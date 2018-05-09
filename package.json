@@ -53,7 +53,6 @@
     "prettier": "~1.12.0",
     "readline-sync": "~1.4.9",
     "semantic-release": "~15.4.0",
-    "travis-deploy-once": "4.4.1",
     "validate-commit-msg": "~2.14.0"
   },
   "peerDependencies": {
