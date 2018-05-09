@@ -231,7 +231,7 @@ export class CordovaBuilder {
         try {
           files.runJavaScript(code, {
             filename: 'mobile-config.js',
-            symbols: { App: createAppConfiguration(this) }
+            symbols: { App: createAppConfiguration(this), Settings: createSettings(this.options) }
           });
         } catch (error) {
           buildmessage.exception(error);
@@ -738,4 +738,18 @@ configuration. The key may be deprecated.`);
       });
     }
   };
+}
+
+function createSettings(options) {
+  let settings = {};
+
+  if (options.settingsFile) {
+    try {
+      settings = JSON.parse(files.readFile(options.settingsFile, 'utf8'));
+    } catch (e) {
+      throw new Error("METEOR_SETTINGS are not valid JSON.");
+    }
+  }
+
+  return settings;
 }
