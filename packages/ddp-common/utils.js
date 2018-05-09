@@ -49,9 +49,9 @@ DDPCommon.parseDDP = function (stringMessage) {
   }
 
   // Convert all DDP messages to Array form
-  messages = messages.constructor === Array ? messages : [messages];
+  messages = Array.isArray(messages) ? messages : [messages];
 
-  keys(messages).forEach(i => {
+  for (let i = 0; i < messages.length; i++) {
     var msg = messages[i];
 
     // Each individual DDP message must be an object.
@@ -79,7 +79,7 @@ DDPCommon.parseDDP = function (stringMessage) {
         msg[field] = EJSON._adjustTypesFromJSONValue(msg[field]);
       }
     });
-  });
+  }
 
   return messages;
 };
@@ -87,11 +87,10 @@ DDPCommon.parseDDP = function (stringMessage) {
 DDPCommon.stringifyDDP = function (messages) {
   messages = Array.isArray(messages) ? messages : [messages];
 
-  const clonedMessages = EJSON.clone(messages);
+  const clonedMessages = [];
 
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
-    const copy = clonedMessages[i];
 
     // swizzle 'changed' messages from 'fields undefined' rep to 'fields
     // and cleared' rep
@@ -103,29 +102,31 @@ DDPCommon.stringifyDDP = function (messages) {
 
         if (typeof value === "undefined") {
           cleared.push(key);
-          delete copy.fields[key];
+          delete msg.fields[key];
         }
       });
 
       if (! isEmpty(cleared)) {
-        copy.cleared = cleared;
+        msg.cleared = cleared;
       }
 
-      if (isEmpty(copy.fields)) {
-        delete copy.fields;
+      if (isEmpty(msg.fields)) {
+        delete msg.fields;
       }
     }
 
     // adjust types to basic
     ['fields', 'params', 'result'].forEach(field => {
-      if (hasOwn.call(copy, field)) {
-        copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
+      if (hasOwn.call(msg, field)) {
+        msg[field] = EJSON._adjustTypesToJSONValue(msg[field]);
       }
     });
 
     if (msg.id && typeof msg.id !== 'string') {
       throw new Error("Message id is not a string");
     }
+
+    clonedMessages.push(EJSON.clone(msg));
   }
 
   return JSON.stringify(clonedMessages);
