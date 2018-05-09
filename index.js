@@ -2,7 +2,8 @@
 
 const assert = require("assert");
 const Cache = require("./cache.js");
-let compileCache; // Lazily initialized.
+const cachesByDir = Object.create(null);
+const BABEL_CACHE_DIR = process.env.BABEL_CACHE_DIR;
 let options; // Lazily initialized.
 
 // Make sure that module.importSync and module.export are defined in the
@@ -38,12 +39,36 @@ exports.getMinimumModernBrowserVersions = function () {
 const parse = exports.parse =
   require("reify/lib/parsers/babylon.js").parse;
 
-exports.compile = function compile(source, options, deps) {
+let didWarnAboutNoCache = false;
+
+exports.compile = function (source, options, deps) {
   options = options || getDefaultOptions();
-  if (! compileCache) {
-    setCacheDir();
+
+  if (typeof options.cacheDir === "string") {
+    return getOrCreateCache(options.cacheDir).get(source, options, deps);
   }
-  return compileCache.get(source, options, deps);
+
+  // If no options.cacheDir was provided, but the BABEL_CACHE_DIR
+  // environment variable is set, then respect that.
+  if (BABEL_CACHE_DIR) {
+    return getOrCreateCache(BABEL_CACHE_DIR).get(source, options, deps);
+  }
+
+  // If neither options.cacheDir nor BABEL_CACHE_DIR were provided, use
+  // the first cache directory registered so far.
+  for (var cacheDir in cachesByDir) {
+    return getOrCreateCache(cacheDir).get(source, options, deps);
+  }
+
+  // Otherwise fall back to compiling without a cache.
+  if (! didWarnAboutNoCache) {
+    console.warn("Compiling " + options.filename +
+                 " with meteor-babel without a cache");
+    console.trace();
+    didWarnAboutNoCache = true;
+  }
+
+  return compile(source, options);
 };
 
 function compile(source, options) {
@@ -104,12 +129,12 @@ exports.minify = function minify(source, options) {
   );
 }
 
-function setCacheDir(cacheDir) {
-  if (! (compileCache && compileCache.dir === cacheDir)) {
-    compileCache = new Cache(compile, cacheDir);
-  }
+function getOrCreateCache(cacheDir) {
+  return cachesByDir[cacheDir] || (
+    cachesByDir[cacheDir] = new Cache(compile, cacheDir)
+  );
 }
-exports.setCacheDir = setCacheDir;
+exports.setCacheDir = getOrCreateCache;
 
 exports.runtime = // Legacy name; prefer installRuntime.
 exports.installRuntime = function installRuntime() {
