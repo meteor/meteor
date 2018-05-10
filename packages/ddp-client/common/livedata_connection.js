@@ -82,7 +82,6 @@ export class Connection {
     if (typeof url === 'object') {
       self._stream = url;
     } else {
-      // TODO: send allowBatching = true to the server
       const { ClientStream } = require("meteor/socket-stream-client");
       self._stream = new ClientStream(url, {
         retry: options.retry,

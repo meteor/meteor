@@ -47,7 +47,7 @@ function wrapInternalException(exception, context) {
 }
 
 export default class Session {
-  constructor(server, version, socket, options, allowBatching) {
+  constructor(server, version, socket, options) {
     var self = this;
     self.id = Random.id();
 
@@ -88,6 +88,9 @@ export default class Session {
     // List of callbacks to call when this connection is closed.
     self._closeCallbacks = [];
     
+    // DDP clients with version 2 and up should support batching of DDP messages
+    var allowBatching = version >= 2;
+
     // When updates are coming within this ms interval, batch them together.
     self._bufferedMessagesInterval = allowBatching ? options.bufferedMessagesInterval || 10 : 0;
     
