@@ -1661,8 +1661,9 @@ export class Connection {
       Meteor._debug('Exception while parsing DDP', e);
       return;
     }
-
-    console.log(messages.length);
+    
+    // TODO: remove this console.log, which clearly shows the effect
+    // console.log(messages.length);
 
     // Any message counts as receiving a pong, as it demonstrates that
     // the server is still alive.
