@@ -1662,6 +1662,8 @@ export class Connection {
       return;
     }
 
+    console.log(messages.length);
+
     // Any message counts as receiving a pong, as it demonstrates that
     // the server is still alive.
     if (this._heartbeat) {

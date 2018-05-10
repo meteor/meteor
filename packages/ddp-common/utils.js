@@ -38,7 +38,7 @@ export function last(array, n, guard) {
   return slice.call(array, Math.max(array.length - n, 0));
 }
 
-DDPCommon.SUPPORTED_DDP_VERSIONS = [ '1', 'pre2', 'pre1' ];
+DDPCommon.SUPPORTED_DDP_VERSIONS = [ '2', '1', 'pre2', 'pre1' ];
 
 DDPCommon.parseDDP = function (stringMessage) {
   try {
