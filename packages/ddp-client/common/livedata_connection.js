@@ -82,6 +82,7 @@ export class Connection {
     if (typeof url === 'object') {
       self._stream = url;
     } else {
+      // TODO: send allowBatching = true to the server
       const { ClientStream } = require("meteor/socket-stream-client");
       self._stream = new ClientStream(url, {
         retry: options.retry,
@@ -1660,7 +1661,7 @@ export class Connection {
       Meteor._debug('Exception while parsing DDP', e);
       return;
     }
-
+    
     // TODO: remove this console.log, which clearly shows the effect
     // console.log(messages.length);
 
