@@ -212,14 +212,6 @@ export default class Cursor {
     return LocalCollection._observeFromObserveChanges(this, options);
   }
 
-  observeChangesBatched(callback) {
-    var self = this;
-    return self.observeChanges({
-        messages: callback,
-      }
-    );
-  }
-
   /**
    * @summary Watch a query. Receive callbacks as the result set changes. Only
    *          the differences between the old and new documents are passed to
@@ -306,19 +298,21 @@ export default class Cursor {
       };
     };
 
-    query.added = wrapCallback(options.added);
-    query.changed = wrapCallback(options.changed);
-    query.removed = wrapCallback(options.removed);
-
-    if (options.messages) {
-      query.messages = wrapCallback(options.messages);
+    if (_.isFunction(options)) {
+      query.messages = wrapCallback(options);
+    }
+    else {
+      query.added = wrapCallback(options.added);
+      query.changed = wrapCallback(options.changed);
+      query.removed = wrapCallback(options.removed);
+  
+      if (ordered) {
+        query.addedBefore = wrapCallback(options.addedBefore);
+        query.movedBefore = wrapCallback(options.movedBefore);
+      }
     }
 
-    if (ordered) {
-      query.addedBefore = wrapCallback(options.addedBefore);
-      query.movedBefore = wrapCallback(options.movedBefore);
-    }
-
+    // TODO: probably refactor some stuff here to make it working as intended in all scenarios
     if (!options._suppress_initial && !this.collection.paused) {
       const results = ordered ? query.results : query.results._map;
 
@@ -527,8 +521,7 @@ export default class Cursor {
     return Package.mongo.Mongo.Collection._publishCursor(
       this,
       subscription,
-      this.collection.name,
-      Meteor.isServer,
+      this.collection.name
     );
   }
 }

@@ -602,11 +602,11 @@ export default class Session {
     });
   }
 
-  _startSubscription(handler, subId, params, name) {
+  _startSubscription(handler, subId, params, name, allowBatching) {
     var self = this;
 
     var sub = new Subscription(
-      self, handler, subId, params, name);
+      self, handler, subId, params, name, allowBatching);
     if (subId)
       self._namedSubs[subId] = sub;
     else
@@ -753,8 +753,7 @@ Object.assign(Session.prototype, {
 
       var handler = self.server.publish_handlers[msg.name];
 
-      self._startSubscription(handler, msg.id, msg.params, msg.name);
-
+      self._startSubscription(handler, msg.id, msg.params, msg.name, msg.allowBatching);
     },
 
     unsub: function (msg) {

@@ -356,11 +356,11 @@ Object.assign(Mongo.Collection.prototype, {
 });
 
 Object.assign(Mongo.Collection, {
-  _publishCursor(cursor, sub, collectionName, batching) {
+  _publishCursor(cursor, sub, collectionName) {
     var observeHandle;
 
-    if (batching) {
-      observeHandle = cursor.observeChangesBatched(function(messages) {
+    if (sub.allowBatching && Meteor.isServer) {
+      observeHandle = cursor.observeChanges(function(messages) {
         sub.messages(collectionName, messages);
       });
     }

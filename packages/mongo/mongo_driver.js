@@ -892,10 +892,10 @@ Cursor.prototype.getTransform = function () {
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
-Cursor.prototype._publishCursor = function (sub, batching) {
+Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   var collectionName = self._cursorDescription.collectionName;
-  return Mongo.Collection._publishCursor(self, sub, collectionName, batching);
+  return Mongo.Collection._publishCursor(self, sub, collectionName);
 };
 
 // Used to guarantee that publish functions return at most one cursor per
@@ -911,37 +911,35 @@ Cursor.prototype.observe = function (callbacks) {
   return LocalCollection._observeFromObserveChanges(self, callbacks);
 };
 
-Cursor.prototype.observeChangesBatched = function(callback) {
-  var self = this;
-  return self._mongo._observeChanges(
-    self._cursorDescription, false, {
-      messages: callback,
-    });
-}
-
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
-  var methods = [
-    'addedAt',
-    'added',
-    'changedAt',
-    'changed',
-    'removedAt',
-    'removed',
-    'movedTo'
-  ];
-  var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
-
-  // XXX: Can we find out if callbacks are from observe?
-  var exceptionName = ' observe/observeChanges callback';
-  methods.forEach(function (method) {
-    if (callbacks[method] && typeof callbacks[method] == "function") {
-      callbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
-    }
-  });
-
-  return self._mongo._observeChanges(
-    self._cursorDescription, ordered, callbacks);
+  if (_.isFunction(callbacks)) {
+    return self._mongo._observeChanges(
+      self._cursorDescription, true, false, callbacks);
+  }
+  else {
+    var methods = [
+      'addedAt',
+      'added',
+      'changedAt',
+      'changed',
+      'removedAt',
+      'removed',
+      'movedTo'
+    ];
+    var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
+  
+    // XXX: Can we find out if callbacks are from observe?
+    var exceptionName = ' observe/observeChanges callback';
+    methods.forEach(function (method) {
+      if (callbacks[method] && typeof callbacks[method] == "function") {
+        callbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
+      }
+    });
+  
+    return self._mongo._observeChanges(
+      self._cursorDescription, false, ordered, callbacks);
+  }
 };
 
 MongoConnection.prototype._createSynchronousCursor = function(
@@ -1175,7 +1173,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
 };
 
 MongoConnection.prototype._observeChanges = function (
-    cursorDescription, ordered, callbacks) {
+    cursorDescription, allowBatching, ordered, callbacks) {
   var self = this;
 
   if (cursorDescription.options.tailable) {
@@ -1191,7 +1189,10 @@ MongoConnection.prototype._observeChanges = function (
   }
 
   var observeKey = EJSON.stringify(
-    _.extend({ordered: ordered}, cursorDescription));
+    _.extend({
+      allowBatching: allowBatching,
+      ordered: ordered
+    }, cursorDescription));
 
   var multiplexer, observeDriver;
   var firstHandle = false;
@@ -1206,6 +1207,7 @@ MongoConnection.prototype._observeChanges = function (
       firstHandle = true;
       // Create a new ObserveMultiplexer.
       multiplexer = new ObserveMultiplexer({
+        allowBatching: allowBatching,
         ordered: ordered,
         onStop: function () {
           delete self._observeMultiplexers[observeKey];

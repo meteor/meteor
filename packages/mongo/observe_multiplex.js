@@ -1,3 +1,5 @@
+import { log } from "util";
+
 var Future = Npm.require('fibers/future');
 
 ObserveMultiplexer = function (options) {
@@ -18,8 +20,10 @@ ObserveMultiplexer = function (options) {
     ordered: options.ordered});
   // Number of addHandleAndSendInitialAdds tasks scheduled but not yet
   // running. removeHandle uses this to know if it's time to call the onStop
-  // callback.
+  // callback. 
   self._addHandleTasksScheduledButNotPerformed = 0;
+  // Whether or not to allow batching of consecutive messages
+  self._allowBatching = options.allowBatching;
   // When callbacks are fired within this ms interval, batch them together
   self._bufferedCallsInterval = 10;
   // Flush buffer at least every 500ms
@@ -152,7 +156,7 @@ _.extend(ObserveMultiplexer.prototype, {
     if (self._ordered)
       return ["addedBefore", "changed", "movedBefore", "removed"];
     else
-      return ["added", "changed", "removed", "messages"];
+      return ["added", "changed", "removed"];
   },
   _ready: function () {
     return this._readyFuture.isResolved();
@@ -182,7 +186,7 @@ _.extend(ObserveMultiplexer.prototype, {
         throw new Error("Got " + callbackName + " during initial adds");
       }
 
-      if (self.messages) {
+      if (self._allowBatching) {
         // Add the callback to the bufferedCalls
         self._bufferedCalls.push({
           action: callbackName,
@@ -245,6 +249,8 @@ _.extend(ObserveMultiplexer.prototype, {
     self._bufferedCallsFlushAt = null;
       
     var messages = self._bufferedCalls;
+
+    console.log(messages.length);
   
     self._bufferedCalls = [];
 
@@ -300,11 +306,18 @@ ObserveHandle = function (multiplexer, callbacks) {
   // accessible to the multiplexer, though.
   self._multiplexer = multiplexer;
 
-  if (callbacks.messages) {
-    self._messages = callbacks.messages;
-
-    self._added = function() {
-      self._multiplexer._applyCallback('added', arguments)
+  if (multiplexer._allowBatching) {
+    if (_.isFunction(callbacks)) {
+      self._messages = callbacks;
+  
+      self._added = self._addedBefore = function() {
+        multiplexer._applyCallback('added', arguments);
+      }
+    }
+    else {      
+      throw new Error(
+        'Multiplexer.allowBatching requires a single callback in ObserveHandle.'
+      );
     }
   }
   else {

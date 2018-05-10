@@ -11,7 +11,7 @@ import { maybeAuditArgumentChecks } from "./common.js";
  * @showInstanceName true
  */
 export default class Subscription {
-  constructor(session, handler, subscriptionId, params, name) {
+  constructor(session, handler, subscriptionId, params, name, allowBatching) {
     var self = this;
     self._session = session; // type is Session
 
@@ -61,6 +61,9 @@ export default class Subscription {
      * @instance
      */
     self.userId = session.userId;
+
+    // allow batching of changes to the collections in this publication
+    self.allowBatching = allowBatching || false;
 
     Package.facts && Package.facts.Facts.incrementServerFact(
       "livedata", "subscriptions", 1);
@@ -117,13 +120,12 @@ export default class Subscription {
     //   };
 
     var self = this;
-    var batching = true;
     var isCursor = function (c) {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
       try {
-        res._publishCursor(self, batching);
+        res._publishCursor(self);
       } catch (e) {
         self.error(e);
         return;
@@ -154,7 +156,7 @@ export default class Subscription {
 
       try {
         _.each(res, function (cur) {
-          cur._publishCursor(self, batching);
+          cur._publishCursor(self);
         });
       } catch (e) {
         self.error(e);
@@ -218,7 +220,7 @@ export default class Subscription {
     var self = this;
     return new Subscription(
       self._session, self._handler, self._subscriptionId, self._params,
-      self._name);
+      self._name, self.allowBatching);
   }
 
   /**

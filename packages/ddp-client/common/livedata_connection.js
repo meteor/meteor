@@ -451,7 +451,12 @@ export class Connection {
           }
         }
       };
-      self._send({ msg: 'sub', id: id, name: name, params: params });
+      self._send({
+        msg: 'sub',
+        id: id,
+        name: name,
+        params: params,
+      });
     }
 
     // return a handle to the application.
@@ -1803,7 +1808,8 @@ export class Connection {
         msg: 'sub',
         id: id,
         name: sub.name,
-        params: sub.params
+        params: sub.params,
+        allowBatching: true,
       });
     });
   }
