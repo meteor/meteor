@@ -89,7 +89,7 @@ export default class Session {
     self._closeCallbacks = [];
     
     // When updates are coming within this ms interval, batch them together.
-    self._bufferedMessagesInterval = allowBatching ? options.bufferedMessagesInterval || 5 : 0;
+    self._bufferedMessagesInterval = allowBatching ? options.bufferedMessagesInterval || 10 : 0;
     
     // Flush buffers immediately if messages are happening continuously for more than this many ms.
     self._bufferedMessagesMaxAge = options.bufferedMessagesMaxAge || 500;
