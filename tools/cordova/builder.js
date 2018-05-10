@@ -9,6 +9,7 @@ import archinfo from '../utils/archinfo.js';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
+import {optimisticReadJsonOrNull} from "../fs/optimistic.js";
 
 import { CORDOVA_ARCH } from './index.js';
 
@@ -745,7 +746,7 @@ function createSettings(options) {
 
   if (options.settingsFile) {
     try {
-      settings = JSON.parse(files.readFile(options.settingsFile, 'utf8'));
+      settings = optimisticReadJsonOrNull(options.settingsFile) || {};
     } catch (e) {
       throw new Error("METEOR_SETTINGS are not valid JSON.");
     }
