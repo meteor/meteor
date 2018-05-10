@@ -221,10 +221,45 @@ export default class Session {
     return ret;
   }
 
+  messages(subscriptionHandle, collectionName, messages) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    var checkEmptyView = false;
+
+    for (var i = 0; i < messages.length; i++) {
+      var msg = messages[i];
+      var action = msg.action;
+      var id = msg.args[0];
+      var fields = msg.args[1];
+
+      if (action === 'added') {
+        view.added(subscriptionHandle, id, fields);
+      } else if (action === 'changed') {
+        view.changed(subscriptionHandle, id, fields);
+      } else if (action === 'removed') {
+        checkEmptyView = true;
+
+        view.removed(subscriptionHandle, id);
+      } else {      
+        throw new Error("Unknown action in MongoDB message");
+      }
+    }
+    
+    if (checkEmptyView && view.isEmpty()) {
+      delete self.collectionViews[collectionName];
+    }
+  }
+
   added(subscriptionHandle, collectionName, id, fields) {
     var self = this;
     var view = self.getCollectionView(collectionName);
     view.added(subscriptionHandle, id, fields);
+  }
+
+  changed(subscriptionHandle, collectionName, id, fields) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    view.changed(subscriptionHandle, id, fields);
   }
 
   removed(subscriptionHandle, collectionName, id) {
@@ -234,12 +269,6 @@ export default class Session {
     if (view.isEmpty()) {
       delete self.collectionViews[collectionName];
     }
-  }
-
-  changed(subscriptionHandle, collectionName, id, fields) {
-    var self = this;
-    var view = self.getCollectionView(collectionName);
-    view.changed(subscriptionHandle, id, fields);
   }
 
   startUniversalSubs() {
@@ -303,42 +332,40 @@ export default class Session {
   // It should be a JSON object (it will be stringified.)
   send(msg) {
     var self = this;
-    
-    if (self.socket) {
-      self._bufferedMessages.push(msg);
 
-      var standardWrite =
-        msg.msg === "added" ||
-        msg.msg === "changed" ||
-        msg.msg === "removed";
+    self._bufferedMessages.push(msg);
 
-      if (self._bufferedMessagesInterval === 0 || ! standardWrite) {
-        self._flushBufferedMessages();
-        return;
-      }
-      
-      if (self._bufferedMessagesFlushAt === null) {
-        self._bufferedMessagesFlushAt =
-          new Date().valueOf() + self._bufferedMessagesMaxAge;
-      } else if (self._bufferedMessagesFlushAt < new Date().valueOf()) {
-        self._flushBufferedMessages();
-        return;
-      }
-      
-      if (self._bufferedMessagesFlushHandle) {
-        clearTimeout(self._bufferedMessagesFlushHandle);
-      }
+    var standardWrite =
+      msg.msg === "added" ||
+      msg.msg === "changed" ||
+      msg.msg === "removed";
 
-      self._bufferedMessagesFlushHandle = setTimeout(
-        self._flushBufferedMessages,
-        self._bufferedMessagesInterval
-      );
+    if (self._bufferedMessagesInterval === 0 || ! standardWrite) {
+      self._flushBufferedMessages();
+      return;
     }
+    
+    if (self._bufferedMessagesFlushAt === null) {
+      self._bufferedMessagesFlushAt =
+        new Date().valueOf() + self._bufferedMessagesMaxAge;
+    } else if (self._bufferedMessagesFlushAt < new Date().valueOf()) {
+      self._flushBufferedMessages();
+      return;
+    }
+    
+    if (self._bufferedMessagesFlushHandle) {
+      clearTimeout(self._bufferedMessagesFlushHandle);
+    }
+
+    self._bufferedMessagesFlushHandle = setTimeout(
+      self._flushBufferedMessages,
+      self._bufferedMessagesInterval
+    );
   }
 
   _flushBufferedMessages() {
     var self = this;
-  
+
     if (self._bufferedMessagesFlushHandle) {
       clearTimeout(self._bufferedMessagesFlushHandle);
   
@@ -351,11 +378,13 @@ export default class Session {
   
     self._bufferedMessages = [];
   
-    if (Meteor._printSentDDP) {
-      Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(messages));
-    }
   
-    self.socket.send(DDPCommon.stringifyDDP(messages));
+    if (self.socket) {
+      if (Meteor._printSentDDP) {
+        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(messages));
+      }
+      self.socket.send(DDPCommon.stringifyDDP(messages));
+    }
   }
 
   // Send a connection error.

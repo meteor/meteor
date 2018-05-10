@@ -86,7 +86,7 @@ export default class Server {
           // Convert all DDP messages to Array form
           messages = Array.isArray(messages) ? messages : [messages];
 
-          keys(messages).forEach(i => {
+          for (var i = 0; i < messages.length; i++) {
             var msg = messages[i];
 
             if (msg === null || !msg.msg) {
@@ -104,18 +104,18 @@ export default class Server {
               }).run();
               return;
             }
-          });
 
-          if (!socket._meteorSession) {
-            sendError('Must connect first', msg);
-            return;
+            socket._meteorSession.processMessage(msg);
           }
 
-          socket._meteorSession.processMessage(msg);
+          if (!socket._meteorSession) {
+            sendError('Must connect first', messages);
+            return;
+          }
         } catch (e) {
           // XXX print stack nicely
-          Meteor._debug("Internal exception while processing message", msg,
-                        e.message, e.stack);
+          Meteor._debug("Internal exception while processing message(s)",
+            messages, e.message, e.stack);
         }
       });
 

@@ -892,11 +892,10 @@ Cursor.prototype.getTransform = function () {
 // When you call Meteor.publish() with a function that returns a Cursor, we need
 // to transmute it into the equivalent subscription.  This is the function that
 // does that.
-
-Cursor.prototype._publishCursor = function (sub) {
+Cursor.prototype._publishCursor = function (sub, batching) {
   var self = this;
-  var collection = self._cursorDescription.collectionName;
-  return Mongo.Collection._publishCursor(self, sub, collection);
+  var collectionName = self._cursorDescription.collectionName;
+  return Mongo.Collection._publishCursor(self, sub, collectionName, batching);
 };
 
 // Used to guarantee that publish functions return at most one cursor per
@@ -911,6 +910,14 @@ Cursor.prototype.observe = function (callbacks) {
   var self = this;
   return LocalCollection._observeFromObserveChanges(self, callbacks);
 };
+
+Cursor.prototype.observeChangesBatched = function(callback) {
+  var self = this;
+  return self._mongo._observeChanges(
+    self._cursorDescription, false, {
+      messages: callback,
+    });
+}
 
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;

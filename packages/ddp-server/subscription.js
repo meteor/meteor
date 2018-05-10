@@ -48,10 +48,6 @@ export default class Subscription {
     // stop callbacks to g/c this sub.  called w/ zero arguments.
     self._stopCallbacks = [];
 
-    // the set of (collection, documentid) that this subscription has
-    // an opinion about
-    self._documents = {};
-
     // remember if we are ready.
     self._ready = false;
 
@@ -65,20 +61,6 @@ export default class Subscription {
      * @instance
      */
     self.userId = session.userId;
-
-    // For now, the id filter is going to default to
-    // the to/from DDP methods on MongoID, to
-    // specifically deal with mongo/minimongo ObjectIds.
-
-    // Later, you will be able to make this be "raw"
-    // if you want to publish a collection that you know
-    // just has strings for keys and no funny business, to
-    // a ddp consumer that isn't minimongo
-
-    self._idFilter = {
-      idStringify: MongoID.idStringify,
-      idParse: MongoID.idParse
-    };
 
     Package.facts && Package.facts.Facts.incrementServerFact(
       "livedata", "subscriptions", 1);
@@ -135,12 +117,13 @@ export default class Subscription {
     //   };
 
     var self = this;
+    var batching = true;
     var isCursor = function (c) {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
       try {
-        res._publishCursor(self);
+        res._publishCursor(self, batching);
       } catch (e) {
         self.error(e);
         return;
@@ -171,7 +154,7 @@ export default class Subscription {
 
       try {
         _.each(res, function (cur) {
-          cur._publishCursor(self);
+          cur._publishCursor(self, batching);
         });
       } catch (e) {
         self.error(e);
@@ -215,12 +198,12 @@ export default class Subscription {
   // Send remove messages for every document.
   _removeAllDocuments() {
     var self = this;
+    var session = self._session;
+
     Meteor._noYieldsAllowed(function () {
-      _.each(self._documents, function(collectionDocs, collectionName) {
-        // Iterate over _.keys instead of the dictionary itself, since we'll be
-        // mutating it.
-        _.each(_.keys(collectionDocs), function (strId) {
-          self.removed(collectionName, self._idFilter.idParse(strId));
+      _.each(session.collectionViews, function(collectionView, collectionName) {
+        _.each(_.keys(collectionView.documents), function(id) {
+          self.removed(collectionName, id);
         });
       });
     });
@@ -228,8 +211,8 @@ export default class Subscription {
 
   // Returns a new Subscription for the same session with the same
   // initial creation parameters. This isn't a clone: it doesn't have
-  // the same _documents cache, stopped state or callbacks; may have a
-  // different _subscriptionHandle, and gets its userId from the
+  // the same SessionCollectionView, stopped state or callbacks; may have
+  // a different _subscriptionHandle, and gets its userId from the
   // session, not from this object.
   _recreate() {
     var self = this;
@@ -294,6 +277,14 @@ export default class Subscription {
     return self._deactivated || self._session.inQueue === null;
   }
 
+  messages(collectionName, messages) {
+    var self = this;
+    if (self._isDeactivated()) {
+      return;
+    }
+    self._session.messages(self._subscriptionHandle, collectionName, messages);
+  }
+
   /**
    * @summary Call inside the publish function.  Informs the subscriber that a document has been added to the record set.
    * @locus Server
@@ -305,10 +296,9 @@ export default class Subscription {
    */
   added(collectionName, id, fields) {
     var self = this;
-    if (self._isDeactivated())
+    if (self._isDeactivated()) {
       return;
-    id = self._idFilter.idStringify(id);
-    Meteor._ensure(self._documents, collectionName)[id] = true;
+    }
     self._session.added(self._subscriptionHandle, collectionName, id, fields);
   }
 
@@ -323,9 +313,9 @@ export default class Subscription {
    */
   changed(collectionName, id, fields) {
     var self = this;
-    if (self._isDeactivated())
+    if (self._isDeactivated()) {
       return;
-    id = self._idFilter.idStringify(id);
+    }
     self._session.changed(self._subscriptionHandle, collectionName, id, fields);
   }
 
@@ -339,12 +329,11 @@ export default class Subscription {
    */
   removed(collectionName, id) {
     var self = this;
-    if (self._isDeactivated())
+    if (self._isDeactivated()) {
       return;
-    id = self._idFilter.idStringify(id);
+    }
     // We don't bother to delete sets of things in a collection if the
     // collection is empty.  It could break _removeAllDocuments.
-    delete self._documents[collectionName][id];
     self._session.removed(self._subscriptionHandle, collectionName, id);
   }
 

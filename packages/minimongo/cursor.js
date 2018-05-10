@@ -212,6 +212,14 @@ export default class Cursor {
     return LocalCollection._observeFromObserveChanges(this, options);
   }
 
+  observeChangesBatched(callback) {
+    var self = this;
+    return self.observeChanges({
+        messages: callback,
+      }
+    );
+  }
+
   /**
    * @summary Watch a query. Receive callbacks as the result set changes. Only
    *          the differences between the old and new documents are passed to
@@ -301,6 +309,10 @@ export default class Cursor {
     query.added = wrapCallback(options.added);
     query.changed = wrapCallback(options.changed);
     query.removed = wrapCallback(options.removed);
+
+    if (options.messages) {
+      query.messages = wrapCallback(options.messages);
+    }
 
     if (ordered) {
       query.addedBefore = wrapCallback(options.addedBefore);
@@ -515,7 +527,8 @@ export default class Cursor {
     return Package.mongo.Mongo.Collection._publishCursor(
       this,
       subscription,
-      this.collection.name
+      this.collection.name,
+      Meteor.isServer,
     );
   }
 }

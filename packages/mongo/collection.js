@@ -356,18 +356,27 @@ Object.assign(Mongo.Collection.prototype, {
 });
 
 Object.assign(Mongo.Collection, {
-  _publishCursor(cursor, sub, collection) {
-    var observeHandle = cursor.observeChanges({
-      added: function (id, fields) {
-        sub.added(collection, id, fields);
-      },
-      changed: function (id, fields) {
-        sub.changed(collection, id, fields);
-      },
-      removed: function (id) {
-        sub.removed(collection, id);
-      }
-    });
+  _publishCursor(cursor, sub, collectionName, batching) {
+    var observeHandle;
+
+    if (batching) {
+      observeHandle = cursor.observeChangesBatched(function(messages) {
+        sub.messages(collectionName, messages);
+      });
+    }
+    else {
+      observeHandle = cursor.observeChanges({
+        added: function (id, fields) {
+          sub.added(collectionName, id, fields);
+        },
+        changed: function (id, fields) {
+          sub.changed(collectionName, id, fields);
+        },
+        removed: function (id) {
+          sub.removed(collectionName, id);
+        }
+      });
+    }
 
     // We don't call sub.ready() here: it gets called in livedata_server, after
     // possibly calling _publishCursor on multiple returned cursors.
