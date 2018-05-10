@@ -172,10 +172,12 @@ CachingCompilerBase = class CachingCompilerBase {
         // ignore errors, it's just a cache
       }
     } else {
-      fs.writeFile(tempFilename, contents, err => {
-        // ignore errors, it's just a cache
-        if (! err) {
-          fs.rename(tempFilename, filename, err => {});
+      fs.writeFile(tempFilename, contents, writeError => {
+        if (writeError) return;
+        try {
+          fs.renameSync(tempFilename, filename);
+        } catch (renameError) {
+          // ignore errors, it's just a cache
         }
       });
     }
