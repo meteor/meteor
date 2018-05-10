@@ -87,12 +87,9 @@ export default class Session {
 
     // List of callbacks to call when this connection is closed.
     self._closeCallbacks = [];
-
-    // Whether we allow batching 
-    self._allowBatching = allowBatching || false;
     
     // When updates are coming within this ms interval, batch them together.
-    self._bufferedMessagesInterval = options.bufferedMessagesInterval || 5;
+    self._bufferedMessagesInterval = allowBatching ? options.bufferedMessagesInterval || 5 : 0;
     
     // Flush buffers immediately if messages are happening continuously for more than this many ms.
     self._bufferedMessagesMaxAge = options.bufferedMessagesMaxAge || 500;
@@ -333,17 +330,24 @@ export default class Session {
   send(msg) {
     var self = this;
 
-    self._bufferedMessages.push(msg);
-
     var standardWrite =
       msg.msg === "added" ||
       msg.msg === "changed" ||
       msg.msg === "removed";
 
     if (self._bufferedMessagesInterval === 0 || ! standardWrite) {
-      self._flushBufferedMessages();
+      if (self.socket) {
+        if (Meteor._printSentDDP) {
+          Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(messages));
+        }
+      
+        self.socket.send(DDPCommon.stringifyDDP(messages));
+      }
+
       return;
     }
+    
+    self._bufferedMessages.push(msg);
     
     if (self._bufferedMessagesFlushAt === null) {
       self._bufferedMessagesFlushAt =
@@ -378,11 +382,11 @@ export default class Session {
   
     self._bufferedMessages = [];
   
-  
     if (self.socket) {
       if (Meteor._printSentDDP) {
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(messages));
       }
+    
       self.socket.send(DDPCommon.stringifyDDP(messages));
     }
   }

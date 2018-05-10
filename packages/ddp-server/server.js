@@ -105,12 +105,12 @@ export default class Server {
               return;
             }
 
+            if (!socket._meteorSession) {
+              sendError('Must connect first', msg);
+              return;
+            }
+  
             socket._meteorSession.processMessage(msg);
-          }
-
-          if (!socket._meteorSession) {
-            sendError('Must connect first', messages);
-            return;
           }
         } catch (e) {
           // XXX print stack nicely

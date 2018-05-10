@@ -1671,7 +1671,7 @@ export class Connection {
     // Convert all DDP messages to Array form
     messages = Array.isArray(messages) ? messages : [messages];
 
-    keys(messages).forEach(i => {
+    for (var i = 0; i < messages.length; i++) {
       var msg = messages[i];
 
       if (msg === null || !msg.msg) {
@@ -1715,7 +1715,7 @@ export class Connection {
       } else {
         Meteor._debug('discarding unknown livedata message type', msg);
       }
-    });
+    }
   }
 
   onReset() {
