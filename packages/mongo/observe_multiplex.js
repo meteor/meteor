@@ -248,8 +248,6 @@ _.extend(ObserveMultiplexer.prototype, {
   
     self._bufferedCalls = [];
 
-    console.log(messages.length);
-
     // Now multiplex the callbacks out to all observe handles. It's OK if
     // these calls yield; since we're inside a task, no other use of our queue
     // can continue until these are done. (But we do have to be careful to not
