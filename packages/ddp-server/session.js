@@ -300,8 +300,6 @@ export default class Session {
   // It should be a JSON object (it will be stringified.)
   send(msg) {
     var self = this;
-    
-    self._bufferedMessages.push(msg);
 
     var standardWrite =
       msg.msg === "added" ||
@@ -319,6 +317,8 @@ export default class Session {
 
       return;
     }
+    
+    self._bufferedMessages.push(msg);
     
     if (self._bufferedMessagesFlushAt === null) {
       self._bufferedMessagesFlushAt =
