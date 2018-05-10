@@ -172,9 +172,6 @@ export default class Server {
     //  socket._meteorSession = self.sessions[msg.session]
     var version = calculateVersion(msg.support, DDPCommon.SUPPORTED_DDP_VERSIONS);
 
-    // DDP clients with version 2 and up should support batching of DDP messages
-    var allowBatching = version >= 2;
-
     if (msg.version !== version) {
       // The best version to use (according to the client's stated preferences)
       // is not the one the client is trying to use. Inform them about the best
@@ -187,7 +184,7 @@ export default class Server {
     // Yay, version matches! Create a new session.
     // Note: Troposphere depends on the ability to mutate
     // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
-    socket._meteorSession = new Session(self, version, socket, self.options, allowBatching);
+    socket._meteorSession = new Session(self, version, socket, self.options);
     self.sessions[socket._meteorSession.id] = socket._meteorSession;
     self.onConnectionHook.each(function (callback) {
       if (socket._meteorSession)
