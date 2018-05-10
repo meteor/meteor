@@ -93,6 +93,9 @@ export default class Session {
     
     // Flush buffers immediately if messages are happening continuously for more than this many ms.
     self._bufferedMessagesMaxAge = options.bufferedMessagesMaxAge || 500;
+
+    // Maximum amount of messages to store in the buffer before flushing
+    self._bufferedMessagesMaxAmount = options.bufferedMessagesMaxAmount || 1000;
     
     // The timeoutHandle for the outgoing message buffer
     self._bufferedMessagesFlushHandle = null;
@@ -301,39 +304,53 @@ export default class Session {
   send(msg) {
     var self = this;
 
-    var standardWrite =
-      msg.msg === "added" ||
-      msg.msg === "changed" ||
-      msg.msg === "removed";
-
-    if (self._bufferedMessagesInterval === 0 || ! standardWrite) {
+    // If we have decided not to buffer messages
+    if (self._bufferedMessagesInterval === 0) {
       if (self.socket) {
         if (Meteor._printSentDDP) {
-          Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(messages));
+          Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
         }
       
-        self.socket.send(DDPCommon.stringifyDDP(messages));
+        self.socket.send(DDPCommon.stringifyDDP(msg));
       }
 
       return;
     }
     
+    // Otherwise add the current message to the buffer
     self._bufferedMessages.push(msg);
-    
+
+    // Set the time at which this buffer will expire
     if (self._bufferedMessagesFlushAt === null) {
       self._bufferedMessagesFlushAt =
         new Date().valueOf() + self._bufferedMessagesMaxAge;
-    } else if (self._bufferedMessagesFlushAt < new Date().valueOf()) {
+    }
+    
+    var standardWrite =
+      msg.msg === "added" ||
+      msg.msg === "changed" ||
+      msg.msg === "removed";
+
+    // Flush the buffer if we have (1) a non-standard message, (2) reached
+    // the maximum buffer size or (3) the buffer expired.
+    if (
+      ! standardWrite
+      || self._bufferedMessages.length >= self._bufferedMessagesMaxAmount
+      || self._bufferedMessagesFlushAt < new Date().valueOf()
+    ) {
       self._flushBufferedMessages();
       return;
     }
     
+    // Clear any previously set timeout
     if (self._bufferedMessagesFlushHandle) {
       clearTimeout(self._bufferedMessagesFlushHandle);
     }
 
+    // Wait for new messages within the bufferedMessagesInterval
+    // If the timeout expires we flush the buffer
     self._bufferedMessagesFlushHandle = setTimeout(
-      self._flushBufferedMessages,
+      self._flushBufferedMessages.bind(self),
       self._bufferedMessagesInterval
     );
   }
