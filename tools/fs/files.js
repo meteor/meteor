@@ -533,6 +533,11 @@ export function symlinkWithOverwrite(source, target) {
     files.symlink(source, target);
   } catch (e) {
     if (e.code === "EEXIST") {
+      if (files.readlink(target) === source) {
+        // If the target already points to the desired source, we don't
+        // need to do anything.
+        return;
+      }
       // overwrite existing link, file, or directory
       files.rm_recursive(target);
       files.symlink(source, target);
