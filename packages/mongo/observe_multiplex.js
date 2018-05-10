@@ -21,7 +21,7 @@ ObserveMultiplexer = function (options) {
   // callback.
   self._addHandleTasksScheduledButNotPerformed = 0;
   // When callbacks are fired within this ms interval, batch them together
-  self._bufferedCallsInterval = 5;
+  self._bufferedCallsInterval = 10;
   // Flush buffer at least every 500ms
   self._bufferedCallsMaxAge = 500;
   // The timeoutHandle for the callback buffer
