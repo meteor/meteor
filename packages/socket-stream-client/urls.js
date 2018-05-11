@@ -10,6 +10,12 @@ function translateUrl(url, newSchemeBase, subPath) {
     newSchemeBase = 'http';
   }
 
+  if (typeof URL === "function") {
+    url = new URL(url, location.href).href;
+  } else if (url.startsWith("/")) {
+    url = location.protocol + "//" + location.host + url;
+  }
+
   if (subPath !== "sockjs" && url.startsWith("/")) {
     url = Meteor.absoluteUrl(url.substr(1));
   }
