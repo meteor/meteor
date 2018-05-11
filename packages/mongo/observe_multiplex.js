@@ -168,6 +168,11 @@ _.extend(ObserveMultiplexer.prototype, {
     var self = this;
 
     self._queue.queueTask(function () {
+      // If we stopped in the meantime, do nothing.
+      if (!self._handles) {
+        return;
+      }
+
       // If we haven't finished the initial adds, then we should only be getting
       // adds.
       if (!self._ready() &&
