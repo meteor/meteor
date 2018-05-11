@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.4.0'
+  version: '1.4.1'
 });
 
 Package.onUse(function (api) {
@@ -19,8 +19,6 @@ Package.onUse(function (api) {
     'ddp',
     'mongo',
   ], ['client', 'server']);
-
-  api.use(['http', 'random'], 'web.cordova');
 
   api.addFiles('autoupdate_server.js', 'server');
   api.addFiles('autoupdate_client.js', 'web.browser');
