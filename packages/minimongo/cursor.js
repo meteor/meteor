@@ -301,15 +301,14 @@ export default class Cursor {
     if (_.isFunction(options)) {
       query.messages = wrapCallback(options);
     }
-    else {
-      query.added = wrapCallback(options.added);
-      query.changed = wrapCallback(options.changed);
-      query.removed = wrapCallback(options.removed);
-  
-      if (ordered) {
-        query.addedBefore = wrapCallback(options.addedBefore);
-        query.movedBefore = wrapCallback(options.movedBefore);
-      }
+    
+    query.added = wrapCallback(options.added);
+    query.changed = wrapCallback(options.changed);
+    query.removed = wrapCallback(options.removed);
+
+    if (ordered) {
+      query.addedBefore = wrapCallback(options.addedBefore);
+      query.movedBefore = wrapCallback(options.movedBefore);
     }
 
     // TODO: probably refactor some stuff here to make it working as intended in all scenarios

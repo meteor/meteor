@@ -151,6 +151,7 @@ _.extend(ObserveMultiplexer.prototype, {
       cb();
     });
   },
+
   callbackNames: function () {
     var self = this;
     if (self._ordered)
@@ -158,41 +159,31 @@ _.extend(ObserveMultiplexer.prototype, {
     else
       return ["added", "changed", "removed"];
   },
+
   _ready: function () {
     return this._readyFuture.isResolved();
   },
+
   _applyCallback: function (callbackName, args) {
     var self = this;
+
     self._queue.queueTask(function () {
-      var clonedArgs = [
-        MongoID.idStringify(args[0])
-      ];
-
-      if (args[1]) {
-        clonedArgs.push(EJSON.clone(args[1]));
-      }
-
-      // First, apply the change to the cache.
-      // XXX We could make applyChange callbacks promise not to hang on to any
-      // state from their arguments (assuming that their supplied callbacks
-      // don't) and skip this clone. Currently 'changed' hangs on to state
-      // though.
-      self._cache.applyChange[callbackName].apply(null, clonedArgs);
-
       // If we haven't finished the initial adds, then we should only be getting
       // adds.
       if (!self._ready() &&
           (callbackName !== 'added' && callbackName !== 'addedBefore')) {
         throw new Error("Got " + callbackName + " during initial adds");
       }
+  
+      args[0] = MongoID.idStringify(args[0]);
 
       if (self._allowBatching) {
         // Add the callback to the bufferedCalls
         self._bufferedCalls.push({
           action: callbackName,
-          args: clonedArgs
+          args: args
         });
-  
+
         if (self._bufferedCallsFlushAt === null) {
           self._bufferedCallsFlushAt =
             new Date().valueOf() + self._bufferedCallsMaxAge;
@@ -200,11 +191,11 @@ _.extend(ObserveMultiplexer.prototype, {
           self._flushBufferedCalls();
           return;
         }
-  
+
         if (self._bufferedCallsFlushHandle) {
           clearTimeout(self._bufferedCallsFlushHandle);
         }
-  
+
         self._bufferedCallsFlushHandle = setTimeout(
           self._flushBufferedCalls.bind(self),
           self._bufferedCallsInterval
@@ -226,7 +217,7 @@ _.extend(ObserveMultiplexer.prototype, {
           var callback = handle['_' + callbackName];
 
           // clone arguments so that callbacks can mutate their arguments
-          callback && callback.apply(null, clonedArgs);
+          callback && callback.apply(null, EJSON.clone(args));
         });
       }
     });
@@ -250,6 +241,16 @@ _.extend(ObserveMultiplexer.prototype, {
       
     var messages = self._bufferedCalls;
 
+    _.each(messages, (message) => {
+      // First, apply the change to the cache.
+      // XXX We could make applyChange callbacks promise not to hang on to any
+      // state from their arguments (assuming that their supplied callbacks
+      // don't) and skip this clone. Currently 'changed' hangs on to state
+      // though.
+      self._cache.applyChange[message.action].apply(null, message.args);
+    });
+
+    // TODO remove this comment which shows the effect clearly
     console.log(messages.length);
   
     self._bufferedCalls = [];
@@ -269,7 +270,7 @@ _.extend(ObserveMultiplexer.prototype, {
       var callback = handle._messages;
 
       // clone arguments so that callbacks can mutate their arguments
-      callback && callback.apply(null, [messages]);
+      callback && callback.apply(null, [EJSON.clone(messages)]);
     });
   },
 
