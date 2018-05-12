@@ -86,22 +86,27 @@ _.extend(OplogHandle.prototype, {
       self._tailHandle.stop();
     // XXX should close connections too
   },
-  onOplogEntry: function (trigger, callback) {
+  onOplogEntries: function (trigger, callback) {
     var self = this;
-    if (self._stopped)
+
+    if (self._stopped) {
       throw new Error("Called onOplogEntry on stopped handle!");
+    }
 
     // Calling onOplogEntry requires us to wait for the tailing to be ready.
     self._readyFuture.wait();
 
     var originalCallback = callback;
-    callback = Meteor.bindEnvironment(function (notification) {
+
+    callback = Meteor.bindEnvironment(function (notifications) {
       // XXX can we avoid this clone by making oplog.js careful?
-      originalCallback(EJSON.clone(notification));
+      originalCallback(EJSON.clone(notifications));
     }, function (err) {
       Meteor._debug("Error in oplog callback", err);
     });
-    var listenHandle = self._crossbar.listen(trigger, callback);
+
+    var listenHandle = self._crossbar.buffer(trigger, callback);
+
     return {
       stop: function () {
         listenHandle.stop();
@@ -247,8 +252,9 @@ _.extend(OplogHandle.prototype, {
 
   _maybeStartWorker: function () {
     var self = this;
-    if (self._workerActive)
+    if (self._workerActive) {
       return;
+    }
     self._workerActive = true;
     Meteor.defer(function () {
       try {
