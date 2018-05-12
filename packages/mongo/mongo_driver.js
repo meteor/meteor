@@ -913,11 +913,20 @@ Cursor.prototype.observe = function (callbacks) {
 
 Cursor.prototype.observeChanges = function (callbacks) {
   var self = this;
-  if (_.isFunction(callbacks)) {
+  var allowBuffering = _.isFunction(callbacks);
+  var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
+
+  // XXX: Can we find out if callbacks are from observe?
+  var exceptionName = ' observe/observeChanges callback';
+
+  if (allowBuffering) {
+    var boundCallback = Meteor.bindEnvironment(callbacks, 'Messages' + exceptionName);
+
     return self._mongo._observeChanges(
-      self._cursorDescription, true, false, callbacks);
+      self._cursorDescription, allowBuffering, ordered, boundCallback);
   }
   else {
+    var boundCallbacks = [];
     var methods = [
       'addedAt',
       'added',
@@ -927,18 +936,15 @@ Cursor.prototype.observeChanges = function (callbacks) {
       'removed',
       'movedTo'
     ];
-    var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
-  
-    // XXX: Can we find out if callbacks are from observe?
-    var exceptionName = ' observe/observeChanges callback';
+    
     methods.forEach(function (method) {
       if (callbacks[method] && typeof callbacks[method] == "function") {
-        callbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
+        boundCallbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
       }
     });
   
     return self._mongo._observeChanges(
-      self._cursorDescription, false, ordered, callbacks);
+      self._cursorDescription, allowBuffering, ordered, boundCallbacks);
   }
 };
 
@@ -1173,7 +1179,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
 };
 
 MongoConnection.prototype._observeChanges = function (
-    cursorDescription, allowBatching, ordered, callbacks) {
+    cursorDescription, allowBuffering, ordered, callbacks) {
   var self = this;
 
   if (cursorDescription.options.tailable) {
@@ -1190,7 +1196,7 @@ MongoConnection.prototype._observeChanges = function (
 
   var observeKey = EJSON.stringify(
     _.extend({
-      allowBatching: allowBatching,
+      allowBuffering: allowBuffering,
       ordered: ordered
     }, cursorDescription));
 
@@ -1207,7 +1213,7 @@ MongoConnection.prototype._observeChanges = function (
       firstHandle = true;
       // Create a new ObserveMultiplexer.
       multiplexer = new ObserveMultiplexer({
-        allowBatching: allowBatching,
+        allowBuffering: allowBuffering,
         ordered: ordered,
         onStop: function () {
           delete self._observeMultiplexers[observeKey];
@@ -1260,6 +1266,7 @@ MongoConnection.prototype._observeChanges = function (
       }], function (f) { return f(); });  // invoke each function
 
     var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+
     observeDriver = new driverClass({
       cursorDescription: cursorDescription,
       mongoHandle: self,

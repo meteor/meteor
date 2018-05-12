@@ -1667,7 +1667,7 @@ export class Connection {
     }
 
     // TODO: remove this console.log, which clearly shows the effect
-    console.log(messages.length);
+    console.log("Number of messages received: " + messages.length);
 
     // Any message counts as receiving a pong, as it demonstrates that
     // the server is still alive.
@@ -1809,7 +1809,7 @@ export class Connection {
         id: id,
         name: sub.name,
         params: sub.params,
-        allowBatching: true,
+        allowBuffering: true,
       });
     });
   }

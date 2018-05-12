@@ -22,15 +22,15 @@ ObserveMultiplexer = function (options) {
   // running. removeHandle uses this to know if it's time to call the onStop
   // callback. 
   self._addHandleTasksScheduledButNotPerformed = 0;
-  // Whether or not to allow batching of consecutive messages
-  self._allowBatching = options.allowBatching;
+  // Whether or not to allow buffering of consecutive messages
+  self._allowBuffering = options.allowBuffering;
   // When callbacks are fired within this ms interval, batch them together
   self._bufferedCallsInterval = 10;
   // Flush buffer at least every 500ms
   self._bufferedCallsMaxAge = 500;
   // The timeoutHandle for the callback buffer
   self._bufferedCallsFlushHandle = null;
-  // Date at which the callbacks should be flushed, regardless of any timeout
+  // Date at which the buffer should be flushed, regardless of any timeout
   self._bufferedCallsFlushAt = null;
   // A buffer for callbacks
   self._bufferedCalls = [];
@@ -167,46 +167,41 @@ _.extend(ObserveMultiplexer.prototype, {
   _applyCallback: function (callbackName, args) {
     var self = this;
 
-    self._queue.queueTask(function () {
-      // If we stopped in the meantime, do nothing.
-      if (!self._handles) {
+    // If we haven't finished the initial adds, then we should only be getting
+    // adds.
+    if (!self._ready() &&
+        (callbackName !== 'added' && callbackName !== 'addedBefore')) {
+      throw new Error("Got " + callbackName + " during initial adds");
+    }
+
+    args[0] = MongoID.idStringify(args[0]);
+
+    if (self._allowBuffering) {
+      // Add the callback to the bufferedCalls
+      self._bufferedCalls.push({
+        action: callbackName,
+        args: args
+      });
+
+      if (self._bufferedCallsFlushAt === null) {
+        self._bufferedCallsFlushAt =
+          new Date().valueOf() + self._bufferedCallsMaxAge;
+      } else if (self._bufferedCallsFlushAt < new Date().valueOf()) {
+        self._flushBufferedCalls();
         return;
       }
 
-      // If we haven't finished the initial adds, then we should only be getting
-      // adds.
-      if (!self._ready() &&
-          (callbackName !== 'added' && callbackName !== 'addedBefore')) {
-        throw new Error("Got " + callbackName + " during initial adds");
+      if (self._bufferedCallsFlushHandle) {
+        clearTimeout(self._bufferedCallsFlushHandle);
       }
-  
-      args[0] = MongoID.idStringify(args[0]);
 
-      if (self._allowBatching) {
-        // Add the callback to the bufferedCalls
-        self._bufferedCalls.push({
-          action: callbackName,
-          args: args
-        });
-
-        if (self._bufferedCallsFlushAt === null) {
-          self._bufferedCallsFlushAt =
-            new Date().valueOf() + self._bufferedCallsMaxAge;
-        } else if (self._bufferedCallsFlushAt < new Date().valueOf()) {
-          self._flushBufferedCalls();
-          return;
-        }
-
-        if (self._bufferedCallsFlushHandle) {
-          clearTimeout(self._bufferedCallsFlushHandle);
-        }
-
-        self._bufferedCallsFlushHandle = setTimeout(
-          self._flushBufferedCalls.bind(self),
-          self._bufferedCallsInterval
-        );
-      }
-      else {
+      self._bufferedCallsFlushHandle = setTimeout(
+        self._flushBufferedCalls.bind(self),
+        self._bufferedCallsInterval
+      );
+    }
+    else {
+      self._queue.queueTask(function () {
         // If we stopped in the meantime, do nothing.
         if (!self._handles) {
           return;
@@ -224,8 +219,8 @@ _.extend(ObserveMultiplexer.prototype, {
           // clone arguments so that callbacks can mutate their arguments
           callback && callback.apply(null, EJSON.clone(args));
         });
-      }
-    });
+      });
+    }
   },
 
   _flushBufferedCalls: function() {
@@ -246,36 +241,38 @@ _.extend(ObserveMultiplexer.prototype, {
       
     var messages = self._bufferedCalls;
 
-    _.each(messages, (message) => {
-      // First, apply the change to the cache.
-      // XXX We could make applyChange callbacks promise not to hang on to any
-      // state from their arguments (assuming that their supplied callbacks
-      // don't) and skip this clone. Currently 'changed' hangs on to state
-      // though.
-      self._cache.applyChange[message.action].apply(null, message.args);
-    });
-
     // TODO remove this comment which shows the effect clearly
-    console.log(messages.length);
+    console.log("Messages flushed to ObserveChanges: " + messages.length);
   
     self._bufferedCalls = [];
 
-    // Now multiplex the callbacks out to all observe handles. It's OK if
-    // these calls yield; since we're inside a task, no other use of our queue
-    // can continue until these are done. (But we do have to be careful to not
-    // use a handle that got removed, because removeHandle does not use the
-    // queue; thus, we iterate over an array of keys that we control.)
-    _.each(_.keys(self._handles), function (handleId) {
-      var handle = self._handles && self._handles[handleId];
+    self._queue.queueTask(function () {
+      _.each(messages, (message) => {
+        // First, apply the change to the cache.
+        // XXX We could make applyChange callbacks promise not to hang on to any
+        // state from their arguments (assuming that their supplied callbacks
+        // don't) and skip this clone. Currently 'changed' hangs on to state
+        // though.
+        self._cache.applyChange[message.action].apply(null, message.args);
+      });
 
-      if (!handle) {
-        return;
-      }
+      // Now multiplex the callbacks out to all observe handles. It's OK if
+      // these calls yield; since we're inside a task, no other use of our queue
+      // can continue until these are done. (But we do have to be careful to not
+      // use a handle that got removed, because removeHandle does not use the
+      // queue; thus, we iterate over an array of keys that we control.)
+      _.each(_.keys(self._handles), function (handleId) {
+        var handle = self._handles && self._handles[handleId];
 
-      var callback = handle._messages;
+        if (!handle) {
+          return;
+        }
 
-      // clone arguments so that callbacks can mutate their arguments
-      callback && callback.apply(null, [EJSON.clone(messages)]);
+        var callback = handle._messages;
+
+        // clone arguments so that callbacks can mutate their arguments
+        callback && callback.apply(null, [EJSON.clone(messages)]);
+      });
     });
   },
 
@@ -312,7 +309,7 @@ ObserveHandle = function (multiplexer, callbacks) {
   // accessible to the multiplexer, though.
   self._multiplexer = multiplexer;
 
-  if (multiplexer._allowBatching) {
+  if (multiplexer._allowBuffering) {
     if (_.isFunction(callbacks)) {
       self._messages = callbacks;
   
@@ -322,7 +319,7 @@ ObserveHandle = function (multiplexer, callbacks) {
     }
     else {      
       throw new Error(
-        'Multiplexer.allowBatching requires a single callback in ObserveHandle.'
+        'Multiplexer.allowBuffering requires a single callback in ObserveHandle.'
       );
     }
   }

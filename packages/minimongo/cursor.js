@@ -311,9 +311,10 @@ export default class Cursor {
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
-    // TODO: probably refactor some stuff here to make it working as intended in all scenarios
     if (!options._suppress_initial && !this.collection.paused) {
       const results = ordered ? query.results : query.results._map;
+
+      const messages = [];
 
       Object.keys(results).forEach(key => {
         const doc = results[key];
@@ -321,12 +322,28 @@ export default class Cursor {
 
         delete fields._id;
 
-        if (ordered) {
-          query.addedBefore(doc._id, this._projectionFn(fields), null);
-        }
+        const projection = this._projectionFn(fields);
 
-        query.added(doc._id, this._projectionFn(fields));
+        if (query.messages) {
+          messages.push({
+            action: 'added',
+            args: [
+              doc._id,
+              projection
+            ]
+          });
+        } else {
+          if (ordered) {
+            query.addedBefore(doc._id, projection, null);
+          } else {
+            query.added(doc._id, projection);
+          }
+        }
       });
+
+      if (query.messages) {
+        query.messages(messages);
+      }
     }
 
     const handle = Object.assign(new LocalCollection.ObserveHandle, {

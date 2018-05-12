@@ -359,7 +359,7 @@ Object.assign(Mongo.Collection, {
   _publishCursor(cursor, sub, collectionName) {
     var observeHandle;
 
-    if (sub.allowBatching && Meteor.isServer) {
+    if (sub.allowBuffering && Meteor.isServer) {
       observeHandle = cursor.observeChanges(function(messages) {
         sub.messages(collectionName, messages);
       });

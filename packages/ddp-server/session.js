@@ -89,10 +89,10 @@ export default class Session {
     self._closeCallbacks = [];
     
     // DDP clients with version 2 and up should support batching of DDP messages
-    var allowBatching = version >= 2;
+    var allowBuffering = version >= 2;
 
     // When updates are coming within this ms interval, batch them together.
-    self._bufferedMessagesInterval = allowBatching ? options.bufferedMessagesInterval || 10 : 0;
+    self._bufferedMessagesInterval = allowBuffering ? options.bufferedMessagesInterval || 10 : 0;
     
     // Flush buffers immediately if messages are happening continuously for more than this many ms.
     self._bufferedMessagesMaxAge = options.bufferedMessagesMaxAge || 500;
@@ -602,11 +602,11 @@ export default class Session {
     });
   }
 
-  _startSubscription(handler, subId, params, name, allowBatching) {
+  _startSubscription(handler, subId, params, name, allowBuffering) {
     var self = this;
 
     var sub = new Subscription(
-      self, handler, subId, params, name, allowBatching);
+      self, handler, subId, params, name, allowBuffering);
     if (subId)
       self._namedSubs[subId] = sub;
     else
@@ -753,7 +753,7 @@ Object.assign(Session.prototype, {
 
       var handler = self.server.publish_handlers[msg.name];
 
-      self._startSubscription(handler, msg.id, msg.params, msg.name, msg.allowBatching);
+      self._startSubscription(handler, msg.id, msg.params, msg.name, msg.allowBuffering);
     },
 
     unsub: function (msg) {
