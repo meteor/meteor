@@ -367,7 +367,12 @@ class InputFile extends buildPluginModule.InputFile {
     }
 
     const batch = this._resourceSlot.packageSourceBatch;
-    const resolver = batch.getResolver();
+    const resolver = batch.getResolver({
+      // Make sure we use a server architecture when resolving, so that we
+      // don't accidentally use package.json "browser" fields.
+      // https://github.com/meteor/meteor/issues/9870
+      targetArch: archinfo.host(),
+    });
     const resolved = resolver.resolve(id, parentPath);
 
     if (resolved === "missing") {
@@ -944,7 +949,7 @@ export class PackageSourceBatch {
     }
   }
 
-  getResolver() {
+  getResolver(options = {}) {
     if (this._resolver) {
       return this._resolver;
     }
@@ -964,6 +969,7 @@ export class PackageSourceBatch {
       sourceRoot: this.sourceRoot,
       targetArch: this.processor.arch,
       extensions: this.importExtensions,
+      ...options,
       nodeModulesPaths,
     });
   }
