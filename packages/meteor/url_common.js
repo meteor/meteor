@@ -44,11 +44,22 @@ Meteor.absoluteUrl = function (path, options) {
 };
 
 // allow later packages to override default options
-Meteor.absoluteUrl.defaultOptions = { };
+var defaultOptions = Meteor.absoluteUrl.defaultOptions = {};
+
+// available only in a browser environment
+var location = typeof window === "object" && window.location;
+
 if (typeof __meteor_runtime_config__ === "object" &&
     __meteor_runtime_config__.ROOT_URL)
   Meteor.absoluteUrl.defaultOptions.rootUrl = __meteor_runtime_config__.ROOT_URL;
 
+// Make absolute URLs use HTTPS by default if the current window.location
+// uses HTTPS. Since this is just a default, it can be overridden by
+// passing { secure: false } if necessary.
+if (location &&
+    location.protocol === "https:") {
+  defaultOptions.secure = true;
+}
 
 Meteor._relativeToSiteRootUrl = function (link) {
   if (typeof __meteor_runtime_config__ === "object" &&
