@@ -147,6 +147,7 @@ _.extend(DDPServer._Crossbar.prototype, {
   },
 
   buffer: function(trigger, callback) {
+    var self = this;
     var collection = self._collectionForMessage(trigger);
     var listener = {trigger: EJSON.clone(trigger), callback: callback};
     
