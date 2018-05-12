@@ -121,11 +121,7 @@ var fetchURL = require("./common.js").fetchURL;
 
 function fetchMissing(missingTree) {
   return new Promise(function (resolve, reject) {
-    // Always match the protocol (http or https) and the domain:port of
-    // the current page.
-    var url = "//" + location.host + fetchURL;
-
-    HTTP.call("POST", url, {
+    HTTP.call("POST", Meteor.absoluteUrl(fetchURL), {
       query: secretKey ? "key=" + secretKey : void 0,
       data: missingTree
     }, function (error, result) {
