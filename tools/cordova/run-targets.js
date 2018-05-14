@@ -58,10 +58,9 @@ function openXcodeProject(projectDir) {
     return;
   }
 
-  const projectFilePath = files.pathJoin(projectDir, projectFilename);
 
   try {
-    execFileSync('open', [projectFilePath]);
+    execFileSync('open', ['-a', 'Xcode', projectDir]);
 
     Console.info();
     Console.info(

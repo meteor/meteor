@@ -115,7 +115,8 @@ var recordPackages = function (options) {
 };
 
 var logErrorIfInCheckout = function (err) {
-  if (files.inCheckout() || process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
+  if ((Console.isInteractive() && files.inCheckout())
+      || process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
     Console.warn("Failed to record package usage.");
     Console.warn(
       "(This error is hidden when you are not running Meteor from a",

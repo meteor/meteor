@@ -1,13 +1,9 @@
-var manifestUrl = '/app.manifest';
+const manifestUrl = '/app.manifest';
 
-var appcacheTest = function (name, cb) {
-  Tinytest.addAsync('appcache - ' + name, function (test, next) {
-    HTTP.get(manifestUrl, function (err, res) {
-      if (err) {
-        test.fail(err);
-      } else {
-        cb(test, res);
-      }
+const appcacheTest = (name, cb) => {
+  Tinytest.addAsync(`appcache - ${name}`, (test, next) => {
+    HTTP.get(manifestUrl, (err, res) => {
+      err ? test.fail(err) : cb(test, res);
       next();
     });
   });
@@ -15,31 +11,34 @@ var appcacheTest = function (name, cb) {
 
 
 // Verify that the code status of the HTTP response is "OK"
-appcacheTest('presence', function (test, manifest) {
-  test.equal(manifest.statusCode, 200, 'manifest not served');
-});
+appcacheTest('presence', (test, manifest) =>
+  test.equal(manifest.statusCode, 200, 'manifest not served'));
 
 
 // Verify the content-type HTTP header
-appcacheTest('content type', function (test, manifest) {
-  test.equal(manifest.headers['content-type'], 'text/cache-manifest');
-});
+appcacheTest('content type', (test, manifest) =>
+  test.equal(manifest.headers['content-type'], 'text/cache-manifest'));
 
 
 // Verify that each section header is only set once.
-appcacheTest('sections uniqueness', function (test, manifest) {
-  var content = manifest.content;
-  var mandatorySectionHeaders = ['CACHE:', 'NETWORK:', 'FALLBACK:'];
-  var optionalSectionHeaders = ['SETTINGS'];
-  _.each(_.union(mandatorySectionHeaders, optionalSectionHeaders),
-         function (sectionHeader) {
-           var globalSearch = new RegExp(sectionHeader, "g");
-           var matches = content.match(globalSearch) || [];
-           test.isTrue(matches.length <= 1, sectionHeader + ' is set twice');
-           if (_.contains(mandatorySectionHeaders, sectionHeader)) {
-             test.isTrue(matches.length == 1, sectionHeader + ' is not set');
-           }
-         });
+appcacheTest('sections uniqueness', (test, manifest) => {
+  const { content } = manifest;
+  const mandatorySectionHeaders = ['CACHE:', 'NETWORK:', 'FALLBACK:'];
+  const optionalSectionHeaders = ['SETTINGS'];
+  const allSectionHeaders = [
+    ...mandatorySectionHeaders,
+    ...optionalSectionHeaders.filter(
+      header => !mandatorySectionHeaders.includes(header)
+    ),
+  ];
+  allSectionHeaders.forEach(sectionHeader => {
+    const globalSearch = new RegExp(sectionHeader, "g");
+    const matches = content.match(globalSearch) || [];
+    test.isTrue(matches.length <= 1, `${sectionHeader} is set twice`);
+    if (mandatorySectionHeaders.includes(sectionHeader)) {
+      test.isTrue(matches.length == 1, `${sectionHeader} is not set`);
+    }
+  });
 });
 
 
@@ -47,25 +46,24 @@ appcacheTest('sections uniqueness', function (test, manifest) {
 // regular expressions. Regular expressions matches malformed URIs but that's
 // not what we're trying to catch here (the user is free to add its own content
 // in the manifest -- even malformed).
-appcacheTest('sections validity', function (test, manifest) {
-  var lines = manifest.content.split('\n');
-  var i = 0;
-  var currentRegex = null, line = null;
+appcacheTest('sections validity', (test, manifest) => {
+  const lines = manifest.content.split('\n');
+  let i = 0;
+  let currentRegex = null;
+  let line = null;
 
-  var nextLine = function () {
-    return lines[i++];
-  };
+  const nextLine = () => lines[i++];
 
-  var eof = function () {
-    return i >= lines.length;
-  };
+  const eof = () => i >= lines.length;
 
-  var nextLineMatches = function (expected, n) {
+  const nextLineMatches = (expected, n) => {
     n = n || 1;
-    _.times(n, function () {
-      var testFunc = _.isRegExp(expected) ? 'matches' : 'equal';
+    for(let j = 0; j < n; j++) {
+      const testFunc = toString.call(expected) === '[object RegExp]' ?
+        'matches' :
+        'equal';
       test[testFunc](nextLine(), expected);
-    });
+    }
   };
 
   // Verify header validity
@@ -96,7 +94,7 @@ appcacheTest('sections validity', function (test, manifest) {
 
     // Outside sections, only blanks lines and comments are valid
     else if (currentRegex === null)
-      test.fail('Invalid line ' + i + ': ' + line);
+      test.fail(`Invalid line ${i}: ${line}`);
 
     // Inside a section, a star is a valid expression
     else if (line === '*')
@@ -105,7 +103,7 @@ appcacheTest('sections validity', function (test, manifest) {
     // If it is not a blank line, not a comment, and not a header it must
     // match the current section format
     else
-      test.matches(line, currentRegex, 'line ' + i);
+      test.matches(line, currentRegex, `line ${i}`);
   }
 });
 
@@ -114,30 +112,30 @@ appcacheTest('sections validity', function (test, manifest) {
 // are present in the network section of the manifest. The `appcache` package
 // also automatically add the manifest (`app.manifest`) add the star symbol to
 // this list and therefore we also check the presence of these two elements.
-appcacheTest('network section content', function (test, manifest) {
-  var shouldBePresentInNetworkSection = [
+appcacheTest('network section content', (test, manifest) => {
+  const shouldBePresentInNetworkSection = [
     "/app.manifest",
     "/online/",
     "/bigimage.jpg",
     "/largedata.json",
     "*"
   ];
-  var lines = manifest.content.split('\n');
-  var startNetworkSection = lines.indexOf('NETWORK:');
+  const lines = manifest.content.split('\n');
+  const startNetworkSection = lines.indexOf('NETWORK:');
 
   // We search the end of the 'NETWORK:' section by looking at the beginning
   // of any potential other section. By default we set this value to
   // `lines.length - 1` which is the index of the last line.
-  var otherSections = ['CACHE:', 'FALLBACK:', 'SETTINGS'];
-  var endNetworkSection = _.reduce(otherSections, function (min, sectionName) {
-    var position = lines.indexOf(sectionName);
+  const otherSections = ['CACHE:', 'FALLBACK:', 'SETTINGS'];
+  const endNetworkSection = otherSections.reduce((min, sectionName) => {
+    const position = lines.indexOf(sectionName);
     return position > startNetworkSection && position < min ? position : min;
   }, lines.length - 1);
 
   // We remove the first line because it's the 'NETWORK:' header line.
-  var networkLines = lines.slice(startNetworkSection + 1, endNetworkSection);
+  const networkLines = lines.slice(startNetworkSection + 1, endNetworkSection);
 
-  _.each(shouldBePresentInNetworkSection, function (item) {
-    test.include(networkLines, item);
-  });
+  shouldBePresentInNetworkSection.forEach(
+    item => test.include(networkLines, item)
+  );
 });

@@ -29,7 +29,7 @@ MongoInternals.NpmModule = MongoDB;
 // This is used to add or remove EJSON from the beginning of everything nested
 // inside an EJSON custom type. It should only be called on pure JSON!
 var replaceNames = function (filter, thing) {
-  if (typeof thing === "object") {
+  if (typeof thing === "object" && thing !== null) {
     if (_.isArray(thing)) {
       return _.map(thing, _.bind(replaceNames, null, filter));
     }
@@ -855,7 +855,7 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'fetch', 'count'], function (method) {
+_.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) {
   Cursor.prototype[method] = function () {
     var self = this;
 
@@ -1105,6 +1105,24 @@ _.extend(SynchronousCursor.prototype, {
     }
   }
 });
+
+SynchronousCursor.prototype[Symbol.iterator] = function () {
+  var self = this;
+
+  // Get back to the beginning.
+  self._rewind();
+
+  return {
+    next() {
+      const doc = self._nextObject();
+      return doc ? {
+        value: doc
+      } : {
+        done: true
+      };
+    }
+  };
+};
 
 MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
   var self = this;

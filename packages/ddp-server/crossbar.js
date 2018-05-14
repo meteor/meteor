@@ -51,15 +51,15 @@ _.extend(DDPServer._Crossbar.prototype, {
     }
     self.listenersByCollection[collection][id] = record;
 
-    if (self.factName && Package.facts) {
-      Package.facts.Facts.incrementServerFact(
+    if (self.factName && Package['facts-base']) {
+      Package['facts-base'].Facts.incrementServerFact(
         self.factPackage, self.factName, 1);
     }
 
     return {
       stop: function () {
-        if (self.factName && Package.facts) {
-          Package.facts.Facts.incrementServerFact(
+        if (self.factName && Package['facts-base']) {
+          Package['facts-base'].Facts.incrementServerFact(
             self.factPackage, self.factName, -1);
         }
         delete self.listenersByCollection[collection][id];

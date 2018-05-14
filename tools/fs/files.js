@@ -297,6 +297,15 @@ function statOrNull(path, preserveSymlinks) {
   }
 }
 
+export function realpathOrNull(path) {
+  try {
+    return files.realpath(path);
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+    return null;
+  }
+}
+
 files.rm_recursive_async = (path) => {
   return new Promise((resolve, reject) => {
     rimraf(files.convertToOSPath(path), err => err
@@ -495,7 +504,7 @@ files.cp_r = function(from, to, options = {}) {
   files.mkdir_p(files.pathDirname(to));
 
   if (stat.isSymbolicLink()) {
-    files.symlink(files.readlink(from), to);
+    symlinkWithOverwrite(files.readlink(from), to);
 
   } else {
     // Create the file as readable and writable by everyone, and
@@ -516,6 +525,28 @@ files.cp_r = function(from, to, options = {}) {
     }
   }
 };
+
+// create a symlink, overwriting the target link, file, or directory
+// if it exists
+export function symlinkWithOverwrite(source, target) {
+  try {
+    files.symlink(source, target);
+  } catch (e) {
+    if (e.code === "EEXIST") {
+      // overwrite existing link, file, or directory
+      files.rm_recursive(target);
+      files.symlink(source, target);
+    } else if (e.code === "EPERM" &&
+               process.platform === "win32") {
+      files.rm_recursive(target);
+      // This will work only if source refers to a directory, but that's a
+      // chance worth taking.
+      files.symlink(source, target, "junction");
+    } else {
+      throw e;
+    }
+  }
+}
 
 /**
  * Get every path in a directory recursively, treating symlinks as files
@@ -1003,7 +1034,9 @@ files.renameDirAlmostAtomically =
     // limitations, we'll resort to copying.
     if (forceCopy) {
       files.rm_recursive(toDir);
-      files.cp_r(fromDir, toDir);
+      files.cp_r(fromDir, toDir, {
+        preserveSymlinks: true,
+      });
     }
 
     // ... and take out the trash.
@@ -1750,7 +1783,7 @@ if (files.isWindowsLikeFilesystem()) {
     }
 
     if (! success) {
-      files.cp_r(from, to);
+      files.cp_r(from, to, { preserveSymlinks: true });
       files.rm_recursive(from);
     }
   };

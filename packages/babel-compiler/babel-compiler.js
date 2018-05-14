@@ -95,8 +95,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ? "packages/" + packageName + "/" + inputFilePath
       : inputFilePath;
 
-    babelOptions.sourceMapTarget = babelOptions.filename + ".map";
-
     try {
       var result = profile('Babel.compile', function () {
         return Babel.compile(source, babelOptions, cacheDeps);
@@ -130,6 +128,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     toBeAdded.data = result.code;
     toBeAdded.hash = result.hash;
+
+    // The babelOptions.sourceMapTarget option was deprecated in Babel
+    // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
+    result.map.file = babelOptions.filename + ".map";
+
     toBeAdded.sourceMap = result.map;
   }
 
@@ -389,6 +392,17 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
     });
 
     if (found) {
+      if (presetOrPluginMeta.name === "babel-preset-meteor") {
+        // Since Meteor always includes babel-preset-meteor automatically,
+        // it's likely a mistake for that preset to appear in a custom
+        // .babelrc file. Previously we recommended that developers simply
+        // remove the preset (e.g. #9631), but we can easily just ignore
+        // it by returning null here, which seems like a better solution
+        // since it allows the same .babelrc file to be used for other
+        // purposes, such as running tests with a testing tool that needs
+        // to compile application code the same way Meteor does.
+        return null;
+      }
       presetOrPlugin = inputFile.require(presetOrPluginId);
     }
 

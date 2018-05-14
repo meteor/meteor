@@ -318,7 +318,7 @@ var Session = function (server, version, socket, options) {
     self.heartbeat.start();
   }
 
-  Package.facts && Package.facts.Facts.incrementServerFact(
+  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "livedata", "sessions", 1);
 };
 
@@ -440,7 +440,7 @@ _.extend(Session.prototype, {
       self.socket._meteorSession = null;
     }
 
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "livedata", "sessions", -1);
 
     Meteor.defer(function () {
@@ -1023,7 +1023,7 @@ var Subscription = function (
     idParse: MongoID.idParse
   };
 
-  Package.facts && Package.facts.Facts.incrementServerFact(
+  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "livedata", "subscriptions", 1);
 };
 
@@ -1142,7 +1142,7 @@ _.extend(Subscription.prototype, {
       return;
     self._deactivated = true;
     self._callStopCallbacks();
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "livedata", "subscriptions", -1);
   },
 
@@ -1399,8 +1399,7 @@ Server = function (options) {
         socket._meteorSession.processMessage(msg);
       } catch (e) {
         // XXX print stack nicely
-        Meteor._debug("Internal exception while processing message", msg,
-                      e.message, e.stack);
+        Meteor._debug("Internal exception while processing message", msg, e);
       }
     });
 
@@ -1732,12 +1731,12 @@ var wrapInternalException = function (exception, context) {
     return exception;
   }
 
-  // Tests can set the '_expectedByTest' flag on an exception so it won't go to 
+  // Tests can set the '_expectedByTest' flag on an exception so it won't go to
   // the server log.
   if (!exception._expectedByTest) {
-    Meteor._debug("Exception " + context, exception.stack);
+    Meteor._debug("Exception " + context, exception);
     if (exception.sanitizedError) {
-      Meteor._debug("Sanitized and reported to the client as:", exception.sanitizedError.message);
+      Meteor._debug("Sanitized and reported to the client as:", exception.sanitizedError);
       Meteor._debug();
     }
   }

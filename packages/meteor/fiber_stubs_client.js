@@ -47,7 +47,7 @@ SQp.runTask = function (task) {
           // for.
           throw e;
         }
-        Meteor._debug("Exception in queued task: " + (e.stack || e));
+        Meteor._debug("Exception in queued task", e);
       }
     }
   } finally {

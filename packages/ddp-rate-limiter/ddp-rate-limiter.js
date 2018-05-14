@@ -1,19 +1,23 @@
+import { RateLimiter } from 'meteor/rate-limit';
+
 // Rate Limiter built into DDP with a default error message. See README or
 // online documentation for more details.
-DDPRateLimiter = {};
+const DDPRateLimiter = {};
 
-var errorMessage = function (rateLimitResult) {
-  return "Error, too many requests. Please slow down. You must wait " +
-    Math.ceil(rateLimitResult.timeToReset / 1000) + " seconds before " +
-    "trying again.";
+let errorMessage = (rateLimitResult) => {
+  return 'Error, too many requests. Please slow down. You must wait ' +
+    `${Math.ceil(rateLimitResult.timeToReset / 1000)} seconds before ` +
+    'trying again.';
 };
-var rateLimiter = new RateLimiter();
 
-DDPRateLimiter.getErrorMessage = function (rateLimitResult) {
-  if (typeof errorMessage === 'function')
+const rateLimiter = new RateLimiter();
+
+DDPRateLimiter.getErrorMessage = (rateLimitResult) => {
+  if (typeof errorMessage === 'function') {
     return errorMessage(rateLimitResult);
-  else
+  } else {
     return errorMessage;
+  }
 };
 
 /**
@@ -25,7 +29,7 @@ DDPRateLimiter.getErrorMessage = function (rateLimitResult) {
  * of the error message.
  * @locus Server
  */
-DDPRateLimiter.setErrorMessage = function (message) {
+DDPRateLimiter.setErrorMessage = (message) => {
   errorMessage = message;
 };
 
@@ -67,13 +71,10 @@ DDPRateLimiter.setErrorMessage = function (message) {
  * @param {function} callback function to be called after a rule is executed.
  * @locus Server
  */
-DDPRateLimiter.addRule = function (matcher, numRequests, timeInterval, callback) {
-  return rateLimiter.addRule(matcher, numRequests, timeInterval, callback);
-};
+DDPRateLimiter.addRule = (matcher, numRequests, timeInterval, callback) => 
+  rateLimiter.addRule(matcher, numRequests, timeInterval, callback);
 
-DDPRateLimiter.printRules = function () {
-  return rateLimiter.rules;
-};
+DDPRateLimiter.printRules = () => rateLimiter.rules;
 
 /**
  * @summary Removes the specified rule from the rate limiter. If rule had
@@ -82,16 +83,14 @@ DDPRateLimiter.printRules = function () {
  * @return {boolean}    True if a rule was removed.
  * @locus Server
  */
-DDPRateLimiter.removeRule = function (id) {
-  return rateLimiter.removeRule(id);
-};
+DDPRateLimiter.removeRule = id => rateLimiter.removeRule(id);
 
 // This is accessed inside livedata_server.js, but shouldn't be called by any
 // user.
-DDPRateLimiter._increment = function (input) {
+DDPRateLimiter._increment = (input) => {
   rateLimiter.increment(input);
 };
 
-DDPRateLimiter._check = function (input) {
-  return rateLimiter.check(input);
-};
+DDPRateLimiter._check = input => rateLimiter.check(input);
+
+export { DDPRateLimiter };

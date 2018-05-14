@@ -204,6 +204,8 @@ const middleware = (req, res, next) => {
   }
 };
 
+WebApp.connectHandlers.use(middleware);
+
 OAuthTest.middleware = middleware;
 
 // Handle /_oauth/* paths and extract the service name.
