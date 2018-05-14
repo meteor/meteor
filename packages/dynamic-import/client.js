@@ -118,12 +118,18 @@ exports.setSecretKey = function (key) {
 };
 
 var fetchURL = require("./common.js").fetchURL;
+var location = typeof window === "object" && window.location;
 
 function fetchMissing(missingTree) {
   return new Promise(function (resolve, reject) {
-    // Always match the protocol (http or https) and the domain:port of
-    // the current page.
-    var url = "//" + location.host + fetchURL;
+    // In browsers, use "//" + location.host to match the protocol and
+    // origin of the current page. On the server (where window.location is
+    // not defined), use Meteor.absoluteUrl. In practice, dynamic modules
+    // used on the server are typically just included in the initial JS
+    // bundle, so the Meteor.absoluteUrl branch of this code is uncommon.
+    var url = location
+      ? "//" + location.host + fetchURL
+      : Meteor.absoluteUrl(fetchURL);
 
     HTTP.call("POST", url, {
       query: secretKey ? "key=" + secretKey : void 0,
