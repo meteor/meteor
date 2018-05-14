@@ -529,8 +529,18 @@ files.cp_r = function(from, to, options = {}) {
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
 export function symlinkWithOverwrite(source, target) {
+  const args = [source, target];
+
+  if (process.platform === "win32") {
+    const absoluteSource = files.pathResolve(target, source);
+
+    if (files.stat(absoluteSource).isDirectory()) {
+      args[2] = "junction";
+    }
+  }
+
   try {
-    files.symlink(source, target);
+    files.symlink(...args);
   } catch (e) {
     if (e.code === "EEXIST") {
       if (files.readlink(target) === source) {
@@ -540,13 +550,7 @@ export function symlinkWithOverwrite(source, target) {
       }
       // overwrite existing link, file, or directory
       files.rm_recursive(target);
-      files.symlink(source, target);
-    } else if (e.code === "EPERM" &&
-               process.platform === "win32") {
-      files.rm_recursive(target);
-      // This will work only if source refers to a directory, but that's a
-      // chance worth taking.
-      files.symlink(source, target, "junction");
+      files.symlink(...args);
     } else {
       throw e;
     }
