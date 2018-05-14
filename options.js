@@ -127,7 +127,10 @@ function finish(presets) {
     compact: false,
     sourceMap: false,
     ast: false,
+    // Disable .babelrc lookup and processing.
     babelrc: false,
+    // Disable babel.config.js lookup and processing.
+    configFile: false,
     presets: presets
   };
 }
