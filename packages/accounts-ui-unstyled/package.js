@@ -11,7 +11,6 @@ Package.onUse(function (api) {
     'ecmascript',
     'templating@1.2.13',
     'session',
-    'jquery',
   ], 'client');
 
   // Export Accounts (etc) to packages using this one.

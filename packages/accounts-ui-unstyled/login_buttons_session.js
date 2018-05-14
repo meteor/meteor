@@ -55,26 +55,26 @@ const closeDropdown = () => {
   set('inMessageOnlyFlow', false);
   set('dropdownVisible', false);
   resetMessages();
-}
+};
 
 const infoMessage = message => {
   _set("errorMessage", null);
   _set("infoMessage", message);
   ensureMessageVisible();
-}
+};
 
 const errorMessage = message => {
   _set("errorMessage", message);
   _set("infoMessage", null);
   ensureMessageVisible();
-}
+};
 
 // is there a visible dialog that shows messages (info and error)
 const isMessageDialogVisible = () => {
   return get('resetPasswordToken') ||
     get('enrollAccountToken') ||
     get('justVerifiedEmail');
-}
+};
 
 // ensure that somethings displaying a message (info or error) is
 // visible. If a dialog with messages is open, do nothing;
@@ -87,12 +87,12 @@ const isMessageDialogVisible = () => {
 const ensureMessageVisible = () => {
   if (!isMessageDialogVisible())
     set("dropdownVisible", true);
-}
+};
 
 const resetMessages = () => {
   _set("errorMessage", null);
   _set("infoMessage", null);
-}
+};
 
 const configureService = name => {
   if (Meteor.isCordova) {
@@ -102,7 +102,7 @@ const configureService = name => {
     set('configureLoginServiceDialogServiceName', name);
     set('configureLoginServiceDialogSaveDisabled', true);
   }
-}
+};
 
 Accounts._loginButtonsSession = {
   set,
