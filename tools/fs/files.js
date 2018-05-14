@@ -543,7 +543,8 @@ export function symlinkWithOverwrite(source, target) {
     files.symlink(...args);
   } catch (e) {
     if (e.code === "EEXIST") {
-      if (files.readlink(target) === source) {
+      if (files.lstat(target).isSymbolicLink() &&
+          files.readlink(target) === source) {
         // If the target already points to the desired source, we don't
         // need to do anything.
         return;
