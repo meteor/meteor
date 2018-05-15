@@ -586,10 +586,6 @@ class Console extends ConsoleBase {
     });
   }
 
-  isInteractive() {
-    return !this._headless;
-  }
-
   setPretty(pretty) {
     // If we're being forced, do nothing.
     if (FORCE_PRETTY !== undefined) {
@@ -1207,12 +1203,16 @@ class Console extends ConsoleBase {
     this._setProgressDisplay(newProgressDisplay);
   }
 
+  isPseudoTTY() {
+    return this._stream && this._stream.isTTY && ! this._stream.columns;
+  }
+
   isHeadless() {
     return this._headless;
   }
 
-  isPseudoTTY() {
-    return this._stream && this._stream.isTTY && ! this._stream.columns;
+  isInteractive() {
+    return ! this._headless;
   }
 
   setHeadless(headless = true) {

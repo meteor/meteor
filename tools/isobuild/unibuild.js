@@ -255,10 +255,8 @@ export class Unibuild {
       const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
       // We already have this npm directory from another unibuild.
         ? npmDirsToCopy[nmd.sourcePath]
-        : npmDirsToCopy[nmd.sourcePath] = builder.generateFilename(
-          nmd.getPreferredBundlePath("isopack"),
-          { directory: true }
-        );
+        : npmDirsToCopy[nmd.sourcePath] =
+            nmd.getPreferredBundlePath("isopack");
       node_modules[bundlePath] = nmd.toJSON();
     });
 

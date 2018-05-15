@@ -75,7 +75,7 @@ PollingObserveDriver = function (options) {
   // Make sure we actually poll soon!
   self._unthrottledEnsurePollIsScheduled();
 
-  Package.facts && Package.facts.Facts.incrementServerFact(
+  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-polling", 1);
 };
 
@@ -173,7 +173,7 @@ _.extend(PollingObserveDriver.prototype, {
       // "cancel" the observe from the inside in this case.
       Array.prototype.push.apply(self._pendingWrites, writesForCycle);
       Meteor._debug("Exception while polling query " +
-                    JSON.stringify(self._cursorDescription) + ": " + e.stack);
+                    JSON.stringify(self._cursorDescription), e);
       return;
     }
 
@@ -213,7 +213,7 @@ _.extend(PollingObserveDriver.prototype, {
     _.each(self._pendingWrites, function (w) {
       w.committed();
     });
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);
   }
 });

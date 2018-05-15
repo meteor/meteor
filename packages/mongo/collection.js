@@ -305,7 +305,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @summary Find the documents in a collection that match the selector.
    * @locus Anywhere
    * @method find
-   * @memberOf Mongo.Collection
+   * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
@@ -336,7 +336,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
    * @locus Anywhere
    * @method findOne
-   * @memberOf Mongo.Collection
+   * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
@@ -441,7 +441,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @summary Insert a document in the collection.  Returns its unique _id.
    * @locus Anywhere
    * @method  insert
-   * @memberOf Mongo.Collection
+   * @memberof Mongo.Collection
    * @instance
    * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
@@ -527,7 +527,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @summary Modify one or more documents in the collection. Returns the number of matched documents.
    * @locus Anywhere
    * @method update
-   * @memberOf Mongo.Collection
+   * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} selector Specifies which documents to modify
    * @param {MongoModifier} modifier Specifies how to modify the documents
@@ -592,7 +592,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @summary Remove documents from the collection
    * @locus Anywhere
    * @method remove
-   * @memberOf Mongo.Collection
+   * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} selector Specifies which documents to remove
    * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
@@ -632,6 +632,9 @@ Object.assign(Mongo.Collection.prototype, {
   /**
    * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
    * @locus Anywhere
+   * @method upsert
+   * @memberof Mongo.Collection
+   * @instance
    * @param {MongoSelector} selector Specifies which documents to modify
    * @param {MongoModifier} modifier Specifies how to modify the documents
    * @param {Object} [options]

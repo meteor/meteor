@@ -766,13 +766,13 @@ _.extend(PackageSource.prototype, {
         implies: api.implies[arch],
         getFiles(sourceProcessorSet, watchSet) {
           const result = api.files[arch];
-          const relPathToSourceObj = {};
+          const relPathToSourceObj = Object.create(null);
           const sources = result.sources;
 
           // Files explicitly passed to api.addFiles remain at the
           // beginning of api.files[arch].sources in their given order.
-          sources.forEach(sourceObj => {
-            relPathToSourceObj[sourceObj.relPath] = sourceObj;
+          sources.forEach(source => {
+            relPathToSourceObj[source.relPath] = source;
           });
 
           self._findSources({
@@ -781,11 +781,21 @@ _.extend(PackageSource.prototype, {
             sourceArch: this,
             isApp: false
           }).forEach(relPath => {
-            if (! _.has(relPathToSourceObj, relPath)) {
-              const fileOptions = self._inferFileOptions(relPath, {
-                arch,
-                isApp: false,
-              });
+            const source = relPathToSourceObj[relPath];
+
+            if (source) {
+              const fileOptions = source.fileOptions ||
+                (source.fileOptions = Object.create(null));
+
+              // Since this file was explicitly added with api.addFiles or
+              // api.mainModule, it should be loaded eagerly unless the
+              // caller specified a boolean fileOptions.lazy value.
+              if (typeof fileOptions.lazy !== "boolean") {
+                fileOptions.lazy = false;
+              }
+
+            } else {
+              const fileOptions = Object.create(null);
 
               // Since this file was not explicitly added with
               // api.addFiles, it should not be evaluated eagerly.
@@ -837,7 +847,15 @@ _.extend(PackageSource.prototype, {
                   constraint: constraint.constraintString });
     });
 
-    var projectWatchSet = projectContext.getProjectWatchSet();
+    const projectWatchSet = projectContext.getProjectWatchSet();
+
+    const mainModulesByArch =
+      projectContext.meteorConfig.getMainModulesByArch();
+
+    const testModulesByArch =
+      projectContext.meteorConfig.getTestModulesByArch();
+
+    projectWatchSet.merge(projectContext.meteorConfig.watchSet);
 
     _.each(compiler.ALL_ARCHES, function (arch) {
       // We don't need to build a Cordova SourceArch if there are no Cordova
@@ -846,6 +864,12 @@ _.extend(PackageSource.prototype, {
           _.isEmpty(projectContext.platformList.getCordovaPlatforms())) {
         return;
       }
+
+      const mainModule = projectContext.meteorConfig
+        .getMainModuleForArch(arch, mainModulesByArch);
+
+      const testModule = projectContext.meteorConfig
+        .getTestModuleForArch(arch, testModulesByArch);
 
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
@@ -865,23 +889,44 @@ _.extend(PackageSource.prototype, {
             sourceArch: this,
             ignoreFiles,
             isApp: true,
-            loopChecker: new SymlinkLoopChecker(self.sourceRoot)
           };
 
-          return {
-            sources: self._findSources(findOptions).sort(
-              loadOrderSort(sourceProcessorSet, arch)
-            ).map(relPath => {
-              return {
-                relPath,
-                fileOptions: self._inferFileOptions(relPath, {
-                  arch,
-                  isApp: true,
-                }),
-              };
-            }),
+          // If this architecture has a mainModule defined in
+          // package.json, it's an error if _findSources doesn't find that
+          // module. If no mainModule is defined, anything goes.
+          let missingMainModule = !! mainModule;
 
-            assets: self._findAssets(findOptions),
+          const sources = self._findSources(findOptions).sort(
+            loadOrderSort(sourceProcessorSet, arch)
+          ).map(relPath => {
+            if (relPath === mainModule) {
+              missingMainModule = false;
+            }
+
+            const fileOptions = self._inferAppFileOptions(relPath, {
+              arch,
+              mainModule,
+              testModule,
+            });
+
+            return {
+              relPath,
+              fileOptions,
+            };
+          });
+
+          if (missingMainModule) {
+            buildmessage.error([
+              "Could not find mainModule for '" + arch + "' architecture: " + mainModule,
+              'Check the "meteor" section of your package.json file?'
+            ].join("\n"));
+          }
+
+          const assets = self._findAssets(findOptions);
+
+          return {
+            sources,
+            assets,
           };
         }
       });
@@ -920,18 +965,50 @@ _.extend(PackageSource.prototype, {
     }
   }),
 
-  _inferFileOptions(relPath, {arch, isApp}) {
-    const fileOptions = {};
-    const isTest = global.testCommandMetadata
-      && global.testCommandMetadata.isTest;
-    const isAppTest = global.testCommandMetadata
-      && global.testCommandMetadata.isAppTest;
-    const isTestFile = (isTest || isAppTest) && isTestFilePath(relPath);
+  _inferAppFileOptions(relPath, {
+    arch,
+    mainModule,
+    testModule,
+  }) {
+    const fileOptions = Object.create(null);
+    const {
+      isTest = false,
+      isAppTest = false,
+    } = global.testCommandMetadata || {};
+
+    let isTestFile = false;
+    if (isTest || isAppTest) {
+      if (typeof testModule === "undefined") {
+        // If a testModule was not configured in the "meteor" section of
+        // package.json for this architecture, then isTestFilePath should
+        // determine whether this file loads eagerly.
+        isTestFile = isTestFilePath(relPath);
+      } else if (relPath === testModule) {
+        // If testModule is a string === relPath, then it is the entry
+        // point for tests, and should be loaded eagerly.
+        isTestFile = true;
+        fileOptions.lazy = false;
+        fileOptions.testModule = true;
+      } else {
+        // If testModule was defined but !== relPath, this file should not
+        // be loaded eagerly during tests. Setting fileOptions.testModule
+        // to false indicates that a testModule was configured, but this
+        // was not it. ResourceSlot#_isLazy (in compiler-plugin.js) will
+        // use this information (together with fileOptions.mainModule) to
+        // make the final call as to whether this file should be loaded
+        // eagerly or lazily.
+        isTestFile = false;
+        fileOptions.testModule = false;
+      }
+    }
 
     // If running in test mode (`meteor test`), all files other than
     // test files should be loaded lazily.
-    if (isTest && !isTestFile) {
+    if (isTest && ! isTestFile) {
       fileOptions.lazy = true;
+      // Ignore any meteor.mainModule that was specified, since we're
+      // running `meteor test` without the --full-app option.
+      mainModule = void 0;
     }
 
     const dirs = files.pathDirname(relPath).split(files.pathSep);
@@ -949,7 +1026,7 @@ _.extend(PackageSource.prototype, {
       }
 
       // Files in `imports/` should be lazily loaded *apart* from tests
-      if (isApp && dir === "imports" && !isTestFile) {
+      if (dir === "imports" && ! isTestFile) {
         fileOptions.lazy = true;
       }
 
@@ -968,10 +1045,26 @@ _.extend(PackageSource.prototype, {
       if (i > 0 &&
           dirs[i - 1] === "client" &&
           dir === "compatibility" &&
-          isApp && // Skip this check for packages.
           archinfo.matches(arch, "web") &&
           relPath.endsWith(".js")) {
         fileOptions.bare = true;
+      }
+    }
+
+    if (typeof mainModule !== "undefined") {
+      // Note: if mainModule === false, no JavaScript modules will be
+      // loaded eagerly unless explicitly added with !fileOptions.lazy by
+      // a compiler plugin. This can be useful for building an app that
+      // does not run any application JS on the client (or the server). Of
+      // course, Meteor packages may still run JS on startup, but they
+      // have their own rules for lazy/eager loading of modules.
+      if (relPath === mainModule) {
+        fileOptions.lazy = false;
+        fileOptions.mainModule = true;
+      } else {
+        // Used in ResourceSlot#_isLazy (in compiler-plugin.js) to make a
+        // final determination of whether the file should be lazy.
+        fileOptions.mainModule = false;
       }
     }
 
@@ -982,7 +1075,7 @@ _.extend(PackageSource.prototype, {
   // complete list of source files for directories within node_modules.
   _findSourcesCache: Object.create(null),
 
-  _findSources({
+  _findSources: Profile("PackageSource#_findSources", function ({
     sourceProcessorSet,
     watchSet,
     isApp,
@@ -1067,6 +1160,34 @@ _.extend(PackageSource.prototype, {
 
     const dotMeteorIgnoreFiles = Object.create(null);
 
+    function removeIgnoredFilesFrom(array) {
+      Object.keys(dotMeteorIgnoreFiles).forEach(ignoreDir => {
+        const ignore = dotMeteorIgnoreFiles[ignoreDir];
+        let target = 0;
+
+        array.forEach(item => {
+          let relPath = files.pathRelative(ignoreDir, item);
+
+          if (! relPath.startsWith("..")) {
+            if (item.endsWith("/")) {
+              // The trailing slash is discarded by files.pathRelative.
+              relPath += "/";
+            }
+
+            if (ignore.ignores(relPath)) {
+              return;
+            }
+          }
+
+          array[target++] = item;
+        });
+
+        array.length = target;
+      });
+
+      return array;
+    }
+
     function find(dir, depth, inNodeModules) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
@@ -1108,35 +1229,8 @@ _.extend(PackageSource.prototype, {
           : topLevelExcludes
       });
 
-      Object.keys(dotMeteorIgnoreFiles).forEach(ignoreDir => {
-        const ignore = dotMeteorIgnoreFiles[ignoreDir];
-
-        function removeIgnoredFilesFrom(array) {
-          let target = 0;
-
-          array.forEach(item => {
-            let relPath = files.pathRelative(ignoreDir, item);
-
-            if (! relPath.startsWith("..")) {
-              if (item.endsWith("/")) {
-                // The trailing slash is discarded by files.pathRelative.
-                relPath += "/";
-              }
-
-              if (ignore.ignores(relPath)) {
-                return;
-              }
-            }
-
-            array[target++] = item;
-          });
-
-          array.length = target;
-        }
-
-        removeIgnoredFilesFrom(sources);
-        removeIgnoredFilesFrom(subdirectories);
-      });
+      removeIgnoredFilesFrom(sources);
+      removeIgnoredFilesFrom(subdirectories);
 
       let nodeModulesDir;
 
@@ -1158,9 +1252,6 @@ _.extend(PackageSource.prototype, {
         }
       });
 
-      // Don't apply any .meteorignore rules to files inside node_modules.
-      delete dotMeteorIgnoreFiles[dir];
-
       if (isApp &&
           nodeModulesDir &&
           (! inNodeModules || sources.length > 0)) {
@@ -1174,6 +1265,8 @@ _.extend(PackageSource.prototype, {
         sources.push(...find(nodeModulesDir, depth + 1, true));
       }
 
+      delete dotMeteorIgnoreFiles[dir];
+
       if (cacheKey) {
         self._findSourcesCache[cacheKey] = sources;
       }
@@ -1182,7 +1275,7 @@ _.extend(PackageSource.prototype, {
     }
 
     return files.withCache(() => find("", 0, false));
-  },
+  }),
 
   _findAssets({
     sourceProcessorSet,

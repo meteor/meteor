@@ -1,11 +1,18 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.4.1",
+  version: "1.4.1"
 });
 
-Package.onUse(api => {
-  api.use(['tracker', 'service-configuration', 'accounts-base', 
-           'ecmascript', 'templating@1.2.13', 'session', 'jquery'], 'client');
+Package.onUse(function (api) {
+  api.use([
+    'tracker',
+    'service-configuration',
+    'accounts-base',
+    'ecmascript',
+    'templating@1.2.13',
+    'session',
+  ], 'client');
+
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
 

@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('coffeescript@2.0.3_4', ['client', 'server']);
+  api.use('coffeescript@2.2.1_1', ['client', 'server']);
   api.export('COFFEESCRIPT_EXPORTED');
   api.export('COFFEESCRIPT_EXPORTED_ONE_MORE');
   api.export('COFFEESCRIPT_EXPORTED_WITH_BACKTICKS');

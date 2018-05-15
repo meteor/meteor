@@ -75,7 +75,7 @@ Template._resetPasswordDialog.helpers({
 //
 
 Template._justResetPasswordDialog.events({
-  'click #just-verified-dismiss-button': () => 
+  'click #just-verified-dismiss-button': () =>
     loginButtonsSession.set('justResetPassword', false),
 });
 
@@ -133,7 +133,7 @@ Template._enrollAccountDialog.helpers({
 //
 
 Template._justVerifiedEmailDialog.events({
-  'click #just-verified-dismiss-button': () => 
+  'click #just-verified-dismiss-button': () =>
     loginButtonsSession.set('justVerifiedEmail', false),
 });
 
@@ -148,7 +148,7 @@ Template._justVerifiedEmailDialog.helpers({
 //
 
 Template._loginButtonsMessagesDialog.events({
-  'click #messages-dialog-dismiss-button': () => 
+  'click #messages-dialog-dismiss-button': () =>
     loginButtonsSession.resetMessages(),
 });
 
@@ -192,8 +192,7 @@ Template._configureLoginServiceDialog.events({
       );
 
       configuration.loginStyle =
-        $('#configure-login-service-dialog input[name="loginStyle"]:checked')
-        .val();
+        document.querySelector('#configure-login-service-dialog input[name="loginStyle"]:checked').value;
 
       // Configure this login service
       Accounts.connection.call(
@@ -253,7 +252,7 @@ Template._configureLoginServiceDialog.helpers({
   configurationFields,
   visible: () => loginButtonsSession.get('configureLoginServiceDialogVisible'),
   // renders the appropriate template
-  configurationSteps: () => 
+  configurationSteps: () =>
     Template._configureLoginServiceDialog.templateForService(),
   saveDisabled: () =>
     loginButtonsSession.get('configureLoginServiceDialogSaveDisabled'),

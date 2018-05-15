@@ -8,13 +8,14 @@ Package.describe({
   git: '',
   // By default, Meteor will default to using README.md for documentation.
   // To avoid submitting documentation, set this field to null.
-  documentation: 'README.md'
+  documentation: 'README.md',
 });
 
 Package.onUse(function(api) {
   api.use('rate-limit', 'server');
+  api.use('ecmascript');
   api.export('DDPRateLimiter', 'server');
-  api.addFiles('ddp-rate-limiter.js', 'server');
+  api.mainModule('ddp-rate-limiter.js', 'server');
 });
 
 Package.onTest(function(api) {
@@ -24,7 +25,6 @@ Package.onTest(function(api) {
            'ddp', 'ecmascript', 'es5-shim']);
   api.use('ddp-rate-limiter');
 
-  api.addFiles('ddp-rate-limiter-tests-common.js');
-  api.addFiles('ddp-rate-limiter-test-service.js', 'server');
-  api.addFiles('ddp-rate-limiter-tests.js', 'client');
+  api.mainModule('ddp-rate-limiter-test-service.js', 'server');
+  api.mainModule('ddp-rate-limiter-tests.js', 'client');
 });

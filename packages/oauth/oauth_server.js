@@ -79,7 +79,7 @@ OAuth._stateFromQuery = query => {
   }
 };
 
-OAuth._loginStyleFromQuery = quer => {
+OAuth._loginStyleFromQuery = query => {
   let style;
   // For backwards-compatibility for older clients, catch any errors
   // that result from parsing the state parameter. If we can't parse it,
@@ -203,6 +203,8 @@ const middleware = (req, res, next) => {
     }
   }
 };
+
+WebApp.connectHandlers.use(middleware);
 
 OAuthTest.middleware = middleware;
 

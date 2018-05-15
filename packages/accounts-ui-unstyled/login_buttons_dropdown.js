@@ -147,7 +147,7 @@ const changePassword = () => {
 
   if (!matchPasswordAgainIfPresent())
     return;
-  
+
   Accounts.changePassword(oldPassword, password, error => {
     if (error) {
       loginButtonsSession.errorMessage(error.reason || "Unknown error");
@@ -185,12 +185,12 @@ const isInPasswordSignupFields = (fieldOrFields) => {
   }
 
   return signupFields.includes(fieldOrFields);
-}
+};
 
 // events shared between loginButtonsLoggedOutDropdown and
 // loginButtonsLoggedInDropdown
 Template.loginButtons.events({
-  'click #login-name-link, click #login-sign-in-link': () => 
+  'click #login-name-link, click #login-sign-in-link': () =>
     loginButtonsSession.set('dropdownVisible', true),
   'click .login-close-text': loginButtonsSession.closeDropdown,
 });
@@ -377,7 +377,7 @@ Template._loginButtonsLoggedOutPasswordService.helpers({
     const loginFields = [
       {fieldName: 'username-or-email', fieldLabel: 'Username or Email',
         autocomplete: 'username email',
-        visible: () => isInPasswordSignupFields( 
+        visible: () => isInPasswordSignupFields(
           ["USERNAME_AND_EMAIL", "USERNAME_AND_OPTIONAL_EMAIL"]
         ),
       },
@@ -402,7 +402,7 @@ Template._loginButtonsLoggedOutPasswordService.helpers({
           "USERNAME_ONLY",
         ]),
       },
-      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email', 
+      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
         autocomplete: 'email',
         visible: () => isInPasswordSignupFields(
           ["USERNAME_AND_EMAIL", "EMAIL_ONLY"]
@@ -432,8 +432,8 @@ Template._loginButtonsLoggedOutPasswordService.helpers({
 
   inForgotPasswordFlow: () => loginButtonsSession.get('inForgotPasswordFlow'),
 
-  inLoginFlow: () => 
-    !loginButtonsSession.get('inSignupFlow') && 
+  inLoginFlow: () =>
+    !loginButtonsSession.get('inSignupFlow') &&
     !loginButtonsSession.get('inForgotPasswordFlow'),
 
   inSignupFlow: () => loginButtonsSession.get('inSignupFlow'),
@@ -473,10 +473,10 @@ Template._loginButtonsChangePassword.helpers({
     }
     return [
       // The username and email fields are included here to address an
-      // accessibility warning in Chrome, but the fields don't actually display. 
-      // The warning states that there should be an optionally hidden 
-      // username/email field on password forms. 
-      // XXX I think we should not use a CSS class here because this is the 
+      // accessibility warning in Chrome, but the fields don't actually display.
+      // The warning states that there should be an optionally hidden
+      // username/email field on password forms.
+      // XXX I think we should not use a CSS class here because this is the
       // `unstyled` package. So instead we apply an inline style.
       {fieldName: 'username', fieldLabel: 'Username', autocomplete: 'username',
         fieldStyle: 'display: none;', fieldValue: username,
@@ -486,7 +486,7 @@ Template._loginButtonsChangePassword.helpers({
           "USERNAME_ONLY",
         ]),
       },
-      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email', 
+      {fieldName: 'email', fieldLabel: 'Email', inputType: 'email',
         autocomplete: 'email', fieldStyle: 'display: none;', fieldValue: email,
         visible: () => isInPasswordSignupFields(
           ["USERNAME_AND_EMAIL", "EMAIL_ONLY"]

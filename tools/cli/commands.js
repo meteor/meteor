@@ -582,7 +582,8 @@ main.registerCommand({
             return contents;
           }
         },
-        ignore: [/^local$/]
+        ignore: [/^local$/],
+        preserveSymlinks: true,
       });
     } catch (err) {
       Console.error("Could not create package: " + err.message);
@@ -622,7 +623,7 @@ main.registerCommand({
   if (options.list) {
     Console.info("Available examples:");
     _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
-      const branchInfo = repoInfo.branch ? `#${repoInfo.branch}` : '';
+      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : '';
       Console.info(
         Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
         Console.options({ indent: 2 }));
@@ -750,7 +751,8 @@ main.registerCommand({
         return contents;
       }
     },
-    ignore: toIgnore
+    ignore: toIgnore,
+    preserveSymlinks: true,
   });
 
   // We are actually working with a new meteor project at this point, so
@@ -1351,7 +1353,9 @@ main.registerCommand({
     // people to deploy from checkout or do other weird shit. We are not
     // responsible for the consequences.
     'override-architecture-with-local' : { type: Boolean },
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    'deploy-polling-timeout': { type: Number },
+    'no-wait': { type: Boolean },
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1412,12 +1416,21 @@ main.registerCommand({
     serverArch: buildArch
   };
 
+  let deployPollingTimeoutMs = null;
+  if (options['deploy-polling-timeout']) {
+    deployPollingTimeoutMs = options['deploy-polling-timeout'];
+  }
+
+  const waitForDeploy = !options['no-wait'];
+
   var deployResult = deploy.bundleAndDeploy({
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
     buildOptions: buildOptions,
-    rawOptions
+    rawOptions,
+    deployPollingTimeoutMs,
+    waitForDeploy,
   });
 
   if (deployResult === 0) {
@@ -1870,7 +1883,8 @@ var getTestPackageNames = function (projectContext, packageNames) {
           version = projectContext.localCatalog.getVersionBySourceRoot(
             files.pathResolve(p));
           if (! version) {
-            throw Error("should have been caught when initializing catalog?");
+            buildmessage.error("Package not found in local catalog");
+            return;
           }
           if (version.testName) {
             testPackages.push(version.testName);

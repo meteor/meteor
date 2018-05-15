@@ -29,6 +29,8 @@ Issues which *also* have the `confirmed` label ([bugs](https://github.com/meteor
 
 Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue.
 
+Please note that `pull-requests-encouraged` issues with low activity will often be closed without being implemented. These issues are tagged with an additional [`not-implemented`](https://github.com/meteor/meteor/issues?utf8=✓&q=label%3Apull-requests-encouraged+label%3Anot-implemented) label, and can still be considered good candidates to work on. If you're interested in working on a closed and `not-implemented` issue, please let us know by posting on that issue.
+
 ### Project roles
 
 We’ve just begun to create more defined project roles for Meteor. Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
