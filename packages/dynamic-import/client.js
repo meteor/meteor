@@ -118,20 +118,18 @@ exports.setSecretKey = function (key) {
 };
 
 var fetchURL = require("./common.js").fetchURL;
-var location = typeof window === "object" && window.location;
 
 function fetchMissing(missingTree) {
   return new Promise(function (resolve, reject) {
-    // In browsers, use "//" + location.host to match the protocol and
-    // origin of the current page. On the server (where window.location is
-    // not defined), use Meteor.absoluteUrl. In practice, dynamic modules
-    // used on the server are typically just included in the initial JS
-    // bundle, so the Meteor.absoluteUrl branch of this code is uncommon.
-    var url = location
-      ? "//" + location.host + fetchURL
-      : Meteor.absoluteUrl(fetchURL);
-
-    HTTP.call("POST", url, {
+    // If the hostname of the URL returned by Meteor.absoluteUrl differs
+    // from location.host, then we'll be making a cross-origin request
+    // here, but that's fine because the dynamic-import server sets
+    // appropriate CORS headers to enable fetching dynamic modules from
+    // any origin. Browsers that check CORS do so by sending an additional
+    // preflight OPTIONS request, which may add latency to the first
+    // dynamic import() request, so it's a good idea for ROOT_URL to match
+    // location.host if possible, though not strictly necessary.
+    HTTP.call("POST", Meteor.absoluteUrl(fetchURL), {
       query: secretKey ? "key=" + secretKey : void 0,
       data: missingTree
     }, function (error, result) {
