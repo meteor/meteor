@@ -265,6 +265,11 @@
   `webapp` package has been updated to version 1.6.0.
   [PR #9761](https://github.com/meteor/meteor/pull/9761)
 
+* Any settings read from a JSON file passed with the `--settings` option
+  during Cordova run/build/deploy will be exposed in `mobile-config.js`
+  via the `App.settings` property, similar to `Meteor.settings`.
+  [PR #9873](https://github.com/meteor/meteor/pull/9873)
+
 * The `@babel/plugin-proposal-class-properties` plugin provided by
   `meteor-babel` now runs with the `loose:true` option, as required by
   other (optional) plugins like `@babel/plugin-proposal-decorators`.

@@ -4,12 +4,12 @@ import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files.js';
+import { optimisticReadJsonOrNull } from "../fs/optimistic.js";
 import bundler from '../isobuild/bundler.js';
 import archinfo from '../utils/archinfo.js';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
-import {optimisticReadJsonOrNull} from "../fs/optimistic.js";
 
 import { CORDOVA_ARCH } from './index.js';
 
@@ -232,7 +232,7 @@ export class CordovaBuilder {
         try {
           files.runJavaScript(code, {
             filename: 'mobile-config.js',
-            symbols: { App: createAppConfiguration(this), Settings: createSettings(this.options) }
+            symbols: { App: createAppConfiguration(this) }
           });
         } catch (error) {
           buildmessage.exception(error);
@@ -515,6 +515,15 @@ export class CordovaBuilder {
 }
 
 function createAppConfiguration(builder) {
+  const { settingsFile } = builder.options;
+  let settings = null;
+  if (settingsFile) {
+    settings = optimisticReadJsonOrNull(settingsFile);
+    if (! settings) {
+      throw new Error("Unreadable --settings file: " + settingsFile);
+    }
+  }
+
   /**
    * @namespace App
    * @global
@@ -560,6 +569,15 @@ Valid platforms are: ios, android.`);
         builder.additionalConfiguration.global[key] = value;
       }
     },
+
+    /**
+     * @summary Like `Meteor.settings`, contains data read from a JSON
+     *          file provided via the `--settings` command-line option at
+     *          build time, or null if no settings were provided.
+     * @memberOf App
+     * @type {Object}
+     */
+    settings,
 
     /**
      * @summary Set the build-time configuration for a Cordova plugin.
@@ -739,18 +757,4 @@ configuration. The key may be deprecated.`);
       });
     }
   };
-}
-
-function createSettings(options) {
-  let settings = {};
-
-  if (options.settingsFile) {
-    try {
-      settings = optimisticReadJsonOrNull(options.settingsFile) || {};
-    } catch (e) {
-      throw new Error("METEOR_SETTINGS are not valid JSON.");
-    }
-  }
-
-  return settings;
 }
