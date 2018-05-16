@@ -212,8 +212,8 @@
   want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
 
 * The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.46-5. Note: while Babel has recently implemented support for
-  a new kind of `babel.config.js` configuration file (see [this
+  7.0.0-beta.47. Note: while Babel has recently implemented support for a
+  new kind of `babel.config.js` configuration file (see [this
   PR](https://github.com/babel/babel/pull/7358)), and future versions of
   Meteor will no doubt embrace this functionality, Meteor 1.7 supports
   only `.babelrc` files as a means of customizing the default Babel
