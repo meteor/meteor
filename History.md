@@ -211,6 +211,12 @@
   test files across your codebase; just make sure you import the ones you
   want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
 
+* The `meteor create` command now supports a `--minimal` option, which
+  creates an app with as few Meteor packages as possible, in order to
+  minimize client bundle size while still demonstrating advanced features
+  such as server-side rendering. This starter application is a solid
+  foundation for any application that doesn't need Mongo or DDP.
+
 * The `meteor-babel` npm package has been updated to version
   7.0.0-beta.47. Note: while Babel has recently implemented support for a
   new kind of `babel.config.js` configuration file (see [this
@@ -308,10 +314,6 @@
   the `<head />` section as before (for backwards compatibility).
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
-
-* The `meteor create` command now supports a `--minimal` option, which
-  creates an empty app (like `--bare`) with as few Meteor packages as
-  possible, to minimize client-side application size.
 
 ## v1.6.1.1, 2018-04-02
 
