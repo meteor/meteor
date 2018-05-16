@@ -20,7 +20,7 @@ before_install:
   - npm i -g codeclimate-test-reporter
 
 script:
-  - npm run test
+  - npm run test || travis_terminate 1
   - codeclimate-test-reporter < ./coverage/lcov.info
   - npm run coveralls
 
