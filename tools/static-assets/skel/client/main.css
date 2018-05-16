@@ -1,1 +1,4 @@
-/* CSS declarations go here */
+body {
+  padding: 10px;
+  font-family: sans-serif;
+}
