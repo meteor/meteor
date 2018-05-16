@@ -49,7 +49,7 @@
     "eslint-plugin-react": "~7.8.0",
     "husky": "~0.14.3",
     "mocha": "~5.1.0",
-    "nyc": "~11.7.1",
+    "nyc": "~11.8.0",
     "prettier": "~1.12.0",
     "readline-sync": "~1.4.9",
     "semantic-release": "~15.4.0",
