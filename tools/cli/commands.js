@@ -857,8 +857,8 @@ main.registerCommand({
     ].join("\n"));
 
     cmd("meteor create --bare    # to create an empty app");
-    cmd("meteor create --minimal # to create an empty app with as " +
-        "few Meteor packages as possible");
+    cmd("meteor create --minimal # to create an app with as few " +
+        "Meteor packages as possible");
     cmd("meteor create --full    # to create a more complete " +
         "scaffolded app");
   }
