@@ -9,6 +9,7 @@ import archinfo from '../utils/archinfo.js';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
+import {optimisticReadJsonOrNull} from "../fs/optimistic.js";
 
 import { CORDOVA_ARCH } from './index.js';
 
@@ -231,7 +232,7 @@ export class CordovaBuilder {
         try {
           files.runJavaScript(code, {
             filename: 'mobile-config.js',
-            symbols: { App: createAppConfiguration(this) }
+            symbols: { App: createAppConfiguration(this), Settings: createSettings(this.options) }
           });
         } catch (error) {
           buildmessage.exception(error);
@@ -738,4 +739,18 @@ configuration. The key may be deprecated.`);
       });
     }
   };
+}
+
+function createSettings(options) {
+  let settings = {};
+
+  if (options.settingsFile) {
+    try {
+      settings = optimisticReadJsonOrNull(options.settingsFile) || {};
+    } catch (e) {
+      throw new Error("METEOR_SETTINGS are not valid JSON.");
+    }
+  }
+
+  return settings;
 }
