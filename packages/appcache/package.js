@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Enable the application cache in the browser",
-  version: "1.2.0-rc17.10",
+  version: "1.2.0-rc17.11",
 });
 
 Package.onUse(api => {
