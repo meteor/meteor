@@ -52,7 +52,7 @@
     "nyc": "~11.8.0",
     "prettier": "~1.12.0",
     "readline-sync": "~1.4.9",
-    "semantic-release": "~15.4.0",
+    "semantic-release": "~15.5.0",
     "validate-commit-msg": "~2.14.0"
   },
   "peerDependencies": {
