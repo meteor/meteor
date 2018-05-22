@@ -96,6 +96,11 @@ A shortcut is to run `sudo xcodebuild -license accept` from the command line. (Y
 
 > As of [Cordova iOS 4.3.0](https://cordova.apache.org/announcements/2016/10/24/ios-release.html) you may also need to `sudo gem install cocoapods` to resolve a dependency with [PhoneGap Push Plugin](https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/INSTALLATION.md). 
 
+<h4>Enabling Xcode command line tools</h4>
+
+After installing Xcode from the Mac App Store, it is still necesssary to enable those tools in the terminal environment.  This can be accompilshed by running the following from the command prompt:
+
+    sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
 <h3 id="installing-prerequisites-android">Android</h3>
 
