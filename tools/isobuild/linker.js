@@ -102,6 +102,26 @@ _.extend(Module.prototype, {
     return assignedVariables;
   }),
 
+
+  // https://github.com/meteor/meteor/issues/9878
+  // https://github.com/npm/npm/issues/10393
+  _filterOutNonDeterministicPackageJsonFields: function () {
+    const fields = ['_where', '_args'];
+    _.each(this.files, file => {
+      if (file.sourcePath.endsWith("package.json")) {
+        fields.forEach(field => {
+          const lineWithFieldRegEx = new RegExp(` +"${field}": "[^"]+",[\\n\\r]*`, 'gm');
+          if (file.source.includes(`"${field}"`)) {
+            file.source = file.source.replace(lineWithFieldRegEx, '');
+          }
+          if (file.jsonData && field in file.jsonData) {
+            delete file.jsonData[field];
+          }
+        });
+      }
+    });
+  },
+
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
   // 'sourcePath'
   getPrelinkedFiles: Profile("linker Module#getPrelinkedFiles", function () {
@@ -169,6 +189,10 @@ _.extend(Module.prototype, {
 
     // Emit each file
     if (self.meteorInstallOptions) {
+      // We want to remove fields like `_where` and `_args` from any package.json we include in the bundle
+      // as they make the build non deterministic.
+      self._filterOutNonDeterministicPackageJsonFields();
+
       const tree = self._buildModuleTree(results, sourceWidth);
       fileCount = self._chunkifyModuleTree(tree, chunks, sourceWidth);
       result.exportsName =
