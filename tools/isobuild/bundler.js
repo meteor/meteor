@@ -2194,6 +2194,10 @@ class JsImage {
         delete loadItem.node_modules;
       }
 
+      // Will be initialized with a Buffer version of item.source, with
+      // //# sourceMappingURL comments appropriately removed/appended.
+      let sourceBuffer;
+
       if (item.sourceMap) {
         const sourceMapBuffer =
           Buffer.from(JSON.stringify(item.sourceMap), "utf8");
@@ -2209,7 +2213,7 @@ class JsImage {
 
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
-        item.source = addSourceMappingURL(
+        sourceBuffer = addSourceMappingURL(
           item.source,
           sourceMappingURL,
           item.targetPath,
@@ -2218,11 +2222,17 @@ class JsImage {
         if (item.sourceMapRoot) {
           loadItem.sourceMapRoot = item.sourceMapRoot;
         }
+      } else {
+        // If we do not have an item.sourceMap, then we still want to
+        // remove any existing //# sourceMappingURL comments.
+        // https://github.com/meteor/meteor/issues/9894
+        sourceBuffer = removeSourceMappingURLs(item.source);
       }
 
       loadItem.path = builder.writeToGeneratedFilename(
         item.targetPath,
-        { data: Buffer.from(item.source, 'utf8') });
+        { data: sourceBuffer }
+      );
 
       if (!_.isEmpty(item.assets)) {
         // For package code, static assets go inside a directory inside
@@ -2599,10 +2609,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
-  var contents = file.contents();
-  if (! (contents instanceof Buffer)) {
-    throw new Error("contents not a Buffer?");
-  }
+
   // XXX should probably use sanitize: true, but that will have
   // to wait until the server is actually driven by the manifest
   // (rather than just serving all of the files in a certain
@@ -2613,35 +2620,67 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
 
   if (options && options.sourceMapUrl) {
     data = addSourceMappingURL(data, options.sourceMapUrl);
-  }
-
-  if (! Buffer.isBuffer(data)) {
-    data = Buffer.from(data, "utf8");
+  } else {
+    // If we do not have an options.sourceMapUrl to append, then we still
+    // want to remove any existing //# sourceMappingURL comments.
+    // https://github.com/meteor/meteor/issues/9894
+    data = removeSourceMappingURLs(data);
   }
 
   builder.write(file.targetPath, { data, hash });
 });
 
+// Takes a Buffer or string and returns a Buffer. If it looks like there
+// are no //# sourceMappingURL comments to remove, an attempt is made to
+// return the provided buffer without modification.
+function removeSourceMappingURLs(data) {
+  if (Buffer.isBuffer(data)) {
+    // Unfortuantely there is no way to search a Buffer using a RegExp, so
+    // there's a chance of false positives here, which could lead to
+    // unnecessarily stringifying and re-Buffer.from-ing the data, though
+    // that should not cause any logical problems.
+    if (! data.includes("//# source", 0, "utf8")) {
+      return data;
+    }
+    data = data.toString("utf8");
+  }
+
+  // Remove any/all existing //# sourceMappingURL comments using
+  // String#replace (since unfortunately there is no Buffer#replace).
+  data = data.replace(/\n\/\/# source(?:Mapping)?URL=[^\n]+/g, "\n");
+
+  // Always return a Buffer.
+  return Buffer.from(data, "utf8");
+}
+
+const newLineBuffer = Buffer.from("\n", "utf8");
+
 // The data argument may be either a Buffer or a string, but this function
-// always returns a string.
+// always returns a Buffer.
 function addSourceMappingURL(data, url, targetPath) {
-  const parts = [
-    // If data is a Buffer, convert it to a string.
-    data.toString("utf8")
-      // Remove any existing sourceURL or sourceMappingURL comments.
-      .replace(/\n\/\/# source(?:Mapping)?URL=[^\n]+/g, '\n')
-  ];
+  // An array of Buffer objects, even when data is a string.
+  const parts = [removeSourceMappingURLs(data)];
 
   if (targetPath) {
     // If a targetPath was provided, use it to add a sourceURL comment to
     // help associate output files with mapped source files.
-    parts.push(`//# sourceURL=${SOURCE_URL_PREFIX}/${targetPath}`);
+    parts.push(
+      newLineBuffer,
+      Buffer.from(
+        `//# sourceURL=${SOURCE_URL_PREFIX}/${targetPath}`,
+        "utf8"
+      )
+    );
   }
 
-  parts.push(`//# sourceMappingURL=${url}`);
-  parts.push(""); // Trailing newline.
+  parts.push(
+    newLineBuffer,
+    Buffer.from("//# sourceMappingURL=" + url, "utf8"),
+    newLineBuffer // trailing newline
+  );
 
-  return parts.join("\n");
+  // Always return a Buffer.
+  return Buffer.concat(parts);
 }
 
 // Writes a target a path in 'programs'
