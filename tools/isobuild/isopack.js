@@ -1469,7 +1469,7 @@ _.extend(Isopack.prototype, {
       _.extend(babelOptions, {
         filename: path,
         sourceFileName: "/" + path,
-        sourceMap: true
+        sourceMaps: true
       });
 
       var transpiled = babel.compile(inputFileContents, babelOptions, {

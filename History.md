@@ -218,8 +218,8 @@
   foundation for any application that doesn't need Mongo or DDP.
 
 * The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.48. Note: while Babel has recently implemented support for a
-  new kind of `babel.config.js` configuration file (see [this
+  7.0.0-beta.49-1. Note: while Babel has recently implemented support for
+  a new kind of `babel.config.js` configuration file (see [this
   PR](https://github.com/babel/babel/pull/7358)), and future versions of
   Meteor will no doubt embrace this functionality, Meteor 1.7 supports
   only `.babelrc` files as a means of customizing the default Babel
