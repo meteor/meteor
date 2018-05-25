@@ -218,7 +218,7 @@
   foundation for any application that doesn't need Mongo or DDP.
 
 * The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.47. Note: while Babel has recently implemented support for a
+  7.0.0-beta.48. Note: while Babel has recently implemented support for a
   new kind of `babel.config.js` configuration file (see [this
   PR](https://github.com/babel/babel/pull/7358)), and future versions of
   Meteor will no doubt embrace this functionality, Meteor 1.7 supports
@@ -226,7 +226,7 @@
   configuration provided by Meteor. In other words, if your project
   contains a `babel.config.js` file, it will be ignored by Meteor 1.7.
 
-* The `reify` npm package has been updated to version 0.15.1.
+* The `reify` npm package has been updated to version 0.16.1.
 
 * The `meteor-node-stubs` package, which provides stub implementations for
   any Node built-in modules used by the client (such as `path` and
