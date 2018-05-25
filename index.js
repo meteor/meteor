@@ -91,7 +91,7 @@ function compile(source, options) {
     delete optionsCopy.plugins;
     optionsCopy.presets = presets;
     optionsCopy.ast = true;
-    optionsCopy.sourceMap = !! generateSourceMap;
+    optionsCopy.sourceMaps = !! generateSourceMap;
 
     if (result.ast) {
       result = babelCore.transformFromAstSync(

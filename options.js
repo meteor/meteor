@@ -133,7 +133,7 @@ function copyParserOptions() {
 function finish(presets) {
   return {
     compact: false,
-    sourceMap: false,
+    sourceMaps: false,
     ast: false,
     // Disable .babelrc lookup and processing.
     babelrc: false,
@@ -234,7 +234,7 @@ exports.getMinifierDefaults = function getMinifierDefaults(features) {
     // Generate code in loose mode
     compact: false,
     // Don't generate a source map, we do that during compilation
-    sourceMap: false,
+    sourceMaps: false,
     // We don't need to generate AST code
     ast: false,
     // Do not honor babelrc settings, would conflict with compilation

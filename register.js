@@ -19,7 +19,7 @@ var config = {
 function setBabelOptions(options) {
   config.babelOptions = Object.assign({}, options, {
     // Overrides for default options:
-    sourceMap: "inline"
+    sourceMaps: true
   });
   return exports;
 }
@@ -132,7 +132,7 @@ function getBabelResult(filename) {
     }
   }
 
-  if (babelOptions.sourceMap) {
+  if (babelOptions.sourceMaps) {
     if (config.sourceMapRootPath) {
       var relativePath = path.relative(
         config.sourceMapRootPath,
