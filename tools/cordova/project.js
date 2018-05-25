@@ -658,8 +658,55 @@ mobile-config.js accordingly.`);
             end: pluginsToInstallCount
           });
         });
+
+        logIfVerbose('Validating Cordova plugins installation');
+        this.ensurePluginsWereInstalled(pluginVersionsToInstall, pluginsConfiguration, true);
       }
     });
+  }
+
+  // Ensures that the Cordova plugins are installed
+  ensurePluginsWereInstalled(requiredPlugins, pluginsConfiguration, tryInstall) {
+    // List of all installed plugins. This should work for global / local / private cordova plugins.
+    // Examples:
+    // cordova-plugin-whitelist@1.3.2 => { 'cordova-plugin-whitelist': '1.3.2' }
+    // com.cordova.plugin@file://.cordova-plugins/plugin => { 'com.cordova.plugin': 'file://.cordova-plugins/plugin' }
+    // @darqs/plugin@1.0.0 => { 'com.cordova.plugin': 'darqs/plugin' }
+    const installed = this.listInstalledPluginVersions();
+    const installedName = Object.keys(installed);
+    const installedValue = Object.values(installed);
+    const missedPlugins = {};
+    Object.keys(requiredPlugins).filter(plugin => {
+      if (installedName.includes(plugin)) {
+        logIfVerbose(`Plugin ${plugin} was installed.`);
+      } else if (plugin[0] === '@' && installedValue.includes(plugin.substr(1))) {
+        logIfVerbose(`Plugin ${plugin} was installed from private npm repository.`);
+      } else if (tryInstall) {
+        log(`Plugin ${plugin} wasn't installed. Trying again...`);
+        this.addPlugin(
+          plugin,
+          requiredPlugins[plugin],
+          pluginsConfiguration[plugin]
+        );
+        missedPlugins[plugin] = requiredPlugins[plugin];
+      } else {
+        log(`Plugin ${plugin} wasn't installed.`);
+        missedPlugins[plugin] = requiredPlugins[plugin];
+      }
+    });
+
+    // All plugin were installed
+    if (Object.keys(missedPlugins).length === 0) {
+      return;
+    }
+
+    // Check one more time after reinstallation
+    if (tryInstall) {
+      this.ensurePluginsWereInstalled(missedPlugins, pluginsConfiguration, false);
+    } else {
+      // Fail, to prevent build and publishing faulty mobile app without some of the Cordova plugins
+      throw new Error(`Some Cordova plugins wasn't installed`);
+    }
   }
 
   ensurePinnedPluginVersions(pluginVersions) {
