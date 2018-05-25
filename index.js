@@ -82,48 +82,44 @@ exports.compile = function (source, babelOptions, cacheOptions) {
 };
 
 function compile(source, options) {
-  let ast = parse(source);
-
-  // Since Reify inserts code without updating ast.tokens, it's better to
-  // destroy unreliable token information. Don't worry; Babel can cope.
-  delete ast.tokens;
-
   const babelCore = require("@babel/core");
-  let result;
+  let result = { code: source };
 
-  function transform(presets, generateCode) {
+  function transform(presets, generateSourceMap) {
     const optionsCopy = Object.assign({}, options);
 
     delete optionsCopy.plugins;
     optionsCopy.presets = presets;
     optionsCopy.ast = true;
+    optionsCopy.sourceMap = !! generateSourceMap;
 
-    if (! generateCode) {
-      optionsCopy.code = false;
-      optionsCopy.sourceMap = false;
+    if (result.ast) {
+      result = babelCore.transformFromAstSync(
+        result.ast,
+        result.code,
+        optionsCopy,
+      );
+    } else {
+      result = babelCore.transformSync(result.code, optionsCopy);
     }
-
-    const result = babelCore.transformFromAst(ast, source, optionsCopy);
 
     if (options.ast === false) {
       delete result.ast;
     }
-
-    return result;
   }
 
   if (options.plugins &&
       options.plugins.length > 0) {
-    result = transform(
+    transform(
       [{ plugins: options.plugins }],
       // If there are no options.presets, then this is the final transform
-      // call, so make sure we generate code.
+      // call, so make sure we generate a sourceMap.
       ! options.presets
     );
   }
 
   if (options.presets) {
-    result = transform(options.presets, true);
+    transform(options.presets, true);
   }
 
   return result;
