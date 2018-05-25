@@ -9,13 +9,7 @@ function getMeteorBabel() {
 function getDefaultOptions(extraFeatures) {
   // See https://github.com/meteor/babel/blob/master/options.js for more
   // information about what the default options are.
-  var options = getMeteorBabel().getDefaultOptions(extraFeatures);
-
-  // The sourceMap option should probably be removed from the default
-  // options returned by meteorBabel.getDefaultOptions.
-  delete options.sourceMap;
-
-  return options;
+  return getMeteorBabel().getDefaultOptions(extraFeatures);
 }
 
 Babel = {

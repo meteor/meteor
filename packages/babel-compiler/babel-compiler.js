@@ -89,7 +89,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     this.inferExtraBabelOptions(inputFile, babelOptions, cacheDeps);
 
-    babelOptions.sourceMap = true;
+    babelOptions.sourceMaps = true;
     babelOptions.filename =
       babelOptions.sourceFileName = packageName
       ? "packages/" + packageName + "/" + inputFilePath

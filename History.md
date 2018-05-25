@@ -6,6 +6,19 @@
   [8.11.4](https://nodejs.org/en/blog/release/v8.11.4/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/august-2018-security-releases/).
 
+* The `meteor-babel` npm package has been updated to version
+  7.0.0-beta.49-2.
+
+* The `reify` npm package has been updated to version 0.16.4.
+
+* The `meteor-node-stubs` package, which provides stub implementations for
+  any Node built-in modules used by the client (such as `path` and
+  `http`), has a new minor version (0.4.1) that may help with Windows
+  installation problems. To install the new version, run
+  ```sh
+  meteor npm install meteor-node-stubs@latest
+  ```
+
 * The npm package `@babel/runtime`, which is depended on by most Meteor
   apps, introduced a breaking change in version `7.0.0-beta.56` with the
   removal of the `@babel/runtime/helpers/builtin` directory. While this
