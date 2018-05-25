@@ -494,6 +494,8 @@ val = "zxcv";`;
   });
 });
 
+require("./decorators.js");
+
 describe("Reify", function () {
   it("should declare imported symbols with block scope", function () {
     import def, { value } from "./export-value-a.js";
