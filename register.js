@@ -85,8 +85,16 @@ exports.retrieveSourceMap = function(filename) {
   }
 
   var result = getBabelResult(filename);
-  var converted = result && convertSourceMap.fromSource(result.code);
-  var map = converted && converted.toJSON();
+  var map = null;
+
+  if (result) {
+    if (result.map) {
+      map = result.map;
+    } else {
+      var converted = convertSourceMap.fromSource(result.code);
+      map = converted && converted.toJSON();
+    }
+  }
 
   return map && {
     url: map.file,
