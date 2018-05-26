@@ -167,9 +167,14 @@ export default class Sandbox {
   createApp(to, template, options) {
     options = options || {};
     const absoluteTo = files.pathJoin(this.cwd, to);
-    files.cp_r(files.pathJoin(
-      files.convertToStandardPath(__dirname), '..', 'tests', 'apps', template),
-        absoluteTo, { ignore: [/^local$/] });
+    const absoluteFrom = files.pathJoin(
+      files.convertToStandardPath(__dirname),
+      '..', 'tests', 'apps', template
+    );
+    files.cp_r(absoluteFrom, absoluteTo, {
+      ignore: [/^local$/],
+      preserveSymlinks: true,
+    });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
     if (options.release) {
@@ -222,7 +227,9 @@ export default class Sandbox {
     const packagePath = files.pathJoin(this.cwd, packageDir);
     const templatePackagePath = files.pathJoin(
       files.convertToStandardPath(__dirname), '..', 'tests', 'packages', template);
-    files.cp_r(templatePackagePath, packagePath);
+    files.cp_r(templatePackagePath, packagePath, {
+      preserveSymlinks: true,
+    });
 
     files.readdir(packagePath).forEach((file) => {
       if (file.match(/^package.*\.js$/)) {

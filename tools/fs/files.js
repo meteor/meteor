@@ -495,7 +495,7 @@ files.cp_r = function(from, to, options = {}) {
   files.mkdir_p(files.pathDirname(to));
 
   if (stat.isSymbolicLink()) {
-    files.symlink(files.readlink(from), to);
+    symlinkWithOverwrite(files.readlink(from), to);
 
   } else {
     // Create the file as readable and writable by everyone, and
@@ -516,6 +516,32 @@ files.cp_r = function(from, to, options = {}) {
     }
   }
 };
+
+// create a symlink, overwriting the target link, file, or directory
+// if it exists
+export function symlinkWithOverwrite(source, target) {
+  const args = [source, target];
+
+  if (process.platform === "win32") {
+    const absoluteSource = files.pathResolve(target, source);
+
+    if (files.stat(absoluteSource).isDirectory()) {
+      args[2] = "junction";
+    }
+  }
+
+  try {
+    files.symlink(...args);
+  } catch (e) {
+    if (e.code === "EEXIST") {
+      // overwrite existing link, file, or directory
+      files.rm_recursive(target);
+      files.symlink(...args);
+    } else {
+      throw e;
+    }
+  }
+}
 
 /**
  * Get every path in a directory recursively, treating symlinks as files
@@ -1003,7 +1029,9 @@ files.renameDirAlmostAtomically =
     // limitations, we'll resort to copying.
     if (forceCopy) {
       files.rm_recursive(toDir);
-      files.cp_r(fromDir, toDir);
+      files.cp_r(fromDir, toDir, {
+        preserveSymlinks: true,
+      });
     }
 
     // ... and take out the trash.
@@ -1750,7 +1778,7 @@ if (files.isWindowsLikeFilesystem()) {
     }
 
     if (! success) {
-      files.cp_r(from, to);
+      files.cp_r(from, to, { preserveSymlinks: true });
       files.rm_recursive(from);
     }
   };
