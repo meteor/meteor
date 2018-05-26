@@ -1,5 +1,14 @@
 ## v.NEXT
 
+## v1.6.1.2, 2018-05-28
+
+* Meteor 1.6.1.2 is a very small release intended to fix
+  [#9863](https://github.com/meteor/meteor/issues/9863) by making
+  [#9887](https://github.com/meteor/meteor/pull/9887) available to Windows
+  users without forcing them to update to Meteor 1.7 (yet). Thanks very
+  much to [@zodern](https://github.com/zodern) for identifying a solution
+  to this problem. [PR #9910](https://github.com/meteor/meteor/pull/9910)
+
 ## v1.6.1.1, 2018-04-02
 
 * Node has been updated to version
