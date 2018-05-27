@@ -547,9 +547,9 @@
       "integrity": "sha1-ms1whRxtXf3ZPZKC5e35SgP/RrU="
     },
     "core-js": {
-      "version": "2.5.6",
-      "resolved": "https://registry.npmjs.org/core-js/-/core-js-2.5.6.tgz",
-      "integrity": "sha512-lQUVfQi0aLix2xpyjrrJEvfuYCqPc/HwmTKsC/VNf8q0zsjX7SQZtp4+oRONN5Tsur9GDETPjj+Ub2iDiGZfSQ=="
+      "version": "2.5.7",
+      "resolved": "https://registry.npmjs.org/core-js/-/core-js-2.5.7.tgz",
+      "integrity": "sha512-RszJCAxg/PP6uzXVXL6BsxSXx/B05oJAQ2vkJRjyjrEcNVycaqOmNb5OTxZPE3xa5gwZduqza6L9JOCenh/Ecw=="
     },
     "debug": {
       "version": "3.1.0",
@@ -841,9 +841,9 @@
       }
     },
     "reify": {
-      "version": "0.16.1",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.16.1.tgz",
-      "integrity": "sha512-5YhFQFLT3DvDxIxtc//2cxMyWsqWKm9SeqMYrccXMcpL5VOaj697xfc9bK5w3x9xo/01P7KlHVNF+vwgL5zq3A=="
+      "version": "0.16.2",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.16.2.tgz",
+      "integrity": "sha512-9kL/IYcFiBbwpQFScNcFBJ5zhCEJTNujeDEEv5SoSg5er0V5CDbef2zNEk9FBeI9oehGOG5zM4APXgp5n3Llbw=="
     },
     "remove-trailing-separator": {
       "version": "1.1.0",

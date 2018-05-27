@@ -226,7 +226,7 @@
   configuration provided by Meteor. In other words, if your project
   contains a `babel.config.js` file, it will be ignored by Meteor 1.7.
 
-* The `reify` npm package has been updated to version 0.16.1.
+* The `reify` npm package has been updated to version 0.16.2.
 
 * The `meteor-node-stubs` package, which provides stub implementations for
   any Node built-in modules used by the client (such as `path` and
