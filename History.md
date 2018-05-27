@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.7, 2018-05-18
+## v1.7, 2018-05-28
 
 * More than 80% of internet users worldwide have access to a web browser
   that natively supports the latest ECMAScript features and keeps itself
