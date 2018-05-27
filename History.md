@@ -27,10 +27,10 @@
   With Meteor 1.7, this awkward balancing act is no longer necessary,
   because Meteor now automatically builds two sets of client-side assets,
   one tailored to the capabilities of modern browsers, and the other
-  designed to keep legacy browsers working exactly as they did
-  before. Best of all, the entire Meteor community relies on the same
-  system, so any bugs or differences in behavior can be identified and
-  fixed quickly.
+  designed to work in all supported browsers, thus keeping legacy browsers
+  working exactly as they did before. Best of all, the entire Meteor
+  community relies on the same system, so any bugs or differences in
+  behavior can be identified and fixed quickly.
 
   In this system, a "modern" browser can be loosely defined as one with
   full native support for `async` functions and `await` expressions, which
@@ -39,11 +39,12 @@
   seem extremely strict, since `async`/`await` was [just finalized in
   ECMAScript 2017](http://2ality.com/2016/10/async-function-tips.html),
   but the statistics clearly justify it. As another example, any modern
-  browser can use the native `WebSocket` API for DDP traffic, whereas a
-  legacy browser will continue to use the SockJS polyfill. And of course
-  you can safely assume that any modern browser has a native `Promise`
-  implementation, because `async` functions must return `Promise`s. The
-  list goes on and on.
+  browser can handle native `class` syntax, though newer syntax like class
+  fields may still need to be compiled for now, whereas a legacy browser
+  will need compilation for both advanced and basic `class` syntax. And of
+  course you can safely assume that any modern browser has a native
+  `Promise` implementation, because `async` functions must return
+  `Promise`s. The list goes on and on.
 
   This boundary between modern and legacy browsers is designed to be tuned
   over time, not only by the Meteor framework itself but also by each
