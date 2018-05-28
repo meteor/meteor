@@ -18,9 +18,6 @@ export { Run };
 
 import "../tool-env/install-runtime.js";
 
-// To allow long stack traces that cross async boundaries
-import 'longjohn';
-
 // Use this to decorate functions that throw TestFailure. Decorate the
 // first function that should not be included in the call stack shown
 // to the user.
@@ -151,6 +148,18 @@ export function define(name, tagsList, f) {
   }));
 }
 
+// Prevent specific self-test's from being run.
+// e.g. `selftest.skip.define("some test", ...` will skip running "some test".
+const selftestDefine = define;
+export const skip = {
+  define(name, tagsList, f) {
+    if (typeof tagsList === 'function') {
+      f = tagsList;
+    }
+    selftestDefine(name, ['manually-ignored'], f);
+  }
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Choosing tests
 ///////////////////////////////////////////////////////////////////////////////
@@ -170,6 +179,7 @@ const tagDescriptions = {
   // These tests require a setup step which can be amortized across multiple
   // similar tests, so it makes sense to segregate them
   'custom-warehouse': "requires a custom warehouse",
+  'manually-ignored': 'excluded by selftest.skip'
 };
 
 // Returns a TestList object representing a filtered list of tests,
@@ -264,6 +274,8 @@ function getFilteredTests(options) {
   } else {
     tagsToSkip.push("windows");
   }
+
+  tagsToSkip.push('manually-ignored');
 
   const tagsToMatch = options['with-tag'] ? [options['with-tag']] : [];
   return new TestList(allTests, tagsToSkip, tagsToMatch, testState);

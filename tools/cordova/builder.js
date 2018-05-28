@@ -1,8 +1,10 @@
 import _ from 'underscore';
 import util from 'util';
+import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files.js';
+import { optimisticReadJsonOrNull } from "../fs/optimistic.js";
 import bundler from '../isobuild/bundler.js';
 import archinfo from '../utils/archinfo.js';
 import release from '../packaging/release.js';
@@ -52,7 +54,7 @@ const launchIosSizes = {
   'iphone6p_portrait': '1242x2208',
   'iphone6p_landscape': '2208x1242',
   'iphoneX_portrait': '1125x2436',
-  'iphoneX_landscape': '2436x1125', 
+  'iphoneX_landscape': '2436x1125',
   'ipad_portrait_2x': '1536x2048',
   'ipad_landscape_2x': '2048x1536',
   // Legacy
@@ -124,6 +126,9 @@ export class CordovaBuilder {
 
     // Custom elements that will be appended into config.xml's widgets
     this.custom = [];
+
+    // Resource files that will be appended to platform bundle and config.xml
+    this.resourceFiles = [];
 
     const packageMap = this.projectContext.packageMap;
 
@@ -320,6 +325,12 @@ export class CordovaBuilder {
       this.configureAndCopyImages(launchAndroidSizes, platformElement.android, 'splash');
     }
 
+    this.configureAndCopyResourceFiles(
+      this.resourceFiles,
+      platformElement.ios,
+      platformElement.android
+    );
+
     Console.debug('Writing new config.xml');
 
     const configXmlPath = files.pathJoin(this.projectRoot, 'config.xml');
@@ -372,6 +383,31 @@ export class CordovaBuilder {
 
       // Set it to the xml tree
       xmlElement.element(tag, imageAttributes(name, width, height, src));
+    });
+  }
+
+  configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
+    _.each(resourceFiles, resourceFile => {
+      // Copy file in cordova project root directory
+      var filename = path.parse(resourceFile.src).base;
+      files.copyFile(
+        files.pathResolve(this.projectContext.projectDir, resourceFile.src),
+        files.pathJoin(this.projectRoot, filename));
+      // And entry in config.xml
+      if (!resourceFile.platform ||
+          (resourceFile.platform && resourceFile.platform === "android")) {
+        androidElement.element('resource-file', {
+          src: resourceFile.src,
+          target: resourceFile.target
+        });
+      }
+      if (!resourceFile.platform ||
+          (resourceFile.platform && resourceFile.platform === "ios")) {
+        iosElement.element('resource-file', {
+          src: resourceFile.src,
+          target: resourceFile.target
+        });
+      }
     });
   }
 
@@ -479,6 +515,15 @@ export class CordovaBuilder {
 }
 
 function createAppConfiguration(builder) {
+  const { settingsFile } = builder.options;
+  let settings = null;
+  if (settingsFile) {
+    settings = optimisticReadJsonOrNull(settingsFile);
+    if (! settings) {
+      throw new Error("Unreadable --settings file: " + settingsFile);
+    }
+  }
+
   /**
    * @namespace App
    * @global
@@ -524,6 +569,15 @@ Valid platforms are: ios, android.`);
         builder.additionalConfiguration.global[key] = value;
       }
     },
+
+    /**
+     * @summary Like `Meteor.settings`, contains data read from a JSON
+     *          file provided via the `--settings` command-line option at
+     *          build time, or null if no settings were provided.
+     * @memberOf App
+     * @type {Object}
+     */
+    settings,
 
     /**
      * @summary Set the build-time configuration for a Cordova plugin.
@@ -680,11 +734,27 @@ configuration. The key may be deprecated.`);
      *
      * `App.appendToConfig('<any-xml-content/>');`
      *
-     * @param  {String} element The XML you want to include 
+     * @param  {String} element The XML you want to include
      * @memberOf App
      */
     appendToConfig: function (xml) {
       builder.custom.push(xml);
     },
+
+    /**
+     * @summary Add a resource file for your build as described in the
+     * [Cordova documentation](http://cordova.apache.org/docs/en/7.x/config_ref/index.html#resource-file).
+     * @param {String} src The project resource path.
+     * @param {String} target Resource destination in build.
+     * @param {String} [platform] Optional. A platform name (either `ios` or `android`, both if ommited) to add a resource-file entry.
+     * @memberOf App
+     */
+    addResourceFile: function (src, target, platform) {
+      builder.resourceFiles.push({
+        src: src,
+        target: target,
+        platform: platform
+      });
+    }
   };
 }

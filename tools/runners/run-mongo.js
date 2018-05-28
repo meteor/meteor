@@ -48,7 +48,7 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
   const args = [
     // nb: cli-test.sh and findMongoPids make strong assumptions about the
     // order of the arguments! Check them before changing any arguments.
-    '--bind_ip', '127.0.0.1',
+    '--bind_ip', (process.env.METEOR_MONGO_BIND_IP || '127.0.0.1'),
     '--port', port,
     '--dbpath', dbPath,
     // Use an 8MB oplog rather than 256MB. Uses less space on disk and
@@ -61,9 +61,6 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
   if (process.arch === 'ia32') {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
-  } else {
-    // The WT journal seems to be at least 300MB, which is just too much
-    args.push('--nojournal');
   }
 
   return child_process.spawn(mongodPath, args, {
@@ -588,21 +585,24 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      const { Db, Server } = loadIsopackage('npm-mongo').NpmModuleMongodb;
+      const {
+        MongoClient,
+        Server
+      } = loadIsopackage('npm-mongo').NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
-      var db = new Db(
-        'meteor',
+      const client = new MongoClient(
         new Server('127.0.0.1', options.port, {
           poolSize: 1,
           socketOptions: {
             connectTimeoutMS: 60000
           }
-        }),
-        { safe: true }
+        })
       );
 
-      yieldingMethod(db, 'open');
+      yieldingMethod(client, 'connect');
+      const db = client.db('meteor');
+
       if (stopped) {
         return;
       }
@@ -714,7 +714,7 @@ var launchMongo = function (options) {
         break;
       }
 
-      db.close(true /* means "the app is closing the connection" */);
+      client.close(true /* means "the app is closing the connection" */);
     } catch (e) {
       // If the process has exited, we're doing another form of error
       // handling. No need to throw random low-level errors farther.

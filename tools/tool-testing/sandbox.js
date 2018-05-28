@@ -553,14 +553,14 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   'mongo',
   'blaze-html-templates',
   'session',
-  'jquery',
   'tracker',
   "autopublish",
   "insecure",
   "standard-minifier-css",
   "standard-minifier-js",
   "es5-shim",
-  "shell-server"
+  "shell-server",
+  "modern-browsers",
 ];
 
 function newSelfTestCatalog() {
@@ -584,6 +584,7 @@ function newSelfTestCatalog() {
       selfTestCatalog.initialize({
         localPackageSearchDirs: [
           packagesDir,
+          files.pathJoin(packagesDir, "non-core"),
           files.pathJoin(packagesDir, "non-core", "*", "packages"),
         ],
       });

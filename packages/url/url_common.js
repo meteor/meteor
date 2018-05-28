@@ -4,7 +4,7 @@ function encodeString(str) {
   return encodeURIComponent(str).replace(/\*/g, '%2A');
 }
 
-// Encode URL paramaters into a query string, handling nested objects and
+// Encode URL parameters into a query string, handling nested objects and
 // arrays properly.
 URL._encodeParams = function (params, prefix) {
   var str = [];

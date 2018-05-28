@@ -1,6 +1,6 @@
 if (Meteor.isClient) {
   Meteor.startup(function () {
-    _.each(['production_css', 'development_css'], function (cls) {
+    ['production_css', 'development_css'].forEach(cls => {
       var color = getComputedStyle(document.querySelectorAll('.' + cls)[0]).color;
       Meteor.call('print', cls + ': ' + color);
     });

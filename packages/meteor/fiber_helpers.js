@@ -68,7 +68,7 @@ SQp.runTask = function (task) {
   var fut = new Future;
   var handle = {
     task: Meteor.bindEnvironment(task, function (e) {
-      Meteor._debug("Exception from task:", e && e.stack || e);
+      Meteor._debug("Exception from task", e);
       throw e;
     }),
     future: fut,
@@ -152,7 +152,7 @@ SQp._run = function () {
       // We'll throw this exception through runTask.
       exception = err;
     } else {
-      Meteor._debug("Exception in queued task: " + (err.stack || err));
+      Meteor._debug("Exception in queued task", err);
     }
   }
   self._currentTaskFiber = undefined;

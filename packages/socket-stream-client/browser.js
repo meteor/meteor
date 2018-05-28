@@ -2,7 +2,7 @@ import {
   toSockjsUrl,
   toWebsocketUrl,
 } from "./urls.js";
-import "./sockjs-0.3.4.js";
+
 import { StreamClientCommon } from "./common.js";
 
 export class ClientStream extends StreamClientCommon {
@@ -184,11 +184,16 @@ export class ClientStream extends StreamClientCommon {
     };
 
     this.socket.onclose = () => {
-      if (this.lastError) {
-        this._lostConnection(this.lastError);
-      } else {
+      Promise.resolve(
+        // If the socket is closing because there was an error, and we
+        // didn't load SockJS before, try loading it dynamically before
+        // retrying the connection.
+        this.lastError &&
+        ! hasSockJS &&
+        import("./sockjs-0.3.4.js")
+      ).done(() => {
         this._lostConnection();
-      }
+      });
     };
 
     this.socket.onerror = error => {

@@ -3,6 +3,7 @@ var Future = Npm.require('fibers/future');
 OPLOG_COLLECTION = 'oplog.rs';
 
 var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
+var TAIL_TIMEOUT = +process.env.METEOR_OPLOG_TAIL_TIMEOUT || 30000;
 
 var showTS = function (ts) {
   return "Timestamp(" + ts.getHighBits() + ", " + ts.getLowBits() + ")";
@@ -96,10 +97,9 @@ _.extend(OplogHandle.prototype, {
 
     var originalCallback = callback;
     callback = Meteor.bindEnvironment(function (notification) {
-      // XXX can we avoid this clone by making oplog.js careful?
-      originalCallback(EJSON.clone(notification));
+      originalCallback(notification);
     }, function (err) {
-      Meteor._debug("Error in oplog callback", err.stack);
+      Meteor._debug("Error in oplog callback", err);
     });
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
@@ -143,7 +143,7 @@ _.extend(OplogHandle.prototype, {
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while reading last entry: " + e);
+        Meteor._debug("Got exception while reading last entry", e);
         Meteor._sleepForMs(100);
       }
     }
@@ -236,11 +236,19 @@ _.extend(OplogHandle.prototype, {
     var cursorDescription = new CursorDescription(
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
+    // Start tailing the oplog.
+    //
+    // We restart the low-level oplog query every 30 seconds if we didn't get a
+    // doc. This is a workaround for #8598: the Node Mongo driver has at least
+    // one bug that can lead to query callbacks never getting called (even with
+    // an error) when leadership failover occur.
     self._tailHandle = self._oplogTailConnection.tail(
-      cursorDescription, function (doc) {
+      cursorDescription,
+      function (doc) {
         self._entryQueue.push(doc);
         self._maybeStartWorker();
-      }
+      },
+      TAIL_TIMEOUT
     );
     self._readyFuture.return();
   },

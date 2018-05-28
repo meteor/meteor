@@ -22,7 +22,7 @@ extends CachingCompilerBase {
   }) {
     super({compilerName, defaultCacheSize, maxParallelism});
 
-    // Maps from absolute import path to { compileResult, cacheKeys }, where
+    // Maps from cache key to { compileResult, cacheKeys }, where
     // cacheKeys is an object mapping from absolute import path to hashed
     // cacheKey for each file referenced by this file (including itself).
     this._cache = new LRU({
@@ -89,7 +89,7 @@ extends CachingCompilerBase {
     inputFiles.forEach((inputFile) => {
       const importPath = this.getAbsoluteImportPath(inputFile);
       allFiles.set(importPath, inputFile);
-      cacheKeyMap.set(importPath, this._deepHash(this.getCacheKey(inputFile)));
+      cacheKeyMap.set(importPath, this._getCacheKeyWithPath(inputFile));
     });
 
     const allProcessedFuture = new Future;
@@ -107,13 +107,15 @@ extends CachingCompilerBase {
         }
 
         const absoluteImportPath = this.getAbsoluteImportPath(inputFile);
-        let cacheEntry = this._cache.get(absoluteImportPath);
+        const cacheKey = cacheKeyMap.get(absoluteImportPath);
+        let cacheEntry = this._cache.get(cacheKey);
         if (! cacheEntry) {
-          cacheEntry = this._readCache(absoluteImportPath);
+          cacheEntry = this._readCache(cacheKey);
           if (cacheEntry) {
             this._cacheDebug(`Loaded ${ absoluteImportPath }`);
           }
         }
+
         if (! (cacheEntry && this._cacheEntryValid(cacheEntry, cacheKeyMap))) {
           cacheMisses.push(inputFile.getDisplayPath());
 
@@ -142,8 +144,8 @@ extends CachingCompilerBase {
           });
 
           // Save the cache entry.
-          this._cache.set(absoluteImportPath, cacheEntry);
-          this._writeCacheAsync(absoluteImportPath, cacheEntry);
+          this._cache.set(cacheKey, cacheEntry);
+          this._writeCacheAsync(cacheKey, cacheEntry);
         }
 
         this.addCompileResult(inputFile, cacheEntry.compileResult);
@@ -168,6 +170,16 @@ extends CachingCompilerBase {
     }
   }
 
+  // Returns a hash that incorporates both this.getCacheKey(inputFile) and
+  // this.getAbsoluteImportPath(inputFile), since the file path might be
+  // relevant to the compiled output when using MultiFileCachingCompiler.
+  _getCacheKeyWithPath(inputFile) {
+    return this._deepHash([
+      this.getAbsoluteImportPath(inputFile),
+      this.getCacheKey(inputFile),
+    ]);
+  }
+
   _cacheEntryValid(cacheEntry, cacheKeyMap) {
     return Object.keys(cacheEntry.cacheKeys).every(
       (path) => cacheEntry.cacheKeys[path] === cacheKeyMap.get(path)
@@ -177,17 +189,17 @@ extends CachingCompilerBase {
   // The format of a cache file on disk is the JSON-stringified cacheKeys
   // object, a newline, followed by the CompileResult as returned from
   // this.stringifyCompileResult.
-  _cacheFilename(absoluteImportPath) {
-    return path.join(this._diskCache,
-                     this._deepHash(absoluteImportPath) + '.cache');
+  _cacheFilename(cacheKey) {
+    return path.join(this._diskCache, cacheKey + ".cache");
   }
+
   // Loads a {compileResult, cacheKeys} cache entry from disk. Returns the whole
   // cache entry and loads it into the in-memory cache too.
-  _readCache(absoluteImportPath) {
+  _readCache(cacheKey) {
     if (! this._diskCache) {
       return null;
     }
-    const cacheFilename = this._cacheFilename(absoluteImportPath);
+    const cacheFilename = this._cacheFilename(cacheKey);
     const raw = this._readFileOrNull(cacheFilename);
     if (!raw) {
       return null;
@@ -211,17 +223,18 @@ extends CachingCompilerBase {
     }
 
     const cacheEntry = {compileResult, cacheKeys};
-    this._cache.set(absoluteImportPath, cacheEntry);
+    this._cache.set(cacheKey, cacheEntry);
     return cacheEntry;
   }
-  _writeCacheAsync(absoluteImportPath, cacheEntry) {
+
+  _writeCacheAsync(cacheKey, cacheEntry) {
     if (! this._diskCache) {
       return null;
     }
-    const cacheFilename = this._cacheFilename(absoluteImportPath);
+    const cacheFilename = this._cacheFilename(cacheKey);
     const cacheContents =
-            JSON.stringify(cacheEntry.cacheKeys) + '\n'
-            + this.stringifyCompileResult(cacheEntry.compileResult);
+      JSON.stringify(cacheEntry.cacheKeys) + '\n' +
+      this.stringifyCompileResult(cacheEntry.compileResult);
     this._writeFileAsync(cacheFilename, cacheContents);
   }
 }

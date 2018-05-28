@@ -1515,7 +1515,7 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
     var docId;
     // Dog is implemented at the top of the file, outside of the idGeneration
     // loop (so that we only call EJSON.addType once).
-    var d = new Dog("reginald", "purple");
+    var d = new Dog("reginald", null);
     self.coll.insert({d: d}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
@@ -1526,6 +1526,7 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       var inColl = self.coll.findOne();
       test.isTrue(inColl);
       inColl && test.equal(inColl.d.speak(), "woof");
+      inColl && test.isNull(inColl.d.color);
     }));
   },
 
@@ -3233,7 +3234,7 @@ Meteor.isServer && Tinytest.add(
 
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(MongoInternals.NpmModules.mongodb.version, /^2\.(\d+)\.(\d+)/);
+  test.matches(MongoInternals.NpmModules.mongodb.version, /^3\.(\d+)\.(\d+)/);
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'function');
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module.connect),
              'function');
