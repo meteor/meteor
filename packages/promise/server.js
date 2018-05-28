@@ -15,7 +15,7 @@ require("meteor/modern-browsers").setMinimumBrowserVersions({
   // (pre-Edge) from the modern classification. #9818 #9839
   ie: 12,
   firefox: 29,
-  mobile_safari: 8,
+  mobileSafari: 8,
   opera: 20,
   safari: [7, 1],
   // https://github.com/Kilian/electron-to-chromium/blob/master/full-versions.js
