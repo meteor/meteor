@@ -2,10 +2,11 @@ Facebook = {};
 var crypto = Npm.require('crypto');
 
 Facebook.handleAuthFromAccessToken = function handleAuthFromAccessToken(accessToken, expiresAt) {
-  // include all fields from facebook
-  // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
-  var whitelisted = ['id', 'email', 'name', 'first_name',
-      'last_name', 'link', 'gender', 'locale', 'age_range'];
+  // include basic fields from facebook
+  // https://developers.facebook.com/docs/facebook-login/permissions/
+  var whitelisted = ['id', 'email', 'name', 'first_name', 'last_name',
+    'middle_name', 'name_format', 'picture', 'short_name', 'age_range',
+    'birthday', 'friends', 'gender', 'hometown', 'link', 'location'];
 
   var identity = getIdentity(accessToken, whitelisted);
 
@@ -53,7 +54,7 @@ var getTokenResponse = function (query) {
   try {
     // Request an access token
     responseContent = HTTP.get(
-      "https://graph.facebook.com/v2.12/oauth/access_token", {
+      "https://graph.facebook.com/v3.0/oauth/access_token", {
         params: {
           client_id: config.appId,
           redirect_uri: OAuth._redirectUri('facebook', config),
@@ -90,7 +91,7 @@ var getIdentity = function (accessToken, fields) {
   hmac.update(accessToken);
 
   try {
-    return HTTP.get("https://graph.facebook.com/v2.12/me", {
+    return HTTP.get("https://graph.facebook.com/v3.0/me", {
       params: {
         access_token: accessToken,
         appsecret_proof: hmac.digest('hex'),

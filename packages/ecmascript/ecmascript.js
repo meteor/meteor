@@ -1,7 +1,8 @@
 ECMAScript = {
   compileForShell(command) {
     const babelOptions = Babel.getDefaultOptions();
-    babelOptions.sourceMap = false;
+    delete babelOptions.sourceMap;
+    delete babelOptions.sourceMaps;
     babelOptions.ast = false;
     return Babel.compile(command, babelOptions).code;
   }

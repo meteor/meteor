@@ -6,19 +6,21 @@ Package.describe({
   // isn't possible because you can't publish a non-recommended
   // release with package versions that don't have a pre-release
   // identifier at the end (eg, -dev)
-  version: '7.0.9'
+  version: '7.1.0'
 });
 
 Npm.depends({
-  'meteor-babel': '7.0.0-beta.48'
+  'meteor-babel': '7.0.0-beta.49-1'
 });
 
 Package.onUse(function (api) {
   api.use('ecmascript-runtime', 'server');
+  api.use('modern-browsers');
 
   api.addFiles([
     'babel.js',
-    'babel-compiler.js'
+    'babel-compiler.js',
+    'versions.js',
   ], 'server');
 
   api.export('Babel', 'server');

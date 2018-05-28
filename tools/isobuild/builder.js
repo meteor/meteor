@@ -135,7 +135,15 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (partial in this.previousUsedAsFile) {
           if (this.previousUsedAsFile[partial]) {
             // was previously used as file, delete it, create a directory
-            files.unlink(partial);
+            try {
+              files.unlink(partial);
+            } catch (e) {
+              // If files.unlink(partial) failed because the file does not
+              // exist, then we can just pretend the unlink succeeded.
+              if (e.code !== "ENOENT") {
+                throw e;
+              }
+            }
           } else {
             // is already a directory
             needToMkdir = false;

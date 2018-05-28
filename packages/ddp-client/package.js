@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  lolex: '1.4.0'
+  lolex: '2.3.1'
 });
 
 Package.onUse((api) => {

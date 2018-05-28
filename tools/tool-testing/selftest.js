@@ -18,9 +18,6 @@ export { Run };
 
 import "../tool-env/install-runtime.js";
 
-// To allow long stack traces that cross async boundaries
-import 'longjohn';
-
 // Use this to decorate functions that throw TestFailure. Decorate the
 // first function that should not be included in the call stack shown
 // to the user.

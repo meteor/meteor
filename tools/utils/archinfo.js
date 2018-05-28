@@ -143,7 +143,7 @@ export const VALID_ARCHITECTURES = {
 //
 // If you change this, also change scripts/admin/launch-meteor
 var _host = null; // memoize
-var host = function () {
+export function host() {
   if (! _host) {
     var run = function (...args) {
       var result = utils.execFileSync(args[0], args.slice(1)).stdout;
@@ -188,7 +188,7 @@ var host = function () {
   }
 
   return _host;
-};
+}
 
 // In order to springboard to earlier Meteor releases that did not have
 // 64-bit Windows builds, Windows installations must be allowed to
@@ -212,7 +212,7 @@ exports.acceptableMeteorToolArches = function () {
 // 64-bit Windows machines that have been using a 32-bit version of Meteor
 // are eligible to switch to 64-bit beginning with Meteor 1.6, which is
 // the first version of Meteor that contains this code.
-exports.canSwitchTo64Bit = function () {
+export function canSwitchTo64Bit() {
   // Automatically switching from 32-bit to 64-bit Windows builds is
   // disabled for the time being, since downloading additional builds of
   // meteor-tool isn't stable enough at the moment (on Windows, at least)
@@ -220,7 +220,7 @@ exports.canSwitchTo64Bit = function () {
   return false &&
     utils.architecture() === "x86_64" &&
     host() === "os.windows.x86_32";
-};
+}
 
 // True if `host` (an architecture name such as 'os.linux.x86_64') can run
 // programs of architecture `program` (which might be something like 'os',
@@ -230,17 +230,17 @@ exports.canSwitchTo64Bit = function () {
 // necessarily have to be a fully qualified architecture name. This
 // function just checks to see if `program` describes a set of
 // environments that is a (non-strict) superset of `host`.
-var matches = function (host, program) {
+export function matches(host, program) {
   return host.substr(0, program.length) === program &&
     (host.length === program.length ||
      host.substr(program.length, 1) === ".");
-};
+}
 
 // Like `supports`, but instead taken an array of possible
 // architectures as its second argument. Returns the most specific
 // match, or null if none match. Throws an error if `programs`
 // contains exact duplicates.
-var mostSpecificMatch = function (host, programs) {
+export function mostSpecificMatch(host, programs) {
   var seen = {};
   var best = null;
 
@@ -249,14 +249,14 @@ var mostSpecificMatch = function (host, programs) {
       throw new Error("Duplicate architecture: " + p);
     }
     seen[p] = true;
-    if (archinfo.matches(host, p) &&
+    if (matches(host, p) &&
         (! best || p.length > best.length)) {
       best = p;
     }
   });
 
   return best;
-};
+}
 
 // `programs` is a set of architectures (as an array of string, which
 // may contain duplicates). Determine if there exists any architecture
@@ -267,7 +267,7 @@ var mostSpecificMatch = function (host, programs) {
 // For example, for 'os' and 'os.osx', return 'os.osx'. For 'os' and
 // 'os.linux.x86_64', return 'os.linux.x86_64'. For 'os' and 'browser', throw an
 // exception.
-var leastSpecificDescription = function (programs) {
+export function leastSpecificDescription(programs) {
   if (programs.length === 0) {
     return '';
   }
@@ -280,27 +280,18 @@ var leastSpecificDescription = function (programs) {
   // compatible with the most specific then it must be the least
   // specific compatible description.
   _.each(programs, function (p) {
-    if (! archinfo.matches(longest, p)) {
+    if (! matches(longest, p)) {
       throw new Error("Incompatible architectures: '" + p + "' and '" +
                       longest + "'");
     }
   });
 
   return longest;
-};
+}
 
-var withoutSpecificOs = function (arch) {
+export function withoutSpecificOs(arch) {
   if (arch.substr(0, 3) === 'os.') {
     return 'os';
   }
   return arch;
-};
-
-var archinfo = exports;
-_.extend(archinfo, {
-  host: host,
-  matches: matches,
-  mostSpecificMatch: mostSpecificMatch,
-  leastSpecificDescription: leastSpecificDescription,
-  withoutSpecificOs: withoutSpecificOs
-});
+}

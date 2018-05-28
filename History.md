@@ -1,5 +1,102 @@
 ## v.NEXT
 
+## v1.7, 2018-05-28
+
+* More than 80% of internet users worldwide have access to a web browser
+  that natively supports the latest ECMAScript features and keeps itself
+  updated automatically, which means new features become available almost
+  as soon as they ship. In other words, the future we envisioned when we
+  first began [compiling code with
+  Babel](https://blog.meteor.com/how-much-does-ecmascript-2015-cost-2ded41d70914)
+  is finally here, yet most web frameworks and applications still compile
+  a single client-side JavaScript bundle that must function simultaneously
+  in the oldest and the newest browsers the application developer wishes
+  to support.
+
+  That choice is understandable, because the alternative is daunting: not
+  only must you build multiple JavaScript and CSS bundles for different
+  browsers, with different dependency graphs and compilation rules and
+  webpack configurations, but your server must also be able to detect the
+  capabilities of each visiting client, so that it can deliver the
+  appropriate assets at runtime. Testing a matrix of different browsers
+  and application versions gets cumbersome quickly, so it's no surprise
+  that responsible web developers would rather ship a single, well-tested
+  bundle, and forget about taking advantage of modern features until
+  legacy browsers have disappeared completely.
+
+  With Meteor 1.7, this awkward balancing act is no longer necessary,
+  because Meteor now automatically builds two sets of client-side assets,
+  one tailored to the capabilities of modern browsers, and the other
+  designed to work in all supported browsers, thus keeping legacy browsers
+  working exactly as they did before. Best of all, the entire Meteor
+  community relies on the same system, so any bugs or differences in
+  behavior can be identified and fixed quickly.
+
+  In this system, a "modern" browser can be loosely defined as one with
+  full native support for `async` functions and `await` expressions, which
+  includes more than 80% of the world market, and 85% of the US market
+  ([source](https://caniuse.com/#feat=async-functions)). This standard may
+  seem extremely strict, since `async`/`await` was [just finalized in
+  ECMAScript 2017](http://2ality.com/2016/10/async-function-tips.html),
+  but the statistics clearly justify it. As another example, any modern
+  browser can handle native `class` syntax, though newer syntax like class
+  fields may still need to be compiled for now, whereas a legacy browser
+  will need compilation for both advanced and basic `class` syntax. And of
+  course you can safely assume that any modern browser has a native
+  `Promise` implementation, because `async` functions must return
+  `Promise`s. The list goes on and on.
+
+  This boundary between modern and legacy browsers is designed to be tuned
+  over time, not only by the Meteor framework itself but also by each
+  individual Meteor application. For example, here's how the minimum
+  versions for native ECMAScript `class` support might be expressed:
+
+  ```js
+  import { setMinimumBrowserVersions } from "meteor/modern-browsers";
+
+  setMinimumBrowserVersions({
+    chrome: 49,
+    firefox: 45,
+    edge: 12,
+    ie: Infinity, // Sorry, IE11.
+    mobile_safari: [9, 2], // 9.2.0+
+    opera: 36,
+    safari: 9,
+    electron: 1,
+  }, "classes");
+  ```
+
+  The minimum modern version for each browser is simply the maximum of all
+  versions passed to `setMinimumBrowserVersions` for that browser. The
+  Meteor development server decides which assets to deliver to each client
+  based on the `User-Agent` string of the HTTP request. In production,
+  different bundles are named with unique hashes, which prevents cache
+  collisions, though Meteor also sets the `Vary: User-Agent` HTTP response
+  header to let well-behaved clients know they should cache modern and
+  legacy resources separately.
+
+  For the most part, the modern/legacy system will transparently determine
+  how your code is compiled, bundled, and delivered&mdash;and yes, it
+  works with every existing part of Meteor, including dynamic `import()`
+  and even [the old `appcache`
+  package](https://github.com/meteor/meteor/pull/9776). However, if you're
+  writing dynamic code that depends on modern features, you can use the
+  boolean `Meteor.isModern` flag to detect the status of the current
+  environment (Node 8 is modern, too, of course). If you're writing a
+  Meteor package, you can call `api.addFiles(files, "legacy")` in your
+  `package.js` configuration file to add extra files to the legacy bundle,
+  or `api.addFiles(files, "client")` to add files to all client bundles,
+  or `api.addFiles(files, "web.browser")` to add files only to the modern
+  bundle, and the same rules apply to `api.mainModule`. Just be sure to
+  call `setMinimumBrowserVersions` (in server startup code) to enforce
+  your assumptions about ECMAScript feature support.
+
+  We think this modern/legacy system is one of the most powerful features
+  we've added since we first introduced the `ecmascript` package in Meteor
+  1.2, and we look forward to other frameworks attempting to catch up.
+
+  [PR #9439](https://github.com/meteor/meteor/pull/9439)
+
 * Although Meteor does not recompile packages installed in `node_modules`
   by default, compilation of specific npm packages (for example, to
   support older browsers that the package author neglected) can now be
@@ -44,7 +141,21 @@
   application code. [PR #9771](https://github.com/meteor/meteor/pull/9771)
   [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
 
-* The `npm` package has been upgraded to version 5.8.0, and our
+  > Note: since compilation of npm packages can now be enabled using the
+    techniques described above, Meteor will no longer automatically scan
+    `node_modules` directories for modules that can be compiled by
+    compiler plugins. If you have been using that functionality to import
+    compiled-to-JS modules from `node_modules`, you should start using the
+    symlinking strategy instead.
+
+* Node has been updated to version
+  [8.11.2](https://nodejs.org/en/blog/release/v8.11.2/), officially fixing
+  a [cause](https://github.com/nodejs/node/issues/19274) of frequent
+  segmentation faults in Meteor applications that was introduced in Node
+  8.10.0. Meteor 1.6.1.1 shipped with a custom build of Node that patched
+  this problem, but that approach was never intended to be permanent.
+
+* The `npm` package has been upgraded to version 5.10.0, and our
   [fork](https://github.com/meteor/pacote/tree/v7.6.1-meteor) of its
   `pacote` dependency has been rebased against version 7.6.1.
 
@@ -101,12 +212,32 @@
   test files across your codebase; just make sure you import the ones you
   want to run. [PR #9714](https://github.com/meteor/meteor/pull/9714)
 
+* The `meteor create` command now supports a `--minimal` option, which
+  creates an app with as few Meteor packages as possible, in order to
+  minimize client bundle size while still demonstrating advanced features
+  such as server-side rendering. This starter application is a solid
+  foundation for any application that doesn't need Mongo or DDP.
+
 * The `meteor-babel` npm package has been updated to version
-  7.0.0-beta.46.
+  7.0.0-beta.49-1. Note: while Babel has recently implemented support for
+  a new kind of `babel.config.js` configuration file (see [this
+  PR](https://github.com/babel/babel/pull/7358)), and future versions of
+  Meteor will no doubt embrace this functionality, Meteor 1.7 supports
+  only `.babelrc` files as a means of customizing the default Babel
+  configuration provided by Meteor. In other words, if your project
+  contains a `babel.config.js` file, it will be ignored by Meteor 1.7.
 
-* The `reify` npm package has been updated to version 0.15.1.
+* The `reify` npm package has been updated to version 0.16.2.
 
-* The `optimism` npm package has been updated to version 0.4.0.
+* The `meteor-node-stubs` package, which provides stub implementations for
+  any Node built-in modules used by the client (such as `path` and
+  `http`), has a new minor version (0.4.1) that may help with Windows
+  installation problems. To install the new version, run
+  ```sh
+  meteor npm install meteor-node-stubs@latest
+  ```
+
+* The `optimism` npm package has been updated to version 0.6.3.
 
 * The `minifier-js` package has been updated to use `uglify-es` 3.3.9.
 
@@ -115,10 +246,10 @@
   `selftest.skip.define('some test', ...` will skip running "some test".
   [PR #9579](https://github.com/meteor/meteor/pull/9579)
 
-* Mongo has been upgraded to version 3.6.3 for 64-bit systems, and 3.2.19
+* Mongo has been upgraded to version 3.6.4 for 64-bit systems, and 3.2.19
   for 32-bit systems. [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
-  **NOTE:** After upgrading an application to use Mongo 3.6.2, it has been
+  **NOTE:** After upgrading an application to use Mongo 3.6.4, it has been
   observed ([#9591](https://github.com/meteor/meteor/issues/9591))
   that attempting to run that application with an older version of
   Meteor (via `meteor --release X`), that uses an older version of Mongo, can
@@ -132,9 +263,19 @@
   ```
   [PR #9632](https://github.com/meteor/meteor/pull/9632)
 
+* The `mongodb` driver package has been updated from version 2.2.34 to
+  version 3.0.7. [PR #9790](https://github.com/meteor/meteor/pull/9790)
+  [PR #9831](https://github.com/meteor/meteor/pull/9831)
+  [Feature #268](https://github.com/meteor/meteor-feature-requests/issues/268)
+
 * The `cordova-plugin-meteor-webapp` package depended on by the Meteor
   `webapp` package has been updated to version 1.6.0.
   [PR #9761](https://github.com/meteor/meteor/pull/9761)
+
+* Any settings read from a JSON file passed with the `--settings` option
+  during Cordova run/build/deploy will be exposed in `mobile-config.js`
+  via the `App.settings` property, similar to `Meteor.settings`.
+  [PR #9873](https://github.com/meteor/meteor/pull/9873)
 
 * The `@babel/plugin-proposal-class-properties` plugin provided by
   `meteor-babel` now runs with the `loose:true` option, as required by

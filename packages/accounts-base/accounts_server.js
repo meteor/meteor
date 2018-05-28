@@ -1345,7 +1345,7 @@ Ap.insertUserDoc = function (options, user) {
   } catch (e) {
     // XXX string parsing sucks, maybe
     // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
-    if (e.name !== 'MongoError') throw e;
+    if (e.name !== 'MongoError' && e.name !== 'BulkWriteError') throw e;
     if (e.code !== 11000) throw e;
     if (e.errmsg.indexOf('emails.address') !== -1)
       throw new Meteor.Error(403, "Email already exists.");

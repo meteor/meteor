@@ -151,20 +151,17 @@ export class IsopackCache {
       return true;
     }
 
-    arch = arch && archinfo.withoutSpecificOs(arch);
+    const unibuild = isopack.getUnibuildAtArch(arch);
+    if (! unibuild) {
+      return false;
+    }
 
-    return _.some(isopack.unibuilds, u => {
-      if (arch && ! archinfo.matches(u.arch, arch)) {
-        return false;
-      }
-
-      return _.some(u.uses, use => {
-        return this.implies(
-          this._isopacks[use.package],
-          name,
-          arch,
-        );
-      });
+    return _.some(unibuild.uses, use => {
+      return this.implies(
+        this._isopacks[use.package],
+        name,
+        arch,
+      );
     });
   }
 
@@ -178,20 +175,17 @@ export class IsopackCache {
       return true;
     }
 
-    arch = arch && archinfo.withoutSpecificOs(arch);
+    const unibuild = isopack.getUnibuildAtArch(arch);
+    if (! unibuild) {
+      return false;
+    }
 
-    return _.some(isopack.unibuilds, u => {
-      if (arch && ! archinfo.matches(u.arch, arch)) {
-        return false;
-      }
-
-      return _.some(u.implies, imp => {
-        return this.implies(
-          this._isopacks[imp.package],
-          name,
-          arch,
-        );
-      });
+    return _.some(unibuild.implies, imp => {
+      return this.implies(
+        this._isopacks[imp.package],
+        name,
+        arch,
+      );
     });
   }
 

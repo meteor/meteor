@@ -7,6 +7,7 @@ const {
   normalize: pathNormalize,
 } = require("path");
 const { fetchURL } = require("./common.js");
+const { isModern } = require("meteor/modern-browsers");
 const hasOwn = Object.prototype.hasOwnProperty;
 
 require("./security.js");
@@ -61,20 +62,37 @@ function randomId(n) {
 }
 
 function middleware(request, response) {
-  assert.strictEqual(request.method, "POST");
-  const chunks = [];
-  request.on("data", chunk => chunks.push(chunk));
-  request.on("end", () => {
-    response.setHeader("Content-Type", "application/json");
-    response.end(JSON.stringify(readTree(
-      JSON.parse(Buffer.concat(chunks)),
-      getPlatform(request)
-    )));
-  });
+  // Allow dynamic import() requests from any origin.
+  response.setHeader("Access-Control-Allow-Origin", "*");
+
+  if (request.method === "OPTIONS") {
+    response.setHeader("Access-Control-Allow-Headers", "*");
+    response.setHeader("Access-Control-Allow-Methods", "POST");
+    response.end();
+  } else if (request.method === "POST") {
+    const chunks = [];
+    request.on("data", chunk => chunks.push(chunk));
+    request.on("end", () => {
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify(readTree(
+        JSON.parse(Buffer.concat(chunks)),
+        getPlatform(request)
+      ), null, 2));
+    });
+  } else {
+    response.writeHead(405, {
+      "Cache-Control": "no-cache"
+    });
+    response.end(`method ${request.method} not allowed`);
+  }
 }
 
 function getPlatform(request) {
-  let platform = "web.browser";
+  const { identifyBrowser } = Package.webapp.WebAppInternals;
+  const browser = identifyBrowser(request.headers["user-agent"]);
+  let platform = isModern(browser)
+    ? "web.browser"
+    : "web.browser.legacy";
 
   // If the __dynamicImport request includes a secret key, and it matches
   // dynamicImportInfo[platform].key, use platform instead of the default
