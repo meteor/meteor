@@ -9,6 +9,14 @@
   revisit this optimization in Meteor 1.7.1.
   [mozfet/meteor-autoform-materialize#43](https://github.com/mozfet/meteor-autoform-materialize/issues/43)
 
+* After updating to Meteor 1.7 or 1.7.0.1, you should update the
+  `@babel/runtime` npm package (as well as other Babel-related packages)
+  to their latest versions, along with the `meteor-node-stubs` package,
+  by running the following command:
+  ```sh
+  meteor npm install @babel/runtime@latest meteor-node-stubs@latest
+  ```
+
 ## v1.7, 2018-05-28
 
 * More than 80% of internet users worldwide have access to a web browser
