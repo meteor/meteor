@@ -117,7 +117,7 @@
     import("the-package").then(...)
     ```
     This reuse of compiled code is the critical new feature that was added
-    in Meteor 1.6.2.
+    in Meteor 1.7.
 
   * Install the package normally with `meteor npm install the-package`,
     then create a symbolic link *to* the installed package elsewhere in
