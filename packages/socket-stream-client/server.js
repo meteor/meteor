@@ -7,7 +7,7 @@ setMinimumBrowserVersions({
   edge: 12,
   firefox: 11,
   ie: 10,
-  mobile_safari: [6, 1],
+  mobileSafari: [6, 1],
   phantomjs: 2,
   safari: 7,
   electron: [0, 20],

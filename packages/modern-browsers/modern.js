@@ -7,12 +7,20 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // specifically for chromeMobile. This map defines that aliasing behavior
 // in a generic way that could work for other browsers as well.
 const browserAliases = {
-  chrome: ["chromeMobile"],
+  chrome: [
+    "chromeMobile",
+    "chromeMobileIOS",
+  ],
+
   // If a call to setMinimumBrowserVersions specifies Edge 12 as a minimum
   // version, that means no version of Internet Explorer pre-Edge should
   // be classified as modern. This edge:["ie"] alias effectively enforces
   // that logic, because there is no IE12. #9818 #9839
   edge: ["ie"],
+
+  // The webapp package converts browser names to camel case, so
+  // mobile_safari and mobileSafari should be synonymous.
+  mobile_safari: ["mobileSafari"],
 };
 
 // Expand the given minimum versions by reusing chrome versions for
@@ -136,7 +144,7 @@ setMinimumBrowserVersions({
   chrome: 49,
   edge: 12,
   firefox: 45,
-  mobile_safari: [9, 2],
+  mobileSafari: [9, 2],
   opera: 36,
   safari: 9,
   // Electron 1.0.0+ matches Chromium 49, per
@@ -148,7 +156,7 @@ setMinimumBrowserVersions({
   chrome: 39,
   edge: 13,
   firefox: 26,
-  mobile_safari: 10,
+  mobileSafari: 10,
   opera: 26,
   safari: 10,
   // Disallow any version of PhantomJS.
@@ -160,7 +168,7 @@ setMinimumBrowserVersions({
   chrome: 41,
   edge: 13,
   firefox: 34,
-  mobile_safari: [9, 2],
+  mobileSafari: [9, 2],
   opera: 29,
   safari: [9, 1],
   electron: [0, 24],
@@ -170,7 +178,7 @@ setMinimumBrowserVersions({
   chrome: 38,
   edge: 12,
   firefox: 36,
-  mobile_safari: 9,
+  mobileSafari: 9,
   opera: 25,
   safari: 9,
   electron: [0, 20],
