@@ -1,5 +1,22 @@
 ## v.NEXT
 
+## v1.7.0.1, 2018-05-29
+
+* Reverted an [optimization](https://github.com/meteor/meteor/pull/9825)
+  introduced in Meteor 1.7 to stop scanning `node_modules` for files that
+  might be of interest to compiler plugins, since the intended workarounds
+  (creating symlinks) did not satisfy all existing use cases. We will
+  revisit this optimization in Meteor 1.7.1.
+  [mozfet/meteor-autoform-materialize#43](https://github.com/mozfet/meteor-autoform-materialize/issues/43)
+
+* After updating to Meteor 1.7 or 1.7.0.1, you should update the
+  `@babel/runtime` npm package (as well as other Babel-related packages)
+  to their latest versions, along with the `meteor-node-stubs` package,
+  by running the following command:
+  ```sh
+  meteor npm install @babel/runtime@latest meteor-node-stubs@latest
+  ```
+
 ## v1.7, 2018-05-28
 
 * More than 80% of internet users worldwide have access to a web browser
@@ -117,7 +134,7 @@
     import("the-package").then(...)
     ```
     This reuse of compiled code is the critical new feature that was added
-    in Meteor 1.6.2.
+    in Meteor 1.7.
 
   * Install the package normally with `meteor npm install the-package`,
     then create a symbolic link *to* the installed package elsewhere in
@@ -141,12 +158,13 @@
   application code. [PR #9771](https://github.com/meteor/meteor/pull/9771)
   [Feature #6](https://github.com/meteor/meteor-feature-requests/issues/6)
 
-  > Note: since compilation of npm packages can now be enabled using the
+  > ~Note: since compilation of npm packages can now be enabled using the
     techniques described above, Meteor will no longer automatically scan
     `node_modules` directories for modules that can be compiled by
     compiler plugins. If you have been using that functionality to import
     compiled-to-JS modules from `node_modules`, you should start using the
-    symlinking strategy instead.
+    symlinking strategy instead.~ **Follow-up note: this optimization was
+    reverted in Meteor 1.7.0.1 (see [above](#v1701-2018-05-29)).**
 
 * Node has been updated to version
   [8.11.2](https://nodejs.org/en/blog/release/v8.11.2/), officially fixing
