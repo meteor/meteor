@@ -18,7 +18,7 @@
     "hexo-versioned-netlify-redirects": "1.0.7",
     "jsdoc": "3.5.5",
     "meteor-hexo-config": "1.0.8",
-    "meteor-theme-hexo": "1.0.11",
+    "meteor-theme-hexo": "1.0.12",
     "showdown": "1.8.6",
     "underscore": "1.9.0"
   },
