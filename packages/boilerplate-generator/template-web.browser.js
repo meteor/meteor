@@ -9,8 +9,9 @@ export const headTemplate = ({
 }) => {
   var headSections = head.split(/<meteor-bundled-css[^<>]*>/, 2);
   var cssBundle = [...(css || []).map(file =>
-    template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>">')({
+    template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>" integrity="sha512-<%- hash %>" crossorigin="anonymous">')({
       href: bundledJsCssUrlRewriteHook(file.url),
+      hash: file.hash,
     })
   )].join('\n');
 
@@ -21,7 +22,7 @@ export const headTemplate = ({
         attrValue: htmlAttributes[key],
       })
     ).join('') + '>',
-    
+
     '<head>',
 
     (headSections.length === 1)
@@ -54,8 +55,9 @@ export const closeTemplate = ({
   '',
 
   ...(js || []).map(file =>
-    template('  <script type="text/javascript" src="<%- src %>"></script>')({
+    template('  <script type="text/javascript" src="<%- src %>" integrity="sha512-<%- hash %>" crossorigin="anonymous"></script>')({
       src: bundledJsCssUrlRewriteHook(file.url),
+      hash: file.hash,
     })
   ),
 

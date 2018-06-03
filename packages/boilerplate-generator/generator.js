@@ -1,5 +1,6 @@
 import { readFile } from 'fs';
 import { create as createStream } from "combined-stream2";
+import { createHash } from 'crypto';
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
@@ -124,6 +125,14 @@ export class Boilerplate {
         itemObj.scriptContent = readUtf8FileSync(
           pathMapper(item.path));
         itemObj.inline = true;
+      } else {
+        if (item.sha512) {
+          itemObj.hash = item.sha512;
+        } else {
+          const hash = createHash('sha512');
+          hash.update(readUtf8FileSync(pathMapper(item.path)));
+          itemObj.hash = hash.digest('base64');
+        }
       }
 
       if (item.type === 'css' && item.where === 'client') {

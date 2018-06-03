@@ -10,7 +10,8 @@ export async function generateHTMLForArch(arch, includeHead) {
       cacheable: true,
       url: '/packages/bootstrap/css/bootstrap-responsive.css?hash=785760fc5ad665d7b54d56a3c2522797bb2cc150&v="1"',
       size: 22111,
-      hash: '785760fc5ad665d7b54d56a3c2522797bb2cc150'
+      hash: '785760fc5ad665d7b54d56a3c2522797bb2cc150',
+      sha512: 'FgwCpUKZj/5DORw0OQWACh65bi8wxnLGcoHxNq9bbErR9TLacgBisdqhg4uBLZ2sctoiSjG+hWLRigs1mBZY/Q==',
     },
     {
       path: 'packages/templating-runtime.js',
@@ -19,7 +20,8 @@ export async function generateHTMLForArch(arch, includeHead) {
       cacheable: true,
       url: '/packages/templating-runtime.js?hash=c18de19afda6e9f0db7faf3d4382a4c953cabe18&v="1"',
       size: 24132,
-      hash: 'c18de19afda6e9f0db7faf3d4382a4c953cabe18'
+      hash: 'c18de19afda6e9f0db7faf3d4382a4c953cabe18',
+      sha512: 'mJ9OEOi4HbVMzqiVGOjxCiIIImgnzEg6QhorPno46yULMu/3tKmENYriasWP9RrM+wLNwlTzw6+9d+nWY9/A0A==',
     },
   ];
 
