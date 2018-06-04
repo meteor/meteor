@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "hexo": {
-    "version": "3.6.0"
+    "version": "3.7.1"
   },
   "devDependencies": {
     "canonical-json": "0.0.4",
