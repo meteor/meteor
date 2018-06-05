@@ -1102,12 +1102,12 @@ export class AccountsServer extends AccountsCommon {
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
       if (e.name !== 'MongoError') throw e;
-      if (e.code !== 11000) throw e;
       if (e.errmsg.includes('emails.address'))
         throw new Meteor.Error(403, "Email already exists.");
       if (e.errmsg.includes('username'))
         throw new Meteor.Error(403, "Username already exists.");
       // XXX better error reporting for services.facebook.id duplicate, etc
+      if (e.code !== 11000) throw e;
       throw e;
     }
     return userId;
