@@ -1,5 +1,9 @@
 ## v.NEXT
 
+* The `npm` package has been upgraded to version 6.1.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
+  `pacote` dependency has been rebased against version 8.1.6.
+
 ## v1.7.0.1, 2018-05-29
 
 * Reverted an [optimization](https://github.com/meteor/meteor/pull/9825)
