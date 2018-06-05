@@ -349,9 +349,32 @@ _.extend(Isopack.prototype, {
 
   // A sorted plus-separated string of all the architectures included in this
   // package.
-  buildArchitectures: function () {
-    var self = this;
-    return self.architectures().join('+');
+  buildArchitectures(simplify) {
+    const arches = this.architectures();
+
+    if (simplify) {
+      const simpler = [];
+
+      arches.forEach(arch => {
+        const parts = arch.split(".");
+        while (parts.length > 1) {
+          parts.pop();
+          if (arches.indexOf(parts.join(".")) >= 0) {
+            // If the arches array contains a strict prefix of this arch,
+            // omit this arch from the result, since it should be covered
+            // by the prefix. For example, if arches contains "web" or
+            // "web.browser" then it shouldn't need to contain
+            // "web.browser.legacy" as well.
+            return;
+          }
+        }
+        simpler.push(arch);
+      });
+
+      return simpler.join("+");
+    }
+
+    return arches.join("+");
   },
 
   // Returns true if we think that this isopack is platform specific (contains
@@ -1424,10 +1447,11 @@ _.extend(Isopack.prototype, {
     // Transpile the files we selected
     var babel = require("meteor-babel");
     pathsToTranspile.forEach((path) => {
-      var fullPath = files.convertToOSPath(
-        files.pathJoin(files.getCurrentToolsDir(), path));
-
-      var inputFileContents = files.readFile(fullPath, "utf-8");
+      const toolsDir = files.getCurrentToolsDir();
+      const fullPath = files.convertToOSPath(files.pathJoin(toolsDir, path));
+      let inputFileContents = files.readFile(fullPath, "utf-8");
+      const babelCacheDirectory =
+        files.pathJoin(files.pathDirname(toolsDir), ".babel-cache");
 
       // #RemoveInProd
       // We don't actually want to load the babel auto-transpiler when we are
@@ -1445,10 +1469,12 @@ _.extend(Isopack.prototype, {
       _.extend(babelOptions, {
         filename: path,
         sourceFileName: "/" + path,
-        sourceMap: true
+        sourceMaps: true
       });
 
-      var transpiled = babel.compile(inputFileContents, babelOptions);
+      var transpiled = babel.compile(inputFileContents, babelOptions, {
+        cacheDirectory: babelCacheDirectory,
+      });
 
       var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
 

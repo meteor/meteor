@@ -1,8 +1,8 @@
 import crypto from 'crypto';
-import { 
-  AccountsCommon, 
-  EXPIRE_TOKENS_INTERVAL_MS, 
-  CONNECTION_CLOSE_DELAY_MS 
+import {
+  AccountsCommon,
+  EXPIRE_TOKENS_INTERVAL_MS,
+  CONNECTION_CLOSE_DELAY_MS
 } from './accounts_common.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -276,7 +276,7 @@ export class AccountsServer extends AccountsCommon {
     // the login token on the connection (not that there is
     // currently a public API for reading the login token on a
     // connection).
-    Meteor._noYieldsAllowed(() => 
+    Meteor._noYieldsAllowed(() =>
       this._setLoginToken(
         userId,
         methodInvocation.connection,
@@ -326,10 +326,10 @@ export class AccountsServer extends AccountsCommon {
       methodArguments: Array.from(methodArgs)
     };
     if (result.error) {
-      attempt.error = result.error;    
+      attempt.error = result.error;
     }
     if (user) {
-      attempt.user = user;    
+      attempt.user = user;
     }
 
     // _validateLogin may mutate `attempt` by adding an error and changing allowed
@@ -500,8 +500,8 @@ export class AccountsServer extends AccountsCommon {
     // The methods created in this function need to be created here so that
     // this variable is available in their scope.
     const accounts = this;
-    
-    
+
+
     // This object will be populated with methods and then passed to
     // accounts._server.methods further below.
     const methods = {};
@@ -573,7 +573,7 @@ export class AccountsServer extends AccountsCommon {
           // associated with `tokens`.
           accounts._deleteSavedTokensForUser(this.userId, tokens);
         }, accounts._noConnectionCloseDelayForTest ? 0 :
-                          CONNECTION_CLOSE_DELAY_MS);
+          CONNECTION_CLOSE_DELAY_MS);
         // We do not set the login token on this connection, but instead the
         // observe closes the connection and the client will reconnect with the
         // new token.
@@ -644,7 +644,7 @@ export class AccountsServer extends AccountsCommon {
       //     be in accounts-oauth; if it's not then the registry should be
       //     in this package
       if (!(accounts.oauth
-            && accounts.oauth.serviceNames().includes(options.service))) {
+        && accounts.oauth.serviceNames().includes(options.service))) {
         throw new Meteor.Error(403, "Service unknown");
       }
 
@@ -706,7 +706,7 @@ export class AccountsServer extends AccountsCommon {
     Package.autopublish && Meteor.startup(() => {
       // ['profile', 'username'] -> {profile: 1, username: 1}
       const toFieldSelector = fields => fields.reduce((prev, field) => (
-        { ...prev, [field]: 1 }),
+          { ...prev, [field]: 1 }),
         {}
       );
       this._server.publish(null, function () {
@@ -786,14 +786,14 @@ export class AccountsServer extends AccountsCommon {
   // {token, when} => {hashedToken, when}
   _hashStampedToken(stampedToken) {
     const hashedStampedToken = Object.keys(stampedToken).reduce(
-      (prev, key) => key === 'token' ? 
-        prev : 
+      (prev, key) => key === 'token' ?
+        prev :
         { ...prev, [key]: stampedToken[key] },
       {},
     )
     return {
-      ...hashedStampedToken, 
-      hashedToken: this._hashLoginToken(stampedToken.token) 
+      ...hashedStampedToken,
+      hashedToken: this._hashLoginToken(stampedToken.token)
     };
   };
 
@@ -897,9 +897,9 @@ export class AccountsServer extends AccountsCommon {
             foundMatchingUser = true;
           },
           removed: connection.close,
-            // The onClose callback for the connection takes care of
-            // cleaning up the observe handle and any other state we have
-            // lying around.
+          // The onClose callback for the connection takes care of
+          // cleaning up the observe handle and any other state we have
+          // lying around.
         });
 
         // If the user ran another login or logout command we were waiting for the
@@ -928,7 +928,7 @@ export class AccountsServer extends AccountsCommon {
       });
     }
   };
-    
+
   // (Also used by Meteor Accounts server and tests).
   //
   _generateStampedLoginToken() {
@@ -1042,15 +1042,15 @@ export class AccountsServer extends AccountsCommon {
     // If the user set loginExpirationInDays to null, then we need to clear the
     // timer that periodically expires tokens.
     if (hasOwn.call(this._options, 'loginExpirationInDays') &&
-        this._options.loginExpirationInDays === null &&
-        this.expireTokenInterval) {
+      this._options.loginExpirationInDays === null &&
+      this.expireTokenInterval) {
       Meteor.clearInterval(this.expireTokenInterval);
       this.expireTokenInterval = null;
     }
 
     return superResult;
   };
-    
+
   // Called by accounts-password
   insertUserDoc(options, user) {
     // - clone user document, to protect from modification
@@ -1188,7 +1188,7 @@ export class AccountsServer extends AccountsCommon {
     if (serviceName === "password" || serviceName === "resume") {
       throw new Error(
         "Can't use updateOrCreateUserFromExternalService with internal service "
-          + serviceName);
+        + serviceName);
     }
     if (!hasOwn.call(serviceData, 'id')) {
       throw new Error(
@@ -1279,7 +1279,7 @@ export class AccountsServer extends AccountsCommon {
     }
   };
 
-};
+}
 
 // Give each login hook callback a fresh cloned copy of the attempt
 // object, but don't clone the connection.
@@ -1288,7 +1288,7 @@ const cloneAttemptWithConnection = (connection, attempt) => {
   const clonedAttempt = EJSON.clone(attempt);
   clonedAttempt.connection = connection;
   return clonedAttempt;
-}
+};
 
 const tryLoginMethod = (type, fn) => {
   let result;
@@ -1309,7 +1309,7 @@ const setupDefaultLoginHandlers = accounts => {
   accounts.registerLoginHandler("resume", function (options) {
     return defaultResumeLoginHandler.call(this, accounts, options);
   });
-}
+};
 
 // Login handler for resume tokens.
 const defaultResumeLoginHandler = (accounts, options) => {
@@ -1349,7 +1349,7 @@ const defaultResumeLoginHandler = (accounts, options) => {
   // {hashedToken, when} for a hashed token or {token, when} for an
   // unhashed token.
   let oldUnhashedStyleToken;
-  let token = user.services.resume.loginTokens.find(token => 
+  let token = user.services.resume.loginTokens.find(token =>
     token.hashedToken === hashedToken
   );
   if (token) {
@@ -1381,11 +1381,11 @@ const defaultResumeLoginHandler = (accounts, options) => {
         "services.resume.loginTokens.token": options.resume
       },
       {$addToSet: {
-        "services.resume.loginTokens": {
-          "hashedToken": hashedToken,
-          "when": token.when
-        }
-      }}
+          "services.resume.loginTokens": {
+            "hashedToken": hashedToken,
+            "when": token.when
+          }
+        }}
     );
 
     // Remove the old token *after* adding the new, since otherwise
@@ -1405,12 +1405,12 @@ const defaultResumeLoginHandler = (accounts, options) => {
       when: token.when
     }
   };
-}
+};
 
 const expirePasswordToken = (
-  accounts, 
-  oldestValidDate, 
-  tokenFilter, 
+  accounts,
+  oldestValidDate,
+  tokenFilter,
   userId
 ) => {
   const userFilter = userId ? {_id: userId} : {};
@@ -1427,7 +1427,7 @@ const expirePasswordToken = (
       "services.password.reset": ""
     }
   }, { multi: true });
-}
+};
 
 const setExpireTokensInterval = accounts => {
   accounts.expireTokenInterval = Meteor.setInterval(() => {
@@ -1435,7 +1435,7 @@ const setExpireTokensInterval = accounts => {
     accounts._expirePasswordResetTokens();
     accounts._expirePasswordEnrollTokens();
   }, EXPIRE_TOKENS_INTERVAL_MS);
-}
+};
 
 ///
 /// OAuth Encryption Support
@@ -1447,7 +1447,7 @@ const OAuthEncryption =
 
 const usingOAuthEncryption = () => {
   return OAuthEncryption && OAuthEncryption.keyIsLoaded();
-}
+};
 
 // OAuth service data is temporarily stored in the pending credentials
 // collection during the oauth authentication process.  Sensitive data
@@ -1463,7 +1463,7 @@ const pinEncryptedFieldsToUser = (serviceData, userId) => {
       value = OAuthEncryption.seal(OAuthEncryption.open(value), userId);
     serviceData[key] = value;
   });
-}
+};
 
 
 // Encrypt unencrypted login service secrets when oauth-encryption is
@@ -1503,7 +1503,79 @@ const defaultCreateUserHook = (options, user) => {
   if (options.profile)
     user.profile = options.profile;
   return user;
-}
+};
+
+// Called by accounts-password
+AccountsCommon.prototype.insertUserDoc = function (options, user) {
+  // - clone user document, to protect from modification
+  // - add createdAt timestamp
+  // - prepare an _id, so that you can modify other collections (eg
+  // create a first task for every new user)
+  //
+  // XXX If the onCreateUser or validateNewUser hooks fail, we might
+  // end up having modified some other collection
+  // inappropriately. The solution is probably to have onCreateUser
+  // accept two callbacks - one that gets called before inserting
+  // the user document (in which you can modify its contents), and
+  // one that gets called after (in which you should change other
+  // collections)
+  user = {
+    ...user,
+    createdAt: new Date(),
+    _id: Random.id()
+  };
+
+  if (user.services) {
+    user.services.forEach((serviceData) => {
+      pinEncryptedFieldsToUser(serviceData, user._id);
+    });
+  }
+
+  let fullUser;
+  if (this._onCreateUserHook) {
+    fullUser = this._onCreateUserHook(options, user);
+
+    // This is *not* part of the API. We need this because we can't isolate
+    // the global server environment between tests, meaning we can't test
+    // both having a create user hook set and not having one set.
+    if (fullUser === 'TEST DEFAULT HOOK')
+      fullUser = defaultCreateUserHook(options, user);
+  } else {
+    fullUser = defaultCreateUserHook(options, user);
+  }
+
+  this._validateNewUserHooks.forEach((hook) => {
+    if (! hook(fullUser))
+      throw new Meteor.Error(403, "User validation failed");
+  });
+
+  let userId;
+  try {
+    userId = this.users.insert(fullUser);
+  } catch (e) {
+    // XXX string parsing sucks, maybe
+    // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
+    if (e.name !== 'MongoError' && e.name !== 'BulkWriteError') throw e;
+    if (e.code !== 11000) throw e;
+    if (e.errmsg.indexOf('emails.address') !== -1)
+      throw new Meteor.Error(403, "Email already exists.");
+    if (e.errmsg.indexOf('username') !== -1)
+      throw new Meteor.Error(403, "Username already exists.");
+    // XXX better error reporting for services.facebook.id duplicate, etc
+    throw e;
+  }
+  return userId;
+};
+
+// Helper function: returns false if email does not match company domain from
+// the configuration.
+AccountsCommon.prototype._testEmailDomain = function (email) {
+  let domain = this._options.restrictCreationByEmailDomain;
+  return !domain ||
+    (typeof domain === 'function' && domain(email)) ||
+    (typeof domain === 'string') &&
+    (new RegExp('@' + Meteor._escapeRegExp(domain) + '$', 'i')).test(email);
+};
 
 // Validate new user's email or Google/Facebook/GitHub account's email
 function defaultValidateNewUserHook(user) {
@@ -1565,15 +1637,15 @@ const setupUsersCollection = users => {
   users._ensureIndex('username', {unique: 1, sparse: 1});
   users._ensureIndex('emails.address', {unique: 1, sparse: 1});
   users._ensureIndex('services.resume.loginTokens.hashedToken',
-                     {unique: 1, sparse: 1});
+    {unique: 1, sparse: 1});
   users._ensureIndex('services.resume.loginTokens.token',
-                     {unique: 1, sparse: 1});
+    {unique: 1, sparse: 1});
   // For taking care of logoutOtherClients calls that crashed before the
   // tokens were deleted.
   users._ensureIndex('services.resume.haveLoginTokensToDelete',
-                     { sparse: 1 });
+    { sparse: 1 });
   // For expiring login tokens
   users._ensureIndex("services.resume.loginTokens.when", { sparse: 1 });
   // For expiring password tokens
   users._ensureIndex('services.password.reset.when', { sparse: 1 });
-}
+};

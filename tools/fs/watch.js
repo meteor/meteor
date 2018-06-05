@@ -11,6 +11,9 @@ import {
   optimisticHashOrNull,
 } from "./optimistic.js";
 
+const WATCH_COALESCE_MS =
+  process.env.METEOR_FILE_WATCH_COALESCE_MS || 100;
+
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
 // second callback, you'll need to create a second Watcher.)
@@ -496,11 +499,12 @@ export class Watcher {
     // --hard), or a file was deleted and then recreated by an editor like
     // Vim. Because detecting changes can be costly, and because we care
     // most about the settled state of the file system, we use the
-    // funcUtils.coalesce helper to delay calls to the callback by 100ms,
-    // canceling any additional calls if they happen within that window of
-    // time, so that a rapid succession of calls will tend to trigger only
-    // one inspection of the file system.
-    return coalesce(100, function onWatchEvent() {
+    // funcUtils.coalesce helper to delay calls to the callback by
+    // METEOR_FILE_WATCH_COALESCE_MS or 100 milliseconds, canceling any
+    // additional calls if they happen within that window of time, so that
+    // a rapid succession of calls will tend to trigger only one inspection
+    // of the file system.
+    return coalesce(WATCH_COALESCE_MS, function onWatchEvent() {
       if (self.stopped) {
         return;
       }

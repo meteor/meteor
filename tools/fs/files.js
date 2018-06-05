@@ -529,19 +529,29 @@ files.cp_r = function(from, to, options = {}) {
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
 export function symlinkWithOverwrite(source, target) {
+  const args = [source, target];
+
+  if (process.platform === "win32") {
+    const absoluteSource = files.pathResolve(target, source);
+
+    if (files.stat(absoluteSource).isDirectory()) {
+      args[2] = "junction";
+    }
+  }
+
   try {
-    files.symlink(source, target);
+    files.symlink(...args);
   } catch (e) {
     if (e.code === "EEXIST") {
+      if (files.lstat(target).isSymbolicLink() &&
+          files.readlink(target) === source) {
+        // If the target already points to the desired source, we don't
+        // need to do anything.
+        return;
+      }
       // overwrite existing link, file, or directory
       files.rm_recursive(target);
-      files.symlink(source, target);
-    } else if (e.code === "EPERM" &&
-               process.platform === "win32") {
-      files.rm_recursive(target);
-      // This will work only if source refers to a directory, but that's a
-      // chance worth taking.
-      files.symlink(source, target, "junction");
+      files.symlink(...args);
     } else {
       throw e;
     }
@@ -1654,7 +1664,10 @@ let dependOnPathSalt = 0;
 export const dependOnPath = require("optimism").wrap(
   // Always return something different to prevent optimism from
   // second-guessing the dirtiness of this function.
-  path => ++dependOnPathSalt
+  path => ++dependOnPathSalt,
+  // This function is disposable because we don't care about its result,
+  // only its role in optimistic dependency tracking/dirtying.
+  { disposable: true }
 );
 
 function wrapDestructiveFsFunc(name, pathArgIndices) {

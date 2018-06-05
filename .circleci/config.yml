@@ -41,7 +41,7 @@ run_log_mem_use: &run_log_mem_use
     # Log memory usage throughout entire build.
     MEMUSELOG=/tmp/memuse.txt /bin/bash -c '\
         while true; do\
-          ps -u $USER -e -o pid,%cpu,%mem,rss:10,vsz:10,command:20 \
+          ps -e -o user,%cpu,%mem,rss:10,vsz:10,command:20 \
             --sort=-%mem >> $MEMUSELOG; \
           echo "----------" >> $MEMUSELOG; \
           sleep 1; \
@@ -86,11 +86,7 @@ build_machine_environment: &build_machine_environment
     # These will be evaled before each command.
     PRE_TEST_COMMANDS: |-
         ulimit -c unlimited; # Set core dump size as Ubuntu 14.04 lacks prlimit.
-        ulimit -n 4096; # CircleCI default is soft 1024, hard 4096. Take it all.
-
-    # Enable the Garbage Collection `gc` object to be exposed so we can try
-    # to our own, hopefully more graceful, technique.
-    TOOL_NODE_FLAGS: --expose-gc
+        ulimit -a # Display all ulimit settings for transparency.
 
     # This is only to make Meteor self-test not remind us that we can set
     # this argument for self-tests.
@@ -115,22 +111,25 @@ jobs:
           command: (git submodule sync && git submodule update --init --recursive) || (rm -fr .git/config .git/modules && git submodule deinit -f . && git submodule update --init --recursive)
       - restore_cache:
           keys:
-            - dev-bundle-cache-{{ checksum "meteor" }}
-            - dev-bundle-cache
+            - v1-dev-bundle-cache-{{ checksum "meteor" }}
+            - v1-dev-bundle-cache-
       - restore_cache:
           keys:
-            - other-deps-cache-{{ .Branch }}-{{ .Revision }}
-            - other-deps-cache-{{ .Branch }}
-            - other-deps-cache
+            - v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
+            - v2-other-deps-cache-{{ .Branch }}-
       - restore_cache:
           keys: 
-            - test-groups-v1-{{ .Branch }}
-            - test-groups-v1
+            - v1-test-groups-{{ .Branch }}
+            - v1-test-groups-
       - run:
           name: Create Test Results Directory
           command: |
             sudo mkdir -p ./tmp/results/junit
             sudo chmod a+rwx ./tmp/results/junit
+      # Clear dev_bundle/.npm to ensure consistent test runs.
+      - run:
+          name: Clear npm cache
+          command: ./meteor npm cache clear --force
       - run:
           name: Get Ready
           command: |
@@ -138,10 +137,6 @@ jobs:
             ./meteor --get-ready
           # shouldn't take longer than 20 minutes
           no_output_timeout: 20m
-      # Clear dev_bundle/.npm to ensure consistent test runs.
-      - run:
-          name: Clear npm cache
-          command: ./meteor npm cache clear --force
       - run:
           <<: *run_save_node_bin
       - persist_to_workspace:
@@ -688,16 +683,16 @@ jobs:
             npm install --prefix ./scripts/test-balancer
             npm start --prefix ./scripts/test-balancer --num-groups ${NUM_GROUPS} --running-avg-length ${RUNNING_AVG_LENGTH}
       - save_cache:
-          key: test-groups-v1-{{ .Branch }}-{{ .BuildNum }}
+          key: v1-test-groups-{{ .Branch }}-{{ .BuildNum }}
           paths:
             - ./tmp/test-groups
           when: on_success
       - save_cache:
-          key: dev-bundle-cache-{{ checksum "meteor" }}
+          key: v1-dev-bundle-cache-{{ checksum "meteor" }}
           paths:
             - "dev_bundle"
       - save_cache:
-          key: other-deps-cache-{{ .Branch }}-{{ .Revision }}
+          key: v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
           paths:
             - ".babel-cache"
             - ".meteor"

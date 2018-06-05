@@ -4,6 +4,7 @@ import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files.js';
+import { optimisticReadJsonOrNull } from "../fs/optimistic.js";
 import bundler from '../isobuild/bundler.js';
 import archinfo from '../utils/archinfo.js';
 import release from '../packaging/release.js';
@@ -514,6 +515,15 @@ export class CordovaBuilder {
 }
 
 function createAppConfiguration(builder) {
+  const { settingsFile } = builder.options;
+  let settings = null;
+  if (settingsFile) {
+    settings = optimisticReadJsonOrNull(settingsFile);
+    if (! settings) {
+      throw new Error("Unreadable --settings file: " + settingsFile);
+    }
+  }
+
   /**
    * @namespace App
    * @global
@@ -559,6 +569,15 @@ Valid platforms are: ios, android.`);
         builder.additionalConfiguration.global[key] = value;
       }
     },
+
+    /**
+     * @summary Like `Meteor.settings`, contains data read from a JSON
+     *          file provided via the `--settings` command-line option at
+     *          build time, or null if no settings were provided.
+     * @memberOf App
+     * @type {Object}
+     */
+    settings,
 
     /**
      * @summary Set the build-time configuration for a Cordova plugin.

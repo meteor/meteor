@@ -1,13 +1,13 @@
 Package.describe({
   name: "ecmascript-runtime",
-  version: "0.5.0",
+  version: "0.7.0",
   summary: "Polyfills for new ECMAScript 2015 APIs like Map and Set",
   git: "https://github.com/meteor/ecmascript-runtime",
   documentation: "README.md"
 });
 
 Package.onUse(function(api) {
-  api.imply("ecmascript-runtime-client", "client");
+  api.imply("ecmascript-runtime-client");
   api.imply("ecmascript-runtime-server", "server");
 });
 
