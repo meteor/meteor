@@ -7,7 +7,7 @@ import {
 } from "./common.js";
 import * as classes from "./classNames.js";
 
-import "./style.css";
+import("./style.css");
 
 Meteor.startup(() => {
   import("./sunburst.js").then(s => main(s.Sunburst));

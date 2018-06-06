@@ -566,6 +566,23 @@ class File {
     // file is not intended to be served over HTTP).
     this.url = null;
 
+    // A prefix that will be prepended to this.url.
+    // Prefixing is currently restricted to web.cordova URLs.
+    if (options.arch.startsWith("web.") &&
+        // Using the isModern function from the modern-browsers package,
+        // the webapp and dynamic-import packages can automatically
+        // determine whether a client should receive resources from the
+        // web.browser or web.browser.legacy architecture, so those
+        // architectures do not need a URL prefix. Other architectures,
+        // such as web.cordova, still need a prefix like /__cordova/.
+        options.arch !== "web.browser" &&
+        options.arch !== "web.browser.legacy") {
+      this.urlPrefix = "/__" +
+        options.arch.split(".").slice(1).join(".");
+    } else {
+      this.urlPrefix = "";
+    }
+
     // Is this file guaranteed to never change, so that we can let it be
     // cached forever? Only makes sense of self.url is set.
     this.cacheable = options.cacheable || false;
@@ -644,7 +661,8 @@ class File {
   // url, useful for query parameters.
   setUrlToHash(fileAndUrlSuffix, urlSuffix) {
     urlSuffix = urlSuffix || "";
-    this.url = "/" + this.hash() + fileAndUrlSuffix + urlSuffix;
+    this.url = this.urlPrefix + "/" +
+      this.hash() + fileAndUrlSuffix + urlSuffix;
     this.cacheable = true;
     this.targetPath = this.hash() + fileAndUrlSuffix;
   }
@@ -668,7 +686,7 @@ class File {
   // Given a relative path like 'a/b/c' (where '/' is this system's
   // path component separator), produce a URL that always starts with
   // a forward slash and that uses a literal forward slash as the
-  // component separator.
+  // component separator. Also optionally add browser.legacy prefix.
   setUrlFromRelPath(relPath) {
     var url = relPath;
 
@@ -679,7 +697,7 @@ class File {
     // XXX replacing colons with underscores as colon is hard to escape later
     // on different targets and generally is not a good separator for web.
     url = colonConverter.convert(url);
-    this.url = url;
+    this.url = this.urlPrefix + url;
   }
 
   setTargetPathFromRelPath(relPath) {
@@ -1079,25 +1097,40 @@ class Target {
           return;
         }
 
-        const f = new File({
+        const fileOptions = {
           info: 'unbuild ' + resource,
+          arch: this.arch,
           data: resource.data,
           cacheable: false,
-          hash: resource.hash
-        });
+          hash: resource.hash,
+        };
 
-        const relPath = isOs
-              ? files.pathJoin('assets', resource.servePath)
-              : stripLeadingSlash(resource.servePath);
-        f.setTargetPathFromRelPath(relPath);
+        const file = new File(fileOptions);
+        const assetFiles = [file];
 
-        if (isWeb) {
-          f.setUrlFromRelPath(resource.servePath);
-        } else {
-          unibuildAssets[resource.path] = resource.data;
+        if (file.urlPrefix.length > 0) {
+          const noPrefix = new File(fileOptions);
+          noPrefix.urlPrefix = "";
+          // If the file has a URL prefix, add another resource for this
+          // asset without the prefix.
+          assetFiles.push(noPrefix);
         }
 
-        this.asset.push(f);
+        assetFiles.forEach(f => {
+          const relPath = isOs
+            ? files.pathJoin('assets', resource.servePath)
+            : stripLeadingSlash(resource.servePath);
+
+          f.setTargetPathFromRelPath(relPath);
+
+          if (isWeb) {
+            f.setUrlFromRelPath(resource.servePath);
+          } else {
+            unibuildAssets[resource.path] = resource.data;
+          }
+
+          this.asset.push(f);
+        });
       });
 
       // Now look for the other kinds of resources.
@@ -1125,7 +1158,12 @@ class Target {
             return;
           }
 
-          const f = new File({ info: 'resource ' + resource.servePath, data: resource.data, cacheable: false});
+          const f = new File({
+            info: 'resource ' + resource.servePath,
+            arch: this.arch,
+            data: resource.data,
+            cacheable: false,
+          });
 
           const relPath = stripLeadingSlash(resource.servePath);
           f.setTargetPathFromRelPath(relPath);
@@ -1204,9 +1242,10 @@ class Target {
   minifyJs(minifierDef, minifyMode) {
     const staticFiles = [];
     const dynamicFiles = [];
+    const { arch } = this;
 
     this.js.forEach(file => {
-      const jsf = new JsFile(file, { arch: this.arch });
+      const jsf = new JsFile(file, { arch });
 
       if (file.targetPath.startsWith("dynamic/")) {
         // Make sure file._hash is cached.
@@ -1260,6 +1299,7 @@ class Target {
 
         const newFile = new File({
           info: 'minified js',
+          arch,
           data: Buffer.from(file.data, 'utf8'),
         });
 
@@ -1288,6 +1328,7 @@ class Target {
           const contents = newFile.contents();
           const statsFile = new File({
             info: "bundle size stats JSON",
+            arch,
             data: Buffer.from(JSON.stringify({
               minifier: {
                 name: minifierDef.isopack.name,
@@ -1479,10 +1520,9 @@ class ClientTarget extends Target {
 
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
+    const { arch } = this;
     const sources = this.css.map((file) => {
-      return new CssFile(file, {
-        arch: this.arch
-      });
+      return new CssFile(file, { arch });
     });
     const minifier = minifierDef.userPlugin.processFilesForBundle.bind(
       minifierDef.userPlugin);
@@ -1500,6 +1540,7 @@ class ClientTarget extends Target {
       return source._minifiedFiles.map((file) => {
         const newFile = new File({
           info: 'minified css',
+          arch,
           data: Buffer.from(file.data, 'utf8')
         });
         if (file.sourceMap) {
@@ -1539,9 +1580,28 @@ class ClientTarget extends Target {
 
     // Reserve all file names from the manifest, so that interleaved
     // generateFilename calls don't overlap with them.
-    eachResource((file, type) =>
-      builder.reserve(file.targetPath)
-    );
+
+    const targetPathToHash = new Map;
+    eachResource((file, type) => {
+      const hash = targetPathToHash.get(file.targetPath);
+      if (hash) {
+        // When we add assets that have a URL prefix like /__cordova, we
+        // also add them without the prefix, which means there could be
+        // collisions between target paths, causing builder.reserve to
+        // throw an exception. However, we tolerate collisions (and call
+        // builder.reserve only once) if the hashes of the two assets are
+        // identical, which should always be the case when we register a
+        // single asset using multiple target paths. If the hashes do not
+        // match for some reason, we just call builder.reserve again and
+        // let it throw.
+        if (file.hash() === hash) {
+          return;
+        }
+      } else {
+        targetPathToHash.set(file.targetPath, file.hash());
+      }
+      builder.reserve(file.targetPath);
+    });
 
     // Build up a manifest of all resources served via HTTP.
     const manifest = [];
@@ -2134,6 +2194,10 @@ class JsImage {
         delete loadItem.node_modules;
       }
 
+      // Will be initialized with a Buffer version of item.source, with
+      // //# sourceMappingURL comments appropriately removed/appended.
+      let sourceBuffer;
+
       if (item.sourceMap) {
         const sourceMapBuffer =
           Buffer.from(JSON.stringify(item.sourceMap), "utf8");
@@ -2149,7 +2213,7 @@ class JsImage {
 
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
-        item.source = addSourceMappingURL(
+        sourceBuffer = addSourceMappingURL(
           item.source,
           sourceMappingURL,
           item.targetPath,
@@ -2158,11 +2222,17 @@ class JsImage {
         if (item.sourceMapRoot) {
           loadItem.sourceMapRoot = item.sourceMapRoot;
         }
+      } else {
+        // If we do not have an item.sourceMap, then we still want to
+        // remove any existing //# sourceMappingURL comments.
+        // https://github.com/meteor/meteor/issues/9894
+        sourceBuffer = removeSourceMappingURLs(item.source);
       }
 
       loadItem.path = builder.writeToGeneratedFilename(
         item.targetPath,
-        { data: Buffer.from(item.source, 'utf8') });
+        { data: sourceBuffer }
+      );
 
       if (!_.isEmpty(item.assets)) {
         // For package code, static assets go inside a directory inside
@@ -2539,10 +2609,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
-  var contents = file.contents();
-  if (! (contents instanceof Buffer)) {
-    throw new Error("contents not a Buffer?");
-  }
+
   // XXX should probably use sanitize: true, but that will have
   // to wait until the server is actually driven by the manifest
   // (rather than just serving all of the files in a certain
@@ -2553,35 +2620,67 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
 
   if (options && options.sourceMapUrl) {
     data = addSourceMappingURL(data, options.sourceMapUrl);
-  }
-
-  if (! Buffer.isBuffer(data)) {
-    data = Buffer.from(data, "utf8");
+  } else {
+    // If we do not have an options.sourceMapUrl to append, then we still
+    // want to remove any existing //# sourceMappingURL comments.
+    // https://github.com/meteor/meteor/issues/9894
+    data = removeSourceMappingURLs(data);
   }
 
   builder.write(file.targetPath, { data, hash });
 });
 
+// Takes a Buffer or string and returns a Buffer. If it looks like there
+// are no //# sourceMappingURL comments to remove, an attempt is made to
+// return the provided buffer without modification.
+function removeSourceMappingURLs(data) {
+  if (Buffer.isBuffer(data)) {
+    // Unfortuantely there is no way to search a Buffer using a RegExp, so
+    // there's a chance of false positives here, which could lead to
+    // unnecessarily stringifying and re-Buffer.from-ing the data, though
+    // that should not cause any logical problems.
+    if (! data.includes("//# source", 0, "utf8")) {
+      return data;
+    }
+    data = data.toString("utf8");
+  }
+
+  // Remove any/all existing //# sourceMappingURL comments using
+  // String#replace (since unfortunately there is no Buffer#replace).
+  data = data.replace(/\n\/\/# source(?:Mapping)?URL=[^\n]+/g, "\n");
+
+  // Always return a Buffer.
+  return Buffer.from(data, "utf8");
+}
+
+const newLineBuffer = Buffer.from("\n", "utf8");
+
 // The data argument may be either a Buffer or a string, but this function
-// always returns a string.
+// always returns a Buffer.
 function addSourceMappingURL(data, url, targetPath) {
-  const parts = [
-    // If data is a Buffer, convert it to a string.
-    data.toString("utf8")
-      // Remove any existing sourceURL or sourceMappingURL comments.
-      .replace(/\n\/\/# source(?:Mapping)?URL=[^\n]+/g, '\n')
-  ];
+  // An array of Buffer objects, even when data is a string.
+  const parts = [removeSourceMappingURLs(data)];
 
   if (targetPath) {
     // If a targetPath was provided, use it to add a sourceURL comment to
     // help associate output files with mapped source files.
-    parts.push(`//# sourceURL=${SOURCE_URL_PREFIX}/${targetPath}`);
+    parts.push(
+      newLineBuffer,
+      Buffer.from(
+        `//# sourceURL=${SOURCE_URL_PREFIX}/${targetPath}`,
+        "utf8"
+      )
+    );
   }
 
-  parts.push(`//# sourceMappingURL=${url}`);
-  parts.push(""); // Trailing newline.
+  parts.push(
+    newLineBuffer,
+    Buffer.from("//# sourceMappingURL=" + url, "utf8"),
+    newLineBuffer // trailing newline
+  );
 
-  return parts.join("\n");
+  // Always return a Buffer.
+  return Buffer.concat(parts);
 }
 
 // Writes a target a path in 'programs'

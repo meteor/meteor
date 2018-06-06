@@ -23,7 +23,7 @@ import {
 } from "./fs/optimistic.js";
 
 import {
-  mapWhereToArch,
+  mapWhereToArches,
 } from "./isobuild/package-api.js";
 
 import Resolver from "./isobuild/resolver.js";
@@ -1299,7 +1299,10 @@ _.extend(exports.PlatformList.prototype, {
 
   getWebArchs: function () {
     var self = this;
-    var archs = [ "web.browser" ];
+    var archs = [
+      "web.browser",
+      "web.browser.legacy",
+    ];
     if (self.usesCordova()) {
       archs.push("web.cordova");
     }
@@ -1677,11 +1680,14 @@ export class MeteorConfig {
       // value as the entry module for all architectures.
       entryModulesByArch["os"] = configEntryModule;
       entryModulesByArch["web"] = configEntryModule;
-    } else if (configEntryModule && typeof configEntryModule === "object") {
+    } else if (configEntryModule &&
+               typeof configEntryModule === "object") {
       // If the top-level config value is an object, use its properties to
       // select an entry module for each architecture.
       Object.keys(configEntryModule).forEach(where => {
-        entryModulesByArch[mapWhereToArch(where)] = configEntryModule[where];
+        mapWhereToArches(where).forEach(arch => {
+          entryModulesByArch[arch] = configEntryModule[where];
+        });
       });
     }
 
@@ -1729,6 +1735,17 @@ export class MeteorConfig {
       if (res && typeof res === "object") {
         return files.pathRelative(this.appDirectory, res.path);
       }
+
+      buildmessage.error(
+        `Could not resolve meteor.mainModule ${
+          JSON.stringify(entryModule)
+        } in ${
+          files.pathRelative(
+            this.appDirectory,
+            this.packageJsonPath
+          )
+        } (${arch})`
+      );
     }
   }
 }

@@ -291,7 +291,7 @@ be removed if there is no need for the Blaze configuration interface.`,
     packagesFile.writeIfModified();
   },
 
-  '1.6.2-split-underscore-from-meteor-base': function (projectContext) {
+  '1.7-split-underscore-from-meteor-base': function (projectContext) {
     const packagesFile = projectContext.projectConstraintsFile;
     if (! packagesFile.getConstraint(`underscore`) &&
       packagesFile.getConstraint(`meteor-base`)) {
@@ -303,7 +303,7 @@ meteor-base. Since some apps may have been using underscore through this \
 dependency without having it listed in their .meteor/packages files, it has \
 been added automatically. If your app is not using underscore, then you can \
 safely remove it using 'meteor remove underscore'.`,
-        Console.options({ bulletPoint: "1.6.2: " })
+        Console.options({ bulletPoint: "1.7: " })
       );
       packagesFile.addPackages([`underscore`]);
       packagesFile.writeIfModified();

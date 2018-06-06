@@ -170,10 +170,12 @@ MongoConnection = function (url, options) {
     url,
     mongoOptions,
     Meteor.bindEnvironment(
-      function (err, db) {
+      function (err, client) {
         if (err) {
           throw err;
         }
+
+        var db = client.db();
 
         // First, figure out what the current primary is, if any.
         if (db.serverConfig.isMasterDoc) {
@@ -201,14 +203,15 @@ MongoConnection = function (url, options) {
           }));
 
         // Allow the constructor to return.
-        connectFuture['return'](db);
+        connectFuture['return']({ client, db });
       },
       connectFuture.resolver()  // onException
     )
   );
 
-  // Wait for the connection to be successful; throws on failure.
-  self.db = connectFuture.wait();
+  // Wait for the connection to be successful (throws on failure) and assign the
+  // results (`client` and `db`) to `self`.
+  Object.assign(self, connectFuture.wait());
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
@@ -231,7 +234,7 @@ MongoConnection.prototype.close = function() {
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
-  Future.wrap(_.bind(self.db.close, self.db))(true).wait();
+  Future.wrap(_.bind(self.client.close, self.client))(true).wait();
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -947,7 +950,8 @@ MongoConnection.prototype._createSynchronousCursor = function(
   var mongoOptions = {
     sort: cursorOptions.sort,
     limit: cursorOptions.limit,
-    skip: cursorOptions.skip
+    skip: cursorOptions.skip,
+    projection: cursorOptions.fields
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -973,7 +977,7 @@ MongoConnection.prototype._createSynchronousCursor = function(
 
   var dbCursor = collection.find(
     replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-    cursorOptions.fields, mongoOptions);
+    mongoOptions);
 
   if (typeof cursorOptions.maxTimeMs !== 'undefined') {
     dbCursor = dbCursor.maxTimeMS(cursorOptions.maxTimeMs);
@@ -1001,21 +1005,33 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
     self._transform = null;
   }
 
-  // Need to specify that the callback is the first argument to nextObject,
-  // since otherwise when we try to call it with no args the driver will
-  // interpret "undefined" first arg as an options hash and crash.
-  self._synchronousNextObject = Future.wrap(
-    dbCursor.nextObject.bind(dbCursor), 0);
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
   self._visitedIds = new LocalCollection._IdMap;
 };
 
 _.extend(SynchronousCursor.prototype, {
-  _nextObject: function () {
+  // Returns a Promise for the next object from the underlying cursor (before
+  // the Mongo->Meteor type replacement).
+  _rawNextObjectPromise: function () {
+    const self = this;
+    return new Promise((resolve, reject) => {
+      self._dbCursor.next((err, doc) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(doc);
+        }
+      });
+    });
+  },
+
+  // Returns a Promise for the next object from the cursor, skipping those whose
+  // IDs we've already seen and replacing Mongo atoms with Meteor atoms.
+  _nextObjectPromise: async function () {
     var self = this;
 
     while (true) {
-      var doc = self._synchronousNextObject().wait();
+      var doc = await self._rawNextObjectPromise();
 
       if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
@@ -1036,6 +1052,35 @@ _.extend(SynchronousCursor.prototype, {
 
       return doc;
     }
+  },
+
+  // Returns a promise which is resolved with the next object (like with
+  // _nextObjectPromise) or rejected if the cursor doesn't return within
+  // timeoutMS ms.
+  _nextObjectPromiseWithTimeout: function (timeoutMS) {
+    const self = this;
+    if (!timeoutMS) {
+      return self._nextObjectPromise();
+    }
+    const nextObjectPromise = self._nextObjectPromise();
+    const timeoutErr = new Error('Client-side timeout waiting for next object');
+    const timeoutPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(timeoutErr);
+      }, timeoutMS);
+    });
+    return Promise.race([nextObjectPromise, timeoutPromise])
+      .catch((err) => {
+        if (err === timeoutErr) {
+          self.close();
+        }
+        throw err;
+      });
+  },
+
+  _nextObject: function () {
+    var self = this;
+    return self._nextObjectPromise().await();
   },
 
   forEach: function (callback, thisArg) {
@@ -1124,7 +1169,13 @@ SynchronousCursor.prototype[Symbol.iterator] = function () {
   };
 };
 
-MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
+// Tails the cursor described by cursorDescription, most likely on the
+// oplog. Calls docCallback with each document found. Ignores errors and just
+// restarts the tail on error.
+//
+// If timeoutMS is set, then if we don't get a new document every timeoutMS,
+// kill and restart the cursor. This is primarily a workaround for #8598.
+MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeoutMS) {
   var self = this;
   if (!cursorDescription.options.tailable)
     throw new Error("Can only tail a tailable cursor");
@@ -1139,14 +1190,15 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
       if (stopped)
         return;
       try {
-        doc = cursor._nextObject();
+        doc = cursor._nextObjectPromiseWithTimeout(timeoutMS).await();
       } catch (err) {
-        // There's no good way to figure out if this was actually an error
-        // from Mongo. Ah well. But either way, we need to retry the cursor
-        // (unless the failure was because the observe got stopped).
+        // There's no good way to figure out if this was actually an error from
+        // Mongo, or just client-side (including our own timeout error). Ah
+        // well. But either way, we need to retry the cursor (unless the failure
+        // was because the observe got stopped).
         doc = null;
       }
-      // Since cursor._nextObject can yield, we need to check again to see if
+      // Since we awaited a promise above, we need to check again to see if
       // we've been stopped before calling the callback.
       if (stopped)
         return;
