@@ -66,8 +66,9 @@ function middleware(request, response) {
   response.setHeader("Access-Control-Allow-Origin", "*");
 
   if (request.method === "OPTIONS") {
-    if (request.headers["access-control-request-headers"] !== undefined) {
-      response.setHeader("Access-Control-Allow-Headers", request.headers["access-control-request-headers"]);
+    const requestedHeaders = request.headers["access-control-request-headers"];
+    if (requestedHeaders !== undefined) {
+      response.setHeader("Access-Control-Allow-Headers", requestedHeaders);
     } else {
       response.setHeader("Access-Control-Allow-Headers", "*");
     }
