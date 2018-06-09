@@ -7,7 +7,6 @@ Package.describe({
 
 Npm.depends({
   'lru-cache': '2.6.4',
-  'async': '1.4.0'
 });
 
 Package.onUse(function(api) {
