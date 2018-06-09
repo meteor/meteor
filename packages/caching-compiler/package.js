@@ -5,10 +5,6 @@ Package.describe({
   documentation: 'README.md'
 });
 
-Npm.depends({
-  'lru-cache': '2.6.4',
-});
-
 Package.onUse(function(api) {
   api.use(['ecmascript', 'random']);
   api.addFiles(['caching-compiler.js'], 'server');

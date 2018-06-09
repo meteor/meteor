@@ -53,7 +53,7 @@ var packageJson = {
     multipipe: "2.0.1",
     pathwatcher: "7.1.1",
     optimism: "0.6.3",
-    'lru-cache': '4.1.1'
+    'lru-cache': '4.1.3'
   }
 };
 
