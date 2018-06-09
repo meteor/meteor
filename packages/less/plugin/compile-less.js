@@ -45,6 +45,18 @@ class LessCompiler extends MultiFileCachingCompiler {
              /\.lessimport$/.test(pathInPackage));
   }
 
+  compileOneFileLater(inputFile, getResult) {
+    inputFile.addStylesheet({
+      path: inputFile.getPathInPackage(),
+    }, () => {
+      const result = getResult();
+      return result && {
+        data: result.css,
+        sourceMap: result.sourceMap,
+      };
+    });
+  }
+
   compileOneFile(inputFile, allFiles) {
     const importPlugin = new MeteorImportLessPlugin(allFiles);
 

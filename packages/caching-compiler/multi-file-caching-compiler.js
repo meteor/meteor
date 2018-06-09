@@ -145,10 +145,18 @@ extends CachingCompilerBase {
         return cacheEntry.compileResult;
       };
 
-      if (this.isRoot(inputFile)) {
-        // If this isn't a root, skip it (and definitely don't waste time
-        // looking for a cache file that won't be there).
-        this.addCompileResult(inputFile, getResult());
+      if (this.compileOneFileLater &&
+          inputFile.supportsLazyCompilation) {
+        // TODO Remove this isRoot check once compileOneFileLater no
+        // longer immediately compiles the file.
+        if (this.isRoot(inputFile)) {
+          this.compileOneFileLater(inputFile, getResult);
+        }
+      } else if (this.isRoot(inputFile)) {
+        const result = getResult();
+        if (result) {
+          this.addCompileResult(inputFile, result);
+        }
       }
 
     })).then(() => {
