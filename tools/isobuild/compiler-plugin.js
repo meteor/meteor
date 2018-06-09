@@ -221,6 +221,11 @@ class InputFile extends buildPluginModule.InputFile {
     // Map from imported module identifier strings (possibly relative) to
     // fully require.resolve'd module identifiers.
     this._resolveCache = Object.create(null);
+
+    // Communicate to compiler plugins that methods like addJavaScript
+    // accept a lazy finalizer function as a second argument, so that
+    // compilation can be avoided until/unless absolutely necessary.
+    this.supportsLazyCompilation = true;
   }
 
   getContentsAsBuffer() {
@@ -445,16 +450,26 @@ class InputFile extends buildPluginModule.InputFile {
    * @param {String|Object} options.sourceMap A stringified JSON
    * sourcemap, in case the stylesheet was generated from a different
    * file.
+   * @param {Function} lazyFinalizer Optional function that can be called
+   *                   to obtain any remaining options that may be
+   *                   expensive to compute, and thus should only be
+   *                   computed if/when we are sure this CSS will be used
+   *                   by the application.
    * @memberOf InputFile
    * @instance
    */
-  addStylesheet(options) {
-    var self = this;
+  addStylesheet(options, lazyFinalizer) {
+    if (typeof lazyFinalizer === "function") {
+      // For now, just call the lazyFinalizer function immediately.
+      Object.assign(options, lazyFinalizer());
+    }
+
     if (options.sourceMap && typeof options.sourceMap === 'string') {
       // XXX remove an anti-XSSI header? ")]}'\n"
       options.sourceMap = JSON.parse(options.sourceMap);
     }
-    self._resourceSlot.addStylesheet(options);
+
+    this._resourceSlot.addStylesheet(options);
   }
 
   /**
@@ -470,16 +485,26 @@ class InputFile extends buildPluginModule.InputFile {
    * @param {String|Object} options.sourceMap A stringified JSON
    * sourcemap, in case the JavaScript file was generated from a
    * different file.
+   * @param {Function} lazyFinalizer Optional function that can be called
+   *                   to obtain any remaining options that may be
+   *                   expensive to compute, and thus should only be
+   *                   computed if/when we are sure this JavaScript will
+   *                   be used by the application.
    * @memberOf InputFile
    * @instance
    */
-  addJavaScript(options) {
-    var self = this;
+  addJavaScript(options, lazyFinalizer) {
+    if (typeof lazyFinalizer === "function") {
+      // For now, just call the lazyFinalizer function immediately.
+      Object.assign(options, lazyFinalizer());
+    }
+
     if (options.sourceMap && typeof options.sourceMap === 'string') {
       // XXX remove an anti-XSSI header? ")]}'\n"
       options.sourceMap = JSON.parse(options.sourceMap);
     }
-    self._resourceSlot.addJavaScript(options);
+
+    this._resourceSlot.addJavaScript(options);
   }
 
   /**
@@ -493,12 +518,24 @@ class InputFile extends buildPluginModule.InputFile {
    * file.
    * @param {String} [options.hash] Optionally, supply a hash for the output
    * file.
+   * @param {Function} lazyFinalizer Optional function that can be called
+   *                   to obtain any remaining options that may be
+   *                   expensive to compute, and thus should only be
+   *                   computed if/when we are sure this asset will be
+   *                   used by the application.
    * @memberOf InputFile
    * @instance
    */
-  addAsset(options) {
-    var self = this;
-    self._resourceSlot.addAsset(options);
+  addAsset(options, lazyFinalizer) {
+    if (typeof lazyFinalizer === "function") {
+      // For now, just call the lazyFinalizer function immediately. Since
+      // assets typically are not compiled, this immediate invocation is
+      // probably permanently appropriate for addAsset, whereas methods
+      // like addJavaScript benefit from waiting to call lazyFinalizer.
+      Object.assign(options, lazyFinalizer());
+    }
+
+    this._resourceSlot.addAsset(options);
   }
 
   /**
@@ -508,12 +545,24 @@ class InputFile extends buildPluginModule.InputFile {
    * @param {String} options.section Which section of the document should
    * be appended to. Can only be "head" or "body".
    * @param {String} options.data The content to append.
+   * @param {Function} lazyFinalizer Optional function that can be called
+   *                   to obtain any remaining options that may be
+   *                   expensive to compute, and thus should only be
+   *                   computed if/when we are sure this HTML will be used
+   *                   by the application.
    * @memberOf InputFile
    * @instance
    */
   addHtml(options) {
-    var self = this;
-    self._resourceSlot.addHtml(options);
+    if (typeof lazyFinalizer === "function") {
+      // For now, just call the lazyFinalizer function immediately. Since
+      // HTML is not compiled, this immediate invocation is probably
+      // permanently appropriate for addHtml, whereas methods like
+      // addJavaScript benefit from waiting to call lazyFinalizer.
+      Object.assign(options, lazyFinalizer());
+    }
+
+    this._resourceSlot.addHtml(options);
   }
 
   _reportError(message, info) {
