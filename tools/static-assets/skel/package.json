@@ -16,6 +16,6 @@
       "client": "client/main.js",
       "server": "server/main.js"
     },
-    "testModule": "test/main.js"
+    "testModule": "tests/main.js"
   }
 }
