@@ -20,7 +20,7 @@
     "meteor-hexo-config": "1.0.8",
     "meteor-theme-hexo": "1.0.13",
     "showdown": "1.8.6",
-    "underscore": "1.9.0"
+    "underscore": "1.9.1"
   },
   "scripts": {
     "build": "jsdoc/jsdoc.sh && chexo meteor-hexo-config -- generate",
