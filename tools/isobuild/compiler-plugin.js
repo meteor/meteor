@@ -23,6 +23,8 @@ import {
 
 import { isTestFilePath } from './test-files.js';
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 // This file implements the new compiler plugins added in Meteor 1.2, which are
 // registered with the Plugin.registerCompiler API.
 //
@@ -494,17 +496,7 @@ class InputFile extends buildPluginModule.InputFile {
    * @instance
    */
   addJavaScript(options, lazyFinalizer) {
-    if (typeof lazyFinalizer === "function") {
-      // For now, just call the lazyFinalizer function immediately.
-      Object.assign(options, lazyFinalizer());
-    }
-
-    if (options.sourceMap && typeof options.sourceMap === 'string') {
-      // XXX remove an anti-XSSI header? ")]}'\n"
-      options.sourceMap = JSON.parse(options.sourceMap);
-    }
-
-    this._resourceSlot.addJavaScript(options);
+    this._resourceSlot.addJavaScript(options, lazyFinalizer);
   }
 
   /**
@@ -752,29 +744,26 @@ class ResourceSlot {
       // file is lazy, add it as a lazy JS module instead of adding it
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
-      resource.type = "js";
-      resource.data =
-        Buffer.from(cssToCommonJS(data, resource.hash), "utf8");
-
-      self.jsOutputResources.push(resource);
+      self.addJavaScript({
+        ...resource,
+        data: Buffer.from(cssToCommonJS(data, resource.hash), "utf8"),
+      });
 
     } else {
       // Eager CSS is added unconditionally to a combined <style> tag at
       // the beginning of the <head>. If the corresponding module ever
       // gets imported, its module.exports object should be an empty stub,
       // rather than a <style> node added dynamically to the <head>.
-      self.jsOutputResources.push({
+      self.addJavaScript({
         ...resource,
-        type: "js",
         data: Buffer.from(
           "// These styles have already been applied to the document.\n",
           "utf8"),
+        lazy: true,
         // If a compiler plugin calls addJavaScript with the same
         // sourcePath, that code should take precedence over this empty
-        // stub, so this property marks the resource as disposable.
-        implicit: true,
-        lazy: true,
-      });
+        // stub, so setting .implicit marks the resource as disposable.
+      }).implicit = true;
 
       resource.type = "css";
       resource.data = Buffer.from(data, 'utf8'),
@@ -787,41 +776,21 @@ class ResourceSlot {
     }
   }
 
-  addJavaScript(options) {
-    const self = this;
+  addJavaScript(options, lazyFinalizer) {
     // #HardcodeJs this gets called by constructor in the "js" case
-    if (! self.sourceProcessor && self.inputResource.extension !== "js") {
+    if (! this.sourceProcessor && this.inputResource.extension !== "js") {
       throw Error("addJavaScript on non-source ResourceSlot?");
     }
 
-    let sourcePath = self.inputResource.path;
-    if (_.has(options, "sourcePath") &&
-        typeof options.sourcePath === "string") {
-      sourcePath = options.sourcePath;
-    }
-
-    const targetPath = options.path || sourcePath;
-
-    var data = Buffer.from(
-      files.convertToStandardLineEndings(options.data), 'utf8');
-
-    self.jsOutputResources.push({
-      type: "js",
-      data: data,
-      sourcePath,
-      targetPath,
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
-      // XXX should we allow users to be trusted and specify a hash?
-      hash: sha1(data),
-      // XXX do we need to call convertSourceMapPaths here like we did
-      //     in legacy handlers?
-      sourceMap: options.sourceMap,
-      // intentionally preserve a possible `undefined` value for files
-      // in apps, rather than convert it into `false` via `!!`
-      lazy: self._isLazy(options, true),
-      bare: !! self._getOption("bare", options),
-      mainModule: !! self._getOption("mainModule", options),
+    const resource = new JsOutputResource({
+      resourceSlot: this,
+      options,
+      lazyFinalizer,
     });
+
+    this.jsOutputResources.push(resource);
+
+    return resource;
   }
 
   addAsset(options) {
@@ -878,17 +847,103 @@ class ResourceSlot {
     // If this file is ever actually imported, only then will we report
     // the error. Use this.jsOutputResources because that's what the
     // ImportScanner deals with.
-    this.jsOutputResources.push({
-      type: "js",
-      sourcePath: this.inputResource.path,
-      targetPath: this.inputResource.path,
-      servePath: this.inputResource.path,
+    this.addJavaScript({
       data: Buffer.from(
         "throw new Error(" + JSON.stringify(message) + ");\n",
         "utf8"),
       lazy: true,
-      error: { message, info },
+    }).error = { message, info };
+  }
+}
+
+class JsOutputResource {
+  constructor({
+    resourceSlot,
+    options = Object.create(null),
+    lazyFinalizer = null,
+  }) {
+    this._lazyFinalizer = lazyFinalizer;
+    this._initialOptions = options;
+
+    let sourcePath = resourceSlot.inputResource.path;
+    if (_.has(options, "sourcePath") &&
+        typeof options.sourcePath === "string") {
+      sourcePath = options.sourcePath;
+    }
+
+    const targetPath = options.path || sourcePath;
+
+    Object.assign(this, {
+      type: "js",
+      lazy: resourceSlot._isLazy(options, true),
+      bare: !! resourceSlot._getOption("bare", options),
+      mainModule: !! resourceSlot._getOption("mainModule", options),
+      sourcePath,
+      targetPath,
+      servePath: resourceSlot.packageSourceBatch
+        .unibuild.pkg._getServePath(targetPath),
     });
+  }
+
+  get data() { return this._get("data"); }
+  set data(value) { return this._set("data", value); }
+
+  get hash() { return this._get("hash"); }
+  set hash(value) { return this._set("hash", value); }
+
+  get sourceMap() { return this._get("sourceMap"); }
+  set sourceMap(value) { return this._set("sourceMap", value); }
+
+  // Method for getting properties that may be computed lazily, or that
+  // require some one-time post-processing.
+  _get(name) {
+    if (hasOwn.call(this, name)) {
+      return this[name];
+    }
+
+    if (this._lazyFinalizer) {
+      const finalize = this._lazyFinalizer;
+      this._lazyFinalizer = null;
+      Object.assign(this._initialOptions, finalize());
+    }
+
+    switch (name) {
+    case "data":
+      let { data } = this._initialOptions;
+      if (! Buffer.isBuffer(data)) {
+        data = Buffer.from(data, "utf8");
+      }
+      return this._set("data", data);
+
+    case "hash":
+      const { hash } = this._initialOptions;
+      return this._set("hash", hash || sha1(this._get("data")));
+
+    case "sourceMap":
+      let { sourceMap } = this._initialOptions;
+      if (sourceMap && typeof sourceMap === "string") {
+        sourceMap = JSON.parse(sourceMap);
+      }
+      return this._set("sourceMap", sourceMap);
+    }
+
+    if (! hasOwn.call(this._initialOptions, name)) {
+      throw new Error(`Unknown JsOutputResource property: ${name}`);
+    }
+
+    return this[name] = this._initialOptions[name];
+  }
+
+  // This method must be used to set any properties that have a getter
+  // defined above (data, hash, sourceMap).
+  _set(name, value) {
+    Object.defineProperty(this, name, {
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    });
+    return value;
   }
 }
 
