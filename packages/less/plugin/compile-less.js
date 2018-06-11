@@ -1,6 +1,7 @@
 const path = Plugin.path;
 const less = Npm.require('less');
 const Future = Npm.require('fibers/future');
+const hasOwn = Object.prototype.hasOwnProperty;
 
 Plugin.registerCompiler({
   // *.lessimport has been deprecated since 0.7.1, but it still works. We
@@ -36,8 +37,13 @@ class LessCompiler extends MultiFileCachingCompiler {
   // file option in api.addFiles.
   isRoot(inputFile) {
     const fileOptions = inputFile.getFileOptions();
-    if (fileOptions.hasOwnProperty('isImport')) {
-      return !fileOptions.isImport;
+
+    if (hasOwn.call(fileOptions, 'isImport')) {
+      return ! fileOptions.isImport;
+    }
+
+    if (fileOptions.lazy) {
+      return false;
     }
 
     const pathInPackage = inputFile.getPathInPackage();
