@@ -461,17 +461,7 @@ class InputFile extends buildPluginModule.InputFile {
    * @instance
    */
   addStylesheet(options, lazyFinalizer) {
-    if (typeof lazyFinalizer === "function") {
-      // For now, just call the lazyFinalizer function immediately.
-      Object.assign(options, lazyFinalizer());
-    }
-
-    if (options.sourceMap && typeof options.sourceMap === 'string') {
-      // XXX remove an anti-XSSI header? ")]}'\n"
-      options.sourceMap = JSON.parse(options.sourceMap);
-    }
-
-    this._resourceSlot.addStylesheet(options);
+    this._resourceSlot.addStylesheet(options, lazyFinalizer);
   }
 
   /**
@@ -720,33 +710,31 @@ class ResourceSlot {
     return isInImports;
   }
 
-  addStylesheet(options) {
-    const self = this;
-    if (! self.sourceProcessor) {
+  addStylesheet(options, lazyFinalizer) {
+    if (! this.sourceProcessor) {
       throw Error("addStylesheet on non-source ResourceSlot?");
     }
 
-    const data = files.convertToStandardLineEndings(options.data);
-    const useMeteorInstall = self.packageSourceBatch.useMeteorInstall;
-    const sourcePath = this.inputResource.path;
-    const targetPath = options.path || sourcePath;
-    const resource = {
-      refreshable: true,
-      sourcePath,
-      targetPath,
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(targetPath),
-      hash: sha1(data),
-      lazy: this._isLazy(options, false),
-    };
+    // In contrast to addJavaScript, CSS resources passed to addStylesheet
+    // default to being eager (non-lazy).
+    options.lazy = this._isLazy(options, false);
 
-    if (useMeteorInstall && resource.lazy) {
+    if (this.packageSourceBatch.useMeteorInstall &&
+        options.lazy) {
       // If the current packageSourceBatch supports modules, and this CSS
       // file is lazy, add it as a lazy JS module instead of adding it
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
-      self.addJavaScript({
-        ...resource,
-        data: Buffer.from(cssToCommonJS(data, resource.hash), "utf8"),
+      this.addJavaScript(options, () => {
+        const result = typeof lazyFinalizer === "function"
+          ? lazyFinalizer()
+          : { data: options.data };
+
+        if (result) {
+          result.data = Buffer.from(cssToCommonJS(result.data), "utf8");
+        }
+
+        return result;
       });
 
     } else {
@@ -754,8 +742,8 @@ class ResourceSlot {
       // the beginning of the <head>. If the corresponding module ever
       // gets imported, its module.exports object should be an empty stub,
       // rather than a <style> node added dynamically to the <head>.
-      self.addJavaScript({
-        ...resource,
+      this.addJavaScript({
+        ...options,
         data: Buffer.from(
           "// These styles have already been applied to the document.\n",
           "utf8"),
@@ -765,14 +753,11 @@ class ResourceSlot {
         // stub, so setting .implicit marks the resource as disposable.
       }).implicit = true;
 
-      resource.type = "css";
-      resource.data = Buffer.from(data, 'utf8'),
-
-      // XXX do we need to call convertSourceMapPaths here like we did
-      //     in legacy handlers?
-      resource.sourceMap = options.sourceMap;
-
-      self.outputResources.push(resource);
+      this.outputResources.push(new CssOutputResource({
+        resourceSlot: this,
+        options,
+        lazyFinalizer,
+      }));
     }
   }
 
@@ -856,8 +841,9 @@ class ResourceSlot {
   }
 }
 
-class JsOutputResource {
+class OutputResource {
   constructor({
+    type,
     resourceSlot,
     options = Object.create(null),
     lazyFinalizer = null,
@@ -874,7 +860,7 @@ class JsOutputResource {
     const targetPath = options.path || sourcePath;
 
     Object.assign(this, {
-      type: "js",
+      type,
       lazy: resourceSlot._isLazy(options, true),
       bare: !! resourceSlot._getOption("bare", options),
       mainModule: !! resourceSlot._getOption("mainModule", options),
@@ -944,6 +930,19 @@ class JsOutputResource {
       configurable: true,
     });
     return value;
+  }
+}
+
+class JsOutputResource extends OutputResource {
+  constructor(options) {
+    super({ ...options, type: "js" });
+  }
+}
+
+class CssOutputResource extends OutputResource {
+  constructor(options) {
+    super({ ...options, type: "css" });
+    this.refreshable = true;
   }
 }
 
