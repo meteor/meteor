@@ -725,9 +725,9 @@ class ResourceSlot {
       // file is lazy, add it as a lazy JS module instead of adding it
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
-      this.addJavaScript(options, () => {
+      this.addJavaScript(options, async () => {
         const result = typeof lazyFinalizer === "function"
-          ? lazyFinalizer()
+          ? await lazyFinalizer()
           : { data: options.data };
 
         if (result) {
@@ -850,6 +850,7 @@ class OutputResource {
   }) {
     this._lazyFinalizer = lazyFinalizer;
     this._initialOptions = options;
+    this._finalizerPromise = null;
 
     let sourcePath = resourceSlot.inputResource.path;
     if (_.has(options, "sourcePath") &&
@@ -871,6 +872,21 @@ class OutputResource {
     });
   }
 
+  finalize() {
+    if (this._finalizerPromise) {
+      this._finalizerPromise.await();
+    } else if (this._lazyFinalizer) {
+      const finalize = this._lazyFinalizer;
+      this._lazyFinalizer = null;
+      (this._finalizerPromise = new Promise(
+        resolve => resolve(finalize())
+      ).then(result => {
+        Object.assign(this._initialOptions, result);
+        this._finalizerPromise = null;
+      })).await();
+    }
+  }
+
   get data() { return this._get("data"); }
   set data(value) { return this._set("data", value); }
 
@@ -887,11 +903,7 @@ class OutputResource {
       return this[name];
     }
 
-    if (this._lazyFinalizer) {
-      const finalize = this._lazyFinalizer;
-      this._lazyFinalizer = null;
-      Object.assign(this._initialOptions, finalize());
-    }
+    this.finalize();
 
     switch (name) {
     case "data":
