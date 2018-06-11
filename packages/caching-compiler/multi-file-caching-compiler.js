@@ -147,11 +147,7 @@ extends CachingCompilerBase {
 
       if (this.compileOneFileLater &&
           inputFile.supportsLazyCompilation) {
-        // TODO Remove this isRoot check once compileOneFileLater no
-        // longer immediately compiles the file.
-        if (this.isRoot(inputFile)) {
-          this.compileOneFileLater(inputFile, getResult);
-        }
+        this.compileOneFileLater(inputFile, getResult);
       } else if (this.isRoot(inputFile)) {
         const result = getResult();
         if (result) {
