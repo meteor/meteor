@@ -16,7 +16,7 @@
   3. Stubbing collections to create test data client side
 4. Unit testing in Meteor: package testing
   1. Right now a package is the best system we have for isolating code and running tests
-  2. Using practicalmeteor:mocha to run package tests with mocha
+  2. Using meteortesting:mocha to run package tests with mocha
     1. Using `beforeEach` / etc to stub/mock
   3. Isolating
     1. Other packages w/ sinon

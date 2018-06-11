@@ -75,15 +75,14 @@ In this article, we'll use the popular [Mocha](https://mochajs.org) test runner 
 
 There are several options. Choose the ones that makes sense for your app. You may depend on more than one and set up different test commands for different situations.
 
-* [practicalmeteor:mocha](https://atmospherejs.com/practicalmeteor/mocha) Runs client and server package or app tests and displays all results in a browser. Use [spacejam](https://www.npmjs.com/package/spacejam) for command line / CI support.
 * [meteortesting:mocha](https://atmospherejs.com/meteortesting/mocha) Runs client and/or server package or app tests and reports all results in the server console. Supports various browsers for running client tests, including PhantomJS, Selenium ChromeDriver, and Electron. Can be used for running tests on a CI server. Has a watch mode.
 
 These packages don't do anything in development or production mode. They declare themselves `testOnly` so they are not even loaded outside of testing. But when our app is run in [test mode](#test-modes), the test driver package takes over, executing test code on both the client and server, and rendering results to the browser.
 
-Here's how we can add the [`practicalmeteor:mocha`](https://atmospherejs.com/practicalmeteor/mocha) package to our app:
+Here's how we can add the [`meteortesting:mocha`](https://atmospherejs.com/meteortesting/mocha) package to our app:
 
 ```bash
-meteor add practicalmeteor:mocha
+meteor add meteortesting:mocha
 ```
 
 <h2 id="test-files">Test Files</h2>
@@ -237,7 +236,7 @@ A simple example of a reusable component to test is the [`Todos_item`](https://g
 /* eslint-disable func-names, prefer-arrow-callback */
 
 import { Factory } from 'meteor/dburles:factory';
-import { chai } from 'meteor/practicalmeteor:chai';
+import chai from 'chai';
 import { Template } from 'meteor/templating';
 import { $ } from 'meteor/jquery';
 import { Todos } from '../../../api/todos/todos';
@@ -324,7 +323,7 @@ We can also apply the same structure to testing React components and recommend t
 import { Factory } from 'meteor/dburles:factory';
 import React from 'react';
 import { shallow } from 'enzyme';
-import { chai } from 'meteor/practicalmeteor:chai';
+import chai from 'chai';
 import TodoItem from './TodoItem.jsx';
 
 describe('TodoItem', () => {
@@ -345,7 +344,7 @@ The test is slightly simpler than the Blaze version above because the React samp
 import { Factory } from 'meteor/dburles:factory';
 import React from 'react';
 import { shallow } from 'enzyme';
-import { sinon } from 'meteor/practicalmeteor:sinon';
+import sinon from 'sinon';
 import TodoItem from './TodoItem.jsx';
 import { setCheckedStatus } from '../../api/todos/methods.js';
 
@@ -376,14 +375,12 @@ In this case, the `TodoItem` component calls a [Meteor Method](/methods.html) `s
 To run the tests that our app defines, we run our app in [test mode](#test-modes):
 
 ```txt
-meteor test --driver-package practicalmeteor:mocha
+TEST_WATCH=1 meteor test --driver-package meteortesting:mocha
 ```
 
 As we've defined a test file (`imports/todos/todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry.
 
-To run the tests, visit http://localhost:3000 in your browser. This kicks off `practicalmeteor:mocha`, which runs your tests both in the browser and on the server. It displays the test results in the browser in a Mocha test reporter:
-
-<img src="images/mocha-test-results.png">
+To run the tests, visit http://localhost:3000 in your browser. This kicks off `meteortesting:mocha`, which runs your tests both in the browser and on the server. It will display the test results in a div with ID mocha.
 
 Usually, while developing an application, it makes sense to run `meteor test` on a second port (say `3100`), while also running your main application in a separate process:
 
@@ -392,7 +389,7 @@ Usually, while developing an application, it makes sense to run `meteor test` on
 meteor
 
 # in another
-meteor test --driver-package practicalmeteor:mocha --port 3100
+meteor test --driver-package meteortesting:mocha --port 3100
 ```
 
 Then you can open two browser windows to see the app in action while also ensuring that you don't break any tests as you make changes.
@@ -460,13 +457,13 @@ In the [Todos](https://github.com/meteor/todos) example app, we have an integrat
 import { Meteor } from 'meteor/meteor';
 import { Factory } from 'meteor/dburles:factory';
 import { Random } from 'meteor/random';
-import { chai } from 'meteor/practicalmeteor:chai';
+import chai from 'chai';
 import StubCollections from 'meteor/hwillson:stub-collections';
 import { Template } from 'meteor/templating';
 import { _ } from 'meteor/underscore';
 import { $ } from 'meteor/jquery';
 import { FlowRouter } from 'meteor/kadira:flow-router';
-import { sinon } from 'meteor/practicalmeteor:sinon';
+import sinon from 'sinon';
 
 
 import { withRenderedTemplate } from '../../test-helpers.js';
@@ -481,8 +478,8 @@ describe('Lists_show_page', function () {
   beforeEach(function () {
     StubCollections.stub([Todos, Lists]);
     Template.registerHelper('_', key => key);
-    sinon.stub(FlowRouter, 'getParam', () => listId);
-    sinon.stub(Meteor, 'subscribe', () => ({
+    sinon.stub(FlowRouter, 'getParam').returns(listId);
+    sinon.stub(Meteor, 'subscribe').returns.({
       subscriptionId: 0,
       ready: () => true,
     }));
@@ -544,7 +541,7 @@ import { Meteor } from 'meteor/meteor';
 import { Tracker } from 'meteor/tracker';
 import { DDP } from 'meteor/ddp-client';
 import { FlowRouter } from 'meteor/kadira:flow-router';
-import { assert } from 'meteor/practicalmeteor:chai';
+import { assert } from 'chai';
 import { Promise } from 'meteor/promise';
 import { $ } from 'meteor/jquery';
 
@@ -611,7 +608,7 @@ Of note here:
 To run the [full-app tests](#test-modes) in our application, we run:
 
 ```txt
-meteor test --full-app --driver-package practicalmeteor:mocha
+meteor test --full-app --driver-package meteortesting:mocha
 ```
 
 When we connect to the test instance in a browser, we want to render a testing UI rather than our app UI, so the `mocha-web-reporter` package will hide any UI of our application and overlay it with its own. However the app continues to behave as normal, so we are able to route around and check the correct data is loaded.

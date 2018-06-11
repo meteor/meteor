@@ -231,7 +231,7 @@ Read more about using Cordova in the [mobile guide](mobile.html).
 Meteor has a test mode for packages called `meteor test-packages`. If you are in a package's directory, you can run
 
 ```bash
-meteor test-packages ./ --driver-package practicalmeteor:mocha
+meteor test-packages ./ --driver-package meteortesting:mocha
 ```
 
 This will run a special app containing only a "test" version of your package and start a Mocha [test driver package](testing.html#driver-packages).
@@ -245,7 +245,7 @@ Package.onTest(function(api) {
   api.use('my-package');
 
   // You should also include any packages you need to use in the test code
-  api.use(['ecmascript', 'random', 'practicalmeteor:mocha']);
+  api.use(['ecmascript', 'random', 'meteortesting:mocha']);
 
   // Finally add an entry point for tests
   api.mainModule('my-package-tests.js');
