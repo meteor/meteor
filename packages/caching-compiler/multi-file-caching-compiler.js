@@ -95,7 +95,7 @@ extends CachingCompilerBase {
         arches[inputFile.getArch()] = 1;
       }
 
-      const getResult = () => {
+      const getResult = async () => {
         const absoluteImportPath = this.getAbsoluteImportPath(inputFile);
         const cacheKey = cacheKeyMap.get(absoluteImportPath);
         let cacheEntry = this._cache.get(cacheKey);
@@ -109,7 +109,9 @@ extends CachingCompilerBase {
         if (! (cacheEntry && this._cacheEntryValid(cacheEntry, cacheKeyMap))) {
           cacheMisses.push(inputFile.getDisplayPath());
 
-          const compileOneFileReturn = this.compileOneFile(inputFile, allFiles);
+          const compileOneFileReturn =
+            await this.compileOneFile(inputFile, allFiles);
+
           if (! compileOneFileReturn) {
             // compileOneFile should have called inputFile.error.
             // We don't cache failures for now.
@@ -147,9 +149,9 @@ extends CachingCompilerBase {
 
       if (this.compileOneFileLater &&
           inputFile.supportsLazyCompilation) {
-        this.compileOneFileLater(inputFile, getResult);
+        await this.compileOneFileLater(inputFile, getResult);
       } else if (this.isRoot(inputFile)) {
-        const result = getResult();
+        const result = await getResult();
         if (result) {
           this.addCompileResult(inputFile, result);
         }
