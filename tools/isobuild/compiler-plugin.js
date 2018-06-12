@@ -514,7 +514,7 @@ class InputFile extends buildPluginModule.InputFile {
       // assets typically are not compiled, this immediate invocation is
       // probably permanently appropriate for addAsset, whereas methods
       // like addJavaScript benefit from waiting to call lazyFinalizer.
-      Object.assign(options, lazyFinalizer());
+      Object.assign(options, Promise.await(lazyFinalizer()));
     }
 
     this._resourceSlot.addAsset(options);
@@ -541,7 +541,7 @@ class InputFile extends buildPluginModule.InputFile {
       // HTML is not compiled, this immediate invocation is probably
       // permanently appropriate for addHtml, whereas methods like
       // addJavaScript benefit from waiting to call lazyFinalizer.
-      Object.assign(options, lazyFinalizer());
+      Object.assign(options, Promise.await(lazyFinalizer()));
     }
 
     this._resourceSlot.addHtml(options);
