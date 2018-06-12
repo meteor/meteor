@@ -27,13 +27,11 @@ BCp.processFilesForTarget = function (inputFiles) {
   this._babelrcCache = null;
 
   inputFiles.forEach(function (inputFile) {
-    var fileOptions = inputFile.getFileOptions();
-
     if (inputFile.supportsLazyCompilation) {
       inputFile.addJavaScript({
         path: inputFile.getPathInPackage(),
         hash: inputFile.getSourceHash(),
-        bare: !! fileOptions.bare
+        bare: !! inputFile.getFileOptions().bare
       }, function () {
         return compiler.processOneFileForTarget(inputFile);
       });
