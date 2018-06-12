@@ -575,6 +575,8 @@ class ResourceSlot {
     self.outputResources = [];
     // JS, which gets linked together at the end.
     self.jsOutputResources = [];
+    // Errors encountered while processing this resource.
+    self.errors = [];
     self.sourceProcessor = sourceProcessor;
     self.packageSourceBatch = packageSourceBatch;
 
@@ -830,14 +832,8 @@ class ResourceSlot {
 
   addError(message, info) {
     // If this file is ever actually imported, only then will we report
-    // the error. Use this.jsOutputResources because that's what the
-    // ImportScanner deals with.
-    this.addJavaScript({
-      data: Buffer.from(
-        "throw new Error(" + JSON.stringify(message) + ");\n",
-        "utf8"),
-      lazy: true,
-    }).error = { message, info };
+    // the error.
+    this.errors.push({ message, info });
   }
 }
 
@@ -851,6 +847,8 @@ class OutputResource {
     this._lazyFinalizer = lazyFinalizer;
     this._initialOptions = options;
     this._finalizerPromise = null;
+    // Share the errors array of the resourceSlot.
+    this._errors = resourceSlot.errors;
 
     let sourcePath = resourceSlot.inputResource.path;
     if (_.has(options, "sourcePath") &&
@@ -885,6 +883,19 @@ class OutputResource {
         this._finalizerPromise = null;
       })).await();
     }
+  }
+
+  reportPendingErrors() {
+    this.finalize();
+    const count = this._errors.length;
+    if (count > 0) {
+      const firstError = this._errors[0];
+      buildmessage.error(
+        firstError.message,
+        firstError.info
+      );
+    }
+    return count;
   }
 
   get data() { return this._get("data"); }

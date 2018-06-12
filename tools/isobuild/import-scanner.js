@@ -818,14 +818,11 @@ export default class ImportScanner {
     // Set file.imported to a truthy value (either "dynamic" or true).
     file.imported = forDynamicImport ? "dynamic" : true;
 
-    if (file.error) {
+    if (file.reportPendingErrors &&
+        file.reportPendingErrors() > 0) {
       // Any errors reported to InputFile#error were saved but not
       // reported at compilation time. Now that we know the file has been
       // imported, it's time to report those errors.
-      buildmessage.error(
-        file.error.message,
-        file.error.info
-      );
       return;
     }
 
