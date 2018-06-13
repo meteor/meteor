@@ -2,6 +2,10 @@
 
 ## v1.7.0.2, 2018-06-13
 
+* Node has been updated to version
+  [8.11.3](https://nodejs.org/en/blog/release/v8.11.3/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/june-2018-security-releases/).
+
 * The `meteor-babel` npm package has been updated to version
   [7.0.0-beta.51](https://github.com/babel/babel/releases/tag/v7.0.0-beta.51).
 
