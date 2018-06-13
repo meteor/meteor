@@ -1,5 +1,10 @@
 ## v.NEXT
 
+## v1.7.0.2, 2018-06-13
+
+* The `meteor-babel` npm package has been updated to version
+  [7.0.0-beta.51](https://github.com/babel/babel/releases/tag/v7.0.0-beta.51).
+
 ## v1.7.0.1, 2018-05-29
 
 * Reverted an [optimization](https://github.com/meteor/meteor/pull/9825)
