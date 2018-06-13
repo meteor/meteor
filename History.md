@@ -9,6 +9,14 @@
 * The `meteor-babel` npm package has been updated to version
   [7.0.0-beta.51](https://github.com/babel/babel/releases/tag/v7.0.0-beta.51).
 
+* Meteor apps created with `meteor create` or `meteor create --minimal`
+  will now have a directory called `tests/` rather than `test/`, so that
+  test code will not be eagerly loaded if you decide to remove the
+  `meteor.mainModule` configuration from `package.json`, thanks to
+  [PR #9977](https://github.com/meteor/meteor/pull/9977) by
+  [@robfallows](https://github.com/robfallows).
+  [Issue #9961](https://github.com/meteor/meteor/issues/9961)
+
 ## v1.7.0.1, 2018-05-29
 
 * Reverted an [optimization](https://github.com/meteor/meteor/pull/9825)
