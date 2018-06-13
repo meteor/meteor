@@ -1,5 +1,22 @@
 ## v.NEXT
 
+## v1.7.0.2, 2018-06-13
+
+* Node has been updated to version
+  [8.11.3](https://nodejs.org/en/blog/release/v8.11.3/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/june-2018-security-releases/).
+
+* The `meteor-babel` npm package has been updated to version
+  [7.0.0-beta.51](https://github.com/babel/babel/releases/tag/v7.0.0-beta.51).
+
+* Meteor apps created with `meteor create` or `meteor create --minimal`
+  will now have a directory called `tests/` rather than `test/`, so that
+  test code will not be eagerly loaded if you decide to remove the
+  `meteor.mainModule` configuration from `package.json`, thanks to
+  [PR #9977](https://github.com/meteor/meteor/pull/9977) by
+  [@robfallows](https://github.com/robfallows).
+  [Issue #9961](https://github.com/meteor/meteor/issues/9961)
+
 ## v1.7.0.1, 2018-05-29
 
 * Reverted an [optimization](https://github.com/meteor/meteor/pull/9825)
