@@ -1,7 +1,5 @@
 const path = Plugin.path;
-const Future = Npm.require('fibers/future');
 const LRU = Npm.require('lru-cache');
-const async = Npm.require('async');
 
 // MultiFileCachingCompiler is like CachingCompiler, but for implementing
 // languages which allow files to reference each other, such as CSS
@@ -92,20 +90,12 @@ extends CachingCompilerBase {
       cacheKeyMap.set(importPath, this._getCacheKeyWithPath(inputFile));
     });
 
-    const allProcessedFuture = new Future;
-    async.eachLimit(inputFiles, this._maxParallelism, (inputFile, cb) => {
+    return Promise.all(inputFiles.map(async (inputFile) => {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      let error = null;
-      try {
-        // If this isn't a root, skip it (and definitely don't waste time
-        // looking for a cache file that won't be there).
-        if (!this.isRoot(inputFile)) {
-          return;
-        }
-
+      const getResult = async () => {
         const absoluteImportPath = this.getAbsoluteImportPath(inputFile);
         const cacheKey = cacheKeyMap.get(absoluteImportPath);
         let cacheEntry = this._cache.get(cacheKey);
@@ -119,13 +109,19 @@ extends CachingCompilerBase {
         if (! (cacheEntry && this._cacheEntryValid(cacheEntry, cacheKeyMap))) {
           cacheMisses.push(inputFile.getDisplayPath());
 
-          const compileOneFileReturn = this.compileOneFile(inputFile, allFiles);
+          const compileOneFileReturn =
+            await this.compileOneFile(inputFile, allFiles);
+
           if (! compileOneFileReturn) {
             // compileOneFile should have called inputFile.error.
-            //  We don't cache failures for now.
+            // We don't cache failures for now.
             return;
           }
-          const {compileResult, referencedImportPaths} = compileOneFileReturn;
+
+          const {
+            compileResult,
+            referencedImportPaths,
+          } = compileOneFileReturn;
 
           cacheEntry = {
             compileResult,
@@ -148,17 +144,27 @@ extends CachingCompilerBase {
           this._writeCacheAsync(cacheKey, cacheEntry);
         }
 
-        this.addCompileResult(inputFile, cacheEntry.compileResult);
-      } catch (e) {
-        error = e;
-      } finally {
-        cb(error);
-      }
-    }, allProcessedFuture.resolver());
-    allProcessedFuture.wait();
+        return cacheEntry.compileResult;
+      };
 
-    if (this._cacheDebugEnabled) {
+      if (this.compileOneFileLater &&
+          inputFile.supportsLazyCompilation &&
+          ! this._cacheDebugEnabled) {
+        await this.compileOneFileLater(inputFile, getResult);
+      } else if (this.isRoot(inputFile)) {
+        const result = await getResult();
+        if (result) {
+          this.addCompileResult(inputFile, result);
+        }
+      }
+
+    })).then(() => {
+      if (! this._cacheDebugEnabled) {
+        return;
+      }
+
       cacheMisses.sort();
+
       this._cacheDebug(
         `Ran (#${
           ++this._callCount
@@ -166,8 +172,9 @@ extends CachingCompilerBase {
           JSON.stringify(cacheMisses)
         } ${
           JSON.stringify(Object.keys(arches).sort())
-        }`);
-    }
+        }`
+      );
+    });
   }
 
   // Returns a hash that incorporates both this.getCacheKey(inputFile) and
