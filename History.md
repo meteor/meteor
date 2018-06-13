@@ -4,6 +4,13 @@
   [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
   `pacote` dependency has been rebased against version 8.1.6.
 
+## v1.7.0.3, 2018-06-13
+
+* Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
+  introduced in
+  [Meteor 1.7.0.2](https://github.com/meteor/meteor/pull/9990)
+  by [PR #9977](https://github.com/meteor/meteor/pull/9977).
+
 ## v1.7.0.2, 2018-06-13
 
 * Node has been updated to version
