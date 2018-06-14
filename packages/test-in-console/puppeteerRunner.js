@@ -8,9 +8,7 @@ async function runNextUrl(browser) {
   });
 
   if (!process.env.URL) {
-    await page.close();
-    await browser.close();
-    process.exit(0);
+    process.exit(1);
     return;
   }
 
@@ -25,7 +23,8 @@ async function runNextUrl(browser) {
         process.exit(1);
       } else {
         await page.close();
-        setTimeout(runNextUrl, 1000);
+        await browser.close();
+        process.exit(0);
       }
     } else {
       setTimeout(poll, 1000);
