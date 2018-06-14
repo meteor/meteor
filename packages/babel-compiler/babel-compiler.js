@@ -21,15 +21,27 @@ var hasOwn = Object.prototype.hasOwnProperty;
 var isMeteorPre144 = semver.lt(process.version, "4.8.1");
 
 BCp.processFilesForTarget = function (inputFiles) {
+  var compiler = this;
+
   // Reset this cache for each batch processed.
   this._babelrcCache = null;
 
   inputFiles.forEach(function (inputFile) {
-    var toBeAdded = this.processOneFileForTarget(inputFile);
-    if (toBeAdded) {
-      inputFile.addJavaScript(toBeAdded);
+    if (inputFile.supportsLazyCompilation) {
+      inputFile.addJavaScript({
+        path: inputFile.getPathInPackage(),
+        hash: inputFile.getSourceHash(),
+        bare: !! inputFile.getFileOptions().bare
+      }, function () {
+        return compiler.processOneFileForTarget(inputFile);
+      });
+    } else {
+      var toBeAdded = compiler.processOneFileForTarget(inputFile);
+      if (toBeAdded) {
+        inputFile.addJavaScript(toBeAdded);
+      }
     }
-  }, this);
+  });
 };
 
 // Returns an object suitable for passing to inputFile.addJavaScript, or
