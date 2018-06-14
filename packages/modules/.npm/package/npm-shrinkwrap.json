@@ -7,9 +7,9 @@
       "integrity": "sha512-jd5MkIUlbbmb07nXH0DT3y7rDVtkzDi4XZOUVWAer8ajmF/DTSSbl5oNFyDOl/OXA33Bl79+ypHhl2pN20VeOQ=="
     },
     "reify": {
-      "version": "0.15.1",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.15.1.tgz",
-      "integrity": "sha512-XUIO34oFNXyb8cYRw3eVN0oqD3LwxaBFml5cHZf3Uiw6v+pfPB0D7kxKCdBjvaa1cneDtUqqQ94MPQkJt2kEWg=="
+      "version": "0.16.2",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.16.2.tgz",
+      "integrity": "sha512-9kL/IYcFiBbwpQFScNcFBJ5zhCEJTNujeDEEv5SoSg5er0V5CDbef2zNEk9FBeI9oehGOG5zM4APXgp5n3Llbw=="
     },
     "semver": {
       "version": "5.5.0",

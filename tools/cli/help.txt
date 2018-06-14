@@ -142,15 +142,16 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--full] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
 
 Make a subdirectory named <path> if it doesn't exist and create a new Meteor app
 there. You can pass an absolute path, relative path, or '.' for the current
-directory. Use the --bare option to create an empty app. To scaffold the app
-use the --full option.
+directory. Use the --bare option to create an empty app, or the --minimal option
+to create an empty app with as few Meteor packages as possible. To scaffold a
+more complete app, use the --full option.
 
 With the --package option, creates a Meteor package instead of an app. If you're
 in an app, the package will go in the app's top-level 'packages' directory;
@@ -170,7 +171,8 @@ Options:
   --example  Example template to use.
   --list     Show list of available examples.
   --bare     Create an empty app.
-  --full     Create a scaffolded app.
+  --minimal  Create an app with as few Meteor packages as possible.
+  --full     Create a fully scaffolded app.
 
 
 >>> update
@@ -632,7 +634,7 @@ that your tests can inspect and interact with the full running application.
 Test files are loaded similarly to 'meteor test' mode, but must be called
 *.app-test[s].* or *.app-spec[s].*.
 
-Note: as of Meteor 1.6.2, you can override the default test loading rules
+Note: as of Meteor 1.7, you can override the default test loading rules
 described in the previous two paragraphs by including a meteor.testModule
 section in your package.json file:
 

@@ -79,7 +79,7 @@ var runTest = function () {
                    ["/nested/nested.txt", "Nested\n"]];
   _.each(testCases, function (file) {
     var manifestItem = _.find(clientManifest.manifest, function (m) {
-      return m.url === file[0];
+      return m.url.endsWith(file[0]);
     });
     assert(manifestItem);
     var diskPath = files.pathJoin(tmpOutputDir, "programs", "web.browser",

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.5.0'
+  version: '1.6.1'
 });
 
 Npm.depends({"basic-auth-connect": "1.0.0",
@@ -27,8 +27,14 @@ Cordova.depends({
 
 Package.onUse(function (api) {
   api.use('ecmascript');
-  api.use(['logging', 'underscore', 'routepolicy', 'boilerplate-generator',
-           'webapp-hashing'], 'server');
+  api.use([
+    'logging',
+    'underscore',
+    'routepolicy',
+    'modern-browsers',
+    'boilerplate-generator',
+    'webapp-hashing'
+  ], 'server');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If
   // browser-policy is loaded, then it must be loaded after webapp
@@ -51,4 +57,7 @@ Package.onTest(function (api) {
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
   api.addFiles('socket_file_tests.js', 'server');
+
+  api.addAssets('modern_test_asset.js', 'web.browser');
+  api.addAssets('legacy_test_asset.js', 'legacy');
 });

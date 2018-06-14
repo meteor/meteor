@@ -2,8 +2,13 @@ import {
   toSockjsUrl,
   toWebsocketUrl,
 } from "./urls.js";
-import "./sockjs-0.3.4.js";
+
 import { StreamClientCommon } from "./common.js";
+
+// Statically importing SockJS here will prevent native WebSocket usage
+// below (in favor of SockJS), but will ensure maximum compatibility for
+// clients stuck in unusual networking environments.
+import "./sockjs-0.3.4.js";
 
 export class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app
@@ -184,11 +189,16 @@ export class ClientStream extends StreamClientCommon {
     };
 
     this.socket.onclose = () => {
-      if (this.lastError) {
-        this._lostConnection(this.lastError);
-      } else {
+      Promise.resolve(
+        // If the socket is closing because there was an error, and we
+        // didn't load SockJS before, try loading it dynamically before
+        // retrying the connection.
+        this.lastError &&
+        ! hasSockJS &&
+        import("./sockjs-0.3.4.js")
+      ).done(() => {
         this._lostConnection();
-      }
+      });
     };
 
     this.socket.onerror = error => {

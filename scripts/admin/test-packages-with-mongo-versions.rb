@@ -7,7 +7,7 @@
 require 'tmpdir'
 
 mongo_install_urls = {
-  "3.6.3" => "https://fastdl.mongodb.org/osx/mongodb-osx-ssl-x86_64-3.6.3.tgz",
+  "3.6.4" => "https://fastdl.mongodb.org/osx/mongodb-osx-ssl-x86_64-3.6.4.tgz",
   "3.2.19" => "https://fastdl.mongodb.org/osx/mongodb-osx-x86_64-3.2.19.tgz",
   "3.0.5" => "https://fastdl.mongodb.org/osx/mongodb-osx-x86_64-3.0.5.tgz",
   "2.6.10" => "http://downloads.mongodb.org/osx/mongodb-osx-x86_64-2.6.10.tgz"
@@ -29,7 +29,7 @@ puts "Putting output in: #{path_to_output}/"
 
 test_env = "TEST_PACKAGES_EXCLUDE=\"less\""
 
-["3.6.3", "3.2.19", "3.0.5", "2.6.10"].each do |mongo_version|
+["3.6.4", "3.2.19", "3.0.5", "2.6.10"].each do |mongo_version|
   puts "Installing and testing with Mongo #{mongo_version}..."
 
   Dir.mktmpdir "mongo_install" do |mongo_install_dir|

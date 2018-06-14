@@ -933,9 +933,22 @@ main.registerCommand({
               throw Error("no isopack for " + packageName);
             }
 
-            var existingBuild =
-                  catalog.official.getBuildWithPreciseBuildArchitectures(
-                    oldVersionRecord, isopk.buildArchitectures());
+            const existingBuild =
+              // First try with the non-simplified build architecture
+              // list, which is likely to be something like
+              // os+web.browser+web.browser.legacy+web.cordova:
+              catalog.official.getBuildWithPreciseBuildArchitectures(
+                oldVersionRecord,
+                isopk.buildArchitectures(),
+              ) ||
+              // If that fails, fall back to the simplified architecture
+              // list (e.g. os+web.browser+web.cordova), to match packages
+              // published before the web.browser.legacy architecture was
+              // introduced (in Meteor 1.7).
+              catalog.official.getBuildWithPreciseBuildArchitectures(
+                oldVersionRecord,
+                isopk.buildArchitectures(true),
+              );
 
             var somethingChanged;
 
