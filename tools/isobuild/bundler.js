@@ -831,7 +831,10 @@ class Target {
         packages: packages || []
       });
 
-      const sourceBatches = this._runCompilerPlugins();
+      const sourceBatches = this._runCompilerPlugins({
+        minifiers,
+        minifyMode,
+      });
 
       // Link JavaScript and set up this.js, etc.
       this._emitResources(sourceBatches);
@@ -1041,16 +1044,58 @@ class Target {
 
   // Run all the compiler plugins on all source files in the project. Returns an
   // array of PackageSourceBatches which contain the results of this processing.
-  _runCompilerPlugins() {
+  _runCompilerPlugins({
+    minifiers = [],
+    minifyMode = "development",
+  }) {
     buildmessage.assertInJob();
+
+    const minifiersByExt = Object.create(null);
+    if (this instanceof ClientTarget) {
+      ["js", "css"].forEach(ext => {
+        minifiers.some(minifier => {
+          if (_.contains(minifier.extensions, ext)) {
+            return minifiersByExt[ext] = minifier;
+          }
+        });
+      });
+    }
+
+    const target = this;
     const processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: this.unibuilds,
       arch: this.arch,
       sourceRoot: this.sourceRoot,
       isopackCache: this.isopackCache,
-      linkerCacheDir:
-        (this.bundlerCacheDir && files.pathJoin(this.bundlerCacheDir, 'linker'))
+      linkerCacheDir: this.bundlerCacheDir &&
+        files.pathJoin(this.bundlerCacheDir, 'linker'),
+
+      // Takes a CssOutputResource and returns a string of minified CSS,
+      // or null to indicate no minification occurred.
+      // TODO Cache result by resource hash?
+      minifyCssResource(resource) {
+        if (! minifiersByExt.css ||
+            minifyMode === "development") {
+          // Indicates the caller should use the original resource.data
+          // without minification.
+          return null;
+        }
+
+        const file = new File({
+          info: 'resource ' + resource.servePath,
+          arch: target.arch,
+          data: resource.data,
+        });
+
+        file.setTargetPathFromRelPath(
+          stripLeadingSlash(resource.servePath));
+
+        return target.minifyCssFiles(
+          [file], minifiersByExt.css, minifyMode
+        ).map(file => file.contents("utf8")).join("\n");
+      }
     });
+
     return processor.runCompilerPlugins();
   }
 
@@ -1520,12 +1565,14 @@ class ClientTarget extends Target {
 
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
+    this.css = this.minifyCssFiles(this.css, minifierDef, minifyMode);
+  }
+
+  minifyCssFiles(files, minifierDef, minifyMode) {
     const { arch } = this;
-    const sources = this.css.map((file) => {
-      return new CssFile(file, { arch });
-    });
-    const minifier = minifierDef.userPlugin.processFilesForBundle.bind(
-      minifierDef.userPlugin);
+    const sources = files.map(file => new CssFile(file, { arch }));
+    const minifier = minifierDef.userPlugin.processFilesForBundle
+      .bind(minifierDef.userPlugin);
 
     buildmessage.enterJob('minifying app stylesheet', function () {
       try {
@@ -1536,7 +1583,7 @@ class ClientTarget extends Target {
       }
     });
 
-    this.css = _.flatten(sources.map((source) => {
+    return _.flatten(sources.map((source) => {
       return source._minifiedFiles.map((file) => {
         const newFile = new File({
           info: 'minified css',
