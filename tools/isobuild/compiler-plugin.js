@@ -778,7 +778,12 @@ class ResourceSlot {
         // stub, so setting .implicit marks the resource as disposable.
       }).implicit = true;
 
-      this.outputResources.push(cssResource);
+      // If there was an error processing this file, cssResource.data will
+      // not be a Buffer, and accessing cssResource.data here should cause
+      // the error to be reported via inputFile.error.
+      if (Buffer.isBuffer(cssResource.data)) {
+        this.outputResources.push(cssResource);
+      }
     }
   }
 
@@ -927,8 +932,8 @@ class OutputResource {
 
     switch (name) {
     case "data":
-      let { data } = this._initialOptions;
-      if (! Buffer.isBuffer(data)) {
+      let { data = null } = this._initialOptions;
+      if (typeof data === "string") {
         data = Buffer.from(data, "utf8");
       }
       return this._set("data", data);
