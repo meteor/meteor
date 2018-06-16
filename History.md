@@ -358,6 +358,12 @@
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
 
+## v1.6.1.3, 2018-06-16
+
+* Node has been updated to version
+  [8.11.3](https://nodejs.org/en/blog/release/v8.11.3/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/june-2018-security-releases/).
+
 ## v1.6.1.2, 2018-05-28
 
 * Meteor 1.6.1.2 is a very small release intended to fix
