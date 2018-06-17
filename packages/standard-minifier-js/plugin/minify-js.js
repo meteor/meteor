@@ -138,13 +138,17 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
         throw err;
       }
 
-      const tree = extractModuleSizesTree(minified.code);
-      if (tree) {
-        toBeAdded.stats[file.getPathInBundle()] =
-          [Buffer.byteLength(minified.code), tree];
-      } else {
-        toBeAdded.stats[file.getPathInBundle()] =
-          Buffer.byteLength(minified.code);
+      try {
+        const tree = extractModuleSizesTree(minified.code);
+        if (tree) {
+          toBeAdded.stats[file.getPathInBundle()] =
+            [Buffer.byteLength(minified.code), tree];
+        } else {
+          toBeAdded.stats[file.getPathInBundle()] =
+            Buffer.byteLength(minified.code);
+        }
+      } catch(e) { 
+        throw new Error(`File: ${file.getPathInBundle()} Parse error: ${minified.code.slice(e.pos).substring(0,256)}`); 
       }
 
       toBeAdded.data += minified.code;
