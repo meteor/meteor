@@ -148,7 +148,11 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
             Buffer.byteLength(minified.code);
         }
       } catch(e) { 
-        throw new Error(`File: ${file.getPathInBundle()} Parse error: ${minified.code.slice(e.pos).substring(0,256)}`); 
+        if (e.pos) {
+          throw new Error(`File: ${file.getPathInBundle()} Parse error: ${minified.code.slice(e.pos).substring(0,256)}`);
+        } else {
+          throw e;
+        } 
       }
 
       toBeAdded.data += minified.code;
