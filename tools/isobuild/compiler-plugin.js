@@ -110,17 +110,19 @@ export class CompilerPluginProcessor {
     sourceRoot,
     isopackCache,
     linkerCacheDir,
+    minifyCssResource,
   }) {
-    const self = this;
+    Object.assign(this, {
+      unibuilds,
+      arch,
+      sourceRoot,
+      isopackCache,
+      linkerCacheDir,
+      minifyCssResource,
+    });
 
-    self.unibuilds = unibuilds;
-    self.arch = arch;
-    self.sourceRoot = sourceRoot;
-    self.isopackCache = isopackCache;
-
-    self.linkerCacheDir = linkerCacheDir;
-    if (self.linkerCacheDir) {
-      files.mkdir_p(self.linkerCacheDir);
+    if (this.linkerCacheDir) {
+      files.mkdir_p(this.linkerCacheDir);
     }
   }
 
@@ -509,15 +511,7 @@ class InputFile extends buildPluginModule.InputFile {
    * @instance
    */
   addAsset(options, lazyFinalizer) {
-    if (typeof lazyFinalizer === "function") {
-      // For now, just call the lazyFinalizer function immediately. Since
-      // assets typically are not compiled, this immediate invocation is
-      // probably permanently appropriate for addAsset, whereas methods
-      // like addJavaScript benefit from waiting to call lazyFinalizer.
-      Object.assign(options, Promise.await(lazyFinalizer()));
-    }
-
-    this._resourceSlot.addAsset(options);
+    this._resourceSlot.addAsset(options, lazyFinalizer);
   }
 
   /**
@@ -721,20 +715,49 @@ class ResourceSlot {
     // default to being eager (non-lazy).
     options.lazy = this._isLazy(options, false);
 
+    const cssResource = new CssOutputResource({
+      resourceSlot: this,
+      options,
+      lazyFinalizer,
+    });
+
     if (this.packageSourceBatch.useMeteorInstall &&
         options.lazy) {
       // If the current packageSourceBatch supports modules, and this CSS
       // file is lazy, add it as a lazy JS module instead of adding it
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
-      this.addJavaScript(options, async () => {
-        const result = typeof lazyFinalizer === "function"
-          ? await lazyFinalizer()
-          : { data: options.data };
+      const jsResource = this.addJavaScript(options, () => {
+        const result = {};
 
-        if (result) {
-          result.data = Buffer.from(cssToCommonJS(result.data), "utf8");
+        let css = this.packageSourceBatch.processor
+          .minifyCssResource(cssResource);
+
+        if (! css && typeof css !== "string") {
+          // The minifier didn't do anything, so we should use the
+          // original contents of cssResource.data.
+          css = cssResource.data.toString("utf8");
+
+          if (cssResource.sourceMap) {
+            // Add the source map as an asset, and append a
+            // sourceMappingURL comment to the end of the CSS text that
+            // will be dynamically inserted when/if this JS module is
+            // evaluated at runtime. Note that this only happens when the
+            // minifier did not modify the CSS, and thus does not happen
+            // when we are building for production.
+            const { servePath } = this.addAsset({
+              path: jsResource.targetPath + ".map.json",
+              data: JSON.stringify(cssResource.sourceMap)
+            });
+            css += "\n//# sourceMappingURL=" + servePath + "\n";
+          }
         }
+
+        result.data = Buffer.from(cssToCommonJS(css), "utf8");
+
+        // The JavaScript module that dynamically loads this CSS should
+        // not inherit the source map of the original CSS output.
+        result.sourceMap = null;
 
         return result;
       });
@@ -755,11 +778,12 @@ class ResourceSlot {
         // stub, so setting .implicit marks the resource as disposable.
       }).implicit = true;
 
-      this.outputResources.push(new CssOutputResource({
-        resourceSlot: this,
-        options,
-        lazyFinalizer,
-      }));
+      // If there was an error processing this file, cssResource.data will
+      // not be a Buffer, and accessing cssResource.data here should cause
+      // the error to be reported via inputFile.error.
+      if (Buffer.isBuffer(cssResource.data)) {
+        this.outputResources.push(cssResource);
+      }
     }
   }
 
@@ -780,30 +804,20 @@ class ResourceSlot {
     return resource;
   }
 
-  addAsset(options) {
-    const self = this;
-    if (! self.sourceProcessor) {
+  addAsset(options, lazyFinalizer) {
+    if (! this.sourceProcessor) {
       throw Error("addAsset on non-source ResourceSlot?");
     }
 
-    if (! (options.data instanceof Buffer)) {
-      if (_.isString(options.data)) {
-        options.data = Buffer.from(options.data);
-      } else {
-        throw new Error("'data' option to addAsset must be a Buffer or " +
-                        "String: " + self.inputResource.path);
-      }
-    }
-
-    self.outputResources.push({
-      type: 'asset',
-      data: options.data,
-      path: options.path,
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
-        options.path),
-      hash: sha1(options.data),
-      lazy: self._isLazy(options, false),
+    const resource = new AssetOutputResource({
+      resourceSlot: this,
+      options,
+      lazyFinalizer,
     });
+
+    this.outputResources.push(resource);
+
+    return resource;
   }
 
   addHtml(options) {
@@ -918,8 +932,8 @@ class OutputResource {
 
     switch (name) {
     case "data":
-      let { data } = this._initialOptions;
-      if (! Buffer.isBuffer(data)) {
+      let { data = null } = this._initialOptions;
+      if (typeof data === "string") {
         data = Buffer.from(data, "utf8");
       }
       return this._set("data", data);
@@ -957,15 +971,25 @@ class OutputResource {
 }
 
 class JsOutputResource extends OutputResource {
-  constructor(options) {
-    super({ ...options, type: "js" });
+  constructor(params) {
+    super({ ...params, type: "js" });
   }
 }
 
 class CssOutputResource extends OutputResource {
-  constructor(options) {
-    super({ ...options, type: "css" });
+  constructor(params) {
+    super({ ...params, type: "css" });
     this.refreshable = true;
+  }
+}
+
+class AssetOutputResource extends OutputResource {
+  constructor(params) {
+    super({ ...params, type: "asset" });
+    // Asset paths must always be explicitly specified.
+    this.path = this._initialOptions.path;
+    // Eagerness/laziness should never matter for assets.
+    delete this.lazy;
   }
 }
 
