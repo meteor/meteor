@@ -1,7 +1,7 @@
 Facebook = {};
 import crypto from 'crypto';
 
-Facebook.handleAuthFromAccessToken = function handleAuthFromAccessToken(accessToken, expiresAt) {
+Facebook.handleAuthFromAccessToken = (accessToken, expiresAt) => {
   // include basic fields from facebook
   // https://developers.facebook.com/docs/facebook-login/permissions/
   const whitelisted = ['id', 'email', 'name', 'first_name', 'last_name',

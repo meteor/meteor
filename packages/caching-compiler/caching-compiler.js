@@ -2,9 +2,7 @@ const fs = Plugin.fs;
 const path = Plugin.path;
 const createHash = Npm.require('crypto').createHash;
 const assert = Npm.require('assert');
-const Future = Npm.require('fibers/future');
 const LRU = Npm.require('lru-cache');
-const async = Npm.require('async');
 
 // Base class for CachingCompiler and MultiFileCachingCompiler.
 CachingCompilerBase = class CachingCompilerBase {
@@ -283,14 +281,12 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
     const cacheMisses = [];
     const arches = this._cacheDebugEnabled && Object.create(null);
 
-    const future = new Future;
-    async.eachLimit(inputFiles, this._maxParallelism, (inputFile, cb) => {
+    return Promise.all(inputFiles.map(async (inputFile) => {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      let error = null;
-      try {
+      const getResult = async () => {
         const cacheKey = this._deepHash(this.getCacheKey(inputFile));
         let compileResult = this._cache.get(cacheKey);
 
@@ -303,7 +299,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
         if (! compileResult) {
           cacheMisses.push(inputFile.getDisplayPath());
-          compileResult = this.compileOneFile(inputFile);
+          compileResult = await this.compileOneFile(inputFile);
 
           if (! compileResult) {
             // compileOneFile should have called inputFile.error.
@@ -316,17 +312,27 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
           this._writeCacheAsync(cacheKey, compileResult);
         }
 
-        this.addCompileResult(inputFile, compileResult);
-      } catch (e) {
-        error = e;
-      } finally {
-        cb(error);
-      }
-    }, future.resolver());
-    future.wait();
+        return compileResult;
+      };
 
-    if (this._cacheDebugEnabled) {
+      if (this.compileOneFileLater &&
+          inputFile.supportsLazyCompilation &&
+          ! this._cacheDebugEnabled) {
+        await this.compileOneFileLater(inputFile, getResult);
+      } else {
+        const result = await getResult();
+        if (result) {
+          this.addCompileResult(inputFile, result);
+        }
+      }
+
+    })).then(() => {
+      if (! this._cacheDebugEnabled) {
+        return;
+      }
+
       cacheMisses.sort();
+
       this._cacheDebug(
         `Ran (#${
           ++this._callCount
@@ -336,7 +342,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
           JSON.stringify(Object.keys(arches).sort())
         }`
       );
-    }
+    });
   }
 
   _cacheFilename(cacheKey) {

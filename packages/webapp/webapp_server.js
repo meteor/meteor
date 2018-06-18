@@ -484,23 +484,33 @@ function getStaticFileInfo(originalPath, browser) {
     return null;
   }
 
-  if (hasOwn.call(staticFilesByArch, arch)) {
+  // Get a list of all available static file architectures, with arch
+  // first in the list if it exists.
+  const staticArchList = Object.keys(staticFilesByArch);
+  const archIndex = staticArchList.indexOf(arch);
+  if (archIndex > 0) {
+    staticArchList.unshift(staticArchList.splice(archIndex, 1)[0]);
+  }
+
+  let info = null;
+
+  staticArchList.some(arch => {
     const staticFiles = staticFilesByArch[arch];
 
     // If staticFiles contains originalPath with the arch inferred above,
     // use that information.
     if (hasOwn.call(staticFiles, originalPath)) {
-      return staticFiles[originalPath];
+      return info = staticFiles[originalPath];
     }
 
     // If getArchAndPath returned an alternate path, try that instead.
     if (path !== originalPath &&
         hasOwn.call(staticFiles, path)) {
-      return staticFiles[path];
+      return info = staticFiles[path];
     }
-  }
+  });
 
-  return null;
+  return info;
 }
 
 function getArchAndPath(path, browser) {
