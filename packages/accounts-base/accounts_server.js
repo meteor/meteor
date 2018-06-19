@@ -742,6 +742,12 @@ Ap._initServerPublications = function () {
 
       const ids = company.childCompanyIds ? [...company.childCompanyIds, company._id] : [company._id];
 
+      let additionalCollections = [];
+
+      if (NC.accountPublications && NC.accountPublications.partners) {
+        additionalCollections = NC.accountPublications.partners(this.userId);
+      }
+
       return [
         accounts.users.find({
           _id: this.userId
@@ -751,7 +757,8 @@ Ap._initServerPublications = function () {
             activeCompanyId: 1,
             profile: 1,
             username: 1,
-            emails: 1
+            emails: 1,
+            partnerIds: 1
           }
         }),
         NC.Companies.find({
@@ -831,7 +838,7 @@ Ap._initServerPublications = function () {
           ]
         }, {})
 
-      ];
+      ].concat(additionalCollections);
     } else {
       return null;
     }
