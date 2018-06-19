@@ -190,22 +190,34 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
   s.cd("myapp");
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-    // Add a debugOnly package. It should work during a normal run, but print
+  // Add a debugOnly package. It should work during a normal run, but print
   // nothing in production mode.
   run = s.run("add", "debug-only");
+  run.waitSecs(30);
   run.match("debug-only");
   run.expectExit(0);
 
-  s.mkdir("server");
-  s.write("server/exit-test.js",
-          "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
+  function onStartup(property) {
+    s.mkdir("server");
+    s.write("server/exit-test.js", [
+      "Meteor.startup(() => {",
+      "  console.log('Meteor.isDevelopment', Meteor.isDevelopment);",
+      "  console.log('Meteor.isProduction', Meteor.isProduction);",
+      `  console.log('${property}', global.${property});`,
+      `  process.exit(global.${property} ? 234 : 235);`,
+      "});",
+      ""
+    ].join("\n"));
+  }
+
+  onStartup("DEBUG_ONLY_LOADED");
 
   run = s.run("--once");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(234);
 
   run = s.run("--once", "--production");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(235);
 
   // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
@@ -213,16 +225,14 @@ selftest.define("add debugOnly and prodOnly packages", [], function () {
   run.match("prod-only");
   run.expectExit(0);
 
-  s.mkdir("server");
-  s.write("server/exit-test.js", // overwrite
-          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+  onStartup("PROD_ONLY_LOADED");
 
   run = s.run("--once");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(235);
 
   run = s.run("--once", "--production");
-  run.waitSecs(15);
+  run.waitSecs(30);
   run.expectExit(234);
 });
 
@@ -729,8 +739,20 @@ selftest.define("show and search local package",  function () {
     s.cp("package-with-exports.js", "package.js");
   });
 
-  var exportStr =
-    "A, B (server), C (web.browser, web.cordova), D (web.browser), E (web.cordova), G (server, web.cordova)";
+  const impRaw = {
+    A: "",
+    B: "server",
+    C: "web.browser, web.browser.legacy, web.cordova",
+    D: "web.browser, web.browser.legacy",
+    E: "web.cordova",
+    G: "server, web.cordova"
+  };
+
+  const exportStr = Object.keys(impRaw).map(key => {
+    const value = impRaw[key];
+    return key + (value ? " (" + value + ")" : "");
+  }).join(", ");
+
   var description = "Test package.";
 
   testShowPackage(s, name, {
@@ -753,14 +775,6 @@ selftest.define("show and search local package",  function () {
 
   // Test showing implies. Since we are not going to build the package, we don't
   // have to publish any of the things that we imply.
-  var impRaw = {
-    A: "",
-    B: "server",
-    C: "web.browser, web.cordova",
-    D: "web.browser",
-    E: "web.cordova",
-    G: "server, web.cordova"
-  };
   var impliesData = _.sortBy(_.map(impRaw, function (label, placeholder) {
     var name =  randomizedPackageName(username, placeholder.toLowerCase());
     return { placeholder: placeholder, name: name, label: label};

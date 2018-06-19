@@ -80,7 +80,7 @@ OplogObserveDriver = function (options) {
   self._stopped = false;
   self._stopHandles = [];
 
-  Package.facts && Package.facts.Facts.incrementServerFact(
+  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-oplog", 1);
 
   self._registerPhaseChange(PHASE.QUERYING);
@@ -511,7 +511,7 @@ _.extend(OplogObserveDriver.prototype, {
               finishIfNeedToPollQuery(function (err, doc) {
                 try {
                   if (err) {
-                    Meteor._debug("Got exception while fetching documents: " +
+                    Meteor._debug("Got exception while fetching documents",
                                   err);
                     // If we get an error from the fetcher (eg, trouble
                     // connecting to Mongo), let's just abandon the fetch phase
@@ -747,7 +747,7 @@ _.extend(OplogObserveDriver.prototype, {
 
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while polling query: " + e);
+        Meteor._debug("Got exception while polling query", e);
         Meteor._sleepForMs(100);
       }
     }
@@ -931,7 +931,7 @@ _.extend(OplogObserveDriver.prototype, {
     self._oplogEntryHandle = null;
     self._listenersHandle = null;
 
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-oplog", -1);
   },
 
@@ -942,7 +942,7 @@ _.extend(OplogObserveDriver.prototype, {
 
       if (self._phase) {
         var timeDiff = now - self._phaseStartTime;
-        Package.facts && Package.facts.Facts.incrementServerFact(
+        Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
           "mongo-livedata", "time-spent-in-" + self._phase + "-phase", timeDiff);
       }
 

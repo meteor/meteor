@@ -126,7 +126,7 @@ Ap._initLocalStorage = function () {
       userId && self.connection.setUserId(userId);
       self.loginWithToken(token, function (err) {
         if (err) {
-          Meteor._debug("Error logging in with token: " + err);
+          Meteor._debug("Error logging in with token", err);
           self.makeClientLoggedOut();
         }
 

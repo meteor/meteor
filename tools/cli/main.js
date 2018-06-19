@@ -539,6 +539,10 @@ var springboard = function (rel, options) {
     process.env['METEOR_SPRINGBOARD_RELEASE'] = options.releaseOverride;
   }
 
+  // Release our connection to the sqlite catalog database for the current
+  // process, so that the springboarded process can reestablish it.
+  catalog.official.closePermanently();
+
   if (process.platform === 'win32') {
     process.exit(new Promise(function (resolve) {
       var batPath = files.convertToOSPath(executable + ".bat");
@@ -561,6 +565,10 @@ var oldSpringboard = function (toolsVersion) {
   var newArgv = process.argv.slice(2);
   var cmd =
     files.pathJoin(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor');
+
+  // Release our connection to the sqlite catalog database for the current
+  // process, so that the springboarded process can reestablish it.
+  catalog.official.closePermanently();
 
   // Now exec; we're not coming back.
   require('kexec')(cmd, newArgv);

@@ -12,7 +12,10 @@ Meteor = {
   isDevelopment: meteorEnv.NODE_ENV !== "production",
   isClient: false,
   isServer: true,
-  isCordova: false
+  isCordova: false,
+  // Server code runs in Node 8+, which is decidedly "modern" by any
+  // reasonable definition.
+  isModern: true
 };
 
 Meteor.settings = {};
@@ -21,7 +24,7 @@ if (process.env.METEOR_SETTINGS) {
   try {
     Meteor.settings = JSON.parse(process.env.METEOR_SETTINGS);
   } catch (e) {
-    throw new Error("METEOR_SETTINGS are not valid JSON: " + process.env.METEOR_SETTINGS);
+    throw new Error("METEOR_SETTINGS are not valid JSON.");
   }
 }
 

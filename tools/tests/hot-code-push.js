@@ -229,6 +229,13 @@ appcache`);
     run.match("client connected: 0");
     run.match("jsVar: undefined");
 
+    // XXX: Remove me.  This shouldn't be needed, but sometimes if we run too 
+    // quickly on fast (or Linux?) machines, it looks like there's a race and we 
+    // see a weird state. Without this line this test was failing one time on
+    // every build in CircleCI, but oddly enough would succeed on the second
+    // try.
+    utils.sleepMs(10000);
+
     s.write("client/test.js", "jsVar = 'bar'");
     run.waitSecs(20);
     run.match("client connected: 1");

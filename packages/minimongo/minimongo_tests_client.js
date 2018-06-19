@@ -3074,7 +3074,7 @@ Tinytest.add('minimongo - modify', test => {
 
   // Nested fields don't work with literal objects
   upsertException({"a": {}, "a.b": "foo"}, {});
-   // You can't have an ambiguious ID
+   // You can't have an ambiguous ID
   upsertException({"_id":"foo"}, {"_id":"bar"});
   upsertException({"_id":"foo"}, {"$set":{"_id":"bar"}});
    // You can't set the same field twice

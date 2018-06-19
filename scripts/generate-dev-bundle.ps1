@@ -20,8 +20,10 @@ $BUNDLE_VERSION = Read-VariableFromShellScript "${dirCheckout}\meteor" 'BUNDLE_V
 # extract the major package versions from the build-dev-bundle-common script.
 $MONGO_VERSION_64BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_64BIT'
 $MONGO_VERSION_32BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_32BIT'
-$NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
+
 $NPM_VERSION = Read-VariableFromShellScript $shCommon 'NPM_VERSION'
+
+$NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
 
 # 7-zip path.
 $system7zip = "C:\Program Files\7-zip\7z.exe"
@@ -107,7 +109,11 @@ Function Add-Python {
 }
 
 Function Add-NodeAndNpm {
-  $nodeUrlBase = 'https://nodejs.org/dist'
+  if ("${NODE_VERSION}" -match "-rc\.\d+$") {
+    $nodeUrlBase = 'https://nodejs.org/download/rc'
+  } else {
+    $nodeUrlBase = 'https://nodejs.org/dist'
+  }
 
   if ($PLATFORM -eq "windows_x86") {
     $nodeArchitecture = 'win-x86'
@@ -219,11 +225,11 @@ Function Add-NodeAndNpm {
 }
 
 Function Add-Mongo {
-  # Mongo 3.4 no longer supports 32-bit (x86) architectures, so we package
-  # the latest 3.2 version of Mongo for those builds and 3.4+ for x64.
+  # Mongo >= 3.4 no longer supports 32-bit (x86) architectures, so we package
+  # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
   $mongo_filenames = @{
     windows_x86 = "mongodb-win32-i386-${MONGO_VERSION_32BIT}"
-    windows_x64 = "mongodb-win32-x86_64-2008plus-${MONGO_VERSION_64BIT}"
+    windows_x64 = "mongodb-win32-x86_64-2008plus-ssl-${MONGO_VERSION_64BIT}"
   }
 
   $previousCwd = $PWD
@@ -245,10 +251,22 @@ Function Add-Mongo {
     $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
   }
 
-  Write-Host "Putting MongoDB mongod.exe in \mongodb\bin\" -ForegroundColor Magenta
+  Write-Host "Putting MongoDB mongod.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
-  Write-Host "Putting MongoDB mongo.exe in \mongodb\bin\" -ForegroundColor Magenta
+  Write-Host "Putting MongoDB mongo.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
+
+  # https://jira.mongodb.org/browse/SERVER-19086
+  $libeay32dll = "$DIR\mongodb\$mongo_name\bin\libeay32.dll"
+  if (Test-Path $libeay32dll) {
+    Write-Host "Putting MongoDB libeay32.dll in mongodb\bin" -ForegroundColor Magenta
+    cp $libeay32dll $DIR\mongodb\bin
+  }
+  $ssleay32dll = "$DIR\mongodb\$mongo_name\bin\ssleay32.dll"
+  if (Test-Path $ssleay32dll) {
+    Write-Host "Putting MongoDB ssleay32.dll in mongodb\bin" -ForegroundColor Magenta
+    cp $ssleay32dll $DIR\mongodb\bin
+  }
 
   Write-Host "Removing the old Mongo zip..." -ForegroundColor Magenta
   rm -Recurse -Force $mongo_zip

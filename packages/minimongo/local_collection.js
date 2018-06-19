@@ -1848,6 +1848,12 @@ const MODIFIERS = {
     // native javascript numbers (doubles) so far, so we can't support $bit
     throw MinimongoError('$bit is not supported', {field});
   },
+  $v() {
+    // As discussed in https://github.com/meteor/meteor/issues/9623,
+    // the `$v` operator is not needed by Meteor, but problems can occur if
+    // it's not at least callable (as of Mongo >= 3.6). It's defined here as
+    // a no-op to work around these problems.
+  }
 };
 
 const NO_CREATE_MODIFIERS = {
