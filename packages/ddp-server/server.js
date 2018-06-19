@@ -114,8 +114,7 @@ export default class Server {
           }
         } catch (e) {
           // XXX print stack nicely
-          Meteor._debug("Internal exception while processing message(s)",
-            messages, e.message, e.stack);
+          Meteor._debug("Internal exception while processing message", msg, e);
         }
       });
 
