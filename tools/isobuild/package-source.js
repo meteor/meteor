@@ -889,6 +889,7 @@ _.extend(PackageSource.prototype, {
             sourceArch: this,
             ignoreFiles,
             isApp: true,
+            testModule,
           };
 
           // If this architecture has a mainModule defined in
@@ -1025,8 +1026,9 @@ _.extend(PackageSource.prototype, {
         return fileOptions;
       }
 
-      // Files in `imports/` should be lazily loaded *apart* from tests
-      if (dir === "imports" && ! isTestFile) {
+      // Files in `imports/` and `tests/` directories should be lazily
+      // loaded *apart* from tests.
+      if ((dir === "imports" || dir === "tests") && ! isTestFile) {
         fileOptions.lazy = true;
       }
 
@@ -1080,6 +1082,7 @@ _.extend(PackageSource.prototype, {
     watchSet,
     isApp,
     sourceArch,
+    testModule,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = []
   }) {
@@ -1102,10 +1105,10 @@ _.extend(PackageSource.prototype, {
     // Unless we're running tests, ignore all test filenames and if we are, ignore the
     // type of file we *aren't* running
     if (!global.testCommandMetadata || global.testCommandMetadata.isTest) {
-      Array.prototype.push.apply(sourceReadOptions.exclude, APP_TEST_FILENAME_REGEXPS);
+      sourceReadOptions.exclude.push(...APP_TEST_FILENAME_REGEXPS);
     }
     if (!global.testCommandMetadata || global.testCommandMetadata.isAppTest) {
-      Array.prototype.push.apply(sourceReadOptions.exclude, TEST_FILENAME_REGEXPS);
+      sourceReadOptions.exclude.push(...TEST_FILENAME_REGEXPS);
     }
 
     // Read top-level source files, excluding control files that were not
@@ -1116,13 +1119,21 @@ _.extend(PackageSource.prototype, {
       controlFiles.push('package.js');
     }
 
-    const anyLevelExcludes = [
-      /^tests\/$/,
+    const anyLevelExcludes = [];
+
+    // If we have a meteor.testModule from package.json, then we don't
+    // need to exclude tests/ directories from the search, because we
+    // trust meteor.testModule to identify a single test entry point.
+    if (! testModule) {
+      anyLevelExcludes.push(/^tests\/$/);
+    }
+
+    anyLevelExcludes.push(
       archinfo.matches(arch, "os")
         ? /^client\/$/
         : /^server\/$/,
       ...sourceReadOptions.exclude,
-    ];
+    );
 
     const topLevelExcludes = isApp ? [
       ...anyLevelExcludes,

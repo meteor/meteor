@@ -559,7 +559,8 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "standard-minifier-css",
   "standard-minifier-js",
   "es5-shim",
-  "shell-server"
+  "shell-server",
+  "modern-browsers",
 ];
 
 function newSelfTestCatalog() {

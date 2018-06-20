@@ -16,6 +16,13 @@ var Profile = require('../../tool-env/profile.js').Profile;
 // XXX: Rationalize these flags.  Maybe use the logger?
 var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
 
+// Developers using Windows Subsystem for Linux (WSL) may want to override
+// this environment variable to TRUNCATE instead of WAL. WAL mode copes
+// better with (multi-process) concurrency but is currently incompatible
+// with WSL: https://github.com/meteor/meteor-feature-requests/issues/154
+const JOURNAL_MODE =
+  process.env.METEOR_SQLITE_JOURNAL_MODE || "WAL";
+
 var SYNCTOKEN_ID = "1";
 
 var METADATA_LAST_SYNC = "lastsync";
@@ -139,17 +146,8 @@ var Db = function (dbFile, options) {
     return self.open(dbFile);
   });
 
-  // WAL mode copes much better with (multi-process) concurrency
-  // Windows Subsystem for Linux cannot work with WAL mode
-  // https://github.com/meteor/meteor-feature-requests/issues/154
-  // So if any of the filesystems are a windows filesystem (e.g. WSL)
-  // Then we will run with TRUNCATE mode.
   self._retry(function () {
-    if(files.isWindowsLikeFilesystem()) {
-      self._execute('PRAGMA journal_mode=TRUNCATE');
-    } else {
-      self._execute('PRAGMA journal_mode=WAL');
-    }
+    self._execute(`PRAGMA journal_mode=${JOURNAL_MODE}`);
   });
 };
 
@@ -249,9 +247,9 @@ _.extend(Db.prototype, {
       } catch (err) {
         var retry = false;
         // Grr... doesn't expose error code; must string-match
-        if (err.message
-            && (   err.message == "SQLITE_BUSY: database is locked"
-                || err.message == "SQLITE_BUSY: cannot commit transaction - SQL statements in progress")) {
+        if (err.message &&
+            (err.message === "SQLITE_BUSY: database is locked" ||
+             err.message === "SQLITE_BUSY: cannot commit transaction - SQL statements in progress")) {
           if (attempt < BUSY_RETRY_ATTEMPTS) {
             retry = true;
           }
