@@ -9,13 +9,7 @@ function getMeteorBabel() {
 function getDefaultOptions(extraFeatures) {
   // See https://github.com/meteor/babel/blob/master/options.js for more
   // information about what the default options are.
-  var options = getMeteorBabel().getDefaultOptions(extraFeatures);
-
-  // The sourceMap option should probably be removed from the default
-  // options returned by meteorBabel.getDefaultOptions.
-  delete options.sourceMap;
-
-  return options;
+  return getMeteorBabel().getDefaultOptions(extraFeatures);
 }
 
 Babel = {
@@ -28,11 +22,16 @@ Babel = {
     return getMeteorBabel().parse(source);
   },
 
-  compile: function (source, options) {
-    options = options || getDefaultOptions();
-    return getMeteorBabel().compile(source, options);
+  compile: function (source, babelOptions, cacheOptions) {
+    return getMeteorBabel().compile(
+      source,
+      babelOptions || getDefaultOptions(),
+      cacheOptions,
+    );
   },
 
+  // This method is deprecated in favor of passing
+  // cacheDeps.cacheDirectory to Babel.compile (see above).
   setCacheDir: function (cacheDir) {
     getMeteorBabel().setCacheDir(cacheDir);
   },
@@ -44,5 +43,9 @@ Babel = {
 
   getMinifierOptions: function (extraFeatures) {
     return getMeteorBabel().getMinifierOptions(extraFeatures);
+  },
+
+  getMinimumModernBrowserVersions: function () {
+    return Npm.require("meteor-babel/modern-versions.js").get();
   }
 };

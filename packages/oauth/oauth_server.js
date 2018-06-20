@@ -1,4 +1,3 @@
-var Fiber = Npm.require('fibers');
 var url = Npm.require('url');
 
 OAuth = {};
@@ -139,14 +138,6 @@ OAuth._checkRedirectUrlOrigin = function (redirectUrl) {
 
 
 // Listen to incoming OAuth http requests
-WebApp.connectHandlers.use(function(req, res, next) {
-  // Need to create a Fiber since we're using synchronous http calls and nothing
-  // else is wrapping this in a fiber automatically
-  Fiber(function () {
-    middleware(req, res, next);
-  }).run();
-});
-
 var middleware = function (req, res, next) {
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
@@ -206,6 +197,8 @@ var middleware = function (req, res, next) {
     }
   }
 };
+
+WebApp.connectHandlers.use(middleware);
 
 OAuthTest.middleware = middleware;
 

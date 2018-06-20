@@ -58,3 +58,31 @@ selftest.define("create", function () {
 
   // XXX XXX more more
 });
+
+["bare",
+ "minimal",
+ "full",
+].forEach(template => {
+  selftest.define("create --" + template, function () {
+    const s = new Sandbox;
+
+    // Can we create an app? Yes!
+    let run = s.run("create", "--" + template, template);
+    run.waitSecs(60);
+    run.match("Created a new Meteor app in '" + template + "'.");
+    run.match("To run your new app");
+
+    s.cd(template);
+    run = s.run();
+    run.waitSecs(60);
+    run.match(template);
+    run.match("proxy")
+    run.waitSecs(60);
+    run.match("your app");
+    run.waitSecs(5);
+    run.match("running at");
+    run.match("localhost");
+
+    run.stop();
+  });
+});

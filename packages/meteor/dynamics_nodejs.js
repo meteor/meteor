@@ -54,7 +54,7 @@ EVp.withValue = function (value, func) {
   var saved = currentValues[this.slot];
   try {
     currentValues[this.slot] = value;
-    return Promise.await(func());
+    return func();
   } finally {
     currentValues[this.slot] = saved;
   }
@@ -90,7 +90,7 @@ Meteor.bindEnvironment = function (func, onException, _this) {
     onException = function (error) {
       Meteor._debug(
         "Exception in " + description + ":",
-        error && error.stack || error
+        error
       );
     };
   } else if (typeof(onException) !== 'function') {

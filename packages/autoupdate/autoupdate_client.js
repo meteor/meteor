@@ -70,7 +70,7 @@ function after(times, func) {
 Autoupdate._retrySubscription = function () {
   Meteor.subscribe("meteor_autoupdate_clientVersions", {
     onError: function (error) {
-      Meteor._debug("autoupdate subscription failed:", error);
+      Meteor._debug("autoupdate subscription failed", error);
       failures++;
       retry.retryLater(failures, function () {
         // Just retry making the subscription, don't reload the whole

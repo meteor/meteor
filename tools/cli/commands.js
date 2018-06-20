@@ -382,9 +382,12 @@ function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
-  let webArchs = ['web.browser'];
-  if (!_.isEmpty(runTargets) || options['mobile-server']) {
-    webArchs.push("web.cordova");
+  let webArchs = projectContext.platformList.getWebArchs();
+  if (! _.isEmpty(runTargets) ||
+      options['mobile-server']) {
+    if (webArchs.indexOf("web.cordova") < 0) {
+      webArchs.push("web.cordova");
+    }
   }
 
   let cordovaRunner;
@@ -419,7 +422,7 @@ function doRunCommand(options) {
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
-      buildMode: options.production && 'production',
+      buildMode: options.production ? 'production' : 'development',
       webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
@@ -486,8 +489,9 @@ main.registerCommand({
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean },
+    bare: { type: Boolean },
+    minimal: { type: Boolean },
     full: { type: Boolean },
-    bare: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -582,7 +586,8 @@ main.registerCommand({
             return contents;
           }
         },
-        ignore: [/^local$/]
+        ignore: [/^local$/],
+        preserveSymlinks: true,
       });
     } catch (err) {
       Console.error("Could not create package: " + err.message);
@@ -622,7 +627,7 @@ main.registerCommand({
   if (options.list) {
     Console.info("Available examples:");
     _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
-      const branchInfo = repoInfo.branch ? `#${repoInfo.branch}` : '';
+      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : '';
       Console.info(
         Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
         Console.options({ indent: 2 }));
@@ -730,13 +735,13 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/)
   }
 
-  let skelName = 'skel';
-
-  if(options.bare){
-    skelName += '-bare';
-  }
-  else if(options.full){
-    skelName += '-full';
+  let skelName = "skel";
+  if (options.minimal) {
+    skelName += "-minimal";
+  } else if (options.bare) {
+    skelName += "-bare";
+  } else if (options.full) {
+    skelName += "-full";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -750,7 +755,8 @@ main.registerCommand({
         return contents;
       }
     },
-    ignore: toIgnore
+    ignore: toIgnore,
+    preserveSymlinks: true,
   });
 
   // We are actually working with a new meteor project at this point, so
@@ -816,6 +822,12 @@ main.registerCommand({
   // do next.
   Console.info("To run your new app:");
 
+  function cmd(text) {
+    Console.info(Console.command(text), Console.options({
+      indent: 2
+    }));
+  }
+
   if (appPathAsEntered !== ".") {
     // Wrap the app path in quotes if it contains spaces
     const appPathWithQuotesIfSpaces = appPathAsEntered.indexOf(' ') === -1 ?
@@ -823,13 +835,10 @@ main.registerCommand({
       `'${appPathAsEntered}'`;
 
     // Don't tell people to 'cd .'
-    Console.info(
-      Console.command("cd " + appPathWithQuotesIfSpaces),
-        Console.options({ indent: 2 }));
+    cmd("cd " + appPathWithQuotesIfSpaces);
   }
 
-  Console.info(
-    Console.command("meteor"), Console.options({ indent: 2 }));
+  cmd("meteor");
 
   Console.info("");
   Console.info("If you are new to Meteor, try some of the learning resources here:");
@@ -837,13 +846,21 @@ main.registerCommand({
     Console.url("https://www.meteor.com/tutorials"),
       Console.options({ indent: 2 }));
 
-  if (!options.full && !options.bare){
-    // Notice people about --bare and --full
-    const bareOptionNotice = 'meteor create --bare to create an empty app.';
-    const fullOptionNotice = 'meteor create --full to create a scaffolded app.';
+  if (! options.bare &&
+      ! options.minimal &&
+      ! options.full) {
+    // Notify people about --bare, --minimal, and --full.
+    Console.info([
+      "",
+      "To start with a different app template, try one of the following:",
+      "",
+    ].join("\n"));
 
-    Console.info("");
-    Console.info(bareOptionNotice + '\n' + fullOptionNotice);
+    cmd("meteor create --bare    # to create an empty app");
+    cmd("meteor create --minimal # to create an app with as few " +
+        "Meteor packages as possible");
+    cmd("meteor create --full    # to create a more complete " +
+        "scaffolded app");
   }
 
   Console.info("");
@@ -1351,7 +1368,9 @@ main.registerCommand({
     // people to deploy from checkout or do other weird shit. We are not
     // responsible for the consequences.
     'override-architecture-with-local' : { type: Boolean },
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    'deploy-polling-timeout': { type: Number },
+    'no-wait': { type: Boolean },
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1412,12 +1431,21 @@ main.registerCommand({
     serverArch: buildArch
   };
 
+  let deployPollingTimeoutMs = null;
+  if (options['deploy-polling-timeout']) {
+    deployPollingTimeoutMs = options['deploy-polling-timeout'];
+  }
+
+  const waitForDeploy = !options['no-wait'];
+
   var deployResult = deploy.bundleAndDeploy({
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
     buildOptions: buildOptions,
-    rawOptions
+    rawOptions,
+    deployPollingTimeoutMs,
+    waitForDeploy,
   });
 
   if (deployResult === 0) {
@@ -1870,7 +1898,8 @@ var getTestPackageNames = function (projectContext, packageNames) {
           version = projectContext.localCatalog.getVersionBySourceRoot(
             files.pathResolve(p));
           if (! version) {
-            throw Error("should have been caught when initializing catalog?");
+            buildmessage.error("Package not found in local catalog");
+            return;
           }
           if (version.testName) {
             testPackages.push(version.testName);

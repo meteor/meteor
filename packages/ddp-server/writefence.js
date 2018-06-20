@@ -94,7 +94,7 @@ export default class WriteFence {
         try {
           func(self);
         } catch (err) {
-          Meteor._debug("exception in write fence callback:", err);
+          Meteor._debug("exception in write fence callback", err);
         }
       }
 

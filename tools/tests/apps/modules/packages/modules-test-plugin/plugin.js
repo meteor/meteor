@@ -21,6 +21,9 @@ class ArsonCompiler {
 
   processFilesForTarget(inputFiles) {
     assert.strictEqual(this.expectedName, "compile-arson");
+    assert.ok(inputFiles.length > 0);
+
+    let vueCheckCount = 0;
 
     inputFiles.forEach(file => {
       const arson = file.require("arson");
@@ -39,6 +42,19 @@ class ArsonCompiler {
         ].join("\n"),
         hash: file.getSourceHash()
       });
+
+      if (file.getPackageName() === "modules-test-plugin") {
+        const vueCompilerId = file.resolve("vue-template-compiler");
+        // Make sure resolution does not use the "browser" field of
+        // vue-template-compiler/package.json.
+        assert.strictEqual(
+          vueCompilerId.split("/").pop(),
+          "index.js"
+        );
+        ++vueCheckCount;
+      }
     });
+
+    assert.ok(vueCheckCount > 0);
   }
 }

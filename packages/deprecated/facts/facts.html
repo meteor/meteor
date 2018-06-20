@@ -1,0 +1,14 @@
+<template name='serverFacts'>
+  <ul>
+    {{#each factsByPackage}}
+      <li>{{ _id }}
+        <dl>
+          {{#each facts}}
+            <dt>{{ name }}</dt>
+            <dd>{{ value }}</dd>
+          {{/each}}
+        </dl>
+      </li>
+    {{/each}}
+  </ul>
+</template>
