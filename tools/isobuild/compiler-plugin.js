@@ -722,7 +722,7 @@ class ResourceSlot {
     });
 
     if (this.packageSourceBatch.useMeteorInstall &&
-        options.lazy) {
+        cssResource.lazy) {
       // If the current packageSourceBatch supports modules, and this CSS
       // file is lazy, add it as a lazy JS module instead of adding it
       // unconditionally as a CSS resource, so that it can be imported
@@ -778,12 +778,15 @@ class ResourceSlot {
         // stub, so setting .implicit marks the resource as disposable.
       }).implicit = true;
 
-      // If there was an error processing this file, cssResource.data will
-      // not be a Buffer, and accessing cssResource.data here should cause
-      // the error to be reported via inputFile.error.
-      if (Buffer.isBuffer(cssResource.data)) {
-        this.outputResources.push(cssResource);
+      if (! cssResource.lazy &&
+          ! Buffer.isBuffer(cssResource.data)) {
+        // If there was an error processing this file, cssResource.data
+        // will not be a Buffer, and accessing cssResource.data here
+        // should cause the error to be reported via inputFile.error.
+        return;
       }
+
+      this.outputResources.push(cssResource);
     }
   }
 

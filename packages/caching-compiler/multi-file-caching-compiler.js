@@ -148,8 +148,7 @@ extends CachingCompilerBase {
       };
 
       if (this.compileOneFileLater &&
-          inputFile.supportsLazyCompilation &&
-          ! this._cacheDebugEnabled) {
+          inputFile.supportsLazyCompilation) {
         if (! this.isRoot(inputFile)) {
           // If this inputFile is definitely not a root, then it must be
           // lazy, and this is our last chance to mark it as such, so that

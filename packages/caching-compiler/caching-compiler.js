@@ -316,8 +316,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
       };
 
       if (this.compileOneFileLater &&
-          inputFile.supportsLazyCompilation &&
-          ! this._cacheDebugEnabled) {
+          inputFile.supportsLazyCompilation) {
         await this.compileOneFileLater(inputFile, getResult);
       } else {
         const result = await getResult();
