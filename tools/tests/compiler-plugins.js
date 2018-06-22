@@ -166,7 +166,6 @@ selftest.define("compiler plugin caching - coffee", () => {
     matchRun([
       // Though files in imports directories are compiled, they are marked
       // as lazy so they will not be loaded unless imported.
-      "/imports/dotdot." + extension,
       "/subdir/nested-root." + extension,
       "/top." + extension
     ], "web.browser");
@@ -174,7 +173,6 @@ selftest.define("compiler plugin caching - coffee", () => {
     matchRun([
       // Though files in imports directories are compiled, they are marked
       // as lazy so they will not be loaded unless imported.
-      "/imports/dotdot." + extension,
       "/subdir/nested-root." + extension,
       "/top." + extension
     ], "web.browser.legacy");

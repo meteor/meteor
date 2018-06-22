@@ -273,10 +273,10 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   getFileOptions() {
-    var self = this;
     // XXX fileOptions only exists on some resources (of type "source"). The JS
     // resources might not have this property.
-    return self._resourceSlot.inputResource.fileOptions || {};
+    const { inputResource } = this._resourceSlot;
+    return inputResource.fileOptions || (inputResource.fileOptions = {});
   }
 
   readAndWatchFileWithHash(path) {
