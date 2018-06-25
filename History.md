@@ -4,6 +4,11 @@
   [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
   `pacote` dependency has been rebased against version 8.1.6.
 
+* Importing a directory containing an `index.*` file now works for
+  non-`.js` file extensions. As before, the list of possible extensions is
+  defined by which compiler plugins you have enabled.
+  [PR #10027](https://github.com/meteor/meteor/pull/10027)
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
