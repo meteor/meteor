@@ -182,7 +182,7 @@ export default class Resolver {
       // there's very little chance an `index.js` file will be a
       // directory. However, in principle it is remotely possible that a
       // file called `index.js` could be a directory instead of a file.
-      resolved = this._joinAndStat(dirPath, "index.js");
+      resolved = this._joinAndStat(dirPath, "index");
     }
 
     if (resolved) {
