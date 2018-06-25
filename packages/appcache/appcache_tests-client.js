@@ -1,28 +1,28 @@
 const manifestUrl = '/app.manifest';
 
-const appcacheTest = (name, cb) => {
-  Tinytest.addAsync(`appcache - ${name}`, (test, next) => {
-    HTTP.get(manifestUrl, (err, res) => {
-      err ? test.fail(err) : cb(test, res);
-      next();
-    });
+function appcacheTest(name, cb) {
+  Tinytest.addAsync(`appcache - ${name}`, test => {
+    return fetch(manifestUrl).then(
+      res => cb(test, res),
+      err => test.fail(err)
+    );
   });
-};
+}
 
 
 // Verify that the code status of the HTTP response is "OK"
 appcacheTest('presence', (test, manifest) =>
-  test.equal(manifest.statusCode, 200, 'manifest not served'));
+  test.equal(manifest.status, 200, 'manifest not served'));
 
 
 // Verify the content-type HTTP header
 appcacheTest('content type', (test, manifest) =>
-  test.equal(manifest.headers['content-type'], 'text/cache-manifest'));
+  test.equal(manifest.headers.get('content-type'), 'text/cache-manifest'));
 
 
 // Verify that each section header is only set once.
-appcacheTest('sections uniqueness', (test, manifest) => {
-  const { content } = manifest;
+appcacheTest('sections uniqueness', async (test, manifest) => {
+  const content = await manifest.text();
   const mandatorySectionHeaders = ['CACHE:', 'NETWORK:', 'FALLBACK:'];
   const optionalSectionHeaders = ['SETTINGS'];
   const allSectionHeaders = [
@@ -46,8 +46,8 @@ appcacheTest('sections uniqueness', (test, manifest) => {
 // regular expressions. Regular expressions matches malformed URIs but that's
 // not what we're trying to catch here (the user is free to add its own content
 // in the manifest -- even malformed).
-appcacheTest('sections validity', (test, manifest) => {
-  const lines = manifest.content.split('\n');
+appcacheTest('sections validity', async (test, manifest) => {
+  const lines = (await manifest.text()).split('\n');
   let i = 0;
   let currentRegex = null;
   let line = null;
@@ -112,7 +112,7 @@ appcacheTest('sections validity', (test, manifest) => {
 // are present in the network section of the manifest. The `appcache` package
 // also automatically add the manifest (`app.manifest`) add the star symbol to
 // this list and therefore we also check the presence of these two elements.
-appcacheTest('network section content', (test, manifest) => {
+appcacheTest('network section content', async (test, manifest) => {
   const shouldBePresentInNetworkSection = [
     "/app.manifest",
     "/online/",
@@ -120,7 +120,7 @@ appcacheTest('network section content', (test, manifest) => {
     "/largedata.json",
     "*"
   ];
-  const lines = manifest.content.split('\n');
+  const lines = (await manifest.text()).split('\n');
   const startNetworkSection = lines.indexOf('NETWORK:');
 
   // We search the end of the 'NETWORK:' section by looking at the beginning

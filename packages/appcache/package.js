@@ -15,7 +15,7 @@ Package.onUse(api => {
 Package.onTest(api => {
   api.use('tinytest');
   api.use('appcache');
-  api.use('http', 'client');
+  api.use('fetch');
   api.use('webapp', 'server');
   api.addFiles('appcache_tests-server.js', 'server');
   api.addFiles('appcache_tests-client.js', 'client');
