@@ -47,13 +47,10 @@ exports.getDefaults = function getDefaults(features) {
       [reifyPlugin, {
         generateLetDeclarations: true,
         enforceStrictMode: false
-      }]
+      }],
+      require("./plugins/dynamic-import.js")
     ]
   };
-
-  combined.plugins.push(
-    require("./plugins/dynamic-import.js")
-  );
 
   const rt = getRuntimeTransform(features, false);
   if (rt) {
@@ -61,6 +58,7 @@ exports.getDefaults = function getDefaults(features) {
   }
 
   maybeAddReactPlugins(features, combined);
+  maybeAddTypeScriptPlugin(features, combined.plugins);
 
   if (features && features.jscript) {
     combined.plugins.push(
@@ -89,6 +87,16 @@ function maybeAddReactPlugins(features, options) {
   }
 }
 
+function maybeAddTypeScriptPlugin(features, plugins) {
+  if (features && features.typescript) {
+    plugins.push(
+      [require("@babel/plugin-transform-typescript"), {
+        isTSX: features.typescript === "tsx"
+      }]
+    );
+  }
+}
+
 function getDefaultsForModernBrowsers(features) {
   const combined = {
     presets: [babelPresetMeteorModern.getPreset],
@@ -99,10 +107,7 @@ function getDefaultsForModernBrowsers(features) {
     [reifyPlugin, {
       generateLetDeclarations: true,
       enforceStrictMode: false
-    }]
-  );
-
-  combined.plugins.push(
+    }],
     require("./plugins/dynamic-import.js")
   );
 
@@ -112,6 +117,7 @@ function getDefaultsForModernBrowsers(features) {
   }
 
   maybeAddReactPlugins(features, combined);
+  maybeAddTypeScriptPlugin(features, combined.plugins);
 
   // Even though we use Reify to transpile `import` and `export`
   // declarations in the original source, Babel sometimes inserts its own
@@ -223,6 +229,7 @@ function getDefaultsForNode8(features) {
   }];
 
   maybeAddReactPlugins(features, { plugins, presets });
+  maybeAddTypeScriptPlugin(features, plugins);
 
   return finish(presets);
 }

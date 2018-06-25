@@ -35,6 +35,7 @@
     "@babel/plugin-syntax-dynamic-import": "7.0.0-beta.51",
     "@babel/plugin-transform-modules-commonjs": "7.0.0-beta.51",
     "@babel/plugin-transform-runtime": "7.0.0-beta.51",
+    "@babel/plugin-transform-typescript": "^7.0.0-beta.51",
     "@babel/preset-react": "7.0.0-beta.51",
     "@babel/runtime": "7.0.0-beta.51",
     "@babel/template": "7.0.0-beta.51",
