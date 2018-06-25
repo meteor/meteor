@@ -14,8 +14,8 @@ var Fiber = Npm.require('fibers');
 // Represents a single document in a SessionCollectionView
 var SessionDocumentView = function () {
   var self = this;
-  self.existsIn = {}; // set of subscriptionHandle
-  self.dataByKey = {}; // key-> [ {subscriptionHandle, value} by precedence]
+  self.existsIn = new Set(); // set of subscriptionHandle
+  self.dataByKey = new Map(); // key-> [ {subscriptionHandle, value} by precedence]
 };
 
 DDPServer._SessionDocumentView = SessionDocumentView;
@@ -26,7 +26,7 @@ _.extend(SessionDocumentView.prototype, {
   getFields: function () {
     var self = this;
     var ret = {};
-    _.each(self.dataByKey, function (precedenceList, key) {
+    self.dataByKey.forEach(function (precedenceList, key) {
       ret[key] = precedenceList[0].value;
     });
     return ret;
@@ -37,7 +37,7 @@ _.extend(SessionDocumentView.prototype, {
     // Publish API ignores _id if present in fields
     if (key === "_id")
       return;
-    var precedenceList = self.dataByKey[key];
+    var precedenceList = self.dataByKey.get(key);
 
     // It's okay to clear fields that didn't exist. No need to throw
     // an error.
@@ -56,8 +56,8 @@ _.extend(SessionDocumentView.prototype, {
         break;
       }
     }
-    if (_.isEmpty(precedenceList)) {
-      delete self.dataByKey[key];
+    if (precedenceList.length === 0) {
+      self.dataByKey.delete(key);
       changeCollector[key] = undefined;
     } else if (removedValue !== undefined &&
                !EJSON.equals(removedValue, precedenceList[0].value)) {
@@ -75,17 +75,17 @@ _.extend(SessionDocumentView.prototype, {
     // Don't share state with the data passed in by the user.
     value = EJSON.clone(value);
 
-    if (!_.has(self.dataByKey, key)) {
-      self.dataByKey[key] = [{subscriptionHandle: subscriptionHandle,
-                              value: value}];
+    if (!self.dataByKey.has(key)) {
+      self.dataByKey.set(key, [{subscriptionHandle: subscriptionHandle,
+                                value: value}]);
       changeCollector[key] = value;
       return;
     }
-    var precedenceList = self.dataByKey[key];
+    var precedenceList = self.dataByKey.get(key);
     var elt;
     if (!isAdd) {
-      elt = _.find(precedenceList, function (precedence) {
-        return precedence.subscriptionHandle === subscriptionHandle;
+      elt = precedenceList.find(function (precedence) {
+          return precedence.subscriptionHandle === subscriptionHandle;
       });
     }
 
@@ -112,7 +112,7 @@ _.extend(SessionDocumentView.prototype, {
 var SessionCollectionView = function (collectionName, sessionCallbacks) {
   var self = this;
   self.collectionName = collectionName;
-  self.documents = {};
+  self.documents = new Map();
   self.callbacks = sessionCallbacks;
 };
 
@@ -123,12 +123,12 @@ _.extend(SessionCollectionView.prototype, {
 
   isEmpty: function () {
     var self = this;
-    return _.isEmpty(self.documents);
+    return self.documents.size === 0;
   },
 
   diff: function (previous) {
     var self = this;
-    DiffSequence.diffObjects(previous.documents, self.documents, {
+    DiffSequence.diffMaps(previous.documents, self.documents, {
       both: _.bind(self.diffDocument, self),
 
       rightOnly: function (id, nowDV) {
@@ -161,14 +161,14 @@ _.extend(SessionCollectionView.prototype, {
 
   added: function (subscriptionHandle, id, fields) {
     var self = this;
-    var docView = self.documents[id];
+    var docView = self.documents.get(id);
     var added = false;
     if (!docView) {
       added = true;
       docView = new SessionDocumentView();
-      self.documents[id] = docView;
+      self.documents.set(id, docView);
     }
-    docView.existsIn[subscriptionHandle] = true;
+    docView.existsIn.add(subscriptionHandle);
     var changeCollector = {};
     _.each(fields, function (value, key) {
       docView.changeField(
@@ -183,7 +183,7 @@ _.extend(SessionCollectionView.prototype, {
   changed: function (subscriptionHandle, id, changed) {
     var self = this;
     var changedResult = {};
-    var docView = self.documents[id];
+    var docView = self.documents.get(id);
     if (!docView)
       throw new Error("Could not find element with id " + id + " to change");
     _.each(changed, function (value, key) {
@@ -197,21 +197,21 @@ _.extend(SessionCollectionView.prototype, {
 
   removed: function (subscriptionHandle, id) {
     var self = this;
-    var docView = self.documents[id];
+    var docView = self.documents.get(id);
     if (!docView) {
       var err = new Error("Removed nonexistent document " + id);
       throw err;
     }
-    delete docView.existsIn[subscriptionHandle];
-    if (_.isEmpty(docView.existsIn)) {
+    docView.existsIn.delete(subscriptionHandle);
+    if (docView.existsIn.size === 0) {
       // it is gone from everyone
       self.callbacks.removed(self.collectionName, id);
-      delete self.documents[id];
+      self.documents.delete(id);
     } else {
       var changed = {};
       // remove this subscription from every precedence list
       // and record the changes
-      _.each(docView.dataByKey, function (precedenceList, key) {
+      docView.dataByKey.forEach(function (precedenceList, key) {
         docView.clearField(subscriptionHandle, key, changed);
       });
 
@@ -242,12 +242,12 @@ var Session = function (server, version, socket, options) {
   self.workerRunning = false;
 
   // Sub objects for active subscriptions
-  self._namedSubs = {};
+  self._namedSubs = new Map();
   self._universalSubs = [];
 
   self.userId = null;
 
-  self.collectionViews = {};
+  self.collectionViews = new Map();
 
   // Set this to false to not send messages when collectionViews are
   // modified. This is done when rerunning subs in _setUserId and those messages
@@ -373,12 +373,12 @@ _.extend(Session.prototype, {
 
   getCollectionView: function (collectionName) {
     var self = this;
-    if (_.has(self.collectionViews, collectionName)) {
-      return self.collectionViews[collectionName];
-    }
-    var ret = new SessionCollectionView(collectionName,
+    var ret = self.collectionViews.get(collectionName);
+    if (!ret) {
+      ret = new SessionCollectionView(collectionName,
                                         self.getSendCallbacks());
-    self.collectionViews[collectionName] = ret;
+      self.collectionViews.set(collectionName, ret);
+    }
     return ret;
   },
 
@@ -393,7 +393,7 @@ _.extend(Session.prototype, {
     var view = self.getCollectionView(collectionName);
     view.removed(subscriptionHandle, id);
     if (view.isEmpty()) {
-      delete self.collectionViews[collectionName];
+       self.collectionViews.delete(collectionName);
     }
   },
 
@@ -428,7 +428,7 @@ _.extend(Session.prototype, {
 
     // Drop the merge box data immediately.
     self.inQueue = null;
-    self.collectionViews = {};
+    self.collectionViews = new Map();
 
     if (self.heartbeat) {
       self.heartbeat.stop();
@@ -585,7 +585,7 @@ _.extend(Session.prototype, {
         return;
       }
 
-      if (_.has(self._namedSubs, msg.id))
+      if (self._namedSubs.has(msg.id))
         // subs are idempotent, or rather, they are ignored if a sub
         // with that id already exists. this is important during
         // reconnect.
@@ -753,23 +753,23 @@ _.extend(Session.prototype, {
 
   _eachSub: function (f) {
     var self = this;
-    _.each(self._namedSubs, f);
-    _.each(self._universalSubs, f);
+    self._namedSubs.forEach(f);
+    self._universalSubs.forEach(f);
   },
 
   _diffCollectionViews: function (beforeCVs) {
     var self = this;
-    DiffSequence.diffObjects(beforeCVs, self.collectionViews, {
+    DiffSequence.diffMaps(beforeCVs, self.collectionViews, {
       both: function (collectionName, leftValue, rightValue) {
         rightValue.diff(leftValue);
       },
       rightOnly: function (collectionName, rightValue) {
-        _.each(rightValue.documents, function (docView, id) {
+        rightValue.documents.forEach(function (docView, id) {
           self.sendAdded(collectionName, id, docView.getFields());
         });
       },
       leftOnly: function (collectionName, leftValue) {
-        _.each(leftValue.documents, function (doc, id) {
+        leftValue.documents.forEach(function (doc, id) {
           self.sendRemoved(collectionName, id);
         });
       }
@@ -806,7 +806,7 @@ _.extend(Session.prototype, {
     // update the userId.
     self._isSending = false;
     var beforeCVs = self.collectionViews;
-    self.collectionViews = {};
+    self.collectionViews = new Map();
     self.userId = userId;
 
     // _setUserId is normally called from a Meteor method with
@@ -816,14 +816,15 @@ _.extend(Session.prototype, {
     DDP._CurrentMethodInvocation.withValue(undefined, function () {
       // Save the old named subs, and reset to having no subscriptions.
       var oldNamedSubs = self._namedSubs;
-      self._namedSubs = {};
+      self._namedSubs = new Map();
       self._universalSubs = [];
 
-      _.each(oldNamedSubs, function (sub, subscriptionId) {
-        self._namedSubs[subscriptionId] = sub._recreate();
+      oldNamedSubs.forEach(function (sub, subscriptionId) {
+        var newSub = sub._recreate();
+        self._namedSubs.set(subscriptionId, newSub);
         // nb: if the handler throws or calls this.error(), it will in fact
         // immediately send its 'nosub'. This is OK, though.
-        self._namedSubs[subscriptionId]._runHandler();
+        newSub._runHandler();
       });
 
       // Allow newly-created universal subs to be started on our connection in
@@ -852,7 +853,7 @@ _.extend(Session.prototype, {
     var sub = new Subscription(
       self, handler, subId, params, name);
     if (subId)
-      self._namedSubs[subId] = sub;
+      self._namedSubs.set(subId, sub);
     else
       self._universalSubs.push(sub);
 
@@ -864,12 +865,14 @@ _.extend(Session.prototype, {
     var self = this;
 
     var subName = null;
-
-    if (subId && self._namedSubs[subId]) {
-      subName = self._namedSubs[subId]._name;
-      self._namedSubs[subId]._removeAllDocuments();
-      self._namedSubs[subId]._deactivate();
-      delete self._namedSubs[subId];
+    if (subId) {
+      var maybeSub = self._namedSubs.get(subId);
+      if (maybeSub) {
+        subName = maybeSub._name;
+        maybeSub._removeAllDocuments();
+        maybeSub._deactivate();
+        self._namedSubs.delete(subId);
+      }
     }
 
     var response = {msg: 'nosub', id: subId};
@@ -889,12 +892,12 @@ _.extend(Session.prototype, {
   _deactivateAllSubscriptions: function () {
     var self = this;
 
-    _.each(self._namedSubs, function (sub, id) {
+    self._namedSubs.forEach(function (sub, id) {
       sub._deactivate();
     });
-    self._namedSubs = {};
+    self._namedSubs = new Map();
 
-    _.each(self._universalSubs, function (sub) {
+    self._universalSubs.forEach(function (sub) {
       sub._deactivate();
     });
     self._universalSubs = [];
@@ -993,7 +996,7 @@ var Subscription = function (
 
   // the set of (collection, documentid) that this subscription has
   // an opinion about
-  self._documents = {};
+  self._documents = new Map();
 
   // remember if we are ready.
   self._ready = false;
@@ -1160,10 +1163,8 @@ _.extend(Subscription.prototype, {
   _removeAllDocuments: function () {
     var self = this;
     Meteor._noYieldsAllowed(function () {
-      _.each(self._documents, function(collectionDocs, collectionName) {
-        // Iterate over _.keys instead of the dictionary itself, since we'll be
-        // mutating it.
-        _.each(_.keys(collectionDocs), function (strId) {
+      self._documents.forEach(function (collectionDocs, collectionName) {
+        collectionDocs.forEach(function (strId) {
           self.removed(collectionName, self._idFilter.idParse(strId));
         });
       });
@@ -1252,7 +1253,12 @@ _.extend(Subscription.prototype, {
     if (self._isDeactivated())
       return;
     id = self._idFilter.idStringify(id);
-    Meteor._ensure(self._documents, collectionName)[id] = true;
+    let ids = self._documents.get(collectionName);
+    if (ids == null) {
+      ids = new Set();
+      self._documents.set(collectionName, ids);
+    }
+    ids.add(id);
     self._session.added(self._subscriptionHandle, collectionName, id, fields);
   },
 
@@ -1288,7 +1294,7 @@ _.extend(Subscription.prototype, {
     id = self._idFilter.idStringify(id);
     // We don't bother to delete sets of things in a collection if the
     // collection is empty.  It could break _removeAllDocuments.
-    delete self._documents[collectionName][id];
+    self._documents.get(collectionName).delete(id);
     self._session.removed(self._subscriptionHandle, collectionName, id);
   },
 
@@ -1350,7 +1356,7 @@ Server = function (options) {
 
   self.method_handlers = {};
 
-  self.sessions = {}; // map from id to session
+  self.sessions = new Map(); // map from id to session
 
   self.stream_server = new StreamServer;
 
@@ -1471,7 +1477,7 @@ _.extend(Server.prototype, {
     // Note: Troposphere depends on the ability to mutate
     // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
     socket._meteorSession = new Session(self, version, socket, self.options);
-    self.sessions[socket._meteorSession.id] = socket._meteorSession;
+    self.sessions.set(socket._meteorSession.id, socket._meteorSession);
     self.onConnectionHook.each(function (callback) {
       if (socket._meteorSession)
         callback(socket._meteorSession.connectionHandle);
@@ -1552,7 +1558,7 @@ _.extend(Server.prototype, {
         // Spin up the new publisher on any existing session too. Run each
         // session's subscription in a new Fiber, so that there's no change for
         // self.sessions to change while we're running this loop.
-        _.each(self.sessions, function (session) {
+        self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
             Fiber(function() {
               session._startSubscription(handler);
@@ -1570,9 +1576,7 @@ _.extend(Server.prototype, {
 
   _removeSession: function (session) {
     var self = this;
-    if (self.sessions[session.id]) {
-      delete self.sessions[session.id];
-    }
+    self.sessions.delete(session.id);
   },
 
   /**
@@ -1692,7 +1696,7 @@ _.extend(Server.prototype, {
 
   _urlForSession: function (sessionId) {
     var self = this;
-    var session = self.sessions[sessionId];
+    var session = self.sessions.get(sessionId);
     if (session)
       return session._socketUrl;
     else
