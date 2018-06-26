@@ -542,17 +542,8 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   _reportError(message, info) {
-    if (this.getFileOptions().lazy === true) {
-      // Files with fileOptions.lazy === true were not explicitly added to
-      // the source batch via api.addFiles or api.mainModule, so any
-      // compilation errors should not be fatal until the files are
-      // actually imported by the ImportScanner. Attempting compilation is
-      // still important for lazy files that might end up being imported
-      // later, which is why we defang the error here, instead of avoiding
-      // compilation preemptively. Note also that exceptions thrown by the
-      // compiler will still cause build errors.
-      this._resourceSlot.addError(message, info);
-    } else {
+    this._resourceSlot.addError(message, info);
+    if (! this.getFileOptions().lazy) {
       super._reportError(message, info);
     }
   }
@@ -893,26 +884,46 @@ class OutputResource {
     } else if (this._lazyFinalizer) {
       const finalize = this._lazyFinalizer;
       this._lazyFinalizer = null;
-      (this._finalizerPromise = new Promise(
-        resolve => resolve(finalize())
-      ).then(result => {
-        Object.assign(this._initialOptions, result);
-        this._finalizerPromise = null;
-      })).await();
+      (this._finalizerPromise =
+       // It's important to initialize this._finalizerPromise to the new
+       // Promise before calling finalize(), so there's no possibility of
+       // finalize() triggering code that reenters this function before we
+       // have the final version of this._finalizerPromise. If this code
+       // used `new Promise(resolve => resolve(finalize()))` instead of
+       // `Promise.resolve().then(finalize)`, the finalize() call would
+       // begin before this._finalizerPromise was fully initialized.
+       Promise.resolve().then(finalize).then(result => {
+         if (result) {
+           Object.assign(this._initialOptions, result);
+         } else if (this._errors.length === 0) {
+           // In case the finalize() call failed without reporting any
+           // errors, create at least one generic error that can be
+           // reported when reportPendingErrors is called.
+           const error = new Error("lazyFinalizer failed");
+           error.info = { resource: this, finalize }
+           this._errors.push(error);
+         }
+         // The this._finalizerPromise object only survives for the
+         // duration of the initial finalization.
+         this._finalizerPromise = null;
+       })).await();
     }
   }
 
-  reportPendingErrors() {
+  hasPendingErrors() {
     this.finalize();
-    const count = this._errors.length;
-    if (count > 0) {
+    return this._errors.length > 0;
+  }
+
+  reportPendingErrors() {
+    if (this.hasPendingErrors()) {
       const firstError = this._errors[0];
       buildmessage.error(
         firstError.message,
         firstError.info
       );
     }
-    return count;
+    return this._errors.length;
   }
 
   get data() { return this._get("data"); }
@@ -931,7 +942,14 @@ class OutputResource {
       return this[name];
     }
 
-    this.finalize();
+    if (this.hasPendingErrors()) {
+      // If you're considering using this resource, you should call
+      // hasPendingErrors or reportPendingErrors to find out if it's safe
+      // to access computed properties like .data, .hash, or .sourceMap.
+      // If you get here without checking for errors first, those errors
+      // will be fatal.
+      throw this._errors[0];
+    }
 
     switch (name) {
     case "data":

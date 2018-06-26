@@ -671,6 +671,7 @@ export default class ImportScanner {
     return this.outputFiles.filter(file => {
       return file.absModuleId &&
         ! file[fakeSymbol] &&
+        ! file.hasErrors &&
         (! file.lazy ||
          file.imported === true ||
          file.imported === "dynamic");
@@ -820,6 +821,7 @@ export default class ImportScanner {
 
     if (file.reportPendingErrors &&
         file.reportPendingErrors() > 0) {
+      file.hasErrors = true;
       // Any errors reported to InputFile#error were saved but not
       // reported at compilation time. Now that we know the file has been
       // imported, it's time to report those errors.
