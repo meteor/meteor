@@ -910,17 +910,20 @@ class OutputResource {
     }
   }
 
-  reportPendingErrors() {
+  hasPendingErrors() {
     this.finalize();
-    const count = this._errors.length;
-    if (count > 0) {
+    return this._errors.length > 0;
+  }
+
+  reportPendingErrors() {
+    if (this.hasPendingErrors()) {
       const firstError = this._errors[0];
       buildmessage.error(
         firstError.message,
         firstError.info
       );
     }
-    return count;
+    return this._errors.length;
   }
 
   get data() { return this._get("data"); }
@@ -939,7 +942,14 @@ class OutputResource {
       return this[name];
     }
 
-    this.finalize();
+    if (this.hasPendingErrors()) {
+      // If you're considering using this resource, you should call
+      // hasPendingErrors or reportPendingErrors to find out if it's safe
+      // to access computed properties like .data, .hash, or .sourceMap.
+      // If you get here without checking for errors first, those errors
+      // will be fatal.
+      throw this._errors[0];
+    }
 
     switch (name) {
     case "data":
