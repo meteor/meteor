@@ -12,6 +12,9 @@
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
   to version 7.0.0-beta.51-1.
 
+* The `install` npm package used by `modules-runtime` has been updated to
+  version 0.12.0.
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
