@@ -542,17 +542,8 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   _reportError(message, info) {
-    if (this.getFileOptions().lazy === true) {
-      // Files with fileOptions.lazy === true were not explicitly added to
-      // the source batch via api.addFiles or api.mainModule, so any
-      // compilation errors should not be fatal until the files are
-      // actually imported by the ImportScanner. Attempting compilation is
-      // still important for lazy files that might end up being imported
-      // later, which is why we defang the error here, instead of avoiding
-      // compilation preemptively. Note also that exceptions thrown by the
-      // compiler will still cause build errors.
-      this._resourceSlot.addError(message, info);
-    } else {
+    this._resourceSlot.addError(message, info);
+    if (! this.getFileOptions().lazy) {
       super._reportError(message, info);
     }
   }
