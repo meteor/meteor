@@ -530,6 +530,7 @@ export class NodeModulesDirectory {
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
 // - hash: optional, sha1 hash of the file contents, if known
+// - sri: sha512 hash of file contents in base64 encoding
 // - sourceMap: if 'data' is given, can be given instead of
 //   sourcePath. a string or a JS Object. Will be stored as Object.
 // - cacheable
@@ -600,6 +601,7 @@ class File {
     this._contents = options.data || null; // contents, if known, as a Buffer
     this._hashOfContents = options.hash || null;
     this._hash = null;
+    this._sri = null;
   }
 
   toString() {
@@ -625,6 +627,13 @@ class File {
 
     return this._hash;
   }
+
+  sri() {
+    if (! this._sri) {
+      this._sri = watch.sri(this.contents());
+    }
+    return this._sri;
+   }
 
   // Omit encoding to get a buffer, or provide something like 'utf8'
   // to get a string
@@ -1647,6 +1656,7 @@ class ClientTarget extends Target {
       // Set this now, in case we mutated the file's contents.
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
+      manifestItem.sri = file.sri();
 
       if (! file.targetPath.startsWith("dynamic/")) {
         writeFile(file, builder);
