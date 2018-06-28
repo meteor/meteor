@@ -1132,7 +1132,9 @@ class Target {
       const isApp = ! name;
 
       // Emit the resources
-      const resources = sourceBatch.getResources(jsOutputFilesMap.get(name));
+      const resources = sourceBatch.getResources(
+        jsOutputFilesMap.get(name).files,
+      );
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).

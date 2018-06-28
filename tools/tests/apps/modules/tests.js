@@ -496,6 +496,15 @@ describe("symlinking node_modules", () => {
       require("./imports/links/acorn").parse
     );
   });
+
+  it("should not break custom import extensions", () => {
+    import { jsx } from "jsx-import-test";
+    assert.strictEqual(jsx.type, "div");
+    assert.strictEqual(jsx.props.children, "oyez");
+    return import("./imports/links/jsx-import-test/child").then(ns => {
+      assert.strictEqual(ns.default, jsx);
+    });
+  });
 });
 
 describe("ecmascript miscellany", () => {
