@@ -558,8 +558,8 @@ var File = function (inputFile, module) {
   // True if the input file should not be evaluated eagerly.
   self.lazy = inputFile.lazy; // could be `true`, `false` or `undefined` <sigh>
 
-  // True if the file is eagerly imported, "dynamic" if the file is
-  // dynamically imported.
+  // False if the file is not imported at all, "static" if it is eagerly
+  // imported, and "dynamic" if the file is dynamically imported.
   self.imported = inputFile.imported;
 
   // Boolean indicating whether this file is the main entry point module
