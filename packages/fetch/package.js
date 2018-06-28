@@ -28,5 +28,6 @@ Package.onTest(function(api) {
   api.use("ecmascript");
   api.use("tinytest");
   api.use("fetch");
-  api.mainModule("fetch-tests.js");
+  api.mainModule("tests/main.js");
+  api.addAssets("tests/asset.json", ["client", "server"]);
 });
