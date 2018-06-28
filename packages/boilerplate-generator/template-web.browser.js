@@ -1,17 +1,21 @@
 import template from './template';
 
+const sri = (sri, mode) =>
+  (sri && mode) ? ` integrity="sha512-${sri}" crossorigin="${mode}"` : '';
+
 export const headTemplate = ({
   css,
   htmlAttributes,
   bundledJsCssUrlRewriteHook,
+  sriMode,
   head,
   dynamicHead,
 }) => {
   var headSections = head.split(/<meteor-bundled-css[^<>]*>/, 2);
   var cssBundle = [...(css || []).map(file =>
-    template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>" integrity="sha512-<%- sri %>" crossorigin="anonymous">')({
+    template('  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="<%- href %>"<%= sri %>>')({
       href: bundledJsCssUrlRewriteHook(file.url),
-      sri: file.sri,
+      sri: sri(file.sri, sriMode),
     })
   )].join('\n');
 
@@ -43,6 +47,7 @@ export const closeTemplate = ({
   js,
   additionalStaticJs,
   bundledJsCssUrlRewriteHook,
+  sriMode,
 }) => [
   '',
   inlineScriptsAllowed
@@ -55,9 +60,9 @@ export const closeTemplate = ({
   '',
 
   ...(js || []).map(file =>
-    template('  <script type="text/javascript" src="<%- src %>" integrity="sha512-<%- sri %>" crossorigin="anonymous"></script>')({
+    template('  <script type="text/javascript" src="<%- src %>"<%= sri %>></script>')({
       src: bundledJsCssUrlRewriteHook(file.url),
-      sri: file.sri,
+      sri: sri(file.sri, sriMode),
     })
   ),
 
