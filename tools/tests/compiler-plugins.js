@@ -58,6 +58,13 @@ selftest.define("compiler plugin caching - coffee", () => {
     '/f2.coffee',
     '/f3.coffee',
     '/packages/local-pack/p.coffee'
+  ], "web.browser.legacy");
+
+  matchRun([
+    '/f1.coffee',
+    '/f2.coffee',
+    '/f3.coffee',
+    '/packages/local-pack/p.coffee'
   ], osArch);
 
   // App prints this:
@@ -67,6 +74,7 @@ selftest.define("compiler plugin caching - coffee", () => {
 
   // Only recompiles f2.
   matchRun(["/f2.coffee"], "web.browser");
+  matchRun(["/f2.coffee"], "web.browser.legacy");
   matchRun(["/f2.coffee"], osArch);
 
   // Program prints this:
@@ -78,6 +86,7 @@ selftest.define("compiler plugin caching - coffee", () => {
   s.append("packages/local-pack/package.js", "\n// foo\n");
 
   matchRun([], "web.browser");
+  matchRun([], "web.browser.legacy");
   matchRun([], osArch);
 
   run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
@@ -87,6 +96,7 @@ selftest.define("compiler plugin caching - coffee", () => {
   s.write("packages/local-pack/p.coffee", "FromPackage = 'FromPackage is 5'");
 
   matchRun(["/packages/local-pack/p.coffee"], "web.browser");
+  matchRun(["/packages/local-pack/p.coffee"], "web.browser.legacy");
   matchRun(["/packages/local-pack/p.coffee"], osArch);
 
   run.match("Coffeescript X is 2 Y is 3 FromPackage is 5");
@@ -109,6 +119,7 @@ selftest.define("compiler plugin caching - coffee", () => {
   nextRunOrdinal = 1;
 
   matchRun(["/f2.coffee"], "web.browser");
+  matchRun(["/f2.coffee"], "web.browser.legacy");
   matchRun(["/f2.coffee"], osArch);
 
   run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
@@ -119,6 +130,7 @@ selftest.define("compiler plugin caching - coffee", () => {
 // Tests the actual cache logic used by less and stylus.
 ['less', 'stylus'].forEach((packageName) => {
   const extension = packageName === 'stylus' ? 'styl' : packageName;
+  const hasCompileOneFileLaterSupport = packageName === "less";
 
   selftest.define("compiler plugin caching - " + packageName, () => {
     var s = new Sandbox({ fakeMongo: true });
@@ -153,12 +165,22 @@ selftest.define("compiler plugin caching - coffee", () => {
 
     // First program built (web.browser) compiles everything.
     matchRun([
-      // Though files in imports directories are compiled, they are marked
-      // as lazy so they will not be loaded unless imported.
-      "/imports/dotdot." + extension,
+      // Plugins with a compileOneFileLater method can avoid compiling
+      // lazy files in /imports or /node_modules until they are actually
+      // needed, but older plugins still eagerly compile those files just
+      // in case they might be imported by a JS module.
+      ...(hasCompileOneFileLaterSupport ? []
+          : ["/imports/dotdot." + extension]),
       "/subdir/nested-root." + extension,
       "/top." + extension
     ], "web.browser");
+
+    matchRun([
+      ...(hasCompileOneFileLaterSupport ? []
+          : ["/imports/dotdot." + extension]),
+      "/subdir/nested-root." + extension,
+      "/top." + extension
+    ], "web.browser.legacy");
 
     // There is no render execution in the server program, because it has
     // archMatching:'web'.  We'll see this more clearly when the next call later
@@ -193,6 +215,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     // preprocessor file in it. This should not require us to render anything.
     s.append("packages/local-pack/package.js", "\n// foo\n");
     matchRun([], "web.browser");
+    matchRun([], "web.browser.legacy");
     run.waitSecs(15);
     run.match("Hello world");
 
@@ -218,6 +241,7 @@ selftest.define("compiler plugin caching - coffee", () => {
             setVariable('el4-style', 'inset'));
     expectedBorderStyles.el4 = 'inset';
     matchRun([`/top.${ extension }`], "web.browser");
+    matchRun([`/top.${ extension }`], "web.browser.legacy");
     run.match("Client modified -- refreshing");
     checkCSS(expectedBorderStyles);
 
@@ -226,6 +250,7 @@ selftest.define("compiler plugin caching - coffee", () => {
             '.el0 { border-style: double; }\n');
     expectedBorderStyles.el0 = 'double';
     matchRun([`/subdir/nested-root.${ extension }`], "web.browser");
+    matchRun([`/subdir/nested-root.${ extension }`], "web.browser.legacy");
     run.match("Client modified -- refreshing");
     checkCSS(expectedBorderStyles);
 
@@ -234,6 +259,7 @@ selftest.define("compiler plugin caching - coffee", () => {
             '.el6 { border-style: solid; }\n');
     expectedBorderStyles.el6 = 'solid';
     matchRun([`/yet-another-root.${ extension }`], "web.browser");
+    matchRun([`/yet-another-root.${ extension }`], "web.browser.legacy");
     run.match("Client modified -- refreshing");
     checkCSS(expectedBorderStyles);
 
@@ -259,6 +285,7 @@ selftest.define("compiler plugin caching - coffee", () => {
     nextRunOrdinal = 1;
 
     matchRun([`/top.${ extension }`], "web.browser");
+    matchRun([`/top.${ extension }`], "web.browser.legacy");
     run.waitSecs(15);
     run.match('Hello world');
     checkCSS(expectedBorderStyles);
@@ -393,6 +420,17 @@ selftest.define("compiler plugins - compiler throws", () => {
   run.expectExit(1);
 });
 
+function checkModernAndLegacyUrls(path, test) {
+  if (! path.startsWith("/")) {
+    path = "/" + path;
+  }
+  test(getUrl("http://localhost:3000" + path));
+  // Asset URLs are no longer prefixed with /__browser.legacy because the
+  // developer has full control over the path where an asset is served, so
+  // there's not much value in serving a legacy version of every asset.
+  // test(getUrl("http://localhost:3000/__browser.legacy" + path));
+}
+
 // Test that compiler plugins can add static assets. Also tests `filenames`
 // option to registerCompiler.
 selftest.define("compiler plugins - compiler addAsset", () => {
@@ -407,8 +445,9 @@ selftest.define("compiler plugins - compiler addAsset", () => {
   run.match("Asset says Print out foo");
 
   // Test client-side asset.
-  const body = getUrl('http://localhost:3000/foo.printme');
-  selftest.expectEqual(body, 'Print out foo\n');
+  checkModernAndLegacyUrls("/foo.printme", body => {
+    selftest.expectEqual(body, "Print out foo\n");
+  });
 
   run.stop();
 });
@@ -416,7 +455,7 @@ selftest.define("compiler plugins - compiler addAsset", () => {
 
 // Test that a package can have a single file that is both source code and an
 // asset
-selftest.skip.define("compiler plugins - addAssets", () => {
+selftest.define("compiler plugins - addAssets", () => {
   const s = new Sandbox({ fakeMongo: true });
 
   s.createApp('myapp', 'compiler-plugin-asset-and-source');
@@ -428,9 +467,14 @@ selftest.skip.define("compiler plugins - addAssets", () => {
   run.match("Printing out my own source code!");
 
   // Test client-side asset.
-  let body = getUrl('http://localhost:3000/packages/' +
-    'asset-and-source/asset-and-source.js');
-  selftest.expectTrue(body.indexOf('Printing out my own source code!') !== -1);
+  checkModernAndLegacyUrls(
+    "/packages/asset-and-source/asset-and-source.js",
+    body => {
+      selftest.expectTrue(
+        body.indexOf("Printing out my own source code!") !== -1
+      );
+    }
+  );
 
   // Test that deprecated API still works (added in 1.2.1 in response to people
   // having trouble upgrading to 1.2)
@@ -450,9 +494,14 @@ selftest.skip.define("compiler plugins - addAssets", () => {
   run.match("Printing out my own source code!");
 
   // Test client-side asset.
-  body = getUrl('http://localhost:3000/packages/' +
-    'asset-and-source/asset-and-source.js');
-  selftest.expectTrue(body.indexOf('Printing out my own source code!') !== -1);
+  checkModernAndLegacyUrls(
+    "/packages/asset-and-source/asset-and-source.js",
+    body => {
+      selftest.expectTrue(
+        body.indexOf('Printing out my own source code!') !== -1
+      );
+    }
+  );
 
   // Test error messages for malformed package files
   s.write("packages/asset-and-source/package.js", `Package.describe({

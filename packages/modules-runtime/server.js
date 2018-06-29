@@ -1,3 +1,6 @@
+// Options that will be populated below and then passed to makeInstaller.
+var makeInstallerOptions = {};
+
 // RegExp matching strings that don't start with a `.` or a `/`.
 var topLevelIdPattern = /^[^./]/;
 

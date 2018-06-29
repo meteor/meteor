@@ -249,19 +249,6 @@ export default class ImportScanner {
       // something plausible. #6411 #6383
       const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
-      const dotExt = "." + file.type;
-      const dataString = file.data.toString("utf8");
-      file.dataString = defaultExtensionHandlers[dotExt].call(
-        file,
-        dataString,
-        file.hash,
-      );
-
-      if (! (file.data instanceof Buffer) ||
-          file.dataString !== dataString) {
-        file.data = Buffer.from(file.dataString, "utf8");
-      }
-
       // This property can have values false, true, "dynamic" (which
       // indicates that the file has been imported, but only dynamically).
       file.imported = false;
@@ -302,9 +289,10 @@ export default class ImportScanner {
     const files = this.realPathToFiles[realPath];
     if (files && files.length > 0) {
       const firstFile = files[0];
+      const dataString = this._getDataString(firstFile);
       return {
         data: firstFile.data,
-        dataString: firstFile.dataString,
+        dataString: dataString,
         hash: firstFile.hash,
       };
     }
@@ -343,7 +331,13 @@ export default class ImportScanner {
     if (foundSymbolicLink) {
       // Call the actual realpathOrNull function only if there were any
       // symlinks involved in the relative path within this.sourceRoot.
-      return this.realPathCache[absPath] = realpathOrNull(absPath);
+      const realPath = realpathOrNull(absPath);
+      if (! realPath) {
+        // If we couldn't resolve the real path, fall back to the given
+        // absPath, and avoid caching.
+        return absPath;
+      }
+      return this.realPathCache[absPath] = realPath;
     }
 
     return this.realPathCache[absPath] = absPath;
@@ -411,7 +405,7 @@ export default class ImportScanner {
       // plugin calling inputFile.addJavaScript multiple times for the
       // same source file (see discussion in #9176), with different target
       // paths, code, laziness, etc.
-      sourceFile.dataString += [
+      sourceFile.dataString = this._getDataString(sourceFile) + [
         "module.watch(require(" + JSON.stringify(relativeId) + "), {",
         '  "*": module.makeNsSetter(true)',
         "});",
@@ -431,6 +425,8 @@ export default class ImportScanner {
   // maps and updating all other properties appropriately. Once this
   // combination is done, oldFile should be kept and newFile discarded.
   _combineFiles(oldFile, newFile) {
+    const scanner = this;
+
     function checkProperty(name) {
       if (has(oldFile, name)) {
         if (! has(newFile, name)) {
@@ -463,8 +459,11 @@ export default class ImportScanner {
       const consumer = file.sourceMap &&
         new SourceMapConsumer(file.sourceMap);
       const node = consumer &&
-        SourceNode.fromStringWithSourceMap(file.dataString, consumer);
-      return node || file.dataString;
+        SourceNode.fromStringWithSourceMap(
+          scanner._getDataString(file),
+          consumer
+        );
+      return node || scanner._getDataString(file);
     }
 
     const {
@@ -672,6 +671,7 @@ export default class ImportScanner {
     return this.outputFiles.filter(file => {
       return file.absModuleId &&
         ! file[fakeSymbol] &&
+        ! file.hasErrors &&
         (! file.lazy ||
          file.imported === true ||
          file.imported === "dynamic");
@@ -722,7 +722,7 @@ export default class ImportScanner {
     }
 
     const result = findImportedModuleIdentifiers(
-      file.dataString,
+      this._getDataString(file),
       file.hash,
     );
 
@@ -819,14 +819,12 @@ export default class ImportScanner {
     // Set file.imported to a truthy value (either "dynamic" or true).
     file.imported = forDynamicImport ? "dynamic" : true;
 
-    if (file.error) {
+    if (file.reportPendingErrors &&
+        file.reportPendingErrors() > 0) {
+      file.hasErrors = true;
       // Any errors reported to InputFile#error were saved but not
       // reported at compilation time. Now that we know the file has been
       // imported, it's time to report those errors.
-      buildmessage.error(
-        file.error.message,
-        file.error.info
-      );
       return;
     }
 
@@ -905,6 +903,27 @@ export default class ImportScanner {
 
   isWebBrowser() {
     return archMatches(this.bundleArch, "web.browser");
+  }
+
+  _getDataString(file) {
+    if (typeof file.dataString === "string") {
+      return file.dataString;
+    }
+
+    const dotExt = "." + file.type;
+    const dataString = file.data.toString("utf8");
+    file.dataString = defaultExtensionHandlers[dotExt].call(
+      file,
+      dataString,
+      file.hash,
+    );
+
+    if (! (file.data instanceof Buffer) ||
+        file.dataString !== dataString) {
+      file.data = Buffer.from(file.dataString, "utf8");
+    }
+
+    return file.dataString;
   }
 
   _readFile(absPath) {
@@ -1379,14 +1398,29 @@ export default class ImportScanner {
   }
 }
 
-each([
-  "_readFile",
+const ISp = ImportScanner.prototype;
+
+[ "_addPkgJsonToOutput",
   "_findImportedModuleIdentifiers",
   "_getAbsModuleId",
-  "_addPkgJsonToOutput",
+  "_readFile",
   "_realPath",
+  "_resolve",
   "_resolvePkgJsonBrowserAliases",
-], funcName => {
-  ImportScanner.prototype[funcName] = Profile(
-    `ImportScanner#${funcName}`, ImportScanner.prototype[funcName]);
+  // We avoid profiling _scanFile here because it doesn't typically have
+  // much "own time," and it gets called recursively, resulting in deeply
+  // nested METEOR_PROFILE output, which often obscures actual problems.
+  // "_scanFile",
+].forEach(name => {
+  ISp[name] = Profile(`ImportScanner#${name}`, ISp[name]);
+});
+
+[ // Include the package name in METEOR_PROFILE output for the following
+  // public methods:
+  "scanImports",
+  "scanMissingModules",
+].forEach(name => {
+  ISp[name] = Profile(function (...args) {
+    return `ImportScanner#${name} for ${this.name || "the app"}`;
+  }, ISp[name]);
 });

@@ -1,14 +1,5 @@
-var global = this;
+var proto = Promise.prototype;
 var hasOwn = Object.prototype.hasOwnProperty;
-
-if (typeof global.Promise === "function") {
-  exports.Promise = global.Promise;
-} else {
-  exports.Promise = global.Promise =
-    require("promise/lib/es6-extensions");
-}
-
-var proto = exports.Promise.prototype;
 
 proto.done = function (onFulfilled, onRejected) {
   var self = this;

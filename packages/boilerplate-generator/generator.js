@@ -22,7 +22,7 @@ let shouldWarnAboutToHTMLDeprecation = ! Meteor.isProduction;
 
 export class Boilerplate {
   constructor(arch, manifest, options = {}) {
-    const { headTemplate, closeTemplate } = _getTemplate(arch);
+    const { headTemplate, closeTemplate } = getTemplate(arch);
     this.headTemplate = headTemplate;
     this.closeTemplate = closeTemplate;
     this.baseData = null;
@@ -44,7 +44,7 @@ export class Boilerplate {
     }
 
     // Calling .await() requires a Fiber.
-    return toHTMLAsync(extraData).await();
+    return this.toHTMLAsync(extraData).await();
   }
 
   // Returns a Promise that resolves to a string of HTML.
@@ -154,12 +154,16 @@ export class Boilerplate {
 
 // Returns a template function that, when called, produces the boilerplate
 // html as a string.
-const _getTemplate = arch => {
-  if (arch === 'web.browser') {
+function getTemplate(arch) {
+  const prefix = arch.split(".", 2).join(".");
+
+  if (prefix === "web.browser") {
     return WebBrowserTemplate;
-  } else if (arch === 'web.cordova') {
-    return WebCordovaTemplate;
-  } else {
-    throw new Error('Unsupported arch: ' + arch);
   }
-};
+
+  if (prefix === "web.cordova") {
+    return WebCordovaTemplate;
+  }
+
+  throw new Error("Unsupported arch: " + arch);
+}

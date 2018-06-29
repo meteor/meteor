@@ -33,21 +33,39 @@ function getStatBundles() {
     f.absolutePath.endsWith(".stats.json");
 
   // Read the stat file, but if it's in any way unusable just return null.
-  const readOrNull = file => {
+  function readOrNull(file) {
     try {
       return JSON.parse(fsReadFileSync(file, "utf8"));
     } catch (err) {
       return null;
     }
-  };
+  }
 
-  return Object.keys(WebAppInternals.staticFiles)
-    .map(staticFile => WebAppInternals.staticFiles[staticFile])
-    .filter(statFileFilter)
-    .map(statFile => ({
-      name: statFile.hash,
-      stats: readOrNull(statFile.absolutePath),
-    }));
+  const {
+    staticFiles,
+    staticFilesByArch,
+  } = WebAppInternals;
+
+  const files = [];
+
+  if (staticFilesByArch) {
+    Object.keys(staticFilesByArch).forEach(arch => {
+      const staticFiles = staticFilesByArch[arch];
+      Object.keys(staticFiles).forEach(path => {
+        files.push({ ...staticFiles[path], arch });
+      });
+    });
+  } else if (staticFiles) {
+    Object.keys(staticFiles).forEach(path => {
+      files.push({ ...staticFiles[path], arch: 'bundle' });
+    });
+  }
+
+  return files.filter(statFileFilter).map(file => ({
+    name: file.hash,
+    arch: file.arch,
+    stats: readOrNull(file.absolutePath),
+  }));
 }
 
 function _childModules(node) {
@@ -135,10 +153,7 @@ function statsMiddleware(request, response) {
   sendJSON({
     name: "main",
     children: statBundles.map((statBundle, index, array) => ({
-      // TODO: If multiple bundles, could
-      // show abbr. bundle names with:
-      //   `...${bundle.name.substr(-3)}`,
-      name: "bundle" + (array.length > 1 ? ` (${index + 1})` : ""),
+      name: statBundle.arch,
       type: typeBundle,
       children: d3TreeFromStats(statBundle.stats),
     }))

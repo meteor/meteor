@@ -192,7 +192,11 @@ CollectionPrototype._defineMutationMethods = function(options) {
             throw new Meteor.Error(403, "Access denied");
           }
         } catch (e) {
-          if (e.name === 'MongoError' || e.name === 'MinimongoError') {
+          if (
+            e.name === 'MongoError' ||
+            e.name === 'BulkWriteError' ||
+            e.name === 'MinimongoError'
+          ) {
             throw new Meteor.Error(409, e.toString());
           } else {
             throw e;
