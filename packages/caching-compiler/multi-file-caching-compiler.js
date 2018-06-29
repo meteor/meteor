@@ -78,7 +78,7 @@ extends CachingCompilerBase {
   }
 
   // The processFilesForTarget method from the Plugin.registerCompiler API.
-  processFilesForTarget(inputFiles) {
+  async processFilesForTarget(inputFiles) {
     const allFiles = new Map;
     const cacheKeyMap = new Map;
     const cacheMisses = [];

@@ -277,7 +277,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
   // you have processing you want to perform at the beginning or end of a
   // processing phase, you may want to override this method and call the
   // superclass implementation from within your method.
-  processFilesForTarget(inputFiles) {
+  async processFilesForTarget(inputFiles) {
     const cacheMisses = [];
     const arches = this._cacheDebugEnabled && Object.create(null);
 
