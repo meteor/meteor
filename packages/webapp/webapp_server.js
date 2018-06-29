@@ -748,27 +748,45 @@ function runWebAppServer() {
     res.end();
   });
 
+  function getPathParts(path) {
+    const parts = path.split("/");
+    while (parts[0] === "") parts.shift();
+    return parts;
+  }
+
+  function isPrefixOf(prefix, array) {
+    return prefix.length <= array.length &&
+      prefix.every((part, i) => part === array[i]);
+  }
+
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
-    var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    var url = Npm.require('url').parse(request.url);
-    var pathname = url.pathname;
-    // check if the path in the url starts with the path prefix (and the part
-    // after the path prefix must start with a / if it exists.)
-    if (pathPrefix && pathname.substring(0, pathPrefix.length) === pathPrefix &&
-       (pathname.length == pathPrefix.length
-        || pathname.substring(pathPrefix.length, pathPrefix.length + 1) === "/")) {
-      request.url = request.url.substring(pathPrefix.length);
-      next();
-    } else if (pathname === "/favicon.ico" || pathname === "/robots.txt") {
-      next();
-    } else if (pathPrefix) {
+    const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
+    const { pathname } = parseUrl(request.url);
+
+    // check if the path in the url starts with the path prefix
+    if (pathPrefix) {
+      const prefixParts = getPathParts(pathPrefix);
+      const pathParts = getPathParts(pathname);
+      if (isPrefixOf(prefixParts, pathParts)) {
+        request.url = "/" + pathParts.slice(prefixParts.length).join("/");
+        return next();
+      }
+    }
+
+    if (pathname === "/favicon.ico" ||
+        pathname === "/robots.txt") {
+      return next();
+    }
+
+    if (pathPrefix) {
       response.writeHead(404);
       response.write("Unknown path");
       response.end();
-    } else {
-      next();
+      return;
     }
+
+    next();
   });
 
   // Parse the query string into res.query. Used by oauth_server, but it's
