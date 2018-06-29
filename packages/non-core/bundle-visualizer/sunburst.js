@@ -151,7 +151,7 @@ export class Sunburst {
   createPills(json) {
     this.elements.pills = [];
     json.children.forEach((child, i) => {
-      const className = 
+      const className =
         prefixedClass("pill") + (i ? '' : ` ${prefixedClass("active")}`);
       this.elements.pills.push(
         this.elements.pillContainer
@@ -166,8 +166,8 @@ export class Sunburst {
 
   handlePillClick(name) {
     this.elements.pills.forEach((pill, i) => {
-      const className = 
-        pill.attr("name") === name 
+      const className =
+        pill.attr("name") === name
           ? `${prefixedClass("pill")} ${prefixedClass("active")}`
           : prefixedClass("pill");
 
@@ -240,7 +240,7 @@ export class Sunburst {
       .forEach(bundle => this.draw({ name: 'main', children: [bundle] }));
 
     // Basic setup of page elements.
-    this.json = json;    
+    this.json = json;
     this.createPills(json);
     this.initializeBreadcrumbTrail();
 
@@ -250,7 +250,7 @@ export class Sunburst {
 
   mouseoverEvent() {
     return this.mouseover || (this.mouseover = d => {
-      const percentage = 
+      const percentage =
         (100 * d.value / this.totalSizes[this.activeBundle]).toPrecision(3);
       let percentageString = `${percentage}%`;
       if (percentage < 0.1) {

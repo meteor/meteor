@@ -27,7 +27,7 @@
   width: 950px;
 }
 
-.meteorBundleVisualizer.meteorBundleVisualizerRootContainer 
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerPills,
 .meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerSequence
@@ -80,7 +80,7 @@
   font-weight: bold;
 }
 
-.meteorBundleVisualizer.meteorBundleVisualizerRootContainer 
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerPills .meteorBundleVisualizerPill
 {
   display: inline-block;
@@ -90,7 +90,7 @@
   border-radius: 15px;
 }
 
-.meteorBundleVisualizer.meteorBundleVisualizerRootContainer 
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerPills,
 .meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerTrail
@@ -109,7 +109,7 @@
   top: 100px;
 }
 
-.meteorBundleVisualizer.meteorBundleVisualizerRootContainer 
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerPills .meteorBundleVisualizerPill,
 .meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerTrail .meteorBundleVisualizerTrailSegment
@@ -121,22 +121,22 @@
   margin-bottom: 5px;
 }
 
-.meteorBundleVisualizer.meteorBundleVisualizerRootContainer 
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerPills .meteorBundleVisualizerPill
 {
   cursor: pointer;
   background-color: rgba(171, 171, 171, 0.3);
 }
 
-.meteorBundleVisualizer.meteorBundleVisualizerRootContainer 
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerPills .meteorBundleVisualizerPill:hover
 {
   background-color: rgba(171, 171, 171, 0.8);
 }
 
 
-.meteorBundleVisualizer.meteorBundleVisualizerRootContainer 
-  .meteorBundleVisualizerPills 
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPills
   .meteorBundleVisualizerPill.meteorBundleVisualizerActive
 {
   background-color: rgba(171, 171, 171, 1);
