@@ -12,6 +12,12 @@
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
   to version 7.0.0-beta.51-1.
 
+* The `@babel/preset-env` and `@babel/preset-react` presets will be
+  ignored by Meteor if included in a `.babelrc` file, since Meteor already
+  provides equivalent/superior functionality without them. However, you
+  should feel free to leave these plugins in your `.babelrc` file if they
+  are needed by external tools.
+
 * The `install` npm package used by `modules-runtime` has been updated to
   version 0.12.0.
 

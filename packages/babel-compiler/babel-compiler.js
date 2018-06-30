@@ -396,6 +396,21 @@ function merge(babelOptions, babelrc, name) {
   }
 }
 
+const forbiddenPresetNames = new Set([
+  // Since Meteor always includes babel-preset-meteor automatically, it's
+  // likely a mistake for that preset to appear in a custom .babelrc
+  // file. Previously we recommended that developers simply remove the
+  // preset (e.g. #9631), but we can easily just ignore it by returning
+  // null here, which seems like a better solution since it allows the
+  // same .babelrc file to be used for other purposes, such as running
+  // tests with a testing tool that needs to compile application code the
+  // same way Meteor does.
+  "babel-preset-meteor",
+  // Similar reasoning applies to these commonly misused Babel presets:
+  "@babel/preset-env",
+  "@babel/preset-react",
+]);
+
 function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
   var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
   var presetOrPlugin;
@@ -430,15 +445,7 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
     });
 
     if (found) {
-      if (presetOrPluginMeta.name === "babel-preset-meteor") {
-        // Since Meteor always includes babel-preset-meteor automatically,
-        // it's likely a mistake for that preset to appear in a custom
-        // .babelrc file. Previously we recommended that developers simply
-        // remove the preset (e.g. #9631), but we can easily just ignore
-        // it by returning null here, which seems like a better solution
-        // since it allows the same .babelrc file to be used for other
-        // purposes, such as running tests with a testing tool that needs
-        // to compile application code the same way Meteor does.
+      if (forbiddenPresetNames.has(presetOrPluginMeta.name)) {
         return null;
       }
 
