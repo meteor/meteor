@@ -1542,6 +1542,7 @@ export class PackageSourceBatch {
     const isWeb = archinfo.matches(self.unibuild.arch, "web");
     const linkerOptions = {
       isApp,
+      bundleArch,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!

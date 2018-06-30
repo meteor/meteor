@@ -43,6 +43,9 @@ var Module = function (options) {
   // module name or null
   self.name = options.name || null;
 
+  // The architecture for which this bundle is being linked.
+  self.bundleArch = options.bundleArch;
+
   // files in the module. array of File
   self.files = [];
 
@@ -810,6 +813,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
     makeCacheKey(file, options) {
       return JSON.stringify({
         sourceHash: file.sourceHash,
+        arch: file.module.bundleArch,
         bare: file.bare,
         servePath: file.servePath,
         options,
@@ -1027,6 +1031,8 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // accessible from the console, and avoids actually combining files into
   // a single file.
   isApp,
+  // The architecture for which this bundle is being linked.
+  bundleArch,
   // If we end up combining all of the files into one, use this as the
   // servePath.
   combinedServePath,
@@ -1048,6 +1054,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   var module = new Module({
     name,
+    bundleArch,
     useGlobalNamespace: isApp,
     combinedServePath,
   });
