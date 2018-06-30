@@ -1090,9 +1090,11 @@ class Target {
         file.setTargetPathFromRelPath(
           stripLeadingSlash(resource.servePath));
 
-        return target.minifyCssFiles(
-          [file], minifiersByExt.css, minifyMode
-        ).map(file => file.contents("utf8")).join("\n");
+        return minifyCssFiles([file], {
+          arch: target.arch,
+          minifier: minifiersByExt.css,
+          minifyMode,
+        }).map(file => file.contents("utf8")).join("\n");
       }
     });
 
@@ -1567,45 +1569,11 @@ class ClientTarget extends Target {
 
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
-    this.css = this.minifyCssFiles(this.css, minifierDef, minifyMode);
-  }
-
-  minifyCssFiles(files, minifierDef, minifyMode) {
-    const { arch } = this;
-    const sources = files.map(file => new CssFile(file, { arch }));
-    const minifier = minifierDef.userPlugin.processFilesForBundle
-      .bind(minifierDef.userPlugin);
-
-    buildmessage.enterJob('minifying app stylesheet', function () {
-      try {
-        const markedMinifier = buildmessage.markBoundary(minifier);
-        Promise.await(markedMinifier(sources, { minifyMode }));
-      } catch (e) {
-        buildmessage.exception(e);
-      }
+    this.css = minifyCssFiles(this.css, {
+      arch: this.arch,
+      minifier: minifierDef,
+      minifyMode,
     });
-
-    return _.flatten(sources.map((source) => {
-      return source._minifiedFiles.map((file) => {
-        const newFile = new File({
-          info: 'minified css',
-          arch,
-          data: Buffer.from(file.data, 'utf8')
-        });
-        if (file.sourceMap) {
-          newFile.setSourceMap(file.sourceMap, '/');
-        }
-
-        if (file.path) {
-          newFile.setUrlFromRelPath(file.path);
-          newFile.targetPath = file.path;
-        } else {
-          newFile.setUrlToHash('.css', '?meteor_css_resource=true');
-        }
-
-        return newFile;
-      });
-    }));
   }
 
   // Output the finished target to disk
@@ -1802,6 +1770,65 @@ class ClientTarget extends Target {
       nodePath: []
     };
   }
+}
+
+const { wrap, defaultMakeCacheKey } = require("optimism");
+const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
+  arch,
+  minifier,
+  minifyMode,
+}) {
+  const sources = files.map(file => new CssFile(file, { arch }));
+  const markedMinifier = buildmessage.markBoundary(
+    minifier.userPlugin.processFilesForBundle,
+    minifier.userPlugin,
+  );
+
+  buildmessage.enterJob('minifying app stylesheet', function () {
+    try {
+      Promise.await(markedMinifier(sources, { minifyMode }));
+    } catch (e) {
+      buildmessage.exception(e);
+    }
+  });
+
+  return _.flatten(sources.map((source) => {
+    return source._minifiedFiles.map((file) => {
+      const newFile = new File({
+        info: 'minified css',
+        arch,
+        data: Buffer.from(file.data, 'utf8')
+      });
+      if (file.sourceMap) {
+        newFile.setSourceMap(file.sourceMap, '/');
+      }
+
+      if (file.path) {
+        newFile.setUrlFromRelPath(file.path);
+        newFile.targetPath = file.path;
+      } else {
+        newFile.setUrlToHash('.css', '?meteor_css_resource=true');
+      }
+
+      return newFile;
+    });
+  }));
+}, {
+  makeCacheKey(files, { arch, minifier, minifyMode }) {
+    return defaultMakeCacheKey(
+      minifier,
+      arch,
+      minifyMode,
+      hashOfFiles(files),
+    );
+  }
+}));
+
+const { createHash } = require("crypto");
+function hashOfFiles(files) {
+  const hash = createHash("sha1");
+  files.forEach(file => hash.update(file.hash()).update("\0"));
+  return hash.digest("hex");
 }
 
 // mark methods for profiling
