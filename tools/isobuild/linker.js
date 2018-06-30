@@ -709,14 +709,19 @@ _.extend(File.prototype, {
   //
   // Returns a SourceNode.
   getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
-    var self = this;
+    return getPrelinkedOutputCached(this, options);
+  })
+});
+
+const getPrelinkedOutputCached = require("optimism").wrap(
+  function (file, options) {
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
     var preserveLineNumbers = options.preserveLineNumbers;
 
-    if (self.sourceMap) {
+    if (file.sourceMap) {
       // Honoring options.preserveLineNumbers is likely impossible if we
-      // have a source map, since self.source has probably already been
+      // have a source map, since file.source has probably already been
       // transformed in a way that does not preserve line numbers. That's
       // ok, though, because we have a source map, and we also annotate
       // line numbers using comments (see above), just in case source maps
@@ -725,15 +730,15 @@ _.extend(File.prototype, {
     }
 
     const result = {
-      code: self.source,
-      map: self.sourceMap || null,
+      code: file.source,
+      map: file.sourceMap || null,
     };
 
     var chunks = [];
-    var pathNoSlash = convertColons(self.servePath.replace(/^\//, ""));
+    var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
 
-    if (! self.bare) {
-      var closureHeader = self._getClosureHeader();
+    if (! file.bare) {
+      var closureHeader = file._getClosureHeader();
       chunks.push(
         closureHeader,
         preserveLineNumbers ? "" : "\n\n"
@@ -744,7 +749,7 @@ _.extend(File.prototype, {
       // Banner
       var bannerLines = [pathNoSlash];
 
-      if (self.bare) {
+      if (file.bare) {
         bannerLines.push(
           "This file is in bare mode and is not in its own closure.");
       }
@@ -779,12 +784,12 @@ _.extend(File.prototype, {
     }
 
     // Footer
-    if (self.bare) {
+    if (file.bare) {
       if (! preserveLineNumbers) {
         chunks.push(dividerLine(bannerWidth), "\n");
       }
     } else {
-      const closureFooter = self._getClosureFooter();
+      const closureFooter = file._getClosureFooter();
       if (preserveLineNumbers) {
         chunks.push(closureFooter);
       } else {
@@ -797,8 +802,21 @@ _.extend(File.prototype, {
     }
 
     return new sourcemap.SourceNode(null, null, null, chunks);
-  })
-});
+
+  }, {
+    // Store at most 4096 Files worth of prelinked output in this cache.
+    max: Math.pow(2, 12),
+
+    makeCacheKey(file, options) {
+      return JSON.stringify({
+        sourceHash: file.sourceHash,
+        bare: file.bare,
+        servePath: file.servePath,
+        options,
+      });
+    }
+  }
+);
 
 // Given a list of lines (not newline-terminated), returns a string placing them
 // in a pretty banner of width bannerWidth. All lines must have length at most
