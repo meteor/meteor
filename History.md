@@ -21,6 +21,11 @@
 * The `install` npm package used by `modules-runtime` has been updated to
   version 0.12.0.
 
+* The `uglify-es` npm package used by `minifier-js` has been replaced with
+  [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
+  `uglify-es` that appears to be (more actively) maintained.
+  [Issue #10042](https://github.com/meteor/meteor/issues/10042)
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
