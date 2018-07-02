@@ -21,6 +21,8 @@
 * The `install` npm package used by `modules-runtime` has been updated to
   version 0.12.0.
 
+* The `reify` npm package has been updated to version 0.16.3.
+
 * The `uglify-es` npm package used by `minifier-js` has been replaced with
   [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
   `uglify-es` that appears to be (more actively) maintained.
