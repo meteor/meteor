@@ -15,7 +15,6 @@ Package.registerBuildPlugin({
   sources: [
     'plugin/minify-js.js',
     'plugin/stats.js',
-    'plugin/visitor.js',
     'plugin/utils.js',
   ],
 });
