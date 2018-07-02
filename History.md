@@ -5,6 +5,11 @@
   defined by which compiler plugins you have enabled.
   [PR #10027](https://github.com/meteor/meteor/pull/10027)
 
+* The `uglify-es` npm package used by `minifier-js` has been replaced with
+  [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
+  `uglify-es` that appears to be (more actively) maintained.
+  [Issue #10042](https://github.com/meteor/meteor/issues/10042)
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
