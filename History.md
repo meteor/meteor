@@ -135,6 +135,11 @@
   [PR #10025](https://github.com/meteor/meteor/pull/10025).
   [Feature #310](https://github.com/meteor/meteor-feature-requests/issues/310)
 
+* Sub-resource integrity hashes (sha512) can now be enabled for static CSS
+  and JS assets by calling `WebAppInternals.enableSubresourceIntegrity()`.
+  [PR #9933](https://github.com/meteor/meteor/pull/9933)
+  [PR #10050](https://github.com/meteor/meteor/pull/10050)
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),

@@ -351,6 +351,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
         encodeURIComponent(JSON.stringify(runtimeConfig))),
       rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
       bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
+      sriMode: sriMode,
       inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
       inline: additionalOptions.inline
     }
@@ -1032,6 +1033,12 @@ WebAppInternals.setInlineScriptsAllowed = function (value) {
   WebAppInternals.generateBoilerplate();
 };
 
+var sriMode;
+
+WebAppInternals.enableSubresourceIntegrity = function(use_credentials = false) {
+  sriMode = use_credentials ? 'use-credentials' : 'anonymous';
+  WebAppInternals.generateBoilerplate();
+};
 
 WebAppInternals.setBundledJsCssUrlRewriteHook = function (hookFn) {
   bundledJsCssUrlRewriteHook = hookFn;
