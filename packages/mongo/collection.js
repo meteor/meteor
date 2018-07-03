@@ -210,6 +210,9 @@ Object.assign(Mongo.Collection.prototype, {
             var modifier = {};
             keys.forEach(key => {
               const value = msg.fields[key];
+              if (EJSON.equals(doc[key], value)) {
+                return;
+              }
               if (typeof value === "undefined") {
                 if (!modifier.$unset) {
                   modifier.$unset = {};
@@ -222,7 +225,9 @@ Object.assign(Mongo.Collection.prototype, {
                 modifier.$set[key] = value;
               }
             });
-            self._collection.update(mongoId, modifier);
+            if (Object.keys(modifier).length > 0) {
+              self._collection.update(mongoId, modifier);
+            }
           }
         } else {
           throw new Error("I don't know how to deal with this message");
