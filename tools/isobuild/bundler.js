@@ -2532,7 +2532,7 @@ class ServerTarget extends JsImageTarget {
   constructor (options, ...args) {
     super(options, ...args);
 
-    this.clientTargets = options.clientTargets;
+    this.clientArchs = options.clientArchs;
     this.releaseName = options.releaseName;
     this.appIdentifier = options.appIdentifier;
 
@@ -2549,11 +2549,6 @@ class ServerTarget extends JsImageTarget {
     buildMode,
     // falsy or 'symlink', documented in exports.bundle
     includeNodeModules,
-    // a function that takes {forTarget: Target, relativeTo: Target} and
-    // return the path of one target in the bundle relative to another. hack
-    // to get the path of the client target.. we'll find a better solution
-    // here eventually
-    getRelativeTargetPath,
   }) {
     var self = this;
     var nodePath = [];
@@ -2561,24 +2556,12 @@ class ServerTarget extends JsImageTarget {
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
 
-    // Mapping from arch to relative path to the client program, if we have any
-    // (hack). Ex.: { 'web.browser': '../web.browser/program.json', ... }
-    var clientTargetPaths = {};
-    if (self.clientTargets) {
-      _.each(self.clientTargets, function (target) {
-        clientTargetPaths[target.arch] = files.pathJoin(getRelativeTargetPath({
-          forTarget: target,
-          relativeTo: self,
-        }), 'program.json');
-      });
-    }
-
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
       meteorRelease: self.releaseName || undefined,
       appId: self.appIdentifier || undefined,
-      clientPaths: clientTargetPaths
+      clientArchs: self.clientArchs || undefined,
     });
 
     // Write package.json and npm-shrinkwrap.json for the dependencies of
@@ -2767,7 +2750,6 @@ var writeTargetToPath = Profile(
   "bundler writeTargetToPath",
   function (name, target, outputPath, {
     includeNodeModules,
-    getRelativeTargetPath,
     previousBuilder,
     buildMode,
     minifyMode,
@@ -2779,7 +2761,6 @@ var writeTargetToPath = Profile(
 
     var targetBuild = target.write(builder, {
       includeNodeModules,
-      getRelativeTargetPath,
       buildMode,
       minifyMode,
     });
@@ -2821,14 +2802,12 @@ var writeTargetToPath = Profile(
 // - includeNodeModules: string or falsy, documented on exports.bundle
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
-// - getRelativeTargetPath: see doc at ServerTarget.write
 // - previousBuilder: previous Builder object used in previous iteration
 var writeSiteArchive = Profile("bundler writeSiteArchive", function (
   targets, outputPath, {
     includeNodeModules,
     builtBy,
     releaseName,
-    getRelativeTargetPath,
     previousBuilders,
     buildMode,
     minifyMode
@@ -2916,7 +2895,6 @@ Find out more about Meteor at meteor.com.
           includeNodeModules,
           builtBy,
           releaseName,
-          getRelativeTargetPath,
           previousBuilder,
           buildMode,
           minifyMode
@@ -3106,22 +3084,18 @@ function bundle({
     });
 
     var makeServerTarget = Profile(
-      "bundler.bundle..makeServerTarget", function (app, clientTargets) {
-      var targetOptions = {
+      "bundler.bundle..makeServerTarget", function (app, clientArchs) {
+      const server = new ServerTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         sourceRoot: packageSource.sourceRoot,
         arch: serverArch,
-        releaseName: releaseName,
-        appIdentifier: appIdentifier,
+        releaseName,
+        appIdentifier,
         buildMode: buildOptions.buildMode,
-      };
-      if (clientTargets) {
-        targetOptions.clientTargets = clientTargets;
-      }
-
-      var server = new ServerTarget(targetOptions);
+        clientArchs,
+      });
 
       server.make({
         packages: [app]
@@ -3181,47 +3155,21 @@ function bundle({
       return mergeAppWatchSets();
     }
 
-    var clientTargets = [];
     // Client
     _.each(webArchs, function (arch) {
-      var client = makeClientTarget(app, arch, {minifiers});
-      clientTargets.push(client);
-      targets[arch] = client;
+      targets[arch] = makeClientTarget(app, arch, {minifiers});
     });
 
     // Server
     if (! hasCachedBundle) {
-      var server = makeServerTarget(app, clientTargets);
-      targets.server = server;
+      targets.server = makeServerTarget(app, webArchs);
     }
-
-    // Hack to let servers find relative paths to clients. Should find
-    // another solution eventually (probably some kind of mount
-    // directive that mounts the client bundle in the server at runtime)
-    var getRelativeTargetPath = function (options) {
-      var pathForTarget = function (target) {
-        var name;
-        _.each(targets, function (t, n) {
-          if (t === target) {
-            name = n;
-          }
-        });
-        if (! name) {
-          throw new Error("missing target?");
-        }
-        return files.pathJoin('programs', name);
-      };
-
-      return files.pathRelative(pathForTarget(options.relativeTo),
-                                pathForTarget(options.forTarget));
-    };
 
     // Write to disk
     var writeOptions = {
       includeNodeModules,
       builtBy,
       releaseName,
-      getRelativeTargetPath,
       minifyMode: minifyMode
     };
 
@@ -3237,7 +3185,7 @@ function bundle({
             _.extend({
               buildMode: buildOptions.buildMode,
             }, writeOptions, {previousBuilder})
-         );
+          );
           nodePath = nodePath.concat(targetBuild.nodePath);
           clientWatchSet.merge(target.getWatchSet());
           builders[name] = targetBuild.builder;
