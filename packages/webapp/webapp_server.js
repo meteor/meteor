@@ -1,5 +1,5 @@
 import assert from "assert";
-import { readFile } from "fs";
+import { readFileSync } from "fs";
 import { createServer } from "http";
 import {
   join as pathJoin,
@@ -59,10 +59,6 @@ var sha1 = function (contents) {
   var hash = createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
-};
-
-var readUtf8FileSync = function (filename) {
-  return Meteor.wrapAsync(readFile)(filename, 'utf8');
 };
 
 // #BrowserIdentification
@@ -571,92 +567,104 @@ function runWebAppServer() {
     syncQueue.runTask(function() {
       staticFilesByArch = Object.create(null);
 
-      function generateClientProgram(clientPath, arch) {
-        function addStaticFile(path, item) {
-          if (! hasOwn.call(staticFilesByArch, arch)) {
-            staticFilesByArch[arch] = Object.create(null);
-          }
-          staticFilesByArch[arch][path] = item;
-        }
-
-        // read the control for the client we'll be serving up
-        var clientJsonPath = pathJoin(__meteor_bootstrap__.serverDir,
-                                   clientPath);
-        var clientDir = pathDirname(clientJsonPath);
-        var clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
-        if (clientJson.format !== "web-program-pre1")
-          throw new Error("Unsupported format for client assets: " +
-                          JSON.stringify(clientJson.format));
-
-        if (! clientJsonPath || ! clientDir || ! clientJson)
-          throw new Error("Client config file not parsed.");
-
-        var manifest = clientJson.manifest;
-        _.each(manifest, function (item) {
-          if (item.url && item.where === "client") {
-            addStaticFile(getItemPathname(item.url), {
-              absolutePath: pathJoin(clientDir, item.path),
-              cacheable: item.cacheable,
-              hash: item.hash,
-              // Link from source to its map
-              sourceMapUrl: item.sourceMapUrl,
-              type: item.type
-            });
-
-            if (item.sourceMap) {
-              // Serve the source map too, under the specified URL. We assume all
-              // source maps are cacheable.
-              addStaticFile(getItemPathname(item.sourceMapUrl), {
-                absolutePath: pathJoin(clientDir, item.sourceMap),
-                cacheable: true
-              });
-            }
-          }
-        });
-
-        var program = {
-          format: "web-program-pre1",
-          manifest: manifest,
-          version: process.env.AUTOUPDATE_VERSION ||
-            WebAppHashing.calculateClientHash(
-              manifest,
-              null,
-              _.pick(__meteor_runtime_config__, "PUBLIC_SETTINGS")
-            ),
-          cordovaCompatibilityVersions: clientJson.cordovaCompatibilityVersions,
-          PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
-        };
-
-        WebApp.clientPrograms[arch] = program;
-
-        // Expose program details as a string reachable via the following
-        // URL.
-        const manifestUrlPrefix = "/__" + arch.replace(/^web\./, "");
-        const manifestUrl = manifestUrlPrefix +
-          getItemPathname("/manifest.json");
-
-        addStaticFile(manifestUrl, {
-          content: JSON.stringify(program),
-          cacheable: false,
-          hash: program.version,
-          type: "json"
-        });
-      }
+      const { configJson } = __meteor_bootstrap__;
+      const clientArchs = configJson.clientArchs ||
+        Object.keys(configJson.clientPaths);
 
       try {
-        var clientPaths = __meteor_bootstrap__.configJson.clientPaths;
-        _.each(clientPaths, function (clientPath, arch) {
-          archPath[arch] = pathDirname(clientPath);
-          generateClientProgram(clientPath, arch);
+        clientArchs.forEach(arch => {
+          WebAppInternals.generateClientProgram(arch);
         });
-
-        // Exported for tests.
         WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error("Error reloading the client program: " + e.stack);
         process.exit(1);
       }
     });
+  };
+
+  WebAppInternals.generateClientProgram = function (arch) {
+    if (hasOwn.call(staticFilesByArch, arch)) {
+      return;
+    }
+
+    // read the control for the client we'll be serving up
+
+    const clientDir = pathJoin(
+      pathDirname(__meteor_bootstrap__.serverDir),
+      arch,
+    );
+
+    const programJsonPath = pathJoin(clientDir, "program.json");
+
+    let programJson;
+    try {
+      programJson = JSON.parse(readFileSync(programJsonPath));
+    } catch (e) {
+      if (e.code === "ENOENT") return;
+      throw e;
+    }
+
+    if (programJson.format !== "web-program-pre1") {
+      throw new Error("Unsupported format for client assets: " +
+                      JSON.stringify(programJson.format));
+    }
+
+    if (! programJsonPath || ! clientDir || ! programJson) {
+      throw new Error("Client config file not parsed.");
+    }
+
+    archPath[arch] = clientDir;
+    const staticFiles = staticFilesByArch[arch] = Object.create(null);
+
+    const { manifest } = programJson;
+    manifest.forEach(item => {
+      if (item.url && item.where === "client") {
+        staticFiles[getItemPathname(item.url)] = {
+          absolutePath: pathJoin(clientDir, item.path),
+          cacheable: item.cacheable,
+          hash: item.hash,
+          // Link from source to its map
+          sourceMapUrl: item.sourceMapUrl,
+          type: item.type
+        };
+
+        if (item.sourceMap) {
+          // Serve the source map too, under the specified URL. We assume
+          // all source maps are cacheable.
+          staticFiles[getItemPathname(item.sourceMapUrl)] = {
+            absolutePath: pathJoin(clientDir, item.sourceMap),
+            cacheable: true
+          };
+        }
+      }
+    });
+
+    const program = {
+      format: "web-program-pre1",
+      manifest: manifest,
+      version: process.env.AUTOUPDATE_VERSION ||
+        WebAppHashing.calculateClientHash(
+          manifest,
+          null,
+          _.pick(__meteor_runtime_config__, "PUBLIC_SETTINGS")
+        ),
+      cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,
+      PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
+    };
+
+    WebApp.clientPrograms[arch] = program;
+
+    // Expose program details as a string reachable via the following URL.
+    const manifestUrlPrefix = "/__" + arch.replace(/^web\./, "");
+    const manifestUrl = manifestUrlPrefix + getItemPathname("/manifest.json");
+
+    staticFiles[manifestUrl] = {
+      content: JSON.stringify(program),
+      cacheable: false,
+      hash: program.version,
+      type: "json"
+    };
   };
 
   WebAppInternals.generateBoilerplate = function () {
