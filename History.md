@@ -1,13 +1,90 @@
 ## v.NEXT
 
+## v1.7.1, TBD
+
+* Compiler plugins that call `inputFile.addJavaScript` or
+  `inputFile.addStylesheet` may now delay expensive compilation work by
+  passing partial options (`{ path, hash }`) as the first argument,
+  followed by a callback function as the second argument, which will be
+  called by the build system once it knows the module will actually be
+  included in the bundle. For example, here's the old implementation of
+  `BabelCompiler#processFilesForTarget`:
+  ```js
+  processFilesForTarget(inputFiles) {
+    inputFiles.forEach(inputFile => {
+      var toBeAdded = this.processOneFileForTarget(inputFile);
+      if (toBeAdded) {
+        inputFile.addJavaScript(toBeAdded);
+      }
+    });
+  }
+  ```
+  and here's the new version:
+  ```js
+  processFilesForTarget(inputFiles) {
+    inputFiles.forEach(inputFile => {
+      if (inputFile.supportsLazyCompilation) {
+        inputFile.addJavaScript({
+          path: inputFile.getPathInPackage(),
+          hash: inputFile.getSourceHash(),
+        }, function () {
+          return this.processOneFileForTarget(inputFile);
+        });
+      } else {
+        var toBeAdded = this.processOneFileForTarget(inputFile);
+        if (toBeAdded) {
+          inputFile.addJavaScript(toBeAdded);
+        }
+      }
+    });
+  }
+  ```
+  If you are an author of a compiler plugin, we strongly recommend using
+  this new API, since unnecessary compilation of files that are not
+  included in the bundle can be a major source of performance problems for
+  compiler plugins. Although this new API is only available in Meteor
+  1.7.1, you can use `inputFile.supportsLazyCompilation` to determine
+  dynamically whether the new API is available, so you can support older
+  versions of Meteor without having to publish multiple versions of your
+  package. [PR #9983](https://github.com/meteor/meteor/pull/9983)
+
 * The `npm` package has been upgraded to version 6.1.0, and our
   [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
   `pacote` dependency has been rebased against version 8.1.6.
+
+* Scripts run via `meteor npm ...` can now use the `meteor` command more
+  safely, since the `PATH` environment variable will now be set so that
+  `meteor` always refers to the same `meteor` used to run `meteor npm`.
+  [PR #9941](https://github.com/meteor/meteor/pull/9941)
 
 * Importing a directory containing an `index.*` file now works for
   non-`.js` file extensions. As before, the list of possible extensions is
   defined by which compiler plugins you have enabled.
   [PR #10027](https://github.com/meteor/meteor/pull/10027)
+
+* Any client (modern or legacy) may now request any static JS or CSS
+  `web.browser` or `web.browser.legacy` resource, even if it was built for
+  a different architecture, which greatly simplifies CDN setup if your CDN
+  does not forward the `User-Agent` header to the origin.
+  [Issue #9953](https://github.com/meteor/meteor/issues/9953)
+  [PR #9965](https://github.com/meteor/meteor/pull/9965)
+
+* Cross-origin dynamic `import()` requests will now succeed in more cases.
+  [PR #9954](https://github.com/meteor/meteor/pull/9954)
+
+* Dynamic CSS modules (which are compiled to JS and handled like any other
+  JS module) will now be properly minified in production and source mapped
+  in development. [PR #9998](https://github.com/meteor/meteor/pull/9998)
+
+* While CSS is only minified in production, CSS files must be merged
+  together into a single stylesheet in both development and production.
+  This merging is [cached by `standard-minifier-css`](https://github.com/meteor/meteor/blob/183d5ff9500d908d537f58d35ce6cd6d780ab270/packages/standard-minifier-css/plugin/minify-css.js#L58-L62)
+  so that it does not happen on every rebuild in development, but not all
+  CSS minifier packages use the same caching techniques. Thanks to
+  [1ed095c36d](https://github.com/meteor/meteor/pull/9942/commits/1ed095c36d7b2915872eb0c943dae0c4f870d7e4),
+  this caching is now performed within the Meteor build tool, so it works
+  the same way for all CSS minifier packages, which may eliminate a few
+  seconds of rebuild time for projects with lots of CSS.
 
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
   to version 7.0.0-beta.51-1.
@@ -27,6 +104,36 @@
   [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
   `uglify-es` that appears to be (more actively) maintained.
   [Issue #10042](https://github.com/meteor/meteor/issues/10042)
+
+* When a Meteor application uses a compiler plugin to process files with a
+  particular file extension (other than `.js` or `.json`), those file
+  extensions should be automatically appended to imports that do not
+  resolve as written. However, this behavior was not previously enabled
+  for modules inside `node_modules`. Thanks to
+  [8b04c25390](https://github.com/meteor/meteor/pull/9942/commits/8b04c253900e4ca2a194d2fcaf6fc2ce9a9085e7),
+  the same file extensions that are applied to modules outside the
+  `node_modules` directory will now be applied to those within it, though
+  `.js` and `.json` will always be tried first.
+
+* As foreshadowed in this [talk](https://youtu.be/vpCotlPieIY?t=29m18s)
+  about Meteor 1.7's modern/legacy bundling system
+  ([slides](https://slides.com/benjamn/meteor-night-may-2018#/46)), Meteor
+  now provides an isomorphic implementation of the [WHATWG `fetch()`
+  API](https://fetch.spec.whatwg.org/), which can be installed by running
+  ```sh
+  meteor add fetch
+  ```
+  This package is a great demonstration of the modern/legacy bundling
+  system, since it has very different implementations in modern
+  browsers, legacy browsers, and Node.
+  [PR #10029](https://github.com/meteor/meteor/pull/10029)
+
+* The [`bundle-visualizer`
+  package](https://github.com/meteor/meteor/tree/release-1.7.1/packages/non-core/bundle-visualizer)
+  has received a number of UI improvements thanks to work by
+  [@jamesmillerburgess](https://github.com/jamesmillerburgess) in
+  [PR #10025](https://github.com/meteor/meteor/pull/10025).
+  [Feature #310](https://github.com/meteor/meteor-feature-requests/issues/310)
 
 ## v1.7.0.3, 2018-06-13
 
