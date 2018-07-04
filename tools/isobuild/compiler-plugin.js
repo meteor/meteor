@@ -189,9 +189,10 @@ export class CompilerPluginProcessor {
             return new InputFile(resourceSlot);
           });
 
-          var markedMethod = buildmessage.markBoundary(
-            sourceProcessor.userPlugin.processFilesForTarget.bind(
-              sourceProcessor.userPlugin));
+          const markedMethod = buildmessage.markBoundary(
+            sourceProcessor.userPlugin.processFilesForTarget,
+            sourceProcessor.userPlugin
+          );
 
           try {
             Promise.await(markedMethod(inputFiles));

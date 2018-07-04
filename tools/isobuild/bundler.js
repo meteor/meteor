@@ -1320,12 +1320,13 @@ class Target {
       }
     });
 
-    var minifier = minifierDef.userPlugin.processFilesForBundle
-      .bind(minifierDef.userPlugin);
+    var markedMinifier = buildmessage.markBoundary(
+      minifierDef.userPlugin.processFilesForBundle,
+      minifierDef.userPlugin
+    );
 
     buildmessage.enterJob('minifying app code', function () {
       try {
-        var markedMinifier = buildmessage.markBoundary(minifier);
         Promise.all([
           markedMinifier(staticFiles, { minifyMode }),
           ...dynamicFiles.map(
