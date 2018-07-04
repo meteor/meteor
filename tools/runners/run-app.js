@@ -389,7 +389,7 @@ var AppRunner = function (options) {
 
   // Builders saved across rebuilds, so that targets can be re-written in
   // place instead of created again from scratch.
-  self.builders = {};
+  self.builders = Object.create(null);
 };
 
 _.extend(AppRunner.prototype, {
@@ -576,7 +576,7 @@ _.extend(AppRunner.prototype, {
       }
 
       var bundleResult = Profile.run((firstRun?"B":"Reb")+"uild App", () => {
-        var bundleResult = bundler.bundle({
+        return bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
           includeNodeModules: "symlink",
@@ -584,11 +584,6 @@ _.extend(AppRunner.prototype, {
           hasCachedBundle: !! cachedServerWatchSet,
           previousBuilders: self.builders
         });
-
-        // save new builders with their caches
-        self.builders = bundleResult.builders;
-
-        return bundleResult;
       });
 
       // Keep the server watch set from the initial bundle, because subsequent

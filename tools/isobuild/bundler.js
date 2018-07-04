@@ -2750,7 +2750,7 @@ var writeTargetToPath = Profile(
   "bundler writeTargetToPath",
   function (name, target, outputPath, {
     includeNodeModules,
-    previousBuilder,
+    previousBuilder = null,
     buildMode,
     minifyMode,
   }) {
@@ -2808,16 +2808,16 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     includeNodeModules,
     builtBy,
     releaseName,
-    previousBuilders,
+    previousBuilders = Object.create(null),
     buildMode,
     minifyMode
   }) {
 
   const builders = {};
-  const previousStarBuilder = previousBuilders && previousBuilders.star;
-  const builder = new Builder({outputPath,
-                               previousBuilder: previousStarBuilder});
-  builders.star = builder;
+  const builder = builders.star = new Builder({
+    outputPath,
+    previousBuilder: previousBuilders.star,
+  });
 
   try {
     var json = {
@@ -2883,22 +2883,18 @@ Find out more about Meteor at meteor.com.
 
     Object.keys(targets).forEach(name => {
       const target = targets[name];
-      const previousBuilder =
-              (previousBuilders && previousBuilders[name]) ?
-              previousBuilders[name] : null;
       const {
         arch, path, cordovaDependencies,
         nodePath: targetNP,
         builder: targetBuilder
-      } =
-        writeTargetToPath(name, target, builder.buildPath, {
-          includeNodeModules,
-          builtBy,
-          releaseName,
-          previousBuilder,
-          buildMode,
-          minifyMode
-        });
+      } = writeTargetToPath(name, target, builder.buildPath, {
+        includeNodeModules,
+        builtBy,
+        releaseName,
+        previousBuilder: previousBuilders[name] || null,
+        buildMode,
+        minifyMode
+      });
 
       builders[name] = targetBuilder;
 
@@ -2921,7 +2917,8 @@ Find out more about Meteor at meteor.com.
     // be adjusted so we can later pass them as previousBuilder's
     Object.keys(builders).forEach(name => {
       const subBuilder = builders[name];
-      subBuilder.outputPath = builder.outputPath + subBuilder.outputPath.substring(builder.buildPath.length);
+      subBuilder.outputPath = builder.outputPath +
+        subBuilder.outputPath.substring(builder.buildPath.length);
     });
 
     return {
@@ -2929,7 +2926,7 @@ Find out more about Meteor at meteor.com.
       serverWatchSet,
       starManifest: json,
       nodePath,
-      builders
+      builders,
     };
   } catch (e) {
     builder.abort();
@@ -3009,7 +3006,7 @@ function bundle({
   outputPath,
   includeNodeModules,
   buildOptions,
-  previousBuilders,
+  previousBuilders = Object.create(null),
   hasCachedBundle,
 }) {
   buildOptions = buildOptions || {};
@@ -3041,7 +3038,6 @@ function bundle({
   var targets = {};
   var nodePath = [];
   var lintingMessages = null;
-  var builders = {};
 
   const bundlerCacheDir =
       projectContext.getProjectLocalDirectory('bundler-cache');
@@ -3177,32 +3173,26 @@ function bundle({
       if (hasCachedBundle) {
         // If we already have a cached bundle, just recreate the new targets.
         // XXX This might make the contents of "star.json" out of date.
-        builders = _.clone(previousBuilders);
         _.each(targets, function (target, name) {
-          const previousBuilder = previousBuilders && previousBuilders[name];
-          var targetBuild = writeTargetToPath(
-            name, target, outputPath,
-            _.extend({
-              buildMode: buildOptions.buildMode,
-            }, writeOptions, {previousBuilder})
-          );
+          var targetBuild = writeTargetToPath(name, target, outputPath, {
+            buildMode: buildOptions.buildMode,
+            previousBuilder: previousBuilders[name],
+            ...writeOptions,
+          });
           nodePath = nodePath.concat(targetBuild.nodePath);
           clientWatchSet.merge(target.getWatchSet());
-          builders[name] = targetBuild.builder;
+          previousBuilders[name] = targetBuild.builder;
         });
       } else {
-        starResult = writeSiteArchive(
-          targets,
-          outputPath,
-          _.extend({
-            buildMode: buildOptions.buildMode,
-          }, writeOptions, {previousBuilders})
-        );
-
+        starResult = writeSiteArchive(targets, outputPath, {
+          buildMode: buildOptions.buildMode,
+          previousBuilders,
+          ...writeOptions,
+        });
         nodePath = nodePath.concat(starResult.nodePath);
         serverWatchSet.merge(starResult.serverWatchSet);
         clientWatchSet.merge(starResult.clientWatchSet);
-        builders = starResult.builders;
+        Object.assign(previousBuilders, starResult.builders);
       }
     }
 
@@ -3221,7 +3211,6 @@ function bundle({
     clientWatchSet,
     starManifest: starResult && starResult.starManifest,
     nodePath,
-    builders
   };
 }
 
