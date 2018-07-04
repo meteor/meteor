@@ -1583,8 +1583,6 @@ class ClientTarget extends Target {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the target
-  // - nodePath: an array of paths required to be set in the NODE_PATH
-  // environment variable.
   write(builder, {minifyMode}) {
     builder.reserve("program.json");
 
@@ -1769,8 +1767,7 @@ class ClientTarget extends Target {
     builder.writeJson('program.json', program);
 
     return {
-      controlFile: "program.json",
-      nodePath: []
+      controlFile: "program.json"
     };
   }
 }
@@ -2195,8 +2192,6 @@ class JsImage {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the image
-  // - nodePath: an array of paths required to be set in the NODE_PATH
-  // environment variable.
   write(builder, {
     buildMode,
     // falsy or 'symlink', documented on exports.bundle
@@ -2414,8 +2409,7 @@ class JsImage {
     });
 
     return {
-      controlFile: "program.json",
-      nodePath: []
+      controlFile: "program.json"
     };
   }
 
@@ -2551,7 +2545,6 @@ class ServerTarget extends JsImageTarget {
     includeNodeModules,
   }) {
     var self = this;
-    var nodePath = [];
 
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
@@ -2655,7 +2648,6 @@ class ServerTarget extends JsImageTarget {
     var controlFilePath = 'boot.js';
     return {
       controlFile: controlFilePath,
-      nodePath: nodePath
     };
   }
 }
@@ -2771,7 +2763,6 @@ var writeTargetToPath = Profile(
       name,
       arch: target.mostCompatibleArch(),
       path: files.pathJoin('programs', name, targetBuild.controlFile),
-      nodePath: targetBuild.nodePath,
       cordovaDependencies: target.cordovaDependencies || undefined,
       builder
     };
@@ -2794,8 +2785,6 @@ var writeTargetToPath = Profile(
 //     serverWatchSet: watch.WatchSet for all files and directories that
 //                     ultimately went into all server programs
 //     starManifest: the JSON manifest of the star
-//     nodePath: an array of paths required to be set in NODE_PATH. It's
-//               up to the called to determine what they should be.
 // }
 //
 // options:
@@ -2828,7 +2817,6 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
     };
-    var nodePath = [];
 
     // Tell the deploy server what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied or
@@ -2885,7 +2873,6 @@ Find out more about Meteor at meteor.com.
       const target = targets[name];
       const {
         arch, path, cordovaDependencies,
-        nodePath: targetNP,
         builder: targetBuilder
       } = writeTargetToPath(name, target, builder.buildPath, {
         includeNodeModules,
@@ -2901,8 +2888,6 @@ Find out more about Meteor at meteor.com.
       json.programs.push({
         name, arch, path, cordovaDependencies
       });
-
-      nodePath = nodePath.concat(targetNP);
     });
 
     // Control file
@@ -2925,7 +2910,6 @@ Find out more about Meteor at meteor.com.
       clientWatchSet,
       serverWatchSet,
       starManifest: json,
-      nodePath,
       builders,
     };
   } catch (e) {
@@ -3036,7 +3020,6 @@ function bundle({
   var clientWatchSet = new watch.WatchSet();
   var starResult = null;
   var targets = {};
-  var nodePath = [];
   var lintingMessages = null;
 
   const bundlerCacheDir =
@@ -3179,7 +3162,6 @@ function bundle({
             previousBuilder: previousBuilders[name],
             ...writeOptions,
           });
-          nodePath = nodePath.concat(targetBuild.nodePath);
           clientWatchSet.merge(target.getWatchSet());
           previousBuilders[name] = targetBuild.builder;
         });
@@ -3189,7 +3171,6 @@ function bundle({
           previousBuilders,
           ...writeOptions,
         });
-        nodePath = nodePath.concat(starResult.nodePath);
         serverWatchSet.merge(starResult.serverWatchSet);
         clientWatchSet.merge(starResult.clientWatchSet);
         Object.assign(previousBuilders, starResult.builders);
@@ -3210,7 +3191,6 @@ function bundle({
     serverWatchSet,
     clientWatchSet,
     starManifest: starResult && starResult.starManifest,
-    nodePath,
   };
 }
 

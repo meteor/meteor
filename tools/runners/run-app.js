@@ -65,7 +65,6 @@ var AppProcess = function (options) {
   self.onExit = options.onExit;
   self.onListen = options.onListen;
   self.nodeOptions = options.nodeOptions || [];
-  self.nodePath = options.nodePath || [];
   self.inspect = options.inspect;
   self.settings = options.settings;
   self.testMetadata = options.testMetadata;
@@ -224,13 +223,6 @@ _.extend(AppProcess.prototype, {
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
 
-    // use node's path module and not 'files.js' because NODE_PATH is an
-    // environment variable passed to an external process and needs to be
-    // constructed in the OS-style.
-    var path = require('path');
-    env.NODE_PATH =
-      self.nodePath.join(path.delimiter);
-
     return env;
   },
 
@@ -239,7 +231,6 @@ _.extend(AppProcess.prototype, {
     var self = this;
 
     // Path conversions
-    var nodePath = process.execPath; // This path is an OS path already
     var entryPoint = files.convertToOSPath(
       files.pathJoin(self.bundlePath, 'main.js'));
 
@@ -263,7 +254,7 @@ _.extend(AppProcess.prototype, {
     var child_process = require('child_process');
     // setup the 'ipc' pipe if further communication between app and proxy is
     // expected
-    var child = child_process.spawn(nodePath, opts, {
+    var child = child_process.spawn(process.execPath, opts, {
       env: self._computeEnvironment(),
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
     });
@@ -728,7 +719,6 @@ _.extend(AppRunner.prototype, {
         self._resolvePromise("start");
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
       settings: settings,
       testMetadata: self.testMetadata,
     });
