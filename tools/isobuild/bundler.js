@@ -3166,12 +3166,17 @@ function bundle({
         // If we have a previous builder for this arch, and it's an arch
         // that we can safely build later (e.g. web.browser.legacy), then
         // schedule it to be built after the others.
-        postStartupCallbacks.push(childProcess => {
+        postStartupCallbacks.push(({
+          childProcess,
+          runLog,
+        }) => {
           const start = +new Date;
 
           // Build and write the target in one step.
           writeClientTarget(makeClientTarget(app, arch, { minifiers }));
 
+          // Return a Promise so that the caller has to wait for the
+          // childProcess.send to complete.
           return new Promise((resolve, reject) => {
             // Let the webapp package running in the child process know it
             // should regenerate the client program for this arch.
@@ -3183,13 +3188,15 @@ function bundle({
               if (error) {
                 reject(error);
               } else {
-                resolve(`Finished delayed build of ${arch} in ${
+                runLog.log(`Finished delayed build of ${arch} in ${
                   new Date - start
-                }ms`);
+                }ms`, { arrow: true });
+                resolve();
               }
             });
           });
         });
+
       } else {
         // Otherwise make the client target now, and write it below.
         targets[arch] = makeClientTarget(app, arch, {minifiers});

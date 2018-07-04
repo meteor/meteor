@@ -796,10 +796,11 @@ _.extend(AppRunner.prototype, {
         while (callbacks.length > 0) {
           const fn = callbacks.shift();
           try {
-            const message = Promise.await(fn(appProcess.proc));
-            if (message) {
-              runLog.log(message, { arrow: true });
-            }
+            Promise.await(fn({
+              // Miscellany that the callback might find useful.
+              childProcess: appProcess.proc,
+              runLog,
+            }));
           } catch (error) {
             buildmessage.error(error);
           }
