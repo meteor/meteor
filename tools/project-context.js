@@ -1297,7 +1297,7 @@ _.extend(exports.PlatformList.prototype, {
     return ! _.isEmpty(self.getCordovaPlatforms());
   },
 
-  getWebArchs: function () {
+  getWebArchs() {
     var self = this;
     var archs = [
       "web.browser",
@@ -1307,6 +1307,10 @@ _.extend(exports.PlatformList.prototype, {
       archs.push("web.cordova");
     }
     return archs;
+  },
+
+  canDelayBuildingArch(arch) {
+    return arch === "web.browser.legacy";
   }
 });
 

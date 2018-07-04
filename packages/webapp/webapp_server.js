@@ -583,6 +583,14 @@ function runWebAppServer() {
     });
   };
 
+  process.on("message", message => {
+    if (message.package !== "webapp") return;
+    if (message.method === "generateClientProgram") {
+      delete staticFilesByArch[message.args[0]];
+      WebAppInternals.generateClientProgram(...message.args);
+    }
+  });
+
   WebAppInternals.generateClientProgram = function (arch) {
     if (hasOwn.call(staticFilesByArch, arch)) {
       return;

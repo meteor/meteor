@@ -3019,8 +3019,11 @@ function bundle({
   var serverWatchSet = new watch.WatchSet();
   var clientWatchSet = new watch.WatchSet();
   var starResult = null;
-  var targets = {};
   var lintingMessages = null;
+
+  // Will be populated with callbacks to be called after the application
+  // process has started up.
+  const postStartupCallbacks = [];
 
   const bundlerCacheDir =
       projectContext.getProjectLocalDirectory('bundler-cache');
@@ -3134,9 +3137,63 @@ function bundle({
       return mergeAppWatchSets();
     }
 
+    const targets = Object.create(null);
+    const hasOwn = Object.prototype.hasOwnProperty;
+
+    // Write to disk
+    const writeOptions = {
+      includeNodeModules,
+      builtBy,
+      releaseName,
+      minifyMode,
+    };
+
+    function writeClientTarget(target) {
+      const { arch } = target;
+      const written = writeTargetToPath(arch, target, outputPath, {
+        buildMode: buildOptions.buildMode,
+        previousBuilder: previousBuilders[arch],
+        ...writeOptions,
+      });
+      clientWatchSet.merge(target.getWatchSet());
+      previousBuilders[arch] = written.builder;
+    }
+
     // Client
-    _.each(webArchs, function (arch) {
-      targets[arch] = makeClientTarget(app, arch, {minifiers});
+    webArchs.forEach(arch => {
+      if (hasOwn.call(previousBuilders, arch) &&
+          projectContext.platformList.canDelayBuildingArch(arch)) {
+        // If we have a previous builder for this arch, and it's an arch
+        // that we can safely build later (e.g. web.browser.legacy), then
+        // schedule it to be built after the others.
+        postStartupCallbacks.push(childProcess => {
+          const start = +new Date;
+
+          // Build and write the target in one step.
+          writeClientTarget(makeClientTarget(app, arch, { minifiers }));
+
+          return new Promise((resolve, reject) => {
+            // Let the webapp package running in the child process know it
+            // should regenerate the client program for this arch.
+            childProcess.send({
+              "package": "webapp",
+              "method": "generateClientProgram",
+              "args": [arch],
+            }, error => {
+              if (error) {
+                reject(error);
+              } else {
+                resolve(`Finished delayed build of ${arch} in ${
+                  new Date - start
+                }ms`);
+              }
+            });
+          });
+        });
+      } else {
+        // Otherwise make the client target now, and write it below.
+        targets[arch] = makeClientTarget(app, arch, {minifiers});
+      }
     });
 
     // Server
@@ -3144,27 +3201,11 @@ function bundle({
       targets.server = makeServerTarget(app, webArchs);
     }
 
-    // Write to disk
-    var writeOptions = {
-      includeNodeModules,
-      builtBy,
-      releaseName,
-      minifyMode: minifyMode
-    };
-
     if (outputPath !== null) {
       if (hasCachedBundle) {
         // If we already have a cached bundle, just recreate the new targets.
         // XXX This might make the contents of "star.json" out of date.
-        _.each(targets, function (target, name) {
-          var targetBuild = writeTargetToPath(name, target, outputPath, {
-            buildMode: buildOptions.buildMode,
-            previousBuilder: previousBuilders[name],
-            ...writeOptions,
-          });
-          clientWatchSet.merge(target.getWatchSet());
-          previousBuilders[name] = targetBuild.builder;
-        });
+        _.each(targets, writeClientTarget);
       } else {
         starResult = writeSiteArchive(targets, outputPath, {
           buildMode: buildOptions.buildMode,
@@ -3191,6 +3232,7 @@ function bundle({
     serverWatchSet,
     clientWatchSet,
     starManifest: starResult && starResult.starManifest,
+    postStartupCallbacks,
   };
 }
 

@@ -786,7 +786,39 @@ _.extend(AppRunner.prototype, {
       setupClientWatcher();
     }
 
+    function runPostStartupCallbacks(bundleResult) {
+      const callbacks = bundleResult.postStartupCallbacks;
+      if (! callbacks) return;
+
+      const messages = buildmessage.capture({
+        title: "running post-startup callbacks"
+      }, () => {
+        while (callbacks.length > 0) {
+          const fn = callbacks.shift();
+          try {
+            const message = Promise.await(fn(appProcess.proc));
+            if (message) {
+              runLog.log(message, { arrow: true });
+            }
+          } catch (error) {
+            buildmessage.error(error);
+          }
+        }
+      });
+
+      if (messages.hasMessages()) {
+        return {
+          outcome: "bundle-fail",
+          errors: messages,
+          watchSet: bundleResult.clientWatchSet,
+        };
+      }
+    }
+
     Console.enableProgressDisplay(false);
+
+    const postStartupResult = runPostStartupCallbacks(bundleResult);
+    if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
@@ -826,6 +858,9 @@ _.extend(AppRunner.prototype, {
 
         // Establish a watcher on the new files.
         setupClientWatcher();
+
+        const postStartupResult = runPostStartupCallbacks(bundleResult);
+        if (postStartupResult) return postStartupResult;
 
         // Wait until another file changes.
         ret = oldPromise.await();
