@@ -2992,6 +2992,7 @@ function bundle({
   buildOptions,
   previousBuilders = Object.create(null),
   hasCachedBundle,
+  allowDelayedClientBuilds = false,
 }) {
   buildOptions = buildOptions || {};
 
@@ -3021,9 +3022,9 @@ function bundle({
   var starResult = null;
   var lintingMessages = null;
 
-  // Will be populated with callbacks to be called after the application
-  // process has started up.
-  const postStartupCallbacks = [];
+  // If delayed client builds are allowed, this array will be populated
+  // with callbacks to run after the application process has started up.
+  const postStartupCallbacks = allowDelayedClientBuilds && [];
 
   const bundlerCacheDir =
       projectContext.getProjectLocalDirectory('bundler-cache');
@@ -3161,11 +3162,13 @@ function bundle({
 
     // Client
     webArchs.forEach(arch => {
-      if (hasOwn.call(previousBuilders, arch) &&
+      if (allowDelayedClientBuilds &&
+          hasOwn.call(previousBuilders, arch) &&
           projectContext.platformList.canDelayBuildingArch(arch)) {
-        // If we have a previous builder for this arch, and it's an arch
-        // that we can safely build later (e.g. web.browser.legacy), then
-        // schedule it to be built after the others.
+        // If delayed client builds are allowed, and we have a previous
+        // builder for this arch, and it's an arch that we can safely
+        // build later (e.g. web.browser.legacy), then schedule it to be
+        // built after the server has started up.
         postStartupCallbacks.push(({
           childProcess,
           runLog,

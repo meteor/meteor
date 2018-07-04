@@ -573,7 +573,10 @@ _.extend(AppRunner.prototype, {
           includeNodeModules: "symlink",
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
-          previousBuilders: self.builders
+          previousBuilders: self.builders,
+          // Permit delayed bundling of client architectures if the
+          // console is interactive.
+          allowDelayedClientBuilds: ! Console.isHeadless(),
         });
       });
 
