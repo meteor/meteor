@@ -7,13 +7,18 @@ meteorJsMinify = function (source) {
   terser = terser || Npm.require("terser");
 
   try {
+    source = source
+      .replace(/Meteor\.isServer|Meteor\.isDevelopment|process\.env\.NODE_DEBUG/g, 'UGLYFYJS_FALSE')
+      .replace(/Meteor\.isClient|Meteor\.isProduction/g, 'UGLYFYJS_TRUE');
     var terserResult = terser.minify(source, {
       compress: {
         drop_debugger: false,
         unused: false,
         dead_code: true,
         global_defs: {
-          "process.env.NODE_ENV": NODE_ENV
+          "process.env.NODE_ENV": NODE_ENV,
+          UGLYFYJS_FALSE: false,
+          UGLYFYJS_TRUE: true
         }
       },
       mangle: {
