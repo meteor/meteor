@@ -583,11 +583,13 @@ function runWebAppServer() {
     });
   };
 
-  process.on("message", message => {
+  process.on("message", async (message) => {
     if (message.package !== "webapp") return;
     if (message.method === "generateClientProgram") {
-      delete staticFilesByArch[message.args[0]];
-      WebAppInternals.generateClientProgram(...message.args);
+      syncQueue.runTask(() => {
+        delete staticFilesByArch[message.args[0]];
+        WebAppInternals.generateClientProgram(...message.args);
+      });
     }
   });
 
