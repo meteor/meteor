@@ -206,12 +206,6 @@ Meteor.startup(function () {
     ].versionNonRefreshable;
   };
 
-  WebApp.calculateClientHashCordova = function () {
-    return (WebApp.clientPrograms["web.cordova"] || {
-      version: "none"
-    }).version;
-  };
-
   WebApp.getRefreshableAssets = function (arch) {
     return WebApp.clientPrograms[
       arch || WebApp.defaultArch
