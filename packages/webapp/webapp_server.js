@@ -1036,10 +1036,6 @@ function runWebAppServer() {
   };
 }
 
-
-runWebAppServer();
-
-
 var inlineScriptsAllowed = true;
 
 WebAppInternals.inlineScriptsAllowed = function () {
@@ -1083,3 +1079,6 @@ WebAppInternals.addStaticJs = function (contents) {
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
+
+// Start the server!
+runWebAppServer();
