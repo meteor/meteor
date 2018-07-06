@@ -3170,7 +3170,7 @@ function bundle({
         // build later (e.g. web.browser.legacy), then schedule it to be
         // built after the server has started up.
         postStartupCallbacks.push(({
-          childProcess,
+          refreshClient,
           runLog,
         }) => {
           const start = +new Date;
@@ -3178,25 +3178,12 @@ function bundle({
           // Build and write the target in one step.
           writeClientTarget(makeClientTarget(app, arch, { minifiers }));
 
-          // Return a Promise so that the caller has to wait for the
-          // childProcess.send to complete.
-          return new Promise((resolve, reject) => {
-            // Let the webapp package running in the child process know it
-            // should regenerate the client program for this arch.
-            childProcess.send({
-              "package": "webapp",
-              "method": "generateClientProgram",
-              "args": [arch],
-            }, error => {
-              if (error) {
-                reject(error);
-              } else {
-                runLog.log(`Finished delayed build of ${arch} in ${
-                  new Date - start
-                }ms`, { arrow: true });
-                resolve();
-              }
-            });
+          // Let the webapp package running in the child process know it
+          // should regenerate the client program for this arch.
+          return refreshClient(arch).then(() => {
+            runLog.log(`Finished delayed build of ${arch} in ${
+              new Date - start
+            }ms`, { arrow: true });
           });
         });
 

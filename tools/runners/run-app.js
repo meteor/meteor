@@ -108,11 +108,6 @@ _.extend(AppProcess.prototype, {
     });
 
     self.proc.on('error', async function (err) {
-      // if the error is the result of .send command over ipc pipe, ignore it
-      if (self._refreshing) {
-        return;
-      }
-
       runLog.log("Couldn't spawn process: " + err.message,  { arrow: true });
 
       // node docs say that it might make both an 'error' and a
@@ -373,10 +368,6 @@ var AppRunner = function (options) {
   // If this promise is set with self.makeBeforeStartPromise, then for the first
   // run, we will wait on it just before self.appProcess.start() is called.
   self._beforeStartPromise = null;
-  // A hacky state variable that indicates that the proxy process (this process)
-  // is communicating to the app process over ipc. If an error in communication
-  // occurs, we can distinguish it in a callback handling the 'error' event.
-  self._refreshing = false;
 
   // Builders saved across rebuilds, so that targets can be re-written in
   // place instead of created again from scratch.
@@ -789,6 +780,35 @@ _.extend(AppRunner.prototype, {
       setupClientWatcher();
     }
 
+    let lastSendMessagePromise = Promise.resolve();
+    function sendMessageAsync(message) {
+      // Keep the messages strictly ordered, one after the last.
+      return lastSendMessagePromise =
+        lastSendMessagePromise.then(both, both);
+
+      function both() {
+        return new Promise((resolve, reject) => {
+          appProcess.proc.send(message, error => {
+            error ? reject(error) : resolve();
+          });
+        });
+      }
+    }
+
+    function refreshClient(arch) {
+      if (typeof arch === "string") {
+        sendMessageAsync({
+          "package": "webapp",
+          "method": "generateClientProgram",
+          "args": [arch],
+        });
+      }
+
+      return sendMessageAsync({
+        refresh: "client"
+      });
+    }
+
     function runPostStartupCallbacks(bundleResult) {
       const callbacks = bundleResult.postStartupCallbacks;
       if (! callbacks) return;
@@ -801,7 +821,7 @@ _.extend(AppRunner.prototype, {
           try {
             Promise.await(fn({
               // Miscellany that the callback might find useful.
-              childProcess: appProcess.proc,
+              refreshClient,
               runLog,
             }));
           } catch (error) {
@@ -848,17 +868,7 @@ _.extend(AppRunner.prototype, {
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
-        // Notify the server that new client assets have been added to the
-        // build.
-        self._refreshing = true;
-        // ChildProcess.prototype.send used to be synchronous, but is now
-        // asynchronous: https://github.com/nodejs/node/pull/2620
-        appProcess.proc.send({
-          refresh: 'client'
-        }, err => {
-          self._refreshing = false;
-          if (err) throw err;
-        });
+        refreshClient();
 
         // Establish a watcher on the new files.
         setupClientWatcher();
