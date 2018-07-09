@@ -142,11 +142,11 @@ var enqueueVersionsRefresh = function () {
 
 // Listen for the special {refresh: 'client'} message, which signals that a
 // client asset has changed.
-process.on('message', Meteor.bindEnvironment(function (m) {
+export async function onMessage(m) {
   if (m && m.refresh === 'client') {
     enqueueVersionsRefresh();
   }
-}, "handling client refresh message"));
+}
 
 // Another way to tell the process to refresh: send SIGHUP signal
 process.on('SIGHUP', Meteor.bindEnvironment(function () {

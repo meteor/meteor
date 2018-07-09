@@ -553,6 +553,12 @@ WebAppInternals.parsePort = port => {
   return parsedPort;
 }
 
+export async function onMessage(message) {
+  if (message.method === "generateClientProgram") {
+    WebAppInternals.generateClientProgram(...message.args);
+  }
+}
+
 function runWebAppServer() {
   var shuttingDown = false;
   var syncQueue = new Meteor._SynchronousQueue();
@@ -570,9 +576,7 @@ function runWebAppServer() {
         Object.keys(configJson.clientPaths);
 
       try {
-        clientArchs.forEach(arch => {
-          WebAppInternals.generateClientProgram(arch);
-        });
+        clientArchs.forEach(generateClientProgram);
         WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error("Error reloading the client program: " + e.stack);
@@ -581,16 +585,11 @@ function runWebAppServer() {
     });
   };
 
-  process.on("message", async (message) => {
-    if (message.package !== "webapp") return;
-    if (message.method === "generateClientProgram") {
-      syncQueue.runTask(() => {
-        WebAppInternals.generateClientProgram(...message.args);
-      });
-    }
-  });
-
   WebAppInternals.generateClientProgram = function (arch) {
+    syncQueue.runTask(() => generateClientProgram(arch));
+  };
+
+  function generateClientProgram(arch) {
     const clientDir = pathJoin(
       pathDirname(__meteor_bootstrap__.serverDir),
       arch,

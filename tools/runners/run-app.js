@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
+const uuid = require("uuid");
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var files = require('../fs/files.js');
 var watch = require('../fs/watch.js');
@@ -15,6 +16,8 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher.js";
 import { eachline } from "../utils/eachline.js";
+
+const hasOwn = Object.prototype.hasOwnProperty;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -254,9 +257,71 @@ _.extend(AppProcess.prototype, {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
     });
 
+    // Add a child.sendMessage(packageName, payload) method to this child
+    // process object.
+    enableSendMessage(child);
+
     return child;
   }
 });
+
+function enableSendMessage(childProcess) {
+  const pendingMessages = new Map;
+  const childProcessReadyResolvers = new Map;
+
+  childProcess.readyForMessages = new Promise(resolve => {
+    childProcessReadyResolvers.set(childProcess.pid, resolve);
+  });
+
+  childProcess.on("message", message => {
+    if (message.type === "CHILD_READY") {
+      const resolve = childProcessReadyResolvers.get(message.pid);
+      // This resolves the child.readyForMessages Promise created above.
+      if (typeof resolve === "function") {
+        resolve();
+      }
+
+    } else if (message.type === "FROM_CHILD") {
+      const entry = pendingMessages.get(message.responseId);
+      if (entry) {
+        if (hasOwn.call(message, "error")) {
+          entry.reject(message.error);
+        } else {
+          entry.resolve(message.result);
+        }
+      }
+    }
+  });
+
+  childProcess.sendMessage = function (packageName, payload) {
+    return childProcess.readyForMessages.then(() => {
+      const responseId = uuid();
+
+      return new Promise((resolve, reject) => {
+        pendingMessages.set(responseId, { resolve, reject });
+
+        childProcess.send({
+          type: "FROM_PARENT",
+          responseId,
+          packageName,
+          payload
+        }, error => {
+          if (error) {
+            reject(error);
+          }
+        });
+
+      }).then(result => {
+        pendingMessages.delete(responseId);
+        return result;
+
+      }, error => {
+        pendingMessages.delete(responseId);
+        throw error;
+      });
+    });
+  };
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // AppRunner
@@ -780,31 +845,15 @@ _.extend(AppRunner.prototype, {
       setupClientWatcher();
     }
 
-    let lastSendMessagePromise = Promise.resolve();
-    function sendMessageAsync(message) {
-      // Keep the messages strictly ordered, one after the last.
-      return lastSendMessagePromise =
-        lastSendMessagePromise.then(both, both);
-
-      function both() {
-        return new Promise((resolve, reject) => {
-          appProcess.proc.send(message, error => {
-            error ? reject(error) : resolve();
-          });
-        });
-      }
-    }
-
-    function refreshClient(arch) {
+    async function refreshClient(arch) {
       if (typeof arch === "string") {
-        sendMessageAsync({
-          "package": "webapp",
-          "method": "generateClientProgram",
-          "args": [arch],
+        await appProcess.proc.sendMessage("webapp", {
+          method: "generateClientProgram",
+          args: [arch],
         });
       }
 
-      return sendMessageAsync({
+      await appProcess.proc.sendMessage("autoupdate", {
         refresh: "client"
       });
     }
@@ -825,7 +874,7 @@ _.extend(AppRunner.prototype, {
               runLog,
             }));
           } catch (error) {
-            buildmessage.error(error);
+            buildmessage.error(error.message);
           }
         }
       });
