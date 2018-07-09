@@ -1,6 +1,8 @@
 function PackageRegistry() {}
 
 var PRp = PackageRegistry.prototype;
+var hasOwn = Object.prototype.hasOwnProperty;
+var callbacksByPackageName = Object.create(null);
 
 // Set global.Package[name] = pkg || {}. If additional arguments are
 // supplied, their keys will be copied into pkg if not already present.
@@ -19,7 +21,30 @@ PRp._define = function definePackage(name, pkg) {
     }
   }
 
-  return this[name] = pkg;
+  this[name] = pkg;
+
+  var callbacks = callbacksByPackageName[name];
+  if (callbacks) {
+    delete callbacksByPackageName[name];
+    callbacks.forEach(function (callback) {
+      callback(pkg);
+    });
+  }
+
+  return pkg;
+};
+
+// Call Package._on(packageName, callback) to run callback when a package
+// is defined. If the package has already been defined, the callback will
+// be called immediately.
+PRp._on = function on(name, callback) {
+  if (hasOwn.call(this, name)) {
+    callback(this[name]);
+  } else {
+    (callbacksByPackageName[name] =
+     callbacksByPackageName[name] || []
+    ).push(callback);
+  }
 };
 
 // Initialize the Package namespace used by all Meteor packages.
