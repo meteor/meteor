@@ -4,9 +4,10 @@ var autoupdateVersionsCordova =
   };
 
 // The collection of acceptable client versions.
-ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions");
+const ClientVersions =
+  new Mongo.Collection("meteor_autoupdate_clientVersions");
 
-Autoupdate = {};
+export const Autoupdate = {};
 
 Autoupdate.newClientAvailable =
   () => !! ClientVersions.findOne({

@@ -20,9 +20,9 @@ Package.onUse(function (api) {
     'mongo',
   ], ['client', 'server']);
 
-  api.addFiles('autoupdate_server.js', 'server');
-  api.addFiles('autoupdate_client.js', 'web.browser');
-  api.addFiles('autoupdate_cordova.js', 'web.cordova');
+  api.mainModule('autoupdate_server.js', 'server');
+  api.mainModule('autoupdate_client.js', 'client');
+  api.mainModule('autoupdate_cordova.js', 'web.cordova');
 
   api.export('Autoupdate');
 });

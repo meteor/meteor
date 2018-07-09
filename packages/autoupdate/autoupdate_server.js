@@ -24,7 +24,7 @@
 
 var Future = Npm.require("fibers/future");
 
-Autoupdate = __meteor_runtime_config__.autoupdate = {
+export const Autoupdate = __meteor_runtime_config__.autoupdate = {
   // Map from client architectures (web.browser, web.browser.legacy,
   // web.cordova) to version fields { version, versionRefreshable,
   // versionNonRefreshable, refreshable } that will be stored in
@@ -35,8 +35,10 @@ Autoupdate = __meteor_runtime_config__.autoupdate = {
 };
 
 // The collection of acceptable client versions.
-ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions",
-  { connection: null });
+const ClientVersions =
+  new Mongo.Collection("meteor_autoupdate_clientVersions", {
+    connection: null
+  });
 
 // The client hash includes __meteor_runtime_config__, so wait until
 // all packages have loaded and have had a chance to populate the

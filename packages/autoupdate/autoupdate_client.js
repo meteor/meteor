@@ -36,10 +36,10 @@ const autoupdateVersions =
     assets: [],
   };
 
-Autoupdate = {};
+export const Autoupdate = {};
 
 // The collection of acceptable client versions.
-ClientVersions =
+const ClientVersions =
   Autoupdate._ClientVersions = // Used by a self-test.
   new Mongo.Collection("meteor_autoupdate_clientVersions");
 
