@@ -3169,22 +3169,34 @@ function bundle({
         // builder for this arch, and it's an arch that we can safely
         // build later (e.g. web.browser.legacy), then schedule it to be
         // built after the server has started up.
-        postStartupCallbacks.push(({
+        postStartupCallbacks.push(async ({
+          pauseClient,
           refreshClient,
           runLog,
         }) => {
           const start = +new Date;
 
-          // Build and write the target in one step.
-          writeClientTarget(makeClientTarget(app, arch, { minifiers }));
+          // Build the target first.
+          const target = makeClientTarget(app, arch, { minifiers });
+
+          // Tell the webapp package to pause responding to requests from
+          // clients that use this arch, because we're about to write a
+          // new version of this bundle to disk.
+          await pauseClient(arch);
+
+          // Now write the target to disk. Note that we are rewriting the
+          // bundle in place, so this work is not atomic by any means,
+          // which is why we needed to pause the client.
+          writeClientTarget(target);
+
+          // Refresh and unpause the client, now that writing is finished.
+          await refreshClient(arch);
 
           // Let the webapp package running in the child process know it
           // should regenerate the client program for this arch.
-          return refreshClient(arch).then(() => {
-            runLog.log(`Finished delayed build of ${arch} in ${
-              new Date - start
-            }ms`, { arrow: true });
-          });
+          runLog.log(`Finished delayed build of ${arch} in ${
+            new Date - start
+          }ms`, { arrow: true });
         });
 
       } else {

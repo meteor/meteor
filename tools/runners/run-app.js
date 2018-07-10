@@ -845,8 +845,16 @@ _.extend(AppRunner.prototype, {
       setupClientWatcher();
     }
 
+    function pauseClient(arch) {
+      return appProcess.proc.sendMessage("webapp", {
+        method: "pauseClient",
+        args: [arch],
+      });
+    }
+
     async function refreshClient(arch) {
       if (typeof arch === "string") {
+        // This message will reload the client program and unpause it.
         await appProcess.proc.sendMessage("webapp", {
           method: "generateClientProgram",
           args: [arch],
@@ -870,6 +878,7 @@ _.extend(AppRunner.prototype, {
           try {
             Promise.await(fn({
               // Miscellany that the callback might find useful.
+              pauseClient,
               refreshClient,
               runLog,
             }));

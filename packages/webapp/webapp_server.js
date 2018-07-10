@@ -366,7 +366,12 @@ var staticFilesByArch;
 
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
-WebAppInternals.staticFilesMiddleware = function (staticFilesByArch, req, res, next) {
+WebAppInternals.staticFilesMiddleware = async function (
+  staticFilesByArch,
+  req,
+  res,
+  next,
+) {
   if ('GET' != req.method && 'HEAD' != req.method && 'OPTIONS' != req.method) {
     next();
     return;
@@ -398,11 +403,16 @@ WebAppInternals.staticFilesMiddleware = function (staticFilesByArch, req, res, n
     return;
   }
 
-  const info = getStaticFileInfo(
+  const { arch, path } = getArchAndPath(
     pathname,
     identifyBrowser(req.headers["user-agent"]),
   );
 
+  // If pauseClient(arch) has been called, program.paused will be a
+  // Promise that will be resolved when the program is unpaused.
+  await WebApp.clientPrograms[arch].paused;
+
+  const info = getStaticFileInfo(pathname, path, arch);
   if (! info) {
     next();
     return;
@@ -472,9 +482,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFilesByArch, req, res, n
   }
 };
 
-function getStaticFileInfo(originalPath, browser) {
-  const { arch, path } = getArchAndPath(originalPath, browser);
-
+function getStaticFileInfo(originalPath, path, arch) {
   if (! hasOwn.call(WebApp.clientPrograms, arch)) {
     return null;
   }
@@ -556,6 +564,8 @@ WebAppInternals.parsePort = port => {
 export async function onMessage(message) {
   if (message.method === "generateClientProgram") {
     WebAppInternals.generateClientProgram(...message.args);
+  } else if (message.method === "pauseClient") {
+    WebAppInternals.pauseClient(...message.args);
   }
 }
 
@@ -582,6 +592,27 @@ function runWebAppServer() {
         Log.error("Error reloading the client program: " + e.stack);
         process.exit(1);
       }
+    });
+  };
+
+  // Pause any incoming requests and make them wait for the program to be
+  // unpaused the next time generateClientProgram(arch) is called.
+  WebAppInternals.pauseClient = function (arch) {
+    syncQueue.runTask(() => {
+      const program = WebApp.clientPrograms[arch];
+      const { unpause } = program;
+      program.paused = new Promise(resolve => {
+        if (typeof unpause === "function") {
+          // If there happens to be an existing program.unpause function,
+          // compose it with the resolve function.
+          program.unpause = function () {
+            unpause();
+            resolve();
+          };
+        } else {
+          program.unpause = resolve;
+        }
+      });
     });
   };
 
@@ -652,7 +683,8 @@ function runWebAppServer() {
       minimumModernVersionsHash: calculateHashOfMinimumVersions(),
     };
 
-    const program = {
+    const oldProgram = WebApp.clientPrograms[arch];
+    const newProgram = WebApp.clientPrograms[arch] = {
       format: "web-program-pre1",
       manifest: manifest,
       version: AUTOUPDATE_VERSION ||
@@ -666,22 +698,29 @@ function runWebAppServer() {
           manifest, type => type !== "css", configOverrides),
       cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,
       PUBLIC_SETTINGS,
+      // Set to a Promise if WebAppInternals.pauseClient(arch) is called.
+      paused: null,
     };
-
-    WebApp.clientPrograms[arch] = program;
 
     // Expose program details as a string reachable via the following URL.
     const manifestUrlPrefix = "/__" + arch.replace(/^web\./, "");
     const manifestUrl = manifestUrlPrefix + getItemPathname("/manifest.json");
 
     staticFiles[manifestUrl] = {
-      content: JSON.stringify(program),
+      content: JSON.stringify(newProgram),
       cacheable: false,
-      hash: program.version,
+      hash: newProgram.version,
       type: "json"
     };
 
     generateBoilerplateForArch(arch);
+
+    // If there are any requests waiting on oldProgram.paused, let them
+    // continue now (using the new program).
+    if (oldProgram &&
+        oldProgram.paused) {
+      oldProgram.unpause();
+    }
   };
 
   const defaultOptionsForArch = {
@@ -843,7 +882,7 @@ function runWebAppServer() {
     res.end("An error message");
   });
 
-  app.use(function (req, res, next) {
+  app.use(async function (req, res, next) {
     if (! appUrl(req.url)) {
       return next();
 
@@ -896,13 +935,20 @@ function runWebAppServer() {
         return;
       }
 
-      return getBoilerplateAsync(
-        request,
-        getArchAndPath(
-          parseRequest(req).pathname,
-          request.browser,
-        ).arch,
-      ).then(({ stream, statusCode, headers: newHeaders }) => {
+      const { arch } = getArchAndPath(
+        parseRequest(req).pathname,
+        request.browser,
+      );
+
+      // If pauseClient(arch) has been called, program.paused will be a
+      // Promise that will be resolved when the program is unpaused.
+      await WebApp.clientPrograms[arch].paused;
+
+      return getBoilerplateAsync(request, arch).then(({
+        stream,
+        statusCode,
+        headers: newHeaders,
+      }) => {
         if (!statusCode) {
           statusCode = res.statusCode ? res.statusCode : 200;
         }
