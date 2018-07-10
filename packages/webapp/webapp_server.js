@@ -14,7 +14,10 @@ import query from "qs-middleware";
 import parseRequest from "parseurl";
 import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
-import { isModern } from "meteor/modern-browsers";
+import {
+  isModern,
+  calculateHashOfMinimumVersions,
+} from "meteor/modern-browsers";
 import send from "send";
 import {
   removeExistingSocketFile,
@@ -641,7 +644,15 @@ function runWebAppServer() {
 
     const { AUTOUPDATE_VERSION } = process.env;
     const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
-    const configOverrides = { PUBLIC_SETTINGS };
+    const configOverrides = {
+      PUBLIC_SETTINGS,
+      // Since the minimum modern versions defined in the modern-versions
+      // package affect which bundle a given client receives, any changes
+      // in those versions should trigger a corresponding change in the
+      // versions calculated below.
+      minimumModernVersionsHash: calculateHashOfMinimumVersions(),
+    };
+
     const program = {
       format: "web-program-pre1",
       manifest: manifest,
