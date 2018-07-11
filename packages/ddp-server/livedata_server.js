@@ -113,6 +113,7 @@ var SessionCollectionView = function (collectionName, sessionCallbacks) {
   var self = this;
   self.collectionName = collectionName;
   self.documents = {};
+  self.documentCount = 0;
   self.callbacks = sessionCallbacks;
 };
 
@@ -123,7 +124,7 @@ _.extend(SessionCollectionView.prototype, {
 
   isEmpty: function () {
     var self = this;
-    return _.isEmpty(self.documents);
+    return self.documentCount === 0;
   },
 
   diff: function (previous) {
@@ -167,6 +168,7 @@ _.extend(SessionCollectionView.prototype, {
       added = true;
       docView = new SessionDocumentView();
       self.documents[id] = docView;
+      self.documentCount++;
     }
     docView.existsIn[subscriptionHandle] = true;
     var changeCollector = {};
@@ -207,6 +209,7 @@ _.extend(SessionCollectionView.prototype, {
       // it is gone from everyone
       self.callbacks.removed(self.collectionName, id);
       delete self.documents[id];
+      self.documentCount--;
     } else {
       var changed = {};
       // remove this subscription from every precedence list
