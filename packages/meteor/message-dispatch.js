@@ -23,9 +23,7 @@ if (typeof process.send === "function") {
       // package, one after the last. The first message waits for the
       // package to call Package._define(packageName, exports).
       promises[packageName] = (
-        promises[packageName] || new Promise(resolve => {
-          Package._on(packageName, resolve);
-        })
+        promises[packageName] || Package._promise(packageName)
       ).then(
         // In order to receive messages, the package must export an
         // onMessage function.

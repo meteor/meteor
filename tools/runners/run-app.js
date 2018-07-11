@@ -863,6 +863,10 @@ _.extend(AppRunner.prototype, {
 
       await appProcess.proc.sendMessage("autoupdate", {
         refresh: "client"
+      }).catch(error => {
+        if (error.message !== "Package autoupdate not installed") {
+          throw error;
+        }
       });
     }
 

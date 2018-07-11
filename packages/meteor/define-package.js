@@ -1,8 +1,8 @@
-function PackageRegistry() {}
+function PackageRegistry() {
+  this._promiseInfoMap = Object.create(null);
+}
 
 var PRp = PackageRegistry.prototype;
-var hasOwn = Object.prototype.hasOwnProperty;
-var callbacksByPackageName = Object.create(null);
 
 // Set global.Package[name] = pkg || {}. If additional arguments are
 // supplied, their keys will be copied into pkg if not already present.
@@ -23,28 +23,41 @@ PRp._define = function definePackage(name, pkg) {
 
   this[name] = pkg;
 
-  var callbacks = callbacksByPackageName[name];
-  if (callbacks) {
-    delete callbacksByPackageName[name];
-    callbacks.forEach(function (callback) {
-      callback(pkg);
-    });
+  var info = this._promiseInfoMap[name];
+  if (info) {
+    info.resolve(pkg);
   }
 
   return pkg;
 };
 
-// Call Package._on(packageName, callback) to run callback when a package
-// is defined. If the package has already been defined, the callback will
-// be called immediately.
-PRp._on = function on(name, callback) {
-  if (hasOwn.call(this, name)) {
-    callback(this[name]);
-  } else {
-    (callbacksByPackageName[name] =
-     callbacksByPackageName[name] || []
-    ).push(callback);
+PRp._has = function has(name) {
+  return Object.prototype.hasOwnProperty.call(this, name);
+};
+
+// Returns a Promise that will resolve to the exports of the named
+// package, or be rejected if the package is not installed.
+PRp._promise = function promise(name) {
+  var self = this;
+  var info = self._promiseInfoMap[name];
+
+  if (! info) {
+    info = self._promiseInfoMap[name] = {};
+    info.promise = new Promise(function (resolve, reject) {
+      info.resolve = resolve;
+      if (self._has(name)) {
+        resolve(self[name]);
+      } else {
+        Meteor.startup(function () {
+          if (! self._has(name)) {
+            reject(new Error("Package " + name + " not installed"));
+          }
+        });
+      }
+    });
   }
+
+  return info.promise;
 };
 
 // Initialize the Package namespace used by all Meteor packages.
