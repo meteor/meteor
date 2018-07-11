@@ -110,17 +110,19 @@ export class CompilerPluginProcessor {
     sourceRoot,
     isopackCache,
     linkerCacheDir,
+    minifyCssResource,
   }) {
-    const self = this;
+    Object.assign(this, {
+      unibuilds,
+      arch,
+      sourceRoot,
+      isopackCache,
+      linkerCacheDir,
+      minifyCssResource,
+    });
 
-    self.unibuilds = unibuilds;
-    self.arch = arch;
-    self.sourceRoot = sourceRoot;
-    self.isopackCache = isopackCache;
-
-    self.linkerCacheDir = linkerCacheDir;
-    if (self.linkerCacheDir) {
-      files.mkdir_p(self.linkerCacheDir);
+    if (this.linkerCacheDir) {
+      files.mkdir_p(this.linkerCacheDir);
     }
   }
 
@@ -271,10 +273,10 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   getFileOptions() {
-    var self = this;
     // XXX fileOptions only exists on some resources (of type "source"). The JS
     // resources might not have this property.
-    return self._resourceSlot.inputResource.fileOptions || {};
+    const { inputResource } = this._resourceSlot;
+    return inputResource.fileOptions || (inputResource.fileOptions = {});
   }
 
   readAndWatchFileWithHash(path) {
@@ -509,15 +511,7 @@ class InputFile extends buildPluginModule.InputFile {
    * @instance
    */
   addAsset(options, lazyFinalizer) {
-    if (typeof lazyFinalizer === "function") {
-      // For now, just call the lazyFinalizer function immediately. Since
-      // assets typically are not compiled, this immediate invocation is
-      // probably permanently appropriate for addAsset, whereas methods
-      // like addJavaScript benefit from waiting to call lazyFinalizer.
-      Object.assign(options, Promise.await(lazyFinalizer()));
-    }
-
-    this._resourceSlot.addAsset(options);
+    this._resourceSlot.addAsset(options, lazyFinalizer);
   }
 
   /**
@@ -548,17 +542,8 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   _reportError(message, info) {
-    if (this.getFileOptions().lazy === true) {
-      // Files with fileOptions.lazy === true were not explicitly added to
-      // the source batch via api.addFiles or api.mainModule, so any
-      // compilation errors should not be fatal until the files are
-      // actually imported by the ImportScanner. Attempting compilation is
-      // still important for lazy files that might end up being imported
-      // later, which is why we defang the error here, instead of avoiding
-      // compilation preemptively. Note also that exceptions thrown by the
-      // compiler will still cause build errors.
-      this._resourceSlot.addError(message, info);
-    } else {
+    this._resourceSlot.addError(message, info);
+    if (! this.getFileOptions().lazy) {
       super._reportError(message, info);
     }
   }
@@ -721,20 +706,49 @@ class ResourceSlot {
     // default to being eager (non-lazy).
     options.lazy = this._isLazy(options, false);
 
+    const cssResource = new CssOutputResource({
+      resourceSlot: this,
+      options,
+      lazyFinalizer,
+    });
+
     if (this.packageSourceBatch.useMeteorInstall &&
-        options.lazy) {
+        cssResource.lazy) {
       // If the current packageSourceBatch supports modules, and this CSS
       // file is lazy, add it as a lazy JS module instead of adding it
       // unconditionally as a CSS resource, so that it can be imported
       // when needed.
-      this.addJavaScript(options, async () => {
-        const result = typeof lazyFinalizer === "function"
-          ? await lazyFinalizer()
-          : { data: options.data };
+      const jsResource = this.addJavaScript(options, () => {
+        const result = {};
 
-        if (result) {
-          result.data = Buffer.from(cssToCommonJS(result.data), "utf8");
+        let css = this.packageSourceBatch.processor
+          .minifyCssResource(cssResource);
+
+        if (! css && typeof css !== "string") {
+          // The minifier didn't do anything, so we should use the
+          // original contents of cssResource.data.
+          css = cssResource.data.toString("utf8");
+
+          if (cssResource.sourceMap) {
+            // Add the source map as an asset, and append a
+            // sourceMappingURL comment to the end of the CSS text that
+            // will be dynamically inserted when/if this JS module is
+            // evaluated at runtime. Note that this only happens when the
+            // minifier did not modify the CSS, and thus does not happen
+            // when we are building for production.
+            const { servePath } = this.addAsset({
+              path: jsResource.targetPath + ".map.json",
+              data: JSON.stringify(cssResource.sourceMap)
+            });
+            css += "\n//# sourceMappingURL=" + servePath + "\n";
+          }
         }
+
+        result.data = Buffer.from(cssToCommonJS(css), "utf8");
+
+        // The JavaScript module that dynamically loads this CSS should
+        // not inherit the source map of the original CSS output.
+        result.sourceMap = null;
 
         return result;
       });
@@ -755,11 +769,15 @@ class ResourceSlot {
         // stub, so setting .implicit marks the resource as disposable.
       }).implicit = true;
 
-      this.outputResources.push(new CssOutputResource({
-        resourceSlot: this,
-        options,
-        lazyFinalizer,
-      }));
+      if (! cssResource.lazy &&
+          ! Buffer.isBuffer(cssResource.data)) {
+        // If there was an error processing this file, cssResource.data
+        // will not be a Buffer, and accessing cssResource.data here
+        // should cause the error to be reported via inputFile.error.
+        return;
+      }
+
+      this.outputResources.push(cssResource);
     }
   }
 
@@ -780,30 +798,20 @@ class ResourceSlot {
     return resource;
   }
 
-  addAsset(options) {
-    const self = this;
-    if (! self.sourceProcessor) {
+  addAsset(options, lazyFinalizer) {
+    if (! this.sourceProcessor) {
       throw Error("addAsset on non-source ResourceSlot?");
     }
 
-    if (! (options.data instanceof Buffer)) {
-      if (_.isString(options.data)) {
-        options.data = Buffer.from(options.data);
-      } else {
-        throw new Error("'data' option to addAsset must be a Buffer or " +
-                        "String: " + self.inputResource.path);
-      }
-    }
-
-    self.outputResources.push({
-      type: 'asset',
-      data: options.data,
-      path: options.path,
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
-        options.path),
-      hash: sha1(options.data),
-      lazy: self._isLazy(options, false),
+    const resource = new AssetOutputResource({
+      resourceSlot: this,
+      options,
+      lazyFinalizer,
     });
+
+    this.outputResources.push(resource);
+
+    return resource;
   }
 
   addHtml(options) {
@@ -876,26 +884,46 @@ class OutputResource {
     } else if (this._lazyFinalizer) {
       const finalize = this._lazyFinalizer;
       this._lazyFinalizer = null;
-      (this._finalizerPromise = new Promise(
-        resolve => resolve(finalize())
-      ).then(result => {
-        Object.assign(this._initialOptions, result);
-        this._finalizerPromise = null;
-      })).await();
+      (this._finalizerPromise =
+       // It's important to initialize this._finalizerPromise to the new
+       // Promise before calling finalize(), so there's no possibility of
+       // finalize() triggering code that reenters this function before we
+       // have the final version of this._finalizerPromise. If this code
+       // used `new Promise(resolve => resolve(finalize()))` instead of
+       // `Promise.resolve().then(finalize)`, the finalize() call would
+       // begin before this._finalizerPromise was fully initialized.
+       Promise.resolve().then(finalize).then(result => {
+         if (result) {
+           Object.assign(this._initialOptions, result);
+         } else if (this._errors.length === 0) {
+           // In case the finalize() call failed without reporting any
+           // errors, create at least one generic error that can be
+           // reported when reportPendingErrors is called.
+           const error = new Error("lazyFinalizer failed");
+           error.info = { resource: this, finalize }
+           this._errors.push(error);
+         }
+         // The this._finalizerPromise object only survives for the
+         // duration of the initial finalization.
+         this._finalizerPromise = null;
+       })).await();
     }
   }
 
-  reportPendingErrors() {
+  hasPendingErrors() {
     this.finalize();
-    const count = this._errors.length;
-    if (count > 0) {
+    return this._errors.length > 0;
+  }
+
+  reportPendingErrors() {
+    if (this.hasPendingErrors()) {
       const firstError = this._errors[0];
       buildmessage.error(
         firstError.message,
         firstError.info
       );
     }
-    return count;
+    return this._errors.length;
   }
 
   get data() { return this._get("data"); }
@@ -914,12 +942,19 @@ class OutputResource {
       return this[name];
     }
 
-    this.finalize();
+    if (this.hasPendingErrors()) {
+      // If you're considering using this resource, you should call
+      // hasPendingErrors or reportPendingErrors to find out if it's safe
+      // to access computed properties like .data, .hash, or .sourceMap.
+      // If you get here without checking for errors first, those errors
+      // will be fatal.
+      throw this._errors[0];
+    }
 
     switch (name) {
     case "data":
-      let { data } = this._initialOptions;
-      if (! Buffer.isBuffer(data)) {
+      let { data = null } = this._initialOptions;
+      if (typeof data === "string") {
         data = Buffer.from(data, "utf8");
       }
       return this._set("data", data);
@@ -957,15 +992,25 @@ class OutputResource {
 }
 
 class JsOutputResource extends OutputResource {
-  constructor(options) {
-    super({ ...options, type: "js" });
+  constructor(params) {
+    super({ ...params, type: "js" });
   }
 }
 
 class CssOutputResource extends OutputResource {
-  constructor(options) {
-    super({ ...options, type: "css" });
+  constructor(params) {
+    super({ ...params, type: "css" });
     this.refreshable = true;
+  }
+}
+
+class AssetOutputResource extends OutputResource {
+  constructor(params) {
+    super({ ...params, type: "asset" });
+    // Asset paths must always be explicitly specified.
+    this.path = this._initialOptions.path;
+    // Eagerness/laziness should never matter for assets.
+    delete this.lazy;
   }
 }
 

@@ -1,10 +1,10 @@
 Package.describe({
   summary: "JavaScript minifier",
-  version: "2.3.5"
+  version: "2.4.0"
 });
 
 Npm.depends({
-  "uglify-es": "3.3.9"
+  terser: "3.7.6"
 });
 
 Package.onUse(function (api) {

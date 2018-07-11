@@ -529,7 +529,6 @@ export class NodeModulesDirectory {
 // Allowed options:
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
-// - hash: optional, sha1 hash of the file contents, if known
 // - sourceMap: if 'data' is given, can be given instead of
 //   sourcePath. a string or a JS Object. Will be stored as Object.
 // - cacheable
@@ -598,8 +597,8 @@ class File {
     this.assets = null;
 
     this._contents = options.data || null; // contents, if known, as a Buffer
-    this._hashOfContents = options.hash || null;
     this._hash = null;
+    this._sri = null;
   }
 
   toString() {
@@ -613,17 +612,21 @@ class File {
 
   hash() {
     if (! this._hash) {
-      if (! this._hashOfContents) {
-        this._hashOfContents = watch.sha1(this.contents());
-      }
-
       this._hash = watch.sha1(
         String(File._salt()),
-        this._hashOfContents,
+        this.sri(),
       );
     }
 
     return this._hash;
+  }
+
+  sri() {
+    if (! this._sri) {
+      this._sri = watch.sha512(this.contents());
+    }
+
+    return this._sri;
   }
 
   // Omit encoding to get a buffer, or provide something like 'utf8'
@@ -641,12 +644,10 @@ class File {
   }
 
   setContents(b) {
-    if (!(b instanceof Buffer)) {
-      throw new Error("Must set contents to a Buffer");
-    }
+    assert.ok(Buffer.isBuffer(b), "Must pass Buffer to File#setContents");
     this._contents = b;
-    // Un-cache hash.
-    this._hashOfContents = this._hash = null;
+    // Bust the hash cache.
+    this._hash = this._sri = null;
   }
 
   size() {
@@ -831,7 +832,10 @@ class Target {
         packages: packages || []
       });
 
-      const sourceBatches = this._runCompilerPlugins();
+      const sourceBatches = this._runCompilerPlugins({
+        minifiers,
+        minifyMode,
+      });
 
       // Link JavaScript and set up this.js, etc.
       this._emitResources(sourceBatches);
@@ -1041,16 +1045,58 @@ class Target {
 
   // Run all the compiler plugins on all source files in the project. Returns an
   // array of PackageSourceBatches which contain the results of this processing.
-  _runCompilerPlugins() {
+  _runCompilerPlugins({
+    minifiers = [],
+    minifyMode = "development",
+  }) {
     buildmessage.assertInJob();
+
+    const minifiersByExt = Object.create(null);
+    if (this instanceof ClientTarget) {
+      ["js", "css"].forEach(ext => {
+        minifiers.some(minifier => {
+          if (_.contains(minifier.extensions, ext)) {
+            return minifiersByExt[ext] = minifier;
+          }
+        });
+      });
+    }
+
+    const target = this;
     const processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: this.unibuilds,
       arch: this.arch,
       sourceRoot: this.sourceRoot,
       isopackCache: this.isopackCache,
-      linkerCacheDir:
-        (this.bundlerCacheDir && files.pathJoin(this.bundlerCacheDir, 'linker'))
+      linkerCacheDir: this.bundlerCacheDir &&
+        files.pathJoin(this.bundlerCacheDir, 'linker'),
+
+      // Takes a CssOutputResource and returns a string of minified CSS,
+      // or null to indicate no minification occurred.
+      // TODO Cache result by resource hash?
+      minifyCssResource(resource) {
+        if (! minifiersByExt.css ||
+            minifyMode === "development") {
+          // Indicates the caller should use the original resource.data
+          // without minification.
+          return null;
+        }
+
+        const file = new File({
+          info: 'resource ' + resource.servePath,
+          arch: target.arch,
+          data: resource.data,
+        });
+
+        file.setTargetPathFromRelPath(
+          stripLeadingSlash(resource.servePath));
+
+        return target.minifyCssFiles(
+          [file], minifiersByExt.css, minifyMode
+        ).map(file => file.contents("utf8")).join("\n");
+      }
     });
+
     return processor.runCompilerPlugins();
   }
 
@@ -1520,12 +1566,14 @@ class ClientTarget extends Target {
 
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
+    this.css = this.minifyCssFiles(this.css, minifierDef, minifyMode);
+  }
+
+  minifyCssFiles(files, minifierDef, minifyMode) {
     const { arch } = this;
-    const sources = this.css.map((file) => {
-      return new CssFile(file, { arch });
-    });
-    const minifier = minifierDef.userPlugin.processFilesForBundle.bind(
-      minifierDef.userPlugin);
+    const sources = files.map(file => new CssFile(file, { arch }));
+    const minifier = minifierDef.userPlugin.processFilesForBundle
+      .bind(minifierDef.userPlugin);
 
     buildmessage.enterJob('minifying app stylesheet', function () {
       try {
@@ -1536,7 +1584,7 @@ class ClientTarget extends Target {
       }
     });
 
-    this.css = _.flatten(sources.map((source) => {
+    return _.flatten(sources.map((source) => {
       return source._minifiedFiles.map((file) => {
         const newFile = new File({
           info: 'minified css',
@@ -1647,6 +1695,7 @@ class ClientTarget extends Target {
       // Set this now, in case we mutated the file's contents.
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
+      manifestItem.sri = file.sri();
 
       if (! file.targetPath.startsWith("dynamic/")) {
         writeFile(file, builder);

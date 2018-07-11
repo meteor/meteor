@@ -5,6 +5,21 @@
   passing the `--phantom` flag to the `meteor self-test` command.
   [PR #9814](https://github.com/meteor/meteor/pull/9814)
 
+* Importing a directory containing an `index.*` file now works for
+  non-`.js` file extensions. As before, the list of possible extensions is
+  defined by which compiler plugins you have enabled.
+  [PR #10027](https://github.com/meteor/meteor/pull/10027)
+
+* The `uglify-es` npm package used by `minifier-js` has been replaced with
+  [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
+  `uglify-es` that appears to be (more actively) maintained.
+  [Issue #10042](https://github.com/meteor/meteor/issues/10042)
+
+* Sub-resource integrity hashes (sha512) can now be enabled for static CSS
+  and JS assets by calling `WebAppInternals.enableSubresourceIntegrity()`.
+  [PR #9933](https://github.com/meteor/meteor/pull/9933)
+  [PR #10050](https://github.com/meteor/meteor/pull/10050)
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
@@ -362,6 +377,12 @@
   the `<head />` section as before (for backwards compatibility).
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
+
+## v1.6.1.3, 2018-06-16
+
+* Node has been updated to version
+  [8.11.3](https://nodejs.org/en/blog/release/v8.11.3/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/june-2018-security-releases/).
 
 ## v1.6.1.2, 2018-05-28
 
