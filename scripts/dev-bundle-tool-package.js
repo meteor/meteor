@@ -17,7 +17,7 @@ var packageJson = {
     "meteor-babel": "7.0.0-beta.51",
     "meteor-promise": "0.8.6",
     promise: "8.0.1",
-    reify: "0.16.2",
+    reify: "0.16.4",
     fibers: "2.0.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.0.0-beta.51",

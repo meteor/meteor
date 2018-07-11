@@ -17,6 +17,8 @@
   `pacote` dependency has been rebased against version 8.1.6.
   [Issue #9940](https://github.com/meteor/meteor/issues/9940)
 
+* The `reify` npm package has been updated to version 0.16.4.
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
