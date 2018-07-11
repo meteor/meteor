@@ -1583,8 +1583,6 @@ class ClientTarget extends Target {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the target
-  // - nodePath: an array of paths required to be set in the NODE_PATH
-  // environment variable.
   write(builder, {minifyMode}) {
     builder.reserve("program.json");
 
@@ -1769,8 +1767,7 @@ class ClientTarget extends Target {
     builder.writeJson('program.json', program);
 
     return {
-      controlFile: "program.json",
-      nodePath: []
+      controlFile: "program.json"
     };
   }
 }
@@ -2195,8 +2192,6 @@ class JsImage {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the image
-  // - nodePath: an array of paths required to be set in the NODE_PATH
-  // environment variable.
   write(builder, {
     buildMode,
     // falsy or 'symlink', documented on exports.bundle
@@ -2414,8 +2409,7 @@ class JsImage {
     });
 
     return {
-      controlFile: "program.json",
-      nodePath: []
+      controlFile: "program.json"
     };
   }
 
@@ -2532,7 +2526,7 @@ class ServerTarget extends JsImageTarget {
   constructor (options, ...args) {
     super(options, ...args);
 
-    this.clientTargets = options.clientTargets;
+    this.clientArchs = options.clientArchs;
     this.releaseName = options.releaseName;
     this.appIdentifier = options.appIdentifier;
 
@@ -2549,36 +2543,18 @@ class ServerTarget extends JsImageTarget {
     buildMode,
     // falsy or 'symlink', documented in exports.bundle
     includeNodeModules,
-    // a function that takes {forTarget: Target, relativeTo: Target} and
-    // return the path of one target in the bundle relative to another. hack
-    // to get the path of the client target.. we'll find a better solution
-    // here eventually
-    getRelativeTargetPath,
   }) {
     var self = this;
-    var nodePath = [];
 
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
-
-    // Mapping from arch to relative path to the client program, if we have any
-    // (hack). Ex.: { 'web.browser': '../web.browser/program.json', ... }
-    var clientTargetPaths = {};
-    if (self.clientTargets) {
-      _.each(self.clientTargets, function (target) {
-        clientTargetPaths[target.arch] = files.pathJoin(getRelativeTargetPath({
-          forTarget: target,
-          relativeTo: self,
-        }), 'program.json');
-      });
-    }
 
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
       meteorRelease: self.releaseName || undefined,
       appId: self.appIdentifier || undefined,
-      clientPaths: clientTargetPaths
+      clientArchs: self.clientArchs || undefined,
     });
 
     // Write package.json and npm-shrinkwrap.json for the dependencies of
@@ -2672,7 +2648,6 @@ class ServerTarget extends JsImageTarget {
     var controlFilePath = 'boot.js';
     return {
       controlFile: controlFilePath,
-      nodePath: nodePath
     };
   }
 }
@@ -2767,8 +2742,7 @@ var writeTargetToPath = Profile(
   "bundler writeTargetToPath",
   function (name, target, outputPath, {
     includeNodeModules,
-    getRelativeTargetPath,
-    previousBuilder,
+    previousBuilder = null,
     buildMode,
     minifyMode,
   }) {
@@ -2779,7 +2753,6 @@ var writeTargetToPath = Profile(
 
     var targetBuild = target.write(builder, {
       includeNodeModules,
-      getRelativeTargetPath,
       buildMode,
       minifyMode,
     });
@@ -2790,7 +2763,6 @@ var writeTargetToPath = Profile(
       name,
       arch: target.mostCompatibleArch(),
       path: files.pathJoin('programs', name, targetBuild.controlFile),
-      nodePath: targetBuild.nodePath,
       cordovaDependencies: target.cordovaDependencies || undefined,
       builder
     };
@@ -2813,32 +2785,28 @@ var writeTargetToPath = Profile(
 //     serverWatchSet: watch.WatchSet for all files and directories that
 //                     ultimately went into all server programs
 //     starManifest: the JSON manifest of the star
-//     nodePath: an array of paths required to be set in NODE_PATH. It's
-//               up to the called to determine what they should be.
 // }
 //
 // options:
 // - includeNodeModules: string or falsy, documented on exports.bundle
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
-// - getRelativeTargetPath: see doc at ServerTarget.write
 // - previousBuilder: previous Builder object used in previous iteration
 var writeSiteArchive = Profile("bundler writeSiteArchive", function (
   targets, outputPath, {
     includeNodeModules,
     builtBy,
     releaseName,
-    getRelativeTargetPath,
-    previousBuilders,
+    previousBuilders = Object.create(null),
     buildMode,
     minifyMode
   }) {
 
   const builders = {};
-  const previousStarBuilder = previousBuilders && previousBuilders.star;
-  const builder = new Builder({outputPath,
-                               previousBuilder: previousStarBuilder});
-  builders.star = builder;
+  const builder = builders.star = new Builder({
+    outputPath,
+    previousBuilder: previousBuilders.star,
+  });
 
   try {
     var json = {
@@ -2849,7 +2817,6 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
     };
-    var nodePath = [];
 
     // Tell the deploy server what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied or
@@ -2904,31 +2871,23 @@ Find out more about Meteor at meteor.com.
 
     Object.keys(targets).forEach(name => {
       const target = targets[name];
-      const previousBuilder =
-              (previousBuilders && previousBuilders[name]) ?
-              previousBuilders[name] : null;
       const {
         arch, path, cordovaDependencies,
-        nodePath: targetNP,
         builder: targetBuilder
-      } =
-        writeTargetToPath(name, target, builder.buildPath, {
-          includeNodeModules,
-          builtBy,
-          releaseName,
-          getRelativeTargetPath,
-          previousBuilder,
-          buildMode,
-          minifyMode
-        });
+      } = writeTargetToPath(name, target, builder.buildPath, {
+        includeNodeModules,
+        builtBy,
+        releaseName,
+        previousBuilder: previousBuilders[name] || null,
+        buildMode,
+        minifyMode
+      });
 
       builders[name] = targetBuilder;
 
       json.programs.push({
         name, arch, path, cordovaDependencies
       });
-
-      nodePath = nodePath.concat(targetNP);
     });
 
     // Control file
@@ -2943,15 +2902,15 @@ Find out more about Meteor at meteor.com.
     // be adjusted so we can later pass them as previousBuilder's
     Object.keys(builders).forEach(name => {
       const subBuilder = builders[name];
-      subBuilder.outputPath = builder.outputPath + subBuilder.outputPath.substring(builder.buildPath.length);
+      subBuilder.outputPath = builder.outputPath +
+        subBuilder.outputPath.substring(builder.buildPath.length);
     });
 
     return {
       clientWatchSet,
       serverWatchSet,
       starManifest: json,
-      nodePath,
-      builders
+      builders,
     };
   } catch (e) {
     builder.abort();
@@ -3031,8 +2990,9 @@ function bundle({
   outputPath,
   includeNodeModules,
   buildOptions,
-  previousBuilders,
+  previousBuilders = Object.create(null),
   hasCachedBundle,
+  allowDelayedClientBuilds = false,
 }) {
   buildOptions = buildOptions || {};
 
@@ -3060,10 +3020,11 @@ function bundle({
   var serverWatchSet = new watch.WatchSet();
   var clientWatchSet = new watch.WatchSet();
   var starResult = null;
-  var targets = {};
-  var nodePath = [];
   var lintingMessages = null;
-  var builders = {};
+
+  // If delayed client builds are allowed, this array will be populated
+  // with callbacks to run after the application process has started up.
+  const postStartupCallbacks = allowDelayedClientBuilds && [];
 
   const bundlerCacheDir =
       projectContext.getProjectLocalDirectory('bundler-cache');
@@ -3106,22 +3067,18 @@ function bundle({
     });
 
     var makeServerTarget = Profile(
-      "bundler.bundle..makeServerTarget", function (app, clientTargets) {
-      var targetOptions = {
+      "bundler.bundle..makeServerTarget", function (app, clientArchs) {
+      const server = new ServerTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         sourceRoot: packageSource.sourceRoot,
         arch: serverArch,
-        releaseName: releaseName,
-        appIdentifier: appIdentifier,
+        releaseName,
+        appIdentifier,
         buildMode: buildOptions.buildMode,
-      };
-      if (clientTargets) {
-        targetOptions.clientTargets = clientTargets;
-      }
-
-      var server = new ServerTarget(targetOptions);
+        clientArchs,
+      });
 
       server.make({
         packages: [app]
@@ -3181,80 +3138,92 @@ function bundle({
       return mergeAppWatchSets();
     }
 
-    var clientTargets = [];
+    const targets = Object.create(null);
+    const hasOwn = Object.prototype.hasOwnProperty;
+
+    // Write to disk
+    const writeOptions = {
+      includeNodeModules,
+      builtBy,
+      releaseName,
+      minifyMode,
+    };
+
+    function writeClientTarget(target) {
+      const { arch } = target;
+      const written = writeTargetToPath(arch, target, outputPath, {
+        buildMode: buildOptions.buildMode,
+        previousBuilder: previousBuilders[arch],
+        ...writeOptions,
+      });
+      clientWatchSet.merge(target.getWatchSet());
+      previousBuilders[arch] = written.builder;
+    }
+
     // Client
-    _.each(webArchs, function (arch) {
-      var client = makeClientTarget(app, arch, {minifiers});
-      clientTargets.push(client);
-      targets[arch] = client;
+    webArchs.forEach(arch => {
+      if (allowDelayedClientBuilds &&
+          hasOwn.call(previousBuilders, arch) &&
+          projectContext.platformList.canDelayBuildingArch(arch)) {
+        // If delayed client builds are allowed, and we have a previous
+        // builder for this arch, and it's an arch that we can safely
+        // build later (e.g. web.browser.legacy), then schedule it to be
+        // built after the server has started up.
+        postStartupCallbacks.push(async ({
+          pauseClient,
+          refreshClient,
+          runLog,
+        }) => {
+          const start = +new Date;
+
+          // Build the target first.
+          const target = makeClientTarget(app, arch, { minifiers });
+
+          // Tell the webapp package to pause responding to requests from
+          // clients that use this arch, because we're about to write a
+          // new version of this bundle to disk.
+          await pauseClient(arch);
+
+          // Now write the target to disk. Note that we are rewriting the
+          // bundle in place, so this work is not atomic by any means,
+          // which is why we needed to pause the client.
+          writeClientTarget(target);
+
+          // Refresh and unpause the client, now that writing is finished.
+          await refreshClient(arch);
+
+          // Let the webapp package running in the child process know it
+          // should regenerate the client program for this arch.
+          runLog.log(`Finished delayed build of ${arch} in ${
+            new Date - start
+          }ms`, { arrow: true });
+        });
+
+      } else {
+        // Otherwise make the client target now, and write it below.
+        targets[arch] = makeClientTarget(app, arch, {minifiers});
+      }
     });
 
     // Server
     if (! hasCachedBundle) {
-      var server = makeServerTarget(app, clientTargets);
-      targets.server = server;
+      targets.server = makeServerTarget(app, webArchs);
     }
-
-    // Hack to let servers find relative paths to clients. Should find
-    // another solution eventually (probably some kind of mount
-    // directive that mounts the client bundle in the server at runtime)
-    var getRelativeTargetPath = function (options) {
-      var pathForTarget = function (target) {
-        var name;
-        _.each(targets, function (t, n) {
-          if (t === target) {
-            name = n;
-          }
-        });
-        if (! name) {
-          throw new Error("missing target?");
-        }
-        return files.pathJoin('programs', name);
-      };
-
-      return files.pathRelative(pathForTarget(options.relativeTo),
-                                pathForTarget(options.forTarget));
-    };
-
-    // Write to disk
-    var writeOptions = {
-      includeNodeModules,
-      builtBy,
-      releaseName,
-      getRelativeTargetPath,
-      minifyMode: minifyMode
-    };
 
     if (outputPath !== null) {
       if (hasCachedBundle) {
         // If we already have a cached bundle, just recreate the new targets.
         // XXX This might make the contents of "star.json" out of date.
-        builders = _.clone(previousBuilders);
-        _.each(targets, function (target, name) {
-          const previousBuilder = previousBuilders && previousBuilders[name];
-          var targetBuild = writeTargetToPath(
-            name, target, outputPath,
-            _.extend({
-              buildMode: buildOptions.buildMode,
-            }, writeOptions, {previousBuilder})
-         );
-          nodePath = nodePath.concat(targetBuild.nodePath);
-          clientWatchSet.merge(target.getWatchSet());
-          builders[name] = targetBuild.builder;
-        });
+        _.each(targets, writeClientTarget);
       } else {
-        starResult = writeSiteArchive(
-          targets,
-          outputPath,
-          _.extend({
-            buildMode: buildOptions.buildMode,
-          }, writeOptions, {previousBuilders})
-        );
-
-        nodePath = nodePath.concat(starResult.nodePath);
+        starResult = writeSiteArchive(targets, outputPath, {
+          buildMode: buildOptions.buildMode,
+          previousBuilders,
+          ...writeOptions,
+        });
         serverWatchSet.merge(starResult.serverWatchSet);
         clientWatchSet.merge(starResult.clientWatchSet);
-        builders = starResult.builders;
+        Object.assign(previousBuilders, starResult.builders);
       }
     }
 
@@ -3272,8 +3241,7 @@ function bundle({
     serverWatchSet,
     clientWatchSet,
     starManifest: starResult && starResult.starManifest,
-    nodePath,
-    builders
+    postStartupCallbacks,
   };
 }
 

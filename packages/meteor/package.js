@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.9.0'
+  version: '1.9.1'
 });
 
 Package.registerBuildPlugin({
@@ -29,6 +29,7 @@ Package.onUse(function (api) {
 
   api.addFiles('cordova_environment.js', 'web.cordova');
   api.addFiles('define-package.js', ['client', 'server']);
+  api.addFiles('message-dispatch.js', 'server');
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
