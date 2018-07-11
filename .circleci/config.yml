@@ -13,16 +13,6 @@ run_env_change: &run_env_change
     echo "en_US.UTF-8 UTF-8" | sudo tee /etc/locale.gen
     sudo locale-gen
 
-    # The official node image built on Debian OS lacks some dependencies,
-    # so if you want to run Puppeteer on Docker based CI services
-    # (e.g. CircleCI 2.x or Wercker CI) they need to be installed manually.
-    # https://github.com/GoogleChrome/puppeteer/blob/master/docs/troubleshooting.md#chrome-headless-doesnt-launch
-    sudo apt-get install -yq gconf-service libasound2 libatk1.0-0 libc6 libcairo2 libcups2 libdbus-1-3 \
-    libexpat1 libfontconfig1 libgcc1 libgconf-2-4 libgdk-pixbuf2.0-0 libglib2.0-0 libgtk-3-0 libnspr4 \
-    libpango-1.0-0 libpangocairo-1.0-0 libstdc++6 libx11-6 libx11-xcb1 libxcb1 libxcomposite1 \
-    libxcursor1 libxdamage1 libxext6 libxfixes3 libxi6 libxrandr2 libxrender1 libxss1 libxtst6 \
-    ca-certificates fonts-liberation libappindicator1 libnss3 lsb-release xdg-utils wget
-
     # The commands below don't work in Docker images, but might be worth
     # reenabling if we switch back to machine:true instead of Docker.
 
