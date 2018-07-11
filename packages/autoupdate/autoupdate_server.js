@@ -116,6 +116,17 @@ Meteor.publish(
 
 Meteor.startup(function () {
   updateVersions(false);
+
+  // Force any connected clients that are still looking for these older
+  // document IDs to reload.
+  ["version",
+   "version-refreshable",
+   "version-cordova",
+  ].forEach(_id => {
+    ClientVersions.upsert(_id, {
+      $set: { version: "outdated" }
+    });
+  });
 });
 
 var fut = new Future();
@@ -152,4 +163,3 @@ export async function onMessage(m) {
 process.on('SIGHUP', Meteor.bindEnvironment(function () {
   enqueueVersionsRefresh();
 }, "handling SIGHUP signal for refresh"));
-
