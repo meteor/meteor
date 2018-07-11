@@ -47,7 +47,7 @@
     "convert-source-map": "1.5.0",
     "lodash": "^4.17.10",
     "meteor-babel-helpers": "0.0.3",
-    "reify": "^0.16.2"
+    "reify": "^0.16.4"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.0.0-beta.53",
