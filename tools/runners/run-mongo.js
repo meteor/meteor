@@ -543,7 +543,7 @@ var launchMongo = function (options) {
         maybeReadyToTalk();
       }
 
-      if (/ \[rsSync\] transition to primary complete/.test(data)) {
+      if (/ \[rsSync-0\] transition to primary complete/.test(data)) {
         replSetReady = true;
         maybeReadyToTalk();
       }
