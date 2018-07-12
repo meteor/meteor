@@ -610,6 +610,7 @@ var launchMongo = function (options) {
       var configuration = {
         _id: replSetName,
         version: 1,
+        protocolVersion: 1,
         members: [{_id: 0, host: '127.0.0.1:' + options.port, priority: 100}]
       };
 
