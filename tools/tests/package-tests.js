@@ -358,8 +358,8 @@ selftest.define("add packages client archs", function (options) {
     outerRun.expectExit(0);
     checkPackages(s, ["meteor-base", "say-something-client-targets"]);
 
-    var expectedLogNum = 0;
     s.testWithAllClients(function (run) {
+      var expectedLogNum = 0;
       run.waitSecs(5);
       run.match("myapp");
       run.match("proxy");
