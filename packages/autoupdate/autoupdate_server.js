@@ -145,19 +145,15 @@ WebApp.onListening(function () {
   fut.return();
 });
 
-var enqueueVersionsRefresh = function () {
+function enqueueVersionsRefresh() {
   syncQueue.queueTask(function () {
     updateVersions(true);
   });
-};
-
-// Listen for the special {refresh: 'client'} message, which signals that a
-// client asset has changed.
-export async function onMessage(m) {
-  if (m && m.refresh === 'client') {
-    enqueueVersionsRefresh();
-  }
 }
+
+// Listen for messages pertaining to the client-refresh topic.
+import { onMessage } from "meteor/inter-process-messaging";
+onMessage("client-refresh", enqueueVersionsRefresh);
 
 // Another way to tell the process to refresh: send SIGHUP signal
 process.on('SIGHUP', Meteor.bindEnvironment(function () {

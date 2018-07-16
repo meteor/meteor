@@ -16,6 +16,7 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher.js";
 import { eachline } from "../utils/eachline.js";
+import { loadIsopackage } from '../tool-env/isopackets.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -257,71 +258,14 @@ _.extend(AppProcess.prototype, {
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
     });
 
-    // Add a child.sendMessage(packageName, payload) method to this child
+    // Add a child.sendMessage(topic, payload) method to this child
     // process object.
-    enableSendMessage(child);
+    loadIsopackage("inter-process-messaging")
+      .enableSendMessage(child);
 
     return child;
   }
 });
-
-function enableSendMessage(childProcess) {
-  const pendingMessages = new Map;
-  const childProcessReadyResolvers = new Map;
-
-  childProcess.readyForMessages = new Promise(resolve => {
-    childProcessReadyResolvers.set(childProcess.pid, resolve);
-  });
-
-  childProcess.on("message", message => {
-    if (message.type === "CHILD_READY") {
-      const resolve = childProcessReadyResolvers.get(message.pid);
-      // This resolves the child.readyForMessages Promise created above.
-      if (typeof resolve === "function") {
-        resolve();
-      }
-
-    } else if (message.type === "FROM_CHILD") {
-      const entry = pendingMessages.get(message.responseId);
-      if (entry) {
-        if (hasOwn.call(message, "error")) {
-          entry.reject(message.error);
-        } else {
-          entry.resolve(message.result);
-        }
-      }
-    }
-  });
-
-  childProcess.sendMessage = function (packageName, payload) {
-    return childProcess.readyForMessages.then(() => {
-      const responseId = uuid();
-
-      return new Promise((resolve, reject) => {
-        pendingMessages.set(responseId, { resolve, reject });
-
-        childProcess.send({
-          type: "FROM_PARENT",
-          responseId,
-          packageName,
-          payload
-        }, error => {
-          if (error) {
-            reject(error);
-          }
-        });
-
-      }).then(result => {
-        pendingMessages.delete(responseId);
-        return result;
-
-      }, error => {
-        pendingMessages.delete(responseId);
-        throw error;
-      });
-    });
-  };
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 // AppRunner
@@ -846,28 +790,17 @@ _.extend(AppRunner.prototype, {
     }
 
     function pauseClient(arch) {
-      return appProcess.proc.sendMessage("webapp", {
-        method: "pauseClient",
-        args: [arch],
-      });
+      return appProcess.proc.sendMessage("webapp-pause-client", { arch });
     }
 
     async function refreshClient(arch) {
       if (typeof arch === "string") {
         // This message will reload the client program and unpause it.
-        await appProcess.proc.sendMessage("webapp", {
-          method: "generateClientProgram",
-          args: [arch],
-        });
+        await appProcess.proc.sendMessage("webapp-reload-client", { arch });
       }
-
-      await appProcess.proc.sendMessage("autoupdate", {
-        refresh: "client"
-      }).catch(error => {
-        if (error.message !== "Package autoupdate not installed") {
-          throw error;
-        }
-      });
+      // If arch is not a string, the receiver of this message should
+      // assume all clients need to be refreshed.
+      await appProcess.proc.sendMessage("client-refresh");
     }
 
     function runPostStartupCallbacks(bundleResult) {
