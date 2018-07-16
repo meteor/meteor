@@ -42,6 +42,7 @@ DDPCommon.SUPPORTED_DDP_VERSIONS = [ '1', 'pre2', 'pre1' ];
 
 DDPCommon.parseDDP = function (stringMessage) {
   try {
+    // Reject based on size of string here (Option 1/2)
     var msg = JSON.parse(stringMessage);
   } catch (e) {
     Meteor._debug("Discarding message with invalid JSON", stringMessage);
@@ -77,6 +78,7 @@ DDPCommon.parseDDP = function (stringMessage) {
 };
 
 DDPCommon.stringifyDDP = function (msg) {
+  // Reject based on size of buffer here (Option 2/2)
   const copy = EJSON.clone(msg);
 
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
