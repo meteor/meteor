@@ -475,6 +475,8 @@ _.extend(Session.prototype, {
   sendError: function (reason, offendingMessage) {
     var self = this;
     var msg = {msg: 'error', reason: reason};
+    
+    // Don't send offendingMessage back here
     if (offendingMessage)
       msg.offendingMessage = offendingMessage;
     self.send(msg);
