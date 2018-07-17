@@ -561,13 +561,15 @@ WebAppInternals.parsePort = port => {
   return parsedPort;
 }
 
-export async function onMessage(message) {
-  if (message.method === "generateClientProgram") {
-    WebAppInternals.generateClientProgram(...message.args);
-  } else if (message.method === "pauseClient") {
-    WebAppInternals.pauseClient(...message.args);
-  }
-}
+import { onMessage } from "meteor/inter-process-messaging";
+
+onMessage("webapp-pause-client", async ({ arch }) => {
+  WebAppInternals.pauseClient(arch);
+});
+
+onMessage("webapp-reload-client", async ({ arch }) => {
+  WebAppInternals.generateClientProgram(arch);
+});
 
 function runWebAppServer() {
   var shuttingDown = false;

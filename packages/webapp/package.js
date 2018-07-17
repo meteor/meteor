@@ -33,7 +33,8 @@ Package.onUse(function (api) {
     'routepolicy',
     'modern-browsers',
     'boilerplate-generator',
-    'webapp-hashing'
+    'webapp-hashing',
+    'inter-process-messaging',
   ], 'server');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If

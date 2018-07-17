@@ -29,7 +29,6 @@ Package.onUse(function (api) {
 
   api.addFiles('cordova_environment.js', 'web.cordova');
   api.addFiles('define-package.js', ['client', 'server']);
-  api.addFiles('message-dispatch.js', 'server');
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);

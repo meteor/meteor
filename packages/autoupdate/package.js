@@ -6,7 +6,8 @@ Package.describe({
 Package.onUse(function (api) {
   api.use([
     'webapp',
-    'check'
+    'check',
+    'inter-process-messaging',
   ], 'server');
 
   api.use([
