@@ -178,6 +178,17 @@ Object.assign(exports, {
         poll();
       });
     }
+
+    otherProcess.on("exit", (code, signal) => {
+      const error = new Error("process exited");
+      Object.assign(error, { code, signal });
+
+      // Terminate any pending messages.
+      pendingMessages.forEach(entry => entry.reject(error));
+
+      // Prevent future messages from being sent.
+      otherProcess.readyForMessages = Promise.reject(error);
+    });
   }
 });
 
