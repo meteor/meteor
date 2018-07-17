@@ -1,4 +1,9 @@
 const uuid = require("uuid");
+const {
+  MESSAGE_FROM_PARENT,
+  RESPONSE_FROM_CHILD,
+  CHILD_READY,
+} = require("./types.js");
 const hasOwn = Object.prototype.hasOwnProperty;
 
 // Call enableSendMessage(childProcess) to define a method called
@@ -15,14 +20,14 @@ Object.assign(exports, {
     });
 
     childProcess.on("message", message => {
-      if (message.type === "CHILD_READY") {
+      if (message.type === CHILD_READY) {
         const resolve = childProcessReadyResolvers.get(message.pid);
         // This resolves the child.readyForMessages Promise created above.
         if (typeof resolve === "function") {
           resolve();
         }
 
-      } else if (message.type === "FROM_CHILD") {
+      } else if (message.type === RESPONSE_FROM_CHILD) {
         const entry = pendingMessages.get(message.responseId);
         if (entry) {
           if (hasOwn.call(message, "error")) {
@@ -42,7 +47,7 @@ Object.assign(exports, {
           pendingMessages.set(responseId, { resolve, reject });
 
           childProcess.send({
-            type: "FROM_PARENT",
+            type: MESSAGE_FROM_PARENT,
             responseId,
             topic,
             payload

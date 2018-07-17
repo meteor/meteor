@@ -1,3 +1,9 @@
+const {
+  MESSAGE_FROM_PARENT,
+  RESPONSE_FROM_CHILD,
+  CHILD_READY,
+} = require("./types.js");
+
 const callbacksByTopic = new Map;
 
 Object.assign(exports, {
@@ -25,12 +31,12 @@ if (typeof process.send === "function") {
   // When called, the callback will receive the provided payload as a
   // parameter.
   process.on("message", ({
-    type = "FROM_PARENT",
+    type = MESSAGE_FROM_PARENT,
     responseId = null,
     topic,
     payload,
   }) => {
-    if (type === "FROM_PARENT" &&
+    if (type === MESSAGE_FROM_PARENT &&
         typeof topic === "string") {
       // Keep the messages and their responses strictly ordered per topic,
       // one after the last. Because we always register a non-throwing
@@ -50,7 +56,7 @@ if (typeof process.send === "function") {
       }).then(results => {
         if (responseId) {
           process.send({
-            type: "FROM_CHILD",
+            type: RESPONSE_FROM_CHILD,
             responseId,
             results,
           });
@@ -66,7 +72,7 @@ if (typeof process.send === "function") {
         });
 
         process.send({
-          type: "FROM_CHILD",
+          type: RESPONSE_FROM_CHILD,
           responseId,
           error: serializable,
         });
@@ -77,7 +83,7 @@ if (typeof process.send === "function") {
   // Let the parent process know this child process is ready to receive
   // messages.
   process.send({
-    type: "CHILD_READY",
+    type: CHILD_READY,
     pid: process.pid,
   });
 }
