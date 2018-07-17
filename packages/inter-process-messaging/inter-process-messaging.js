@@ -1,5 +1,7 @@
 const uuid = require("uuid");
 
+const { encode, decode } = require("arson");
+
 const {
   MESSAGE,
   RESPONSE,
@@ -60,7 +62,7 @@ Object.assign(exports, {
     handlersByType[MESSAGE] = function ({
       responseId,
       topic,
-      payload,
+      encodedPayload,
     }) {
       const newPromise = (
         promisesByTopic.get(topic) || Promise.resolve()
@@ -68,7 +70,9 @@ Object.assign(exports, {
         const results = [];
         const callbacks = callbacksByTopic.get(topic);
         if (callbacks && callbacks.size > 0) {
-          callbacks.forEach(cb => results.push(cb(payload)));
+          // Re-decode the payload for each callback to prevent one
+          // callback from modifying the payload seen by later callbacks.
+          callbacks.forEach(cb => results.push(cb(decode(encodedPayload))));
           return Promise.all(results);
         }
         // Since there were no callbacks, this will be an empty array.
@@ -78,7 +82,7 @@ Object.assign(exports, {
           otherProcess.send({
             type: RESPONSE,
             responseId,
-            results,
+            encodedResults: encode(results),
           });
         }
       }, error => {
@@ -94,7 +98,7 @@ Object.assign(exports, {
         otherProcess.send({
           type: RESPONSE,
           responseId,
-          error: serializable,
+          encodedError: encode(serializable),
         });
       });
 
@@ -111,10 +115,10 @@ Object.assign(exports, {
     handlersByType[RESPONSE] = function (message) {
       const entry = pendingMessages.get(message.responseId);
       if (entry) {
-        if (hasOwn.call(message, "error")) {
-          entry.reject(message.error);
+        if (hasOwn.call(message, "encodedError")) {
+          entry.reject(decode(message.encodedError));
         } else {
-          entry.resolve(message.results);
+          entry.resolve(decode(message.encodedResults));
         }
       }
     };
@@ -144,7 +148,7 @@ Object.assign(exports, {
             type: MESSAGE,
             responseId,
             topic,
-            payload
+            encodedPayload: encode(payload),
           }, error => {
             if (error) {
               reject(error);

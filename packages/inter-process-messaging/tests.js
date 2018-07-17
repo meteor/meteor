@@ -13,7 +13,7 @@ class FakeChildProcess extends EventEmitter {
   }
 
   send(message) {
-    this.child.emit("message", message);
+    this.child.emit("message", JSON.parse(JSON.stringify(message)));
   }
 }
 
@@ -26,7 +26,7 @@ class FakeProcess extends EventEmitter {
   }
 
   send(message) {
-    this.parent.emit("message", message);
+    this.parent.emit("message", JSON.parse(JSON.stringify(message)));
   }
 }
 
@@ -92,4 +92,59 @@ Tinytest.addAsync('inter-process-messaging - message from child', async (test) =
   });
 
   test.equal(results, ["right back atcha"]);
+});
+
+Tinytest.addAsync('inter-process-messaging - exotic payloads', async (test) => {
+  const proc = new FakeChildProcess;
+
+  // Reach into the fake child process to register a listener.
+  proc.child.onMessage("self-reference", payload => {
+    test.ok(payload.self === payload);
+    return payload;
+  });
+
+  const obj = {};
+  obj.self = obj;
+  const [obj2] = await proc.sendMessage("self-reference", obj);
+
+  test.ok(obj2 !== obj);
+  test.ok(obj2.self === obj2);
+
+  // Reach into the fake child process to register a listener.
+  proc.child.onMessage("repeated-reference", payload => {
+    test.ok(payload[0] === payload[1]);
+    return payload;
+  });
+
+  const arr = [obj, obj, obj];
+  const [arr2] = await proc.sendMessage("repeated-reference", arr);
+
+  test.ok(arr2 !== arr);
+  test.ok(arr2[0] === arr2[1]);
+  test.ok(arr2[1] === arr2[2]);
+
+  // Reach into the fake child process to register a listener.
+  proc.child.onMessage("Set-Map-containment", map => {
+    checkMap(map);
+    return map;
+  });
+
+  function checkMap(map) {
+    test.equal(map.size, 1);
+    map.forEach((set, self) => {
+      test.ok(self === map);
+      test.equal(set.size, 2);
+      test.ok(set.has(map));
+      test.ok(set.has(set));
+    });
+  }
+
+  const map = new Map;
+  const set = new Set;
+  map.set(map, set);
+  set.add(map).add(set);
+
+  const [map2] = await proc.sendMessage("Set-Map-containment", map);
+  test.ok(map2 !== map);
+  checkMap(map2);
 });

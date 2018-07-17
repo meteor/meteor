@@ -6,7 +6,8 @@ Package.describe({
 });
 
 Npm.depends({
-  uuid: "3.3.2"
+  uuid: "3.3.2",
+  arson: "0.2.6"
 });
 
 Package.onUse(function(api) {

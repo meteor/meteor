@@ -1,6 +1,11 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
+    "arson": {
+      "version": "0.2.6",
+      "resolved": "https://registry.npmjs.org/arson/-/arson-0.2.6.tgz",
+      "integrity": "sha512-wVRnIfjOaCWu3jrf3j1CU/eotDf7tuM34cBswo32EwyLPaMiaWgETfROdYVv47VWEbWSOaZaDnkypGQtQduLbw=="
+    },
     "uuid": {
       "version": "3.3.2",
       "resolved": "https://registry.npmjs.org/uuid/-/uuid-3.3.2.tgz",
