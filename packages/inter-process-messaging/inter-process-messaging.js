@@ -188,6 +188,9 @@ Object.assign(exports, {
 
       // Prevent future messages from being sent.
       otherProcess.readyForMessages = Promise.reject(error);
+
+      // Silence UnhandledPromiseRejectionWarning
+      otherProcess.readyForMessages.catch(() => {});
     });
   }
 });
