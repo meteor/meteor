@@ -14,3 +14,10 @@ Package.onUse(function(api) {
   api.use("promise");
   api.mainModule("inter-process-messaging.js", "server");
 });
+
+Package.onTest(function(api) {
+  api.use("ecmascript");
+  api.use("tinytest");
+  api.use("inter-process-messaging");
+  api.mainModule("tests.js", "server");
+});

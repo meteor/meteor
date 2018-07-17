@@ -260,8 +260,7 @@ _.extend(AppProcess.prototype, {
 
     // Add a child.sendMessage(topic, payload) method to this child
     // process object.
-    loadIsopackage("inter-process-messaging")
-      .enableSendMessage(child);
+    loadIsopackage("inter-process-messaging").enable(child);
 
     return child;
   }

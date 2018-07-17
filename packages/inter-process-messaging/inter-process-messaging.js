@@ -9,28 +9,36 @@ const {
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-// These callbacks represent listeners registered on the global.process
-// object by the onMessage method below.
-const callbacksByTopic = new Map;
-
 Object.assign(exports, {
-  // To receive messages, a process should import this onMessage function
-  // and call onMessage(topic, callback). When called, the callback will
-  // receive the provided payload as its first (and only) parameter.
-  // Callbacks may return a Promise, in which case the response will be
-  // delayed until all results returned by callbacks registered for this
-  // topic have been resolved.
-  onMessage(topic, callback) {
-    if (! callbacksByTopic.has(topic)) {
-      callbacksByTopic.set(topic, new Set);
+  // Adds onMessage(topic, callback) and sendMessage(topic, payload)
+  // methods to otherProcess. These methods are an improvement over the
+  // native Node interfaces otherProcess.on("message", callback) and
+  // otherProcess.send(message) because they take a topic string as their
+  // first argument, which allows restricting the delivery of messages by
+  // topic; and they permit the receiving process to respond by returning
+  // a value (possibly a Promise) from the onMessage callback.
+  enable(otherProcess) {
+    if (typeof otherProcess.onMessage === "function" &&
+        typeof otherProcess.sendMessage === "function") {
+      // Calling enable more than once should be safe/idempotent.
+      return otherProcess;
     }
-    callbacksByTopic.get(topic).add(callback);
-  },
 
-  // Call enableSendMessage(otherProcess) to define a method called
-  // otherProcess.sendMessage that takes a topic string and payload to
-  // deliver to any listeners that have been registered for that topic.
-  enableSendMessage(otherProcess) {
+    const callbacksByTopic = new Map;
+
+    // To receive messages *from* otherProcess, this process should call
+    // otherMessage.onMessage(topic, callback). The callback will receive
+    // the provided payload as its first (and only) parameter. Callbacks
+    // may return a Promise, in which case the response will be delayed
+    // until all results returned by callbacks registered for this topic
+    // have been resolved.
+    otherProcess.onMessage = function onMessage(topic, callback) {
+      if (! callbacksByTopic.has(topic)) {
+        callbacksByTopic.set(topic, new Set);
+      }
+      callbacksByTopic.get(topic).add(callback);
+    };
+
     const readyResolvers = new Map;
     const pendingMessages = new Map;
     const promisesByTopic = new Map;
@@ -93,10 +101,10 @@ Object.assign(exports, {
       // Immediately update the latest promise for this topic to the
       // newPromise that we just created, before any listeners run. This
       // strategy has the effect of chaining promises by topic and thus
-      // keeping messages and their responses strictly ordered, one
-      // after the last. Because we always register a non-throwing error
-      // handler at the end of newPromise, this queue of promises should
-      // never get stalled by an earlier rejection.
+      // keeping messages and their responses strictly ordered, one after
+      // the last. Because we always register a non-throwing error handler
+      // at the end of newPromise, this queue of promises should never get
+      // stalled by an earlier rejection.
       promisesByTopic.set(topic, newPromise);
     };
 
@@ -120,9 +128,9 @@ Object.assign(exports, {
 
     // Call otherProcess.sendMessage(topic, payload) instead of the native
     // otherProcess.send(message) to deliver a message based on a specific
-    // topic string, and receive a reliable response when the other
+    // topic string, and to receive a reliable response when the other
     // process has finished handling that message.
-    otherProcess.sendMessage = function (topic, payload) {
+    otherProcess.sendMessage = function sendMessage(topic, payload) {
       otherProcess.readyForMessages =
         otherProcess.readyForMessages || makeReadyPromise();
 
@@ -192,14 +200,28 @@ Object.assign(exports, {
       // Silence UnhandledPromiseRejectionWarning
       otherProcess.readyForMessages.catch(() => {});
     });
+
+    return otherProcess;
+  },
+
+  // Call this onMessage function to listen for messages *from the parent
+  // process* (if the parent spawned this process with an IPC channel).
+  onMessage(topic, callback) {
+    // Do nothing by default unless exports.enable(process) is called
+    // below, because this process will never receive any messages unless
+    // we have an IPC channel open with the parent process, which is true
+    // only if process.send is a function.
   }
 });
 
 if (typeof process.send === "function") {
   // The process.send method is defined only when the current process was
-  // spawned with an IPC channel by its parent process. In other words,
+  // spawned with an IPC channel by the parent process. In other words,
   // given that process.send can be used to send messages to the parent
   // process, it makes sense to enable process.sendMessage(topic, payload)
   // in the child-to-parent direction, too.
-  exports.enableSendMessage(process);
+  exports.enable(process);
+
+  // Override the default no-op exports.onMessage defined above.
+  exports.onMessage = process.onMessage;
 }
