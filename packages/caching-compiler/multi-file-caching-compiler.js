@@ -148,8 +148,20 @@ extends CachingCompilerBase {
       };
 
       if (this.compileOneFileLater &&
-          inputFile.supportsLazyCompilation &&
-          ! this._cacheDebugEnabled) {
+          inputFile.supportsLazyCompilation) {
+        if (! this.isRoot(inputFile)) {
+          // If this inputFile is definitely not a root, then it must be
+          // lazy, and this is our last chance to mark it as such, so that
+          // the rest of the compiler plugin system can avoid worrying
+          // about the MultiFileCachingCompiler-specific concept of a
+          // "root." If this.isRoot(inputFile) returns true instead, that
+          // classification may not be trustworthy, since returning true
+          // used to be the only way to get the file to be compiled, so
+          // that it could be imported later by a JS module. Now that
+          // files can be compiled on-demand, it's safe to pass all files
+          // that might be roots to this.compileOneFileLater.
+          inputFile.getFileOptions().lazy = true;
+        }
         await this.compileOneFileLater(inputFile, getResult);
       } else if (this.isRoot(inputFile)) {
         const result = await getResult();

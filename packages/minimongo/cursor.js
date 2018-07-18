@@ -308,10 +308,7 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      const results = ordered ? query.results : query.results._map;
-
-      Object.keys(results).forEach(key => {
-        const doc = results[key];
+      query.results.forEach(doc => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;

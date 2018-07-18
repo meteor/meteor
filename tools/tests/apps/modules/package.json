@@ -19,15 +19,16 @@
     "moment": "2.11.1",
     "mssql": "^3.1.1",
     "mysql": "^2.15.0",
+    "puppeteer": "^1.3.0",
     "regenerator-runtime": "^0.11.1",
     "stripe": "^4.4.0",
     "uuid": "^3.1.0",
     "winston": "^2.3.1"
   },
   "scripts": {
-    "test": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package dispatch:mocha-phantomjs",
-    "browser": "METEOR_PROFILE=100 ../../../../meteor test --full-app --driver-package dispatch:mocha-browser",
-    "test-packages": "../../../../meteor test-packages --driver-package dispatch:mocha-phantomjs packages/modules-test-package"
+    "test": "METEOR_PROFILE=100 TEST_BROWSER_DRIVER=puppeteer meteor ../../../../meteor test --full-app --driver-package meteortesting:mocha",
+    "browser": "METEOR_PROFILE=100 TEST_BROWSER_DRIVER=puppeteer meteor ../../../../meteor test --full-app --driver-package meteortesting:mocha",
+    "test-packages": "TEST_BROWSER_DRIVER=puppeteer meteor../../../../meteor test-packages --driver-package meteortesting:mocha packages/modules-test-package"
   },
   "meteor": {
     "testModule": "tests.js"

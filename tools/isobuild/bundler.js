@@ -529,7 +529,6 @@ export class NodeModulesDirectory {
 // Allowed options:
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
-// - hash: optional, sha1 hash of the file contents, if known
 // - sourceMap: if 'data' is given, can be given instead of
 //   sourcePath. a string or a JS Object. Will be stored as Object.
 // - cacheable
@@ -598,8 +597,8 @@ class File {
     this.assets = null;
 
     this._contents = options.data || null; // contents, if known, as a Buffer
-    this._hashOfContents = options.hash || null;
     this._hash = null;
+    this._sri = null;
   }
 
   toString() {
@@ -613,17 +612,21 @@ class File {
 
   hash() {
     if (! this._hash) {
-      if (! this._hashOfContents) {
-        this._hashOfContents = watch.sha1(this.contents());
-      }
-
       this._hash = watch.sha1(
         String(File._salt()),
-        this._hashOfContents,
+        this.sri(),
       );
     }
 
     return this._hash;
+  }
+
+  sri() {
+    if (! this._sri) {
+      this._sri = watch.sha512(this.contents());
+    }
+
+    return this._sri;
   }
 
   // Omit encoding to get a buffer, or provide something like 'utf8'
@@ -641,12 +644,10 @@ class File {
   }
 
   setContents(b) {
-    if (!(b instanceof Buffer)) {
-      throw new Error("Must set contents to a Buffer");
-    }
+    assert.ok(Buffer.isBuffer(b), "Must pass Buffer to File#setContents");
     this._contents = b;
-    // Un-cache hash.
-    this._hashOfContents = this._hash = null;
+    // Bust the hash cache.
+    this._hash = this._sri = null;
   }
 
   size() {
@@ -1694,6 +1695,7 @@ class ClientTarget extends Target {
       // Set this now, in case we mutated the file's contents.
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
+      manifestItem.sri = file.sri();
 
       if (! file.targetPath.startsWith("dynamic/")) {
         writeFile(file, builder);

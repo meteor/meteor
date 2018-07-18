@@ -1,5 +1,33 @@
 ## v.NEXT
 
+* Meteor's `self-test` has been updated to use "headless" Chrome rather
+  than PhantomJS for browser tests. PhantomJS can still be forced by
+  passing the `--phantom` flag to the `meteor self-test` command.
+  [PR #9814](https://github.com/meteor/meteor/pull/9814)
+
+* Importing a directory containing an `index.*` file now works for
+  non-`.js` file extensions. As before, the list of possible extensions is
+  defined by which compiler plugins you have enabled.
+  [PR #10027](https://github.com/meteor/meteor/pull/10027)
+
+* The `meteor-babel` npm package used by `babel-compiler` has been updated
+  to version 7.0.0-beta.53.
+
+* The `install` npm package used by `modules-runtime` has been updated to
+  version 0.12.0.
+
+* The `reify` npm package has been updated to version 0.16.4.
+
+* The `uglify-es` npm package used by `minifier-js` has been replaced with
+  [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
+  `uglify-es` that appears to be (more actively) maintained.
+  [Issue #10042](https://github.com/meteor/meteor/issues/10042)
+
+* Sub-resource integrity hashes (sha512) can now be enabled for static CSS
+  and JS assets by calling `WebAppInternals.enableSubresourceIntegrity()`.
+  [PR #9933](https://github.com/meteor/meteor/pull/9933)
+  [PR #10050](https://github.com/meteor/meteor/pull/10050)
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
