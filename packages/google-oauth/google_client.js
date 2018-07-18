@@ -1,6 +1,6 @@
-var Google = require("./namespace.js");
+import Google from './namespace.js';
 
-var ILLEGAL_PARAMETERS = {
+const ILLEGAL_PARAMETERS = {
   'response_type': 1,
   'client_id': 1,
   'scope': 1,
@@ -13,7 +13,7 @@ var ILLEGAL_PARAMETERS = {
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on
 //   error.
-Google.requestCredential = function (options, credentialRequestCompleteCallback) {
+Google.requestCredential = (options, credentialRequestCompleteCallback) => {
   // support both (options, callback) and (callback).
   if (!credentialRequestCompleteCallback && typeof options === 'function') {
     credentialRequestCompleteCallback = options;
@@ -22,24 +22,22 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
     options = {};
   }
 
-  var config = ServiceConfiguration.configurations.findOne({service: 'google'});
+  const config = ServiceConfiguration.configurations.findOne({service: 'google'});
   if (!config) {
     credentialRequestCompleteCallback && credentialRequestCompleteCallback(
       new ServiceConfiguration.ConfigError());
     return;
   }
 
-  var credentialToken = Random.secret();
+  const credentialToken = Random.secret();
 
   // we need the email scope to get user id from google.
-  var requiredScopes = { 'email': 1 };
-  var scopes = options.requestPermissions || ['profile'];
-  scopes.forEach(function (scope) {
-    requiredScopes[scope] = 1;
-  });
+  const requiredScopes = { 'email': 1 };
+  let scopes = options.requestPermissions || ['profile'];
+  scopes.forEach(scope => requiredScopes[scope] = 1);
   scopes = Object.keys(requiredScopes);
 
-  var loginUrlParameters = {};
+  const loginUrlParameters = {};
   if (config.loginUrlParameters){
     Object.assign(loginUrlParameters, config.loginUrlParameters);
   }
@@ -48,9 +46,9 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
   }
 
   // validate options keys
-  Object.keys(loginUrlParameters).forEach(function (key) {
-    if (ILLEGAL_PARAMETERS.hasOwnProperty(key)) {
-      throw new Error("Google.requestCredential: Invalid loginUrlParameter: " + key);
+  Object.keys(loginUrlParameters).forEach(key => {
+    if (Object.prototype.hasOwnProperty.call(ILLEGAL_PARAMETERS, key)) {
+      throw new Error(`Google.requestCredential: Invalid loginUrlParameter: ${key}`);
     }
   });
 
@@ -68,7 +66,7 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
     loginUrlParameters.login_hint = options.loginHint;
   }
 
-  var loginStyle = OAuth._loginStyle('google', config, options);
+  const loginStyle = OAuth._loginStyle('google', config, options);
   // https://developers.google.com/accounts/docs/OAuth2WebServer#formingtheurl
   Object.assign(loginUrlParameters, {
     "response_type": "code",
@@ -77,18 +75,17 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
     "redirect_uri": OAuth._redirectUri('google', config),
     "state": OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl)
   });
-  var loginUrl = 'https://accounts.google.com/o/oauth2/auth?' +
-    Object.keys(loginUrlParameters).map(function (param) {
-      return encodeURIComponent(param) + '=' +
-        encodeURIComponent(loginUrlParameters[param]);
-    }).join("&");
+  const loginUrl = 'https://accounts.google.com/o/oauth2/auth?' +
+    Object.keys(loginUrlParameters).map(param => 
+      `${encodeURIComponent(param)}=${encodeURIComponent(loginUrlParameters[param])}`
+    ).join("&");
 
   OAuth.launchLogin({
     loginService: "google",
-    loginStyle: loginStyle,
-    loginUrl: loginUrl,
-    credentialRequestCompleteCallback: credentialRequestCompleteCallback,
-    credentialToken: credentialToken,
+    loginStyle,
+    loginUrl,
+    credentialRequestCompleteCallback,
+    credentialToken,
     popupOptions: { height: 600 }
   });
 };

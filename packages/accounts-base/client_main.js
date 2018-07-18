@@ -1,6 +1,4 @@
-import {AccountsClient} from "./accounts_client.js";
-import {AccountsTest} from "./url_client.js";
-import "./localstorage_token.js";
+import { AccountsClient, AccountsTest } from "./accounts_client.js";
 
 /**
  * @namespace Accounts
@@ -16,11 +14,14 @@ Accounts = new AccountsClient();
  */
 Meteor.users = Accounts.users;
 
-export {
+const exp = { AccountsClient };
+
+if (Meteor.isPackageTest) {
   // Since this file is the main module for the client version of the
   // accounts-base package, properties of non-entry-point modules need to
   // be re-exported in order to be accessible to modules that import the
   // accounts-base package.
-  AccountsClient,
-  AccountsTest,
-};
+  exp.AccountsTest = AccountsTest;
+}
+
+export default exp;

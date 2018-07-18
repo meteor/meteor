@@ -40,6 +40,33 @@ export class AccountsCommon {
       bindEnvironment: false,
       debugPrintExceptions: "onLogout callback"
     });
+
+    // Expose for testing.
+    this.DEFAULT_LOGIN_EXPIRATION_DAYS = DEFAULT_LOGIN_EXPIRATION_DAYS;
+    this.LOGIN_UNEXPIRING_TOKEN_DAYS = LOGIN_UNEXPIRING_TOKEN_DAYS;
+
+    // Thrown when the user cancels the login process (eg, closes an oauth
+    // popup, declines retina scan, etc)
+    const lceName = 'Accounts.LoginCancelledError';
+    this.LoginCancelledError = Meteor.makeErrorType(
+      lceName,
+      function (description) {
+        this.message = description;
+      }
+    );
+    this.LoginCancelledError.prototype.name = lceName;
+
+    // This is used to transmit specific subclass errors over the wire. We
+    // should come up with a more generic way to do this (eg, with some sort of
+    // symbolic error code rather than a number).
+    this.LoginCancelledError.numericError = 0x8acdc2f;
+
+    // loginServiceConfiguration and ConfigError are maintained for backwards compatibility
+    Meteor.startup(() => {
+      const { ServiceConfiguration } = Package['service-configuration'];
+      this.loginServiceConfiguration = ServiceConfiguration.configurations;
+      this.ConfigError = ServiceConfiguration.ConfigError;
+    });
   }
 
   /**
@@ -55,7 +82,7 @@ export class AccountsCommon {
    * @locus Anywhere
    */
   user() {
-    var userId = this.userId();
+    const userId = this.userId();
     return userId ? this.users.findOne(userId) : null;
   }
 
@@ -107,8 +134,6 @@ export class AccountsCommon {
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
    */
   config(options) {
-    var self = this;
-
     // We don't want users to accidentally only call Accounts.config on the
     // client, where some of the options will have partial effects (eg removing
     // the "create account" button from accounts-ui if forbidClientAccountCreation
@@ -126,32 +151,35 @@ export class AccountsCommon {
     // We need to validate the oauthSecretKey option at the time
     // Accounts.config is called. We also deliberately don't store the
     // oauthSecretKey in Accounts._options.
-    if (_.has(options, "oauthSecretKey")) {
-      if (Meteor.isClient)
+    if (Object.prototype.hasOwnProperty.call(options, 'oauthSecretKey')) {
+      if (Meteor.isClient) {
         throw new Error("The oauthSecretKey option may only be specified on the server");
-      if (! Package["oauth-encryption"])
+      }
+      if (! Package["oauth-encryption"]) {
         throw new Error("The oauth-encryption package must be loaded to set oauthSecretKey");
+      }
       Package["oauth-encryption"].OAuthEncryption.loadKey(options.oauthSecretKey);
-      options = _.omit(options, "oauthSecretKey");
+      options = { ...options };
+      delete options.oauthSecretKey;
     }
 
     // validate option keys
-    var VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
+    const VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
                       "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays",
                       "ambiguousErrorMessages", "bcryptRounds"];
-    _.each(_.keys(options), function (key) {
-      if (!_.contains(VALID_KEYS, key)) {
-        throw new Error("Accounts.config: Invalid key: " + key);
+    Object.keys(options).forEach(key => {
+      if (!VALID_KEYS.includes(key)) {
+        throw new Error(`Accounts.config: Invalid key: ${key}`);
       }
     });
 
     // set values in Accounts._options
-    _.each(VALID_KEYS, function (key) {
+    VALID_KEYS.forEach(key => {
       if (key in options) {
-        if (key in self._options) {
-          throw new Error("Can't set `" + key + "` more than once");
+        if (key in this._options) {
+          throw new Error(`Can't set \`${key}\` more than once`);
         }
-        self._options[key] = options[key];
+        this._options[key] = options[key];
       }
     });
   }
@@ -201,7 +229,6 @@ export class AccountsCommon {
     // It would be much preferable for this to be in accounts_client.js,
     // but it has to be here because it's needed to create the
     // Meteor.users collection.
-
     if (options.connection) {
       this.connection = options.connection;
     } else if (options.ddpUrl) {
@@ -251,15 +278,14 @@ export class AccountsCommon {
   }
 
   _tokenExpiresSoon(when) {
-    var minLifetimeMs = .1 * this._getTokenLifetimeMs();
-    var minLifetimeCapMs = MIN_TOKEN_LIFETIME_CAP_SECS * 1000;
-    if (minLifetimeMs > minLifetimeCapMs)
+    let minLifetimeMs = .1 * this._getTokenLifetimeMs();
+    const minLifetimeCapMs = MIN_TOKEN_LIFETIME_CAP_SECS * 1000;
+    if (minLifetimeMs > minLifetimeCapMs) {
       minLifetimeMs = minLifetimeCapMs;
+    }
     return new Date() > (new Date(when) - minLifetimeMs);
   }
 }
-
-var Ap = AccountsCommon.prototype;
 
 // Note that Accounts is defined separately in accounts_client.js and
 // accounts_server.js.
@@ -269,64 +295,30 @@ var Ap = AccountsCommon.prototype;
  * @locus Anywhere but publish functions
  * @importFromPackage meteor
  */
-Meteor.userId = function () {
-  return Accounts.userId();
-};
+Meteor.userId = () => Accounts.userId();
 
 /**
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
  * @locus Anywhere but publish functions
  * @importFromPackage meteor
  */
-Meteor.user = function () {
-  return Accounts.user();
-};
+Meteor.user = () => Accounts.user();
 
 // how long (in days) until a login token expires
 const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
-// Expose for testing.
-Ap.DEFAULT_LOGIN_EXPIRATION_DAYS = DEFAULT_LOGIN_EXPIRATION_DAYS;
-
 // how long (in days) until reset password token expires
-var DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS = 3;
+const DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS = 3;
 // how long (in days) until enrol password token expires
-var DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
+const DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
 // Clients don't try to auto-login with a token that is going to expire within
 // .1 * DEFAULT_LOGIN_EXPIRATION_DAYS, capped at MIN_TOKEN_LIFETIME_CAP_SECS.
 // Tries to avoid abrupt disconnects from expiring tokens.
-var MIN_TOKEN_LIFETIME_CAP_SECS = 3600; // one hour
+const MIN_TOKEN_LIFETIME_CAP_SECS = 3600; // one hour
 // how often (in milliseconds) we check for expired tokens
-EXPIRE_TOKENS_INTERVAL_MS = 600 * 1000; // 10 minutes
+export const EXPIRE_TOKENS_INTERVAL_MS = 600 * 1000; // 10 minutes
 // how long we wait before logging out clients when Meteor.logoutOtherClients is
 // called
-CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
-
+export const CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
 // A large number of expiration days (approximately 100 years worth) that is
 // used when creating unexpiring tokens.
 const LOGIN_UNEXPIRING_TOKEN_DAYS = 365 * 100;
-// Expose for testing.
-Ap.LOGIN_UNEXPIRING_TOKEN_DAYS = LOGIN_UNEXPIRING_TOKEN_DAYS;
-
-// loginServiceConfiguration and ConfigError are maintained for backwards compatibility
-Meteor.startup(function () {
-  var ServiceConfiguration =
-    Package['service-configuration'].ServiceConfiguration;
-  Ap.loginServiceConfiguration = ServiceConfiguration.configurations;
-  Ap.ConfigError = ServiceConfiguration.ConfigError;
-});
-
-// Thrown when the user cancels the login process (eg, closes an oauth
-// popup, declines retina scan, etc)
-var lceName = 'Accounts.LoginCancelledError';
-Ap.LoginCancelledError = Meteor.makeErrorType(
-  lceName,
-  function (description) {
-    this.message = description;
-  }
-);
-Ap.LoginCancelledError.prototype.name = lceName;
-
-// This is used to transmit specific subclass errors over the wire. We should
-// come up with a more generic way to do this (eg, with some sort of symbolic
-// error code rather than a number).
-Ap.LoginCancelledError.numericError = 0x8acdc2f;

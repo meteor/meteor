@@ -1,12 +1,8 @@
 Template.configureLoginServiceDialogForGithub.helpers({
-  siteUrl: function () {
-    return Meteor.absoluteUrl();
-  }
+  siteUrl: () => Meteor.absoluteUrl(),
 });
 
-Template.configureLoginServiceDialogForGithub.fields = function () {
-  return [
-    {property: 'clientId', label: 'Client ID'},
-    {property: 'secret', label: 'Client Secret'}
-  ];
-};
+Template.configureLoginServiceDialogForGithub.fields = () => [
+  {property: 'clientId', label: 'Client ID'},
+  {property: 'secret', label: 'Client Secret'}
+];

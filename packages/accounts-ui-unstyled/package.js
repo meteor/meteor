@@ -8,7 +8,7 @@ Package.onUse(function (api) {
     'tracker',
     'service-configuration',
     'accounts-base',
-    'underscore',
+    'ecmascript',
     'templating@1.2.13',
     'session',
   ], 'client');
@@ -46,7 +46,7 @@ Package.onUse(function (api) {
   api.addFiles('login_buttons.import.less');
 });
 
-Package.onTest(function (api) {
+Package.onTest(api => {
   api.use('accounts-ui-unstyled');
   api.use('tinytest');
   api.addFiles('accounts_ui_tests.js', 'client');

@@ -1,12 +1,15 @@
-var url = Npm.require("url");
+import url from 'url';
+import { OAuth1Binding } from './oauth1_binding';
 
-OAuth._queryParamsWithAuthTokenUrl = function (authUrl, oauthBinding, params, whitelistedQueryParams) {
-  params = params || {};
-  var redirectUrlObj = url.parse(authUrl, true);
+OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitelistedQueryParams) => {
+  const redirectUrlObj = url.parse(authUrl, true);
 
-  _.extend(
+  Object.assign(
     redirectUrlObj.query,
-    _.pick(params.query, whitelistedQueryParams),
+    whitelistedQueryParams.reduce((prev, param) => 
+      params.query[param] ? { ...prev, param: params.query[param] } : prev,
+      {}
+    ),
     {
       oauth_token: oauthBinding.requestToken,
     }
@@ -22,20 +25,20 @@ OAuth._queryParamsWithAuthTokenUrl = function (authUrl, oauthBinding, params, wh
 };
 
 // connect middleware
-OAuth._requestHandlers['1'] = function (service, query, res) {
-  var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
+OAuth._requestHandlers['1'] = (service, query, res) => {
+  const config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (! config) {
     throw new ServiceConfiguration.ConfigError(service.serviceName);
   }
 
-  var urls = service.urls;
-  var oauthBinding = new OAuth1Binding(config, urls);
+  const { urls } = service;
+  const oauthBinding = new OAuth1Binding(config, urls);
 
-  var credentialSecret;
+  let credentialSecret;
 
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
-    var callbackUrl = OAuth._redirectUri(service.serviceName, config, {
+    const callbackUrl = OAuth._redirectUri(service.serviceName, config, {
       state: query.state,
       cordova: (query.cordova === "true"),
       android: (query.android === "true")
@@ -51,10 +54,8 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
       oauthBinding.requestTokenSecret);
 
     // support for scope/name parameters
-    var redirectUrl;
-    var authParams = {
-      query: query
-    };
+    let redirectUrl;
+    const authParams = { query };
 
     if(typeof urls.authenticate === "function") {
       redirectUrl = urls.authenticate(oauthBinding, authParams);
@@ -75,7 +76,7 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
     // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
-    var requestTokenInfo = OAuth._retrieveRequestToken(
+    const requestTokenInfo = OAuth._retrieveRequestToken(
       OAuth._credentialTokenFromQuery(query));
 
     if (! requestTokenInfo) {
@@ -93,10 +94,10 @@ OAuth._requestHandlers['1'] = function (service, query, res) {
       oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
-      var oauthResult = service.handleOauthRequest(
+      const oauthResult = service.handleOauthRequest(
         oauthBinding, { query: query });
 
-      var credentialToken = OAuth._credentialTokenFromQuery(query);
+      const credentialToken = OAuth._credentialTokenFromQuery(query);
       credentialSecret = Random.secret();
 
       // Store the login result so it can be retrieved in another
