@@ -6,6 +6,8 @@ Support for sending messages between a parent process and a child process
 that was spawned (by the parent) with [an IPC
 channel](https://nodejs.org/api/child_process.html#child_process_options_stdio).
 
+## Usage
+
 After spawning a child process, calling `enable(childProcess)` enables
 `childProcess.sendMessage(topic, payload)`, which delivers `payload` to
 any listeners in the child process that were registered for the given
