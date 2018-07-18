@@ -39,6 +39,7 @@
 //   - port: the port that the clients should run on
 import * as files from '../fs/files.js';
 import PhantomClient from './clients/phantom/index.js';
+import PuppeteerClient from './clients/puppeteer/index.js';
 import BrowserStackClient from './clients/browserstack/index.js';
 import Builder from '../isobuild/builder.js';
 import Run from './run.js';
@@ -82,7 +83,7 @@ export default class Sandbox {
       this.warehouse = files.pathJoin(this.root, 'tropohouse');
       this._makeWarehouse(this.options.warehouse);
     }
-
+    
     const meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
 
     // Figure out the 'meteor' to run
@@ -128,6 +129,10 @@ export default class Sandbox {
 
       if (clientOptions.phantom) {
         PhantomClient.pushClients(this.clients, appConfig);
+      }
+
+      if (clientOptions.puppeteer) {
+        PuppeteerClient.pushClients(this.clients, appConfig);
       }
 
       if (clientOptions.browserstack && BrowserStackClient.prerequisitesMet()) {

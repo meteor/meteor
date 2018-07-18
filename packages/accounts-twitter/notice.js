@@ -1,6 +1,6 @@
 if (Package['accounts-ui']
     && !Package['service-configuration']
-    && !Package.hasOwnProperty('twitter-config-ui')) {
+    && !Object.prototype.hasOwnProperty.call(Package, 'twitter-config-ui')) {
   console.warn(
     "Note: You're using accounts-ui and accounts-twitter,\n" +
     "but didn't install the configuration UI for Twitter\n" +

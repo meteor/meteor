@@ -57,6 +57,11 @@
   `meteor` always refers to the same `meteor` used to run `meteor npm`.
   [PR #9941](https://github.com/meteor/meteor/pull/9941)
 
+* Meteor's `self-test` has been updated to use "headless" Chrome rather
+  than PhantomJS for browser tests. PhantomJS can still be forced by
+  passing the `--phantom` flag to the `meteor self-test` command.
+  [PR #9814](https://github.com/meteor/meteor/pull/9814)
+
 * Importing a directory containing an `index.*` file now works for
   non-`.js` file extensions. As before, the list of possible extensions is
   defined by which compiler plugins you have enabled.
