@@ -132,7 +132,14 @@ fi
 # the script take precedence over $NODE_PATH; it used to be that users would
 # screw up their meteor installs by have a ~/node_modules
 
+if [ "$ARCH" = "i686" ]; then
+    # 32-bit platforms cannot request 4GB
+    MAX_OLD_SPACE_SIZE=3072
+else
+    MAX_OLD_SPACE_SIZE=4096
+fi
+
 exec "$DEV_BUNDLE/bin/node" \
-     --max-old-space-size=4096 \
+     --max-old-space-size=${MAX_OLD_SPACE_SIZE} \
      ${TOOL_NODE_FLAGS} \
      "$METEOR" "$@"
