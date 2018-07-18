@@ -1,25 +1,25 @@
-var createPage = require("webpage").create;
-var system = require("system");
-var platform = system.args[1] || "local";
+var createPage = require('webpage').create;
+var system = require('system');
+var platform = system.args[1] || 'local';
 var platformUrl = system.env.URL + platform;
 var testUrls = [
   // Additional application URLs can be added here to re-run tests in
   // PhantomJS with different query parameter-based configurations.
-  platformUrl,
+  platformUrl
 ];
 
 function runNextUrl() {
   var url = testUrls.shift();
-  if (! url) {
+  if (!url) {
     phantom.exit(0);
     return;
   }
 
-  console.log("Running Meteor tests in PhantomJS... " + url);
+  console.log('Running Meteor tests in PhantomJS... ' + url);
 
   var page = createPage();
 
-  page.onConsoleMessage = function (message) {
+  page.onConsoleMessage = function(message) {
     console.log(message);
   };
 
@@ -43,22 +43,22 @@ function runNextUrl() {
 }
 
 function isDone(page) {
-  return page.evaluate(function () {
-    if (typeof TEST_STATUS !== "undefined") {
+  return page.evaluate(function() {
+    if (typeof TEST_STATUS !== 'undefined') {
       return TEST_STATUS.DONE;
     }
 
-    return typeof DONE !== "undefined" && DONE;
+    return typeof DONE !== 'undefined' && DONE;
   });
 }
 
 function getFailCount(page) {
-  return page.evaluate(function () {
-    if (typeof TEST_STATUS !== "undefined") {
+  return page.evaluate(function() {
+    if (typeof TEST_STATUS !== 'undefined') {
       return TEST_STATUS.FAILURES;
     }
 
-    if (typeof FAILURES === "undefined") {
+    if (typeof FAILURES === 'undefined') {
       return 1;
     }
 
