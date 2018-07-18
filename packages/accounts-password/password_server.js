@@ -813,6 +813,26 @@ Meteor.methods({resetPassword: function (token, newPassword) {
         Accounts._setLoginToken(user._id, self.connection, oldToken);
       };
 
+      // Copied over from nc:companyUser.recordPasswordChange
+      let passwordHistory = user.passwordHistory || [];
+      passwordHistory.push(hashed);
+
+      const companySettings = NC.CompanySettings.findOne({ companyId: user.companyId });
+      let historyLength = 2;
+
+      if (companySettings && typeof (companySettings.passwordHistoryLength) !== "undefined") {
+        historyLength = companySettings.passwordHistoryLength;
+      }
+
+      if (historyLength) {
+        if (passwordHistory.length > historyLength) {
+          passwordHistory = passwordHistory.slice(0, historyLength - 1);
+        }
+      }
+      else {
+        passwordHistory = [];
+      }
+
       try {
         // Update the user record by:
         // - Changing the password to the new one
@@ -825,7 +845,8 @@ Meteor.methods({resetPassword: function (token, newPassword) {
             'services.password.reset.token': token
           },
           {$set: {'services.password.bcrypt': hashed,
-                  'emails.$.verified': true},
+                  'emails.$.verified': true,
+                  'passwordHistory': passwordHistory},
            $unset: {'services.password.reset': 1,
                     'services.password.srp': 1}});
         if (affectedRecords !== 1)

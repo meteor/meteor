@@ -725,15 +725,120 @@ Ap._initServerPublications = function () {
   // Publish the current user's record to the client.
   accounts._server.publish(null, function () {
     if (this.userId) {
-      return accounts.users.find({
-        _id: this.userId
-      }, {
+      // same as ownCompany sub
+      const user = accounts.users.findOne(this.userId, {
         fields: {
-          profile: 1,
-          username: 1,
-          emails: 1
+          _id: 1,
+          companyId: 1
         }
       });
+
+      const company = NC.Companies.findOne(user.companyId, {
+        _id: 1,
+        childCompanyIds: 1,
+        activeContractIds: 1,
+        _id: 1,
+      });
+
+      const ids = company.childCompanyIds ? [...company.childCompanyIds, company._id] : [company._id];
+
+      let additionalCollections = [];
+
+      if (NC.accountPublications && NC.accountPublications.partners) {
+        additionalCollections = NC.accountPublications.partners(this.userId);
+      }
+
+      return [
+        accounts.users.find({
+          _id: this.userId
+        }, {
+          fields: {
+            companyId: 1,
+            activeCompanyId: 1,
+            profile: 1,
+            username: 1,
+            emails: 1,
+            partnerIds: 1
+          }
+        }),
+        NC.Companies.find({
+          _id: {
+            $in: ids
+          }
+        }, {
+          fields: {
+            name: 1,
+            nameKanji: 1,
+            slug: 1,
+            created_on: 1,
+            customDomain: 1,
+            enableCustomEmail: 1,
+            childCompanyIds: 1,
+            parentCompanyId: 1,
+            customEmailDomain: 1,
+            visibleJb: 1,
+            visibleLanding: 1,
+            emailWaitMins: 1,
+            address: 1
+          }
+        }),
+        NC.CompanySettings.find({
+          companyId: {
+            $in: ids
+          }
+        }, {
+          fields: {
+            'companyId': 1,
+            'enableLandingSite': 1,
+            'enableEvents': 1,
+            'enableInterviewReqs': 1,
+            'enableMobileInterview': 1,
+            'enableCareerEvents': 1,
+            'enableCustomEmailAddresses': 1,
+            'enableCustomInterviewStages': 1,
+            'enableApplicantReferrals': 1,
+            'enableMidcareer': 1,
+            'enableNewGraduate': 1,
+            'enableSms': 1,
+            'enableSms2fa': 1,
+            'enableScheduling': 1,
+            'enableCalendarIntegration': 1,
+            'enableCronofyIntegration': 1,
+            'enableUserAccessLevels': 1,
+            'enableComplexPermissions': 1,
+            'enableAgenciesPositionsManagement': 1,
+            'passwordMinLength': 1,
+            'passwordMinNumbers': 1,
+            'passwordMinUppercases': 1,
+            'passwordMinSymbols': 1,
+            'passwordHistoryLength': 1,
+            'currentStorageUsedInBytes': 1,
+            'maxStorageInBytes': 1,
+            'numberOfUploadedImages': 1,
+            'maxUploadedImages': 1,
+            'enableResponsiblePeople': 1,
+            'responsiblePeopleCategories': 1
+          }
+        }),
+        NC.Contracts.find({
+          'companyId': {
+            $in: ids
+          },
+          $or: [
+            {
+              contractEndDate: {
+                $exists: false
+              }
+            },
+            {
+              contractEndDate: {
+                $gt: new Date()
+              }
+            },
+          ]
+        }, {})
+
+      ].concat(additionalCollections);
     } else {
       return null;
     }
