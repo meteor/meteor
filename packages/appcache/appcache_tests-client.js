@@ -69,8 +69,8 @@ appcacheTest('sections validity', async (test, manifest) => {
   // Verify header validity
   nextLineMatches('CACHE MANIFEST');
   nextLineMatches('');
-  nextLineMatches(/^# [a-z0-9]+$/i, 2);
-
+  nextLineMatches(/^# [a-z0-9]+$/i);
+  nextLineMatches('');
 
   // Verify body validity
   while (! eof()) {
