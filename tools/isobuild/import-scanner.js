@@ -975,6 +975,7 @@ export default class ImportScanner {
     info.dataString = jsonDataToCommonJS(jsonData);
     info.data = Buffer.from(info.dataString, "utf8");
     info.hash = sha1(info.data);
+    info.jsonData = jsonData;
 
     return info;
   }
