@@ -60,13 +60,22 @@ function updateVersions(shouldReloadClientProgram) {
     WebAppInternals.reloadClientPrograms();
   }
 
+  const {
+    // If the AUTOUPDATE_VERSION environment variable is defined, it takes
+    // precedence, but Autoupdate.autoupdateVersion is still supported as
+    // a fallback. In most cases neither of these values will be defined.
+    AUTOUPDATE_VERSION = Autoupdate.autoupdateVersion
+  } = process.env;
+
   // Step 2: update __meteor_runtime_config__.autoupdate.versions.
   const clientArchs = Object.keys(WebApp.clientPrograms);
   clientArchs.forEach(arch => {
     Autoupdate.versions[arch] = {
-      version: WebApp.calculateClientHashNonRefreshable(arch),
-      versionRefreshable: WebApp.calculateClientHashRefreshable(arch),
-      versionNonRefreshable:
+      version: AUTOUPDATE_VERSION ||
+        WebApp.calculateClientHash(arch),
+      versionRefreshable: AUTOUPDATE_VERSION ||
+        WebApp.calculateClientHashRefreshable(arch),
+      versionNonRefreshable: AUTOUPDATE_VERSION ||
         WebApp.calculateClientHashNonRefreshable(arch),
     };
   });

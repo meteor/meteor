@@ -190,30 +190,24 @@ var appUrl = function (url) {
 // the right moment.
 
 Meteor.startup(function () {
-  var calculateClientHash = WebAppHashing.calculateClientHash;
-  WebApp.clientHash = function (arch) {
-    return WebApp.clientPrograms[
-      arch || WebApp.defaultArch
-    ].version;
-  };
+  function getter(key) {
+    return function (arch) {
+      arch = arch || WebApp.defaultArch;
+      const program = WebApp.clientPrograms[arch];
+      const value = program && program[key];
+      // If this is the first time we have calculated this hash,
+      // program[key] will be a thunk (lazy function with no parameters)
+      // that we should call to do the actual computation.
+      return typeof value === "function"
+        ? program[key] = value()
+        : value;
+    };
+  }
 
-  WebApp.calculateClientHashRefreshable = function (arch) {
-    return WebApp.clientPrograms[
-      arch || WebApp.defaultArch
-    ].versionRefreshable;
-  };
-
-  WebApp.calculateClientHashNonRefreshable = function (arch) {
-    return WebApp.clientPrograms[
-      arch || WebApp.defaultArch
-    ].versionNonRefreshable;
-  };
-
-  WebApp.getRefreshableAssets = function (arch) {
-    return WebApp.clientPrograms[
-      arch || WebApp.defaultArch
-    ].refreshableAssets;
-  };
+  WebApp.calculateClientHash = WebApp.clientHash = getter("version");
+  WebApp.calculateClientHashRefreshable = getter("versionRefreshable");
+  WebApp.calculateClientHashNonRefreshable = getter("versionNonRefreshable");
+  WebApp.getRefreshableAssets = getter("refreshableAssets");
 });
 
 
@@ -674,7 +668,6 @@ function runWebAppServer() {
       }
     });
 
-    const { AUTOUPDATE_VERSION } = process.env;
     const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
     const configOverrides = {
       PUBLIC_SETTINGS,
@@ -689,19 +682,17 @@ function runWebAppServer() {
     const newProgram = WebApp.clientPrograms[arch] = {
       format: "web-program-pre1",
       manifest: manifest,
-      version: AUTOUPDATE_VERSION ||
-        WebAppHashing.calculateClientHash(
-          manifest, null, configOverrides),
-      versionRefreshable: AUTOUPDATE_VERSION ||
-        WebAppHashing.calculateClientHash(
-          manifest, type => type === "css", configOverrides),
-      versionNonRefreshable: AUTOUPDATE_VERSION ||
-        WebAppHashing.calculateClientHash(
-          manifest, type => type !== "css", configOverrides),
+      // Use arrow functions so that these versions can be lazily
+      // calculated later, and so that they will not be included in the
+      // staticFiles[manifestUrl].content string below.
+      version: () => WebAppHashing.calculateClientHash(
+        manifest, null, configOverrides),
+      versionRefreshable: () => WebAppHashing.calculateClientHash(
+        manifest, type => type === "css", configOverrides),
+      versionNonRefreshable: () => WebAppHashing.calculateClientHash(
+        manifest, type => type !== "css", configOverrides),
       cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,
       PUBLIC_SETTINGS,
-      // Set to a Promise if WebAppInternals.pauseClient(arch) is called.
-      paused: null,
     };
 
     // Expose program details as a string reachable via the following URL.
