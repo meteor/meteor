@@ -124,8 +124,8 @@ jobs:
             - package-npm-deps-cache-group1-v1-
       - restore_cache:
           keys:
-            - package-npm-deps-cache-group2-v1-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group2-v1-
+            - package-npm-deps-cache-group2-v2-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group2-v2-
       - restore_cache:
           keys:
             - v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
@@ -737,7 +737,7 @@ jobs:
             - packages/package-version-parser/.npm/package/node_modules
             - packages/boilerplate-generator/.npm/package/node_modules
       - save_cache:
-          key: package-npm-deps-cache-group2-v1-{{ checksum "shrinkwraps.txt" }}
+          key: package-npm-deps-cache-group2-v2-{{ checksum "shrinkwraps.txt" }}
           paths:
             - packages/xmlbuilder/.npm/package/node_modules
             - packages/logging/.npm/package/node_modules
