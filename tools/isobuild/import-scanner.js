@@ -66,15 +66,18 @@ const defaultExtensionHandlers = {
   ".json"(dataString) {
     const file = this;
     file.jsonData = JSON.parse(dataString);
-    return "module.exports = " +
-      JSON.stringify(file.jsonData, null, 2) +
-      ";\n";
+    return jsonDataToCommonJS(file.jsonData);
   },
 
   ".css"(dataString, hash) {
     return cssToCommonJS(dataString, hash);
   }
 };
+
+function jsonDataToCommonJS(data) {
+  return "module.exports = " +
+    JSON.stringify(data, null, 2) + ";\n";
+}
 
 // This is just a map from hashes to booleans, so it doesn't need full LRU
 // eviction logic.
@@ -868,7 +871,7 @@ export default class ImportScanner {
         if (depFile.jsonData &&
             depFile.absModuleId.endsWith("/package.json") &&
             depFile.implicit === true) {
-          const file = this._readModule(absImportedPath);
+          const file = this._readPackageJson(absImportedPath);
           if (file) {
             depFile.implicit = false;
             Object.assign(depFile, file);
@@ -927,16 +930,53 @@ export default class ImportScanner {
   }
 
   _readFile(absPath) {
-    const contents = optimisticReadFile(absPath);
-    const hash = optimisticHashOrNull(absPath);
-
-    this.watchSet.addFile(absPath, hash);
-
-    return {
-      data: contents,
-      dataString: contents.toString("utf8"),
-      hash
+    const info = {
+      data: optimisticReadFile(absPath),
+      hash: optimisticHashOrNull(absPath),
     };
+
+    this.watchSet.addFile(absPath, info.hash);
+
+    info.dataString = info.data.toString("utf8");
+
+    // Same logic/comment as stripBOM in node/lib/module.js:
+    // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
+    // because the buffer-to-string conversion in `fs.readFileSync()`
+    // translates it to FEFF, the UTF-16 BOM.
+    if (info.dataString.charCodeAt(0) === 0xfeff) {
+      info.dataString = info.dataString.slice(1);
+      info.data = Buffer.from(into.dataString, "utf8");
+      info.hash = sha1(info.data);
+    }
+
+    return info;
+  }
+
+  _readPackageJson(absPath) {
+    try {
+      var info = this._readFile(absPath);
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      return null;
+    }
+
+    const jsonData = JSON.parse(info.dataString);
+
+    Object.keys(jsonData).forEach(key => {
+      // Strip root properties that start with an underscore, since these
+      // are "private" npm-specific properties, not added by other package
+      // managers like yarn, and they may introduce nondeterminism into
+      // the Meteor build. #9878 #9903
+      if (key.startsWith("_")) {
+        delete jsonData[key];
+      }
+    });
+
+    info.dataString = jsonDataToCommonJS(jsonData);
+    info.data = Buffer.from(info.dataString, "utf8");
+    info.hash = sha1(info.data);
+
+    return info;
   }
 
   _readModule(absPath) {
@@ -963,14 +1003,6 @@ export default class ImportScanner {
     }
 
     const dataString = info.dataString;
-
-    // Same logic/comment as stripBOM in node/lib/module.js:
-    // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
-    // because the buffer-to-string conversion in `fs.readFileSync()`
-    // translates it to FEFF, the UTF-16 BOM.
-    if (info.dataString.charCodeAt(0) === 0xfeff) {
-      info.dataString = info.dataString.slice(1);
-    }
 
     if (! has(defaultExtensionHandlers, ext)) {
       if (canBeParsedAsPlainJS(dataString)) {
@@ -1036,10 +1068,12 @@ export default class ImportScanner {
       }
 
     } else {
-      // If the module is not readable, _readModule may return
-      // null. Otherwise it will return an object with .data,
-      // .dataString, and .hash properties.
-      depFile = this._readModule(absPath);
+      depFile = absModuleId.endsWith("/package.json")
+        ? this._readPackageJson(absPath)
+        : this._readModule(absPath);
+
+      // If the module is not readable, _readModule may return null.
+      // Otherwise it will return { data, dataString, hash }.
       if (! depFile) {
         return null;
       }
@@ -1251,14 +1285,7 @@ export default class ImportScanner {
       return file;
     }
 
-    const data = Buffer.from(map(pkg, (value, key) => {
-      const isIdentifier = /^[_$a-zA-Z]\w*$/.test(key);
-      const prop = isIdentifier
-        ? "." + key
-        : "[" + JSON.stringify(key) + "]";
-      return `exports${prop} = ${JSON.stringify(value)};\n`;
-    }).join(""));
-
+    const data = Buffer.from(jsonDataToCommonJS(pkg), "utf8");
     const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
     const absModuleId = this._getAbsModuleId(pkgJsonPath);
 
