@@ -131,7 +131,7 @@ jobs:
             - v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
             - v2-other-deps-cache-{{ .Branch }}-
       - restore_cache:
-          keys: 
+          keys:
             - v1-test-groups-{{ .Branch }}
             - v1-test-groups-
       - run:
@@ -449,7 +449,7 @@ jobs:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
- 
+
   Test Group 6:
     <<: *build_machine_environment
     steps:
@@ -760,6 +760,7 @@ jobs:
             - packages/minifier-css/.npm/package/node_modules
             - packages/minifier-js/.npm/package/node_modules
             - packages/standard-minifier-css/.npm/plugin/minifyStdCSS/node_modules
+            - packages/inter-process-messaging/.npm/package/node_modules
       - save_cache:
           key: v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
           paths:
