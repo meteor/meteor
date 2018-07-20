@@ -2748,7 +2748,14 @@ var writeTargetToPath = Profile(
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
-      previousBuilder
+      previousBuilder,
+      // We do not force an in-place build for individual targets like
+      // .meteor/local/build/programs/web.browser.legacy, because they
+      // tend to be written atomically, and it's important on Windows to
+      // avoid overwriting files that might be open currently in the build
+      // or server process. If in-place builds were safer on Windows, they
+      // would be much quicker than from-scratch rebuilds.
+      forceInPlaceBuild: false,
     });
 
     var targetBuild = target.write(builder, {
@@ -2806,6 +2813,13 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
   const builder = builders.star = new Builder({
     outputPath,
     previousBuilder: previousBuilders.star,
+    // If we were to build .meteor/local/build by first writing a fresh
+    // temporary directory and then renaming it over the existing output
+    // directory, we would sacrifice the ability to preserve any output
+    // directories that were not written as part of this archive, such as
+    // .meteor/local/build/programs/web.browser.legacy, which is often
+    // built/written later for performance reasons (#10055).
+    forceInPlaceBuild: true,
   });
 
   try {
