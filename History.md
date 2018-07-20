@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* Node has been updated to version
+  [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/).
+
 ## v1.7.1, TBD
 
 * Compiler plugins that call `inputFile.addJavaScript` or
