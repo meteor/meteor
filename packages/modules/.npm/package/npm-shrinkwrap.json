@@ -2,14 +2,14 @@
   "lockfileVersion": 1,
   "dependencies": {
     "acorn": {
-      "version": "5.5.3",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.5.3.tgz",
-      "integrity": "sha512-jd5MkIUlbbmb07nXH0DT3y7rDVtkzDi4XZOUVWAer8ajmF/DTSSbl5oNFyDOl/OXA33Bl79+ypHhl2pN20VeOQ=="
+      "version": "5.7.1",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.7.1.tgz",
+      "integrity": "sha512-d+nbxBUGKg7Arpsvbnlq61mc12ek3EY8EQldM3GPAhWJ1UVxC6TDGbIvUMNU6obBX3i1+ptCIzV4vq0gFPEGVQ=="
     },
     "reify": {
-      "version": "0.16.2",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.16.2.tgz",
-      "integrity": "sha512-9kL/IYcFiBbwpQFScNcFBJ5zhCEJTNujeDEEv5SoSg5er0V5CDbef2zNEk9FBeI9oehGOG5zM4APXgp5n3Llbw=="
+      "version": "0.16.4",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.16.4.tgz",
+      "integrity": "sha512-WlTLgyHuxCyWyi/jntVwg8Ib7fQkr+Ac4zA4uHEO8lzeE72z1wKmdvzwIlN2poax3ee2GJhsIwY/ODnxZRzG0Q=="
     },
     "semver": {
       "version": "5.5.0",

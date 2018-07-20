@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "decimal.js": {
+      "version": "9.0.1",
+      "resolved": "https://registry.npmjs.org/decimal.js/-/decimal.js-9.0.1.tgz",
+      "integrity": "sha512-2h0iKbJwnImBk4TGk7CG1xadoA0g3LDPlQhQzbZ221zvG0p2YVUedbKIPsOZXKZGx6YmZMJKYOalpCMxSdDqTQ=="
+    }
+  }
+}

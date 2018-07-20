@@ -10,6 +10,14 @@
   defined by which compiler plugins you have enabled.
   [PR #10027](https://github.com/meteor/meteor/pull/10027)
 
+* The `meteor-babel` npm package used by `babel-compiler` has been updated
+  to version 7.0.0-beta.53.
+
+* The `install` npm package used by `modules-runtime` has been updated to
+  version 0.12.0.
+
+* The `reify` npm package has been updated to version 0.16.4.
+
 * The `uglify-es` npm package used by `minifier-js` has been replaced with
   [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
   `uglify-es` that appears to be (more actively) maintained.

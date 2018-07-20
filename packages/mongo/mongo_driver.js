@@ -61,6 +61,9 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.ObjectID) {
     return new Mongo.ObjectID(document.toHexString());
   }
+  if (document instanceof MongoDB.Decimal128) {
+    return Decimal(document.toString());
+  }
   if (document["EJSON$type"] && document["EJSON$value"] && _.size(document) === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
@@ -90,6 +93,9 @@ var replaceMeteorAtomWithMongo = function (document) {
     // Mongo representation. We need to do this explicitly or else we would do a
     // structural clone and lose the prototype.
     return document;
+  }
+  if (document instanceof Decimal) {
+    return MongoDB.Decimal128.fromString(document.toString());
   }
   if (EJSON._isCustomType(document)) {
     return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));

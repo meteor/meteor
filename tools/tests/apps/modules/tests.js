@@ -498,6 +498,40 @@ describe("symlinking node_modules", () => {
   });
 });
 
+describe("issue #9878", () => {
+  it("should be fixed by PR #9903", () => {
+    const {
+      packageJson,
+      normalJson,
+    } = require("./issue-9878-test-package");
+
+    assert.deepEqual(packageJson, {
+      stripped: false,
+      nested: {
+        stripped: false,
+        _stripped: false
+      }
+    });
+
+    assert.deepEqual(normalJson, {
+      stripped: false,
+      _stripped: false,
+      nested: {
+        stripped: false,
+        _stripped: false
+      }
+    });
+
+    assert.deepEqual(require("./issue-9878-test-package/package"), {
+      name: "issue-9878-test-package",
+      main: "main.js",
+      nested: {
+        _stripped: false
+      }
+    });
+  });
+});
+
 describe("ecmascript miscellany", () => {
   it("JSX should work in .js files on both client and server", () => {
     const React = {
