@@ -111,7 +111,7 @@
   [Issue #10042](https://github.com/meteor/meteor/issues/10042)
 
 * The `mongodb` npm package used by `npm-mongo` has been updated to
-  version 3.0.11.
+  version 3.1.1.
 
 * When a Meteor application uses a compiler plugin to process files with a
   particular file extension (other than `.js` or `.json`), those file
