@@ -23,6 +23,9 @@
   `uglify-es` that appears to be (more actively) maintained.
   [Issue #10042](https://github.com/meteor/meteor/issues/10042)
 
+* The `mongodb` npm package used by `npm-mongo` has been updated to
+  version 3.0.11.
+
 * Sub-resource integrity hashes (sha512) can now be enabled for static CSS
   and JS assets by calling `WebAppInternals.enableSubresourceIntegrity()`.
   [PR #9933](https://github.com/meteor/meteor/pull/9933)
