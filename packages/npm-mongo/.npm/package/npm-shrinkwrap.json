@@ -2,19 +2,19 @@
   "lockfileVersion": 1,
   "dependencies": {
     "bson": {
-      "version": "1.0.6",
-      "resolved": "https://registry.npmjs.org/bson/-/bson-1.0.6.tgz",
-      "integrity": "sha512-D8zmlb46xfuK2gGvKmUjIklQEouN2nQ0LEHHeZ/NoHM2LDiMk2EYzZ5Ntw/Urk+bgMDosOZxaRzXxvhI5TcAVQ=="
+      "version": "1.0.9",
+      "resolved": "https://registry.npmjs.org/bson/-/bson-1.0.9.tgz",
+      "integrity": "sha512-IQX9/h7WdMBIW/q/++tGd+emQr0XMdeZ6icnT/74Xk9fnabWn+gZgpE+9V+gujL3hhJOoNrnDVY7tWdzc7NUTg=="
     },
     "mongodb": {
-      "version": "3.0.7",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.0.7.tgz",
-      "integrity": "sha512-n/14kMJEoARXz1qhpNPhUocqy+z5130jhqgEIX1Tsl8UVpHrndQ8et+VmgC4yPK/I8Tcgc93JEMQCHTekBUnNA=="
+      "version": "3.0.11",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.0.11.tgz",
+      "integrity": "sha512-60KV+DPW++fzaD5cYbieCRQcXiYWQdRLHBqQyuu3rJmrP8vYZgI4u5UwfsUX6nGLON69FUIu4d3tH+WL4jShuA=="
     },
     "mongodb-core": {
-      "version": "3.0.7",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.0.7.tgz",
-      "integrity": "sha512-z6YufO7s40wLiv2ssFshqoLS4+Kf+huhHq6KZ7gDArsKNzXYjAwTMnhEIJ9GQ8fIfBGs5tBLNPfbIDoCKGPmOw=="
+      "version": "3.0.11",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.0.11.tgz",
+      "integrity": "sha512-agzBbSP3ahEYJyBMQicj70B+n+NNYsKaroezu5ETcImXs9nqf89/QI6e8iipg2rY3a8OWZBHWvqYxnsWasrUQA=="
     },
     "require_optional": {
       "version": "1.0.1",
