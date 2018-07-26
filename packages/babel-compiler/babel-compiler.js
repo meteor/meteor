@@ -201,7 +201,7 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
         };
       } catch (e) {
         if (e instanceof SyntaxError) {
-          e.message = ".babelrc is not a valid JSON file: " + e.message;
+          e.message = ".babelrc is not a valid JSON5 file: " + e.message;
         }
         throw e;
       }
