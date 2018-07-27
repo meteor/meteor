@@ -3195,8 +3195,10 @@ function bundle({
 
           // Tell the webapp package to pause responding to requests from
           // clients that use this arch, because we're about to write a
-          // new version of this bundle to disk.
-          await pauseClient(arch);
+          // new version of this bundle to disk. If the message fails
+          // becuase the child process exited, proceed with writing the
+          // target anyway.
+          await pauseClient(arch).catch(ignoreHarmlessErrors);
 
           // Now write the target to disk. Note that we are rewriting the
           // bundle in place, so this work is not atomic by any means,
@@ -3204,7 +3206,9 @@ function bundle({
           writeClientTarget(target);
 
           // Refresh and unpause the client, now that writing is finished.
-          await refreshClient(arch);
+          // If the child process exited for some reason, don't worry if
+          // this message fails.
+          await refreshClient(arch).catch(ignoreHarmlessErrors);
 
           // Let the webapp package running in the child process know it
           // should regenerate the client program for this arch.
@@ -3257,6 +3261,16 @@ function bundle({
     starManifest: starResult && starResult.starManifest,
     postStartupCallbacks,
   };
+}
+
+// Used as a catch handler for pauseClient and refreshClient above.
+function ignoreHarmlessErrors(error) {
+  switch (error && error.message) {
+  case "process exited":
+    return;
+  default:
+    throw error;
+  }
 }
 
 // Returns null if there are no lint warnings and the app has no linters
