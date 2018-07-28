@@ -16,5 +16,5 @@ Package.onUse(function (api) {
 
   api.addFiles('stream_server.js', 'server');
 
-  api.export('StreamServer', 'server');
+  api.export('StreamServers', 'server');
 });

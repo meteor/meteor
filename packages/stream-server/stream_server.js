@@ -27,6 +27,16 @@ var websocketExtensions = _.once(function () {
 
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
+/**
+ * List of stream servers
+ *
+ * DDP LiveData server will load the latest added stream server.
+ * You need place custom stream server package in `.meteor/packages`
+ * before packages `meteor-tools`, ddp` or `ddp-server`
+ * @type {(StreamServer|*)[]}
+ */
+StreamServers = [];
+
 StreamServer = function () {
   var self = this;
   self.registration_callbacks = [];
@@ -188,3 +198,5 @@ _.extend(StreamServer.prototype, {
     });
   }
 });
+
+StreamServers.push(StreamServer);

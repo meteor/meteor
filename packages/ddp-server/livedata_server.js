@@ -1358,6 +1358,8 @@ Server = function (options) {
 
   self.sessions = new Map(); // map from id to session
 
+  // Use latest added stream server
+  var StreamServer = StreamServers.pop();
   self.stream_server = new StreamServer;
 
   self.stream_server.register(function (socket) {
