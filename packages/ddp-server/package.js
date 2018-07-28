@@ -4,24 +4,18 @@ Package.describe({
   documentation: null
 });
 
-Npm.depends({
-  "permessage-deflate": "0.1.7",
-  sockjs: "0.3.20"
-});
-
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'underscore',
            'retry', 'mongo-id', 'diff-sequence', 'ecmascript'],
           'server');
 
   // common functionality
+  api.use('stream-server', 'server');
   api.use('ddp-common', 'server'); // heartbeat
   api.use('ddp-rate-limiter', 'server', {weak: true});
   // Transport
   api.use('ddp-client', 'server');
   api.imply('ddp-client');
-
-  api.use(['webapp', 'routepolicy'], 'server');
 
   // Detect whether or not the user wants us to audit argument checks.
   api.use(['audit-argument-checks'], 'server', {weak: true});
@@ -35,8 +29,6 @@ Package.onUse(function (api) {
 
   api.use('callback-hook', 'server');
   api.export('DDPServer', 'server');
-
-  api.addFiles('stream_server.js', 'server');
 
   api.addFiles('livedata_server.js', 'server');
   api.addFiles('writefence.js', 'server');
