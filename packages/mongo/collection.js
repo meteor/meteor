@@ -25,6 +25,10 @@ The default id generation technique is `'STRING'`.
  * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
  */
 Mongo.Collection = function Collection(name, options) {
+  if (!(this instanceof Mongo.Collection)) {
+    throw new Error("Mongo.Collection must be called with 'new'");
+  }
+
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
                   "saved or synchronized over the network. (Pass null for " +
