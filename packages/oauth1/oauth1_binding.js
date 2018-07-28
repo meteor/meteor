@@ -100,7 +100,7 @@ export class OAuth1Binding {
   _getSignature(method, url, rawHeaders, accessTokenSecret, params) {
     const headers = this._encodeHeader({ ...rawHeaders, ...params });
 
-    const parameters = headers.map((val, key) => `${key}=${val}`)
+    const parameters = Object.keys(headers).map(key => `${key}=${headers[key]}`)
       .sort().join('&');
 
     const signatureBase = [
