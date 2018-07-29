@@ -25,7 +25,7 @@ class StreamServer {
   constructor() {
     //throw new Meteor.Error('StreamServer break');
     console.log('uws - constructor()');
-    this.registration_callbacks = [];
+    this.registration_callbacks = new Set();
 
     // Because we are installing directly onto WebApp.httpServer instead of using
     // WebApp.app, we have to process the path prefix ourselves.
@@ -76,7 +76,7 @@ class StreamServer {
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
-    _.each(this.registration_callbacks, function(callback) {
+    this.registration_callbacks.forEach((callback) => {
       console.log('uws - callback');
       callback(socket);
     });
@@ -84,7 +84,7 @@ class StreamServer {
 
   register(callback) {
     console.log('uws - register()');
-    this.registration_callbacks.push(callback);
+    this.registration_callbacks.add(callback);
     this.server.clients.forEach((socket, index) => {
       console.log('uws - register() - client', index);
       callback(socket);
