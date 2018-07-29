@@ -46,28 +46,39 @@ class StreamServer {
 
     // On connection
     this.server.on('connection', (socket, req) => {
-      // Debug
-      console.log('uws - on connection', socket.readyState);
+      this.connection(socket, req);
+    });
+  }
 
-      // Set headers
-      socket.headers = req.headers;
+  /**
+   * WebSocket Connection handler
+   * @param {WebSocket} socket
+   * @param {string[]} socket.headers
+   * @param {Function} socket.setWebsocketTimeout
+   * @param {IncomingMessage} req
+   */
+  connection(socket, req) {
+    // Debug
+    console.log('uws - on connection', socket.readyState);
 
-      // Don't setup socket timeout, just create empty function
-      socket.setWebsocketTimeout = () => {};
+    // Set headers
+    socket.headers = req.headers;
 
-      // XXX COMPAT WITH 0.6.6. Send the old style welcome message, which
-      // will force old clients to reload. Remove this once we're not
-      // concerned about people upgrading from a pre-0.7.0 release. Also,
-      // remove the clause in the client that ignores the welcome message
-      // (livedata_connection.js)
-      socket.send(JSON.stringify({server_id: "0"}));
+    // Don't setup socket timeout, just create empty function
+    socket.setWebsocketTimeout = () => {};
 
-      // call all our callbacks when we get a new socket. they will do the
-      // work of setting up handlers and such for specific messages.
-      _.each(this.registration_callbacks, function (callback) {
-        console.log('uws - callback');
-        callback(socket);
-      });
+    // XXX COMPAT WITH 0.6.6. Send the old style welcome message, which
+    // will force old clients to reload. Remove this once we're not
+    // concerned about people upgrading from a pre-0.7.0 release. Also,
+    // remove the clause in the client that ignores the welcome message
+    // (livedata_connection.js)
+    socket.send(JSON.stringify({server_id: '0'}));
+
+    // call all our callbacks when we get a new socket. they will do the
+    // work of setting up handlers and such for specific messages.
+    _.each(this.registration_callbacks, function(callback) {
+      console.log('uws - callback');
+      callback(socket);
     });
   }
 
