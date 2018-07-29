@@ -16,7 +16,11 @@ try {
 
 // noinspection JSUnresolvedVariable
 const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-const POSTFIX = '/websocket';
+const PATH = '/websocket';
+const UWS_SERVER_OPTIONS = {
+  path: pathPrefix + PATH,
+  noServer: true
+};
 
 /**
  * StreamServer with uws
@@ -29,9 +33,9 @@ class StreamServer {
 
     // Because we are installing directly onto WebApp.httpServer instead of using
     // WebApp.app, we have to process the path prefix ourselves.
-    this.prefix = pathPrefix + POSTFIX;
+    this.pathname = options.path;
     // noinspection JSUnresolvedFunction
-    RoutePolicy.declare(this.prefix + '/', 'network');
+    RoutePolicy.declare(this.pathname + '/', 'network');
 
     // Setup uWS
     const serverOptions = {
@@ -101,7 +105,7 @@ class StreamServer {
   upgrade(request, socket, head) {
     const pathname = url.parse(request.url).pathname;
 
-    if (pathname === this.prefix) {
+    if (pathname === this.pathname) {
       this.server.handleUpgrade(request, socket, head, (ws) => {
         console.log('uws - handle upgrade');
         this.server.emit('connection', ws, request);
