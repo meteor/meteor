@@ -26,9 +26,10 @@ const UWS_SERVER_OPTIONS = {
  * StreamServer with uws
  */
 class StreamServer {
-  constructor() {
+  /** @param {WebSocket.IServerOptions} options */
+  constructor(options = UWS_SERVER_OPTIONS) {
     //throw new Meteor.Error('StreamServer break');
-    console.log('uws - constructor()');
+    console.log('uws - constructor()', options);
     this.registration_callbacks = new Set();
 
     // Because we are installing directly onto WebApp.httpServer instead of using
@@ -38,15 +39,14 @@ class StreamServer {
     RoutePolicy.declare(this.pathname + '/', 'network');
 
     // Setup uWS
-    const serverOptions = {
-      noServer: true
-    };
-    this.server = new WebSocket.Server(serverOptions);
+    this.server = new WebSocket.Server(options);
 
-    // Support the /websocket endpoint
-    WebApp.httpServer.on('upgrade', (request, socket, head) => {
-      this.upgrade(request, socket, head);
-    });
+    if (options.noServer) {
+      // Support the /websocket endpoint
+      WebApp.httpServer.on('upgrade', (request, socket, head) => {
+        this.upgrade(request, socket, head);
+      });
+    }
 
     // On connection
     this.server.on('connection', (socket, req) => {
