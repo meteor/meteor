@@ -111,7 +111,7 @@ export class OAuth1Binding {
 
     const secret = OAuth.openSecret(this._config.secret);
 
-    const signingKey = `${this._encodeString(secret)}&`;
+    let signingKey = `${this._encodeString(secret)}&`;
     if (accessTokenSecret)
       signingKey += this._encodeString(accessTokenSecret);
 
