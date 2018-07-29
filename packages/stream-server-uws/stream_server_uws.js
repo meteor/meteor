@@ -92,9 +92,10 @@ class StreamServer {
   }
 
   /**
-   * HTTP Upgrade
-   * @param request
-   * @param socket
+   * HTTP Upgrade handler
+   * @param {IncomingMessage} request
+   * @param {Socket} socket
+   * @param {Function} socket.destroy
    * @param head
    */
   upgrade(request, socket, head) {
