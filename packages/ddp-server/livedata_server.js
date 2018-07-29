@@ -1373,7 +1373,17 @@ Server = function (options) {
       socket.send(DDPCommon.stringifyDDP(msg));
     };
 
-    socket.on('data', function (raw_msg) {
+    // Event listeners based on StreamServer library
+    // SockJS
+    socket.on('data', handleMessage);
+    // WebSocket
+    socket.on('message', handleMessage);
+
+    /**
+     * Handle socket message
+     * @param {string} raw_msg
+     */
+    function handleMessage (raw_msg) {
       if (Meteor._printReceivedDDP) {
         Meteor._debug("Received DDP", raw_msg);
       }
@@ -1409,7 +1419,7 @@ Server = function (options) {
         // XXX print stack nicely
         Meteor._debug("Internal exception while processing message", msg, e);
       }
-    });
+    }
 
     socket.on('close', function () {
       if (socket._meteorSession) {
