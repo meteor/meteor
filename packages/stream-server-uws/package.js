@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's DDP stream server based on uWS",
-  version: '0.4.0',
+  version: '0.5.0',
   documentation: 'README.md'
 });
 

@@ -2,7 +2,6 @@
 const { RoutePolicy } = require('meteor/routepolicy');
 // noinspection NpmUsedModulesInstalled
 const { WebApp } = require('meteor/webapp');
-const url = require('url');
 
 // Try load of `uws` Node.js package
 /** @type {WebSocket} */
@@ -19,7 +18,7 @@ const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
 const PATH = '/websocket';
 const UWS_SERVER_OPTIONS = {
   path: pathPrefix + PATH,
-  noServer: true
+  server: WebApp.httpServer,
 };
 
 /**
@@ -36,19 +35,11 @@ StreamServerUWS = class StreamServerUWS {
 
     // Because we are installing directly onto WebApp.httpServer instead of using
     // WebApp.app, we have to process the path prefix ourselves.
-    this.pathname = options.path;
     // noinspection JSUnresolvedFunction
-    RoutePolicy.declare(this.pathname + '/', 'network');
+    RoutePolicy.declare(options.path + '/', 'network');
 
     // Setup uWS
     this.server = new WebSocket.Server(options);
-
-    if (options.noServer) {
-      // Support the /websocket endpoint
-      WebApp.httpServer.on('upgrade', (request, socket, head) => {
-        this.upgrade(request, socket, head);
-      });
-    }
 
     // On connection
     this.server.on('connection', (socket, req) => {
@@ -95,27 +86,6 @@ StreamServerUWS = class StreamServerUWS {
       console.log('uws - register() - client', index);
       callback(socket);
     });
-  }
-
-  /**
-   * HTTP Upgrade handler
-   * @param {IncomingMessage} request
-   * @param {Socket} socket
-   * @param {Function} socket.destroy
-   * @param head
-   */
-  upgrade(request, socket, head) {
-    const pathname = url.parse(request.url).pathname;
-
-    if (pathname === this.pathname) {
-      this.server.handleUpgrade(request, socket, head, (ws) => {
-        console.log('uws - handle upgrade');
-        this.server.emit('connection', ws, request);
-      });
-    } else {
-      console.log('uws - destroy socket');
-      socket.destroy();
-    }
   }
 };
 
