@@ -1,8 +1,8 @@
 // noinspection NpmUsedModulesInstalled
-import { RoutePolicy } from 'meteor/routepolicy';
+const { RoutePolicy } = require('meteor/routepolicy');
 // noinspection NpmUsedModulesInstalled
-import { WebApp } from 'meteor/webapp';
-import url from 'url';
+const { WebApp } = require('meteor/webapp');
+const url = require('url');
 
 // Try load of `uws` Node.js package
 /** @type {WebSocket} */
