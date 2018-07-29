@@ -24,8 +24,10 @@ const UWS_SERVER_OPTIONS = {
 
 /**
  * StreamServer with uws
+ * @class
+ * @type {StreamServerUWS}
  */
-class StreamServer {
+StreamServerUWS = class StreamServerUWS {
   /** @param {WebSocket.IServerOptions} options */
   constructor(options = UWS_SERVER_OPTIONS) {
     //throw new Meteor.Error('StreamServer break');
@@ -115,12 +117,12 @@ class StreamServer {
       socket.destroy();
     }
   }
-}
+};
 
 // Stream server will be added only if Node.js module was installed
 if (typeof WebSocket !== 'undefined') {
   StreamServers.push(
-    StreamServer
+    StreamServerUWS
   );
   console.log('`stream-server-uws` added to StreamServers');
 }

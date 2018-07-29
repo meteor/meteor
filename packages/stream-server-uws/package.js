@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's DDP stream server based on uWS",
-  version: '0.3.0',
+  version: '0.4.0',
   documentation: 'README.md'
 });
 
@@ -13,6 +13,7 @@ Package.onUse(function (api) {
   api.imply(['stream-server'], 'server');
 
   api.export('StreamServers', 'server');
+  api.export('StreamServerUWS', 'server');
 
   api.addFiles('stream_server_uws.js', 'server');
 });
