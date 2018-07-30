@@ -1,7 +1,7 @@
 Package.describe({
   summary: "Meteor's DDP stream server based on SockJS",
   version: '2.2.0',
-  documentation: null
+  documentation: 'README.md'
 });
 
 Npm.depends({
