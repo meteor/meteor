@@ -29,8 +29,6 @@ const UWS_SERVER_OPTIONS = {
 StreamServerUWS = class StreamServerUWS {
   /** @param {WebSocket.IServerOptions} options */
   constructor(options = UWS_SERVER_OPTIONS) {
-    //throw new Meteor.Error('StreamServer break');
-    console.log('uws - constructor()', options);
     this.registration_callbacks = new Set();
 
     // Because we are installing directly onto WebApp.httpServer instead of using
@@ -55,9 +53,6 @@ StreamServerUWS = class StreamServerUWS {
    * @param {IncomingMessage} req
    */
   connection(socket, req) {
-    // Debug
-    console.log('uws - on connection', socket.readyState);
-
     // Set headers
     socket.headers = req.headers;
 
@@ -74,16 +69,13 @@ StreamServerUWS = class StreamServerUWS {
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
     this.registration_callbacks.forEach((callback) => {
-      console.log('uws - callback');
       callback(socket);
     });
   }
 
   register(callback) {
-    console.log('uws - register()');
     this.registration_callbacks.add(callback);
-    this.server.clients.forEach((socket, index) => {
-      console.log('uws - register() - client', index);
+    this.server.clients.forEach((socket) => {
       callback(socket);
     });
   }
@@ -94,6 +86,5 @@ if (typeof WebSocket !== 'undefined') {
   StreamServers.push(
     StreamServerUWS
   );
-  console.log('`stream-server-uws` added to StreamServers');
 }
 
