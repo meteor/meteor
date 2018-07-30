@@ -100,7 +100,7 @@ export class OAuth1Binding {
   _getSignature(method, url, rawHeaders, accessTokenSecret, params) {
     const headers = this._encodeHeader({ ...rawHeaders, ...params });
 
-    const parameters = headers.map((val, key) => `${key}=${val}`)
+    const parameters = Object.keys(headers).map(key => `${key}=${headers[key]}`)
       .sort().join('&');
 
     const signatureBase = [
@@ -111,7 +111,7 @@ export class OAuth1Binding {
 
     const secret = OAuth.openSecret(this._config.secret);
 
-    const signingKey = `${this._encodeString(secret)}&`;
+    let signingKey = `${this._encodeString(secret)}&`;
     if (accessTokenSecret)
       signingKey += this._encodeString(accessTokenSecret);
 
