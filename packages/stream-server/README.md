@@ -2,14 +2,14 @@
 
 > Network core of the Meteor's DDP.
 
-`stream-server` package provide:
+The `stream-server` package provides:
 
-* default Meteor's stream server based on SockJS;
-* mechanism for replace bundled `StreamServer`.
+* the default Meteor's stream server based on SockJS;
+* the mechanism to replace bundled `StreamServer`.
 
 ## How to add your custom `StreamServer` to `StreamServers` and activate it
 
-As example your package have name `custom-stream-server`.
+For example your package has name `custom-stream-server`.
 
 1. Enable access to the `StreamServers` variable.
 
@@ -41,7 +41,7 @@ As example your package have name `custom-stream-server`.
 
 3. Activate your custom stream server.
 
-    In `.meteor/packages` move your package before packages:
+    In the `.meteor/packages` place your package name before packages:
     
     * `meteor-tools`
     * `ddp`
