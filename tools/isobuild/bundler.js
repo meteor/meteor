@@ -3267,6 +3267,7 @@ function bundle({
 function ignoreHarmlessErrors(error) {
   switch (error && error.message) {
   case "process exited":
+  case "channel closed":
     return;
   default:
     throw error;
