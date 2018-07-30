@@ -1,6 +1,6 @@
 # Meteor's DDP stream server based on uWS
 
-## Installing
+## Installation
 
 1. Install the fork of the uWebSocket Node.js bindings:
 
@@ -23,7 +23,7 @@ for using native WebSocket instead of SockJS:
 
 ## Activation
 
-In `.meteor/packages` move package `stream-server-uws` before packages:
+In the `.meteor/packages` place the package `stream-server-uws` before packages:
 
 * `meteor-tools`
 * `ddp`
