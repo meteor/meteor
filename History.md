@@ -92,7 +92,7 @@
   seconds of rebuild time for projects with lots of CSS.
 
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
-  to version 7.0.0-beta.54.
+  to version 7.0.0-beta.55.
 
 * The `@babel/preset-env` and `@babel/preset-react` presets will be
   ignored by Meteor if included in a `.babelrc` file, since Meteor already
@@ -103,7 +103,7 @@
 * The `install` npm package used by `modules-runtime` has been updated to
   version 0.12.0.
 
-* The `reify` npm package has been updated to version 0.16.4.
+* The `reify` npm package has been updated to version 0.17.0.
 
 * The `uglify-es` npm package used by `minifier-js` has been replaced with
   [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
