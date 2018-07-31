@@ -419,7 +419,7 @@ export default class ImportScanner {
 
       // Set the contents of the source module to import the target
       // module(s), combining their exports on the source module's exports
-      // object using the module.watch live binding system. This is better
+      // object using the module.link live binding system. This is better
       // than `Object.assign(exports, require(relativeId))` because it
       // allows the exports to change in the future, and better than
       // `module.exports = require(relativeId)` because it preserves the
@@ -432,12 +432,11 @@ export default class ImportScanner {
       // plugin calling inputFile.addJavaScript multiple times for the
       // same source file (see discussion in #9176), with different target
       // paths, code, laziness, etc.
-      sourceFile.dataString = this._getDataString(sourceFile) + [
-        "module.watch(require(" + JSON.stringify(relativeId) + "), {",
-        '  "*": module.makeNsSetter(true)',
-        "});",
-        ""
-      ].join("\n");
+      sourceFile.dataString = this._getDataString(sourceFile) +
+        // The + in "*+" indicates that the "default" property should be
+        // included as well as any other re-exported properties.
+        "module.link(" + JSON.stringify(relativeId) + ', { "*": "*+" });\n';
+
       sourceFile.data = Buffer.from(sourceFile.dataString, "utf8");
       sourceFile.hash = sha1(sourceFile.data);
       sourceFile.deps[relativeId] = {
