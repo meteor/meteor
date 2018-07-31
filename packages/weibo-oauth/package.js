@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Weibo OAuth flow",
-  version: "1.2.1-beta171.22",
+  version: "1.2.1-beta171.23",
 });
 
 Package.onUse(api => {
