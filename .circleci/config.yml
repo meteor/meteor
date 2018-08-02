@@ -939,7 +939,7 @@ jobs:
             - packages/xmlbuilder/.npm/package/node_modules
             - packages/logging/.npm/package/node_modules
             - packages/webapp/.npm/package/node_modules
-            - packages/ddp-server/.npm/package/node_modules
+            - packages/stream-server/.npm/package/node_modules
             - packages/mongo/.npm/package/node_modules
             - packages/npm-bcrypt/.npm/package/node_modules
             - packages/email/.npm/package/node_modules

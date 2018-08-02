@@ -77,7 +77,7 @@ var runTest = function () {
                                         "programs", "server", "node_modules")));
     // yes package node_modules directory
     assert(files.lstat(files.pathJoin(
-      tmpOutputDir, "programs", "server", "npm", "node_modules", "meteor", "ddp-server"))
+      tmpOutputDir, "programs", "server", "npm", "node_modules", "meteor", "stream-server"))
            .isDirectory());
 
     // verify that contents are minified
@@ -160,20 +160,20 @@ var runTest = function () {
       tmpOutputDir, "programs", "server", "node_modules", "fibers"
     )).isDirectory());
 
-    console.log("before ddp-server/node_modules check")
+    console.log("before stream-server/node_modules check");
 
     // package node_modules directory also a directory
     assert(files.lstat(files.pathJoin(
       tmpOutputDir, "programs", "server", "npm", "node_modules",
-      "meteor", "ddp-server", "node_modules"
+      "meteor", "stream-server", "node_modules"
     )).isDirectory());
 
-    console.log("before ddp-server/node_modules/sockjs check");
+    console.log("before stream-server/node_modules/sockjs check");
 
-    // ddp-server/node_modules/sockjs is a symlink
+    // stream-server/node_modules/sockjs is a symlink
     assert(files.lstat(files.pathJoin(
       tmpOutputDir, "programs", "server", "npm", "node_modules",
-      "meteor", "ddp-server", "node_modules", "sockjs"
+      "meteor", "stream-server", "node_modules", "sockjs"
     )).isSymbolicLink());
   }
 };
