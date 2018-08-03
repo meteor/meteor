@@ -541,6 +541,17 @@ describe("issue #9878", () => {
   });
 });
 
+describe("local .json modules", () => {
+  it("should be importable within Meteor packages (issue #10122)", () => {
+    import { oyez } from "meteor/import-local-json-module";
+    assert.strictEqual(oyez, 1234);
+    assert.strictEqual(
+      require("meteor/import-local-json-module/data").oyez,
+      1234
+    );
+  });
+});
+
 describe("ecmascript miscellany", () => {
   it("JSX should work in .js files on both client and server", () => {
     const React = {

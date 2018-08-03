@@ -1062,8 +1062,7 @@ export default class ImportScanner {
       // raw version found in node_modules. See also:
       // https://github.com/meteor/meteor-feature-requests/issues/6
 
-    } else if (! this.isWeb() &&
-               absModuleId.startsWith("/node_modules/")) {
+    } else if (this._shouldUseNode(absModuleId)) {
       // On the server, modules in node_modules directories will be
       // handled natively by Node, so we just need to generate a stub
       // module that calls module.useNode(), rather than calling
@@ -1108,6 +1107,34 @@ export default class ImportScanner {
     this._addFileByRealPath(depFile, realPath);
 
     return depFile;
+  }
+
+  // Similar to logic in Module.prototype.useNode as defined in
+  // packages/modules-runtime/server.js. Introduced to fix issue #10122.
+  _shouldUseNode(absModuleId) {
+    if (this.isWeb()) {
+      // Node should never be used in a browser, obviously.
+      return false;
+    }
+
+    const parts = absModuleId.split("/");
+    let start = 0;
+
+    // Tolerate leading / character.
+    if (parts[start] === "") ++start;
+
+    // Meteor package modules include a node_modules component in their
+    // absolute module identifiers, but that doesn't mean those modules
+    // should be evaluated by module.useNode().
+    if (parts[start] === "node_modules" &&
+        parts[start + 1] === "meteor") {
+      start += 2;
+    }
+
+    // If the remaining parts include node_modules, then this is a module
+    // that was installed by npm, and it should be evaluated by Node on
+    // the server.
+    return parts.indexOf("node_modules", start) >= 0;
   }
 
   // Returns an absolute module identifier indicating where to install the

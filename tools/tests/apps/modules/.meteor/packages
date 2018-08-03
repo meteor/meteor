@@ -24,3 +24,4 @@ modules-test-plugin
 shell-server@0.3.1
 dynamic-import@0.4.0
 underscore@1.0.10
+import-local-json-module
