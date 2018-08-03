@@ -52,6 +52,9 @@
   [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
   `pacote` dependency has been rebased against version 8.1.6.
 
+* The `node-gyp` npm package has been updated to version 3.7.0, and the
+  `node-pre-gyp` npm package has been updated to version 0.10.3.
+
 * Scripts run via `meteor npm ...` can now use the `meteor` command more
   safely, since the `PATH` environment variable will now be set so that
   `meteor` always refers to the same `meteor` used to run `meteor npm`.
