@@ -4,10 +4,10 @@
   "description": "Test app exercising many aspects of the Meteor module system.",
   "private": true,
   "dependencies": {
-    "@babel/core": "^7.0.0-beta.54",
-    "@babel/plugin-proposal-do-expressions": "^7.0.0-beta.54",
-    "@babel/plugin-proposal-optional-chaining": "^7.0.0-beta.54",
-    "@babel/runtime": "^7.0.0-beta.54",
+    "@babel/core": "^7.0.0-beta.56",
+    "@babel/plugin-proposal-do-expressions": "^7.0.0-beta.56",
+    "@babel/plugin-proposal-optional-chaining": "^7.0.0-beta.56",
+    "@babel/runtime": "^7.0.0-beta.56",
     "acorn": "file:imports/links/acorn",
     "aws-sdk": "^2.2.41",
     "cli-color": "^0.2.3",
@@ -20,7 +20,6 @@
     "moment": "2.11.1",
     "mssql": "^3.1.1",
     "mysql": "^2.15.0",
-    "puppeteer": "^1.3.0",
     "regenerator-runtime": "^0.11.1",
     "stripe": "^4.4.0",
     "uuid": "^3.1.0",
@@ -33,5 +32,8 @@
   },
   "meteor": {
     "testModule": "tests.js"
+  },
+  "devDependencies": {
+    "puppeteer": "^1.6.2"
   }
 }
