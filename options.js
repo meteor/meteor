@@ -52,7 +52,7 @@ exports.getDefaults = function getDefaults(features) {
     ]
   };
 
-  const rt = getRuntimeTransform(features, false);
+  const rt = getRuntimeTransform(features);
   if (rt) {
     combined.plugins.push(rt);
   }
@@ -111,7 +111,7 @@ function getDefaultsForModernBrowsers(features) {
     require("./plugins/dynamic-import.js")
   );
 
-  const rt = getRuntimeTransform(features, true);
+  const rt = getRuntimeTransform(features);
   if (rt) {
     combined.plugins.push(rt);
   }
@@ -154,28 +154,16 @@ function isObject(value) {
   return value !== null && typeof value === "object";
 }
 
-function getRuntimeTransform(features, useBuiltIns) {
+function getRuntimeTransform(features) {
   if (isObject(features)) {
     if (features.runtime === false) {
       return null;
-    }
-
-    if (isObject(features.runtime)) {
-      useBuiltIns = !! features.runtime.useBuiltIns;
     }
   }
 
   // Import helpers from the babel-runtime package rather than redefining
   // them at the top of each module.
-  return [require("@babel/plugin-transform-runtime"), {
-    // Avoid importing polyfills for things like Object.keys, which
-    // Meteor already shims in other ways.
-    polyfill: false,
-
-    // Use runtime helpers that do not import any core-js polyfills,
-    // since Meteor provides those polyfills in other ways.
-    useBuiltIns: useBuiltIns
-  }];
+  return require("@babel/plugin-transform-runtime");
 }
 
 function getDefaultsForNode8(features) {
@@ -193,7 +181,7 @@ function getDefaultsForNode8(features) {
     require("@babel/plugin-transform-flow-strip-types")
   );
 
-  const rt = getRuntimeTransform(features, true);
+  const rt = getRuntimeTransform(features);
   if (rt) {
     plugins.push(rt);
   }
