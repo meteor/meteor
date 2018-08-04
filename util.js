@@ -23,9 +23,14 @@ exports.mkdirp = function mkdirp(dir) {
 };
 
 function deepHash(val) {
-  return createHash("sha1")
-    .update(JSON.stringify(val))
-    .digest("hex");
+  return createHash("sha1").update(
+    JSON.stringify(val, function (key, value) {
+      switch (typeof value) {
+      case "function": return String(value);
+      default: return value;
+      }
+    })
+  ).digest("hex");
 }
 
 exports.deepHash = function (val) {
