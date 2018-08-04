@@ -95,7 +95,12 @@
   seconds of rebuild time for projects with lots of CSS.
 
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
-  to version 7.0.0-beta.55.
+  to version 7.0.0-beta.56. **Note:** This change _requires_ also updating
+  the `@babel/runtime` npm package to version 7.0.0-beta.56 or later:
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+  [`meteor-babel` issue #22](https://github.com/meteor/babel/issues/22)
 
 * The `@babel/preset-env` and `@babel/preset-react` presets will be
   ignored by Meteor if included in a `.babelrc` file, since Meteor already
