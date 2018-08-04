@@ -2,10 +2,10 @@
 
 ## Installation
 
-1. Install the fork of the uWebSocket Node.js bindings:
+1. Install the uWebSocket Node.js bindings:
 
     ```bash
-    meteor npm install sc-uws
+    meteor npm install uws@10.148.0
     ```
     
 2. Pin the older version of the `socket-stream-client` package,

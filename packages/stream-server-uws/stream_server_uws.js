@@ -8,9 +8,9 @@ const { WebApp } = require('meteor/webapp');
 let WebSocket;
 try {
   // noinspection NpmUsedModulesInstalled
-  WebSocket = require('sc-uws');
+  WebSocket = require('uws');
 } catch (e) {
-  console.warn('Run:\nmeteor npm install sc-uws')
+  console.warn('Run:\nmeteor npm install uws@10.148.0')
 }
 
 // noinspection JSUnresolvedVariable
