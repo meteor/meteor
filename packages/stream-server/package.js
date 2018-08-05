@@ -10,8 +10,6 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore'], 'server');
-
   api.use(['webapp', 'routepolicy'], 'server');
 
   api.addFiles('once.js', 'server');
