@@ -39,8 +39,8 @@ StreamServers = [];
 
 StreamServer = function () {
   var self = this;
-  self.registration_callbacks = [];
-  self.open_sockets = [];
+  self.registration_callbacks = new Set();
+  self.open_sockets = new Set();
 
   // Because we are installing directly onto WebApp.httpServer instead of using
   // WebApp.app, we have to process the path prefix ourselves.
@@ -125,9 +125,9 @@ StreamServer = function () {
       socket.write(data);
     };
     socket.on('close', function () {
-      self.open_sockets = _.without(self.open_sockets, socket);
+      self.open_sockets.delete(socket);
     });
-    self.open_sockets.push(socket);
+    self.open_sockets.add(socket);
 
     // XXX COMPAT WITH 0.6.6. Send the old style welcome message, which
     // will force old clients to reload. Remove this once we're not
@@ -138,7 +138,7 @@ StreamServer = function () {
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
-    _.each(self.registration_callbacks, function (callback) {
+    self.registration_callbacks.forEach(function (callback) {
       callback(socket);
     });
   });
@@ -150,16 +150,10 @@ Object.assign(StreamServer.prototype, {
   // also call it for all current connections.
   register: function (callback) {
     var self = this;
-    self.registration_callbacks.push(callback);
-    _.each(self.all_sockets(), function (socket) {
+    self.registration_callbacks.add(callback);
+    self.open_sockets.forEach(function (socket) {
       callback(socket);
     });
-  },
-
-  // get a list of all sockets
-  all_sockets: function () {
-    var self = this;
-    return _.values(self.open_sockets);
   },
 
   // Redirect /websocket to /sockjs/websocket in order to not expose
