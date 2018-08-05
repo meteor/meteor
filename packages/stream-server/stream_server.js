@@ -11,7 +11,7 @@ var url = Npm.require('url');
 // crash the tool during isopacket load if your JSON doesn't parse. This is only
 // a problem because the tool has to load the DDP server code just in order to
 // be a DDP client; see https://github.com/meteor/meteor/issues/3452 .)
-var websocketExtensions = _.once(function () {
+var websocketExtensions = once(function () {
   var extensions = [];
 
   var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
