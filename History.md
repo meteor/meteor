@@ -12,6 +12,11 @@
   ensures newly created Meteor applications do not use `7.0.0-beta.56`.
   [PR #10134](https://github.com/meteor/meteor/pull/10134)
 
+* The `npm` package has been upgraded to version 6.3.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
+  `pacote` dependency has been rebased against version 8.1.6.
+  [Issue #9940](https://github.com/meteor/meteor/issues/9940)
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
