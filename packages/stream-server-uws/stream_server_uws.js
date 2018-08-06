@@ -1,7 +1,9 @@
 // noinspection NpmUsedModulesInstalled
-const { RoutePolicy } = require('meteor/routepolicy');
+import { RoutePolicy } from 'meteor/routepolicy';
 // noinspection NpmUsedModulesInstalled
-const { WebApp } = require('meteor/webapp');
+import { WebApp } from 'meteor/webapp';
+// noinspection NpmUsedModulesInstalled
+import { StreamServers as StreamServersArray } from 'meteor/stream-server';
 
 // Try load of `uws` Node.js package
 /** @type {WebSocket} */
@@ -23,10 +25,8 @@ const UWS_SERVER_OPTIONS = {
 
 /**
  * StreamServer with uws
- * @class
- * @type {StreamServerUWS}
  */
-StreamServerUWS = class StreamServerUWS {
+export class StreamServerUWS {
   /** @param {WebSocket.IServerOptions} options */
   constructor(options = UWS_SERVER_OPTIONS) {
     this.registration_callbacks = new Set();
@@ -79,12 +79,13 @@ StreamServerUWS = class StreamServerUWS {
       callback(socket);
     });
   }
-};
+}
 
 // Stream server will be added only if Node.js module was installed
 if (typeof WebSocket !== 'undefined') {
-  StreamServers.push(
+  StreamServersArray.push(
     StreamServerUWS
   );
 }
 
+export const StreamServers = StreamServersArray;
