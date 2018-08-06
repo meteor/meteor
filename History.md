@@ -6,6 +6,15 @@
   [8.11.4](https://nodejs.org/en/blog/release/v8.11.4/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/august-2018-security-releases/).
 
+* The npm package `@babel/runtime`, which is depended on by most Meteor
+  apps, introduced a breaking change in version `7.0.0-beta.56` with the
+  removal of the `@babel/runtime/helpers/builtin` directory. While this
+  change has clear benefits in the long term, in the short term it has
+  been disruptive for Meteor 1.6.x applications that accidentally updated
+  to the latest version of `@babel/runtime`. Meteor 1.6.1.4 provides
+  better warnings about this problem, and ensures newly created Meteor
+  applications do not use `7.0.0-beta.56`.
+
 ## v1.6.1.3, 2018-06-16
 
 * Node has been updated to version
