@@ -12,7 +12,6 @@ Npm.depends({
 Package.onUse(function (api) {
   api.use(['webapp', 'routepolicy'], 'server');
 
-  api.addFiles('once.js', 'server');
   api.addFiles('stream_server.js', 'server');
 
   api.export('StreamServers', 'server');

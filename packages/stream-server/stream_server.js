@@ -7,11 +7,7 @@ var url = Npm.require('url');
 // configure method; see
 // https://github.com/faye/permessage-deflate-node/blob/master/README.md
 //
-// (We do this in an _.once instead of at startup, because we don't want to
-// crash the tool during isopacket load if your JSON doesn't parse. This is only
-// a problem because the tool has to load the DDP server code just in order to
-// be a DDP client; see https://github.com/meteor/meteor/issues/3452 .)
-var websocketExtensions = once(function () {
+var websocketExtensions = function () {
   var extensions = [];
 
   var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
@@ -23,7 +19,7 @@ var websocketExtensions = once(function () {
   }
 
   return extensions;
-});
+};
 
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
