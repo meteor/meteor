@@ -1,5 +1,17 @@
 ## v.NEXT
 
+## v1.7.0.4, TBD
+
+* The npm package `@babel/runtime`, which is depended on by most Meteor
+  apps, introduced a breaking change in version `7.0.0-beta.56` with the
+  removal of the `@babel/runtime/helpers/builtin` directory. While this
+  change has clear benefits in the long term, in the short term it has
+  been disruptive for Meteor 1.7.0.x applications that accidentally
+  updated to the latest version of `@babel/runtime`. Meteor 1.7.0.4 is a
+  patch release that provides better warnings about this problem, and
+  ensures newly created Meteor applications do not use `7.0.0-beta.56`.
+  [PR #10134](https://github.com/meteor/meteor/pull/10134)
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
