@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['modules'], 'server');
+  api.use(['ecmascript'], 'server');
   api.use(['webapp', 'routepolicy'], 'server');
   // Update StreamServers global variable
   api.use(['stream-server'], 'server');
