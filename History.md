@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.7.0.4, TBD
+## v1.7.0.4, 2018-08-07
 
 * The npm package `@babel/runtime`, which is depended on by most Meteor
   apps, introduced a breaking change in version `7.0.0-beta.56` with the
