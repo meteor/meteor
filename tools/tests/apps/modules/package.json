@@ -17,7 +17,7 @@
     "jsx-import-test": "file:imports/links/jsx-import-test",
     "lodash-es": "^4.17.7",
     "meteor-node-stubs": "^0.4.1",
-    "moment": "2.11.1",
+    "moment": "^2.22.2",
     "mssql": "^3.1.1",
     "mysql": "^2.15.0",
     "puppeteer": "^1.6.2",
