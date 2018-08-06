@@ -945,7 +945,7 @@ export default class ImportScanner {
     // translates it to FEFF, the UTF-16 BOM.
     if (info.dataString.charCodeAt(0) === 0xfeff) {
       info.dataString = info.dataString.slice(1);
-      info.data = Buffer.from(into.dataString, "utf8");
+      info.data = Buffer.from(info.dataString, "utf8");
       info.hash = sha1(info.data);
     }
 
