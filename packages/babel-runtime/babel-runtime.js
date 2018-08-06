@@ -26,7 +26,7 @@ if (parseInt(babelRuntimeVersion, 10) < 6) {
     ""
   ].join("\n"));
 
-} else if (babelRuntimeVersion.startsWith("7.0.0-beta.")) {
+} else if (babelRuntimeVersion.indexOf("7.0.0-beta.") === 0) {
   var betaVersion = parseInt(babelRuntimeVersion.split(".").pop(), 10);
   if (betaVersion > 55) {
     console.warn([
