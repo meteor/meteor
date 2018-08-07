@@ -96,9 +96,17 @@ Autoupdate._retrySubscription = () => {
     },
 
     onReady() {
+      // Call checkNewVersionDocument with a slight delay, so that the
+      // const handle declaration is guaranteed to be initialized, even if
+      // the added or changed callbacks are called synchronously.
+      const resolved = Promise.resolve();
+      function check(doc) {
+        resolved.then(() => checkNewVersionDocument(doc));
+      }
+
       const handle = ClientVersions.find().observe({
-        added: checkNewVersionDocument,
-        changed: checkNewVersionDocument
+        added: check,
+        changed: check
       });
 
       function checkNewVersionDocument(doc) {

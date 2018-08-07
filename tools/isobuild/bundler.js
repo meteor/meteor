@@ -2748,7 +2748,14 @@ var writeTargetToPath = Profile(
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
-      previousBuilder
+      previousBuilder,
+      // We do not force an in-place build for individual targets like
+      // .meteor/local/build/programs/web.browser.legacy, because they
+      // tend to be written atomically, and it's important on Windows to
+      // avoid overwriting files that might be open currently in the build
+      // or server process. If in-place builds were safer on Windows, they
+      // would be much quicker than from-scratch rebuilds.
+      forceInPlaceBuild: false,
     });
 
     var targetBuild = target.write(builder, {
@@ -2806,6 +2813,13 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
   const builder = builders.star = new Builder({
     outputPath,
     previousBuilder: previousBuilders.star,
+    // If we were to build .meteor/local/build by first writing a fresh
+    // temporary directory and then renaming it over the existing output
+    // directory, we would sacrifice the ability to preserve any output
+    // directories that were not written as part of this archive, such as
+    // .meteor/local/build/programs/web.browser.legacy, which is often
+    // built/written later for performance reasons (#10055).
+    forceInPlaceBuild: true,
   });
 
   try {
@@ -3181,8 +3195,10 @@ function bundle({
 
           // Tell the webapp package to pause responding to requests from
           // clients that use this arch, because we're about to write a
-          // new version of this bundle to disk.
-          await pauseClient(arch);
+          // new version of this bundle to disk. If the message fails
+          // becuase the child process exited, proceed with writing the
+          // target anyway.
+          await pauseClient(arch).catch(ignoreHarmlessErrors);
 
           // Now write the target to disk. Note that we are rewriting the
           // bundle in place, so this work is not atomic by any means,
@@ -3190,7 +3206,9 @@ function bundle({
           writeClientTarget(target);
 
           // Refresh and unpause the client, now that writing is finished.
-          await refreshClient(arch);
+          // If the child process exited for some reason, don't worry if
+          // this message fails.
+          await refreshClient(arch).catch(ignoreHarmlessErrors);
 
           // Let the webapp package running in the child process know it
           // should regenerate the client program for this arch.
@@ -3243,6 +3261,17 @@ function bundle({
     starManifest: starResult && starResult.starManifest,
     postStartupCallbacks,
   };
+}
+
+// Used as a catch handler for pauseClient and refreshClient above.
+function ignoreHarmlessErrors(error) {
+  switch (error && error.message) {
+  case "process exited":
+  case "channel closed":
+    return;
+  default:
+    throw error;
+  }
 }
 
 // Returns null if there are no lint warnings and the app has no linters

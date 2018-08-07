@@ -284,7 +284,7 @@ describe("local node_modules", () => {
 
   it('should expose "version" field of package.json', () => {
     const pkg = require("moment/package.json");
-    assert.strictEqual(pkg.version, "2.11.1");
+    assert.strictEqual(pkg.version, "2.22.2");
   });
 
   it('should support object-valued package.json "browser" fields', () => {
@@ -538,6 +538,17 @@ describe("issue #9878", () => {
         _stripped: false
       }
     });
+  });
+});
+
+describe("local .json modules", () => {
+  it("should be importable within Meteor packages (issue #10122)", () => {
+    import { oyez } from "meteor/import-local-json-module";
+    assert.strictEqual(oyez, 1234);
+    assert.strictEqual(
+      require("meteor/import-local-json-module/data").oyez,
+      1234
+    );
   });
 });
 

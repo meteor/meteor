@@ -15,7 +15,7 @@ tracker@1.2.0                 # Meteor's client-side reactive programming librar
 standard-minifier-css@1.4.1   # CSS minifier run for production mode
 standard-minifier-js@2.3.4    # JS minifier run for production mode
 es5-shim@4.8.0                # ECMAScript 5 compatibility for older browsers.
-ecmascript@0.11.0              # Enable ECMAScript2015+ syntax in app code
+ecmascript@0.11.1              # Enable ECMAScript2015+ syntax in app code
 shell-server@0.3.1            # Server-side component of the `meteor shell` command
 
 autopublish@1.0.7             # Publish all data to the clients (for prototyping)
@@ -24,4 +24,4 @@ dynamic-import@0.4.0
 lazy-test-package
 helper-package
 user:colon-name
-underscore
+underscore@1.0.10

@@ -58,7 +58,15 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
 // structure; and the hashes of the contents correspond to the
 // writtenHashes data strcture.
 export default class Builder {
-  constructor({outputPath, previousBuilder}) {
+  constructor({
+    outputPath,
+    previousBuilder,
+    // Even though in-place builds are disabled by default on some
+    // platforms (Windows), they can be forcibly reenabled with this
+    // option, in cases where it's safe and/or necessary to avoid
+    // clobbering existing files.
+    forceInPlaceBuild = false,
+  }) {
     this.outputPath = outputPath;
 
     // Paths already written to. Map from canonicalized relPath (no
@@ -83,7 +91,8 @@ export default class Builder {
     // If we have a previous builder and we are allowed to re-use it,
     // let's keep all the older files on the file-system and replace
     // only outdated ones + write the new files in the same path
-    if (previousBuilder && ENABLE_IN_PLACE_BUILDER_REPLACEMENT) {
+    if (previousBuilder &&
+        (forceInPlaceBuild || ENABLE_IN_PLACE_BUILDER_REPLACEMENT)) {
       if (previousBuilder.outputPath !== outputPath) {
         throw new Error(
           `previousBuilder option can only be set to a builder with the same output path.

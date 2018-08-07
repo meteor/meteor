@@ -8,6 +8,10 @@ require("./install-promise.js");
 const Module = module.constructor;
 const Mp = Module.prototype;
 
+Mp.resolve = function (id) {
+  return Module._resolveFilename(id, this);
+};
+
 // Enable the module.{watch,export,...} runtime API needed by Reify.
 require("reify/lib/runtime").enable(Mp);
 

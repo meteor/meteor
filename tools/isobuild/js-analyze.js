@@ -6,6 +6,11 @@ import Visitor from "reify/lib/visitor.js";
 import { findPossibleIndexes } from "reify/lib/utils.js";
 
 const hasOwn = Object.prototype.hasOwnProperty;
+const objToStr = Object.prototype.toString
+
+function isRegExp(value) {
+  return value && objToStr.call(value) === "[object RegExp]";
+}
 
 var AST_CACHE = new LRU({
   max: Math.pow(2, 12),
@@ -58,6 +63,7 @@ export function findImportedModuleIdentifiers(source, hash) {
     "import",
     "export",
     "dynamicImport",
+    "link",
   ]);
 
   if (possibleIndexes.length === 0) {
@@ -150,10 +156,12 @@ const importedIdentifierVisitor = new (class extends Visitor {
       this.addIdentifier(firstArg.value, "import", true);
 
     } else if (node.callee.type === "MemberExpression" &&
-               isIdWithName(node.callee.object, "module")) {
+               // The Reify compiler sometimes renames references to the
+               // CommonJS module object for hygienic purposes, but it
+               // always does so by appending additional numbers.
+               isIdWithName(node.callee.object, /^module\d*$/)) {
       const propertyName =
-        isPropertyWithName(node.callee.property, "import") ||
-        isPropertyWithName(node.callee.property, "importSync") ||
+        isPropertyWithName(node.callee.property, "link") ||
         isPropertyWithName(node.callee.property, "dynamicImport");
 
       if (propertyName) {
@@ -193,9 +201,20 @@ const importedIdentifierVisitor = new (class extends Visitor {
 });
 
 function isIdWithName(node, name) {
-  return node &&
-    node.type === "Identifier" &&
-    node.name === name;
+  if (! node ||
+      node.type !== "Identifier") {
+    return false;
+  }
+
+  if (typeof name === "string") {
+    return node.name === name;
+  }
+
+  if (isRegExp(name)) {
+    return name.test(node.name);
+  }
+
+  return false;
 }
 
 function isStringLiteral(node) {

@@ -51,9 +51,12 @@
   versions of Meteor without having to publish multiple versions of your
   package. [PR #9983](https://github.com/meteor/meteor/pull/9983)
 
-* The `npm` package has been upgraded to version 6.2.0, and our
+* The `npm` package has been upgraded to version 6.3.0, and our
   [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
   `pacote` dependency has been rebased against version 8.1.6.
+
+* The `node-gyp` npm package has been updated to version 3.7.0, and the
+  `node-pre-gyp` npm package has been updated to version 0.10.3.
 
 * Scripts run via `meteor npm ...` can now use the `meteor` command more
   safely, since the `PATH` environment variable will now be set so that
@@ -95,7 +98,12 @@
   seconds of rebuild time for projects with lots of CSS.
 
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
-  to version 7.0.0-beta.54.
+  to version 7.0.0-beta.56. **Note:** This change _requires_ also updating
+  the `@babel/runtime` npm package to version 7.0.0-beta.56 or later:
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+  [`meteor-babel` issue #22](https://github.com/meteor/babel/issues/22)
 
 * The `@babel/preset-env` and `@babel/preset-react` presets will be
   ignored by Meteor if included in a `.babelrc` file, since Meteor already
@@ -106,12 +114,17 @@
 * The `install` npm package used by `modules-runtime` has been updated to
   version 0.12.0.
 
-* The `reify` npm package has been updated to version 0.16.4.
+* The `reify` npm package has been updated to version 0.17.2, which
+  introduces the `module.link(id, {...})` runtime method as a replacement
+  for `module.watch(require(id), {...})`.
 
 * The `uglify-es` npm package used by `minifier-js` has been replaced with
   [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
   `uglify-es` that appears to be (more actively) maintained.
   [Issue #10042](https://github.com/meteor/meteor/issues/10042)
+
+* The `mongodb` npm package used by `npm-mongo` has been updated to
+  version 3.1.1.
 
 * When a Meteor application uses a compiler plugin to process files with a
   particular file extension (other than `.js` or `.json`), those file
@@ -147,6 +160,25 @@
   and JS assets by calling `WebAppInternals.enableSubresourceIntegrity()`.
   [PR #9933](https://github.com/meteor/meteor/pull/9933)
   [PR #10050](https://github.com/meteor/meteor/pull/10050)
+
+## v1.7.0.4, 2018-08-07
+
+* The npm package `@babel/runtime`, which is depended on by most Meteor
+  apps, introduced a breaking change in version `7.0.0-beta.56` with the
+  removal of the `@babel/runtime/helpers/builtin` directory. While this
+  change has clear benefits in the long term, in the short term it has
+  been disruptive for Meteor 1.7.0.x applications that accidentally
+  updated to the latest version of `@babel/runtime`. Meteor 1.7.0.4 is a
+  patch release that provides better warnings about this problem, and
+  ensures newly created Meteor applications do not use `7.0.0-beta.56`.
+  [PR #10134](https://github.com/meteor/meteor/pull/10134)
+
+* The `npm` package has been upgraded to version 6.3.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
+  `pacote` dependency has been rebased against version 8.1.6.
+  [Issue #9940](https://github.com/meteor/meteor/issues/9940)
+
+* The `reify` npm package has been updated to version 0.16.4.
 
 ## v1.7.0.3, 2018-06-13
 
