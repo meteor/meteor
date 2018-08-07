@@ -158,6 +158,25 @@
   [PR #9933](https://github.com/meteor/meteor/pull/9933)
   [PR #10050](https://github.com/meteor/meteor/pull/10050)
 
+## v1.7.0.4, 2018-08-07
+
+* The npm package `@babel/runtime`, which is depended on by most Meteor
+  apps, introduced a breaking change in version `7.0.0-beta.56` with the
+  removal of the `@babel/runtime/helpers/builtin` directory. While this
+  change has clear benefits in the long term, in the short term it has
+  been disruptive for Meteor 1.7.0.x applications that accidentally
+  updated to the latest version of `@babel/runtime`. Meteor 1.7.0.4 is a
+  patch release that provides better warnings about this problem, and
+  ensures newly created Meteor applications do not use `7.0.0-beta.56`.
+  [PR #10134](https://github.com/meteor/meteor/pull/10134)
+
+* The `npm` package has been upgraded to version 6.3.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
+  `pacote` dependency has been rebased against version 8.1.6.
+  [Issue #9940](https://github.com/meteor/meteor/issues/9940)
+
+* The `reify` npm package has been updated to version 0.16.4.
+
 ## v1.7.0.3, 2018-06-13
 
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
