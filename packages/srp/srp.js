@@ -77,9 +77,9 @@ var paramsFromOptions = function (options) {
   if (!options) // fast path
     return _defaults;
 
-  var ret = _.extend({}, _defaults);
+  var ret = { ..._defaults };
 
-  _.each(['N', 'g', 'k'], function (p) {
+  ['N', 'g', 'k'].forEach(function (p) {
     if (options[p]) {
       if (typeof options[p] === "string")
         ret[p] = new BigInteger(options[p], 16);
