@@ -4,16 +4,9 @@ import { RoutePolicy } from 'meteor/routepolicy';
 import { WebApp } from 'meteor/webapp';
 // noinspection NpmUsedModulesInstalled
 import { StreamServers as StreamServersArray } from 'meteor/stream-server';
-
-// Try load of `uws` Node.js package
 /** @type {WebSocket} */
-let WebSocket;
-try {
-  // noinspection NpmUsedModulesInstalled
-  WebSocket = require('uws');
-} catch (e) {
-  console.warn('Run:\nmeteor npm install uws@10.148.0')
-}
+// noinspection NpmUsedModulesInstalled
+import WebSocket from 'uws';
 
 // noinspection JSUnresolvedVariable
 const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;

@@ -4,6 +4,10 @@ Package.describe({
   documentation: 'README.md'
 });
 
+Npm.depends({
+  uws: '10.148.0'
+});
+
 Package.onUse(function (api) {
   api.use(['ecmascript'], 'server');
   api.use(['webapp', 'routepolicy'], 'server');
