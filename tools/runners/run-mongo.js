@@ -22,7 +22,7 @@ var runMongoShell = function (url) {
   var auth = mongoUrl.auth && mongoUrl.auth.split(':');
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
-  var args = [];
+  var args = ['--quiet'];
   if (ssl) {
     args.push('--ssl');
   }
