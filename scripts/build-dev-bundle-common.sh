@@ -11,7 +11,7 @@ MONGO_VERSION_32BIT=3.2.19
 NPM_VERSION=6.3.0
 
 # If we built Node from source on Jenkins, this is the build number.
-NODE_BUILD_NUMBER=135
+NODE_BUILD_NUMBER=140
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
