@@ -74,11 +74,8 @@ export class StreamServerUWS {
   }
 }
 
-// Stream server will be added only if Node.js module was installed
-if (typeof WebSocket !== 'undefined') {
-  StreamServersArray.push(
-    StreamServerUWS
-  );
-}
+StreamServersArray.push(
+  StreamServerUWS
+);
 
 export const StreamServers = StreamServersArray;
