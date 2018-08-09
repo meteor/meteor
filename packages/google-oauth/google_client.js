@@ -1,5 +1,7 @@
 import Google from './namespace.js';
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 const ILLEGAL_PARAMETERS = {
   'response_type': 1,
   'client_id': 1,
@@ -47,7 +49,7 @@ Google.requestCredential = (options, credentialRequestCompleteCallback) => {
 
   // validate options keys
   Object.keys(loginUrlParameters).forEach(key => {
-    if (Object.prototype.hasOwnProperty.call(ILLEGAL_PARAMETERS, key)) {
+    if (hasOwn.call(ILLEGAL_PARAMETERS, key)) {
       throw new Error(`Google.requestCredential: Invalid loginUrlParameter: ${key}`);
     }
   });
