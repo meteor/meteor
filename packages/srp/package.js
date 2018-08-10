@@ -5,11 +5,16 @@
 
 Package.describe({
   summary: "Library for Secure Remote Password (SRP) exchanges",
-  version: "1.0.11"
+  version: "1.0.12"
 });
 
 Package.onUse(function (api) {
-  api.use(['random', 'check', 'sha'], ['client', 'server']);
+  api.use([
+    'ecmascript',
+    'random',
+    'check',
+    'sha'
+  ], ['client', 'server']);
   api.export('SRP');
   api.addFiles(['biginteger.js', 'srp.js'],
                 ['client', 'server']);
