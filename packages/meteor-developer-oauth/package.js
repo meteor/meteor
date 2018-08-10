@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Meteor developer accounts OAuth flow',
-  version: '1.2.1-beta171.30'
+  version: '1.2.1-beta171.31'
 });
 
 Package.onUse(api => {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: "1.2.6-beta171.30",
+  version: "1.2.6-beta171.31",
 });
 
 const cordovaPluginGooglePlusURL =
