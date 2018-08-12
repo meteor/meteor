@@ -1,5 +1,5 @@
 var semver = Npm.require("semver");
-
+var JSON5 = Npm.require("json5");
 /**
  * A compiler that can be instantiated with features and used inside
  * Plugin.registerCompiler
@@ -195,13 +195,13 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
       try {
         this._babelrcCache[babelrcPath] = {
           controlFilePath: babelrcPath,
-          controlFileData: JSON.parse(
+          controlFileData: JSON5.parse(
             inputFile.readAndWatchFile(babelrcPath)),
           deps: Object.create(null),
         };
       } catch (e) {
         if (e instanceof SyntaxError) {
-          e.message = ".babelrc is not a valid JSON file: " + e.message;
+          e.message = ".babelrc is not a valid JSON5 file: " + e.message;
         }
         throw e;
       }
