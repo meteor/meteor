@@ -25,9 +25,7 @@ For example your package has name `custom-stream-server`.
     });
     ```
 
-2. Push `CustomStreamServer` to the `StreamServers` array.
-
-    `custom-stream-server/server.js`
+2. Create `CustomStreamServer`
 
     ```js
     class CustomStreamServer {
@@ -35,13 +33,19 @@ For example your package has name `custom-stream-server`.
         // this.server = new WebSocket.Server();
       }
     }
-    
+    ```
+
+3. Push `CustomStreamServer` to the `StreamServers` array.
+
+    `custom-stream-server/server.js`
+
+    ```js
     StreamServers.push(CustomStreamServer);
     ```
 
-3. Activate your custom stream server.
+4. Activate your custom stream server.
 
-    In the `.meteor/packages` place your package name before packages:
+    In the `.meteor/packages` place your package name before any packages that's loading:
     
     * `meteor-tools`
     * `ddp`
@@ -50,7 +54,6 @@ For example your package has name `custom-stream-server`.
     Example of the `.meteor/packages`
     
     ```
-    custom-stream-server
-    meteor-tools
-    # other packages
-    ```
+    custom-stream-server # on top
+    # packages
+    ``` 
