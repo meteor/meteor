@@ -15,21 +15,5 @@ for using native WebSocket instead of SockJS:
     meteor add stream-server-uws
     ```
 
-## Activation
-
-In the `.meteor/packages` place the package `stream-server-uws` before packages:
-
-* `meteor-tools`
-* `ddp`
-* `ddp-server`
-
-### Example of the `.meteor/packages`
-
-```
-stream-server-uws
-meteor-tools
-# other packages
-```
-
 ## Have fun
 
