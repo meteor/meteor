@@ -14,6 +14,7 @@ Package.onUse(function (api) {
   api.use('stream-server-uws', 'server', { weak: true });
 
   api.addFiles('stream_server.js', 'server');
+  api.addFiles('stream_servers.js', 'server');
 
   api.export('StreamServers', 'server');
 });
