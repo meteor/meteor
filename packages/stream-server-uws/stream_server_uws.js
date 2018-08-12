@@ -16,8 +16,13 @@ const UWS_SERVER_OPTIONS = {
 
 /**
  * StreamServer with uws
+ * @description We using the global variable `StreamServerUWS`
+ * because Meteor package compiler creating empty `var StreamServer;` before `export StreamServerUWS`,
+ * and it made the import/export mechanism broken
+ * @class
+ * @type {StreamServerUWS}
  */
-export class StreamServerUWS {
+StreamServerUWS = class StreamServerUWS {
   /** @param {WebSocket.IServerOptions} options */
   constructor(options = UWS_SERVER_OPTIONS) {
     this.registration_callbacks = new Set();
