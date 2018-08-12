@@ -11,6 +11,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use(['webapp', 'routepolicy'], 'server');
+  api.use('stream-server-uws', 'server', { weak: true });
 
   api.addFiles('stream_server.js', 'server');
 
