@@ -2,8 +2,6 @@
 import { RoutePolicy } from 'meteor/routepolicy';
 // noinspection NpmUsedModulesInstalled
 import { WebApp } from 'meteor/webapp';
-// noinspection NpmUsedModulesInstalled
-import { StreamServers as StreamServersArray } from 'meteor/stream-server';
 /** @type {WebSocket} */
 // noinspection NpmUsedModulesInstalled
 import WebSocket from 'uws';
@@ -72,10 +70,4 @@ export class StreamServerUWS {
       callback(socket);
     });
   }
-}
-
-StreamServersArray.push(
-  StreamServerUWS
-);
-
-export const StreamServers = StreamServersArray;
+};
