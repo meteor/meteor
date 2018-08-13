@@ -494,16 +494,26 @@ function getStaticFileInfo(originalPath, path, arch) {
   staticArchList.some(arch => {
     const staticFiles = staticFilesByArch[arch];
 
+    function finalize(path) {
+      info = staticFiles[path];
+      // Sometimes we register a lazy function instead of actual data in
+      // the staticFiles manifest.
+      if (typeof info === "function") {
+        info = staticFiles[path] = info();
+      }
+      return info;
+    }
+
     // If staticFiles contains originalPath with the arch inferred above,
     // use that information.
     if (hasOwn.call(staticFiles, originalPath)) {
-      return info = staticFiles[originalPath];
+      return finalize(originalPath);
     }
 
     // If getArchAndPath returned an alternate path, try that instead.
     if (path !== originalPath &&
         hasOwn.call(staticFiles, path)) {
-      return info = staticFiles[path];
+      return finalize(path);
     }
   });
 
@@ -699,11 +709,28 @@ function runWebAppServer() {
     const manifestUrlPrefix = "/__" + arch.replace(/^web\./, "");
     const manifestUrl = manifestUrlPrefix + getItemPathname("/manifest.json");
 
-    staticFiles[manifestUrl] = {
-      content: JSON.stringify(newProgram),
-      cacheable: false,
-      hash: newProgram.version,
-      type: "json"
+    staticFiles[manifestUrl] = () => {
+      if (Package.autoupdate) {
+        const {
+          AUTOUPDATE_VERSION =
+            Package.autoupdate.Autoupdate.autoupdateVersion
+        } = process.env;
+
+        if (AUTOUPDATE_VERSION) {
+          newProgram.version = AUTOUPDATE_VERSION;
+        }
+      }
+
+      if (typeof newProgram.version === "function") {
+        newProgram.version = newProgram.version();
+      }
+
+      return {
+        content: JSON.stringify(newProgram),
+        cacheable: false,
+        hash: newProgram.version,
+        type: "json"
+      };
     };
 
     generateBoilerplateForArch(arch);
