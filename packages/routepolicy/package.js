@@ -1,6 +1,6 @@
 Package.describe({
   summary: "route policy declarations",
-  version: '1.1.0-beta171.31'
+  version: '1.1.0-beta171.32'
 });
 
 Package.onUse(function (api) {
