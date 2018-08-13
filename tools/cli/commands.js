@@ -742,6 +742,8 @@ main.registerCommand({
     skelName += "-bare";
   } else if (options.full) {
     skelName += "-full";
+  } else if (options.react) {
+    skelName += "-react";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
