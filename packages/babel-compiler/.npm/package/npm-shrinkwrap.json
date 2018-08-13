@@ -671,9 +671,9 @@
       }
     },
     "reify": {
-      "version": "0.17.2",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.17.2.tgz",
-      "integrity": "sha512-FUWN1JNaFCrpmUzG+Wf77jf5u1D7ThCdxl1WSHLw9OMUworZnR/l4DL+pM0l7jcePIBxsp+iD7faGsGN+Kxupw=="
+      "version": "0.17.3",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.17.3.tgz",
+      "integrity": "sha512-i0t837UYnWyJPCeesupZjmpThIppOPSs4I/uHmsWzQaiGQqtsYlbeJNN5i+61fe6UEA3Famc3IHnlm511poMnA=="
     },
     "resolve": {
       "version": "1.8.1",

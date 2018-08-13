@@ -111,9 +111,12 @@
 * The `install` npm package used by `modules-runtime` has been updated to
   version 0.12.0.
 
-* The `reify` npm package has been updated to version 0.17.2, which
+* The `reify` npm package has been updated to version 0.17.3, which
   introduces the `module.link(id, {...})` runtime method as a replacement
-  for `module.watch(require(id), {...})`.
+  for `module.watch(require(id), {...})`. Note: in future versions of
+  `reify` and Meteor, the `module.watch` runtime API will be removed, but
+  for now it still exists (and is used to implement `module.link`), so
+  that existing code will continue to work without recompilation.
 
 * The `uglify-es` npm package used by `minifier-js` has been replaced with
   [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
