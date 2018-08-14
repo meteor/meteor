@@ -182,10 +182,26 @@ CS.isConstraintSatisfied = function (pkg, vConstraint, version) {
 
     if (type === "any-reasonable") {
       return true;
-    } else if (type === "exactly") {
+    }
+
+    // If any top-level constraints use the @x.y.z! override syntax, all
+    // other constraints on the same package will be marked with the
+    // weakMinimum property, which means they constrain nothing other than
+    // the minimum version of the package. Look for weakMinimum in the
+    // CS.Solver#analyze method for related logic.
+    if (vConstraint.weakMinimum) {
+      return ! PV.lessThan(
+        PV.parse(version),
+        PV.parse(simpleConstraint.versionString)
+      );
+    }
+
+    if (type === "exactly") {
       var cVersion = simpleConstraint.versionString;
       return (cVersion === version);
-    } else if (type === 'compatible-with') {
+    }
+
+    if (type === 'compatible-with') {
       if (typeof simpleConstraint.test === "function") {
         return simpleConstraint.test(version);
       }
@@ -206,9 +222,9 @@ CS.isConstraintSatisfied = function (pkg, vConstraint, version) {
       }
 
       return true;
-    } else {
-      throw Error("Unknown constraint type: " + type);
     }
+
+    throw Error("Unknown constraint type: " + type);
   });
 };
 

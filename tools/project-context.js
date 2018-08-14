@@ -728,20 +728,20 @@ _.extend(ProjectContext.prototype, {
   }),
 
   _getRootDepsAndConstraints: function () {
-    var self = this;
+    const depsAndConstraints = {
+      deps: [],
+      constraints: [],
+    };
 
-    var depsAndConstraints = {deps: [], constraints: []};
+    this._addAppConstraints(depsAndConstraints);
+    this._addLocalPackageConstraints(depsAndConstraints);
+    this._addReleaseConstraints(depsAndConstraints);
 
-    self._addAppConstraints(depsAndConstraints);
-    self._addLocalPackageConstraints(depsAndConstraints);
-    self._addReleaseConstraints(depsAndConstraints);
     return depsAndConstraints;
   },
 
   _addAppConstraints: function (depsAndConstraints) {
-    var self = this;
-
-    self.projectConstraintsFile.eachConstraint(function (constraint) {
+    this.projectConstraintsFile.eachConstraint(function (constraint) {
       // Add a dependency ("this package must be used") and a constraint
       // ("... at this version (maybe 'any reasonable')").
       depsAndConstraints.deps.push(constraint.package);
