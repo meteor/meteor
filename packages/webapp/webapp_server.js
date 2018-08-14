@@ -749,6 +749,13 @@ function runWebAppServer() {
     res.end();
   });
 
+  // Parse the query string into res.query. Used by oauth_server, but it's
+  // generally pretty handy..
+  //
+  // Do this before the next middleware destroys req.url if a path prefix
+  // is set to close #10111.
+  app.use(query());
+  
   function getPathParts(path) {
     const parts = path.split("/");
     while (parts[0] === "") parts.shift();
@@ -789,10 +796,6 @@ function runWebAppServer() {
 
     next();
   });
-
-  // Parse the query string into res.query. Used by oauth_server, but it's
-  // generally pretty handy..
-  app.use(query());
 
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
