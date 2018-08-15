@@ -228,6 +228,15 @@ CS.Solver.prototype.analyze = function () {
     // make a copy of it and set vConstraint.weakMinimum = true.
     function getVersionConstraint(c) {
       var vConstraint = c.versionConstraint;
+
+      // The meteor-tool version can never be weakened/overridden.
+      if (c.package === "meteor-tool") {
+        return vConstraint;
+      }
+
+      // Overrides cannot be weakened, so in theory they could conflict
+      // with each other, though that's unlikely to be a problem within a
+      // single .meteor/packages file.
       if (vConstraint.override) {
         return vConstraint;
       }
