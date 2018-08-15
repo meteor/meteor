@@ -59,11 +59,27 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                 'upgradeIndirectDepPatchVersions'));
   });
 
-  var resultCache = self._options.resultCache;
-  if (resultCache &&
-      resultCache.lastInput &&
-      _.isEqual(resultCache.lastInput,
-                input.toJSONable(true))) {
+  // The constraint solver avoids re-solving everything from scratch on
+  // rebuilds if the current input of top-level constraints matches the
+  // previously solved input (also just top-level constraints). This is
+  // slightly unsound, because non-top-level dependency constraints might
+  // have changed, but it's important for performance, and relatively
+  // harmless in practice (if there's a version conflict, you'll find out
+  // about it the next time you do a full restart of the development
+  // server). The unsoundness can cause problems for tests, however, so it
+  // may be a good idea to set this environment variable to "true" to
+  // disable the caching entirely.
+  const disableCaching = !! JSON.parse(
+    process.env.METEOR_DISABLE_CONSTRAINT_SOLVER_CACHING || "false"
+  );
+
+  let resultCache = self._options.resultCache;
+  if (disableCaching) {
+    resultCache = null;
+  } else if (resultCache &&
+             resultCache.lastInput &&
+             _.isEqual(resultCache.lastInput,
+                       input.toJSONable(true))) {
     return resultCache.lastOutput;
   }
 
