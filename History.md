@@ -48,6 +48,32 @@
   versions of Meteor without having to publish multiple versions of your
   package. [PR #9983](https://github.com/meteor/meteor/pull/9983)
 
+* The `.meteor/packages` file supports a new syntax for overriding
+  problematic version constraints from packages you do not control.
+
+  If a package version constraint in `.meteor/packages` ends with a `!`
+  character, any other (non-`!`) constraints on that package elsewhere in
+  the application will be _weakened_ to allow any version greater than or
+  equal to the constraint, even if the major/minor versions do not match.
+
+  For example, using both CoffeeScript 2 and `practicalmeteor:mocha` used
+  to be impossible (or at least very difficult) because of this
+  [`api.versionsFrom("1.3")`](https://github.com/practicalmeteor/meteor-mocha/blob/3a2658070a920f8846df48bb8d8c7b678b8c6870/package.js#L28)
+  statement, which unfortunately constrained the `coffeescript` package to
+  version 1.x. In Meteor 1.7.1, if you want to update `coffeescript` to
+  2.x, you can relax the `practicalmeteor:mocha` constraint by putting
+  ```
+  coffeescript@2.2.1_1! # note the !
+  ```
+  in your `.meteor/packages` file. The `coffeescript` version still needs
+  to be at least 1.x, so that `practicalmeteor:mocha` can count on that
+  minimum. However, `practicalmeteor:mocha` will no longer constrain the
+  major version of `coffeescript`, so `coffeescript@2.2.1_1` will work.
+
+  [Feature #208](https://github.com/meteor/meteor-feature-requests/issues/208)
+  [Commit 4a70b12e](https://github.com/meteor/meteor/commit/4a70b12eddef00b6700f129e90018a6076cb1681)
+  [Commit 9872a3a7](https://github.com/meteor/meteor/commit/9872a3a71df033e4cf6290b75fea28f44427c0c2)
+
 * The `npm` package has been upgraded to version 6.3.0, and our
   [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
   `pacote` dependency has been rebased against version 8.1.6.
