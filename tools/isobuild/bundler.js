@@ -2584,10 +2584,10 @@ function addSourceMappingURL(data, url, targetPath) {
   if (targetPath) {
     // If a targetPath was provided, use it to add a sourceURL comment to
     // help associate output files with mapped source files.
-    parts.push(`//# sourceURL=${SOURCE_URL_PREFIX}/${targetPath}`);
+    parts.push("//# sourceURL=" + SOURCE_URL_PREFIX + "/" + targetPath);
   }
 
-  parts.push(`//# sourceMappingURL=${url}`);
+  parts.push("//# sourceMappingURL=" + url);
   parts.push(""); // Trailing newline.
 
   return parts.join("\n");
