@@ -687,6 +687,8 @@ Object.assign(Mongo.Collection.prototype, {
   /**
    * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/2.2/api/Collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
    * @locus Server
+   * @memberof Mongo.Collection
+   * @instance
    */
   rawCollection() {
     var self = this;
@@ -699,6 +701,8 @@ Object.assign(Mongo.Collection.prototype, {
   /**
    * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/2.2/api/Db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
    * @locus Server
+   * @memberof Mongo.Collection
+   * @instance
    */
   rawDatabase() {
     var self = this;
