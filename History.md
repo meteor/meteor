@@ -1,5 +1,11 @@
 ## v.NEXT
 
+## v1.6.1.4, 2018-08-16
+
+* Node has been updated to version
+  [8.11.4](https://nodejs.org/en/blog/release/v8.11.4/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/august-2018-security-releases/).
+
 ## v1.6.1.3, 2018-06-16
 
 * Node has been updated to version
