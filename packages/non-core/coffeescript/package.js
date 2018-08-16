@@ -31,7 +31,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['coffeescript', 'tinytest']);
+  api.use(['coffeescript', 'tinytest', 'modern-browsers']);
   api.use(['coffeescript-test-helper', 'ecmascript'], ['client', 'server']); // Need ecmascript to compile tests/es2015_module.js
   api.addFiles('tests/bare_test_setup.coffee', ['client'], {bare: true});
   api.addFiles('tests/bare_tests.js', ['client']);
@@ -45,4 +45,5 @@ Package.onTest(function (api) {
     'tests/litcoffeescript_tests.coffee.md',
     'tests/coffeescript_tests.js'
   ], ['client', 'server']);
+  api.addFiles('tests/modern_browsers.coffee', ['server']);
 });
