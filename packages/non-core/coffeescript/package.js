@@ -1,6 +1,6 @@
 Package.describe({
   name: 'coffeescript',
-  summary: 'Javascript dialect with fewer braces and semicolons',
+  summary: 'JavaScript dialect with fewer braces and semicolons',
   // This package version should track the version of the `coffeescript-compiler`
   // package, because people will likely only have this one added to their apps;
   // so bumping the version of this package will be how they get newer versions
