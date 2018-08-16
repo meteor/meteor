@@ -24,3 +24,4 @@ dynamic-import@0.2.0
 lazy-test-package
 helper-package
 user:colon-name
+fetch@0.1.0
