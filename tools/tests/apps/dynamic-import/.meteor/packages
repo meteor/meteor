@@ -24,4 +24,5 @@ dynamic-import@0.4.0
 lazy-test-package
 helper-package
 user:colon-name
-underscore
+underscore@1.0.10
+fetch@0.1.0
