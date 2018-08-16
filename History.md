@@ -29,6 +29,12 @@
   [PR #9933](https://github.com/meteor/meteor/pull/9933)
   [PR #10050](https://github.com/meteor/meteor/pull/10050)
 
+## v1.7.0.5, 2018-08-16
+
+* Node has been updated to version
+  [8.11.4](https://nodejs.org/en/blog/release/v8.11.4/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/august-2018-security-releases/).
+
 ## v1.7.0.4, 2018-08-07
 
 * The npm package `@babel/runtime`, which is depended on by most Meteor
