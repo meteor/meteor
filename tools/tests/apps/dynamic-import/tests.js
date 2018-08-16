@@ -1,5 +1,6 @@
 import assert from "assert";
 import { Meteor } from "meteor/meteor";
+import { HTTP } from "meteor/http";
 
 function assertDeepEqual(a, b) {
   const aWithoutDefault = Object.assign({}, a);
@@ -15,15 +16,26 @@ describe("dynamic import(...)", function () {
   maybeClearDynamicImportCache();
 
   it("ignores bad __meteor__/dynamic-import/fetch requests (#10147)", function () {
-    return fetch(Meteor.absoluteUrl("/__meteor__/dynamic-import/fetch"), {
-      // POST request with empty body.
-      method: "POST"
-    }).then(async (res) => {
-      assert.strictEqual(res.status, 400);
+    // POST request with empty body.
+    return new Promise((resolve, reject) => {
+      HTTP.post(
+        Meteor.absoluteUrl("/__meteor__/dynamic-import/fetch"),
+        function (error, response) {
+          if (error) {
+            resolve(error);
+          } else {
+            error = new Error("request should have failed");
+            error.response = response;
+            reject(error);
+          }
+        }
+      );
+    }).then(error => {
+      assert.strictEqual(error.response.statusCode, 400);
       if (Meteor.isProduction) {
-        assert.strictEqual(await res.json(), "bad request");
+        assert.strictEqual(error.response.data, "bad request");
       } else {
-        assert.strictEqual(await res.json(), "Unexpected end of JSON input");
+        assert.strictEqual(error.response.data, "Unexpected end of JSON input");
       }
     });
   });
