@@ -24,3 +24,4 @@ dynamic-import@0.2.0
 lazy-test-package
 helper-package
 user:colon-name
+http@1.4.0
