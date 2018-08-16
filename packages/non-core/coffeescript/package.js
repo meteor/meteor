@@ -6,12 +6,12 @@ Package.describe({
   // so bumping the version of this package will be how they get newer versions
   // of `coffeescript-compiler`. If you change this, make sure to also update
   // ../coffeescript-compiler/package.js to match.
-  version: '2.2.1_1'
+  version: '2.2.1_2'
 });
 
 Package.registerBuildPlugin({
   name: 'compile-coffeescript',
-  use: ['caching-compiler@1.1.9', 'ecmascript@0.8.3', 'coffeescript-compiler@2.2.1_1'],
+  use: ['caching-compiler@1.1.12', 'ecmascript@0.11.1', 'coffeescript-compiler@2.2.1_2'],
   sources: ['compile-coffeescript.js']
 });
 
@@ -24,10 +24,10 @@ Package.onUse(function (api) {
   // same runtime environment that the 'ecmascript' package provides.
   // The following api.imply calls should match those in ../../ecmascript/package.js,
   // except that coffeescript does not api.imply('modules').
-  api.imply('ecmascript-runtime@0.5.0');
-  api.imply('babel-runtime@1.2.2');
-  api.imply('promise@0.10.1');
-  api.imply('dynamic-import@0.3.0');
+  api.imply('ecmascript-runtime@0.7.0');
+  api.imply('babel-runtime@1.2.4');
+  api.imply('promise@0.11.1');
+  api.imply('dynamic-import@0.4.1');
 });
 
 Package.onTest(function (api) {
