@@ -25,3 +25,4 @@ lazy-test-package
 helper-package
 user:colon-name
 underscore@1.0.10
+fetch@0.1.0

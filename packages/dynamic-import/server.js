@@ -7,6 +7,7 @@ const {
   normalize: pathNormalize,
 } = require("path");
 const { fetchURL } = require("./common.js");
+const { Meteor } = require("meteor/meteor");
 const { isModern } = require("meteor/modern-browsers");
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -73,20 +74,39 @@ function middleware(request, response) {
     );
     response.setHeader("Access-Control-Allow-Methods", "POST");
     response.end();
+
   } else if (request.method === "POST") {
     const chunks = [];
     request.on("data", chunk => chunks.push(chunk));
     request.on("end", () => {
-      response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify(readTree(
-        JSON.parse(Buffer.concat(chunks)),
-        getPlatform(request)
-      ), null, 2));
+      try {
+        const tree = JSON.stringify(readTree(
+          JSON.parse(Buffer.concat(chunks)),
+          getPlatform(request)
+        ), null, 2);
+
+        response.writeHead(200, {
+          "Content-Type": "application/json"
+        });
+
+        response.end(tree);
+
+      } catch (e) {
+        response.writeHead(400, {
+          "Content-Type": "application/json"
+        });
+
+        response.end(JSON.stringify(
+          Meteor.isDevelopment && e.message || "bad request"
+        ));
+      }
     });
+
   } else {
     response.writeHead(405, {
       "Cache-Control": "no-cache"
     });
+
     response.end(`method ${request.method} not allowed`);
   }
 }
