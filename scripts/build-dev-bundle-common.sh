@@ -5,13 +5,13 @@ set -u
 
 UNAME=$(uname)
 ARCH=$(uname -m)
-NODE_VERSION=8.12.0
+NODE_VERSION=8.12.0-rc.1
 MONGO_VERSION_64BIT=4.0.0
 MONGO_VERSION_32BIT=3.2.19
 NPM_VERSION=6.3.0
 
 # If we built Node from source on Jenkins, this is the build number.
-NODE_BUILD_NUMBER=140
+NODE_BUILD_NUMBER=
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
