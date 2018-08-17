@@ -48,6 +48,7 @@ Tinytest.add "coffeescript - JSX", (test) ->
   test.isTrue <div>Hello from JSX!</div> is '<div>Hello from JSX!</div>'
 
 
-Tinytest.add "coffeescript - modern browsers", (test) ->
-  klass = class Klass
-  test.isTrue klass.toString().startsWith 'class'
+if Meteor.isModern
+  Tinytest.add "coffeescript - modern browsers", (test) ->
+    klass = class Klass
+    test.isTrue klass.toString().startsWith 'class'
