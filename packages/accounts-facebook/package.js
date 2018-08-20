@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Facebook accounts",
-  version: "1.3.2-rc171.3",
+  version: "1.3.2-rc171.4",
 });
 
 Package.onUse(api => {
