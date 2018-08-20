@@ -6,13 +6,24 @@ Package.describe({
   // so bumping the version of this package will be how they get newer versions
   // of `coffeescript-compiler`. If you change this, make sure to also update
   // ../coffeescript-compiler/package.js to match.
-  version: '2.3.1_1'
+  version: '2.3.1_2'
 });
 
 Package.registerBuildPlugin({
   name: 'compile-coffeescript',
-  use: ['caching-compiler@1.1.12', 'ecmascript@0.11.1', 'coffeescript-compiler@2.3.1_1'],
-  sources: ['compile-coffeescript.js']
+  use: ['caching-compiler@1.1.12', 'ecmascript@0.11.1', 'coffeescript-compiler@2.3.1_2'],
+  sources: ['compile-coffeescript.js'],
+  npmDependencies: {
+    // A breaking change was introduced in @babel/runtime@7.0.0-beta.56
+    // with the removal of the @babel/runtime/helpers/builtin directory.
+    // Since the compile-coffeescript plugin is bundled and published with
+    // a specific version of babel-compiler and babel-runtime, it also
+    // needs to have a reliable version of the @babel/runtime npm package,
+    // rather than delegating to the one installed in the application's
+    // node_modules directory, so the coffeescript package can work in
+    // Meteor 1.7.1 apps as well as 1.7.0.x and earlier.
+    '@babel/runtime': '7.0.0-beta.55'
+  }
 });
 
 Package.onUse(function (api) {
