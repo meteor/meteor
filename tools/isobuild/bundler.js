@@ -2014,6 +2014,10 @@ class JsImage {
             }
 
             function tryLookup(nodeModulesPath, name) {
+              if (typeof nodeModulesPath !== "string") {
+                return;
+              }
+
               var nodeModulesTopDir = files.pathJoin(
                 nodeModulesPath,
                 name.split("/", 1)[0]
@@ -2026,18 +2030,39 @@ class JsImage {
               }
             }
 
-            const found = _.some(item.nodeModulesDirectories, nmd => {
+            let found = _.some(item.nodeModulesDirectories, nmd => {
               // Npm.require doesn't consider local node_modules
               // directories.
               return ! nmd.local && tryLookup(nmd.sourcePath, name);
             });
 
-            if (found || tryLookup(devBundleLibNodeModulesDir, name)) {
-              return require(fullPath);
+            if (! found &&
+                bindings.Plugin &&
+                typeof bindings.Plugin.name === "string") {
+              // If this package is part of a build plugin, try looking up
+              // the requested module in any node_modules directories
+              // belonging to the plugin package, as declared by
+              //
+              //   Package.registerBuildPlugin({
+              //     name: "this-plugin-name",
+              //     ...
+              //     npmDependencies: { name: version, ... }
+              //   });
+              //
+              // in the parent package (e.g. ecmascript, coffeescript).
+              const nmdSourcePaths =
+                nodeModulesDirsByPackageName.get(bindings.Plugin.name);
+              if (Array.isArray(nmdSourcePaths)) {
+                found = _.some(nmdSourcePaths, sourcePath => {
+                  return tryLookup(sourcePath, name);
+                });
+              }
             }
 
-            if (appNodeModules &&
-                tryLookup(appNodeModules, name)) {
+            found = found || tryLookup(devBundleLibNodeModulesDir, name);
+            found = found || tryLookup(appNodeModules, name);
+
+            if (found) {
               return require(fullPath);
             }
 
