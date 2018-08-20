@@ -15,7 +15,9 @@ then
     then
         NODE_FROM_SRC=${NODE_FROM_SRC:=true}
         echo "Building Node source from Git hash ${NODE_COMMIT_HASH}...";
-        NODE_URL="https://github.com/meteor/node/archive/${NODE_COMMIT_HASH}.tar.gz"
+        git clone --branch "$NODE_COMMIT_HASH" --depth 1 \
+            https://github.com/meteor/node.git \
+            node-build
     else
         echo "Building Node source from ${NODE_VERSION} src tarball...";
         NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}.tar.gz"
@@ -24,11 +26,16 @@ else
     NODE_URL="https://nodejs.org/dist/v${NODE_VERSION}/${NODE_TGZ}"
 fi
 
-mkdir node-build
-cd node-build
+if [ -d node-build ]
+then
+    cd node-build
+else
+    mkdir node-build
+    cd node-build
 
-echo "Downloading Node from ${NODE_URL}"
-curl -sL "${NODE_URL}" | tar zx --strip-components 1
+    echo "Downloading Node from ${NODE_URL}"
+    curl -sL "${NODE_URL}" | tar zx --strip-components 1
+fi
 
 node_configure_flags=(
     # Enable the ICU internationalization library.
