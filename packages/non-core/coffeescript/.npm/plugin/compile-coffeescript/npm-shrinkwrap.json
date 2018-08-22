@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@babel/runtime": {
-      "version": "7.0.0-rc.1",
-      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.0.0-rc.1.tgz",
-      "integrity": "sha512-Nifv2kwP/nwR39cAOasNxzjYfpeuf/ZbZNtQz5eYxWTC9yHARU9wItFnAwz1GTZ62MU+AtSjzZPMbLK5Q9hmbg=="
+      "version": "7.0.0-rc.2",
+      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.0.0-rc.2.tgz",
+      "integrity": "sha512-QugZtHk0uVHqHmgwNn2f2uOtTwXWPBBZVSH2EFRm9iw1fFmi5fm46ye6NSVSiXT9Ymejh7fKIw3riCv23SNtSQ=="
     },
     "regenerator-runtime": {
       "version": "0.12.1",
