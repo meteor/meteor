@@ -698,7 +698,7 @@ Lists.helpers({
   // ...
   editableBy(userId) {
     if (!this.userId) {
-      return true;
+      return false;
     }
 
     return this.userId === userId;
