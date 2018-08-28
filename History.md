@@ -154,9 +154,6 @@
   [PR #10058](https://github.com/meteor/meteor/pull/10058)
   [Feature Request #269](https://github.com/meteor/meteor-feature-requests/issues/269)
 
-* The `mongodb` npm package used by `npm-mongo` has been updated to
-  version 3.1.1.
-
 * When a Meteor application uses a compiler plugin to process files with a
   particular file extension (other than `.js` or `.json`), those file
   extensions should be automatically appended to imports that do not
