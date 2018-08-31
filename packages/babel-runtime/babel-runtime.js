@@ -28,9 +28,9 @@ if (parseInt(babelRuntimeVersion, 10) < 6) {
 } else {
   var match = /^7\.0\.0-(beta|rc)\./.exec(babelRuntimeVersion);
   if (match &&
-      match[1] === "rc" ||
+      (match[1] === "rc" ||
       (match[1] === "beta" &&
-       parseInt(babelRuntimeVersion.split(".").pop(), 10) > 55)) {
+        parseInt(babelRuntimeVersion.split(".").pop(), 10) > 55))) {
     console.warn([
       "The version of @babel/runtime installed in your node_modules directory ",
       "(" + babelRuntimeVersion + ") contains a breaking change which was introduced by ",
