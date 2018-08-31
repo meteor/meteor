@@ -25,12 +25,14 @@ if (parseInt(babelRuntimeVersion, 10) < 6) {
     ""
   ].join("\n"));
 
-} else {
-  var match = /^7\.0\.0-(beta|rc)\./.exec(babelRuntimeVersion);
-  if (match &&
-      (match[1] === "rc" ||
-      (match[1] === "beta" &&
-        parseInt(babelRuntimeVersion.split(".").pop(), 10) > 55))) {
+} else if (parseInt(babelRuntimeVersion.split(".").shift()) >= 7) {
+  // If Babel 7, only allow -beta.55 and earlier.  The final release, all RCs
+  // and -beta.56 all suffere from the removal of the "builtins" helpers.
+  var acceptableBabelRuntimeVersion =
+    /^7\.0\.0-beta/.test(babelRuntimeVersion) &&
+    parseInt(babelRuntimeVersion.split(".").pop(), 10) <= 55;
+
+  if (! acceptableBabelRuntimeVersion) {
     console.warn([
       "The version of @babel/runtime installed in your node_modules directory ",
       "(" + babelRuntimeVersion + ") contains a breaking change which was introduced by ",
