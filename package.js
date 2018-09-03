@@ -15,6 +15,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['percolate:synced-cron', 'tinytest', 'underscore', 'logging']);
-  api.add_files('synced-cron-tests.js', ['server']);
+  api.use(['check', 'mongo'], 'server');
+  api.use(['tinytest', 'underscore', 'logging']);
+  api.add_files(['synced-cron-server.js', 'synced-cron-tests.js'], ['server']);
 });
