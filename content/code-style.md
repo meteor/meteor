@@ -81,7 +81,7 @@ We recommend choosing and sticking to a JavaScript style guide and enforcing it 
 
 We recommend using the [Airbnb eslint configuration](https://github.com/airbnb/javascript/tree/master/packages/eslint-config-airbnb) which verifies the Airbnb styleguide.
 
-Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's a fastest and easy way to identify typos and small errors.
+Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's an automated way to identify typos and small errors.
 
 <h3 id="eslint-installing">Installing and running ESLint</h3>
 
