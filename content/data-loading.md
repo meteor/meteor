@@ -41,9 +41,9 @@ Meteor.publish('lists.public', function() {
 });
 ```
 
-There are a few things to understand about this code block. First, we've named the publication with the unique string `lists.public`, and that will be how we access it from the client. Second, we are simply returning a Mongo *cursor* from the publication function. Note that the cursor is filtered to only return certain fields from the collection, as detailed in the [Security article](security.html#fields).
+There are a few things to understand about this code block. First, we've named the publication with the unique string `lists.public`, and that will be how we access it from the client. Second, we are returning a Mongo *cursor* from the publication function. Note that the cursor is filtered to only return certain fields from the collection, as detailed in the [Security article](security.html#fields).
 
-What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `Lists` on the client will have all of the public lists that are available in the server collection named `Lists` while that subscription is open. In this particular example in the Todos application, the subscription is initialized when the app starts and never stopped, but a later section will talk about [subscription life cycle](data-loading.html#patterns).
+What that means is that the publication will ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `Lists` on the client will have all of the public lists that are available in the server collection named `Lists` while that subscription is open. In this particular example in the Todos application, the subscription is initialized when the app starts and never stopped, but a later section will talk about [subscription life cycle](data-loading.html#patterns).
 
 Every publication takes two types of parameters:
 
@@ -143,7 +143,7 @@ Subscribing to data puts it in your client-side collection. To use the data in y
 
 <h4 id="specific-queries">Always use specific queries to fetch data</h4>
 
-If you're publishing a subset of your data, it might be tempting to simply query for all data available in a collection (i.e. `Lists.find()`) in order to get that subset on the client, without re-specifying the Mongo selector you used to publish that data in the first place.
+If you're publishing a subset of your data, it might be tempting to query for all data available in a collection (i.e. `Lists.find()`) in order to get that subset on the client, without re-specifying the Mongo selector you used to publish that data in the first place.
 
 But if you do this, then you open yourself up to problems if another subscription pushes data into the same collection, since the data returned by `Lists.find()` might not be what you expected anymore. In an actively developed application, it's often hard to anticipate what may change in the future and this can be a source of hard to understand bugs.
 
@@ -208,7 +208,7 @@ Technically, what happens when one of these reactive sources changes is the foll
 1. The reactive data source *invalidates* the autorun computation (marks it so that it re-runs in the next Tracker flush cycle).
 2. The subscription detects this, and given that anything is possible in next computation run, marks itself for destruction.
 3. The computation re-runs, with `.subscribe()` being re-called either with the same or different arguments.
-4. If the subscription is run with the *same arguments* then the "new" subscription discovers the old "marked for destruction" subscription that's sitting around, with the same data already ready, and simply reuses that.
+4. If the subscription is run with the *same arguments* then the "new" subscription discovers the old "marked for destruction" subscription that's sitting around, with the same data already ready, and reuses that.
 5. If the subscription is run with *different arguments*, then a new subscription is created, which connects to the publication on the server.
 6. At the end of the flush cycle (i.e. after the computation is done re-running), the old subscription checks to see if it was re-used, and if not, sends a message to the server to tell the server to shut it down.
 
@@ -230,7 +230,7 @@ There are two styles of pagination that are commonly used, a "page-by-page" styl
 
 In this section, we'll consider a publication/subscription technique for the second, infinite-scroll style pagination. The page-by-page technique is a little tricker to handle in Meteor, due to it being difficult to calculate the offset on the client. If you need to do so, you can follow many of the same techniques that we use here and use the [`percolate:find-from-publication`](https://atmospherejs.com/percolate/find-from-publication) package to keep track of which records have come from your publication.
 
-In an infinite scroll publication, we simply need to add a new argument to our publication controlling how many items to load. Suppose we wanted to paginate the todo items in our Todos example app:
+In an infinite scroll publication, we need to add a new argument to our publication controlling how many items to load. Suppose we wanted to paginate the todo items in our Todos example app:
 
 ```js
 const MAX_TODOS = 1000;
@@ -265,7 +265,7 @@ Template.Lists_show_page.onCreated(function() {
 });
 ```
 
-We'd increment that `requestedTodos` variable when the user clicks "load more" (or perhaps just when they scroll to the bottom of the page).
+We'd increment that `requestedTodos` variable when the user clicks "load more" (or perhaps when they scroll to the bottom of the page).
 
 One piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The [`tmeasday:publish-counts`](https://atmospherejs.com/tmeasday/publish-counts) package can be useful to publish this. We could add a `Lists.todoCount` publication like so
 
@@ -350,7 +350,7 @@ WindowSize.simulateMobile = (device) => {
 
 <h2 id="advanced-publications">Advanced publications</h2>
 
-Sometimes, the simple mechanism of returning a query from a publication function won't cover your needs. In those situations, there are some more powerful publication patterns that you can use.
+Sometimes, the mechanism of returning a query from a publication function won't cover your needs. In those situations, there are some more powerful publication patterns that you can use.
 
 <h3 id="publishing-relations">Publishing relational data</h3>
 
@@ -520,7 +520,7 @@ One point to be aware of is that if you allow the user to *modify* data in the "
 
 Although you can use publications and subscriptions in Meteor via an intuitive understanding, sometimes it's useful to know exactly what happens under the hood when you subscribe to data.
 
-Suppose you have a simple publication of the following form:
+Suppose you have a publication of the following form:
 
 ```js
 Meteor.publish('Posts.all', function() {
@@ -568,7 +568,7 @@ Publications and subscriptions are the primary way of dealing with data in Meteo
 
 As a concrete example of using the [low-level API](#custom-publication), consider the situation where you have some 3rd party REST endpoint which provides a changing set of data that's valuable to your users. How do you make that data available?
 
-One option would be to provide a Method that simply proxies through to the endpoint, for which it's the client's responsibility to poll and deal with the changing data as it comes in. So then it's the clients problem to deal with keeping a local data cache of the data, updating the UI when changes happen, etc. Although this is possible (you could use a Local Collection to store the polled data, for instance), it's simpler, and more natural to create a publication that does this polling for the client.
+One option would be to provide a Method that proxies through to the endpoint, for which it's the client's responsibility to poll and deal with the changing data as it comes in. So then it's the clients problem to deal with keeping a local data cache of the data, updating the UI when changes happen, etc. Although this is possible (you could use a Local Collection to store the polled data, for instance), it's simpler, and more natural to create a publication that does this polling for the client.
 
 A pattern for turning a polled REST endpoint looks something like this:
 
@@ -579,7 +579,7 @@ Meteor.publish('polled-publication', function() {
   const publishedKeys = {};
 
   const poll = () => {
-    // Let's assume the data comes back as an array of JSON documents, with an _id field, for simplicity
+    // Let's assume the data comes back as an array of JSON documents, with an _id field
     const data = HTTP.get(REST_URL, REST_OPTIONS);
 
     data.forEach((doc) => {
@@ -607,7 +607,7 @@ Things can get more complicated; for instance you may want to deal with document
 
 <h3 id="publications-as-rest">Accessing a publication as a REST endpoint</h3>
 
-The opposite scenario occurs when you want to publish data to be consumed by a 3rd party, typically over REST. If the data we want to publish is the same as what we already publish via a publication, then we can use the [simple:rest](https://atmospherejs.com/simple/rest) package to do this really easily.
+The opposite scenario occurs when you want to publish data to be consumed by a 3rd party, typically over REST. If the data we want to publish is the same as what we already publish via a publication, then we can use the [simple:rest](https://atmospherejs.com/simple/rest) package to do this.
 
 In the Todos example app, we have done this, and you can now access our publications over HTTP:
 

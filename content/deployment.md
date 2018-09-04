@@ -33,7 +33,7 @@ In web application deployment it's common to refer to three runtime environments
 2. **Staging.** An intermediate environment that is similar to production, but not visible to users of the application. Can be used for testing and QA.
 3. **Production.** The real deployment of your app that your customers are currently using.
 
-The idea of the staging environment is to provide a non-user-visible test environment that is as close as possible to production in terms of infrastructure. It's common for issues to appear with new code on the production infrastructure that just don't happen in a development environment. A very simple example is issues that involve latency between the client and server---connecting to a local development server with tiny latencies, you just may never see such an issue.
+The idea of the staging environment is to provide a non-user-visible test environment that is as close as possible to production in terms of infrastructure. It's common for issues to appear with new code on the production infrastructure that don't happen in a development environment. A very simple example is issues that involve latency between the client and server---connecting to a local development server with tiny latencies, you just may never see such an issue.
 
 For this reason, developers tend to try and get staging as close as possible to production. This means that all the steps we outline below about production deployment, should, if possible, also be followed for your staging server.
 
@@ -94,7 +94,7 @@ Template.registerHelper("assetUrl", (asset) => {
 
 <h4 id="cdn-webfonts">CDNs and webfonts</h4>
 
-If you are hosting a webfont as part of your application and serving it via a CDN, you may need to configure the served headers for the font to allow cross-origin resource sharing (as the webfont is now served from a different origin to your site itself). You can do this easily enough in Meteor by adding a handler (you'll need to ensure your CDN is passing the header through):
+If you are hosting a webfont as part of your application and serving it via a CDN, you may need to configure the served headers for the font to allow cross-origin resource sharing (as the webfont is now served from a different origin to your site itself). You can do this in Meteor by adding a handler (you'll need to ensure your CDN is passing the header through):
 
 ```js
 import { WebApp } from 'meteor/webapp';
@@ -125,11 +125,11 @@ Meteor is an open source platform, and you can run the apps that you make with M
 
 The easiest way to operate your app with confidence is to use Galaxy, the service built by Meteor Development Group specifically to run Meteor apps.
 
-Galaxy is a distributed system that runs on Amazon AWS. If you understand what it takes to run Meteor apps correctly and just how Galaxy works, you’ll come to appreciate Galaxy’s value, and that it will save you a lot of time and trouble. Most large Meteor apps run on Galaxy today, and many of them have switched from custom solutions they used prior to Galaxy’s launch.
+Galaxy is a distributed system that runs on Amazon AWS. If you understand what it takes to run Meteor apps correctly and how Galaxy works, you’ll come to appreciate Galaxy’s value, and that it will save you a lot of time and trouble. Most large Meteor apps run on Galaxy today, and many of them have switched from custom solutions they used prior to Galaxy’s launch.
 
 In order to deploy to Galaxy, you'll need to [sign up for an account](https://www.meteor.com/galaxy/signup), and separately provision a MongoDB database (see below).
 
-Once you've done that, it's easy to [deploy to Galaxy](http://galaxy-guide.meteor.com/deploy-guide.html). You just need to [add some environment variables to your settings file](http://galaxy-guide.meteor.com/environment-variables.html) to point it at your MongoDB, and you can deploy with:
+Once you've done that, it's easy to [deploy to Galaxy](http://galaxy-guide.meteor.com/deploy-guide.html). You need to [add some environment variables to your settings file](http://galaxy-guide.meteor.com/environment-variables.html) to point it at your MongoDB, and you can deploy with:
 
 ```bash
 DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
@@ -145,7 +145,7 @@ You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you
 
 If you are following [our advice](security.html#ssl), you'll probably want to [set up SSL](http://galaxy-guide.meteor.com/encryption.html) on your Galaxy application with the certificate and key for your domain. You should also read the [Security](security.html#ssl) section of this guide for information on how to forcibly redirect HTTP to HTTPS.
 
-Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), and scaling is even easier---simply log into galaxy.meteor.com, and scale instantly from there.
+Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), as is scaling --- log into galaxy.meteor.com, and scale instantly from there.
 
 <img src="images/galaxy-scaling.png">
 
@@ -260,7 +260,7 @@ If the new version involves different data formats in the database, then you nee
 
 <h2 id="analytics">Monitoring users via analytics</h2>
 
-It's common to want to know which pages of your app are most commonly visited, and where users are coming from. Here's a simple setup that will get you URL tracking using Google Analytics. We'll be using the [`okgrow:analytics`](https://atmospherejs.com/okgrow/analytics) package.
+It's common to want to know which pages of your app are most commonly visited, and where users are coming from. Here's a setup that will get you URL tracking using Google Analytics. We'll be using the [`okgrow:analytics`](https://atmospherejs.com/okgrow/analytics) package.
 
 ```
 meteor add okgrow:analytics
@@ -298,7 +298,7 @@ export const updateText = new ValidatedMethod({
 });
 ```
 
-To achieve a similar abstraction for subscriptions/publications, you may want to write a simple wrapper for `Meteor.subscribe()`.
+To achieve a similar abstraction for subscriptions/publications, you may want to write a wrapper for `Meteor.subscribe()`.
 
 <h2 id="apm">Monitoring your application</h2>
 
@@ -322,8 +322,8 @@ Galaxy's UI provides a detailed logging system, which can be invaluable to deter
 
 If your application contains a lot of publicly accessible content, then you probably want it to rank well in Google and other search engines' indexes. As most webcrawlers do not support client-side rendering (or if they do, have spotty support for websockets), it's better to render the site on the server and deliver it as HTML in this special case.
 
-If you’re using [Galaxy to host your meteor apps](https://www.meteor.com/galaxy/signup), you can take advantage of built-in automatic [Prerender.io](https://prerender.io) integration. Simply add [`mdg:seo`](https://atmospherejs.com/mdg/seo) to your app and Galaxy will take care of the rest: loading the code and configuring it with Galaxy-provided credentials.
+If you’re using [Galaxy to host your meteor apps](https://www.meteor.com/galaxy/signup), you can take advantage of built-in automatic [Prerender.io](https://prerender.io) integration. Add [`mdg:seo`](https://atmospherejs.com/mdg/seo) to your app and Galaxy will take care of the rest: loading the code and configuring it with Galaxy-provided credentials.
 
-If you're not using Galaxy, you can still use `mdg:seo`. You will need to sign up for your own Prerender.io account and provide your token to the `mdg:seo` package in `Meteor.settings`. You can also do this if you use Galaxy but would prefer to use your own Prerender.io account with more frequent cache changes.  You can also just use the [`prerender-node` NPM package](https://www.npmjs.com/package/prerender-node) directly, mimicing the small amount of [client](https://github.com/meteor/galaxy-seo-package/blob/master/client/prerender.html) and [server](https://github.com/meteor/galaxy-seo-package/blob/master/server/prerender.js) code in the Atmosphere package; do this if you need to use a newer version of the NPM package than the one in `mdg:seo`.
+If you're not using Galaxy, you can still use `mdg:seo`. You will need to sign up for your own Prerender.io account and provide your token to the `mdg:seo` package in `Meteor.settings`. You can also do this if you use Galaxy but would prefer to use your own Prerender.io account with more frequent cache changes.  You can also use the [`prerender-node` NPM package](https://www.npmjs.com/package/prerender-node) directly, mimicing the small amount of [client](https://github.com/meteor/galaxy-seo-package/blob/master/client/prerender.html) and [server](https://github.com/meteor/galaxy-seo-package/blob/master/server/prerender.js) code in the Atmosphere package; do this if you need to use a newer version of the NPM package than the one in `mdg:seo`.
 
 Chances are you also want to set `<title>` tags and other `<head>` content to make your site appear nicer in search results. The best way to do so is to use the [`kadira:dochead`](https://atmospherejs.com/kadira/dochead) package. The sensible place to call out to `DocHead` is from the `onCreated` callbacks of your page-level components.

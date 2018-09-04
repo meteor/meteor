@@ -23,7 +23,7 @@ Meteor officially supports three user interface (UI) rendering libraries, [Blaze
 - Blaze uses an easy-to-learn [Handlebars](http://handlebarsjs.com)-like template syntax, with logic like `{% raw %}{{#if}}{% endraw %}` and `{% raw %}{{#each}}{% endraw %}` interspersed in your HTML files. Template functions and CSS-selector events maps are written in JavaScript files.
 - React uses [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html), with which you write your HTML in JavaScript. While it doesn't have the logic-view separation most libraries have, it also has the most flexibility. Template functions and event handlers are defined in the same file as the HTML part of the component, which usually makes it easier to understand how they are tied together.
 - Angular uses HTML with [special attribute syntax](https://angular.io/docs/ts/latest/guide/cheatsheet.html) for logic and events. Template helpers are written in the accompanying JavaScript file along with events, which are called by name from inside HTML attributes.
-- React and Angular enforce a better component structure, which makes developing larger apps easier. (Although you can add component structure to Blaze by [following conventions](http://blazejs.org/guide/reusable-components.html) or using the [Blaze Components](http://components.meteorapp.com/) or [ViewModel](https://viewmodel.org/) packages.)
+- React and Angular enforce a better component structure, which makes developing larger apps more manageable. (Although you can add component structure to Blaze by [following conventions](http://blazejs.org/guide/reusable-components.html) or using the [Blaze Components](http://components.meteorapp.com/) or [ViewModel](https://viewmodel.org/) packages.)
 
 <h3 id="community">Community</h3>
 
@@ -52,7 +52,7 @@ Meteor officially supports three user interface (UI) rendering libraries, [Blaze
 
 Regardless of the view layer that you are using, there are some patterns in how you build your User Interface (UI) that will help make your app's code easier to understand, test, and maintain. These patterns, much like general patterns of modularity, revolve around making the interfaces to your UI elements very clear and avoiding using techniques that bypass these known interfaces.
 
-In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more like a component, which has an API and internal logic, rather than a template, which is just a bit of HTML.
+In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more like a component, which has an API and internal logic, rather than a template, which is a bit of HTML.
 
 To begin with, let's consider two categories of UI components that are useful to think about, "reusable" and "smart":
 
@@ -64,7 +64,7 @@ In Meteor specifically, this means a component which does not access data from a
 
 Reusable components have many advantages:
 
- 1. They are easy to reason about---you don't need to understand how the data in the global store changes, simply how the arguments to the component change.
+ 1. They are easy to reason about---you don't need to understand how the data in the global store changes, how the arguments to the component change.
 
  2. They are easy to test---you don't need to be careful about the environment you render them in, all you need to do is provide the right arguments.
 
@@ -190,7 +190,7 @@ In Meteor, [the excellent `tap:i18n` package](https://atmospherejs.com/tap/i18n)
 
 To use `tap:i18n`, first `meteor add tap:i18n` to add it to your app. Then we need to add a translation JSON file for our default language (`en` for English) -- we can put it at `i18n/en.i18n.json`. Once we've done that we can import and use the `TAPi18n.__()` function to get translations for strings or keys within our JavaScript code.
 
-For instance for errors in the Todos example app, we create an `errors` module that allows us to easily alert a translated error for all of the errors that we can potentially throw from methods:
+For instance for errors in the Todos example app, we create an `errors` module that allows us to alert a translated error for all of the errors that we can potentially throw from methods:
 
 ```js
 import { TAPi18n } from 'meteor/tap:i18n';
@@ -222,7 +222,7 @@ The `error.error` field is the first argument to the `Meteor.Error` constructor,
 
 <h4 id="tap-i18n-blaze">Using `tap:i18n` in Blaze</h4>
 
-We can also easily use translations in Blaze templates. To do so, we can use the `{% raw %}{{_ }}{% endraw %}` helper. In the Todos app we use the actual string that we want to output in English as the i18n key, which means we don't need to provide an English translation, although perhaps in a real app you might want to provide keys from the beginning.
+We can also use translations in Blaze templates. To do so, we can use the `{% raw %}{{_ }}{% endraw %}` helper. In the Todos app we use the actual string that we want to output in English as the i18n key, which means we don't need to provide an English translation, although perhaps in a real app you might want to provide keys from the beginning.
 
 For example in `app-not-found.html`:
 
@@ -287,7 +287,7 @@ To change the user's language, use `i18n.setLocale('en-US')`. `universe:i18n` al
 
 <h4 id="universe-i18n-react">Using `universe:i18n` in React components</h4>
 
-To add reactive i18n inline in your React components, simply use the `i18n.createComponent()` function and pass it keys from your translation file. Here's an example of a simple component wrapping i18n's translation component:
+To add reactive i18n inline in your React components, use the `i18n.createComponent()` function and pass it keys from your translation file. Here's an example of a simple component wrapping i18n's translation component:
 
 ```js
 import React from 'react';
@@ -356,7 +356,7 @@ User experience, or UX, describes the experience of a user as they interact with
 
 When you subscribe to data in Meteor, it does not become instantly available on the client. Typically the user will need to wait for a few hundred milliseconds, or as long as a few seconds (depending on the connection speed), for the data to arrive. This is especially noticeable when the app is first starting up or you move between screens that are displaying completely new data.
 
-There are a few UX techniques for dealing with this waiting period. The simplest is simply to switch out the page you are rendering with a generic "loading" page while you wait for all the data (typically a page may open several subscriptions) to load. As an example, in the Todos example app, we wait until all the public lists and the user's private lists have loaded before we try to render the actual page:
+There are a few UX techniques for dealing with this waiting period. The simplest is to switch out the page you are rendering with a generic "loading" page while you wait for all the data (typically a page may open several subscriptions) to load. As an example, in the Todos example app, we wait until all the public lists and the user's private lists have loaded before we try to render the actual page:
 
 ```html
 {{#if Template.subscriptionsReady}}
@@ -413,7 +413,7 @@ For example, in Galaxy, while you wait for your app's log to load, you see a loa
 
 Loading states are notoriously difficult to work on visually as they are by definition transient and often are barely noticeable in a development environment where subscriptions load almost instantly.
 
-This is one reason why being able to achieve any state at will in the [component style guide](#styleguides) is so useful. As our reusable component `Lists_show` simply chooses to render based on its `todosReady` argument and does not concern itself with a subscription, it is trivial to render its loading state in a style guide.
+This is one reason why being able to achieve any state at will in the [component style guide](#styleguides) is so useful. As our reusable component `Lists_show` chooses to render based on its `todosReady` argument and does not concern itself with a subscription, it is trivial to render its loading state in a style guide.
 
 <h3 id="pagination">Pagination</h3>
 
@@ -446,7 +446,7 @@ We can now distinguish between the 5 states above based on these conditions:
 4. `items.length === requested && requested === count && count > 0`
 5. `count === 0`
 
-You can see that although the situation is a little complex, it's also completely determined by the arguments and thus very much testable. A component style guide helps immeasurably in seeing all these states easily! In Galaxy we have each state in our style guide for each of the lists of our app and we can ensure all work as expected and appear correctly:
+You can see that although the situation is a little complex, it's also completely determined by the arguments and thus very much testable. A component style guide helps immeasurably in seeing all these states! In Galaxy we have each state in our style guide for each of the lists of our app and we can ensure all work as expected and appear correctly:
 
 <image src="images/galaxy-styleguide-list.png">
 
@@ -456,7 +456,7 @@ A list is also a good opportunity to understand the benefits of the smart vs reu
 
 However, we still need to subscribe to the list of items and the count, and collect that data somewhere. To do this, it's sensible to use a smart wrapper component (analogous to an MVC "controller") whose job it is to subscribe and fetch the relevant data.
 
-In the Todos example app, we already have a wrapping component for the list that talks to the router and sets up subscriptions. This component could easily be extended to understand pagination:
+In the Todos example app, we already have a wrapping component for the list that talks to the router and sets up subscriptions. This component could be extended to understand pagination:
 
 ```js
 const PAGE_SIZE = 10;
@@ -499,13 +499,13 @@ Template.Lists_show_page.helpers({
 
 <h4 id="patterns-for-new-data">UX patterns for displaying new data</h4>
 
-An interesting UX challenge in a realtime system like Meteor involves how to bring new information (like changing data in a list) to the user's attention. As [Dominic](http://blog.percolatestudio.com/design/design-for-realtime/) points out, it's not always a good idea to simply update the contents of a list as quickly as possible, as it's easy to miss changes or get confused about what's happened.
+An interesting UX challenge in a realtime system like Meteor involves how to bring new information (like changing data in a list) to the user's attention. As [Dominic](http://blog.percolatestudio.com/design/design-for-realtime/) points out, it's not always a good idea to update the contents of a list as quickly as possible, as it's easy to miss changes or get confused about what's happened.
 
 One solution to this problem is to *animate* list changes (which we'll look at in the [animation section](#animation)), but this isn't always the best approach. For instance, if a user is reading a list of comments, they may not want to see any changes until they are done with the current comment thread.
 
 An option in this case is to call out that there are changes to the data the user is looking at without actually making UI updates. In a system like Meteor which is reactive by default, it isn't necessarily easy to stop such changes from happening!
 
-However, it is possible to do this thanks to our split between smart and reusable components. The reusable component simply renders what it's given, so we use our smart component to control that information. We can use a [*local collection*](collections.html#local-collections) to store the rendered data, and then push data into it when the user requests an update:
+However, it is possible to do this thanks to our split between smart and reusable components. The reusable component renders what it's given, so we use our smart component to control that information. We can use a [*local collection*](collections.html#local-collections) to store the rendered data, and then push data into it when the user requests an update:
 
 ```js
 Template.Lists_show_page.onCreated(function() {
@@ -604,7 +604,7 @@ Note that the `listId` returned by the list method (which is the one generated b
 
 <h3 id="writes-in-progress">Indicating when a write is in progress</h3>
 
-Sometimes the user may be interested in knowing when the update has hit the server. For instance, in a chat application, it's a typical pattern to optimistically display the message in the chat log, but indicate that it is "pending" until the server has acknowledged the write. We can do this easily in Meteor by simply modifying the Method to act differently on the client:
+Sometimes the user may be interested in knowing when the update has hit the server. For instance, in a chat application, it's a typical pattern to optimistically display the message in the chat log, but indicate that it is "pending" until the server has acknowledged the write. We can do this in Meteor by modifying the Method to act differently on the client:
 
 ```js
 Messages.methods.insert = new ValidatedMethod({
@@ -632,7 +632,7 @@ We've seen examples above of failures which you don't really anticipate will hap
 
 Thanks to Meteor's automatic handling of optimistic UI, if a method unexpectedly fails the optimistic changes will roll back and the Minimongo database will end up in a consistent state. If you are rendering directly from Minimongo, the user will see something that is consistent, even if it's not what they anticipated of course. In some cases when you have state you are keeping outside of Minimongo, you may need to make changes to it manually to reflect this. You can see this in the example above where we had to update the router manually after an operation failed.
 
-However, it's terrible UX to simply jump the user to an unexpected state without explaining what's happened. We used a `alert()` above, which is a pretty poor option, but gets the job done. One better approach is to indicate changes via a "flash notification", which is a UI element that's displayed "out-of-band", typically in the top right of the screen, given the user *some* indication of what's happened. Here's an example of a flash notification in Galaxy, at the top right of the page:
+However, it's terrible UX to jump the user to an unexpected state without explaining what's happened. We used a `alert()` above, which is a pretty poor option, but gets the job done. One better approach is to indicate changes via a "flash notification", which is a UI element that's displayed "out-of-band", typically in the top right of the screen, given the user *some* indication of what's happened. Here's an example of a flash notification in Galaxy, at the top right of the page:
 
 <img src="images/galaxy-flash-notification.png">
 
@@ -660,7 +660,7 @@ Momentum works by overriding the way that child HTML elements appear and disappe
 
 <h3 id="animating-attributes">Animating changes to attributes</h3>
 
-Another common type of animation is when an attribute of an element changes. For instance, a button may change color when you click on it. These type of animations are most easily achieved with [CSS transitions](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Transitions/Using_CSS_transitions). For example, we use a CSS transition for the hover state of links in the Todos example app:
+Another common type of animation is when an attribute of an element changes. For instance, a button may change color when you click on it. These type of animations are achieved with [CSS transitions](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Transitions/Using_CSS_transitions). For example, we use a CSS transition for the hover state of links in the Todos example app:
 
 ```less
 a {
@@ -691,7 +691,7 @@ Let's consider the case of the Todos example app. Here we do a similar thing to 
 {{/momentum}}
 ```
 
-This looks like it should just work, but there's one problem: Sometimes the rendering system will prefer to simply change an existing component rather than switching it out and triggering the animation system. For example in the Todos example app, when you navigate between lists, by default Blaze will try to simply re-render the `Lists_show` component with a new `listId` (a changed argument) rather than pull the old list out and put in a new one. This is an optimization that is nice in principle, but that we want to avoid here for animation purposes. More specifically, we want to make sure the animation *only* happens when the `listId` changes and not on other reactive changes.
+This looks like it should just work, but there's one problem: Sometimes the rendering system will prefer to change an existing component rather than switching it out and triggering the animation system. For example in the Todos example app, when you navigate between lists, by default Blaze will try to re-render the `Lists_show` component with a new `listId` (a changed argument) rather than pull the old list out and put in a new one. This is an optimization that is nice in principle, but that we want to avoid here for animation purposes. More specifically, we want to make sure the animation *only* happens when the `listId` changes and not on other reactive changes.
 
 To do so in this case, we can use a little trick (that is specific to Blaze, although similar techniques apply to other view layers) of using the fact that the `{% raw %}{{#each}}{% endraw %}` helper diffs arrays of strings, and completely re-renders elements when they change.
 

@@ -9,7 +9,7 @@ You can use the official search at [npmjs.com](https://www.npmjs.com/) or see re
 
 <h2 id="client-npm">npm on the client</h2>
 
-Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a Node-like environment on the client so that many npm packages, even ones originally intended for the server, can run unmodified. Meteor's ES2015 module system does this for you out of the box with no additional configuration necessary. In most cases, you can simply import npm dependencies from a client file, just as you would on the server.
+Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a Node-like environment on the client so that many npm packages, even ones originally intended for the server, can run unmodified. Meteor's ES2015 module system does this for you out of the box with no additional configuration necessary. In most cases, you can import npm dependencies from a client file, just as you would on the server.
 
 > When creating a new application Meteor installs the `meteor-node-stubs` npm package to help provide this client browser compatibility. If you are upgrading an application to Meteor 1.3 you may have to run `meteor npm install --save meteor-node-stubs` manually.
 
@@ -37,7 +37,7 @@ For more information about `npm install`, check out the [official documentation]
 
 <h2 id="using-npm">Using npm Packages</h2>
 
-To use an npm package from a file in your application you simply `import` the name of the package:
+To use an npm package from a file in your application you `import` the name of the package:
 
 ```js
 import moment from 'moment';
@@ -121,7 +121,7 @@ Let's look at a few ways to resolve this issue.
 
 <h3 id="bind-environment">`Meteor.bindEnvironment`</h3>
 
-In most cases, simply wrapping the callback in `Meteor.bindEnvironment` will do the trick. This function both wraps the callback in a fiber, and does some work to maintain Meteor's server-side environment tracking. Here's the same code with `Meteor.bindEnvironment`:
+In most cases, wrapping the callback in `Meteor.bindEnvironment` will do the trick. This function both wraps the callback in a fiber, and does some work to maintain Meteor's server-side environment tracking. Here's the same code with `Meteor.bindEnvironment`:
 
 ```js
 // Inside a Meteor method definition

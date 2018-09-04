@@ -18,7 +18,7 @@ After reading this guide, you'll know:
 
 <h2 id="introduction">Meteor Cordova integration</h2>
 
-Meteor integrates with [Cordova](https://cordova.apache.org), a well-known Apache open source project, to build mobile apps from the same codebase you use to create regular web apps. With the Cordova integration in Meteor, you can take your existing app and run it on an iOS or Android device with a few simple commands.
+Meteor integrates with [Cordova](https://cordova.apache.org), a well-known Apache open source project, to build mobile apps from the same codebase you use to create regular web apps. With the Cordova integration in Meteor, you can take your existing app and run it on an iOS or Android device with a few commands.
 
 A Cordova app is a web app written using HTML, CSS, and JavaScript as usual, but it runs in a [web view](#what-environment) embedded in a native app instead of in a stand-alone mobile browser. An important benefit of packaging up your web app as a Cordova app is that all your assets are bundled with the app. This ensures your app will load faster than a web app running on a remote server could, which can make a huge difference for users on slow mobile connections. Another feature of the Cordova integration in Meteor is support for [hot code push](#hot-code-push), which allows you to update your app on users' devices without going through the usual app store review process.
 
@@ -151,7 +151,7 @@ To install an older version of SDK tools:
 
 <h4 id="ubuntu-make">Using Ubuntu Make</h4>
 
-If you're running Ubuntu, the easiest way to install both a Java Development Kit and Android Studio is by using [Ubuntu Make](https://wiki.ubuntu.com/ubuntu-make), a command line tool that sets up development environments and dependencies for you.
+If you're running Ubuntu, one way to install both a Java Development Kit and Android Studio is by using [Ubuntu Make](https://wiki.ubuntu.com/ubuntu-make), a command line tool that sets up development environments and dependencies for you.
 
 If you're on Ubuntu 14.04 LTS, you'll have to add the Ubuntu Make ppa first:
 * `sudo add-apt-repository ppa:ubuntu-desktop/ubuntu-make`
@@ -595,7 +595,7 @@ Although Meteor includes a standard set of app icons and launch screens, you wil
 
 You can configure the icon and splash screen image sizes using the specific supported settings in [`App.icons`](http://docs.meteor.com/api/mobile-config.html#App-icons) and [`App.launchScreens`](http://docs.meteor.com/api/mobile-config.html#App-launchScreens).
 
-In addition, Cordova on iOS supports using [launch story board images](https://cordova.apache.org/docs/en/latest/reference/cordova-plugin-splashscreen/#launch-storyboard-images), which is now Apple's recommended approach for providing launch screens. This has the benefit of not requiring you to provide an image for every possible device screen size. Just remove all the iOS `App.launchScreens` directives from your `mobile-config.js` and use [`App.appendToConfig`](http://docs.meteor.com/api/mobile-config.html#App-appendToConfig) to add the paths to your universal images.
+In addition, Cordova on iOS supports using [launch story board images](https://cordova.apache.org/docs/en/latest/reference/cordova-plugin-splashscreen/#launch-storyboard-images), which is now Apple's recommended approach for providing launch screens. This has the benefit of not requiring you to provide an image for every possible device screen size. Remove all the iOS `App.launchScreens` directives from your `mobile-config.js` and use [`App.appendToConfig`](http://docs.meteor.com/api/mobile-config.html#App-appendToConfig) to add the paths to your universal images.
 
 ```
 App.appendToConfig(`

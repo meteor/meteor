@@ -12,7 +12,7 @@ After reading this article, you'll know:
 
 <h2 id="meteor-structure">Universal JavaScript</h2>
 
-Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](build-tool.html) allows you to easily specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#load-order) rules.
+Meteor is a *full-stack* framework for building JavaScript applications. This means Meteor applications differ from most applications in that they include code that runs on the client, inside a web browser or Cordova mobile app, code that runs on the server, inside a [Node.js](http://nodejs.org/) container, and _common_ code that runs in both environments. The [Meteor build tool](build-tool.html) allows you to specify what JavaScript code, including any supporting UI templates, CSS rules, and static assets, to run in each environment using a combination of ES2015 `import` and `export` and the Meteor build system [default file load order](#load-order) rules.
 
 <h3 id="es2015-modules">ES2015 modules</h3>
 
@@ -147,7 +147,7 @@ For each module defined above, it makes sense to co-locate the various auxiliary
 
 <h3 id="startup-files">Startup files</h3>
 
-Some of your code isn't going to be a unit of business logic or UI, it's just some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client:
+Some of your code isn't going to be a unit of business logic or UI, it's some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client:
 
 ```js
 import { FlowRouter } from 'meteor/kadira:flow-router';
@@ -196,7 +196,7 @@ import '../imports/startup/server/security.js';
 import '../imports/api/api.js';
 ```
 
-Our main server entry point `server/main.js` then imports this startup module. You can see that here we don't actually import any variables from these files - we just import them so that they execute in this order.
+Our main server entry point `server/main.js` then imports this startup module. You can see that here we don't actually import any variables from these files - we import them so that they execute in this order.
 
 <h3 id="importing-meteor-globals">Importing Meteor "pseudo-globals"</h3>
 
@@ -310,13 +310,13 @@ However there are some challenges to splitting your code in this way that should
 
 <h3 id="sharing-code">Sharing code</h3>
 
-The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to simply deploy the *same* application on different web servers, controlling the behavior via different [settings](deployment.html#environment). This approach allows you to easily deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
+The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to deploy the *same* application on different web servers, controlling the behavior via different [settings](deployment.html#environment). This approach allows you to deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
 
 If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](writing-packages.html), either npm or Atmosphere, depending on whether the code is Meteor-specific or otherwise.
 
-If the code is private, or of no interest to others, it typically makes sense to simply include the same module in both applications (you *can* do this with [private npm modules](https://www.npmjs.com/private-modules)). There are several ways to do this:
+If the code is private, or of no interest to others, it typically makes sense to include the same module in both applications (you *can* do this with [private npm modules](https://www.npmjs.com/private-modules)). There are several ways to do this:
 
- - a straightforward approach is simply to include the common code as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) of both applications.
+ - a straightforward approach is to include the common code as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) of both applications.
 
  - alternatively, if you include both applications in a single repository, you can use symbolic links to include the common module inside both apps.
 

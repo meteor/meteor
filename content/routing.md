@@ -21,9 +21,9 @@ In a web application, _routing_ is the process of using URLs to drive the user i
 
 In a traditional web application stack, where the server renders HTML one page at a time, the URL is the fundamental entry point for the user to access the application. Users navigate an application by clicking through URLs, which are sent to the server via HTTP, and the server responds appropriately via a server-side router.
 
-In contrast, Meteor operates on the principle of _data on the wire_, where the server doesn’t think in terms of URLs or HTML pages. The client application communicates with the server over DDP. Typically as an application loads, it initializes a series of _subscriptions_ which fetch the data required to render the application. As the user interacts with the application, different subscriptions may load, but there’s no technical need for URLs to be involved in this process - you could easily have a Meteor app where the URL never changes.
+In contrast, Meteor operates on the principle of _data on the wire_, where the server doesn’t think in terms of URLs or HTML pages. The client application communicates with the server over DDP. Typically as an application loads, it initializes a series of _subscriptions_ which fetch the data required to render the application. As the user interacts with the application, different subscriptions may load, but there’s no technical need for URLs to be involved in this process - you could have a Meteor app where the URL never changes.
 
-However, most of the user-facing features of URLs listed above are still relevant for typical Meteor applications. Since the server is not URL-driven, the URL just becomes a useful representation of the client-side state the user is currently looking at. However, unlike in a server-rendered application, it does not need to describe the entirety of the user’s current state; it simply needs to contain the parts that you want to be linkable. For example, the URL should contain any search filters applied on a page, but not necessarily the state of a dropdown menu or popup.
+However, most of the user-facing features of URLs listed above are still relevant for typical Meteor applications. Since the server is not URL-driven, the URL becomes a useful representation of the client-side state the user is currently looking at. However, unlike in a server-rendered application, it does not need to describe the entirety of the user’s current state; it needs to contain the parts that you want to be linkable. For example, the URL should contain any search filters applied on a page, but not necessarily the state of a dropdown menu or popup.
 
 <h2 id="flow-router">Using Flow Router</h2>
 
@@ -247,7 +247,7 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 </template>
 ```
 
-Of course, we might find that we need to share this functionality between multiple pages of our app that require access control. We can easily share functionality between templates by wrapping them in a wrapper "layout" component which includes the behavior we want.
+Of course, we might find that we need to share this functionality between multiple pages of our app that require access control. We can share functionality between templates by wrapping them in a wrapper "layout" component which includes the behavior we want.
 
 You can create wrapper components by using the "template as block helper" ability of Blaze (see the [Blaze Article](http://blazejs.org/guide/spacebars.html#Block-Helpers)). Here's how we could write an authorization template:
 
@@ -261,7 +261,7 @@ You can create wrapper components by using the "template as block helper" abilit
 </template>
 ```
 
-Once that template exists, we can simply wrap our `Lists_show_page`:
+Once that template exists, we can wrap our `Lists_show_page`:
 
 ```html
 <template name="Lists_show_page">
@@ -321,7 +321,7 @@ Of course, calling `FlowRouter.go()`, will always work, so unless you are trying
 
 <h3 id="storing-data-in-the-url">Storing data in the URL</h3>
 
-As we discussed in the introduction, the URL is really just a serialization of some part of the client-side state the user is looking at. Although parameters can only be strings, it's possible to convert any type of data to a string by serializing it.
+As we discussed in the introduction, the URL is really a serialization of some part of the client-side state the user is looking at. Although parameters can only be strings, it's possible to convert any type of data to a string by serializing it.
 
 In general if you want to store arbitrary serializable data in a URL param, you can use [`EJSON.stringify()`](http://docs.meteor.com/#/full/ejson_stringify) to turn it into a string. You'll need to URL-encode the string using [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) to remove any characters that have meaning in a URL:
 
@@ -341,7 +341,7 @@ Sometimes, your users will end up on a page that isn't a good place for them to 
 
 Usually, we can redirect in response to a user's action by calling `FlowRouter.go()` and friends, like in our list creation example above, but if a user browses directly to a URL that doesn't exist, it's useful to know how to redirect immediately.
 
-If a URL is simply out-of-date (sometimes you might change the URL scheme of an application), you can redirect inside the `action` function of the route:
+If a URL is out-of-date (sometimes you might change the URL scheme of an application), you can redirect inside the `action` function of the route:
 
 ```js
 FlowRouter.route('/old-list-route/:_id', {
@@ -364,7 +364,7 @@ FlowRouter.route('/', {
 });
 ```
 
-The `App_rootRedirector` component is rendered inside the `App_body` layout, which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-component, and we are guaranteed there is at least one such list. This means that if the `App_rootRedirector` ends up being created, there'll be a list loaded, so we can simply do:
+The `App_rootRedirector` component is rendered inside the `App_body` layout, which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-component, and we are guaranteed there is at least one such list. This means that if the `App_rootRedirector` ends up being created, there'll be a list loaded, so we can do:
 
 ```js
 Template.App_rootRedirector.onCreated(function rootRedirectorOnCreated() {
@@ -450,7 +450,7 @@ As we've discussed, Meteor is a framework for client rendered applications, but 
 
 <h4 id="server-side-apis">Server Routing for API access</h4>
 
-Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html#publications-as-rest) and [Methods](methods.html) articles for more information.
+Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this. See the [Data Loading](data-loading.html#publications-as-rest) and [Methods](methods.html) articles for more information.
 
 If you need more control, you can use the comprehensive [`nimble:restivus`](https://atmospherejs.com/nimble/restivus) package to create more or less whatever you need in whatever ontology you require.
 

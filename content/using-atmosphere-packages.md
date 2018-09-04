@@ -19,7 +19,7 @@ You may notice that, with the exception of Meteor platform packages, all package
 
 <h2 id="installing-atmosphere">Installing Atmosphere Packages</h2>
 
-To install an Atmosphere package, you simply run `meteor add`:
+To install an Atmosphere package, you run `meteor add`:
 
 ```bash
 meteor add kadira:flow-router
@@ -57,7 +57,7 @@ import { SimpleSchema } from 'meteor/aldeed:simple-schema';
 
 Typically a package will export one or more symbols, which you'll need to reference with the destructuring syntax. You can find these exported symbols by either looking in that package's `package.js` file for [`api.export`](http://docs.meteor.com/#/full/pack_export) calls or by looking in that package's main JavaScript file for ES2015 `export ` calls like `export const packageName = 'package-name';`.
 
-Sometimes a package will have no exports and simply have side effects when included in your app. In such cases you don't need to import the package at all after installing.
+Sometimes a package will have no exports and have side effects when included in your app. In such cases you don't need to import the package at all after installing.
 
 > For backwards compatibility with Meteor 1.2 and early releases, Meteor by default makes available directly to your app all symbols referenced in `api.export` in any packages you have installed. However, it is recommended that you import these symbols first before using them.
 

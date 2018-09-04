@@ -41,7 +41,7 @@ secondStatement();
 
 <h3 id="automatic-error-checking">Automatic error checking</h3>
 
-Having a consistent style means that it's easier to adopt standard tools for error checking. For example, if you adopt a convention that you must always use `let` or `const` instead of `var`, you can now use a tool to ensure all of your variables are scoped the way you expect. That means you can avoid bugs where variables act in unexpected ways. Also, by enforcing that all variables are declared before use, you can easily catch typos before even running any code!
+Having a consistent style means that it's easier to adopt standard tools for error checking. For example, if you adopt a convention that you must always use `let` or `const` instead of `var`, you can now use a tool to ensure all of your variables are scoped the way you expect. That means you can avoid bugs where variables act in unexpected ways. Also, by enforcing that all variables are declared before use, you can catch typos before even running any code!
 
 <h3 id="deeper-understanding">Deeper understanding</h3>
 
@@ -81,7 +81,7 @@ We recommend choosing and sticking to a JavaScript style guide and enforcing it 
 
 We recommend using the [Airbnb eslint configuration](https://github.com/airbnb/javascript/tree/master/packages/eslint-config-airbnb) which verifies the Airbnb styleguide.
 
-Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's the fastest and easiest way to identify typos and small errors.
+Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's a fastest and easy way to identify typos and small errors.
 
 <h3 id="eslint-installing">Installing and running ESLint</h3>
 
@@ -108,7 +108,7 @@ You can also add a `eslintConfig` section to your `package.json` to specify that
 }
 ```
 
-To run the linter, you can now simply type:
+To run the linter, you can now type:
 
 ```bash
 meteor npm run lint
@@ -118,7 +118,7 @@ For more details, read the [Getting Started](http://eslint.org/docs/user-guide/g
 
 <h3 id="eslint-editor">Integrating with your editor</h3>
 
-Linting is the fastest way to find potential bugs in your code. Running a linter is usually faster than running your app or your unit tests, so it's a good idea to run it all the time. Setting up linting in your editor can seem annoying at first since it will complain often when you save poorly-formatted code, but over time you'll develop the muscle memory to just write well-formatted code in the first place. Here are some directions for setting up ESLint in different editors:
+Linting is the fastest way to find potential bugs in your code. Running a linter is usually faster than running your app or your unit tests, so it's a good idea to run it all the time. Setting up linting in your editor can seem annoying at first since it will complain often when you save poorly-formatted code, but over time you'll develop the muscle memory to write well-formatted code in the first place. Here are some directions for setting up ESLint in different editors:
 
 
 <h4 id="eslint-sublime">Sublime Text</h4>
@@ -135,7 +135,7 @@ A side note for Emmet users: You can use *\<ctrl-e\>* to expand HTML tags in .js
 
 <h4 id="eslint-atom">Atom</h4>
 
-Using ESLint with Atom is simple. Just install these three packages:
+Install these three packages to use ESLint with Atom: 
 
 ```bash
 apm install language-babel
@@ -148,7 +148,7 @@ Then **restart** (or **reload** by pressing Ctrl+Alt+R / Cmd+Opt+R) Atom to acti
 
 <h4 id="eslint-webstorm">WebStorm</h4>
 
-WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `package.json`, just enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
+WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `package.json`, enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
 
 ![Enable ESLint here.](images/webstorm-configuration.png)
 
@@ -165,7 +165,7 @@ Using ESLint in VS Code requires installation of the 3rd party [ESLint](https://
 
 <h2 id="meteor-features">Meteor code style</h2>
 
-The section above talked about JavaScript code in general - you can easily apply it in any JavaScript application, not just with Meteor apps. However, there are some style questions that are Meteor-specific, in particular how to name and structure all of the different components of your app.
+The section above talked about JavaScript code in general - you can apply it in any JavaScript application, not just with Meteor apps. However, there are some style questions that are Meteor-specific, in particular how to name and structure all of the different components of your app.
 
 <h3 id="collections">Collections</h3>
 
@@ -211,7 +211,7 @@ Meteor.publish('lists.public', function listsPublic() {
 
 <h3 id="files-and-exports">Files, exports, and packages</h3>
 
-You should use the ES2015 `import` and `export` features to manage your code. This will let you better understand the dependencies between different parts of your code, and it will be easy to know where to look if you need to read the source code of a dependency.
+You should use the ES2015 `import` and `export` features to manage your code. This will let you better understand the dependencies between different parts of your code, and it will help you navigate to the source code of a dependency.
 
 Each file in your app should represent one logical module. Avoid having catch-all utility modules that export a variety of unrelated functions and symbols. Often, this can mean that it's good to have one class, UI component, or collection per file, but there are cases where it is OK to make an exception, for example if you have a UI component with a small sub-component that isn't used outside of that file.
 
@@ -241,7 +241,7 @@ import Meteor from 'meteor/meteor';
 
 <h3 id="templates-and-components">Templates and components</h3>
 
-Since Spacebars templates are always global, can't be imported and exported as modules, and need to have names that are completely unique across the whole app, we recommend naming your Blaze templates with the full path to the namespace, separated by underscores. Underscores are a great choice in this case because then you can easily type the name of the template as one symbol in JavaScript.
+Since Spacebars templates are always global, can't be imported and exported as modules, and need to have names that are completely unique across the whole app, we recommend naming your Blaze templates with the full path to the namespace, separated by underscores. Underscores are a great choice in this case because then you can type the name of the template as one symbol in JavaScript.
 
 ```html
 <template name="Lists_show">

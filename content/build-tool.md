@@ -16,7 +16,7 @@ When you run `meteor`, the tool starts up, and you should leave it running conti
 
 <h3 id="compiles-with-build-plugins">Compiles files with build plugins</h3>
 
-The main function of the Meteor build tool is to run "build plugins". These plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process, and [file load order](structure.html#load-order), is configured almost entirely through adding and removing packages to your app and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you just add the [`ecmascript` package](http://docs.meteor.com/#/full/ecmascript). This package provides support for ES2015 modules, which gives you even more fine grained control over file load order using ES2015 `import` and `export`. As new Meteor releases add new features to this package you just get them for free.
+The main function of the Meteor build tool is to run "build plugins". These plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process, and [file load order](structure.html#load-order), is configured almost entirely through adding and removing packages to your app and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you add the [`ecmascript` package](http://docs.meteor.com/#/full/ecmascript). This package provides support for ES2015 modules, which gives you even more fine grained control over file load order using ES2015 `import` and `export`. As new Meteor releases add new features to this package you get them for free.
 
 <h3 id="concatenate-and-minify">Combines and minifies code</h3>
 
@@ -24,7 +24,7 @@ Another important feature of the Meteor build tool is that it automatically conc
 
 <h3 id="dev-vs-prod">Development vs. production</h3>
 
-Running an app in development is all about fast iteration time. All kinds of different parts of your app are handled differently and instrumented to enable better reloads and debugging. In production, the app is reduced to just the necessary code, and functions like a regular Node.js app. Therefore, you shouldn't run your app in production by running the `meteor` command. Instead, follow the directions in the [production deployment article](deployment.html#custom-deployment).
+Running an app in development is all about fast iteration time. All kinds of different parts of your app are handled differently and instrumented to enable better reloads and debugging. In production, the app is reduced to the necessary code, and functions like a regular Node.js app. Therefore, you shouldn't run your app in production by running the `meteor` command. Instead, follow the directions in the [production deployment article](deployment.html#custom-deployment).
 
 <h2 id="javascript-transpilation">JavaScript transpilation</h2>
 
@@ -118,7 +118,7 @@ CSS framework compatibility should be a primary concern when picking a pre-proce
 An important feature shared by all of the available CSS pre-processors is the ability to import files. This lets you split your CSS into smaller pieces, and provides a lot of the same benefits that you get from JavaScript modules:
 
 1. You can control the load order of files by encoding dependencies through imports, since the load order of CSS matters.
-2. You can create reusable CSS "modules" that just have variables and mixins and don't actually generate any CSS.
+2. You can create reusable CSS "modules" that only have variables and mixins and don't actually generate any CSS.
 
 In Meteor, each of your `.scss`, `.less`, or `.styl` source files will be one of two types: "source" or "import".
 
@@ -180,7 +180,7 @@ The best Stylus build plugin for Meteor is [coagmano:stylus](https://atmospherej
 
 In addition to CSS pre-processors like Sass, Less, and Stylus, there is now an ecosystem of CSS post-processors. Regardless of which CSS pre-processor you use, a post-processor can give you additional benefits like cross-browser compatibility.
 
-The most popular CSS post-processor right now is [PostCSS](https://github.com/postcss/postcss), which supports a variety of plugins. [Autoprefixer](https://github.com/postcss/autoprefixer) is perhaps the most useful plugin, since it enables you to stop worrying about browser prefixes and compatibility and write standards-compliant CSS. No more copying 5 different statements every time you want a CSS gradient - you can just write a standard gradient without any prefixes and Autoprefixer handles it for you.
+The most popular CSS post-processor right now is [PostCSS](https://github.com/postcss/postcss), which supports a variety of plugins. [Autoprefixer](https://github.com/postcss/autoprefixer) is perhaps the most useful plugin, since it enables you to stop worrying about browser prefixes and compatibility and write standards-compliant CSS. No more copying 5 different statements every time you want a CSS gradient - you can write a standard gradient without any prefixes and Autoprefixer handles it for you.
 
 Currently, Meteor doesn't have a separate build step for post-processing CSS, so the only way to integrate it is to build it into the minifier. Thankfully, there is a community package that has integrated PostCSS with plugin support into a replacement for Meteor's standard minification package.
 
