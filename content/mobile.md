@@ -296,7 +296,7 @@ Something else to keep in mind is that your server-side code should be prepared 
 
 The compatibility version can be found in the `cordovaCompatibilityVersions` attribute of the JSON file served at `ROOT_URL/__cordova/manifest.json` during `meteor run [ios/android]`.
 
-![cordovaCompatibilityVersions](http://i.imgur.com/Wx7iOWu.png)
+![cordovaCompatibilityVersions](https://i.imgur.com/Wx7iOWu.png)
 
 You may want to override the compatibility version if you want hot code push to reach older apps that don't have the latest version of your native code from the app store. Let's say you're developing an iOS app, you have the plugin `cordova-plugin-camera@2.4.0`, and your app has the compatibility version pictured above, `3ed5b9318b2916b595f7721759ead4d708dfbd46`. If you were to update to version `2.4.1` of `cordova-plugin-camera`, your server would generate a new compatibility version and your users' apps would stop receiving hot code pushes. However, you can tell your server to use the old compatilibity version: 
 
