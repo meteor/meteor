@@ -1451,26 +1451,43 @@ class Target {
     }
   }
 
+  // Overrides a cordova dependency version.
+  _overrideCordovaDependencyVersion(scoped, id, name, version) {
+    if (!scoped) {
+      this.cordovaDependencies[id] = version;
+    } else {
+      if (id in this.cordovaDependencies) {
+        delete this.cordovaDependencies[id];
+      }
+      this.cordovaDependencies[name] = version;
+    }
+  }
+
   // Add a Cordova plugin dependency to the target. If the same plugin
   // has already been added at a different version and `override` is
   // false, use whichever version is newest. If `override` is true, then
   // we always add the exact version specified, overriding any other
   // version that has already been added.
+  // Additionally we need to be sure that a cordova-plugin-name gets
+  // overriden with @scope/cordova-plugin-name.
   _addCordovaDependency(name, version, override) {
     if (! this.cordovaDependencies) {
       return;
     }
+    const scoped = name[0] === '@';
+    const id = scoped ? name.split('/')[1] : name;
 
     if (override) {
-      this.cordovaDependencies[name] = version;
+      this._overrideCordovaDependencyVersion(scoped, id, name, version);
     } else {
-      if (_.has(this.cordovaDependencies, name)) {
-        var existingVersion = this.cordovaDependencies[name];
+      if (_.has(this.cordovaDependencies, id)) {
+        const existingVersion = this.cordovaDependencies[id];
 
         if (existingVersion === version) { return; }
 
-        this.cordovaDependencies[name] = packageVersionParser.
+        const versionToSet = packageVersionParser.
           lessThan(existingVersion, version) ? version : existingVersion;
+          this._overrideCordovaDependencyVersion(scoped, id, name, versionToSet);
       } else {
         this.cordovaDependencies[name] = version;
       }
