@@ -3237,9 +3237,11 @@ function bundle({
 
           // Let the webapp package running in the child process know it
           // should regenerate the client program for this arch.
-          runLog.log(`Finished delayed build of ${arch} in ${
-            new Date - start
-          }ms`, { arrow: true });
+          if (Profile.enabled) {
+            runLog.log(`Finished delayed build of ${arch} in ${
+              new Date - start
+            }ms`, { arrow: true });
+          }
         });
 
       } else {
