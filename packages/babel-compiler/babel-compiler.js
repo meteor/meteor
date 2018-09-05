@@ -92,7 +92,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     if (arch.startsWith("os.")) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
-      extraFeatures.nodeMajorVersion = parseInt(process.versions.node);
+      extraFeatures.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
       extraFeatures.modernBrowsers = true;
     }
