@@ -290,10 +290,13 @@ _.extend(OplogHandle.prototype, {
         // somewhere in operator?
         if (trigger.collection === "$cmd") {
           if (doc.ns.startsWith("admin.")) {
-            // This was a successful transaction, so we need to apply
-            // the operations that were involved.
-            doc.o.applyOps.forEach(handleDoc);
-            return;
+            if (doc.o.applyOps) {
+              // This was a successful transaction, so we need to apply
+              // the operations that were involved.
+              doc.o.applyOps.forEach(handleDoc);
+              return;
+            }
+            throw new Error("Unknown command " + EJSON.stringify(doc));
           }
 
           if (doc.o.dropDatabase) {
