@@ -13,6 +13,6 @@ bundle. It has no effect on the server.
 In addition to the `jquery` package, Meteor provides several jQuery
 plugins as separate packages. These include:
 
-* [`jquery-history`](https://github.com/balupton/history.js)
+* [`jquery-history`](https://github.com/browserstate/history.js)
 * [`jquery-layout`](http://layout.jquery-dev.net/)
 * [`jquery-waypoints`](http://imakewebthings.com/jquery-waypoints/)
