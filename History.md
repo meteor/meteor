@@ -1,5 +1,91 @@
 ## v.NEXT
 
+## v1.7.1, TBD
+
+* Compiler plugins that call `inputFile.addJavaScript` or
+  `inputFile.addStylesheet` may now delay expensive compilation work by
+  passing partial options (`{ path, hash }`) as the first argument,
+  followed by a callback function as the second argument, which will be
+  called by the build system once it knows the module will actually be
+  included in the bundle. For example, here's the old implementation of
+  `BabelCompiler#processFilesForTarget`:
+  ```js
+  processFilesForTarget(inputFiles) {
+    inputFiles.forEach(inputFile => {
+      var toBeAdded = this.processOneFileForTarget(inputFile);
+      if (toBeAdded) {
+        inputFile.addJavaScript(toBeAdded);
+      }
+    });
+  }
+  ```
+  and here's the new version:
+  ```js
+  processFilesForTarget(inputFiles) {
+    inputFiles.forEach(inputFile => {
+      if (inputFile.supportsLazyCompilation) {
+        inputFile.addJavaScript({
+          path: inputFile.getPathInPackage(),
+          hash: inputFile.getSourceHash(),
+        }, function () {
+          return this.processOneFileForTarget(inputFile);
+        });
+      } else {
+        var toBeAdded = this.processOneFileForTarget(inputFile);
+        if (toBeAdded) {
+          inputFile.addJavaScript(toBeAdded);
+        }
+      }
+    });
+  }
+  ```
+  If you are an author of a compiler plugin, we strongly recommend using
+  this new API, since unnecessary compilation of files that are not
+  included in the bundle can be a major source of performance problems for
+  compiler plugins. Although this new API is only available in Meteor
+  1.7.1, you can use `inputFile.supportsLazyCompilation` to determine
+  dynamically whether the new API is available, so you can support older
+  versions of Meteor without having to publish multiple versions of your
+  package. [PR #9983](https://github.com/meteor/meteor/pull/9983)
+
+* The `.meteor/packages` file supports a new syntax for overriding
+  problematic version constraints from packages you do not control.
+
+  If a package version constraint in `.meteor/packages` ends with a `!`
+  character, any other (non-`!`) constraints on that package elsewhere in
+  the application will be _weakened_ to allow any version greater than or
+  equal to the constraint, even if the major/minor versions do not match.
+
+  For example, using both CoffeeScript 2 and `practicalmeteor:mocha` used
+  to be impossible (or at least very difficult) because of this
+  [`api.versionsFrom("1.3")`](https://github.com/practicalmeteor/meteor-mocha/blob/3a2658070a920f8846df48bb8d8c7b678b8c6870/package.js#L28)
+  statement, which unfortunately constrained the `coffeescript` package to
+  version 1.x. In Meteor 1.7.1, if you want to update `coffeescript` to
+  2.x, you can relax the `practicalmeteor:mocha` constraint by putting
+  ```
+  coffeescript@2.2.1_1! # note the !
+  ```
+  in your `.meteor/packages` file. The `coffeescript` version still needs
+  to be at least 1.x, so that `practicalmeteor:mocha` can count on that
+  minimum. However, `practicalmeteor:mocha` will no longer constrain the
+  major version of `coffeescript`, so `coffeescript@2.2.1_1` will work.
+
+  [Feature #208](https://github.com/meteor/meteor-feature-requests/issues/208)
+  [Commit 4a70b12e](https://github.com/meteor/meteor/commit/4a70b12eddef00b6700f129e90018a6076cb1681)
+  [Commit 9872a3a7](https://github.com/meteor/meteor/commit/9872a3a71df033e4cf6290b75fea28f44427c0c2)
+
+* The `npm` package has been upgraded to version 6.3.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
+  `pacote` dependency has been rebased against version 8.1.6.
+
+* The `node-gyp` npm package has been updated to version 3.7.0, and the
+  `node-pre-gyp` npm package has been updated to version 0.10.3.
+
+* Scripts run via `meteor npm ...` can now use the `meteor` command more
+  safely, since the `PATH` environment variable will now be set so that
+  `meteor` always refers to the same `meteor` used to run `meteor npm`.
+  [PR #9941](https://github.com/meteor/meteor/pull/9941)
+
 * Meteor's `self-test` has been updated to use "headless" Chrome rather
   than PhantomJS for browser tests. PhantomJS can still be forced by
   passing the `--phantom` flag to the `meteor self-test` command.
@@ -10,19 +96,93 @@
   defined by which compiler plugins you have enabled.
   [PR #10027](https://github.com/meteor/meteor/pull/10027)
 
+* Any client (modern or legacy) may now request any static JS or CSS
+  `web.browser` or `web.browser.legacy` resource, even if it was built for
+  a different architecture, which greatly simplifies CDN setup if your CDN
+  does not forward the `User-Agent` header to the origin.
+  [Issue #9953](https://github.com/meteor/meteor/issues/9953)
+  [PR #9965](https://github.com/meteor/meteor/pull/9965)
+
+* Cross-origin dynamic `import()` requests will now succeed in more cases.
+  [PR #9954](https://github.com/meteor/meteor/pull/9954)
+
+* Dynamic CSS modules (which are compiled to JS and handled like any other
+  JS module) will now be properly minified in production and source mapped
+  in development. [PR #9998](https://github.com/meteor/meteor/pull/9998)
+
+* While CSS is only minified in production, CSS files must be merged
+  together into a single stylesheet in both development and production.
+  This merging is [cached by `standard-minifier-css`](https://github.com/meteor/meteor/blob/183d5ff9500d908d537f58d35ce6cd6d780ab270/packages/standard-minifier-css/plugin/minify-css.js#L58-L62)
+  so that it does not happen on every rebuild in development, but not all
+  CSS minifier packages use the same caching techniques. Thanks to
+  [1ed095c36d](https://github.com/meteor/meteor/pull/9942/commits/1ed095c36d7b2915872eb0c943dae0c4f870d7e4),
+  this caching is now performed within the Meteor build tool, so it works
+  the same way for all CSS minifier packages, which may eliminate a few
+  seconds of rebuild time for projects with lots of CSS.
+
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
-  to version 7.0.0-beta.53.
+  to version 7.0.0. **Note:** This change _requires_ also updating the
+  `@babel/runtime` npm package to version 7.0.0-beta.56 or later:
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+  [`meteor-babel` issue #22](https://github.com/meteor/babel/issues/22)
+
+* The `@babel/preset-env` and `@babel/preset-react` presets will be
+  ignored by Meteor if included in a `.babelrc` file, since Meteor already
+  provides equivalent/superior functionality without them. However, you
+  should feel free to leave these plugins in your `.babelrc` file if they
+  are needed by external tools.
 
 * The `install` npm package used by `modules-runtime` has been updated to
   version 0.12.0.
+
+* The `reify` npm package has been updated to version 0.17.3, which
+  introduces the `module.link(id, {...})` runtime method as a replacement
+  for `module.watch(require(id), {...})`. Note: in future versions of
+  `reify` and Meteor, the `module.watch` runtime API will be removed, but
+  for now it still exists (and is used to implement `module.link`), so
+  that existing code will continue to work without recompilation.
 
 * The `uglify-es` npm package used by `minifier-js` has been replaced with
   [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
   `uglify-es` that appears to be (more actively) maintained.
   [Issue #10042](https://github.com/meteor/meteor/issues/10042)
 
-* The `mongodb` npm package used by `npm-mongo` has been updated to
-  version 3.0.11.
+* Mongo has been updated to version 4.0.2 and the `mongodb` npm package
+  used by `npm-mongo` has been updated to version 3.1.1.
+  [PR #10058](https://github.com/meteor/meteor/pull/10058)
+  [Feature Request #269](https://github.com/meteor/meteor-feature-requests/issues/269)
+
+* When a Meteor application uses a compiler plugin to process files with a
+  particular file extension (other than `.js` or `.json`), those file
+  extensions should be automatically appended to imports that do not
+  resolve as written. However, this behavior was not previously enabled
+  for modules inside `node_modules`. Thanks to
+  [8b04c25390](https://github.com/meteor/meteor/pull/9942/commits/8b04c253900e4ca2a194d2fcaf6fc2ce9a9085e7),
+  the same file extensions that are applied to modules outside the
+  `node_modules` directory will now be applied to those within it, though
+  `.js` and `.json` will always be tried first.
+
+* As foreshadowed in this [talk](https://youtu.be/vpCotlPieIY?t=29m18s)
+  about Meteor 1.7's modern/legacy bundling system
+  ([slides](https://slides.com/benjamn/meteor-night-may-2018#/46)), Meteor
+  now provides an isomorphic implementation of the [WHATWG `fetch()`
+  API](https://fetch.spec.whatwg.org/), which can be installed by running
+  ```sh
+  meteor add fetch
+  ```
+  This package is a great demonstration of the modern/legacy bundling
+  system, since it has very different implementations in modern
+  browsers, legacy browsers, and Node.
+  [PR #10029](https://github.com/meteor/meteor/pull/10029)
+
+* The [`bundle-visualizer`
+  package](https://github.com/meteor/meteor/tree/release-1.7.1/packages/non-core/bundle-visualizer)
+  has received a number of UI improvements thanks to work by
+  [@jamesmillerburgess](https://github.com/jamesmillerburgess) in
+  [PR #10025](https://github.com/meteor/meteor/pull/10025).
+  [Feature #310](https://github.com/meteor/meteor-feature-requests/issues/310)
 
 * Sub-resource integrity hashes (sha512) can now be enabled for static CSS
   and JS assets by calling `WebAppInternals.enableSubresourceIntegrity()`.

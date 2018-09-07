@@ -139,7 +139,9 @@ MongoConnection = function (url, options) {
     // Try to reconnect forever, instead of stopping after 30 tries (the
     // default), with each attempt separated by 1000ms.
     reconnectTries: Infinity,
-    ignoreUndefined: true
+    ignoreUndefined: true,
+    // Required to silence deprecation warnings with mongodb@3.1.1.
+    useNewUrlParser: true,
   }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled

@@ -58,10 +58,10 @@ export function parse(err) {
 // will not be returned, but you'd also say that those frames are "at
 // the bottom of the stack". Frames below the bottom are the outer
 // context of the framework running the user's code.
-export function markBottom(f) {
+export function markBottom(f, context) {
   /* eslint-disable camelcase */
   return function __bottom_mark__() {
-    return f.apply(this, arguments);
+    return f.apply(context || this, arguments);
   };
   /* eslint-enable camelcase */
 }

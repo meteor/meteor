@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.7.0'
+  version: '1.7.0-rc171.6'
 });
 
 Npm.depends({"basic-auth-connect": "1.0.0",
@@ -33,7 +33,8 @@ Package.onUse(function (api) {
     'routepolicy',
     'modern-browsers',
     'boilerplate-generator',
-    'webapp-hashing'
+    'webapp-hashing',
+    'inter-process-messaging',
   ], 'server');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If

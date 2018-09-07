@@ -1,6 +1,6 @@
 Package.describe({
   name: "dynamic-import",
-  version: "0.5.0",
+  version: "0.5.0-rc171.6",
   summary: "Runtime support for Meteor 1.5 dynamic import(...) syntax",
   documentation: "README.md"
 });
@@ -13,6 +13,7 @@ Package.onUse(function (api) {
   api.use("promise");
   api.use("fetch");
   api.use("modern-browsers");
+  api.use("inter-process-messaging", "server");
 
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");

@@ -277,16 +277,16 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
   // you have processing you want to perform at the beginning or end of a
   // processing phase, you may want to override this method and call the
   // superclass implementation from within your method.
-  processFilesForTarget(inputFiles) {
+  async processFilesForTarget(inputFiles) {
     const cacheMisses = [];
     const arches = this._cacheDebugEnabled && Object.create(null);
 
-    return Promise.all(inputFiles.map(async (inputFile) => {
+    inputFiles.forEach(inputFile => {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      const getResult = async () => {
+      const getResult = () => {
         const cacheKey = this._deepHash(this.getCacheKey(inputFile));
         let compileResult = this._cache.get(cacheKey);
 
@@ -299,7 +299,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
         if (! compileResult) {
           cacheMisses.push(inputFile.getDisplayPath());
-          compileResult = await this.compileOneFile(inputFile);
+          compileResult = Promise.await(this.compileOneFile(inputFile));
 
           if (! compileResult) {
             // compileOneFile should have called inputFile.error.
@@ -317,19 +317,16 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
       if (this.compileOneFileLater &&
           inputFile.supportsLazyCompilation) {
-        await this.compileOneFileLater(inputFile, getResult);
+        this.compileOneFileLater(inputFile, getResult);
       } else {
-        const result = await getResult();
+        const result = getResult();
         if (result) {
           this.addCompileResult(inputFile, result);
         }
       }
+    });
 
-    })).then(() => {
-      if (! this._cacheDebugEnabled) {
-        return;
-      }
-
+    if (this._cacheDebugEnabled) {
       cacheMisses.sort();
 
       this._cacheDebug(
@@ -341,7 +338,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
           JSON.stringify(Object.keys(arches).sort())
         }`
       );
-    });
+    }
   }
 
   _cacheFilename(cacheKey) {

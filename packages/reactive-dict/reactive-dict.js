@@ -1,3 +1,5 @@
+const hasOwn = Object.prototype.hasOwnProperty;
+
 // XXX come up with a serialization method which canonicalizes object key
 // order, which would allow us to use objects as values for equals.
 function stringify(value) {
@@ -74,7 +76,7 @@ export class ReactiveDict {
 
     value = stringify(value);
 
-    const keyExisted = _.has(this.keys, key);
+    const keyExisted = hasOwn.call(this.keys, key);
     const oldSerializedValue = keyExisted ? this.keys[key] : 'undefined';
     const isNewValue = (value !== oldSerializedValue);
 
@@ -107,7 +109,7 @@ export class ReactiveDict {
     // and we resume with the rest of the function
     const key = keyOrObject;
 
-    if (! _.has(this.keys, key)) {
+    if (! hasOwn.call(this.keys, key)) {
       this.set(key, value);
     }
   }
@@ -147,7 +149,7 @@ export class ReactiveDict {
     if (Tracker.active) {
       this._ensureKey(key);
 
-      if (! _.has(this.keyValueDeps[key], serializedValue)) {
+      if (! hasOwn.call(this.keyValueDeps[key], serializedValue)) {
         this.keyValueDeps[key][serializedValue] = new Tracker.Dependency;
       }
 
@@ -164,7 +166,7 @@ export class ReactiveDict {
     }
 
     let oldValue = undefined;
-    if (_.has(this.keys, key)) {
+    if (hasOwn.call(this.keys, key)) {
       oldValue = parse(this.keys[key]);
     }
     return EJSON.equals(oldValue, value);
@@ -173,8 +175,8 @@ export class ReactiveDict {
   all() {
     this.allDeps.depend();
     let ret = {};
-    _.each(this.keys, (value, key) => {
-      ret[key] = parse(value);
+    Object.keys(this.keys).forEach(key => {
+      ret[key] = parse(this.keys[key]);
     });
     return ret;
   }
@@ -185,10 +187,10 @@ export class ReactiveDict {
 
     this.allDeps.changed();
 
-    _.each(oldKeys, (value, key) => {
+    Object.keys(oldKeys).forEach(key => {
       changed(this.keyDeps[key]);
       if (this.keyValueDeps[key]) {
-        changed(this.keyValueDeps[key][value]);
+        changed(this.keyValueDeps[key][oldKeys[key]]);
         changed(this.keyValueDeps[key]['undefined']);
       }
     });
@@ -197,7 +199,7 @@ export class ReactiveDict {
   delete(key) {
     let didRemove = false;
 
-    if (_.has(this.keys, key)) {
+    if (hasOwn.call(this.keys, key)) {
       const oldValue = this.keys[key];
       delete this.keys[key];
       changed(this.keyDeps[key]);
@@ -210,23 +212,23 @@ export class ReactiveDict {
     }
     return didRemove;
   }
-  
+
   destroy() {
     this.clear();
-    if (this.name && _.has(ReactiveDict._dictsToMigrate, this.name)) {
+    if (this.name && hasOwn.call(ReactiveDict._dictsToMigrate, this.name)) {
       delete ReactiveDict._dictsToMigrate[this.name];
     }
   }
 
   _setObject(object) {
-    _.each(object, (value, key) => {
-      this.set(key, value);
+    Object.keys(object).forEach(key => {
+      this.set(key, object[key]);
     });
   }
 
   _setDefaultObject(object) {
-    _.each(object, (value, key) => {
-      this.setDefault(key, value);
+    Object.keys(object).forEach(key => {
+      this.setDefault(key, object[key]);
     });
   }
 
