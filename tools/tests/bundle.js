@@ -33,3 +33,45 @@ selftest.define("bundle - verify sanitized asset names", function () {
     execSync(`tar -tf ${tarball}`).toString().indexOf(sanitizedFilename) > -1
   );
 });
+
+selftest.define("build - linked external npm package (#10177)", function () {
+  const s = new Sandbox();
+
+  s.mkdir("external-package");
+  s.cd("external-package");
+
+  s.write(
+    "package.json",
+    JSON.stringify({
+      name: "external-package",
+      version: "1.2.3",
+      "private": true,
+      main: "index.js"
+    }, null, 2) + "\n"
+  );
+
+  s.write(
+    "index.js",
+    "exports.id = module.id;\n"
+  );
+
+  s.cd(s.home);
+
+  s.createApp("app", "linked-external-npm-package");
+  s.cd("app");
+
+  const run = s.run();
+  run.waitSecs(30);
+  run.match("external-package/index.js");
+  run.stop();
+
+  const build = s.run("build", "../build");
+  build.waitSecs(60);
+  build.expectExit(0);
+
+  selftest.expectTrue(execSync(
+    "tar -tf " + files.pathJoin(s.home, "build", "app.tar.gz")
+  ).toString("utf8").split("\n").includes(
+    "bundle/programs/server/npm/node_modules/external-package/package.json"
+  ));
+});

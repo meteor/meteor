@@ -1,0 +1,15 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "@babel/runtime": {
+      "version": "7.0.0-rc.2",
+      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.0.0-rc.2.tgz",
+      "integrity": "sha512-QugZtHk0uVHqHmgwNn2f2uOtTwXWPBBZVSH2EFRm9iw1fFmi5fm46ye6NSVSiXT9Ymejh7fKIw3riCv23SNtSQ=="
+    },
+    "regenerator-runtime": {
+      "version": "0.12.1",
+      "resolved": "https://registry.npmjs.org/regenerator-runtime/-/regenerator-runtime-0.12.1.tgz",
+      "integrity": "sha512-odxIc1/vDlo4iZcfXqRYFj0vpXFNoGdKMAUieAlFYO6m/nl5e9KR/beGf41z4a1FI+aQgtjhuaSlDxQ0hmkrHg=="
+    }
+  }
+}

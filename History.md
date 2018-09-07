@@ -5,6 +5,25 @@
 
 ## v1.7.1, TBD
 
+* Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
+  addition to the `web.browser` (modern) and `web.cordova` bundles.
+  Naturally, this extra bundle increased client (re)build times. Since
+  developers spend most of their time testing the modern bundle in
+  development, and the legacy bundle mostly provides a safe fallback in
+  production, Meteor 1.7.1 cleverly postpones building the legacy bundle
+  until just after the development server restarts, so that development
+  can continue as soon as the modern bundle has finished building. Since
+  the legacy build happens during a time when the build process would
+  otherwise be completely idle, the impact of the legacy build on server
+  performance is minimal. Nevertheless, the legacy bundle still gets
+  rebuilt regularly, so any legacy build errors will be surfaced in a
+  timely fashion, and legacy clients can test the new legacy bundle by
+  waiting a bit longer than modern clients. Applications using the
+  `autoupdate` or `hot-code-push` packages will reload modern and legacy
+  clients independently, once each new bundle becomes available.
+  [Issue #9948](https://github.com/meteor/meteor/issues/9948)
+  [PR #10055](https://github.com/meteor/meteor/pull/10055)
+
 * Compiler plugins that call `inputFile.addJavaScript` or
   `inputFile.addStylesheet` may now delay expensive compilation work by
   passing partial options (`{ path, hash }`) as the first argument,
@@ -124,8 +143,8 @@
   seconds of rebuild time for projects with lots of CSS.
 
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
-  to version 7.0.0-rc.1-1. **Note:** This change _requires_ also updating
-  the `@babel/runtime` npm package to version 7.0.0-beta.56 or later:
+  to version 7.0.0. **Note:** This change _requires_ also updating the
+  `@babel/runtime` npm package to version 7.0.0-beta.56 or later:
   ```sh
   meteor npm install @babel/runtime@latest
   ```
@@ -152,13 +171,10 @@
   `uglify-es` that appears to be (more actively) maintained.
   [Issue #10042](https://github.com/meteor/meteor/issues/10042)
 
-* Mongo has been updated to version 4.0.0 and the `mongodb` npm package
+* Mongo has been updated to version 4.0.2 and the `mongodb` npm package
   used by `npm-mongo` has been updated to version 3.1.1.
   [PR #10058](https://github.com/meteor/meteor/pull/10058)
   [Feature Request #269](https://github.com/meteor/meteor-feature-requests/issues/269)
-
-* The `mongodb` npm package used by `npm-mongo` has been updated to
-  version 3.1.1.
 
 * When a Meteor application uses a compiler plugin to process files with a
   particular file extension (other than `.js` or `.json`), those file

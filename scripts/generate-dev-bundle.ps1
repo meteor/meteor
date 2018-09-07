@@ -28,6 +28,9 @@ $NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
 # 7-zip path.
 $system7zip = "C:\Program Files\7-zip\7z.exe"
 
+# Required for downloading MongoDB via HTTPS
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 # Since we reuse the same temp directory, cleanup from previous failed runs.
 Remove-DirectoryRecursively $DIR
 
