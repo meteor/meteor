@@ -2,6 +2,16 @@
 
 ## v1.7.1, TBD
 
+### Breaking changes
+N/A
+
+### Migration Steps
+* Update `@babel/runtime` npm package to version 7.0.0-beta.56 or later
+```sh
+    meteor npm install @babel/runtime@latest
+```
+
+### Changes
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
   addition to the `web.browser` (modern) and `web.cordova` bundles.
   Naturally, this extra bundle increased client (re)build times. Since
