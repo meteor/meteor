@@ -1,7 +1,7 @@
 ## v.NEXT
 
 * Node has been updated to version
-  [8.12.0-rc.3](https://github.com/nodejs/node/pull/21593).
+  [8.12.0-rc.6](https://github.com/nodejs/node/pull/21593).
 
 ## v1.7.1, TBD
 
