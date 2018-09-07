@@ -377,14 +377,14 @@
   `meteor-babel` now runs with the `loose:true` option, as required by
   other (optional) plugins like `@babel/plugin-proposal-decorators`.
   [Issue #9628](https://github.com/meteor/meteor/issues/9628)
-  
+
 * The `underscore` package has been removed as a dependency from `meteor-base`.
   This opens up the possibility of removing 14.4 kb from production bundles.
-  Since this would be a breaking change for any apps that may have been 
-  using `_` without having any packages that depend on `underscore` 
-  besides `meteor-base`, we have added an upgrader that will automatically 
-  add `underscore` to the `.meteor/packages` file of any project which 
-  lists `meteor-base`, but not `underscore`. Apps which do not require this 
+  Since this would be a breaking change for any apps that may have been
+  using `_` without having any packages that depend on `underscore`
+  besides `meteor-base`, we have added an upgrader that will automatically
+  add `underscore` to the `.meteor/packages` file of any project which
+  lists `meteor-base`, but not `underscore`. Apps which do not require this
   package can safely remove it using `meteor remove underscore`.
   [PR #9596](https://github.com/meteor/meteor/pull/9596)
 
@@ -479,6 +479,30 @@
   new major or minor version, so that you can continue releasing patch
   updates compatible with older versions of Meteor, if necessary.
 
+* Meteor's Node Mongo driver is now configured with the
+  [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
+  connection option set to `true`, to make sure fields with `undefined`
+  values are not first converted to `null`, when inserted/updated. `undefined`
+  values are now removed from all Mongo queries and insert/update documents.
+
+  This is a potentially breaking change if you are upgrading an existing app from
+  an earlier version of Meteor.
+
+  For example:
+  ```
+  // return data pertaining to the current user
+  db.privateUserData.find({
+      userId: currentUser._id // undefined
+  });
+  ```
+  Assuming there are no documents in the `privateUserData` collection with `userId: null`,
+  in Meteor versions prior to 1.6.1 this query will return zero documents.
+  From Meteor 1.6.1 onwards, this query will now return _every_ document in the collection.
+  It is highly recommend you review all your existing queries to ensure that any potential
+  usage of `undefined` in query objects won't lead to problems.
+  [Issue #6051](https://github.com/meteor/meteor/issues/6051)
+  [PR #9444](https://github.com/meteor/meteor/pull/9444)
+
 * The `server-render` package now supports passing a `Stream` object to
   `ServerSink` methods that previously expected a string, which enables
   [streaming server-side rendering with React
@@ -536,11 +560,11 @@
   function changes are:
 
   * `CssTools.parseCss` now returns a PostCSS
-    [`Root`](http://api.postcss.org/Root.html) object.    
+    [`Root`](http://api.postcss.org/Root.html) object.
   * `CssTools.stringifyCss` expects a PostCSS `Root` object as its first
-    parameter.    
+    parameter.
   * `CssTools.mergeCssAsts` expects an array of PostCSS `Root` objects as its
-    first parameter.    
+    first parameter.
   * `CssTools.rewriteCssUrls` expects a PostCSS `Root` object as its first
     parameter.
 
@@ -744,14 +768,6 @@
   Meteor Tool.
   [Issue #5180](https://github.com/meteor/meteor/issues/5180)
   [PR #9459](https://github.com/meteor/meteor/pull/9459)
-
-* Meteor's Node Mongo driver is now configured with the
-  [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
-  connection option set to `true`, to make sure fields with `undefined`
-  values are not first converted to `null`, when inserted/updated. Fields
-  with `undefined` values are now ignored when inserting/updating.
-  [Issue #6051](https://github.com/meteor/meteor/issues/6051)
-  [PR #9444](https://github.com/meteor/meteor/pull/9444)
 
 * The `accounts-ui-unstyled` package has been updated to use `<form />` and
   `<button />` tags with its login/signup form, instead of `<div />`'s. This
@@ -1050,7 +1066,7 @@
   [PR #9092](https://github.com/meteor/meteor/pull/9092)
 
 * `reactive-dict` now supports `destroy`. `destroy` will clear the `ReactiveDict`s
-  data and unregister the `ReactiveDict` from data migration.  
+  data and unregister the `ReactiveDict` from data migration.
   i.e. When a `ReactiveDict` is instantiated with a name on the client and the
   `reload` package is present in the project.
   [Feature Request #76](https://github.com/meteor/meteor-feature-requests/issues/76)
