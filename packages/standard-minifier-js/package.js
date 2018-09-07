@@ -12,6 +12,9 @@ Package.registerBuildPlugin({
     'babel-compiler',
     'ecmascript'
   ],
+  npmDependencies: {
+    "@babel/runtime": "7.0.0"
+  },
   sources: [
     'plugin/minify-js.js',
     'plugin/stats.js',
