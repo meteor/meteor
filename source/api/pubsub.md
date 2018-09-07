@@ -158,7 +158,7 @@ Read more about publications and how to use them in the
 {% apibox "Subscription#userId" %}
 
 This is constant. However, if the logged-in user changes, the publish
-function is rerun with the new value.
+function is rerun with the new value, assuming it didn't throw an error at the previous run.
 
 {% apibox "Subscription#added" %}
 {% apibox "Subscription#changed" %}
