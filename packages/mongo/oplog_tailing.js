@@ -39,7 +39,7 @@ OplogHandle = function (oplogUrl, dbName) {
   self._baseOplogSelector = {
     ns: new RegExp("^(?:" + [
       Meteor._escapeRegExp(self._dbName + "."),
-      Meteor._escapeRegExp("admin."),
+      Meteor._escapeRegExp("admin.$cmd"),
     ].join("|") + ")"),
 
     $or: [
@@ -266,39 +266,32 @@ _.extend(OplogHandle.prototype, {
     Meteor.defer(function () {
       // May be called recursively in case of transactions.
       function handleDoc(doc) {
-        let trigger = null;
-
-        if (typeof doc.ns === "string") {
-          [self._dbName, "admin"].some(name => {
-            const nameWithDot = name + ".";
-            if (doc.ns.startsWith(nameWithDot)) {
-              return trigger = {
-                collection: doc.ns.slice(nameWithDot.length),
-                dropCollection: false,
-                dropDatabase: false,
-                op: doc,
-              };
-            }
-          });
+        if (doc.ns === "admin.$cmd") {
+          if (doc.o.applyOps) {
+            // This was a successful transaction, so we need to apply the
+            // operations that were involved.
+            doc.o.applyOps.forEach(handleDoc);
+            return;
+          }
+          throw new Error("Unknown command " + EJSON.stringify(doc));
         }
 
-        if (trigger === null) {
+        const trigger = {
+          dropCollection: false,
+          dropDatabase: false,
+          op: doc,
+        };
+
+        if (typeof doc.ns === "string" &&
+            doc.ns.startsWith(self._dbName + ".")) {
+          trigger.collection = doc.ns.slice(self._dbName.length + 1);
+        } else {
           throw new Error("Unexpected ns");
         }
 
         // Is it a special command and the collection name is hidden
         // somewhere in operator?
         if (trigger.collection === "$cmd") {
-          if (doc.ns.startsWith("admin.")) {
-            if (doc.o.applyOps) {
-              // This was a successful transaction, so we need to apply
-              // the operations that were involved.
-              doc.o.applyOps.forEach(handleDoc);
-              return;
-            }
-            throw new Error("Unknown command " + EJSON.stringify(doc));
-          }
-
           if (doc.o.dropDatabase) {
             delete trigger.collection;
             trigger.dropDatabase = true;
