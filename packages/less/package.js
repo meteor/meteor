@@ -1,6 +1,6 @@
 Package.describe({
   name: 'less',
-  version: '2.8.0-rc171.8',
+  version: '2.8.0-rc171.9',
   summary: 'Leaner CSS language',
   documentation: 'README.md'
 });
