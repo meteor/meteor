@@ -2,6 +2,16 @@
 
 ## v1.7.1, TBD
 
+### Breaking changes
+N/A
+
+### Migration Steps
+* Update `@babel/runtime` npm package to version 7.0.0-beta.56 or later
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+
+### Changes
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
   addition to the `web.browser` (modern) and `web.cordova` bundles.
   Naturally, this extra bundle increased client (re)build times. Since
@@ -215,12 +225,26 @@
 
 ## v1.7.0.5, 2018-08-16
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
 * Node has been updated to version
   [8.11.4](https://nodejs.org/en/blog/release/v8.11.4/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/august-2018-security-releases/).
 
 ## v1.7.0.4, 2018-08-07
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
 * The npm package `@babel/runtime`, which is depended on by most Meteor
   apps, introduced a breaking change in version `7.0.0-beta.56` with the
   removal of the `@babel/runtime/helpers/builtin` directory. While this
@@ -240,6 +264,13 @@
 
 ## v1.7.0.3, 2018-06-13
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
   introduced in
   [Meteor 1.7.0.2](https://github.com/meteor/meteor/pull/9990)
@@ -247,6 +278,13 @@
 
 ## v1.7.0.2, 2018-06-13
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
 * Node has been updated to version
   [8.11.3](https://nodejs.org/en/blog/release/v8.11.3/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/june-2018-security-releases/).
@@ -264,6 +302,28 @@
 
 ## v1.7.0.1, 2018-05-29
 
+### Breaking changes
+* You may need to change your aggregations calls. Now 
+`Meteor.wrapAsync(rawCollection.aggreate)` will return an `‌AggregationCursor` 
+and no longer the aggregation result directly, you can fix this changing your 
+code to:
+  ```js
+  import { Promise } from "meteor/promise";
+  // ...
+   
+  // `aggregate` returns a cursor, so you don't need a callback or `wrapAsync`!
+  const result = Promise.await(rawCollection.aggregate(pipeline).toArray());
+  ```
+[more here](https://github.com/meteor/meteor/issues/9936)
+
+### Migration Steps
+* Update `@babel/runtime` (as well as other Babel-related packages) and 
+`meteor-node-stubs` npm packages
+  ```sh
+  meteor npm install @babel/runtime@latest meteor-node-stubs@latest
+  ```
+
+### Changes
 * Reverted an [optimization](https://github.com/meteor/meteor/pull/9825)
   introduced in Meteor 1.7 to stop scanning `node_modules` for files that
   might be of interest to compiler plugins, since the intended workarounds
@@ -281,6 +341,13 @@
 
 ## v1.7, 2018-05-28
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
 * More than 80% of internet users worldwide have access to a web browser
   that natively supports the latest ECMAScript features and keeps itself
   updated automatically, which means new features become available almost
@@ -598,12 +665,26 @@
 
 ## v1.6.1.3, 2018-06-16
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
 * Node has been updated to version
   [8.11.3](https://nodejs.org/en/blog/release/v8.11.3/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/june-2018-security-releases/).
 
 ## v1.6.1.2, 2018-05-28
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
 * Meteor 1.6.1.2 is a very small release intended to fix
   [#9863](https://github.com/meteor/meteor/issues/9863) by making
   [#9887](https://github.com/meteor/meteor/pull/9887) available to Windows
@@ -613,6 +694,17 @@
 
 ## v1.6.1.1, 2018-04-02
 
+### Breaking changes
+N/A
+
+### Migration Steps
+* Update `@babel/runtime` npm package and any custom Babel plugin enabled in 
+`.babelrc`
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+
+### Changes
 * Node has been updated to version
   [8.11.1](https://nodejs.org/en/blog/release/v8.11.1/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/march-2018-security-releases/),
@@ -632,6 +724,34 @@
 
 ## v1.6.1, 2018-01-19
 
+### Breaking changes
+* Meteor's Node Mongo driver is now configured with the
+  [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
+  connection option set to `true`, to make sure fields with `undefined`
+  values are not first converted to `null`, when inserted/updated. `undefined`
+  values are now removed from all Mongo queries and insert/update documents.
+
+  This is a potentially breaking change if you are upgrading an existing app 
+  from an earlier version of Meteor.
+
+  For example:
+  ```js
+  // return data pertaining to the current user
+  db.privateUserData.find({
+      userId: currentUser._id // undefined
+  });
+  ```
+  Assuming there are no documents in the `privateUserData` collection with 
+  `userId: null`, in Meteor versions prior to 1.6.1 this query will return 
+  zero documents. From Meteor 1.6.1 onwards, this query will now return 
+  _every_ document in the collection. It is highly recommend you review all 
+  your existing queries to ensure that any potential usage of `undefined` in 
+  query objects won't lead to problems.
+
+### Migration Steps
+N/A
+
+### Changes
 * Node has been updated to version
   [8.9.4](https://nodejs.org/en/blog/release/v8.9.4/).
 
@@ -668,22 +788,6 @@
   connection option set to `true`, to make sure fields with `undefined`
   values are not first converted to `null`, when inserted/updated. `undefined`
   values are now removed from all Mongo queries and insert/update documents.
-
-  This is a potentially breaking change if you are upgrading an existing app from
-  an earlier version of Meteor.
-
-  For example:
-  ```
-  // return data pertaining to the current user
-  db.privateUserData.find({
-      userId: currentUser._id // undefined
-  });
-  ```
-  Assuming there are no documents in the `privateUserData` collection with `userId: null`,
-  in Meteor versions prior to 1.6.1 this query will return zero documents.
-  From Meteor 1.6.1 onwards, this query will now return _every_ document in the collection.
-  It is highly recommend you review all your existing queries to ensure that any potential
-  usage of `undefined` in query objects won't lead to problems.
   [Issue #6051](https://github.com/meteor/meteor/issues/6051)
   [PR #9444](https://github.com/meteor/meteor/pull/9444)
 
