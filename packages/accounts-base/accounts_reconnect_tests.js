@@ -50,7 +50,7 @@ if (Meteor.isClient) {
       onLoginStopper = Accounts.onLogin(onUser2LoggedInAfterReconnectAfterFailedLogin);
       Meteor.disconnect();
       Meteor.reconnect();
-      timeoutHandle = Meteor.setTimeout(failTest, 1000);
+      timeoutHandle = Meteor.setTimeout(failTest, 5000);
     }
 
     const failTest = () => {
