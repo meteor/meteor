@@ -105,6 +105,11 @@
   `meteor` always refers to the same `meteor` used to run `meteor npm`.
   [PR #9941](https://github.com/meteor/meteor/pull/9941)
 
+* Minimongo's behavior for sorting fields containing an array
+  is now compatible with the behavior of [Mongo 3.6+](https://docs.mongodb.com/manual/release-notes/3.6-compatibility/#array-sort-behavior).
+  Note that this means it is now incompatible with the behavior of earlier MongoDB versions.
+  [PR #10214](https://github.com/meteor/meteor/pull/10214)
+
 * Meteor's `self-test` has been updated to use "headless" Chrome rather
   than PhantomJS for browser tests. PhantomJS can still be forced by
   passing the `--phantom` flag to the `meteor self-test` command.
