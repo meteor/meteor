@@ -2197,10 +2197,10 @@ Tinytest.add('minimongo - array sort', test => {
   // Similarly, "selected" is the index that the doc should have in the query
   // that sorts ascending on "a.x" and selects {'a.x': {$gt: 1}}. In this case,
   // the 1 in [1, 4] may not be used as a sort key.
-  c.insert({up: 1, down: 1, selected: 2, a: {x: [1, 4]}});
-  c.insert({up: 2, down: 2, selected: 0, a: [{x: [2]}, {x: 3}]});
+  c.insert({up: 1, down: 1, selected: 0, a: {x: [1, 4]}});
+  c.insert({up: 2, down: 2, selected: 1, a: [{x: [2]}, {x: 3}]});
   c.insert({up: 0, down: 4,              a: {x: 0}});
-  c.insert({up: 3, down: 3, selected: 1, a: {x: 2.5}});
+  c.insert({up: 3, down: 3, selected: 2, a: {x: 2.5}});
   c.insert({up: 4, down: 0, selected: 3, a: {x: 5}});
 
   // Test that the the documents in "cursor" contain values with the name
@@ -2281,87 +2281,6 @@ Tinytest.add('minimongo - sort keys', test => {
   testParallelError({'a.x': 1, 'a.y': 1},
     {a: [{x: 1, y: [2, 3]},
       {x: 2, y: [4, 5]}]});
-});
-
-Tinytest.add('minimongo - sort key filter', test => {
-  const testOrder = (sortSpec, selector, doc1, doc2) => {
-    const matcher = new Minimongo.Matcher(selector);
-    const sorter = new Minimongo.Sorter(sortSpec, {matcher});
-    const comparator = sorter.getComparator();
-    const comparison = comparator(doc1, doc2);
-    test.isTrue(comparison < 0);
-  };
-
-  testOrder({'a.x': 1}, {'a.x': {$gt: 1}},
-    {a: {x: 3}},
-    {a: {x: [1, 4]}});
-  testOrder({'a.x': 1}, {'a.x': {$gt: 0}},
-    {a: {x: [1, 4]}},
-    {a: {x: 3}});
-
-  const keyCompatible = (sortSpec, selector, key, compatible) => {
-    const matcher = new Minimongo.Matcher(selector);
-    const sorter = new Minimongo.Sorter(sortSpec, {matcher});
-    const actual = sorter._keyCompatibleWithSelector(key);
-    test.equal(actual, compatible);
-  };
-
-  keyCompatible({a: 1}, {a: 5}, [5], true);
-  keyCompatible({a: 1}, {a: 5}, [8], false);
-  keyCompatible({a: 1}, {a: {x: 5}}, [{x: 5}], true);
-  keyCompatible({a: 1}, {a: {x: 5}}, [{x: 5, y: 9}], false);
-  keyCompatible({'a.x': 1}, {a: {x: 5}}, [5], true);
-  // To confirm this:
-  //   > db.x.insert({_id: "q", a: [{x:1}, {x:5}], b: 2})
-  //   > db.x.insert({_id: "w", a: [{x:5}, {x:10}], b: 1})
-  //   > db.x.find({}).sort({'a.x': 1, b: 1})
-  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
-  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
-  //   > db.x.find({a: {x:5}}).sort({'a.x': 1, b: 1})
-  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
-  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
-  //   > db.x.find({'a.x': 5}).sort({'a.x': 1, b: 1})
-  //   { "_id" : "w", "a" : [  {  "x" : 5 },  {  "x" : 10 } ], "b" : 1 }
-  //   { "_id" : "q", "a" : [  {  "x" : 1 },  {  "x" : 5 } ], "b" : 2 }
-  // ie, only the last one manages to trigger the key compatibility code,
-  // not the previous one.  (The "b" sort is necessary because when the key
-  // compatibility code *does* kick in, both documents only end up with "5"
-  // for the first field as their only sort key, and we need to differentiate
-  // somehow...)
-  keyCompatible({'a.x': 1}, {a: {x: 5}}, [1], true);
-  keyCompatible({'a.x': 1}, {'a.x': 5}, [5], true);
-  keyCompatible({'a.x': 1}, {'a.x': 5}, [1], false);
-
-  // Regex key check.
-  keyCompatible({a: 1}, {a: /^foo+/}, ['foo'], true);
-  keyCompatible({a: 1}, {a: /^foo+/}, ['foooo'], true);
-  keyCompatible({a: 1}, {a: /^foo+/}, ['foooobar'], true);
-  keyCompatible({a: 1}, {a: /^foo+/}, ['afoooo'], false);
-  keyCompatible({a: 1}, {a: /^foo+/}, [''], false);
-  keyCompatible({a: 1}, {a: {$regex: '^foo+'}}, ['foo'], true);
-  keyCompatible({a: 1}, {a: {$regex: '^foo+'}}, ['foooo'], true);
-  keyCompatible({a: 1}, {a: {$regex: '^foo+'}}, ['foooobar'], true);
-  keyCompatible({a: 1}, {a: {$regex: '^foo+'}}, ['afoooo'], false);
-  keyCompatible({a: 1}, {a: {$regex: '^foo+'}}, [''], false);
-
-  keyCompatible({a: 1}, {a: /^foo+/i}, ['foo'], true);
-  // Key compatibility check appears to be turned off for regexps with flags.
-  keyCompatible({a: 1}, {a: /^foo+/i}, ['bar'], true);
-  keyCompatible({a: 1}, {a: /^foo+/m}, ['bar'], true);
-  keyCompatible({a: 1}, {a: {$regex: '^foo+', $options: 'i'}}, ['bar'], true);
-  keyCompatible({a: 1}, {a: {$regex: '^foo+', $options: 'm'}}, ['bar'], true);
-
-  // Multiple keys!
-  keyCompatible({a: 1, b: 1, c: 1},
-    {a: {$gt: 5}, c: {$lt: 3}}, [6, 'bla', 2], true);
-  keyCompatible({a: 1, b: 1, c: 1},
-    {a: {$gt: 5}, c: {$lt: 3}}, [6, 'bla', 4], false);
-  keyCompatible({a: 1, b: 1, c: 1},
-    {a: {$gt: 5}, c: {$lt: 3}}, [3, 'bla', 1], false);
-  // No filtering is done (ie, all keys are compatible) if the first key isn't
-  // constrained.
-  keyCompatible({a: 1, b: 1, c: 1},
-    {c: {$lt: 3}}, [3, 'bla', 4], true);
 });
 
 Tinytest.add('minimongo - sort function', test => {

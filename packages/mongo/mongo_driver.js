@@ -1316,8 +1316,7 @@ MongoConnection.prototype._observeChanges = function (
         if (!cursorDescription.options.sort)
           return true;
         try {
-          sorter = new Minimongo.Sorter(cursorDescription.options.sort,
-                                        { matcher: matcher });
+          sorter = new Minimongo.Sorter(cursorDescription.options.sort);
           return true;
         } catch (e) {
           // XXX make all compilation errors MinimongoError or something
