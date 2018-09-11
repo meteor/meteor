@@ -7,9 +7,9 @@ N/A
 
 ### Migration Steps
 * Update `@babel/runtime` npm package to version 7.0.0-beta.56 or later
-```sh
-    meteor npm install @babel/runtime@latest
-```
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
 
 ### Changes
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
@@ -298,21 +298,25 @@ N/A
 ## v1.7.0.1, 2018-05-29
 
 ### Breaking changes
-* You may need to change your aggregations calls. Now `Meteor.wrapAsync(rawCollection.aggreate)` will return an `‌AggregationCursor` and no longer the aggregation result directly, you can fix this changing your code to:
-```js
-import { Promise } from "meteor/promise";
-// ...
-
-// `aggregate` returns a cursor, so you don't need a callback or `wrapAsync`!
-const result = Promise.await(rawCollection.aggregate(pipeline).toArray());
-```
+* You may need to change your aggregations calls. Now 
+`Meteor.wrapAsync(rawCollection.aggreate)` will return an `‌AggregationCursor` 
+and no longer the aggregation result directly, you can fix this changing your 
+code to:
+  ```js
+  import { Promise } from "meteor/promise";
+  // ...
+   
+  // `aggregate` returns a cursor, so you don't need a callback or `wrapAsync`!
+  const result = Promise.await(rawCollection.aggregate(pipeline).toArray());
+  ```
 [more here](https://github.com/meteor/meteor/issues/9936)
 
 ### Migration Steps
-* Update `@babel/runtime` (as well as other Babel-related packages) and `meteor-node-stubs` npm packages
-```sh
-    meteor npm install @babel/runtime@latest meteor-node-stubs@latest
-```
+* Update `@babel/runtime` (as well as other Babel-related packages) and 
+`meteor-node-stubs` npm packages
+  ```sh
+  meteor npm install @babel/runtime@latest meteor-node-stubs@latest
+  ```
 
 ### Changes
 * Reverted an [optimization](https://github.com/meteor/meteor/pull/9825)
@@ -689,8 +693,9 @@ N/A
 N/A
 
 ### Migration Steps
-* Update `@babel/runtime` npm package and any custom Babel plugin enabled in `.babelrc`
-```sh
+* Update `@babel/runtime` npm package and any custom Babel plugin enabled in 
+`.babelrc`
+  ```sh
   meteor npm install @babel/runtime@latest
   ```
 
@@ -721,21 +726,22 @@ N/A
   values are not first converted to `null`, when inserted/updated. `undefined`
   values are now removed from all Mongo queries and insert/update documents.
 
-  This is a potentially breaking change if you are upgrading an existing app from
-  an earlier version of Meteor.
+  This is a potentially breaking change if you are upgrading an existing app 
+  from an earlier version of Meteor.
 
   For example:
-  ```
+  ```js
   // return data pertaining to the current user
   db.privateUserData.find({
       userId: currentUser._id // undefined
   });
   ```
-  Assuming there are no documents in the `privateUserData` collection with `userId: null`,
-  in Meteor versions prior to 1.6.1 this query will return zero documents.
-  From Meteor 1.6.1 onwards, this query will now return _every_ document in the collection.
-  It is highly recommend you review all your existing queries to ensure that any potential
-  usage of `undefined` in query objects won't lead to problems.
+  Assuming there are no documents in the `privateUserData` collection with 
+  `userId: null`, in Meteor versions prior to 1.6.1 this query will return 
+  zero documents. From Meteor 1.6.1 onwards, this query will now return 
+  _every_ document in the collection. It is highly recommend you review all 
+  your existing queries to ensure that any potential usage of `undefined` in 
+  query objects won't lead to problems.
 
 ### Migration Steps
 N/A
