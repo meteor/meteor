@@ -761,6 +761,9 @@ class ResourceSlot {
       // rather than a <style> node added dynamically to the <head>.
       this.addJavaScript({
         ...options,
+        // As above, the JavaScript module that dynamically loads this CSS
+        // should not inherit the source map of the original CSS output.
+        sourceMap: null,
         data: Buffer.from(
           "// These styles have already been applied to the document.\n",
           "utf8"),
