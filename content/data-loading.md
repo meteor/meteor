@@ -658,3 +658,41 @@ $ curl localhost:3000/publications/lists.private -H "Authorization: Bearer 6PN4E
   ]
 }
 ```
+
+<h2 id="scaling-updates">Scaling updates</h2>
+
+As previously mentioned, Meteor uses MongoDB's Oplog to identify which changes to apply to which publication. Each change to the database is processed by every Meteor server, so frequent changes can result in high CPU usage across the board. At the same time, your database will come under higher load as all your servers keep fetching data from the oplog.
+
+To solve this issue, you can use the [`cultofcoders:redis-oplog`](https://github.com/cult-of-coders/redis-oplog) package, which opts out completely from using MongoDB's Oplog and shifts the communication to Redis' Pub/Sub system.
+
+The caveats:
+1. You may not need it, if your application is smaller or your data doesn't change a lot.
+2. You'll have to maintain another database (Redis)[https://redis.io/].
+3. Changes that happen outside Meteor instance, must be [manually submitted to Redis](https://github.com/cult-of-coders/redis-oplog/blob/master/docs/outside_mutations.md).
+
+The benefits:
+1. Lower load on server CPU and MongoDB.
+2. Backwards compatible (no changes required to your publication/subscription code).
+3. [Better control](https://github.com/cult-of-coders/redis-oplog/blob/master/docs/finetuning.md) over which updates should trigger reactivity.
+4. You can work with a MongoDB database that does not have oplog enabled.
+5. Full control over reactivity using [Vent](https://github.com/cult-of-coders/redis-oplog/blob/master/docs/vent.md).
+
+```
+meteor add cultofcoders:redis-oplog
+meteor add disable-oplog
+```
+
+In your `settings.json` file:
+
+```
+{
+    "redisOplog": {}
+}
+```
+
+```
+# Start Redis, then run Meteor
+meteor run --settings settings.json
+```
+
+Read more about `redis-oplog` here: https://github.com/cult-of-coders/redis-oplog
