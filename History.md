@@ -6,12 +6,14 @@
 N/A
 
 ### Migration Steps
-* Update `@babel/runtime` npm package to version 7.0.0-beta.56 or later
+
+* Update the `@babel/runtime` npm package to version 7.0.0:
   ```sh
   meteor npm install @babel/runtime@latest
   ```
 
 ### Changes
+
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
   addition to the `web.browser` (modern) and `web.cordova` bundles.
   Naturally, this extra bundle increased client (re)build times. Since
@@ -232,6 +234,7 @@ N/A
 N/A
 
 ### Changes
+
 * Node has been updated to version
   [8.11.4](https://nodejs.org/en/blog/release/v8.11.4/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/august-2018-security-releases/).
@@ -245,6 +248,7 @@ N/A
 N/A
 
 ### Changes
+
 * The npm package `@babel/runtime`, which is depended on by most Meteor
   apps, introduced a breaking change in version `7.0.0-beta.56` with the
   removal of the `@babel/runtime/helpers/builtin` directory. While this
@@ -271,6 +275,7 @@ N/A
 N/A
 
 ### Changes
+
 * Fixed [Issue #9991](https://github.com/meteor/meteor/issues/9991),
   introduced in
   [Meteor 1.7.0.2](https://github.com/meteor/meteor/pull/9990)
@@ -285,6 +290,7 @@ N/A
 N/A
 
 ### Changes
+
 * Node has been updated to version
   [8.11.3](https://nodejs.org/en/blog/release/v8.11.3/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/june-2018-security-releases/).
@@ -303,27 +309,52 @@ N/A
 ## v1.7.0.1, 2018-05-29
 
 ### Breaking changes
-* You may need to change your aggregations calls. Now 
-`Meteor.wrapAsync(rawCollection.aggreate)` will return an `‌AggregationCursor` 
-and no longer the aggregation result directly, you can fix this changing your 
-code to:
+
+* The `aggregate` method of raw Mongo collections now returns an
+  `AggregationCursor` rather than returning the aggregation result
+  directly. To obtain an array of aggregation results, you will need to
+  call the `.toArray()` method of the cursor:
   ```js
-  import { Promise } from "meteor/promise";
-  // ...
-   
-  // `aggregate` returns a cursor, so you don't need a callback or `wrapAsync`!
-  const result = Promise.await(rawCollection.aggregate(pipeline).toArray());
+  // With MongoDB 2.x, callback style:
+  rawCollection.aggregate(
+    pipeline,
+    (error, results) => {...}
+  );
+
+  // With MongoDB 2.x, wrapAsync style:
+  const results = Meteor.wrapAsync(
+    rawCollection.aggregate,
+    rawCollection
+  )(pipeline);
+
+  // With MongoDB 3.x, callback style:
+  rawCollection.aggregate(
+    pipeline,
+    (error, aggregationCursor) => {
+      ...
+      const results = aggregationCursor.toArray();
+      ...
+    }
+  );
+
+  // With MongoDB 3.x, wrapAsync style:
+  const results = Meteor.wrapAsync(
+    rawCollection.aggregate,
+    rawCollection
+  )(pipeline).toArray();
   ```
-[more here](https://github.com/meteor/meteor/issues/9936)
+  [Issue #9936](https://github.com/meteor/meteor/issues/9936)
 
 ### Migration Steps
+
 * Update `@babel/runtime` (as well as other Babel-related packages) and 
-`meteor-node-stubs` npm packages
+  `meteor-node-stubs` to their latest versions:
   ```sh
   meteor npm install @babel/runtime@latest meteor-node-stubs@latest
   ```
 
 ### Changes
+
 * Reverted an [optimization](https://github.com/meteor/meteor/pull/9825)
   introduced in Meteor 1.7 to stop scanning `node_modules` for files that
   might be of interest to compiler plugins, since the intended workarounds
@@ -348,6 +379,7 @@ N/A
 N/A
 
 ### Changes
+
 * More than 80% of internet users worldwide have access to a web browser
   that natively supports the latest ECMAScript features and keeps itself
   updated automatically, which means new features become available almost
@@ -672,6 +704,7 @@ N/A
 N/A
 
 ### Changes
+
 * Node has been updated to version
   [8.11.3](https://nodejs.org/en/blog/release/v8.11.3/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/june-2018-security-releases/).
@@ -685,6 +718,7 @@ N/A
 N/A
 
 ### Changes
+
 * Meteor 1.6.1.2 is a very small release intended to fix
   [#9863](https://github.com/meteor/meteor/issues/9863) by making
   [#9887](https://github.com/meteor/meteor/pull/9887) available to Windows
@@ -705,6 +739,7 @@ N/A
   ```
 
 ### Changes
+
 * Node has been updated to version
   [8.11.1](https://nodejs.org/en/blog/release/v8.11.1/), an important
   [security release](https://nodejs.org/en/blog/vulnerability/march-2018-security-releases/),
@@ -725,6 +760,7 @@ N/A
 ## v1.6.1, 2018-01-19
 
 ### Breaking changes
+
 * Meteor's Node Mongo driver is now configured with the
   [`ignoreUndefined`](http://mongodb.github.io/node-mongodb-native/2.2/api/MongoClient.html#connect)
   connection option set to `true`, to make sure fields with `undefined`
@@ -752,6 +788,7 @@ N/A
 N/A
 
 ### Changes
+
 * Node has been updated to version
   [8.9.4](https://nodejs.org/en/blog/release/v8.9.4/).
 
