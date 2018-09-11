@@ -14,6 +14,11 @@ N/A
 
 ### Changes
 
+* Node has been updated to version
+  [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/), which provides
+  [performance improvements](https://github.com/nodejs/node/pull/20727)
+  for `Fiber`-heavy Meteor applications, among many other benefits.
+
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
   addition to the `web.browser` (modern) and `web.cordova` bundles.
   Naturally, this extra bundle increased client (re)build times. Since
