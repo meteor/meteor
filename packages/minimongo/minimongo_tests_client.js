@@ -2220,6 +2220,43 @@ Tinytest.add('minimongo - array sort', test => {
     'selected');
 });
 
+Tinytest.add('minimongo - nested array sort', test => {
+  const c = new LocalCollection();
+
+  // the short fields represent the order it should be when sorting for those keys
+  // e.g. the cdx_cdy field represents the order when you sort: { 'c.d.x': 1, 'c.d.y': 1 }
+  c.insert({ ab0x: 0, ab0x_g: 0, g_ab0x: 0, cdx: 0, cdx_cdy: 0, cdy_cdx: 0, n: 0 });
+  c.insert({ ab0x: 1, ab0x_g: 2, g_ab0x: 3, cdx: 1, cdx_cdy: 2, cdy_cdx: 4, n: 1 , g: 2, c: { d: [{ y: 2}, { y: 3}] } });
+  c.insert({ ab0x: 2, ab0x_g: 1, g_ab0x: 1, cdx: 2, cdx_cdy: 3, cdy_cdx: 5, n: 2 , c: { d: [{ y: 2}] }, g: 0 });
+  c.insert({ ab0x: 3, ab0x_g: 3, g_ab0x: 2, cdx: 6, cdx_cdy: 6, cdy_cdx: 8, n: 3 , a: { b: [{ x: 0 }] }, c: { d: [{ x: 1, y: 2}] }, g: 1 });
+  c.insert({ ab0x: 4, ab0x_g: 4, g_ab0x: 4, cdx: 3, cdx_cdy: 1, cdy_cdx: 1, n: 4 , a: { b: [{ x: [1, 4] }] }, c: { d: [] }, g: 2 });
+  c.insert({ ab0x: 5, ab0x_g: 5, g_ab0x: 5, cdx: 7, cdx_cdy: 7, cdy_cdx: 3, n: 5 , a: { b: [{ x: [2] }, { x: 3 }]}, c: { d: [{x: 2, y: 2}, {x: 3, y: 1}] }, g: 3 });
+  c.insert({ ab0x: 6, ab0x_g: 6, g_ab0x: 6, cdx: 8, cdx_cdy: 8, cdy_cdx: 2, n: 6 , a: { b: [{ x: 2.5 }] }, c: { d: [{x: 2, y: 2}, {x: 3}] }, g: 4 });
+  c.insert({ ab0x: 7, ab0x_g: 7, g_ab0x: 7, cdx: 4, cdx_cdy: 4, cdy_cdx: 6, n: 7 , a: { b: [{ x: 5 }] }, c: { d: [{ y: 2}, { y: 3}] }, g: 5 });
+  c.insert({ ab0x: 8, ab0x_g: 8, g_ab0x: 8, cdx: 5, cdx_cdy: 5, cdy_cdx: 7, n: 8 , a: { b: [{ x: 6 }, { x: 7 }] }, c: { d: [{ y: 2}, { x: 1.5, y: 2}] }, g: 6 });
+  
+  // Test that the the documents in "cursor" contain values with the name
+  // "field" running from 0 to the max value of that name in the collection.
+  const testCursorMatchesField = (cursor, field) => {
+    const fieldValues = [];
+    c.find().forEach(doc => {
+      if (hasOwn.call(doc, field)) {
+        fieldValues.push(doc[field]);
+      }
+    });
+    test.equal(cursor.fetch().map(doc => doc[field]),
+      Array.from({ length: Math.max(...fieldValues) + 1 }, (x, i) => i));
+  };
+
+  testCursorMatchesField(c.find({}, { sort: { 'a.b.0.x': 1 } }), 'ab0x');
+  testCursorMatchesField(c.find({}, { sort: { 'a.b.0.x': 1, 'g': 1 } }), 'ab0x_g');
+  testCursorMatchesField(c.find({}, { sort: { 'g': 1, 'a.b.0.x': 1 } }), 'g_ab0x');
+  testCursorMatchesField(c.find({}, { sort: { 'c.d.x': 1 } }), 'cdx');
+  testCursorMatchesField(c.find({}, { sort: { 'c.d.x': 1, 'c.d.y': 1 } }), 'cdx_cdy');
+  testCursorMatchesField(c.find({}, { sort: { 'c.d.y': 1, 'c.d.x': 1 } }), 'cdy_cdx');
+ 
+});
+
 Tinytest.add('minimongo - sort keys', test => {
   const keyListToObject = keyList => {
     const obj = {};
@@ -2271,6 +2308,14 @@ Tinytest.add('minimongo - sort keys', test => {
   testKeys({a: 1, b: 1},
     {a: [1, 2, 3], b: 42},
     [[1, 42], [2, 42], [3, 42]]);
+
+  testKeys({'a.0.x': 1},
+    {a: [{x: 0}]},
+    [[0]]);
+  
+  testKeys({'a.0.x': 1},
+    {a: []},
+    [[undefined]]);
 
   // Don't support multiple arrays at the same level.
   testParallelError({a: 1, b: 1},
