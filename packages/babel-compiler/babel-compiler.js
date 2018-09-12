@@ -105,7 +105,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     }
 
     var babelOptions = Babel.getDefaultOptions(extraFeatures);
-    babelOptions.caller = {name: 'meteor', arch: arch};
+    babelOptions.caller = { name: "meteor", arch };
 
     this.inferExtraBabelOptions(
       inputFile,
