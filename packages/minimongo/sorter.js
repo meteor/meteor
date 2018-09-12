@@ -140,9 +140,9 @@ export default class Sorter {
       let branches = expandArraysInBranches(spec.lookup(doc), true);
 
       // If there are no values for a key (eg, key goes to an empty array),
-      // pretend we found one null value.
+      // pretend we found one undefined value.
       if (!branches.length) {
-        branches = [{value: null}];
+        branches = [{ value: void 0 }];
       }
 
       const element = Object.create(null);
@@ -279,12 +279,6 @@ export default class Sorter {
         minKey = key;
       }
     });
-
-    // This could happen if our key filter somehow filters out all the keys even
-    // though somehow the selector matches.
-    if (minKey === null) {
-      throw Error('sort selector found no keys in doc?');
-    }
 
     return minKey;
   }
