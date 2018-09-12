@@ -28,7 +28,7 @@ selftest.define("bundle - verify sanitized asset names", function () {
   run.expectExit(0);
 
   const tarball = files.pathJoin(s.cwd, "../sanitized-app.tgz");
-  const sanitizedFilename = 'Meteor_:-@2x.png';
+  const sanitizedFilename = 'Meteor_-@2x.png';
   selftest.expectTrue(
     execSync(`tar -tf ${tarball}`).toString().indexOf(sanitizedFilename) > -1
   );
