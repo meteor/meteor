@@ -142,7 +142,7 @@ export default class Sorter {
       // If there are no values for a key (eg, key goes to an empty array),
       // pretend we found one undefined value.
       if (!branches.length) {
-        branches = [{value: undefined}];
+        branches = [{ value: void 0 }];
       }
 
       const element = Object.create(null);
