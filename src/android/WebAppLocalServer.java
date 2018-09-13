@@ -126,11 +126,10 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     void initializeAssetBundles() throws WebAppException {
         // The initial asset bundle consists of the assets bundled with the app
         AssetBundle initialAssetBundle = new AssetBundle(resourceApi, applicationDirectoryUri);
-        Log.w(LOG_TAG, "initial bundle loaded " + initialAssetBundle.getVersion());
+        Log.d(LOG_TAG, "Initial bundle loaded " + initialAssetBundle.getVersion());
 
         // Downloaded versions are stored in /data/data/<app>/files/meteor
         File versionsDirectory = new File(cordova.getActivity().getFilesDir(), "meteor");
-        printDirectoryContent(versionsDirectory, true);
 
         // If the last seen initial version is different from the currently bundled
         // version, we delete the versions directory and unset lastDownloadedVersion
@@ -190,7 +189,6 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         }
 
         Log.i(LOG_TAG, "Serving asset bundle with version: " + currentAssetBundle.getVersion());
-        printDirectoryContent(new File(URI.create(currentAssetBundle.getDirectoryUri().toString())), true);
 
         configuration.setAppId(currentAssetBundle.getAppId());
         configuration.setRootUrlString(currentAssetBundle.getRootUrlString());
@@ -200,17 +198,6 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         if (testingDelegate == null) {
             startStartupTimer();
         }
-    }
-
-    private void switchPendingVersion(CallbackContext callbackContext) {
-        // If there is a pending asset bundle, we make it the current
-        if (pendingAssetBundle != null) {
-            Log.w(LOG_TAG, "Switching pending version " + pendingAssetBundle.getVersion() + " as current version.");
-            currentAssetBundle = pendingAssetBundle;
-            pendingAssetBundle = null;
-        }
-
-        callbackContext.success();
     }
 
     private void startStartupTimer() {
@@ -250,9 +237,6 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
             return true;
         } else if ("startupDidComplete".equals(action)) {
             startupDidComplete(callbackContext);
-            return true;
-        } else if ("switchPendingVersion".equals(action)) {
-            switchPendingVersion(callbackContext);
             return true;
         }
 
@@ -314,7 +298,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     private void startupDidComplete(CallbackContext callbackContext) {
         removeStartupTimer();
 
-        Log.w(LOG_TAG, "Startup completed received. New good version is " + currentAssetBundle.getVersion());
+        Log.i(LOG_TAG, "Startup completed received. New good version is " + currentAssetBundle.getVersion());
 
         // If startup completed successfully, we consider a version good
         configuration.setLastKnownGoodVersion(currentAssetBundle.getVersion());
@@ -343,7 +327,6 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
                 pendingAssetBundle = assetBundle;
             }
         }
-
         // Else, revert to the initial asset bundle, unless that is what we are currently serving
         else if (!currentAssetBundle.equals(assetBundleManager.initialAssetBundle)) {
             pendingAssetBundle = assetBundleManager.initialAssetBundle;
@@ -351,6 +334,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
         // Only reload if we have a pending asset bundle to reload
         if (pendingAssetBundle != null) {
+            Log.i(LOG_TAG, "Reverting to: " + pendingAssetBundle.getVersion());
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -358,6 +342,8 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
                 }
             });
+        } else {
+            Log.w(LOG_TAG, "No suitable version to revert to.");
         }
     }
 
@@ -396,7 +382,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
     @Override
     public void onFinishedDownloadingAssetBundle(AssetBundle assetBundle) {
-        Log.w(LOG_TAG, "Finished downloading " + assetBundle.getVersion());
+        Log.i(LOG_TAG, "Finished downloading " + assetBundle.getVersion());
         configuration.setLastDownloadedVersion(assetBundle.getVersion());
         pendingAssetBundle = assetBundle;
         notifyNewVersionReady(assetBundle.getVersion());
@@ -419,13 +405,8 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
             public Uri remapUri(Uri uri) {
                 if (currentAssetBundle == null) return null;
 
-                Log.w(LOG_TAG, "Requesting asset " + uri.toString());
-
                 AssetBundle.Asset asset = currentAssetBundle.assetForUrlPath(uri.getPath());
                 if (asset != null) {
-                    if (asset.getFileUri().toString().endsWith("index.html")) {
-                        printFileContent(asset.getFileUri());
-                    }
                     return asset.getFileUri();
                 } else {
                     return null;
@@ -485,8 +466,6 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
                 AssetBundle.Asset asset = currentAssetBundle.getIndexFile();
                 if (asset != null) {
-                    Log.w(LOG_TAG, "Serving index.html for uri " + uri.toString());
-                    printFileContent(asset.getFileUri());
                     return asset.getFileUri();
                 } else {
                     return null;
@@ -532,46 +511,6 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
     void setTestingDelegate(TestingDelegate testingDelegate) {
         this.testingDelegate = testingDelegate;
-    }
-
-    void printFileContent(Uri uri) {
-        File file = new File(URI.create(uri.toString()));
-        try {
-            printFileContent(file);
-        }catch(Exception e) {
-            Log.e(LOG_TAG, "Error while printing file content", e);
-        }
-    }
-
-    void printDirectoryContent(File folder, boolean recursive) {
-        if (folder.isDirectory() && folder.exists()) {
-            Log.w(LOG_TAG, "Directory " + folder.getAbsolutePath() + " content is:");
-            File[] allFiles = folder.listFiles();
-            for (File file : allFiles) {
-                Log.w(LOG_TAG, "\t" + file.getAbsolutePath());
-                if (recursive && file.isDirectory()) {
-                    printDirectoryContent(file, true);
-                }
-            }
-        } else {
-            Log.w(LOG_TAG, "Directory " + folder.getAbsolutePath() + " doesnt exists");
-        }
-    }
-
-    public static void printStreamContent(InputStream is) throws Exception {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(is));
-        String line = null;
-        while ((line = reader.readLine()) != null) {
-            Log.w(LOG_TAG, line);
-        }
-        reader.close();
-    }
-
-    public static void printFileContent (File fl) throws Exception {
-        FileInputStream fin = new FileInputStream(fl);
-        printStreamContent(fin);
-        //Make sure you close all streams.
-        fin.close();
     }
 
     //endregion

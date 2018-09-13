@@ -69,16 +69,19 @@ class WebAppConfiguration {
     }
 
     public void addBlacklistedVersion(String version) {
-        Set<String> blacklistedVersionForRetry = preferences.getStringSet("blacklistedVersionsForRetry", Collections.EMPTY_SET);
+        Set<String> versionsForRetry = new HashSet<String>(preferences.getStringSet("versionsForRetry", Collections.EMPTY_SET));
         Set<String> blacklistedVersions = new HashSet<String>(getBlacklistedVersions());
-        blacklistedVersions.add(version);
+        Log.d("BLACKLIST", "versionsForRetry: " + versionsForRetry);
 
-        if (blacklistedVersionForRetry.isEmpty()) {
-            Log.d("BLACKLIST", "blacklisting version for retry: " + blacklistedVersions);
-            preferences.edit().putStringSet("blacklistedVersionsForRetry", blacklistedVersions).commit();
+        if (!versionsForRetry.contains(version) && !blacklistedVersions.contains(version)) {
+            Log.d("BLACKLIST", "adding faulty version for retry: " + version);
+            versionsForRetry.add(version);
+            preferences.edit().putStringSet("versionsForRetry", versionsForRetry).commit();
         } else {
-            Log.d("BLACKLIST", "blacklisting version for real: " + blacklistedVersions);
-            preferences.edit().putStringSet("blacklistedVersionsForRetry", Collections.EMPTY_SET).commit();
+            versionsForRetry.remove(version);
+            blacklistedVersions.add(version);
+            Log.d("BLACKLIST", "blacklisting version: " + version);
+            preferences.edit().putStringSet("versionsForRetry", versionsForRetry).commit();
             preferences.edit().putStringSet("blacklistedVersions", blacklistedVersions).commit();
         }
     }
