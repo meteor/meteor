@@ -147,22 +147,21 @@ Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react] <pa
        meteor create --list
        meteor create --package [<package_name>]
 
-Make a subdirectory named <path> if it doesn't exist and create a new
-Meteor app there. You can pass an absolute path, relative path, or '.' for
-the current directory. Use the --bare option to create an empty app, or
-the --minimal option to create an empty app with as few Meteor packages as
-possible. To scaffold a more complete app, use the --full option. To
-create a basic React-based app, pass the --react option.
+Make a subdirectory named <path> if it doesn't exist and create a new Meteor app
+there. You can pass an absolute path, relative path, or '.' for the current
+directory. Use the --bare option to create an empty app, or the --minimal option
+to create an empty app with as few Meteor packages as possible. To scaffold a
+more complete app, use the --full option. To create a basic React-based app,
+pass the --react option.
 
-With the --package option, creates a Meteor package instead of an app. If
-you're in an app, the package will go in the app's top-level 'packages'
-directory; otherwise it will be created in the current directory.
+With the --package option, creates a Meteor package instead of an app. If you're
+in an app, the package will go in the app's top-level 'packages' directory;
+otherwise it will be created in the current directory.
 
 The app will use the release of Meteor specified with the --release
 option, or the latest available version if the option is not specified. (A
-package created in an app, will be created using the application's version
-of meteor and a package created outside a meteor app will use the latest
-release).
+package created in an app, will be created using the application's version of
+meteor and a package created outside a meteor app will use the latest release).
 
 You can pass --example to start off with a copy of one of the Meteor
 sample applications. Use --list to see the available examples. There are
