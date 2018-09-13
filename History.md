@@ -79,6 +79,18 @@ N/A
   Meteor without having to publish multiple versions of your package. [PR
   #9983](https://github.com/meteor/meteor/pull/9983)
 
+* New [React](https://reactjs.org/)-based Meteor applications can now be
+  created using the command
+  ```bash
+  meteor create --react new-react-app
+  ```
+  Though relatively simple, this application template reflects the ideas
+  of many contributors, especially [@dmihal](https://github.com/dmihal)
+  and [@alexsicart](https://github.com/alexsicart), and it will no doubt
+  continue to evolve in future Meteor releases.
+  [Feature #182](https://github.com/meteor/meteor-feature-requests/issues/182)
+  [PR #10149](https://github.com/meteor/meteor/pull/10149)
+
 * The `.meteor/packages` file supports a new syntax for overriding
   problematic version constraints from packages you do not control.
 
