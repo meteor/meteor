@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.7.1, TBD
+## v1.8, TBD
 
 ### Breaking changes
 N/A
@@ -19,7 +19,7 @@ N/A
   Naturally, this extra bundle increased client (re)build times. Since
   developers spend most of their time testing the modern bundle in
   development, and the legacy bundle mostly provides a safe fallback in
-  production, Meteor 1.7.1 cleverly postpones building the legacy bundle
+  production, Meteor 1.8 cleverly postpones building the legacy bundle
   until just after the development server restarts, so that development
   can continue as soon as the modern bundle has finished building. Since
   the legacy build happens during a time when the build process would
@@ -73,11 +73,11 @@ N/A
   If you are an author of a compiler plugin, we strongly recommend using
   this new API, since unnecessary compilation of files that are not
   included in the bundle can be a major source of performance problems for
-  compiler plugins. Although this new API is only available in Meteor
-  1.7.1, you can use `inputFile.supportsLazyCompilation` to determine
-  dynamically whether the new API is available, so you can support older
-  versions of Meteor without having to publish multiple versions of your
-  package. [PR #9983](https://github.com/meteor/meteor/pull/9983)
+  compiler plugins. Although this new API is only available in Meteor 1.8,
+  you can use `inputFile.supportsLazyCompilation` to determine dynamically
+  whether the new API is available, so you can support older versions of
+  Meteor without having to publish multiple versions of your package. [PR
+  #9983](https://github.com/meteor/meteor/pull/9983)
 
 * The `.meteor/packages` file supports a new syntax for overriding
   problematic version constraints from packages you do not control.
@@ -91,7 +91,7 @@ N/A
   to be impossible (or at least very difficult) because of this
   [`api.versionsFrom("1.3")`](https://github.com/practicalmeteor/meteor-mocha/blob/3a2658070a920f8846df48bb8d8c7b678b8c6870/package.js#L28)
   statement, which unfortunately constrained the `coffeescript` package to
-  version 1.x. In Meteor 1.7.1, if you want to update `coffeescript` to
+  version 1.x. In Meteor 1.8, if you want to update `coffeescript` to
   2.x, you can relax the `practicalmeteor:mocha` constraint by putting
   ```
   coffeescript@2.2.1_1! # note the !
@@ -359,7 +359,7 @@ N/A
   introduced in Meteor 1.7 to stop scanning `node_modules` for files that
   might be of interest to compiler plugins, since the intended workarounds
   (creating symlinks) did not satisfy all existing use cases. We will
-  revisit this optimization in Meteor 1.7.1.
+  revisit this optimization in Meteor 1.8.
   [mozfet/meteor-autoform-materialize#43](https://github.com/mozfet/meteor-autoform-materialize/issues/43)
 
 * After updating to Meteor 1.7 or 1.7.0.1, you should update the
