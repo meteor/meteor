@@ -492,6 +492,7 @@ main.registerCommand({
     bare: { type: Boolean },
     minimal: { type: Boolean },
     full: { type: Boolean },
+    react: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -850,8 +851,9 @@ main.registerCommand({
 
   if (! options.bare &&
       ! options.minimal &&
-      ! options.full) {
-    // Notify people about --bare, --minimal, and --full.
+      ! options.full &&
+      ! options.react) {
+    // Notify people about --bare, --minimal, --full, and --react.
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
@@ -863,6 +865,7 @@ main.registerCommand({
         "Meteor packages as possible");
     cmd("meteor create --full    # to create a more complete " +
         "scaffolded app");
+    cmd("meteor create --react   # to create a basic React-based app");
   }
 
   Console.info("");
