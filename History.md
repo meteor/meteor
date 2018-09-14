@@ -1,5 +1,13 @@
 ## v.NEXT
 
+* Cordova Hot Code Push mechanism is now switching versions explicitly with
+  call to `WebAppLocalServer.switchToPendingVersion` instead of trying to 
+  switch every time a browser reload is detected. If you use any third 
+  party package or have your own HCP routines implemented be sure to call
+  it before forcing a browser reload. If you use the automatic reload from
+  the `Reload` meteor package you do not need to do anything.
+  [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62) 
+
 * Meteor's `self-test` has been updated to use "headless" Chrome rather
   than PhantomJS for browser tests. PhantomJS can still be forced by
   passing the `--phantom` flag to the `meteor self-test` command.
