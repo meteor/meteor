@@ -969,7 +969,7 @@ export function makeLookupFunction(key, options = {}) {
   const firstPart = parts.length ? parts[0] : '';
   const lookupRest = (
     parts.length > 1 &&
-    makeLookupFunction(parts.slice(1).join('.'))
+    makeLookupFunction(parts.slice(1).join('.'), options)
   );
 
   const omitUnnecessaryFields = result => {
