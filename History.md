@@ -198,7 +198,7 @@ N/A
   [Issue #10042](https://github.com/meteor/meteor/issues/10042)
 
 * Mongo has been updated to version 4.0.2 and the `mongodb` npm package
-  used by `npm-mongo` has been updated to version 3.1.1.
+  used by `npm-mongo` has been updated to version 3.1.6.
   [PR #10058](https://github.com/meteor/meteor/pull/10058)
   [Feature Request #269](https://github.com/meteor/meteor-feature-requests/issues/269)
 
