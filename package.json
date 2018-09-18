@@ -50,11 +50,11 @@
     "reify": "0.17.3"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-decorators": "7.0.0",
-    "@babel/plugin-syntax-decorators": "7.0.0",
-    "fibers": "^2.0.0",
-    "meteor-promise": "^0.8.5",
-    "mocha": "^5.0.0",
-    "promise": "^8.0.1"
+    "@babel/plugin-proposal-decorators": "7.1.0",
+    "@babel/plugin-syntax-decorators": "7.1.0",
+    "fibers": "3.0.0",
+    "meteor-promise": "0.8.6",
+    "mocha": "5.2.0",
+    "promise": "8.0.2"
   }
 }
