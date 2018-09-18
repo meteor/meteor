@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'CSS minifier',
-  version: '1.4.0-rc18.14'
+  version: '1.4.0-rc18.15'
 });
 
 Npm.depends({

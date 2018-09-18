@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Blaze configuration templates for the Meteor developer accounts OAuth.',
-  version: '1.0.1-rc18.14'
+  version: '1.0.1-rc18.15'
 });
 
 Package.onUse(api => {

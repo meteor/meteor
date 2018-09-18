@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Blaze configuration templates for Facebook OAuth.",
-  version: "1.0.2-rc18.14",
+  version: "1.0.2-rc18.15",
 });
 
 Package.onUse(api => {
