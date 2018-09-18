@@ -689,9 +689,9 @@ _.extend(AppRunner.prototype, {
       return { outcome: 'stopped' };
     }
 
-    if (self.runPromise) {
-      throw new Error("already have promise?");
-    }
+    // We should have reset self.runPromise to null by now, but await it
+    // just in case it's still defined.
+    Promise.await(self.runPromise);
 
     var runPromise = self.runPromise = self._makePromise("run");
 
