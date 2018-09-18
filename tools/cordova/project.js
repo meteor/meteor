@@ -7,6 +7,7 @@ import semver from 'semver';
 import files from '../fs/files.js';
 import utils from '../utils/utils.js';
 import { Console } from '../console/console.js';
+import { Profile } from '../tool-env/profile.js';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
 import httpHelpers from '../utils/http-helpers.js';
@@ -837,3 +838,16 @@ running again with the --verbose option to help diagnose the issue.)`),
     }
   }
 }
+
+const CPp = CordovaProject.prototype;
+["prepareFromAppBundle",
+ "prepareForPlatform",
+ "buildForPlatform",
+].forEach(name => {
+  CPp[name] = Profile(platform => {
+    const prefix = `CordovaProject#${name}`;
+    return name.endsWith("ForPlatform") ? `${prefix} for ${
+      displayNameForPlatform(platform)
+    }` : prefix;
+  }, CPp[name]);
+});

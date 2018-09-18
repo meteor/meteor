@@ -16,6 +16,8 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
+const { Profile } = require("../tool-env/profile.js");
+
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
@@ -898,27 +900,40 @@ var buildCommands = {
   catalogRefresh: new catalog.Refresh.Never()
 };
 
-main.registerCommand(_.extend({ name: 'build' }, buildCommands),
-  function (options) {
-    return buildCommand(options);
+main.registerCommand({
+  name: "build",
+  ...buildCommands,
+}, async function (options) {
+  return Profile.run(
+    "meteor build",
+    () => Promise.await(buildCommand(options))
+  );
 });
 
 // Deprecated -- identical functionality to 'build' with one exception: it
 // doesn't output a directory with all builds but rather only one tarball with
 // server/client programs.
 // XXX COMPAT WITH 0.9.1.1
-main.registerCommand(_.extend({ name: 'bundle', hidden: true
-                              }, buildCommands),
-    function (options) {
+main.registerCommand({
+  name: "bundle",
+  hidden: true,
+  ...buildCommands,
+}, async function (options) {
+  Console.error(
+    "This command has been deprecated in favor of " +
+    Console.command("'meteor build'") + ", which allows you to " +
+    "build for multiple platforms and outputs a directory instead of " +
+    "a single tarball. See " + Console.command("'meteor help build'") + " " +
+    "for more information.");
+  Console.error();
 
-      Console.error(
-      "This command has been deprecated in favor of " +
-      Console.command("'meteor build'") + ", which allows you to " +
-      "build for multiple platforms and outputs a directory instead of " +
-      "a single tarball. See " + Console.command("'meteor help build'") + " " +
-      "for more information.");
-      Console.error();
-      return buildCommand(_.extend(options, { _bundleOnly: true }));
+  return Profile.run(
+    "meteor bundle",
+    () => Promise.await(buildCommand({
+      ...options,
+      _bundleOnly: true,
+    }))
+  );
 });
 
 var buildCommand = function (options) {
@@ -951,6 +966,8 @@ var buildCommand = function (options) {
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
+    // TODO Fix the nested Profile.run warning here, without interfering
+    // with METEOR_PROFILE output for other commands, like `meteor run`.
     projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
@@ -1382,7 +1399,14 @@ main.registerCommand({
     return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options, {rawOptions}) {
+}, async function (...args) {
+  return Profile.run(
+    "meteor deploy",
+    () => Promise.await(deployCommand(...args))
+  );
+});
+
+function deployCommand(options, { rawOptions }) {
   var site = options.args[0];
 
   if (options.delete) {
@@ -1426,6 +1450,7 @@ main.registerCommand({
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
+    // TODO Fix nested Profile.run warning here, too.
     projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
@@ -1464,7 +1489,7 @@ main.registerCommand({
   }
 
   return deployResult;
-});
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // authorized

@@ -3037,9 +3037,9 @@ Find out more about Meteor at meteor.com.
  * you are testing!
  */
 
-exports.bundle = function (options) {
+exports.bundle = Profile("bundler.bundle", function (options) {
   return files.withCache(() => bundle(options));
-};
+});
 
 function bundle({
   projectContext,

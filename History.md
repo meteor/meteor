@@ -237,6 +237,10 @@ N/A
   [PR #9933](https://github.com/meteor/meteor/pull/9933)
   [PR #10050](https://github.com/meteor/meteor/pull/10050)
 
+* The environment variable `METEOR_PROFILE=milliseconds` now works for the
+  build portion of the `meteor build` and `meteor deploy` commands.
+  [Feature #239](https://github.com/meteor/meteor-feature-requests/issues/239)
+
 ## v1.7.0.5, 2018-08-16
 
 ### Breaking changes
