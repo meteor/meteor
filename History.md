@@ -169,7 +169,7 @@ N/A
   seconds of rebuild time for projects with lots of CSS.
 
 * The `meteor-babel` npm package used by `babel-compiler` has been updated
-  to version 7.0.0. **Note:** This change _requires_ also updating the
+  to version 7.1.0. **Note:** This change _requires_ also updating the
   `@babel/runtime` npm package to version 7.0.0-beta.56 or later:
   ```sh
   meteor npm install @babel/runtime@latest
