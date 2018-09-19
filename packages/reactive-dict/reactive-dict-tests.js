@@ -1,7 +1,7 @@
 Tinytest.add('ReactiveDict - set to undefined', function (test) {
   var dict = new ReactiveDict;
   dict.set('foo', undefined);
-  test.equal(_.keys(dict.all()), ['foo']);
+  test.equal(Object.keys(dict.all()), ['foo']);
   dict.setDefault('foo', 'bar');
   test.equal(dict.get('foo'), undefined);
 });
@@ -48,7 +48,7 @@ Tinytest.add('ReactiveDict - setDefault', function (test) {
   dict.set('B', undefined);
   dict.setDefault({
     A: 'default',
-    B: 'defualt',
+    B: 'default',
     C: 'default',
     D: undefined
   });
