@@ -1,3 +1,5 @@
+import { SRP } from 'meteor/srp';
+
 Tinytest.add("srp - fixed values", function(test) {
   // Test exact values outputted by `generateVerifier`. We have to be very
   // careful about changing the SRP code, because changes could render
@@ -5,13 +7,11 @@ Tinytest.add("srp - fixed values", function(test) {
   // intentionally brittle to catch change that could affect the
   // validity of user passwords.
 
-  var identity = "b73d9af9-4e74-4ce0-879c-484828b08436";
-  var salt = "85f8b9d3-744a-487d-8982-a50e4c9f552a";
-  var password = "95109251-3d8a-4777-bdec-44ffe8d86dfb";
-  var a = "dc99c646fa4cb7c24314bb6f4ca2d391297acd0dacb0430a13bbf1e37dcf8071";
-  var b = "cf878e00c9f2b6aa48a10f66df9706e64fef2ca399f396d65f5b0a27cb8ae237";
+  const identity = "b73d9af9-4e74-4ce0-879c-484828b08436";
+  const salt = "85f8b9d3-744a-487d-8982-a50e4c9f552a";
+  const password = "95109251-3d8a-4777-bdec-44ffe8d86dfb";
 
-  var verifier = SRP.generateVerifier(
+  const verifier = SRP.generateVerifier(
     password, {identity: identity, salt: salt});
   test.equal(verifier.identity, identity);
   test.equal(verifier.salt, salt);

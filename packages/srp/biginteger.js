@@ -1,5 +1,5 @@
 /// METEOR WRAPPER
-BigInteger = (function () {
+export default BigInteger = (function () {
 
 
 /// BEGIN jsbn.js
