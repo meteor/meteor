@@ -16,10 +16,10 @@ meteorJsMinify = function (source) {
           "process.env.NODE_ENV": NODE_ENV
         }
       },
+      // Fix issue #9866, as explained in this comment:
+      // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
+      safari10: true,
       mangle: {
-        // Fix issue #9866, as explained in this comment:
-        // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
-        safari10: true,
         // Fix safari issue related to catch clause scoping
         // https://github.com/terser-js/terser/issues/117
         ie8: true,
