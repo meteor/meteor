@@ -215,7 +215,7 @@ ListPage.propTypes = {
 };
 ```
 
-Then we create a `ListPageContainer` container component which wraps it and provides a data source:
+Then we create a container component which wraps it and provides a data source:
 
 ```js
 import { Meteor } from 'meteor/meteor';
@@ -223,7 +223,7 @@ import { Lists } from '../../api/lists/lists.js';
 import { withTracker } from 'meteor/react-meteor-data';
 import ListPage from '../pages/ListPage.js';
 
-export default ListPageContainer = withTracker(({ id }) => {
+const ListPageContainer = withTracker(({ id }) => {
   const todosHandle = Meteor.subscribe('todos.inList', id);
   const loading = !todosHandle.ready();
   const list = Lists.findOne(id);
@@ -235,9 +235,11 @@ export default ListPageContainer = withTracker(({ id }) => {
     todos: listExists ? list.todos().fetch() : [],
   };
 })(ListPage);
+
+export default ListPageContainer;
 ```
 
-It's a good habit to name your container exactly like the component that it wraps, with the word “Container” tacked onto the end. This way, when you're attempting to track down issues in your code, it makes it much easier to locate the appropriate files/classes.
+It's a good habit to name your container exactly like the component that it wraps, with the word “Container” tacked onto the end (eg `ListPageContainer`). This way, when you're attempting to track down issues in your code, it makes it much easier to locate the appropriate files/classes.
 
 The container component created by `withTracker` will reactively re-render the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
 
@@ -294,13 +296,15 @@ const App = (props) => (
   </div>
 );
 
-export default AppContainer = withTracker(props => {
+const AppContainer = withTracker(props => {
   // props here will have `main`, passed from the router
   // anything we return from this function will be *added* to it
   return {
     user: Meteor.user(),
   };
 })(App);
+
+export default AppContainer
 ```
 
 <h3 id="using-react-router">React Router</h3>
