@@ -304,7 +304,7 @@ const AppContainer = withTracker(props => {
   };
 })(App);
 
-export default AppContainer
+export default AppContainer;
 ```
 
 <h3 id="using-react-router">React Router</h3>
