@@ -4,10 +4,6 @@ language: node_js
 env:
   - NODE_ENV=development
 
-cache:
-  directories:
-    - node_modules
-
 notifications:
   email: false
 
