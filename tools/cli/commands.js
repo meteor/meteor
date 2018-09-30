@@ -1119,7 +1119,7 @@ https://guide.meteor.com/mobile.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
-                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
+                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
 
               if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
