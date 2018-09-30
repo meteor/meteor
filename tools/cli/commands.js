@@ -654,7 +654,7 @@ main.registerCommand({
     const branchOption = repoInfo.branch ? ` -b ${repoInfo.branch}` : '';
     const path = options.args.length === 1 ? ` ${options.args[0]}` : '';
 
-    Console.info(`To create the ${options.example} example, please run:`)
+    Console.info(`To create the ${options.example} example, please run:`);
     Console.info(
       Console.command(`git clone ${repoInfo.repo}${branchOption}${path}`),
       Console.options({ indent: 2 }));
@@ -728,11 +728,11 @@ main.registerCommand({
     });
   }
 
-  var toIgnore = [/^local$/, /^\.id$/]
+  var toIgnore = [/^local$/, /^\.id$/];
   if (destinationHasCodeFiles) {
     // If there is already source code in the directory, don't copy our
     // skeleton app code over it. Just create the .meteor folder and metadata
-    toIgnore.push(/(\.html|\.js|\.css)/)
+    toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
   let skelName = "skel";
