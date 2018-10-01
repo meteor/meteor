@@ -230,6 +230,8 @@ exports.getMinifierDefaults = function getMinifierDefaults(features) {
     compact: false,
     // Don't generate a source map, we do that during compilation
     sourceMaps: false,
+    // Necessary after https://github.com/babel/minify/pull/855
+    comments: false,
     // We don't need to generate AST code
     ast: false,
     // Do not honor babelrc settings, would conflict with compilation
