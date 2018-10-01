@@ -59,6 +59,5 @@ async function performTask() {
 > helpful to use parameter de-structuring to provide additional clarity:
 >
 > ```js
-import("another-tool").then(({ default: thatTool }) => thatTool.go());
-
-```
+> import("another-tool").then(({ default: thatTool }) => thatTool.go());
+> ```
