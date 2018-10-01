@@ -6,7 +6,7 @@ Package.describe({
 Package.onUse(api => {
   api.use('check', 'server');
   api.use('webapp', 'server');
-  api.use('accounts-base', ['client', 'server']);
+  api.use(['accounts-base', 'ecmascript'], ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('oauth');
