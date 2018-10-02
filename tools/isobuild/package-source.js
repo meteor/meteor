@@ -1311,7 +1311,7 @@ _.extend(PackageSource.prototype, {
       }
 
       while (!_.isEmpty(assetDirs)) {
-        dir = assetDirs.shift();
+        var dir = assetDirs.shift();
         // remove trailing slash
         dir = dir.substr(0, dir.length - 1);
 
