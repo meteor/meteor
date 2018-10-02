@@ -18,12 +18,8 @@ meteorJsMinify = function (source) {
       },
       // Fix issue #9866, as explained in this comment:
       // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
+      // And fix terser issue #117: https://github.com/terser-js/terser/issues/117
       safari10: true,
-      mangle: {
-        // Fix safari issue related to catch clause scoping
-        // https://github.com/terser-js/terser/issues/117
-        ie8: true,
-      }
     });
 
     if (typeof terserResult.code === "string") {
