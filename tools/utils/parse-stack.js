@@ -15,8 +15,13 @@ const _ = require('underscore');
 // return anything past that function. We call this the "user portion"
 // of the stack.
 export function parse(err) {
+  const stack = err.stack;
+  if (typeof stack !== "string") {
+    return {};
+  }
+
   // at least the first line is the exception
-  const frames = err.stack.split("\n").slice(1)
+  const frames = stack.split("\n").slice(1)
     // longjohn adds lines of the form '---' (45 times) to separate
     // the trace across async boundaries. It's not clear if we need to
     // separate the trace in the same way we do for future boundaries below
