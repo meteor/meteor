@@ -724,9 +724,9 @@ function wrapCallback(callback, convertResult) {
     if (error) {
       callback(error);
     } else if (typeof convertResult === "function") {
-      callback(null, convertResult(result));
+      callback(error, convertResult(result));
     } else {
-      callback(null, result);
+      callback(error, result);
     }
   };
 }
