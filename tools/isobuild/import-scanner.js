@@ -404,6 +404,7 @@ export default class ImportScanner {
           deps: {},
           lazy: true,
           imported: false,
+          implicit: true,
         });
       }
 
@@ -411,6 +412,13 @@ export default class ImportScanner {
       // instead of the source path.
       file.absModuleId = absTargetId;
       file.sourcePath = file.targetPath;
+
+      // If the sourceFile was not generated implicitly above, then it
+      // must have been explicitly added as a source module, so we should
+      // not override or modify its contents. #10233
+      if (sourceFile.implicit !== true) {
+        return;
+      }
 
       const relativeId = this._getRelativeImportId(
         absSourceId,

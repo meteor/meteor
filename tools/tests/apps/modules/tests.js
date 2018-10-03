@@ -541,6 +541,12 @@ describe("issue #9878", () => {
   });
 });
 
+describe("issue #10233", () => {
+  it("should be fixed", () => {
+    require("meteor/dummy-compiler").check();
+  });
+});
+
 describe("local .json modules", () => {
   it("should be importable within Meteor packages (issue #10122)", () => {
     import { oyez } from "meteor/import-local-json-module";
