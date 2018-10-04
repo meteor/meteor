@@ -125,16 +125,19 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       });
     } catch (e) {
       if (e.loc) {
+        // Error is from @babel/parser.
         inputFile.error({
           message: e.message,
           line: e.loc.line,
           column: e.loc.column,
         });
-
-        return null;
+      } else {
+        // Error is from a Babel transform, with line/column information
+        // embedded in e.message.
+        inputFile.error(e);
       }
 
-      throw e;
+      return null;
     }
 
     if (isMeteorPre144) {
