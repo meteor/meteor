@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-cd "`dirname "$0"`"
-cd ../..
+cd $(dirname $0)/../..
 export METEOR_HOME=`pwd`
 
 export phantom=$phantom
@@ -9,11 +8,11 @@ export phantom=$phantom
 # only install dependencies if required
 if [ "$phantom" = true ]
 then
-# Just in case these packages haven't been installed elsewhere.
-./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
+    # Just in case these packages haven't been installed elsewhere.
+    ./meteor npm install -g phantomjs-prebuilt browserstack-webdriver
 else
-# Install locally
-./meteor npm install puppeteer
+    # Installs into dev_bundle/lib/node_modules/puppeteer.
+    ./meteor npm install -g puppeteer
 fi
 
 export PATH=$METEOR_HOME:$PATH
@@ -29,9 +28,9 @@ sed '/test-in-console listening$/q' <&3
 
 if [ "$phantom" = true ]
 then
-./dev_bundle/bin/phantomjs "$METEOR_HOME/packages/test-in-console/phantomRunner.js"
+    ./dev_bundle/bin/phantomjs "$METEOR_HOME/packages/test-in-console/phantomRunner.js"
 else
-node "$METEOR_HOME/packages/test-in-console/puppeteerRunner.js"
+    node "$METEOR_HOME/packages/test-in-console/puppeteerRunner.js"
 fi
 
 STATUS=$?

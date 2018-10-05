@@ -13,6 +13,7 @@ Package.onUse(function (api) {
   api.use("promise");
   api.use("fetch");
   api.use("modern-browsers");
+  api.use("inter-process-messaging", "server");
 
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");

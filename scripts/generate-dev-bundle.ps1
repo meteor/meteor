@@ -28,6 +28,9 @@ $NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
 # 7-zip path.
 $system7zip = "C:\Program Files\7-zip\7z.exe"
 
+# Required for downloading MongoDB via HTTPS
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
 # Since we reuse the same temp directory, cleanup from previous failed runs.
 Remove-DirectoryRecursively $DIR
 
@@ -316,9 +319,23 @@ Function Add-NpmModulesFromJsBundleFile {
     }
   }
 
+  cd node_modules
+
+  # @babel/runtime@7.0.0-beta.56 removed the @babel/runtime/helpers/builtin
+  # directory, since all helpers are now implemented in the built-in style
+  # (meaning they do not import core-js polyfills). Generated code in build
+  # plugins might still refer to the old directory layout (at least for the
+  # time being), but we can accommodate that by symlinking to the parent
+  # directory, since all the module names are the same.
+  if ((Test-Path "@babel\runtime\helpers") -And
+      !(Test-Path "@babel\runtime\helpers\builtin")) {
+    cd @babel\runtime\helpers
+    & "$($Commands.node)" -e 'require("fs").symlinkSync(".", "builtin", "junction")'
+    cd ..\..\..
+  }
+
   # Since we install a patched version of pacote in $Destination\lib\node_modules,
   # we need to remove npm's bundled version to make it use the new one.
-  cd node_modules
   if (Test-Path "pacote") {
     Remove-DirectoryRecursively "npm\node_modules\pacote"
   }

@@ -156,7 +156,7 @@ function addToTree(tree, id, value) {
 function getNamespace(module, id) {
   var namespace;
 
-  module.watch(module.require(id), {
+  module.link(id, {
     "*": function (ns) {
       namespace = ns;
     }

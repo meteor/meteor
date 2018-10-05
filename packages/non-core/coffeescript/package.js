@@ -22,7 +22,7 @@ Package.registerBuildPlugin({
     // rather than delegating to the one installed in the application's
     // node_modules directory, so the coffeescript package can work in
     // Meteor 1.7.1 apps as well as 1.7.0.x and earlier.
-    '@babel/runtime': '7.0.0-beta.55'
+    '@babel/runtime': '7.0.0'
   }
 });
 

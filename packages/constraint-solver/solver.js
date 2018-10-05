@@ -207,11 +207,63 @@ CS.Solver.prototype.analyze = function () {
   analysis.topLevelEqualityConstrainedPackages = {};
 
   Profile.time("analyze constraints", function () {
+    // Find package names with @x.y.z! overrides. We consider only
+    // top-level constraints here, which includes (1) .meteor/packages,
+    // (2) local package versions, and (3) Meteor release constraints.
+    // Since (2) and (3) are generated programmatically without any
+    // override syntax (in tools/project-context.js), the .meteor/packages
+    // file is effectively the only place where override syntax has any
+    // impact. This limitation is deliberate, since overriding package
+    // version constraints is a power-tool that should be used sparingly
+    // by application developers, and never abused by package authors.
+    var overrides = new Set;
+    _.each(input.constraints, function (c) {
+      if (c.constraintString &&
+          c.versionConstraint.override) {
+        overrides.add(c.package);
+      }
+    });
+
+    // Return c.versionConstraint unless it is overridden, in which case
+    // make a copy of it and set vConstraint.weakMinimum = true.
+    function getVersionConstraint(c) {
+      var vConstraint = c.versionConstraint;
+
+      // The meteor-tool version can never be weakened/overridden.
+      if (c.package === "meteor-tool") {
+        return vConstraint;
+      }
+
+      // Overrides cannot be weakened, so in theory they could conflict
+      // with each other, though that's unlikely to be a problem within a
+      // single .meteor/packages file.
+      if (vConstraint.override) {
+        return vConstraint;
+      }
+
+      if (overrides.has(c.package)) {
+        // Make a defensive shallow copy of vConstraint with the same
+        // prototype (that is, PV.VersionConstraint.prototype).
+        vConstraint = Object.create(
+          Object.getPrototypeOf(vConstraint),
+          Object.getOwnPropertyDescriptors(vConstraint)
+        );
+
+        // This weakens the constraint so that it matches any version not
+        // less than the constraint, regardless of whether the major or
+        // minor versions are the same. See CS.isConstraintSatisfied in
+        // constraint-solver.js for the implementation of this behavior.
+        vConstraint.weakMinimum = true;
+      }
+
+      return vConstraint;
+    }
+
     // top-level constraints
     _.each(input.constraints, function (c) {
       if (c.constraintString) {
         analysis.constraints.push(new CS.Solver.Constraint(
-          null, c.package, c.versionConstraint,
+          null, c.package, getVersionConstraint(c),
           "constraint#" + analysis.constraints.length));
 
         if (c.versionConstraint.alternatives.length === 1 &&
@@ -231,7 +283,7 @@ CS.Solver.prototype.analyze = function () {
           if (input.isKnownPackage(p2) &&
               dep.packageConstraint.constraintString) {
             analysis.constraints.push(new CS.Solver.Constraint(
-              pv, p2, dep.packageConstraint.versionConstraint,
+              pv, p2, getVersionConstraint(dep.packageConstraint),
               "constraint#" + analysis.constraints.length));
           }
         });

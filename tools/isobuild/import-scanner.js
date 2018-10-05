@@ -124,6 +124,30 @@ function ensureLeadingSlash(path) {
   return posix;
 }
 
+// Files start with file.imported === false. As we scan the dependency
+// graph, a file can get promoted to "dynamic" or "static" to indicate
+// that it has been imported by other modules. The "dynamic" status trumps
+// false, and "static" trumps both "dynamic" and false. A file can never
+// be demoted to a lower status after it has been promoted.
+const importedStatusOrder = [false, "dynamic", "static"];
+
+// Set each file.imported status to the maximum status of provided files.
+function alignImportedStatuses(...files) {
+  const maxIndex = Math.max(...files.map(
+    file => importedStatusOrder.indexOf(file.imported)));
+  const maxStatus = importedStatusOrder[maxIndex];
+  files.forEach(file => file.imported = maxStatus);
+}
+
+// Set file.imported to status if status has a higher index than the
+// current value of file.imported.
+function setImportedStatus(file, status) {
+  if (importedStatusOrder.indexOf(status) >
+      importedStatusOrder.indexOf(file.imported)) {
+    file.imported = status;
+  }
+}
+
 // Map from SHA (which is already calculated, so free for us)
 // to the results of calling findImportedModuleIdentifiers.
 // Each entry is an array of strings, and this is a case where
@@ -380,6 +404,7 @@ export default class ImportScanner {
           deps: {},
           lazy: true,
           imported: false,
+          implicit: true,
         });
       }
 
@@ -388,6 +413,13 @@ export default class ImportScanner {
       file.absModuleId = absTargetId;
       file.sourcePath = file.targetPath;
 
+      // If the sourceFile was not generated implicitly above, then it
+      // must have been explicitly added as a source module, so we should
+      // not override or modify its contents. #10233
+      if (sourceFile.implicit !== true) {
+        return;
+      }
+
       const relativeId = this._getRelativeImportId(
         absSourceId,
         absTargetId,
@@ -395,7 +427,7 @@ export default class ImportScanner {
 
       // Set the contents of the source module to import the target
       // module(s), combining their exports on the source module's exports
-      // object using the module.watch live binding system. This is better
+      // object using the module.link live binding system. This is better
       // than `Object.assign(exports, require(relativeId))` because it
       // allows the exports to change in the future, and better than
       // `module.exports = require(relativeId)` because it preserves the
@@ -408,12 +440,11 @@ export default class ImportScanner {
       // plugin calling inputFile.addJavaScript multiple times for the
       // same source file (see discussion in #9176), with different target
       // paths, code, laziness, etc.
-      sourceFile.dataString = this._getDataString(sourceFile) + [
-        "module.watch(require(" + JSON.stringify(relativeId) + "), {",
-        '  "*": module.makeNsSetter(true)',
-        "});",
-        ""
-      ].join("\n");
+      sourceFile.dataString = this._getDataString(sourceFile) +
+        // The + in "*+" indicates that the "default" property should be
+        // included as well as any other re-exported properties.
+        "module.link(" + JSON.stringify(relativeId) + ', { "*": "*+" });\n';
+
       sourceFile.data = Buffer.from(sourceFile.dataString, "utf8");
       sourceFile.hash = sha1(sourceFile.data);
       sourceFile.deps[relativeId] = {
@@ -484,15 +515,7 @@ export default class ImportScanner {
     oldFile.data = Buffer.from(oldFile.dataString, "utf8");
     oldFile.hash = sha1(oldFile.data);
 
-    // If either oldFile or newFile has been imported non-dynamically,
-    // then oldFile.imported needs to be === true. Otherwise we simply set
-    // oldFile.imported = oldFile.imported || newFile.imported, which
-    // could be either "dynamic" or false.
-    oldFile.imported =
-      oldFile.imported === true ||
-      newFile.imported === true ||
-      oldFile.imported ||
-      newFile.imported;
+    alignImportedStatuses(oldFile, newFile);
 
     oldFile.sourceMap = combinedSourceMap.toJSON();
     if (! oldFile.sourceMap.mappings) {
@@ -643,6 +666,11 @@ export default class ImportScanner {
 
       let container = files[0];
 
+      // Make sure all the files share the same file.imported value, so
+      // that a statically bundled alias doesn't point to a dynamically
+      // bundled container, or vice-versa.
+      alignImportedStatuses(...files);
+
       // Take the first file inside node_modules as the container. If none
       // found, default to the first file in the list. It's important to
       // let node_modules files be the containers if possible, since some
@@ -675,9 +703,7 @@ export default class ImportScanner {
       return file.absModuleId &&
         ! file[fakeSymbol] &&
         ! file.hasErrors &&
-        (! file.lazy ||
-         file.imported === true ||
-         file.imported === "dynamic");
+        (! file.lazy || file.imported);
     });
   }
 
@@ -778,10 +804,7 @@ export default class ImportScanner {
       // they can be handled by the loop above.
       const file = this._getFile(resolved.path);
       if (file && file.alias) {
-        file.imported = forDynamicImport
-          ? file.imported || "dynamic"
-          : true;
-
+        setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
         return file.alias;
       }
     }
@@ -806,7 +829,7 @@ export default class ImportScanner {
   }
 
   _scanFile(file, forDynamicImport = false) {
-    if (file.imported === true) {
+    if (file.imported === "static") {
       // If we've already scanned this file non-dynamically, then we don't
       // need to scan it again.
       return;
@@ -820,7 +843,7 @@ export default class ImportScanner {
     }
 
     // Set file.imported to a truthy value (either "dynamic" or true).
-    file.imported = forDynamicImport ? "dynamic" : true;
+    setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
 
     if (file.reportPendingErrors &&
         file.reportPendingErrors() > 0) {
@@ -1047,8 +1070,7 @@ export default class ImportScanner {
       // raw version found in node_modules. See also:
       // https://github.com/meteor/meteor-feature-requests/issues/6
 
-    } else if (! this.isWeb() &&
-               absModuleId.startsWith("/node_modules/")) {
+    } else if (this._shouldUseNode(absModuleId)) {
       // On the server, modules in node_modules directories will be
       // handled natively by Node, so we just need to generate a stub
       // module that calls module.useNode(), rather than calling
@@ -1093,6 +1115,34 @@ export default class ImportScanner {
     this._addFileByRealPath(depFile, realPath);
 
     return depFile;
+  }
+
+  // Similar to logic in Module.prototype.useNode as defined in
+  // packages/modules-runtime/server.js. Introduced to fix issue #10122.
+  _shouldUseNode(absModuleId) {
+    if (this.isWeb()) {
+      // Node should never be used in a browser, obviously.
+      return false;
+    }
+
+    const parts = absModuleId.split("/");
+    let start = 0;
+
+    // Tolerate leading / character.
+    if (parts[start] === "") ++start;
+
+    // Meteor package modules include a node_modules component in their
+    // absolute module identifiers, but that doesn't mean those modules
+    // should be evaluated by module.useNode().
+    if (parts[start] === "node_modules" &&
+        parts[start + 1] === "meteor") {
+      start += 2;
+    }
+
+    // If the remaining parts include node_modules, then this is a module
+    // that was installed by npm, and it should be evaluated by Node on
+    // the server.
+    return parts.indexOf("node_modules", start) >= 0;
   }
 
   // Returns an absolute module identifier indicating where to install the
@@ -1279,10 +1329,7 @@ export default class ImportScanner {
     if (file) {
       // If the file already exists, just update file.imported according
       // to the forDynamicImport parameter.
-      file.imported = forDynamicImport
-        ? file.imported || "dynamic"
-        : true;
-
+      setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
       return file;
     }
 
@@ -1300,7 +1347,7 @@ export default class ImportScanner {
       servePath: stripLeadingSlash(absModuleId),
       hash: sha1(data),
       lazy: true,
-      imported: forDynamicImport ? "dynamic" : true,
+      imported: forDynamicImport ? "dynamic" : "static",
       // Since _addPkgJsonToOutput is only ever called for package.json
       // files that are involved in resolving package directories, and pkg
       // is only a subset of the information in the actual package.json

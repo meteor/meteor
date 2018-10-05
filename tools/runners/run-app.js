@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
+const uuid = require("uuid");
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var files = require('../fs/files.js');
 var watch = require('../fs/watch.js');
@@ -15,6 +16,9 @@ import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher.js";
 import { eachline } from "../utils/eachline.js";
+import { loadIsopackage } from '../tool-env/isopackets.js';
+
+const hasOwn = Object.prototype.hasOwnProperty;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -65,7 +69,6 @@ var AppProcess = function (options) {
   self.onExit = options.onExit;
   self.onListen = options.onListen;
   self.nodeOptions = options.nodeOptions || [];
-  self.nodePath = options.nodePath || [];
   self.inspect = options.inspect;
   self.settings = options.settings;
   self.testMetadata = options.testMetadata;
@@ -109,11 +112,6 @@ _.extend(AppProcess.prototype, {
     });
 
     self.proc.on('error', async function (err) {
-      // if the error is the result of .send command over ipc pipe, ignore it
-      if (self._refreshing) {
-        return;
-      }
-
       runLog.log("Couldn't spawn process: " + err.message,  { arrow: true });
 
       // node docs say that it might make both an 'error' and a
@@ -224,13 +222,6 @@ _.extend(AppProcess.prototype, {
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
 
-    // use node's path module and not 'files.js' because NODE_PATH is an
-    // environment variable passed to an external process and needs to be
-    // constructed in the OS-style.
-    var path = require('path');
-    env.NODE_PATH =
-      self.nodePath.join(path.delimiter);
-
     return env;
   },
 
@@ -239,7 +230,6 @@ _.extend(AppProcess.prototype, {
     var self = this;
 
     // Path conversions
-    var nodePath = process.execPath; // This path is an OS path already
     var entryPoint = files.convertToOSPath(
       files.pathJoin(self.bundlePath, 'main.js'));
 
@@ -263,10 +253,14 @@ _.extend(AppProcess.prototype, {
     var child_process = require('child_process');
     // setup the 'ipc' pipe if further communication between app and proxy is
     // expected
-    var child = child_process.spawn(nodePath, opts, {
+    var child = child_process.spawn(process.execPath, opts, {
       env: self._computeEnvironment(),
       stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
     });
+
+    // Add a child.sendMessage(topic, payload) method to this child
+    // process object.
+    loadIsopackage("inter-process-messaging").enable(child);
 
     return child;
   }
@@ -382,14 +376,10 @@ var AppRunner = function (options) {
   // If this promise is set with self.makeBeforeStartPromise, then for the first
   // run, we will wait on it just before self.appProcess.start() is called.
   self._beforeStartPromise = null;
-  // A hacky state variable that indicates that the proxy process (this process)
-  // is communicating to the app process over ipc. If an error in communication
-  // occurs, we can distinguish it in a callback handling the 'error' event.
-  self._refreshing = false;
 
   // Builders saved across rebuilds, so that targets can be re-written in
   // place instead of created again from scratch.
-  self.builders = {};
+  self.builders = Object.create(null);
 };
 
 _.extend(AppRunner.prototype, {
@@ -576,19 +566,17 @@ _.extend(AppRunner.prototype, {
       }
 
       var bundleResult = Profile.run((firstRun?"B":"Reb")+"uild App", () => {
-        var bundleResult = bundler.bundle({
+        return bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
           includeNodeModules: "symlink",
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
-          previousBuilders: self.builders
+          previousBuilders: self.builders,
+          // Permit delayed bundling of client architectures if the
+          // console is interactive.
+          allowDelayedClientBuilds: ! Console.isHeadless(),
         });
-
-        // save new builders with their caches
-        self.builders = bundleResult.builders;
-
-        return bundleResult;
       });
 
       // Keep the server watch set from the initial bundle, because subsequent
@@ -701,9 +689,9 @@ _.extend(AppRunner.prototype, {
       return { outcome: 'stopped' };
     }
 
-    if (self.runPromise) {
-      throw new Error("already have promise?");
-    }
+    // We should have reset self.runPromise to null by now, but await it
+    // just in case it's still defined.
+    Promise.await(self.runPromise);
 
     var runPromise = self.runPromise = self._makePromise("run");
 
@@ -733,7 +721,6 @@ _.extend(AppRunner.prototype, {
         self._resolvePromise("start");
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
       settings: settings,
       testMetadata: self.testMetadata,
     });
@@ -801,7 +788,55 @@ _.extend(AppRunner.prototype, {
       setupClientWatcher();
     }
 
+    function pauseClient(arch) {
+      return appProcess.proc.sendMessage("webapp-pause-client", { arch });
+    }
+
+    async function refreshClient(arch) {
+      if (typeof arch === "string") {
+        // This message will reload the client program and unpause it.
+        await appProcess.proc.sendMessage("webapp-reload-client", { arch });
+      }
+      // If arch is not a string, the receiver of this message should
+      // assume all clients need to be refreshed.
+      await appProcess.proc.sendMessage("client-refresh");
+    }
+
+    function runPostStartupCallbacks(bundleResult) {
+      const callbacks = bundleResult.postStartupCallbacks;
+      if (! callbacks) return;
+
+      const messages = buildmessage.capture({
+        title: "running post-startup callbacks"
+      }, () => {
+        while (callbacks.length > 0) {
+          const fn = callbacks.shift();
+          try {
+            Promise.await(fn({
+              // Miscellany that the callback might find useful.
+              pauseClient,
+              refreshClient,
+              runLog,
+            }));
+          } catch (error) {
+            buildmessage.error(error.message);
+          }
+        }
+      });
+
+      if (messages.hasMessages()) {
+        return {
+          outcome: "bundle-fail",
+          errors: messages,
+          watchSet: bundleResult.clientWatchSet,
+        };
+      }
+    }
+
     Console.enableProgressDisplay(false);
+
+    const postStartupResult = runPostStartupCallbacks(bundleResult);
+    if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
@@ -827,20 +862,13 @@ _.extend(AppRunner.prototype, {
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
-        // Notify the server that new client assets have been added to the
-        // build.
-        self._refreshing = true;
-        // ChildProcess.prototype.send used to be synchronous, but is now
-        // asynchronous: https://github.com/nodejs/node/pull/2620
-        appProcess.proc.send({
-          refresh: 'client'
-        }, err => {
-          self._refreshing = false;
-          if (err) throw err;
-        });
+        refreshClient();
 
         // Establish a watcher on the new files.
         setupClientWatcher();
+
+        const postStartupResult = runPostStartupCallbacks(bundleResult);
+        if (postStartupResult) return postStartupResult;
 
         // Wait until another file changes.
         ret = oldPromise.await();

@@ -2,19 +2,24 @@
   "lockfileVersion": 1,
   "dependencies": {
     "bson": {
-      "version": "1.0.9",
-      "resolved": "https://registry.npmjs.org/bson/-/bson-1.0.9.tgz",
-      "integrity": "sha512-IQX9/h7WdMBIW/q/++tGd+emQr0XMdeZ6icnT/74Xk9fnabWn+gZgpE+9V+gujL3hhJOoNrnDVY7tWdzc7NUTg=="
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/bson/-/bson-1.1.0.tgz",
+      "integrity": "sha512-9Aeai9TacfNtWXOYarkFJRW2CWo+dRon+fuLZYJmvLV3+MiUp0bEI6IAZfXEIg7/Pl/7IWlLaDnhzTsD81etQA=="
+    },
+    "memory-pager": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/memory-pager/-/memory-pager-1.1.0.tgz",
+      "integrity": "sha512-Mf9OHV/Y7h6YWDxTzX/b4ZZ4oh9NSXblQL8dtPCOomOtZciEHxePR78+uHFLLlsk01A6jVHhHsQZZ/WcIPpnzg=="
     },
     "mongodb": {
-      "version": "3.0.11",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.0.11.tgz",
-      "integrity": "sha512-60KV+DPW++fzaD5cYbieCRQcXiYWQdRLHBqQyuu3rJmrP8vYZgI4u5UwfsUX6nGLON69FUIu4d3tH+WL4jShuA=="
+      "version": "3.1.6",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.1.6.tgz",
+      "integrity": "sha512-E5QJuXQoMlT7KyCYqNNMfAkhfQD79AT4F8Xd+6x37OX+8BL17GyXyWvfm6wuyx4wnzCCPoCSLeMeUN2S7dU9yw=="
     },
     "mongodb-core": {
-      "version": "3.0.11",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.0.11.tgz",
-      "integrity": "sha512-agzBbSP3ahEYJyBMQicj70B+n+NNYsKaroezu5ETcImXs9nqf89/QI6e8iipg2rY3a8OWZBHWvqYxnsWasrUQA=="
+      "version": "3.1.5",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.1.5.tgz",
+      "integrity": "sha512-emT/tM4ZBinqd6RZok+EzDdtN4LjYJIckv71qQVOEFmvXgT5cperZegVmTgox/1cx4XQu6LJ5ZuIwipP/eKdQg=="
     },
     "require_optional": {
       "version": "1.0.1",
@@ -26,10 +31,25 @@
       "resolved": "https://registry.npmjs.org/resolve-from/-/resolve-from-2.0.0.tgz",
       "integrity": "sha1-lICrIOlP+h2egKgEx+oUdhGWa1c="
     },
+    "safe-buffer": {
+      "version": "5.1.2",
+      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.1.2.tgz",
+      "integrity": "sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g=="
+    },
+    "saslprep": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/saslprep/-/saslprep-1.0.2.tgz",
+      "integrity": "sha512-4cDsYuAjXssUSjxHKRe4DTZC0agDwsCqcMqtJAQPzC74nJ7LfAJflAtC1Zed5hMzEQKj82d3tuzqdGNRsLJ4Gw=="
+    },
     "semver": {
-      "version": "5.5.0",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.5.0.tgz",
-      "integrity": "sha512-4SJ3dm0WAwWy/NVeioZh5AntkdJoWKxHxcmyP622fOkgHa4z3R0TdBJICINyaSDE6uNwVc8gZr+ZinwZAH4xIA=="
+      "version": "5.5.1",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.5.1.tgz",
+      "integrity": "sha512-PqpAxfrEhlSUWge8dwIp4tZnQ25DIOthpiaHNIthsjEFQD6EvqUKUDM7L8O2rShkFccYo1VjJR0coWfNkCubRw=="
+    },
+    "sparse-bitfield": {
+      "version": "3.0.3",
+      "resolved": "https://registry.npmjs.org/sparse-bitfield/-/sparse-bitfield-3.0.3.tgz",
+      "integrity": "sha1-/0rm5oZWBWuks+eSqzM004JzyhE="
     }
   }
 }

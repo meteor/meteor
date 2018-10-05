@@ -389,8 +389,8 @@ var jobHasMessages = function () {
 // able to show the user just the "user portion" of the stack trace
 // (the part inside their own code, and not all of the innards of the
 // code that called it).
-var markBoundary = function (f) {
-  return parseStack.markBottom(f);
+var markBoundary = function (f, context) {
+  return parseStack.markBottom(f, context);
 };
 
 // Record a build error. If inside a job, add the error to the current

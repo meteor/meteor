@@ -10,17 +10,17 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.3.0",
+    npm: "6.4.1",
     pacote: "https://github.com/meteor/pacote/tarball/a3285854a68e4969d6c8abaa74407f7d113b178f",
-    "node-gyp": "3.6.2",
-    "node-pre-gyp": "0.6.36",
-    "meteor-babel": "7.0.0-beta.53",
+    "node-gyp": "3.7.0",
+    "node-pre-gyp": "0.10.3",
+    "meteor-babel": "7.1.0",
     "meteor-promise": "0.8.6",
     promise: "8.0.1",
-    reify: "0.16.4",
+    reify: "0.17.3",
     fibers: "2.0.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.0.0-beta.53",
+    "@babel/runtime": "7.0.0",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
@@ -31,6 +31,7 @@ var packageJson = {
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     semver: "5.4.1",
     request: "2.83.0",
+    uuid: "3.3.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
     kexec: "3.0.0",

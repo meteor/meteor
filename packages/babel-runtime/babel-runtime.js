@@ -13,37 +13,16 @@ try {
   ].join("\n"));
 }
 
-if (parseInt(babelRuntimeVersion, 10) < 6) {
-  throw new Error([
-    "",
+if (parseInt(babelRuntimeVersion, 10) < 7 ||
+    (babelRuntimeVersion.indexOf("7.0.0-beta.") === 0 &&
+     parseInt(babelRuntimeVersion.split(".").pop(), 10) < 56)) {
+  console.error([
     "The version of @babel/runtime installed in your node_modules directory ",
     "(" + babelRuntimeVersion + ") is out of date. Please upgrade it by running ",
     "",
-    "  meteor npm install --save @babel/runtime",
+    "  meteor npm install --save @babel/runtime@latest",
     "",
     "in your application directory.",
     ""
   ].join("\n"));
-
-} else if (parseInt(babelRuntimeVersion.split(".").shift()) >= 7) {
-  // If Babel 7, only allow -beta.55 and earlier.  The final release, all RCs
-  // and -beta.56 all suffere from the removal of the "builtins" helpers.
-  var acceptableBabelRuntimeVersion =
-    /^7\.0\.0-beta/.test(babelRuntimeVersion) &&
-    parseInt(babelRuntimeVersion.split(".").pop(), 10) <= 55;
-
-  if (! acceptableBabelRuntimeVersion) {
-    console.warn([
-      "The version of @babel/runtime installed in your node_modules directory ",
-      "(" + babelRuntimeVersion + ") contains a breaking change which was introduced by ",
-      "https://github.com/babel/babel/pull/8266. Please either downgrade by ",
-      "running the following command:",
-      "",
-      "  meteor npm install --save-exact @babel/runtime@7.0.0-beta.55",
-      "",
-      "or update to the latest beta version of Meteor 1.7.1, as explained in ",
-      "this pull request: https://github.com/meteor/meteor/pull/9942.",
-      ""
-    ].join("\n"));
-  }
 }
