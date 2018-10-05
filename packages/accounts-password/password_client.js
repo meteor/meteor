@@ -1,5 +1,5 @@
 // Used in the various functions below to handle errors consistently
-function reportError(error, callback) {
+const reportError = (error, callback) => {
    if (callback) {
      callback(error);
    } else {
@@ -30,9 +30,9 @@ function reportError(error, callback) {
  *   on failure.
  * @importFromPackage meteor
  */
-Meteor.loginWithPassword = function (selector, password, callback) {
+Meteor.loginWithPassword = (selector, password, callback) => {
   if (typeof selector === 'string')
-    if (selector.indexOf('@') === -1)
+    if (!selector.includes('@'))
       selector = {username: selector};
     else
       selector = {email: selector};
@@ -42,7 +42,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
       user: selector,
       password: Accounts._hashPassword(password)
     }],
-    userCallback: function (error, result) {
+    userCallback: (error, result) => {
       if (error && error.error === 400 &&
           error.reason === 'old password format') {
         // The "reason" string should match the error thrown in the
@@ -72,12 +72,11 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   });
 };
 
-Accounts._hashPassword = function (password) {
-  return {
-    digest: SHA256(password),
-    algorithm: "sha-256"
-  };
-};
+Accounts._hashPassword = password => ({
+  digest: SHA256(password),
+  algorithm: "sha-256"
+});
+
 
 // XXX COMPAT WITH 0.8.1.3
 // The server requested an upgrade from the old SRP password format,
@@ -86,8 +85,8 @@ Accounts._hashPassword = function (password) {
 //     us to upgrade from SRP to bcrypt.
 //   - userSelector: selector to retrieve the user object
 //   - plaintextPassword: the password as a string
-var srpUpgradePath = function (options, callback) {
-  var details;
+const srpUpgradePath = (options, callback) => {
+  let details;
   try {
     details = EJSON.parse(options.upgradeError.details);
   } catch (e) {}
@@ -99,7 +98,7 @@ var srpUpgradePath = function (options, callback) {
     Accounts.callLoginMethod({
       methodArguments: [{
         user: options.userSelector,
-        srp: SHA256(details.identity + ":" + options.plaintextPassword),
+        srp: SHA256(`${details.identity}:${options.plaintextPassword}`),
         password: Accounts._hashPassword(options.plaintextPassword)
       }],
       userCallback: callback
@@ -120,8 +119,8 @@ var srpUpgradePath = function (options, callback) {
  * @param {Function} [callback] Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.createUser = function (options, callback) {
-  options = _.clone(options); // we'll be modifying options
+Accounts.createUser = (options, callback) => {
+  options = { ...options }; // we'll be modifying options
 
   if (typeof options.password !== 'string')
     throw new Error("options.password must be a string");
@@ -155,12 +154,15 @@ Accounts.createUser = function (options, callback) {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.changePassword = function (oldPassword, newPassword, callback) {
+Accounts.changePassword = (oldPassword, newPassword, callback) => {
   if (!Meteor.user()) {
     return reportError(new Error("Must be logged in to change password."), callback);
   }
 
-  check(newPassword, String);
+  if (!newPassword instanceof String) {
+    return reportError(new Meteor.Error(400, "Password must be a string"), callback);
+  }
+
   if (!newPassword) {
     return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
   }
@@ -169,7 +171,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
     'changePassword',
     [oldPassword ? Accounts._hashPassword(oldPassword) : null,
      Accounts._hashPassword(newPassword)],
-    function (error, result) {
+    (error, result) => {
       if (error || !result) {
         if (error && error.error === 400 &&
             error.reason === 'old password format') {
@@ -180,7 +182,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
             upgradeError: error,
             userSelector: { id: Meteor.userId() },
             plaintextPassword: oldPassword
-          }, function (err) {
+          }, err => {
             if (err) {
               reportError(err, callback);
             } else {
@@ -216,7 +218,7 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.forgotPassword = function(options, callback) {
+Accounts.forgotPassword = (options, callback) => {
   if (!options.email) {
     return reportError(new Meteor.Error(400, "Must pass options.email"), callback);
   }
@@ -243,9 +245,14 @@ Accounts.forgotPassword = function(options, callback) {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.resetPassword = function(token, newPassword, callback) {
-  check(token, String);
-  check(newPassword, String);
+Accounts.resetPassword = (token, newPassword, callback) => {
+  if (!token instanceof String) {
+    return reportError(new Meteor.Error(400, "Token must be a string"), callback);
+  }
+
+  if (!newPassword instanceof String) {
+    return reportError(new Meteor.Error(400, "Password must be a string"), callback);
+  }
 
   if (!newPassword) {
     return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
@@ -270,7 +277,7 @@ Accounts.resetPassword = function(token, newPassword, callback) {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.verifyEmail = function(token, callback) {
+Accounts.verifyEmail = (token, callback) => {
   if (!token) {
     return reportError(new Meteor.Error(400, "Need to pass token"), callback);
   }

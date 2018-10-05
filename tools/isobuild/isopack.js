@@ -472,7 +472,7 @@ _.extend(Isopack.prototype, {
         // case right.)
       }, function () {
         // Make a new Plugin API object for this plugin.
-        var Plugin = self._makePluginApi();
+        var Plugin = self._makePluginApi(name);
         plugin.load({ Plugin: Plugin, Profile: Profile });
       });
     });
@@ -492,7 +492,7 @@ _.extend(Isopack.prototype, {
     self._pluginsInitialized = true;
   }),
 
-  _makePluginApi: function () {
+  _makePluginApi: function (pluginName) {
     var isopack = this;
 
     /**
@@ -501,6 +501,8 @@ _.extend(Isopack.prototype, {
      * @summary The namespace that is exposed inside build plugin files.
      */
     var Plugin = {
+      name: pluginName,
+
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //

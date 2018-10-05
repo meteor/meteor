@@ -22,7 +22,7 @@ import {
 // first, or 0 if neither object comes before the other.
 
 export default class Sorter {
-  constructor(spec, options = {}) {
+  constructor(spec) {
     this._sortSpecParts = [];
     this._sortFunction = null;
 
@@ -82,15 +82,6 @@ export default class Sorter {
     this._keyComparator = composeComparators(
       this._sortSpecParts.map((spec, i) => this._keyFieldComparator(i))
     );
-
-    // If you specify a matcher for this Sorter, _keyFilter may be set to a
-    // function which selects whether or not a given "sort key" (tuple of values
-    // for the different sort spec fields) is compatible with the selector.
-    this._keyFilter = null;
-
-    if (options.matcher) {
-      this._useWithMatcher(options.matcher);
-    }
   }
 
   getComparator(options) {
@@ -149,9 +140,9 @@ export default class Sorter {
       let branches = expandArraysInBranches(spec.lookup(doc), true);
 
       // If there are no values for a key (eg, key goes to an empty array),
-      // pretend we found one null value.
+      // pretend we found one undefined value.
       if (!branches.length) {
-        branches = [{value: null}];
+        branches = [{ value: void 0 }];
       }
 
       const element = Object.create(null);
@@ -279,10 +270,6 @@ export default class Sorter {
     let minKey = null;
 
     this._generateKeysFromDoc(doc, key => {
-      if (!this._keyCompatibleWithSelector(key)) {
-        return;
-      }
-
       if (minKey === null) {
         minKey = key;
         return;
@@ -293,21 +280,11 @@ export default class Sorter {
       }
     });
 
-    // This could happen if our key filter somehow filters out all the keys even
-    // though somehow the selector matches.
-    if (minKey === null) {
-      throw Error('sort selector found no keys in doc?');
-    }
-
     return minKey;
   }
 
   _getPaths() {
     return this._sortSpecParts.map(part => part.path);
-  }
-
-  _keyCompatibleWithSelector(key) {
-    return !this._keyFilter || this._keyFilter(key);
   }
 
   // Given an index 'i', returns a comparator that compares two key arrays based
@@ -319,132 +296,6 @@ export default class Sorter {
       const compare = LocalCollection._f._cmp(key1[i], key2[i]);
       return invert ? -compare : compare;
     };
-  }
-
-  // In MongoDB, if you have documents
-  //    {_id: 'x', a: [1, 10]} and
-  //    {_id: 'y', a: [5, 15]},
-  // then C.find({}, {sort: {a: 1}}) puts x before y (1 comes before 5).
-  // But  C.find({a: {$gt: 3}}, {sort: {a: 1}}) puts y before x (1 does not
-  // match the selector, and 5 comes before 10).
-  //
-  // The way this works is pretty subtle!  For example, if the documents
-  // are instead {_id: 'x', a: [{x: 1}, {x: 10}]}) and
-  //             {_id: 'y', a: [{x: 5}, {x: 15}]}),
-  // then C.find({'a.x': {$gt: 3}}, {sort: {'a.x': 1}}) and
-  //      C.find({a: {$elemMatch: {x: {$gt: 3}}}}, {sort: {'a.x': 1}})
-  // both follow this rule (y before x).  (ie, you do have to apply this
-  // through $elemMatch.)
-  //
-  // So if you pass a matcher to this sorter's constructor, we will attempt to
-  // skip sort keys that don't match the selector. The logic here is pretty
-  // subtle and undocumented; we've gotten as close as we can figure out based
-  // on our understanding of Mongo's behavior.
-  _useWithMatcher(matcher) {
-    if (this._keyFilter) {
-      throw Error('called _useWithMatcher twice?');
-    }
-
-    // If we are only sorting by distance, then we're not going to bother to
-    // build a key filter.
-    // XXX figure out how geoqueries interact with this stuff
-    if (!this._sortSpecParts.length) {
-      return;
-    }
-
-    const selector = matcher._selector;
-
-    // If the user just passed a falsey selector to find(),
-    // then we can't get a key filter from it.
-    if (!selector) {
-      return;
-    }
-
-    // If the user just passed a literal function to find(), then we can't get a
-    // key filter from it.
-    if (selector instanceof Function) {
-      return;
-    }
-
-    const constraintsByPath = {};
-
-    this._sortSpecParts.forEach(spec => {
-      constraintsByPath[spec.path] = [];
-    });
-
-    Object.keys(selector).forEach(key => {
-      const subSelector = selector[key];
-
-      // XXX support $and and $or
-      const constraints = constraintsByPath[key];
-      if (!constraints) {
-        return;
-      }
-
-      // XXX it looks like the real MongoDB implementation isn't "does the
-      // regexp match" but "does the value fall into a range named by the
-      // literal prefix of the regexp", ie "foo" in /^foo(bar|baz)+/  But
-      // "does the regexp match" is a good approximation.
-      if (subSelector instanceof RegExp) {
-        // As far as we can tell, using either of the options that both we and
-        // MongoDB support ('i' and 'm') disables use of the key filter. This
-        // makes sense: MongoDB mostly appears to be calculating ranges of an
-        // index to use, which means it only cares about regexps that match
-        // one range (with a literal prefix), and both 'i' and 'm' prevent the
-        // literal prefix of the regexp from actually meaning one range.
-        if (subSelector.ignoreCase || subSelector.multiline) {
-          return;
-        }
-
-        constraints.push(regexpElementMatcher(subSelector));
-        return;
-      }
-
-      if (isOperatorObject(subSelector)) {
-        Object.keys(subSelector).forEach(operator => {
-          const operand = subSelector[operator];
-
-          if (['$lt', '$lte', '$gt', '$gte'].includes(operator)) {
-            // XXX this depends on us knowing that these operators don't use any
-            // of the arguments to compileElementSelector other than operand.
-            constraints.push(
-              ELEMENT_OPERATORS[operator].compileElementSelector(operand)
-            );
-          }
-
-          // See comments in the RegExp block above.
-          if (operator === '$regex' && !subSelector.$options) {
-            constraints.push(
-              ELEMENT_OPERATORS.$regex.compileElementSelector(
-                operand,
-                subSelector
-              )
-            );
-          }
-
-          // XXX support {$exists: true}, $mod, $type, $in, $elemMatch
-        });
-
-        return;
-      }
-
-      // OK, it's an equality thing.
-      constraints.push(equalityElementMatcher(subSelector));
-    });
-
-    // It appears that the first sort field is treated differently from the
-    // others; we shouldn't create a key filter unless the first sort field is
-    // restricted, though after that point we can restrict the other sort fields
-    // or not as we wish.
-    if (!constraintsByPath[this._sortSpecParts[0].path].length) {
-      return;
-    }
-
-    this._keyFilter = key =>
-      this._sortSpecParts.every((specPart, index) =>
-        constraintsByPath[specPart.path].every(fn => fn(key[index]))
-      )
-    ;
   }
 }
 

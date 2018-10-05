@@ -284,7 +284,7 @@ describe("local node_modules", () => {
 
   it('should expose "version" field of package.json', () => {
     const pkg = require("moment/package.json");
-    assert.strictEqual(pkg.version, "2.11.1");
+    assert.strictEqual(pkg.version, "2.22.2");
   });
 
   it('should support object-valued package.json "browser" fields', () => {
@@ -494,6 +494,66 @@ describe("symlinking node_modules", () => {
     assert.strictEqual(
       parse,
       require("./imports/links/acorn").parse
+    );
+  });
+
+  it("should not break custom import extensions", () => {
+    import { jsx } from "jsx-import-test";
+    assert.strictEqual(jsx.type, "div");
+    assert.strictEqual(jsx.props.children, "oyez");
+    return import("./imports/links/jsx-import-test/child").then(ns => {
+      assert.strictEqual(ns.default, jsx);
+    });
+  });
+});
+
+describe("issue #9878", () => {
+  it("should be fixed by PR #9903", () => {
+    const {
+      packageJson,
+      normalJson,
+    } = require("./issue-9878-test-package");
+
+    assert.deepEqual(packageJson, {
+      stripped: false,
+      nested: {
+        stripped: false,
+        _stripped: false
+      }
+    });
+
+    assert.deepEqual(normalJson, {
+      stripped: false,
+      _stripped: false,
+      nested: {
+        stripped: false,
+        _stripped: false
+      }
+    });
+
+    assert.deepEqual(require("./issue-9878-test-package/package"), {
+      name: "issue-9878-test-package",
+      main: "main.js",
+      nested: {
+        _stripped: false
+      }
+    });
+  });
+});
+
+describe("issue #10233", () => {
+  it("should be fixed", () => {
+    require("meteor/dummy-compiler").check();
+  });
+});
+
+describe("local .json modules", () => {
+  it("should be importable within Meteor packages (issue #10122)", () => {
+    import { oyez } from "meteor/import-local-json-module";
+    assert.strictEqual(oyez, 1234);
+    assert.strictEqual(
+      require("meteor/import-local-json-module/data").oyez,
+      1234
     );
   });
 });

@@ -455,9 +455,19 @@ export class CordovaBuilder {
     configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
     const { WebAppHashing } = loadIsopackage('webapp-hashing');
+    const { AUTOUPDATE_VERSION } = process.env;
 
-    program.version =
-      WebAppHashing.calculateClientHash(program.manifest, null, configDummy);
+    program.version = AUTOUPDATE_VERSION ||
+      WebAppHashing.calculateClientHash(
+        program.manifest, null, configDummy);
+
+    program.versionRefreshable = AUTOUPDATE_VERSION ||
+      WebAppHashing.calculateClientHash(
+        program.manifest, type => type === "css", configDummy);
+
+    program.versionNonRefreshable = AUTOUPDATE_VERSION ||
+      WebAppHashing.calculateClientHash(
+        program.manifest, type => type !== "css", configDummy);
   }
 
   generateBootstrapPage(applicationPath, program, publicSettings) {
@@ -465,7 +475,6 @@ export class CordovaBuilder {
       release.current.isCheckout() ? "none" : release.current.name;
 
     const manifest = program.manifest;
-    const autoupdateVersion = process.env.AUTOUPDATE_VERSION || program.version;
 
     const mobileServerUrl = this.options.mobileServerUrl;
 
@@ -475,7 +484,15 @@ export class CordovaBuilder {
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: '',
       DDP_DEFAULT_CONNECTION_URL: mobileServerUrl,
-      autoupdateVersionCordova: autoupdateVersion,
+      autoupdate: {
+        versions: {
+          "web.cordova": {
+            version: program.version,
+            versionRefreshable: program.versionRefreshable,
+            versionNonRefreshable: program.versionNonRefreshable
+          }
+        }
+      },
       appId: this.projectContext.appIdentifier,
       meteorEnv: {
         NODE_ENV: process.env.NODE_ENV || "production",

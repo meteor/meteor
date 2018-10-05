@@ -2,9 +2,7 @@ const fs = Plugin.fs;
 const path = Plugin.path;
 const createHash = Npm.require('crypto').createHash;
 const assert = Npm.require('assert');
-const Future = Npm.require('fibers/future');
 const LRU = Npm.require('lru-cache');
-const async = Npm.require('async');
 
 // Base class for CachingCompiler and MultiFileCachingCompiler.
 CachingCompilerBase = class CachingCompilerBase {
@@ -279,18 +277,16 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
   // you have processing you want to perform at the beginning or end of a
   // processing phase, you may want to override this method and call the
   // superclass implementation from within your method.
-  processFilesForTarget(inputFiles) {
+  async processFilesForTarget(inputFiles) {
     const cacheMisses = [];
     const arches = this._cacheDebugEnabled && Object.create(null);
 
-    const future = new Future;
-    async.eachLimit(inputFiles, this._maxParallelism, (inputFile, cb) => {
+    inputFiles.forEach(inputFile => {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      let error = null;
-      try {
+      const getResult = () => {
         const cacheKey = this._deepHash(this.getCacheKey(inputFile));
         let compileResult = this._cache.get(cacheKey);
 
@@ -303,7 +299,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
         if (! compileResult) {
           cacheMisses.push(inputFile.getDisplayPath());
-          compileResult = this.compileOneFile(inputFile);
+          compileResult = Promise.await(this.compileOneFile(inputFile));
 
           if (! compileResult) {
             // compileOneFile should have called inputFile.error.
@@ -316,17 +312,23 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
           this._writeCacheAsync(cacheKey, compileResult);
         }
 
-        this.addCompileResult(inputFile, compileResult);
-      } catch (e) {
-        error = e;
-      } finally {
-        cb(error);
+        return compileResult;
+      };
+
+      if (this.compileOneFileLater &&
+          inputFile.supportsLazyCompilation) {
+        this.compileOneFileLater(inputFile, getResult);
+      } else {
+        const result = getResult();
+        if (result) {
+          this.addCompileResult(inputFile, result);
+        }
       }
-    }, future.resolver());
-    future.wait();
+    });
 
     if (this._cacheDebugEnabled) {
       cacheMisses.sort();
+
       this._cacheDebug(
         `Ran (#${
           ++this._callCount
