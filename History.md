@@ -1,18 +1,28 @@
 ## v.NEXT
 
-## v1.8, TBD
+## v1.8, 2018-10-08
 
 ### Breaking changes
 N/A
 
 ### Migration Steps
 
-* Update the `@babel/runtime` npm package to version 7.0.0:
+* Update the `@babel/runtime` npm package to version 7.0.0 or later:
   ```sh
   meteor npm install @babel/runtime@latest
   ```
 
 ### Changes
+
+* Although Node 8.12.0 has been released, Meteor 1.8 still uses Node
+  8.11.4, due to concerns about excessive garbage collection and CPU usage
+  in production. To enable Galaxy customers to use Node 8.12.0, we are
+  planning a quick follow-up Meteor 1.8.1 release, which can be obtained
+  by running the command
+  ```bash
+  meteor update --release 1.8.1
+  ```
+  [Issue #10216](https://github.com/meteor/meteor/issues/10216)
 
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
   addition to the `web.browser` (modern) and `web.cordova` bundles.
@@ -193,7 +203,7 @@ N/A
   that existing code will continue to work without recompilation.
 
 * The `uglify-es` npm package used by `minifier-js` has been replaced with
-  [`terser@3.7.6`](https://www.npmjs.com/package/terser), a fork of
+  [`terser@3.9.2`](https://www.npmjs.com/package/terser), a fork of
   `uglify-es` that appears to be (more actively) maintained.
   [Issue #10042](https://github.com/meteor/meteor/issues/10042)
 
@@ -240,6 +250,15 @@ N/A
 * The environment variable `METEOR_PROFILE=milliseconds` now works for the
   build portion of the `meteor build` and `meteor deploy` commands.
   [Feature #239](https://github.com/meteor/meteor-feature-requests/issues/239)
+
+* Babel compiler plugins will now receive a `caller` option of the
+  following form:
+  ```js
+  { name: "meteor", arch }
+  ```
+  where `arch` is the target architecture, e.g. `os.*`, `web.browser`,
+  `web.cordova`, or `web.browser.legacy`.
+  [PR #10211](https://github.com/meteor/meteor/pull/10211)
 
 ## v1.7.0.5, 2018-08-16
 
