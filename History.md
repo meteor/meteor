@@ -1,5 +1,23 @@
 ## v.NEXT
 
+## v1.8.1, TBD
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node has been updated to version
+  [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/). While this
+  version of Node includes changes that may improve the performance of
+  Meteor apps, there have been reports of CPU usage spikes in production
+  due to excessive garbage collection, so this version of Meteor should be
+  considered experimental until those problems have been fixed.
+  [Issue #10216](https://github.com/meteor/meteor/issues/10216)
+
 ## v1.8, 2018-10-08
 
 ### Breaking changes
