@@ -99,6 +99,10 @@ Creates a more complete, imports-based project which
 closely matches the [file structure](https://guide.meteor.com/structure.html#javascript-structure) recommended by the
 [Meteor Guide](https://guide.meteor.com/)
 
+`--minimal`
+
+Creates a project with as few Meteor Packages as possible.
+
  `--package`
 
 Creates a new package. If used in an
@@ -107,27 +111,30 @@ directory.
 
 **Packages**
 
-|| Default | `--bare`  | `--full`  |
+|| Default | `--bare`  | `--full`  | `--minimal` |
 |--------------------|--------|---|---|
-|[autopublish](https://atmospherejs.com/meteor/autopublish)|    X    |   |   |
-|[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)| X | |X |
-|[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|
-|[es5-shim](https://atmospherejs.com/meteor/es5-shim)|X|X|X|
-|[insecure](https://atmospherejs.com/meteor/insecure)|X|||
-|[johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook:publication-collector)|||X|
-|[kadira:blaze-layout](https://atmospherejs.com/meteor/kadira:blaze-layout)|||X|
-|[kadira:flow-router](https://atmospherejs.com/meteor/kadira:flow-router)|||X|
-|[less](https://atmospherejs.com/meteor/less)|||X|
-|[meteor-base](https://atmospherejs.com/meteor/meteor-base)|X|X|X|
-|[mobile-experience](https://atmospherejs.com/meteor/mobile-experience)|X|X|X|
-|[mongo](https://atmospherejs.com/meteor/mongo)|X|X|X|
-|[practicalmeteor:mocha](https://atmospherejs.com/meteor/practicalmeteor:mocha)|||X|
-|[reactive-var](https://atmospherejs.com/meteor/reactive-var)|X|X|X|
-|[shell-server](https://atmospherejs.com/meteor/shell-server)|X|X||
-|[standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)|X|X|X|
-|[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|
-|[static-html](https://atmospherejs.com/meteor/static-html)||X||
-|[tracker](https://atmospherejs.com/meteor/tracker)|X|X|X|
+|[autopublish](https://atmospherejs.com/meteor/autopublish)|    X    |   |   | |
+|[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)| X | |X | |
+|[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|X|
+|[es5-shim](https://atmospherejs.com/meteor/es5-shim)|X|X|X|X|
+|[insecure](https://atmospherejs.com/meteor/insecure)|X||| |
+|[johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook:publication-collector)|||X| |
+|[kadira:blaze-layout](https://atmospherejs.com/meteor/kadira:blaze-layout)|||X| |
+|[kadira:flow-router](https://atmospherejs.com/meteor/kadira:flow-router)|||X| |
+|[less](https://atmospherejs.com/meteor/less)|||X| |
+|[meteor](https://atmospherejs.com/meteor/meteor)||||X|
+|[meteor-base](https://atmospherejs.com/meteor/meteor-base)|X|X|X| |
+|[mobile-experience](https://atmospherejs.com/meteor/mobile-experience)|X|X|X| |
+|[mongo](https://atmospherejs.com/meteor/mongo)|X|X|X| |
+|[practicalmeteor:mocha](https://atmospherejs.com/meteor/practicalmeteor:mocha)|||X| |
+|[reactive-var](https://atmospherejs.com/meteor/reactive-var)|X|X|X| |
+|[server-render](https://atmospherejs.com/meteor/server-render)||||X|
+|[shell-server](https://atmospherejs.com/meteor/shell-server)|X|X||X|
+|[standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)|X|X|X|X|
+|[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|X|
+|[static-html](https://atmospherejs.com/meteor/static-html)||X||X|
+|[tracker](https://atmospherejs.com/meteor/tracker) |X|X|X| |
+|[webapp](https://atmospherejs.com/meteor/webapp) | | | |X|
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
