@@ -8,6 +8,7 @@ N/A
 ### Migration Steps
 
 * Update the `@babel/runtime` npm package to version 7.0.0 or later:
+
   ```sh
   meteor npm install @babel/runtime@latest
   ```
