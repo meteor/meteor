@@ -14,7 +14,6 @@ selftest.define("css hot code push", function (options) {
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
 
@@ -109,7 +108,6 @@ selftest.define("versioning hot code push", function (options) {
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
     run.connectClient();
@@ -133,7 +131,6 @@ selftest.define("javascript hot code push", function (options) {
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
 
