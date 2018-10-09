@@ -15,6 +15,8 @@ Package.onUse(function (api) {
     'retry'
   ], 'client');
 
+  api.use('reload', 'client', { weak: true });
+
   api.use([
     'ecmascript',
     'ddp'

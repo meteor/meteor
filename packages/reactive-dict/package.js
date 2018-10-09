@@ -6,7 +6,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.use(['tracker', 'ejson', 'ecmascript']);
   // If we are loading mongo-livedata, let you store ObjectIDs in it.
-  api.use('mongo', {weak: true});
+  api.use(['mongo', 'reload'], { weak: true });
   api.mainModule('migration.js');
   api.export('ReactiveDict');
 });
