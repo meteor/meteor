@@ -17,8 +17,7 @@ Package.onUse(function (api) {
 
   api.use([
     'ecmascript',
-    'ddp',
-    'mongo',
+    'ddp'
   ], ['client', 'server']);
 
   api.mainModule('autoupdate_server.js', 'server');

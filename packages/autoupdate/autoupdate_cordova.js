@@ -1,21 +1,27 @@
+import { ClientVersions } from "./client_versions.js";
+
 var autoupdateVersionsCordova =
   __meteor_runtime_config__.autoupdate.versions["web.cordova"] || {
     version: "unknown"
   };
 
-// The collection of acceptable client versions.
-const ClientVersions =
-  new Mongo.Collection("meteor_autoupdate_clientVersions");
-
 export const Autoupdate = {};
 
-Autoupdate.newClientAvailable =
-  () => !! ClientVersions.findOne({
-    _id: "web.cordova",
-    version: {
-      $ne: autoupdateVersionsCordova.version
-    }
-  });
+// Stores acceptable client versions.
+const clientVersions = new ClientVersions();
+
+Meteor.connection.registerStore(
+  "meteor_autoupdate_clientVersions",
+  clientVersions.createStore()
+);
+
+Autoupdate.newClientAvailable = function () {
+  return clientVersions.newClientAvailable(
+    "web.cordova",
+    ["version"],
+    autoupdateVersionsCordova
+  );
+};
 
 var retry = new Retry({
   // Unlike the stream reconnect use of Retry, which we want to be instant
@@ -59,11 +65,8 @@ Autoupdate._retrySubscription = () => {
           }
         }
 
-        ClientVersions.find({
-          _id: "web.cordova"
-        }).observe({
-          added: checkNewVersionDocument,
-          changed: checkNewVersionDocument
+        clientVersions.watch(checkNewVersionDocument, {
+          filter: "web.cordova"
         });
       }
     }
