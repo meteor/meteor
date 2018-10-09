@@ -108,8 +108,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("myapp");
   run.match("proxy");
   run.waitSecs(5);
-  run.match("MongoDB");
-  run.waitSecs(5);
   run.match("your app");
   run.waitSecs(5);
   run.match("running at");
@@ -160,7 +158,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.waitSecs(5);
   run.match("myapp");
   run.match("proxy");
-  run.match("MongoDB");
   run.waitSecs(5);
   run.match("louder");  // the package actually loaded
 
@@ -363,8 +360,6 @@ selftest.define("add packages client archs", function (options) {
       run.waitSecs(5);
       run.match("myapp");
       run.match("proxy");
-      run.waitSecs(5);
-      run.match("MongoDB");
       run.waitSecs(5);
       run.match("running at");
       run.match("localhost");
@@ -981,8 +976,6 @@ selftest.define("tilde version constraints", [], function () {
   run.match("tilde-app");
   run.match("proxy");
   run.waitSecs(10);
-  run.match("MongoDB");
-  run.waitSecs(10);
   run.match("your app");
   run.waitSecs(10);
   run.match("running at");
@@ -1136,8 +1129,6 @@ selftest.define("override version constraints", [], function () {
 
   run.match("override-app");
   run.match("proxy");
-  run.waitSecs(10);
-  run.match("MongoDB");
   run.waitSecs(10);
   run.match("your app");
   run.waitSecs(10);
