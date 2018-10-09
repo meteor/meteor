@@ -34,11 +34,6 @@ Package.onUse(function (api) {
   api.use('facts-base', 'server', {weak: true});
 
   api.use('callback-hook', 'server');
-
-  // we depend on LocalCollection._diffObjects, _applyChanges,
-  // _idParse, _idStringify.
-  api.use('minimongo', 'server');
-
   api.export('DDPServer', 'server');
 
   api.addFiles('stream_server.js', 'server');
