@@ -1,14 +1,14 @@
 Package.describe({
   summary: "Common code for OAuth1-based login services",
-  version: "1.2.1",
+  version: "1.2.0"
 });
 
-Package.onUse(api => {
-  api.use('ecmascript', ['client', 'server']);
+Package.onUse(function (api) {
   api.use('random');
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use([
+    'underscore',
     'check',
     'http'
   ], 'server');
@@ -23,8 +23,7 @@ Package.onUse(api => {
   api.addFiles('oauth1_pending_request_tokens.js', 'server');
 });
 
-Package.onTest(api => {
-  api.use('ecmascript', 'server');
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('random');
   api.use('service-configuration', 'server');

@@ -1,8 +1,13 @@
 Package.describe({
   name: 'caching-compiler',
-  version: '1.2.0',
+  version: '1.1.11',
   summary: 'An easy way to make compiler plugins cache',
   documentation: 'README.md'
+});
+
+Npm.depends({
+  'lru-cache': '2.6.4',
+  'async': '1.4.0'
 });
 
 Package.onUse(function(api) {

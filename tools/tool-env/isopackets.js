@@ -69,8 +69,6 @@ export const ISOPACKETS = {
     'xmlbuilder',
     // cordova-support, logging
     'logging',
-    // support for childProcess.sendMessage(topic, payload)
-    'inter-process-messaging',
   ]
 };
 

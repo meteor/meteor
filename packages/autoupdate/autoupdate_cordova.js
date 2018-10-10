@@ -1,21 +1,16 @@
-var autoupdateVersionsCordova =
-  __meteor_runtime_config__.autoupdate.versions["web.cordova"] || {
-    version: "unknown"
-  };
+var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
 
 // The collection of acceptable client versions.
-const ClientVersions =
-  new Mongo.Collection("meteor_autoupdate_clientVersions");
+ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions");
 
-export const Autoupdate = {};
+Autoupdate = {};
 
-Autoupdate.newClientAvailable =
-  () => !! ClientVersions.findOne({
-    _id: "web.cordova",
-    version: {
-      $ne: autoupdateVersionsCordova.version
-    }
+Autoupdate.newClientAvailable = function() {
+  return !! ClientVersions.findOne({
+    _id: 'version-cordova',
+    version: {$ne: autoupdateVersionCordova}
   });
+};
 
 var retry = new Retry({
   // Unlike the stream reconnect use of Retry, which we want to be instant
@@ -29,14 +24,12 @@ var retry = new Retry({
   minCount: 0, // don't do any immediate retries
   baseTimeout: 30*1000 // start with 30s
 });
+var failures = 0;
 
-let failures = 0;
-
-Autoupdate._retrySubscription = () => {
-  const { appId } = __meteor_runtime_config__;
-
+Autoupdate._retrySubscription = function() {
+  var appId = __meteor_runtime_config__.appId;
   Meteor.subscribe("meteor_autoupdate_clientVersions", appId, {
-    onError(error) {
+    onError: function(error) {
       console.log("autoupdate subscription failed:", error);
       failures++;
       retry.retryLater(failures, function() {
@@ -50,18 +43,16 @@ Autoupdate._retrySubscription = () => {
         Autoupdate._retrySubscription();
       });
     },
-
-    onReady() {
+    onReady: function() {
       if (Package.reload) {
-        function checkNewVersionDocument(doc) {
-          if (doc.version !== autoupdateVersionsCordova.version) {
+        var checkNewVersionDocument = function(doc) {
+          var self = this;
+          if (doc.version !== autoupdateVersionCordova) {
             newVersionAvailable();
           }
-        }
+        };
 
-        ClientVersions.find({
-          _id: "web.cordova"
-        }).observe({
+        var handle = ClientVersions.find({_id: 'version-cordova'}).observe({
           added: checkNewVersionDocument,
           changed: checkNewVersionDocument
         });
@@ -70,8 +61,8 @@ Autoupdate._retrySubscription = () => {
   });
 };
 
-Meteor.startup(() => {
-  WebAppLocalServer.onNewVersionReady(() => {
+Meteor.startup(function() {
+  WebAppLocalServer.onNewVersionReady(function() {
     if (Package.reload) {
       Package.reload.Reload._reload();
     }
@@ -80,6 +71,6 @@ Meteor.startup(() => {
   Autoupdate._retrySubscription();
 });
 
-function newVersionAvailable() {
+var newVersionAvailable = function() {
   WebAppLocalServer.checkForUpdates();
 }

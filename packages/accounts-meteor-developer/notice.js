@@ -1,6 +1,6 @@
 if (Package['accounts-ui']
     && !Package['service-configuration']
-    && !Object.prototype.hasOwnProperty.call(Package, 'meteor-developer-config-ui')) {
+    && !Package.hasOwnProperty('meteor-developer-config-ui')) {
   console.warn(
     "Note: You're using accounts-ui and accounts-meteor-developer,\n" +
     "but didn't install the configuration UI for the Meteor Developer\n" +

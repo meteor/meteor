@@ -16,8 +16,6 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
-const { Profile } = require("../tool-env/profile.js");
-
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
@@ -424,7 +422,7 @@ function doRunCommand(options) {
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
-      buildMode: options.production ? 'production' : 'development',
+      buildMode: options.production && 'production',
       webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
@@ -494,7 +492,6 @@ main.registerCommand({
     bare: { type: Boolean },
     minimal: { type: Boolean },
     full: { type: Boolean },
-    react: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -630,7 +627,7 @@ main.registerCommand({
   if (options.list) {
     Console.info("Available examples:");
     _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
-      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : '';
+      const branchInfo = repoInfo.branch ? `#${repoInfo.branch}` : '';
       Console.info(
         Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
         Console.options({ indent: 2 }));
@@ -657,7 +654,7 @@ main.registerCommand({
     const branchOption = repoInfo.branch ? ` -b ${repoInfo.branch}` : '';
     const path = options.args.length === 1 ? ` ${options.args[0]}` : '';
 
-    Console.info(`To create the ${options.example} example, please run:`);
+    Console.info(`To create the ${options.example} example, please run:`)
     Console.info(
       Console.command(`git clone ${repoInfo.repo}${branchOption}${path}`),
       Console.options({ indent: 2 }));
@@ -731,11 +728,11 @@ main.registerCommand({
     });
   }
 
-  var toIgnore = [/^local$/, /^\.id$/];
+  var toIgnore = [/^local$/, /^\.id$/]
   if (destinationHasCodeFiles) {
     // If there is already source code in the directory, don't copy our
     // skeleton app code over it. Just create the .meteor folder and metadata
-    toIgnore.push(/(\.html|\.js|\.css)/);
+    toIgnore.push(/(\.html|\.js|\.css)/)
   }
 
   let skelName = "skel";
@@ -745,8 +742,6 @@ main.registerCommand({
     skelName += "-bare";
   } else if (options.full) {
     skelName += "-full";
-  } else if (options.react) {
-    skelName += "-react";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -853,9 +848,8 @@ main.registerCommand({
 
   if (! options.bare &&
       ! options.minimal &&
-      ! options.full &&
-      ! options.react) {
-    // Notify people about --bare, --minimal, --full, and --react.
+      ! options.full) {
+    // Notify people about --bare, --minimal, and --full.
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
@@ -863,11 +857,10 @@ main.registerCommand({
     ].join("\n"));
 
     cmd("meteor create --bare    # to create an empty app");
-    cmd("meteor create --minimal # to create an app with as few " +
-        "Meteor packages as possible");
+    cmd("meteor create --minimal # to create an empty app with as " +
+        "few Meteor packages as possible");
     cmd("meteor create --full    # to create a more complete " +
         "scaffolded app");
-    cmd("meteor create --react   # to create a basic React-based app");
   }
 
   Console.info("");
@@ -900,40 +893,27 @@ var buildCommands = {
   catalogRefresh: new catalog.Refresh.Never()
 };
 
-main.registerCommand({
-  name: "build",
-  ...buildCommands,
-}, async function (options) {
-  return Profile.run(
-    "meteor build",
-    () => Promise.await(buildCommand(options))
-  );
+main.registerCommand(_.extend({ name: 'build' }, buildCommands),
+  function (options) {
+    return buildCommand(options);
 });
 
 // Deprecated -- identical functionality to 'build' with one exception: it
 // doesn't output a directory with all builds but rather only one tarball with
 // server/client programs.
 // XXX COMPAT WITH 0.9.1.1
-main.registerCommand({
-  name: "bundle",
-  hidden: true,
-  ...buildCommands,
-}, async function (options) {
-  Console.error(
-    "This command has been deprecated in favor of " +
-    Console.command("'meteor build'") + ", which allows you to " +
-    "build for multiple platforms and outputs a directory instead of " +
-    "a single tarball. See " + Console.command("'meteor help build'") + " " +
-    "for more information.");
-  Console.error();
+main.registerCommand(_.extend({ name: 'bundle', hidden: true
+                              }, buildCommands),
+    function (options) {
 
-  return Profile.run(
-    "meteor bundle",
-    () => Promise.await(buildCommand({
-      ...options,
-      _bundleOnly: true,
-    }))
-  );
+      Console.error(
+      "This command has been deprecated in favor of " +
+      Console.command("'meteor build'") + ", which allows you to " +
+      "build for multiple platforms and outputs a directory instead of " +
+      "a single tarball. See " + Console.command("'meteor help build'") + " " +
+      "for more information.");
+      Console.error();
+      return buildCommand(_.extend(options, { _bundleOnly: true }));
 });
 
 var buildCommand = function (options) {
@@ -966,8 +946,6 @@ var buildCommand = function (options) {
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
-    // TODO Fix the nested Profile.run warning here, without interfering
-    // with METEOR_PROFILE output for other commands, like `meteor run`.
     projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
@@ -1141,7 +1119,7 @@ https://guide.meteor.com/mobile.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
-                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
+                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
 
               if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
@@ -1399,14 +1377,7 @@ main.registerCommand({
     return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, async function (...args) {
-  return Profile.run(
-    "meteor deploy",
-    () => Promise.await(deployCommand(...args))
-  );
-});
-
-function deployCommand(options, { rawOptions }) {
+}, function (options, {rawOptions}) {
   var site = options.args[0];
 
   if (options.delete) {
@@ -1450,7 +1421,6 @@ function deployCommand(options, { rawOptions }) {
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
-    // TODO Fix nested Profile.run warning here, too.
     projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
@@ -1489,7 +1459,7 @@ function deployCommand(options, { rawOptions }) {
   }
 
   return deployResult;
-}
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // authorized
@@ -2224,7 +2194,6 @@ main.registerCommand({
     slow: { type: Boolean },
     galaxy: { type: Boolean },
     browserstack: { type: Boolean },
-    phantom: { type: Boolean },
     // Indicates whether these self-tests are running headless, e.g. in a
     // continuous integration testing environment, where visual niceties
     // like progress bars and spinners are unimportant.
@@ -2314,8 +2283,7 @@ main.registerCommand({
   }
 
   const clients = {
-    puppeteer: true, // Puppeteer is always enabled.
-    phantom: options.phantom,
+    phantom: true, // Phantom is always enabled.
     browserstack: options.browserstack,
   };
 

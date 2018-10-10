@@ -44,7 +44,7 @@ export class Boilerplate {
     }
 
     // Calling .await() requires a Fiber.
-    return this.toHTMLAsync(extraData).await();
+    return toHTMLAsync(extraData).await();
   }
 
   // Returns a Promise that resolves to a string of HTML.
@@ -124,8 +124,6 @@ export class Boilerplate {
         itemObj.scriptContent = readUtf8FileSync(
           pathMapper(item.path));
         itemObj.inline = true;
-      } else if (item.sri) {
-        itemObj.sri = item.sri;
       }
 
       if (item.type === 'css' && item.where === 'client') {

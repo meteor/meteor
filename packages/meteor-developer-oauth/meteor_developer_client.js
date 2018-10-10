@@ -2,14 +2,14 @@
 // @param credentialRequestCompleteCallback {Function} Callback function to call on
 //   completion. Takes one argument, credentialToken on success, or Error on
 //   error.
-const requestCredential = (options, credentialRequestCompleteCallback) => {
+var requestCredential = function (options, credentialRequestCompleteCallback) {
   // support a callback without options
   if (! credentialRequestCompleteCallback && typeof options === "function") {
     credentialRequestCompleteCallback = options;
     options = null;
   }
 
-  const config = ServiceConfiguration.configurations.findOne({
+  var config = ServiceConfiguration.configurations.findOne({
     service: 'meteor-developer'
   });
   if (!config) {
@@ -18,16 +18,16 @@ const requestCredential = (options, credentialRequestCompleteCallback) => {
     return;
   }
 
-  const credentialToken = Random.secret();
+  var credentialToken = Random.secret();
 
-  const loginStyle = OAuth._loginStyle('meteor-developer', config, options);
+  var loginStyle = OAuth._loginStyle('meteor-developer', config, options);
 
-  let loginUrl =
+  var loginUrl =
         MeteorDeveloperAccounts._server +
         "/oauth2/authorize?" +
-        `state=${OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl)}` +
+        "state=" + OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl) +
         "&response_type=code&" +
-        `client_id=${config.clientId}`;
+        "client_id=" + config.clientId;
 
   /**
    * @deprecated in 1.3.0
@@ -38,17 +38,17 @@ const requestCredential = (options, credentialRequestCompleteCallback) => {
   }
 
   if (options && options.loginHint) {
-    loginUrl += `&user_email=${encodeURIComponent(options.loginHint)}`;
+    loginUrl += '&user_email=' + encodeURIComponent(options.loginHint);
   }
 
-  loginUrl += `&redirect_uri=${OAuth._redirectUri('meteor-developer', config)}`;
+  loginUrl += "&redirect_uri=" + OAuth._redirectUri('meteor-developer', config);
 
   OAuth.launchLogin({
     loginService: "meteor-developer",
-    loginStyle,
-    loginUrl,
-    credentialRequestCompleteCallback,
-    credentialToken,
+    loginStyle: loginStyle,
+    loginUrl: loginUrl,
+    credentialRequestCompleteCallback: credentialRequestCompleteCallback,
+    credentialToken: credentialToken,
     popupOptions: {width: 470, height: 490}
   });
 };

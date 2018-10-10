@@ -1,19 +1,20 @@
 Accounts.oauth.registerService('weibo');
 
 if (Meteor.isClient) {
-  const loginWithWeibo = (options, callback) => {
+  const loginWithWeibo = function(options, callback) {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
       options = null;
     }
 
-    const credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
+    var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
     Weibo.requestCredential(options, credentialRequestCompleteCallback);
   };
   Accounts.registerClientLoginFunction('weibo', loginWithWeibo);
-  Meteor.loginWithWeibo = (...args) => 
-    Accounts.applyLoginFunction('weibo', args);
+  Meteor.loginWithWeibo = function () {
+    return Accounts.applyLoginFunction('weibo', arguments);
+  };
 } else {
   Accounts.addAutopublishFields({
     // publish all fields including access token, which can legitimately

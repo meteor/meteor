@@ -60,36 +60,32 @@ export default class RoutePolicy {
       return null;
     }
 
-    const policy = this;
-
-    function check(manifest) {
-      const conflict = manifest.find(resource => (
-        resource.type === 'static' &&
-        resource.where === 'client' &&
-        policy.urlPrefixMatches(urlPrefix, resource.url)
-      ));
-
-      if (conflict) {
-        return `static resource ${conflict.url} conflicts with ${type} ` +
-          `route ${urlPrefix}`;
-      }
-
+    if (!Package.webapp ||
+        !Package.webapp.WebApp ||
+        !Package.webapp.WebApp.clientPrograms ||
+        !Package.webapp.WebApp.clientPrograms[
+          Package.webapp.WebApp.defaultArch].manifest) {
+      // Hack: If we don't have a manifest, deal with it
+      // gracefully. This lets us load livedata into a nodejs
+      // environment that doesn't have a HTTP server (eg, a
+      // command-line tool).
       return null;
-    };
-
-    if (_testManifest) {
-      return check(_testManifest);
     }
 
-    const { WebApp } = require("meteor/webapp");
-    let errorMessage = null;
+    const WebApp = Package.webapp.WebApp;
+    const manifest =
+      _testManifest || WebApp.clientPrograms[WebApp.defaultArch].manifest;
+    const conflict = manifest.find(resource => (
+      resource.type === 'static' &&
+      resource.where === 'client' &&
+      this.urlPrefixMatches(urlPrefix, resource.url)
+    ));
 
-    Object.keys(WebApp.clientPrograms).some(arch => {
-      const { manifest } = WebApp.clientPrograms[arch];
-      return errorMessage = check(manifest);
-    });
-
-    return errorMessage;
+    if (conflict) {
+      return `static resource ${conflict.url} conflicts with ${type} ` +
+        `route ${urlPrefix}`;
+    }
+    return null;
   }
 
   declare(urlPrefix, type) {

@@ -58,15 +58,7 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
 // structure; and the hashes of the contents correspond to the
 // writtenHashes data strcture.
 export default class Builder {
-  constructor({
-    outputPath,
-    previousBuilder,
-    // Even though in-place builds are disabled by default on some
-    // platforms (Windows), they can be forcibly reenabled with this
-    // option, in cases where it's safe and/or necessary to avoid
-    // clobbering existing files.
-    forceInPlaceBuild = false,
-  }) {
+  constructor({outputPath, previousBuilder}) {
     this.outputPath = outputPath;
 
     // Paths already written to. Map from canonicalized relPath (no
@@ -91,8 +83,7 @@ export default class Builder {
     // If we have a previous builder and we are allowed to re-use it,
     // let's keep all the older files on the file-system and replace
     // only outdated ones + write the new files in the same path
-    if (previousBuilder &&
-        (forceInPlaceBuild || ENABLE_IN_PLACE_BUILDER_REPLACEMENT)) {
+    if (previousBuilder && ENABLE_IN_PLACE_BUILDER_REPLACEMENT) {
       if (previousBuilder.outputPath !== outputPath) {
         throw new Error(
           `previousBuilder option can only be set to a builder with the same output path.
@@ -144,15 +135,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (partial in this.previousUsedAsFile) {
           if (this.previousUsedAsFile[partial]) {
             // was previously used as file, delete it, create a directory
-            try {
-              files.unlink(partial);
-            } catch (e) {
-              // If files.unlink(partial) failed because the file does not
-              // exist, then we can just pretend the unlink succeeded.
-              if (e.code !== "ENOENT") {
-                throw e;
-              }
-            }
+            files.unlink(partial);
           } else {
             // is already a directory
             needToMkdir = false;
@@ -524,9 +507,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     }
 
-    const rootDir = files.realpath(from);
-
-    const walk = (absFrom, relTo) => {
+    const walk = (
+      absFrom,
+      relTo,
+      _currentRealRootDir = absFrom
+    ) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
@@ -545,8 +530,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         // Returns files.realpath(thisAbsFrom), iff it is external to
-        // rootDir, using caching because this function might be called
-        // more than once.
+        // _currentRealRootDir, using caching because this function might
+        // be called more than once.
         let cachedExternalPath;
         const getExternalPath = () => {
           if (typeof cachedExternalPath !== "undefined") {
@@ -564,7 +549,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           const isExternal =
-            files.pathRelative(rootDir, real).startsWith("..");
+            files.pathRelative(_currentRealRootDir, real).startsWith("..");
 
           // Now cachedExternalPath is either a string or false.
           return cachedExternalPath = isExternal && real;
@@ -579,11 +564,22 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // external files, and this file is a symbolic link that points
           // to an external file, update fileStatus so that we copy this
           // file as a normal file rather than as a symbolic link.
+
           const externalPath = getExternalPath();
           if (externalPath) {
+            // Copy from the real path rather than the link path.
+            thisAbsFrom = externalPath;
+
             // Update fileStatus to match the actual file rather than the
             // symbolic link, thus forcing the file to be copied below.
             fileStatus = optimisticLStatOrNull(externalPath);
+
+            if (fileStatus && fileStatus.isDirectory()) {
+              // Update _currentRealRootDir so that we can judge
+              // isExternal relative to this new root directory when
+              // traversing nested directories.
+              _currentRealRootDir = externalPath;
+            }
           }
         }
 
@@ -614,7 +610,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         if (isDirectory) {
-          walk(thisAbsFrom, thisRelTo);
+          walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
           return;
         }
 
@@ -663,7 +659,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     };
 
-    walk(rootDir, to);
+    walk(files.realpath(from), to);
   }
 
   // Returns a new Builder-compatible object that works just like a

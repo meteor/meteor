@@ -3,7 +3,6 @@ var Future = Npm.require('fibers/future');
 OPLOG_COLLECTION = 'oplog.rs';
 
 var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
-var TAIL_TIMEOUT = +process.env.METEOR_OPLOG_TAIL_TIMEOUT || 30000;
 
 var showTS = function (ts) {
   return "Timestamp(" + ts.getHighBits() + ", " + ts.getLowBits() + ")";
@@ -37,17 +36,12 @@ OplogHandle = function (oplogUrl, dbName) {
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
   self._baseOplogSelector = {
-    ns: new RegExp("^(?:" + [
-      Meteor._escapeRegExp(self._dbName + "."),
-      Meteor._escapeRegExp("admin.$cmd"),
-    ].join("|") + ")"),
-
+    ns: new RegExp('^' + Meteor._escapeRegExp(self._dbName) + '\\.'),
     $or: [
-      { op: { $in: ['i', 'u', 'd'] } },
+      { op: {$in: ['i', 'u', 'd']} },
       // drop collection
       { op: 'c', 'o.drop': { $exists: true } },
       { op: 'c', 'o.dropDatabase': 1 },
-      { op: 'c', 'o.applyOps': { $exists: true } },
     ]
   };
 
@@ -102,7 +96,8 @@ _.extend(OplogHandle.prototype, {
 
     var originalCallback = callback;
     callback = Meteor.bindEnvironment(function (notification) {
-      originalCallback(notification);
+      // XXX can we avoid this clone by making oplog.js careful?
+      originalCallback(EJSON.clone(notification));
     }, function (err) {
       Meteor._debug("Error in oplog callback", err);
     });
@@ -241,79 +236,23 @@ _.extend(OplogHandle.prototype, {
     var cursorDescription = new CursorDescription(
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
-    // Start tailing the oplog.
-    //
-    // We restart the low-level oplog query every 30 seconds if we didn't get a
-    // doc. This is a workaround for #8598: the Node Mongo driver has at least
-    // one bug that can lead to query callbacks never getting called (even with
-    // an error) when leadership failover occur.
     self._tailHandle = self._oplogTailConnection.tail(
-      cursorDescription,
-      function (doc) {
+      cursorDescription, function (doc) {
         self._entryQueue.push(doc);
         self._maybeStartWorker();
-      },
-      TAIL_TIMEOUT
+      }
     );
     self._readyFuture.return();
   },
 
   _maybeStartWorker: function () {
     var self = this;
-    if (self._workerActive) return;
+    if (self._workerActive)
+      return;
     self._workerActive = true;
-
     Meteor.defer(function () {
-      // May be called recursively in case of transactions.
-      function handleDoc(doc) {
-        if (doc.ns === "admin.$cmd") {
-          if (doc.o.applyOps) {
-            // This was a successful transaction, so we need to apply the
-            // operations that were involved.
-            doc.o.applyOps.forEach(handleDoc);
-            return;
-          }
-          throw new Error("Unknown command " + EJSON.stringify(doc));
-        }
-
-        const trigger = {
-          dropCollection: false,
-          dropDatabase: false,
-          op: doc,
-        };
-
-        if (typeof doc.ns === "string" &&
-            doc.ns.startsWith(self._dbName + ".")) {
-          trigger.collection = doc.ns.slice(self._dbName.length + 1);
-        } else {
-          throw new Error("Unexpected ns");
-        }
-
-        // Is it a special command and the collection name is hidden
-        // somewhere in operator?
-        if (trigger.collection === "$cmd") {
-          if (doc.o.dropDatabase) {
-            delete trigger.collection;
-            trigger.dropDatabase = true;
-          } else if (_.has(doc.o, "drop")) {
-            trigger.collection = doc.o.drop;
-            trigger.dropCollection = true;
-            trigger.id = null;
-          } else {
-            throw Error("Unknown command " + EJSON.stringify(doc));
-          }
-
-        } else {
-          // All other ops have an id.
-          trigger.id = idForOp(doc);
-        }
-
-        self._crossbar.fire(trigger);
-      }
-
       try {
-        while (! self._stopped &&
-               ! self._entryQueue.isEmpty()) {
+        while (! self._stopped && ! self._entryQueue.isEmpty()) {
           // Are we too far behind? Just tell our observers that they need to
           // repoll, and drop our queue.
           if (self._entryQueue.length > TOO_FAR_BEHIND) {
@@ -331,25 +270,50 @@ _.extend(OplogHandle.prototype, {
             continue;
           }
 
-          const doc = self._entryQueue.shift();
+          var doc = self._entryQueue.shift();
 
-          // Fire trigger(s) for this doc.
-          handleDoc(doc);
+          if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
+                doc.ns.substr(0, self._dbName.length + 1) ===
+                (self._dbName + '.'))) {
+            throw new Error("Unexpected ns");
+          }
+
+          var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
+                         dropCollection: false,
+                         dropDatabase: false,
+                         op: doc};
+
+          // Is it a special command and the collection name is hidden somewhere
+          // in operator?
+          if (trigger.collection === "$cmd") {
+            if (doc.o.dropDatabase) {
+              delete trigger.collection;
+              trigger.dropDatabase = true;
+            } else if (_.has(doc.o, 'drop')) {
+              trigger.collection = doc.o.drop;
+              trigger.dropCollection = true;
+              trigger.id = null;
+            } else {
+              throw Error("Unknown command " + JSON.stringify(doc));
+            }
+          } else {
+            // All other ops have an id.
+            trigger.id = idForOp(doc);
+          }
+
+          self._crossbar.fire(trigger);
 
           // Now that we've processed this operation, process pending
           // sequencers.
-          if (doc.ts) {
-            self._setLastProcessedTS(doc.ts);
-          } else {
+          if (!doc.ts)
             throw Error("oplog entry without ts: " + EJSON.stringify(doc));
-          }
+          self._setLastProcessedTS(doc.ts);
         }
       } finally {
         self._workerActive = false;
       }
     });
   },
-
   _setLastProcessedTS: function (ts) {
     var self = this;
     self._lastProcessedTS = ts;

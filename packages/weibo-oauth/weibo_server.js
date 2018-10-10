@@ -1,17 +1,16 @@
 Weibo = {};
 
-OAuth.registerService('weibo', 2, null, query => {
+OAuth.registerService('weibo', 2, null, function(query) {
 
-  const response = getTokenResponse(query);
-  const uid = parseInt(response.uid, 10);
+  var response = getTokenResponse(query);
+  var uid = parseInt(response.uid, 10);
 
   // different parts of weibo's api seem to expect numbers, or strings
   // for uid. let's make sure they're both the same.
-  if (response.uid !== uid + "") {
-    throw new Error(`Expected 'uid' to parse to an integer: ${JSON.stringify(response)}`);
-  }
+  if (response.uid !== uid + "")
+    throw new Error("Expected 'uid' to parse to an integer: " + JSON.stringify(response));
 
-  const identity = getIdentity(response.access_token, uid);
+  var identity = getIdentity(response.access_token, uid);
 
   return {
     serviceData: {
@@ -31,12 +30,12 @@ OAuth.registerService('weibo', 2, null, query => {
 // - uid
 // - access_token
 // - expires_in: lifetime of this token in seconds (5 years(!) right now)
-const getTokenResponse = query => {
-  const config = ServiceConfiguration.configurations.findOne({service: 'weibo'});
+var getTokenResponse = function (query) {
+  var config = ServiceConfiguration.configurations.findOne({service: 'weibo'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
-  let response;
+  var response;
   try {
     response = HTTP.post(
       "https://api.weibo.com/oauth2/access_token", {params: {
@@ -47,7 +46,7 @@ const getTokenResponse = query => {
         grant_type: 'authorization_code'
       }});
   } catch (err) {
-    throw Object.assign(new Error(`Failed to complete OAuth handshake with Weibo. ${err.message}`),
+    throw _.extend(new Error("Failed to complete OAuth handshake with Weibo. " + err.message),
                    {response: err.response});
   }
 
@@ -56,22 +55,23 @@ const getTokenResponse = query => {
   response.data = JSON.parse(response.content);
 
   if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with Weibo. ${response.data.error}`);
+    throw new Error("Failed to complete OAuth handshake with Weibo. " + response.data.error);
   } else {
     return response.data;
   }
 };
 
-const getIdentity = (accessToken, userId) => {
+var getIdentity = function (accessToken, userId) {
   try {
     return HTTP.get(
       "https://api.weibo.com/2/users/show.json",
       {params: {access_token: accessToken, uid: userId}}).data;
   } catch (err) {
-    throw Object.assign(new Error("Failed to fetch identity from Weibo. " + err.message),
+    throw _.extend(new Error("Failed to fetch identity from Weibo. " + err.message),
                    {response: err.response});
   }
 };
 
-Weibo.retrieveCredential = (credentialToken, credentialSecret) =>
-  OAuth.retrieveCredential(credentialToken, credentialSecret);
+Weibo.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
+};

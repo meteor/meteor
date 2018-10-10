@@ -6,28 +6,24 @@ selftest.define("mainModule", function () {
   s.createApp("app-config-mainModule", "app-config");
   s.cd("app-config-mainModule");
 
-  // For meteortesting:mocha to work we must set test broswer driver
-  // See https://github.com/meteortesting/meteor-mocha
-  s.set("TEST_BROWSER_DRIVER", "puppeteer");
-
   const run = s.run(
     "test",
     "--full-app",
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package", "dispatch:mocha-phantomjs"
   );
 
   run.waitSecs(60);
   run.match("App running at");
 
-  function check(mainModule, errorPattern) {
-    writeConfig(s, run, mainModule, errorPattern);
+  function check(mainModule) {
+    writeConfig(s, run, mainModule);
   }
 
   check();
 
   check(null);
 
-  check("oyez", /Could not resolve meteor.mainModule/);
+  check("oyez");
 
   check({});
 
@@ -116,7 +112,7 @@ selftest.define("mainModule", function () {
   run.stop();
 });
 
-function writeConfig(s, run, mainModule, errorPattern) {
+function writeConfig(s, run, mainModule) {
   const json = JSON.parse(s.read("package.json"));
 
   json.meteor = {
@@ -133,14 +129,9 @@ function writeConfig(s, run, mainModule, errorPattern) {
   s.write("package.json", JSON.stringify(json, null, 2) + "\n");
 
   run.waitSecs(10);
-
-  if (errorPattern instanceof RegExp) {
-    run.match(errorPattern);
-  } else {
-    run.forbid(" 0 passing ");
-    run.match("SERVER FAILURES: 0");
-    run.match("CLIENT FAILURES: 0");
-  }
+  run.forbid(" 0 passing ");
+  run.match("SERVER FAILURES: 0");
+  run.match("CLIENT FAILURES: 0");
 }
 
 selftest.define("testModule", function () {
@@ -148,15 +139,11 @@ selftest.define("testModule", function () {
   s.createApp("app-config-mainModule", "app-config");
   s.cd("app-config-mainModule");
 
-  // For meteortesting:mocha to work we must set test broswer driver
-  // See https://github.com/meteortesting/meteor-mocha
-  s.set("TEST_BROWSER_DRIVER", "puppeteer");
-
   const run = s.run(
     "test",
     // Not running with the --full-app option here, in order to exercise
     // the normal `meteor test` behavior.
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package", "dispatch:mocha-phantomjs"
   );
 
   run.waitSecs(60);

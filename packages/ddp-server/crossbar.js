@@ -11,7 +11,6 @@ DDPServer._Crossbar = function (options) {
   // keys 'trigger', 'callback'.  As a hack, the empty string means "no
   // collection".
   self.listenersByCollection = {};
-  self.listenersByCollectionCount = {};
   self.factPackage = options.factPackage || "livedata";
   self.factName = options.factName || null;
 };
@@ -49,10 +48,8 @@ _.extend(DDPServer._Crossbar.prototype, {
     var record = {trigger: EJSON.clone(trigger), callback: callback};
     if (! _.has(self.listenersByCollection, collection)) {
       self.listenersByCollection[collection] = {};
-      self.listenersByCollectionCount[collection] = 0;
     }
     self.listenersByCollection[collection][id] = record;
-    self.listenersByCollectionCount[collection]++;
 
     if (self.factName && Package['facts-base']) {
       Package['facts-base'].Facts.incrementServerFact(
@@ -66,10 +63,8 @@ _.extend(DDPServer._Crossbar.prototype, {
             self.factPackage, self.factName, -1);
         }
         delete self.listenersByCollection[collection][id];
-        self.listenersByCollectionCount[collection]--;
-        if (self.listenersByCollectionCount[collection] === 0) {
+        if (_.isEmpty(self.listenersByCollection[collection])) {
           delete self.listenersByCollection[collection];
-          delete self.listenersByCollectionCount[collection];
         }
       }
     };

@@ -1,19 +1,20 @@
 Accounts.oauth.registerService('github');
 
 if (Meteor.isClient) {
-  const loginWithGithub = (options, callback) => {
+  const loginWithGithub = function(options, callback) {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
       options = null;
     }
 
-    const credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
+    var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
     Github.requestCredential(options, credentialRequestCompleteCallback);
   };
   Accounts.registerClientLoginFunction('github', loginWithGithub);
-  Meteor.loginWithGithub = 
-    (...args) => Accounts.applyLoginFunction('github', args);
+  Meteor.loginWithGithub = function () {
+    return Accounts.applyLoginFunction('github', arguments);
+  };
 } else {
   Accounts.addAutopublishFields({
     // not sure whether the github api can be used from the browser,

@@ -1,5 +1,4 @@
-import Visitor from "reify/lib/visitor.js";
-import { findPossibleIndexes } from "reify/lib/utils.js";
+import Visitor from "./visitor.js";
 
 // This RegExp will be used to scan the source for calls to meteorInstall,
 // taking into consideration that the function name may have been mangled
@@ -23,7 +22,6 @@ export function extractModuleSizesTree(source) {
   if (match) {
     const ast = Babel.parse(source);
     let meteorInstallName = "meteorInstall";
-    // The minifier may have renamed meteorInstall to something shorter.
     match.some((name, i) => (i > 0 && (meteorInstallName = name)));
     meteorInstallVisitor.visit(ast, meteorInstallName, source);
     return meteorInstallVisitor.tree;
@@ -34,41 +32,38 @@ const meteorInstallVisitor = new (class extends Visitor {
   reset(root, meteorInstallName, source) {
     this.name = meteorInstallName;
     this.source = source;
-    this.tree = Object.create(null);
-    // Optimization to abandon entire subtrees of the AST that contain
-    // nothing like the meteorInstall identifier we're looking for.
-    this.possibleIndexes = findPossibleIndexes(source, [
-      meteorInstallName,
-    ]);
+    this.tree = null;
   }
 
-  visitCallExpression(path) {
-    const node = path.getValue();
+  visitCallExpression(node) {
+    if (this.tree !== null) {
+      return;
+    }
 
     if (hasIdWithName(node.callee, this.name)) {
       const source = this.source;
 
-      function walk(tree, expr) {
+      function walk(expr) {
         if (expr.type !== "ObjectExpression") {
           return Buffer.byteLength(source.slice(expr.start, expr.end));
         }
 
-        tree = tree || Object.create(null);
+        const contents = Object.create(null);
 
         expr.properties.forEach(prop => {
           const keyName = getKeyName(prop.key);
           if (typeof keyName === "string") {
-            tree[keyName] = walk(tree[keyName], prop.value);
+            contents[keyName] = walk(prop.value);
           }
         });
 
-        return tree;
+        return contents;
       }
 
-      walk(this.tree, node.arguments[0]);
+      this.tree = walk(node.arguments[0]);
 
     } else {
-      this.visitChildren(path);
+      this.visitChildren(node);
     }
   }
 });

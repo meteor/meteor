@@ -130,7 +130,6 @@ selftest.define("compiler plugin caching - coffee", () => {
 // Tests the actual cache logic used by less and stylus.
 ['less', 'stylus'].forEach((packageName) => {
   const extension = packageName === 'stylus' ? 'styl' : packageName;
-  const hasCompileOneFileLaterSupport = packageName === "less";
 
   selftest.define("compiler plugin caching - " + packageName, () => {
     var s = new Sandbox({ fakeMongo: true });
@@ -165,19 +164,17 @@ selftest.define("compiler plugin caching - coffee", () => {
 
     // First program built (web.browser) compiles everything.
     matchRun([
-      // Plugins with a compileOneFileLater method can avoid compiling
-      // lazy files in /imports or /node_modules until they are actually
-      // needed, but older plugins still eagerly compile those files just
-      // in case they might be imported by a JS module.
-      ...(hasCompileOneFileLaterSupport ? []
-          : ["/imports/dotdot." + extension]),
+      // Though files in imports directories are compiled, they are marked
+      // as lazy so they will not be loaded unless imported.
+      "/imports/dotdot." + extension,
       "/subdir/nested-root." + extension,
       "/top." + extension
     ], "web.browser");
 
     matchRun([
-      ...(hasCompileOneFileLaterSupport ? []
-          : ["/imports/dotdot." + extension]),
+      // Though files in imports directories are compiled, they are marked
+      // as lazy so they will not be loaded unless imported.
+      "/imports/dotdot." + extension,
       "/subdir/nested-root." + extension,
       "/top." + extension
     ], "web.browser.legacy");
@@ -425,10 +422,7 @@ function checkModernAndLegacyUrls(path, test) {
     path = "/" + path;
   }
   test(getUrl("http://localhost:3000" + path));
-  // Asset URLs are no longer prefixed with /__browser.legacy because the
-  // developer has full control over the path where an asset is served, so
-  // there's not much value in serving a legacy version of every asset.
-  // test(getUrl("http://localhost:3000/__browser.legacy" + path));
+  test(getUrl("http://localhost:3000/__browser.legacy" + path));
 }
 
 // Test that compiler plugins can add static assets. Also tests `filenames`
@@ -455,7 +449,7 @@ selftest.define("compiler plugins - compiler addAsset", () => {
 
 // Test that a package can have a single file that is both source code and an
 // asset
-selftest.define("compiler plugins - addAssets", () => {
+selftest.skip.define("compiler plugins - addAssets", () => {
   const s = new Sandbox({ fakeMongo: true });
 
   s.createApp('myapp', 'compiler-plugin-asset-and-source');

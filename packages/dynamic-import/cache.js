@@ -1,3 +1,4 @@
+var hasOwn = Object.prototype.hasOwnProperty;
 var dbPromise;
 
 var canUseCache =

@@ -1,9 +1,10 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.4.3",
+  version: "1.4.2"
 });
 
-Package.onUse(api => {
+Package.onUse(function (api) {
+  api.use('underscore', ['client', 'server']);
   api.use('ecmascript', ['client', 'server']);
   api.use('ddp-rate-limiter');
   api.use('localstorage', 'client');
@@ -49,7 +50,7 @@ Package.onUse(api => {
   api.mainModule('client_main.js', 'client');
 });
 
-Package.onTest(api => {
+Package.onTest(function (api) {
   api.use([
     'accounts-base',
     'ecmascript',
@@ -57,6 +58,7 @@ Package.onTest(api => {
     'random',
     'test-helpers',
     'oauth-encryption',
+    'underscore',
     'ddp',
     'accounts-password'
   ]);

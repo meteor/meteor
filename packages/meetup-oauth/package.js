@@ -1,12 +1,13 @@
 Package.describe({
   summary: 'Meetup OAuth flow',
-  version: '1.0.3'
+  version: '1.0.1'
 });
 
-Package.onUse(api => {
+Package.onUse(function (api) {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('http', 'server');
+  api.use('http', ['server']);
+  api.use('underscore', 'client');
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
 

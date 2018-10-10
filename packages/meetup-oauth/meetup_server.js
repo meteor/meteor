@@ -1,28 +1,28 @@
 Meetup = {};
 
-OAuth.registerService('meetup', 2, null, query => {
+OAuth.registerService('meetup', 2, null, function(query) {
 
-  const response = getAccessToken(query);
-  const accessToken = response.access_token;
-  const expiresAt = (+new Date) + (1000 * response.expires_in);
-  const identity = getIdentity(accessToken);
+  var response = getAccessToken(query);
+  var accessToken = response.access_token;
+  var expiresAt = (+new Date) + (1000 * response.expires_in);
+  var identity = getIdentity(accessToken);
 
   return {
     serviceData: {
       id: identity.id,
-      accessToken,
-      expiresAt,
+      accessToken: accessToken,
+      expiresAt: expiresAt
     },
     options: {profile: {name: identity.name}}
   };
 });
 
-const getAccessToken = query => {
-  const config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
+var getAccessToken = function (query) {
+  var config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
-  let response;
+  var response;
   try {
     response = HTTP.post(
       "https://secure.meetup.com/oauth2/access", {headers: {Accept: 'application/json'}, params: {
@@ -34,33 +34,30 @@ const getAccessToken = query => {
         state: query.state
       }});
   } catch (err) {
-    throw Object.assign(
-      new Error(`Failed to complete OAuth handshake with Meetup. ${err.message}`),
-      { response: err.response }
-    );
+    throw _.extend(new Error("Failed to complete OAuth handshake with Meetup. " + err.message),
+                   {response: err.response});
   }
 
   if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with Meetup. ${response.data.error}`);
+    throw new Error("Failed to complete OAuth handshake with Meetup. " + response.data.error);
   } else {
     return response.data;
   }
 };
 
-const getIdentity = accessToken => {
+var getIdentity = function (accessToken) {
   try {
-    const response = HTTP.get(
+    var response = HTTP.get(
       "https://api.meetup.com/2/members",
       {params: {member_id: 'self', access_token: accessToken}});
     return response.data.results && response.data.results[0];
   } catch (err) {
-    throw Object.assign(
-      new Error(`Failed to fetch identity from Meetup. ${err.message}`),
-      { response: err.response }
-    );
+    throw _.extend(new Error("Failed to fetch identity from Meetup. " + err.message),
+                   {response: err.response});
   }
 };
 
 
-Meetup.retrieveCredential = (credentialToken, credentialSecret) =>
-  OAuth.retrieveCredential(credentialToken, credentialSecret);
+Meetup.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
+};

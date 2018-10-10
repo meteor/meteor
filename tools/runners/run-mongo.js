@@ -22,7 +22,7 @@ var runMongoShell = function (url) {
   var auth = mongoUrl.auth && mongoUrl.auth.split(':');
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
-  var args = ['--quiet'];
+  var args = [];
   if (ssl) {
     args.push('--ssl');
   }
@@ -543,7 +543,7 @@ var launchMongo = function (options) {
         maybeReadyToTalk();
       }
 
-      if (/ \[rsSync-0\] transition to primary complete/.test(data)) {
+      if (/ \[rsSync\] transition to primary complete/.test(data)) {
         replSetReady = true;
         maybeReadyToTalk();
       }
@@ -585,24 +585,21 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      const {
-        MongoClient,
-        Server
-      } = loadIsopackage('npm-mongo').NpmModuleMongodb;
+      const { Db, Server } = loadIsopackage('npm-mongo').NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
-      const client = new MongoClient(
+      var db = new Db(
+        'meteor',
         new Server('127.0.0.1', options.port, {
           poolSize: 1,
           socketOptions: {
             connectTimeoutMS: 60000
           }
-        })
+        }),
+        { safe: true }
       );
 
-      yieldingMethod(client, 'connect');
-      const db = client.db('meteor');
-
+      yieldingMethod(db, 'open');
       if (stopped) {
         return;
       }
@@ -610,7 +607,6 @@ var launchMongo = function (options) {
       var configuration = {
         _id: replSetName,
         version: 1,
-        protocolVersion: 1,
         members: [{_id: 0, host: '127.0.0.1:' + options.port, priority: 100}]
       };
 
@@ -715,7 +711,7 @@ var launchMongo = function (options) {
         break;
       }
 
-      client.close(true /* means "the app is closing the connection" */);
+      db.close(true /* means "the app is closing the connection" */);
     } catch (e) {
       // If the process has exited, we're doing another form of error
       // handling. No need to throw random low-level errors farther.

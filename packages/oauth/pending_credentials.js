@@ -23,13 +23,13 @@ OAuth._pendingCredentials._ensureIndex('createdAt');
 
 
 // Periodically clear old entries that were never retrieved
-const _cleanStaleResults = () => {
+var _cleanStaleResults = function() {
   // Remove credentials older than 1 minute
-  const timeCutoff = new Date();
+  var timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 1);
   OAuth._pendingCredentials.remove({ createdAt: { $lt: timeCutoff } });
 };
-const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
+var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
 // Stores the key and credential in the _pendingCredentials collection.
@@ -40,9 +40,9 @@ const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 // @param credentialSecret {string} A secret that must be presented in
 //   addition to the `key` to retrieve the credential
 //
-OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
+OAuth._storePendingCredential = function (key, credential, credentialSecret) {
   check(key, String);
-  check(credentialSecret, Match.Maybe(String));
+  check(credentialSecret, Match.Optional(String));
 
   if (credential instanceof Error) {
     credential = storableError(credential);
@@ -54,11 +54,11 @@ OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
   // to somehow send the same `state` parameter twice during an OAuth
   // login; we don't want a duplicate key error.
   OAuth._pendingCredentials.upsert({
-    key,
+    key: key
   }, {
-    key,
-    credential,
-    credentialSecret,
+    key: key,
+    credential: credential,
+    credentialSecret: credentialSecret || null,
     createdAt: new Date()
   });
 };
@@ -69,14 +69,13 @@ OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
 // @param key {string}
 // @param credentialSecret {string}
 //
-OAuth._retrievePendingCredential = (key, credentialSecret = null) => {
+OAuth._retrievePendingCredential = function (key, credentialSecret) {
   check(key, String);
 
-  const pendingCredential = OAuth._pendingCredentials.findOne({
-    key,
-    credentialSecret,
+  var pendingCredential = OAuth._pendingCredentials.findOne({
+    key: key,
+    credentialSecret: credentialSecret || null
   });
-
   if (pendingCredential) {
     OAuth._pendingCredentials.remove({ _id: pendingCredential._id });
     if (pendingCredential.credential.error)
@@ -92,12 +91,11 @@ OAuth._retrievePendingCredential = (key, credentialSecret = null) => {
 // Convert an Error into an object that can be stored in mongo
 // Note: A Meteor.Error is reconstructed as a Meteor.Error
 // All other error classes are reconstructed as a plain Error.
-// TODO: Can we do this more simply with EJSON?
-const storableError = error => {
-  const plainObject = {};
-  Object.getOwnPropertyNames(error).forEach(
-    key => plainObject[key] = error[key]
-  );
+var storableError = function(error) {
+  var plainObject = {};
+  Object.getOwnPropertyNames(error).forEach(function(key) {
+    plainObject[key] = error[key];
+  });
 
   // Keep track of whether it's a Meteor.Error
   if(error instanceof Meteor.Error) {
@@ -108,8 +106,8 @@ const storableError = error => {
 };
 
 // Create an error from the error format stored in mongo
-const recreateError = errorDoc => {
-  let error;
+var recreateError = function(errorDoc) {
+  var error;
 
   if (errorDoc.meteorError) {
     error = new Meteor.Error();
@@ -118,9 +116,9 @@ const recreateError = errorDoc => {
     error = new Error();
   }
 
-  Object.getOwnPropertyNames(errorDoc).forEach(key =>
-    error[key] = errorDoc[key]
-  );
+  Object.getOwnPropertyNames(errorDoc).forEach(function(key) {
+    error[key] = errorDoc[key];
+  });
 
   return error;
 };

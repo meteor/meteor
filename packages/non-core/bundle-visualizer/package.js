@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.2.2',
+  version: '1.1.2',
   summary: 'Meteor bundle analysis and visualization.',
   documentation: 'README.md',
 });
@@ -18,8 +18,7 @@ Package.onUse(function(api) {
   api.use([
     'ecmascript',
     'dynamic-import',
-    'fetch',
-    'webapp',
+    'http',
   ]);
   api.mainModule('server.js', 'server');
   api.mainModule('client.js', 'client');

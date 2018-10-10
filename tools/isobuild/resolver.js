@@ -182,7 +182,7 @@ export default class Resolver {
       // there's very little chance an `index.js` file will be a
       // directory. However, in principle it is remotely possible that a
       // file called `index.js` could be a directory instead of a file.
-      resolved = this._joinAndStat(dirPath, "index");
+      resolved = this._joinAndStat(dirPath, "index.js");
     }
 
     if (resolved) {
@@ -216,25 +216,19 @@ export default class Resolver {
     const path = pathNormalize(joined);
     const exactStat = this.statOrNull(path);
     const exactResult = exactStat && { path, stat: exactStat };
-
     let result = null;
-
     if (exactResult && exactStat.isFile()) {
       result = exactResult;
-    } else {
-      // No point in trying alternate file extensions if the parent
-      // directory does not exist.
-      const parentDirStat = this.statOrNull(pathDirname(path));
-      if (parentDirStat &&
-          parentDirStat.isDirectory()) {
-        this.extensions.some(ext => {
-          const pathWithExt = path + ext;
-          const stat = this.statOrNull(pathWithExt);
-          if (stat && ! stat.isDirectory()) {
-            return result = { path: pathWithExt, stat };
-          }
-        });
-      }
+    }
+
+    if (! result) {
+      this.extensions.some(ext => {
+        const pathWithExt = path + ext;
+        const stat = this.statOrNull(pathWithExt);
+        if (stat && ! stat.isDirectory()) {
+          return result = { path: pathWithExt, stat };
+        }
+      });
     }
 
     if (! result && exactResult && exactStat.isDirectory()) {
@@ -294,8 +288,8 @@ export default class Resolver {
 
     if (sourceRoot) {
       let dir = absParentPath; // It's ok for absParentPath to be a directory!
-      let dirStat = this.statOrNull(dir);
-      if (! (dirStat && dirStat.isDirectory())) {
+      let info = this._joinAndStat(dir);
+      if (! info || ! info.stat.isDirectory()) {
         dir = pathDirname(dir);
       }
 

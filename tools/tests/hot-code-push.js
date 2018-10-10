@@ -220,9 +220,6 @@ my-package`);
     run.match("jsVar: undefined");
     run.match("packageVar: bar");
 
-    // Ensure we set back to foo for subsequent runs
-    s.write("packages/my-package/foo.js", "packageVar = 'foo'");
-
     // Add appcache and ensure that the browser still reloads.
     s.write(".meteor/packages", `meteor-base
 session
@@ -246,7 +243,6 @@ appcache`);
 
     // Remove appcache and ensure that the browser still reloads.
     s.write(".meteor/packages", `meteor-base
-    static-html
 session`);
     run.match(/appcache.*removed from your project/);
     run.match("server restarted");
@@ -257,11 +253,16 @@ session`);
     run.match("jsVar: baz");
 
     s.unlink("client/test.js");
-    run.match("client connected: 2");
+
+    // Setting the autoupdateVersion to a different string should also
+    // force the client to restart.
+    s.write("server/test.js",
+            "Package.autoupdate.Autoupdate.autoupdateVersion = 'random'");
+    run.match("server restarted");
+    run.match("client connected: 0");
     run.match("jsVar: undefined");
 
-    s.write("server/test.js", 'console.log("DONE");');
-    run.match("DONE");
+    s.unlink("server/test.js");
     run.match("server restarted");
 
     run.stop();

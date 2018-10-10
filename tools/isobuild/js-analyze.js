@@ -2,15 +2,7 @@ import { parse } from 'meteor-babel';
 import { analyze as analyzeScope } from 'escope';
 import LRU from "lru-cache";
 
-import Visitor from "reify/lib/visitor.js";
-import { findPossibleIndexes } from "reify/lib/utils.js";
-
 const hasOwn = Object.prototype.hasOwnProperty;
-const objToStr = Object.prototype.toString
-
-function isRegExp(value) {
-  return value && objToStr.call(value) === "[object RegExp]";
-}
 
 var AST_CACHE = new LRU({
   max: Math.pow(2, 12),
@@ -43,6 +35,9 @@ function tryToParse(source, hash) {
   return ast;
 }
 
+var dependencyKeywordPattern =
+  /\b(?:require|import|importSync|dynamicImport|export)\b/g;
+
 /**
  * The `findImportedModuleIdentifiers` function takes a string of module
  * source code and returns a map from imported module identifiers to AST
@@ -58,45 +53,85 @@ function tryToParse(source, hash) {
  * function call, or an `import` or `export` statement).
  */
 export function findImportedModuleIdentifiers(source, hash) {
-  const possibleIndexes = findPossibleIndexes(source, [
-    "require",
-    "import",
-    "export",
-    "dynamicImport",
-    "link",
-  ]);
+  const identifiers = {};
+  const possibleIndexes = [];
+  let match;
 
-  if (possibleIndexes.length === 0) {
+  dependencyKeywordPattern.lastIndex = 0;
+  while ((match = dependencyKeywordPattern.exec(source))) {
+    possibleIndexes.push(match.index);
+  }
+
+  if (!possibleIndexes.length) {
     return {};
   }
 
   const ast = tryToParse(source, hash);
-  importedIdentifierVisitor.visit(ast, source, possibleIndexes);
-  return importedIdentifierVisitor.identifiers;
-}
 
-const importedIdentifierVisitor = new (class extends Visitor {
-  reset(rootPath, code, possibleIndexes) {
-    this.requireIsBound = false;
-    this.identifiers = Object.create(null);
+  function walk(node, left, right, requireIsBound) {
+    if (left >= right) {
+      // The window of possible indexes is empty, so we can ignore
+      // the entire subtree rooted at this node.
+    } else if (Array.isArray(node)) {
+      for (var i = 0, len = node.length; i < len; ++i) {
+        walk(node[i], left, right, requireIsBound);
+      }
+    } else if (isNode(node)) {
+      const start = node.start;
+      const end = node.end;
 
-    // Defining this.possibleIndexes causes the Visitor to ignore any
-    // subtrees of the AST that do not contain any indexes of identifiers
-    // that we care about. Note that findPossibleIndexes uses a RegExp to
-    // scan for the given identifiers, so there may be false positives,
-    // but that's fine because it just means scanning more of the AST.
-    this.possibleIndexes = possibleIndexes;
+      // Narrow the left-right window to exclude possible indexes
+      // that fall outside of the current node.
+      while (left < right && possibleIndexes[left] < start) ++left;
+      while (left < right && end < possibleIndexes[right - 1]) --right;
+
+      if (left < right) {
+        if (! requireIsBound &&
+            isFunctionWithParameter(node, "require")) {
+          requireIsBound = true;
+        }
+
+        let id = getRequiredModuleId(node);
+        if (typeof id === "string") {
+          return addIdentifier(id, "require", requireIsBound);
+        }
+
+        const importInfo = getImportedModuleInfo(node);
+        if (importInfo) {
+          return addIdentifier(
+            importInfo.id,
+            "import",
+            requireIsBound,
+            importInfo.dynamic
+          );
+        }
+
+        // Continue traversing the children of this node.
+        for (const key of Object.keys(node)) {
+          switch (key) {
+          case "type":
+          case "loc":
+          case "start":
+          case "end":
+            // Ignore common keys that are never nodes.
+            continue;
+          }
+
+          walk(node[key], left, right, requireIsBound);
+        }
+      }
+    }
   }
 
-  addIdentifier(id, type, dynamic) {
-    const entry = hasOwn.call(this.identifiers, id)
-      ? this.identifiers[id]
-      : this.identifiers[id] = {
+  function addIdentifier(id, type, requireIsBound, isDynamic) {
+    const entry = hasOwn.call(identifiers, id)
+      ? identifiers[id]
+      : identifiers[id] = {
           possiblySpurious: true,
-          dynamic: !! dynamic
+          dynamic: !! isDynamic
         };
 
-    if (! dynamic) {
+    if (! isDynamic) {
       entry.dynamic = false;
     }
 
@@ -104,7 +139,7 @@ const importedIdentifierVisitor = new (class extends Visitor {
       // If the identifier comes from a require call, but require is not a
       // free variable, then this dependency might be spurious.
       entry.possiblySpurious =
-        entry.possiblySpurious && this.requireIsBound;
+        entry.possiblySpurious && requireIsBound;
     } else {
       // The import keyword can't be shadowed, so any dependencies
       // registered by import statements should be trusted absolutely.
@@ -112,109 +147,45 @@ const importedIdentifierVisitor = new (class extends Visitor {
     }
   }
 
-  visitFunctionExpression(path) {
-    return this._functionParamRequireHelper(path);
-  }
+  walk(ast, 0, possibleIndexes.length, false);
 
-  visitFunctionDeclaration(path) {
-    return this._functionParamRequireHelper(path);
-  }
+  return identifiers;
+}
 
-  visitArrowFunctionExpression(path) {
-    return this._functionParamRequireHelper(path);
-  }
+function isNode(value) {
+  return value
+    && typeof value === "object"
+    && typeof value.type === "string"
+    && typeof value.start === "number"
+    && typeof value.end === "number";
+}
 
-  _functionParamRequireHelper(path) {
-    const node = path.getValue();
-    if (node.params.some(param => isIdWithName(param, "require"))) {
-      const { requireIsBound } = this;
-      this.requireIsBound = true;
-      this.visitChildren(path);
-      this.requireIsBound = requireIsBound;
-    } else {
-      this.visitChildren(path);
-    }
-  }
+function isIdWithName(node, name) {
+  return node &&
+    node.type === "Identifier" &&
+    node.name === name;
+}
 
-  visitCallExpression(path) {
-    const node = path.getValue();
+function isFunctionWithParameter(node, name) {
+  if (node.type === "FunctionExpression" ||
+      node.type === "FunctionDeclaration" ||
+      node.type === "ArrowFunctionExpression") {
+    return node.params.some(param => isIdWithName(param, name));
+  }
+}
+
+function getRequiredModuleId(node) {
+  if (node.type === "CallExpression" &&
+      isIdWithName(node.callee, "require")) {
     const args = node.arguments;
     const argc = args.length;
-    const firstArg = args[0];
-
-    this.visitChildren(path);
-
-    if (! isStringLiteral(firstArg)) {
-      return;
-    }
-
-    if (isIdWithName(node.callee, "require")) {
-      this.addIdentifier(firstArg.value, "require");
-
-    } else if (node.callee.type === "Import" ||
-               isIdWithName(node.callee, "import")) {
-      this.addIdentifier(firstArg.value, "import", true);
-
-    } else if (node.callee.type === "MemberExpression" &&
-               // The Reify compiler sometimes renames references to the
-               // CommonJS module object for hygienic purposes, but it
-               // always does so by appending additional numbers.
-               isIdWithName(node.callee.object, /^module\d*$/)) {
-      const propertyName =
-        isPropertyWithName(node.callee.property, "link") ||
-        isPropertyWithName(node.callee.property, "dynamicImport");
-
-      if (propertyName) {
-        this.addIdentifier(
-          firstArg.value,
-          "import",
-          propertyName === "dynamicImport"
-        );
+    if (argc > 0) {
+      const arg = args[0];
+      if (isStringLiteral(arg)) {
+        return arg.value;
       }
     }
   }
-
-  visitImportDeclaration(path) {
-    return this._importExportSourceHelper(path);
-  }
-
-  visitExportAllDeclaration(path) {
-    return this._importExportSourceHelper(path);
-  }
-
-  visitExportNamedDeclaration(path) {
-    return this._importExportSourceHelper(path);
-  }
-
-  _importExportSourceHelper(path) {
-    const node = path.getValue();
-    // The .source of an ImportDeclaration or Export{Named,All}Declaration
-    // is always a string-valued Literal node, if not null.
-    if (isStringLiteral(node.source)) {
-      this.addIdentifier(
-        node.source.value,
-        "import",
-        false
-      );
-    }
-  }
-});
-
-function isIdWithName(node, name) {
-  if (! node ||
-      node.type !== "Identifier") {
-    return false;
-  }
-
-  if (typeof name === "string") {
-    return node.name === name;
-  }
-
-  if (isRegExp(name)) {
-    return name.test(node.name);
-  }
-
-  return false;
 }
 
 function isStringLiteral(node) {
@@ -222,6 +193,61 @@ function isStringLiteral(node) {
     node.type === "StringLiteral" ||
     (node.type === "Literal" &&
      typeof node.value === "string"));
+}
+
+function getImportedModuleInfo(node) {
+  switch (node.type) {
+  case "CallExpression":
+    if (node.callee.type === "Import" ||
+        isIdWithName(node.callee, "import")) {
+      const firstArg = node.arguments[0];
+      if (isStringLiteral(firstArg)) {
+        return {
+          id: firstArg.value,
+          dynamic: true,
+        };
+      }
+
+    } else if (node.callee.type === "MemberExpression" &&
+               isIdWithName(node.callee.object, "module")) {
+      const propertyName =
+        isPropertyWithName(node.callee.property, "import") ||
+        isPropertyWithName(node.callee.property, "importSync") ||
+        isPropertyWithName(node.callee.property, "dynamicImport");
+
+      if (propertyName) {
+        const dynamic = propertyName === "dynamicImport";
+        const args = node.arguments;
+        const argc = args.length;
+
+        if (argc > 0) {
+          const arg = args[0];
+          if (isStringLiteral(arg)) {
+            return {
+              id: arg.value,
+              dynamic,
+            };
+          }
+        }
+      }
+    }
+
+    return null;
+
+  case "ImportDeclaration":
+  case "ExportAllDeclaration":
+  case "ExportNamedDeclaration":
+    // The .source of an ImportDeclaration or Export{Named,All}Declaration
+    // is always a string-valued Literal node, if not null.
+    if (isNode(node.source)) {
+      return {
+        id: node.source.value,
+        dynamic: false,
+      };
+    }
+
+    return null;
+  }
 }
 
 function isPropertyWithName(node, name) {

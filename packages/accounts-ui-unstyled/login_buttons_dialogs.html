@@ -14,27 +14,13 @@
   {{#if inResetPasswordFlow}}
     <div class="hide-background"></div>
 
-    <form class="accounts-dialog accounts-centered-dialog">
-      <label id="reset-password-username-email-label" for="reset-password-username-email" style="display: none;">
-        Username or email
-      </label> 
-
-      <div class="reset-password-username-email-wrapper" style="display: none;" >
-        <input
-          id="reset-password-username-email"
-          type="text"
-          value="{{displayName}}"
-          autocomplete="username email"
-          disabled
-        />
-      </div>
-
+    <div class="accounts-dialog accounts-centered-dialog">
       <label id="reset-password-new-password-label" for="reset-password-new-password">
         New password
-      </label>      
+      </label>
 
       <div class="reset-password-new-password-wrapper">
-        <input id="reset-password-new-password" type="password" autocomplete="new-password" />
+        <input id="reset-password-new-password" type="password" />
       </div>
 
       {{> _loginButtonsMessages}}
@@ -44,7 +30,7 @@
       </div>
 
       <a class="accounts-close" id="login-buttons-cancel-reset-password">&times;</a>
-    </form>
+    </div>
   {{/if}}
 </template>
 
@@ -62,27 +48,13 @@
   {{#if inEnrollAccountFlow}}
     <div class="hide-background"></div>
 
-    <form class="accounts-dialog accounts-centered-dialog">
-      <label id="enroll-account-username-email-label" for="enroll-account-username-email" style="display: none;">
-        Username or email
-      </label> 
-
-      <div class="enroll-account-username-email-wrapper" style="display: none;" >
-        <input
-          id="enroll-account-username-email"
-          type="text"
-          value="{{displayName}}"
-          autocomplete="username email"
-          disabled
-        />
-      </div>
-
+    <div class="accounts-dialog accounts-centered-dialog">
       <label id="enroll-account-password-label" for="enroll-account-password">
         Choose a password
       </label>
 
       <div class="enroll-account-password-wrapper">
-        <input id="enroll-account-password" type="password" autocomplete="new-password" />
+        <input id="enroll-account-password" type="password" />
       </div>
 
       {{> _loginButtonsMessages}}
@@ -92,7 +64,7 @@
       </div>
 
       <a class="accounts-close" id="login-buttons-cancel-enroll-account">&times;</a>
-    </form>
+    </div>
   {{/if}}
 </template>
 

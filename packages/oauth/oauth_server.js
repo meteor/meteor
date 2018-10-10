@@ -1,12 +1,11 @@
-import Fiber from 'fibers';
-import url from 'url';
+var url = Npm.require('url');
 
 OAuth = {};
 OAuthTest = {};
 
 RoutePolicy.declare('/_oauth/', 'network');
 
-const registeredServices = {};
+var registeredServices = {};
 
 // Internal: Maps from service version to handler function. The
 // 'oauth1' and 'oauth2' packages manipulate this directly to register
@@ -30,57 +29,58 @@ OAuth._requestHandlers = {};
 //       up in the user's services[name] field
 //     - `null` if the user declined to give permissions
 //
-OAuth.registerService = (name, version, urls, handleOauthRequest) => {
+OAuth.registerService = function (name, version, urls, handleOauthRequest) {
   if (registeredServices[name])
-    throw new Error(`Already registered the ${name} OAuth service`);
+    throw new Error("Already registered the " + name + " OAuth service");
 
   registeredServices[name] = {
     serviceName: name,
-    version,
-    urls,
-    handleOauthRequest,
+    version: version,
+    urls: urls,
+    handleOauthRequest: handleOauthRequest
   };
 };
 
 // For test cleanup.
-OAuthTest.unregisterService = name => {
+OAuthTest.unregisterService = function (name) {
   delete registeredServices[name];
 };
 
 
-OAuth.retrieveCredential = (credentialToken, credentialSecret) =>
-  OAuth._retrievePendingCredential(credentialToken, credentialSecret);
+OAuth.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth._retrievePendingCredential(credentialToken, credentialSecret);
+};
 
 
 // The state parameter is normally generated on the client using
 // `btoa`, but for tests we need a version that runs on the server.
 //
-OAuth._generateState = (loginStyle, credentialToken, redirectUrl) => {
+OAuth._generateState = function (loginStyle, credentialToken, redirectUrl) {
   return Buffer.from(JSON.stringify({
     loginStyle: loginStyle,
     credentialToken: credentialToken,
     redirectUrl: redirectUrl})).toString('base64');
 };
 
-OAuth._stateFromQuery = query => {
-  let string;
+OAuth._stateFromQuery = function (query) {
+  var string;
   try {
     string = Buffer.from(query.state, 'base64').toString('binary');
   } catch (e) {
-    Log.warn(`Unable to base64 decode state from OAuth query: ${query.state}`);
+    Log.warn('Unable to base64 decode state from OAuth query: ' + query.state);
     throw e;
   }
 
   try {
     return JSON.parse(string);
   } catch (e) {
-    Log.warn(`Unable to parse state from OAuth query: ${string}`);
+    Log.warn('Unable to parse state from OAuth query: ' + string);
     throw e;
   }
 };
 
-OAuth._loginStyleFromQuery = query => {
-  let style;
+OAuth._loginStyleFromQuery = function (query) {
+  var style;
   // For backwards-compatibility for older clients, catch any errors
   // that result from parsing the state parameter. If we can't parse it,
   // set login style to popup by default.
@@ -90,13 +90,13 @@ OAuth._loginStyleFromQuery = query => {
     style = "popup";
   }
   if (style !== "popup" && style !== "redirect") {
-    throw new Error(`Unrecognized login style: ${style}`);
+    throw new Error("Unrecognized login style: " + style);
   }
   return style;
 };
 
-OAuth._credentialTokenFromQuery = query => {
-  let state;
+OAuth._credentialTokenFromQuery = function (query) {
+  var state;
   // For backwards-compatibility for older clients, catch any errors
   // that result from parsing the state parameter. If we can't parse it,
   // assume that the state parameter's value is the credential token, as
@@ -109,7 +109,7 @@ OAuth._credentialTokenFromQuery = query => {
   return state.credentialToken;
 };
 
-OAuth._isCordovaFromQuery = query => {
+OAuth._isCordovaFromQuery = function (query) {
   try {
     return !! OAuth._stateFromQuery(query).isCordova;
   } catch (err) {
@@ -125,9 +125,9 @@ OAuth._isCordovaFromQuery = query => {
 // We export this function so that developers can override this
 // behavior to allow apps from external domains to login using the
 // redirect OAuth flow.
-OAuth._checkRedirectUrlOrigin = redirectUrl => {
-  const appHost = Meteor.absoluteUrl();
-  const appHostReplacedLocalhost = Meteor.absoluteUrl(undefined, {
+OAuth._checkRedirectUrlOrigin = function (redirectUrl) {
+  var appHost = Meteor.absoluteUrl();
+  var appHostReplacedLocalhost = Meteor.absoluteUrl(undefined, {
     replaceLocalhost: true
   });
   return (
@@ -138,35 +138,29 @@ OAuth._checkRedirectUrlOrigin = redirectUrl => {
 
 
 // Listen to incoming OAuth http requests
-WebApp.connectHandlers.use((req, res, next) => {
-  // Need to create a Fiber since we're using synchronous http calls and nothing
-  // else is wrapping this in a fiber automatically
-  Fiber(() => middleware(req, res, next)).run();
-});
-
-const middleware = (req, res, next) => {
+var middleware = function (req, res, next) {
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
   try {
-    const serviceName = oauthServiceName(req);
+    var serviceName = oauthServiceName(req);
     if (!serviceName) {
       // not an oauth request. pass to next middleware.
       next();
       return;
     }
 
-    const service = registeredServices[serviceName];
+    var service = registeredServices[serviceName];
 
     // Skip everything if there's no service set by the oauth middleware
     if (!service)
-      throw new Error(`Unexpected OAuth service ${serviceName}`);
+      throw new Error("Unexpected OAuth service " + serviceName);
 
     // Make sure we're configured
     ensureConfigured(serviceName);
 
-    const handler = OAuth._requestHandlers[service.version];
+    var handler = OAuth._requestHandlers[service.version];
     if (!handler)
-      throw new Error(`Unexpected OAuth version ${service.version}`);
+      throw new Error("Unexpected OAuth version " + service.version);
     handler(service, req.query, res);
   } catch (err) {
     // if we got thrown an error, save it off, it will get passed to
@@ -212,15 +206,15 @@ OAuthTest.middleware = middleware;
 //
 // @returns {String|null} e.g. "facebook", or null if this isn't an
 // oauth request
-const oauthServiceName = req => {
+var oauthServiceName = function (req) {
   // req.url will be "/_oauth/<service name>" with an optional "?close".
-  const i = req.url.indexOf('?');
-  let barePath;
+  var i = req.url.indexOf('?');
+  var barePath;
   if (i === -1)
     barePath = req.url;
   else
     barePath = req.url.substring(0, i);
-  const splitPath = barePath.split('/');
+  var splitPath = barePath.split('/');
 
   // Any non-oauth request will continue down the default
   // middlewares.
@@ -228,18 +222,18 @@ const oauthServiceName = req => {
     return null;
 
   // Find service based on url
-  const serviceName = splitPath[2];
+  var serviceName = splitPath[2];
   return serviceName;
 };
 
 // Make sure we're configured
-const ensureConfigured = serviceName => {
+var ensureConfigured = function(serviceName) {
   if (!ServiceConfiguration.configurations.findOne({service: serviceName})) {
     throw new ServiceConfiguration.ConfigError();
   }
 };
 
-const isSafe = value => {
+var isSafe = function (value) {
   // This matches strings generated by `Random.secret` and
   // `Random.id`.
   return typeof value === "string" &&
@@ -247,7 +241,7 @@ const isSafe = value => {
 };
 
 // Internal: used by the oauth1 and oauth2 packages
-OAuth._renderOauthResults = (res, query, credentialSecret) => {
+OAuth._renderOauthResults = function(res, query, credentialSecret) {
   // For tests, we support the `only_credential_secret_for_test`
   // parameter, which just returns the credential secret without any
   // surrounding HTML. (The test needs to be able to easily grab the
@@ -261,15 +255,15 @@ OAuth._renderOauthResults = (res, query, credentialSecret) => {
     res.writeHead(200, {'Content-Type': 'text/html'});
     res.end(credentialSecret, 'utf-8');
   } else {
-    const details = {
-      query,
+    var details = {
+      query: query,
       loginStyle: OAuth._loginStyleFromQuery(query)
     };
     if (query.error) {
       details.error = query.error;
     } else {
-      const token = OAuth._credentialTokenFromQuery(query);
-      const secret = credentialSecret;
+      var token = OAuth._credentialTokenFromQuery(query);
+      var secret = credentialSecret;
       if (token && secret &&
           isSafe(token) && isSafe(secret)) {
         details.credentials = { token: token, secret: secret};
@@ -302,13 +296,13 @@ OAuth._endOfRedirectResponseTemplate = Assets.getText(
 //   - redirectUrl
 //   - isCordova (boolean)
 //
-const renderEndOfLoginResponse = options => {
+var renderEndOfLoginResponse = function (options) {
   // It would be nice to use Blaze here, but it's a little tricky
   // because our mustaches would be inside a <script> tag, and Blaze
   // would treat the <script> tag contents as text (e.g. encode '&' as
   // '&amp;'). So we just do a simple replace.
 
-  const escape = s => {
+  var escape = function (s) {
     if (s) {
       return s.replace(/&/g, "&amp;").
         replace(/</g, "&lt;").
@@ -323,7 +317,7 @@ const renderEndOfLoginResponse = options => {
 
   // Escape everything just to be safe (we've already checked that some
   // of this data -- the token and secret -- are safe).
-  const config = {
+  var config = {
     setCredentialToken: !! options.setCredentialToken,
     credentialToken: escape(options.credentialToken),
     credentialSecret: escape(options.credentialSecret),
@@ -332,21 +326,21 @@ const renderEndOfLoginResponse = options => {
     isCordova: !! options.isCordova
   };
 
-  let template;
+  var template;
   if (options.loginStyle === 'popup') {
     template = OAuth._endOfPopupResponseTemplate;
   } else if (options.loginStyle === 'redirect') {
     template = OAuth._endOfRedirectResponseTemplate;
   } else {
-    throw new Error(`invalid loginStyle: ${options.loginStyle}`);
+    throw new Error('invalid loginStyle: ' + options.loginStyle);
   }
 
-  const result = template.replace(/##CONFIG##/, JSON.stringify(config))
+  var result = template.replace(/##CONFIG##/, JSON.stringify(config))
     .replace(
       /##ROOT_URL_PATH_PREFIX##/, __meteor_runtime_config__.ROOT_URL_PATH_PREFIX
     );
 
-  return `<!DOCTYPE html>\n${result}`;
+  return "<!DOCTYPE html>\n" + result;
 };
 
 // Writes an HTTP response to the popup window at the end of an OAuth
@@ -380,21 +374,21 @@ const renderEndOfLoginResponse = options => {
 //        so shouldn't be trusted for security decisions or included in
 //        the response without sanitizing it first. Only one of `error`
 //        or `credentials` should be set.
-OAuth._endOfLoginResponse = (res, details) => {
+OAuth._endOfLoginResponse = function (res, details) {
   res.writeHead(200, {'Content-Type': 'text/html'});
 
-  let redirectUrl;
+  var redirectUrl;
   if (details.loginStyle === 'redirect') {
     redirectUrl = OAuth._stateFromQuery(details.query).redirectUrl;
-    const appHost = Meteor.absoluteUrl();
+    var appHost = Meteor.absoluteUrl();
     if (OAuth._checkRedirectUrlOrigin(redirectUrl)) {
-      details.error = `redirectUrl (${redirectUrl}` +
-        `) is not on the same host as the app (${appHost})`;
+      details.error = "redirectUrl (" + redirectUrl +
+        ") is not on the same host as the app (" + appHost + ")";
       redirectUrl = appHost;
     }
   }
 
-  const isCordova = OAuth._isCordovaFromQuery(details.query);
+  var isCordova = OAuth._isCordovaFromQuery(details.query);
 
   if (details.error) {
     Log.warn("Error in OAuth Server: " +
@@ -403,8 +397,8 @@ OAuth._endOfLoginResponse = (res, details) => {
     res.end(renderEndOfLoginResponse({
       loginStyle: details.loginStyle,
       setCredentialToken: false,
-      redirectUrl,
-      isCordova,
+      redirectUrl: redirectUrl,
+      isCordova: isCordova
     }), "utf-8");
     return;
   }
@@ -417,16 +411,17 @@ OAuth._endOfLoginResponse = (res, details) => {
     setCredentialToken: true,
     credentialToken: details.credentials.token,
     credentialSecret: details.credentials.secret,
-    redirectUrl,
-    isCordova,
+    redirectUrl: redirectUrl,
+    isCordova: isCordova
   }), "utf-8");
 };
 
 
-const OAuthEncryption = Package["oauth-encryption"] && Package["oauth-encryption"].OAuthEncryption;
+var OAuthEncryption = Package["oauth-encryption"] && Package["oauth-encryption"].OAuthEncryption;
 
-const usingOAuthEncryption = () =>
-  OAuthEncryption && OAuthEncryption.keyIsLoaded();
+var usingOAuthEncryption = function () {
+  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
+};
 
 // Encrypt sensitive service data such as access tokens if the
 // "oauth-encryption" package is loaded and the oauth secret key has
@@ -438,7 +433,7 @@ const usingOAuthEncryption = () =>
 // will be re-encrypted with the user id included before inserting the
 // service data into the user document.
 //
-OAuth.sealSecret = plaintext => {
+OAuth.sealSecret = function (plaintext) {
   if (usingOAuthEncryption())
     return OAuthEncryption.seal(plaintext);
   else
@@ -451,7 +446,7 @@ OAuth.sealSecret = plaintext => {
 // Throws an error if the "oauth-encryption" package is loaded and the
 // field is encrypted, but the oauth secret key hasn't been specified.
 //
-OAuth.openSecret = (maybeSecret, userId) => {
+OAuth.openSecret = function (maybeSecret, userId) {
   if (!Package["oauth-encryption"] || !OAuthEncryption.isSealed(maybeSecret))
     return maybeSecret;
 
@@ -460,10 +455,10 @@ OAuth.openSecret = (maybeSecret, userId) => {
 
 // Unencrypt fields in the service data object.
 //
-OAuth.openSecrets = (serviceData, userId) => {
-  const result = {};
-  Object.keys(serviceData).forEach(key =>
-    result[key] = OAuth.openSecret(serviceData[key], userId)
-  );
+OAuth.openSecrets = function (serviceData, userId) {
+  var result = {};
+  _.each(_.keys(serviceData), function (key) {
+    result[key] = OAuth.openSecret(serviceData[key], userId);
+  });
   return result;
 };

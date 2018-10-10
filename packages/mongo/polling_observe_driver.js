@@ -1,6 +1,3 @@
-var POLLING_THROTTLE_MS = +process.env.METEOR_POLLING_THROTTLE_MS || 50;
-var POLLING_INTERVAL_MS = +process.env.METEOR_POLLING_INTERVAL_MS || 10 * 1000;
-
 PollingObserveDriver = function (options) {
   var self = this;
 
@@ -32,7 +29,7 @@ PollingObserveDriver = function (options) {
   // PollingObserveDriver object.
   self._ensurePollIsScheduled = _.throttle(
     self._unthrottledEnsurePollIsScheduled,
-    self._cursorDescription.options.pollingThrottleMs || POLLING_THROTTLE_MS /* ms */);
+    self._cursorDescription.options.pollingThrottleMs || 50 /* ms */);
 
   // XXX figure out if we still need a queue
   self._taskQueue = new Meteor._SynchronousQueue();
@@ -67,7 +64,7 @@ PollingObserveDriver = function (options) {
     var pollingInterval =
           self._cursorDescription.options.pollingIntervalMs ||
           self._cursorDescription.options._pollingInterval || // COMPAT with 1.2
-          POLLING_INTERVAL_MS;
+          10 * 1000;
     var intervalHandle = Meteor.setInterval(
       _.bind(self._ensurePollIsScheduled, self), pollingInterval);
     self._stopCallbacks.push(function () {

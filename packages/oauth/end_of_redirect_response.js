@@ -1,6 +1,6 @@
-(() => {
+(function () {
 
-  const config = JSON.parse(document.getElementById("config").innerHTML);
+  var config = JSON.parse(document.getElementById("config").innerHTML);
 
   if (config.setCredentialToken) {
     sessionStorage[config.storagePrefix + config.credentialToken] =

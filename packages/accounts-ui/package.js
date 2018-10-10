@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Simple templates to add login widgets to an app",
-  version: "1.3.1",
+  version: "1.3.0"
 });
 
-Package.onUse(api => {
+Package.onUse(function (api) {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('accounts-ui-unstyled', 'client');

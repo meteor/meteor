@@ -889,7 +889,6 @@ _.extend(PackageSource.prototype, {
             sourceArch: this,
             ignoreFiles,
             isApp: true,
-            testModule,
           };
 
           // If this architecture has a mainModule defined in
@@ -1026,9 +1025,8 @@ _.extend(PackageSource.prototype, {
         return fileOptions;
       }
 
-      // Files in `imports/` and `tests/` directories should be lazily
-      // loaded *apart* from tests.
-      if ((dir === "imports" || dir === "tests") && ! isTestFile) {
+      // Files in `imports/` should be lazily loaded *apart* from tests
+      if (dir === "imports" && ! isTestFile) {
         fileOptions.lazy = true;
       }
 
@@ -1077,12 +1075,11 @@ _.extend(PackageSource.prototype, {
   // complete list of source files for directories within node_modules.
   _findSourcesCache: Object.create(null),
 
-  _findSources: Profile("PackageSource#_findSources", function ({
+  _findSources({
     sourceProcessorSet,
     watchSet,
     isApp,
     sourceArch,
-    testModule,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = []
   }) {
@@ -1105,10 +1102,10 @@ _.extend(PackageSource.prototype, {
     // Unless we're running tests, ignore all test filenames and if we are, ignore the
     // type of file we *aren't* running
     if (!global.testCommandMetadata || global.testCommandMetadata.isTest) {
-      sourceReadOptions.exclude.push(...APP_TEST_FILENAME_REGEXPS);
+      Array.prototype.push.apply(sourceReadOptions.exclude, APP_TEST_FILENAME_REGEXPS);
     }
     if (!global.testCommandMetadata || global.testCommandMetadata.isAppTest) {
-      sourceReadOptions.exclude.push(...TEST_FILENAME_REGEXPS);
+      Array.prototype.push.apply(sourceReadOptions.exclude, TEST_FILENAME_REGEXPS);
     }
 
     // Read top-level source files, excluding control files that were not
@@ -1119,21 +1116,13 @@ _.extend(PackageSource.prototype, {
       controlFiles.push('package.js');
     }
 
-    const anyLevelExcludes = [];
-
-    // If we have a meteor.testModule from package.json, then we don't
-    // need to exclude tests/ directories from the search, because we
-    // trust meteor.testModule to identify a single test entry point.
-    if (! testModule) {
-      anyLevelExcludes.push(/^tests\/$/);
-    }
-
-    anyLevelExcludes.push(
+    const anyLevelExcludes = [
+      /^tests\/$/,
       archinfo.matches(arch, "os")
         ? /^client\/$/
         : /^server\/$/,
       ...sourceReadOptions.exclude,
-    );
+    ];
 
     const topLevelExcludes = isApp ? [
       ...anyLevelExcludes,
@@ -1170,34 +1159,6 @@ _.extend(PackageSource.prototype, {
     }
 
     const dotMeteorIgnoreFiles = Object.create(null);
-
-    function removeIgnoredFilesFrom(array) {
-      Object.keys(dotMeteorIgnoreFiles).forEach(ignoreDir => {
-        const ignore = dotMeteorIgnoreFiles[ignoreDir];
-        let target = 0;
-
-        array.forEach(item => {
-          let relPath = files.pathRelative(ignoreDir, item);
-
-          if (! relPath.startsWith("..")) {
-            if (item.endsWith("/")) {
-              // The trailing slash is discarded by files.pathRelative.
-              relPath += "/";
-            }
-
-            if (ignore.ignores(relPath)) {
-              return;
-            }
-          }
-
-          array[target++] = item;
-        });
-
-        array.length = target;
-      });
-
-      return array;
-    }
 
     function find(dir, depth, inNodeModules) {
       // Remove trailing slash.
@@ -1240,8 +1201,35 @@ _.extend(PackageSource.prototype, {
           : topLevelExcludes
       });
 
-      removeIgnoredFilesFrom(sources);
-      removeIgnoredFilesFrom(subdirectories);
+      Object.keys(dotMeteorIgnoreFiles).forEach(ignoreDir => {
+        const ignore = dotMeteorIgnoreFiles[ignoreDir];
+
+        function removeIgnoredFilesFrom(array) {
+          let target = 0;
+
+          array.forEach(item => {
+            let relPath = files.pathRelative(ignoreDir, item);
+
+            if (! relPath.startsWith("..")) {
+              if (item.endsWith("/")) {
+                // The trailing slash is discarded by files.pathRelative.
+                relPath += "/";
+              }
+
+              if (ignore.ignores(relPath)) {
+                return;
+              }
+            }
+
+            array[target++] = item;
+          });
+
+          array.length = target;
+        }
+
+        removeIgnoredFilesFrom(sources);
+        removeIgnoredFilesFrom(subdirectories);
+      });
 
       let nodeModulesDir;
 
@@ -1263,6 +1251,9 @@ _.extend(PackageSource.prototype, {
         }
       });
 
+      // Don't apply any .meteorignore rules to files inside node_modules.
+      delete dotMeteorIgnoreFiles[dir];
+
       if (isApp &&
           nodeModulesDir &&
           (! inNodeModules || sources.length > 0)) {
@@ -1276,8 +1267,6 @@ _.extend(PackageSource.prototype, {
         sources.push(...find(nodeModulesDir, depth + 1, true));
       }
 
-      delete dotMeteorIgnoreFiles[dir];
-
       if (cacheKey) {
         self._findSourcesCache[cacheKey] = sources;
       }
@@ -1286,7 +1275,7 @@ _.extend(PackageSource.prototype, {
     }
 
     return files.withCache(() => find("", 0, false));
-  }),
+  },
 
   _findAssets({
     sourceProcessorSet,
@@ -1311,7 +1300,7 @@ _.extend(PackageSource.prototype, {
       }
 
       while (!_.isEmpty(assetDirs)) {
-        var dir = assetDirs.shift();
+        dir = assetDirs.shift();
         // remove trailing slash
         dir = dir.substr(0, dir.length - 1);
 

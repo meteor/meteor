@@ -1,7 +1,5 @@
 import { Facts, FACTS_COLLECTION, FACTS_PUBLICATION } from './facts_base_common';
 
-const hasOwn = Object.prototype.hasOwnProperty;
-
 // This file is only used server-side, so no need to check Meteor.isServer.
 
 // By default, we publish facts to no user if autopublish is off, and to all
@@ -24,23 +22,23 @@ let activeSubscriptions = [];
 Facts._factsByPackage = factsByPackage;
 
 Facts.incrementServerFact = function (pkg, fact, increment) {
-  if (!hasOwn.call(factsByPackage, pkg)) {
+  if (!_.has(factsByPackage, pkg)) {
     factsByPackage[pkg] = {};
     factsByPackage[pkg][fact] = increment;
-    activeSubscriptions.forEach(function (sub) {
+    _.each(activeSubscriptions, function (sub) {
       sub.added(FACTS_COLLECTION, pkg, factsByPackage[pkg]);
     });
     return;
   }
 
   const packageFacts = factsByPackage[pkg];
-  if (!hasOwn.call(packageFacts, fact)) {
+  if (!_.has(packageFacts, fact)) {
     factsByPackage[pkg][fact] = 0;
   }
   factsByPackage[pkg][fact] += increment;
   const changedField = {};
   changedField[fact] = factsByPackage[pkg][fact];
-  activeSubscriptions.forEach(function (sub) {
+  _.each(activeSubscriptions, function (sub) {
     sub.changed(FACTS_COLLECTION, pkg, changedField);
   });
 };
@@ -58,12 +56,11 @@ Meteor.defer(function () {
     }
 
     activeSubscriptions.push(sub);
-    Object.keys(factsByPackage).forEach(function (pkg) {
-      sub.added(FACTS_COLLECTION, pkg, factsByPackage[pkg]);
+    _.each(factsByPackage, function (facts, pkg) {
+      sub.added(FACTS_COLLECTION, pkg, facts);
     });
     sub.onStop(function () {
-      activeSubscriptions =
-        activeSubscriptions.filter(activeSub => activeSub !== sub);
+      activeSubscriptions = _.without(activeSubscriptions, sub);
     });
     sub.ready();
   }, {is_auto: true});

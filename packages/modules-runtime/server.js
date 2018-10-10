@@ -1,6 +1,3 @@
-// Options that will be populated below and then passed to makeInstaller.
-var makeInstallerOptions = {};
-
 // RegExp matching strings that don't start with a `.` or a `/`.
 var topLevelIdPattern = /^[^./]/;
 
@@ -16,13 +13,6 @@ makeInstallerOptions.fallback = function (id, parentId, error) {
   // some arbitrary location on the file system), and we only really need
   // the fallback for dependencies installed in node_modules directories.
   if (topLevelIdPattern.test(id)) {
-    if (id && id.startsWith('meteor/')) {
-      const [meteorPrefix, packageName] = id.split('/', 2);
-      throw new Error(
-        `Cannot find package "${packageName}". ` +
-        `Try "meteor add ${packageName}".`
-      );
-    }
     if (typeof Npm === "object" &&
         typeof Npm.require === "function") {
       return Npm.require(id, error);

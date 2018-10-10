@@ -1,23 +1,22 @@
-import { displayName, dropdown, validatePassword } from './login_buttons.js';
 // for convenience
-const loginButtonsSession = Accounts._loginButtonsSession;
+var loginButtonsSession = Accounts._loginButtonsSession;
 
 // since we don't want to pass around the callback that we get from our event
 // handlers, we just make it a variable for the whole file
-let doneCallback;
+var doneCallback;
 
-Accounts.onResetPasswordLink((token, done) => {
+Accounts.onResetPasswordLink(function (token, done) {
   loginButtonsSession.set("resetPasswordToken", token);
   doneCallback = done;
 });
 
-Accounts.onEnrollmentLink((token, done) => {
+Accounts.onEnrollmentLink(function (token, done) {
   loginButtonsSession.set("enrollAccountToken", token);
   doneCallback = done;
 });
 
-Accounts.onEmailVerificationLink((token, done) => {
-  Accounts.verifyEmail(token, error => {
+Accounts.onEmailVerificationLink(function (token, done) {
+  Accounts.verifyEmail(token, function (error) {
     if (! error) {
       loginButtonsSession.set('justVerifiedEmail', true);
     }
@@ -33,27 +32,29 @@ Accounts.onEmailVerificationLink((token, done) => {
 //
 
 Template._resetPasswordDialog.events({
-  'click #login-buttons-reset-password-button': () => resetPassword(),
-  'keypress #reset-password-new-password': event => {
+  'click #login-buttons-reset-password-button': function () {
+    resetPassword();
+  },
+  'keypress #reset-password-new-password': function (event) {
     if (event.keyCode === 13)
       resetPassword();
   },
-  'click #login-buttons-cancel-reset-password': () => {
+  'click #login-buttons-cancel-reset-password': function () {
     loginButtonsSession.set('resetPasswordToken', null);
     if (doneCallback)
       doneCallback();
   }
 });
 
-const resetPassword = () => {
+var resetPassword = function () {
   loginButtonsSession.resetMessages();
-  const newPassword = document.getElementById('reset-password-new-password').value;
+  var newPassword = document.getElementById('reset-password-new-password').value;
   if (!validatePassword(newPassword))
     return;
 
   Accounts.resetPassword(
     loginButtonsSession.get('resetPasswordToken'), newPassword,
-    error => {
+    function (error) {
       if (error) {
         loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {
@@ -66,8 +67,9 @@ const resetPassword = () => {
 };
 
 Template._resetPasswordDialog.helpers({
-  displayName,
-  inResetPasswordFlow: () => loginButtonsSession.get('resetPasswordToken'),
+  inResetPasswordFlow: function () {
+    return loginButtonsSession.get('resetPasswordToken');
+  }
 });
 
 //
@@ -75,13 +77,16 @@ Template._resetPasswordDialog.helpers({
 //
 
 Template._justResetPasswordDialog.events({
-  'click #just-verified-dismiss-button': () =>
-    loginButtonsSession.set('justResetPassword', false),
+  'click #just-verified-dismiss-button': function () {
+    loginButtonsSession.set('justResetPassword', false);
+  }
 });
 
 Template._justResetPasswordDialog.helpers({
-  visible: () => loginButtonsSession.get('justResetPassword'),
-  displayName,
+  visible: function () {
+    return loginButtonsSession.get('justResetPassword');
+  },
+  displayName: displayName
 });
 
 
@@ -90,15 +95,30 @@ Template._justResetPasswordDialog.helpers({
 // enrollAccountDialog template
 //
 
-const enrollAccount = () => {
+Template._enrollAccountDialog.events({
+  'click #login-buttons-enroll-account-button': function () {
+    enrollAccount();
+  },
+  'keypress #enroll-account-password': function (event) {
+    if (event.keyCode === 13)
+      enrollAccount();
+  },
+  'click #login-buttons-cancel-enroll-account': function () {
+    loginButtonsSession.set('enrollAccountToken', null);
+    if (doneCallback)
+      doneCallback();
+  }
+});
+
+var enrollAccount = function () {
   loginButtonsSession.resetMessages();
-  const password = document.getElementById('enroll-account-password').value;
+  var password = document.getElementById('enroll-account-password').value;
   if (!validatePassword(password))
     return;
 
   Accounts.resetPassword(
     loginButtonsSession.get('enrollAccountToken'), password,
-    error => {
+    function (error) {
       if (error) {
         loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {
@@ -109,22 +129,10 @@ const enrollAccount = () => {
     });
 };
 
-Template._enrollAccountDialog.events({
-  'click #login-buttons-enroll-account-button': enrollAccount,
-  'keypress #enroll-account-password': event => {
-    if (event.keyCode === 13)
-      enrollAccount();
-  },
-  'click #login-buttons-cancel-enroll-account': () => {
-    loginButtonsSession.set('enrollAccountToken', null);
-    if (doneCallback)
-      doneCallback();
-  }
-});
-
 Template._enrollAccountDialog.helpers({
-  displayName,
-  inEnrollAccountFlow: () => loginButtonsSession.get('enrollAccountToken'),
+  inEnrollAccountFlow: function () {
+    return loginButtonsSession.get('enrollAccountToken');
+  }
 });
 
 
@@ -133,13 +141,16 @@ Template._enrollAccountDialog.helpers({
 //
 
 Template._justVerifiedEmailDialog.events({
-  'click #just-verified-dismiss-button': () =>
-    loginButtonsSession.set('justVerifiedEmail', false),
+  'click #just-verified-dismiss-button': function () {
+    loginButtonsSession.set('justVerifiedEmail', false);
+  }
 });
 
 Template._justVerifiedEmailDialog.helpers({
-  visible: () => loginButtonsSession.get('justVerifiedEmail'),
-  displayName,
+  visible: function () {
+    return loginButtonsSession.get('justVerifiedEmail');
+  },
+  displayName: displayName
 });
 
 
@@ -148,13 +159,14 @@ Template._justVerifiedEmailDialog.helpers({
 //
 
 Template._loginButtonsMessagesDialog.events({
-  'click #messages-dialog-dismiss-button': () =>
-    loginButtonsSession.resetMessages(),
+  'click #messages-dialog-dismiss-button': function () {
+    loginButtonsSession.resetMessages();
+  }
 });
 
 Template._loginButtonsMessagesDialog.helpers({
-  visible: () => {
-    const hasMessage = loginButtonsSession.get('infoMessage') || loginButtonsSession.get('errorMessage');
+  visible: function () {
+    var hasMessage = loginButtonsSession.get('infoMessage') || loginButtonsSession.get('errorMessage');
     return !dropdown() && hasMessage;
   }
 });
@@ -165,40 +177,34 @@ Template._loginButtonsMessagesDialog.helpers({
 //
 
 Template._configureLoginServiceDialog.events({
-  'click .configure-login-service-dismiss-button': () =>
-    loginButtonsSession.set('configureLoginServiceDialogVisible', false),
-  'click #configure-login-service-dialog-save-configuration': () => {
+  'click .configure-login-service-dismiss-button': function () {
+    loginButtonsSession.set('configureLoginServiceDialogVisible', false);
+  },
+  'click #configure-login-service-dialog-save-configuration': function () {
     if (loginButtonsSession.get('configureLoginServiceDialogVisible') &&
         ! loginButtonsSession.get('configureLoginServiceDialogSaveDisabled')) {
       // Prepare the configuration document for this login service
-      const serviceName = loginButtonsSession.get('configureLoginServiceDialogServiceName');
-      const configuration = {
+      var serviceName = loginButtonsSession.get('configureLoginServiceDialogServiceName');
+      var configuration = {
         service: serviceName
       };
 
       // Fetch the value of each input field
-      configurationFields().forEach(field => {
+      _.each(configurationFields(), function(field) {
         configuration[field.property] = document.getElementById(
-          `configure-login-service-dialog-${field.property}`).value
+          'configure-login-service-dialog-' + field.property).value
           .replace(/^\s*|\s*$/g, ""); // trim() doesnt work on IE8;
       });
 
-      // Replacement of single use of jQuery in this package so we can remove
-      // the dependency
-      const inputs = [].slice.call( // Because HTMLCollections aren't arrays
-        document
-          .getElementById('configure-login-service-dialog')
-          .getElementsByTagName('input')
-      );
-
       configuration.loginStyle =
-        document.querySelector('#configure-login-service-dialog input[name="loginStyle"]:checked').value;
+        $('#configure-login-service-dialog input[name="loginStyle"]:checked')
+        .val();
 
       // Configure this login service
       Accounts.connection.call(
-        "configureLoginService", configuration, (error, result) => {
+        "configureLoginService", configuration, function (error, result) {
           if (error)
-            Meteor._debug(`Error configuring login service ${serviceName}`,
+            Meteor._debug("Error configuring login service " + serviceName,
                           error);
           else
             loginButtonsSession.set('configureLoginServiceDialogVisible',
@@ -209,7 +215,7 @@ Template._configureLoginServiceDialog.events({
   // IE8 doesn't support the 'input' event, so we'll run this on the keyup as
   // well. (Keeping the 'input' event means that this also fires when you use
   // the mouse to change the contents of the field, eg 'Cut' menu item.)
-  'input, keyup input': event => {
+  'input, keyup input': function (event) {
     // if the event fired on one of the configuration input fields,
     // check whether we should enable the 'save configuration' button
     if (event.target.id.indexOf('configure-login-service-dialog') === 0)
@@ -220,55 +226,62 @@ Template._configureLoginServiceDialog.events({
 // check whether the 'save configuration' button should be enabled.
 // this is a really strange way to implement this and a Forms
 // Abstraction would make all of this reactive, and simpler.
-const updateSaveDisabled = () => {
-  const anyFieldEmpty = configurationFields().reduce((prev, field) =>
-    prev || document.getElementById(
-      `configure-login-service-dialog-${field.property}`
-    ).value === '',
-    false
-  );
+var updateSaveDisabled = function () {
+  var anyFieldEmpty = _.any(configurationFields(), function(field) {
+    return document.getElementById(
+      'configure-login-service-dialog-' + field.property).value === '';
+  });
 
   loginButtonsSession.set('configureLoginServiceDialogSaveDisabled', anyFieldEmpty);
 };
 
 // Returns the appropriate template for this login service.  This
 // template should be defined in the service's package
-Template._configureLoginServiceDialog.templateForService = serviceName => {
+Template._configureLoginServiceDialog.templateForService = function(serviceName) {
   serviceName = serviceName || loginButtonsSession.get('configureLoginServiceDialogServiceName');
   // XXX Service providers should be able to specify their configuration
   // template name.
-  return Template[`configureLoginServiceDialogFor${
-                  serviceName === 'meteor-developer' ?
+  return Template['configureLoginServiceDialogFor' +
+                  (serviceName === 'meteor-developer' ?
                    'MeteorDeveloper' :
-                   capitalize(serviceName)}`];
+                   capitalize(serviceName))];
 };
 
-const configurationFields = () => {
-  const template = Template._configureLoginServiceDialog.templateForService();
+var configurationFields = function () {
+  var template = Template._configureLoginServiceDialog.templateForService();
   return template.fields();
 };
 
 Template._configureLoginServiceDialog.helpers({
-  configurationFields,
-  visible: () => loginButtonsSession.get('configureLoginServiceDialogVisible'),
-  // renders the appropriate template
-  configurationSteps: () =>
-    Template._configureLoginServiceDialog.templateForService(),
-  saveDisabled: () =>
-    loginButtonsSession.get('configureLoginServiceDialogSaveDisabled'),
+  configurationFields: function () {
+    return configurationFields();
+  },
+  visible: function () {
+    return loginButtonsSession.get('configureLoginServiceDialogVisible');
+  },
+  configurationSteps: function () {
+    // renders the appropriate template
+    return Template._configureLoginServiceDialog.templateForService();
+  },
+  saveDisabled: function () {
+    return loginButtonsSession.get('configureLoginServiceDialogSaveDisabled');
+  }
 });
 
 // XXX from http://epeli.github.com/underscore.string/lib/underscore.string.js
-const capitalize = str => {
+var capitalize = function(str){
   str = str == null ? '' : String(str);
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
 Template._configureLoginOnDesktopDialog.helpers({
-  visible: () => loginButtonsSession.get('configureOnDesktopVisible'),
+  visible: function () {
+    return loginButtonsSession.get('configureOnDesktopVisible');
+  }
 });
 
 Template._configureLoginOnDesktopDialog.events({
-  'click #configure-on-desktop-dismiss-button': () =>
-    loginButtonsSession.set('configureOnDesktopVisible', false),
+  'click #configure-on-desktop-dismiss-button': function () {
+    loginButtonsSession.set('configureOnDesktopVisible', false);
+  }
 });

@@ -14,41 +14,17 @@ if (Meteor.isClient) {
     }, onUser1LoggedIn);
   };
 
-  Tinytest.addAsync('accounts - reconnect auto-login', (test, done) => {
-    function disconnectAndReconnect(callback) {
-      test.equal(Meteor.status().status, "connected");
-
-      function pollUntilDisconnected() {
-        if (Meteor.status().status === "offline") {
-          Meteor.reconnect();
-          pollUntilReconnected();
-        } else {
-          Meteor.setTimeout(pollUntilDisconnected, 10);
-        }
-      }
-
-      function pollUntilReconnected() {
-        if (Meteor.status().status === "connected") {
-          if (typeof callback === "function") {
-            callback();
-          }
-        } else {
-          Meteor.setTimeout(pollUntilReconnected, 10);
-        }
-      }
-
-      Meteor.disconnect();
-      pollUntilDisconnected();
-    }
-
-    let onReconnectCalls = 0;
-    const reconnectHandler = () => onReconnectCalls++;
+  Tinytest.addAsync('accounts - reconnect auto-login', function(test, done) {
+    var onReconnectCalls = 0;
+    var reconnectHandler = function () {
+      onReconnectCalls++;
+    };
     Meteor.connection.onReconnect = reconnectHandler;
 
-    const username2 = `testuser2-${Random.id()}`;
-    const password2 = `password2-${Random.id()}`;
-    let timeoutHandle;
-    let onLoginStopper;
+    var username2 = 'testuser2-' + Random.id();
+    var password2 = 'password2-' + Random.id();
+    var timeoutHandle;
+    var onLoginStopper;
 
     loginAsUser1((err) => {
       test.isUndefined(err, 'Unexpected error logging in as user1');
@@ -58,38 +34,40 @@ if (Meteor.isClient) {
       }, onUser2LoggedIn);
     });
 
-    const onUser2LoggedIn = err => {
+    function onUser2LoggedIn(err) {
       test.isUndefined(err, 'Unexpected error logging in as user2');
       onLoginStopper = Accounts.onLogin(onUser2LoggedInAfterReconnect);
-      disconnectAndReconnect();
+      Meteor.disconnect();
+      Meteor.reconnect();
     }
 
-    const onUser2LoggedInAfterReconnect = () => {
+    function onUser2LoggedInAfterReconnect() {
       onLoginStopper.stop();
       Meteor.loginWithPassword('non-existent-user', 'or-wrong-password',
         onFailedLogin);
     }
 
-    const onFailedLogin = err => {
+    function onFailedLogin(err) {
       test.instanceOf(err, Meteor.Error, 'No Meteor.Error on login failure');
       onLoginStopper = Accounts.onLogin(onUser2LoggedInAfterReconnectAfterFailedLogin);
-      disconnectAndReconnect();
-      timeoutHandle = Meteor.setTimeout(failTest, 5000);
+      Meteor.disconnect();
+      Meteor.reconnect();
+      timeoutHandle = Meteor.setTimeout(failTest, 1000);
     }
 
-    const failTest = () => {
+    function failTest() {
       onLoginStopper.stop();
       test.fail('Issue #4970 has occured.');
       Meteor.call('getConnectionUserId', checkFinalState);
     }
 
-    const onUser2LoggedInAfterReconnectAfterFailedLogin = () => {
+    function onUser2LoggedInAfterReconnectAfterFailedLogin() {
       onLoginStopper.stop();
       Meteor.clearTimeout(timeoutHandle);
       Meteor.call('getConnectionUserId', checkFinalState);
     }
 
-    const checkFinalState = (err, connectionUserId) => {
+    function checkFinalState(err, connectionUserId) {
       test.isUndefined(err, 'Unexpected error calling getConnectionUserId');
       test.equal(connectionUserId, Meteor.userId(),
         'userId is different on client and server');
@@ -105,7 +83,7 @@ if (Meteor.isClient) {
   // Addresses: https://github.com/meteor/meteor/issues/9140
   Tinytest.addAsync(
     'accounts - verify single onReconnect callback',
-    (test, done) => {
+    function (test, done) {
       loginAsUser1((err) => {
         test.isUndefined(err, 'Unexpected error logging in as user1');
         test.equal(

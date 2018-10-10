@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Login service for Google accounts",
-  version: "1.3.2",
+  version: "1.3.1"
 });
 
-Package.onUse(api => {
-  api.use(['ecmascript']);
+Package.onUse(function(api) {
+  api.use(['ecmascript', 'underscore', 'random']);
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);

@@ -203,9 +203,3 @@ valid-identifier: https://github.com/purplecabbage/valid-identifier
 ----------
 
 Jesse MacFadyen
-
-----------
-puppeteer: https://github.com/GoogleChrome/puppeteer
-----------
-
-Copyright 2017 Google Inc.

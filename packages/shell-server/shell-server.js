@@ -209,7 +209,6 @@ class Server {
     });
 
     const repl = this.repl = replStart(options);
-    const { shellDir } = this;
 
     // This is technique of setting `repl.context` is similar to how the
     // `useGlobal` option would work during a normal `repl.start()` and
@@ -234,9 +233,7 @@ class Server {
     function wrappedDefaultEval(code, context, file, callback) {
       if (Package.ecmascript) {
         try {
-          code = Package.ecmascript.ECMAScript.compileForShell(code, {
-            cacheDirectory: getCacheDirectory(shellDir)
-          });
+          code = Package.ecmascript.ECMAScript.compileForShell(code);
         } catch (err) {
           // Any Babel error here might be just fine since it's
           // possible the code was incomplete (multi-line code on the REPL).
@@ -407,9 +404,6 @@ function getHistoryFile(shellDir) {
   return pathJoin(shellDir, "history");
 }
 
-function getCacheDirectory(shellDir) {
-  return pathJoin(shellDir, "cache");
-}
 
 function setRequireAndModule(context) {
   if (Package.modules) {

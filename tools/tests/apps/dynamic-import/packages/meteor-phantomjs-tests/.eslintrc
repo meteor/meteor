@@ -1,0 +1,21 @@
+{
+  "extends": "airbnb",
+  "env": {
+    "node": true,
+    "mocha": true
+  },
+  "globals": {
+    "expect": false,
+    "describe": false
+  },
+  "rules": {
+    "consistent-return": 1,
+    "max-len": 0,
+    "no-use-before-define": [2, "nofunc"],
+    "no-unused-expressions": 0,
+    "no-console": 0,
+    "space-before-function-paren": 0,
+    "react/prefer-stateless-function": 0,
+    "react/no-multi-comp": 0
+  }
+}

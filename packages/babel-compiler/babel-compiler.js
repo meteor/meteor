@@ -1,5 +1,5 @@
 var semver = Npm.require("semver");
-var JSON5 = Npm.require("json5");
+
 /**
  * A compiler that can be instantiated with features and used inside
  * Plugin.registerCompiler
@@ -9,7 +9,6 @@ BabelCompiler = function BabelCompiler(extraFeatures) {
   this.extraFeatures = extraFeatures;
   this._babelrcCache = null;
   this._babelrcWarnings = Object.create(null);
-  this.cacheDirectory = null;
 };
 
 var BCp = BabelCompiler.prototype;
@@ -21,27 +20,15 @@ var hasOwn = Object.prototype.hasOwnProperty;
 var isMeteorPre144 = semver.lt(process.version, "4.8.1");
 
 BCp.processFilesForTarget = function (inputFiles) {
-  var compiler = this;
-
   // Reset this cache for each batch processed.
   this._babelrcCache = null;
 
   inputFiles.forEach(function (inputFile) {
-    if (inputFile.supportsLazyCompilation) {
-      inputFile.addJavaScript({
-        path: inputFile.getPathInPackage(),
-        hash: inputFile.getSourceHash(),
-        bare: !! inputFile.getFileOptions().bare
-      }, function () {
-        return compiler.processOneFileForTarget(inputFile);
-      });
-    } else {
-      var toBeAdded = compiler.processOneFileForTarget(inputFile);
-      if (toBeAdded) {
-        inputFile.addJavaScript(toBeAdded);
-      }
+    var toBeAdded = this.processOneFileForTarget(inputFile);
+    if (toBeAdded) {
+      inputFile.addJavaScript(toBeAdded);
     }
-  });
+  }, this);
 };
 
 // Returns an object suitable for passing to inputFile.addJavaScript, or
@@ -68,11 +55,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     sourceMap: null,
     bare: !! fileOptions.bare
   };
-  var cacheOptions = {
-    cacheDirectory: this.cacheDirectory,
-    cacheDeps: {
-      sourceHash: toBeAdded.hash,
-    },
+  var cacheDeps = {
+    sourceHash: toBeAdded.hash
   };
 
   // If you need to exclude a specific file within a package from Babel
@@ -92,7 +76,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     if (arch.startsWith("os.")) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
-      extraFeatures.nodeMajorVersion = parseInt(process.versions.node, 10);
+      extraFeatures.nodeMajorVersion = parseInt(process.versions.node);
     } else if (arch === "web.browser") {
       extraFeatures.modernBrowsers = true;
     }
@@ -105,15 +89,10 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     }
 
     var babelOptions = Babel.getDefaultOptions(extraFeatures);
-    babelOptions.caller = { name: "meteor", arch };
 
-    this.inferExtraBabelOptions(
-      inputFile,
-      babelOptions,
-      cacheOptions.cacheDeps,
-    );
+    this.inferExtraBabelOptions(inputFile, babelOptions, cacheDeps);
 
-    babelOptions.sourceMaps = true;
+    babelOptions.sourceMap = true;
     babelOptions.filename =
       babelOptions.sourceFileName = packageName
       ? "packages/" + packageName + "/" + inputFilePath
@@ -121,23 +100,20 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     try {
       var result = profile('Babel.compile', function () {
-        return Babel.compile(source, babelOptions, cacheOptions);
+        return Babel.compile(source, babelOptions, cacheDeps);
       });
     } catch (e) {
       if (e.loc) {
-        // Error is from @babel/parser.
         inputFile.error({
           message: e.message,
           line: e.loc.line,
           column: e.loc.column,
         });
-      } else {
-        // Error is from a Babel transform, with line/column information
-        // embedded in e.message.
-        inputFile.error(e);
+
+        return null;
       }
 
-      return null;
+      throw e;
     }
 
     if (isMeteorPre144) {
@@ -167,7 +143,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 };
 
 BCp.setDiskCacheDirectory = function (cacheDir) {
-  this.cacheDirectory = cacheDir;
+  Babel.setCacheDir(cacheDir);
 };
 
 function profile(name, func) {
@@ -197,62 +173,55 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
   if (babelrcPath) {
     if (! hasOwn.call(this._babelrcCache, babelrcPath)) {
       try {
-        this._babelrcCache[babelrcPath] = {
-          controlFilePath: babelrcPath,
-          controlFileData: JSON5.parse(
-            inputFile.readAndWatchFile(babelrcPath)),
-          deps: Object.create(null),
-        };
+        this._babelrcCache[babelrcPath] =
+          JSON.parse(inputFile.readAndWatchFile(babelrcPath));
       } catch (e) {
         if (e instanceof SyntaxError) {
-          e.message = ".babelrc is not a valid JSON5 file: " + e.message;
+          e.message = ".babelrc is not a valid JSON file: " + e.message;
         }
+
         throw e;
       }
     }
 
-    const cacheEntry = this._babelrcCache[babelrcPath];
-
-    if (this._inferHelper(inputFile, cacheEntry)) {
-      merge(babelOptions, cacheEntry, "presets");
-      merge(babelOptions, cacheEntry, "plugins");
-      Object.assign(cacheDeps, cacheEntry.deps);
-      return true;
-    }
+    return this._inferHelper(
+      inputFile,
+      babelOptions,
+      babelrcPath,
+      this._babelrcCache[babelrcPath],
+      cacheDeps
+    );
   }
 };
 
 BCp._inferFromPackageJson = function (inputFile, babelOptions, cacheDeps) {
   var pkgJsonPath = inputFile.findControlFile("package.json");
   if (pkgJsonPath) {
-    const cacheEntry = hasOwn.call(this._babelrcCache, pkgJsonPath)
-      ? this._babelrcCache[pkgJsonPath]
-      : this._babelrcCache[pkgJsonPath] = {
-          controlFilePath: pkgJsonPath,
-          controlFileData: JSON.parse(
-            inputFile.readAndWatchFile(pkgJsonPath)
-          ).babel || null,
-          deps: Object.create(null),
-        };
-
-    if (this._inferHelper(inputFile, cacheEntry)) {
-      merge(babelOptions, cacheEntry, "presets");
-      merge(babelOptions, cacheEntry, "plugins");
-      Object.assign(cacheDeps, cacheEntry.deps);
-      return true;
+    if (! hasOwn.call(this._babelrcCache, pkgJsonPath)) {
+      this._babelrcCache[pkgJsonPath] = JSON.parse(
+        inputFile.readAndWatchFile(pkgJsonPath)
+      ).babel || null;
     }
+
+    return this._inferHelper(
+      inputFile,
+      babelOptions,
+      pkgJsonPath,
+      this._babelrcCache[pkgJsonPath],
+      cacheDeps
+    );
   }
 };
 
-BCp._inferHelper = function (inputFile, cacheEntry) {
-  if (! cacheEntry.controlFileData) {
+BCp._inferHelper = function (
+  inputFile,
+  babelOptions,
+  controlFilePath,
+  babelrc,
+  cacheDeps
+) {
+  if (! babelrc) {
     return false;
-  }
-
-  if (hasOwn.call(cacheEntry, "finalInferHelperResult")) {
-    // We've already run _inferHelper and populated
-    // cacheEntry.{presets,plugins}, so we can return early here.
-    return cacheEntry.finalInferHelperResult;
   }
 
   var compiler = this;
@@ -315,7 +284,7 @@ BCp._inferHelper = function (inputFile, cacheEntry) {
         // The value is a string that we need to require.
         const result = requireWithPath(value, path);
         if (result && result.module) {
-          cacheEntry.deps[result.name] = result.version;
+          cacheDeps[result.name] = result.version;
           return walkBabelRC(result.module, path);
         }
 
@@ -341,23 +310,20 @@ BCp._inferHelper = function (inputFile, cacheEntry) {
     prefixes.push("");
 
     try {
-      return requireWithPrefixes(
-        inputFile, id, prefixes,
-        cacheEntry.controlFilePath
-      );
+      return requireWithPrefixes(inputFile, id, prefixes, controlFilePath);
     } catch (e) {
       if (e.code !== "MODULE_NOT_FOUND") {
         throw e;
       }
 
       if (! hasOwn.call(compiler._babelrcWarnings, id)) {
-        compiler._babelrcWarnings[id] = cacheEntry.controlFilePath;
+        compiler._babelrcWarnings[id] = controlFilePath;
 
         console.error(
           "Warning: unable to resolve " +
             JSON.stringify(id) +
             " in " + path.join(".") +
-            " of " + cacheEntry.controlFilePath + ", due to:"
+            " of " + controlFilePath + ", due to:"
         );
 
         console.error(e.stack || e);
@@ -367,29 +333,26 @@ BCp._inferHelper = function (inputFile, cacheEntry) {
     }
   }
 
-  const { controlFileData } = cacheEntry;
-  const clean = walkBabelRC(controlFileData);
-  merge(cacheEntry, clean, "presets");
-  merge(cacheEntry, clean, "plugins");
+  const clean = walkBabelRC(babelrc);
+  merge(babelOptions, clean, "presets");
+  merge(babelOptions, clean, "plugins");
 
-  if (controlFileData &&
-      controlFileData.env) {
+  if (babelrc && babelrc.env) {
     const envKey =
       process.env.BABEL_ENV ||
       process.env.NODE_ENV ||
       "development";
 
-    const clean = walkBabelRC(controlFileData.env[envKey]);
+    const clean = walkBabelRC(babelrc.env[envKey]);
 
     if (clean) {
-      merge(cacheEntry, clean, "presets");
-      merge(cacheEntry, clean, "plugins");
+      merge(babelOptions, clean, "presets");
+      merge(babelOptions, clean, "plugins");
     }
   }
 
-  return cacheEntry.finalInferHelperResult =
-    !! (cacheEntry.presets ||
-        cacheEntry.plugins);
+  return !! (babelOptions.presets ||
+             babelOptions.plugins);
 };
 
 function merge(babelOptions, babelrc, name) {
@@ -399,21 +362,6 @@ function merge(babelOptions, babelrc, name) {
     list.push.apply(list, babelrc[name]);
   }
 }
-
-const forbiddenPresetNames = new Set([
-  // Since Meteor always includes babel-preset-meteor automatically, it's
-  // likely a mistake for that preset to appear in a custom .babelrc
-  // file. Previously we recommended that developers simply remove the
-  // preset (e.g. #9631), but we can easily just ignore it by returning
-  // null here, which seems like a better solution since it allows the
-  // same .babelrc file to be used for other purposes, such as running
-  // tests with a testing tool that needs to compile application code the
-  // same way Meteor does.
-  "babel-preset-meteor",
-  // Similar reasoning applies to these commonly misused Babel presets:
-  "@babel/preset-env",
-  "@babel/preset-react",
-]);
 
 function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
   var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
@@ -428,14 +376,12 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
         // Call inputFile.resolve here rather than inputFile.require so
         // that the import doesn't fail due to missing transitive
         // dependencies imported by the preset or plugin.
-        if (inputFile.resolve(prefix + id, controlFilePath)) {
+        if (inputFile.resolve(prefix + id)) {
           presetOrPluginId = prefix + id;
         }
 
         presetOrPluginMeta = inputFile.require(
-          packageNameFromTopLevelModuleId(prefix + id) + "/package.json",
-          controlFilePath
-        );
+          packageNameFromTopLevelModuleId(prefix + id) + "/package.json");
 
         return true;
 
@@ -449,14 +395,18 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
     });
 
     if (found) {
-      if (forbiddenPresetNames.has(presetOrPluginMeta.name)) {
+      if (presetOrPluginMeta.name === "babel-preset-meteor") {
+        // Since Meteor always includes babel-preset-meteor automatically,
+        // it's likely a mistake for that preset to appear in a custom
+        // .babelrc file. Previously we recommended that developers simply
+        // remove the preset (e.g. #9631), but we can easily just ignore
+        // it by returning null here, which seems like a better solution
+        // since it allows the same .babelrc file to be used for other
+        // purposes, such as running tests with a testing tool that needs
+        // to compile application code the same way Meteor does.
         return null;
       }
-
-      presetOrPlugin = inputFile.require(
-        presetOrPluginId,
-        controlFilePath
-      );
+      presetOrPlugin = inputFile.require(presetOrPluginId);
     }
 
   } else {

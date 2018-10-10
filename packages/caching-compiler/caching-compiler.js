@@ -2,7 +2,9 @@ const fs = Plugin.fs;
 const path = Plugin.path;
 const createHash = Npm.require('crypto').createHash;
 const assert = Npm.require('assert');
+const Future = Npm.require('fibers/future');
 const LRU = Npm.require('lru-cache');
+const async = Npm.require('async');
 
 // Base class for CachingCompiler and MultiFileCachingCompiler.
 CachingCompilerBase = class CachingCompilerBase {
@@ -170,12 +172,10 @@ CachingCompilerBase = class CachingCompilerBase {
         // ignore errors, it's just a cache
       }
     } else {
-      fs.writeFile(tempFilename, contents, writeError => {
-        if (writeError) return;
-        try {
-          fs.renameSync(tempFilename, filename);
-        } catch (renameError) {
-          // ignore errors, it's just a cache
+      fs.writeFile(tempFilename, contents, err => {
+        // ignore errors, it's just a cache
+        if (! err) {
+          fs.rename(tempFilename, filename, err => {});
         }
       });
     }
@@ -277,16 +277,18 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
   // you have processing you want to perform at the beginning or end of a
   // processing phase, you may want to override this method and call the
   // superclass implementation from within your method.
-  async processFilesForTarget(inputFiles) {
+  processFilesForTarget(inputFiles) {
     const cacheMisses = [];
     const arches = this._cacheDebugEnabled && Object.create(null);
 
-    inputFiles.forEach(inputFile => {
+    const future = new Future;
+    async.eachLimit(inputFiles, this._maxParallelism, (inputFile, cb) => {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      const getResult = () => {
+      let error = null;
+      try {
         const cacheKey = this._deepHash(this.getCacheKey(inputFile));
         let compileResult = this._cache.get(cacheKey);
 
@@ -299,7 +301,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
         if (! compileResult) {
           cacheMisses.push(inputFile.getDisplayPath());
-          compileResult = Promise.await(this.compileOneFile(inputFile));
+          compileResult = this.compileOneFile(inputFile);
 
           if (! compileResult) {
             // compileOneFile should have called inputFile.error.
@@ -312,23 +314,17 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
           this._writeCacheAsync(cacheKey, compileResult);
         }
 
-        return compileResult;
-      };
-
-      if (this.compileOneFileLater &&
-          inputFile.supportsLazyCompilation) {
-        this.compileOneFileLater(inputFile, getResult);
-      } else {
-        const result = getResult();
-        if (result) {
-          this.addCompileResult(inputFile, result);
-        }
+        this.addCompileResult(inputFile, compileResult);
+      } catch (e) {
+        error = e;
+      } finally {
+        cb(error);
       }
-    });
+    }, future.resolver());
+    future.wait();
 
     if (this._cacheDebugEnabled) {
       cacheMisses.sort();
-
       this._cacheDebug(
         `Ran (#${
           ++this._callCount

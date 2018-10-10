@@ -1,15 +1,12 @@
-import url from 'url';
-import { OAuth1Binding } from './oauth1_binding';
+var url = Npm.require("url");
 
-OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitelistedQueryParams) => {
-  const redirectUrlObj = url.parse(authUrl, true);
+OAuth._queryParamsWithAuthTokenUrl = function (authUrl, oauthBinding, params, whitelistedQueryParams) {
+  params = params || {};
+  var redirectUrlObj = url.parse(authUrl, true);
 
-  Object.assign(
+  _.extend(
     redirectUrlObj.query,
-    whitelistedQueryParams.reduce((prev, param) => 
-      params.query[param] ? { ...prev, param: params.query[param] } : prev,
-      {}
-    ),
+    _.pick(params.query, whitelistedQueryParams),
     {
       oauth_token: oauthBinding.requestToken,
     }
@@ -25,20 +22,20 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
 };
 
 // connect middleware
-OAuth._requestHandlers['1'] = (service, query, res) => {
-  const config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
+OAuth._requestHandlers['1'] = function (service, query, res) {
+  var config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (! config) {
     throw new ServiceConfiguration.ConfigError(service.serviceName);
   }
 
-  const { urls } = service;
-  const oauthBinding = new OAuth1Binding(config, urls);
+  var urls = service.urls;
+  var oauthBinding = new OAuth1Binding(config, urls);
 
-  let credentialSecret;
+  var credentialSecret;
 
   if (query.requestTokenAndRedirect) {
     // step 1 - get and store a request token
-    const callbackUrl = OAuth._redirectUri(service.serviceName, config, {
+    var callbackUrl = OAuth._redirectUri(service.serviceName, config, {
       state: query.state,
       cordova: (query.cordova === "true"),
       android: (query.android === "true")
@@ -54,8 +51,10 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
       oauthBinding.requestTokenSecret);
 
     // support for scope/name parameters
-    let redirectUrl;
-    const authParams = { query };
+    var redirectUrl;
+    var authParams = {
+      query: query
+    };
 
     if(typeof urls.authenticate === "function") {
       redirectUrl = urls.authenticate(oauthBinding, authParams);
@@ -76,7 +75,7 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
     // and close the window to allow the login handler to proceed
 
     // Get the user's request token so we can verify it and clear it
-    const requestTokenInfo = OAuth._retrieveRequestToken(
+    var requestTokenInfo = OAuth._retrieveRequestToken(
       OAuth._credentialTokenFromQuery(query));
 
     if (! requestTokenInfo) {
@@ -94,10 +93,10 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
       oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
-      const oauthResult = service.handleOauthRequest(
+      var oauthResult = service.handleOauthRequest(
         oauthBinding, { query: query });
 
-      const credentialToken = OAuth._credentialTokenFromQuery(query);
+      var credentialToken = OAuth._credentialTokenFromQuery(query);
       credentialSecret = Random.secret();
 
       // Store the login result so it can be retrieved in another

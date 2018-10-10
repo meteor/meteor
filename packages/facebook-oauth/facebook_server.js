@@ -1,39 +1,38 @@
 Facebook = {};
-import crypto from 'crypto';
+var crypto = Npm.require('crypto');
 
-Facebook.handleAuthFromAccessToken = (accessToken, expiresAt) => {
-  // include basic fields from facebook
-  // https://developers.facebook.com/docs/facebook-login/permissions/
-  const whitelisted = ['id', 'email', 'name', 'first_name', 'last_name',
-    'middle_name', 'name_format', 'picture', 'short_name', 'age_range',
-    'birthday', 'friends', 'gender', 'hometown', 'link', 'location', 'locale'];
+Facebook.handleAuthFromAccessToken = function handleAuthFromAccessToken(accessToken, expiresAt) {
+  // include all fields from facebook
+  // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
+  var whitelisted = ['id', 'email', 'name', 'first_name',
+      'last_name', 'link', 'gender', 'locale', 'age_range'];
 
-  const identity = getIdentity(accessToken, whitelisted);
+  var identity = getIdentity(accessToken, whitelisted);
 
-  const fields = {};
-  whitelisted.forEach(field => fields[field] = identity[field]);
-  const serviceData = {
-    accessToken,
-    expiresAt,
-    ...fields,
+  var serviceData = {
+    accessToken: accessToken,
+    expiresAt: expiresAt
   };
-  
+
+  var fields = _.pick(identity, whitelisted);
+  _.extend(serviceData, fields);
+
   return {
-    serviceData,
+    serviceData: serviceData,
     options: {profile: {name: identity.name}}
   };
 };
 
-OAuth.registerService('facebook', 2, null, query => {
-  const response = getTokenResponse(query);
-  const { accessToken } = response;
-  const { expiresIn } = response;
+OAuth.registerService('facebook', 2, null, function(query) {
+  var response = getTokenResponse(query);
+  var accessToken = response.accessToken;
+  var expiresIn = response.expiresIn;
 
   return Facebook.handleAuthFromAccessToken(accessToken, (+new Date) + (1000 * expiresIn));
 });
 
 // checks whether a string parses as JSON
-const isJSON = str => {
+var isJSON = function (str) {
   try {
     JSON.parse(str);
     return true;
@@ -45,16 +44,16 @@ const isJSON = str => {
 // returns an object containing:
 // - accessToken
 // - expiresIn: lifetime of token in seconds
-const getTokenResponse = query => {
-  const config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
+var getTokenResponse = function (query) {
+  var config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
-  let responseContent;
+  var responseContent;
   try {
     // Request an access token
     responseContent = HTTP.get(
-      "https://graph.facebook.com/v3.0/oauth/access_token", {
+      "https://graph.facebook.com/v2.8/oauth/access_token", {
         params: {
           client_id: config.appId,
           redirect_uri: OAuth._redirectUri('facebook', config),
@@ -63,18 +62,16 @@ const getTokenResponse = query => {
         }
       }).data;
   } catch (err) {
-    throw Object.assign(
-      new Error(`Failed to complete OAuth handshake with Facebook. ${err.message}`),
-      { response: err.response },
-    );
+    throw _.extend(new Error("Failed to complete OAuth handshake with Facebook. " + err.message),
+                   {response: err.response});
   }
 
-  const fbAccessToken = responseContent.access_token;
-  const fbExpires = responseContent.expires_in;
+  var fbAccessToken = responseContent.access_token;
+  var fbExpires = responseContent.expires_in;
 
   if (!fbAccessToken) {
     throw new Error("Failed to complete OAuth handshake with facebook " +
-                    `-- can't find access token in HTTP response. ${responseContent}`);
+                    "-- can't find access token in HTTP response. " + responseContent);
   }
   return {
     accessToken: fbAccessToken,
@@ -82,18 +79,18 @@ const getTokenResponse = query => {
   };
 };
 
-const getIdentity = (accessToken, fields) => {
-  const config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
+var getIdentity = function (accessToken, fields) {
+  var config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
   // Generate app secret proof that is a sha256 hash of the app access token, with the app secret as the key
   // https://developers.facebook.com/docs/graph-api/securing-requests#appsecret_proof
-  const hmac = crypto.createHmac('sha256', OAuth.openSecret(config.secret));
+  var hmac = crypto.createHmac('sha256', OAuth.openSecret(config.secret));
   hmac.update(accessToken);
 
   try {
-    return HTTP.get("https://graph.facebook.com/v3.0/me", {
+    return HTTP.get("https://graph.facebook.com/v2.8/me", {
       params: {
         access_token: accessToken,
         appsecret_proof: hmac.digest('hex'),
@@ -101,13 +98,11 @@ const getIdentity = (accessToken, fields) => {
       }
     }).data;
   } catch (err) {
-    throw Object.assign(
-      new Error(`Failed to fetch identity from Facebook. ${err.message}`),
-      { response: err.response },
-    );
+    throw _.extend(new Error("Failed to fetch identity from Facebook. " + err.message),
+                   {response: err.response});
   }
 };
 
-Facebook.retrieveCredential = (credentialToken, credentialSecret) =>
-  OAuth.retrieveCredential(credentialToken, credentialSecret);
-
+Facebook.retrieveCredential = function(credentialToken, credentialSecret) {
+  return OAuth.retrieveCredential(credentialToken, credentialSecret);
+};

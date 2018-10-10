@@ -3,9 +3,9 @@ Package.describe({
   version: "1.2.3"
 });
 
-Package.onUse(api => {
+Package.onUse(function (api) {
   api.use('check');
-  api.use('ecmascript');
+  api.use('underscore');
 
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
@@ -48,7 +48,7 @@ Package.onUse(api => {
 });
 
 
-Package.onTest(api => {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('random');
   api.use('service-configuration', 'server');

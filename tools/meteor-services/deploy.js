@@ -21,7 +21,6 @@ import {
 } from './auth.js';
 import { recordPackages } from './stats.js';
 import { Console } from '../console/console.js';
-import { Profile } from '../tool-env/profile.js';
 
 function sleepForMilliseconds(millisecondsToWait) {
   return new Promise(function(resolve) {
@@ -559,9 +558,7 @@ export async function bundleAndDeploy(options) {
     });
   }
 
-  const result = buildmessage.enterJob({
-    title: "uploading"
-  }, Profile("upload bundle", function () {
+  var result = buildmessage.enterJob({ title: "uploading" }, function () {
     return authedRpc({
       method: 'POST',
       operation: 'deploy',
@@ -574,7 +571,7 @@ export async function bundleAndDeploy(options) {
       timeout: null,
       waitForDeploy: options.waitForDeploy,
     });
-  }));
+  });
 
   if (result.errorMessage) {
     Console.error("\nError deploying application: " + result.errorMessage);

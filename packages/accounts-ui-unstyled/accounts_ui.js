@@ -24,42 +24,37 @@ Accounts.ui._options = {
  * @param {String} options.passwordSignupFields Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default).
  * @importFromPackage accounts-base
  */
-Accounts.ui.config = options => {
+Accounts.ui.config = function(options) {
   // validate options keys
-  const VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken', 'forceApprovalPrompt'];
-  Object.keys(options).forEach(key => {
-    if (!VALID_KEYS.includes(key))
-      throw new Error(`Accounts.ui.config: Invalid key: ${key}`);
+  var VALID_KEYS = ['passwordSignupFields', 'requestPermissions', 'requestOfflineToken', 'forceApprovalPrompt'];
+  _.each(_.keys(options), function (key) {
+    if (!_.contains(VALID_KEYS, key))
+      throw new Error("Accounts.ui.config: Invalid key: " + key);
   });
 
   // deal with `passwordSignupFields`
   if (options.passwordSignupFields) {
-    if (options.passwordSignupFields.reduce((prev, field) => 
-      prev && 
-      [
-        "USERNAME_AND_EMAIL",
-        "USERNAME_AND_OPTIONAL_EMAIL",
-        "USERNAME_ONLY",
-        "EMAIL_ONLY"
-      ].includes(field),
-      true
-    )) {
+    if (_.contains([
+      "USERNAME_AND_EMAIL",
+      "USERNAME_AND_OPTIONAL_EMAIL",
+      "USERNAME_ONLY",
+      "EMAIL_ONLY"
+    ], options.passwordSignupFields)) {
       if (Accounts.ui._options.passwordSignupFields)
         throw new Error("Accounts.ui.config: Can't set `passwordSignupFields` more than once");
       else
         Accounts.ui._options.passwordSignupFields = options.passwordSignupFields;
     } else {
-      throw new Error(`Accounts.ui.config: Invalid option for \`passwordSignupFields\`: ${options.passwordSignupFields}`);
+      throw new Error("Accounts.ui.config: Invalid option for `passwordSignupFields`: " + options.passwordSignupFields);
     }
   }
 
   // deal with `requestPermissions`
   if (options.requestPermissions) {
-    Object.keys(options.requestPermissions).forEach(service => {
-      const scope = options.forceApprovalPrompt[service];
+    _.each(options.requestPermissions, function (scope, service) {
       if (Accounts.ui._options.requestPermissions[service]) {
-        throw new Error(`Accounts.ui.config: Can't set \`requestPermissions\` more than once for ${service}`);
-      } else if (!Array.isArray(scope)) {
+        throw new Error("Accounts.ui.config: Can't set `requestPermissions` more than once for " + service);
+      } else if (!(scope instanceof Array)) {
         throw new Error("Accounts.ui.config: Value for `requestPermissions` must be an array");
       } else {
         Accounts.ui._options.requestPermissions[service] = scope;
@@ -69,13 +64,12 @@ Accounts.ui.config = options => {
 
   // deal with `requestOfflineToken`
   if (options.requestOfflineToken) {
-    Object.keys(options.requestOfflineToken).forEach(service => {
-      const value = options.forceApprovalPrompt[service];
+    _.each(options.requestOfflineToken, function (value, service) {
       if (service !== 'google')
         throw new Error("Accounts.ui.config: `requestOfflineToken` only supported for Google login at the moment.");
 
       if (Accounts.ui._options.requestOfflineToken[service]) {
-        throw new Error(`Accounts.ui.config: Can't set \`requestOfflineToken\` more than once for ${service}`);
+        throw new Error("Accounts.ui.config: Can't set `requestOfflineToken` more than once for " + service);
       } else {
         Accounts.ui._options.requestOfflineToken[service] = value;
       }
@@ -84,13 +78,12 @@ Accounts.ui.config = options => {
 
   // deal with `forceApprovalPrompt`
   if (options.forceApprovalPrompt) {
-    Object.keys(options.forceApprovalPrompt).forEach(service => {
-      const value = options.forceApprovalPrompt[service];
+    _.each(options.forceApprovalPrompt, function (value, service) {
       if (service !== 'google')
         throw new Error("Accounts.ui.config: `forceApprovalPrompt` only supported for Google login at the moment.");
 
       if (Accounts.ui._options.forceApprovalPrompt[service]) {
-        throw new Error(`Accounts.ui.config: Can't set \`forceApprovalPrompt\` more than once for ${service}`);
+        throw new Error("Accounts.ui.config: Can't set `forceApprovalPrompt` more than once for " + service);
       } else {
         Accounts.ui._options.forceApprovalPrompt[service] = value;
       }
@@ -98,13 +91,7 @@ Accounts.ui.config = options => {
   }
 };
 
-export const passwordSignupFields = () => {
-  const { passwordSignupFields } = Accounts.ui._options;
-  if (Array.isArray(passwordSignupFields)) {
-    return passwordSignupFields;
-  } else if (typeof passwordSignupFields === 'string') {
-    return [passwordSignupFields];
-  }
-  return ["EMAIL_ONLY"];
-}
-  
+passwordSignupFields = function () {
+  return Accounts.ui._options.passwordSignupFields || "EMAIL_ONLY";
+};
+

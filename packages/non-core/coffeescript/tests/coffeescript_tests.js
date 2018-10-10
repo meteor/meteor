@@ -1,6 +1,3 @@
-import { Meteor } from "meteor/meteor";
-import { Tinytest } from "meteor/tinytest";
-
 Tinytest.add("coffeescript - presence", function(test) {
   test.isTrue(Meteor.__COFFEESCRIPT_PRESENT);
 });
