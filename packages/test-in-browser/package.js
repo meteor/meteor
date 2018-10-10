@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.1.0',
+  version: '1.2.0',
   documentation: null
 });
 
@@ -14,7 +14,7 @@ Package.onUse(function (api) {
 
   api.use('session');
   api.use('reload');
-  api.use('jquery');
+  api.use('jquery@1.11.1');
 
   api.use(['webapp', 'blaze@2.1.8', 'templating@1.2.13', 'spacebars@1.0.12',
            'ddp', 'tracker'], 'client');
@@ -27,9 +27,8 @@ Package.onUse(function (api) {
     'driver.css'
   ], "client");
 
-  api.use('autoupdate', 'server', {weak: true});
-  api.use('random', 'server');
-  api.addFiles('autoupdate.js', 'server');
+  api.use("random", "server");
+  api.mainModule("server.js", "server");
 
   api.export('runTests');
 });

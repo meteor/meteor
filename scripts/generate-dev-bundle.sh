@@ -42,8 +42,15 @@ downloadOfficialNode() {
     curl "${NODE_URL}" | tar zx --strip-components 1
 }
 
+downloadReleaseCandidateNode() {
+    NODE_URL="https://nodejs.org/download/rc/v${NODE_VERSION}/${NODE_TGZ}"
+    echo "Downloading Node from ${NODE_URL}" >&2
+    curl "${NODE_URL}" | tar zx --strip-components 1
+}
+
 # Try each strategy in the following order:
-extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
+extractNodeFromTarGz || downloadNodeFromS3 || \
+  downloadOfficialNode || downloadReleaseCandidateNode
 
 # Download Mongo from mongodb.com. Will download a 64-bit version of Mongo
 # by default. Will download a 32-bit version of Mongo if using a 32-bit based
@@ -144,8 +151,23 @@ cp -R node_modules/.bin "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
 
-# Clean up some bulky stuff.
 cd node_modules
+
+# @babel/runtime@7.0.0-beta.56 removed the @babel/runtime/helpers/builtin
+# directory, since all helpers are now implemented in the built-in style
+# (meaning they do not import core-js polyfills). Generated code in build
+# plugins might still refer to the old directory layout (at least for the
+# time being), but we can accommodate that by symlinking to the parent
+# directory, since all the module names are the same.
+if [ -d @babel/runtime/helpers ] &&
+   [ ! -d @babel/runtime/helpers/builtin ]
+then
+    pushd @babel/runtime/helpers
+    ln -s . builtin
+    popd
+fi
+
+## Clean up some bulky stuff.
 
 # Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
 # don't exist, because that might mean it moved somewhere else and we should
@@ -157,11 +179,6 @@ delete () {
     fi
     rm -rf "$1"
 }
-
-delete npm/node_modules/node-gyp
-pushd npm/node_modules
-ln -s ../../node-gyp ./
-popd
 
 # Since we install a patched version of pacote in $DIR/lib/node_modules,
 # we need to remove npm's bundled version to make it use the new one.

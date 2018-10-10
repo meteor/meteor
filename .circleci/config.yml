@@ -41,7 +41,7 @@ run_log_mem_use: &run_log_mem_use
     # Log memory usage throughout entire build.
     MEMUSELOG=/tmp/memuse.txt /bin/bash -c '\
         while true; do\
-          ps -u $USER -e -o pid,%cpu,%mem,rss:10,vsz:10,command:20 \
+          ps -e -o user,%cpu,%mem,rss:10,vsz:10,command:20 \
             --sort=-%mem >> $MEMUSELOG; \
           echo "----------" >> $MEMUSELOG; \
           sleep 1; \
@@ -86,11 +86,7 @@ build_machine_environment: &build_machine_environment
     # These will be evaled before each command.
     PRE_TEST_COMMANDS: |-
         ulimit -c unlimited; # Set core dump size as Ubuntu 14.04 lacks prlimit.
-        ulimit -n 4096; # CircleCI default is soft 1024, hard 4096. Take it all.
-
-    # Enable the Garbage Collection `gc` object to be exposed so we can try
-    # to our own, hopefully more graceful, technique.
-    TOOL_NODE_FLAGS: --expose-gc
+        ulimit -a # Display all ulimit settings for transparency.
 
     # This is only to make Meteor self-test not remind us that we can set
     # this argument for self-tests.
@@ -115,22 +111,38 @@ jobs:
           command: (git submodule sync && git submodule update --init --recursive) || (rm -fr .git/config .git/modules && git submodule deinit -f . && git submodule update --init --recursive)
       - restore_cache:
           keys:
-            - dev-bundle-cache-{{ checksum "meteor" }}
-            - dev-bundle-cache
+            - v1-dev-bundle-cache-{{ checksum "meteor" }}
+            - v1-dev-bundle-cache-
+      - run:
+          name: Combine NPM Shrinkwrap Files
+          command: |
+            for d in packages/*/.npm/package; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
+            for d in packages/*/.npm/plugin/*; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
       - restore_cache:
           keys:
-            - other-deps-cache-{{ .Branch }}-{{ .Revision }}
-            - other-deps-cache-{{ .Branch }}
-            - other-deps-cache
+            - package-npm-deps-cache-group1-v1-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group1-v1-
       - restore_cache:
-          keys: 
-            - test-groups-v1-{{ .Branch }}
-            - test-groups-v1
+          keys:
+            - package-npm-deps-cache-group2-v3-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group2-v3-
+      - restore_cache:
+          keys:
+            - v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
+            - v2-other-deps-cache-{{ .Branch }}-
+      - restore_cache:
+          keys:
+            - v1-test-groups-{{ .Branch }}
+            - v1-test-groups-
       - run:
           name: Create Test Results Directory
           command: |
             sudo mkdir -p ./tmp/results/junit
             sudo chmod a+rwx ./tmp/results/junit
+      # Clear dev_bundle/.npm to ensure consistent test runs.
+      - run:
+          name: Clear npm cache
+          command: ./meteor npm cache clear --force
       - run:
           name: Get Ready
           command: |
@@ -138,10 +150,6 @@ jobs:
             ./meteor --get-ready
           # shouldn't take longer than 20 minutes
           no_output_timeout: 20m
-      # Clear dev_bundle/.npm to ensure consistent test runs.
-      - run:
-          name: Clear npm cache
-          command: ./meteor npm cache clear --force
       - run:
           <<: *run_save_node_bin
       - persist_to_workspace:
@@ -171,7 +179,8 @@ jobs:
             ./meteor self-test \
               'add debugOnly and prodOnly packages' \
               --retries ${METEOR_SELF_TEST_RETRIES} \
-              --headless
+              --headless \
+              --phantom
           no_output_timeout: 20m
       - run:
           name: "Running self-test (Custom Warehouse Tests)"
@@ -181,6 +190,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --with-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -217,6 +227,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/0.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -257,6 +268,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/1.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -297,6 +309,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/2.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -337,6 +350,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/3.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -377,6 +391,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/4.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -417,6 +432,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/5.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -433,7 +449,7 @@ jobs:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
- 
+
   Test Group 6:
     <<: *build_machine_environment
     steps:
@@ -457,6 +473,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/6.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -497,6 +514,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/7.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -537,6 +555,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/8.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -577,6 +596,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/9.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -617,6 +637,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
+              --phantom \
               --junit ./tmp/results/junit/10.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -688,16 +709,62 @@ jobs:
             npm install --prefix ./scripts/test-balancer
             npm start --prefix ./scripts/test-balancer --num-groups ${NUM_GROUPS} --running-avg-length ${RUNNING_AVG_LENGTH}
       - save_cache:
-          key: test-groups-v1-{{ .Branch }}-{{ .BuildNum }}
+          key: v1-test-groups-{{ .Branch }}-{{ .BuildNum }}
           paths:
             - ./tmp/test-groups
           when: on_success
       - save_cache:
-          key: dev-bundle-cache-{{ checksum "meteor" }}
+          key: v1-dev-bundle-cache-{{ checksum "meteor" }}
           paths:
             - "dev_bundle"
+      # The package npm dependencies are split into two caches to avoid an AWS
+      # `MetadataTooLarge` error that consistently appears if we put all of
+      # these folders in the same cache
       - save_cache:
-          key: other-deps-cache-{{ .Branch }}-{{ .Revision }}
+          key: package-npm-deps-cache-group1-v1-{{ checksum "shrinkwraps.txt" }}
+          paths:
+            - packages/meteor/.npm/package/node_modules
+            - packages/modules-runtime/.npm/package/node_modules
+            - packages/modules/.npm/package/node_modules
+            - packages/ecmascript-runtime-server/.npm/package/node_modules
+            - packages/promise/.npm/package/node_modules
+            - packages/babel-compiler/.npm/package/node_modules
+            - packages/babel-runtime/.npm/package/node_modules
+            - packages/http/.npm/package/node_modules
+            - packages/socket-stream-client/.npm/package/node_modules
+            - packages/ddp-client/.npm/package/node_modules
+            - packages/npm-mongo/.npm/package/node_modules
+            - packages/package-version-parser/.npm/package/node_modules
+            - packages/boilerplate-generator/.npm/package/node_modules
+      - save_cache:
+          key: package-npm-deps-cache-group2-v3-{{ checksum "shrinkwraps.txt" }}
+          paths:
+            - packages/xmlbuilder/.npm/package/node_modules
+            - packages/logging/.npm/package/node_modules
+            - packages/webapp/.npm/package/node_modules
+            - packages/ddp-server/.npm/package/node_modules
+            - packages/mongo/.npm/package/node_modules
+            - packages/npm-bcrypt/.npm/package/node_modules
+            - packages/email/.npm/package/node_modules
+            - packages/caching-compiler/.npm/package/node_modules
+            - packages/less/.npm/plugin/compileLessBatch/node_modules
+            - packages/non-core/blaze/packages/spacebars-compiler/.npm/package/node_modules
+            - packages/boilerplate-generator-tests/.npm/package/node_modules
+            - packages/non-core/bundle-visualizer/.npm/package/node_modules
+            - packages/d3-hierarchy/.npm/package/node_modules
+            - packages/non-core/coffeescript-compiler/.npm/package/node_modules
+            - packages/server-render/.npm/package/node_modules
+            - packages/es5-shim/.npm/package/node_modules
+            - packages/force-ssl-common/.npm/package/node_modules
+            - packages/jshint/.npm/plugin/lintJshint/node_modules
+            - packages/minifier-css/.npm/package/node_modules
+            - packages/minifier-js/.npm/package/node_modules
+            - packages/standard-minifier-css/.npm/plugin/minifyStdCSS/node_modules
+            - packages/inter-process-messaging/.npm/package/node_modules
+            - packages/fetch/.npm/package/node_modules
+            - packages/non-core/mongo-decimal/.npm/package/node_modules
+      - save_cache:
+          key: v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
           paths:
             - ".babel-cache"
             - ".meteor"

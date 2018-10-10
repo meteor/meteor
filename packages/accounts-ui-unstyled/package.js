@@ -1,11 +1,18 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.4.0"
+  version: "1.4.1"
 });
 
 Package.onUse(function (api) {
-  api.use(['tracker', 'service-configuration', 'accounts-base',
-           'underscore', 'templating@1.2.13', 'session', 'jquery'], 'client');
+  api.use([
+    'tracker',
+    'service-configuration',
+    'accounts-base',
+    'ecmascript',
+    'templating@1.2.13',
+    'session',
+  ], 'client');
+
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
 
@@ -39,7 +46,7 @@ Package.onUse(function (api) {
   api.addFiles('login_buttons.import.less');
 });
 
-Package.onTest(function (api) {
+Package.onTest(api => {
   api.use('accounts-ui-unstyled');
   api.use('tinytest');
   api.addFiles('accounts_ui_tests.js', 'client');

@@ -28,6 +28,8 @@
 }
 
 .meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPills,
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerSequence
 {
   width: 800px;
@@ -79,24 +81,70 @@
 }
 
 .meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPills .meteorBundleVisualizerPill
+{
+  display: inline-block;
+  border: 2px solid black;
+  width: 176px;
+  margin-right: 5px;
+  border-radius: 15px;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPills,
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerTrail
 {
-    position: absolute;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 12px;
-    left: 0;
-    min-width: 180px;
-    font-weight: bold;
+  position: absolute;
+  font-family: 'Open Sans', sans-serif;
+  font-size: 12px;
+  left: 0;
+  min-width: 180px;
+  font-weight: bold;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerTrail
+{
+  top: 100px;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPills .meteorBundleVisualizerPill,
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerTrail .meteorBundleVisualizerTrailSegment
+{
+  height: 40px;
+  text-align: center;
+  vertical-align: middle;
+  line-height: 40px;
+  margin-bottom: 5px;
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPills .meteorBundleVisualizerPill
+{
+  cursor: pointer;
+  background-color: rgba(171, 171, 171, 0.3);
+}
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPills .meteorBundleVisualizerPill:hover
+{
+  background-color: rgba(171, 171, 171, 0.8);
+}
+
+
+.meteorBundleVisualizer.meteorBundleVisualizerRootContainer
+  .meteorBundleVisualizerPills
+  .meteorBundleVisualizerPill.meteorBundleVisualizerActive
+{
+  background-color: rgba(171, 171, 171, 1);
 }
 
 .meteorBundleVisualizer.meteorBundleVisualizerRootContainer
   .meteorBundleVisualizerTrail .meteorBundleVisualizerTrailSegment
 {
-  height: 40px;
   border-radius: 3px;
   border: 2px dotted black;
-  text-align: center;
-  vertical-align: middle;
-  line-height: 40px;
-  margin-bottom: 5px;
 }

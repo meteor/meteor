@@ -1,3 +1,6 @@
+import { MaxHeap } from './max-heap.js';
+import { MinHeap } from './min-heap.js';
+
 // This implementation of Min/Max-Heap is just a subclass of Max-Heap
 // with a Min-Heap as an encapsulated property.
 //
@@ -10,44 +13,39 @@
 // (http://www.cs.otago.ac.nz/staffpriv/mike/Papers/MinMaxHeaps/MinMaxHeaps.pdf)
 // and Interval Heaps
 // (http://www.cise.ufl.edu/~sahni/dsaac/enrich/c13/double.htm)
-MinMaxHeap = function (comparator, options) {
-  var self = this;
-
-  MaxHeap.call(self, comparator, options);
-  self._minHeap = new MinHeap(comparator, options);
-};
-
-Meteor._inherits(MinMaxHeap, MaxHeap);
-
-_.extend(MinMaxHeap.prototype, {
-  set: function (id, value) {
-    var self = this;
-    MaxHeap.prototype.set.apply(self, arguments);
-    self._minHeap.set(id, value);
-  },
-  remove: function (id) {
-    var self = this;
-    MaxHeap.prototype.remove.apply(self, arguments);
-    self._minHeap.remove(id);
-  },
-  clear: function () {
-    var self = this;
-    MaxHeap.prototype.clear.apply(self, arguments);
-    self._minHeap.clear();
-  },
-  setDefault: function (id, def) {
-    var self = this;
-    MaxHeap.prototype.setDefault.apply(self, arguments);
-    return self._minHeap.setDefault(id, def);
-  },
-  clone: function () {
-    var self = this;
-    var clone = new MinMaxHeap(self._comparator, self._heap);
-    return clone;
-  },
-  minElementId: function () {
-    var self = this;
-    return self._minHeap.minElementId();
+export class MinMaxHeap extends MaxHeap {
+  constructor(comparator, options) {
+    super(comparator, options);
+    this._minHeap = new MinHeap(comparator, options);
   }
-});
 
+  set(...args) {
+    super.set(...args);
+    this._minHeap.set(...args);
+  }
+
+  remove(...args) {
+    super.remove(...args);
+    this._minHeap.remove(...args);
+  }
+
+  clear(...args) {
+    super.clear(...args);
+    this._minHeap.clear(...args);
+  }
+
+  setDefault(...args) {
+    super.setDefault(...args);
+    return this._minHeap.setDefault(...args);
+  }
+
+  clone() {
+    const clone = new MinMaxHeap(this._comparator, this._heap);
+    return clone;
+  }
+
+  minElementId() {
+    return this._minHeap.minElementId();
+  }
+
+};

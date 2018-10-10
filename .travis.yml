@@ -1,11 +1,11 @@
 language: node_js
 node_js:
-  - "4.0"
+  - "8.11.1"
 cache:
   directories:
     - ".meteor"
     - ".babel-cache"
-script: TEST_PACKAGES_EXCLUDE="less" ./packages/test-in-console/run.sh
+script: TEST_PACKAGES_EXCLUDE="less" phantom=false ./packages/test-in-console/run.sh
 sudo: false
 env:
   - CXX=g++-4.8

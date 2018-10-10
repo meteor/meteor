@@ -66,15 +66,18 @@ const defaultExtensionHandlers = {
   ".json"(dataString) {
     const file = this;
     file.jsonData = JSON.parse(dataString);
-    return "module.exports = " +
-      JSON.stringify(file.jsonData, null, 2) +
-      ";\n";
+    return jsonDataToCommonJS(file.jsonData);
   },
 
   ".css"(dataString, hash) {
     return cssToCommonJS(dataString, hash);
   }
 };
+
+function jsonDataToCommonJS(data) {
+  return "module.exports = " +
+    JSON.stringify(data, null, 2) + ";\n";
+}
 
 // This is just a map from hashes to booleans, so it doesn't need full LRU
 // eviction logic.
@@ -119,6 +122,30 @@ function ensureLeadingSlash(path) {
   }
 
   return posix;
+}
+
+// Files start with file.imported === false. As we scan the dependency
+// graph, a file can get promoted to "dynamic" or "static" to indicate
+// that it has been imported by other modules. The "dynamic" status trumps
+// false, and "static" trumps both "dynamic" and false. A file can never
+// be demoted to a lower status after it has been promoted.
+const importedStatusOrder = [false, "dynamic", "static"];
+
+// Set each file.imported status to the maximum status of provided files.
+function alignImportedStatuses(...files) {
+  const maxIndex = Math.max(...files.map(
+    file => importedStatusOrder.indexOf(file.imported)));
+  const maxStatus = importedStatusOrder[maxIndex];
+  files.forEach(file => file.imported = maxStatus);
+}
+
+// Set file.imported to status if status has a higher index than the
+// current value of file.imported.
+function setImportedStatus(file, status) {
+  if (importedStatusOrder.indexOf(status) >
+      importedStatusOrder.indexOf(file.imported)) {
+    file.imported = status;
+  }
 }
 
 // Map from SHA (which is already calculated, so free for us)
@@ -249,19 +276,6 @@ export default class ImportScanner {
       // something plausible. #6411 #6383
       const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
-      const dotExt = "." + file.type;
-      const dataString = file.data.toString("utf8");
-      file.dataString = defaultExtensionHandlers[dotExt].call(
-        file,
-        dataString,
-        file.hash,
-      );
-
-      if (! (file.data instanceof Buffer) ||
-          file.dataString !== dataString) {
-        file.data = Buffer.from(file.dataString, "utf8");
-      }
-
       // This property can have values false, true, "dynamic" (which
       // indicates that the file has been imported, but only dynamically).
       file.imported = false;
@@ -302,9 +316,10 @@ export default class ImportScanner {
     const files = this.realPathToFiles[realPath];
     if (files && files.length > 0) {
       const firstFile = files[0];
+      const dataString = this._getDataString(firstFile);
       return {
         data: firstFile.data,
-        dataString: firstFile.dataString,
+        dataString: dataString,
         hash: firstFile.hash,
       };
     }
@@ -343,7 +358,13 @@ export default class ImportScanner {
     if (foundSymbolicLink) {
       // Call the actual realpathOrNull function only if there were any
       // symlinks involved in the relative path within this.sourceRoot.
-      return this.realPathCache[absPath] = realpathOrNull(absPath);
+      const realPath = realpathOrNull(absPath);
+      if (! realPath) {
+        // If we couldn't resolve the real path, fall back to the given
+        // absPath, and avoid caching.
+        return absPath;
+      }
+      return this.realPathCache[absPath] = realPath;
     }
 
     return this.realPathCache[absPath] = absPath;
@@ -383,6 +404,7 @@ export default class ImportScanner {
           deps: {},
           lazy: true,
           imported: false,
+          implicit: true,
         });
       }
 
@@ -391,6 +413,13 @@ export default class ImportScanner {
       file.absModuleId = absTargetId;
       file.sourcePath = file.targetPath;
 
+      // If the sourceFile was not generated implicitly above, then it
+      // must have been explicitly added as a source module, so we should
+      // not override or modify its contents. #10233
+      if (sourceFile.implicit !== true) {
+        return;
+      }
+
       const relativeId = this._getRelativeImportId(
         absSourceId,
         absTargetId,
@@ -398,7 +427,7 @@ export default class ImportScanner {
 
       // Set the contents of the source module to import the target
       // module(s), combining their exports on the source module's exports
-      // object using the module.watch live binding system. This is better
+      // object using the module.link live binding system. This is better
       // than `Object.assign(exports, require(relativeId))` because it
       // allows the exports to change in the future, and better than
       // `module.exports = require(relativeId)` because it preserves the
@@ -411,12 +440,11 @@ export default class ImportScanner {
       // plugin calling inputFile.addJavaScript multiple times for the
       // same source file (see discussion in #9176), with different target
       // paths, code, laziness, etc.
-      sourceFile.dataString += [
-        "module.watch(require(" + JSON.stringify(relativeId) + "), {",
-        '  "*": module.makeNsSetter(true)',
-        "});",
-        ""
-      ].join("\n");
+      sourceFile.dataString = this._getDataString(sourceFile) +
+        // The + in "*+" indicates that the "default" property should be
+        // included as well as any other re-exported properties.
+        "module.link(" + JSON.stringify(relativeId) + ', { "*": "*+" });\n';
+
       sourceFile.data = Buffer.from(sourceFile.dataString, "utf8");
       sourceFile.hash = sha1(sourceFile.data);
       sourceFile.deps[relativeId] = {
@@ -431,6 +459,8 @@ export default class ImportScanner {
   // maps and updating all other properties appropriately. Once this
   // combination is done, oldFile should be kept and newFile discarded.
   _combineFiles(oldFile, newFile) {
+    const scanner = this;
+
     function checkProperty(name) {
       if (has(oldFile, name)) {
         if (! has(newFile, name)) {
@@ -463,8 +493,11 @@ export default class ImportScanner {
       const consumer = file.sourceMap &&
         new SourceMapConsumer(file.sourceMap);
       const node = consumer &&
-        SourceNode.fromStringWithSourceMap(file.dataString, consumer);
-      return node || file.dataString;
+        SourceNode.fromStringWithSourceMap(
+          scanner._getDataString(file),
+          consumer
+        );
+      return node || scanner._getDataString(file);
     }
 
     const {
@@ -482,15 +515,7 @@ export default class ImportScanner {
     oldFile.data = Buffer.from(oldFile.dataString, "utf8");
     oldFile.hash = sha1(oldFile.data);
 
-    // If either oldFile or newFile has been imported non-dynamically,
-    // then oldFile.imported needs to be === true. Otherwise we simply set
-    // oldFile.imported = oldFile.imported || newFile.imported, which
-    // could be either "dynamic" or false.
-    oldFile.imported =
-      oldFile.imported === true ||
-      newFile.imported === true ||
-      oldFile.imported ||
-      newFile.imported;
+    alignImportedStatuses(oldFile, newFile);
 
     oldFile.sourceMap = combinedSourceMap.toJSON();
     if (! oldFile.sourceMap.mappings) {
@@ -641,6 +666,11 @@ export default class ImportScanner {
 
       let container = files[0];
 
+      // Make sure all the files share the same file.imported value, so
+      // that a statically bundled alias doesn't point to a dynamically
+      // bundled container, or vice-versa.
+      alignImportedStatuses(...files);
+
       // Take the first file inside node_modules as the container. If none
       // found, default to the first file in the list. It's important to
       // let node_modules files be the containers if possible, since some
@@ -672,9 +702,8 @@ export default class ImportScanner {
     return this.outputFiles.filter(file => {
       return file.absModuleId &&
         ! file[fakeSymbol] &&
-        (! file.lazy ||
-         file.imported === true ||
-         file.imported === "dynamic");
+        ! file.hasErrors &&
+        (! file.lazy || file.imported);
     });
   }
 
@@ -722,7 +751,7 @@ export default class ImportScanner {
     }
 
     const result = findImportedModuleIdentifiers(
-      file.dataString,
+      this._getDataString(file),
       file.hash,
     );
 
@@ -775,10 +804,7 @@ export default class ImportScanner {
       // they can be handled by the loop above.
       const file = this._getFile(resolved.path);
       if (file && file.alias) {
-        file.imported = forDynamicImport
-          ? file.imported || "dynamic"
-          : true;
-
+        setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
         return file.alias;
       }
     }
@@ -803,7 +829,7 @@ export default class ImportScanner {
   }
 
   _scanFile(file, forDynamicImport = false) {
-    if (file.imported === true) {
+    if (file.imported === "static") {
       // If we've already scanned this file non-dynamically, then we don't
       // need to scan it again.
       return;
@@ -817,16 +843,14 @@ export default class ImportScanner {
     }
 
     // Set file.imported to a truthy value (either "dynamic" or true).
-    file.imported = forDynamicImport ? "dynamic" : true;
+    setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
 
-    if (file.error) {
+    if (file.reportPendingErrors &&
+        file.reportPendingErrors() > 0) {
+      file.hasErrors = true;
       // Any errors reported to InputFile#error were saved but not
       // reported at compilation time. Now that we know the file has been
       // imported, it's time to report those errors.
-      buildmessage.error(
-        file.error.message,
-        file.error.info
-      );
       return;
     }
 
@@ -870,7 +894,7 @@ export default class ImportScanner {
         if (depFile.jsonData &&
             depFile.absModuleId.endsWith("/package.json") &&
             depFile.implicit === true) {
-          const file = this._readModule(absImportedPath);
+          const file = this._readPackageJson(absImportedPath);
           if (file) {
             depFile.implicit = false;
             Object.assign(depFile, file);
@@ -907,17 +931,76 @@ export default class ImportScanner {
     return archMatches(this.bundleArch, "web.browser");
   }
 
+  _getDataString(file) {
+    if (typeof file.dataString === "string") {
+      return file.dataString;
+    }
+
+    const dotExt = "." + file.type;
+    const dataString = file.data.toString("utf8");
+    file.dataString = defaultExtensionHandlers[dotExt].call(
+      file,
+      dataString,
+      file.hash,
+    );
+
+    if (! (file.data instanceof Buffer) ||
+        file.dataString !== dataString) {
+      file.data = Buffer.from(file.dataString, "utf8");
+    }
+
+    return file.dataString;
+  }
+
   _readFile(absPath) {
-    const contents = optimisticReadFile(absPath);
-    const hash = optimisticHashOrNull(absPath);
-
-    this.watchSet.addFile(absPath, hash);
-
-    return {
-      data: contents,
-      dataString: contents.toString("utf8"),
-      hash
+    const info = {
+      data: optimisticReadFile(absPath),
+      hash: optimisticHashOrNull(absPath),
     };
+
+    this.watchSet.addFile(absPath, info.hash);
+
+    info.dataString = info.data.toString("utf8");
+
+    // Same logic/comment as stripBOM in node/lib/module.js:
+    // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
+    // because the buffer-to-string conversion in `fs.readFileSync()`
+    // translates it to FEFF, the UTF-16 BOM.
+    if (info.dataString.charCodeAt(0) === 0xfeff) {
+      info.dataString = info.dataString.slice(1);
+      info.data = Buffer.from(info.dataString, "utf8");
+      info.hash = sha1(info.data);
+    }
+
+    return info;
+  }
+
+  _readPackageJson(absPath) {
+    try {
+      var info = this._readFile(absPath);
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      return null;
+    }
+
+    const jsonData = JSON.parse(info.dataString);
+
+    Object.keys(jsonData).forEach(key => {
+      // Strip root properties that start with an underscore, since these
+      // are "private" npm-specific properties, not added by other package
+      // managers like yarn, and they may introduce nondeterminism into
+      // the Meteor build. #9878 #9903
+      if (key.startsWith("_")) {
+        delete jsonData[key];
+      }
+    });
+
+    info.dataString = jsonDataToCommonJS(jsonData);
+    info.data = Buffer.from(info.dataString, "utf8");
+    info.hash = sha1(info.data);
+    info.jsonData = jsonData;
+
+    return info;
   }
 
   _readModule(absPath) {
@@ -944,14 +1027,6 @@ export default class ImportScanner {
     }
 
     const dataString = info.dataString;
-
-    // Same logic/comment as stripBOM in node/lib/module.js:
-    // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
-    // because the buffer-to-string conversion in `fs.readFileSync()`
-    // translates it to FEFF, the UTF-16 BOM.
-    if (info.dataString.charCodeAt(0) === 0xfeff) {
-      info.dataString = info.dataString.slice(1);
-    }
 
     if (! has(defaultExtensionHandlers, ext)) {
       if (canBeParsedAsPlainJS(dataString)) {
@@ -995,8 +1070,7 @@ export default class ImportScanner {
       // raw version found in node_modules. See also:
       // https://github.com/meteor/meteor-feature-requests/issues/6
 
-    } else if (! this.isWeb() &&
-               absModuleId.startsWith("/node_modules/")) {
+    } else if (this._shouldUseNode(absModuleId)) {
       // On the server, modules in node_modules directories will be
       // handled natively by Node, so we just need to generate a stub
       // module that calls module.useNode(), rather than calling
@@ -1017,10 +1091,12 @@ export default class ImportScanner {
       }
 
     } else {
-      // If the module is not readable, _readModule may return
-      // null. Otherwise it will return an object with .data,
-      // .dataString, and .hash properties.
-      depFile = this._readModule(absPath);
+      depFile = absModuleId.endsWith("/package.json")
+        ? this._readPackageJson(absPath)
+        : this._readModule(absPath);
+
+      // If the module is not readable, _readModule may return null.
+      // Otherwise it will return { data, dataString, hash }.
       if (! depFile) {
         return null;
       }
@@ -1039,6 +1115,34 @@ export default class ImportScanner {
     this._addFileByRealPath(depFile, realPath);
 
     return depFile;
+  }
+
+  // Similar to logic in Module.prototype.useNode as defined in
+  // packages/modules-runtime/server.js. Introduced to fix issue #10122.
+  _shouldUseNode(absModuleId) {
+    if (this.isWeb()) {
+      // Node should never be used in a browser, obviously.
+      return false;
+    }
+
+    const parts = absModuleId.split("/");
+    let start = 0;
+
+    // Tolerate leading / character.
+    if (parts[start] === "") ++start;
+
+    // Meteor package modules include a node_modules component in their
+    // absolute module identifiers, but that doesn't mean those modules
+    // should be evaluated by module.useNode().
+    if (parts[start] === "node_modules" &&
+        parts[start + 1] === "meteor") {
+      start += 2;
+    }
+
+    // If the remaining parts include node_modules, then this is a module
+    // that was installed by npm, and it should be evaluated by Node on
+    // the server.
+    return parts.indexOf("node_modules", start) >= 0;
   }
 
   // Returns an absolute module identifier indicating where to install the
@@ -1225,21 +1329,11 @@ export default class ImportScanner {
     if (file) {
       // If the file already exists, just update file.imported according
       // to the forDynamicImport parameter.
-      file.imported = forDynamicImport
-        ? file.imported || "dynamic"
-        : true;
-
+      setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
       return file;
     }
 
-    const data = Buffer.from(map(pkg, (value, key) => {
-      const isIdentifier = /^[_$a-zA-Z]\w*$/.test(key);
-      const prop = isIdentifier
-        ? "." + key
-        : "[" + JSON.stringify(key) + "]";
-      return `exports${prop} = ${JSON.stringify(value)};\n`;
-    }).join(""));
-
+    const data = Buffer.from(jsonDataToCommonJS(pkg), "utf8");
     const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
     const absModuleId = this._getAbsModuleId(pkgJsonPath);
 
@@ -1253,7 +1347,7 @@ export default class ImportScanner {
       servePath: stripLeadingSlash(absModuleId),
       hash: sha1(data),
       lazy: true,
-      imported: forDynamicImport ? "dynamic" : true,
+      imported: forDynamicImport ? "dynamic" : "static",
       // Since _addPkgJsonToOutput is only ever called for package.json
       // files that are involved in resolving package directories, and pkg
       // is only a subset of the information in the actual package.json

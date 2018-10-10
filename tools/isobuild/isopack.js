@@ -472,7 +472,7 @@ _.extend(Isopack.prototype, {
         // case right.)
       }, function () {
         // Make a new Plugin API object for this plugin.
-        var Plugin = self._makePluginApi();
+        var Plugin = self._makePluginApi(name);
         plugin.load({ Plugin: Plugin, Profile: Profile });
       });
     });
@@ -492,7 +492,7 @@ _.extend(Isopack.prototype, {
     self._pluginsInitialized = true;
   }),
 
-  _makePluginApi: function () {
+  _makePluginApi: function (pluginName) {
     var isopack = this;
 
     /**
@@ -501,6 +501,8 @@ _.extend(Isopack.prototype, {
      * @summary The namespace that is exposed inside build plugin files.
      */
     var Plugin = {
+      name: pluginName,
+
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
@@ -1447,10 +1449,11 @@ _.extend(Isopack.prototype, {
     // Transpile the files we selected
     var babel = require("meteor-babel");
     pathsToTranspile.forEach((path) => {
-      var fullPath = files.convertToOSPath(
-        files.pathJoin(files.getCurrentToolsDir(), path));
-
-      var inputFileContents = files.readFile(fullPath, "utf-8");
+      const toolsDir = files.getCurrentToolsDir();
+      const fullPath = files.convertToOSPath(files.pathJoin(toolsDir, path));
+      let inputFileContents = files.readFile(fullPath, "utf-8");
+      const babelCacheDirectory =
+        files.pathJoin(files.pathDirname(toolsDir), ".babel-cache");
 
       // #RemoveInProd
       // We don't actually want to load the babel auto-transpiler when we are
@@ -1468,10 +1471,12 @@ _.extend(Isopack.prototype, {
       _.extend(babelOptions, {
         filename: path,
         sourceFileName: "/" + path,
-        sourceMap: true
+        sourceMaps: true
       });
 
-      var transpiled = babel.compile(inputFileContents, babelOptions);
+      var transpiled = babel.compile(inputFileContents, babelOptions, {
+        cacheDirectory: babelCacheDirectory,
+      });
 
       var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
 

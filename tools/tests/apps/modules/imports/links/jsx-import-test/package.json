@@ -1,0 +1,9 @@
+{
+  "name": "jsx-import-test",
+  "version": "0.0.0",
+  "private": true,
+  "main": "parent.js",
+  "dependencies": {
+    "react": "16.4.1"
+  }
+}

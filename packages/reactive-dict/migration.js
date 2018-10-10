@@ -1,10 +1,12 @@
 import { ReactiveDict } from './reactive-dict';
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 ReactiveDict._migratedDictData = {}; // name -> data
 ReactiveDict._dictsToMigrate = {}; // name -> ReactiveDict
 
 ReactiveDict._loadMigratedDict = function (dictName) {
-  if (_.has(ReactiveDict._migratedDictData, dictName)) {
+  if (hasOwn.call(ReactiveDict._migratedDictData, dictName)) {
     const data = ReactiveDict._migratedDictData[dictName];
     delete ReactiveDict._migratedDictData[dictName];
     return data;
@@ -14,7 +16,7 @@ ReactiveDict._loadMigratedDict = function (dictName) {
 };
 
 ReactiveDict._registerDictForMigrate = function (dictName, dict) {
-  if (_.has(ReactiveDict._dictsToMigrate, dictName))
+  if (hasOwn.call(ReactiveDict._dictsToMigrate, dictName))
     throw new Error("Duplicate ReactiveDict name: " + dictName);
 
   ReactiveDict._dictsToMigrate[dictName] = dict;

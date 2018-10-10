@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.6.0-beta162.14'
+  version: '1.7.0'
 });
 
 Npm.depends({"basic-auth-connect": "1.0.0",
@@ -33,7 +33,8 @@ Package.onUse(function (api) {
     'routepolicy',
     'modern-browsers',
     'boilerplate-generator',
-    'webapp-hashing'
+    'webapp-hashing',
+    'inter-process-messaging',
   ], 'server');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If
@@ -57,4 +58,7 @@ Package.onTest(function (api) {
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
   api.addFiles('socket_file_tests.js', 'server');
+
+  api.addAssets('modern_test_asset.js', 'web.browser');
+  api.addAssets('legacy_test_asset.js', 'legacy');
 });

@@ -1,6 +1,44 @@
 const minimumVersions = Object.create(null);
 const hasOwn = Object.prototype.hasOwnProperty;
 
+// By default, any minimum versions specified for chrome should apply to
+// chromeMobile too, per https://github.com/meteor/meteor/pull/9793,
+// though it should also be possible to specify minimum versions
+// specifically for chromeMobile. This map defines that aliasing behavior
+// in a generic way that could work for other browsers as well.
+const browserAliases = {
+  chrome: [
+    "chromeMobile",
+    "chromeMobileIOS",
+  ],
+
+  // If a call to setMinimumBrowserVersions specifies Edge 12 as a minimum
+  // version, that means no version of Internet Explorer pre-Edge should
+  // be classified as modern. This edge:["ie"] alias effectively enforces
+  // that logic, because there is no IE12. #9818 #9839
+  edge: ["ie"],
+
+  // The webapp package converts browser names to camel case, so
+  // mobile_safari and mobileSafari should be synonymous.
+  mobile_safari: ["mobileSafari"],
+};
+
+// Expand the given minimum versions by reusing chrome versions for
+// chromeMobile (according to browserAliases above).
+function applyAliases(versions) {
+  Object.keys(browserAliases).forEach(original => {
+    if (hasOwn.call(versions, original)) {
+      browserAliases[original].forEach(alias => {
+        if (! hasOwn.call(versions, alias)) {
+          versions[alias] = versions[original];
+        }
+      });
+    }
+  });
+
+  return versions;
+}
+
 // TODO Should it be possible for callers to setMinimumBrowserVersions to
 // forbid any version of a particular browser?
 
@@ -24,6 +62,8 @@ function isModern(browser) {
 // web.browser.legacy and web.browser will be based on the maximum of all
 // requested minimum versions for each browser.
 function setMinimumBrowserVersions(versions, source) {
+  applyAliases(versions);
+
   Object.keys(versions).forEach(browserName => {
     if (hasOwn.call(minimumVersions, browserName) &&
         ! greaterThan(versions[browserName],
@@ -55,6 +95,12 @@ function getCaller(calleeName) {
 Object.assign(exports, {
   isModern,
   setMinimumBrowserVersions,
+  calculateHashOfMinimumVersions() {
+    const { createHash } = require("crypto");
+    return createHash("sha1").update(
+      JSON.stringify(minimumVersions)
+    ).digest("hex");
+  }
 });
 
 // For making defensive copies of [major, minor, ...] version arrays, so
@@ -104,36 +150,42 @@ setMinimumBrowserVersions({
   chrome: 49,
   edge: 12,
   firefox: 45,
-  mobile_safari: [9, 2],
+  mobileSafari: [9, 2],
   opera: 36,
   safari: 9,
+  // Electron 1.0.0+ matches Chromium 49, per
+  // https://github.com/Kilian/electron-to-chromium/blob/master/full-versions.js
+  electron: 1,
 }, makeSource("classes"));
 
 setMinimumBrowserVersions({
   chrome: 39,
   edge: 13,
   firefox: 26,
-  mobile_safari: 10,
+  mobileSafari: 10,
   opera: 26,
   safari: 10,
   // Disallow any version of PhantomJS.
   phantomjs: Infinity,
+  electron: [0, 20],
 }, makeSource("generator functions"));
 
 setMinimumBrowserVersions({
   chrome: 41,
   edge: 13,
   firefox: 34,
-  mobile_safari: [9, 2],
+  mobileSafari: [9, 2],
   opera: 29,
   safari: [9, 1],
+  electron: [0, 24],
 }, makeSource("template literals"));
 
 setMinimumBrowserVersions({
   chrome: 38,
   edge: 12,
   firefox: 36,
-  mobile_safari: 9,
+  mobileSafari: 9,
   opera: 25,
   safari: 9,
+  electron: [0, 20],
 }, makeSource("symbols"));

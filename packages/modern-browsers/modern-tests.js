@@ -7,6 +7,11 @@ Tinytest.add('modern-browsers - versions - basic', function (test) {
     major: 60,
   }));
 
+  test.isTrue(isModern({
+    name: "chromeMobile",
+    major: 60,
+  }));
+
   test.isFalse(isModern({
     name: "firefox",
     major: 25,

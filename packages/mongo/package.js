@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.4.5'
+  version: '1.6.0'
 });
 
 Npm.depends({
@@ -36,6 +36,10 @@ Package.onUse(function (api) {
     'ecmascript',
     'mongo-dev-server',
   ]);
+
+  // Make weak use of Decimal type on client
+  api.use('mongo-decimal', 'client', {weak: true});
+  api.use('mongo-decimal', 'server');
 
   api.use('underscore', 'server');
 
