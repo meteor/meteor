@@ -120,7 +120,8 @@ var mergeCss = Profile("mergeCss", function (css) {
   // Add the contents of the input files to the source map of the new file
   stringifiedCss.map.sourcesContent =
     stringifiedCss.map.sources.map(function (filename) {
-      return originals[filename].getContentsAsString();
+      const file = originals[filename] || null;
+      return file && file.getContentsAsString();
     });
 
   // Compose the concatenated file's source map with source maps from the
