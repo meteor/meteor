@@ -51,6 +51,11 @@ var hashFiles = Profile("hashFiles", function (files) {
   return hash.digest("hex");
 });
 
+function disableSourceMappingURLs(css) {
+  return css.replace(/# sourceMappingURL=/g,
+                     "# sourceMappingURL_DISABLED=");
+}
+
 // Lints CSS files and merges them into one file, fixing up source maps and
 // pulling any @import directives up to the top since the CSS spec does not
 // allow them to appear in the middle of a file.
@@ -69,7 +74,8 @@ var mergeCss = Profile("mergeCss", function (css) {
     originals[filename] = file;
     try {
       var parseOptions = { source: filename, position: true };
-      var ast = CssTools.parseCss(file.getContentsAsString(), parseOptions);
+      var css = disableSourceMappingURLs(file.getContentsAsString());
+      var ast = CssTools.parseCss(css, parseOptions);
       ast.filename = filename;
     } catch (e) {
       if (e.reason) {
