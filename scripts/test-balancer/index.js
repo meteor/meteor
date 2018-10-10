@@ -11,21 +11,16 @@ const runningAvgLength = +args[args.indexOf('--running-avg-length') + 1];
 // Load the junit results from the various groups on this build
 const currentBuildResults = [];
 for (let i = 0; i < numGroups; i++) {
-  try {
-    const data = fs.readFileSync(`../../tmp/results/junit/${i}.xml`);
-    parser.parseString(data, (err, { testsuites: { testsuite } }) => {
-      (testsuite || [])
-        .map(testsuite => testsuite.testcase)
-        .forEach((testcase = []) =>
-          testcase.forEach(({ $: { name, time } }) => {
-            currentBuildResults.push({ name, time: +time })
-          })
-        );
-    });
-  } catch(e) {
-    console.log(`Could not find '/tmp/results/junit/${i}.xml'`);
-  }
-  
+  const data = fs.readFileSync(`../../tmp/results/junit/${i}.xml`);
+  parser.parseString(data, (err, { testsuites: { testsuite } }) => {
+    (testsuite || [])
+      .map(testsuite => testsuite.testcase)
+      .forEach((testcase = []) =>
+        testcase.forEach(({ $: { name, time } }) => {
+          currentBuildResults.push({ name, time: +time })
+        })
+      );
+  });
 }
 
 // Try to load previous test balance

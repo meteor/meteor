@@ -44,7 +44,7 @@ export class Boilerplate {
     }
 
     // Calling .await() requires a Fiber.
-    return this.toHTMLAsync(extraData).await();
+    return toHTMLAsync(extraData).await();
   }
 
   // Returns a Promise that resolves to a string of HTML.

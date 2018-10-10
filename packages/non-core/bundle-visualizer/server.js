@@ -33,38 +33,21 @@ function getStatBundles() {
     f.absolutePath.endsWith(".stats.json");
 
   // Read the stat file, but if it's in any way unusable just return null.
-  function readOrNull(file) {
+  const readOrNull = file => {
     try {
       return JSON.parse(fsReadFileSync(file, "utf8"));
     } catch (err) {
       return null;
     }
-  }
+  };
 
-  const {
-    staticFiles,
-    staticFilesByArch,
-  } = WebAppInternals;
-
-  const files = [];
-
-  if (staticFilesByArch) {
-    Object.keys(staticFilesByArch).forEach(arch => {
-      const staticFiles = staticFilesByArch[arch];
-      Object.keys(staticFiles).forEach(path => {
-        files.push(staticFiles[path]);
-      });
-    });
-  } else if (staticFiles) {
-    Object.keys(staticFiles).forEach(path => {
-      files.push(staticFiles[path]);
-    });
-  }
-
-  return files.filter(statFileFilter).map(file => ({
-    name: file.hash,
-    stats: readOrNull(file.absolutePath),
-  }));
+  return Object.keys(WebAppInternals.staticFiles)
+    .map(staticFile => WebAppInternals.staticFiles[staticFile])
+    .filter(statFileFilter)
+    .map(statFile => ({
+      name: statFile.hash,
+      stats: readOrNull(statFile.absolutePath),
+    }));
 }
 
 function _childModules(node) {

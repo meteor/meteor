@@ -139,18 +139,16 @@ testAsyncMulti = function (name, funcs) {
         }, timeout);
 
         test.extraDetails.asyncBlock = i++;
-
-        new Promise(resolve => {
-          resolve(func.apply(context, [test, _.bind(em.expect, em)]));
-        }).then(result => {
-          em.done();
-        }, exception => {
-          if (em.cancel()) {
+        try {
+          func.apply(context, [test, _.bind(em.expect, em)]);
+        } catch (exception) {
+          if (em.cancel())
             test.exception(exception);
-            // Because we called test.exception, we're not to call onComplete.
-          }
           Meteor.clearTimeout(timer);
-        });
+          // Because we called test.exception, we're not to call onComplete.
+          return;
+        }
+        em.done();
       }
     };
 

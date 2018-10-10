@@ -585,24 +585,21 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      const {
-        MongoClient,
-        Server
-      } = loadIsopackage('npm-mongo').NpmModuleMongodb;
+      const { Db, Server } = loadIsopackage('npm-mongo').NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
-      const client = new MongoClient(
+      var db = new Db(
+        'meteor',
         new Server('127.0.0.1', options.port, {
           poolSize: 1,
           socketOptions: {
             connectTimeoutMS: 60000
           }
-        })
+        }),
+        { safe: true }
       );
 
-      yieldingMethod(client, 'connect');
-      const db = client.db('meteor');
-
+      yieldingMethod(db, 'open');
       if (stopped) {
         return;
       }
@@ -714,7 +711,7 @@ var launchMongo = function (options) {
         break;
       }
 
-      client.close(true /* means "the app is closing the connection" */);
+      db.close(true /* means "the app is closing the connection" */);
     } catch (e) {
       // If the process has exited, we're doing another form of error
       // handling. No need to throw random low-level errors farther.

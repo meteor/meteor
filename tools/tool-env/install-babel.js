@@ -15,10 +15,11 @@ function babelRegister() {
 
   // Make sure that source maps are included in the generated code for
   // meteor/tools modules.
-  babelOptions.sourceMaps = "inline";
+  babelOptions.sourceMap = "inline";
+
+  meteorBabel.setCacheDir(cacheDir);
 
   require('meteor-babel/register')
-    .setCacheDirectory(cacheDir)
     .allowDirectory(toolsPath)
     .setSourceMapRootPath(meteorPath)
     .setBabelOptions(babelOptions);

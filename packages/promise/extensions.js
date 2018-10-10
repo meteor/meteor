@@ -1,5 +1,5 @@
-var proto = Promise.prototype;
-var hasOwn = Object.prototype.hasOwnProperty;
+const proto = Promise.prototype;
+const hasOwn = Object.prototype.hasOwnProperty;
 
 proto.done = function (onFulfilled, onRejected) {
   var self = this;

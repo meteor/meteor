@@ -42,15 +42,8 @@ downloadOfficialNode() {
     curl "${NODE_URL}" | tar zx --strip-components 1
 }
 
-downloadReleaseCandidateNode() {
-    NODE_URL="https://nodejs.org/download/rc/v${NODE_VERSION}/${NODE_TGZ}"
-    echo "Downloading Node from ${NODE_URL}" >&2
-    curl "${NODE_URL}" | tar zx --strip-components 1
-}
-
 # Try each strategy in the following order:
-extractNodeFromTarGz || downloadNodeFromS3 || \
-  downloadOfficialNode || downloadReleaseCandidateNode
+extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
 
 # Download Mongo from mongodb.com. Will download a 64-bit version of Mongo
 # by default. Will download a 32-bit version of Mongo if using a 32-bit based
@@ -164,6 +157,11 @@ delete () {
     fi
     rm -rf "$1"
 }
+
+delete npm/node_modules/node-gyp
+pushd npm/node_modules
+ln -s ../../node-gyp ./
+popd
 
 # Since we install a patched version of pacote in $DIR/lib/node_modules,
 # we need to remove npm's bundled version to make it use the new one.

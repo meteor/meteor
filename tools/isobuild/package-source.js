@@ -1071,7 +1071,11 @@ _.extend(PackageSource.prototype, {
     return fileOptions;
   },
 
-  _findSources: Profile("PackageSource#_findSources", function ({
+  // This cache survives for the duration of the process, and stores the
+  // complete list of source files for directories within node_modules.
+  _findSourcesCache: Object.create(null),
+
+  _findSources({
     sourceProcessorSet,
     watchSet,
     isApp,
@@ -1129,39 +1133,44 @@ _.extend(PackageSource.prototype, {
       /^acceptance-tests\/$/,
     ] : anyLevelExcludes;
 
-    const dotMeteorIgnoreFiles = Object.create(null);
+    const nodeModulesReadOptions = {
+      ...sourceReadOptions,
+      // When we're in a node_modules directory, we can avoid collecting
+      // .js and .json files, because (unlike .less or .coffee files) they
+      // are allowed to be imported later by the ImportScanner, as they do
+      // not require custom processing by compiler plugins.
+      exclude: sourceReadOptions.exclude.concat(/\.js(on)?$/i),
+    };
 
-    function removeIgnoredFilesFrom(array) {
-      Object.keys(dotMeteorIgnoreFiles).forEach(ignoreDir => {
-        const ignore = dotMeteorIgnoreFiles[ignoreDir];
-        let target = 0;
+    const baseCacheKey = JSON.stringify({
+      isApp,
+      arch,
+      sourceRoot: self.sourceRoot,
+      excludes: anyLevelExcludes,
+    }, (key, value) => {
+      if (_.isRegExp(value)) {
+        return [value.source, value.flags];
+      }
+      return value;
+    });
 
-        array.forEach(item => {
-          let relPath = files.pathRelative(ignoreDir, item);
-
-          if (! relPath.startsWith("..")) {
-            if (item.endsWith("/")) {
-              // The trailing slash is discarded by files.pathRelative.
-              relPath += "/";
-            }
-
-            if (ignore.ignores(relPath)) {
-              return;
-            }
-          }
-
-          array[target++] = item;
-        });
-
-        array.length = target;
-      });
-
-      return array;
+    function makeCacheKey(dir) {
+      return baseCacheKey + "\0" + dir;
     }
 
-    function find(dir, depth) {
+    const dotMeteorIgnoreFiles = Object.create(null);
+
+    function find(dir, depth, inNodeModules) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
+
+      // If we're in a node_modules directory, cache the results of the
+      // find function for the duration of the process.
+      const cacheKey = inNodeModules && makeCacheKey(dir);
+      if (cacheKey &&
+          cacheKey in self._findSourcesCache) {
+        return self._findSourcesCache[cacheKey];
+      }
 
       if (loopChecker.check(dir)) {
         // Pretend we found no files.
@@ -1169,13 +1178,19 @@ _.extend(PackageSource.prototype, {
       }
 
       const absDir = files.pathJoin(self.sourceRoot, dir);
-      const ignore = optimisticReadMeteorIgnore(absDir);
-      if (ignore) {
-        dotMeteorIgnoreFiles[dir] = ignore;
+      if (! inNodeModules) {
+        const ignore = optimisticReadMeteorIgnore(absDir);
+        if (ignore) {
+          dotMeteorIgnoreFiles[dir] = ignore;
+        }
       }
 
+      const readOptions = inNodeModules
+        ? nodeModulesReadOptions
+        : sourceReadOptions;
+
       const sources = _.difference(
-        self._readAndWatchDirectory(dir, watchSet, sourceReadOptions),
+        self._readAndWatchDirectory(dir, watchSet, readOptions),
         depth > 0 ? [] : controlFiles
       );
 
@@ -1186,24 +1201,81 @@ _.extend(PackageSource.prototype, {
           : topLevelExcludes
       });
 
-      removeIgnoredFilesFrom(sources);
-      removeIgnoredFilesFrom(subdirectories);
+      Object.keys(dotMeteorIgnoreFiles).forEach(ignoreDir => {
+        const ignore = dotMeteorIgnoreFiles[ignoreDir];
+
+        function removeIgnoredFilesFrom(array) {
+          let target = 0;
+
+          array.forEach(item => {
+            let relPath = files.pathRelative(ignoreDir, item);
+
+            if (! relPath.startsWith("..")) {
+              if (item.endsWith("/")) {
+                // The trailing slash is discarded by files.pathRelative.
+                relPath += "/";
+              }
+
+              if (ignore.ignores(relPath)) {
+                return;
+              }
+            }
+
+            array[target++] = item;
+          });
+
+          array.length = target;
+        }
+
+        removeIgnoredFilesFrom(sources);
+        removeIgnoredFilesFrom(subdirectories);
+      });
+
+      let nodeModulesDir;
 
       subdirectories.forEach(subdir => {
         if (/(^|\/)node_modules\/$/.test(subdir)) {
-          sourceArch.localNodeModulesDirs[subdir] = true;
+          if (! inNodeModules) {
+            sourceArch.localNodeModulesDirs[subdir] = true;
+          }
+
+          // Defer handling node_modules until after we handle all other
+          // subdirectories, so that we know whether we need to descend
+          // further. If sources is still empty after we handle everything
+          // else in dir, then nothing in this node_modules subdir can be
+          // imported by anthing outside of it, so we can ignore it.
+          nodeModulesDir = subdir;
+
         } else {
-          sources.push(...find(subdir, depth + 1));
+          sources.push(...find(subdir, depth + 1, inNodeModules));
         }
       });
 
+      // Don't apply any .meteorignore rules to files inside node_modules.
       delete dotMeteorIgnoreFiles[dir];
+
+      if (isApp &&
+          nodeModulesDir &&
+          (! inNodeModules || sources.length > 0)) {
+        // If we found a node_modules subdirectory above, and either we
+        // are not already inside another node_modules directory or we
+        // found source files elsewhere in this directory or its other
+        // subdirectories, and we're building an app (as opposed to a
+        // Meteor package), continue searching this node_modules
+        // directory, so that any non-.js(on) files it contains can be
+        // imported by the app (#6037).
+        sources.push(...find(nodeModulesDir, depth + 1, true));
+      }
+
+      if (cacheKey) {
+        self._findSourcesCache[cacheKey] = sources;
+      }
 
       return sources;
     }
 
-    return files.withCache(() => find("", 0));
-  }),
+    return files.withCache(() => find("", 0, false));
+  },
 
   _findAssets({
     sourceProcessorSet,

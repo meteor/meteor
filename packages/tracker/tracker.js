@@ -8,12 +8,6 @@
  */
 Tracker = {};
 
-/**
- * @namespace Deps
- * @deprecated
- */
-Deps = Tracker;
-
 // http://docs.meteor.com/#tracker_active
 
 /**

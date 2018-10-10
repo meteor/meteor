@@ -15,15 +15,15 @@ selftest.define("mainModule", function () {
   run.waitSecs(60);
   run.match("App running at");
 
-  function check(mainModule, errorPattern) {
-    writeConfig(s, run, mainModule, errorPattern);
+  function check(mainModule) {
+    writeConfig(s, run, mainModule);
   }
 
   check();
 
   check(null);
 
-  check("oyez", /Could not resolve meteor.mainModule/);
+  check("oyez");
 
   check({});
 
@@ -112,7 +112,7 @@ selftest.define("mainModule", function () {
   run.stop();
 });
 
-function writeConfig(s, run, mainModule, errorPattern) {
+function writeConfig(s, run, mainModule) {
   const json = JSON.parse(s.read("package.json"));
 
   json.meteor = {
@@ -129,14 +129,9 @@ function writeConfig(s, run, mainModule, errorPattern) {
   s.write("package.json", JSON.stringify(json, null, 2) + "\n");
 
   run.waitSecs(10);
-
-  if (errorPattern instanceof RegExp) {
-    run.match(errorPattern);
-  } else {
-    run.forbid(" 0 passing ");
-    run.match("SERVER FAILURES: 0");
-    run.match("CLIENT FAILURES: 0");
-  }
+  run.forbid(" 0 passing ");
+  run.match("SERVER FAILURES: 0");
+  run.match("CLIENT FAILURES: 0");
 }
 
 selftest.define("testModule", function () {

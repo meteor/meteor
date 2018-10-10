@@ -62,29 +62,16 @@ function randomId(n) {
 }
 
 function middleware(request, response) {
-  // Allow dynamic import() requests from any origin.
-  response.setHeader("Access-Control-Allow-Origin", "*");
-
-  if (request.method === "OPTIONS") {
-    response.setHeader("Access-Control-Allow-Headers", "*");
-    response.setHeader("Access-Control-Allow-Methods", "POST");
-    response.end();
-  } else if (request.method === "POST") {
-    const chunks = [];
-    request.on("data", chunk => chunks.push(chunk));
-    request.on("end", () => {
-      response.setHeader("Content-Type", "application/json");
-      response.end(JSON.stringify(readTree(
-        JSON.parse(Buffer.concat(chunks)),
-        getPlatform(request)
-      ), null, 2));
-    });
-  } else {
-    response.writeHead(405, {
-      "Cache-Control": "no-cache"
-    });
-    response.end(`method ${request.method} not allowed`);
-  }
+  assert.strictEqual(request.method, "POST");
+  const chunks = [];
+  request.on("data", chunk => chunks.push(chunk));
+  request.on("end", () => {
+    response.setHeader("Content-Type", "application/json");
+    response.end(JSON.stringify(readTree(
+      JSON.parse(Buffer.concat(chunks)),
+      getPlatform(request)
+    ), null, 2));
+  });
 }
 
 function getPlatform(request) {

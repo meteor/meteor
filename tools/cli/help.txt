@@ -171,7 +171,7 @@ Options:
   --example  Example template to use.
   --list     Show list of available examples.
   --bare     Create an empty app.
-  --minimal  Create an app with as few Meteor packages as possible.
+  --minimal  Create an empty app with as few Meteor packages as possible.
   --full     Create a fully scaffolded app.
 
 
@@ -634,7 +634,7 @@ that your tests can inspect and interact with the full running application.
 Test files are loaded similarly to 'meteor test' mode, but must be called
 *.app-test[s].* or *.app-spec[s].*.
 
-Note: as of Meteor 1.7, you can override the default test loading rules
+Note: as of Meteor 1.6.2, you can override the default test loading rules
 described in the previous two paragraphs by including a meteor.testModule
 section in your package.json file:
 

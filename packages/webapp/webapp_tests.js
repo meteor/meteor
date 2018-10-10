@@ -44,19 +44,16 @@ MockResponse.prototype.getBody = function () {
 };
 
 Tinytest.add("webapp - content-type header", function (test) {
-  const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
-
   const cssResource = _.find(
-    _.keys(staticFiles),
+    _.keys(WebAppInternals.staticFiles),
     function (url) {
-      return staticFiles[url].type === "css";
+      return WebAppInternals.staticFiles[url].type === "css";
     }
   );
-
   const jsResource = _.find(
-    _.keys(staticFiles),
+    _.keys(WebAppInternals.staticFiles),
     function (url) {
-      return staticFiles[url].type === "js";
+      return WebAppInternals.staticFiles[url].type === "js";
     }
   );
 
@@ -101,12 +98,10 @@ Tinytest.addAsync(
       req.method = "GET";
       req.url = "/" + additionalScriptPathname;
       let nextCalled = false;
-      WebAppInternals.staticFilesMiddleware({
-        "web.browser": {},
-        "web.browser.legacy": {},
-      }, req, res, function () {
-        nextCalled = true;
-      });
+      WebAppInternals.staticFilesMiddleware(
+        staticFilesOpts, req, res, function () {
+          nextCalled = true;
+        });
       test.isTrue(nextCalled);
 
       // When inline scripts are disallowed, the script body should not be
@@ -135,10 +130,8 @@ Tinytest.addAsync(
     req.headers = {};
     req.method = "GET";
     req.url = "/" + additionalScriptPathname;
-    WebAppInternals.staticFilesMiddleware({
-      "web.browser": {},
-      "web.browser.legacy": {},
-    }, req, res, function () {});
+    WebAppInternals.staticFilesMiddleware(staticFilesOpts, req, res,
+                                          function () { });
     const resBody = res.getBody();
     test.isTrue(resBody.indexOf(additionalScript) !== -1);
     test.equal(res.statusCode, 200);

@@ -422,7 +422,7 @@ function doRunCommand(options) {
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
-      buildMode: options.production ? 'production' : 'development',
+      buildMode: options.production && 'production',
       webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
@@ -627,7 +627,7 @@ main.registerCommand({
   if (options.list) {
     Console.info("Available examples:");
     _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
-      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : '';
+      const branchInfo = repoInfo.branch ? `#${repoInfo.branch}` : '';
       Console.info(
         Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
         Console.options({ indent: 2 }));
@@ -857,8 +857,8 @@ main.registerCommand({
     ].join("\n"));
 
     cmd("meteor create --bare    # to create an empty app");
-    cmd("meteor create --minimal # to create an app with as few " +
-        "Meteor packages as possible");
+    cmd("meteor create --minimal # to create an empty app with as " +
+        "few Meteor packages as possible");
     cmd("meteor create --full    # to create a more complete " +
         "scaffolded app");
   }

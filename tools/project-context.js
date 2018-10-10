@@ -1735,17 +1735,6 @@ export class MeteorConfig {
       if (res && typeof res === "object") {
         return files.pathRelative(this.appDirectory, res.path);
       }
-
-      buildmessage.error(
-        `Could not resolve meteor.mainModule ${
-          JSON.stringify(entryModule)
-        } in ${
-          files.pathRelative(
-            this.appDirectory,
-            this.packageJsonPath
-          )
-        } (${arch})`
-      );
     }
   }
 }

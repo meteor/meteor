@@ -343,13 +343,7 @@ export default class ImportScanner {
     if (foundSymbolicLink) {
       // Call the actual realpathOrNull function only if there were any
       // symlinks involved in the relative path within this.sourceRoot.
-      const realPath = realpathOrNull(absPath);
-      if (! realPath) {
-        // If we couldn't resolve the real path, fall back to the given
-        // absPath, and avoid caching.
-        return absPath;
-      }
-      return this.realPathCache[absPath] = realPath;
+      return this.realPathCache[absPath] = realpathOrNull(absPath);
     }
 
     return this.realPathCache[absPath] = absPath;
