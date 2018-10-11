@@ -14,13 +14,13 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/a3285854a68e4969d6c8abaa74407f7d113b178f",
     "node-gyp": "3.7.0",
     "node-pre-gyp": "0.10.3",
-    "meteor-babel": "7.1.0",
+    "meteor-babel": "7.1.3",
     "meteor-promise": "0.8.6",
     promise: "8.0.1",
     reify: "0.17.3",
     fibers: "2.0.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.0.0",
+    "@babel/runtime": "7.1.2",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
