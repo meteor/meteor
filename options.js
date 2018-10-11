@@ -129,12 +129,7 @@ function getDefaultsForModernBrowsers(features) {
 }
 
 const parserOpts = require("reify/lib/parsers/babylon.js").options;
-
-function copyParserOptions() {
-  return Object.assign({}, parserOpts, {
-    plugins: parserOpts.plugins.slice(0)
-  });
-}
+const util = require("./util.js");
 
 function finish(presets) {
   return {
@@ -145,7 +140,7 @@ function finish(presets) {
     babelrc: false,
     // Disable babel.config.js lookup and processing.
     configFile: false,
-    parserOpts: copyParserOptions(),
+    parserOpts: util.deepClone(parserOpts),
     presets: presets
   };
 }
