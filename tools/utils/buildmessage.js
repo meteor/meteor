@@ -239,7 +239,7 @@ var addChildTracker = function (title) {
 // begin capturing errors. Alternately you may pass `options`
 // (otherwise optional) and a job will be created for you based on
 // `options`.
-var capture = function (options, f) {
+function capture(options, f) {
   var messageSet = new MessageSet;
   var parentMessageSet = currentMessageSet.get();
 
@@ -249,40 +249,57 @@ var capture = function (options, f) {
   }
   var progress = addChildTracker(title);
 
-  currentProgress.withValue(progress, function () {
-    currentMessageSet.withValue(messageSet, function () {
-      var job = null;
-      if (typeof options === "object") {
-        job = new Job(options);
-        messageSet.jobs.push(job);
-      } else {
-        f = options; // options not actually provided
-      }
+  const resetFns = [
+    currentProgress.set(progress),
+    currentMessageSet.set(messageSet),
+  ];
 
-      currentJob.withValue(job, function () {
-        var nestingLevel = currentNestingLevel.get();
-        currentNestingLevel.withValue(nestingLevel + 1, function () {
-          var start;
-          if (debugBuild) {
-            start = Date.now();
-            console.log(spaces(nestingLevel * 2), "START CAPTURE", nestingLevel, options.title, "took " + (end - start));
-          }
-          try {
-            f();
-          } finally {
-            progress.reportProgressDone();
+  let job = null;
+  if (typeof options === "object") {
+    job = new Job(options);
+    messageSet.jobs.push(job);
+  } else {
+    f = options; // options not actually provided
+  }
 
-            if (debugBuild) {
-              var end = Date.now();
-              console.log(spaces(nestingLevel * 2), "END CAPTURE", nestingLevel, options.title, "took " + (end - start));
-            }
-          }
-        });
-      });
-    });
-  });
+  resetFns.push(currentJob.set(job));
+
+  const nestingLevel = currentNestingLevel.get();
+  resetFns.push(currentNestingLevel.set(nestingLevel + 1));
+
+  var start;
+  if (debugBuild) {
+    start = Date.now();
+    console.log(
+      spaces(nestingLevel * 2),
+      "START CAPTURE",
+      nestingLevel,
+      options.title,
+      "took " + (end - start),
+    );
+  }
+
+  try {
+    f();
+  } finally {
+    progress.reportProgressDone();
+
+    resetFns.forEach(fn => fn());
+
+    if (debugBuild) {
+      var end = Date.now();
+      console.log(
+        spaces(nestingLevel * 2),
+        "END CAPTURE",
+        nestingLevel,
+        options.title,
+        "took " + (end - start),
+      );
+    }
+  }
+
   return messageSet;
-};
+}
 
 // Called from inside capture(), creates a new Job inside the current
 // MessageSet and run `f` inside of it, so that any messages emitted
@@ -296,7 +313,7 @@ var capture = function (options, f) {
 // - rootPath: the absolute path relative to which paths in messages
 //   in this job should be interpreted (omit if there is no way to map
 //   files that this job talks about back to files on disk)
-var enterJob = function (options, f) {
+function enterJob(options, f) {
   if (typeof options === "function") {
     f = options;
     options = {};
@@ -321,53 +338,73 @@ var enterJob = function (options, f) {
     progress = getCurrentProgressTracker().addChildTask(progressOptions);
   }
 
-  return currentProgress.withValue(progress, function () {
-    if (!currentMessageSet.get()) {
-      var nestingLevel = currentNestingLevel.get();
-      var start;
-      if (debugBuild) {
-        start = Date.now();
-        console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
-      }
-      try {
-        return currentNestingLevel.withValue(nestingLevel + 1, function () {
-          return f();
-        });
-      } finally {
-        progress.reportProgressDone();
-        if (debugBuild) {
-          var end = Date.now();
-          console.log(spaces(nestingLevel * 2), "DONE", nestingLevel, options.title, "took " + (end - start));
-        }
-      }
+  const resetFns = [
+    currentProgress.set(progress),
+  ];
+
+  if (!currentMessageSet.get()) {
+    var nestingLevel = currentNestingLevel.get();
+    var start;
+    if (debugBuild) {
+      start = Date.now();
+      console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
     }
 
-    var job = new Job(options);
-    var originalJob = currentJob.get();
-    originalJob && originalJob.children.push(job);
-    currentMessageSet.get().jobs.push(job);
+    resetFns.push(currentNestingLevel.set(nestingLevel + 1));
 
-    return currentJob.withValue(job, function () {
-      var nestingLevel = currentNestingLevel.get();
-      return currentNestingLevel.withValue(nestingLevel + 1, function () {
-        var start;
-        if (debugBuild) {
-          start = Date.now();
-          console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
-        }
-        try {
-          return f();
-        } finally {
-          progress.reportProgressDone();
-          if (debugBuild) {
-            var end = Date.now();
-            console.log(spaces(nestingLevel * 2), "DONE", nestingLevel, options.title, "took " + (end - start));
-          }
-        }
-      });
-    });
-  });
-};
+    try {
+      return f();
+    } finally {
+      progress.reportProgressDone();
+
+      while (resetFns.length) {
+        resetFns.pop()();
+      }
+
+      if (debugBuild) {
+        var end = Date.now();
+        console.log(spaces(nestingLevel * 2), "DONE", nestingLevel, options.title, "took " + (end - start));
+      }
+    }
+  }
+
+  var job = new Job(options);
+  var originalJob = currentJob.get();
+  originalJob && originalJob.children.push(job);
+  currentMessageSet.get().jobs.push(job);
+
+  resetFns.push(currentJob.set(job));
+
+  var nestingLevel = currentNestingLevel.get();
+  resetFns.push(currentNestingLevel.set(nestingLevel + 1));
+
+  var start;
+  if (debugBuild) {
+    start = Date.now();
+    console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
+  }
+
+  try {
+    return f();
+  } finally {
+    progress.reportProgressDone();
+
+    while (resetFns.length) {
+      resetFns.pop()();
+    }
+
+    if (debugBuild) {
+      var end = Date.now();
+      console.log(
+        spaces(nestingLevel * 2),
+        "DONE",
+        nestingLevel,
+        options.title,
+        "took " + (end - start),
+      );
+    }
+  }
+}
 
 // If not inside a job, return false. Otherwise, return true if any
 // messages (presumably errors) have been recorded for this job
