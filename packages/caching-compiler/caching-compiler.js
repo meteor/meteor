@@ -13,7 +13,9 @@ CachingCompilerBase = class CachingCompilerBase {
   }) {
     this._compilerName = compilerName;
     this._maxParallelism = maxParallelism;
-    const envVarPrefix = 'METEOR_' + compilerName.toUpperCase() + '_CACHE_';
+    const compilerNameForEnvar = compilerName.toUpperCase()
+      .replace('/-/g', '_').replace(/[^A-Z0-9_]/g, '');
+    const envVarPrefix = 'METEOR_' + compilerNameForEnvar + '_CACHE_';
 
     const debugEnvVar = envVarPrefix + 'DEBUG';
     this._cacheDebugEnabled = !! process.env[debugEnvVar];
