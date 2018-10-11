@@ -1,4 +1,3 @@
-import Fiber from 'fibers';
 import url from 'url';
 
 OAuth = {};
