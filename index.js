@@ -2,6 +2,7 @@
 
 const assert = require("assert");
 const Cache = require("./cache.js");
+const util = require("./util.js");
 const cachesByDir = Object.create(null);
 const BABEL_CACHE_DIR = process.env.BABEL_CACHE_DIR;
 let options; // Lazily initialized.
@@ -85,12 +86,13 @@ function compile(source, options) {
   const babelCore = require("@babel/core");
   let result = { code: source };
 
-  function transform(presets, generateSourceMap) {
-    const optionsCopy = Object.assign({}, options);
+  const optionsCopy = util.deepClone(options);
+  const { ast, plugins, presets } = optionsCopy;
+  delete optionsCopy.plugins;
+  optionsCopy.ast = true;
 
-    delete optionsCopy.plugins;
+  function transform(presets, generateSourceMap) {
     optionsCopy.presets = presets;
-    optionsCopy.ast = true;
     optionsCopy.sourceMaps = !! generateSourceMap;
 
     if (result.ast) {
@@ -103,23 +105,23 @@ function compile(source, options) {
       result = babelCore.transformSync(result.code, optionsCopy);
     }
 
-    if (options.ast === false) {
+    if (ast === false) {
       delete result.ast;
     }
   }
 
-  if (options.plugins &&
-      options.plugins.length > 0) {
+  if (plugins && plugins.length > 0) {
+    const presetOfPlugins = { plugins };
     transform(
-      [{ plugins: options.plugins }],
-      // If there are no options.presets, then this is the final transform
-      // call, so make sure we generate a sourceMap.
-      ! options.presets
+      [presetOfPlugins],
+      // If there were no options.presets, then this is the final
+      // transform call, so make sure we generate a sourceMap.
+      ! presets
     );
   }
 
-  if (options.presets) {
-    transform(options.presets, true);
+  if (presets) {
+    transform(presets, true);
   }
 
   return result;
