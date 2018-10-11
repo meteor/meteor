@@ -17,10 +17,9 @@ var config = {
 };
 
 function setBabelOptions(options) {
-  config.babelOptions = Object.assign({}, options, {
-    // Overrides for default options:
-    sourceMaps: true
-  });
+  config.babelOptions = util.deepClone(options);
+  // Overrides for default options:
+  config.babelOptions.sourceMaps = true;
   return exports;
 }
 
