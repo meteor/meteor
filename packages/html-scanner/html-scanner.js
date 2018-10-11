@@ -3,8 +3,6 @@ export const scanHtmlForTags = function scanHtmlForTags(options) {
   return scan.getTags();
 };
 
-export class CompileError extends Error {};
-
 /**
  * Scan an HTML file for top-level tags and extract their contents. Pass them to
  * a tag handler (an object with a handleTag method)
@@ -156,7 +154,7 @@ class HtmlScan {
   throwCompileError(msg, overrideIndex) {
     const finalIndex = (typeof overrideIndex === 'number' ? overrideIndex : this.index);
 
-    const err = new CompileError();
+    const err = new Error();
     err.message = msg || "bad formatting in template file";
     err.file = this.sourceName;
     err.line = this.contents.substring(0, finalIndex).split('\n').length;

@@ -1,7 +1,5 @@
 const path = Plugin.path;
 
-class CompileError extends Error {};
-
 // The CompileResult type for this CachingCompiler is the return value of
 // htmlScanner.scan: a {js, head, body, bodyAttrs} object.
 CachingHtmlCompiler = class CachingHtmlCompiler extends CachingCompiler {
@@ -65,10 +63,9 @@ CachingHtmlCompiler = class CachingHtmlCompiler extends CachingCompiler {
           contents: contents,
           tagNames: ["body", "head", "template"]
         });
-
         return this.tagHandlerFunc(tags);
       } catch (e) {
-        if (e instanceof CompileError) {
+        if (e.message && e.line) {
           inputFile.error({
             message: e.message,
             line: e.line
