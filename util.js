@@ -22,6 +22,43 @@ exports.mkdirp = function mkdirp(dir) {
   return dir;
 };
 
+exports.deepClone = function (val) {
+  return deepCloneHelper(val, new Map);
+};
+
+function deepCloneHelper(val, seen) {
+  if (seen.has(val)) {
+    return seen.get(val);
+  }
+
+  if (Array.isArray(val)) {
+    const copy = new Array(val.length);
+    seen.set(val, copy);
+    val.forEach(function (child, i) {
+      copy[i] = deepCloneHelper(child, seen);
+    });
+    return copy;
+  }
+
+  if (val !== null && typeof val === "object") {
+    const copy = Object.create(Object.getPrototypeOf(val));
+    seen.set(val, copy);
+
+    const handleKey = function (key) {
+      const desc = Object.getOwnPropertyDescriptor(val, key);
+      desc.value = deepCloneHelper(val[key], seen);
+      Object.defineProperty(copy, key, desc);
+    };
+
+    Object.getOwnPropertyNames(val).forEach(handleKey);
+    Object.getOwnPropertySymbols(val).forEach(handleKey);
+
+    return copy;
+  }
+
+  return val;
+}
+
 function deepHash(val) {
   return createHash("sha1").update(
     JSON.stringify(val, function (key, value) {
