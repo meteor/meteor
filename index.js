@@ -45,38 +45,40 @@ let didWarnAboutNoCache = false;
 exports.compile = function (source, babelOptions, cacheOptions) {
   babelOptions = babelOptions || getDefaultOptions();
 
-  if (cacheOptions &&
-      typeof cacheOptions.cacheDirectory === "string") {
-    return getOrCreateCache(
-      cacheOptions.cacheDirectory
-    ).get(source, babelOptions, cacheOptions.cacheDeps);
-  }
+  if (cacheOptions !== false) {
+    if (cacheOptions &&
+        typeof cacheOptions.cacheDirectory === "string") {
+      return getOrCreateCache(
+        cacheOptions.cacheDirectory
+      ).get(source, babelOptions, cacheOptions.cacheDeps);
+    }
 
-  // If cacheOptions.cacheDirectory was not provided, and cacheOptions
-  // does not have a cacheDeps property, use the whole cacheOptions object
-  // as cacheDeps when computing the cache key.
-  const cacheDeps = cacheOptions && cacheOptions.cacheDeps || cacheOptions;
+    // If cacheOptions.cacheDirectory was not provided, and cacheOptions
+    // does not have a cacheDeps property, use the whole cacheOptions object
+    // as cacheDeps when computing the cache key.
+    const cacheDeps = cacheOptions && cacheOptions.cacheDeps || cacheOptions;
 
-  // If no babelOptions.cacheDir was provided, but the BABEL_CACHE_DIR
-  // environment variable is set, then respect that.
-  if (BABEL_CACHE_DIR) {
-    return getOrCreateCache(BABEL_CACHE_DIR)
-      .get(source, babelOptions, cacheDeps);
-  }
+    // If no babelOptions.cacheDir was provided, but the BABEL_CACHE_DIR
+    // environment variable is set, then respect that.
+    if (BABEL_CACHE_DIR) {
+      return getOrCreateCache(BABEL_CACHE_DIR)
+        .get(source, babelOptions, cacheDeps);
+    }
 
-  // If neither babelOptions.cacheDir nor BABEL_CACHE_DIR were provided,
-  // use the first cache directory registered so far.
-  for (var cacheDirectory in cachesByDir) {
-    return getOrCreateCache(cacheDirectory)
-      .get(source, babelOptions, cacheDeps);
-  }
+    // If neither babelOptions.cacheDir nor BABEL_CACHE_DIR were provided,
+    // use the first cache directory registered so far.
+    for (var cacheDirectory in cachesByDir) {
+      return getOrCreateCache(cacheDirectory)
+        .get(source, babelOptions, cacheDeps);
+    }
 
-  // Otherwise fall back to compiling without a cache.
-  if (! didWarnAboutNoCache) {
-    console.warn("Compiling " + babelOptions.filename +
-                 " with meteor-babel without a cache");
-    console.trace();
-    didWarnAboutNoCache = true;
+    // Otherwise fall back to compiling without a cache.
+    if (! didWarnAboutNoCache) {
+      console.warn("Compiling " + babelOptions.filename +
+                  " with meteor-babel without a cache");
+      console.trace();
+      didWarnAboutNoCache = true;
+    }
   }
 
   return compile(source, babelOptions);
