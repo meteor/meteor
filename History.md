@@ -1,5 +1,17 @@
 ## v.NEXT
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* The `static-html` package is now part of the Meteor core, and no longer has
+  any dependencies on Blaze templating tools.
+  [PR #10267](https://github.com/meteor/meteor/pull/10267)
+
 ## v1.8, 2018-10-08
 
 ### Breaking changes
@@ -383,7 +395,7 @@ N/A
 
 ### Migration Steps
 
-* Update `@babel/runtime` (as well as other Babel-related packages) and 
+* Update `@babel/runtime` (as well as other Babel-related packages) and
   `meteor-node-stubs` to their latest versions:
   ```sh
   meteor npm install @babel/runtime@latest meteor-node-stubs@latest
@@ -768,7 +780,7 @@ N/A
 N/A
 
 ### Migration Steps
-* Update `@babel/runtime` npm package and any custom Babel plugin enabled in 
+* Update `@babel/runtime` npm package and any custom Babel plugin enabled in
 `.babelrc`
   ```sh
   meteor npm install @babel/runtime@latest
@@ -803,7 +815,7 @@ N/A
   values are not first converted to `null`, when inserted/updated. `undefined`
   values are now removed from all Mongo queries and insert/update documents.
 
-  This is a potentially breaking change if you are upgrading an existing app 
+  This is a potentially breaking change if you are upgrading an existing app
   from an earlier version of Meteor.
 
   For example:
@@ -813,11 +825,11 @@ N/A
       userId: currentUser._id // undefined
   });
   ```
-  Assuming there are no documents in the `privateUserData` collection with 
-  `userId: null`, in Meteor versions prior to 1.6.1 this query will return 
-  zero documents. From Meteor 1.6.1 onwards, this query will now return 
-  _every_ document in the collection. It is highly recommend you review all 
-  your existing queries to ensure that any potential usage of `undefined` in 
+  Assuming there are no documents in the `privateUserData` collection with
+  `userId: null`, in Meteor versions prior to 1.6.1 this query will return
+  zero documents. From Meteor 1.6.1 onwards, this query will now return
+  _every_ document in the collection. It is highly recommend you review all
+  your existing queries to ensure that any potential usage of `undefined` in
   query objects won't lead to problems.
 
 ### Migration Steps
