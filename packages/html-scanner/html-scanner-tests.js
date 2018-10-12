@@ -13,7 +13,7 @@ Tinytest.add("html-scanner - html scanner", function (test) {
     try {
       f();
     } catch (e) {
-      if (! e instanceof CompileError) {
+      if (!e.line) {
         throw e;
       }
 
