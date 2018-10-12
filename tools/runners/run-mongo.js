@@ -22,7 +22,7 @@ var runMongoShell = function (url) {
   var auth = mongoUrl.auth && mongoUrl.auth.split(':');
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
-  var args = [];
+  var args = ['--quiet'];
   if (ssl) {
     args.push('--ssl');
   }
@@ -543,7 +543,7 @@ var launchMongo = function (options) {
         maybeReadyToTalk();
       }
 
-      if (/ \[rsSync\] transition to primary complete/.test(data)) {
+      if (/ \[rsSync-0\] transition to primary complete/.test(data)) {
         replSetReady = true;
         maybeReadyToTalk();
       }
@@ -610,6 +610,7 @@ var launchMongo = function (options) {
       var configuration = {
         _id: replSetName,
         version: 1,
+        protocolVersion: 1,
         members: [{_id: 0, host: '127.0.0.1:' + options.port, priority: 100}]
       };
 

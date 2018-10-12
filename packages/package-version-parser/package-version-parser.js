@@ -225,21 +225,30 @@ PV.compare = function (versionOne, versionTwo) {
   }
 };
 
-// Conceptually we have three types of constraints:
-// 1. "compatible-with" - A@x.y.z - constraints package A to version x.y.z or
-//    higher, as long as the version is backwards compatible with x.y.z.
-//    "pick A compatible with x.y.z"
-//    It is the default type.
-// 2. "exactly" - A@=x.y.z - constraints package A only to version x.y.z and
+// Conceptually we have four types of simple constraints:
+//
+// 1. "any-reasonable" - "A" - any version of A is allowed (other than
+//    prerelease versions that contain dashes, unless a prerelease version
+//    has been explicitly selected elsewhere).
+//
+// 2. "compatible-with" (major) - "A@x.y.z" - constrains package A to
+//    version x.y.z or higher, and requires the major version of package A
+//    to match x. This is the most common kind of version constraint.
+//
+// 3. "compatible-with" (minor) - "A@~x.y.z" - constrains package A to
+//    version x.y.z or higher, and requires the major and minor versions
+//    of package A to match x and y, respectively. This style is allowed
+//    anywhere, but is used most often to constrain the minor versions of
+//    Meteor core packages, according to the current Meteor release.
+//
+// 4. "exactly" - A@=x.y.z - constrains package A to version x.y.z and
 //    nothing else.
-//    "pick A exactly at x.y.z"
-// 3. "any-reasonable" - "A"
-//    Basically, this means any version of A ... other than ones that have
-//    dashes in the version (ie, are prerelease) ... unless the prerelease
-//    version has been explicitly selected (which at this stage in the game
-//    means they are mentioned in a top-level constraint in the top-level
-//    call to the resolver).
-var parseSimpleConstraint = function (constraintString) {
+//
+// If a top-level constraint (e.g. in .meteor/packages) ends with a '!'
+// character, any other constraints on that package will be weakened to
+// accept any version of the package that is not less than the constraint,
+// regardless of whether the major/minor versions match.
+function parseSimpleConstraint(constraintString) {
   if (! constraintString) {
     throw new Error("Non-empty string required");
   }
@@ -279,8 +288,7 @@ var parseSimpleConstraint = function (constraintString) {
   }
 
   return result;
-};
-
+}
 
 // Check to see if the versionString that we pass in is a valid meteor version.
 //
@@ -301,6 +309,18 @@ PV.VersionConstraint = function (vConstraintString) {
       [ { type: "any-reasonable", versionString: null } ];
     vConstraintString = "";
   } else {
+    if (vConstraintString.endsWith("!")) {
+      // If a top-level constraint (e.g. from .meteor/packages) ends with
+      // a '!' character, any other constraints on that package will be
+      // weakened to accept any version of the package that is not less
+      // than the constraint, regardless of whether the major/minor
+      // versions actually match. See packages/constraint-solver/solver.js
+      // for implementation details.
+      this.override = true;
+      vConstraintString =
+        vConstraintString.slice(0, vConstraintString.length - 1);
+    }
+
     // Parse out the versionString.
     var parts = vConstraintString.split(/ *\|\| */);
     alternatives = parts.map(function (alt) {

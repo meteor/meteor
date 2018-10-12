@@ -65,7 +65,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 20; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 21; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -189,9 +189,10 @@ export class CompilerPluginProcessor {
             return new InputFile(resourceSlot);
           });
 
-          var markedMethod = buildmessage.markBoundary(
-            sourceProcessor.userPlugin.processFilesForTarget.bind(
-              sourceProcessor.userPlugin));
+          const markedMethod = buildmessage.markBoundary(
+            sourceProcessor.userPlugin.processFilesForTarget,
+            sourceProcessor.userPlugin
+          );
 
           try {
             Promise.await(markedMethod(inputFiles));
@@ -760,6 +761,9 @@ class ResourceSlot {
       // rather than a <style> node added dynamically to the <head>.
       this.addJavaScript({
         ...options,
+        // As above, the JavaScript module that dynamically loads this CSS
+        // should not inherit the source map of the original CSS output.
+        sourceMap: null,
         data: Buffer.from(
           "// These styles have already been applied to the document.\n",
           "utf8"),
@@ -1106,6 +1110,12 @@ export class PackageSourceBatch {
         "modules",
         self.unibuild.arch
       );
+
+    // These are the options that should be passed as the second argument
+    // to meteorInstall when modules in this source batch are installed.
+    self.meteorInstallOptions = self.useMeteorInstall ? {
+      extensions: self.importExtensions,
+    } : null;
   }
 
   addImportExtension(extension) {
@@ -1185,7 +1195,7 @@ export class PackageSourceBatch {
       map.set(name, {
         files: inputFiles,
         mainModule: _.find(inputFiles, file => file.mainModule) || null,
-        importExtensions: batch.importExtensions,
+        batch,
       });
     });
 
@@ -1353,9 +1363,19 @@ export class PackageSourceBatch {
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
       const outputFiles = scanner.getOutputFiles();
+      const entry = map.get(name);
+
+      if (entry.batch.useMeteorInstall) {
+        outputFiles.forEach(file => {
+          // Give every file the same meteorInstallOptions object, so the
+          // linker can emit one meteorInstall call per options object.
+          file.meteorInstallOptions = entry.batch.meteorInstallOptions;
+        });
+      }
 
       if (isApp) {
         const appFilesWithoutNodeModules = [];
+        const modulesEntry = map.get("modules");
 
         outputFiles.forEach(file => {
           const parts = file.absModuleId.split("/");
@@ -1366,6 +1386,15 @@ export class PackageSourceBatch {
                                           parts[2] === "meteor")) {
             appFilesWithoutNodeModules.push(file);
           } else {
+            // There's a chance the application does not use the module
+            // system, which means entry.batch.useMeteorInstall will be
+            // false and file.meteorInstallOptions will not have been
+            // defined above. In that case, just use meteorInstallOptions
+            // from the modules source batch, since we're moving this file
+            // into the modules bundle.
+            file.meteorInstallOptions = file.meteorInstallOptions ||
+              modulesEntry.batch.meteorInstallOptions;
+
             // This file is going to be installed in a node_modules
             // directory, so we move it to the modules bundle so that it
             // can be imported by any package that uses the modules
@@ -1374,15 +1403,17 @@ export class PackageSourceBatch {
             // client/node_modules will not be importable by Meteor
             // packages, because it's important for all npm packages in
             // the app to share the same limited scope (i.e. the scope of
-            // the modules package).
-            map.get("modules").files.push(file);
+            // the modules package). However, these relocated files have
+            // their own meteorInstallOptions, and will be installed with
+            // a separate call to meteorInstall in the modules bundle.
+            modulesEntry.files.push(file);
           }
         });
 
-        map.get(null).files = appFilesWithoutNodeModules;
+        entry.files = appFilesWithoutNodeModules;
 
       } else {
-        map.get(name).files = outputFiles;
+        entry.files = outputFiles;
       }
     });
 
@@ -1490,28 +1521,21 @@ export class PackageSourceBatch {
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources({
-    files: jsResources,
-    importExtensions = [".js", ".json"],
-  }) {
+  getResources(jsResources) {
     buildmessage.assertInJob();
 
-    function flatten(arrays) {
-      return Array.prototype.concat.apply([], arrays);
-    }
+    const resources = [];
 
-    const resources = flatten(_.pluck(this.resourceSlots, 'outputResources'));
+    this.resourceSlots.forEach(slot => {
+      resources.push(...slot.outputResources);
+    });
 
-    resources.push(...this._linkJS(jsResources || flatten(
-      _.pluck(this.resourceSlots, 'jsOutputResources')
-    ), this.useMeteorInstall && {
-      extensions: importExtensions
-    }));
+    resources.push(...this._linkJS(jsResources));
 
     return resources;
   }
 
-  _linkJS(jsResources, meteorInstallOptions) {
+  _linkJS(jsResources) {
     const self = this;
     buildmessage.assertInJob();
 
@@ -1522,7 +1546,7 @@ export class PackageSourceBatch {
     const isWeb = archinfo.matches(self.unibuild.arch, "web");
     const linkerOptions = {
       isApp,
-      meteorInstallOptions,
+      bundleArch,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!
@@ -1544,6 +1568,7 @@ export class PackageSourceBatch {
       files: jsResources.map((inputFile) => {
         fileHashes.push(inputFile.hash);
         return {
+          meteorInstallOptions: inputFile.meteorInstallOptions,
           absModuleId: inputFile.absModuleId,
           sourceMap: !! inputFile.sourceMap,
           mainModule: inputFile.mainModule,

@@ -78,7 +78,7 @@ extends CachingCompilerBase {
   }
 
   // The processFilesForTarget method from the Plugin.registerCompiler API.
-  processFilesForTarget(inputFiles) {
+  async processFilesForTarget(inputFiles) {
     const allFiles = new Map;
     const cacheKeyMap = new Map;
     const cacheMisses = [];
@@ -90,12 +90,12 @@ extends CachingCompilerBase {
       cacheKeyMap.set(importPath, this._getCacheKeyWithPath(inputFile));
     });
 
-    return Promise.all(inputFiles.map(async (inputFile) => {
+    inputFiles.forEach(inputFile => {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      const getResult = async () => {
+      const getResult = () => {
         const absoluteImportPath = this.getAbsoluteImportPath(inputFile);
         const cacheKey = cacheKeyMap.get(absoluteImportPath);
         let cacheEntry = this._cache.get(cacheKey);
@@ -110,7 +110,7 @@ extends CachingCompilerBase {
           cacheMisses.push(inputFile.getDisplayPath());
 
           const compileOneFileReturn =
-            await this.compileOneFile(inputFile, allFiles);
+            Promise.await(this.compileOneFile(inputFile, allFiles));
 
           if (! compileOneFileReturn) {
             // compileOneFile should have called inputFile.error.
@@ -162,19 +162,16 @@ extends CachingCompilerBase {
           // that might be roots to this.compileOneFileLater.
           inputFile.getFileOptions().lazy = true;
         }
-        await this.compileOneFileLater(inputFile, getResult);
+        this.compileOneFileLater(inputFile, getResult);
       } else if (this.isRoot(inputFile)) {
-        const result = await getResult();
+        const result = getResult();
         if (result) {
           this.addCompileResult(inputFile, result);
         }
       }
+    });
 
-    })).then(() => {
-      if (! this._cacheDebugEnabled) {
-        return;
-      }
-
+    if (this._cacheDebugEnabled) {
       cacheMisses.sort();
 
       this._cacheDebug(
@@ -186,7 +183,7 @@ extends CachingCompilerBase {
           JSON.stringify(Object.keys(arches).sort())
         }`
       );
-    });
+    }
   }
 
   // Returns a hash that incorporates both this.getCacheKey(inputFile) and

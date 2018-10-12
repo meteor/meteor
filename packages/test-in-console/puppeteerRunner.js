@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('../../dev_bundle/lib/node_modules/puppeteer');
 
 async function runNextUrl(browser) {
   const page = await browser.newPage();

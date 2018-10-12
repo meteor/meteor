@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(api => {
-  api.use('ecmascript', ['server']);
+  api.use('ecmascript', ['client', 'server']);
   api.use('random');
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);

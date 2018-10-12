@@ -1,4 +1,3 @@
-import Fiber from 'fibers';
 import url from 'url';
 
 OAuth = {};
@@ -136,14 +135,6 @@ OAuth._checkRedirectUrlOrigin = redirectUrl => {
   );
 };
 
-
-// Listen to incoming OAuth http requests
-WebApp.connectHandlers.use((req, res, next) => {
-  // Need to create a Fiber since we're using synchronous http calls and nothing
-  // else is wrapping this in a fiber automatically
-  Fiber(() => middleware(req, res, next)).run();
-});
-
 const middleware = (req, res, next) => {
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
@@ -204,6 +195,7 @@ const middleware = (req, res, next) => {
   }
 };
 
+// Listen to incoming OAuth http requests
 WebApp.connectHandlers.use(middleware);
 
 OAuthTest.middleware = middleware;
