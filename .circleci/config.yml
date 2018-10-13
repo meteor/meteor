@@ -180,7 +180,7 @@ jobs:
               'add debugOnly and prodOnly packages' \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --headless \
-              --phantom
+              --browserstack
           no_output_timeout: 20m
       - run:
           name: "Running self-test (Custom Warehouse Tests)"
@@ -190,7 +190,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --with-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -227,7 +227,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/0.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -268,7 +268,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/1.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -309,7 +309,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/2.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -350,7 +350,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/3.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -391,7 +391,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/4.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -432,7 +432,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/5.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -473,7 +473,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/6.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -514,7 +514,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/7.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -555,7 +555,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/8.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -596,7 +596,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/9.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -637,7 +637,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
+              --browserstack \
               --junit ./tmp/results/junit/10.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
