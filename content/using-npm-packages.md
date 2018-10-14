@@ -23,7 +23,7 @@ To install a package into your app you run the `npm install` command with the `-
 meteor npm install --save moment
 ```
 
-This will both update your `package.json` with information about the dependency and download the package into your app's local `node_modules/` directory. Typically, you don't check the `node_modules/` directory into source control and your teammates run `meteor npm install` to get up to date when dependencies change:
+This will both update your `package.json` with information about the dependency and download the package into your app's local `node_modules` directory. Typically, you don't check the `node_modules` directory into source control and your teammates run `meteor npm install` to get up to date when dependencies change:
 
 ```bash
 meteor npm install
@@ -84,7 +84,18 @@ You can also import CSS directly from a JavaScript file to control load order if
 import 'npm-package-name/stylesheets/styles.css';
 ```
 
-> When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor Build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
+> When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
+
+<h3 id="npm-assets">Building with other assets from npm</h3>
+
+Meteor also supports building other assets into your app, such as fonts, that are located in your `node_modules` directory by symbolic linking to those assets from either the `/public` or `/private` directories. For example, `font-awesome` is a very popular font library that provides lots of font-based icons. New icons appear frequently as the library is developed and it would be difficult to manage all the updates if you were to copy the entire `font-awesome` code base to your own app and git repository. Instead use the following to include these fonts:
+
+```
+cd /public
+ln -ls ../node_modules/font-awesome/fonts ./fonts
+```
+
+Any assets made available via symlinks in the `/public` and `/private` directories of an application will be copied into the Meteor application bundles when using the `meteor build` command.
 
 
 <h2 id="recompile">Recompiling npm packages</h2>
