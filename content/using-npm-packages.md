@@ -13,7 +13,7 @@ Tools like [browserify](http://browserify.org) and [webpack](https://webpack.git
 
 > When creating a new application Meteor installs the `meteor-node-stubs` npm package to help provide this client browser compatibility. If you are upgrading an application to Meteor 1.3 you may have to run `meteor npm install --save meteor-node-stubs` manually.
 
-<h2 id="installing-npm">Installing npm Packages</h2>
+<h2 id="installing-npm">Installing npm packages</h2>
 
 npm packages are configured in a `package.json` file at the root of your project. If you create a new Meteor project, you will have such a file created for you. If not you can run `meteor npm init` to create one.
 
@@ -35,7 +35,7 @@ For more information about `npm install`, check out the [official documentation]
 
 > Meteor comes with npm bundled so that you can type `meteor npm` without worrying about installing it yourself. If you like, you can also use a globally installed npm to manage your packages.
 
-<h2 id="using-npm">Using npm Packages</h2>
+<h2 id="using-npm">Using npm packages</h2>
 
 To use an npm package from a file in your application you `import` the name of the package:
 
@@ -86,6 +86,34 @@ import 'npm-package-name/stylesheets/styles.css';
 
 > When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor Build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
 
+
+<h2 id="recompile">Recompiling npm packages</h2>
+
+Meteor does not recompile packages installed in your `node_modules` by default. However, compilation of specific npm packages (for example, to support older browsers that the package author neglected) can now be enabled in one of two ways:
+
+1. Clone the package repository into your application's `/imports` directory, make any modifications necessary, then use `npm install` to link the package into your `node_modules`:
+```
+meteor npm install imports/the-package
+```
+Meteor will compile the contents of the package exposed via `imports/the-package` and this compiled code will be used when you `import the-package` in any of the usual ways:
+```
+import stuff from "the-package"
+require("the-package") === require("/imports/the-package")
+import("the-package").then(...)
+```
+
+2. Install the package normally with `meteor npm install the-package`, then create a symbolic link to the installed package elsewhere in your application, outside of `node_modules`:
+```
+meteor npm install the-package
+cd imports
+ln -s ../node_modules/the-package .
+```
+Again, Meteor will compile the contents of the package because they are exposed outside of `node_modules` and the compiled code will be used whenever `the-package` is imported from `node_modules`.
+
+> Note: this technique also works if you create symbolic links to individual files, rather than linking the entire package directory.
+
+In both cases, Meteor will compile the exposed code as if it was part of your application, using whatever compiler plugins you have installed. You can influence this compilation using `.babelrc` files or any other techniques you would normally use to configure compilation of application code.
+
 <h2 id="npm-shrinkwrap">npm Shrinkwrap</h2>
 
 `package.json` typically encodes a version range, and so each `npm install` command can sometimes lead to a different result if new versions have been published in the meantime. In order to ensure that you and the rest of your team are using the same exact same version of each package, it's a good idea to use `npm shrinkwrap` after making any dependency changes to `package.json`:
@@ -98,7 +126,7 @@ meteor npm shrinkwrap
 
 This will create an `npm-shrinkwrap.json` file containing the exact versions of each dependency, and you should check this file into source control. For even more precision (the contents of a given version of a package *can* change), and to avoid a reliance on the npm server during deployment, you should consider using [`npm shrinkpack`](#npm-shrinkpack).
 
-<h2 id="async-callbacks">Asyncronous Callbacks</h2>
+<h2 id="async-callbacks">Asyncronous callbacks</h2>
 
 Many npm packages rely on an asynchronous, callback or promise-based coding style. For several reasons, Meteor is currently built around a synchronous-looking but still non-blocking style using [Fibers](https://github.com/laverdet/node-fibers).
 
@@ -203,4 +231,4 @@ shrinkpack
 
 You should then check the generated `node_shrinkwrap/` directory into source control, but ensure it is ignored by your text editor.
 
-**NOTE**: Although this is a good idea for projects with a lot of npm dependencies, it will not affect Atmosphere dependencies, even if they themselves have direct npm dependencies.
+> NOTE: Although this is a good idea for projects with a lot of npm dependencies, it will not affect Atmosphere dependencies, even if they themselves have direct npm dependencies.
