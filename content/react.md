@@ -239,6 +239,21 @@ const ListPageContainer = withTracker(({ id }) => {
 export default ListPageContainer;
 ```
 
+If you're subscribing to multiple publications, you can create an array of handles and use [`some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some) to determine if any is loading:
+
+```js
+export default withTracker(({ id }) => {
+  const handles = [
+    Meteor.subscribe('todos.inList', id),
+    Meteor.subscribe('otherSub'),
+  ];
+  const loading = handles.some(handle => !handle.ready());
+  return {
+    loading,
+  };
+})(ListPage);
+```
+
 It's a good habit to name your container exactly like the component that it wraps, with the word “Container” tacked onto the end (eg `ListPageContainer`). This way, when you're attempting to track down issues in your code, it makes it much easier to locate the appropriate files/classes.
 
 The container component created by `withTracker` will reactively re-render the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
