@@ -102,7 +102,7 @@ Any assets made available via symlinks in the `/public` and `/private` directori
 
 Meteor does not recompile packages installed in your `node_modules` by default. However, compilation of specific npm packages (for example, to support older browsers that the package author neglected) can now be enabled in one of two ways:
 
-1. Clone the package repository into your application's `/imports` directory, make any modifications necessary, then use `npm install` to link the package into your `node_modules`:
+Option one is to clone the package repository into your application's `/imports` directory, make any modifications necessary, then use `npm install` to link the package into your `node_modules`:
 ```
 meteor npm install imports/the-package
 ```
@@ -113,7 +113,7 @@ require("the-package") === require("/imports/the-package")
 import("the-package").then(...)
 ```
 
-2. Install the package normally with `meteor npm install the-package`, then create a symbolic link to the installed package elsewhere in your application, outside of `node_modules`:
+Option two is to install the package normally with `meteor npm install the-package`, then create a symbolic link to the installed package elsewhere in your application, outside of `node_modules`:
 ```
 meteor npm install the-package
 cd imports
