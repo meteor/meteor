@@ -29,6 +29,7 @@ sidebar_categories:
     - blaze
     - react
     - angular
+    - vue
   Build:
     - atmosphere-vs-npm
     - using-atmosphere-packages
