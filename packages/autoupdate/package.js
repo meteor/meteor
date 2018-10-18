@@ -15,10 +15,11 @@ Package.onUse(function (api) {
     'retry'
   ], 'client');
 
+  api.use('reload', 'client', { weak: true });
+
   api.use([
     'ecmascript',
-    'ddp',
-    'mongo',
+    'ddp'
   ], ['client', 'server']);
 
   api.mainModule('autoupdate_server.js', 'server');
