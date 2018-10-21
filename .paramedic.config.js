@@ -5,5 +5,5 @@ module.exports = {
   verbose: true,
   skipAppiumTests: true,
   ci: true,
-  target: "iPhone-X\\,\\ 11\\.2",
+  target: "iPhone-X\\,"
 };
