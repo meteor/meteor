@@ -21,7 +21,7 @@ const CssTools = {
       options.from = options.source;
       delete options.source;
     }
-    return postcss().process(cssText, options).root;
+    return postcss.parse(cssText, options);
   },
 
   /**
@@ -37,6 +37,9 @@ const CssTools = {
     // controlled sourcemap generation by passing in { sourcemap: true }.
     // If included, we'll convert this to the `postcss` equivalent, to maintain
     // backwards compatibility.
+    if (!options.from){
+      // options.from = undefined;
+    }
     if (options.sourcemap) {
       options.map = {
         inline: false,
@@ -53,6 +56,9 @@ const CssTools = {
       f.throw(error);
     });
     transformResult = f.wait();
+    // transformResult = postcss.parse(cssAst, options).toResult(options);
+    // if (!transformResult) throw new Error("...");
+
     return {
       code: transformResult.css,
       map: transformResult.map ? transformResult.map.toJSON() : null,
@@ -67,7 +73,7 @@ const CssTools = {
    */
   minifyCss(cssText) {
     const f = new Future;
-    postcss([ cssnano({ safe: true }) ]).process(cssText).then(result => {
+    postcss([ cssnano({ safe: true }) ]).process(cssText, {from: undefined}).then(result => {
       f.return(result.css);
     }).catch(error => {
       f.throw(error);
