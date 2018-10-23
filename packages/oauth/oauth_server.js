@@ -435,7 +435,7 @@ OAuth.sealSecret = plaintext => {
     return OAuthEncryption.seal(plaintext);
   else
     return plaintext;
-}
+};
 
 // Unencrypt a service data field, if the "oauth-encryption"
 // package is loaded and the field is encrypted.

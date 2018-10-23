@@ -1,5 +1,3 @@
-import url from 'url';
-
 OAuth._storageTokenPrefix = "Meteor.oauth.credentialSecret-";
 
 OAuth._redirectUri = (serviceName, config, params, absoluteUrlOptions) => {
@@ -29,6 +27,7 @@ OAuth._redirectUri = (serviceName, config, params, absoluteUrlOptions) => {
   }
 
   if (Meteor.isServer && isCordova) {
+    const url = Npm.require('url');
     let rootUrl = process.env.MOBILE_ROOT_URL ||
           __meteor_runtime_config__.ROOT_URL;
 
@@ -46,7 +45,7 @@ OAuth._redirectUri = (serviceName, config, params, absoluteUrlOptions) => {
       rootUrl = url.format(parsedRootUrl);
     }
 
-    absoluteUrlOptions = { 
+    absoluteUrlOptions = {
       ...absoluteUrlOptions,
       // For Cordova clients, redirect to the special Cordova root url
       // (likely a local IP in development mode).
