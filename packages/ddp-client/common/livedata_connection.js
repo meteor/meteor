@@ -246,10 +246,8 @@ export class Connection {
         ! options.reloadWithOutstanding) {
       Package.reload.Reload._onMigrate(retry => {
         if (! self._readyToMigrate()) {
-          if (self._retryMigrate)
-            throw new Error('Two migrations in progress?');
           self._retryMigrate = retry;
-          return false;
+          return [false];
         } else {
           return [true];
         }
