@@ -38,7 +38,7 @@ const CssTools = {
     // If included, we'll convert this to the `postcss` equivalent, to maintain
     // backwards compatibility.
     if (!options.from){
-      // options.from = undefined;
+      options.from = undefined;
     }
     if (options.sourcemap) {
       options.map = {
