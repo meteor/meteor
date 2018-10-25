@@ -48,16 +48,8 @@ const CssTools = {
       };
       delete options.sourcemap;
     }
-
-    const f = new Future;
-    postcss().process(cssAst, options).then(result => {
-      f.return(result);
-    }).catch(error => {
-      f.throw(error);
-    });
-    transformResult = f.wait();
-    // transformResult = postcss.parse(cssAst, options).toResult(options);
-    // if (!transformResult) throw new Error("...");
+    
+    transformResult = cssAst.toResult(options);
 
     return {
       code: transformResult.css,
