@@ -37,9 +37,6 @@ const CssTools = {
     // controlled sourcemap generation by passing in { sourcemap: true }.
     // If included, we'll convert this to the `postcss` equivalent, to maintain
     // backwards compatibility.
-    if (!options.from){
-      options.from = undefined;
-    }
     if (options.sourcemap) {
       options.map = {
         inline: false,
@@ -48,7 +45,11 @@ const CssTools = {
       };
       delete options.sourcemap;
     }
-    
+    // explicitly set from to undefined to prevent postcss warnings
+    if (!options.from){
+      options.from = undefined;
+    }
+
     transformResult = cssAst.toResult(options);
 
     return {
