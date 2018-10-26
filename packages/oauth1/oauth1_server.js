@@ -1,7 +1,7 @@
 import url from 'url';
 import { OAuth1Binding } from './oauth1_binding';
 
-OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitelistedQueryParams) => {
+OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitelistedQueryParams = []) => {
   const redirectUrlObj = url.parse(authUrl, true);
 
   Object.assign(
