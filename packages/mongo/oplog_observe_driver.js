@@ -879,7 +879,8 @@ _.extend(OplogObserveDriver.prototype, {
       // XXX if this is slow, remove it later
       if (self._published.size() !== newResults.size()) {
         console.error('The Mongo server and the Meteor query disagree on how ' +
-          'many documents match your query. Cursor description: ', self._cursorDescription);
+          'many documents match your query. Cursor description: ',
+          self._cursorDescription);
         throw Error(
           "The Mongo server and the Meteor query disagree on how " +
             "many documents match your query. Maybe it is hitting a Mongo " +
