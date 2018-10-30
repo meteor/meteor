@@ -54,12 +54,10 @@ EVp.withValue = function (value, func) {
   var saved = currentValues[this.slot];
   try {
     currentValues[this.slot] = value;
-    var ret = func();
+    return func();
   } finally {
     currentValues[this.slot] = saved;
   }
-
-  return ret;
 };
 
 // Meteor application code is always supposed to be run inside a
@@ -92,7 +90,7 @@ Meteor.bindEnvironment = function (func, onException, _this) {
     onException = function (error) {
       Meteor._debug(
         "Exception in " + description + ":",
-        error && error.stack || error
+        error
       );
     };
   } else if (typeof(onException) !== 'function') {

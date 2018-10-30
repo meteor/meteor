@@ -1,3 +1,8 @@
+var URL = require("meteor/url").URL;
+var common = require("./httpcall_common.js");
+var HTTP = exports.HTTP = common.HTTP;
+var hasOwn = Object.prototype.hasOwnProperty;
+
 /**
  * @summary Perform an outbound HTTP request.
  * @locus Anywhere
@@ -13,7 +18,7 @@
  * @param {Number} options.timeout Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default.
  * @param {Boolean} options.followRedirects If `true`, transparently follow HTTP redirects. Cannot be set to `false` on the client. Default `true`.
  * @param {Object} options.npmRequestOptions On the server, `HTTP.call` is implemented by using the [npm `request` module](https://www.npmjs.com/package/request). Any options in this object will be passed directly to the `request` invocation.
- * @param {Function} options.beforeSend On the client, this will be called before the request is sent to allow for more direct manipulation of the underlying XMLHttpRequest object, which will be passed as the first argument. If the callback returns `false`, the request will be not be send.
+ * @param {Function} options.beforeSend On the client, this will be called before the request is sent to allow for more direct manipulation of the underlying XMLHttpRequest object, which will be passed as the first argument. If the callback returns `false`, the request will be not be sent.
  * @param {Function} [asyncCallback] Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback.  On the client, this callback is required.
  */
 HTTP.call = function(method, url, options, callback) {
@@ -53,7 +58,7 @@ HTTP.call = function(method, url, options, callback) {
   if (options.followRedirects === false)
     throw new Error("Option followRedirects:false not supported on client.");
 
-  if (_.has(options, 'npmRequestOptions')) {
+  if (hasOwn.call(options, 'npmRequestOptions')) {
     throw new Error("Option npmRequestOptions not supported on client.");
   }
 
@@ -61,7 +66,7 @@ HTTP.call = function(method, url, options, callback) {
   if (options.auth) {
     var colonLoc = options.auth.indexOf(':');
     if (colonLoc < 0)
-      throw new Error('auth option should be of the form "username:password"');
+      throw new Error('Option auth should be of the form "username:password"');
     username = options.auth.substring(0, colonLoc);
     password = options.auth.substring(colonLoc+1);
   }
@@ -70,23 +75,28 @@ HTTP.call = function(method, url, options, callback) {
     content = URL._encodeParams(params_for_body);
   }
 
-  _.extend(headers, options.headers || {});
+  if (options.headers) {
+    Object.keys(options.headers).forEach(function (key) {
+      headers[key] = options.headers[key];
+    });
+  }
 
   ////////// Callback wrapping //////////
 
   // wrap callback to add a 'response' property on an error, in case
   // we have both (http 4xx/5xx error, which has a response payload)
   callback = (function(callback) {
+    var called = false;
     return function(error, response) {
-      if (error && response)
-        error.response = response;
-      callback(error, response);
+      if (! called) {
+        called = true;
+        if (error && response) {
+          error.response = response;
+        }
+        callback(error, response);
+      }
     };
   })(callback);
-
-  // safety belt: only call the callback once.
-  callback = _.once(callback);
-
 
   ////////// Kickoff! //////////
 
@@ -126,10 +136,10 @@ HTTP.call = function(method, url, options, callback) {
           Meteor.clearTimeout(timer);
 
         if (timed_out) {
-          callback(new Error("timeout"));
+          callback(new Error("Connection timeout"));
         } else if (! xhr.status) {
           // no HTTP response
-          callback(new Error("network"));
+          callback(new Error("Connection lost"));
         } else {
 
           var response = {};
@@ -157,17 +167,22 @@ HTTP.call = function(method, url, options, callback) {
             "content-type: " + xhr.getResponseHeader("content-type");
 
           var headers_raw = header_str.split(/\r?\n/);
-          _.each(headers_raw, function (h) {
+          headers_raw.forEach(function (h) {
             var m = /^(.*?):(?:\s+)(.*)$/.exec(h);
-            if (m && m.length === 3)
+            if (m && m.length === 3) {
               response.headers[m[1].toLowerCase()] = m[2];
+            }
           });
 
-          populateData(response);
+          common.populateData(response);
 
           var error = null;
-          if (response.statusCode >= 400)
-            error = makeErrorByStatus(response.statusCode, response.content);
+          if (response.statusCode >= 400) {
+            error = common.makeErrorByStatus(
+              response.statusCode,
+              response.content
+            );
+          }
 
           callback(error, response);
         }
@@ -175,12 +190,9 @@ HTTP.call = function(method, url, options, callback) {
     };
 
     // Allow custom control over XHR and abort early.
-    if (options.beforeSend) {
-      // Sanity
-      var beforeSend = _.once(options.beforeSend);
-
+    if (typeof options.beforeSend === "function") {
       // Call the callback and check to see if the request was aborted
-      if (false === beforeSend.call(null, xhr, options)) {
+      if (false === options.beforeSend.call(null, xhr, options)) {
         return xhr.abort();
       }
     }
@@ -191,5 +203,4 @@ HTTP.call = function(method, url, options, callback) {
   } catch (err) {
     callback(err);
   }
-
 };

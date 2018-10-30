@@ -1,6 +1,8 @@
 import assert from "assert";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
-import files from '../fs/files.js';
+import files, {
+  symlinkWithOverwrite,
+} from '../fs/files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../tool-env/profile.js';
 import {
@@ -56,7 +58,15 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
 // structure; and the hashes of the contents correspond to the
 // writtenHashes data strcture.
 export default class Builder {
-  constructor({outputPath, previousBuilder}) {
+  constructor({
+    outputPath,
+    previousBuilder,
+    // Even though in-place builds are disabled by default on some
+    // platforms (Windows), they can be forcibly reenabled with this
+    // option, in cases where it's safe and/or necessary to avoid
+    // clobbering existing files.
+    forceInPlaceBuild = false,
+  }) {
     this.outputPath = outputPath;
 
     // Paths already written to. Map from canonicalized relPath (no
@@ -81,7 +91,8 @@ export default class Builder {
     // If we have a previous builder and we are allowed to re-use it,
     // let's keep all the older files on the file-system and replace
     // only outdated ones + write the new files in the same path
-    if (previousBuilder && ENABLE_IN_PLACE_BUILDER_REPLACEMENT) {
+    if (previousBuilder &&
+        (forceInPlaceBuild || ENABLE_IN_PLACE_BUILDER_REPLACEMENT)) {
       if (previousBuilder.outputPath !== outputPath) {
         throw new Error(
           `previousBuilder option can only be set to a builder with the same output path.
@@ -133,7 +144,15 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (partial in this.previousUsedAsFile) {
           if (this.previousUsedAsFile[partial]) {
             // was previously used as file, delete it, create a directory
-            files.unlink(partial);
+            try {
+              files.unlink(partial);
+            } catch (e) {
+              // If files.unlink(partial) failed because the file does not
+              // exist, then we can just pretend the unlink succeeded.
+              if (e.code !== "ENOENT") {
+                throw e;
+              }
+            }
           } else {
             // is already a directory
             needToMkdir = false;
@@ -390,6 +409,59 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return generated;
   }
 
+  // A version of copyDirectory that works better for copying node_modules
+  // directories when symlinks are involved.
+  copyNodeModulesDirectory(options) {
+    // Although the options.from directory should probably be a
+    // node_modules directory, the only essential precondition here is
+    // that the destination directory is a node_modules directory.
+    // assert.strictEqual(files.pathBasename(options.from), "node_modules");
+    assert.strictEqual(files.pathBasename(options.to), "node_modules");
+
+    if (options.symlink) {
+      // If we're going to use symlinks to speed up this copy, then we
+      // need to make sure we've reserved all directories that are not
+      // package directories, such as the node_modules directory itself,
+      // as well as node_modules/meteor and the parent directories of any
+      // scoped npm packages.
+      this._ensureAllNonPackageDirectories(
+        files.realpath(options.from),
+        options.to
+      );
+    }
+
+    // Call this._copyDirectory rather than this.copyDirectory so that the
+    // subBuilder hacks from Builder#enter won't apply a second time.
+    return this._copyDirectory(options);
+  }
+
+  _ensureAllNonPackageDirectories(absFromDir, relToDir) {
+    const dirStat = optimisticStatOrNull(absFromDir);
+    if (! (dirStat && dirStat.isDirectory())) {
+      return;
+    }
+
+    const absFromPackageJson =
+      files.pathJoin(absFromDir, "package.json");
+
+    const stat = optimisticStatOrNull(absFromPackageJson);
+    if (stat && stat.isFile()) {
+      // If the directory has a package.json file, it's a package
+      // directory, and we should not call this._ensureDirectory, so that
+      // the package directory can later be symlinked in copyDirectory.
+      return;
+    }
+
+    this._ensureDirectory(relToDir);
+
+    optimisticReaddir(absFromDir).forEach(item => {
+      this._ensureAllNonPackageDirectories(
+        files.pathJoin(absFromDir, item),
+        files.pathJoin(relToDir, item)
+      );
+    });
+  }
+
   // Recursively copy a directory and all of its contents into the
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
@@ -408,7 +480,13 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //   entries that end with a slash if it's a directory.
   // - specificFiles: just copy these paths (specified as relative to 'to').
   // - symlink: true if the directory should be symlinked instead of copying
-  copyDirectory({
+  copyDirectory(options) {
+    // TODO(benjamn) Remove this wrapper when Builder#enter is no longer
+    // implemented using ridiculous hacks.
+    return this._copyDirectory(options);
+  }
+
+  _copyDirectory({
     from, to,
     ignore,
     specificFiles,
@@ -446,11 +524,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     }
 
-    const walk = (
-      absFrom,
-      relTo,
-      _currentRealRootDir = absFrom
-    ) => {
+    const rootDir = files.realpath(from);
+
+    const walk = (absFrom, relTo) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
@@ -469,8 +545,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         // Returns files.realpath(thisAbsFrom), iff it is external to
-        // _currentRealRootDir, using caching because this function might
-        // be called more than once.
+        // rootDir, using caching because this function might be called
+        // more than once.
         let cachedExternalPath;
         const getExternalPath = () => {
           if (typeof cachedExternalPath !== "undefined") {
@@ -488,7 +564,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           const isExternal =
-            files.pathRelative(_currentRealRootDir, real).startsWith("..");
+            files.pathRelative(rootDir, real).startsWith("..");
 
           // Now cachedExternalPath is either a string or false.
           return cachedExternalPath = isExternal && real;
@@ -503,22 +579,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // external files, and this file is a symbolic link that points
           // to an external file, update fileStatus so that we copy this
           // file as a normal file rather than as a symbolic link.
-
           const externalPath = getExternalPath();
           if (externalPath) {
-            // Copy from the real path rather than the link path.
-            thisAbsFrom = externalPath;
-
             // Update fileStatus to match the actual file rather than the
             // symbolic link, thus forcing the file to be copied below.
             fileStatus = optimisticLStatOrNull(externalPath);
-
-            if (fileStatus && fileStatus.isDirectory()) {
-              // Update _currentRealRootDir so that we can judge
-              // isExternal relative to this new root directory when
-              // traversing nested directories.
-              _currentRealRootDir = externalPath;
-            }
           }
         }
 
@@ -549,7 +614,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         if (isDirectory) {
-          walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
+          walk(thisAbsFrom, thisRelTo);
           return;
         }
 
@@ -598,7 +663,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     };
 
-    walk(files.realpath(from), to);
+    walk(rootDir, to);
   }
 
   // Returns a new Builder-compatible object that works just like a
@@ -608,21 +673,31 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // The sub-builder returned does not have all Builder methods (for
   // example, complete() wouldn't make sense) and you should not rely
   // on it being instanceof Builder.
+  //
+  // TODO(benjamn) This nonsense should be ripped out by any means
+  // necessary... whenever someone has the time.
   enter(relPath) {
-    const methods = ["write", "writeJson", "reserve", "generateFilename",
-                   "copyDirectory", "enter"];
     const subBuilder = {};
     const relPathWithSep = relPath + files.pathSep;
+    const methods = [
+      "write",
+      "writeJson",
+      "reserve",
+      "generateFilename",
+      "copyDirectory",
+      "copyNodeModulesDirectory",
+      "enter",
+    ];
 
     methods.forEach(method => {
       subBuilder[method] = (...args) => {
-        if (method !== "copyDirectory") {
-          // Normal method (relPath as first argument)
-          args[0] = files.pathJoin(relPath, args[0]);
-        } else {
-          // with copyDirectory the path we have to fix up is inside
-          // an options hash
+        if (method === "copyDirectory" ||
+            method === "copyNodeModulesDirectory") {
+          // The copy methods take their relative paths via options.to.
           args[0].to = files.pathJoin(relPath, args[0].to);
+        } else {
+          // Other methods have relPath as the first argument.
+          args[0] = files.pathJoin(relPath, args[0]);
         }
 
         let ret = this[method](...args);
@@ -739,31 +814,15 @@ function symlinkIfPossible(source, target) {
   }
 }
 
-// create a symlink, overwriting the target link, file, or directory
-// if it exists
-function symlinkWithOverwrite(source, target) {
-  try {
-    files.symlink(source, target);
-  } catch (e) {
-    if (e.code === "EEXIST") {
-      // overwrite existing link, file, or directory
-      files.rm_recursive(target);
-      files.symlink(source, target);
-    } else if (e.code === "EPERM" &&
-               process.platform === "win32") {
-      files.rm_recursive(target);
-      // This will work only if source refers to a directory, but that's a
-      // chance worth taking.
-      files.symlink(source, target, "junction");
-    } else {
-      throw e;
-    }
-  }
-}
-
 // Wrap slow methods into Profiler calls
 const slowBuilderMethods = [
-  '_ensureDirectory', 'write', 'enter', 'copyDirectory', 'enter', 'complete'
+  "_ensureDirectory",
+  "write",
+  "enter",
+  "copyDirectory",
+  "copyNodeModulesDirectory",
+  "enter",
+  "complete",
 ];
 
 slowBuilderMethods.forEach(method => {

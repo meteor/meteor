@@ -1,52 +1,47 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '2.2.0',
+  version: '2.3.3',
   documentation: null
 });
 
 Npm.depends({
-  "faye-websocket": "0.11.1",
-  "lolex": "1.4.0",
-  "permessage-deflate": "0.1.6"
+  lolex: '2.3.1'
 });
 
-Package.onUse(function (api) {
-  api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
-           'retry', 'id-map', 'ecmascript'],
-          ['client', 'server']);
-
-  api.use('callback-hook', ['client', 'server']);
-
-  // common functionality
-  api.use('ddp-common', ['client', 'server']);
-
-  api.use('reload', 'client', {weak: true});
-
-  // we depend on _diffObjects, _applyChanges,
-  api.use('diff-sequence', ['client', 'server']);
-  // _idParse, _idStringify.
-  api.use('mongo-id', ['client', 'server']);
-
-  api.addFiles(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
-  api.addFiles('stream_client_nodejs.js', 'server');
-  api.addFiles('stream_client_common.js', ['client', 'server']);
-
-  api.addFiles('livedata_common.js', ['client', 'server']);
-  api.addFiles('random_stream.js', ['client', 'server']);
-
-  api.addFiles('livedata_connection.js', ['client', 'server']);
-
-  api.addFiles('client_convenience.js', 'client');
-
-  api.mainModule("namespace.js");
-  api.export('DDP');
-});
-
-Package.onTest(function (api) {
-  api.use('livedata', ['client', 'server']);
-  api.use('mongo', ['client', 'server']);
-  api.use('test-helpers', ['client', 'server']);
+Package.onUse((api) => {
   api.use([
+    'check',
+    'random',
+    'ejson',
+    'tracker',
+    'retry',
+    'id-map',
+    'ecmascript',
+    'callback-hook',
+    'ddp-common',
+    'reload',
+    'socket-stream-client',
+
+    // we depend on _diffObjects, _applyChanges,
+    'diff-sequence',
+
+    // _idParse, _idStringify.
+    'mongo-id'
+  ], ['client', 'server']);
+
+  api.use('reload', 'client', { weak: true });
+
+  // For backcompat where things use Package.ddp.DDP, etc
+  api.export('DDP');
+  api.mainModule('client/client.js', 'client');
+  api.mainModule('server/server.js', 'server');
+});
+
+Package.onTest((api) => {
+  api.use([
+    'livedata',
+    'mongo',
+    'test-helpers',
     'ecmascript',
     'underscore',
     'tinytest',
@@ -55,17 +50,14 @@ Package.onTest(function (api) {
     'reactive-var',
     'mongo-id',
     'diff-sequence',
-    'ejson'
+    'ejson',
+    'ddp-common',
+    'check'
   ]);
 
-  api.addFiles('stub_stream.js');
-  api.addFiles('livedata_connection_tests.js', ['client', 'server']);
-  api.addFiles('livedata_tests.js', ['client', 'server']);
-  api.addFiles('livedata_test_service.js', ['client', 'server']);
-  api.addFiles('random_stream_tests.js', ['client', 'server']);
-
-  api.use('http', 'client');
-  api.addFiles(['stream_tests.js'], 'client');
-  api.addFiles('stream_client_tests.js', 'server');
-  api.use('check', ['client', 'server']);
+  api.addFiles('test/stub_stream.js');
+  api.addFiles('test/livedata_connection_tests.js');
+  api.addFiles('test/livedata_tests.js');
+  api.addFiles('test/livedata_test_service.js');
+  api.addFiles('test/random_stream_tests.js');
 });

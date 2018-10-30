@@ -1,8 +1,10 @@
+import { getLoginServices } from './login_buttons.js';
+
 // for convenience
-var loginButtonsSession = Accounts._loginButtonsSession;
+const loginButtonsSession = Accounts._loginButtonsSession;
 
 
-var loginResultCallback = function (serviceName, err) {
+const loginResultCallback = (serviceName, err) => {
   if (!err) {
     loginButtonsSession.closeDropdown();
   } else if (err instanceof Accounts.LoginCancelledError) {
@@ -12,9 +14,9 @@ var loginResultCallback = function (serviceName, err) {
       loginButtonsSession.configureService(serviceName);
     } else {
       loginButtonsSession.errorMessage(
-        "No configuration for " + capitalize(serviceName) + ".\n" +
+        `No configuration for ${capitalize(serviceName)}.\n` +
         "Use `ServiceConfiguration` to configure it or " +
-        "install the `" +serviceName + "-config-ui` package."
+        `install the \`${serviceName}-config-ui\` package.`
       );
     }
   } else {
@@ -29,26 +31,30 @@ var loginResultCallback = function (serviceName, err) {
 // the dialog on a successful login or display the error on a failed
 // login).
 //
-Accounts.onPageLoadLogin(function (attemptInfo) {
+Accounts.onPageLoadLogin(attemptInfo => {
   // Ignore if we have a left over login attempt for a service that is no longer registered.
-  if (_.contains(_.pluck(getLoginServices(), "name"), attemptInfo.type))
+  if (
+    getLoginServices()
+      .map(service => service.name)
+      .includes(attemptInfo.type)
+  )
     loginResultCallback(attemptInfo.type, attemptInfo.error);
 });
 
 
 Template._loginButtonsLoggedOutSingleLoginButton.events({
   'click .login-button': function () {
-    var serviceName = this.name;
+    const serviceName = this.name;
     loginButtonsSession.resetMessages();
 
     // XXX Service providers should be able to specify their
     // `Meteor.loginWithX` method name.
-    var loginWithService = Meteor["loginWith" +
+    const loginWithService = Meteor[`loginWith${
                                   (serviceName === 'meteor-developer' ?
                                    'MeteorDeveloperAccount' :
-                                   capitalize(serviceName))];
+                                   capitalize(serviceName))}`];
 
-    var options = {}; // use default scope unless specified
+    const options = {}; // use default scope unless specified
     if (Accounts.ui._options.requestPermissions[serviceName])
       options.requestPermissions = Accounts.ui._options.requestPermissions[serviceName];
     if (Accounts.ui._options.requestOfflineToken[serviceName])
@@ -56,7 +62,7 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
     if (Accounts.ui._options.forceApprovalPrompt[serviceName])
       options.forceApprovalPrompt = Accounts.ui._options.forceApprovalPrompt[serviceName];
 
-    loginWithService(options, function (err) {
+    loginWithService(options, err => {
       loginResultCallback(serviceName, err);
     });
   }
@@ -64,9 +70,9 @@ Template._loginButtonsLoggedOutSingleLoginButton.events({
 
 Template._loginButtonsLoggedOutSingleLoginButton.helpers({
   // not configured and has no config UI
-  cannotConfigure: function() {
-    return !ServiceConfiguration.configurations.findOne({service: this.name})
-      && !Template._configureLoginServiceDialog.templateForService(this.name);
+  cannotConfigure: function () { 
+    return !ServiceConfiguration.configurations.findOne({service: this.name}) && 
+      !Template._configureLoginServiceDialog.templateForService(this.name);
   },
   configured: function () {
     return !!ServiceConfiguration.configurations.findOne({service: this.name});
@@ -83,7 +89,7 @@ Template._loginButtonsLoggedOutSingleLoginButton.helpers({
 });
 
 // XXX from http://epeli.github.com/underscore.string/lib/underscore.string.js
-var capitalize = function(str){
-  str = str == null ? '' : String(str);
+const capitalize = input => {
+  str = input == null ? '' : String(input);
   return str.charAt(0).toUpperCase() + str.slice(1);
 };

@@ -124,9 +124,9 @@ describe("template modules", () => {
   Meteor.isClient &&
   it("should be importable on the client", () => {
     assert.strictEqual(typeof Template, "function");
-    assert.ok(! _.has(Template, "lazy"));
+    assert.ok(! Object.prototype.hasOwnProperty.call(Template, "lazy"));
     require("./imports/lazy.html");
-    assert.ok(_.has(Template, "lazy"));
+    assert.ok(Object.prototype.hasOwnProperty.call(Template, "lazy"));
     assert.ok(Template.lazy instanceof Template);
   });
 
@@ -284,7 +284,7 @@ describe("local node_modules", () => {
 
   it('should expose "version" field of package.json', () => {
     const pkg = require("moment/package.json");
-    assert.strictEqual(pkg.version, "2.11.1");
+    assert.strictEqual(pkg.version, "2.22.2");
   });
 
   it('should support object-valued package.json "browser" fields', () => {
@@ -302,6 +302,47 @@ describe("local node_modules", () => {
       const { browser } = require(["uuid", "package.json"].join("/"));
       assert.strictEqual(typeof browser, "object");
     }
+  });
+
+  it('should support package.json without a "main" field', () => {
+    if (Meteor.isServer) {
+      // Only import mysql during server tests, but register the
+      // dependency in the client bundle, too.
+      assert.strictEqual(
+        typeof require("mysql").createQuery,
+        "function"
+      );
+    }
+
+    assert.strictEqual(
+      require.resolve("mysql"),
+      "/node_modules/mysql/index.js"
+    );
+
+    // Verify that the package.json stub is bundled even though it is not
+    // needed for looking up the index.js module (#9235).
+    const pkg = require(["mysql", "package.json"].join("/"));
+    assert.strictEqual(pkg.name, "mysql");
+    assert.strictEqual(pkg.main, void 0);
+  });
+
+  it('should support package.json with a directory "main" field', () => {
+    if (Meteor.isServer) {
+      assert.strictEqual(typeof require("cli-color"), "function");
+    }
+
+    assert.strictEqual(
+      require.resolve("cli-color"),
+      "/node_modules/cli-color/lib/index.js"
+    );
+
+    const pkg = require(["cli-color", "package.json"].join("/"));
+    assert.strictEqual(pkg.name, "cli-color");
+    assert.strictEqual(pkg.main, "lib");
+
+    // We have to use an older version of cli-color to get this unusual
+    // module layout, so we shouldn't let this change without notice.
+    assert.strictEqual(pkg.version, "0.2.3");
   });
 });
 
@@ -385,7 +426,9 @@ describe("Meteor packages", () => {
       assert.deepEqual(os.resources.map(function (res) {
         return res.path;
       }), ["server.js"]);
-      assert.deepEqual(os.resources[0].fileOptions, {});
+      assert.deepEqual(os.resources[0].fileOptions, {
+        lazy: false
+      });
 
       assert.deepEqual(ServerTypeof, {
         require: "undefined",
@@ -414,6 +457,104 @@ describe("Meteor packages", () => {
     assert.strictEqual(array[0], "asdf");
     assert.strictEqual(array[1], array);
     assert.strictEqual(array[2], Infinity);
+  });
+});
+
+describe("symlinking node_modules", () => {
+  it("should allow selective compilation of npm packages", () => {
+    import each from "lodash-es/each";
+    import range from "lodash-es/range";
+    const n = 100;
+    let sum = 0;
+    each(range(1, n + 1), n => sum += n);
+    assert.strictEqual(sum, n * (n + 1) / 2);
+  });
+
+  it("should preserve equivalence for require", async () => {
+    const pkg1 = require("immutable-tuple/package.json");
+    const pkg2 = require("./imports/links/immutable-tuple/package");
+    assert.strictEqual(pkg1.author.name, "Ben Newman");
+    assert.strictEqual(pkg1.author, pkg2.author);
+  });
+
+  it("should preserve equivalence for dynamic import()", async () => {
+    const { default: tuple1 } = await import("immutable-tuple/src/tuple");
+    const { tuple: tuple2 } =
+      await import("/imports/links/immutable-tuple/src/tuple");
+    assert.strictEqual(tuple1, tuple2);
+  });
+
+  it("should support application-compiled `npm link`ed packages", () => {
+    assert.strictEqual(
+      require.resolve("acorn"),
+      "/node_modules/acorn/src/index.js"
+    );
+    const { parse } = require("acorn");
+    assert.strictEqual(typeof parse, "function");
+    assert.strictEqual(
+      parse,
+      require("./imports/links/acorn").parse
+    );
+  });
+
+  it("should not break custom import extensions", () => {
+    import { jsx } from "jsx-import-test";
+    assert.strictEqual(jsx.type, "div");
+    assert.strictEqual(jsx.props.children, "oyez");
+    return import("./imports/links/jsx-import-test/child").then(ns => {
+      assert.strictEqual(ns.default, jsx);
+    });
+  });
+});
+
+describe("issue #9878", () => {
+  it("should be fixed by PR #9903", () => {
+    const {
+      packageJson,
+      normalJson,
+    } = require("./issue-9878-test-package");
+
+    assert.deepEqual(packageJson, {
+      stripped: false,
+      nested: {
+        stripped: false,
+        _stripped: false
+      }
+    });
+
+    assert.deepEqual(normalJson, {
+      stripped: false,
+      _stripped: false,
+      nested: {
+        stripped: false,
+        _stripped: false
+      }
+    });
+
+    assert.deepEqual(require("./issue-9878-test-package/package"), {
+      name: "issue-9878-test-package",
+      main: "main.js",
+      nested: {
+        _stripped: false
+      }
+    });
+  });
+});
+
+describe("issue #10233", () => {
+  it("should be fixed", () => {
+    require("meteor/dummy-compiler").check();
+  });
+});
+
+describe("local .json modules", () => {
+  it("should be importable within Meteor packages (issue #10122)", () => {
+    import { oyez } from "meteor/import-local-json-module";
+    assert.strictEqual(oyez, 1234);
+    assert.strictEqual(
+      require("meteor/import-local-json-module/data").oyez,
+      1234
+    );
   });
 });
 
@@ -462,6 +603,24 @@ describe("ecmascript miscellany", () => {
       require("./imports/babel-env.js").check(2),
       4
     );
+  });
+
+  it("should support plugins like proposal-optional-chaining", () => {
+    const { check } = require("./imports/chaining.js");
+
+    assert.strictEqual(check({
+      oyez: true
+    }), void 0);
+
+    assert.strictEqual(check({
+      foo: {
+        bar: {
+          baz: {
+            qux: 1234
+          }
+        }
+      }
+    }), 1234);
   });
 });
 

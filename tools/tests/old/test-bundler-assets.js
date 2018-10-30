@@ -23,7 +23,9 @@ var makeProjectContext = function (appName) {
 
   var projectDir = files.mkdtemp("test-bundler-assets");
 
-  files.cp_r(testAppDir, projectDir);
+  files.cp_r(testAppDir, projectDir, {
+    preserveSymlinks: true,
+  });
 
   require("../../cli/default-npm-deps.js").install(projectDir);
 
@@ -77,7 +79,7 @@ var runTest = function () {
                    ["/nested/nested.txt", "Nested\n"]];
   _.each(testCases, function (file) {
     var manifestItem = _.find(clientManifest.manifest, function (m) {
-      return m.url === file[0];
+      return m.url.endsWith(file[0]);
     });
     assert(manifestItem);
     var diskPath = files.pathJoin(tmpOutputDir, "programs", "web.browser",

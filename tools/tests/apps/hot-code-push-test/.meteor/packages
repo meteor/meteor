@@ -4,5 +4,5 @@
 # but you can also edit it by hand.
 
 meteor-base
-blaze-html-templates
+static-html 
 session

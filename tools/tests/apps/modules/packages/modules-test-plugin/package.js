@@ -22,7 +22,8 @@ Package.registerBuildPlugin({
 Npm.depends({
   arson: "0.2.3",
   "babel-plugin-transform-class-properties": "6.9.0",
-  "babel-plugin-transform-strict-mode": "6.8.0"
+  "babel-plugin-transform-strict-mode": "6.8.0",
+  "vue-template-compiler": "2.5.16"
 });
 
 Package.onUse(function(api) {

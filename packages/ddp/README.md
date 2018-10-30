@@ -10,10 +10,10 @@ specification](https://github.com/meteor/meteor/blob/devel/packages/ddp/DDP.md).
 
 This package is used by nearly every Meteor application and provides a
 full implementation of DDP in JavaScript. API documentation is on the
-[main Meteor documentation page](http://docs.meteor.com/), under
+[main Meteor documentation page](https://docs.meteor.com/), under
 "Publish and subscribe", "Methods", and "Server connections". Note in
 particular that clients can use
-[`DDP.connect`](http://docs.meteor.com/#ddp_connect) to open a DDP
+[`DDP.connect`](https://docs.meteor.com/api/connections.html#DDP-connect) to open a DDP
 connection to any DDP service on the Internet.
 
 ### Supported platforms

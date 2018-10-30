@@ -16,6 +16,9 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
+const { Profile } = require("../tool-env/profile.js");
+
+import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
@@ -381,9 +384,12 @@ function doRunCommand(options) {
     runLog.setRawLogs(true);
   }
 
-  let webArchs = ['web.browser'];
-  if (!_.isEmpty(runTargets) || options['mobile-server']) {
-    webArchs.push("web.cordova");
+  let webArchs = projectContext.platformList.getWebArchs();
+  if (! _.isEmpty(runTargets) ||
+      options['mobile-server']) {
+    if (webArchs.indexOf("web.cordova") < 0) {
+      webArchs.push("web.cordova");
+    }
   }
 
   let cordovaRunner;
@@ -403,7 +409,6 @@ function doRunCommand(options) {
       });
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     prepareCordovaProject();
   }
@@ -419,7 +424,7 @@ function doRunCommand(options) {
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
-      buildMode: options.production && 'production',
+      buildMode: options.production ? 'production' : 'development',
       webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
@@ -486,8 +491,10 @@ main.registerCommand({
     list: { type: Boolean },
     example: { type: String },
     package: { type: Boolean },
+    bare: { type: Boolean },
+    minimal: { type: Boolean },
     full: { type: Boolean },
-    bare: { type: Boolean }
+    react: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -582,7 +589,8 @@ main.registerCommand({
             return contents;
           }
         },
-        ignore: [/^local$/]
+        ignore: [/^local$/],
+        preserveSymlinks: true,
       });
     } catch (err) {
       Console.error("Could not create package: " + err.message);
@@ -622,7 +630,7 @@ main.registerCommand({
   if (options.list) {
     Console.info("Available examples:");
     _.each(EXAMPLE_REPOSITORIES, function (repoInfo, name) {
-      const branchInfo = repoInfo.branch ? `#${repoInfo.branch}` : '';
+      const branchInfo = repoInfo.branch ? `/tree/${repoInfo.branch}` : '';
       Console.info(
         Console.command(`${name}: ${repoInfo.repo}${branchInfo}`),
         Console.options({ indent: 2 }));
@@ -649,7 +657,7 @@ main.registerCommand({
     const branchOption = repoInfo.branch ? ` -b ${repoInfo.branch}` : '';
     const path = options.args.length === 1 ? ` ${options.args[0]}` : '';
 
-    Console.info(`To create the ${options.example} example, please run:`)
+    Console.info(`To create the ${options.example} example, please run:`);
     Console.info(
       Console.command(`git clone ${repoInfo.repo}${branchOption}${path}`),
       Console.options({ indent: 2 }));
@@ -723,20 +731,22 @@ main.registerCommand({
     });
   }
 
-  var toIgnore = [/^local$/, /^\.id$/]
+  var toIgnore = [/^local$/, /^\.id$/];
   if (destinationHasCodeFiles) {
     // If there is already source code in the directory, don't copy our
     // skeleton app code over it. Just create the .meteor folder and metadata
-    toIgnore.push(/(\.html|\.js|\.css)/)
+    toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
-  let skelName = 'skel';
-
-  if(options.bare){
-    skelName += '-bare';
-  }
-  else if(options.full){
-    skelName += '-full';
+  let skelName = "skel";
+  if (options.minimal) {
+    skelName += "-minimal";
+  } else if (options.bare) {
+    skelName += "-bare";
+  } else if (options.full) {
+    skelName += "-full";
+  } else if (options.react) {
+    skelName += "-react";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -750,7 +760,8 @@ main.registerCommand({
         return contents;
       }
     },
-    ignore: toIgnore
+    ignore: toIgnore,
+    preserveSymlinks: true,
   });
 
   // We are actually working with a new meteor project at this point, so
@@ -796,7 +807,12 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
-  require("./default-npm-deps.js").install(appPath);
+  // Since some of the project skeletons include npm `devDependencies`, we need
+  // to make sure they're included when running `npm install`.
+  require("./default-npm-deps.js").install(
+    appPath,
+    { includeDevDependencies: true }
+  );
 
   var appNameToDisplay = appPathAsEntered === "." ?
     "current directory" : `'${appPathAsEntered}'`;
@@ -811,6 +827,12 @@ main.registerCommand({
   // do next.
   Console.info("To run your new app:");
 
+  function cmd(text) {
+    Console.info(Console.command(text), Console.options({
+      indent: 2
+    }));
+  }
+
   if (appPathAsEntered !== ".") {
     // Wrap the app path in quotes if it contains spaces
     const appPathWithQuotesIfSpaces = appPathAsEntered.indexOf(' ') === -1 ?
@@ -818,13 +840,10 @@ main.registerCommand({
       `'${appPathAsEntered}'`;
 
     // Don't tell people to 'cd .'
-    Console.info(
-      Console.command("cd " + appPathWithQuotesIfSpaces),
-        Console.options({ indent: 2 }));
+    cmd("cd " + appPathWithQuotesIfSpaces);
   }
 
-  Console.info(
-    Console.command("meteor"), Console.options({ indent: 2 }));
+  cmd("meteor");
 
   Console.info("");
   Console.info("If you are new to Meteor, try some of the learning resources here:");
@@ -832,13 +851,23 @@ main.registerCommand({
     Console.url("https://www.meteor.com/tutorials"),
       Console.options({ indent: 2 }));
 
-  if (!options.full && !options.bare){
-    // Notice people about --bare and --full
-    const bareOptionNotice = 'meteor create --bare to create an empty app.';
-    const fullOptionNotice = 'meteor create --full to create a scaffolded app.';
+  if (! options.bare &&
+      ! options.minimal &&
+      ! options.full &&
+      ! options.react) {
+    // Notify people about --bare, --minimal, --full, and --react.
+    Console.info([
+      "",
+      "To start with a different app template, try one of the following:",
+      "",
+    ].join("\n"));
 
-    Console.info("");
-    Console.info(bareOptionNotice + '\n' + fullOptionNotice);
+    cmd("meteor create --bare    # to create an empty app");
+    cmd("meteor create --minimal # to create an app with as few " +
+        "Meteor packages as possible");
+    cmd("meteor create --full    # to create a more complete " +
+        "scaffolded app");
+    cmd("meteor create --react   # to create a basic React-based app");
   }
 
   Console.info("");
@@ -871,27 +900,40 @@ var buildCommands = {
   catalogRefresh: new catalog.Refresh.Never()
 };
 
-main.registerCommand(_.extend({ name: 'build' }, buildCommands),
-  function (options) {
-    return buildCommand(options);
+main.registerCommand({
+  name: "build",
+  ...buildCommands,
+}, async function (options) {
+  return Profile.run(
+    "meteor build",
+    () => Promise.await(buildCommand(options))
+  );
 });
 
 // Deprecated -- identical functionality to 'build' with one exception: it
 // doesn't output a directory with all builds but rather only one tarball with
 // server/client programs.
 // XXX COMPAT WITH 0.9.1.1
-main.registerCommand(_.extend({ name: 'bundle', hidden: true
-                              }, buildCommands),
-    function (options) {
+main.registerCommand({
+  name: "bundle",
+  hidden: true,
+  ...buildCommands,
+}, async function (options) {
+  Console.error(
+    "This command has been deprecated in favor of " +
+    Console.command("'meteor build'") + ", which allows you to " +
+    "build for multiple platforms and outputs a directory instead of " +
+    "a single tarball. See " + Console.command("'meteor help build'") + " " +
+    "for more information.");
+  Console.error();
 
-      Console.error(
-      "This command has been deprecated in favor of " +
-      Console.command("'meteor build'") + ", which allows you to " +
-      "build for multiple platforms and outputs a directory instead of " +
-      "a single tarball. See " + Console.command("'meteor help build'") + " " +
-      "for more information.");
-      Console.error();
-      return buildCommand(_.extend(options, { _bundleOnly: true }));
+  return Profile.run(
+    "meteor bundle",
+    () => Promise.await(buildCommand({
+      ...options,
+      _bundleOnly: true,
+    }))
+  );
 });
 
 var buildCommand = function (options) {
@@ -908,9 +950,8 @@ var buildCommand = function (options) {
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
-  // Error handling for options.architecture. We must pass in only one of three
-  // architectures. See archinfo.js for more information on what the
-  // architectures are, what they mean, et cetera.
+  // Error handling for options.architecture. See archinfo.js for more
+  // information on what the architectures are, what they mean, et cetera.
   if (options.architecture &&
       !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
     showInvalidArchMsg(options.architecture);
@@ -925,6 +966,8 @@ var buildCommand = function (options) {
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
+    // TODO Fix the nested Profile.run warning here, without interfering
+    // with METEOR_PROFILE output for other commands, like `meteor run`.
     projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
@@ -1042,10 +1085,9 @@ ${Console.command("meteor build ../output")}`,
     main.captureAndExit('', () => {
 
       import {
-        ensureDevBundleDependencies,
         pluginVersionsFromStarManifest,
         displayNameForPlatform,
-      } from '../cordova';
+      } from '../cordova/index.js';
 
       ensureDevBundleDependencies();
 
@@ -1099,7 +1141,7 @@ https://guide.meteor.com/mobile.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
-                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
+                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
 
               if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
@@ -1348,14 +1390,23 @@ main.registerCommand({
     // people to deploy from checkout or do other weird shit. We are not
     // responsible for the consequences.
     'override-architecture-with-local' : { type: Boolean },
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    'deploy-polling-timeout': { type: Number },
+    'no-wait': { type: Boolean },
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
     return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options, {rawOptions}) {
+}, async function (...args) {
+  return Profile.run(
+    "meteor deploy",
+    () => Promise.await(deployCommand(...args))
+  );
+});
+
+function deployCommand(options, { rawOptions }) {
   var site = options.args[0];
 
   if (options.delete) {
@@ -1399,6 +1450,7 @@ main.registerCommand({
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
+    // TODO Fix nested Profile.run warning here, too.
     projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
@@ -1409,12 +1461,21 @@ main.registerCommand({
     serverArch: buildArch
   };
 
+  let deployPollingTimeoutMs = null;
+  if (options['deploy-polling-timeout']) {
+    deployPollingTimeoutMs = options['deploy-polling-timeout'];
+  }
+
+  const waitForDeploy = !options['no-wait'];
+
   var deployResult = deploy.bundleAndDeploy({
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
     buildOptions: buildOptions,
-    rawOptions
+    rawOptions,
+    deployPollingTimeoutMs,
+    waitForDeploy,
   });
 
   if (deployResult === 0) {
@@ -1428,22 +1489,7 @@ main.registerCommand({
   }
 
   return deployResult;
-});
-
-///////////////////////////////////////////////////////////////////////////////
-// logs
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'logs',
-  minArgs: 1,
-  maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  var site = qualifySitename(options.args[0]);
-
-  return deploy.logs(site);
-});
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // authorized
@@ -1828,7 +1874,6 @@ function doTestCommand(options) {
       });
     }
 
-    import { ensureDevBundleDependencies } from '../cordova';
     ensureDevBundleDependencies();
     prepareCordovaProject();
   }
@@ -1883,7 +1928,8 @@ var getTestPackageNames = function (projectContext, packageNames) {
           version = projectContext.localCatalog.getVersionBySourceRoot(
             files.pathResolve(p));
           if (! version) {
-            throw Error("should have been caught when initializing catalog?");
+            buildmessage.error("Package not found in local catalog");
+            return;
           }
           if (version.testName) {
             testPackages.push(version.testName);
@@ -2178,6 +2224,7 @@ main.registerCommand({
     slow: { type: Boolean },
     galaxy: { type: Boolean },
     browserstack: { type: Boolean },
+    phantom: { type: Boolean },
     // Indicates whether these self-tests are running headless, e.g. in a
     // continuous integration testing environment, where visual niceties
     // like progress bars and spinners are unimportant.
@@ -2191,6 +2238,7 @@ main.registerCommand({
     // Only run tests with this tag
     'with-tag': { type: String },
     junit: { type: String },
+    retries: { type: Number, default: 2 },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2265,8 +2313,10 @@ main.registerCommand({
     return 0;
   }
 
-  var clients = {
-    browserstack: options.browserstack
+  const clients = {
+    puppeteer: true, // Puppeteer is always enabled.
+    phantom: options.phantom,
+    browserstack: options.browserstack,
   };
 
   if (options.headless) {
@@ -2285,6 +2335,7 @@ main.registerCommand({
     fileRegexp: fileRegexp,
     excludeRegexp: excludeRegexp,
     // other options
+    retries: options.retries,
     historyLines: options.history,
     clients: clients,
     junit: options.junit && files.pathResolve(options.junit),

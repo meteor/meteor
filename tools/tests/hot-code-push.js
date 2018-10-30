@@ -98,21 +98,22 @@ jquery`);
 });
 
 selftest.define("versioning hot code push", function (options) {
-  var s = new Sandbox();
+  var s = new Sandbox({
+    clients: options.clients,
+  });
 
   s.set("AUTOUPDATE_VERSION", "1.0");
   s.createApp("myapp", "hot-code-push-test");
   s.cd("myapp");
 
   s.testWithAllClients(function (run) {
-    run.baseTimeout = 20;
     run.match("myapp");
     run.match("proxy");
     run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
     run.connectClient();
-    run.waitSecs(20);
+    run.waitSecs(40);
 
     run.match("client connected: 0");
 
@@ -122,7 +123,7 @@ selftest.define("versioning hot code push", function (options) {
   });
 });
 
-selftest.define("javascript hot code push", ["slow"], function (options) {
+selftest.define("javascript hot code push", function (options) {
   var s = new Sandbox({
     clients: options.clients
   });
@@ -219,6 +220,9 @@ my-package`);
     run.match("jsVar: undefined");
     run.match("packageVar: bar");
 
+    // Ensure we set back to foo for subsequent runs
+    s.write("packages/my-package/foo.js", "packageVar = 'foo'");
+
     // Add appcache and ensure that the browser still reloads.
     s.write(".meteor/packages", `meteor-base
 session
@@ -228,6 +232,13 @@ appcache`);
     run.match("client connected: 0");
     run.match("jsVar: undefined");
 
+    // XXX: Remove me.  This shouldn't be needed, but sometimes if we run too 
+    // quickly on fast (or Linux?) machines, it looks like there's a race and we 
+    // see a weird state. Without this line this test was failing one time on
+    // every build in CircleCI, but oddly enough would succeed on the second
+    // try.
+    utils.sleepMs(10000);
+
     s.write("client/test.js", "jsVar = 'bar'");
     run.waitSecs(20);
     run.match("client connected: 1");
@@ -235,6 +246,7 @@ appcache`);
 
     // Remove appcache and ensure that the browser still reloads.
     s.write(".meteor/packages", `meteor-base
+    static-html
 session`);
     run.match(/appcache.*removed from your project/);
     run.match("server restarted");
@@ -245,16 +257,11 @@ session`);
     run.match("jsVar: baz");
 
     s.unlink("client/test.js");
-
-    // Setting the autoupdateVersion to a different string should also
-    // force the client to restart.
-    s.write("server/test.js",
-            "Package.autoupdate.Autoupdate.autoupdateVersion = 'random'");
-    run.match("server restarted");
-    run.match("client connected: 0");
+    run.match("client connected: 2");
     run.match("jsVar: undefined");
 
-    s.unlink("server/test.js");
+    s.write("server/test.js", 'console.log("DONE");');
+    run.match("DONE");
     run.match("server restarted");
 
     run.stop();

@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.3.0'
+  version: '1.6.0'
 });
 
 Npm.depends({
@@ -27,7 +27,6 @@ Package.onUse(function (api) {
   api.use([
     'random',
     'ejson',
-    'underscore',
     'minimongo',
     'ddp',
     'tracker',
@@ -37,6 +36,12 @@ Package.onUse(function (api) {
     'ecmascript',
     'mongo-dev-server',
   ]);
+
+  // Make weak use of Decimal type on client
+  api.use('mongo-decimal', 'client', {weak: true});
+  api.use('mongo-decimal', 'server');
+
+  api.use('underscore', 'server');
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.
@@ -58,7 +63,7 @@ Package.onUse(function (api) {
   api.use('webapp', 'server', {weak: true});
 
   // If the facts package is loaded, publish some statistics.
-  api.use('facts', 'server', {weak: true});
+  api.use('facts-base', 'server', {weak: true});
 
   api.use('callback-hook', 'server');
 
@@ -81,6 +86,7 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('mongo');
   api.use('check');
+  api.use('ecmascript');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
            'ddp', 'base64']);
   // XXX test order dependency: the allow_tests "partial allow" test

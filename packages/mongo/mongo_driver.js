@@ -29,7 +29,7 @@ MongoInternals.NpmModule = MongoDB;
 // This is used to add or remove EJSON from the beginning of everything nested
 // inside an EJSON custom type. It should only be called on pure JSON!
 var replaceNames = function (filter, thing) {
-  if (typeof thing === "object") {
+  if (typeof thing === "object" && thing !== null) {
     if (_.isArray(thing)) {
       return _.map(thing, _.bind(replaceNames, null, filter));
     }
@@ -61,6 +61,9 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.ObjectID) {
     return new Mongo.ObjectID(document.toHexString());
   }
+  if (document instanceof MongoDB.Decimal128) {
+    return Decimal(document.toString());
+  }
   if (document["EJSON$type"] && document["EJSON$value"] && _.size(document) === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
@@ -90,6 +93,9 @@ var replaceMeteorAtomWithMongo = function (document) {
     // Mongo representation. We need to do this explicitly or else we would do a
     // structural clone and lose the prototype.
     return document;
+  }
+  if (document instanceof Decimal) {
+    return MongoDB.Decimal128.fromString(document.toString());
   }
   if (EJSON._isCustomType(document)) {
     return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
@@ -132,7 +138,10 @@ MongoConnection = function (url, options) {
     autoReconnect: true,
     // Try to reconnect forever, instead of stopping after 30 tries (the
     // default), with each attempt separated by 1000ms.
-    reconnectTries: Infinity
+    reconnectTries: Infinity,
+    ignoreUndefined: true,
+    // Required to silence deprecation warnings with mongodb@3.1.1.
+    useNewUrlParser: true,
   }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
@@ -169,10 +178,12 @@ MongoConnection = function (url, options) {
     url,
     mongoOptions,
     Meteor.bindEnvironment(
-      function (err, db) {
+      function (err, client) {
         if (err) {
           throw err;
         }
+
+        var db = client.db();
 
         // First, figure out what the current primary is, if any.
         if (db.serverConfig.isMasterDoc) {
@@ -200,14 +211,15 @@ MongoConnection = function (url, options) {
           }));
 
         // Allow the constructor to return.
-        connectFuture['return'](db);
+        connectFuture['return']({ client, db });
       },
       connectFuture.resolver()  // onException
     )
   );
 
-  // Wait for the connection to be successful; throws on failure.
-  self.db = connectFuture.wait();
+  // Wait for the connection to be successful (throws on failure) and assign the
+  // results (`client` and `db`) to `self`.
+  Object.assign(self, connectFuture.wait());
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
@@ -230,7 +242,7 @@ MongoConnection.prototype.close = function() {
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
-  Future.wrap(_.bind(self.db.close, self.db))(true).wait();
+  Future.wrap(_.bind(self.client.close, self.client))(true).wait();
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -339,7 +351,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
-    e.expected = true;
+    e._expectedByTest = true;
     sendError(e);
     return;
   }
@@ -390,7 +402,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
-    e.expected = true;
+    e._expectedByTest = true;
     if (callback) {
       return callback(e);
     } else {
@@ -466,7 +478,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 
   if (collection_name === "___meteor_failure_test_collection") {
     var e = new Error("Failure test");
-    e.expected = true;
+    e._expectedByTest = true;
     if (callback) {
       return callback(e);
     } else {
@@ -549,13 +561,13 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         ! (options.insertedId instanceof Mongo.ObjectID &&
            options.generatedId)) {
       // In case of an upsert with a replacement, where there is no _id defined
-      // in either the query or the replacement doc, mongo will generate an id itself. 
+      // in either the query or the replacement doc, mongo will generate an id itself.
       // Therefore we need this special strategy if we want to control the id ourselves.
 
       // We don't need to do this when:
       // - This is not a replacement, so we can add an _id to $setOnInsert
       // - The id is defined by query or mod we can just add it to the replacement doc
-      // - The user did not specify any id preference and the id is a Mongo ObjectId, 
+      // - The user did not specify any id preference and the id is a Mongo ObjectId,
       //     then we can just let Mongo generate the id
 
       simulateUpsertWithInsertedId(
@@ -575,7 +587,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         }
       );
     } else {
-      
+
       if (options.upsert && !knownId && options.insertedId && isModify) {
         if (!mongoMod.hasOwnProperty('$setOnInsert')) {
           mongoMod.$setOnInsert = {};
@@ -583,7 +595,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         knownId = options.insertedId;
         Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
       }
-      
+
       collection.update(
         mongoSelector, mongoMod, mongoOpts,
         bindEnvironmentForWrite(function (err, result) {
@@ -666,7 +678,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   // STRATEGY: First try doing an upsert with a generated ID.
   // If this throws an error about changing the ID on an existing document
   // then without affecting the database, we know we should probably try
-  // an update without the generated ID. If it affected 0 documents, 
+  // an update without the generated ID. If it affected 0 documents,
   // then without affecting the database, we the document that first
   // gave the error is probably removed and we need to try an insert again
   // We go back to step one and repeat.
@@ -854,7 +866,7 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'fetch', 'count'], function (method) {
+_.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) {
   Cursor.prototype[method] = function () {
     var self = this;
 
@@ -925,13 +937,13 @@ Cursor.prototype.observeChanges = function (callbacks) {
   var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
 
   // XXX: Can we find out if callbacks are from observe?
-  var exceptionName = ' observe/observeChanges callback'; 
+  var exceptionName = ' observe/observeChanges callback';
   methods.forEach(function (method) {
     if (callbacks[method] && typeof callbacks[method] == "function") {
       callbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
     }
   });
-  
+
   return self._mongo._observeChanges(
     self._cursorDescription, ordered, callbacks);
 };
@@ -946,7 +958,8 @@ MongoConnection.prototype._createSynchronousCursor = function(
   var mongoOptions = {
     sort: cursorOptions.sort,
     limit: cursorOptions.limit,
-    skip: cursorOptions.skip
+    skip: cursorOptions.skip,
+    projection: cursorOptions.fields
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -972,7 +985,7 @@ MongoConnection.prototype._createSynchronousCursor = function(
 
   var dbCursor = collection.find(
     replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-    cursorOptions.fields, mongoOptions);
+    mongoOptions);
 
   if (typeof cursorOptions.maxTimeMs !== 'undefined') {
     dbCursor = dbCursor.maxTimeMS(cursorOptions.maxTimeMs);
@@ -1000,21 +1013,33 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
     self._transform = null;
   }
 
-  // Need to specify that the callback is the first argument to nextObject,
-  // since otherwise when we try to call it with no args the driver will
-  // interpret "undefined" first arg as an options hash and crash.
-  self._synchronousNextObject = Future.wrap(
-    dbCursor.nextObject.bind(dbCursor), 0);
   self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
   self._visitedIds = new LocalCollection._IdMap;
 };
 
 _.extend(SynchronousCursor.prototype, {
-  _nextObject: function () {
+  // Returns a Promise for the next object from the underlying cursor (before
+  // the Mongo->Meteor type replacement).
+  _rawNextObjectPromise: function () {
+    const self = this;
+    return new Promise((resolve, reject) => {
+      self._dbCursor.next((err, doc) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(doc);
+        }
+      });
+    });
+  },
+
+  // Returns a Promise for the next object from the cursor, skipping those whose
+  // IDs we've already seen and replacing Mongo atoms with Meteor atoms.
+  _nextObjectPromise: async function () {
     var self = this;
 
     while (true) {
-      var doc = self._synchronousNextObject().wait();
+      var doc = await self._rawNextObjectPromise();
 
       if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
@@ -1035,6 +1060,35 @@ _.extend(SynchronousCursor.prototype, {
 
       return doc;
     }
+  },
+
+  // Returns a promise which is resolved with the next object (like with
+  // _nextObjectPromise) or rejected if the cursor doesn't return within
+  // timeoutMS ms.
+  _nextObjectPromiseWithTimeout: function (timeoutMS) {
+    const self = this;
+    if (!timeoutMS) {
+      return self._nextObjectPromise();
+    }
+    const nextObjectPromise = self._nextObjectPromise();
+    const timeoutErr = new Error('Client-side timeout waiting for next object');
+    const timeoutPromise = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(timeoutErr);
+      }, timeoutMS);
+    });
+    return Promise.race([nextObjectPromise, timeoutPromise])
+      .catch((err) => {
+        if (err === timeoutErr) {
+          self.close();
+        }
+        throw err;
+      });
+  },
+
+  _nextObject: function () {
+    var self = this;
+    return self._nextObjectPromise().await();
   },
 
   forEach: function (callback, thisArg) {
@@ -1105,7 +1159,31 @@ _.extend(SynchronousCursor.prototype, {
   }
 });
 
-MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
+SynchronousCursor.prototype[Symbol.iterator] = function () {
+  var self = this;
+
+  // Get back to the beginning.
+  self._rewind();
+
+  return {
+    next() {
+      const doc = self._nextObject();
+      return doc ? {
+        value: doc
+      } : {
+        done: true
+      };
+    }
+  };
+};
+
+// Tails the cursor described by cursorDescription, most likely on the
+// oplog. Calls docCallback with each document found. Ignores errors and just
+// restarts the tail on error.
+//
+// If timeoutMS is set, then if we don't get a new document every timeoutMS,
+// kill and restart the cursor. This is primarily a workaround for #8598.
+MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeoutMS) {
   var self = this;
   if (!cursorDescription.options.tailable)
     throw new Error("Can only tail a tailable cursor");
@@ -1120,14 +1198,15 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
       if (stopped)
         return;
       try {
-        doc = cursor._nextObject();
+        doc = cursor._nextObjectPromiseWithTimeout(timeoutMS).await();
       } catch (err) {
-        // There's no good way to figure out if this was actually an error
-        // from Mongo. Ah well. But either way, we need to retry the cursor
-        // (unless the failure was because the observe got stopped).
+        // There's no good way to figure out if this was actually an error from
+        // Mongo, or just client-side (including our own timeout error). Ah
+        // well. But either way, we need to retry the cursor (unless the failure
+        // was because the observe got stopped).
         doc = null;
       }
-      // Since cursor._nextObject can yield, we need to check again to see if
+      // Since we awaited a promise above, we need to check again to see if
       // we've been stopped before calling the callback.
       if (stopped)
         return;
@@ -1239,8 +1318,7 @@ MongoConnection.prototype._observeChanges = function (
         if (!cursorDescription.options.sort)
           return true;
         try {
-          sorter = new Minimongo.Sorter(cursorDescription.options.sort,
-                                        { matcher: matcher });
+          sorter = new Minimongo.Sorter(cursorDescription.options.sort);
           return true;
         } catch (e) {
           // XXX make all compilation errors MinimongoError or something

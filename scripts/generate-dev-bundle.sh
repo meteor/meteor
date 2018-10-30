@@ -28,6 +28,7 @@ extractNodeFromTarGz() {
 }
 
 downloadNodeFromS3() {
+    test -n "${NODE_BUILD_NUMBER}" || return 1
     S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
     S3_TGZ="node_${UNAME}_${ARCH}_v${NODE_VERSION}.tar.gz"
     NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${S3_TGZ}"
@@ -41,18 +42,36 @@ downloadOfficialNode() {
     curl "${NODE_URL}" | tar zx --strip-components 1
 }
 
+downloadReleaseCandidateNode() {
+    NODE_URL="https://nodejs.org/download/rc/v${NODE_VERSION}/${NODE_TGZ}"
+    echo "Downloading Node from ${NODE_URL}" >&2
+    curl "${NODE_URL}" | tar zx --strip-components 1
+}
+
 # Try each strategy in the following order:
-extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
+extractNodeFromTarGz || downloadNodeFromS3 || \
+  downloadOfficialNode || downloadReleaseCandidateNode
 
 # Download Mongo from mongodb.com. Will download a 64-bit version of Mongo
 # by default. Will download a 32-bit version of Mongo if using a 32-bit based
 # OS.
 MONGO_VERSION=$MONGO_VERSION_64BIT
+MONGO_SSL="-ssl"
+
+# The MongoDB "Generic" Linux option is not offered with SSL, which is reserved
+# for named distributions.  This works out better since the SSL support adds
+# size to the dev bundle though isn't necessary for local development.
+if [ $UNAME = "Linux" ]; then
+  MONGO_SSL=""
+fi
+
 if [ $ARCH = "i686" ]; then
   MONGO_VERSION=$MONGO_VERSION_32BIT
 fi
+
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
-MONGO_TGZ="${MONGO_NAME}.tgz"
+MONGO_NAME_SSL="mongodb-${OS}${MONGO_SSL}-${ARCH}-${MONGO_VERSION}"
+MONGO_TGZ="${MONGO_NAME_SSL}.tgz"
 MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"
 curl "${MONGO_URL}" | tar zx
@@ -132,8 +151,23 @@ cp -R node_modules/.bin "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
 
-# Clean up some bulky stuff.
 cd node_modules
+
+# @babel/runtime@7.0.0-beta.56 removed the @babel/runtime/helpers/builtin
+# directory, since all helpers are now implemented in the built-in style
+# (meaning they do not import core-js polyfills). Generated code in build
+# plugins might still refer to the old directory layout (at least for the
+# time being), but we can accommodate that by symlinking to the parent
+# directory, since all the module names are the same.
+if [ -d @babel/runtime/helpers ] &&
+   [ ! -d @babel/runtime/helpers/builtin ]
+then
+    pushd @babel/runtime/helpers
+    ln -s . builtin
+    popd
+fi
+
+## Clean up some bulky stuff.
 
 # Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
 # don't exist, because that might mean it moved somewhere else and we should
@@ -145,11 +179,6 @@ delete () {
     fi
     rm -rf "$1"
 }
-
-delete npm/node_modules/node-gyp
-pushd npm/node_modules
-ln -s ../../node-gyp ./
-popd
 
 # Since we install a patched version of pacote in $DIR/lib/node_modules,
 # we need to remove npm's bundled version to make it use the new one.

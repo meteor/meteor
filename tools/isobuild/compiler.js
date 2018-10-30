@@ -34,11 +34,16 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/30';
+compiler.BUILT_BY = 'meteor/31';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
-compiler.ALL_ARCHES = [ "os", "web.browser", "web.cordova" ];
+compiler.ALL_ARCHES = [
+  "os",
+  "web.browser",
+  "web.browser.legacy",
+  "web.cordova"
+];
 
 compiler.compile = Profile(function (packageSource, options) {
   return `compiler.compile(${ packageSource.name || 'the app' })`;
@@ -526,11 +531,14 @@ var compileUnibuild = Profile(function (options) {
       // though; that happens via compiler.lint.
 
       if (isApp) {
-        // This shouldn't happen, because initFromAppDir's getFiles
+        // This shouldn't normally happen, because initFromAppDir's getFiles
         // should only return assets or sources which match
-        // sourceProcessorSet.
-        throw Error("app contains non-asset files without plugin? " +
-                    relPath + " - " + filename);
+        // sourceProcessorSet. That being said, this can happen when sources
+        // are being watched by a build plugin, and that build plugin is
+        // removed while the Tool is running. Given that this is not a
+        // common occurrence however, we'll ignore this situation and let the
+        // Tool rebuild continue.
+        return;
       }
 
       const linterClassification = linterSourceProcessorSet.classifyFilename(
@@ -812,7 +820,10 @@ function runLinters({inputSourceArch, isopackCache, sources,
       wrappedSource => new linterPluginModule.LintingFile(wrappedSource)
     );
 
-    const linter = sourceProcessor.userPlugin.processFilesForPackage;
+    const markedLinter = buildmessage.markBoundary(
+      sourceProcessor.userPlugin.processFilesForPackage,
+      sourceProcessor.userPlugin
+    );
 
     function archToString(arch) {
       if (arch.match(/web\.cordova/)) {
@@ -835,9 +846,9 @@ function runLinters({inputSourceArch, isopackCache, sources,
         " (" + archToString(inputSourceArch.arch) + ")"
     }, () => {
       try {
-        var markedLinter = buildmessage.markBoundary(linter.bind(
-          sourceProcessor.userPlugin));
-        markedLinter(sourcesToLint, { globals: globalImports });
+        Promise.await(markedLinter(sourcesToLint, {
+          globals: globalImports
+        }));
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -1038,4 +1049,9 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package requires functionality introduced in meteor-tool@1.5.0
   // to enable dynamic module fetching via import(...).
   'isobuild:dynamic-import': ['1.5.0'],
+
+  // This package ensures that processFilesFor{Bundle,Target,Package} are
+  // allowed to return a Promise instead of having to await async
+  // compilation using fibers and/or futures.
+  'isobuild:async-plugins': ['1.6.1'],
 };

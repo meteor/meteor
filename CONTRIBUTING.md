@@ -11,7 +11,7 @@ Before we jump into detailed guidelines for opening and triaging issues and subm
 There are many ways to contribute to the Meteor Project. Here’s a list of technical contributions with increasing levels of involvement and required knowledge of Meteor’s code and operations.  
 - [Reporting a bug](CONTRIBUTING.md#reporting-a-bug-in-meteor)
 - [Triaging issues](ISSUE_TRIAGE.md)
-- [Contributing to documentation](https://github.com/meteor/docs/blob/master/CONTRIBUTING.md)
+- [Contributing to documentation](CONTRIBUTING.md#documentation)
 - [Finding work](CONTRIBUTING.md#finding-work)
 - [Submitting pull requests](CONTRIBUTING.md#making-changes-to-meteor-core)
 - [Reviewing pull requests](CONTRIBUTING.md#reviewer)
@@ -28,6 +28,8 @@ We curate specific issues that would make great pull requests for community cont
 Issues which *also* have the `confirmed` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed)) are considered to have their details clear enough to begin working on.
 
 Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue.
+
+Please note that `pull-requests-encouraged` issues with low activity will often be closed without being implemented. These issues are tagged with an additional [`not-implemented`](https://github.com/meteor/meteor/issues?utf8=✓&q=label%3Apull-requests-encouraged+label%3Anot-implemented) label, and can still be considered good candidates to work on. If you're interested in working on a closed and `not-implemented` issue, please let us know by posting on that issue.
 
 ### Project roles
 
@@ -168,7 +170,7 @@ A great way to contribute to Meteor is by helping keep the issues in the reposit
 
 ## Documentation
 
-If you'd like to contribution to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
+If you'd like to contribute to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
 
 ## Blaze
 

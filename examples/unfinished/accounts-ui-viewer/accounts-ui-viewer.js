@@ -1,23 +1,30 @@
 
-Meteor.users.allow({update: function () { return true; }});
+Meteor.users.allow({ update: () => true });
+
+const { ServiceConfiguration } = Package['service-configuration'];
+
+Meteor.methods({
+  'removeService': service => ServiceConfiguration.configurations.remove({ service }),
+})
 
 if (Meteor.isClient) {
 
-  Accounts.STASH = _.extend({}, Accounts);
+  Accounts.STASH = { ...Accounts };
   Accounts.STASH.loggingIn = Meteor.loggingIn;
 
-  var handleSetting = function (key, value) {
+  const handleSetting = (key, value) => {
     if (key === "numServices") {
-      _.each(['facebook', 'github', 'google'],
-             function (serv, i) {
-               if (i < value)
-                 Accounts[serv] = Accounts.STASH[serv];
-               else
-                 Accounts[serv] = null;
-             });
+      const registeredServices = Accounts.oauth.serviceNames();
+      ['facebook', 'github', 'google'].forEach((serv, i) => {
+        if (i < value && !registeredServices.includes(serv)) {
+          Accounts.oauth.registerService(serv);
+        } else if (i >= value && registeredServices.includes(serv)) {
+          Accounts.oauth.unregisterService(serv);
+        }
+      });
     } else if (key === "hasPasswords") {
-      Accounts.password = value && Accounts.STASH.password || null;
-      var user = Meteor.user();
+      Package['accounts-password'] = value ? {} : null;
+      const user = Meteor.user();
       if (user) {
         if (! value) {
           // make sure we have no username if "app" has no passwords
@@ -32,12 +39,13 @@ if (Meteor.isClient) {
     } else if (key === "signupFields") {
       Accounts.ui._options.passwordSignupFields = value;
     } else if (key === "fakeLoggingIn") {
-      Meteor.loggingIn = (value ? function () { return true; } :
+      Meteor.loggingIn = (value ? () => true :
                           Accounts.STASH.loggingIn);
     }
   };
 
-  if (! Session.get('settings'))
+  const settings = Session.get('settings');
+  if (! settings) {
     Session.set('settings', {
       alignRight: false,
       positioning: "relative",
@@ -47,22 +55,32 @@ if (Meteor.isClient) {
       fakeLoggingIn: false,
       bgcolor: 'white'
     });
-  else
-    _.each(Session.get('settings'), function (v,k) {
-      handleSetting(k, v);
-    });
+  } else {
+    Object.keys(settings).forEach(key => handleSetting(key, settings[key]));
+  }
 
-  Template.page.settings = function () {
-    return Session.get('settings');
-  };
+  Template.page.helpers({
+    settings: () => Session.get('settings'),
+    settingsClass: () => {
+      var settings = Session.get('settings');
+      var classes = [];
+      if (settings.positioning)
+        classes.push('positioning-' + settings.positioning.toLowerCase());
+      return classes.join(' ');
+    },
+    match: kv => {
+      kv = keyValueFromId(kv);
+      if (! kv)
+        return false;
+  
+      return Session.get('settings')[kv[0]] === kv[1];
+    },
+    dropdownAlign: function() {
+      var settings = this;
+      return settings.alignRight ? 'right' : 'left';
+    }
+  });
 
-  Template.page.settingsClass = function () {
-    var settings = Session.get('settings');
-    var classes = [];
-    if (settings.positioning)
-      classes.push('positioning-' + settings.positioning.toLowerCase());
-    return classes.join(' ');
-  };
 
   var keyValueFromId = function (id) {
     var match;
@@ -74,7 +92,7 @@ if (Meteor.isClient) {
     return null;
   };
 
-  var castValue = function (value) {
+  const castValue = value => {
     if (value === "false")
       value = false;
     else if (value === "true")
@@ -84,32 +102,21 @@ if (Meteor.isClient) {
     return value;
   };
 
-  Template.radio.maybeChecked = function () {
-    var curValue = Session.get('settings')[this.key];
-    if (castValue(this.value) === curValue)
-      return 'checked';
-    return '';
-  };
+  Template.radio.helpers({
+      maybeChecked: function() {
+      var curValue = Session.get('settings')[this.key];
+      if (castValue(this.value) === curValue)
+        return 'checked';
+      return '';
+    },
+  });
 
-  Template.page.match = function (kv) {
-    kv = keyValueFromId(kv);
-    if (! kv)
-      return false;
-
-    return Session.get('settings')[kv[0]] === kv[1];
-  };
-
-  Template.page.dropdownAlign = function () {
-    var settings = this;
-    return settings.alignRight ? 'right' : 'left';
-  };
-
-  var fakeLogin = function (callback) {
+  const fakeLogin = callback => {
     Accounts.createUser(
       {username: Random.id(),
        password: "password",
        profile: { name: "Joe Schmoe" }},
-      function () {
+      () => {
         var user = Meteor.user();
         if (! user)
           return;
@@ -124,7 +131,7 @@ if (Meteor.isClient) {
       });
   };
 
-  var exitFlows = function () {
+  const exitFlows = () => {
     Accounts._loginButtonsSession.set('inSignupFlow', false);
     Accounts._loginButtonsSession.set('inForgotPasswordFlow', false);
     Accounts._loginButtonsSession.set('inChangePasswordFlow', false);
@@ -132,17 +139,17 @@ if (Meteor.isClient) {
   };
 
   Template.page.events({
-    'change #controlpane input[type=radio]': function (event) {
-      var input = event.currentTarget;
-      var keyValue;
+    'change #controlpane input[type=radio]': event => {
+      const input = event.currentTarget;
+      let keyValue;
       if (input && input.id && (keyValue = keyValueFromId(input.id))) {
-        var key = keyValue[0];
-        var value = keyValue[1];
+        const key = keyValue[0];
+        const value = keyValue[1];
         if (value === "false")
           value = false;
         else if (value === "true")
           value = true;
-        var settings = Session.get('settings');
+        const settings = Session.get('settings');
         settings[key] = value;
         Session.set('settings', settings);
 
@@ -150,14 +157,15 @@ if (Meteor.isClient) {
       }
     },
     'click #controlpane button': function (event) {
+      const { ServiceConfiguration } = Package['service-configuration'];
       if (this.key === "fakeConfig") {
-        var service = this.value;
-        if (! ServiceConfiguration.configurations.findOne({service: service}))
+        const service = this.value;
+        if (! ServiceConfiguration.configurations.findOne({ service }))
           ServiceConfiguration.configurations.insert(
-            {service: service, fake: true});
+            { service, fake: true });
       } else if (this.key === "unconfig") {
-        var service = this.value;
-        ServiceConfiguration.configurations.remove({service: service});
+        const service = this.value;
+        Meteor.call('removeService', service);
       } else if (this.key === "messages") {
         if (this.value === "error") {
           Accounts._loginButtonsSession.errorMessage('An error occurred!  Gee golly gosh.');
@@ -190,20 +198,22 @@ if (Meteor.isClient) {
         exitFlows();
         Accounts._loginButtonsSession.set("dropdownVisible", true);
         if (! Meteor.userId())
-          fakeLogin();
+          fakeLogin(() => {});
         if (this.value === "changePassword")
           Accounts._loginButtonsSession.set("inChangePasswordFlow", true);
         else if (this.value === "messageOnly")
           Accounts._loginButtonsSession.set("inMessageOnlyFlow", true);
       } else if (this.key === "modals") {
-        var value = this.value;
-        _.each([
+        const { value } = this;
+        [
           'resetPasswordToken',
           'enrollAccountToken',
-          'justVerifiedEmail'], function (k) {
-            Accounts._loginButtonsSession.set(
-              k, k.indexOf(value) >= 0 ? 'foo' : null);
-          });
+          'justVerifiedEmail'
+        ].forEach(k => {
+          Accounts._loginButtonsSession.set(
+            k, k.indexOf(value) >= 0 ? 'foo' : null
+          );
+        });
       }
     }
   });

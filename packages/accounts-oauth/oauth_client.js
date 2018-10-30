@@ -19,7 +19,7 @@
 
 // Allow server to specify a specify subclass of errors. We should come
 // up with a more generic way to do this!
-var convertError = function (err) {
+const convertError = err => {
   if (err && err instanceof Meteor.Error &&
       err.error === Accounts.LoginCancelledError.numericError)
     return new Accounts.LoginCancelledError(err.reason);
@@ -34,8 +34,8 @@ var convertError = function (err) {
 // credentialSecret for a successful login is stored in session
 // storage.
 
-Meteor.startup(function () {
-  var oauth = OAuth.getDataAfterRedirect();
+Meteor.startup(() => {
+  const oauth = OAuth.getDataAfterRedirect();
   if (! oauth)
     return;
 
@@ -43,12 +43,13 @@ Meteor.startup(function () {
   // successfully.  However we still call the login method anyway to
   // retrieve the error if the login was unsuccessful.
 
-  var methodName = 'login';
-  var methodArguments = [{oauth: _.pick(oauth, 'credentialToken', 'credentialSecret')}];
+  const methodName = 'login';
+  const { credentialToken, credentialSecret } = oauth;
+  const methodArguments = [{ oauth: { credentialToken, credentialSecret } }];
 
   Accounts.callLoginMethod({
-    methodArguments: methodArguments,
-    userCallback: function (err) {
+    methodArguments,
+    userCallback: err => {
       // The redirect login flow is complete.  Construct an
       // `attemptInfo` object with the login result, and report back
       // to the code which initiated the login attempt
@@ -58,8 +59,8 @@ Meteor.startup(function () {
         type: oauth.loginService,
         allowed: !err,
         error: err,
-        methodName: methodName,
-        methodArguments: methodArguments
+        methodName,
+        methodArguments,
       });
     }
   });
@@ -69,24 +70,20 @@ Meteor.startup(function () {
 // Send an OAuth login method to the server. If the user authorized
 // access in the popup this should log the user in, otherwise
 // nothing should happen.
-Accounts.oauth.tryLoginAfterPopupClosed = function(credentialToken, callback) {
-  var credentialSecret = OAuth._retrieveCredentialSecret(credentialToken) || null;
+Accounts.oauth.tryLoginAfterPopupClosed = (credentialToken, callback) => {
+  const credentialSecret = OAuth._retrieveCredentialSecret(credentialToken) || null;
   Accounts.callLoginMethod({
-    methodArguments: [{oauth: {
-      credentialToken: credentialToken,
-      credentialSecret: credentialSecret
-    }}],
-    userCallback: callback && function (err) {
-      callback(convertError(err));
-    }});
+    methodArguments: [{oauth: { credentialToken, credentialSecret }}],
+    userCallback: callback && (err => callback(convertError(err))),
+    });
 };
 
-Accounts.oauth.credentialRequestCompleteHandler = function(callback) {
-  return function (credentialTokenOrError) {
+Accounts.oauth.credentialRequestCompleteHandler = callback => 
+  credentialTokenOrError => {
     if(credentialTokenOrError && credentialTokenOrError instanceof Error) {
       callback && callback(credentialTokenOrError);
     } else {
       Accounts.oauth.tryLoginAfterPopupClosed(credentialTokenOrError, callback);
     }
-  };
-};
+  }
+

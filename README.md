@@ -2,6 +2,7 @@
 
 [![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
+[![BrowserStack Status](https://www.browserstack.com/automate/badge.svg?badge_key=S2FjOVpYTlk1eHVxdkdrR24ra0JXaXBDaVA3WjJGejdkbThaWGRnWVJvWT0tLTlQMEdYM2NJbDJOYUd3RTc3RVVGQ2c9PQ==--9e2143718a0c216274cdacef7cd5a3d12950bcb8)](https://www.browserstack.com/automate/public-build/S2FjOVpYTlk1eHVxdkdrR24ra0JXaXBDaVA3WjJGejdkbThaWGRnWVJvWT0tLTlQMEdYM2NJbDJOYUd3RTc3RVVGQ2c9PQ==--9e2143718a0c216274cdacef7cd5a3d12950bcb8)
 
 Meteor is an ultra-simple environment for building modern web
 applications.

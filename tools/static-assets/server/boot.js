@@ -10,7 +10,7 @@ var npmRequire = require('./npm-require.js').require;
 var Profile = require('./profile.js').Profile;
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.41';
+var MIN_NODE_VERSION = 'v8.0.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
@@ -196,13 +196,13 @@ var specialArgPaths = {
 
   "packages/dynamic-import.js": function (file) {
     var dynamicImportInfo = {};
+    var programsDir = path.dirname(serverDir);
+    var clientArchs = configJson.clientArchs ||
+      Object.keys(configJson.clientPaths);
 
-    Object.keys(configJson.clientPaths).map(function (key) {
-      var programJsonPath = path.resolve(configJson.clientPaths[key]);
-      var programJson = require(programJsonPath);
-
-      dynamicImportInfo[key] = {
-        dynamicRoot: path.join(path.dirname(programJsonPath), "dynamic")
+    clientArchs.forEach(function (arch) {
+      dynamicImportInfo[arch] = {
+        dynamicRoot: path.join(programsDir, arch, "dynamic")
       };
     });
 
@@ -390,12 +390,10 @@ var loadServerBundles = Profile("Load server bundles", function () {
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
-    var script = new (require('vm').Script)(wrapped, {
+    var func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
       displayErrors: true
     });
-
-    var func = script.runInThisContext();
 
     var args = [Npm, Assets];
 
@@ -403,10 +401,15 @@ var loadServerBundles = Profile("Load server bundles", function () {
       args.push(specialArgs[key]);
     });
 
-    infos.push({
-      fn: Profile(fileInfo.path, func),
-      args
-    });
+    if (meteorDebugFuture) {
+      infos.push({
+        fn: Profile(fileInfo.path, func),
+        args
+      });
+    } else {
+      // Allows us to use code-coverage if the debugger is not enabled
+      Profile(fileInfo.path, func).apply(global, args);
+    }
   });
 
   maybeWaitForDebuggerToAttach();

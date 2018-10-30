@@ -70,6 +70,10 @@ exports.getEnv = function (options) {
     var paths = [
       // When npm looks for node, it must find dev_bundle/bin/node.
       path.join(devBundleDir, "bin"),
+
+      // When npm looks for meteor, it should find dev_bundle/../meteor.
+      path.dirname(devBundleDir),
+
       // Also make available any scripts installed by packages in
       // dev_bundle/lib/node_modules, such as node-gyp.
       path.join(devBundleDir, "lib", "node_modules", ".bin")

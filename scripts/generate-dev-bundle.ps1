@@ -20,11 +20,16 @@ $BUNDLE_VERSION = Read-VariableFromShellScript "${dirCheckout}\meteor" 'BUNDLE_V
 # extract the major package versions from the build-dev-bundle-common script.
 $MONGO_VERSION_64BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_64BIT'
 $MONGO_VERSION_32BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_32BIT'
-$NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
+
 $NPM_VERSION = Read-VariableFromShellScript $shCommon 'NPM_VERSION'
+
+$NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
 
 # 7-zip path.
 $system7zip = "C:\Program Files\7-zip\7z.exe"
+
+# Required for downloading MongoDB via HTTPS
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 # Since we reuse the same temp directory, cleanup from previous failed runs.
 Remove-DirectoryRecursively $DIR
@@ -107,7 +112,11 @@ Function Add-Python {
 }
 
 Function Add-NodeAndNpm {
-  $nodeUrlBase = 'https://nodejs.org/dist'
+  if ("${NODE_VERSION}" -match "-rc\.\d+$") {
+    $nodeUrlBase = 'https://nodejs.org/download/rc'
+  } else {
+    $nodeUrlBase = 'https://nodejs.org/dist'
+  }
 
   if ($PLATFORM -eq "windows_x86") {
     $nodeArchitecture = 'win-x86'
@@ -219,11 +228,11 @@ Function Add-NodeAndNpm {
 }
 
 Function Add-Mongo {
-  # Mongo 3.4 no longer supports 32-bit (x86) architectures, so we package
-  # the latest 3.2 version of Mongo for those builds and 3.4+ for x64.
+  # Mongo >= 3.4 no longer supports 32-bit (x86) architectures, so we package
+  # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
   $mongo_filenames = @{
     windows_x86 = "mongodb-win32-i386-${MONGO_VERSION_32BIT}"
-    windows_x64 = "mongodb-win32-x86_64-2008plus-${MONGO_VERSION_64BIT}"
+    windows_x64 = "mongodb-win32-x86_64-2008plus-ssl-${MONGO_VERSION_64BIT}"
   }
 
   $previousCwd = $PWD
@@ -245,10 +254,22 @@ Function Add-Mongo {
     $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
   }
 
-  Write-Host "Putting MongoDB mongod.exe in \mongodb\bin\" -ForegroundColor Magenta
+  Write-Host "Putting MongoDB mongod.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
-  Write-Host "Putting MongoDB mongo.exe in \mongodb\bin\" -ForegroundColor Magenta
+  Write-Host "Putting MongoDB mongo.exe in mongodb\bin" -ForegroundColor Magenta
   cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
+
+  # https://jira.mongodb.org/browse/SERVER-19086
+  $libeay32dll = "$DIR\mongodb\$mongo_name\bin\libeay32.dll"
+  if (Test-Path $libeay32dll) {
+    Write-Host "Putting MongoDB libeay32.dll in mongodb\bin" -ForegroundColor Magenta
+    cp $libeay32dll $DIR\mongodb\bin
+  }
+  $ssleay32dll = "$DIR\mongodb\$mongo_name\bin\ssleay32.dll"
+  if (Test-Path $ssleay32dll) {
+    Write-Host "Putting MongoDB ssleay32.dll in mongodb\bin" -ForegroundColor Magenta
+    cp $ssleay32dll $DIR\mongodb\bin
+  }
 
   Write-Host "Removing the old Mongo zip..." -ForegroundColor Magenta
   rm -Recurse -Force $mongo_zip
@@ -298,9 +319,23 @@ Function Add-NpmModulesFromJsBundleFile {
     }
   }
 
+  cd node_modules
+
+  # @babel/runtime@7.0.0-beta.56 removed the @babel/runtime/helpers/builtin
+  # directory, since all helpers are now implemented in the built-in style
+  # (meaning they do not import core-js polyfills). Generated code in build
+  # plugins might still refer to the old directory layout (at least for the
+  # time being), but we can accommodate that by symlinking to the parent
+  # directory, since all the module names are the same.
+  if ((Test-Path "@babel\runtime\helpers") -And
+      !(Test-Path "@babel\runtime\helpers\builtin")) {
+    cd @babel\runtime\helpers
+    & "$($Commands.node)" -e 'require("fs").symlinkSync(".", "builtin", "junction")'
+    cd ..\..\..
+  }
+
   # Since we install a patched version of pacote in $Destination\lib\node_modules,
   # we need to remove npm's bundled version to make it use the new one.
-  cd node_modules
   if (Test-Path "pacote") {
     Remove-DirectoryRecursively "npm\node_modules\pacote"
   }

@@ -498,7 +498,8 @@ exports.isUrlWithSha = function (x) {
 exports.isNpmUrl = function (x) {
   // These are the various protocols that NPM supports, which we use to download NPM dependencies
   // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
-  return exports.isUrlWithSha(x) || /^(git|git\+ssh|git\+http|git\+https)?:\/\//.test(x);
+  return exports.isUrlWithSha(x) ||
+    /^(git|git\+ssh|git\+http|git\+https|https|http)?:\/\//.test(x);
 };
 
 exports.isPathRelative = function (x) {
@@ -735,3 +736,15 @@ export function architecture() {
 
   return supportedArchitectures[osType][osArch];
 };
+
+let emacsDetected;
+export function isEmacs() {
+  // Checking `process.env` is expensive, so only check once.
+  if (typeof emacsDetected === "boolean") {
+    return emacsDetected;
+  }
+
+  // Prior to v22, Emacs only set EMACS. After v27, it only sets INSIDE_EMACS.
+  emacsDetected = !! (process.env.EMACS === "t" || process.env.INSIDE_EMACS);
+  return emacsDetected;
+}

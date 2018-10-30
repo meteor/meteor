@@ -58,10 +58,9 @@ function openXcodeProject(projectDir) {
     return;
   }
 
-  const projectFilePath = files.pathJoin(projectDir, projectFilename);
 
   try {
-    execFileSync('open', [projectFilePath]);
+    execFileSync('open', ['-a', 'Xcode', projectDir]);
 
     Console.info();
     Console.info(
@@ -172,6 +171,7 @@ function logFromAndroidLogcatLine(Log, line) {
   // "I/Tag(  PID): message"
   let match =
     line.match(/^([A-Z])\/([^\(]*?)\(\s*(\d+)\): (.*)$/);
+    let priority, tag, pid, message, logLevel, filename, lineNumber;
 
   if (match) {
     [, priority, tag, pid, message] = match;

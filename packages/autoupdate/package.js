@@ -1,12 +1,13 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.3.12'
+  version: '1.5.0'
 });
 
 Package.onUse(function (api) {
   api.use([
     'webapp',
-    'check'
+    'check',
+    'inter-process-messaging',
   ], 'server');
 
   api.use([
@@ -15,16 +16,14 @@ Package.onUse(function (api) {
   ], 'client');
 
   api.use([
+    'ecmascript',
     'ddp',
     'mongo',
-    'underscore'
   ], ['client', 'server']);
 
-  api.use(['http', 'random'], 'web.cordova');
-
-  api.addFiles('autoupdate_server.js', 'server');
-  api.addFiles('autoupdate_client.js', 'web.browser');
-  api.addFiles('autoupdate_cordova.js', 'web.cordova');
+  api.mainModule('autoupdate_server.js', 'server');
+  api.mainModule('autoupdate_client.js', 'client');
+  api.mainModule('autoupdate_cordova.js', 'web.cordova');
 
   api.export('Autoupdate');
 });

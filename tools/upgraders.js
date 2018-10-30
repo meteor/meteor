@@ -5,7 +5,7 @@ var files = require('./fs/files.js');
 var Console = require('./console/console.js').Console;
 import main from './cli/main.js';
 import buildmessage from './utils/buildmessage.js';
-import * as cordova from './cordova';
+import { convertPluginVersions } from './cordova/index.js';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -183,7 +183,7 @@ var upgradersByName = {
       messages = buildmessage.capture(
         { title: `converting Cordova plugins` }, () => {
         let pluginVersions = pluginsFile.getPluginVersions();
-        pluginVersions = cordova.convertPluginVersions(pluginVersions);
+        pluginVersions = convertPluginVersions(pluginVersions);
         pluginsFile.write(pluginVersions);
       });
     }
@@ -290,6 +290,25 @@ be removed if there is no need for the Blaze configuration interface.`,
     packagesFile.addPackages(["dynamic-import"]);
     packagesFile.writeIfModified();
   },
+
+  '1.7-split-underscore-from-meteor-base': function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    if (! packagesFile.getConstraint(`underscore`) &&
+      packagesFile.getConstraint(`meteor-base`)) {
+
+      maybePrintNoticeHeader();
+      Console.info(
+`The underscore package has been removed as a dependency of all packages in \
+meteor-base. Since some apps may have been using underscore through this \
+dependency without having it listed in their .meteor/packages files, it has \
+been added automatically. If your app is not using underscore, then you can \
+safely remove it using 'meteor remove underscore'.`,
+        Console.options({ bulletPoint: "1.7: " })
+      );
+      packagesFile.addPackages([`underscore`]);
+      packagesFile.writeIfModified();
+    }
+  }
 
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the

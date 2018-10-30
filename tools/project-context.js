@@ -17,6 +17,17 @@ var watch = require('./fs/watch.js');
 var Profile = require('./tool-env/profile.js').Profile;
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 
+import {
+  optimisticReadJsonOrNull,
+  optimisticHashOrNull,
+} from "./fs/optimistic.js";
+
+import {
+  mapWhereToArches,
+} from "./isobuild/package-api.js";
+
+import Resolver from "./isobuild/resolver.js";
+
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
 // used by it, etc.  Any time you want to work with an app, create a
@@ -363,6 +374,13 @@ _.extend(ProjectContext.prototype, {
       });
       if (buildmessage.jobHasMessages())
         return;
+
+      self.meteorConfig = new MeteorConfig({
+        appDirectory: self.projectDir,
+      });
+      if (buildmessage.jobHasMessages()) {
+        return;
+      }
     });
 
     self._completedStage = STAGE.READ_PROJECT_METADATA;
@@ -710,20 +728,20 @@ _.extend(ProjectContext.prototype, {
   }),
 
   _getRootDepsAndConstraints: function () {
-    var self = this;
+    const depsAndConstraints = {
+      deps: [],
+      constraints: [],
+    };
 
-    var depsAndConstraints = {deps: [], constraints: []};
+    this._addAppConstraints(depsAndConstraints);
+    this._addLocalPackageConstraints(depsAndConstraints);
+    this._addReleaseConstraints(depsAndConstraints);
 
-    self._addAppConstraints(depsAndConstraints);
-    self._addLocalPackageConstraints(depsAndConstraints);
-    self._addReleaseConstraints(depsAndConstraints);
     return depsAndConstraints;
   },
 
   _addAppConstraints: function (depsAndConstraints) {
-    var self = this;
-
-    self.projectConstraintsFile.eachConstraint(function (constraint) {
+    this.projectConstraintsFile.eachConstraint(function (constraint) {
       // Add a dependency ("this package must be used") and a constraint
       // ("... at this version (maybe 'any reasonable')").
       depsAndConstraints.deps.push(constraint.package);
@@ -1279,13 +1297,20 @@ _.extend(exports.PlatformList.prototype, {
     return ! _.isEmpty(self.getCordovaPlatforms());
   },
 
-  getWebArchs: function () {
+  getWebArchs() {
     var self = this;
-    var archs = [ "web.browser" ];
+    var archs = [
+      "web.browser",
+      "web.browser.legacy",
+    ];
     if (self.usesCordova()) {
       archs.push("web.cordova");
     }
     return archs;
+  },
+
+  canDelayBuildingArch(arch) {
+    return arch === "web.browser.legacy";
   }
 });
 
@@ -1322,24 +1347,25 @@ _.extend(exports.CordovaPluginsFile.prototype, {
         return;
 
       // We just do a standard split here, not utils.parsePackageConstraint,
-      // since cordova plugins don't necessary obey the same naming conventions
-      // as Meteor packages.
-      var parts = line.split('@');
-      if (parts.length !== 2) {
+      // since cordova plugins don't necessarily obey the same naming
+      // conventions as Meteor packages.
+      let { id, version } =
+        require('./cordova/package-id-version-parser.js').parse(line);
+      if (! version) {
         buildmessage.error("Cordova plugin must specify version: " + line, {
           // XXX should this be relative?
           file: self.filename
         });
         return;  // recover by ignoring
       }
-      if (_.has(self._plugins, parts[0])) {
-        buildmessage.error("Plugin name appears twice: " + parts[0], {
+      if (_.has(self._plugins, id)) {
+        buildmessage.error("Plugin name appears twice: " + id, {
           // XXX should this be relative?
           file: self.filename
         });
         return;  // recover by ignoring
       }
-      self._plugins[parts[0]] = parts[1];
+      self._plugins[id] = version;
     });
   },
 
@@ -1579,3 +1605,151 @@ _.extend(exports.FinishedUpgraders.prototype, {
     files.appendFile(self.filename, appendText);
   }
 });
+
+export class MeteorConfig {
+  constructor({
+    appDirectory,
+  }) {
+    this.appDirectory = appDirectory;
+    this.packageJsonPath = files.pathJoin(appDirectory, "package.json");
+    this.watchSet = new watch.WatchSet;
+    this._resolversByArch = Object.create(null);
+  }
+
+  _ensureInitialized() {
+    if (! _.has(this, "_config")) {
+      const json = optimisticReadJsonOrNull(this.packageJsonPath);
+      this._config = json && json.meteor || null;
+      this.watchSet.addFile(
+        this.packageJsonPath,
+        optimisticHashOrNull(this.packageJsonPath)
+      );
+    }
+
+    return this._config;
+  }
+
+  // General utility for querying the "meteor" section of package.json.
+  // TODO Implement an API for setting these values?
+  get(...keys) {
+    let config = this._ensureInitialized();
+    if (config) {
+      keys.every(key => {
+        if (config && _.has(config, key)) {
+          config = config[key];
+          return true;
+        }
+      });
+      return config;
+    }
+  }
+
+  // Call this first if you plan to call getMainModuleForArch multiple
+  // times, so that you can avoid repeating this work each time.
+  getMainModulesByArch(arch) {
+    return this._getEntryModulesByArch("mainModule");
+  }
+
+  // Given an architecture like web.browser, get the best mainModule for
+  // that architecture. For example, if this.config.mainModule.client is
+  // defined, then because mapWhereToArch("client") === "web", and "web"
+  // matches web.browser, return this.config.mainModule.client.
+  getMainModuleForArch(
+    arch,
+    mainModulesByArch = this.getMainModulesByArch(),
+  ) {
+    return this._getEntryModuleForArch(arch, mainModulesByArch);
+  }
+
+  // Analogous to getMainModulesByArch, except for this.config.testModule.
+  getTestModulesByArch(arch) {
+    return this._getEntryModulesByArch("testModule");
+  }
+
+  // Analogous to getMainModuleForArch, except for this.config.testModule.
+  getTestModuleForArch(
+    arch,
+    testModulesByArch = this.getTestModulesByArch(),
+  ) {
+    return this._getEntryModuleForArch(arch, testModulesByArch);
+  }
+
+  _getEntryModulesByArch(...keys) {
+    const configEntryModule = this.get(...keys);
+    const entryModulesByArch = Object.create(null);
+
+    if (typeof configEntryModule === "string" ||
+        configEntryModule === false) {
+      // If the top-level config value is a string or false, use that
+      // value as the entry module for all architectures.
+      entryModulesByArch["os"] = configEntryModule;
+      entryModulesByArch["web"] = configEntryModule;
+    } else if (configEntryModule &&
+               typeof configEntryModule === "object") {
+      // If the top-level config value is an object, use its properties to
+      // select an entry module for each architecture.
+      Object.keys(configEntryModule).forEach(where => {
+        mapWhereToArches(where).forEach(arch => {
+          entryModulesByArch[arch] = configEntryModule[where];
+        });
+      });
+    }
+
+    return entryModulesByArch;
+  }
+
+  _getEntryModuleForArch(
+    arch,
+    entryModulesByArch,
+  ) {
+    const entryMatch = archinfo.mostSpecificMatch(
+      arch, Object.keys(entryModulesByArch));
+
+    if (entryMatch) {
+      const entryModule = entryModulesByArch[entryMatch];
+
+      if (entryModule === false) {
+        // If meteor.{main,test}Module.{client,server,...} === false, no
+        // modules will be loaded eagerly on the client or server. This is
+        // useful if you have an app with no special app/{client,server}
+        // directory structure and you want to specify an entry point for
+        // just the client (or just the server), without accidentally
+        // loading everything on the other architecture. Instead of
+        // omitting the entry module for the other architecture, simply
+        // set it to false.
+        return entryModule;
+      }
+
+      if (! this._resolversByArch[arch]) {
+        this._resolversByArch[arch] = new Resolver({
+          sourceRoot: this.appDirectory,
+          targetArch: arch,
+        });
+      }
+
+      // Use a Resolver to allow the mainModule strings to omit .js or
+      // .json file extensions, and to enable resolving directories
+      // containing package.json or index.js files.
+      const res = this._resolversByArch[arch].resolve(
+        // Only relative paths are allowed (not top-level packages).
+        "./" + files.pathNormalize(entryModule),
+        this.packageJsonPath
+      );
+
+      if (res && typeof res === "object") {
+        return files.pathRelative(this.appDirectory, res.path);
+      }
+
+      buildmessage.error(
+        `Could not resolve meteor.mainModule ${
+          JSON.stringify(entryModule)
+        } in ${
+          files.pathRelative(
+            this.appDirectory,
+            this.packageJsonPath
+          )
+        } (${arch})`
+      );
+    }
+  }
+}

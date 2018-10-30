@@ -23,7 +23,11 @@ var packageMapModule = require('../packaging/package-map.js');
 var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
 
-import * as cordova from '../cordova';
+import {
+  ensureDevBundleDependencies,
+  newPluginId,
+  splitPluginsAndPackages,
+} from '../cordova/index.js';
 import { updateMeteorToolSymlink } from "../packaging/updater.js";
 
 // For each release (or package), we store a meta-record with its name,
@@ -929,9 +933,22 @@ main.registerCommand({
               throw Error("no isopack for " + packageName);
             }
 
-            var existingBuild =
-                  catalog.official.getBuildWithPreciseBuildArchitectures(
-                    oldVersionRecord, isopk.buildArchitectures());
+            const existingBuild =
+              // First try with the non-simplified build architecture
+              // list, which is likely to be something like
+              // os+web.browser+web.browser.legacy+web.cordova:
+              catalog.official.getBuildWithPreciseBuildArchitectures(
+                oldVersionRecord,
+                isopk.buildArchitectures(),
+              ) ||
+              // If that fails, fall back to the simplified architecture
+              // list (e.g. os+web.browser+web.cordova), to match packages
+              // published before the web.browser.legacy architecture was
+              // introduced (in Meteor 1.7).
+              catalog.official.getBuildWithPreciseBuildArchitectures(
+                oldVersionRecord,
+                isopk.buildArchitectures(true),
+              );
 
             var somethingChanged;
 
@@ -1998,34 +2015,39 @@ main.registerCommand({
 
   // Split arguments into Cordova plugins and packages
   const { plugins: pluginsToAdd, packages: packagesToAdd } =
-    cordova.splitPluginsAndPackages(options.args);
+    splitPluginsAndPackages(options.args);
 
   if (!_.isEmpty(pluginsToAdd)) {
-    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
-    let changed = false;
+    function cordovaPluginAdd() {
+      const plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+      let changed = false;
 
-    for (target of pluginsToAdd) {
-      let [id, version] = target.split('@');
+      for (target of pluginsToAdd) {
+        const { id, version } =
+          require('../cordova/package-id-version-parser.js').parse(target);
+        const newId = newPluginId(id);
 
-      const newId = cordova.newPluginId(id);
-
-      if (!(version && utils.isValidVersion(version, {forCordova: true}))) {
-        Console.error(`${id}: Meteor requires either an exact version \
-(e.g. ${id}@1.0.0), a Git URL with a SHA reference, or a local path.`);
-        exitCode = 1;
-      } else if (newId) {
-        plugins[newId] = version;
-        Console.info(`Added Cordova plugin ${newId}@${version} \
-(plugin has been renamed as part of moving to npm).`);
-        changed = true;
-      } else {
-        plugins[id] = version;
-        Console.info(`Added Cordova plugin ${id}@${version}.`);
-        changed = true;
+        if (!(version && utils.isValidVersion(version, {forCordova: true}))) {
+          Console.error(`${id}: Meteor requires either an exact version \
+  (e.g. ${id}@1.0.0), a Git URL with a SHA reference, or a local path.`);
+          exitCode = 1;
+        } else if (newId) {
+          plugins[newId] = version;
+          Console.info(`Added Cordova plugin ${newId}@${version} \
+  (plugin has been renamed as part of moving to npm).`);
+          changed = true;
+        } else {
+          plugins[id] = version;
+          Console.info(`Added Cordova plugin ${id}@${version}.`);
+          changed = true;
+        }
       }
+
+      changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    changed && projectContext.cordovaPluginsFile.write(plugins);
+    ensureDevBundleDependencies();
+    cordovaPluginAdd();
   }
 
   if (_.isEmpty(packagesToAdd)) {
@@ -2191,34 +2213,39 @@ main.registerCommand({
 
   // Split arguments into Cordova plugins and packages
   const { plugins: pluginsToRemove, packages }  =
-    cordova.splitPluginsAndPackages(options.args);
+    splitPluginsAndPackages(options.args);
 
   if (!_.isEmpty(pluginsToRemove)) {
-    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
-    let changed = false;
+    function cordovaPluginRemove() {
+      const plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+      let changed = false;
 
-    for (id of pluginsToRemove) {
-      const newId = cordova.newPluginId(id);
+      for (id of pluginsToRemove) {
+        const newId = newPluginId(id);
 
-      if (/@/.test(id)) {
-        Console.error(`${id}: do not specify version constraints.`);
-        exitCode = 1;
-      } else if (_.has(plugins, id)) {
-        delete plugins[id];
-        Console.info(`Removed Cordova plugin ${id}.`);
-        changed = true;
-      } else if (newId && _.has(plugins, newId)) {
-        delete plugins[newId];
-        Console.info(`Removed Cordova plugin ${newId} \
-(plugin has been renamed as part of moving to npm).`);
-        changed = true;
-      } else {
-        Console.error(`Cordova plugin ${id} is not in this project.`);
-        exitCode = 1;
+        if (/@/.test(id)) {
+          Console.error(`${id}: do not specify version constraints.`);
+          exitCode = 1;
+        } else if (_.has(plugins, id)) {
+          delete plugins[id];
+          Console.info(`Removed Cordova plugin ${id}.`);
+          changed = true;
+        } else if (newId && _.has(plugins, newId)) {
+          delete plugins[newId];
+          Console.info(`Removed Cordova plugin ${newId} \
+  (plugin has been renamed as part of moving to npm).`);
+          changed = true;
+        } else {
+          Console.error(`Cordova plugin ${id} is not in this project.`);
+          exitCode = 1;
+        }
       }
+
+      changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    changed && projectContext.cordovaPluginsFile.write(plugins);
+    ensureDevBundleDependencies();
+    cordovaPluginRemove();
   }
 
   if (_.isEmpty(packages)) {

@@ -1,4 +1,5 @@
-import Visitor from "./visitor.js";
+import Visitor from "reify/lib/visitor.js";
+import { findPossibleIndexes } from "reify/lib/utils.js";
 
 // This RegExp will be used to scan the source for calls to meteorInstall,
 // taking into consideration that the function name may have been mangled
@@ -9,16 +10,22 @@ const meteorInstallRegExp = new RegExp([
   /\b(meteorInstall)\(\{/,
   // If the meteorInstall function name has been minified, we can figure
   // out its mangled name by examining the import assingment.
-  /\b(\w+)=Package.modules.meteorInstall\b/,
+  /\b(\w+)=Package\.modules\.meteorInstall\b/,
   /\b(\w+)=Package\["modules-runtime"\].meteorInstall\b/,
+  // Sometimes uglify-es will inline (0,Package.modules.meteorInstall) as
+  // a call expression.
+  /\(0,Package\.modules\.(meteorInstall)\)\(/,
+  /\(0,Package\["modules-runtime"\]\.(meteorInstall)\)\(/,
 ].map(exp => exp.source).join("|"));
 
 export function extractModuleSizesTree(source) {
   const match = meteorInstallRegExp.exec(source);
   if (match) {
     const ast = Babel.parse(source);
-    const name = match[1] || match[2] || match[3];
-    meteorInstallVisitor.visit(ast, name, source);
+    let meteorInstallName = "meteorInstall";
+    // The minifier may have renamed meteorInstall to something shorter.
+    match.some((name, i) => (i > 0 && (meteorInstallName = name)));
+    meteorInstallVisitor.visit(ast, meteorInstallName, source);
     return meteorInstallVisitor.tree;
   }
 }
@@ -27,46 +34,57 @@ const meteorInstallVisitor = new (class extends Visitor {
   reset(root, meteorInstallName, source) {
     this.name = meteorInstallName;
     this.source = source;
-    this.tree = null;
+    this.tree = Object.create(null);
+    // Optimization to abandon entire subtrees of the AST that contain
+    // nothing like the meteorInstall identifier we're looking for.
+    this.possibleIndexes = findPossibleIndexes(source, [
+      meteorInstallName,
+    ]);
   }
 
-  visitCallExpression(node) {
-    if (this.tree !== null) {
-      return;
-    }
+  visitCallExpression(path) {
+    const node = path.getValue();
 
-    if (isIdWithName(node.callee, this.name)) {
+    if (hasIdWithName(node.callee, this.name)) {
       const source = this.source;
 
-      function walk(expr) {
+      function walk(tree, expr) {
         if (expr.type !== "ObjectExpression") {
           return Buffer.byteLength(source.slice(expr.start, expr.end));
         }
 
-        const contents = Object.create(null);
+        tree = tree || Object.create(null);
 
         expr.properties.forEach(prop => {
           const keyName = getKeyName(prop.key);
           if (typeof keyName === "string") {
-            contents[keyName] = walk(prop.value);
+            tree[keyName] = walk(tree[keyName], prop.value);
           }
         });
 
-        return contents;
+        return tree;
       }
 
-      this.tree = walk(node.arguments[0]);
+      walk(this.tree, node.arguments[0]);
 
     } else {
-      this.visitChildren(node);
+      this.visitChildren(path);
     }
   }
 });
 
-function isIdWithName(node, name) {
-  return node &&
-    node.type === "Identifier" &&
-    node.name === name;
+function hasIdWithName(node, name) {
+  switch (node && node.type) {
+  case "SequenceExpression":
+    const last = node.expressions[node.expressions.length - 1];
+    return hasIdWithName(last, name);
+  case "MemberExpression":
+    return hasIdWithName(node.property, name);
+  case "Identifier":
+    return node.name === name;
+  default:
+    return false;
+  }
 }
 
 function getKeyName(key) {

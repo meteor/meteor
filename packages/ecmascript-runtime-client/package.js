@@ -1,9 +1,13 @@
 Package.describe({
   name: "ecmascript-runtime-client",
-  version: "0.5.0",
+  version: "0.8.0",
   summary: "Polyfills for new ECMAScript 2015 APIs like Map and Set",
   git: "https://github.com/meteor/meteor/tree/devel/packages/ecmascript-runtime-client",
   documentation: "README.md"
+});
+
+Npm.depends({
+  "core-js": "2.5.7"
 });
 
 Package.onUse(function(api) {
@@ -11,10 +15,16 @@ Package.onUse(function(api) {
   // ecmascript-runtime-server, since the runtime uses some ES5 APIs like
   // Object.defineProperties that are buggy in older browsers.
   api.use("es5-shim", { weak: true });
-  api.use("modules", "client");
-  api.use("promise", "client");
-  api.mainModule("runtime.js", "client");
-  api.export("Symbol", "client");
-  api.export("Map", "client");
-  api.export("Set", "client");
+
+  api.use("modules");
+  api.use("promise");
+  api.use("modern-browsers");
+
+  api.mainModule("versions.js", "server");
+  api.mainModule("modern.js", "client");
+
+  api.mainModule("legacy.js", "legacy");
+  api.export("Symbol", "legacy");
+  api.export("Map", "legacy");
+  api.export("Set", "legacy");
 });

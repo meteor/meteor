@@ -32,6 +32,24 @@ class Sink {
 
   // Replaces the content of the identified element.
   renderIntoElementById(id, content)
+
+  // Redirects request to new location.
+  redirect(location, code)
+
+
+  // server only methods
+
+  // sets the status code of the response.
+  setStatusCode(code)
+
+  // sets a header of the response.
+  setHeader(key, value)
+
+  // gets request headers
+  getHeaders()
+
+  // gets request cookies
+  getCookies()
 }
 ```
 
@@ -107,3 +125,25 @@ generated during rendering to the `<head>` of the response document.
 
 Although these examples have all involved React, the `onPageLoad` API is
 designed to be generically useful for any kind of server-side rendering.
+
+
+#### React 16 `renderToNodeStream`
+Since React 16, it is possible to render a React app to a node stream which
+can be piped to the response. This can decrease time to first byte, and improve
+performance of server rendered apps.
+
+Here is a basic example of using streams:
+
+```js
+import React from "react";
+import { renderToNodeStream } from "react-dom/server";
+import { onPageLoad } from "meteor/server-render";
+import App from "/imports/Server.js";
+
+onPageLoad(sink => {
+  sink.renderIntoElementById("app", renderToNodeStream(
+    <App location={sink.request.url} />
+  ));
+});
+```
+

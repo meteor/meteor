@@ -1,7 +1,5 @@
 const path = Plugin.path;
-const Future = Npm.require('fibers/future');
 const LRU = Npm.require('lru-cache');
-const async = Npm.require('async');
 
 // MultiFileCachingCompiler is like CachingCompiler, but for implementing
 // languages which allow files to reference each other, such as CSS
@@ -22,7 +20,7 @@ extends CachingCompilerBase {
   }) {
     super({compilerName, defaultCacheSize, maxParallelism});
 
-    // Maps from absolute import path to { compileResult, cacheKeys }, where
+    // Maps from cache key to { compileResult, cacheKeys }, where
     // cacheKeys is an object mapping from absolute import path to hashed
     // cacheKey for each file referenced by this file (including itself).
     this._cache = new LRU({
@@ -80,45 +78,50 @@ extends CachingCompilerBase {
   }
 
   // The processFilesForTarget method from the Plugin.registerCompiler API.
-  processFilesForTarget(inputFiles) {
+  async processFilesForTarget(inputFiles) {
     const allFiles = new Map;
     const cacheKeyMap = new Map;
     const cacheMisses = [];
+    const arches = this._cacheDebugEnabled && Object.create(null);
 
     inputFiles.forEach((inputFile) => {
       const importPath = this.getAbsoluteImportPath(inputFile);
       allFiles.set(importPath, inputFile);
-      cacheKeyMap.set(importPath, this._deepHash(this.getCacheKey(inputFile)));
+      cacheKeyMap.set(importPath, this._getCacheKeyWithPath(inputFile));
     });
 
-    const allProcessedFuture = new Future;
-    async.eachLimit(inputFiles, this._maxParallelism, (inputFile, cb) => {
-      let error = null;
-      try {
-        // If this isn't a root, skip it (and definitely don't waste time
-        // looking for a cache file that won't be there).
-        if (!this.isRoot(inputFile)) {
-          return;
-        }
+    inputFiles.forEach(inputFile => {
+      if (arches) {
+        arches[inputFile.getArch()] = 1;
+      }
 
+      const getResult = () => {
         const absoluteImportPath = this.getAbsoluteImportPath(inputFile);
-        let cacheEntry = this._cache.get(absoluteImportPath);
+        const cacheKey = cacheKeyMap.get(absoluteImportPath);
+        let cacheEntry = this._cache.get(cacheKey);
         if (! cacheEntry) {
-          cacheEntry = this._readCache(absoluteImportPath);
+          cacheEntry = this._readCache(cacheKey);
           if (cacheEntry) {
             this._cacheDebug(`Loaded ${ absoluteImportPath }`);
           }
         }
+
         if (! (cacheEntry && this._cacheEntryValid(cacheEntry, cacheKeyMap))) {
           cacheMisses.push(inputFile.getDisplayPath());
 
-          const compileOneFileReturn = this.compileOneFile(inputFile, allFiles);
+          const compileOneFileReturn =
+            Promise.await(this.compileOneFile(inputFile, allFiles));
+
           if (! compileOneFileReturn) {
             // compileOneFile should have called inputFile.error.
-            //  We don't cache failures for now.
+            // We don't cache failures for now.
             return;
           }
-          const {compileResult, referencedImportPaths} = compileOneFileReturn;
+
+          const {
+            compileResult,
+            referencedImportPaths,
+          } = compileOneFileReturn;
 
           cacheEntry = {
             compileResult,
@@ -137,24 +140,60 @@ extends CachingCompilerBase {
           });
 
           // Save the cache entry.
-          this._cache.set(absoluteImportPath, cacheEntry);
-          this._writeCacheAsync(absoluteImportPath, cacheEntry);
+          this._cache.set(cacheKey, cacheEntry);
+          this._writeCacheAsync(cacheKey, cacheEntry);
         }
 
-        this.addCompileResult(inputFile, cacheEntry.compileResult);
-      } catch (e) {
-        error = e;
-      } finally {
-        cb(error);
+        return cacheEntry.compileResult;
+      };
+
+      if (this.compileOneFileLater &&
+          inputFile.supportsLazyCompilation) {
+        if (! this.isRoot(inputFile)) {
+          // If this inputFile is definitely not a root, then it must be
+          // lazy, and this is our last chance to mark it as such, so that
+          // the rest of the compiler plugin system can avoid worrying
+          // about the MultiFileCachingCompiler-specific concept of a
+          // "root." If this.isRoot(inputFile) returns true instead, that
+          // classification may not be trustworthy, since returning true
+          // used to be the only way to get the file to be compiled, so
+          // that it could be imported later by a JS module. Now that
+          // files can be compiled on-demand, it's safe to pass all files
+          // that might be roots to this.compileOneFileLater.
+          inputFile.getFileOptions().lazy = true;
+        }
+        this.compileOneFileLater(inputFile, getResult);
+      } else if (this.isRoot(inputFile)) {
+        const result = getResult();
+        if (result) {
+          this.addCompileResult(inputFile, result);
+        }
       }
-    }, allProcessedFuture.resolver());
-    allProcessedFuture.wait();
+    });
 
     if (this._cacheDebugEnabled) {
       cacheMisses.sort();
+
       this._cacheDebug(
-        `Ran (#${ ++this._callCount }) on: ${ JSON.stringify(cacheMisses) }`);
+        `Ran (#${
+          ++this._callCount
+        }) on: ${
+          JSON.stringify(cacheMisses)
+        } ${
+          JSON.stringify(Object.keys(arches).sort())
+        }`
+      );
     }
+  }
+
+  // Returns a hash that incorporates both this.getCacheKey(inputFile) and
+  // this.getAbsoluteImportPath(inputFile), since the file path might be
+  // relevant to the compiled output when using MultiFileCachingCompiler.
+  _getCacheKeyWithPath(inputFile) {
+    return this._deepHash([
+      this.getAbsoluteImportPath(inputFile),
+      this.getCacheKey(inputFile),
+    ]);
   }
 
   _cacheEntryValid(cacheEntry, cacheKeyMap) {
@@ -166,17 +205,17 @@ extends CachingCompilerBase {
   // The format of a cache file on disk is the JSON-stringified cacheKeys
   // object, a newline, followed by the CompileResult as returned from
   // this.stringifyCompileResult.
-  _cacheFilename(absoluteImportPath) {
-    return path.join(this._diskCache,
-                     this._deepHash(absoluteImportPath) + '.cache');
+  _cacheFilename(cacheKey) {
+    return path.join(this._diskCache, cacheKey + ".cache");
   }
+
   // Loads a {compileResult, cacheKeys} cache entry from disk. Returns the whole
   // cache entry and loads it into the in-memory cache too.
-  _readCache(absoluteImportPath) {
+  _readCache(cacheKey) {
     if (! this._diskCache) {
       return null;
     }
-    const cacheFilename = this._cacheFilename(absoluteImportPath);
+    const cacheFilename = this._cacheFilename(cacheKey);
     const raw = this._readFileOrNull(cacheFilename);
     if (!raw) {
       return null;
@@ -200,17 +239,18 @@ extends CachingCompilerBase {
     }
 
     const cacheEntry = {compileResult, cacheKeys};
-    this._cache.set(absoluteImportPath, cacheEntry);
+    this._cache.set(cacheKey, cacheEntry);
     return cacheEntry;
   }
-  _writeCacheAsync(absoluteImportPath, cacheEntry) {
+
+  _writeCacheAsync(cacheKey, cacheEntry) {
     if (! this._diskCache) {
       return null;
     }
-    const cacheFilename = this._cacheFilename(absoluteImportPath);
+    const cacheFilename = this._cacheFilename(cacheKey);
     const cacheContents =
-            JSON.stringify(cacheEntry.cacheKeys) + '\n'
-            + this.stringifyCompileResult(cacheEntry.compileResult);
+      JSON.stringify(cacheEntry.cacheKeys) + '\n' +
+      this.stringifyCompileResult(cacheEntry.compileResult);
     this._writeFileAsync(cacheFilename, cacheContents);
   }
 }

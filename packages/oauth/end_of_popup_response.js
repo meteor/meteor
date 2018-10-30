@@ -1,15 +1,14 @@
-(function () {
+(() => {
 
-  var config = JSON.parse(document.getElementById("config").innerHTML);
+  const config = JSON.parse(document.getElementById("config").innerHTML);
 
   if (config.setCredentialToken) {
-    var credentialToken = config.credentialToken;
-    var credentialSecret = config.credentialSecret;
+    const { credentialToken, credentialSecret } = config;
 
     if (config.isCordova) {
-      var credentialString = JSON.stringify({
-        credentialToken: credentialToken,
-        credentialSecret: credentialSecret
+      const credentialString = JSON.stringify({
+        credentialToken,
+        credentialSecret,
       });
 
       window.location.hash = credentialString;
@@ -31,7 +30,7 @@
 
   if (! config.isCordova) {
     document.getElementById("completedText").style.display = "block";
-    document.getElementById("loginCompleted").onclick = function(){ window.close(); };
+    document.getElementById("loginCompleted").onclick = () => window.close();
     window.close();
   }
 })();
