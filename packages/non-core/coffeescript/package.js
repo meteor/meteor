@@ -6,7 +6,7 @@ Package.describe({
   // so bumping the version of this package will be how they get newer versions
   // of `coffeescript-compiler`. If you change this, make sure to also update
   // ../coffeescript-compiler/package.js to match.
-  version: '2.3.1_2'
+  version: '2.3.2_1'
 });
 
 Package.registerBuildPlugin({
@@ -22,7 +22,7 @@ Package.registerBuildPlugin({
     // rather than delegating to the one installed in the application's
     // node_modules directory, so the coffeescript package can work in
     // Meteor 1.7.1 apps as well as 1.7.0.x and earlier.
-    '@babel/runtime': '7.0.0'
+    '@babel/runtime': '7.1.2'
   }
 });
 
