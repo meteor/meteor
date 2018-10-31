@@ -1286,6 +1286,19 @@ class Target {
         ), "utf8")
       );
     });
+
+    // Call any plugin.afterLink callbacks defined by compiler plugins,
+    // now that all compilation (including lazy compilation) is finished.
+    sourceBatches.forEach(batch => {
+      batch.resourceSlots.forEach(slot => {
+        const plugin =
+          slot.sourceProcessor &&
+          slot.sourceProcessor.userPlugin;
+        if (plugin && typeof plugin.afterLink === "function") {
+          plugin.afterLink();
+        }
+      });
+    });
   }
 
   // Minify the JS in this target
