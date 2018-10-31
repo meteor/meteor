@@ -1,12 +1,14 @@
-(() => {
+// NOTE: This file is added to the client as asset and hence ecmascript package has no effect here.
+(function() {
 
-  const config = JSON.parse(document.getElementById("config").innerHTML);
+  var config = JSON.parse(document.getElementById("config").innerHTML);
 
   if (config.setCredentialToken) {
-    const { credentialToken, credentialSecret } = config;
+    var credentialToken = config.credentialToken;
+    var credentialSecret = config.credentialSecret;
 
     if (config.isCordova) {
-      const credentialString = JSON.stringify({
+      var credentialString = JSON.stringify({
         credentialToken,
         credentialSecret,
       });
@@ -30,7 +32,7 @@
 
   if (! config.isCordova) {
     document.getElementById("completedText").style.display = "block";
-    document.getElementById("loginCompleted").onclick = () => window.close();
+    document.getElementById("loginCompleted").onclick = function() { window.close() };
     window.close();
   }
 })();
