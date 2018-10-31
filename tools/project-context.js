@@ -28,6 +28,10 @@ import {
 
 import Resolver from "./isobuild/resolver.js";
 
+const CAN_DELAY_LEGACY_BUILD = ! JSON.parse(
+  process.env.METEOR_DISALLOW_DELAYED_LEGACY_BUILD || "false"
+);
+
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
 // used by it, etc.  Any time you want to work with an app, create a
@@ -1310,7 +1314,8 @@ _.extend(exports.PlatformList.prototype, {
   },
 
   canDelayBuildingArch(arch) {
-    return arch === "web.browser.legacy";
+    return CAN_DELAY_LEGACY_BUILD &&
+      arch === "web.browser.legacy";
   }
 });
 
