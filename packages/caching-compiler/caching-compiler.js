@@ -25,6 +25,10 @@ CachingCompilerBase = class CachingCompilerBase {
 
     // For testing.
     this._callCount = 0;
+
+    // Callbacks that will be called after the linker is done processing
+    // files, after all lazy compilation has finished.
+    this._afterLinkCallbacks = [];
   }
 
   // Your subclass must override this method to define the key used to identify
@@ -111,6 +115,14 @@ CachingCompilerBase = class CachingCompilerBase {
       + (sm.sourcesContent || []).reduce(function (soFar, current) {
         return soFar + (current ? current.length : 0);
       }, 0);
+  }
+
+  // Called by the compiler plugins system after all linking and lazy
+  // compilation has finished.
+  afterLink() {
+    this._afterLinkCallbacks.splice(0).forEach(callback => {
+      callback();
+    });
   }
 
   // Borrowed from another MIT-licensed project that benjamn wrote:
@@ -327,17 +339,19 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
     });
 
     if (this._cacheDebugEnabled) {
-      cacheMisses.sort();
+      this._afterLinkCallbacks.push(() => {
+        cacheMisses.sort();
 
-      this._cacheDebug(
-        `Ran (#${
-          ++this._callCount
-        }) on: ${
-          JSON.stringify(cacheMisses)
-        } ${
-          JSON.stringify(Object.keys(arches).sort())
-        }`
-      );
+        this._cacheDebug(
+          `Ran (#${
+            ++this._callCount
+          }) on: ${
+            JSON.stringify(cacheMisses)
+          } ${
+            JSON.stringify(Object.keys(arches).sort())
+          }`
+        );
+      });
     }
   }
 

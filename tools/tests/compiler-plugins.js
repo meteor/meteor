@@ -30,6 +30,11 @@ selftest.define("compiler plugin caching - coffee", () => {
   // Ask them to print out when they build a file (instead of using it from the
   // cache) as well as when they load cache from disk.
   s.set('METEOR_COFFEESCRIPT_CACHE_DEBUG', 't');
+
+  // Enforcing the order of builds is just too tricky if we let the legacy
+  // build race with the os.* build.
+  s.set("METEOR_DISALLOW_DELAYED_LEGACY_BUILD", "true");
+
   var run = startRun(s);
 
   let nextRunOrdinal = 1;
@@ -69,6 +74,7 @@ selftest.define("compiler plugin caching - coffee", () => {
 
   // App prints this:
   run.match("Coffeescript X is 2 Y is 1 FromPackage is 4");
+  run.match("App running at");
 
   s.write("f2.coffee", "share.Y = 'Y is 3'\n");
 
@@ -79,6 +85,7 @@ selftest.define("compiler plugin caching - coffee", () => {
 
   // Program prints this:
   run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
+  run.match("Meteor server restarted");
 
   // Force a rebuild of the local package without actually changing the
   // coffeescript file in it. This should not require us to coffee.compile
@@ -90,6 +97,7 @@ selftest.define("compiler plugin caching - coffee", () => {
   matchRun([], osArch);
 
   run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
+  run.match("Meteor server restarted");
 
   // But writing to the actual source file in the local package should
   // recompile.
@@ -100,6 +108,7 @@ selftest.define("compiler plugin caching - coffee", () => {
   matchRun(["/packages/local-pack/p.coffee"], osArch);
 
   run.match("Coffeescript X is 2 Y is 3 FromPackage is 5");
+  run.match("Meteor server restarted");
 
   // We never should have loaded cache from disk, since we only made
   // each compiler once and there were no cache files at this point.
@@ -140,6 +149,11 @@ selftest.define("compiler plugin caching - coffee", () => {
     // Ask them to print out when they build a file (instead of using it from
     // the cache) as well as when they load cache from disk.
     s.set(`METEOR_${ packageName.toUpperCase() }_CACHE_DEBUG`, "t");
+
+    // Enforcing the order of builds is just too tricky if we let the legacy
+    // build race with the "Client modified - refreshing" messages.
+    s.set("METEOR_DISALLOW_DELAYED_LEGACY_BUILD", "true");
+
     var run = startRun(s);
 
     const cacheMatch = selftest.markStack((message, arch) => {
