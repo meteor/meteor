@@ -36,6 +36,12 @@ of boilerplate code you have to write.
 
 <h3 id="integrating-vue-with-meteor">Integrating Vue With Meteor</h3>
 
+To start a new project:  
+
+```sh
+meteor create .
+```
+
 To install Vue in Meteor 1.8, you should add it as an npm dependency:
 
 ```sh
@@ -49,9 +55,23 @@ meteor add akryum:vue-component
 ```
 
 At time of writing, there is a known bug in the vue-component package which makes the app refresh endlessly. This has to do with the package's own hot reload system. You can however work around it by setting 
-the `NO_HMR=1` env var.
+the `NO_HMR=1` env var.  E.g. from the commandline run `NO_HMR=1 meteor`
 
-You can now start writing .vue files in your app with the following format:
+You will end up with at least 3 files: 
+
+- `/client/App.vue` (The root component of your app)
+- `/client/main.js` (Initializing the Vue app in Meteor startup)
+- `/client/main.html` (containing the body with the #app div)
+
+We need a base HTML document that has the `app` id.  If you created a new project from `meteor create .`, put this in your `/client/main.html`.
+
+```html
+<body>
+  <div id="app"></div>
+</body>
+```
+
+You can now start writing .vue files in your app with the following format.  If you created a new project from `meteor create .`, put this in your `/client/App.vue`.
 
 ```vuejs
 <template>
@@ -78,10 +98,12 @@ export default {
 </style>
 ```
 
-You can render the Vue component hierarchy to the DOM by using the below snippet in you client startup file:
+You can render the Vue component hierarchy to the DOM by using the below snippet in you client startup file.  If you created a new project from `meteor create .`, put this in your `/client/main.js`.
 
 ```javascript
+import Vue from 'vue';
 import App from './App.vue';
+import './main.html';
 
 Meteor.startup(() => {
   new Vue({
@@ -91,19 +113,7 @@ Meteor.startup(() => {
 });
 ```
 
-Of course you will need a base HTML document with a div that has the `app` id:
-
-```html
-<body>
-  <div id="app"></div>
-</body>
-```
-
-You will end up with at least 3 files: 
-
-- `App.vue` (The root component of your app)
-- `main.js` (Initializing the Vue app in Meteor startup)
-- `main.html` (containing the body with the #app div)
+Run your new Vue+Meteor app with this command: `NO_HMR=1 meteor`
 
 <h2 id="ssr-code-splitting">SSR and Code Splitting</h2>
 Vue has [an excellent guide on how to render your Vue application on the server](https://vuejs.org/v2/guide/ssr.html). It includes code splitting, async data fetching and many other practices that are used in most apps that require this. 
@@ -113,9 +123,16 @@ Making Vue SSR to work with Meteor is not more complex then for example with [Ex
 However instead of defining a wildcard route, Meteor uses its own [server-render](https://docs.meteor.com/packages/server-render.html) package that exposes an `onPageLoad` function. Every time a call is made to 
 the serverside, this function is triggered. This is where we should put our code like how its described on the [VueJS SSR Guide](https://ssr.vuejs.org/guide/#integrating-with-a-server).
 
-Below is Meteor's equivalent:
+To add the packages, run:
+
+```sh
+meteor add server-render
+meteor npm install --save vue-server-renderer
+```
+then connect to Vue in `/server/main.js`:
 
 ```javascript
+import { Meteor } from 'meteor/meteor';
 import Vue from 'vue';
 import { onPageLoad } from 'meteor/server-render';
 import { createRenderer } from 'vue-server-renderer';
@@ -123,11 +140,13 @@ import { createRenderer } from 'vue-server-renderer';
 const renderer = createRenderer();
 
 onPageLoad(sink => {
+  console.log('onPageLoad');
+  
   const url = sink.request.url.path;
   
   const app = new Vue({
     data: {
-      url: req.url
+      url
     },
     template: `<div>The visited URL is: {{ url }}</div>`
   });
@@ -137,12 +156,17 @@ onPageLoad(sink => {
       res.status(500).end('Internal Server Error');
       return
     }
+    console.log('html', html);
     
     sink.renderIntoElementById('app', html);
   })
 })
+
+Meteor.startup(() => {
+  // code to run on server at startup
+  console.log('startup');
+});
 ```
-
-
+Please note this isn't a complete example.
 
 
