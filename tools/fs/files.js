@@ -985,14 +985,16 @@ files.createTarGzStream = function (dirPath, options) {
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
 // The tar archive will contain a top-level directory named after dirPath.
-files.createTarball = function (dirPath, tarball, options) {
+files.createTarball = Profile(function (dirPath, tarball) {
+  return "files.createTarball " + files.pathBasename(tarball);
+}, function (dirPath, tarball, options) {
   var out = files.createWriteStream(tarball);
   new Promise(function (resolve, reject) {
     out.on('error', reject);
     out.on('close', resolve);
     files.createTarGzStream(dirPath, options).pipe(out);
   }).await();
-};
+});
 
 // Use this if you'd like to replace a directory with another
 // directory as close to atomically as possible. It's better than

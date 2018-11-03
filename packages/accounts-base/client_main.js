@@ -1,4 +1,7 @@
-import { AccountsClient, AccountsTest } from "./accounts_client.js";
+import {
+  AccountsClient,
+  AccountsTest,
+} from "./accounts_client.js";
 
 /**
  * @namespace Accounts
@@ -14,14 +17,12 @@ Accounts = new AccountsClient();
  */
 Meteor.users = Accounts.users;
 
-const exp = { AccountsClient };
-
-if (Meteor.isPackageTest) {
-  // Since this file is the main module for the client version of the
-  // accounts-base package, properties of non-entry-point modules need to
-  // be re-exported in order to be accessible to modules that import the
-  // accounts-base package.
-  exp.AccountsTest = AccountsTest;
-}
-
-export default exp;
+export {
+  Accounts,
+  AccountsClient,
+  AccountsTest,
+  // For backwards compatibility. Note that exporting an object as the
+  // default export is *not* the same as exporting its properties as named
+  // exports, as was previously assumed.
+  exports as default,
+};

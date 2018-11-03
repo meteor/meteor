@@ -260,21 +260,17 @@ export function readFile(absPath) {
   }
 };
 
-export function sha1(...args) {
-  return Profile.run("sha1", function () {
-    var hash = createHash('sha1');
-    args.forEach(arg => hash.update(arg));
-    return hash.digest('hex');
-  });
-}
+export const sha1 = Profile("sha1", function (...args) {
+  var hash = createHash('sha1');
+  args.forEach(arg => hash.update(arg));
+  return hash.digest('hex');
+});
 
-export function sha512(...args) {
-  return Profile.run("sha512", function () {
-    var hash = createHash('sha512');
-    args.forEach(arg => hash.update(arg));
-    return hash.digest('base64');
-  });
-}
+export const sha512 = Profile("sha512", function (...args) {
+  var hash = createHash('sha512');
+  args.forEach(arg => hash.update(arg));
+  return hash.digest('base64');
+});
 
 export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.

@@ -164,7 +164,7 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
 
-var enabled = !! process.env['METEOR_PROFILE'];
+Profile.enabled = !! process.env['METEOR_PROFILE'];
 var filter = parseFloat(process.env['METEOR_PROFILE']); // ms
 if (isNaN(filter)) {
   filter = 100; // ms
@@ -250,8 +250,8 @@ var start = function () {
   running = true;
 };
 
-var Profile = function (bucketName, f) {
-  if (! enabled) {
+function Profile(bucketName, f) {
+  if (! Profile.enabled) {
     return f;
   }
 
@@ -299,7 +299,7 @@ var Profile = function (bucketName, f) {
       throw err;
     }
   }, f);
-};
+}
 
 var time = function (bucket, f) {
   return Profile(bucket, f)();
@@ -470,7 +470,7 @@ var setupReport = function () {
 var reportNum = 1;
 
 var report = function () {
-  if (! enabled) {
+  if (! Profile.enabled) {
     return;
   }
   running = false;
@@ -486,7 +486,7 @@ var report = function () {
 };
 
 var run = function (bucketName, f) {
-  if (! enabled) {
+  if (! Profile.enabled) {
     return f();
   } else if (running) {
     // We've kept the calls to Profile.run in the tool disjoint so far,

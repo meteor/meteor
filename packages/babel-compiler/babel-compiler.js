@@ -1,5 +1,5 @@
 var semver = Npm.require("semver");
-
+var JSON5 = Npm.require("json5");
 /**
  * A compiler that can be instantiated with features and used inside
  * Plugin.registerCompiler
@@ -92,7 +92,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     if (arch.startsWith("os.")) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
-      extraFeatures.nodeMajorVersion = parseInt(process.versions.node);
+      extraFeatures.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
       extraFeatures.modernBrowsers = true;
     }
@@ -105,6 +105,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     }
 
     var babelOptions = Babel.getDefaultOptions(extraFeatures);
+    babelOptions.caller = { name: "meteor", arch };
 
     this.inferExtraBabelOptions(
       inputFile,
@@ -124,16 +125,19 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       });
     } catch (e) {
       if (e.loc) {
+        // Error is from @babel/parser.
         inputFile.error({
           message: e.message,
           line: e.loc.line,
           column: e.loc.column,
         });
-
-        return null;
+      } else {
+        // Error is from a Babel transform, with line/column information
+        // embedded in e.message.
+        inputFile.error(e);
       }
 
-      throw e;
+      return null;
     }
 
     if (isMeteorPre144) {
@@ -195,13 +199,13 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
       try {
         this._babelrcCache[babelrcPath] = {
           controlFilePath: babelrcPath,
-          controlFileData: JSON.parse(
+          controlFileData: JSON5.parse(
             inputFile.readAndWatchFile(babelrcPath)),
           deps: Object.create(null),
         };
       } catch (e) {
         if (e instanceof SyntaxError) {
-          e.message = ".babelrc is not a valid JSON file: " + e.message;
+          e.message = ".babelrc is not a valid JSON5 file: " + e.message;
         }
         throw e;
       }
@@ -396,6 +400,21 @@ function merge(babelOptions, babelrc, name) {
   }
 }
 
+const forbiddenPresetNames = new Set([
+  // Since Meteor always includes babel-preset-meteor automatically, it's
+  // likely a mistake for that preset to appear in a custom .babelrc
+  // file. Previously we recommended that developers simply remove the
+  // preset (e.g. #9631), but we can easily just ignore it by returning
+  // null here, which seems like a better solution since it allows the
+  // same .babelrc file to be used for other purposes, such as running
+  // tests with a testing tool that needs to compile application code the
+  // same way Meteor does.
+  "babel-preset-meteor",
+  // Similar reasoning applies to these commonly misused Babel presets:
+  "@babel/preset-env",
+  "@babel/preset-react",
+]);
+
 function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
   var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
   var presetOrPlugin;
@@ -430,15 +449,7 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
     });
 
     if (found) {
-      if (presetOrPluginMeta.name === "babel-preset-meteor") {
-        // Since Meteor always includes babel-preset-meteor automatically,
-        // it's likely a mistake for that preset to appear in a custom
-        // .babelrc file. Previously we recommended that developers simply
-        // remove the preset (e.g. #9631), but we can easily just ignore
-        // it by returning null here, which seems like a better solution
-        // since it allows the same .babelrc file to be used for other
-        // purposes, such as running tests with a testing tool that needs
-        // to compile application code the same way Meteor does.
+      if (forbiddenPresetNames.has(presetOrPluginMeta.name)) {
         return null;
       }
 

@@ -1113,3 +1113,214 @@ selftest.define("tilde version constraints", [], function () {
 
   run.stop();
 });
+
+selftest.define("override version constraints", [], function () {
+  var s = new Sandbox();
+
+  // The constraint solver avoids re-solving everything from scratch on
+  // rebuilds if the current input of top-level constraints matches the
+  // previously solved input (also just top-level constraints). This is
+  // slightly unsound, because non-top-level dependency constraints might
+  // have changed, but it's important for performance, and relatively
+  // harmless in practice (if there's a version conflict, you'll find out
+  // about it the next time you do a full restart of the development
+  // server). The unsoundness causes problems for this test, however, and
+  // since we're not testing the caching functionality here, we set this
+  // environment variable to disable the caching completely.
+  s.set("METEOR_DISABLE_CONSTRAINT_SOLVER_CACHING", "true");
+
+  s.createApp("override-app", "package-tests");
+  s.cd("override-app");
+
+  var run = s.run();
+
+  run.match("override-app");
+  run.match("proxy");
+  run.waitSecs(10);
+  run.match("MongoDB");
+  run.waitSecs(10);
+  run.match("your app");
+  run.waitSecs(10);
+  run.match("running at");
+  run.waitSecs(60);
+
+  let packages = s.read(".meteor/packages")
+    .replace(/\n*$/m, "\n");
+
+  function setTopLevelConstraint(constraint) {
+    s.write(
+      ".meteor/packages",
+      packages + "override-constraints" + (
+        constraint ? "@" + constraint : ""
+      ) + "\n"
+    );
+  }
+
+  function checkRestarted() {
+    run.match("override-constraints.js");
+    run.match("server restarted");
+    run.waitSecs(10);
+  }
+
+  setTopLevelConstraint("");
+  run.match(/override-constraints.*added, version 1\.5\.3/);
+  checkRestarted();
+
+  setTopLevelConstraint("1.4.0");
+  checkRestarted();
+
+  setTopLevelConstraint("1.4.0!");
+  checkRestarted();
+
+  setTopLevelConstraint("=1.5.3");
+  checkRestarted();
+
+  setTopLevelConstraint("=1.5.3!");
+  checkRestarted();
+
+  function checkNoSatisfyingVersion() {
+    run.match("error: No version of override-constraints satisfies all constraints");
+    run.waitSecs(10);
+  }
+
+  setTopLevelConstraint("~1.4.0");
+  checkNoSatisfyingVersion();
+
+  setTopLevelConstraint("~1.4.0!");
+  checkNoSatisfyingVersion();
+
+  setTopLevelConstraint("1.6.0");
+  checkNoSatisfyingVersion();
+
+  setTopLevelConstraint("1.6.0!");
+  checkNoSatisfyingVersion();
+
+  setTopLevelConstraint("1.5.4");
+  checkNoSatisfyingVersion();
+
+  setTopLevelConstraint("1.5.4!");
+  checkNoSatisfyingVersion();
+
+  setTopLevelConstraint("~1.4.0||=1.5.3");
+  checkRestarted();
+
+  setTopLevelConstraint("~1.4.0||=1.5.3!");
+  checkRestarted();
+
+  // The ! applies to the whole || disjunction, not just the rightmost
+  // individual constraint (~1.4.0). This would fail if ~1.4.0 won.
+  setTopLevelConstraint("1.5.0||~1.4.0!");
+  checkRestarted();
+
+  // Different major versions, but at least one of them works.
+  setTopLevelConstraint("1.5.0||0.4.0!");
+  checkRestarted();
+
+  function checkInvalidConstraint() {
+    run.match(".meteor/packages: Invalid constraint string");
+    run.waitSecs(10);
+  }
+
+  setTopLevelConstraint("!");
+  checkInvalidConstraint();
+
+  // Reset to something that works in between invalid tests.
+  setTopLevelConstraint("1.5.3");
+  checkRestarted();
+
+  function checkInvalidSemver() {
+    run.match(".meteor/packages: Version string must look like semver");
+    run.waitSecs(10);
+  }
+
+  setTopLevelConstraint("5!");
+  checkInvalidSemver();
+
+  // Reset to something that works in between invalid tests.
+  setTopLevelConstraint("1.5.3");
+  checkRestarted();
+
+  setTopLevelConstraint("1.5!");
+  checkInvalidSemver();
+
+  // Add the conflicting package.
+  packages += "override-conflicts@1.0.0\n";
+  setTopLevelConstraint("1.5.3");
+  run.match(/override-conflicts.*added, version 1\.0\.1/);
+  run.match("override-conflicts.js");
+  checkRestarted();
+
+  const conflictingPackageJs =
+    s.read("packages/override-conflicts/package.js");
+
+  function setConflictingConstraint(statement) {
+    s.write(
+      "packages/override-conflicts/package.js",
+      conflictingPackageJs.replace("// PLACEHOLDER", statement)
+    );
+  }
+
+  setConflictingConstraint('api.use("override-constraints");');
+  checkRestarted();
+
+  setConflictingConstraint('api.use("override-constraints@1.5.0");');
+  checkRestarted();
+
+  setConflictingConstraint('api.imply("override-constraints@1.5.0");');
+  checkRestarted();
+
+  setConflictingConstraint('api.use("override-constraints@=1.4.0");');
+  run.match("Constraint override-constraints@=1.4.0 is not satisfied by " +
+            "override-constraints 1.5.3");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("1.5.0!");
+  checkRestarted();
+
+  // Constraints imposed elsewhere are still enforced as minimums, so the
+  // @1.5.0! override syntax can't do anything about this constraint:
+  setConflictingConstraint('api.use("override-constraints@1.6.0");');
+  run.match("Constraint override-constraints@1.6.0 is not satisfied by " +
+            "override-constraints 1.5.3");
+  run.waitSecs(10);
+
+  setConflictingConstraint('api.use("override-constraints@1.5.0");');
+  checkRestarted();
+
+  setTopLevelConstraint("1.5.3");
+  checkRestarted();
+
+  setConflictingConstraint('api.use("override-constraints@0.9.0");');
+  run.match("Constraint override-constraints@0.9.0 is not satisfied by " +
+            "override-constraints 1.5.3");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("0.9.0||1.5.3");
+  run.match("Constraint override-constraints@0.9.0 is not satisfied by " +
+            "override-constraints 1.5.3");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("1.4.0!");
+  checkRestarted();
+
+  setTopLevelConstraint("~1.5.0!");
+  checkRestarted();
+
+  setTopLevelConstraint("=1.5.3!");
+  checkRestarted();
+
+  setTopLevelConstraint("1.5.3");
+  run.match("Constraint override-constraints@0.9.0 is not satisfied by " +
+            "override-constraints 1.5.3");
+  run.waitSecs(10);
+
+  setTopLevelConstraint("");
+  run.match("Constraint override-constraints@0.9.0 is not satisfied by " +
+            "override-constraints 1.5.3");
+  run.waitSecs(10);
+
+  setConflictingConstraint('// PLACEHOLDER');
+  checkRestarted();
+
+  run.stop();
+});

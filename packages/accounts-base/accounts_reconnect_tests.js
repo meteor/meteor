@@ -15,6 +15,32 @@ if (Meteor.isClient) {
   };
 
   Tinytest.addAsync('accounts - reconnect auto-login', (test, done) => {
+    function disconnectAndReconnect(callback) {
+      test.equal(Meteor.status().status, "connected");
+
+      function pollUntilDisconnected() {
+        if (Meteor.status().status === "offline") {
+          Meteor.reconnect();
+          pollUntilReconnected();
+        } else {
+          Meteor.setTimeout(pollUntilDisconnected, 10);
+        }
+      }
+
+      function pollUntilReconnected() {
+        if (Meteor.status().status === "connected") {
+          if (typeof callback === "function") {
+            callback();
+          }
+        } else {
+          Meteor.setTimeout(pollUntilReconnected, 10);
+        }
+      }
+
+      Meteor.disconnect();
+      pollUntilDisconnected();
+    }
+
     let onReconnectCalls = 0;
     const reconnectHandler = () => onReconnectCalls++;
     Meteor.connection.onReconnect = reconnectHandler;
@@ -35,8 +61,7 @@ if (Meteor.isClient) {
     const onUser2LoggedIn = err => {
       test.isUndefined(err, 'Unexpected error logging in as user2');
       onLoginStopper = Accounts.onLogin(onUser2LoggedInAfterReconnect);
-      Meteor.disconnect();
-      Meteor.reconnect();
+      disconnectAndReconnect();
     }
 
     const onUser2LoggedInAfterReconnect = () => {
@@ -48,9 +73,8 @@ if (Meteor.isClient) {
     const onFailedLogin = err => {
       test.instanceOf(err, Meteor.Error, 'No Meteor.Error on login failure');
       onLoginStopper = Accounts.onLogin(onUser2LoggedInAfterReconnectAfterFailedLogin);
-      Meteor.disconnect();
-      Meteor.reconnect();
-      timeoutHandle = Meteor.setTimeout(failTest, 1000);
+      disconnectAndReconnect();
+      timeoutHandle = Meteor.setTimeout(failTest, 5000);
     }
 
     const failTest = () => {

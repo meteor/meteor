@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  terser: "3.7.6"
+  terser: "3.9.2"
 });
 
 Package.onUse(function (api) {

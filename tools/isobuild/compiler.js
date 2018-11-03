@@ -820,7 +820,10 @@ function runLinters({inputSourceArch, isopackCache, sources,
       wrappedSource => new linterPluginModule.LintingFile(wrappedSource)
     );
 
-    const linter = sourceProcessor.userPlugin.processFilesForPackage;
+    const markedLinter = buildmessage.markBoundary(
+      sourceProcessor.userPlugin.processFilesForPackage,
+      sourceProcessor.userPlugin
+    );
 
     function archToString(arch) {
       if (arch.match(/web\.cordova/)) {
@@ -843,8 +846,6 @@ function runLinters({inputSourceArch, isopackCache, sources,
         " (" + archToString(inputSourceArch.arch) + ")"
     }, () => {
       try {
-        var markedLinter = buildmessage.markBoundary(linter.bind(
-          sourceProcessor.userPlugin));
         Promise.await(markedLinter(sourcesToLint, {
           globals: globalImports
         }));
