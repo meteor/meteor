@@ -28,8 +28,8 @@
 const clientArch = Meteor.isCordova ? "web.cordova" :
   Meteor.isModern ? "web.browser" : "web.browser.legacy";
 
-const autoupdateVersions =
-  __meteor_runtime_config__.autoupdate.versions[clientArch] || {
+const autoupdateVersions = 
+  ((__meteor_runtime_config__.autoupdate || {}).versions || {})[clientArch] || {
     version: "unknown",
     versionRefreshable: "unknown",
     versionNonRefreshable: "unknown",
