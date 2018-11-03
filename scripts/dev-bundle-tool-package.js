@@ -18,7 +18,7 @@ var packageJson = {
     "meteor-promise": "0.8.6",
     promise: "8.0.1",
     reify: "0.17.3",
-    fibers: "2.0.0",
+    fibers: "3.0.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.1.2",
     // For backwards compatibility with isopackets that still depend on
