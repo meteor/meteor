@@ -52,7 +52,7 @@ var packageJson = {
     escope: "3.6.0",
     split2: "2.2.0",
     multipipe: "2.0.1",
-    pathwatcher: "7.1.1",
+    pathwatcher: "8.0.2",
     optimism: "0.6.8",
     'lru-cache': '4.1.3'
   }
