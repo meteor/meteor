@@ -1515,9 +1515,9 @@ function defaultValidateNewUserHook(user) {
     emailIsGood = user.emails.reduce(
       (prev, email) => prev || this._testEmailDomain(email.address), false
     );
-  } else if (user.services && user.services.length > 0) {
+  } else if (user.services && Object.values(user.services).length > 0) {
     // Find any email of any service and check it
-    emailIsGood = user.services.reduce(
+    emailIsGood = Object.values(user.services).reduce(
       (prev, service) => service.email && this._testEmailDomain(service.email),
       false,
     );
