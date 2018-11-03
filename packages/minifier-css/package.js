@@ -5,7 +5,7 @@ Package.describe({
 
 Npm.depends({
   postcss: '7.0.5',
-  cssnano: '4.1.5'
+  cssnano: '4.1.7'
 });
 
 Package.onUse(function (api) {
