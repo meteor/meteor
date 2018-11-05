@@ -1,77 +1,38 @@
-import { ClientVersions } from "./client_versions.js";
+import { AutoUpdateBase } from "./autoupdate_client_base";
 
 var autoupdateVersionsCordova =
   __meteor_runtime_config__.autoupdate.versions["web.cordova"] || {
     version: "unknown"
   };
 
-export const Autoupdate = {};
+const {appId} = __meteor_runtime_config__;
 
-// Stores acceptable client versions.
-const clientVersions = new ClientVersions();
+class AutoUpdateCordovaClient extends AutoUpdateBase {
+  newClientAvailable = () => {
+    return this._clientVersions.newClientAvailable(
+      "web.cordova",
+      ["version"],
+      autoupdateVersionsCordova
+    );
+  };
 
-Meteor.connection.registerStore(
-  "meteor_autoupdate_clientVersions",
-  clientVersions.createStore()
-);
-
-Autoupdate.newClientAvailable = function () {
-  return clientVersions.newClientAvailable(
-    "web.cordova",
-    ["version"],
-    autoupdateVersionsCordova
-  );
-};
-
-var retry = new Retry({
-  // Unlike the stream reconnect use of Retry, which we want to be instant
-  // in normal operation, this is a wacky failure. We don't want to retry
-  // right away, we can start slowly.
-  //
-  // A better way than timeconstants here might be to use the knowledge
-  // of when we reconnect to help trigger these retries. Typically, the
-  // server fixing code will result in a restart and reconnect, but
-  // potentially the subscription could have a transient error.
-  minCount: 0, // don't do any immediate retries
-  baseTimeout: 30*1000 // start with 30s
-});
-
-let failures = 0;
-
-Autoupdate._retrySubscription = () => {
-  const { appId } = __meteor_runtime_config__;
-
-  Meteor.subscribe("meteor_autoupdate_clientVersions", appId, {
-    onError(error) {
-      console.log("autoupdate subscription failed:", error);
-      failures++;
-      retry.retryLater(failures, function() {
-        // Just retry making the subscription, don't reload the whole
-        // page. While reloading would catch more cases (for example,
-        // the server went back a version and is now doing old-style hot
-        // code push), it would also be more prone to reload loops,
-        // which look really bad to the user. Just retrying the
-        // subscription over DDP means it is at least possible to fix by
-        // updating the server.
-        Autoupdate._retrySubscription();
-      });
-    },
-
-    onReady() {
-      if (Package.reload) {
-        function checkNewVersionDocument(doc) {
-          if (doc.version !== autoupdateVersionsCordova.version) {
-            newVersionAvailable();
-          }
+  _onReady = () => {
+    if (Package.reload) {
+      const checkNewVersionDocument = (doc) => {
+        if (doc.version !== autoupdateVersionsCordova.version) {
+          this._setStatus('loading');
+          newVersionAvailable();
+        } else {
+          this._setStatus('uptodate');
         }
+      };
 
-        clientVersions.watch(checkNewVersionDocument, {
-          filter: "web.cordova"
-        });
-      }
+      this._clientVersions.watch(checkNewVersionDocument, {
+        filter: "web.cordova"
+      });
     }
-  });
-};
+  };
+}
 
 Meteor.startup(() => {
   WebAppLocalServer.onNewVersionReady(() => {
@@ -84,5 +45,16 @@ Meteor.startup(() => {
 });
 
 function newVersionAvailable() {
-  WebAppLocalServer.checkForUpdates();
+  // Todo use WebAppLocalServer.checkForUpdates once it exposes an error callback
+  cordova.exec(
+    () => Autoupdate._setStatus('outdated'),
+    () => {
+      Meteor._debug("autoupdate download failed");
+      Autoupdate._retryLater();
+    },
+    "WebAppLocalServer",
+    "checkForUpdates",
+    []);
 }
+
+export const Autoupdate = new AutoUpdateCordovaClient({appId});
