@@ -8,10 +8,10 @@ After reading this guide, you'll know:
 1. What Vue is, and why you would consider using it with Meteor.
 2. How to install Vue in your Meteor application, and how to use it correctly.
 3. [TODO] How to structure your Vue application according to both Meteor's and Vue's style guides
-4. How to use Vue's SSR (Serverside Rendering) with Meteor. 
+4. How to use Vue's SSR (Server-side Rendering) with Meteor. 
 5. [TODO] How to integrate Vue with Meteor's realtime data layer.
 
-Vue already has an excellent guide with many advanced topics already covered. Some of them are [SSR (Serverside Rendering)](https://ssr.vuejs.org/), 
+Vue already has an excellent guide with many advanced topics already covered. Some of them are [SSR (Server-side Rendering)](https://ssr.vuejs.org/), 
 [Routing](https://router.vuejs.org/), [Code Structure and Style Guide](https://vuejs.org/v2/style-guide/) and [State Management with Vuex](https://vuex.vuejs.org/).
 
 This documentation is purely focused on integrating it with Meteor.
@@ -42,7 +42,7 @@ To start a new project:
 meteor create .
 ```
 
-To install Vue in Meteor 1.8, you should add it as an npm dependency:
+To install Vue in Meteor 1.7, you should add it as an npm dependency:
 
 ```sh
 meteor npm install --save vue
@@ -53,9 +53,6 @@ To support [Vue's Single File Components](https://vuejs.org/v2/guide/single-file
 ```sh
 meteor add akryum:vue-component
 ```
-
-At time of writing, there is a known bug in the vue-component package which makes the app refresh endlessly. This has to do with the package's own hot reload system. You can however work around it by setting 
-the `NO_HMR=1` env var.  E.g. from the commandline run `NO_HMR=1 meteor`
 
 You will end up with at least 3 files: 
 
@@ -167,6 +164,61 @@ Meteor.startup(() => {
   console.log('startup');
 });
 ```
-Please note this isn't a complete example.
 
 
+<h2 id="vue-and-meteor-realtime-data-layer">How to integrate Vue with Meteor’s realtime data layer</h2>
+
+One of the biggest advantages of Meteor is definitely it's realtime data layer. To integrate it with Vue, first install the `vue-meteor-tracker` package from NPM:
+
+```
+meteor npm install --save vue-meteor-tracker
+```
+
+Next, the package needs to be plugged into the Vue object—just before Vue initialization in `/client/client.js`:
+
+```javascript
+import VueMeteorTracker from 'vue-meteor-tracker';
+
+Vue.use(VueMeteorTracker);
+```
+
+<h3 id="vue-and-meteor-realtime-data-layer-subscriptions">Using subscriptions in Vue components</h3>
+
+In your Vue component, add a `meteor` object. It may contain subscriptions or reactive data sources like cursors and `ReactiveVar`s.
+
+```javascript
+export default {
+  data() {
+    return {
+      selectedThreadId: null
+    }
+  },
+  meteor: {
+    // Subscriptions
+    $subscribe: {
+      // We subscribe to the 'threads' publication
+      'threads': []
+    },
+    // Threads list
+    // 
+    // You can access tthe result with the 'threads' property on the Vue instance
+    threads () {
+      // Here you can use Meteor reactive sources
+      // like cursors or reactive vars
+      // as you would in a Blaze template helper
+      return Threads.find({}, {
+        sort: {date: -1}
+      })
+    },
+    // Selected thread
+    selectedThread () {
+      // You can also use Vue reactive data inside
+      return Threads.findOne(this.selectedThreadId)
+    }
+  }
+}
+```
+
+In example above, `selectedThreadId` variable is reactive. Every time it changes, the subscription will re-run.
+
+For more information, see the [`vue-meteor-tracker` readme](https://github.com/meteor-vue/vue-meteor-tracker).
