@@ -578,7 +578,6 @@ class ResourceSlot {
           // files.convertToStandardLineEndings only works on strings for now
           data: self.inputResource.data.toString('utf8'),
           path: self.inputResource.path,
-          hash: self.inputResource.hash,
           bare: self.inputResource.fileOptions &&
             (self.inputResource.fileOptions.bare ||
              // XXX eventually get rid of backward-compatibility "raw" name
@@ -594,14 +593,10 @@ class ResourceSlot {
       // Any resource that isn't handled by compiler plugins just gets passed
       // through.
       if (self.inputResource.type === "js") {
-        let resource = self.inputResource;
-        if (! _.isString(resource.sourcePath)) {
-          resource.sourcePath = self.inputResource.path;
-        }
-        if (! _.isString(resource.targetPath)) {
-          resource.targetPath = resource.sourcePath;
-        }
-        self.jsOutputResources.push(resource);
+        self.jsOutputResources.push(new JsOutputResource({
+          resourceSlot: self,
+          options: self.inputResource,
+        }));
       } else {
         self.outputResources.push(self.inputResource);
       }
@@ -964,8 +959,7 @@ class OutputResource {
       return this._set("data", data);
 
     case "hash":
-      const { hash } = this._initialOptions;
-      return this._set("hash", hash || sha1(this._get("data")));
+      return this._set("hash", sha1(this._get("data")));
 
     case "sourceMap":
       let { sourceMap } = this._initialOptions;
