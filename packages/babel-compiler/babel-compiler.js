@@ -30,7 +30,6 @@ BCp.processFilesForTarget = function (inputFiles) {
     if (inputFile.supportsLazyCompilation) {
       inputFile.addJavaScript({
         path: inputFile.getPathInPackage(),
-        hash: inputFile.getSourceHash(),
         bare: !! inputFile.getFileOptions().bare
       }, function () {
         return compiler.processOneFileForTarget(inputFile);

@@ -18,6 +18,8 @@ N/A
   considered experimental until those problems have been fixed.
   [Issue #10216](https://github.com/meteor/meteor/issues/10216)
 
+* The `meteor-babel` npm package has been updated to version 7.1.5.
+
 ## v1.8, 2018-10-08
 
 ### Breaking changes
