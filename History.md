@@ -1,5 +1,15 @@
 ## v.NEXT
 
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
+* The `meteor-babel` npm package has been updated to version 7.1.5.
+
 ## v1.8, 2018-10-08
 
 ### Breaking changes
