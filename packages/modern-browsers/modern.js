@@ -1,15 +1,24 @@
 const minimumVersions = Object.create(null);
 const hasOwn = Object.prototype.hasOwnProperty;
 
-// By default, any minimum versions specified for chrome should apply to
-// chromeMobile too, per https://github.com/meteor/meteor/pull/9793,
-// though it should also be possible to specify minimum versions
-// specifically for chromeMobile. This map defines that aliasing behavior
-// in a generic way that could work for other browsers as well.
+// This map defines aliasing behavior in a generic way which still permits
+// minimum versions to be specified for a specific browser family.
 const browserAliases = {
   chrome: [
+    // chromeMobile*, per https://github.com/meteor/meteor/pull/9793,
     "chromeMobile",
     "chromeMobileIOS",
+
+    // The major version number of Chromium and Headless Chrome track with the
+    // releases of Chrome Dev, Canary and Stable, so we should be okay to
+    // alias them to Chrome in a generic sense.
+    // https://www.chromium.org/developers/version-numbers
+    //
+    // Chromium is particularly important to list here since, unlike macOS
+    // builds, Linux builds list Chromium in the userAgent along with Chrome:
+    //   e.g. Chromium/70.0.3538.77 Chrome/70.0.3538.77
+    "chromium",
+    "headlesschrome",
   ],
 
   // If a call to setMinimumBrowserVersions specifies Edge 12 as a minimum
