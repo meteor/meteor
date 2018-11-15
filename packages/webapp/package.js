@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.7.0'
+  version: '1.7.1'
 });
 
 Npm.depends({"basic-auth-connect": "1.0.0",
@@ -12,7 +12,7 @@ Npm.depends({"basic-auth-connect": "1.0.0",
              send: "0.16.1",
              "stream-to-string": "1.1.0",
              "qs-middleware": "1.0.3",
-             useragent: "2.2.1"});
+             useragent: "2.3.0"});
 
 Npm.strip({
   multiparty: ["test/"],

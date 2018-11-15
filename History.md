@@ -10,6 +10,13 @@ N/A
 
 * The `meteor-babel` npm package has been updated to version 7.1.5.
 
+* The `useragent` npm package used by `webapp` and (indirectly) by the
+  `modern-browsers` package has been updated from 2.2.1 to 2.3.0. The
+  `chromium` browser name has been aliased to use the same minimum modern
+  version as `chrome`, and browser names are now processed
+  case-insensitively by the `modern-browsers` package.
+  [PR #10334](https://github.com/meteor/meteor/pull/10334)
+
 ## v1.8, 2018-10-08
 
 ### Breaking changes
