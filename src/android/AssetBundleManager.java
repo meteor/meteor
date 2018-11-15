@@ -153,7 +153,6 @@ class AssetBundleManager {
                 }
 
                 // Else, get ready to download the new asset bundle
-
                 moveExistingDownloadDirectoryIfNeeded();
 
                 // Create download directory

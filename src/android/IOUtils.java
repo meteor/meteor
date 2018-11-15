@@ -26,7 +26,7 @@ class IOUtils {
         return stringBuilder.toString();
     }
 
-    public static void writeToFile(Source source, File file) throws IOException {
+    public static File writeToFile(Source source, File file) throws IOException {
         BufferedSink sink = null;
         try {
             sink = Okio.buffer(Okio.sink(file));
@@ -37,6 +37,7 @@ class IOUtils {
                 sink.close();
             }
         }
+        return file;
     }
 
     public static void writeToFile(byte[] bytes, File file) throws IOException {
