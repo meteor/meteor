@@ -29,7 +29,7 @@
   "devDependencies": {
     "cordova": "^8.0.0",
     "cordova-paramedic": "github:meteor/cordova-paramedic#40df66c3efc2f0db4d66b8c172174a68c031c114",
-    "ios-deploy": "^1.9.2",
-    "ios-sim": "^6.1.2"
+    "ios-deploy": "^1.9.4",
+    "ios-sim": "^7.0.0"
   }
 }
