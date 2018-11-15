@@ -10,16 +10,18 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.Config;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaResourceApi;
+import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import java.io.File;
+import java.io.*;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.net.URI;
 
 import okhttp3.HttpUrl;
 
@@ -126,6 +128,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     void initializeAssetBundles() throws WebAppException {
         // The initial asset bundle consists of the assets bundled with the app
         AssetBundle initialAssetBundle = new AssetBundle(resourceApi, applicationDirectoryUri);
+        Log.d(LOG_TAG, "Initial bundle loaded " + initialAssetBundle.getVersion());
 
         // Downloaded versions are stored in /data/data/<app>/files/meteor
         File versionsDirectory = new File(cordova.getActivity().getFilesDir(), "meteor");
@@ -304,6 +307,8 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     private void startupDidComplete(CallbackContext callbackContext) {
         removeStartupTimer();
 
+        Log.i(LOG_TAG, "Startup completed received. New good version is " + currentAssetBundle.getVersion());
+
         // If startup completed successfully, we consider a version good
         configuration.setLastKnownGoodVersion(currentAssetBundle.getVersion());
 
@@ -331,7 +336,6 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
                 pendingAssetBundle = assetBundle;
             }
         }
-
         // Else, revert to the initial asset bundle, unless that is what we are currently serving
         else if (!currentAssetBundle.equals(assetBundleManager.initialAssetBundle)) {
             pendingAssetBundle = assetBundleManager.initialAssetBundle;
@@ -339,6 +343,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
         // Only reload if we have a pending asset bundle to reload
         if (pendingAssetBundle != null) {
+            Log.i(LOG_TAG, "Reverting to: " + pendingAssetBundle.getVersion());
             cordova.getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
@@ -346,6 +351,8 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
                 }
             });
+        } else {
+            Log.w(LOG_TAG, "No suitable version to revert to.");
         }
     }
 
@@ -384,6 +391,7 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
 
     @Override
     public void onFinishedDownloadingAssetBundle(AssetBundle assetBundle) {
+        Log.i(LOG_TAG, "Finished downloading " + assetBundle.getVersion());
         configuration.setLastDownloadedVersion(assetBundle.getVersion());
         pendingAssetBundle = assetBundle;
         notifyNewVersionReady(assetBundle.getVersion());
