@@ -42,6 +42,8 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
     private String launchUrl;
     private int localServerPort;
 
+    private Boolean switchedToNewVersion = false;
+
     private List<WebResourceHandler> resourceHandlers;
 
     /** The asset bundle manager is responsible for managing asset bundles
@@ -179,20 +181,12 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         newVersionReadyCallbackContext = null;
         errorCallbackContext = null;
 
-        // If there is a pending asset bundle, we make it the current
-        if (pendingAssetBundle != null) {
-            currentAssetBundle = pendingAssetBundle;
-            pendingAssetBundle = null;
-        }
-
-        Log.i(LOG_TAG, "Serving asset bundle with version: " + currentAssetBundle.getVersion());
-
         configuration.setAppId(currentAssetBundle.getAppId());
         configuration.setRootUrlString(currentAssetBundle.getRootUrlString());
         configuration.setCordovaCompatibilityVersion(currentAssetBundle.getCordovaCompatibilityVersion());
 
-        // Don't start startup timer when running a test
-        if (testingDelegate == null) {
+        if (switchedToNewVersion) {
+            switchedToNewVersion = false;
             startStartupTimer();
         }
     }
@@ -217,6 +211,19 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         }
     }
 
+    private void switchPendingVersion(CallbackContext callbackContext) {
+        // If there is a pending asset bundle, we make it the current.
+        if (pendingAssetBundle != null) {
+            Log.i(LOG_TAG, "Switching pending version " + pendingAssetBundle.getVersion() + " as current version.");
+            currentAssetBundle = pendingAssetBundle;
+            pendingAssetBundle = null;
+            switchedToNewVersion = true;
+            callbackContext.success();
+        } else {
+            callbackContext.error("No pending version to switch to");
+        }
+    }
+
     //endregion
 
     //region Public plugin commands
@@ -235,12 +242,14 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
         } else if ("startupDidComplete".equals(action)) {
             startupDidComplete(callbackContext);
             return true;
+        } else if ("switchPendingVersion".equals(action)) {
+            switchPendingVersion(callbackContext);
+            return true;
         }
 
         if (testingDelegate != null) {
             return testingDelegate.execute(action, args, callbackContext);
         }
-
         return false;
     }
 

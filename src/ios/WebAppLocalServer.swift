@@ -15,6 +15,8 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   /// The listening port of the local web server
   private var localServerPort: UInt = 0
 
+  private var switchedToNewVersion = false;
+
   let authTokenKeyValuePair: String = {
     let authToken = ProcessInfo.processInfo.globallyUniqueString
     return "cdvToken=\(authToken)"
@@ -197,7 +199,10 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       self.pendingAssetBundle = nil
     }
 
-    startStartupTimer()
+    if (switchedToNewVersion) {
+      switchedToNewVersion = false;
+      startStartupTimer();
+    }
   }
     
   func startStartupTimer() {
@@ -236,6 +241,22 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
     self.commandDelegate?.send(result, callbackId: command.callbackId)
+  }
+
+  open func switchPendingVersion(_ command: CDVInvokedUrlCommand) {
+    // If there is a pending asset bundle, we make it the current
+    if let pendingAssetBundle = pendingAssetBundle {
+      NSLog("Switching pending version \(pendingAssetBundle.version) as the current asset bundle")
+      currentAssetBundle = pendingAssetBundle
+      self.pendingAssetBundle = nil
+      switchedToNewVersion = true;
+      let result = CDVPluginResult(status: CDVCommandStatus_OK)
+      self.commandDelegate?.send(result, callbackId: command.callbackId)
+    } else {
+      let errorMessage = "No pending version to switch to"
+      let result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: errorMessage)
+      commandDelegate?.send(result, callbackId: command.callbackId)
+    }
   }
 
   open func checkForUpdates(_ command: CDVInvokedUrlCommand) {
