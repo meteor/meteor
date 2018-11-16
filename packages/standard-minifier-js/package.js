@@ -21,7 +21,7 @@ Package.registerBuildPlugin({
     'plugin/utils.js',
   ],
   npmDependencies: {
-    'concat-with-sourcemaps': '1.0.4'
+    'concat-with-sourcemaps': '1.1.0'
   }
 });
 
