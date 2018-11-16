@@ -20,6 +20,9 @@ Package.registerBuildPlugin({
     'plugin/stats.js',
     'plugin/utils.js',
   ],
+  npmDependencies: {
+    'concat-with-sourcemaps': '1.0.4'
+  }
 });
 
 Package.onUse(function(api) {
