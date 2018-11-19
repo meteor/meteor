@@ -870,6 +870,9 @@ class OutputResource {
     }
 
     const targetPath = options.path || sourcePath;
+    const servePath = targetPath
+      ? resourceSlot.packageSourceBatch.unibuild.pkg._getServePath(targetPath)
+      : resourceSlot.inputResource.servePath;
 
     Object.assign(this, {
       type,
@@ -878,8 +881,7 @@ class OutputResource {
       mainModule: !! resourceSlot._getOption("mainModule", options),
       sourcePath,
       targetPath,
-      servePath: resourceSlot.packageSourceBatch
-        .unibuild.pkg._getServePath(targetPath),
+      servePath,
     });
   }
 
