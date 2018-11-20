@@ -10,11 +10,12 @@ N/A
 
 ### Changes
 
-* Node has been updated to version
-  [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/). While this
-  version of Node includes changes that may improve the performance of
-  Meteor apps, there have been reports of CPU usage spikes in production
-  due to excessive garbage collection, so this version of Meteor should be
+* Node has been updated from version 8.11.4 to version
+  [8.13.0](https://nodejs.org/en/blog/release/v8.13.0/), which includes
+  version [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/). While
+  Node 8.12.0 included changes that may improve the performance of Meteor
+  apps, there have been reports of CPU usage spikes in production due to
+  excessive garbage collection, so this version of Meteor should be
   considered experimental until those problems have been fixed.
   [Issue #10216](https://github.com/meteor/meteor/issues/10216)
 
