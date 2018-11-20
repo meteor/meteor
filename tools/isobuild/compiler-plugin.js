@@ -882,6 +882,9 @@ class OutputResource {
       sourcePath,
       targetPath,
       servePath,
+      // Remember the source hash so that changes to the source that
+      // disappear after compilation can still contribute to the hash.
+      _inputHash: resourceSlot.inputResource.hash,
     });
   }
 
@@ -966,8 +969,17 @@ class OutputResource {
       }
       return this._set("data", data);
 
-    case "hash":
-      return this._set("hash", sha1(this._get("data")));
+    case "hash": {
+      const hashes = [];
+
+      if (typeof this._inputHash === "string") {
+        hashes.push(this._inputHash);
+      }
+
+      hashes.push(sha1(this._get("data")));
+
+      return this._set("hash", sha1(...hashes));
+    }
 
     case "sourceMap":
       let { sourceMap } = this._initialOptions;
@@ -1657,6 +1669,7 @@ export class PackageSourceBatch {
         // before returning from the method (but after writing
         // to cache).
         data: file.source,
+        hash: file.hash,
         servePath: file.servePath,
         sourceMap: sm
       };
