@@ -158,6 +158,7 @@ onPageLoad(sink => {
     sink.renderIntoElementById('app', html);
   })
 })
+```
 
 Luckily [Akryum](https://github.com/akryum) has us covered and provided us with a Meteor package for this: 
 [akryum:vue-ssr](https://github.com/meteor-vue/vue-meteor/tree/master/packages/vue-ssr) allows us to write our server-side code like below:
