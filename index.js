@@ -93,9 +93,12 @@ function compile(source, options) {
   delete optionsCopy.plugins;
   optionsCopy.ast = true;
 
-  function transform(presets, generateSourceMap) {
+  function transform(presets) {
     optionsCopy.presets = presets;
-    optionsCopy.sourceMaps = !! generateSourceMap;
+    optionsCopy.sourceMaps = true;
+    if (result.map) {
+      optionsCopy.inputSourceMap = result.map;
+    }
 
     if (result.ast) {
       result = babelCore.transformFromAstSync(
@@ -114,16 +117,11 @@ function compile(source, options) {
 
   if (plugins && plugins.length > 0) {
     const presetOfPlugins = { plugins };
-    transform(
-      [presetOfPlugins],
-      // If there were no options.presets, then this is the final
-      // transform call, so make sure we generate a sourceMap.
-      ! presets
-    );
+    transform([presetOfPlugins]);
   }
 
   if (presets) {
-    transform(presets, true);
+    transform(presets);
   }
 
   return result;

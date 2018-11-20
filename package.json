@@ -55,6 +55,7 @@
     "fibers": "3.0.0",
     "meteor-promise": "0.8.6",
     "mocha": "5.2.0",
-    "promise": "8.0.2"
+    "promise": "8.0.2",
+    "source-map": "^0.5.7"
   }
 }

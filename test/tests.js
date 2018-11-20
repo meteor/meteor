@@ -1,5 +1,6 @@
 import assert from "assert";
 import { transform } from "@babel/core";
+import { SourceMapConsumer } from "source-map";
 import {
   default as testDefault,
   helper as testHelper,
@@ -56,6 +57,61 @@ describe("meteor-babel", () => {
       })).code,
       'console.log("oyez");'
     );
+  });
+
+  it("should compose source maps correctly", function () {
+    const source = [
+      "const fn = (  x) => {",
+      "",
+      "  return   x +  1",
+      "};"
+    ].join("\n");
+
+    const expected = [
+      "var fn = function (x) {",
+      "  return x + 1;",
+      "};"
+    ].join("\n");
+
+    const babelOptions = meteorBabel.getDefaultOptions();
+    babelOptions.plugins = [
+      require("@babel/plugin-transform-arrow-functions"),
+    ];
+
+    const result = meteorBabel.compile(source, babelOptions);
+
+    assert.strictEqual(result.code, expected);
+
+    assert.strictEqual(result.map.sourcesContent.length, 1);
+    assert.strictEqual(result.map.sourcesContent[0], source);
+
+    const smc = new SourceMapConsumer(result.map);
+
+    function checkPos(generated, expectedOriginal) {
+      const actualOriginal = smc.originalPositionFor(generated);
+      assert.strictEqual(actualOriginal.line, expectedOriginal.line);
+      assert.strictEqual(actualOriginal.column, expectedOriginal.column);
+    }
+
+    // |fn
+    checkPos({ line: 1, column: 4 },
+             { line: 1, column: 6 });
+
+    // fn|
+    checkPos({ line: 1, column: 6 },
+             { line: 1, column: 8 });
+
+    // |return
+    checkPos({ line: 2, column: 2 },
+             { line: 3, column: 2 });
+
+    // |x + 1
+    checkPos({ line: 2, column: 9 },
+             { line: 3, column: 11 });
+
+    // x| + 1
+    checkPos({ line: 2, column: 10 },
+             { line: 3, column: 12 });
   });
 });
 
