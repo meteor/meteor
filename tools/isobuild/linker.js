@@ -168,7 +168,9 @@ _.extend(Module.prototype, {
       // .sourceMap, and (optionally) .exportsName properties before being
       // returned from this method in a singleton array.
       servePath: self.combinedServePath,
-      hash: watch.sha1(...self.files.map(file => file._inputHash)),
+      hash: watch.sha1(
+        JSON.stringify(self.files.map(file => file._inputHash))
+      ),
     };
 
     const results = [result];
