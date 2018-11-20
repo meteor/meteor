@@ -81,24 +81,7 @@ selftest.define("run", function () {
   s.unlink("junk.css");
   run.waitSecs(5);
   run.match("restarted");
-
-  // Crash just once, then restart successfully
-  s.write("crash_then_restart.js", `
-var fs = Npm.require('fs');
-var path = Npm.require('path');
-var crashmark = path.join(process.env.METEOR_TEST_TMP, 'crashed');
-try {
-  fs.readFileSync(crashmark);
-} catch (e) {
-  fs.writeFileSync(crashmark);
-  process.exit(137);
-}`);
-  run.waitSecs(5);
-  run.match("with code: 137");
-  run.waitSecs(5);
-  run.match("restarted");
   run.stop();
-  s.unlink("crash_then_restart.js");
 
   run = s.run('--settings', 's.json');
   run.waitSecs(5);
