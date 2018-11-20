@@ -18,7 +18,8 @@ N/A
   considered experimental until those problems have been fixed.
   [Issue #10216](https://github.com/meteor/meteor/issues/10216)
 
-* The `meteor-babel` npm package has been updated to version 7.1.5.
+* The `meteor-babel` npm package has been updated to version 7.1.6,
+  improving source maps for applications with custom `.babelrc` files.
 
 * The `useragent` npm package used by `webapp` and (indirectly) by the
   `modern-browsers` package has been updated from 2.2.1 to 2.3.0. The
