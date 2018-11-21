@@ -11,28 +11,24 @@ After reading this guide, you'll know:
 4. How to use Vue's SSR (Server-side Rendering) with Meteor. 
 5. [TODO] How to integrate Vue with Meteor's realtime data layer.
 
-Vue already has an excellent guide with many advanced topics already covered. Some of them are [SSR (Server-side Rendering)](https://ssr.vuejs.org/), 
-[Routing](https://router.vuejs.org/), [Code Structure and Style Guide](https://vuejs.org/v2/style-guide/) and [State Management with Vuex](https://vuex.vuejs.org/).
+Vue already has an excellent guide with many advanced topics already covered. Some of them are [SSR (Server-side Rendering)](https://ssr.vuejs.org/), [Routing](https://router.vuejs.org/), [Code Structure and Style Guide](https://vuejs.org/v2/style-guide/) and [State Management with Vuex](https://vuex.vuejs.org/).
 
 This documentation is purely focused on integrating it with Meteor.
 
 <h2 id="introduction">Introduction</h2>
 [Vue](https://vuejs.org/v2/guide/) (pronounced /vjuː/, like view) is a progressive framework for building user interfaces. 
 Unlike other monolithic frameworks, Vue is designed from the ground up to be incrementally adoptable. 
-The core library is focused on the view layer only, and is easy to pick up and integrate with other 
-libraries or existing projects. On the other hand, Vue is also perfectly capable of powering sophisticated 
-Single-Page Applications when used in combination with 
-[modern tooling](https://vuejs.org/v2/guide/single-file-components.html) and [supporting libraries](https://github.com/vuejs/awesome-vue#components--libraries).
+The core library is focused on the view layer only, and is easy to pick up and integrate with other libraries or existing projects. On the other hand, Vue is also perfectly capable of powering sophisticated Single-Page Applications when used in combination with [modern tooling](https://vuejs.org/v2/guide/single-file-components.html) and [supporting libraries](https://github.com/vuejs/awesome-vue#components--libraries).
 
 Vue has an excellent [guide and documentation](https://vuejs.org/v2/guide/). This guide is about integrating it with Meteor.
 
 <h3 id="why-use-vue-with-meteor">Why use Vue with Meteor</h3>
 
-Vue is—like React, Blaze and Angular—a frontend library. Some really nice frameworks are built around Vue. [Nuxt.js](https://nuxtjs.org) for example, aims to create a framework flexible enough that you can use it as a main project base or in addition to your current project based on Node.js.
+Vue is a frontend library, like React, Blaze and Angular. 
 
-Though Nuxt.js is full-stack and very pluggable. It lacks the an API to communicate data from and to the server. Also unlike Meteor, Nuxt still relies on a configuration file. 
-Meteor's build tool and Pub/Sub API (or Apollo) provides Vue with this API that you would normally have to integrate yourself, greatly reducing the amount
-of boilerplate code you have to write.
+Some really nice frameworks are built around Vue. [Nuxt.js](https://nuxtjs.org) for example, aims to create a framework flexible enough that you can use it as a main project base or in addition to your current project based on Node.js.  Though Nuxt.js is full-stack and very pluggable. It lacks the an API to communicate data from and to the server. Also unlike Meteor, Nuxt still relies on a configuration file. 
+
+Meteor's build tool and Pub/Sub API (or Apollo) provides Vue with this API that you would normally have to integrate yourself, greatly reducing the amount of boilerplate code you have to write.
 
 <h3 id="integrating-vue-with-meteor">Integrating Vue With Meteor</h3>
 
@@ -56,9 +52,9 @@ meteor add akryum:vue-component
 
 You will end up with at least 3 files: 
 
-- `/client/App.vue` (The root component of your app)
-- `/client/main.js` (Initializing the Vue app in Meteor startup)
-- `/client/main.html` (containing the body with the #app div)
+1. `/client/App.vue` (The root component of your app)
+2. `/client/main.js` (Initializing the Vue app in Meteor startup)
+3. `/client/main.html` (containing the body with the #app div)
 
 We need a base HTML document that has the `app` id.  If you created a new project from `meteor create .`, put this in your `/client/main.html`.
 
