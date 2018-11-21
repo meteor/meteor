@@ -798,11 +798,11 @@ function runWebAppServer() {
         program.manifest,
         additionalOptions,
       );
-    // we need the runtime config w/ overrides for meteor_runtime_config.js
-    program.meteorRuntimeConfig = JSON.stringify(_.extend(
-      _.clone(__meteor_runtime_config__),
-      additionalOptions.runtimeConfigOverrides || {}
-    ));
+    // We need the runtime config with overrides for meteor_runtime_config.js:
+    program.meteorRuntimeConfig = JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || null),
+    });
     program.refreshableAssets = baseData.css.map(file => ({
       url: bundledJsCssUrlRewriteHook(file.url),
     }));
