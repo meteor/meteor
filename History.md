@@ -8,6 +8,16 @@ N/A
 
 ### Changes
 
+## v1.8.0.1, 2018-11-23
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
 * The `meteor-babel` npm package has been updated to version 7.1.6,
   improving source maps for applications with custom `.babelrc` files.
 
@@ -17,6 +27,14 @@ N/A
   version as `chrome`, and browser names are now processed
   case-insensitively by the `modern-browsers` package.
   [PR #10334](https://github.com/meteor/meteor/pull/10334)
+
+* Fixed a module caching bug that allowed `findImportedModuleIdentifiers`
+  to return the same identifiers for the modern and legacy versions of a
+  given module, even if the set of imported modules is different (for
+  example, because Babel injects fewer `@babel/runtime/...` imports into
+  modern code). Now the caching is always based on the SHA-1 hash of the
+  _generated_ code, rather than trusting the hash provided by compiler
+  plugins. [PR #10330](https://github.com/meteor/meteor/pull/10330)
 
 ## v1.8, 2018-10-08
 
