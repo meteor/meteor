@@ -12,6 +12,34 @@ N/A
   any dependencies on Blaze templating tools.
   [PR #10267](https://github.com/meteor/meteor/pull/10267)
 
+## v1.8.0.1, 2018-11-23
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
+* The `meteor-babel` npm package has been updated to version 7.1.6,
+  improving source maps for applications with custom `.babelrc` files.
+
+* The `useragent` npm package used by `webapp` and (indirectly) by the
+  `modern-browsers` package has been updated from 2.2.1 to 2.3.0. The
+  `chromium` browser name has been aliased to use the same minimum modern
+  version as `chrome`, and browser names are now processed
+  case-insensitively by the `modern-browsers` package.
+  [PR #10334](https://github.com/meteor/meteor/pull/10334)
+
+* Fixed a module caching bug that allowed `findImportedModuleIdentifiers`
+  to return the same identifiers for the modern and legacy versions of a
+  given module, even if the set of imported modules is different (for
+  example, because Babel injects fewer `@babel/runtime/...` imports into
+  modern code). Now the caching is always based on the SHA-1 hash of the
+  _generated_ code, rather than trusting the hash provided by compiler
+  plugins. [PR #10330](https://github.com/meteor/meteor/pull/10330)
+
 ## v1.8, 2018-10-08
 
 ### Breaking changes

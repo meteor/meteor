@@ -571,20 +571,7 @@ class ResourceSlot {
         // If we have a sourceProcessor, it will handle the adding of the
         // final processed JavaScript.
       } else if (self.inputResource.extension === "js") {
-        // If there is no sourceProcessor for a .js file, add the source
-        // directly to the output. #HardcodeJs
-        self.addJavaScript({
-          // XXX it's a shame to keep converting between Buffer and string, but
-          // files.convertToStandardLineEndings only works on strings for now
-          data: self.inputResource.data.toString('utf8'),
-          path: self.inputResource.path,
-          hash: self.inputResource.hash,
-          bare: self.inputResource.fileOptions &&
-            (self.inputResource.fileOptions.bare ||
-             // XXX eventually get rid of backward-compatibility "raw" name
-             // XXX COMPAT WITH 0.6.4
-             self.inputResource.fileOptions.raw)
-        });
+        self._addDirectlyToJsOutputResources();
       }
     } else {
       if (sourceProcessor) {
@@ -594,18 +581,21 @@ class ResourceSlot {
       // Any resource that isn't handled by compiler plugins just gets passed
       // through.
       if (self.inputResource.type === "js") {
-        let resource = self.inputResource;
-        if (! _.isString(resource.sourcePath)) {
-          resource.sourcePath = self.inputResource.path;
-        }
-        if (! _.isString(resource.targetPath)) {
-          resource.targetPath = resource.sourcePath;
-        }
-        self.jsOutputResources.push(resource);
+        self._addDirectlyToJsOutputResources();
       } else {
         self.outputResources.push(self.inputResource);
       }
     }
+  }
+
+  // Add this resource directly to jsOutputResources without modifying the
+  // original data. #HardcodeJs
+  _addDirectlyToJsOutputResources() {
+    this.addJavaScript({
+      ...(this.inputResource.fileOptions || {}),
+      path: this.inputResource.path,
+      data: this.inputResource.data,
+    });
   }
 
   _getOption(name, options) {
@@ -698,6 +688,15 @@ class ResourceSlot {
     return isInImports;
   }
 
+  _isBare(options) {
+    return !! (
+      this._getOption("bare", options) ||
+      // XXX eventually get rid of backwards-compatible "raw" name
+      // XXX COMPAT WITH 0.6.4
+      this._getOption("raw", options)
+    );
+  }
+
   addStylesheet(options, lazyFinalizer) {
     if (! this.sourceProcessor) {
       throw Error("addStylesheet on non-source ResourceSlot?");
@@ -787,7 +786,9 @@ class ResourceSlot {
 
   addJavaScript(options, lazyFinalizer) {
     // #HardcodeJs this gets called by constructor in the "js" case
-    if (! this.sourceProcessor && this.inputResource.extension !== "js") {
+    if (! this.sourceProcessor &&
+        this.inputResource.extension !== "js" &&
+        this.inputResource.type !== "js") {
       throw Error("addJavaScript on non-source ResourceSlot?");
     }
 
@@ -869,16 +870,21 @@ class OutputResource {
     }
 
     const targetPath = options.path || sourcePath;
+    const servePath = targetPath
+      ? resourceSlot.packageSourceBatch.unibuild.pkg._getServePath(targetPath)
+      : resourceSlot.inputResource.servePath;
 
     Object.assign(this, {
       type,
       lazy: resourceSlot._isLazy(options, true),
-      bare: !! resourceSlot._getOption("bare", options),
+      bare: resourceSlot._isBare(options),
       mainModule: !! resourceSlot._getOption("mainModule", options),
       sourcePath,
       targetPath,
-      servePath: resourceSlot.packageSourceBatch
-        .unibuild.pkg._getServePath(targetPath),
+      servePath,
+      // Remember the source hash so that changes to the source that
+      // disappear after compilation can still contribute to the hash.
+      _inputHash: resourceSlot.inputResource.hash,
     });
   }
 
@@ -963,9 +969,17 @@ class OutputResource {
       }
       return this._set("data", data);
 
-    case "hash":
-      const { hash } = this._initialOptions;
-      return this._set("hash", hash || sha1(this._get("data")));
+    case "hash": {
+      const hashes = [];
+
+      if (typeof this._inputHash === "string") {
+        hashes.push(this._inputHash);
+      }
+
+      hashes.push(sha1(this._get("data")));
+
+      return this._set("hash", sha1(...hashes));
+    }
 
     case "sourceMap":
       let { sourceMap } = this._initialOptions;
@@ -1655,6 +1669,7 @@ export class PackageSourceBatch {
         // before returning from the method (but after writing
         // to cache).
         data: file.source,
+        hash: file.hash,
         servePath: file.servePath,
         sourceMap: sm
       };

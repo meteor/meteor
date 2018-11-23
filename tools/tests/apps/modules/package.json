@@ -7,7 +7,7 @@
     "@babel/core": "^7.0.0-beta.56",
     "@babel/plugin-proposal-do-expressions": "^7.0.0-beta.56",
     "@babel/plugin-proposal-optional-chaining": "^7.0.0-beta.56",
-    "@babel/runtime": "^7.0.0-beta.56",
+    "@babel/runtime": "^7.1.2",
     "acorn": "file:imports/links/acorn",
     "aws-sdk": "^2.2.41",
     "cli-color": "^0.2.3",
