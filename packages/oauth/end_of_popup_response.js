@@ -9,8 +9,8 @@
 
     if (config.isCordova) {
       var credentialString = JSON.stringify({
-        credentialToken,
-        credentialSecret,
+        credentialToken: credentialToken,
+        credentialSecret: credentialSecret
       });
 
       window.location.hash = credentialString;
