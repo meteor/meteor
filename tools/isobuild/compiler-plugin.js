@@ -786,7 +786,9 @@ class ResourceSlot {
 
   addJavaScript(options, lazyFinalizer) {
     // #HardcodeJs this gets called by constructor in the "js" case
-    if (! this.sourceProcessor && this.inputResource.extension !== "js") {
+    if (! this.sourceProcessor &&
+        this.inputResource.extension !== "js" &&
+        this.inputResource.type !== "js") {
       throw Error("addJavaScript on non-source ResourceSlot?");
     }
 
@@ -868,6 +870,9 @@ class OutputResource {
     }
 
     const targetPath = options.path || sourcePath;
+    const servePath = targetPath
+      ? resourceSlot.packageSourceBatch.unibuild.pkg._getServePath(targetPath)
+      : resourceSlot.inputResource.servePath;
 
     Object.assign(this, {
       type,
@@ -876,8 +881,10 @@ class OutputResource {
       mainModule: !! resourceSlot._getOption("mainModule", options),
       sourcePath,
       targetPath,
-      servePath: resourceSlot.packageSourceBatch
-        .unibuild.pkg._getServePath(targetPath),
+      servePath,
+      // Remember the source hash so that changes to the source that
+      // disappear after compilation can still contribute to the hash.
+      _inputHash: resourceSlot.inputResource.hash,
     });
   }
 
@@ -962,8 +969,17 @@ class OutputResource {
       }
       return this._set("data", data);
 
-    case "hash":
-      return this._set("hash", sha1(this._get("data")));
+    case "hash": {
+      const hashes = [];
+
+      if (typeof this._inputHash === "string") {
+        hashes.push(this._inputHash);
+      }
+
+      hashes.push(sha1(this._get("data")));
+
+      return this._set("hash", sha1(...hashes));
+    }
 
     case "sourceMap":
       let { sourceMap } = this._initialOptions;
@@ -1653,6 +1669,7 @@ export class PackageSourceBatch {
         // before returning from the method (but after writing
         // to cache).
         data: file.source,
+        hash: file.hash,
         servePath: file.servePath,
         sourceMap: sm
       };
