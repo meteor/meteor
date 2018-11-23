@@ -8,6 +8,16 @@ N/A
 
 ### Changes
 
+## v1.8.0.1, 2018-11-23
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
 * The `meteor-babel` npm package has been updated to version 7.1.6,
   improving source maps for applications with custom `.babelrc` files.
 
