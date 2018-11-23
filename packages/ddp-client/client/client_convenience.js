@@ -40,7 +40,7 @@ function onDDPVersionNegotiationFailure(description) {
       return [true, { DDPVersionNegotiationFailures: failures }];
     });
     retry.retryLater(failures, () => {
-      Package.reload.Reload._reload();
+      Package.reload.Reload._reload({ immediateMigration: true });
     });
   }
 }

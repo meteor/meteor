@@ -1,15 +1,24 @@
 const minimumVersions = Object.create(null);
 const hasOwn = Object.prototype.hasOwnProperty;
 
-// By default, any minimum versions specified for chrome should apply to
-// chromeMobile too, per https://github.com/meteor/meteor/pull/9793,
-// though it should also be possible to specify minimum versions
-// specifically for chromeMobile. This map defines that aliasing behavior
-// in a generic way that could work for other browsers as well.
+// This map defines aliasing behavior in a generic way which still permits
+// minimum versions to be specified for a specific browser family.
 const browserAliases = {
   chrome: [
+    // chromeMobile*, per https://github.com/meteor/meteor/pull/9793,
     "chromeMobile",
     "chromeMobileIOS",
+
+    // The major version number of Chromium and Headless Chrome track with the
+    // releases of Chrome Dev, Canary and Stable, so we should be okay to
+    // alias them to Chrome in a generic sense.
+    // https://www.chromium.org/developers/version-numbers
+    //
+    // Chromium is particularly important to list here since, unlike macOS
+    // builds, Linux builds list Chromium in the userAgent along with Chrome:
+    //   e.g. Chromium/70.0.3538.77 Chrome/70.0.3538.77
+    "chromium",
+    "headlesschrome",
   ],
 
   // If a call to setMinimumBrowserVersions specifies Edge 12 as a minimum
@@ -26,17 +35,27 @@ const browserAliases = {
 // Expand the given minimum versions by reusing chrome versions for
 // chromeMobile (according to browserAliases above).
 function applyAliases(versions) {
+  const lowerCaseVersions = Object.create(null);
+
+  Object.keys(versions).forEach(browser => {
+    lowerCaseVersions[browser.toLowerCase()] = versions[browser];
+  });
+
   Object.keys(browserAliases).forEach(original => {
-    if (hasOwn.call(versions, original)) {
-      browserAliases[original].forEach(alias => {
-        if (! hasOwn.call(versions, alias)) {
-          versions[alias] = versions[original];
+    const aliases = browserAliases[original];
+    original = original.toLowerCase();
+
+    if (hasOwn.call(lowerCaseVersions, original)) {
+      aliases.forEach(alias => {
+        alias = alias.toLowerCase();
+        if (! hasOwn.call(lowerCaseVersions, alias)) {
+          lowerCaseVersions[alias] = lowerCaseVersions[original];
         }
       });
     }
   });
 
-  return versions;
+  return lowerCaseVersions;
 }
 
 // TODO Should it be possible for callers to setMinimumBrowserVersions to
@@ -46,14 +65,17 @@ function applyAliases(versions) {
 // webapp via request.browser, return true if that browser qualifies as
 // "modern" according to all requested version constraints.
 function isModern(browser) {
-  return browser &&
+  const lowerCaseName = browser &&
     typeof browser.name === "string" &&
-    hasOwn.call(minimumVersions, browser.name) &&
+    browser.name.toLowerCase();
+
+  return !!lowerCaseName &&
+    hasOwn.call(minimumVersions, lowerCaseName) &&
     greaterThanOrEqualTo([
       ~~browser.major,
       ~~browser.minor,
       ~~browser.patch,
-    ], minimumVersions[browser.name].version);
+    ], minimumVersions[lowerCaseName].version);
 }
 
 // Any package that depends on the modern-browsers package can call this
@@ -62,17 +84,18 @@ function isModern(browser) {
 // web.browser.legacy and web.browser will be based on the maximum of all
 // requested minimum versions for each browser.
 function setMinimumBrowserVersions(versions, source) {
-  applyAliases(versions);
+  const lowerCaseVersions = applyAliases(versions);
 
-  Object.keys(versions).forEach(browserName => {
-    if (hasOwn.call(minimumVersions, browserName) &&
-        ! greaterThan(versions[browserName],
-                      minimumVersions[browserName].version)) {
+  Object.keys(lowerCaseVersions).forEach(lowerCaseName => {
+    const version = lowerCaseVersions[lowerCaseName];
+
+    if (hasOwn.call(minimumVersions, lowerCaseName) &&
+        ! greaterThan(version, minimumVersions[lowerCaseName].version)) {
       return;
     }
 
-    minimumVersions[browserName] = {
-      version: copy(versions[browserName]),
+    minimumVersions[lowerCaseName] = {
+      version: copy(version),
       source: source || getCaller("setMinimumBrowserVersions")
     };
   });

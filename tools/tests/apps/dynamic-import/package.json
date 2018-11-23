@@ -6,7 +6,7 @@
     "test": "TEST_BROWSER_DRIVER=puppeteer meteor test --full-app --driver-package meteortesting:mocha"
   },
   "dependencies": {
-    "@babel/runtime": "^7.0.0-beta.56",
+    "@babel/runtime": "^7.1.2",
     "acorn": "^4.0.11",
     "arson": "^0.2.3",
     "meteor-node-stubs": "^0.4.1",

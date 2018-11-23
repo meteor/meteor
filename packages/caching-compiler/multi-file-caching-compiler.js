@@ -172,17 +172,19 @@ extends CachingCompilerBase {
     });
 
     if (this._cacheDebugEnabled) {
-      cacheMisses.sort();
+      this._afterLinkCallbacks.push(() => {
+        cacheMisses.sort();
 
-      this._cacheDebug(
-        `Ran (#${
-          ++this._callCount
-        }) on: ${
-          JSON.stringify(cacheMisses)
-        } ${
-          JSON.stringify(Object.keys(arches).sort())
-        }`
-      );
+        this._cacheDebug(
+          `Ran (#${
+            ++this._callCount
+          }) on: ${
+            JSON.stringify(cacheMisses)
+          } ${
+            JSON.stringify(Object.keys(arches).sort())
+          }`
+        );
+      });
     }
   }
 
