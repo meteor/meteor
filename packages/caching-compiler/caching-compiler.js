@@ -13,7 +13,9 @@ CachingCompilerBase = class CachingCompilerBase {
   }) {
     this._compilerName = compilerName;
     this._maxParallelism = maxParallelism;
-    const envVarPrefix = 'METEOR_' + compilerName.toUpperCase() + '_CACHE_';
+    const compilerNameForEnvar = compilerName.toUpperCase()
+      .replace('/-/g', '_').replace(/[^A-Z0-9_]/g, '');
+    const envVarPrefix = 'METEOR_' + compilerNameForEnvar + '_CACHE_';
 
     const debugEnvVar = envVarPrefix + 'DEBUG';
     this._cacheDebugEnabled = !! process.env[debugEnvVar];
@@ -25,6 +27,10 @@ CachingCompilerBase = class CachingCompilerBase {
 
     // For testing.
     this._callCount = 0;
+
+    // Callbacks that will be called after the linker is done processing
+    // files, after all lazy compilation has finished.
+    this._afterLinkCallbacks = [];
   }
 
   // Your subclass must override this method to define the key used to identify
@@ -111,6 +117,14 @@ CachingCompilerBase = class CachingCompilerBase {
       + (sm.sourcesContent || []).reduce(function (soFar, current) {
         return soFar + (current ? current.length : 0);
       }, 0);
+  }
+
+  // Called by the compiler plugins system after all linking and lazy
+  // compilation has finished.
+  afterLink() {
+    this._afterLinkCallbacks.splice(0).forEach(callback => {
+      callback();
+    });
   }
 
   // Borrowed from another MIT-licensed project that benjamn wrote:
@@ -277,16 +291,16 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
   // you have processing you want to perform at the beginning or end of a
   // processing phase, you may want to override this method and call the
   // superclass implementation from within your method.
-  processFilesForTarget(inputFiles) {
+  async processFilesForTarget(inputFiles) {
     const cacheMisses = [];
     const arches = this._cacheDebugEnabled && Object.create(null);
 
-    return Promise.all(inputFiles.map(async (inputFile) => {
+    inputFiles.forEach(inputFile => {
       if (arches) {
         arches[inputFile.getArch()] = 1;
       }
 
-      const getResult = async () => {
+      const getResult = () => {
         const cacheKey = this._deepHash(this.getCacheKey(inputFile));
         let compileResult = this._cache.get(cacheKey);
 
@@ -299,7 +313,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
         if (! compileResult) {
           cacheMisses.push(inputFile.getDisplayPath());
-          compileResult = await this.compileOneFile(inputFile);
+          compileResult = Promise.await(this.compileOneFile(inputFile));
 
           if (! compileResult) {
             // compileOneFile should have called inputFile.error.
@@ -317,31 +331,30 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
 
       if (this.compileOneFileLater &&
           inputFile.supportsLazyCompilation) {
-        await this.compileOneFileLater(inputFile, getResult);
+        this.compileOneFileLater(inputFile, getResult);
       } else {
-        const result = await getResult();
+        const result = getResult();
         if (result) {
           this.addCompileResult(inputFile, result);
         }
       }
-
-    })).then(() => {
-      if (! this._cacheDebugEnabled) {
-        return;
-      }
-
-      cacheMisses.sort();
-
-      this._cacheDebug(
-        `Ran (#${
-          ++this._callCount
-        }) on: ${
-          JSON.stringify(cacheMisses)
-        } ${
-          JSON.stringify(Object.keys(arches).sort())
-        }`
-      );
     });
+
+    if (this._cacheDebugEnabled) {
+      this._afterLinkCallbacks.push(() => {
+        cacheMisses.sort();
+
+        this._cacheDebug(
+          `Ran (#${
+            ++this._callCount
+          }) on: ${
+            JSON.stringify(cacheMisses)
+          } ${
+            JSON.stringify(Object.keys(arches).sort())
+          }`
+        );
+      });
+    }
   }
 
   _cacheFilename(cacheKey) {

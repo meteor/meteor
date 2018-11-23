@@ -43,11 +43,13 @@ var Module = function (options) {
   // module name or null
   self.name = options.name || null;
 
+  // The architecture for which this bundle is being linked.
+  self.bundleArch = options.bundleArch;
+
   // files in the module. array of File
   self.files = [];
 
   // options
-  self.meteorInstallOptions = options.meteorInstallOptions;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
 };
@@ -107,11 +109,14 @@ _.extend(Module.prototype, {
   getPrelinkedFiles: Profile("linker Module#getPrelinkedFiles", function () {
     var self = this;
 
+    const haveMeteorInstallOptions =
+      self.files.some(file => file.meteorInstallOptions);
+
     // If we don't want to create a separate scope for this module,
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
     if (self.useGlobalNamespace &&
-        ! self.meteorInstallOptions) {
+        ! haveMeteorInstallOptions) {
       // Ignore lazy files unless we have a module system.
       const eagerFiles = _.filter(self.files, file => ! file.lazy);
 
@@ -168,9 +173,9 @@ _.extend(Module.prototype, {
     let fileCount = 0;
 
     // Emit each file
-    if (self.meteorInstallOptions) {
-      const tree = self._buildModuleTree(results, sourceWidth);
-      fileCount = self._chunkifyModuleTree(tree, chunks, sourceWidth);
+    if (haveMeteorInstallOptions) {
+      const trees = self._buildModuleTrees(results, sourceWidth);
+      fileCount = self._chunkifyModuleTrees(trees, chunks, sourceWidth);
       result.exportsName =
         self._chunkifyEagerRequires(chunks, fileCount, sourceWidth);
 
@@ -223,11 +228,17 @@ _.extend(Module.prototype, {
   // files or directories, and the values are either nested objects
   // (representing directories) or File objects (representing modules).
   // Bare files and lazy files that are never imported are ignored.
-  _buildModuleTree(results, sourceWidth) {
-    assert.ok(this.meteorInstallOptions);
+  _buildModuleTrees(results, sourceWidth) {
+    // Map from meteorInstallOptions objects to trees of File objects for
+    // all non-dynamic modules.
+    const trees = new Map;
 
-    // Tree of File objects for all non-dynamic modules.
-    const tree = {};
+    function getTree({ meteorInstallOptions }) {
+      if (! trees.has(meteorInstallOptions)) {
+        trees.set(meteorInstallOptions, {});
+      }
+      return trees.get(meteorInstallOptions);
+    }
 
     _.each(this.files, file => {
       if (file.bare) {
@@ -242,6 +253,8 @@ _.extend(Module.prototype, {
         // bundle.
         return;
       }
+
+      const tree = getTree(file);
 
       if (file.aliasId) {
         addToTree(file.aliasId, file.absModuleId, tree);
@@ -293,16 +306,15 @@ _.extend(Module.prototype, {
       }
     });
 
-    return tree;
+    return trees;
   },
 
   // Take the tree generated in getPrelinkedFiles and populate the chunks
   // array with strings and SourceNode objects that can be combined into a
   // single SourceNode object. Return the count of modules in the tree.
-  _chunkifyModuleTree(tree, chunks, sourceWidth) {
+  _chunkifyModuleTrees(trees, chunks, sourceWidth) {
     const self = this;
 
-    assert.ok(self.meteorInstallOptions);
     assert.ok(_.isArray(chunks));
     assert.ok(_.isNumber(sourceWidth));
 
@@ -355,11 +367,18 @@ _.extend(Module.prototype, {
 
     const chunksLengthBeforeWalk = chunks.length;
 
-    // The tree of nested directories and module functions built above
-    // allows us to call meteorInstall just once to install everything.
-    chunks.push("var require = meteorInstall(");
-    walk(tree);
-    chunks.push(",", self._stringifyInstallOptions(), ");");
+    if (trees.size > 0) {
+      chunks.push("var require = ");
+    }
+
+    // Emit one meteorInstall call per distinct meteorInstallOptions
+    // object, since the options apply to all modules installed by a given
+    // call to meteorInstall.
+    trees.forEach((tree, options) => {
+      chunks.push("meteorInstall(");
+      walk(tree);
+      chunks.push(",", self._stringifyInstallOptions(options), ");\n");
+    });
 
     if (moduleCount === 0) {
       // If no files were actually added to the chunks array, roll back
@@ -370,9 +389,8 @@ _.extend(Module.prototype, {
     return moduleCount;
   },
 
-  _stringifyInstallOptions() {
-    let optionsString =
-      JSON.stringify(this.meteorInstallOptions, null, 2);
+  _stringifyInstallOptions(options) {
+    const optionsString = JSON.stringify(options, null, 2);
 
     if (this.useGlobalNamespace) {
       return optionsString;
@@ -524,7 +542,7 @@ var writeSymbolTree = function (symbolTree, indent) {
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
-var File = function (inputFile, module) {
+function File(inputFile, module) {
   var self = this;
 
   // source code for this file (a string)
@@ -558,8 +576,8 @@ var File = function (inputFile, module) {
   // True if the input file should not be evaluated eagerly.
   self.lazy = inputFile.lazy; // could be `true`, `false` or `undefined` <sigh>
 
-  // True if the file is eagerly imported, "dynamic" if the file is
-  // dynamically imported.
+  // False if the file is not imported at all, "static" if it is eagerly
+  // imported, and "dynamic" if the file is dynamically imported.
   self.imported = inputFile.imported;
 
   // Boolean indicating whether this file is the main entry point module
@@ -579,6 +597,10 @@ var File = function (inputFile, module) {
 
   // The Module containing this file.
   self.module = module;
+
+  // Options to pass to meteorInstall when this file is installed.
+  // Defined only when the modules package is in use by this module.
+  self.meteorInstallOptions = inputFile.meteorInstallOptions;
 };
 
 function getNonDynamicDeps(inputFileDeps) {
@@ -648,16 +670,12 @@ _.extend(File.prototype, {
     }
   }),
 
-  _useMeteorInstall() {
-    return this.module.meteorInstallOptions;
-  },
-
   isDynamic() {
     return this.lazy && this.imported === "dynamic";
   },
 
   _getClosureHeader() {
-    if (this._useMeteorInstall()) {
+    if (this.meteorInstallOptions) {
       const headerParts = ["function("];
 
       if (this.source.match(/\b__dirname\b/)) {
@@ -681,7 +699,7 @@ _.extend(File.prototype, {
   },
 
   _getClosureFooter() {
-    return this._useMeteorInstall()
+    return this.meteorInstallOptions
       ? "}"
       : "}).call(this);\n";
   },
@@ -694,14 +712,19 @@ _.extend(File.prototype, {
   //
   // Returns a SourceNode.
   getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
-    var self = this;
+    return getPrelinkedOutputCached(this, options);
+  })
+});
+
+const getPrelinkedOutputCached = require("optimism").wrap(
+  function (file, options) {
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
     var preserveLineNumbers = options.preserveLineNumbers;
 
-    if (self.sourceMap) {
+    if (file.sourceMap) {
       // Honoring options.preserveLineNumbers is likely impossible if we
-      // have a source map, since self.source has probably already been
+      // have a source map, since file.source has probably already been
       // transformed in a way that does not preserve line numbers. That's
       // ok, though, because we have a source map, and we also annotate
       // line numbers using comments (see above), just in case source maps
@@ -710,15 +733,15 @@ _.extend(File.prototype, {
     }
 
     const result = {
-      code: self.source,
-      map: self.sourceMap || null,
+      code: file.source,
+      map: file.sourceMap || null,
     };
 
     var chunks = [];
-    var pathNoSlash = convertColons(self.servePath.replace(/^\//, ""));
+    var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
 
-    if (! self.bare) {
-      var closureHeader = self._getClosureHeader();
+    if (! file.bare) {
+      var closureHeader = file._getClosureHeader();
       chunks.push(
         closureHeader,
         preserveLineNumbers ? "" : "\n\n"
@@ -729,7 +752,7 @@ _.extend(File.prototype, {
       // Banner
       var bannerLines = [pathNoSlash];
 
-      if (self.bare) {
+      if (file.bare) {
         bannerLines.push(
           "This file is in bare mode and is not in its own closure.");
       }
@@ -764,12 +787,12 @@ _.extend(File.prototype, {
     }
 
     // Footer
-    if (self.bare) {
+    if (file.bare) {
       if (! preserveLineNumbers) {
         chunks.push(dividerLine(bannerWidth), "\n");
       }
     } else {
-      const closureFooter = self._getClosureFooter();
+      const closureFooter = file._getClosureFooter();
       if (preserveLineNumbers) {
         chunks.push(closureFooter);
       } else {
@@ -782,8 +805,22 @@ _.extend(File.prototype, {
     }
 
     return new sourcemap.SourceNode(null, null, null, chunks);
-  })
-});
+
+  }, {
+    // Store at most 4096 Files worth of prelinked output in this cache.
+    max: Math.pow(2, 12),
+
+    makeCacheKey(file, options) {
+      return JSON.stringify({
+        sourceHash: file.sourceHash,
+        arch: file.module.bundleArch,
+        bare: file.bare,
+        servePath: file.servePath,
+        options,
+      });
+    }
+  }
+);
 
 // Given a list of lines (not newline-terminated), returns a string placing them
 // in a pretty banner of width bannerWidth. All lines must have length at most
@@ -994,9 +1031,8 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // accessible from the console, and avoids actually combining files into
   // a single file.
   isApp,
-  // Options to pass as the second argument to meteorInstall. Falsy if
-  // meteorInstall is disabled.
-  meteorInstallOptions,
+  // The architecture for which this bundle is being linked.
+  bundleArch,
   // If we end up combining all of the files into one, use this as the
   // servePath.
   combinedServePath,
@@ -1018,7 +1054,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   var module = new Module({
     name,
-    meteorInstallOptions,
+    bundleArch,
     useGlobalNamespace: isApp,
     combinedServePath,
   });

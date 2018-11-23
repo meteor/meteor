@@ -21,7 +21,7 @@ const CssTools = {
       options.from = options.source;
       delete options.source;
     }
-    return postcss().process(cssText, options).root;
+    return postcss.parse(cssText, options);
   },
 
   /**
@@ -45,14 +45,13 @@ const CssTools = {
       };
       delete options.sourcemap;
     }
+    // explicitly set from to undefined to prevent postcss warnings
+    if (!options.from){
+      options.from = void 0;
+    }
 
-    const f = new Future;
-    postcss().process(cssAst, options).then(result => {
-      f.return(result);
-    }).catch(error => {
-      f.throw(error);
-    });
-    transformResult = f.wait();
+    transformResult = cssAst.toResult(options);
+
     return {
       code: transformResult.css,
       map: transformResult.map ? transformResult.map.toJSON() : null,
@@ -67,7 +66,11 @@ const CssTools = {
    */
   minifyCss(cssText) {
     const f = new Future;
-    postcss([ cssnano({ safe: true }) ]).process(cssText).then(result => {
+    postcss([
+      cssnano({ safe: true }),
+    ]).process(cssText, {
+      from: void 0,
+    }).then(result => {
       f.return(result.css);
     }).catch(error => {
       f.throw(error);

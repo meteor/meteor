@@ -496,6 +496,15 @@ describe("symlinking node_modules", () => {
       require("./imports/links/acorn").parse
     );
   });
+
+  it("should not break custom import extensions", () => {
+    import { jsx } from "jsx-import-test";
+    assert.strictEqual(jsx.type, "div");
+    assert.strictEqual(jsx.props.children, "oyez");
+    return import("./imports/links/jsx-import-test/child").then(ns => {
+      assert.strictEqual(ns.default, jsx);
+    });
+  });
 });
 
 describe("issue #9878", () => {
@@ -529,6 +538,23 @@ describe("issue #9878", () => {
         _stripped: false
       }
     });
+  });
+});
+
+describe("issue #10233", () => {
+  it("should be fixed", () => {
+    require("meteor/dummy-compiler").check();
+  });
+});
+
+describe("local .json modules", () => {
+  it("should be importable within Meteor packages (issue #10122)", () => {
+    import { oyez } from "meteor/import-local-json-module";
+    assert.strictEqual(oyez, 1234);
+    assert.strictEqual(
+      require("meteor/import-local-json-module/data").oyez,
+      1234
+    );
   });
 });
 

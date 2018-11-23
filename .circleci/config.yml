@@ -124,14 +124,14 @@ jobs:
             - package-npm-deps-cache-group1-v1-
       - restore_cache:
           keys:
-            - package-npm-deps-cache-group2-v1-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group2-v1-
+            - package-npm-deps-cache-group2-v3-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group2-v3-
       - restore_cache:
           keys:
             - v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
             - v2-other-deps-cache-{{ .Branch }}-
       - restore_cache:
-          keys: 
+          keys:
             - v1-test-groups-{{ .Branch }}
             - v1-test-groups-
       - run:
@@ -449,7 +449,7 @@ jobs:
           path: /tmp/core_dumps
       - store_artifacts:
           path: /tmp/memuse.txt
- 
+
   Test Group 6:
     <<: *build_machine_environment
     steps:
@@ -737,7 +737,7 @@ jobs:
             - packages/package-version-parser/.npm/package/node_modules
             - packages/boilerplate-generator/.npm/package/node_modules
       - save_cache:
-          key: package-npm-deps-cache-group2-v1-{{ checksum "shrinkwraps.txt" }}
+          key: package-npm-deps-cache-group2-v3-{{ checksum "shrinkwraps.txt" }}
           paths:
             - packages/xmlbuilder/.npm/package/node_modules
             - packages/logging/.npm/package/node_modules
@@ -760,6 +760,9 @@ jobs:
             - packages/minifier-css/.npm/package/node_modules
             - packages/minifier-js/.npm/package/node_modules
             - packages/standard-minifier-css/.npm/plugin/minifyStdCSS/node_modules
+            - packages/inter-process-messaging/.npm/package/node_modules
+            - packages/fetch/.npm/package/node_modules
+            - packages/non-core/mongo-decimal/.npm/package/node_modules
       - save_cache:
           key: v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
           paths:

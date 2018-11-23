@@ -366,6 +366,8 @@ export class PackageAPI {
   mainModule(path, arch, fileOptions = {}) {
     arch = toArchArray(arch);
 
+    const errors = [];
+
     forAllMatchingArchs(arch, a => {
       const filesForArch = this.files[a];
       const source = {
@@ -392,10 +394,18 @@ export class PackageAPI {
         }
       }
 
+      if (filesForArch.sources.some(old => source.relPath === old.relPath)) {
+        errors.push(`Duplicate api.mainModule: ${path}`);
+      }
+
       filesForArch.main = source;
       filesForArch.sources.push(source);
 
       this._forbidExportWithLazyMain(a);
+    });
+
+    errors.forEach(error => {
+      buildmessage.error(error, { useMyCaller: 1 });
     });
   }
 

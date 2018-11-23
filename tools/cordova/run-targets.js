@@ -171,6 +171,7 @@ function logFromAndroidLogcatLine(Log, line) {
   // "I/Tag(  PID): message"
   let match =
     line.match(/^([A-Z])\/([^\(]*?)\(\s*(\d+)\): (.*)$/);
+    let priority, tag, pid, message, logLevel, filename, lineNumber;
 
   if (match) {
     [, priority, tag, pid, message] = match;

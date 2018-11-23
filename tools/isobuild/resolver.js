@@ -216,19 +216,25 @@ export default class Resolver {
     const path = pathNormalize(joined);
     const exactStat = this.statOrNull(path);
     const exactResult = exactStat && { path, stat: exactStat };
+
     let result = null;
+
     if (exactResult && exactStat.isFile()) {
       result = exactResult;
-    }
-
-    if (! result) {
-      this.extensions.some(ext => {
-        const pathWithExt = path + ext;
-        const stat = this.statOrNull(pathWithExt);
-        if (stat && ! stat.isDirectory()) {
-          return result = { path: pathWithExt, stat };
-        }
-      });
+    } else {
+      // No point in trying alternate file extensions if the parent
+      // directory does not exist.
+      const parentDirStat = this.statOrNull(pathDirname(path));
+      if (parentDirStat &&
+          parentDirStat.isDirectory()) {
+        this.extensions.some(ext => {
+          const pathWithExt = path + ext;
+          const stat = this.statOrNull(pathWithExt);
+          if (stat && ! stat.isDirectory()) {
+            return result = { path: pathWithExt, stat };
+          }
+        });
+      }
     }
 
     if (! result && exactResult && exactStat.isDirectory()) {
@@ -288,8 +294,8 @@ export default class Resolver {
 
     if (sourceRoot) {
       let dir = absParentPath; // It's ok for absParentPath to be a directory!
-      let info = this._joinAndStat(dir);
-      if (! info || ! info.stat.isDirectory()) {
+      let dirStat = this.statOrNull(dir);
+      if (! (dirStat && dirStat.isDirectory())) {
         dir = pathDirname(dir);
       }
 

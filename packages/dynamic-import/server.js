@@ -207,12 +207,15 @@ function getCache(platform) {
     : cachesByPlatform[platform] = Object.create(null);
 }
 
-process.on("message", msg => {
-  // The cache for the "web.browser" platform needs to be discarded
-  // whenever a client-only refresh occurs, so that new client code does
-  // not receive stale module data from __dynamicImport. This code handles
-  // the same message listened for by the autoupdate package.
-  if (msg && msg.refresh === "client") {
-    delete cachesByPlatform["web.browser"];
-  }
+const { onMessage } = require("meteor/inter-process-messaging");
+
+onMessage("client-refresh", () => {
+  // The caches for the web.browser[.legacy] platforms need to be
+  // discarded whenever a client-only refresh occurs, so the new client
+  // bundle does not fetch stale module data from dynamic import(). This
+  // message is sent by tools/runners/run-app.js and also consumed by the
+  // autoupdate package.
+  Object.keys(cachesByPlatform).forEach(platform => {
+    delete cachesByPlatform[platform];
+  });
 });

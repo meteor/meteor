@@ -2,25 +2,13 @@
 
 # Meteor Roadmap
 
-**Up to date as of April 19, 2018**
+**Up to date as of October 9, 2018**
 
 This document describes the high level features the Meteor project maintainers have decided to prioritize in the near- to medium-term future. A large fraction of the maintainers’ time will be dedicated to working on the features described here. As with any roadmap, this is a living document that will evolve as priorities and dependencies shift; we aim to update the roadmap with any changes or status updates on a monthly basis.
 
 Contributors are encouraged to focus their efforts on work that aligns with the roadmap as maintainers will prioritize their time spent reviewing PRs and issues around these contributions. This however does not mean that PRs against other features and bugs will automatically be rejected.
 
 Items can be added to this roadmap by first getting design approval for a solution to an open issue, as outlined by our [contributing guidelines](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md). Then, when a contributor has committed to solving the issue in the short to medium term, they can submit a PR to add that work to the roadmap. All other PRs to the roadmap will be rejected.
-
-## Different JS bundles for modern versus legacy browsers
-
-*Pull request: https://github.com/meteor/meteor/pull/9439*
-
-Despite amazing progress in the latest versions of popular web browsers to support the vast majority of the ECMAScript specification, most web applications are still forced to compile their JavaScript for the oldest browsers they want to support, which means native support for the latest features is usually off-limits.
-
-Starting in Meteor 1.6.2, Meteor will build two different client JS bundles, one for modern browsers (`web.browser`) and another for legacy browsers (`web.browser.legacy` and `web.cordova`), in addition to the server bundle which targets Node 8. Package authors can use these architectures to include files only in legacy browsers, or only in modern browsers, while also setting minimum browser versions for the native features they require. As of this writing, modern browsers are loosely defined as any browsers with native support for `async` functions and `await` expressions, which represents [more than 80% of web usage today](https://caniuse.com/#feat=async-functions).
-
-While it was tempting to compile even more bundles for different categories of browser support, the reality of the web today is that most users have access to self-updating "evergreen" browsers, with nearly complete ECMAScript support, and the market share of evergreen browsers is only going to increase with time. For everyone else, Meteor will automatically provide the same level of compilation provided to everyone by Meteor 1.6.1 and before. It's also a lot easier to test two different bundles in representative browsers than it is to test a whole matrix of possibilities.
-
-As a result of these changes, a typical new Meteor app will have a modern client JS bundle that is one quarter to one third the size of the legacy JS bundle. A new app created with `meteor create --release 1.6.2-beta.12 --minimal new-app` will have a modern JS bundle just 15KB in size (minified + gzip), for example.
 
 ## Out of the box support for advanced React features
 
@@ -34,25 +22,6 @@ React is the most popular way to build UIs in JavaScript today, and a great comp
 We think Meteor has a clear set of benefits when compared to other popular React frameworks like Create React App and Next.js.
 
 ## Remove blockers to Meteor adoption
-
-### Support the latest stable version of Node
-
-*Tracking pull request: https://github.com/meteor/meteor/pull/8728*
-
-See [above](https://github.com/meteor/meteor/blob/devel/Roadmap.md#upgrade-to-node-8). Developers deserve to use the latest underlying technologies, and Meteor is uniquely able to smooth over any rough edges in early/experimental versions of technologies like Node. A number of developers are already using beta versions of Meteor 1.6 to deploy their apps, because the benefits outweigh the risks for them. Just as Meteor 1.5 climbed to more than 50% usage in less than two months, we expect Meteor 1.6 to become the most widely used version of Meteor soon after its release.
-
-### Eliminate the need for an `imports` directory
-
-*Status: possible using `meteor.mainModule` in `package.json` in `1.6.2-beta.12`.*
-*Pull requests: https://github.com/meteor/meteor/pull/9690, https://github.com/meteor/meteor/pull/9714, https://github.com/meteor/meteor/pull/9715*
-
-When Meteor 1.3 first introduced a module system based on [CommonJS](http://wiki.commonjs.org/wiki/Modules/1.1) and [ECMAScript module syntax](2ality.com/2014/09/es6-modules-final.html), we had to provide a way for developers to migrate their apps from the old ways of loading code, whereby all files were evaluated eagerly during application startup.
-
-The best solution at the time was to introduce a special `imports` directory to contain modules that should be loaded lazily (rather than eagerly), when first imported.
-
-Most other Node applications work this way by default: every module is lazy, and therefore must be imported by another module, and evaluation starts with one "entry point" module (typically specified by the `"main"` field in `package.json`).
-
-It should be possible for Meteor apps to opt into this behavior, and optionally get rid of their special `imports` directories. The mechanism for opting in will very likely involve putting something in your `package.json` file that specifies entry point modules for both client and server.
 
 ### Make the `meteor` command-line tool installable from npm
 
@@ -103,9 +72,32 @@ Apollo is our approach to giving Meteor developers SQL and other database suppor
 
 Even though Apollo could eventually be a complete replacement for Meteor’s included Mongo/DDP data stack, you should feel good about Meteor’s existing data system. We are currently open to ideas around performance and stability improvements.
 
-
-
 # **Recently completed**
+
+## Different JS bundles for modern versus legacy browsers
+
+*Pull request: https://github.com/meteor/meteor/pull/9439*
+
+Despite amazing progress in the latest versions of popular web browsers to support the vast majority of the ECMAScript specification, most web applications are still forced to compile their JavaScript for the oldest browsers they want to support, which means native support for the latest features is usually off-limits.
+
+Starting in Meteor 1.6.2, Meteor will build two different client JS bundles, one for modern browsers (`web.browser`) and another for legacy browsers (`web.browser.legacy` and `web.cordova`), in addition to the server bundle which targets Node 8. Package authors can use these architectures to include files only in legacy browsers, or only in modern browsers, while also setting minimum browser versions for the native features they require. As of this writing, modern browsers are loosely defined as any browsers with native support for `async` functions and `await` expressions, which represents [more than 80% of web usage today](https://caniuse.com/#feat=async-functions).
+
+While it was tempting to compile even more bundles for different categories of browser support, the reality of the web today is that most users have access to self-updating "evergreen" browsers, with nearly complete ECMAScript support, and the market share of evergreen browsers is only going to increase with time. For everyone else, Meteor will automatically provide the same level of compilation provided to everyone by Meteor 1.6.1 and before. It's also a lot easier to test two different bundles in representative browsers than it is to test a whole matrix of possibilities.
+
+As a result of these changes, a typical new Meteor app will have a modern client JS bundle that is one quarter to one third the size of the legacy JS bundle. A new app created with `meteor create --release 1.6.2-beta.12 --minimal new-app` will have a modern JS bundle just 15KB in size (minified + gzip), for example.
+
+### Eliminate the need for an `imports` directory
+
+*Status: possible using `meteor.mainModule` in `package.json` in `1.6.2-beta.12`.*
+*Pull requests: https://github.com/meteor/meteor/pull/9690, https://github.com/meteor/meteor/pull/9714, https://github.com/meteor/meteor/pull/9715*
+
+When Meteor 1.3 first introduced a module system based on [CommonJS](http://wiki.commonjs.org/wiki/Modules/1.1) and [ECMAScript module syntax](2ality.com/2014/09/es6-modules-final.html), we had to provide a way for developers to migrate their apps from the old ways of loading code, whereby all files were evaluated eagerly during application startup.
+
+The best solution at the time was to introduce a special `imports` directory to contain modules that should be loaded lazily (rather than eagerly), when first imported.
+
+Most other Node applications work this way by default: every module is lazy, and therefore must be imported by another module, and evaluation starts with one "entry point" module (typically specified by the `"main"` field in `package.json`).
+
+It should be possible for Meteor apps to opt into this behavior, and optionally get rid of their special `imports` directories. The mechanism for opting in will very likely involve putting something in your `package.json` file that specifies entry point modules for both client and server.
 
 ## Make Mongo more optional
 
@@ -114,6 +106,12 @@ Even though Apollo could eventually be a complete replacement for Meteor’s inc
 Meteor has depended on Mongo for as long as the Meteor project has existed. However, we care deeply about supporting other data storage systems (especially via [GraphQL](https://www.apollodata.com/)), and would like to make it possible to avoid using Mongo altogether.
 
 Since Meteor 1.6.2-beta.9, `meteor create --minimal minimal-app` will create an app with very few packages, without any dependency on Mongo.
+
+### Support the latest stable version of Node
+
+*Tracking pull request: https://github.com/meteor/meteor/pull/8728*
+
+See [above](https://github.com/meteor/meteor/blob/devel/Roadmap.md#upgrade-to-node-8). Developers deserve to use the latest underlying technologies, and Meteor is uniquely able to smooth over any rough edges in early/experimental versions of technologies like Node. A number of developers are already using beta versions of Meteor 1.6 to deploy their apps, because the benefits outweigh the risks for them. Just as Meteor 1.5 climbed to more than 50% usage in less than two months, we expect Meteor 1.6 to become the most widely used version of Meteor soon after its release.
 
 ## Upgrade to Node 8
 
