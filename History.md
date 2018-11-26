@@ -57,9 +57,13 @@ N/A
   planning a quick follow-up Meteor 1.8.1 release, which can be obtained
   by running the command
   ```bash
-  meteor update --release 1.8.1
+  meteor update --release 1.8.1-beta.n
   ```
+  where `-beta.n` is the latest beta release according to the
+  [releases](https://github.com/meteor/meteor/releases) page (currently
+  `-beta.6`).
   [Issue #10216](https://github.com/meteor/meteor/issues/10216)
+  [PR #10248](https://github.com/meteor/meteor/pull/10248)
 
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
   addition to the `web.browser` (modern) and `web.cordova` bundles.
