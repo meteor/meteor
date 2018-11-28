@@ -6,7 +6,7 @@
     "version": "3.7.1"
   },
   "devDependencies": {
-    "chexo": "1.0.5",
+    "chexo": "1.0.7",
     "hexo": "3.8.0",
     "hexo-prism-plus": "1.1.0",
     "hexo-renderer-ejs": "0.3.1",
