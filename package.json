@@ -7,7 +7,7 @@
   },
   "devDependencies": {
     "canonical-json": "0.0.4",
-    "chexo": "1.0.5",
+    "chexo": "1.0.7",
     "handlebars": "4.0.12",
     "hexo": "3.8.0",
     "hexo-prism-plus": "1.1.0",
