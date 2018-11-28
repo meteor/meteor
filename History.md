@@ -23,6 +23,10 @@ N/A
   Meteor should be considered experimental until those problems have been
   fixed. [Issue #10216](https://github.com/meteor/meteor/issues/10216)
 
+* Mongo has been upgraded to version 4.0.4 for 64-bit systems (was 4.0.2),
+  and 3.2.21 for 32-bit systems (was 3.2.19). The `mongodb` npm package
+  used by `npm-mongo` has been updated to version 3.1.10 (was 3.1.6).
+
 ## v1.8.0.1, 2018-11-23
 
 ### Breaking changes
