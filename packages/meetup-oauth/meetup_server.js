@@ -10,6 +10,12 @@ OAuth.registerService('meetup', 2, null, query => {
   return {
     serviceData: {
       id: identity.id,
+      name: identity.name,
+      lang: identity.lang,
+      link: identity.link,
+      photo: identity.photo,
+      county: identity.country,
+      city: identity.city,
       accessToken,
       expiresAt,
     },
