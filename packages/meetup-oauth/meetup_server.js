@@ -14,7 +14,7 @@ OAuth.registerService('meetup', 2, null, query => {
       lang: identity.lang,
       link: identity.link,
       photo: identity.photo,
-      county: identity.country,
+      country: identity.country,
       city: identity.city,
       accessToken,
       expiresAt,
