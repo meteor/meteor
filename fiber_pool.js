@@ -62,6 +62,7 @@ function FiberPool(targetFiberCount) {
           break;
         }
       }
+      fiber = null;
     });
 
     // Run the new Fiber up to the first yield point, so that it will be
