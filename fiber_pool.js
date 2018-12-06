@@ -12,7 +12,7 @@ function FiberPool(targetFiberCount) {
     var originalYield = Fiber.yield;
 
     var fiber = new Fiber(function () {
-      while (true) {
+      while (fiber) {
         // Call Fiber.yield() to await further instructions.
         var entry = originalYield.call(Fiber);
 
@@ -58,11 +58,12 @@ function FiberPool(targetFiberCount) {
           fiberStack.push(fiber);
         } else {
           // If the pool has already reached the target maximum number of
-          // Fibers, don't bother recycling this Fiber.
-          break;
+          // Fibers, don't bother recycling this Fiber, and set the
+          // variable to null to help the fiber be garbage collected.
+          fiber = null;
+          return;
         }
       }
-      fiber = null;
     });
 
     // Run the new Fiber up to the first yield point, so that it will be
