@@ -37,7 +37,7 @@ N/A
 
 ### Changes
 
-* The `meteor-babel` npm package has been updated to version 7.1.6,
+* The `meteor-babel` npm package has been updated to version 7.2.0,
   improving source maps for applications with custom `.babelrc` files.
 
 * The `useragent` npm package used by `webapp` and (indirectly) by the
@@ -46,6 +46,11 @@ N/A
   version as `chrome`, and browser names are now processed
   case-insensitively by the `modern-browsers` package.
   [PR #10334](https://github.com/meteor/meteor/pull/10334)
+
+* The `meteor-promise` package has been updated to version 0.8.7, which
+  includes a [commit](https://github.com/meteor/promise/commit/bbe4f0d20b70417950381aea112993c4cc8c1168)
+  that should prevent memory leaks when excess fibers are discarded from
+  the `Fiber` pool.
 
 * Fixed a module caching bug that allowed `findImportedModuleIdentifiers`
   to return the same identifiers for the modern and legacy versions of a
