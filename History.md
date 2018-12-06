@@ -18,7 +18,7 @@ N/A
 
 ### Changes
 
-* The `meteor-babel` npm package has been updated to version 7.1.6,
+* The `meteor-babel` npm package has been updated to version 7.2.0,
   improving source maps for applications with custom `.babelrc` files.
 
 * The `useragent` npm package used by `webapp` and (indirectly) by the
