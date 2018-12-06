@@ -28,7 +28,7 @@
   "license": "MIT",
   "devDependencies": {
     "fibers": "~1.0.15",
-    "mocha": "~2.3.3",
+    "mocha": "^5.2.0",
     "promise": "^8.0.2"
   }
 }
