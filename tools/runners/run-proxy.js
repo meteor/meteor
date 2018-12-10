@@ -227,7 +227,7 @@ _.extend(Proxy.prototype, {
 function showErrorPage(res) {
   // XXX serve an app that shows the logs nicely and that also
   // knows how to reload when the server comes back up
-  res.writeHead(200, {'Content-Type': 'text/html'});
+  res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
   res.write(`
 <!DOCTYPE html>
 <html>
