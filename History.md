@@ -24,6 +24,11 @@ N/A
   Meteor should be considered experimental until those problems have been
   fixed. [Issue #10216](https://github.com/meteor/meteor/issues/10216)
 
+* The `npm` tool has been upgraded to version
+  [6.5.0](https://github.com/npm/cli/releases/tag/v6.5.0), and our
+  [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
+  `pacote` dependency remains at version 8.1.6.
+
 * Mongo has been upgraded to version 4.0.4 for 64-bit systems (was 4.0.2),
   and 3.2.21 for 32-bit systems (was 3.2.19). The `mongodb` npm package
   used by `npm-mongo` has been updated to version 3.1.10 (was 3.1.6).
