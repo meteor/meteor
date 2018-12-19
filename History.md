@@ -11,10 +11,11 @@ N/A
 ### Changes
 
 * Node has been updated from version 8.11.4 to version
+  [8.14.1](https://nodejs.org/en/blog/release/v8.14.1/), which includes
+  the changes from three other minor releases:
   [8.14.0](https://nodejs.org/en/blog/release/v8.14.0/), an important
-  [security release](https://nodejs.org/en/blog/vulnerability/november-2018-security-releases/),
-  which includes the changes from two other minor releases,
-  [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/) and
+  [security release](https://nodejs.org/en/blog/vulnerability/november-2018-security-releases/);
+  [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/); and
   [8.13.0](https://nodejs.org/en/blog/release/v8.13.0/).
 
   > Note: While Node 8.12.0 included changes that may improve the
