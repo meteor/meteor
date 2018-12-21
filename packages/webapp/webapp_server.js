@@ -64,6 +64,16 @@ var sha1 = function (contents) {
   return hash.digest('hex');
 };
 
+var shouldCompress = function (req, res) {
+  if (req.headers['x-no-compression']) {
+    // don't compress responses with this request header
+    return false;
+  }
+
+  // fallback to standard filter function
+  return compress.filter(req, res);
+};
+
 // #BrowserIdentification
 //
 // We have multiple places that want to identify the browser: the
@@ -819,7 +829,7 @@ function runWebAppServer() {
   app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
-  app.use(compress());
+  app.use(compress({filter: shouldCompress}));
 
   // parse cookies into an object
   app.use(cookieParser());
