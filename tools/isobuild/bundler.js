@@ -2825,9 +2825,12 @@ var writeTargetToPath = Profile(
       // .meteor/local/build/programs/web.browser.legacy, because they
       // tend to be written atomically, and it's important on Windows to
       // avoid overwriting files that might be open currently in the build
-      // or server process. If in-place builds were safer on Windows, they
+      // or server process.
+      // Server builds do use an in-place build since the server is always stopped 
+      // during the build.
+      // If client in-place builds were safer on Windows, they
       // would be much quicker than from-scratch rebuilds.
-      forceInPlaceBuild: false,
+      forceInPlaceBuild: name === 'server',
     });
 
     var targetBuild = target.write(builder, {
