@@ -549,6 +549,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (this.previousCreatedSymlinks[absFrom] !== absTo) {
         symlinkWithOverwrite(absFrom, absTo);
         }
+        this.usedAsFile[relTo] = false;
         this.createdSymlinks[absFrom] = absTo;
         return;
       }
