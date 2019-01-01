@@ -528,7 +528,7 @@ files.cp_r = function(from, to, options = {}) {
 
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
-export function symlinkWithOverwrite(source, target) {
+export const symlinkWithOverwrite = Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(source, target) {
   const args = [source, target];
 
   if (process.platform === "win32") {
@@ -543,8 +543,12 @@ export function symlinkWithOverwrite(source, target) {
     files.symlink(...args);
   } catch (e) {
     if (e.code === "EEXIST") {
+      function normalizePath (path) {
+        return files.convertToOSPath(path).replace(/[\/\\]$/, "")
+      }
+
       if (files.lstat(target).isSymbolicLink() &&
-          files.readlink(target) === source) {
+          normalizePath(files.readlink(target)) === normalizePath(source)) {
         // If the target already points to the desired source, we don't
         // need to do anything.
         return;
@@ -556,7 +560,7 @@ export function symlinkWithOverwrite(source, target) {
       throw e;
     }
   }
-}
+})
 
 /**
  * Get every path in a directory recursively, treating symlinks as files
