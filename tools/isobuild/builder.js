@@ -10,6 +10,7 @@ import {
   optimisticReaddir,
   optimisticStatOrNull,
   optimisticLStatOrNull,
+  optimisticHashOrNull,
 } from "../fs/optimistic.js";
 
 // Builder is in charge of writing "bundles" to disk, which are
@@ -75,7 +76,9 @@ export default class Builder {
     this.previousUsedAsFile = {};
 
     this.writtenHashes = {};
+    this.createdSymlinks = {};
     this.previousWrittenHashes = {};
+    this.previousCreatedSymlinks = {};
 
     // foo/bar => foo/.build1234.bar
     // Should we include a random number? The advantage is that multiple
@@ -106,6 +109,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         this.previousWrittenHashes = previousBuilder.writtenHashes;
         this.previousUsedAsFile = previousBuilder.usedAsFile;
+        this.previousCreatedSymlinks = previousBuilder.createdSymlinks;
 
         resetBuildPath = false;
       } else {
@@ -513,8 +517,6 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       to = to.slice(0, -1);
     }
 
-    const absPathTo = files.pathJoin(this.buildPath, to);
-
     if (symlink) {
       if (specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
@@ -544,7 +546,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
+        if (this.previousCreatedSymlinks[absFrom] !== absTo) {
         symlinkWithOverwrite(absFrom, absTo);
+        }
+        this.createdSymlinks[absFrom] = absTo;
         return;
       }
 
@@ -655,14 +660,17 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // could not be created above.
         fileStatus = optimisticStatOrNull(thisAbsFrom);
         if (fileStatus && fileStatus.isFile()) {
-          // XXX can't really optimize this copying without reading
-          // the file into memory to calculate the hash.
+          const hash = optimisticHashOrNull(thisAbsFrom);
+
+          if (this.previousWrittenHashes[thisRelTo] !== hash) {
+            const content = optimisticReadFile(thisAbsFrom);
+
           files.writeFile(
             files.pathResolve(this.buildPath, thisRelTo),
             // The reason we call files.writeFile here instead of
             // files.copyFile is so that we can read the file using
             // optimisticReadFile instead of files.createReadStream.
-            optimisticReadFile(thisAbsFrom),
+              content,
             // Logic borrowed from files.copyFile: "Create the file as
             // readable and writable by everyone, and executable by everyone
             // if the original file is executably by owner. (This mode will be
@@ -671,7 +679,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             // the read-only tools tree into a writable app."
             { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
           );
+          }
 
+          this.writtenHashes[thisRelTo] = hash;
           this.usedAsFile[thisRelTo] = true;
         }
       });
