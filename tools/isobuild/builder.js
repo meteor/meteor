@@ -285,13 +285,27 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     } else {
       hash = hash || sha1(getData());
 
-      if (this.previousWrittenHashes[relPath] !== hash) {
+      if (this.previousWrittenHashes[relPath] !== hash && this.writtenHashes[relPath] !== hash) {
+        
         // Builder is used to create build products, which should be read-only;
         // users shouldn't be manually editing automatically generated files and
         // expecting the results to "stick".
+        // Write is called multiple times for assets when they have multiple urls for the same file
+        const mode = executable ? 0o555 : 0o444
+
+        if (this.buildPath === this.outputPath || this.writtenHashes[relPath]) {
+          // atomicallyRewriteFile handles overwriting files that have already been created
         atomicallyRewriteFile(absPath, getData(), {
-          mode: executable ? 0o555 : 0o444
+            mode
         });
+        } else {
+          // Since builder is not updating in place, and
+          // this build is only used if every file is successfully written,
+          // it is not important to write atomically.
+          files.writeFile(absPath, getData(), {
+            mode
+          })
+      }
       }
 
       this.writtenHashes[relPath] = hash;
