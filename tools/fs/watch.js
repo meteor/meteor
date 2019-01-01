@@ -330,6 +330,9 @@ export class Watcher {
   constructor(options) {
     var self = this;
 
+    // Run initial check asyncly
+    self._async = options.async;
+
     // The set to watch.
     self.watchSet = options.watchSet;
     if (! self.watchSet) {
@@ -431,14 +434,10 @@ export class Watcher {
   }
 
   _startFileWatches() {
-    var self = this;
+    const self = this;
+    const keys = Object.keys(self.watchSet.files);
 
-    // Set up a watch for each file
-    _.each(self.watchSet.files, function (hash, absPath) {
-      if (self.stopped) {
-        return;
-      }
-
+    self._processBatches(keys, absPath => {
       if (! self.justCheckOnce) {
         self._watchFileOrDirectory(absPath);
       }
@@ -640,19 +639,52 @@ export class Watcher {
 
     return stat;
   }
+  
+  // Iterates over the array, calling handleItem for each item
+  // When this._async is true, it pauses ocassionally to avoid blocking for too long
+  // Stops iterating after watcher is stopped
+  _processBatches(array, handleItem) {
+    const self = this;
+    const async = self._async;
+    const amountPerBatch = async ? 50 : array.length;
+    let index = 0;
 
+    function processBatch() {
+      const stop = Math.min(index + amountPerBatch, array.length);
+      for(; index < stop; index++) {
+        if (self.stopped) {
+          return;
+        }
+
+        handleItem(array[index]);
+      }
+
+      if (index < array.length) {
+        if (async) {
+          setImmediate(processBatch);
+        } else {
+          processBatch();
+        }
+      }
+    }
+
+    processBatch();
+  }
   _checkDirectories() {
-    var self = this;
+    const self = this;
+    const dirs = self.watchSet.directories.sort((dir1, dir2) => {
+      // Check node_modules directories last since they are the least likely to change
+      const dir1Value = dir1.absPath.indexOf('node_modules') > -1 ? 0 : 1
+      const dir2Value = dir2.absPath.indexOf('node_modules') > -1 ? 0 : 1;
+
+      return dir2Value - dir1Value;
+    })
 
     if (self.stopped) {
       return;
     }
 
-    _.each(self.watchSet.directories, function (info) {
-      if (self.stopped) {
-        return;
-      }
-
+    self._processBatches(dirs, info => {
       if (! self.justCheckOnce) {
         self._watchFileOrDirectory(info.absPath);
       }
