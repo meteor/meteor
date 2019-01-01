@@ -2420,7 +2420,9 @@ class JsImage {
     _.each(nodeModulesDirectories, function (nmd) {
       assert.strictEqual(typeof nmd.preferredBundlePath, "string");
 
-      if (! nmd.isPortable()) {
+      // Skip calculating isPortable in 'meteor run' since the
+      // modules are never rebuilt
+      if (includeNodeModules !== 'symlink' && !nmd.isPortable()) {
         const parentDir = files.pathDirname(nmd.preferredBundlePath);
         rebuildDirs[parentDir] = parentDir;
       }
