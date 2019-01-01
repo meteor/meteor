@@ -303,7 +303,7 @@ You should see:
 There may be better or alternative ways to do these things.  Please PR if you have improvements.
 
 
-<h2 id="style-guide">Meteor’s and Vue’s Style Guides and Structure
+<h2 id="style-guide">Meteor’s and Vue’s Style Guides and Structure</h2>
 
 Like code linting and style guides are tools for making code easier and more fun to work with.
 
