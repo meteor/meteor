@@ -33,6 +33,13 @@ N/A
   and 3.2.21 for 32-bit systems (was 3.2.19). The `mongodb` npm package
   used by `npm-mongo` has been updated to version 3.1.10 (was 3.1.6).
 
+* The `fibers` npm package has been updated to version 3.1.1, a major
+  update from version 2.0.0. Building this version of `fibers` requires a
+  C++11 compiler, unlike previous versions. If you deploy your Meteor app
+  manually (without using Galaxy), you may need to update the version of
+  `g++` used when running `npm install` in the `bundle/programs/server`
+  directory.
+
 ## v1.8.0.1, 2018-11-23
 
 ### Breaking changes
