@@ -20,7 +20,7 @@ selftest.define("mongo failover", ["slow"], function () {
   run.expectExit(0);
 });
 
-var testMeteorMongo = function (appDir) {
+function testMeteorMongo(appDir) {
   var s = new Sandbox();
   s.createApp(appDir, 'standard-app');
   s.cd(appDir);
@@ -30,15 +30,18 @@ var testMeteorMongo = function (appDir) {
   run.match('proxy');
   run.waitSecs(15);
   run.match('Started MongoDB');
+  run.waitSecs(15);
 
   var mongoRun = s.run('mongo');
+  run.waitSecs(15);
   // Note: when mongo shell's input is not a tty, there is no prompt.
   mongoRun.write('db.version()\n');
   mongoRun.match(/4\.\d+\.\d+/);
+  run.waitSecs(5);
   mongoRun.stop();
 
   run.stop();
-};
+}
 
 selftest.define("meteor mongo", function () {
   testMeteorMongo('asdfzasdf');
