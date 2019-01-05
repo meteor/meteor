@@ -22,7 +22,7 @@ var runMongoShell = function (url) {
   var auth = mongoUrl.auth && mongoUrl.auth.split(':');
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
-  var args = ['--quiet'];
+  var args = [];
   if (ssl) {
     args.push('--ssl');
   }
@@ -55,6 +55,11 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     // initializes faster. (Not recommended for production!)
     '--oplogSize', '8',
     '--replSet', replSetName,
+    // Avoid printing banner about optional free monitoring services.
+    // Previously this was accomplished by passing --quiet to the shell,
+    // because the --enableFreeMonitoring option was broken until version
+    // 4.0.3: https://jira.mongodb.org/browse/SERVER-36474
+    '--enableFreeMonitoring', 'off',
     '--noauth'
   ];
 
