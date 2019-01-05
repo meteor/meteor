@@ -1761,11 +1761,6 @@ function enableCache(name) {
   };
 }
 
-enableCache("readdir");
-enableCache("realpath");
-enableCache("stat");
-enableCache("lstat");
-
 // The fs.exists method is deprecated in Node v4:
 // https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
 files.exists =
@@ -1874,3 +1869,8 @@ files.readBufferWithLengthAndOffset = function (filename, length, offset) {
   }
   return data;
 };
+
+enableCache("readdir");
+enableCache("realpath");
+enableCache("stat");
+enableCache("lstat");
