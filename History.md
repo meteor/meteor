@@ -40,6 +40,12 @@ N/A
   `g++` used when running `npm install` in the `bundle/programs/server`
   directory.
 
+* The `meteor mongo` command no longer uses the `--quiet` option, so the
+  normal startup text will be displayed, albeit without the banner about
+  Mongo's free monitoring service. See this
+  [MongoDB Jira issue](https://jira.mongodb.org/browse/SERVER-38862)
+  for more details.
+
 ## v1.8.0.1, 2018-11-23
 
 ### Breaking changes
