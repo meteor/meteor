@@ -305,22 +305,22 @@ function readAndStatDirectory(absPath) {
 }
 
 function filterDirectoryContents(contents, { include, exclude, names }) {
-    // Filter based on regexps.
-    return contents.filter((entry) => {
-      // Is it one of the names we explicitly requested?
-      if (names && names.indexOf(entry) !== -1) {
-        return true;
-      }
-      // Is it ruled out by an exclude rule?
-      if (exclude && exclude.some(re => re.test(entry))) {
-        return false;
-      }
-      // Is it ruled in by an include rule?
-      if (include && include.some(re => re.test(entry))) {
-        return true;
-      }
+  // Filter based on regexps.
+  return contents.filter((entry) => {
+    // Is it one of the names we explicitly requested?
+    if (names && names.indexOf(entry) !== -1) {
+      return true;
+    }
+    // Is it ruled out by an exclude rule?
+    if (exclude && exclude.some(re => re.test(entry))) {
       return false;
-    }).sort(); 
+    }
+    // Is it ruled in by an include rule?
+    if (include && include.some(re => re.test(entry))) {
+      return true;
+    }
+    return false;
+  }).sort();
 }
 
 export function readDirectory({absPath, include, exclude, names}) {
@@ -656,7 +656,7 @@ export class Watcher {
     let index = 0;
 
     function processBatch() {
-      const stopTime = async ? Date.now() + 50 : Infinity // Math.min(index + amountPerBatch, array.length);
+      const stopTime = async ? Date.now() + 50 : Infinity;
       while (Date.now() < stopTime && index < array.length) {
         if (self.stopped) {
           return;
