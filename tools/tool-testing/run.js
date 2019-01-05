@@ -272,12 +272,13 @@ export default class Run {
       this.extraTime = 0;
 
       let timer;
+      const failure = new TestFailure('exit-timeout', { run: this });
       const promise = new Promise((resolve, reject) => {
         this.exitPromiseResolvers.push(resolve);
         timer = setTimeout(() => {
           this.exitPromiseResolvers =
             this.exitPromiseResolvers.filter(r => r !== resolve);
-          reject(new TestFailure('exit-timeout', { run: this }));
+          reject(failure);
         }, timeout * 1000);
       });
 
@@ -517,21 +518,5 @@ export default class Run {
   }
 }
 
-// `Run` class methods to wrap with `markStack`
-[
-  'expectEnd',
-  'expectExit',
-  'forbid',
-  'forbidAll',
-  'forbidErr',
-  'match',
-  'matchBeforeExit',
-  'matchErr',
-  'matchErrBeforeExit',
-  'read',
-  'readErr',
-  'stop',
-  'tellMongo',
-].forEach((functionName) => {
-  Run.prototype[functionName] = parseStackMarkTop(Run.prototype[functionName]);
-});
+import { markThrowingMethods } from "./test-utils.js";
+markThrowingMethods(Run.prototype);
