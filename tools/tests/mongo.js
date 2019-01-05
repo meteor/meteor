@@ -31,6 +31,8 @@ function testMeteorMongo(appDir) {
   run.waitSecs(15);
   run.match('Started MongoDB');
   run.waitSecs(15);
+  run.match('App running');
+  run.waitSecs(15);
 
   var mongoRun = s.run('mongo');
   run.waitSecs(15);
