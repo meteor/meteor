@@ -89,6 +89,7 @@ const PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 const TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
 const STATUS_INTERVAL_MS = 50;
+const PROGRESS_THROTTLE_MS = 300;
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
@@ -309,6 +310,7 @@ class ProgressDisplayFull {
 
     this._lastWrittenLine = null;
     this._lastWrittenTime = 0;
+    this._renderTimeout = null;
   }
 
   depaint() {
@@ -332,7 +334,15 @@ class ProgressDisplayFull {
     if (startTime) {
       this._progressBarRenderer.start = startTime;
     }
-    this._render();
+
+    if (!this._renderTimeout && this._lastWrittenTime) {
+      this._rerenderTimeout = setTimeout(() => {
+        this._rerenderTimeout = null;
+        this._render.bind(this)
+      }, PROGRESS_THROTTLE_MS);
+    } else if (this._lastWrittenTime === 0) {
+      this._render();
+    }
   }
 
   repaint() {
@@ -344,7 +354,11 @@ class ProgressDisplayFull {
   }
 
   _render() {
-    // XXX: Throttle these updates?
+    if (this._rerenderTimeout) {
+      clearTimeout(this._rerenderTimeout);
+      this._rerenderTimeout = null;
+    }
+
     // XXX: Or maybe just jump to the correct position?
     var progressGraphic = '';
 
