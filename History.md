@@ -8,6 +8,12 @@ N/A
 
 ### Changes
 
+- Fixed a bug where modules named with `*.app-tests.js` (or `*.tests.js`)
+  file extensions sometimes could not be imported by the
+  `meteor.testModule` entry point when running the `meteor test` command
+  (or `meteor test --full-app`).
+  [PR #10402](https://github.com/meteor/meteor/pull/10402)
+
 ## v1.8.0.1, 2018-11-23
 
 ### Breaking changes
