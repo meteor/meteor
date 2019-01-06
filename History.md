@@ -8,6 +8,16 @@ N/A
 
 ### Changes
 
+## v1.8.0.2, 2019-01-07
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
 - Fixed a bug where modules named with `*.app-tests.js` (or `*.tests.js`)
   file extensions sometimes could not be imported by the
   `meteor.testModule` entry point when running the `meteor test` command
