@@ -18,6 +18,12 @@ N/A
 
 ### Changes
 
+- The [React tutorial](https://www.meteor.com/tutorials/react/creating-an-app)
+  has been updated to address a number of inaccuracies due to changes in
+  recent Meteor releases that were not fully incorporated back into the
+  tutorial. As a reminder, Meteor now supports a `meteor create --react`
+  command that can be used to create a new React-based app quickly.
+
 - Fixed a bug where modules named with `*.app-tests.js` (or `*.tests.js`)
   file extensions sometimes could not be imported by the
   `meteor.testModule` entry point when running the `meteor test` command
