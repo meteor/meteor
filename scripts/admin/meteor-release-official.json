@@ -1,10 +1,11 @@
 {
   "track": "METEOR",
-  "version": "1.8.0.1",
+  "version": "1.8.0.2",
   "recommended": false,
   "official": true,
   "patchFrom": [
-    "1.8"
+    "1.8",
+    "1.8.0.1"
   ],
   "description": "The Official Meteor Distribution"
 }

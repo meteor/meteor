@@ -22,7 +22,8 @@ import { PackageAPI } from "./package-api.js";
 import {
   TEST_FILENAME_REGEXPS,
   APP_TEST_FILENAME_REGEXPS,
-  isTestFilePath } from './test-files.js';
+  isTestFilePath,
+} from './test-files.js';
 
 import {
   convert as convertColonsInPath
@@ -1102,15 +1103,6 @@ _.extend(PackageSource.prototype, {
     // Ignore the usual ignorable files.
     sourceReadOptions.exclude.push(...ignoreFiles);
 
-    // Unless we're running tests, ignore all test filenames and if we are, ignore the
-    // type of file we *aren't* running
-    if (!global.testCommandMetadata || global.testCommandMetadata.isTest) {
-      sourceReadOptions.exclude.push(...APP_TEST_FILENAME_REGEXPS);
-    }
-    if (!global.testCommandMetadata || global.testCommandMetadata.isAppTest) {
-      sourceReadOptions.exclude.push(...TEST_FILENAME_REGEXPS);
-    }
-
     // Read top-level source files, excluding control files that were not
     // explicitly included.
     const controlFiles = ['mobile-config.js'];
@@ -1121,11 +1113,48 @@ _.extend(PackageSource.prototype, {
 
     const anyLevelExcludes = [];
 
-    // If we have a meteor.testModule from package.json, then we don't
-    // need to exclude tests/ directories from the search, because we
-    // trust meteor.testModule to identify a single test entry point.
-    if (! testModule) {
+    if (testModule) {
+      // If we have a meteor.testModule from package.json, then we don't
+      // need to exclude tests/ directories or *.tests.js files from the
+      // search, because we trust meteor.testModule to identify a single
+      // test entry point.
+    } else {
       anyLevelExcludes.push(/^tests\/$/);
+
+      const {
+        isTest = false,
+        isAppTest = false,
+      } = global.testCommandMetadata || {};
+
+      if (isTest || isAppTest) {
+        // If we're running `meteor test` without the --full-app option,
+        // ignore app-test-only files like *.app-tests.js.
+        if (! isAppTest) {
+          sourceReadOptions.exclude.push(
+            ...APP_TEST_FILENAME_REGEXPS,
+          );
+        }
+
+        // If we're running `meteor test` with the --full-app option,
+        // ignore non-app-test files like *.tests.js. The wisdom of this
+        // behavior is debatable, since you might want to run non-app
+        // tests even when you're using the --full-app option, but it's
+        // legacy behavior at this point, and it doesn't matter if you're
+        // using meteor.testModule anyway (recommended).
+        if (! isTest) {
+          sourceReadOptions.exclude.push(
+            ...TEST_FILENAME_REGEXPS,
+          );
+        }
+
+      } else {
+        // If we're not running `meteor test` (and meteor.testModule is
+        // not defined in package.json), ignore all test files.
+        sourceReadOptions.exclude.push(
+          ...APP_TEST_FILENAME_REGEXPS,
+          ...TEST_FILENAME_REGEXPS,
+        );
+      }
     }
 
     anyLevelExcludes.push(
