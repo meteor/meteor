@@ -653,3 +653,10 @@ describe("circular package.json resolution chains", () => {
     );
   });
 });
+
+describe("imported *.tests.js modules", () => {
+  const { name } = require("./imports/imported.tests.js");
+  it("should be properly compiled", () => {
+    assert.strictEqual(name, "imported.tests.js");
+  });
+});

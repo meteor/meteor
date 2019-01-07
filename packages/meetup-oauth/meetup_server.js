@@ -1,19 +1,35 @@
 Meetup = {};
 
 OAuth.registerService('meetup', 2, null, query => {
-
   const response = getAccessToken(query);
   const accessToken = response.access_token;
   const expiresAt = (+new Date) + (1000 * response.expires_in);
   const identity = getIdentity(accessToken);
+  const {
+    id,
+    name,
+    lang,
+    link,
+    photo,
+    country,
+    city,
+  } = identity;
 
   return {
     serviceData: {
-      id: identity.id,
+      id,
+      name,
+      lang,
+      link,
+      photo,
+      country,
+      city,
       accessToken,
       expiresAt,
     },
-    options: {profile: {name: identity.name}}
+    options: {
+      profile: { name }
+    },
   };
 });
 
