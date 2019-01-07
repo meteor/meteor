@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Note: Skip 8.12.0.0, as it has already been used.
-BUNDLE_VERSION=8.11.4.7
+BUNDLE_VERSION=8.11.4.8
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.

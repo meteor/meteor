@@ -8,11 +8,35 @@ N/A
 
 ### Changes
 
+## v1.8.0.2, 2019-01-07
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
+- The [React tutorial](https://www.meteor.com/tutorials/react/creating-an-app)
+  has been updated to address a number of inaccuracies due to changes in
+  recent Meteor releases that were not fully incorporated back into the
+  tutorial. As a reminder, Meteor now supports a `meteor create --react`
+  command that can be used to create a new React-based app quickly.
+
 - Fixed a bug where modules named with `*.app-tests.js` (or `*.tests.js`)
   file extensions sometimes could not be imported by the
   `meteor.testModule` entry point when running the `meteor test` command
   (or `meteor test --full-app`).
   [PR #10402](https://github.com/meteor/meteor/pull/10402)
+
+* The `meteor-promise` package has been updated to version 0.8.7, which
+  includes a [commit](https://github.com/meteor/promise/commit/bbe4f0d20b70417950381aea112993c4cc8c1168)
+  that should prevent memory leaks when excess fibers are discarded from
+  the `Fiber` pool.
+
+* The `meteor-babel` npm package has been updated to version 7.2.0,
+  improving source maps for applications with custom `.babelrc` files.
 
 ## v1.8.0.1, 2018-11-23
 
@@ -23,9 +47,6 @@ N/A
 N/A
 
 ### Changes
-
-* The `meteor-babel` npm package has been updated to version 7.2.0,
-  improving source maps for applications with custom `.babelrc` files.
 
 * The `useragent` npm package used by `webapp` and (indirectly) by the
   `modern-browsers` package has been updated from 2.2.1 to 2.3.0. The
