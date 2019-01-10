@@ -1422,6 +1422,12 @@ export default class ImportScanner {
           return;
         }
 
+        // Ignore useless self-referential browser aliases, to fix
+        // https://github.com/meteor/meteor/issues/10409.
+        if (target.id === source.id) {
+          return;
+        }
+
         Object.assign(alias, target);
         alias.absModuleId = this._getAbsModuleId(target.path);
 
