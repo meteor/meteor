@@ -46,6 +46,10 @@ N/A
   [MongoDB Jira issue](https://jira.mongodb.org/browse/SERVER-38862)
   for more details.
 
+* Multiple Cordova-related bugs have been fixed, including Xcode 10 build
+  incompatibilities and hot code push errors due to duplicated
+  images/assets. [PR #10339](https://github.com/meteor/meteor/pull/10339)
+
 ## v1.8.0.2, 2019-01-07
 
 ### Breaking changes
