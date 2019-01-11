@@ -1157,10 +1157,18 @@ _.extend(PackageSource.prototype, {
       }
     }
 
+    if (isApp) {
+      // In the app, server/ directories are ignored by client builds, and
+      // client/ directories are ignored by server builds. In packages,
+      // these directories should not matter (#10393).
+      anyLevelExcludes.push(
+        archinfo.matches(arch, "os")
+          ? /^client\/$/
+          : /^server\/$/
+      );
+    }
+
     anyLevelExcludes.push(
-      archinfo.matches(arch, "os")
-        ? /^client\/$/
-        : /^server\/$/,
       ...sourceReadOptions.exclude,
     );
 
