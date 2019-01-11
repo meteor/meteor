@@ -88,6 +88,10 @@ final class AssetBundle {
     return ownAssetsByURLPath[URLPath] ?? parentAssetBundle?.assetForURLPath(URLPath)
   }
 
+  func assetExistsInBundle(_ URLPath: String) -> Bool {
+    return ownAssetsByURLPath[URLPath] != nil
+  }
+    
   func cachedAssetForURLPath(_ URLPath: String, hash: String? = nil) -> Asset? {
     if let asset = ownAssetsByURLPath[URLPath],
         // If the asset is not cacheable, we require a matching hash

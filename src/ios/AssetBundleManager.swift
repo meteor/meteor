@@ -208,6 +208,9 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     var missingAssets = Set<Asset>()
 
     for asset in assetBundle.ownAssets {
+      // Workaround for https://github.com/meteor/cordova-plugin-meteor-webapp/issues/56
+      if assetBundle.assetExistsInBundle("/__cordova" + asset.urlPath) { continue }
+      
       // Create containing directories for the asset if necessary
       let containingDirectoryURL = asset.fileURL.deletingLastPathComponent()
       do {
