@@ -8,6 +8,14 @@ N/A
 
 ### Changes
 
+* In Meteor packages, `client/` and `server/` directories no longer have
+  any special meaning. In application code, `client/` directories are
+  ignored during the server build, and `server/` directories are ignored
+  during the client build, as before. This special behavior previously
+  applied to packages as well, but has now been removed.
+  [Issue #10393](https://github.com/meteor/meteor/issues/10393)
+  [PR #10414](https://github.com/meteor/meteor/pull/10414)
+
 ## v1.8.0.2, 2019-01-07
 
 ### Breaking changes
