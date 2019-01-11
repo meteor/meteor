@@ -87,6 +87,9 @@ export class CordovaProject {
 
     this.pluginsDir = files.pathJoin(this.projectRoot, 'plugins');
 
+    this.buildJsonPath = files.convertToOSPath(
+      files.pathJoin(this.projectRoot, 'build.json'));
+
     this.createIfNeeded();
   }
 
@@ -182,6 +185,31 @@ outdated platforms`);
           undefined, undefined, config);
       }, undefined, null);
     }
+
+    this.writeBuildJson();
+  }
+
+  writeBuildJson() {
+    if (files.exists(this.buildJsonPath)) {
+      return;
+    }
+
+    const iosCommonOptions = {
+      // See https://github.com/apache/cordova-ios/issues/407:
+      buildFlag: [
+        "-UseModernBuildSystem=0"
+      ]
+    };
+
+    files.writeFile(
+      this.buildJsonPath,
+      JSON.stringify({
+        ios: {
+          debug: iosCommonOptions,
+          release: iosCommonOptions,
+        }
+      }, null, 2) + "\n",
+    );
   }
 
   // Preparing
@@ -240,8 +268,10 @@ outdated platforms`);
     delete require.cache[files.pathJoin(this.projectRoot,
       'platforms/ios/cordova/lib/prepare.js')];
 
-    const commandOptions = _.extend(this.defaultOptions,
-      { platforms: [platform] });
+    const commandOptions = {
+      ...this.defaultOptions,
+      platforms: [platform],
+    };
 
     this.runCommands(`preparing Cordova project for platform \
 ${displayNameForPlatform(platform)}`, async () => {
@@ -254,8 +284,11 @@ ${displayNameForPlatform(platform)}`, async () => {
   buildForPlatform(platform, options = {}, extraPaths) {
     assert(platform);
 
-    const commandOptions = _.extend(this.defaultOptions,
-      { platforms: [platform], options: options });
+    const commandOptions = {
+      ...this.defaultOptions,
+      platforms: [platform],
+      options,
+    };
 
     this.runCommands(`building Cordova app for platform \
 ${displayNameForPlatform(platform)}`, async () => {
@@ -266,6 +299,7 @@ ${displayNameForPlatform(platform)}`, async () => {
   // Running
 
   async run(platform, isDevice, options = [], extraPaths = []) {
+    options.push('--buildConfig', this.buildJsonPath);
     options.push(isDevice ? '--device' : '--emulator');
 
     let env = this.defaultEnvWithPathsAdded(...extraPaths);
@@ -760,7 +794,11 @@ convenience, but you should adjust your dependencies.`);
   // Cordova commands support
 
   get defaultOptions() {
-    return { silent: !Console.verbose, verbose: Console.verbose };
+    return {
+      silent: !Console.verbose,
+      verbose: Console.verbose,
+      buildConfig: this.buildJsonPath,
+    };
   }
 
   defaultEnvWithPathsAdded(...extraPaths) {
