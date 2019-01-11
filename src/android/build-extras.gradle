@@ -16,7 +16,7 @@
        specific language governing permissions and limitations
        under the License.
  */
-ext.postBuildExtras = {
+cdvPluginPostBuildExtras.add({
     def inAssetsDir = file("assets")
     def outAssetsDir = inAssetsDir
     def outFile = new File(outAssetsDir, "cdvasset.manifest")
@@ -44,4 +44,4 @@ ext.postBuildExtras = {
     newTask.outputs.file outFile
     def preBuildTask = tasks["preBuild"]
     preBuildTask.dependsOn(newTask)
-}
+})
