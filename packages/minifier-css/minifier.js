@@ -144,8 +144,9 @@ const CssTools = {
         if (ast.nodes.some(rulesPredicate('import'))) {
           warnCb(
             ast.filename,
-            'There are some @import rules those are not taking effect as ' +
-            'they are required to be in the beginning of the file.'
+            'There are some @import rules in the middle of a file. This ' +
+            'might be a bug, as imports are only valid at the beginning of ' +
+            'a file.'
           );
         }
       }
