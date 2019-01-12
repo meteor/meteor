@@ -28,10 +28,10 @@ const retry = new Retry();
 function onDDPVersionNegotiationFailure(description) {
   Meteor._debug(description);
   if (Package.reload) {
-    const migrationData = Package.reload.Reload._migrationData('livedata') || {};
+    const migrationData = Package.reload.Reload._migrationData('livedata') || Object.create(null);
     let failures = migrationData.DDPVersionNegotiationFailures || 0;
     ++failures;
-    Package.reload.Reload._onMigrate('livedata', () => ([true, { DDPVersionNegotiationFailures: failures }]));
+    Package.reload.Reload._onMigrate('livedata', () => [true, { DDPVersionNegotiationFailures: failures }]);
     retry.retryLater(failures, () => {
       Package.reload.Reload._reload({ immediateMigration: true });
     });

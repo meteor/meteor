@@ -296,6 +296,7 @@ export class Connection {
 
     // Wrap the input object in an object which makes any store method not
     // implemented by 'store' into a no-op.
+    const store = Object.create(null);
     const keysOfStore = [
       'update',
       'beginUpdate',
@@ -305,14 +306,13 @@ export class Connection {
       'getDoc',
       '_getCollection'
     ];
-    const store = keysOfStore.reduce((acc, method) => ({
-      ...acc,
-      [method]: (...args) => {
+    keysOfStore.forEach((method) => {
+      store[method] = (...args) => {
         if (wrappedStore[method]) {
           return wrappedStore[method](...args);
         }
-      }
-    }), Object.create(null));
+      };
+    });
     self._stores[name] = store;
 
     const queued = self._updatesForUnknownStores[name];
@@ -1588,10 +1588,7 @@ export class Connection {
     }
 
     // Now add the rest of the original blocks on.
-    self._outstandingMethodBlocks = [
-      ...self._outstandingMethodBlocks,
-      ...oldOutstandingMethodBlocks
-    ];
+    self._outstandingMethodBlocks.push(...oldOutstandingMethodBlocks);
   }
 
   // We can accept a hot code push if there are no methods in flight.
