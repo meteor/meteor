@@ -653,3 +653,18 @@ describe("circular package.json resolution chains", () => {
     );
   });
 });
+
+describe("imported *.tests.js modules", () => {
+  const { name } = require("./imports/imported.tests.js");
+  it("should be properly compiled", () => {
+    assert.strictEqual(name, "imported.tests.js");
+  });
+});
+
+describe("issue #10409", () => {
+  it("should be able to import mobx@5.8.0", () => {
+    const { observable, action } = require("mobx");
+    assert.strictEqual(typeof observable, "function");
+    assert.strictEqual(typeof action, "function");
+  });
+});

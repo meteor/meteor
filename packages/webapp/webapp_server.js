@@ -64,6 +64,16 @@ var sha1 = function (contents) {
   return hash.digest('hex');
 };
 
+ function shouldCompress(req, res) {
+  if (req.headers['x-no-compression']) {
+    // don't compress responses with this request header
+    return false;
+  }
+
+  // fallback to standard filter function
+  return compress.filter(req, res);
+};
+
 // #BrowserIdentification
 //
 // We have multiple places that want to identify the browser: the
@@ -386,12 +396,7 @@ WebAppInternals.staticFilesMiddleware = async function (
     res.end();
   };
 
-  if (pathname === "/meteor_runtime_config.js" &&
-      ! WebAppInternals.inlineScriptsAllowed()) {
-    serveStaticJs("__meteor_runtime_config__ = " +
-                  JSON.stringify(__meteor_runtime_config__) + ";");
-    return;
-  } else if (_.has(additionalStaticJs, pathname) &&
+  if (_.has(additionalStaticJs, pathname) &&
               ! WebAppInternals.inlineScriptsAllowed()) {
     serveStaticJs(additionalStaticJs[pathname]);
     return;
@@ -404,7 +409,14 @@ WebAppInternals.staticFilesMiddleware = async function (
 
   // If pauseClient(arch) has been called, program.paused will be a
   // Promise that will be resolved when the program is unpaused.
-  await WebApp.clientPrograms[arch].paused;
+  const program = WebApp.clientPrograms[arch];
+  await program.paused;
+
+  if (path === "/meteor_runtime_config.js" &&
+      ! WebAppInternals.inlineScriptsAllowed()) {
+    serveStaticJs(`__meteor_runtime_config__ = ${program.meteorRuntimeConfig};`);
+    return;
+  }
 
   const info = getStaticFileInfo(pathname, path, arch);
   if (! info) {
@@ -789,13 +801,18 @@ function runWebAppServer() {
 
   function generateBoilerplateForArch(arch) {
     const program = WebApp.clientPrograms[arch];
+    const additionalOptions = defaultOptionsForArch[arch] || {};
     const { baseData } = boilerplateByArch[arch] =
       WebAppInternals.generateBoilerplateInstance(
         arch,
         program.manifest,
-        defaultOptionsForArch[arch],
+        additionalOptions,
       );
-
+    // We need the runtime config with overrides for meteor_runtime_config.js:
+    program.meteorRuntimeConfig = JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || null),
+    });
     program.refreshableAssets = baseData.css.map(file => ({
       url: bundledJsCssUrlRewriteHook(file.url),
     }));
@@ -812,7 +829,7 @@ function runWebAppServer() {
   app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
-  app.use(compress());
+  app.use(compress({filter: shouldCompress}));
 
   // parse cookies into an object
   app.use(cookieParser());
@@ -835,7 +852,7 @@ function runWebAppServer() {
   // Do this before the next middleware destroys req.url if a path prefix
   // is set to close #10111.
   app.use(query());
-  
+
   function getPathParts(path) {
     const parts = path.split("/");
     while (parts[0] === "") parts.shift();

@@ -1,22 +1,44 @@
 ## v.NEXT
 
+## v1.8.1, TBD
+
 ### Breaking changes
 N/A
 
-### Migration steps
+### Migration Steps
 N/A
 
 ### Changes
 
-* The `meteor-babel` npm package has been updated to version 7.1.6,
-  improving source maps for applications with custom `.babelrc` files.
+* Node has been updated from version 8.11.4 to version
+  [8.15.0](https://nodejs.org/en/blog/release/v8.15.0/), which includes
+  the changes from three other minor releases:
+  [8.14.0](https://nodejs.org/en/blog/release/v8.14.0/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/november-2018-security-releases/);
+  [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/); and
+  [8.13.0](https://nodejs.org/en/blog/release/v8.13.0/).
 
-* The `useragent` npm package used by `webapp` and (indirectly) by the
-  `modern-browsers` package has been updated from 2.2.1 to 2.3.0. The
-  `chromium` browser name has been aliased to use the same minimum modern
-  version as `chrome`, and browser names are now processed
-  case-insensitively by the `modern-browsers` package.
-  [PR #10334](https://github.com/meteor/meteor/pull/10334)
+  > Note: While Node 8.12.0 included changes that may improve the
+  performance of Meteor apps, there have been reports of CPU usage spikes
+  in production due to excessive garbage collection, so this version of
+  Meteor should be considered experimental until those problems have been
+  fixed. [Issue #10216](https://github.com/meteor/meteor/issues/10216)
+
+* The `npm` tool has been upgraded to version
+  [6.5.0](https://github.com/npm/cli/releases/tag/v6.5.0), and our
+  [fork](https://github.com/meteor/pacote/tree/v8.1.6-meteor) of its
+  `pacote` dependency remains at version 8.1.6.
+
+* Mongo has been upgraded to version 4.0.4 for 64-bit systems (was 4.0.2),
+  and 3.2.21 for 32-bit systems (was 3.2.19). The `mongodb` npm package
+  used by `npm-mongo` has been updated to version 3.1.10 (was 3.1.6).
+
+* The `fibers` npm package has been updated to version 3.1.1, a major
+  update from version 2.0.0. Building this version of `fibers` requires a
+  C++11 compiler, unlike previous versions. If you deploy your Meteor app
+  manually (without using Galaxy), you may need to update the version of
+  `g++` used when running `npm install` in the `bundle/programs/server`
+  directory.
 
 * Cordova Hot Code Push mechanism is now switching versions explicitly with
   call to `WebAppLocalServer.switchToPendingVersion` instead of trying to 
@@ -25,6 +47,71 @@ N/A
   it before forcing a browser reload. If you use the automatic reload from
   the `Reload` meteor package you do not need to do anything.
   [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62) 
+
+* The `meteor mongo` command no longer uses the `--quiet` option, so the
+  normal startup text will be displayed, albeit without the banner about
+  Mongo's free monitoring service. See this
+  [MongoDB Jira issue](https://jira.mongodb.org/browse/SERVER-38862)
+  for more details.
+
+* Multiple Cordova-related bugs have been fixed, including Xcode 10 build
+  incompatibilities and hot code push errors due to duplicated
+  images/assets. [PR #10339](https://github.com/meteor/meteor/pull/10339)
+
+## v1.8.0.2, 2019-01-07
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
+- The [React tutorial](https://www.meteor.com/tutorials/react/creating-an-app)
+  has been updated to address a number of inaccuracies due to changes in
+  recent Meteor releases that were not fully incorporated back into the
+  tutorial. As a reminder, Meteor now supports a `meteor create --react`
+  command that can be used to create a new React-based app quickly.
+
+- Fixed a bug where modules named with `*.app-tests.js` (or `*.tests.js`)
+  file extensions sometimes could not be imported by the
+  `meteor.testModule` entry point when running the `meteor test` command
+  (or `meteor test --full-app`).
+  [PR #10402](https://github.com/meteor/meteor/pull/10402)
+
+* The `meteor-promise` package has been updated to version 0.8.7, which
+  includes a [commit](https://github.com/meteor/promise/commit/bbe4f0d20b70417950381aea112993c4cc8c1168)
+  that should prevent memory leaks when excess fibers are discarded from
+  the `Fiber` pool.
+
+* The `meteor-babel` npm package has been updated to version 7.2.0,
+  improving source maps for applications with custom `.babelrc` files.
+
+## v1.8.0.1, 2018-11-23
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
+* The `useragent` npm package used by `webapp` and (indirectly) by the
+  `modern-browsers` package has been updated from 2.2.1 to 2.3.0. The
+  `chromium` browser name has been aliased to use the same minimum modern
+  version as `chrome`, and browser names are now processed
+  case-insensitively by the `modern-browsers` package.
+  [PR #10334](https://github.com/meteor/meteor/pull/10334)
+
+* Fixed a module caching bug that allowed `findImportedModuleIdentifiers`
+  to return the same identifiers for the modern and legacy versions of a
+  given module, even if the set of imported modules is different (for
+  example, because Babel injects fewer `@babel/runtime/...` imports into
+  modern code). Now the caching is always based on the SHA-1 hash of the
+  _generated_ code, rather than trusting the hash provided by compiler
+  plugins. [PR #10330](https://github.com/meteor/meteor/pull/10330)
 
 ## v1.8, 2018-10-08
 
@@ -47,9 +134,13 @@ N/A
   planning a quick follow-up Meteor 1.8.1 release, which can be obtained
   by running the command
   ```bash
-  meteor update --release 1.8.1
+  meteor update --release 1.8.1-beta.n
   ```
+  where `-beta.n` is the latest beta release according to the
+  [releases](https://github.com/meteor/meteor/releases) page (currently
+  `-beta.6`).
   [Issue #10216](https://github.com/meteor/meteor/issues/10216)
+  [PR #10248](https://github.com/meteor/meteor/pull/10248)
 
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
   addition to the `web.browser` (modern) and `web.cordova` bundles.

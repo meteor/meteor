@@ -597,6 +597,7 @@ class File {
     this.assets = null;
 
     this._contents = options.data || null; // contents, if known, as a Buffer
+    this._inputHash = options.hash;
     this._hash = null;
     this._sri = null;
   }
@@ -612,10 +613,15 @@ class File {
 
   hash() {
     if (! this._hash) {
-      this._hash = watch.sha1(
-        String(File._salt()),
-        this.sri(),
-      );
+      const hashes = [String(File._salt())];
+
+      if (typeof this._inputHash === "string") {
+        hashes.push(this._inputHash);
+      }
+
+      hashes.push(this.sri());
+
+      this._hash = watch.sha1(...hashes);
     }
 
     return this._hash;
@@ -1086,6 +1092,7 @@ class Target {
           info: 'resource ' + resource.servePath,
           arch: target.arch,
           data: resource.data,
+          hash: resource.hash,
         });
 
         file.setTargetPathFromRelPath(
@@ -1212,6 +1219,7 @@ class Target {
             info: 'resource ' + resource.servePath,
             arch: this.arch,
             data: resource.data,
+            hash: resource.hash,
             cacheable: false,
           });
 
@@ -1306,14 +1314,14 @@ class Target {
     const staticFiles = [];
     const dynamicFiles = [];
     const { arch } = this;
+    const inputHashesByJsFile = new Map;
 
     this.js.forEach(file => {
       const jsf = new JsFile(file, { arch });
 
-      if (file.targetPath.startsWith("dynamic/")) {
-        // Make sure file._hash is cached.
-        file.hash();
+      inputHashesByJsFile.set(jsf, file.hash());
 
+      if (file.targetPath.startsWith("dynamic/")) {
         // Dynamic files consist of a single anonymous function
         // expression, which some minifiers (e.g. UglifyJS) either fail to
         // parse or mistakenly eliminate as dead code. To avoid these
@@ -1365,6 +1373,7 @@ class Target {
           info: 'minified js',
           arch,
           data: Buffer.from(file.data, 'utf8'),
+          hash: inputHashesByJsFile.get(source),
         });
 
         if (file.sourceMap) {
@@ -1808,7 +1817,12 @@ const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
   minifier,
   minifyMode,
 }) {
-  const sources = files.map(file => new CssFile(file, { arch }));
+  const inputHashesByCssFile = new Map;
+  const sources = files.map(file => {
+    const cssFile = new CssFile(file, { arch });
+    inputHashesByCssFile.set(cssFile, file.hash());
+    return cssFile;
+  });
   const markedMinifier = buildmessage.markBoundary(
     minifier.userPlugin.processFilesForBundle,
     minifier.userPlugin,
@@ -1827,7 +1841,8 @@ const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
       const newFile = new File({
         info: 'minified css',
         arch,
-        data: Buffer.from(file.data, 'utf8')
+        data: Buffer.from(file.data, 'utf8'),
+        hash: inputHashesByCssFile.get(source),
       });
       if (file.sourceMap) {
         newFile.setSourceMap(file.sourceMap, '/');

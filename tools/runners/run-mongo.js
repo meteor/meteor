@@ -22,7 +22,7 @@ var runMongoShell = function (url) {
   var auth = mongoUrl.auth && mongoUrl.auth.split(':');
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
-  var args = ['--quiet'];
+  var args = [];
   if (ssl) {
     args.push('--ssl');
   }
@@ -61,6 +61,14 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
   if (process.arch === 'ia32') {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
+  } else if (process.platform !== 'linux') {
+    // MongoDB 4, which we use on 64-bit systems, displays a banner in the
+    // Mongo shell about a free monitoring service, which can be disabled
+    // with this flag. However, the generic Linux build (without SSL; see
+    // MONGO_SSL in scripts/generate-dev-bundle.sh) neither displays the
+    // banner nor supports the flag, so it's safe/important to avoid
+    // passing the flag to mongod on 64-bit linux.
+    args.push('--enableFreeMonitoring', 'off');
   }
 
   return child_process.spawn(mongodPath, args, {
@@ -185,12 +193,30 @@ if (process.platform === 'win32') {
         'else ps ax; fi';
     }
 
+    // If the child process output includes unicode, make sure it's
+    // handled properly.
+    const {
+      LANG = "en_US.UTF-8",
+      LC_ALL = LANG,
+      LANGUAGE = LANG,
+      // Remainder of process.env without above properties.
+      ...env
+    } = process.env;
+
+    // Make sure all three properties are set to the same value, which
+    // defaults to "en_US.UTF-8" or whatever LANG was already set to.
+    Object.assign(env, { LANG, LC_ALL, LANGUAGE });
+
     child_process.exec(
       psScript,
-      // we don't want this to randomly fail just because you're running lots of
-      // processes. 10MB should be more than ps ax will ever spit out; the default
-      // is 200K, which at least one person hit (#2158).
-      {maxBuffer: 1024 * 1024 * 10},
+      {
+        env,
+        // we don't want this to randomly fail just because you're running
+        // lots of processes. 10MB should be more than ps ax will ever
+        // spit out; the default is 200K, which at least one person hit
+        // (#2158).
+        maxBuffer: 1024 * 1024 * 10,
+      },
       function (error, stdout, stderr) {
         if (error) {
           promise.reject(

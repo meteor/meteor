@@ -3,7 +3,7 @@ if (Meteor.isClient) {
 
   var maybeCall = function () {
     var A = Package.autoupdate.Autoupdate;
-    if (A._ClientVersions.findOne() && ! A.newClientAvailable()) {
+    if (A._clientVersions.hasVersions() && ! A.newClientAvailable()) {
       Meteor.call("clientLoad",
                   typeof jsVar === 'undefined' ? 'undefined' : jsVar,
                   typeof packageVar === 'undefined' ? 'undefined' : packageVar,

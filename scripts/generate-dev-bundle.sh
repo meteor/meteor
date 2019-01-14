@@ -125,19 +125,6 @@ cp -R node_modules/* "${DIR}/server-lib/node_modules/"
 mkdir -p "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
-# Fibers ships with compiled versions of its C code for a dozen platforms. This
-# bloats our dev bundle. Remove all the ones other than our
-# architecture. (Expression based on build.js in fibers source.)
-shrink_fibers () {
-    FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-" + process.versions.modules')
-    mv $FIBERS_ARCH ..
-    rm -rf *
-    mv ../$FIBERS_ARCH .
-}
-
-cd "$DIR/server-lib/node_modules/fibers/bin"
-shrink_fibers
-
 # Now, install the npm modules which are the dependencies of the command-line
 # tool.
 mkdir "${DIR}/build/npm-tool-install"
@@ -194,9 +181,6 @@ delete moment/min
 
 # Remove esprima tests to reduce the size of the dev bundle
 find . -path '*/esprima-fb/test' | xargs rm -rf
-
-cd "$DIR/lib/node_modules/fibers/bin"
-shrink_fibers
 
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |

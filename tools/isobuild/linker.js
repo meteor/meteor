@@ -122,7 +122,10 @@ _.extend(Module.prototype, {
 
       return _.map(eagerFiles, function (file) {
         const cacheKey = JSON.stringify([
-          file.sourceHash, file.bare, file.servePath]);
+          file._inputHash,
+          file.bare,
+          file.servePath,
+        ]);
 
         if (APP_PRELINK_CACHE.has(cacheKey)) {
           return APP_PRELINK_CACHE.get(cacheKey);
@@ -146,7 +149,8 @@ _.extend(Module.prototype, {
           source: results.code,
           sourcePath: file.sourcePath,
           servePath: file.servePath,
-          sourceMap: sourceMap
+          sourceMap: sourceMap,
+          hash: file._inputHash,
         };
 
         APP_PRELINK_CACHE.set(cacheKey, prelinked);
@@ -164,6 +168,9 @@ _.extend(Module.prototype, {
       // .sourceMap, and (optionally) .exportsName properties before being
       // returned from this method in a singleton array.
       servePath: self.combinedServePath,
+      hash: watch.sha1(
+        JSON.stringify(self.files.map(file => file._inputHash))
+      ),
     };
 
     const results = [result];
@@ -550,7 +557,7 @@ function File(inputFile, module) {
 
   // hash of source (precalculated for *.js files, calculated here for files
   // produced by plugins)
-  self.sourceHash = inputFile.hash || watch.sha1(self.source);
+  self._inputHash = inputFile.hash || watch.sha1(self.source);
 
   // The path of the source file, relative to the root directory of the
   // package or application.
@@ -637,7 +644,7 @@ _.extend(File.prototype, {
     }
 
     try {
-      return _.keys(findAssignedGlobals(self.source, self.sourceHash));
+      return _.keys(findAssignedGlobals(self.source, self._inputHash));
     } catch (e) {
       if (!e.$ParseError) {
         throw e;
@@ -664,7 +671,7 @@ _.extend(File.prototype, {
       // Recover by pretending that this file is empty (which
       // includes replacing its source code with '' in the output)
       self.source = "";
-      self.sourceHash = watch.sha1(self.source);
+      self._inputHash = watch.sha1(self.source);
       self.sourceMap = null;
       return [];
     }
@@ -812,7 +819,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
 
     makeCacheKey(file, options) {
       return JSON.stringify({
-        sourceHash: file.sourceHash,
+        hash: file._inputHash,
         arch: file.module.bundleArch,
         bare: file.bare,
         servePath: file.servePath,

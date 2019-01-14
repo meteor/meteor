@@ -20,7 +20,7 @@ selftest.define("mongo failover", ["slow"], function () {
   run.expectExit(0);
 });
 
-var testMeteorMongo = function (appDir) {
+function testMeteorMongo(appDir) {
   var s = new Sandbox();
   s.createApp(appDir, 'standard-app');
   s.cd(appDir);
@@ -30,15 +30,29 @@ var testMeteorMongo = function (appDir) {
   run.match('proxy');
   run.waitSecs(15);
   run.match('Started MongoDB');
+  run.waitSecs(15);
+  run.match('App running');
+  run.waitSecs(15);
 
   var mongoRun = s.run('mongo');
+  mongoRun.waitSecs(15);
+
+  // Make sure we match the DB version that's printed as part of the
+  // non-quiet shell startup text, so that we don't confuse it with the
+  // output of the db.version() command below.
+  mongoRun.match(/MongoDB server version: 4\.\d+\.\d+/);
+
+  // Make sure the shell does not display the banner about Mongo's free
+  // monitoring service.
+  mongoRun.forbidAll("free cloud-based monitoring service");
+
   // Note: when mongo shell's input is not a tty, there is no prompt.
   mongoRun.write('db.version()\n');
   mongoRun.match(/4\.\d+\.\d+/);
   mongoRun.stop();
 
   run.stop();
-};
+}
 
 selftest.define("meteor mongo", function () {
   testMeteorMongo('asdfzasdf');
