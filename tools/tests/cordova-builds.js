@@ -15,7 +15,7 @@ var checkMobileServer = selftest.markStack(function (s, expected) {
 
   checkIndexHtml(files.pathJoin(
     relBuildDir,
-    "android/project/assets/www/application/index.html"
+    "android/project/app/src/main/assets/www/application/index.html"
   ));
 
   if (isOSX) {
