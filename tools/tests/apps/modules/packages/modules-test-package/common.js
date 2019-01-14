@@ -5,6 +5,13 @@ export const ModulesTestPackage = "loaded";
 import { parse } from "acorn";
 assert.strictEqual(typeof parse, "function");
 
+export function checkWhere(where) {
+  const { where: serverWhere } = require("./server/where.js");
+  const { where: clientWhere } = require("./client/where.js");
+  assert.strictEqual(serverWhere, where);
+  assert.strictEqual(clientWhere, where);
+}
+
 export function checkPackageVars() {
   if (Meteor.isClient) {
     assert.strictEqual(ClientPackageVar, "client");
