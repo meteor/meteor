@@ -60,7 +60,7 @@ try {
     // Be consistently null, for safety
     safeSessionStorage = null;
   }
-} catch(e) {
+} catch (e) {
   // Expected on chrome with strict security, or if sessionStorage not supported
   safeSessionStorage = null;
 }
@@ -125,7 +125,7 @@ Reload._onMigrate = function (name, callback) {
     callback = name;
     name = undefined;
   }
-  providers.push({name: name, callback: callback});
+  providers.push({ name: name, callback: callback });
 };
 
 // Called by packages when they start up.
@@ -220,17 +220,27 @@ Reload._reload = function (options) {
     setTimeout(reload, 1);
   }
 
+  function forceBrowserReload() {
+    // We'd like to make the browser reload the page using location.replace()
+    // instead of location.reload(), because this avoids validating assets
+    // with the server if we still have a valid cached copy. This doesn't work
+    // when the location contains a hash however, because that wouldn't reload
+    // the page and just scroll to the hash location instead.
+    if (window.location.hash || window.location.href.endsWith("#")) {
+      window.location.reload();
+    } else {
+      window.location.replace(window.location.href);
+    }
+  }
+
   function reload() {
     if (Reload._migrate(tryReload, options)) {
-      // We'd like to make the browser reload the page using location.replace()
-      // instead of location.reload(), because this avoids validating assets
-      // with the server if we still have a valid cached copy. This doesn't work
-      // when the location contains a hash however, because that wouldn't reload
-      // the page and just scroll to the hash location instead.
-      if (window.location.hash || window.location.href.endsWith("#")) {
-        window.location.reload();
+      if (Meteor.isCordova) {
+        WebAppLocalServer.switchToPendingVersion(() => {
+          forceBrowserReload();
+        });
       } else {
-        window.location.replace(window.location.href);
+        forceBrowserReload();
       }
     }
   }

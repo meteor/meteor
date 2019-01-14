@@ -40,6 +40,14 @@ N/A
   `g++` used when running `npm install` in the `bundle/programs/server`
   directory.
 
+* Cordova Hot Code Push mechanism is now switching versions explicitly with
+  call to `WebAppLocalServer.switchToPendingVersion` instead of trying to 
+  switch every time a browser reload is detected. If you use any third 
+  party package or have your own HCP routines implemented be sure to call
+  it before forcing a browser reload. If you use the automatic reload from
+  the `Reload` meteor package you do not need to do anything.
+  [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62) 
+
 * The `meteor mongo` command no longer uses the `--quiet` option, so the
   normal startup text will be displayed, albeit without the banner about
   Mongo's free monitoring service. See this
@@ -96,11 +104,6 @@ N/A
   version as `chrome`, and browser names are now processed
   case-insensitively by the `modern-browsers` package.
   [PR #10334](https://github.com/meteor/meteor/pull/10334)
-
-* The `meteor-promise` package has been updated to version 0.8.7, which
-  includes a [commit](https://github.com/meteor/promise/commit/bbe4f0d20b70417950381aea112993c4cc8c1168)
-  that should prevent memory leaks when excess fibers are discarded from
-  the `Fiber` pool.
 
 * Fixed a module caching bug that allowed `findImportedModuleIdentifiers`
   to return the same identifiers for the modern and legacy versions of a
