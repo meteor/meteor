@@ -52,6 +52,9 @@ N/A
   incompatibilities and hot code push errors due to duplicated
   images/assets. [PR #10339](https://github.com/meteor/meteor/pull/10339)
 
+* The `cordova-android` and `cordova-ios` npm dependencies have been
+  updated to 7.1.4 (from 6.4.0) and 4.5.5 (from 4.5.4), respectively.
+
 * The `meteor mongo` command no longer uses the `--quiet` option, so the
   normal startup text will be displayed, albeit without the banner about
   Mongo's free monitoring service. See this

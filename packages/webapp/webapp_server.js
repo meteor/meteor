@@ -14,10 +14,7 @@ import query from "qs-middleware";
 import parseRequest from "parseurl";
 import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
-import {
-  isModern,
-  calculateHashOfMinimumVersions,
-} from "meteor/modern-browsers";
+import { isModern } from "meteor/modern-browsers";
 import send from "send";
 import {
   removeExistingSocketFile,
@@ -693,11 +690,6 @@ function runWebAppServer() {
     const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
     const configOverrides = {
       PUBLIC_SETTINGS,
-      // Since the minimum modern versions defined in the modern-versions
-      // package affect which bundle a given client receives, any changes
-      // in those versions should trigger a corresponding change in the
-      // versions calculated below.
-      minimumModernVersionsHash: calculateHashOfMinimumVersions(),
     };
 
     const oldProgram = WebApp.clientPrograms[arch];
@@ -707,6 +699,10 @@ function runWebAppServer() {
       // Use arrow functions so that these versions can be lazily
       // calculated later, and so that they will not be included in the
       // staticFiles[manifestUrl].content string below.
+      //
+      // Note: these version calculations must be kept in agreement with
+      // CordovaBuilder#appendVersion in tools/cordova/builder.js, or hot
+      // code push will reload Cordova apps unnecessarily.
       version: () => WebAppHashing.calculateClientHash(
         manifest, null, configOverrides),
       versionRefreshable: () => WebAppHashing.calculateClientHash(
