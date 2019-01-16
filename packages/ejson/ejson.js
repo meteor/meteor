@@ -50,13 +50,21 @@ const EJSON = {};
  * @instance
  */
 
-const customTypes = {};
+const customTypes = new Map();
 
-const hasOwn = (obj, prop) => ({}).hasOwnProperty.call(obj, prop);
+const isFunction = (fn) => typeof fn === 'function';
+
+const hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
+
+const convertMapToObject = (map) => Array.from(map).reduce((acc, [key, value]) => {
+  // reassign to not create new object
+  acc[key] = value;
+  return acc;
+}, {});
 
 const isArguments = obj => obj != null && hasOwn(obj, 'callee');
 
-const isInfOrNan =
+const isInfOrNaN =
   obj => Number.isNaN(obj) || obj === Infinity || obj === -Infinity;
 
 // Add a custom type, using a method of your choice to get to and
@@ -83,10 +91,10 @@ const isInfOrNan =
  *                           type's `toJSONValue` method.
  */
 EJSON.addType = (name, factory) => {
-  if (hasOwn(customTypes, name)) {
+  if (customTypes.has(name)) {
     throw new Error(`Type ${name} already present`);
   }
-  customTypes[name] = factory;
+  customTypes.set(name, factory);
 };
 
 const builtinConverters = [
@@ -136,7 +144,7 @@ const builtinConverters = [
     matchJSONValue(obj) {
       return hasOwn(obj, '$InfNaN') && Object.keys(obj).length === 1;
     },
-    matchObject: isInfOrNan,
+    matchObject: isInfOrNaN,
     toJSONValue(obj) {
       let sign;
       if (Number.isNaN(obj)) {
@@ -211,10 +219,10 @@ const builtinConverters = [
     },
     fromJSONValue(obj) {
       const typeName = obj.$type;
-      if (!hasOwn(customTypes, typeName)) {
+      if (!customTypes.has(typeName)) {
         throw new Error(`Custom EJSON type ${typeName} is not defined`);
       }
-      const converter = customTypes[typeName];
+      const converter = customTypes.get(typeName);
       return Meteor._noYieldsAllowed(() => converter(obj.$value));
     },
   },
@@ -222,12 +230,12 @@ const builtinConverters = [
 
 EJSON._isCustomType = (obj) => (
   obj &&
-  typeof obj.toJSONValue === 'function' &&
-  typeof obj.typeName === 'function' &&
-  hasOwn(customTypes, obj.typeName())
+  isFunction(obj.toJSONValue) &&
+  isFunction(obj.typeName) &&
+  customTypes.has(obj.typeName())
 );
 
-EJSON._getTypes = () => customTypes;
+EJSON._getTypes = (isOriginal = false) => (isOriginal ? customTypes : convertMapToObject(customTypes));
 
 EJSON._getConverters = () => builtinConverters;
 
@@ -264,7 +272,7 @@ const adjustTypesToJSONValue = obj => {
   Object.keys(obj).forEach(key => {
     const value = obj[key];
     if (typeof value !== 'object' && value !== undefined &&
-        !isInfOrNan(value)) {
+        !isInfOrNaN(value)) {
       return; // continue
     }
 
@@ -473,11 +481,11 @@ EJSON.equals = (a, b, options) => {
     return true;
   }
 
-  if (typeof (a.equals) === 'function') {
+  if (isFunction(a.equals)) {
     return a.equals(b, options);
   }
 
-  if (typeof (b.equals) === 'function') {
+  if (isFunction(b.equals)) {
     return b.equals(a, options);
   }
 
@@ -580,7 +588,7 @@ EJSON.clone = v => {
   }
 
   // handle general user-defined typed Objects if they have a clone method
-  if (typeof v.clone === 'function') {
+  if (isFunction(v.clone)) {
     return v.clone();
   }
 
