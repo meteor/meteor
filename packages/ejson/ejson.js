@@ -54,6 +54,8 @@ const customTypes = new Map();
 
 const isFunction = (fn) => typeof fn === 'function';
 
+const isObject = (fn) => typeof fn === 'object';
+
 const hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 
 const convertMapToObject = (map) => Array.from(map).reduce((acc, [key, value]) => {
@@ -264,14 +266,14 @@ const adjustTypesToJSONValue = obj => {
   }
 
   // Other atoms are unchanged.
-  if (typeof obj !== 'object') {
+  if (!isObject(obj)) {
     return obj;
   }
 
   // Iterate over array or object structure.
   Object.keys(obj).forEach(key => {
     const value = obj[key];
-    if (typeof value !== 'object' && value !== undefined &&
+    if (!isObject(value) && value !== undefined &&
         !isInfOrNaN(value)) {
       return; // continue
     }
@@ -303,7 +305,7 @@ EJSON.toJSONValue = item => {
   }
 
   let newItem = item;
-  if (typeof item === 'object') {
+  if (isObject(item)) {
     newItem = EJSON.clone(item);
     adjustTypesToJSONValue(newItem);
   }
@@ -315,7 +317,7 @@ EJSON.toJSONValue = item => {
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
 const fromJSONValueHelper = value => {
-  if (typeof value === 'object' && value !== null) {
+  if (isObject(value) && value !== null) {
     const keys = Object.keys(value);
     if (keys.length <= 2
         && keys.every(k => typeof k === 'string' && k.substr(0, 1) === '$')) {
@@ -344,13 +346,13 @@ const adjustTypesFromJSONValue = obj => {
   }
 
   // Other atoms are unchanged.
-  if (typeof obj !== 'object') {
+  if (!isObject(obj)) {
     return obj;
   }
 
   Object.keys(obj).forEach(key => {
     const value = obj[key];
-    if (typeof value === 'object') {
+    if (isObject(value)) {
       const changed = fromJSONValueHelper(value);
       if (value !== changed) {
         obj[key] = changed;
@@ -373,7 +375,7 @@ EJSON._adjustTypesFromJSONValue = adjustTypesFromJSONValue;
  */
 EJSON.fromJSONValue = item => {
   let changed = fromJSONValueHelper(item);
-  if (changed === item && typeof item === 'object') {
+  if (changed === item && isObject(item)) {
     changed = EJSON.clone(item);
     adjustTypesFromJSONValue(changed);
   }
@@ -461,7 +463,7 @@ EJSON.equals = (a, b, options) => {
     return false;
   }
 
-  if (!(typeof a === 'object' && typeof b === 'object')) {
+  if (!(isObject(a) && isObject(b))) {
     return false;
   }
 
@@ -553,7 +555,7 @@ EJSON.equals = (a, b, options) => {
  */
 EJSON.clone = v => {
   let ret;
-  if (typeof v !== 'object') {
+  if (!isObject(v)) {
     return v;
   }
 
@@ -580,11 +582,11 @@ EJSON.clone = v => {
   }
 
   if (Array.isArray(v)) {
-    return v.map(value => EJSON.clone(value));
+    return v.map(EJSON.clone);
   }
 
   if (isArguments(v)) {
-    return Array.from(v).map(value => EJSON.clone(value));
+    return Array.from(v).map(EJSON.clone);
   }
 
   // handle general user-defined typed Objects if they have a clone method
