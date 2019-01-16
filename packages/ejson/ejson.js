@@ -56,6 +56,10 @@ const isFunction = (fn) => typeof fn === 'function';
 
 const isObject = (fn) => typeof fn === 'object';
 
+const keysOf = (obj) => Object.keys(obj);
+
+const lengthOf = (obj) => Object.keys(obj).length;
+
 const hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 
 const convertMapToObject = (map) => Array.from(map).reduce((acc, [key, value]) => {
@@ -102,7 +106,7 @@ EJSON.addType = (name, factory) => {
 const builtinConverters = [
   { // Date
     matchJSONValue(obj) {
-      return hasOwn(obj, '$date') && Object.keys(obj).length === 1;
+      return hasOwn(obj, '$date') && lengthOf(obj) === 1;
     },
     matchObject(obj) {
       return obj instanceof Date;
@@ -118,7 +122,7 @@ const builtinConverters = [
     matchJSONValue(obj) {
       return hasOwn(obj, '$regexp')
         && hasOwn(obj, '$flags')
-        && Object.keys(obj).length === 2;
+        && lengthOf(obj) === 2;
     },
     matchObject(obj) {
       return obj instanceof RegExp;
@@ -144,7 +148,7 @@ const builtinConverters = [
   { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
     matchJSONValue(obj) {
-      return hasOwn(obj, '$InfNaN') && Object.keys(obj).length === 1;
+      return hasOwn(obj, '$InfNaN') && lengthOf(obj) === 1;
     },
     matchObject: isInfOrNaN,
     toJSONValue(obj) {
@@ -164,7 +168,7 @@ const builtinConverters = [
   },
   { // Binary
     matchJSONValue(obj) {
-      return hasOwn(obj, '$binary') && Object.keys(obj).length === 1;
+      return hasOwn(obj, '$binary') && lengthOf(obj) === 1;
     },
     matchObject(obj) {
       return typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array
@@ -179,12 +183,12 @@ const builtinConverters = [
   },
   { // Escaping one level
     matchJSONValue(obj) {
-      return hasOwn(obj, '$escape') && Object.keys(obj).length === 1;
+      return hasOwn(obj, '$escape') && lengthOf(obj) === 1;
     },
     matchObject(obj) {
       let match = false;
       if (obj) {
-        const keyCount = Object.keys(obj).length;
+        const keyCount = lengthOf(obj);
         if (keyCount === 1 || keyCount === 2) {
           match =
             builtinConverters.some(converter => converter.matchJSONValue(obj));
@@ -194,14 +198,14 @@ const builtinConverters = [
     },
     toJSONValue(obj) {
       const newObj = {};
-      Object.keys(obj).forEach(key => {
+      keysOf(obj).forEach(key => {
         newObj[key] = EJSON.toJSONValue(obj[key]);
       });
       return {$escape: newObj};
     },
     fromJSONValue(obj) {
       const newObj = {};
-      Object.keys(obj.$escape).forEach(key => {
+      keysOf(obj.$escape).forEach(key => {
         newObj[key] = EJSON.fromJSONValue(obj.$escape[key]);
       });
       return newObj;
@@ -210,7 +214,7 @@ const builtinConverters = [
   { // Custom
     matchJSONValue(obj) {
       return hasOwn(obj, '$type')
-        && hasOwn(obj, '$value') && Object.keys(obj).length === 2;
+        && hasOwn(obj, '$value') && lengthOf(obj) === 2;
     },
     matchObject(obj) {
       return EJSON._isCustomType(obj);
@@ -271,7 +275,7 @@ const adjustTypesToJSONValue = obj => {
   }
 
   // Iterate over array or object structure.
-  Object.keys(obj).forEach(key => {
+  keysOf(obj).forEach(key => {
     const value = obj[key];
     if (!isObject(value) && value !== undefined &&
         !isInfOrNaN(value)) {
@@ -318,7 +322,7 @@ EJSON.toJSONValue = item => {
 // EJSON.fromJSONValue
 const fromJSONValueHelper = value => {
   if (isObject(value) && value !== null) {
-    const keys = Object.keys(value);
+    const keys = keysOf(value);
     if (keys.length <= 2
         && keys.every(k => typeof k === 'string' && k.substr(0, 1) === '$')) {
       for (let i = 0; i < builtinConverters.length; i++) {
@@ -350,7 +354,7 @@ const adjustTypesFromJSONValue = obj => {
     return obj;
   }
 
-  Object.keys(obj).forEach(key => {
+  keysOf(obj).forEach(key => {
     const value = obj[key];
     if (isObject(value)) {
       const changed = fromJSONValueHelper(value);
@@ -515,8 +519,8 @@ EJSON.equals = (a, b, options) => {
 
   // fall back to structural equality of objects
   let ret;
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
+  const aKeys = keysOf(a);
+  const bKeys = keysOf(b);
   if (keyOrderSensitive) {
     i = 0;
     ret = aKeys.every(key => {
@@ -601,7 +605,7 @@ EJSON.clone = v => {
 
   // handle other objects
   ret = {};
-  Object.keys(v).forEach((key) => {
+  keysOf(v).forEach((key) => {
     ret[key] = EJSON.clone(v[key]);
   });
   return ret;
