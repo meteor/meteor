@@ -841,7 +841,7 @@ _.extend(AppRunner.prototype, {
 
     const postStartupResult = Promise.race([
       listenPromise,
-      new Promise(resolve => setTimeout(resolve, 3000))
+      runPromise
     ]).then(() => {
       return runPostStartupCallbacks(bundleResult);
     }).await();
