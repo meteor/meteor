@@ -763,19 +763,48 @@ _.extend(AppRunner.prototype, {
     var serverWatcher;
     var clientWatcher;
 
+    if (self.watchForChanges) {
+      serverWatcher = new watch.Watcher({
+        watchSet: serverWatchSet,
+        onChange: function () {
+          self._resolvePromise("run", {
+            outcome: 'changed'
+          });
+        },
+        async: true
+      });
+    }
+
     var setupClientWatcher = function () {
       clientWatcher && clientWatcher.stop();
       clientWatcher = new watch.Watcher({
-         watchSet: bundleResult.clientWatchSet,
-         onChange: function () {
+        watchSet: bundleResult.clientWatchSet,
+        onChange: function () {
           var outcome = watch.isUpToDate(serverWatchSet)
                       ? 'changed-refreshable' // only a client asset has changed
                       : 'changed'; // both a client and server asset changed
           self._resolvePromise('run', { outcome: outcome });
-         },
-         async: true
+        },
+        async: true
       });
     };
+    if (self.watchForChanges && canRefreshClient) {
+      setupClientWatcher();
+    }
+
+    function pauseClient(arch) {
+      return appProcess.proc.sendMessage("webapp-pause-client", { arch });
+    }
+
+    async function refreshClient(arch) {
+      if (typeof arch === "string") {
+        // This message will reload the client program and unpause it.
+        await appProcess.proc.sendMessage("webapp-reload-client", { arch });
+      }
+      // If arch is not a string, the receiver of this message should
+      // assume all clients need to be refreshed.
+      await appProcess.proc.sendMessage("client-refresh");
+    }
 
     function runPostStartupCallbacks(bundleResult) {
       const callbacks = bundleResult.postStartupCallbacks;
@@ -808,58 +837,20 @@ _.extend(AppRunner.prototype, {
       }
     }
 
-    Promise.race([
+    Console.enableProgressDisplay(false);
+
+    const postStartupResult = Promise.race([
       listenPromise,
       new Promise(resolve => setTimeout(resolve, 3000))
     ]).then(() => {
-      if (self.watchForChanges) {
-        serverWatcher = new watch.Watcher({
-          watchSet: serverWatchSet,
-          onChange: function () {
-            self._resolvePromise("run", {
-              outcome: 'changed'
-            });
-          },
-          async: true
-        });
-      }
+      return runPostStartupCallbacks(bundleResult);
+    }).await();
 
-      if (self.watchForChanges && canRefreshClient) {
-        setupClientWatcher();
-      }
-      Console.enableProgressDisplay(false);
-      const postStartupResult = runPostStartupCallbacks(bundleResult);
-
-      if (postStartupResult) {
-        self._resolvePromise('run', {
-          ...postStartupResult,
-          postStartupResult: true
-        })
-        return postStartupResult;
-      }  
-    });
-
-    function pauseClient(arch) {
-      return appProcess.proc.sendMessage("webapp-pause-client", { arch });
-    }
-
-    async function refreshClient(arch) {
-      if (typeof arch === "string") {
-        // This message will reload the client program and unpause it.
-        await appProcess.proc.sendMessage("webapp-reload-client", { arch });
-      }
-      // If arch is not a string, the receiver of this message should
-      // assume all clients need to be refreshed.
-      await appProcess.proc.sendMessage("client-refresh");
-    }
+    if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
     var ret = runPromise.await();
-
-    if (ret.postStartupResult) {
-      return ret;
-    }
 
     try {
       while (ret.outcome === 'changed-refreshable') {

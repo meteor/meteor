@@ -441,6 +441,7 @@ export class Watcher {
     const self = this;
     const keys = Object.keys(self.watchSet.files);
 
+    // Set up a watch for each file
     self._processBatches(keys, absPath => {
       if (! self.justCheckOnce) {
         self._watchFileOrDirectory(absPath, true);
