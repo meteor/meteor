@@ -546,11 +546,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
-        if (this.previousCreatedSymlinks[absFrom] !== absTo) {
-        symlinkWithOverwrite(absFrom, absTo);
+        if (this.previousCreatedSymlinks[absFrom] !== relTo) {
+          symlinkWithOverwrite(absFrom, absTo);
         }
         this.usedAsFile[relTo] = false;
-        this.createdSymlinks[absFrom] = absTo;
+        this.createdSymlinks[absFrom] = relTo;
         return;
       }
 
