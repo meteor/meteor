@@ -314,6 +314,7 @@ class ProgressDisplayFull {
   }
 
   depaint() {
+    this._clearDelayedRender();
     this._stream.write(spacesString(this._printedLength) + CARRIAGE_RETURN);
   }
 
@@ -338,7 +339,7 @@ class ProgressDisplayFull {
     if (!this._renderTimeout && this._lastWrittenTime) {
       this._rerenderTimeout = setTimeout(() => {
         this._rerenderTimeout = null;
-        this._render.bind(this)
+        this._render()
       }, PROGRESS_THROTTLE_MS);
     } else if (this._lastWrittenTime === 0) {
       this._render();
@@ -353,10 +354,16 @@ class ProgressDisplayFull {
     this._headless = !! headless;
   }
 
-  _render() {
+  _clearDelayedRender() {
     if (this._rerenderTimeout) {
       clearTimeout(this._rerenderTimeout);
       this._rerenderTimeout = null;
+    }
+  }
+
+  _render() {
+    if (this._rerenderTimeout) {
+      this._clearDelayedRender();
     }
 
     // XXX: Or maybe just jump to the correct position?
