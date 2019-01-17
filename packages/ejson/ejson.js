@@ -1,3 +1,14 @@
+import {
+  isFunction,
+  isObject,
+  keysOf,
+  lengthOf,
+  hasOwn,
+  convertMapToObject,
+  isArguments,
+  isInfOrNaN,
+} from './utils';
+
 /**
  * @namespace
  * @summary Namespace for EJSON functions
@@ -51,27 +62,6 @@ const EJSON = {};
  */
 
 const customTypes = new Map();
-
-const isFunction = (fn) => typeof fn === 'function';
-
-const isObject = (fn) => typeof fn === 'object';
-
-const keysOf = (obj) => Object.keys(obj);
-
-const lengthOf = (obj) => Object.keys(obj).length;
-
-const hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
-
-const convertMapToObject = (map) => Array.from(map).reduce((acc, [key, value]) => {
-  // reassign to not create new object
-  acc[key] = value;
-  return acc;
-}, {});
-
-const isArguments = obj => obj != null && hasOwn(obj, 'callee');
-
-const isInfOrNaN =
-  obj => Number.isNaN(obj) || obj === Infinity || obj === -Infinity;
 
 // Add a custom type, using a method of your choice to get to and
 // from a basic JSON-able representation.  The factory argument
