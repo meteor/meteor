@@ -666,20 +666,20 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           if (this.previousWrittenHashes[thisRelTo] !== hash) {
             const content = optimisticReadFile(thisAbsFrom);
 
-          files.writeFile(
-            files.pathResolve(this.buildPath, thisRelTo),
-            // The reason we call files.writeFile here instead of
-            // files.copyFile is so that we can read the file using
-            // optimisticReadFile instead of files.createReadStream.
+            files.writeFile(
+              files.pathResolve(this.buildPath, thisRelTo),
+              // The reason we call files.writeFile here instead of
+              // files.copyFile is so that we can read the file using
+              // optimisticReadFile instead of files.createReadStream.
               content,
-            // Logic borrowed from files.copyFile: "Create the file as
-            // readable and writable by everyone, and executable by everyone
-            // if the original file is executably by owner. (This mode will be
-            // modified by umask.) We don't copy the mode *directly* because
-            // this function is used by 'meteor create' which is copying from
-            // the read-only tools tree into a writable app."
-            { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
-          );
+              // Logic borrowed from files.copyFile: "Create the file as
+              // readable and writable by everyone, and executable by everyone
+              // if the original file is executably by owner. (This mode will be
+              // modified by umask.) We don't copy the mode *directly* because
+              // this function is used by 'meteor create' which is copying from
+              // the read-only tools tree into a writable app."
+              { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
+            );
           }
 
           this.writtenHashes[thisRelTo] = hash;
