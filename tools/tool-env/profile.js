@@ -280,7 +280,11 @@ function Profile(bucketName, f) {
     var start = process.hrtime();
     var err = null;
     try {
-      return f.apply(this, arguments);
+      const result = f.apply(this, arguments);
+      if (result && typeof result.then === "function") {
+        return Promise.await(result);
+      }
+      return result;
     }
     catch (e) {
       err = e;

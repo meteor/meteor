@@ -280,7 +280,10 @@ function capture(options, f) {
   }
 
   try {
-    f();
+    const result = f();
+    if (result && typeof result.then === "function") {
+      Promise.await(result);
+    }
   } finally {
     progress.reportProgressDone();
 
@@ -353,7 +356,11 @@ function enterJob(options, f) {
     resetFns.push(currentNestingLevel.set(nestingLevel + 1));
 
     try {
-      return f();
+      const result = f();
+      if (result && typeof result.then === "function") {
+        return Promise.await(result);
+      }
+      return result;
     } finally {
       progress.reportProgressDone();
 
@@ -385,7 +392,11 @@ function enterJob(options, f) {
   }
 
   try {
-    return f();
+    const result = f();
+    if (result && typeof result.then === "function") {
+      return Promise.await(result);
+    }
+    return result;
   } finally {
     progress.reportProgressDone();
 

@@ -815,22 +815,29 @@ class Target {
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
-  make({packages, minifyMode, addCacheBusters, minifiers}) {
+  async make({
+    packages,
+    minifyMode,
+    addCacheBusters,
+    minifiers,
+  }) {
     buildmessage.assertInCapture();
 
-    buildmessage.enterJob("building for " + this.arch, () => {
+    await buildmessage.enterJob({
+      title: "building for " + this.arch,
+    }, async () => {
       // Populate the list of unibuilds to load
       this._determineLoadOrder({
         packages: packages || []
       });
 
-      const sourceBatches = this._runCompilerPlugins({
+      const sourceBatches = await this._runCompilerPlugins({
         minifiers,
         minifyMode,
       });
 
       // Link JavaScript and set up this.js, etc.
-      this._emitResources(sourceBatches);
+      await this._emitResources(sourceBatches);
 
       // Add top-level Cordova dependencies, which override Cordova
       // dependencies from packages.
@@ -859,10 +866,10 @@ class Target {
         });
 
         if (minifiersByExt.js) {
-          this.minifyJs(minifiersByExt.js, minifyMode);
+          await this.minifyJs(minifiersByExt.js, minifyMode);
         }
         if (minifiersByExt.css) {
-          this.minifyCss(minifiersByExt.css, minifyMode);
+          await this.minifyCss(minifiersByExt.css, minifyMode);
         }
       }
 
@@ -875,6 +882,8 @@ class Target {
         this._addCacheBusters("css");
       }
     });
+
+    return this;
   }
 
   // Determine the packages to load, create Unibuilds for
@@ -1097,20 +1106,23 @@ class Target {
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
   // linker).
-  _emitResources(sourceBatches) {
+  async _emitResources(sourceBatches) {
     buildmessage.assertInJob();
 
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
-    const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
-      .computeJsOutputFilesMap(sourceBatches);
+    const jsOutputFilesMap = await (
+      compilerPluginModule
+        .PackageSourceBatch
+        .computeJsOutputFilesMap(sourceBatches)
+    );
 
     const versions = {};
     const dynamicImportFiles = new Set;
 
     // Copy their resources into the bundle in order
-    sourceBatches.forEach((sourceBatch) => {
+    for (const sourceBatch of sourceBatches) {
       const unibuild = sourceBatch.unibuild;
 
       if (this.cordovaDependencies) {
@@ -1128,16 +1140,17 @@ class Target {
       const isApp = ! name;
 
       // Emit the resources
-      const resources = sourceBatch.getResources(
+      const resources = await sourceBatch.getResources(
         jsOutputFilesMap.get(name).files,
       );
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
       const unibuildAssets = {};
-      resources.forEach((resource) => {
+
+      for (const resource of resources) {
         if (resource.type !== 'asset') {
-          return;
+          continue;
         }
 
         const fileOptions = {
@@ -1174,20 +1187,20 @@ class Target {
 
           this.asset.push(f);
         });
-      });
+      }
 
       // Now look for the other kinds of resources.
-      resources.forEach((resource) => {
+      for (const resource of resources) {
         if (resource.type === 'asset') {
           // already handled
-          return;
+          continue;
         }
 
         if (resource.type !== "js" &&
             resource.lazy) {
           // Only files that compile to JS can be imported, so any other
           // files should be ignored here, if lazy.
-          return;
+          continue;
         }
 
         if (_.contains(['js', 'css'], resource.type)) {
@@ -1198,7 +1211,7 @@ class Target {
 
             // XXX XXX can't we easily do that in the css handler in
             // meteor.js?
-            return;
+            continue;
           }
 
           const f = new File({
@@ -1239,7 +1252,7 @@ class Target {
           }
 
           this[resource.type].push(f);
-          return;
+          continue;
         }
 
         if (_.contains(['head', 'body'], resource.type)) {
@@ -1247,11 +1260,11 @@ class Target {
             throw new Error('HTML segments can only go to the client');
           }
           this[resource.type].push(resource.data);
-          return;
+          continue;
         }
 
         throw new Error('Unknown type ' + resource.type);
-      });
+      }
 
       this.js.forEach(file => {
         if (file.targetPath === "packages/dynamic-import.js") {
@@ -1269,8 +1282,8 @@ class Target {
       // Remember the versions of all of the build-time dependencies
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
-       this.watchSet.merge(unibuild.pkg.pluginWatchSet);
-    });
+      this.watchSet.merge(unibuild.pkg.pluginWatchSet);
+    }
 
     dynamicImportFiles.forEach(file => {
       file.setContents(
@@ -1283,16 +1296,16 @@ class Target {
 
     // Call any plugin.afterLink callbacks defined by compiler plugins,
     // now that all compilation (including lazy compilation) is finished.
-    sourceBatches.forEach(batch => {
-      batch.resourceSlots.forEach(slot => {
+    for (const batch of sourceBatches) {
+      for (const slot of batch.resourceSlots) {
         const plugin =
           slot.sourceProcessor &&
           slot.sourceProcessor.userPlugin;
         if (plugin && typeof plugin.afterLink === "function") {
-          plugin.afterLink();
+          await plugin.afterLink();
         }
-      });
-    });
+      }
+    }
   }
 
   // Minify the JS in this target
@@ -3108,14 +3121,14 @@ function bundle({
   }
 
   var messages = buildmessage.capture({
-    title: "building the application"
-  }, function () {
+    title: "building the application",
+  }, async () => {
     var packageSource = new PackageSource;
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
 
-    var makeClientTarget = Profile(
+    const makeClientTarget = Profile(
       "bundler.bundle..makeClientTarget", function (app, webArch, options) {
-      var client = new ClientTarget({
+      return new ClientTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
@@ -3124,21 +3137,17 @@ function bundle({
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
         buildMode: buildOptions.buildMode
-      });
-
-      client.make({
+      }).make({
         packages: [app],
         minifyMode: minifyMode,
         minifiers: options.minifiers || [],
         addCacheBusters: true
       });
-
-      return client;
     });
 
-    var makeServerTarget = Profile(
+    const makeServerTarget = Profile(
       "bundler.bundle..makeServerTarget", function (app, clientArchs) {
-      const server = new ServerTarget({
+      return new ServerTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
@@ -3148,13 +3157,9 @@ function bundle({
         appIdentifier,
         buildMode: buildOptions.buildMode,
         clientArchs,
+      }).make({
+        packages: [app],
       });
-
-      server.make({
-        packages: [app]
-      });
-
-      return server;
     });
 
     // Create a Isopack object that represents the app
@@ -3231,7 +3236,7 @@ function bundle({
     }
 
     // Client
-    webArchs.forEach(arch => {
+    for (const arch of webArchs) {
       if (allowDelayedClientBuilds &&
           hasOwn.call(previousBuilders, arch) &&
           projectContext.platformList.canDelayBuildingArch(arch)) {
@@ -3247,7 +3252,7 @@ function bundle({
           const start = +new Date;
 
           // Build the target first.
-          const target = makeClientTarget(app, arch, { minifiers });
+          const target = await makeClientTarget(app, arch, { minifiers });
 
           // Tell the webapp package to pause responding to requests from
           // clients that use this arch, because we're about to write a
@@ -3277,13 +3282,13 @@ function bundle({
 
       } else {
         // Otherwise make the client target now, and write it below.
-        targets[arch] = makeClientTarget(app, arch, {minifiers});
+        targets[arch] = await makeClientTarget(app, arch, {minifiers});
       }
-    });
+    }
 
     // Server
     if (! hasCachedBundle) {
-      targets.server = makeServerTarget(app, webArchs);
+      targets.server = await makeServerTarget(app, webArchs);
     }
 
     if (outputPath !== null) {
@@ -3444,7 +3449,8 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     // (which always wants to build for the current host).
     arch: archinfo.host()
   });
-  target.make({ packages: [isopack] });
+
+  Promise.await(target.make({ packages: [isopack] }));
 
   return {
     image: target.toJsImage(),

@@ -126,7 +126,7 @@ export class CompilerPluginProcessor {
     }
   }
 
-  runCompilerPlugins() {
+  async runCompilerPlugins() {
     const self = this;
     buildmessage.assertInJob();
 
@@ -1195,7 +1195,7 @@ export class PackageSourceBatch {
   }
 
   // Returns a map from package names to arrays of JS output files.
-  static computeJsOutputFilesMap(sourceBatches) {
+  static async computeJsOutputFilesMap(sourceBatches) {
     const map = new Map;
 
     sourceBatches.forEach(batch => {
@@ -1266,14 +1266,14 @@ export class PackageSourceBatch {
     const allRelocatedModules = Object.create(null);
     const scannerMap = new Map;
 
-    sourceBatches.forEach(batch => {
+    for (const batch of sourceBatches) {
       const name = batch.unibuild.pkg.name || null;
       const isApp = ! name;
 
       if (! batch.useMeteorInstall && ! isApp) {
         // If this batch represents a package that does not use the module
         // system, then we don't need to scan its dependencies.
-        return;
+        continue;
       }
 
       const nodeModulesPaths = [];
@@ -1295,10 +1295,10 @@ export class PackageSourceBatch {
         watchSet: batch.unibuild.watchSet,
       });
 
-      scanner.addInputFiles(map.get(name).files);
+      await scanner.addInputFiles(map.get(name).files);
 
       if (batch.useMeteorInstall) {
-        scanner.scanImports();
+        await scanner.scanImports();
         ImportScanner.mergeMissing(
           allMissingModules,
           scanner.allMissingModules
@@ -1306,9 +1306,9 @@ export class PackageSourceBatch {
       }
 
       scannerMap.set(name, scanner);
-    });
+    }
 
-    function handleMissing(missingModules) {
+    async function handleMissing(missingModules) {
       const missingMap = new Map;
 
       _.each(missingModules, (importInfoList, id) => {
@@ -1354,19 +1354,19 @@ export class PackageSourceBatch {
 
       const nextMissingModules = Object.create(null);
 
-      missingMap.forEach((missing, name) => {
+      for (const [name, missing] of missingMap) {
         const { newlyAdded, newlyMissing } =
-          scannerMap.get(name).scanMissingModules(missing);
+          await scannerMap.get(name).scanMissingModules(missing);
         ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);
         ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
-      });
+      }
 
       if (! _.isEmpty(nextMissingModules)) {
-        handleMissing(nextMissingModules);
+        await handleMissing(nextMissingModules);
       }
     }
 
-    handleMissing(allMissingModules);
+    await handleMissing(allMissingModules);
 
     Object.keys(allRelocatedModules).forEach(id => {
       delete allMissingModules[id];
@@ -1374,9 +1374,9 @@ export class PackageSourceBatch {
 
     this._warnAboutMissingModules(allMissingModules);
 
-    scannerMap.forEach((scanner, name) => {
+    for (const [name, scanner] of scannerMap) {
       const isApp = ! name;
-      const outputFiles = scanner.getOutputFiles();
+      const outputFiles = await scanner.getOutputFiles();
       const entry = map.get(name);
 
       if (entry.batch.useMeteorInstall) {
@@ -1429,7 +1429,7 @@ export class PackageSourceBatch {
       } else {
         entry.files = outputFiles;
       }
-    });
+    }
 
     return map;
   }
@@ -1535,7 +1535,7 @@ export class PackageSourceBatch {
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources(jsResources) {
+  async getResources(jsResources) {
     buildmessage.assertInJob();
 
     const resources = [];
@@ -1544,12 +1544,12 @@ export class PackageSourceBatch {
       resources.push(...slot.outputResources);
     });
 
-    resources.push(...this._linkJS(jsResources));
+    resources.push(...(await this._linkJS(jsResources)));
 
     return resources;
   }
 
-  _linkJS(jsResources) {
+  async _linkJS(jsResources) {
     const self = this;
     buildmessage.assertInJob();
 
@@ -1653,8 +1653,8 @@ export class PackageSourceBatch {
     // mutate anything from it.
     let canCache = true;
     let linkedFiles = null;
-    buildmessage.enterJob('linking', () => {
-      linkedFiles = linker.fullLink(jsResources, linkerOptions);
+    await buildmessage.enterJob('linking', async () => {
+      linkedFiles = await linker.fullLink(jsResources, linkerOptions);
       if (buildmessage.jobHasMessages()) {
         canCache = false;
       }
