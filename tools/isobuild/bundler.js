@@ -173,6 +173,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
+import { CancelToken } from "../utils/cancelation.js";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -765,6 +766,9 @@ class Target {
     buildMode = "production",
     // directory on disk where to store the cache for things like linker
     bundlerCacheDir,
+    // Token that can be used to cancel all operations (make, write)
+    // associated with this Target.
+    cancelToken = CancelToken.empty(),
     // ... see subclasses for additional options
   }) {
     Object.assign(this, {
@@ -799,6 +803,7 @@ class Target {
       cordovaDependencies: cordovaPluginsFile ? {} : null,
       buildMode,
       bundlerCacheDir,
+      cancelToken,
     });
   }
 
@@ -1071,6 +1076,7 @@ class Target {
       isopackCache: this.isopackCache,
       linkerCacheDir: this.bundlerCacheDir &&
         files.pathJoin(this.bundlerCacheDir, 'linker'),
+      cancelToken: this.cancelToken,
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
@@ -1109,13 +1115,17 @@ class Target {
   async _emitResources(sourceBatches) {
     buildmessage.assertInJob();
 
+    const { cancelToken } = this;
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
     const jsOutputFilesMap = await (
       compilerPluginModule
         .PackageSourceBatch
-        .computeJsOutputFilesMap(sourceBatches)
+        .computeJsOutputFilesMap({
+          sourceBatches,
+          cancelToken,
+        })
     );
 
     const versions = {};
@@ -1621,8 +1631,12 @@ class ClientTarget extends Target {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the target
-  write(builder, {minifyMode}) {
+  write(builder, {
+    minifyMode,
+  }) {
     builder.reserve("program.json");
+
+    const { cancelToken } = this;
 
     // Helper to iterate over all resources that we serve over HTTP.
     const eachResource = function (f) {
@@ -1661,6 +1675,8 @@ class ClientTarget extends Target {
     // Build up a manifest of all resources served via HTTP.
     const manifest = [];
     eachResource((file, type) => {
+      cancelToken.throwIfRequested();
+
       const manifestItem = {
         path: file.targetPath,
         where: "client",
@@ -1757,6 +1773,8 @@ class ClientTarget extends Target {
       }
     });
 
+    cancelToken.throwIfRequested();
+
     ['head', 'body'].forEach((type) => {
       const data = this[type].join('\n');
       if (data) {
@@ -1771,6 +1789,8 @@ class ClientTarget extends Target {
         });
       }
     });
+
+    cancelToken.throwIfRequested();
 
     // Control file
     const program = {
@@ -1801,6 +1821,8 @@ class ClientTarget extends Target {
         }));
       program.cordovaCompatibilityVersions = cordovaCompatibilityVersions;
     }
+
+    cancelToken.throwIfRequested();
 
     builder.writeJson('program.json', program);
 
@@ -3136,12 +3158,13 @@ function bundle({
         arch: webArch,
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
-        buildMode: buildOptions.buildMode
+        buildMode: buildOptions.buildMode,
+        cancelToken: options.cancelToken,
       }).make({
         packages: [app],
         minifyMode: minifyMode,
         minifiers: options.minifiers || [],
-        addCacheBusters: true
+        addCacheBusters: true,
       });
     });
 
@@ -3248,11 +3271,15 @@ function bundle({
           pauseClient,
           refreshClient,
           runLog,
+          cancelToken,
         }) => {
           const start = +new Date;
 
           // Build the target first.
-          const target = await makeClientTarget(app, arch, { minifiers });
+          const target = await makeClientTarget(app, arch, {
+            minifiers,
+            cancelToken,
+          });
 
           // Tell the webapp package to pause responding to requests from
           // clients that use this arch, because we're about to write a

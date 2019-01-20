@@ -110,6 +110,7 @@ export class CompilerPluginProcessor {
     sourceRoot,
     isopackCache,
     linkerCacheDir,
+    cancelToken,
     minifyCssResource,
   }) {
     Object.assign(this, {
@@ -118,6 +119,7 @@ export class CompilerPluginProcessor {
       sourceRoot,
       isopackCache,
       linkerCacheDir,
+      cancelToken,
       minifyCssResource,
     });
 
@@ -174,6 +176,8 @@ export class CompilerPluginProcessor {
     _.each(sourceProcessorsWithSlots, function (data, id) {
       var sourceProcessor = data.sourceProcessor;
       var resourceSlots = data.resourceSlots;
+
+      self.cancelToken.throwIfRequested();
 
       var jobTitle = [
         "processing files with ",
@@ -1195,7 +1199,10 @@ export class PackageSourceBatch {
   }
 
   // Returns a map from package names to arrays of JS output files.
-  static async computeJsOutputFilesMap(sourceBatches) {
+  static async computeJsOutputFilesMap({
+    sourceBatches,
+    cancelToken,
+  }) {
     const map = new Map;
 
     sourceBatches.forEach(batch => {
@@ -1219,6 +1226,8 @@ export class PackageSourceBatch {
       // do any import scanning.
       return map;
     }
+
+    cancelToken.throwIfRequested();
 
     // Append install(<name>) calls to the install-packages.js file in the
     // modules package for every Meteor package name used.
@@ -1256,6 +1265,8 @@ export class PackageSourceBatch {
 
       return true;
     });
+
+    cancelToken.throwIfRequested();
 
     // Map from module identifiers that previously could not be imported
     // to lists of info objects describing the failed imports.
@@ -1297,18 +1308,23 @@ export class PackageSourceBatch {
 
       await scanner.addInputFiles(map.get(name).files);
 
+      cancelToken.throwIfRequested();
+
       if (batch.useMeteorInstall) {
         await scanner.scanImports();
         ImportScanner.mergeMissing(
           allMissingModules,
           scanner.allMissingModules
         );
+        cancelToken.throwIfRequested();
       }
 
       scannerMap.set(name, scanner);
     }
 
     async function handleMissing(missingModules) {
+      cancelToken.throwIfRequested();
+
       const missingMap = new Map;
 
       _.each(missingModules, (importInfoList, id) => {
@@ -1355,6 +1371,7 @@ export class PackageSourceBatch {
       const nextMissingModules = Object.create(null);
 
       for (const [name, missing] of missingMap) {
+        cancelToken.throwIfRequested();
         const { newlyAdded, newlyMissing } =
           await scannerMap.get(name).scanMissingModules(missing);
         ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);

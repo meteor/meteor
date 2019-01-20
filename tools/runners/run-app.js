@@ -17,6 +17,7 @@ import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher.js";
 import { eachline } from "../utils/eachline.js";
 import { loadIsopackage } from '../tool-env/isopackets.js';
+import { CancelToken } from "../utils/cancelation.js";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -802,13 +803,16 @@ _.extend(AppRunner.prototype, {
       await appProcess.proc.sendMessage("client-refresh");
     }
 
-    function runPostStartupCallbacks(bundleResult) {
+    function runPostStartupCallbacks({
+      bundleResult,
+      cancelToken = CancelToken.empty(),
+    }) {
       const callbacks = bundleResult.postStartupCallbacks;
       if (! callbacks) return;
 
       const messages = buildmessage.capture({
         title: "running post-startup callbacks"
-      }, () => {
+      }, async () => {
         while (callbacks.length > 0) {
           const fn = callbacks.shift();
           try {
@@ -817,9 +821,18 @@ _.extend(AppRunner.prototype, {
               pauseClient,
               refreshClient,
               runLog,
+              cancelToken,
             }));
           } catch (error) {
-            buildmessage.error(error.message);
+            if (CancelToken.isCancelError(error)) {
+              if (Profile.enabled) {
+                runLog.log("Post-startup callbacks interrupted", {
+                  arrow: true,
+                });
+              }
+            } else {
+              buildmessage.error(error.message);
+            }
           }
         }
       });
@@ -835,8 +848,14 @@ _.extend(AppRunner.prototype, {
 
     Console.enableProgressDisplay(false);
 
-    const postStartupResult = runPostStartupCallbacks(bundleResult);
-    if (postStartupResult) return postStartupResult;
+    const postStartupResult = runPostStartupCallbacks({
+      bundleResult,
+      cancelToken: CancelToken.fromPromise(runPromise),
+    });
+
+    if (postStartupResult) {
+      return postStartupResult;
+    }
 
     // Wait for either the process to exit, or (if watchForChanges) a
     // source file to change. Or, for stop() to be called.
@@ -867,8 +886,14 @@ _.extend(AppRunner.prototype, {
         // Establish a watcher on the new files.
         setupClientWatcher();
 
-        const postStartupResult = runPostStartupCallbacks(bundleResult);
-        if (postStartupResult) return postStartupResult;
+        const postStartupResult = runPostStartupCallbacks({
+          bundleResult,
+          cancelToken: CancelToken.fromPromise(oldPromise),
+        });
+
+        if (postStartupResult) {
+          return postStartupResult;
+        }
 
         // Wait until another file changes.
         ret = oldPromise.await();
