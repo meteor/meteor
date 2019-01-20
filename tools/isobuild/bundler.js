@@ -752,68 +752,54 @@ class Target {
     // for resolving package dependencies
     packageMap,
     isopackCache,
-
     // Path to the root source directory for this Target.
     sourceRoot,
-
-    // the architecture to build
+    // Something like "web.browser" or "os" or "os.osx.x86_64"
     arch,
-    // projectContextModule.CordovaPluginsFile object
+    // The project's cordova plugins file (which lists plugins used
+    // directly by the project).
     cordovaPluginsFile,
     // 'development', 'production' or 'test'; determines whether
     // debugOnly, prodOnly and testOnly packages are included;
     // defaults to 'production'
-    buildMode,
+    buildMode = "production",
     // directory on disk where to store the cache for things like linker
     bundlerCacheDir,
     // ... see subclasses for additional options
   }) {
-    this.packageMap = packageMap;
-    this.isopackCache = isopackCache;
-
-    this.sourceRoot = sourceRoot;
-
-    // Something like "web.browser" or "os" or "os.osx.x86_64"
-    this.arch = arch;
-
-    // All of the Unibuilds that are to go into this target, in the order
-    // that they are to be loaded.
-    this.unibuilds = [];
-
-    // JavaScript files. List of File. They will be loaded at startup in
-    // the order given.
-    this.js = [];
-
-    // On-disk dependencies of this target.
-    this.watchSet = new watch.WatchSet();
-
-    // List of all package names used in this target.
-    this.usedPackages = {};
-
-    // node_modules directories that we need to copy into the target (or
-    // otherwise make available at runtime). A map from an absolute path
-    // on disk (NodeModulesDirectory.sourcePath) to a
-    // NodeModulesDirectory object that we have created to represent it.
-    //
-    // The NodeModulesDirectory objects in this map are de-duplicated
-    // aliases to the objects in the nodeModulesDirectory fields of
-    // the File objects in this.js.
-    this.nodeModulesDirectories = Object.create(null);
-
-    // Static assets to include in the bundle. List of File.
-    // For client targets, these are served over HTTP.
-    this.asset = [];
-
-    // The project's cordova plugins file (which lists plugins used directly by
-    // the project).
-    this.cordovaPluginsFile = cordovaPluginsFile;
-
-    // A mapping from Cordova plugin name to Cordova plugin version number.
-    this.cordovaDependencies = this.cordovaPluginsFile ? {} : null;
-
-    this.buildMode = buildMode || 'production';
-
-    this.bundlerCacheDir = bundlerCacheDir;
+    Object.assign(this, {
+      packageMap,
+      isopackCache,
+      sourceRoot,
+      arch,
+      // All of the Unibuilds that are to go into this target, in the
+      // order that they are to be loaded.
+      unibuilds: [],
+      // JavaScript files. List of File. They will be loaded at startup in
+      // the order given.
+      js: [],
+      // On-disk dependencies of this target.
+      watchSet: new watch.WatchSet(),
+      // List of all package names used in this target.
+      usedPackages: {},
+      // node_modules directories that we need to copy into the target (or
+      // otherwise make available at runtime). A map from an absolute path
+      // on disk (NodeModulesDirectory.sourcePath) to a
+      // NodeModulesDirectory object that we have created to represent it.
+      //
+      // The NodeModulesDirectory objects in this map are de-duplicated
+      // aliases to the objects in the nodeModulesDirectory fields of the
+      // File objects in this.js.
+      nodeModulesDirectories: Object.create(null),
+      // Static assets to include in the bundle. List of File.
+      // For client targets, these are served over HTTP.
+      asset: [],
+      cordovaPluginsFile,
+      // A mapping from Cordova plugin name to Cordova plugin version number.
+      cordovaDependencies: cordovaPluginsFile ? {} : null,
+      buildMode,
+      bundlerCacheDir,
+    });
   }
 
   // Top-level entry point for building a target. Generally to build a
