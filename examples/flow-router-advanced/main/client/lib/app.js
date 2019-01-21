@@ -3,7 +3,7 @@ App = {}
 
 "use strict"
 
-_.extend(App, {
+Object.assign(App, {
 
   // Separate routing package details from general app code.
   navigateTo: function (path) {

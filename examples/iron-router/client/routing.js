@@ -11,7 +11,7 @@ Meteor.navigateTo = function (path) {
 }
 
 function emailVerified (user) {
-  return _.some(user.emails, function (email) {
+  return user.emails.some(function (email) {
     return email.verified
   })
 }
@@ -19,7 +19,7 @@ function emailVerified (user) {
 var filters = {
 
   /**
-   * ensure user is logged in and 
+   * ensure user is logged in and
    * email verified
    */
   authenticate: function () {

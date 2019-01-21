@@ -12,7 +12,7 @@ Meteor.startup(function () {
   ////////////////////////////////////////////////////////////////////
   // Create Test Secrets
   //
-    
+
   if (Meteor.secrets.find().fetch().length === 0) {
     Meteor.secrets.insert({secret:"ec2 password: apple2"});
     Meteor.secrets.insert({secret:"domain registration pw: apple3"});
@@ -34,10 +34,10 @@ Meteor.startup(function () {
         {name:"Admin User",email:"admin@example.com",roles:['admin']}
       ];
 
-    _.each(users, function (userData) {
+    users.forEach(function (userData) {
       var id,
           user;
-      
+
       console.log(userData);
 
       id = Accounts.createUser({
@@ -49,12 +49,12 @@ Meteor.startup(function () {
       // email verification
       Meteor.users.update({_id: id}, {$set:{'emails.0.verified': true}});
 
-      _.each(userData.roles, function (role) {
+      userData.roles.forEach(function (role) {
         Roles.createRole(role, {unlessExists: true});
       });
 
       Roles.addUsersToRoles(id, userData.roles);
-    
+
     });
   }
 
@@ -102,7 +102,7 @@ Meteor.publish("users", function () {
   if (Roles.userIsInRole(user, ["admin","manage-users"])) {
     console.log('publishing users', this.userId);
     return Meteor.users.find({}, {fields: {emails: 1, profile: 1, roles: 1}});
-  } 
+  }
 
   this.stop();
   return;

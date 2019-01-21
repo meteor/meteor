@@ -8,10 +8,9 @@ Package.describe({
 Package.onUse(function (api) {
   var both = ['client', 'server'];
 
-  api.versionsFrom("METEOR@1.4.1");
+  api.versionsFrom("METEOR@1.6");
 
-  api.use(['underscore',
-           'accounts-base',
+  api.use(['accounts-base',
            'tracker',
            'mongo',
            'check'], both);
@@ -28,7 +27,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.versionsFrom("METEOR@1.4.1");
+  api.versionsFrom("METEOR@1.6");
 
   var both = ['client', 'server'];
 
@@ -36,7 +35,7 @@ Package.onTest(function (api) {
 
   api.use(['alanning:roles',
            'accounts-password',
-           'underscore',
+           'mongo',
            'tinytest'], both);
 
   api.addFiles('roles/tests/client.js', 'client');
