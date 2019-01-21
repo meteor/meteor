@@ -2611,6 +2611,57 @@
       test.isFalse(Roles.userIsInRole(users.eve, undefined, {anyScope: true}));
     });
 
+Tinytest.add(
+  'roles - isParentOf - returns false for unknown roles',
+  function (test) {
+    reset();
+
+    Roles.createRole('admin');
+
+    test.isFalse(Roles.isParentOf('admin', 'unknown'));
+    test.isFalse(Roles.isParentOf('admin', null));
+    test.isFalse(Roles.isParentOf('admin', undefined));
+
+    test.isFalse(Roles.isParentOf('unknown', 'admin'));
+    test.isFalse(Roles.isParentOf(null, 'admin'));
+    test.isFalse(Roles.isParentOf(undefined, 'admin'));
+  });
+
+Tinytest.add(
+  'roles - isParentOf - returns false if role is not parent of',
+  function (test) {
+    reset();
+
+    Roles.createRole('admin');
+    Roles.createRole('editor');
+    Roles.createRole('user');
+    Roles.addRolesToParent(['editor'], 'admin');
+    Roles.addRolesToParent(['user'], 'editor');
+
+    test.isFalse(Roles.isParentOf('user', 'admin'));
+    test.isFalse(Roles.isParentOf('editor', 'admin'));
+  });
+
+Tinytest.add(
+  'roles - isParentOf - returns true if role is parent of the demanded role',
+  function (test) {
+    reset();
+
+    Roles.createRole('admin');
+    Roles.createRole('editor');
+    Roles.createRole('user');
+    Roles.addRolesToParent(['editor'], 'admin');
+    Roles.addRolesToParent(['user'], 'editor');
+
+    test.isTrue(Roles.isParentOf('admin', 'user'));
+    test.isTrue(Roles.isParentOf('editor', 'user'));
+    test.isTrue(Roles.isParentOf('admin', 'editor'));
+
+    test.isTrue(Roles.isParentOf('admin', 'admin'));
+    test.isTrue(Roles.isParentOf('editor', 'editor'));
+    test.isTrue(Roles.isParentOf('user', 'user'));
+  });
+
   function printException (ex) {
     var tmp = {};
     for (var key in ex) {
