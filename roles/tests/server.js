@@ -73,15 +73,10 @@
     actual = actual || []
     expected = expected || []
 
-    function intersectionObjects (...args) {
-      var array, rest
-      array = args[0]
-      rest = args.length > 2 ? args.slice(1) : []
-      return [...new Set(array)].filter(function (item) {
-        return rest.every(function (other) {
-          return other.some(function (element) {
-            return deepEqual(element, item)
-          })
+    function intersectionObjects (array, array2) {
+      return array.filter(function (item) {
+        return array2.some(function (item2) {
+          return deepEqual(item, item2)
         })
       })
     }
@@ -973,7 +968,7 @@
       test.equal(Roles.getRolesForUser(userObj, 'scope2'), ['admin'])
       test.equal(Roles.getRolesForUser(userObj), [])
 
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1' }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1' }), [{
         _id: 'admin',
         scope: 'scope1',
         assigned: true
@@ -982,13 +977,13 @@
         scope: 'scope1',
         assigned: true
       }])
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2' }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2' }), [{
         _id: 'admin',
         scope: 'scope2',
         assigned: true
       }])
 
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true }), [{
         _id: 'admin',
         scope: 'scope1',
         assigned: true
@@ -1005,7 +1000,7 @@
       Roles.createRole('PERMISSION')
       Roles.addRolesToParent('PERMISSION', 'user')
 
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1' }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1' }), [{
         _id: 'admin',
         scope: 'scope1',
         assigned: true
@@ -1018,15 +1013,15 @@
         scope: 'scope1',
         assigned: false
       }])
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2' }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2' }), [{
         _id: 'admin',
         scope: 'scope2',
         assigned: true
       }])
-      test.equal(Roles.getRolesForUser(userId, { scope: 'scope1' }), ['admin', 'user', 'PERMISSION'])
-      test.equal(Roles.getRolesForUser(userId, { scope: 'scope2' }), ['admin'])
+      itemsEqual(test, Roles.getRolesForUser(userId, { scope: 'scope1' }), ['admin', 'user', 'PERMISSION'])
+      itemsEqual(test, Roles.getRolesForUser(userId, { scope: 'scope2' }), ['admin'])
 
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true }), [{
         _id: 'admin',
         scope: 'scope1',
         assigned: true
@@ -1043,9 +1038,9 @@
         scope: 'scope1',
         assigned: false
       }])
-      test.equal(Roles.getRolesForUser(userId, { anyScope: true }), ['admin', 'user', 'PERMISSION'])
+      itemsEqual(test, Roles.getRolesForUser(userId, { anyScope: true }), ['admin', 'user', 'PERMISSION'])
 
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1', onlyAssigned: true }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1', onlyAssigned: true }), [{
         _id: 'admin',
         scope: 'scope1',
         assigned: true
@@ -1054,15 +1049,15 @@
         scope: 'scope1',
         assigned: true
       }])
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2', onlyAssigned: true }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2', onlyAssigned: true }), [{
         _id: 'admin',
         scope: 'scope2',
         assigned: true
       }])
-      test.equal(Roles.getRolesForUser(userId, { scope: 'scope1', onlyAssigned: true }), ['admin', 'user'])
-      test.equal(Roles.getRolesForUser(userId, { scope: 'scope2', onlyAssigned: true }), ['admin'])
+      itemsEqual(test, Roles.getRolesForUser(userId, { scope: 'scope1', onlyAssigned: true }), ['admin', 'user'])
+      itemsEqual(test, Roles.getRolesForUser(userId, { scope: 'scope2', onlyAssigned: true }), ['admin'])
 
-      test.equal(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true, onlyAssigned: true }), [{
+      itemsEqual(test, Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true, onlyAssigned: true }), [{
         _id: 'admin',
         scope: 'scope1',
         assigned: true
@@ -1075,7 +1070,7 @@
         scope: 'scope2',
         assigned: true
       }])
-      test.equal(Roles.getRolesForUser(userId, { anyScope: true, onlyAssigned: true }), ['admin', 'user'])
+      itemsEqual(test, Roles.getRolesForUser(userId, { anyScope: true, onlyAssigned: true }), ['admin', 'user'])
     })
 
   Tinytest.add(
@@ -1106,13 +1101,13 @@
       Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'scope1')
 
       // by userId
-      test.equal(Roles.getRolesForUser(userId, 'scope1'), ['editor', 'admin', 'user'])
-      test.equal(Roles.getRolesForUser(userId), ['editor'])
+      itemsEqual(test, Roles.getRolesForUser(userId, 'scope1'), ['editor', 'admin', 'user'])
+      itemsEqual(test, Roles.getRolesForUser(userId), ['editor'])
 
       // by user object
       userObj = Meteor.users.findOne({ _id: userId })
-      test.equal(Roles.getRolesForUser(userObj, 'scope1'), ['editor', 'admin', 'user'])
-      test.equal(Roles.getRolesForUser(userObj), ['editor'])
+      itemsEqual(test, Roles.getRolesForUser(userObj, 'scope1'), ['editor', 'admin', 'user'])
+      itemsEqual(test, Roles.getRolesForUser(userObj), ['editor'])
     })
 
   Tinytest.add(
@@ -1126,24 +1121,24 @@
       var userObj
 
       // by userId
-      test.equal(Roles.getRolesForUser(userId, 'scope1'), [])
-      test.equal(Roles.getRolesForUser(userId), [])
+      itemsEqual(test, Roles.getRolesForUser(userId, 'scope1'), [])
+      itemsEqual(test, Roles.getRolesForUser(userId), [])
 
       // by user object
       userObj = Meteor.users.findOne({ _id: userId })
-      test.equal(Roles.getRolesForUser(userObj, 'scope1'), [])
-      test.equal(Roles.getRolesForUser(userObj), [])
+      itemsEqual(test, Roles.getRolesForUser(userObj, 'scope1'), [])
+      itemsEqual(test, Roles.getRolesForUser(userObj), [])
 
       Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
 
       // by userId
-      test.equal(Roles.getRolesForUser(userId, 'scope1'), ['editor'])
-      test.equal(Roles.getRolesForUser(userId), ['editor'])
+      itemsEqual(test, Roles.getRolesForUser(userId, 'scope1'), ['editor'])
+      itemsEqual(test, Roles.getRolesForUser(userId), ['editor'])
 
       // by user object
       userObj = Meteor.users.findOne({ _id: userId })
-      test.equal(Roles.getRolesForUser(userObj, 'scope1'), ['editor'])
-      test.equal(Roles.getRolesForUser(userObj), ['editor'])
+      itemsEqual(test, Roles.getRolesForUser(userObj, 'scope1'), ['editor'])
+      itemsEqual(test, Roles.getRolesForUser(userObj), ['editor'])
     })
 
   Tinytest.add(
@@ -1162,11 +1157,11 @@
       Roles.addUsersToRoles([users.eve], ['admin', 'user'], 'scope2')
 
       // by userId
-      test.equal(Roles.getScopesForUser(userId), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userId), ['scope1', 'scope2'])
 
       // by user object
       userObj = Meteor.users.findOne({ _id: userId })
-      test.equal(Roles.getScopesForUser(userObj), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj), ['scope1', 'scope2'])
     })
 
   Tinytest.add(
@@ -1185,15 +1180,15 @@
       Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'scope2')
 
       // by userId
-      test.equal(Roles.getScopesForUser(userId, 'user'), ['scope2'])
-      test.equal(Roles.getScopesForUser(userId, 'editor'), ['scope1', 'scope2'])
-      test.equal(Roles.getScopesForUser(userId, 'admin'), [])
+      itemsEqual(test, Roles.getScopesForUser(userId, 'user'), ['scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, 'editor'), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, 'admin'), [])
 
       // by user object
       userObj = Meteor.users.findOne({ _id: userId })
-      test.equal(Roles.getScopesForUser(userObj, 'user'), ['scope2'])
-      test.equal(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2'])
-      test.equal(Roles.getScopesForUser(userObj, 'admin'), [])
+      itemsEqual(test, Roles.getScopesForUser(userObj, 'user'), ['scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, 'admin'), [])
     })
 
   Tinytest.add(
@@ -1210,17 +1205,17 @@
       Roles.addUsersToRoles([users.eve], ['editor', 'user'])
 
       // by userId
-      test.equal(Roles.getScopesForUser(userId), [])
-      test.equal(Roles.getScopesForUser(userId, 'editor'), [])
-      test.equal(Roles.getScopesForUser(userId, ['editor']), [])
-      test.equal(Roles.getScopesForUser(userId, ['editor', 'user']), [])
+      itemsEqual(test, Roles.getScopesForUser(userId), [])
+      itemsEqual(test, Roles.getScopesForUser(userId, 'editor'), [])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['editor']), [])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['editor', 'user']), [])
 
       // by user object
       userObj = Meteor.users.findOne({ _id: userId })
-      test.equal(Roles.getScopesForUser(userObj), [])
-      test.equal(Roles.getScopesForUser(userObj, 'editor'), [])
-      test.equal(Roles.getScopesForUser(userObj, ['editor']), [])
-      test.equal(Roles.getScopesForUser(userObj, ['editor', 'user']), [])
+      itemsEqual(test, Roles.getScopesForUser(userObj), [])
+      itemsEqual(test, Roles.getScopesForUser(userObj, 'editor'), [])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['editor']), [])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['editor', 'user']), [])
     })
 
   Tinytest.add(
@@ -1241,25 +1236,25 @@
       Roles.addUsersToRoles([users.eve], ['moderator'], 'group3')
 
       // by userId, one role
-      test.equal(Roles.getScopesForUser(userId, ['user']), ['group2'])
-      test.equal(Roles.getScopesForUser(userId, ['editor']), ['group1', 'group2'])
-      test.equal(Roles.getScopesForUser(userId, ['admin']), [])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['user']), ['group2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['editor']), ['group1', 'group2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['admin']), [])
 
       // by userId, multiple roles
-      test.equal(Roles.getScopesForUser(userId, ['editor', 'user']), ['group1', 'group2'])
-      test.equal(Roles.getScopesForUser(userId, ['editor', 'moderator']), ['group1', 'group2', 'group3'])
-      test.equal(Roles.getScopesForUser(userId, ['user', 'moderator']), ['group2', 'group3'])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['editor', 'user']), ['group1', 'group2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['editor', 'moderator']), ['group1', 'group2', 'group3'])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['user', 'moderator']), ['group2', 'group3'])
 
       // by user object, one role
       userObj = Meteor.users.findOne({ _id: userId })
-      test.equal(Roles.getScopesForUser(userObj, ['user']), ['group2'])
-      test.equal(Roles.getScopesForUser(userObj, ['editor']), ['group1', 'group2'])
-      test.equal(Roles.getScopesForUser(userObj, ['admin']), [])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['user']), ['group2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['editor']), ['group1', 'group2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['admin']), [])
 
       // by user object, multiple roles
-      test.equal(Roles.getScopesForUser(userObj, ['editor', 'user']), ['group1', 'group2'])
-      test.equal(Roles.getScopesForUser(userObj, ['editor', 'moderator']), ['group1', 'group2', 'group3'])
-      test.equal(Roles.getScopesForUser(userObj, ['user', 'moderator']), ['group2', 'group3'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['editor', 'user']), ['group1', 'group2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['editor', 'moderator']), ['group1', 'group2', 'group3'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['user', 'moderator']), ['group2', 'group3'])
     })
 
   Tinytest.add(
@@ -1279,23 +1274,23 @@
       Roles.addUsersToRoles([users.eve], ['editor', 'user', 'admin'], Roles.GLOBAL_SCOPE)
 
       // by userId
-      test.equal(Roles.getScopesForUser(userId, 'user'), ['scope2'])
-      test.equal(Roles.getScopesForUser(userId, 'editor'), ['scope1', 'scope2'])
-      test.equal(Roles.getScopesForUser(userId, 'admin'), [])
-      test.equal(Roles.getScopesForUser(userId, ['user']), ['scope2'])
-      test.equal(Roles.getScopesForUser(userId, ['editor']), ['scope1', 'scope2'])
-      test.equal(Roles.getScopesForUser(userId, ['admin']), [])
-      test.equal(Roles.getScopesForUser(userId, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, 'user'), ['scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, 'editor'), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, 'admin'), [])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['user']), ['scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['editor']), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['admin']), [])
+      itemsEqual(test, Roles.getScopesForUser(userId, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
 
       // by user object
       userObj = Meteor.users.findOne({ _id: userId })
-      test.equal(Roles.getScopesForUser(userObj, 'user'), ['scope2'])
-      test.equal(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2'])
-      test.equal(Roles.getScopesForUser(userObj, 'admin'), [])
-      test.equal(Roles.getScopesForUser(userObj, ['user']), ['scope2'])
-      test.equal(Roles.getScopesForUser(userObj, ['editor']), ['scope1', 'scope2'])
-      test.equal(Roles.getScopesForUser(userObj, ['admin']), [])
-      test.equal(Roles.getScopesForUser(userObj, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, 'user'), ['scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, 'admin'), [])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['user']), ['scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['editor']), ['scope1', 'scope2'])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['admin']), [])
+      itemsEqual(test, Roles.getScopesForUser(userObj, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
     })
 
   Tinytest.add(
@@ -1341,7 +1336,7 @@
       itemsEqual(test, actual, expected)
 
       actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
-      test.equal(actual, [])
+      itemsEqual(test, actual, [])
     })
 
   Tinytest.add(
@@ -1464,7 +1459,7 @@
     })
 
   Tinytest.add(
-    "roles - can use '.' in scope name",
+    'roles - can use \'.\' in scope name',
     function (test) {
       reset()
 
