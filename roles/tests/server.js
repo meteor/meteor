@@ -6,9 +6,27 @@ import { assert } from 'chai'
 import '../roles_server'
 import '../roles_common'
 
+// To allow inserting on the client, needed for testing.
+Meteor.roleAssignment.allow({
+  insert () { return true },
+  update () { return true },
+  remove () { return true }
+})
+
 describe('roles', function () {
   var users = {}
   var roles = ['admin', 'editor', 'user']
+
+  Meteor.publish('_roleAssignments', function () {
+    var loggedInUserId = this.userId
+
+    if (!loggedInUserId) {
+      this.ready()
+      return
+    }
+
+    return Meteor.roleAssignment.find({ _id: loggedInUserId })
+  })
 
   function addUser (name) {
     return Meteor.users.insert({ 'username': name })
@@ -42,6 +60,7 @@ describe('roles', function () {
 
   beforeEach(function () {
     Meteor.roles.remove({})
+    Meteor.roleAssignment.remove({})
     Meteor.users.remove({})
 
     users = {
@@ -1462,160 +1481,12 @@ describe('roles', function () {
     })
   })
 
-  it('_assureConsistency', function () {
-    Roles.createRole('admin')
-    Roles.createRole('user')
-    Roles.createRole('ALL_PERMISSIONS')
-    Roles.createRole('VIEW_PERMISSION')
-    Roles.createRole('EDIT_PERMISSION')
-    Roles.createRole('DELETE_PERMISSION')
-    Roles.addRolesToParent('ALL_PERMISSIONS', 'user')
-    Roles.addRolesToParent('EDIT_PERMISSION', 'ALL_PERMISSIONS')
-    Roles.addRolesToParent('VIEW_PERMISSION', 'ALL_PERMISSIONS')
-    Roles.addRolesToParent('DELETE_PERMISSION', 'admin')
-
-    Roles.addUsersToRoles(users.eve, ['user'], 'scope1')
-    Roles.addUsersToRoles(users.eve, ['user'], 'scope2')
-
-    var correctRoles = [{
-      _id: 'user',
-      scope: 'scope1',
-      assigned: true
-    }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: 'scope1',
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope1',
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: 'scope1',
-      assigned: false
-    }, {
-      _id: 'user',
-      scope: 'scope2',
-      assigned: true
-    }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: 'scope2',
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope2',
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: 'scope2',
-      assigned: false
-    }]
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), correctRoles)
-
-    // let's remove all automatically assigned roles
-    // _assureConsistency should recreate those roles
-    Meteor.users.update(users.eve, { $pull: { roles: { assigned: false } } })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
-      scope: 'scope1',
-      assigned: true
-    }, {
-      _id: 'user',
-      scope: 'scope2',
-      assigned: true
-    }])
-
-    Roles._assureConsistency(users.eve)
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), correctRoles)
-
-    // add an extra role, faking that it is automatically assigned
-    // _assureConsistency should remove this extra role
-    Meteor.users.update(users.eve, { $push: { roles: { _id: 'DELETE_PERMISSION', scope: null, assigned: false } } })
-
-    Roles._assureConsistency(users.eve)
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), correctRoles)
-
-    // remove a role, _assureConsistency should remove it from the user
-    Meteor.roles.remove({ _id: 'VIEW_PERMISSION' })
-
-    Roles._assureConsistency(users.eve)
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
-      scope: 'scope1',
-      assigned: true
-    }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: 'scope1',
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope1',
-      assigned: false
-    }, {
-      _id: 'user',
-      scope: 'scope2',
-      assigned: true
-    }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: 'scope2',
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope2',
-      assigned: false
-    }])
-  })
-
   it('_addUserToRole', function () {
     Roles.createRole('admin')
 
-    // add role with assigned set to true
-    Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false, _assigned: true })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
-      scope: null,
-      assigned: true
-    }])
-
-    // change assigned to false
-    Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false, _assigned: false })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
-      scope: null,
-      assigned: false
-    }])
-
-    Roles.setUserRoles(users.eve, [])
-
     assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [])
 
-    // add role with assigned set to false
-    Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false, _assigned: null })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
-      scope: null,
-      assigned: false
-    }])
-
-    // change assigned to true
-    Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false, _assigned: true })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
-      scope: null,
-      assigned: true
-    }])
-
-    // do not change assigned
-    Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false, _assigned: null })
+    Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false })
 
     assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
       _id: 'admin',
@@ -1635,52 +1506,7 @@ describe('roles', function () {
       assigned: true
     }])
 
-    // remove only roles with assigned set to false, thus do not remove anything
-    Roles._removeUserFromRole(users.eve, 'admin', { scope: null, _assigned: false })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
-      scope: null,
-      assigned: true
-    }])
-
-    // remove only roles with assigned set to true
-    Roles._removeUserFromRole(users.eve, 'admin', { scope: null, _assigned: true })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [])
-
-    Roles.addUsersToRoles(users.eve, 'admin')
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
-      scope: null,
-      assigned: true
-    }])
-
-    // remove roles no matter the assignment
-    Roles._removeUserFromRole(users.eve, 'admin', { scope: null, _assigned: null })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [])
-
-    Roles.addUsersToRoles(users.eve, 'admin', { _assigned: false })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
-      scope: null,
-      assigned: false
-    }])
-
-    // remove only roles with assigned set to true, thus do not remove anything
-    Roles._removeUserFromRole(users.eve, 'admin', { scope: null, _assigned: true })
-
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
-      scope: null,
-      assigned: false
-    }])
-
-    // remove only roles with assigned set to false
-    Roles._removeUserFromRole(users.eve, 'admin', { scope: null, _assigned: false })
+    Roles._removeUserFromRole(users.eve, 'admin', { scope: null })
 
     assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [])
   })

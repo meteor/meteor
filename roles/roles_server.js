@@ -1,9 +1,5 @@
 /* global Meteor, Roles */
 
-// Create default indexes on users collection.
-// Index only on "roles._id" is not needed because the combined index works for it as well.
-Meteor.users._ensureIndex({ 'roles._id': 1, 'roles.scope': 1 })
-Meteor.users._ensureIndex({ 'roles.scope': 1 })
 
 /*
  * Publish logged-in user's roles so client-side checks can work.

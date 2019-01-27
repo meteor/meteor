@@ -10,42 +10,19 @@ describe('roles', function () {
   var users
   var roles = ['admin', 'editor', 'user']
 
+  Tracker.autorun(function () {
+    Roles.assignmentSubscription = Meteor.subscribe('_roleAssignments')
+  })
+
   users = {
     'eve': {
-      _id: 'eve',
-      roles: [{
-        _id: 'admin',
-        scope: null,
-        assigned: true
-      }, {
-        _id: 'editor',
-        scope: null,
-        assigned: true
-      }]
+      _id: 'eve'
     },
     'bob': {
-      _id: 'bob',
-      roles: [{
-        _id: 'user',
-        scope: 'group1',
-        assigned: true
-      }, {
-        _id: 'editor',
-        scope: 'group2',
-        assigned: true
-      }]
+      _id: 'bob'
     },
     'joe': {
-      _id: 'joe',
-      roles: [{
-        _id: 'admin',
-        scope: null,
-        assigned: true
-      }, {
-        _id: 'editor',
-        scope: 'group1',
-        assigned: true
-      }]
+      _id: 'joe'
     }
   }
 
@@ -70,6 +47,54 @@ describe('roles', function () {
   Meteor.user = function () {
     return users.eve
   }
+
+  beforeEach((done) => {
+    Meteor.roleAssignment.insert({
+      user: users.eve,
+      role: { _id: 'admin' },
+      inheritedRoles: [{ _id: 'admin' }]
+    })
+    Meteor.roleAssignment.insert({
+      user: users.eve,
+      role: { _id: 'editor' },
+      inheritedRoles: [{ _id: 'editor' }]
+    })
+
+    Meteor.roleAssignment.insert({
+      user: users.bob,
+      role: { _id: 'user' },
+      inheritedRoles: [{ _id: 'user' }],
+      scope: 'group1'
+    })
+    Meteor.roleAssignment.insert({
+      user: users.bob,
+      role: { _id: 'editor' },
+      inheritedRoles: [{ _id: 'editor' }],
+      scope: 'group2'
+    })
+
+    Meteor.roleAssignment.insert({
+      user: users.joe,
+      role: { _id: 'admin' },
+      inheritedRoles: [{ _id: 'admin' }]
+    })
+    Meteor.roleAssignment.insert({
+      user: users.joe,
+      role: { _id: 'editor' },
+      inheritedRoles: [{ _id: 'editor' }],
+      scope: 'group1'
+    })
+
+    const timer = () => {
+      if (!Roles.assignmentSubscription.ready()) {
+        Meteor.setTimeout(timer, 100)
+      } else {
+        done()
+      }
+    }
+
+    timer()
+  })
 
   it('can check current users roles via template helper', function () {
     var isInRole
