@@ -2,6 +2,10 @@
 import { Meteor } from 'meteor/meteor'
 import { assert } from 'chai'
 
+// To ensure that the files are loaded for coverage
+import '../roles_server'
+import '../roles_common'
+
 describe('roles', function () {
   var users = {}
   var roles = ['admin', 'editor', 'user']

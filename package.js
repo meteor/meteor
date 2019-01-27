@@ -34,7 +34,10 @@ Package.onUse(function (api) {
 })
 
 Package.onTest(function (api) {
+  // Add code coverage
   api.use([
+    'lmieulet:meteor-packages-coverage@0.2.0',
+    'lmieulet:meteor-coverage@3.0.0',
     'meteortesting:mocha'
   ])
 
