@@ -1,5 +1,12 @@
 /* global Meteor, Roles */
 
+Meteor.roleAssignment._ensureIndex({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
+Meteor.roleAssignment._ensureIndex({ 'user._id': 1, 'role._id': 1, scope: 1 })
+Meteor.roleAssignment._ensureIndex({ 'role._id': 1 })
+Meteor.roleAssignment._ensureIndex({ scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }) // Adding userId and roleId might speed up other queries depending on the first index
+Meteor.roleAssignment._ensureIndex({ 'inheritedRoles._id': 1 })
+
+Meteor.roles._ensureIndex({ 'children._id': 1 })
 
 /*
  * Publish logged-in user's roles so client-side checks can work.
