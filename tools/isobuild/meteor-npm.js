@@ -478,8 +478,9 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
   const pkgJsonPath = files.pathJoin(dir, "package.json");
   const pkgJsonStat = optimisticStatOrNull(pkgJsonPath);
   const canCache = pkgJsonStat && pkgJsonStat.isFile();
-  const portableFile = files.pathJoin(
-    dir, ".meteor-portable-" + portableVersion + ".json");
+  const portableFile = files.convertToOSPath(
+    files.pathJoin(dir, ".meteor-portable-" + portableVersion + ".json")
+  );
 
   if (canCache) {
     // Cache previous results by writing a boolean value to a hidden file
