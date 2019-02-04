@@ -31,7 +31,7 @@ module.exports = {
   switchToPendingVersion: function(callback, errorCallback) {
     cordova.exec(
       callback,
-      (error) => {
+      function(error) {
         console.error(error);
         if (typeof errorCallback === "function") {
           errorCallback(error);
