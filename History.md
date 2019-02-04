@@ -69,6 +69,14 @@ N/A
   [Issue #10393](https://github.com/meteor/meteor/issues/10393)
   [PR #10414](https://github.com/meteor/meteor/pull/10414)
 
+* If your application is using Git for version control, the current Git
+  commit hash will now be exposed via the `Meteor.gitCommitHash` property
+  while the app is running (in both server and client code), and also via
+  the `"gitCommitHash"` property in the `star.json` file located in the
+  root directory of builds produced by `meteor build`, for consumption by
+  deployment tools. If you are not using Git, neither property will be
+  defined. [PR #10442](https://github.com/meteor/meteor/pull/10442)
+
 ## v1.8.0.2, 2019-01-07
 
 ### Breaking changes

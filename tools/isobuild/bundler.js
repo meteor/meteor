@@ -2881,7 +2881,8 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     releaseName,
     previousBuilders = Object.create(null),
     buildMode,
-    minifyMode
+    minifyMode,
+    sourceRoot,
   }) {
 
   const builders = {};
@@ -2898,6 +2899,12 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
   });
 
   try {
+    Object.keys(targets).forEach(key => {
+      // Both makeClientTarget and makeServerTarget get their sourceRoot
+      // from packageSource.sourceRoot, so this should always be true:
+      assert.strictEqual(targets[key].sourceRoot, sourceRoot);
+    });
+
     var json = {
       format: "site-archive-pre1",
       builtBy,
@@ -2905,6 +2912,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       meteorRelease: releaseName,
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
+      gitCommitHash: files.findGitCommitHash(sourceRoot),
     };
 
     // Tell the deploy server what version of the dependency kit we're using, so
@@ -3314,6 +3322,7 @@ function bundle({
         starResult = writeSiteArchive(targets, outputPath, {
           buildMode: buildOptions.buildMode,
           previousBuilders,
+          sourceRoot: packageSource.sourceRoot,
           ...writeOptions,
         });
         serverWatchSet.merge(starResult.serverWatchSet);
