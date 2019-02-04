@@ -56,15 +56,15 @@ Meteor = {
   isModern: config.isModern
 };
 
-if (config.gitRevision) {
+if (config.gitCommitHash) {
   /**
-   * @summary Hexadecimal Git revision string if the application is using
-   *          Git for version control. Undefined otherwise.
+   * @summary Hexadecimal Git commit hash, if the application is using Git
+   *          for version control. Undefined otherwise.
    * @locus Anywhere
    * @static
    * @type {String}
    */
-  Meteor.gitRevision = config.gitRevision;
+  Meteor.gitCommitHash = config.gitCommitHash;
 }
 
 if (config.PUBLIC_SETTINGS) {

@@ -40,7 +40,7 @@ __meteor_bootstrap__ = {
 
 __meteor_runtime_config__ = {
   meteorRelease: configJson.meteorRelease,
-  gitRevision: starJson.gitRevision
+  gitCommitHash: starJson.gitCommitHash
 };
 
 if (!process.env.APP_ID) {

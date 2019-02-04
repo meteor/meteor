@@ -1,5 +1,5 @@
 {
-  "name": "git-revision",
+  "name": "git-commit-hash",
   "private": true,
   "scripts": {
     "start": "meteor run",

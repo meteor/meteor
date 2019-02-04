@@ -129,20 +129,17 @@ files.findPackageDir = function (filepath) {
   return findUpwards(isPackageDir, filepath);
 };
 
-// Returns the current Git HEAD revision of the application, if possible.
-// Always resolves rather than rejecting (unless something truly
-// unexpected happens). The result value is a string when a Git revision
-// was successfully resolved, or undefined otherwise.
-files.getGitRevision = function (path) {
+// Returns the hash of the current Git HEAD revision of the application,
+// if possible. Always resolves rather than rejecting (unless something
+// truly unexpected happens). The result value is a string when a Git
+// revision was successfully resolved, or undefined otherwise.
+files.findGitCommitHash = function (path) {
   return new Promise(resolve => {
     const appDir = files.findAppDir(path);
-    const gitDir = appDir && files.pathJoin(appDir, ".git");
-    if (gitDir && files.exists(gitDir)) {
-      const proc = execFile("git", [
-        "--git-dir=" + files.convertToOSPath(gitDir),
-        "rev-parse",
-        "HEAD",
-      ], {}, (error, stdout) => {
+    if (appDir) {
+      const proc = execFile("git", ["rev-parse", "HEAD"], {
+        cwd: files.convertToOSPath(appDir),
+      }, (error, stdout) => {
         if (! error && typeof stdout === "string") {
           resolve(stdout.trim());
         } else {

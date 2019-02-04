@@ -24,37 +24,37 @@ function initGitApp(sandbox) {
   git("add", ".");
   git("commit", "-m", "first");
 
-  let revision;
+  let commitHash;
   git("rev-parse", "HEAD").outputLog.get().some(line => {
     if (line.channel === "stdout") {
-      revision = line.text;
+      commitHash = line.text;
       return true;
     }
   });
 
-  assert(/^[0-9a-z]{40}$/.test(revision), revision);
+  assert(/^[0-9a-z]{40}$/.test(commitHash), commitHash);
 
-  return revision;
+  return commitHash;
 }
 
-selftest.define("Meteor.gitRevision", function () {
+selftest.define("Meteor.gitCommitHash", function () {
   const s = new Sandbox();
 
-  s.createApp("app-using-git", "git-revision");
+  s.createApp("app-using-git", "git-commit-hash");
   s.cd("app-using-git");
 
-  const revision = initGitApp(s);
+  const commitHash = initGitApp(s);
 
   const build = s.run("build", "--directory", "../app-using-git-build");
   build.waitSecs(30);
   build.expectExit(0);
 
   const star = JSON.parse(s.read("../app-using-git-build/bundle/star.json"));
-  assert.strictEqual(star.gitRevision, revision);
+  assert.strictEqual(star.gitCommitHash, commitHash);
 
   const test = s.run("npm", "test");
   test.waitSecs(30);
-  test.match("__meteor_runtime_config__.gitRevision: " + revision);
+  test.match("__meteor_runtime_config__.gitCommitHash: " + commitHash);
   test.match("App running at");
   test.match("SERVER FAILURES: 0");
   test.match("CLIENT FAILURES: 0");

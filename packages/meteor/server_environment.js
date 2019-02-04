@@ -3,7 +3,7 @@ meteorEnv = {
   TEST_METADATA: process.env.TEST_METADATA || "{}"
 };
 
-var config = typeof __meteor_runtime_config__ === "object" &&
+const config = typeof __meteor_runtime_config__ === "object" &&
   __meteor_runtime_config__;
 
 if (config) {
@@ -46,6 +46,6 @@ if (config) {
   config.PUBLIC_SETTINGS = Meteor.settings.public;
 }
 
-if (config && config.gitRevision) {
-  Meteor.gitRevision = config.gitRevision;
+if (config && config.gitCommitHash) {
+  Meteor.gitCommitHash = config.gitCommitHash;
 }
