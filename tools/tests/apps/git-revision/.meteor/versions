@@ -17,7 +17,7 @@ html-tools@1.0.11
 htmljs@1.0.11
 inter-process-messaging@0.1.0
 logging@1.1.20
-meteor@1.9.2
+meteor@1.9.3
 minifier-css@1.4.1
 minifier-js@2.4.0
 modern-browsers@0.1.4-beta181.16
