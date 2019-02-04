@@ -484,6 +484,7 @@ export class CordovaBuilder {
 
     const runtimeConfig = {
       meteorRelease: meteorRelease,
+      gitRevision: files.getGitRevision(applicationPath),
       ROOT_URL: mobileServerUrl,
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: '',

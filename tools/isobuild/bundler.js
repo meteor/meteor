@@ -2897,6 +2897,11 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     forceInPlaceBuild: true,
   });
 
+  let sourceRoot;
+  Object.keys(targets).sort().some(key => {
+    return sourceRoot = targets[key].sourceRoot;
+  });
+
   try {
     var json = {
       format: "site-archive-pre1",
@@ -2905,6 +2910,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       meteorRelease: releaseName,
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
+      gitRevision: files.getGitRevision(sourceRoot),
     };
 
     // Tell the deploy server what version of the dependency kit we're using, so
