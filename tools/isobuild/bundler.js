@@ -2760,6 +2760,10 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   let data = file.contents();
   const hash = file.hash();
 
+  if (builder.usePreviousWrite(file.targetPath, hash)) {
+    return;
+  }
+
   if (options && options.sourceMapUrl) {
     data = addSourceMappingURL(data, options.sourceMapUrl);
   } else {

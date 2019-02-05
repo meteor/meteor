@@ -231,6 +231,39 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     return partsOut.join(files.pathSep);
   }
+  // Checks if a file with the same path and hash was written by
+  // the previous builder. If it was, it adds it to the cache.
+  // It also makes sure the parent directories exist and are part of the cache.
+  // 
+  // Returns true if the file was already written
+  usePreviousWrite (relPath, hash, sanitize) {
+    relPath = this._normalizeFilePath(relPath, sanitize);
+    this._ensureDirectory(files.pathDirname(relPath));
+
+    const previouslyWritten = this.previousWrittenHashes[relPath] === hash;
+
+    if (previouslyWritten) {
+      this.writtenHashes[relPath] = hash;
+      this.usedAsFile[relPath] = true;
+    }
+
+    return previouslyWritten;
+  }
+
+  _normalizeFilePath (relPath, sanitize) {
+    // Ensure no trailing slash
+    if (relPath.slice(-1) === files.pathSep) {
+      relPath = relPath.slice(0, -1);
+    }
+
+    // In sanitize mode, ensure path does not contain segments like
+    // '..', does not contain forbidden characters, and is unique.
+    if (sanitize) {
+      relPath = this._sanitize(relPath);
+    }
+
+    return relPath;
+  }
 
   // Write either a buffer or the contents of a file to `relPath` (a
   // path to a file relative to the bundle root), creating it (and any
@@ -254,16 +287,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //
   // If `file` is used then it will be added to the builder's WatchSet.
   write(relPath, {data, file, hash, sanitize, executable, symlink}) {
-    // Ensure no trailing slash
-    if (relPath.slice(-1) === files.pathSep) {
-      relPath = relPath.slice(0, -1);
-    }
-
-    // In sanitize mode, ensure path does not contain segments like
-    // '..', does not contain forbidden characters, and is unique.
-    if (sanitize) {
-      relPath = this._sanitize(relPath);
-    }
+    relPath = this._normalizeFilePath(relPath, sanitize);
 
     let getData = null;
     if (data) {
