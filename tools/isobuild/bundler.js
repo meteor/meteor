@@ -176,6 +176,9 @@ import { PackageRegistry } from "../../packages/meteor/define-package.js";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
+const MINIFY_PLAIN_FUNCTION = Buffer.from('function(', 'utf8');
+const MINIFY_RENAMED_FUNCTION = Buffer.from('function __minifyJs(', 'utf8');
+
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
     /~$/, /^\.#/,
@@ -1333,13 +1336,10 @@ class Target {
         // expression, which some minifiers (e.g. UglifyJS) either fail to
         // parse or mistakenly eliminate as dead code. To avoid these
         // problems, we temporarily name the function __minifyJs.
-        file._contents = Buffer.from(
-          file.contents()
-            .toString("utf8")
-            .replace(/^\s*function\s*\(/,
-                     "function __minifyJs("),
-          "utf8"
-        );
+        file._contents = Buffer.concat([
+          MINIFY_RENAMED_FUNCTION,
+          file.contents().slice(MINIFY_PLAIN_FUNCTION.length)
+        ]);
 
         dynamicFiles.push(jsf);
 
@@ -1371,15 +1371,24 @@ class Target {
     function handle(source, dynamic) {
       source._minifiedFiles.forEach(file => {
         // Remove the function name __minifyJs that was added above.
-        file.data = file.data
-          .toString("utf8")
-          .replace(/^\s*function\s+__minifyJs\s*\(/,
-                   "function(");
+        if (typeof file.data === 'string') {
+          file.data = Buffer.from(
+            file.data
+              .replace(/^\s*function\s+__minifyJs\s*\(/,
+                       "function("),
+            "utf8"
+          );
+        } else if (dynamic) {
+          file.data = Buffer.concat([
+            MINIFY_PLAIN_FUNCTION,
+            file.data.slice(MINIFY_RENAMED_FUNCTION.length)
+          ]);
+        }
 
         const newFile = new File({
           info: 'minified js',
           arch,
-          data: Buffer.from(file.data, 'utf8'),
+          data: file.data,
           hash: inputHashesByJsFile.get(source),
         });
 
