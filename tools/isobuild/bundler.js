@@ -546,6 +546,9 @@ class File {
     // disk).
     this.sourcePath = options.sourcePath;
 
+    // Allows not calculating sri when the file doesn't support it
+    this._skipSri = options.skipSri
+
     // info is just for help with debugging the tool; it isn't written to disk or
     // anything.
     this.info = options.info || '?';
@@ -619,7 +622,9 @@ class File {
         hashes.push(this._inputHash);
       }
 
-      hashes.push(this.sri());
+      if (!this._skipSri) {
+        hashes.push(this.sri());
+      }
 
       this._hash = watch.sha1(...hashes);
     }
@@ -628,7 +633,7 @@ class File {
   }
 
   sri() {
-    if (! this._sri) {
+    if (! this._sri && !this._skipSri) {
       this._sri = watch.sha512(this.contents());
     }
 
@@ -1160,6 +1165,8 @@ class Target {
           data: resource.data,
           cacheable: false,
           hash: resource.hash,
+          sourcePath: resource.sourcePath,
+          skipSri: !!resource.sourcePath && resource.hash
         };
 
         const file = new File(fileOptions);
