@@ -549,7 +549,7 @@ class File {
     // disk).
     this.sourcePath = options.sourcePath;
 
-    // Allows not calculating sri when the file doesn't support it
+    // Allows not calculating sri when it isn't needed
     this._skipSri = options.skipSri
 
     // info is just for help with debugging the tool; it isn't written to disk or
@@ -1169,7 +1169,7 @@ class Target {
           cacheable: false,
           hash: resource.hash,
           sourcePath: resource.sourcePath,
-          skipSri: !!resource.sourcePath && resource.hash
+          skipSri: !!resource.hash
         };
 
         const file = new File(fileOptions);
