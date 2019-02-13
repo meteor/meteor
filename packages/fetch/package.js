@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "node-fetch": "2.1.2",
+  "node-fetch": "2.3.0",
   "whatwg-fetch": "2.0.4"
 });
 
