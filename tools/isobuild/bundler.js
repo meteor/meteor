@@ -1168,7 +1168,6 @@ class Target {
           data: resource.data,
           cacheable: false,
           hash: resource.hash,
-          sourcePath: resource.sourcePath,
           skipSri: !!resource.hash
         };
 

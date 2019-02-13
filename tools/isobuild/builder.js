@@ -231,18 +231,19 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     return partsOut.join(files.pathSep);
   }
+
   // Checks if a file with the same path and hash was written by
-  // the previous builder. If it was, it adds it to the cache.
-  // It also makes sure the parent directories exist and are part of the cache.
-  // 
+  // the previous builder. If it was, it adds it to the cache and makes
+  // sure the parent directories exist and are part of the cache.
+  //
   // Returns true if the file was already written
   usePreviousWrite (relPath, hash, sanitize) {
     relPath = this._normalizeFilePath(relPath, sanitize);
-    this._ensureDirectory(files.pathDirname(relPath));
 
     const previouslyWritten = this.previousWrittenHashes[relPath] === hash;
 
     if (previouslyWritten) {
+      this._ensureDirectory(files.pathDirname(relPath));
       this.writtenHashes[relPath] = hash;
       this.usedAsFile[relPath] = true;
     }
