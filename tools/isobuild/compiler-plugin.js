@@ -882,9 +882,12 @@ class OutputResource {
       sourcePath,
       targetPath,
       servePath,
+      // When a lazy finalizer is provided, we delay reading and
+      // hashing the file until we know the file will be used
+      _inputResource: lazyFinalizer ? resourceSlot.inputResource : null,
       // Remember the source hash so that changes to the source that
       // disappear after compilation can still contribute to the hash.
-      _inputHash: resourceSlot.inputResource.hash,
+      _inputHash: lazyFinalizer ? null : resourceSlot.inputResource.hash,
     });
   }
 
@@ -892,6 +895,11 @@ class OutputResource {
     if (this._finalizerPromise) {
       this._finalizerPromise.await();
     } else if (this._lazyFinalizer) {
+      if (!this._inputHash) {
+        this._inputHash = this._inputResource.hash;
+        this._inputResource = null;
+      }
+
       const finalize = this._lazyFinalizer;
       this._lazyFinalizer = null;
       (this._finalizerPromise =

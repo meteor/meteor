@@ -45,6 +45,45 @@ compiler.ALL_ARCHES = [
   "web.cordova"
 ];
 
+class LazyResource {
+  constructor({absPath, watchSet, classification, relPath, fileOptions}) {
+    this.type = 'source'
+    this.extension = classification.extension || null;
+    this.usesDefaultSourceProcessor = !!classification.usesDefaultSourceProcessor;
+    this.path = relPath;
+    this.fileOptions = fileOptions
+    this.absPath = absPath;
+
+    this._watchSet = watchSet;
+    this._watching = false;
+    this._hash = null;
+    this._data = null;
+  }
+
+  get data() {
+    if (!this._data) {
+      this._data = optimisticReadFile(this.absPath);
+    }
+    this._watch();
+
+    return this._data;
+  }
+  get hash() {
+    if (!this._hash) {
+      this._hash = optimisticHashOrNull(this.absPath);
+    }
+    this._watch(this._hash);
+
+    return this._hash;
+  }
+  _watch(hash) {
+    if (!this._watching) {
+      this._watchSet.addFile(this.absPath, hash || this.hash);
+      this._watching = true;
+    }
+  }
+}
+
 compiler.compile = Profile(function (packageSource, options) {
   return `compiler.compile(${ packageSource.name || 'the app' })`;
 }, function (packageSource, options) {
@@ -557,19 +596,34 @@ api.addAssets('${relPath}', 'client').`);
       return;
     }
 
+    if (classification.type === "meteor-ignore") {
+      const hash = optimisticHashOrNull(absPath);
+      watchSet.addFile(absPath, hash);
+      // Return after watching .meteorignore files but before adding them
+      // as resources to be processed by compiler plugins. To see how
+      // these files are handled, see PackageSource#_findSources.
+      return;
+    }
+
+    if (classification.isNonLegacySource()) {
+      // This is source used by a new-style compiler plugin; it will be fully
+      // processed later in the bundler.
+      resources.push(new LazyResource({
+        absPath,
+        watchSet,
+        classification,
+        relPath,
+        fileOptions
+      }));
+      return;
+    }
+
     const contents = optimisticReadFile(absPath);
     const hash = optimisticHashOrNull(absPath);
     const file = { contents, hash };
     watchSet.addFile(absPath, hash);
 
     Console.nudge(true);
-
-    if (classification.type === "meteor-ignore") {
-      // Return after watching .meteorignore files but before adding them
-      // as resources to be processed by compiler plugins. To see how
-      // these files are handled, see PackageSource#_findSources.
-      return;
-    }
 
     if (contents === null) {
       // It really sucks to put this check here, since this isn't publish
@@ -587,22 +641,6 @@ api.addAssets('${relPath}', 'client').`);
       }
 
       // recover by ignoring (but still watching the file)
-      return;
-    }
-
-    if (classification.isNonLegacySource()) {
-      // This is source used by a new-style compiler plugin; it will be fully
-      // processed later in the bundler.
-      resources.push({
-        type: "source",
-        extension: classification.extension || null,
-        usesDefaultSourceProcessor:
-          !! classification.usesDefaultSourceProcessor,
-        data: contents,
-        path: relPath,
-        hash: hash,
-        fileOptions: fileOptions
-      });
       return;
     }
 
