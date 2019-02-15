@@ -7,6 +7,7 @@ import {
   convertMapToObject,
   isArguments,
   isInfOrNaN,
+  handleError,
 } from './utils';
 
 /**
@@ -390,7 +391,7 @@ EJSON.fromJSONValue = item => {
  * @param {Boolean} options.canonical When `true`, stringifies keys in an
  *                                    object in sorted order.
  */
-EJSON.stringify = (item, options) => {
+EJSON.stringify = handleError((item, options) => {
   let serialized;
   const json = EJSON.toJSONValue(item);
   if (options && (options.canonical || options.indent)) {
@@ -400,7 +401,7 @@ EJSON.stringify = (item, options) => {
     serialized = JSON.stringify(json);
   }
   return serialized;
-};
+});
 
 /**
  * @summary Parse a string into an EJSON value. Throws an error if the string
