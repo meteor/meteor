@@ -10,7 +10,7 @@ Package.onUse(function onUse(api) {
 });
 
 Package.onTest(function onTest(api) {
-  api.use(['ecmascript', 'tinytest']);
+  api.use(['ecmascript', 'tinytest', 'mongo']);
   api.use('ejson');
   api.mainModule('ejson_tests.js');
 });
