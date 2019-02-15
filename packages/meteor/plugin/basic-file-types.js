@@ -11,11 +11,25 @@ Plugin.registerCompiler({
 
 var CssCompiler = function () {
 };
+
+function hasDir(path, dirName) {
+  var pathParts = path.split('/');
+  var index = pathParts.indexOf(dirName);
+
+  return index > -1 && index < pathParts.length - 1;
+}
+
 CssCompiler.prototype.processFilesForTarget = function (inputFiles) {
   inputFiles.forEach(function (inputFile) {
+    let path = inputFile.getPathInPackage();
+
+    if (hasDir(path, 'node_modules')) {
+      return;
+    }
+
     inputFile.addStylesheet({
       data: inputFile.getContentsAsString(),
-      path: inputFile.getPathInPackage()
+      path: path
     });
   });
 };
