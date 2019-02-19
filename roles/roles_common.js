@@ -699,9 +699,12 @@ Object.assign(Roles, {
    * @param {String|Object} user User ID or an actual user object.
    * @param {Object|String} [options] Options:
    *   - `scope`: name of scope to provide roles for; if not specified, global roles are returned
-   *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
-   *   - `fullObjects`: return full roles objects (`true`) or just names (`false`) (default `false`)
+   *   - `anyScope`: if set, role can be in any scope (`scope` and `onlyAssigned` options are ignored)
+   *   - `onlyScoped`: if set, only roles in the specified scope are returned
    *   - `onlyAssigned`: return only assigned roles and not automatically inferred (like subroles)
+   *   - `fullObjects`: return full roles objects (`true`) or just names (`false`) (`onlyAssigned` option is ignored) (default `false`)
+   *     If you have a use-case for this option, please file a feature-request. You shouldn't need to use it as it's
+   *     result strongly dependant on the internal data structure of this plugin.
    *
    * Alternatively, it can be a scope name string.
    * @return {Array} Array of user's roles, unsorted.
@@ -720,7 +723,8 @@ Object.assign(Roles, {
     options = Object.assign({
       fullObjects: false,
       onlyAssigned: false,
-      anyScope: false
+      anyScope: false,
+      onlyScoped: false
     }, options)
 
     if (user && typeof user === 'object') {
@@ -740,7 +744,11 @@ Object.assign(Roles, {
     }
 
     if (!options.anyScope) {
-      selector.scope = { $in: [options.scope, null] }
+      selector.scope = { $in: [options.scope] }
+
+      if (!options.onlyScoped) {
+        selector.scope.$in.push(null)
+      }
     }
 
     if (options.onlyAssigned) {

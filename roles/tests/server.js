@@ -756,7 +756,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getRolesForUser(null), [])
     assert.sameMembers(Roles.getRolesForUser({}), [])
   })
-  
+
   it('get an empty list of roles for non-existant user', function () {
     assert.sameMembers(Roles.getRolesForUser('1'), [])
     assert.sameMembers(Roles.getRolesForUser('1', 'scope1'), [])
@@ -940,6 +940,29 @@ describe('roles', function () {
       inheritedRoles: [{ _id: 'admin' }]
     }])
     assert.sameMembers(Roles.getRolesForUser(userId, { anyScope: true, onlyAssigned: true }), ['admin', 'user'])
+  })
+
+  it('can get only scoped roles for user', function () {
+    Roles.createRole('admin')
+    Roles.createRole('user')
+
+    var userId = users.eve
+
+    // add roles
+    Roles.addUsersToRoles(userId, ['user'], 'scope1')
+    Roles.addUsersToRoles(userId, ['admin'])
+
+    Roles.createRole('PERMISSION')
+    Roles.addRolesToParent('PERMISSION', 'user')
+
+    assert.sameMembers(Roles.getRolesForUser(userId, { onlyScoped: true, scope: 'scope1' }), ['user', 'PERMISSION'])
+    assert.sameMembers(Roles.getRolesForUser(userId, { onlyScoped: true, onlyAssigned: true, scope: 'scope1' }), ['user'])
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { onlyScoped: true, fullObjects: true, scope: 'scope1' }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
+      scope: 'scope1',
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
+    }])
   })
 
   it('can get all roles for user by scope with periods in name', function () {
