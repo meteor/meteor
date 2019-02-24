@@ -72,6 +72,7 @@ var AppProcess = function (options) {
   self.inspect = options.inspect;
   self.settings = options.settings;
   self.testMetadata = options.testMetadata;
+  self.autoRestart = options.autoRestart;
 
   self.proc = null;
   self.madeExitCallback = false;
@@ -197,6 +198,7 @@ _.extend(AppProcess.prototype, {
       delete env.BIND_IP;
     }
     env.APP_ID = self.projectContext.appIdentifier;
+    env.METEOR_AUTO_RESTART = self.autoRestart;
 
     // We run the server behind our own proxy, so we need to increment
     // the HTTP forwarded count.
@@ -298,7 +300,7 @@ _.extend(AppProcess.prototype, {
 //   for connections.
 //
 // - Other options: port, mongoUrl, oplogUrl, buildOptions, rootUrl,
-//   settingsFile, program, proxy, recordPackageUsage
+//   settingsFile, program, proxy, recordPackageUsage, once
 //
 // To use, construct an instance of AppRunner, and then call start() to start it
 // running. To stop it, either return false from onRunEnd, or call stop().  (But
@@ -357,6 +359,7 @@ var AppRunner = function (options) {
   self.testMetadata = options.testMetadata;
   self.inspect = options.inspect;
   self.proxy = options.proxy;
+  self.autoRestart = !options.once;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
   self.onRunEnd = options.onRunEnd;
@@ -723,6 +726,7 @@ _.extend(AppRunner.prototype, {
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings,
       testMetadata: self.testMetadata,
+      autoRestart: self.autoRestart,
     });
 
     if (options.firstRun && self._beforeStartPromise) {

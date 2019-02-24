@@ -302,7 +302,6 @@ class Runner {
 exports.run = function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
-  delete runOptions.once;
 
   var promise = new Promise(function (resolve) {
     runOptions.onFailure = function () {
