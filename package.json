@@ -29,20 +29,20 @@
     "url": "https://github.com/meteor/babel/issues"
   },
   "dependencies": {
-    "@babel/core": "^7.2.0",
-    "@babel/parser": "^7.2.0",
-    "@babel/plugin-proposal-class-properties": "^7.2.1",
+    "@babel/core": "^7.3.4",
+    "@babel/parser": "^7.3.4",
+    "@babel/plugin-proposal-class-properties": "^7.3.4",
     "@babel/plugin-syntax-dynamic-import": "^7.2.0",
     "@babel/plugin-transform-modules-commonjs": "^7.2.0",
-    "@babel/plugin-transform-runtime": "^7.2.0",
-    "@babel/plugin-transform-typescript": "^7.2.0",
+    "@babel/plugin-transform-runtime": "^7.3.4",
+    "@babel/plugin-transform-typescript": "^7.3.2",
     "@babel/preset-react": "^7.0.0",
-    "@babel/runtime": "^7.2.0",
-    "@babel/template": "^7.1.2",
-    "@babel/traverse": "^7.1.6",
-    "@babel/types": "^7.2.0",
+    "@babel/runtime": "^7.3.4",
+    "@babel/template": "^7.2.2",
+    "@babel/traverse": "^7.3.4",
+    "@babel/types": "^7.3.4",
     "babel-plugin-transform-es2015-modules-reify": "^0.18.0",
-    "babel-preset-meteor": "^7.2.0",
+    "babel-preset-meteor": "^7.3.4",
     "babel-preset-minify": "^0.5.0",
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.11",
@@ -50,12 +50,12 @@
     "reify": "0.17.3"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-decorators": "^7.2.0",
+    "@babel/plugin-proposal-decorators": "^7.3.0",
     "@babel/plugin-syntax-decorators": "^7.2.0",
-    "fibers": "3.0.0",
-    "meteor-promise": "0.8.6",
-    "mocha": "5.2.0",
-    "promise": "8.0.2",
-    "source-map": "^0.5.7"
+    "fibers": "^3.1.1",
+    "meteor-promise": "^0.8.7",
+    "mocha": "^6.0.2",
+    "promise": "^8.0.2",
+    "source-map": "^0.6.1"
   }
 }
