@@ -479,12 +479,8 @@ var compileUnibuild = Profile(function (options) {
     const relPath = asset.relPath;
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
 
-    // readAndWatchFileWithHash returns an object carrying a buffer with the
-    // file-contents. The buffer contains the original data of the file (no EOL
-    // transforms from the tools/files.js part).
-    const file = watch.readAndWatchFileWithHash(watchSet, absPath);
-    const hash = file.hash;
-    const contents = file.contents;
+    const hash = optimisticHashOrNull(absPath)
+    const contents = optimisticReadFile(absPath)
 
     addAsset(contents, relPath, hash);
   });
