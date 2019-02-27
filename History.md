@@ -40,6 +40,8 @@ N/A
   `g++` used when running `npm install` in the `bundle/programs/server`
   directory.
 
+* The `meteor-babel` npm package has been updated to version 7.3.4.
+
 * Cordova Hot Code Push mechanism is now switching versions explicitly with
   call to `WebAppLocalServer.switchToPendingVersion` instead of trying to 
   switch every time a browser reload is detected. If you use any third 
