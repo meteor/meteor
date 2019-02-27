@@ -115,6 +115,9 @@ ls -al "$INCLUDE_PATH"
 mkdir "${DIR}/build/npm-server-install"
 cd "${DIR}/build/npm-server-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" > package.json
+# XXX For no apparent reason this npm install will fail with an EISDIR
+# error if we do not help it by creating the .npm/_locks directory.
+mkdir -p "${DIR}/.npm/_locks"
 npm install
 npm shrinkwrap
 
