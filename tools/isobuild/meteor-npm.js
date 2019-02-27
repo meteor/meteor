@@ -1074,7 +1074,7 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
 
   if (! result.success) {
     const pkgNotFound =
-      `404 Not Found: ${utils.quotemeta(name)}@${utils.quotemeta(version)}`;
+      `404 Not Found - GET ${utils.quotemeta("https://registry.npmjs.org/"+name)}`;
 
     const versionNotFound =
       "No matching version found for " +
