@@ -363,8 +363,6 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
 // - content: the stringified content that should be served at this path
 // - absolutePath: the absolute path on disk to the file
 
-var staticFilesByArch;
-
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
 WebAppInternals.staticFilesMiddleware = async function (
@@ -415,7 +413,7 @@ WebAppInternals.staticFilesMiddleware = async function (
     return;
   }
 
-  const info = getStaticFileInfo(pathname, path, arch);
+  const info = getStaticFileInfo(staticFilesByArch, pathname, path, arch);
   if (! info) {
     next();
     return;
@@ -485,7 +483,7 @@ WebAppInternals.staticFilesMiddleware = async function (
   }
 };
 
-function getStaticFileInfo(originalPath, path, arch) {
+function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
   if (! hasOwn.call(WebApp.clientPrograms, arch)) {
     return null;
   }
@@ -594,14 +592,16 @@ function runWebAppServer() {
 
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
-      staticFilesByArch = Object.create(null);
+      const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
       const clientArchs = configJson.clientArchs ||
         Object.keys(configJson.clientPaths);
 
       try {
-        clientArchs.forEach(generateClientProgram);
+        clientArchs.forEach(arch => {
+          generateClientProgram(arch, staticFilesByArch);
+        });
         WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error("Error reloading the client program: " + e.stack);
@@ -635,7 +635,10 @@ function runWebAppServer() {
     syncQueue.runTask(() => generateClientProgram(arch));
   };
 
-  function generateClientProgram(arch) {
+  function generateClientProgram(
+    arch,
+    staticFilesByArch = WebAppInternals.staticFilesByArch,
+  ) {
     const clientDir = pathJoin(
       pathDirname(__meteor_bootstrap__.serverDir),
       arch,
@@ -893,7 +896,10 @@ function runWebAppServer() {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    WebAppInternals.staticFilesMiddleware(staticFilesByArch, req, res, next);
+    WebAppInternals.staticFilesMiddleware(
+      WebAppInternals.staticFilesByArch,
+      req, res, next
+    );
   });
 
   // Core Meteor packages like dynamic-import can add handlers before
