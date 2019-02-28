@@ -215,11 +215,11 @@ _.extend(Module.prototype, {
     }
 
     // Caching is only useful when there are dynamic files.
-    const canCache = results.find(result => result.dynamic) && self.useGlobalNamespace;
+    const canCache = self.useGlobalNamespace && results.find(result => result.dynamic);
+    const key = `${self.bundleArch}-${self.name}`;
     let inputHash;
-    let key;
 
-    // When only dynamic files changed, reuse the main result from 
+    // When only dynamic files changed, reuse the main result from
     // the last time it was generated
     if (canCache) {
       const files = [];
@@ -237,13 +237,13 @@ _.extend(Module.prototype, {
           });
         }
       });
+
       inputHash = watch.sha1(JSON.stringify({
         useGlobalNamespace: this.useGlobalNamespace,
         combinedServePath: this.combinedServePath,
         name: self.name,
         files
       }));
-      key = `${self.bundleArch}-${self.name}`;
 
       // By using a more general key only the latest result is stored
       // The inputHash is used to know when the cache is stale
@@ -892,7 +892,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
   }
 );
 
-function getOutputWithSourceMapCached (file,servePath, options) {
+function getOutputWithSourceMapCached(file, servePath, options) {
   const key = JSON.stringify({
     hash: file._inputHash,
     arch: file.module.bundleArch,
@@ -906,14 +906,13 @@ function getOutputWithSourceMapCached (file,servePath, options) {
     return DYNAMIC_PRELINKED_OUTPUT_CACHE.get(key);
   }
 
-
   const result = file.getPrelinkedOutput({
     ...options,
     disableCache: true
-  })
-    .toStringWithSourceMap({
-      file: servePath,
-    });
+  }).toStringWithSourceMap({
+    file: servePath,
+  });
+
   DYNAMIC_PRELINKED_OUTPUT_CACHE.set(key, result);
 
   return result;
