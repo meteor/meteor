@@ -21,6 +21,15 @@ const APP_PRELINK_CACHE = new LRU({
     return prelinked.source.length + sourceMapLength(prelinked.sourceMap);
   }
 });
+// Caches code with source map for dynamic files
+const DYNAMIC_PRELINKED_OUTPUT_CACHE = new LRU({
+  max: Math.pow(2, 11)
+});
+
+// Caches main bundle for client architectures that have dynamic imports
+const PRELINKED_MAIN_CACHE = new LRU({
+  max: Math.pow(2, 3)
+});
 
 var packageDot = function (name) {
   if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name)) {
@@ -205,6 +214,54 @@ _.extend(Module.prototype, {
       });
     }
 
+    // Caching is only useful when there are dynamic files.
+    const canCache = self.useGlobalNamespace && results.find(result => result.dynamic);
+    const key = `${self.bundleArch}-${self.name}`;
+    let inputHash;
+
+    // When only dynamic files changed, reuse the main result from
+    // the last time it was generated
+    if (canCache) {
+      const files = [];
+
+      self.files.forEach(file => {
+        if (file.bare || !file.isDynamic()) {
+          files.push({
+            hash: file._inputHash,
+            meteorInstallOptions: file.meteorInstallOptions,
+            sourceMap: !!file.sourceMap,
+            mainModule: file.imported,
+            alias: file.alias,
+            lazy: file.lazy,
+            bare: file.bare
+          });
+        }
+      });
+
+      inputHash = watch.sha1(JSON.stringify({
+        useGlobalNamespace: this.useGlobalNamespace,
+        combinedServePath: this.combinedServePath,
+        name: self.name,
+        files
+      }));
+
+      // By using a more general key only the latest result is stored
+      // The inputHash is used to know when the cache is stale
+      if (PRELINKED_MAIN_CACHE.has(key)) {
+        let {
+          inputHash: cachedInputHash,
+          result: cachedResult
+        } = PRELINKED_MAIN_CACHE.get(key);
+
+        if (cachedInputHash === inputHash) {
+          result.source = cachedResult.source;
+          result.sourceMap = cachedResult.sourceMap;
+
+          return results;
+        }
+      }
+    }
+
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
     Profile.time(
@@ -227,6 +284,13 @@ _.extend(Module.prototype, {
         }
       }
     );
+
+    if (canCache) {
+      PRELINKED_MAIN_CACHE.set(key, {
+        inputHash,
+        result
+      });
+    }
 
     return results;
   }),
@@ -271,11 +335,7 @@ _.extend(Module.prototype, {
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);
         const { code: source, map } =
-          file.getPrelinkedOutput({
-            sourceWidth: sourceWidth,
-          }).toStringWithSourceMap({
-            file: servePath,
-          });
+          getOutputWithSourceMapCached(file, servePath, { sourceWidth })
 
         results.push({
           source,
@@ -812,12 +872,15 @@ const getPrelinkedOutputCached = require("optimism").wrap(
     }
 
     return new sourcemap.SourceNode(null, null, null, chunks);
-
   }, {
     // Store at most 4096 Files worth of prelinked output in this cache.
     max: Math.pow(2, 12),
 
     makeCacheKey(file, options) {
+      if (options.disableCache) {
+        return;
+      }
+
       return JSON.stringify({
         hash: file._inputHash,
         arch: file.module.bundleArch,
@@ -828,6 +891,32 @@ const getPrelinkedOutputCached = require("optimism").wrap(
     }
   }
 );
+
+function getOutputWithSourceMapCached(file, servePath, options) {
+  const key = JSON.stringify({
+    hash: file._inputHash,
+    arch: file.module.bundleArch,
+    bare: file.bare,
+    servePath: file.servePath,
+    dynamic: file.isDynamic(),
+    options,
+  });
+
+  if (DYNAMIC_PRELINKED_OUTPUT_CACHE.has(key)) {
+    return DYNAMIC_PRELINKED_OUTPUT_CACHE.get(key);
+  }
+
+  const result = file.getPrelinkedOutput({
+    ...options,
+    disableCache: true
+  }).toStringWithSourceMap({
+    file: servePath,
+  });
+
+  DYNAMIC_PRELINKED_OUTPUT_CACHE.set(key, result);
+
+  return result;
+}
 
 // Given a list of lines (not newline-terminated), returns a string placing them
 // in a pretty banner of width bannerWidth. All lines must have length at most
