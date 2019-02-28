@@ -237,21 +237,20 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // sure the parent directories exist and are part of the cache.
   //
   // Returns true if the file was already written
-  usePreviousWrite (relPath, hash, sanitize) {
+  usePreviousWrite(relPath, hash, sanitize) {
     relPath = this._normalizeFilePath(relPath, sanitize);
 
-    const previouslyWritten = this.previousWrittenHashes[relPath] === hash;
-
-    if (previouslyWritten) {
+    if (this.previousWrittenHashes[relPath] === hash) {
       this._ensureDirectory(files.pathDirname(relPath));
       this.writtenHashes[relPath] = hash;
       this.usedAsFile[relPath] = true;
+      return true;
     }
 
-    return previouslyWritten;
+    return false;
   }
 
-  _normalizeFilePath (relPath, sanitize) {
+  _normalizeFilePath(relPath, sanitize) {
     // Ensure no trailing slash
     if (relPath.slice(-1) === files.pathSep) {
       relPath = relPath.slice(0, -1);
@@ -316,7 +315,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       // Write is called multiple times for assets when they have multiple urls for the same file
       if (this.previousWrittenHashes[relPath] !== hash && this.writtenHashes[relPath] !== hash) {
-        
+
         // Builder is used to create build products, which should be read-only;
         // users shouldn't be manually editing automatically generated files and
         // expecting the results to "stick".
