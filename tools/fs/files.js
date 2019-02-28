@@ -1032,7 +1032,12 @@ files.createTarball = Profile(function (dirPath, tarball) {
 // is in a state other than initial or final".)
 files.renameDirAlmostAtomically =
   Profile("files.renameDirAlmostAtomically", (fromDir, toDir) => {
-    const garbageDir = `${toDir}-garbage-${utils.randomToken()}`;
+    const garbageDir = files.pathJoin(
+      files.pathDirname(toDir),
+      // Begin the base filename with a '.' character so that it can be
+      // ignored by other directory-scanning code.
+      `.${files.pathBasename(toDir)}-garbage-${utils.randomToken()}`,
+    );
 
     // Get old dir out of the way, if it exists.
     let cleanupGarbage = false;
