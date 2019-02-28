@@ -7,19 +7,19 @@
       "integrity": "sha512-9Aeai9TacfNtWXOYarkFJRW2CWo+dRon+fuLZYJmvLV3+MiUp0bEI6IAZfXEIg7/Pl/7IWlLaDnhzTsD81etQA=="
     },
     "memory-pager": {
-      "version": "1.1.0",
-      "resolved": "https://registry.npmjs.org/memory-pager/-/memory-pager-1.1.0.tgz",
-      "integrity": "sha512-Mf9OHV/Y7h6YWDxTzX/b4ZZ4oh9NSXblQL8dtPCOomOtZciEHxePR78+uHFLLlsk01A6jVHhHsQZZ/WcIPpnzg=="
+      "version": "1.5.0",
+      "resolved": "https://registry.npmjs.org/memory-pager/-/memory-pager-1.5.0.tgz",
+      "integrity": "sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg=="
     },
     "mongodb": {
-      "version": "3.1.10",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.1.10.tgz",
-      "integrity": "sha512-Uml42GeFxhTGQVml1XQ4cD0o/rp7J2ROy0fdYUcVitoE7vFqEhKH4TYVqRDpQr/bXtCJVxJdNQC1ntRxNREkPQ=="
+      "version": "3.1.13",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.1.13.tgz",
+      "integrity": "sha512-sz2dhvBZQWf3LRNDhbd30KHVzdjZx9IKC0L+kSZ/gzYquCF5zPOgGqRz6sSCqYZtKP2ekB4nfLxhGtzGHnIKxA=="
     },
     "mongodb-core": {
-      "version": "3.1.9",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.1.9.tgz",
-      "integrity": "sha512-MJpciDABXMchrZphh3vMcqu8hkNf/Mi+Gk6btOimVg1XMxLXh87j6FAvRm+KmwD1A9fpu3qRQYcbQe4egj23og=="
+      "version": "3.1.11",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.1.11.tgz",
+      "integrity": "sha512-rD2US2s5qk/ckbiiGFHeu+yKYDXdJ1G87F6CG3YdaZpzdOm5zpoAZd/EKbPmFO6cQZ+XVXBXBJ660sSI0gc6qg=="
     },
     "require_optional": {
       "version": "1.0.1",
