@@ -56,6 +56,7 @@ const openCenteredPopup = function(url, width, height) {
   const features = (`width=${width},height=${height}` +
                   `,left=${left},top=${top},scrollbars=yes`);
 
+
   const newwindow = window.open(url, 'Login', features);
 
   if (typeof newwindow === 'undefined') {
