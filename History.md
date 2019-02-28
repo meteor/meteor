@@ -31,9 +31,9 @@ N/A
   [fork](https://github.com/meteor/pacote/tree/v9.4.1-meteor) of its
   `pacote` dependency has been updated to version 9.4.1.
 
-* Mongo has been upgraded to version 4.0.4 for 64-bit systems (was 4.0.2),
-  and 3.2.21 for 32-bit systems (was 3.2.19). The `mongodb` npm package
-  used by `npm-mongo` has been updated to version 3.1.10 (was 3.1.6).
+* Mongo has been upgraded to version 4.0.6 for 64-bit systems (was 4.0.2),
+  and 3.2.22 for 32-bit systems (was 3.2.19). The `mongodb` npm package
+  used by `npm-mongo` has been updated to version 3.1.13 (was 3.1.6).
 
 * The `fibers` npm package has been updated to version 3.1.1, a major
   update from version 2.0.0. Building this version of `fibers` requires a
