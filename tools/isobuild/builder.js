@@ -232,6 +232,39 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return partsOut.join(files.pathSep);
   }
 
+  // Checks if a file with the same path and hash was written by
+  // the previous builder. If it was, it adds it to the cache and makes
+  // sure the parent directories exist and are part of the cache.
+  //
+  // Returns true if the file was already written
+  usePreviousWrite(relPath, hash, sanitize) {
+    relPath = this._normalizeFilePath(relPath, sanitize);
+
+    if (this.previousWrittenHashes[relPath] === hash) {
+      this._ensureDirectory(files.pathDirname(relPath));
+      this.writtenHashes[relPath] = hash;
+      this.usedAsFile[relPath] = true;
+      return true;
+    }
+
+    return false;
+  }
+
+  _normalizeFilePath(relPath, sanitize) {
+    // Ensure no trailing slash
+    if (relPath.slice(-1) === files.pathSep) {
+      relPath = relPath.slice(0, -1);
+    }
+
+    // In sanitize mode, ensure path does not contain segments like
+    // '..', does not contain forbidden characters, and is unique.
+    if (sanitize) {
+      relPath = this._sanitize(relPath);
+    }
+
+    return relPath;
+  }
+
   // Write either a buffer or the contents of a file to `relPath` (a
   // path to a file relative to the bundle root), creating it (and any
   // enclosing directories) if it doesn't exist yet. Exactly one of
@@ -254,16 +287,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //
   // If `file` is used then it will be added to the builder's WatchSet.
   write(relPath, {data, file, hash, sanitize, executable, symlink}) {
-    // Ensure no trailing slash
-    if (relPath.slice(-1) === files.pathSep) {
-      relPath = relPath.slice(0, -1);
-    }
-
-    // In sanitize mode, ensure path does not contain segments like
-    // '..', does not contain forbidden characters, and is unique.
-    if (sanitize) {
-      relPath = this._sanitize(relPath);
-    }
+    relPath = this._normalizeFilePath(relPath, sanitize);
 
     let getData = null;
     if (data) {
@@ -291,7 +315,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       // Write is called multiple times for assets when they have multiple urls for the same file
       if (this.previousWrittenHashes[relPath] !== hash && this.writtenHashes[relPath] !== hash) {
-        
+
         // Builder is used to create build products, which should be read-only;
         // users shouldn't be manually editing automatically generated files and
         // expecting the results to "stick".
