@@ -1697,9 +1697,8 @@ export class Connection {
         this._livedata_error(msg);
       } else {
         Meteor._debug('discarding unknown livedata message type', msg);
-        const description =
-          'DDP version negotiation failed; server requested version ' +
-          msg.version;
+
+        const description = 'DDP version negotiation failed; server requested version ' + msg.version;
         this._stream.disconnect({ _permanent: true, _error: description });
         this.options.onDDPVersionNegotiationFailure(description);
       }
