@@ -265,6 +265,26 @@ var Session = function (server, version, socket, options) {
   // List of callbacks to call when this connection is closed.
   self._closeCallbacks = [];
 
+  // DDP clients with version 2 and up should support batching of DDP messages
+  var allowBuffering = version >= 2;
+
+  // When updates are coming within this ms interval, batch them together.
+  self._bufferedMessagesInterval = allowBuffering ? options.bufferedMessagesInterval || 10 : 0;
+
+  // Flush buffers immediately if messages are happening continuously for more than this many ms.
+  self._bufferedMessagesMaxAge = options.bufferedMessagesMaxAge || 500;
+
+  // Maximum amount of messages to store in the buffer before flushing
+  self._bufferedMessagesMaxAmount = options.bufferedMessagesMaxAmount || 1000;
+
+  // The timeoutHandle for the outgoing message buffer
+  self._bufferedMessagesFlushHandle = null;
+
+  // Date at which messages should be flushed, regardless of any setTimeout
+  self._bufferedMessagesFlushAt = null;
+
+  // A buffer for outgoing messages
+  self._bufferedMessages = [];
 
   // XXX HACK: If a sockjs connection, save off the URL. This is
   // temporary and will go away in the near future.
@@ -382,6 +402,35 @@ _.extend(Session.prototype, {
     return ret;
   },
 
+  messages: function (subscriptionHandle, collectionName, messages) {
+    var self = this;
+    var view = self.getCollectionView(collectionName);
+    var checkEmptyView = false;
+
+     for (var i = 0; i < messages.length; i++) {
+      var msg = messages[i];
+      var action = msg.action;
+      var id = msg.args[0];
+      var fields = msg.args[1];
+
+       if (action === 'added') {
+        view.added(subscriptionHandle, id, fields);
+      } else if (action === 'changed') {
+        view.changed(subscriptionHandle, id, fields);
+      } else if (action === 'removed') {
+        checkEmptyView = true;
+
+         view.removed(subscriptionHandle, id);
+      } else {      
+        throw new Error("Unknown action in MongoDB message");
+      }
+    }
+
+     if (checkEmptyView && view.isEmpty()) {
+      delete self.collectionViews[collectionName];
+    }
+  },
+
   added: function (subscriptionHandle, collectionName, id, fields) {
     var self = this;
     var view = self.getCollectionView(collectionName);
@@ -464,11 +513,80 @@ _.extend(Session.prototype, {
   // It should be a JSON object (it will be stringified.)
   send: function (msg) {
     var self = this;
-    if (self.socket) {
-      if (Meteor._printSentDDP)
-        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
-      self.socket.send(DDPCommon.stringifyDDP(msg));
+
+    // If we have decided not to buffer messages
+    if (self._bufferedMessagesInterval === 0) {
+      self._send(msg);
+
+      return;
     }
+
+      // Otherwise add the current message to the buffer
+    self._bufferedMessages.push(msg);
+
+      // Set the time at which this buffer will expire
+    if (self._bufferedMessagesFlushAt === null) {
+      self._bufferedMessagesFlushAt =
+        new Date().valueOf() + self._bufferedMessagesMaxAge;
+    }
+
+      var standardWrite =
+      msg.msg === "added" ||
+      msg.msg === "changed" ||
+      msg.msg === "removed";
+
+      // Flush the buffer if we have (1) a non-standard message, (2) reached
+    // the maximum buffer size or (3) the buffer expired.
+    if (
+      ! standardWrite
+      || self._bufferedMessages.length >= self._bufferedMessagesMaxAmount
+      || self._bufferedMessagesFlushAt < new Date().valueOf()
+    ) {
+      self._flushBufferedMessages();
+      return;
+    }
+
+      // Clear any previously set timeout
+    if (self._bufferedMessagesFlushHandle) {
+      clearTimeout(self._bufferedMessagesFlushHandle);
+    }
+
+      // Wait for new messages within the bufferedMessagesInterval
+    // If the timeout expires we flush the buffer
+    self._bufferedMessagesFlushHandle = setTimeout(
+      self._flushBufferedMessages.bind(self),
+      self._bufferedMessagesInterval
+    );
+  },
+
+  _send: function(messages) {
+    var self = this;
+
+    if (self.socket) {
+      if (Meteor._printSentDDP) {
+        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(messages));
+      }
+
+      self.socket.send(DDPCommon.stringifyDDP(messages));
+    }
+  },
+
+  _flushBufferedMessages: function() {
+    var self = this;
+
+     if (self._bufferedMessagesFlushHandle) {
+      clearTimeout(self._bufferedMessagesFlushHandle);
+
+       self._bufferedMessagesFlushHandle = null;
+    }
+
+    self._bufferedMessagesFlushAt = null;
+
+    var messages = self._bufferedMessages;
+
+    self._bufferedMessages = [];
+
+    self._send(messages);
   },
 
   // Send a connection error.
@@ -850,8 +968,8 @@ _.extend(Session.prototype, {
   _startSubscription: function (handler, subId, params, name) {
     var self = this;
 
-    var sub = new Subscription(
-      self, handler, subId, params, name);
+    var sub = new Subscription(self, handler, subId, params, name);
+
     if (subId)
       self._namedSubs.set(subId, sub);
     else
@@ -1375,37 +1493,47 @@ Server = function (options) {
       if (Meteor._printReceivedDDP) {
         Meteor._debug("Received DDP", raw_msg);
       }
-      try {
-        try {
-          var msg = DDPCommon.parseDDP(raw_msg);
-        } catch (err) {
-          sendError('Parse error');
-          return;
-        }
-        if (msg === null || !msg.msg) {
-          sendError('Bad request', msg);
-          return;
-        }
 
-        if (msg.msg === 'connect') {
-          if (socket._meteorSession) {
-            sendError("Already connected", msg);
+      try {
+        var messages = DDPCommon.parseDDP(raw_msg);
+      } catch (err) {
+        sendError('Parse error');
+        return;
+      }
+
+      // Convert all DDP messages to Array form
+      messages = Array.isArray(messages) ? messages : [messages];
+
+      for (var i = 0; i < messages.length; i++) {
+        var msg = messages[i];
+
+        try {
+          if (msg === null || !msg.msg) {
+            sendError('Bad request', msg);
             return;
           }
-          Fiber(function () {
-            self._handleConnect(socket, msg);
-          }).run();
-          return;
-        }
 
-        if (!socket._meteorSession) {
-          sendError('Must connect first', msg);
-          return;
+          if (msg.msg === 'connect') {
+            if (socket._meteorSession) {
+              sendError("Already connected", msg);
+              return;
+            }
+            Fiber(function () {
+              self._handleConnect(socket, msg);
+            }).run();
+            return;
+          }
+
+          if (!socket._meteorSession) {
+            sendError('Must connect first', msg);
+            return;
+          }
+
+          socket._meteorSession.processMessage(msg);
+        } catch (e) {
+          // XXX print stack nicely
+          Meteor._debug("Internal exception while processing message", msg, e);
         }
-        socket._meteorSession.processMessage(msg);
-      } catch (e) {
-        // XXX print stack nicely
-        Meteor._debug("Internal exception while processing message", msg, e);
       }
     });
 
