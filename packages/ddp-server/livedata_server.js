@@ -402,35 +402,6 @@ _.extend(Session.prototype, {
     return ret;
   },
 
-  messages: function (subscriptionHandle, collectionName, messages) {
-    var self = this;
-    var view = self.getCollectionView(collectionName);
-    var checkEmptyView = false;
-
-     for (var i = 0; i < messages.length; i++) {
-      var msg = messages[i];
-      var action = msg.action;
-      var id = msg.args[0];
-      var fields = msg.args[1];
-
-       if (action === 'added') {
-        view.added(subscriptionHandle, id, fields);
-      } else if (action === 'changed') {
-        view.changed(subscriptionHandle, id, fields);
-      } else if (action === 'removed') {
-        checkEmptyView = true;
-
-         view.removed(subscriptionHandle, id);
-      } else {      
-        throw new Error("Unknown action in MongoDB message");
-      }
-    }
-
-     if (checkEmptyView && view.isEmpty()) {
-      delete self.collectionViews[collectionName];
-    }
-  },
-
   added: function (subscriptionHandle, collectionName, id, fields) {
     var self = this;
     var view = self.getCollectionView(collectionName);
