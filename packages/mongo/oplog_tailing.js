@@ -92,7 +92,7 @@ _.extend(OplogHandle.prototype, {
       self._tailHandle.stop();
     // XXX should close connections too
   },
-  onOplogEntry: function (trigger, callback) {
+  onOplogEntries: function (trigger, callback) {
     var self = this;
     if (self._stopped)
       throw new Error("Called onOplogEntry on stopped handle!");
@@ -101,15 +101,17 @@ _.extend(OplogHandle.prototype, {
     self._readyFuture.wait();
 
     var originalCallback = callback;
-    callback = Meteor.bindEnvironment(function (notification) {
-      originalCallback(notification);
+    callback = Meteor.bindEnvironment(function (notifications) {
+      originalCallback(notifications);
     }, function (err) {
       Meteor._debug("Error in oplog callback", err);
     });
-    var listenHandle = self._crossbar.listen(trigger, callback);
+
+    var bufferHandle = self._crossbar.buffer(trigger, callback);
+
     return {
       stop: function () {
-        listenHandle.stop();
+        bufferHandle.stop();
       }
     };
   },
