@@ -1,24 +1,23 @@
 // A "crossbar" is a class that provides structured notification registration.
 // See _match for the definition of how a notification matches a trigger.
 // All notifications and triggers must have a string key named 'collection'.
+export default class Crossbar {
+  constructor(options) {
+    var self = this;
+    options = options || {};
 
-DDPServer._Crossbar = function (options) {
-  var self = this;
-  options = options || {};
+    self.nextId = 1;
+    // map from collection name (string) -> listener id -> object. each object has
+    // keys 'trigger', 'callback'.  As a hack, the empty string means "no
+    // collection".
+    self.listenersByCollection = {};
+    self.listenersByCollectionCount = {};
+    self.factPackage = options.factPackage || "livedata";
+    self.factName = options.factName || null;
+  }
 
-  self.nextId = 1;
-  // map from collection name (string) -> listener id -> object. each object has
-  // keys 'trigger', 'callback'.  As a hack, the empty string means "no
-  // collection".
-  self.listenersByCollection = {};
-  self.listenersByCollectionCount = {};
-  self.factPackage = options.factPackage || "livedata";
-  self.factName = options.factName || null;
-};
-
-_.extend(DDPServer._Crossbar.prototype, {
   // msg is a trigger or a notification
-  _collectionForMessage: function (msg) {
+  _collectionForMessage(msg) {
     var self = this;
     if (! _.has(msg, 'collection')) {
       return '';
@@ -29,7 +28,7 @@ _.extend(DDPServer._Crossbar.prototype, {
     } else {
       throw Error("Message has non-string collection!");
     }
-  },
+  }
 
   // Listen for notification that match 'trigger'. A notification
   // matches if it has the key-value pairs in trigger as a
@@ -41,7 +40,7 @@ _.extend(DDPServer._Crossbar.prototype, {
   //
   // XXX It should be legal to call fire() from inside a listen()
   // callback?
-  listen: function (trigger, callback) {
+  listen(trigger, callback) {
     var self = this;
     var id = self.nextId++;
 
@@ -73,7 +72,7 @@ _.extend(DDPServer._Crossbar.prototype, {
         }
       }
     };
-  },
+  }
 
   // Fire the provided 'notification' (an object whose attribute
   // values are all JSON-compatibile) -- inform all matching listeners
@@ -83,7 +82,7 @@ _.extend(DDPServer._Crossbar.prototype, {
   // listener callbacks will be called inside the write fence as well.
   //
   // The listeners may be invoked in parallel, rather than serially.
-  fire: function (notification) {
+  fire(notification) {
     var self = this;
 
     var collection = self._collectionForMessage(notification);
@@ -114,7 +113,7 @@ _.extend(DDPServer._Crossbar.prototype, {
         listenersForCollection[id].callback(notification);
       }
     });
-  },
+  }
 
   // A notification matches a trigger if all keys that exist in both are equal.
   //
@@ -133,7 +132,7 @@ _.extend(DDPServer._Crossbar.prototype, {
   //  N:{collection: "C", id: "X"} does not match T:{collection: "C", id: "Y"}
   //    (a targeted write to a collection does not match a targeted query
   //     targeted at a different document)
-  _matches: function (notification, trigger) {
+  _matches(notification, trigger) {
     // Most notifications that use the crossbar have a string `collection` and
     // maybe an `id` that is a string or ObjectID. We're already dividing up
     // triggers by collection, but let's fast-track "nope, different ID" (and
@@ -155,13 +154,4 @@ _.extend(DDPServer._Crossbar.prototype, {
         EJSON.equals(triggerValue, notification[key]);
     });
   }
-});
-
-// The "invalidation crossbar" is a specific instance used by the DDP server to
-// implement write fence notifications. Listener callbacks on this crossbar
-// should call beginWrite on the current write fence before they return, if they
-// want to delay the write fence from firing (ie, the DDP method-data-updated
-// message from being sent).
-DDPServer._InvalidationCrossbar = new DDPServer._Crossbar({
-  factName: "invalidation-crossbar-listeners"
-});
+}

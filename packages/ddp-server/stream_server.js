@@ -1,4 +1,4 @@
-var url = Npm.require('url');
+const url = Npm.require("url");
 
 // By default, we use the permessage-deflate extension with default
 // configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
@@ -27,7 +27,7 @@ var websocketExtensions = _.once(function () {
 
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
-StreamServer = function () {
+export default function StreamServer() {
   var self = this;
   self.registration_callbacks = [];
   self.open_sockets = [];
