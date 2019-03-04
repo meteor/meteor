@@ -1,12 +1,13 @@
 Accounts.oauth = {};
 
-var services = {};
+const services = {};
+const hasOwn = Object.prototype.hasOwnProperty;
 
 // Helper for registering OAuth based accounts packages.
 // On the server, adds an index to the user collection.
-Accounts.oauth.registerService = function (name) {
-  if (_.has(services, name))
-    throw new Error("Duplicate service: " + name);
+Accounts.oauth.registerService = name => {
+  if (hasOwn.call(services, name))
+    throw new Error(`Duplicate service: ${name}`);
   services[name] = true;
 
   if (Meteor.server) {
@@ -14,8 +15,7 @@ Accounts.oauth.registerService = function (name) {
     // so this should be a unique index. You might want to add indexes for other
     // fields returned by your service (eg services.github.login) but you can do
     // that in your app.
-    Meteor.users._ensureIndex('services.' + name + '.id',
-                              {unique: 1, sparse: 1});
+    Meteor.users._ensureIndex(`services.${name}.id`, {unique: 1, sparse: 1});
   }
 };
 
@@ -24,12 +24,10 @@ Accounts.oauth.registerService = function (name) {
 // contain it.
 // It's worth noting that already logged in users will remain logged in unless
 // you manually expire their sessions.
-Accounts.oauth.unregisterService = function (name) {
-  if (!_.has(services, name))
-    throw new Error("Service not found: " + name);
+Accounts.oauth.unregisterService = name => {
+  if (!hasOwn.call(services, name))
+    throw new Error(`Service not found: ${name}`);
   delete services[name];
 };
 
-Accounts.oauth.serviceNames = function () {
-  return _.keys(services);
-};
+Accounts.oauth.serviceNames = () => Object.keys(services);

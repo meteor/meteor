@@ -32,11 +32,9 @@ var testMeteorMongo = function (appDir) {
   run.match('Started MongoDB');
 
   var mongoRun = s.run('mongo');
-  mongoRun.match('MongoDB shell');
-  mongoRun.match(/connecting to: (.*)127.0.0.1/);
   // Note: when mongo shell's input is not a tty, there is no prompt.
   mongoRun.write('db.version()\n');
-  mongoRun.match(/3\.\d+\.\d+/);
+  mongoRun.match(/4\.\d+\.\d+/);
   mongoRun.stop();
 
   run.stop();

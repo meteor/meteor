@@ -36,7 +36,7 @@ MongoID.ObjectID = class ObjectID {
   typeName() {
     return 'oid';
   }
-  
+
   getTimestamp() {
     return Number.parseInt(this._str.substr(0, 8), 16);
   }
@@ -61,12 +61,13 @@ MongoID.idStringify = (id) => {
   if (id instanceof MongoID.ObjectID) {
     return id.valueOf();
   } else if (typeof id === 'string') {
+    var firstChar = id.charAt(0);
     if (id === '') {
       return id;
-    } else if (id.startsWith('-') || // escape previously dashed strings
-               id.startsWith('~') || // escape escaped numbers, true, false
+    } else if (firstChar === '-' || // escape previously dashed strings
+               firstChar === '~' || // escape escaped numbers, true, false
                MongoID._looksLikeObjectID(id) || // escape object-id-form strings
-               id.startsWith('{')) { // escape object-form strings, for maybe implementing later
+               firstChar === '{') { // escape object-form strings, for maybe implementing later
       return `-${id}`;
     } else {
       return id; // other strings go through unchanged.
@@ -81,13 +82,14 @@ MongoID.idStringify = (id) => {
 };
 
 MongoID.idParse = (id) => {
+  var firstChar = id.charAt(0);
   if (id === '') {
     return id;
   } else if (id === '-') {
     return undefined;
-  } else if (id.startsWith('-')) {
+  } else if (firstChar === '-') {
     return id.substr(1);
-  } else if (id.startsWith('~')) {
+  } else if (firstChar === '~') {
     return JSON.parse(id.substr(1));
   } else if (MongoID._looksLikeObjectID(id)) {
     return new MongoID.ObjectID(id);

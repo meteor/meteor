@@ -1,6 +1,8 @@
+import SessionCollectionView from "./session_collection_view.js";
+
 var newView = function(test) {
   var results = [];
-  var view = new DDPServer._SessionCollectionView('test', {
+  var view = new SessionCollectionView('test', {
     added: function (collection, id, fields) {
       results.push({fun: 'added', id: id, fields: fields});
     },

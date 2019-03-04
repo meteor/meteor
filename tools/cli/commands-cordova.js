@@ -34,7 +34,7 @@ function doAddPlatform(options) {
   let installedPlatforms = projectContext.platformList.getPlatforms();
 
   main.captureAndExit('', 'adding platforms', () => {
-    for (platform of platformsToAdd) {
+    for (var platform of platformsToAdd) {
       if (_.contains(installedPlatforms, platform)) {
         buildmessage.error(`${platform}: platform is already added`);
       } else if (!_.contains(CORDOVA_PLATFORMS, platform)) {
@@ -49,7 +49,7 @@ function doAddPlatform(options) {
     const cordovaProject = new CordovaProject(projectContext);
     if (buildmessage.jobHasMessages()) return;
 
-    installedPlatforms = installedPlatforms.concat(platformsToAdd)
+    installedPlatforms = installedPlatforms.concat(platformsToAdd);
     const cordovaPlatforms = filterPlatforms(installedPlatforms);
     cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
 
@@ -60,7 +60,7 @@ function doAddPlatform(options) {
     // Only write the new platform list when we have succesfully synchronized
     projectContext.platformList.write(installedPlatforms);
 
-    for (platform of platformsToAdd) {
+    for (var platform of platformsToAdd) {
       Console.info(`${platform}: added platform`);
       if (_.contains(cordovaPlatforms, platform)) {
         cordovaProject.checkPlatformRequirements(platform);

@@ -1,15 +1,16 @@
-var testPendingCredential = function (test) {
-  var http = Npm.require('http');
-  var foobookId = Random.id();
-  var foobookOption1 = Random.id();
-  var credentialToken = Random.id();
-  var serviceName = Random.id();
+import http from 'http';
+
+const testPendingCredential = function (test) {
+  const foobookId = Random.id();
+  const foobookOption1 = Random.id();
+  const credentialToken = Random.id();
+  const serviceName = Random.id();
 
   ServiceConfiguration.configurations.insert({service: serviceName});
 
   try {
     // register a fake login service
-    OAuth.registerService(serviceName, 2, null, function (query) {
+    OAuth.registerService(serviceName, 2, null, query => {
       return {
         serviceData: {
           id: foobookId,
@@ -20,33 +21,33 @@ var testPendingCredential = function (test) {
     });
 
     // simulate logging in using foobook
-    var req = {method: "POST",
-               url: "/_oauth/" + serviceName,
+    const req = {method: "POST",
+               url: `/_oauth/${serviceName}`,
                query: {
                  state: OAuth._generateState('popup', credentialToken),
                  close: 1,
                  only_credential_secret_for_test: 1
                }};
-    var res = new http.ServerResponse(req);
-    var write = res.write;
-    var end = res.write;
-    var respData = "";
-    res.write = function (data, encoding, callback) {
-      respData += data;
-      return write.apply(this, arguments);
+    const res = new http.ServerResponse(req);
+    const write = res.write;
+    const end = res.end;
+    let respData = "";
+    res.write = (...args) => {
+      respData += args[0];
+      return write.apply(this, args);
     };
-    res.end = function (data) {
-      respData += data;
-      return end.apply(this, arguments);
+    res.end = function (...args) {
+      respData += args[0];
+      return end.apply(this, args);
     };
 
     OAuthTest.middleware(req, res);
-    var credentialSecret = respData;
+    const credentialSecret = respData;
 
     // Test that the result for the token is available
-    var result = OAuth._retrievePendingCredential(credentialToken,
+    let result = OAuth._retrievePendingCredential(credentialToken,
                                                   credentialSecret);
-    var serviceData = OAuth.openSecrets(result.serviceData);
+    const serviceData = OAuth.openSecrets(result.serviceData);
     test.equal(result.serviceName, serviceName);
     test.equal(serviceData.id, foobookId);
     test.equal(serviceData.secretStuff, 'confidential');
@@ -61,12 +62,12 @@ var testPendingCredential = function (test) {
   }
 };
 
-Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (without oauth encryption)", function (test) {
+Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (without oauth encryption)", test => {
   OAuthEncryption.loadKey(null);
   testPendingCredential(test);
 });
 
-Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", function (test) {
+Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", test => {
   try {
     OAuthEncryption.loadKey(Buffer.from([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
     testPendingCredential(test);

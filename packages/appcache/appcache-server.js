@@ -85,11 +85,27 @@ WebApp.connectHandlers.use((req, res, next) => {
     ? "web.browser"
     : "web.browser.legacy";
 
+  // The true hash of the client manifest for this arch, regardless of
+  // AUTOUPDATE_VERSION or Autoupdate.autoupdateVersion.
   cacheInfo.clientHash = WebApp.clientHash(cacheInfo.arch);
 
   if (Package.autoupdate) {
-    const version = Package.autoupdate.Autoupdate.autoupdateVersion;
-    if (version !== cacheInfo.clientHash) {
+    const {
+      // New in Meteor 1.7.1 (autoupdate@1.5.0), this versions object maps
+      // client architectures (e.g. "web.browser") to client hashes that
+      // reflect AUTOUPDATE_VERSION and Autoupdate.autoupdateVersion.
+      versions,
+      // The legacy way of forcing a particular version, supported here
+      // just in case Autoupdate.versions is not defined.
+      autoupdateVersion,
+    } = Package.autoupdate.Autoupdate;
+
+    const version = versions
+      ? versions[cacheInfo.arch].version
+      : autoupdateVersion;
+
+    if (typeof version === "string" &&
+        version !== cacheInfo.clientHash) {
       cacheInfo.autoupdateVersion = version;
     }
   }
@@ -125,7 +141,7 @@ function computeManifest(cacheInfo) {
   // infinite loop of reloads when the browser doesn't fetch the new
   // app HTML which contains the new version, and autoupdate will
   // reload again trying to get the new code.
-  if (cacheInfo.autoupdateVersion) {
+  if (typeof cacheInfo.autoupdateVersion === "string") {
     manifest += `# ${cacheInfo.autoupdateVersion}\n`;
   }
 
@@ -235,10 +251,10 @@ function eachResource({
 }
 
 function sizeCheck() {
-  [ // Check size of each known architecture independently.
+  const sizes = [ // Check size of each known architecture independently.
     "web.browser",
     "web.browser.legacy",
-  ].forEach(arch => {
+  ].reduce((filt, arch) => {
     let totalSize = 0;
 
     WebApp.clientPrograms[arch].manifest.forEach(resource => {
@@ -250,16 +266,26 @@ function sizeCheck() {
     });
 
     if (totalSize > 5 * 1024 * 1024) {
-      Meteor._debug([
-        "** You are using the appcache package but the total size of the",
-        `** cached resources is ${(totalSize / 1024 / 1024).toFixed(1)}MB.`,
-        "**",
-        "** This is over the recommended maximum of 5MB and may break your",
-        "** app in some browsers! See http://docs.meteor.com/#appcache",
-        "** for more information and fixes."
-      ].join("\n"));
+      filt.push({
+        arch,
+        size: totalSize
+      });
     }
-  });
+    return filt;
+  }, []);
+  if (sizes.length > 0) {
+    Meteor._debug([
+      "** You are using the appcache package, but the size of",
+      "** one or more of your cached resources is larger than",
+      "** the recommended maximum size of 5MB which may break",
+      "** your app in some browsers!",
+      "** ",
+      ...sizes.map(data => `** ${data.arch}: ${(data.size / 1024 / 1024).toFixed(1)}MB`),
+      "** ",
+      "** See http://docs.meteor.com/#appcache for more",
+      "** information and fixes."
+    ].join("\n"));
+  }
 }
 
 // Run the size check after user code has had a chance to run. That way,

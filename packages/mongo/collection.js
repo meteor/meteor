@@ -210,6 +210,9 @@ Object.assign(Mongo.Collection.prototype, {
             var modifier = {};
             keys.forEach(key => {
               const value = msg.fields[key];
+              if (EJSON.equals(doc[key], value)) {
+                return;
+              }
               if (typeof value === "undefined") {
                 if (!modifier.$unset) {
                   modifier.$unset = {};
@@ -222,7 +225,9 @@ Object.assign(Mongo.Collection.prototype, {
                 modifier.$set[key] = value;
               }
             });
-            self._collection.update(mongoId, modifier);
+            if (Object.keys(modifier).length > 0) {
+              self._collection.update(mongoId, modifier);
+            }
           }
         } else {
           throw new Error("I don't know how to deal with this message");
@@ -356,18 +361,27 @@ Object.assign(Mongo.Collection.prototype, {
 });
 
 Object.assign(Mongo.Collection, {
-  _publishCursor(cursor, sub, collection) {
-    var observeHandle = cursor.observeChanges({
-      added: function (id, fields) {
-        sub.added(collection, id, fields);
-      },
-      changed: function (id, fields) {
-        sub.changed(collection, id, fields);
-      },
-      removed: function (id) {
-        sub.removed(collection, id);
-      }
-    });
+  _publishCursor(cursor, sub, collectionName) {
+    var observeHandle;
+
+    if (sub.allowBuffering && Meteor.isServer) {
+      observeHandle = cursor.observeChanges(function(messages) {
+        sub.messages(collectionName, messages);
+      });
+    }
+    else {
+      observeHandle = cursor.observeChanges({
+        added: function (id, fields) {
+          sub.added(collectionName, id, fields);
+        },
+        changed: function (id, fields) {
+          sub.changed(collectionName, id, fields);
+        },
+        removed: function (id) {
+          sub.removed(collectionName, id);
+        }
+      });
+    }
 
     // We don't call sub.ready() here: it gets called in livedata_server, after
     // possibly calling _publishCursor on multiple returned cursors.
@@ -685,8 +699,10 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/2.2/api/Collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+   * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
    * @locus Server
+   * @memberof Mongo.Collection
+   * @instance
    */
   rawCollection() {
     var self = this;
@@ -697,8 +713,10 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/2.2/api/Db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+   * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.0/api/Db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
    * @locus Server
+   * @memberof Mongo.Collection
+   * @instance
    */
   rawDatabase() {
     var self = this;
@@ -715,9 +733,9 @@ function wrapCallback(callback, convertResult) {
     if (error) {
       callback(error);
     } else if (typeof convertResult === "function") {
-      callback(null, convertResult(result));
+      callback(error, convertResult(result));
     } else {
-      callback(null, result);
+      callback(error, result);
     }
   };
 }

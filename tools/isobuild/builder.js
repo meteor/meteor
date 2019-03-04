@@ -58,7 +58,15 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
 // structure; and the hashes of the contents correspond to the
 // writtenHashes data strcture.
 export default class Builder {
-  constructor({outputPath, previousBuilder}) {
+  constructor({
+    outputPath,
+    previousBuilder,
+    // Even though in-place builds are disabled by default on some
+    // platforms (Windows), they can be forcibly reenabled with this
+    // option, in cases where it's safe and/or necessary to avoid
+    // clobbering existing files.
+    forceInPlaceBuild = false,
+  }) {
     this.outputPath = outputPath;
 
     // Paths already written to. Map from canonicalized relPath (no
@@ -83,7 +91,8 @@ export default class Builder {
     // If we have a previous builder and we are allowed to re-use it,
     // let's keep all the older files on the file-system and replace
     // only outdated ones + write the new files in the same path
-    if (previousBuilder && ENABLE_IN_PLACE_BUILDER_REPLACEMENT) {
+    if (previousBuilder &&
+        (forceInPlaceBuild || ENABLE_IN_PLACE_BUILDER_REPLACEMENT)) {
       if (previousBuilder.outputPath !== outputPath) {
         throw new Error(
           `previousBuilder option can only be set to a builder with the same output path.
@@ -515,11 +524,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     }
 
-    const walk = (
-      absFrom,
-      relTo,
-      _currentRealRootDir = absFrom
-    ) => {
+    const rootDir = files.realpath(from);
+
+    const walk = (absFrom, relTo) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
@@ -538,8 +545,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         // Returns files.realpath(thisAbsFrom), iff it is external to
-        // _currentRealRootDir, using caching because this function might
-        // be called more than once.
+        // rootDir, using caching because this function might be called
+        // more than once.
         let cachedExternalPath;
         const getExternalPath = () => {
           if (typeof cachedExternalPath !== "undefined") {
@@ -557,7 +564,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           const isExternal =
-            files.pathRelative(_currentRealRootDir, real).startsWith("..");
+            files.pathRelative(rootDir, real).startsWith("..");
 
           // Now cachedExternalPath is either a string or false.
           return cachedExternalPath = isExternal && real;
@@ -572,22 +579,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // external files, and this file is a symbolic link that points
           // to an external file, update fileStatus so that we copy this
           // file as a normal file rather than as a symbolic link.
-
           const externalPath = getExternalPath();
           if (externalPath) {
-            // Copy from the real path rather than the link path.
-            thisAbsFrom = externalPath;
-
             // Update fileStatus to match the actual file rather than the
             // symbolic link, thus forcing the file to be copied below.
             fileStatus = optimisticLStatOrNull(externalPath);
-
-            if (fileStatus && fileStatus.isDirectory()) {
-              // Update _currentRealRootDir so that we can judge
-              // isExternal relative to this new root directory when
-              // traversing nested directories.
-              _currentRealRootDir = externalPath;
-            }
           }
         }
 
@@ -618,7 +614,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         if (isDirectory) {
-          walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
+          walk(thisAbsFrom, thisRelTo);
           return;
         }
 
@@ -667,7 +663,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     };
 
-    walk(files.realpath(from), to);
+    walk(rootDir, to);
   }
 
   // Returns a new Builder-compatible object that works just like a

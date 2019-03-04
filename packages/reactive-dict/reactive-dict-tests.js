@@ -1,7 +1,7 @@
 Tinytest.add('ReactiveDict - set to undefined', function (test) {
   var dict = new ReactiveDict;
   dict.set('foo', undefined);
-  test.equal(_.keys(dict.all()), ['foo']);
+  test.equal(Object.keys(dict.all()), ['foo']);
   dict.setDefault('foo', 'bar');
   test.equal(dict.get('foo'), undefined);
 });
@@ -190,7 +190,7 @@ Tinytest.add('ReactiveDict - destroy works', function (test) {
   test.equal(equals, false);
   test.equal(equalsUndefined, true);
   test.equal(all, {});
-  
+
   // Shouldn't throw now that we've destroyed the previous dict
   dict = new ReactiveDict('test');
 });

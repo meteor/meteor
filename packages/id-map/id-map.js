@@ -2,7 +2,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 
 export class IdMap {
   constructor(idStringify, idParse) {
-    this.clear();
+    this._map = new Map();
     this._idStringify = idStringify || JSON.stringify;
     this._idParse = idParse || JSON.parse;
   }
@@ -14,44 +14,40 @@ export class IdMap {
 
   get(id) {
     var key = this._idStringify(id);
-    return this._map[key];
+    return this._map.get(key);
   }
 
   set(id, value) {
     var key = this._idStringify(id);
-    this._map[key] = value;
+    this._map.set(key, value);
   }
 
   remove(id) {
     var key = this._idStringify(id);
-    delete this._map[key];
+    this._map.delete(key);
   }
 
   has(id) {
     var key = this._idStringify(id);
-    return hasOwn.call(this._map, key);
+    return this._map.has(key);
   }
 
   empty() {
-    for (let key in this._map) {
-      return false;
-    }
-    return true;
+    return this._map.size === 0;
   }
 
   clear() {
-    this._map = Object.create(null);
+    this._map.clear();
   }
 
   // Iterates over the items in the map. Return `false` to break the loop.
   forEach(iterator) {
     // don't use _.each, because we can't break out of it.
-    var keys = Object.keys(this._map);
-    for (var i = 0; i < keys.length; i++) {
+    for (const [key, value] of this._map){
       var breakIfFalse = iterator.call(
         null,
-        this._map[keys[i]],
-        this._idParse(keys[i])
+        value,
+        this._idParse(key)
       );
       if (breakIfFalse === false) {
         return;
@@ -60,15 +56,15 @@ export class IdMap {
   }
 
   size() {
-    return Object.keys(this._map).length;
+    return this._map.size;
   }
 
   setDefault(id, def) {
     var key = this._idStringify(id);
-    if (hasOwn.call(this._map, key)) {
-      return this._map[key];
+    if (this._map.has(key)) {
+      return this._map.get(key);
     }
-    this._map[key] = def;
+    this._map.set(key, def);
     return def;
   }
 
@@ -76,8 +72,9 @@ export class IdMap {
   // IDs (ie, that nobody is going to mutate an ObjectId).
   clone() {
     var clone = new IdMap(this._idStringify, this._idParse);
-    this.forEach(function (value, id) {
-      clone.set(id, EJSON.clone(value));
+    // copy directly to avoid stringify/parse overhead
+    this._map.forEach(function(value, key){
+      clone._map.set(key, EJSON.clone(value));
     });
     return clone;
   }
