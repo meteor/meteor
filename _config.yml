@@ -29,6 +29,7 @@ sidebar_categories:
     - api/timers
     - api/tracker
     - api/reactive-var
+    - api/reactive-dict
     - api/ejson
     - api/http
     - api/email
