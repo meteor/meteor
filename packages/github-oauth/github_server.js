@@ -1,11 +1,11 @@
 Github = {};
 
-OAuth.registerService('github', 2, null, function(query) {
+OAuth.registerService('github', 2, null, query => {
 
-  var accessToken = getAccessToken(query);
-  var identity = getIdentity(accessToken);
-  var emails = getEmails(accessToken);
-  var primaryEmail = _.findWhere(emails, {primary: true});
+  const accessToken = getAccessToken(query);
+  const identity = getIdentity(accessToken);
+  const emails = getEmails(accessToken);
+  const primaryEmail = emails.find(email => email.primary);
 
   return {
     serviceData: {
@@ -13,23 +13,23 @@ OAuth.registerService('github', 2, null, function(query) {
       accessToken: OAuth.sealSecret(accessToken),
       email: identity.email || (primaryEmail && primaryEmail.email) || '',
       username: identity.login,
-      emails: emails
+      emails,
     },
     options: {profile: {name: identity.name}}
   };
 });
 
 // http://developer.github.com/v3/#user-agent-required
-var userAgent = "Meteor";
+let userAgent = "Meteor";
 if (Meteor.release)
-  userAgent += "/" + Meteor.release;
+  userAgent += `/${Meteor.release}`;
 
-var getAccessToken = function (query) {
-  var config = ServiceConfiguration.configurations.findOne({service: 'github'});
+const getAccessToken = query => {
+  const config = ServiceConfiguration.configurations.findOne({service: 'github'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
-  var response;
+  let response;
   try {
     response = HTTP.post(
       "https://github.com/login/oauth/access_token", {
@@ -46,17 +46,19 @@ var getAccessToken = function (query) {
         }
       });
   } catch (err) {
-    throw _.extend(new Error("Failed to complete OAuth handshake with Github. " + err.message),
-                   {response: err.response});
+    throw Object.assign(
+      new Error(`Failed to complete OAuth handshake with Github. ${err.message}`),
+      { response: err.response },
+    );
   }
   if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error("Failed to complete OAuth handshake with GitHub. " + response.data.error);
+    throw new Error(`Failed to complete OAuth handshake with GitHub. ${response.data.error}`);
   } else {
     return response.data.access_token;
   }
 };
 
-var getIdentity = function (accessToken) {
+const getIdentity = accessToken => {
   try {
     return HTTP.get(
       "https://api.github.com/user", {
@@ -64,12 +66,14 @@ var getIdentity = function (accessToken) {
         params: {access_token: accessToken}
       }).data;
   } catch (err) {
-    throw _.extend(new Error("Failed to fetch identity from Github. " + err.message),
-                   {response: err.response});
+    throw Object.assign(
+      new Error(`Failed to fetch identity from Github. ${err.message}`),
+      { response: err.response },
+    );
   }
 };
 
-var getEmails = function (accessToken) {
+const getEmails = accessToken => {
   try {
     return HTTP.get(
       "https://api.github.com/user/emails", {
@@ -81,6 +85,5 @@ var getEmails = function (accessToken) {
   }
 };
 
-Github.retrieveCredential = function(credentialToken, credentialSecret) {
-  return OAuth.retrieveCredential(credentialToken, credentialSecret);
-};
+Github.retrieveCredential = (credentialToken, credentialSecret) =>
+  OAuth.retrieveCredential(credentialToken, credentialSecret);

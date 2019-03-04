@@ -2,7 +2,6 @@ var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 const { mkdtemp } = require("../fs/files.js");
 
-const offlineStoragePath = mkdtemp("phantomjs-offline");
 const offlineStorageQuotaKB = 10000;
 
 selftest.define("dynamic import(...) in development", function () {
@@ -30,8 +29,12 @@ function run(isProduction) {
     "test",
     "--once",
     "--full-app",
-    "--driver-package", "dispatch:mocha-phantomjs"
+    "--driver-package", "meteortesting:mocha"
   ];
+  
+  // For meteortesting:mocha to work we must set test broswer driver
+  // See https://github.com/meteortesting/meteor-mocha
+  sandbox.set("TEST_BROWSER_DRIVER", "puppeteer");
 
   if (isProduction) {
     sandbox.set("NODE_ENV", "production");
@@ -39,16 +42,6 @@ function run(isProduction) {
   } else {
     sandbox.set("NODE_ENV", "development");
   }
-
-  sandbox.set(
-    "METEOR_PHANTOMJS_OFFLINE_STORAGE_PATH",
-    offlineStoragePath
-  );
-
-  sandbox.set(
-    "METEOR_PHANTOMJS_OFFLINE_STORAGE_QUOTA",
-    String(offlineStorageQuotaKB)
-  );
 
   const run = sandbox.run(...args);
 

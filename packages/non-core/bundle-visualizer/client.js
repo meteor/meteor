@@ -1,5 +1,4 @@
 import { Meteor } from "meteor/meteor";
-import { HTTP } from "meteor/http";
 import {
   classPrefix,
   methodNameStats,
@@ -13,7 +12,7 @@ Meteor.startup(() => {
   import("./sunburst.js").then(s => main(s.Sunburst));
 });
 
-function main(builder) {
+async function main(builder) {
   const { container, mask } = frameStage();
 
   document.body.appendChild(mask);
@@ -21,26 +20,23 @@ function main(builder) {
 
   // Always match the protocol (http or https) and the domain:port of the
   // current page.
-  const url = "//" + location.host + methodNameStats;
+  const url = [
+    "//" +
+    location.host +
+    methodNameStats +
+    "?cacheBuster=" +
+    Math.random().toString(36).slice(2)
+  ].join();
 
-  HTTP.call("GET", url, {
-    params: {
-      cacheBuster: Math.random().toString(36).slice(2)
-    }
-  }, (error, { data }) => {
-    if (error) {
-      console.error([
-        packageName + ": Couldn't load stats for visualization.",
-        "Are you using standard-minifier-js >= 2.1.0 as the minifier?",
-      ].join(" "));
-      return;
-    }
-
-    // Load the JSON, which is `d3-hierarchy` digestible.
-    if (data) {
-      new builder({ container }).loadJson(data);
-    }
-  });
+  try {
+    const data = await fetch(url, { method: "GET" });
+    new builder({ container }).loadJson(await data.json())
+  } catch (err) {
+    console.error([
+      packageName + ": Couldn't load stats for visualization.",
+      "Are you using standard-minifier-js >= 2.1.0 as the minifier?",
+    ].join(" "))
+  }
 }
 
 function frameStage() {

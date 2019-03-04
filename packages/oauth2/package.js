@@ -1,16 +1,17 @@
 Package.describe({
   summary: "Common code for OAuth2-based login services",
-  version: "1.2.0"
+  version: "1.2.1",
 });
 
-Package.onUse(function (api) {
+Package.onUse(api => {
   api.use([
     'random'
   ], 'server');
 
   api.use([
     'oauth',
-    'service-configuration'
+    'service-configuration',
+    'ecmascript',
   ], ['client', 'server']);
 
   api.addFiles('oauth2_server.js', 'server');
@@ -23,7 +24,8 @@ Package.onTest(function (api) {
     'oauth2',
     'oauth',
     'service-configuration',
-    'oauth-encryption'
+    'oauth-encryption',
+    'ecmascript',
   ], 'server');
 
   api.addFiles("oauth2_tests.js", 'server');

@@ -1,3 +1,5 @@
+import { Session } from 'meteor/session';
+
 Tinytest.add('session - setDefault', function (test) {
   Session.setDefault('def', "argyle");
   test.equal(Session.get('def'), "argyle");

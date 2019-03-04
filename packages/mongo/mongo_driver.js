@@ -61,6 +61,9 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.ObjectID) {
     return new Mongo.ObjectID(document.toHexString());
   }
+  if (document instanceof MongoDB.Decimal128) {
+    return Decimal(document.toString());
+  }
   if (document["EJSON$type"] && document["EJSON$value"] && _.size(document) === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
@@ -90,6 +93,9 @@ var replaceMeteorAtomWithMongo = function (document) {
     // Mongo representation. We need to do this explicitly or else we would do a
     // structural clone and lose the prototype.
     return document;
+  }
+  if (document instanceof Decimal) {
+    return MongoDB.Decimal128.fromString(document.toString());
   }
   if (EJSON._isCustomType(document)) {
     return replaceNames(makeMongoLegal, EJSON.toJSONValue(document));
@@ -133,7 +139,9 @@ MongoConnection = function (url, options) {
     // Try to reconnect forever, instead of stopping after 30 tries (the
     // default), with each attempt separated by 1000ms.
     reconnectTries: Infinity,
-    ignoreUndefined: true
+    ignoreUndefined: true,
+    // Required to silence deprecation warnings with mongodb@3.1.1.
+    useNewUrlParser: true,
   }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
@@ -1310,8 +1318,7 @@ MongoConnection.prototype._observeChanges = function (
         if (!cursorDescription.options.sort)
           return true;
         try {
-          sorter = new Minimongo.Sorter(cursorDescription.options.sort,
-                                        { matcher: matcher });
+          sorter = new Minimongo.Sorter(cursorDescription.options.sort);
           return true;
         } catch (e) {
           // XXX make all compilation errors MinimongoError or something

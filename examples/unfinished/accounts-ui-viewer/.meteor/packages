@@ -11,6 +11,8 @@ less
 accounts-google
 accounts-github
 accounts-password
-underscore
 accounts-facebook
 standard-app-packages
+facebook-config-ui
+github-config-ui
+google-config-ui

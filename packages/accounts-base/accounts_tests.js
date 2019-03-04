@@ -7,21 +7,20 @@ Meteor.methods({
 // XXX it'd be cool to also test that the right thing happens if options
 // *are* validated, but Accounts._options is global state which makes this hard
 // (impossible?)
-Tinytest.add('accounts - config validates keys', function (test) {
-  test.throws(function () {
-    Accounts.config({foo: "bar"});
-  });
-});
+Tinytest.add(
+  'accounts - config validates keys', 
+  test => test.throws(() => Accounts.config({foo: "bar"}))
+);
 
-Tinytest.add('accounts - config - token lifetime', function (test) {
-  const loginExpirationInDays = Accounts._options.loginExpirationInDays;
+Tinytest.add('accounts - config - token lifetime', test => {
+  const { loginExpirationInDays } = Accounts._options;
   Accounts._options.loginExpirationInDays = 2;
   test.equal(Accounts._getTokenLifetimeMs(), 2 * 24 * 60 * 60 * 1000);
   Accounts._options.loginExpirationInDays = loginExpirationInDays;
 });
 
-Tinytest.add('accounts - config - unexpiring tokens', function (test) {
-  const loginExpirationInDays = Accounts._options.loginExpirationInDays;
+Tinytest.add('accounts - config - unexpiring tokens', test => {
+  const { loginExpirationInDays } = Accounts._options;
 
   // When setting loginExpirationInDays to null in the global Accounts
   // config object, make sure the returned token lifetime represents an
@@ -48,7 +47,7 @@ Tinytest.add('accounts - config - unexpiring tokens', function (test) {
   Accounts._options.loginExpirationInDays = loginExpirationInDays;
 });
 
-Tinytest.add('accounts - config - default token lifetime', function (test) {
+Tinytest.add('accounts - config - default token lifetime', test => {
   const options = Accounts._options;
   Accounts._options = {};
   test.equal(
@@ -58,55 +57,55 @@ Tinytest.add('accounts - config - default token lifetime', function (test) {
   Accounts._options = options;
 });
 
-var idsInValidateNewUser = {};
-Accounts.validateNewUser(function (user) {
+const idsInValidateNewUser = {};
+Accounts.validateNewUser(user => {
   idsInValidateNewUser[user._id] = true;
   return true;
 });
 
-Tinytest.add('accounts - validateNewUser gets passed user with _id', function (test) {
-  var newUserId = Accounts.updateOrCreateUserFromExternalService('foobook', {id: Random.id()}).userId;
+Tinytest.add('accounts - validateNewUser gets passed user with _id', test => {
+  const newUserId = Accounts.updateOrCreateUserFromExternalService('foobook', {id: Random.id()}).userId;
   test.isTrue(newUserId in idsInValidateNewUser);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', function (test) {
-  var facebookId = Random.id();
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test => {
+  const facebookId = Random.id();
 
   // create an account with facebook
-  var uid1 = Accounts.updateOrCreateUserFromExternalService(
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
     'facebook', {id: facebookId, monkey: 42}, {profile: {foo: 1}}).id;
-  var users = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
-  test.length(users, 1);
-  test.equal(users[0].profile.foo, 1);
-  test.equal(users[0].services.facebook.monkey, 42);
+  const users1 = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.foo, 1);
+  test.equal(users1[0].services.facebook.monkey, 42);
 
   // create again with the same id, see that we get the same user.
   // it should update services.facebook but not profile.
-  var uid2 = Accounts.updateOrCreateUserFromExternalService(
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
     'facebook', {id: facebookId, llama: 50},
     {profile: {foo: 1000, bar: 2}}).id;
   test.equal(uid1, uid2);
-  users = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
-  test.length(users, 1);
-  test.equal(users[0].profile.foo, 1);
-  test.equal(users[0].profile.bar, undefined);
-  test.equal(users[0].services.facebook.llama, 50);
+  const users2 = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
+  test.length(users2, 1);
+  test.equal(users2[0].profile.foo, 1);
+  test.equal(users2[0].profile.bar, undefined);
+  test.equal(users2[0].services.facebook.llama, 50);
   // make sure we *don't* lose values not passed this call to
   // updateOrCreateUserFromExternalService
-  test.equal(users[0].services.facebook.monkey, 42);
+  test.equal(users2[0].services.facebook.monkey, 42);
 
   // cleanup
   Meteor.users.remove(uid1);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', function (test) {
-  var weiboId1 = Random.id();
-  var weiboId2 = Random.id();
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', test => {
+  const weiboId1 = Random.id();
+  const weiboId2 = Random.id();
 
   // users that have different service ids get different users
-  var uid1 = Accounts.updateOrCreateUserFromExternalService(
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
     'weibo', {id: weiboId1}, {profile: {foo: 1}}).id;
-  var uid2 = Accounts.updateOrCreateUserFromExternalService(
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
     'weibo', {id: weiboId2}, {profile: {bar: 2}}).id;
   test.equal(Meteor.users.find({"services.weibo.id": {$in: [weiboId1, weiboId2]}}).count(), 2);
   test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).profile.foo, 1);
@@ -119,75 +118,73 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', functio
   Meteor.users.remove(uid2);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', function (test) {
-  var twitterIdOld = parseInt(Random.hexString(4), 16);
-  var twitterIdNew = ''+twitterIdOld;
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', test => {
+  const twitterIdOld = parseInt(Random.hexString(4), 16);
+  const twitterIdNew = ''+twitterIdOld;
 
   // create an account with twitter using the old ID format of integer
-  var uid1 = Accounts.updateOrCreateUserFromExternalService(
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
     'twitter', {id: twitterIdOld, monkey: 42}, {profile: {foo: 1}}).id;
-  var users = Meteor.users.find({"services.twitter.id": twitterIdOld}).fetch();
-  test.length(users, 1);
-  test.equal(users[0].profile.foo, 1);
-  test.equal(users[0].services.twitter.monkey, 42);
+  const users1 = Meteor.users.find({"services.twitter.id": twitterIdOld}).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.foo, 1);
+  test.equal(users1[0].services.twitter.monkey, 42);
 
   // Update the account with the new ID format of string
   // test that the existing user is found, and that the ID
   // gets updated to a string value
-  var uid2 = Accounts.updateOrCreateUserFromExternalService(
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
     'twitter', {id: twitterIdNew, monkey: 42}, {profile: {foo: 1}}).id;
   test.equal(uid1, uid2);
-  users = Meteor.users.find({"services.twitter.id": twitterIdNew}).fetch();
-  test.length(users, 1);
+  const users2 = Meteor.users.find({"services.twitter.id": twitterIdNew}).fetch();
+  test.length(users2, 1);
 
   // cleanup
   Meteor.users.remove(uid1);
 });
 
 
-Tinytest.add('accounts - insertUserDoc username', function (test) {
-  var userIn = {
+Tinytest.add('accounts - insertUserDoc username', test => {
+  const userIn = {
     username: Random.id()
   };
 
   // user does not already exist. create a user object with fields set.
-  var userId = Accounts.insertUserDoc(
+  const userId = Accounts.insertUserDoc(
     {profile: {name: 'Foo Bar'}},
     userIn
   );
-  var userOut = Meteor.users.findOne(userId);
+  const userOut = Meteor.users.findOne(userId);
 
   test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
   test.equal(userOut.username, userIn.username);
 
   // run the hook again. now the user exists, so it throws an error.
-  test.throws(function () {
-    Accounts.insertUserDoc(
-      {profile: {name: 'Foo Bar'}},
-      userIn
-    );
-  }, 'Username already exists.');
+  test.throws(
+    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn), 
+    'Username already exists.'
+  );
 
   // cleanup
   Meteor.users.remove(userId);
 });
 
-Tinytest.add('accounts - insertUserDoc email', function (test) {
-  var email1 = Random.id();
-  var email2 = Random.id();
-  var email3 = Random.id();
-  var userIn = {
+Tinytest.add('accounts - insertUserDoc email', test => {
+  const email1 = Random.id();
+  const email2 = Random.id();
+  const email3 = Random.id();
+  const userIn = {
     emails: [{address: email1, verified: false},
              {address: email2, verified: true}]
   };
 
   // user does not already exist. create a user object with fields set.
-  var userId = Accounts.insertUserDoc(
+  const userId = Accounts.insertUserDoc(
     {profile: {name: 'Foo Bar'}},
     userIn
   );
-  var userOut = Meteor.users.findOne(userId);
+  const userOut = Meteor.users.findOne(userId);
 
   test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
@@ -195,32 +192,28 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
 
   // run the hook again with the exact same emails.
   // run the hook again. now the user exists, so it throws an error.
-  test.throws(function () {
-    Accounts.insertUserDoc(
-      {profile: {name: 'Foo Bar'}},
-      userIn
-    );
-  }, 'Email already exists.');
+  test.throws(
+    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
+    'Email already exists.'
+  );
 
   // now with only one of them.
-  test.throws(function () {
-    Accounts.insertUserDoc(
-      {}, {emails: [{address: email1}]}
-    );
-  }, 'Email already exists.');
+  test.throws(() => 
+    Accounts.insertUserDoc({}, {emails: [{address: email1}]}), 
+    'Email already exists.'
+  );
 
-  test.throws(function () {
-    Accounts.insertUserDoc(
-      {}, {emails: [{address: email2}]}
-    );
-  }, 'Email already exists.');
+  test.throws(() => 
+    Accounts.insertUserDoc({}, {emails: [{address: email2}]}), 
+    'Email already exists.'
+  );
 
 
   // a third email works.
-  var userId3 = Accounts.insertUserDoc(
+  const userId3 = Accounts.insertUserDoc(
       {}, {emails: [{address: email3}]}
   );
-  var user3 = Meteor.users.findOne(userId3);
+  const user3 = Meteor.users.findOne(userId3);
   test.equal(typeof user3.createdAt, 'object');
 
   // cleanup
@@ -229,12 +222,12 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
 });
 
 // More token expiration tests are in accounts-password
-Tinytest.addAsync('accounts - expire numeric token', function (test, onComplete) {
-  var userIn = { username: Random.id() };
-  var userId = Accounts.insertUserDoc({ profile: {
+Tinytest.addAsync('accounts - expire numeric token', (test, onComplete) => {
+  const userIn = { username: Random.id() };
+  const userId = Accounts.insertUserDoc({ profile: {
     name: 'Foo Bar'
   } }, userIn);
-  var date = new Date(new Date() - 5000);
+  const date = new Date(new Date() - 5000);
   Meteor.users.update(userId, {
     $set: {
       "services.resume.loginTokens": [{
@@ -246,10 +239,11 @@ Tinytest.addAsync('accounts - expire numeric token', function (test, onComplete)
       }]
     }
   });
-  var observe = Meteor.users.find(userId).observe({
-    changed: function (newUser) {
+  const observe = Meteor.users.find(userId).observe({
+    changed: newUser => {
       if (newUser.services && newUser.services.resume &&
-          _.isEmpty(newUser.services.resume.loginTokens)) {
+          (!newUser.services.resume.loginTokens ||
+          newUser.services.resume.loginTokens.length === 0)) {
         observe.stop();
         onComplete();
       }
@@ -261,45 +255,43 @@ Tinytest.addAsync('accounts - expire numeric token', function (test, onComplete)
 
 // Login tokens used to be stored unhashed in the database.  We want
 // to make sure users can still login after upgrading.
-var insertUnhashedLoginToken = function (userId, stampedToken) {
+const insertUnhashedLoginToken = (userId, stampedToken) => {
   Meteor.users.update(
     userId,
     {$push: {'services.resume.loginTokens': stampedToken}}
   );
 };
 
-Tinytest.addAsync('accounts - login token', function (test, onComplete) {
+Tinytest.addAsync('accounts - login token', (test, onComplete) => {
   // Test that we can login when the database contains a leftover
   // old style unhashed login token.
-  var userId1 = Accounts.insertUserDoc({}, {username: Random.id()});
-  var stampedToken = Accounts._generateStampedLoginToken();
-  insertUnhashedLoginToken(userId1, stampedToken);
-  var connection = DDP.connect(Meteor.absoluteUrl());
-  connection.call('login', {resume: stampedToken.token});
+  const userId1 = Accounts.insertUserDoc({}, {username: Random.id()});
+  const stampedToken1 = Accounts._generateStampedLoginToken();
+  insertUnhashedLoginToken(userId1, stampedToken1);
+  let connection = DDP.connect(Meteor.absoluteUrl());
+  connection.call('login', {resume: stampedToken1.token});
   connection.disconnect();
 
   // Steal the unhashed token from the database and use it to login.
   // This is a sanity check so that when we *can't* login with a
   // stolen *hashed* token, we know it's not a problem with the test.
-  var userId2 = Accounts.insertUserDoc({}, {username: Random.id()});
+  const userId2 = Accounts.insertUserDoc({}, {username: Random.id()});
   insertUnhashedLoginToken(userId2, Accounts._generateStampedLoginToken());
-  var stolenToken = Meteor.users.findOne(userId2).services.resume.loginTokens[0].token;
-  test.isTrue(stolenToken);
+  const stolenToken1 = Meteor.users.findOne(userId2).services.resume.loginTokens[0].token;
+  test.isTrue(stolenToken1);
   connection = DDP.connect(Meteor.absoluteUrl());
-  connection.call('login', {resume: stolenToken});
+  connection.call('login', {resume: stolenToken1});
   connection.disconnect();
 
   // Now do the same thing, this time with a stolen hashed token.
-  var userId3 = Accounts.insertUserDoc({}, {username: Random.id()});
+  const userId3 = Accounts.insertUserDoc({}, {username: Random.id()});
   Accounts._insertLoginToken(userId3, Accounts._generateStampedLoginToken());
-  stolenToken = Meteor.users.findOne(userId3).services.resume.loginTokens[0].hashedToken;
-  test.isTrue(stolenToken);
+  const stolenToken2 = Meteor.users.findOne(userId3).services.resume.loginTokens[0].hashedToken;
+  test.isTrue(stolenToken2);
   connection = DDP.connect(Meteor.absoluteUrl());
   // evil plan foiled
   test.throws(
-    function () {
-      connection.call('login', {resume: stolenToken});
-    },
+    () => connection.call('login', {resume: stolenToken2}),
     /You\'ve been logged out by the server/
   );
   connection.disconnect();
@@ -307,21 +299,21 @@ Tinytest.addAsync('accounts - login token', function (test, onComplete) {
   // Old style unhashed tokens are replaced by hashed tokens when
   // encountered.  This means that after someone logins once, the
   // old unhashed token is no longer available to be stolen.
-  var userId4 = Accounts.insertUserDoc({}, {username: Random.id()});
-  var stampedToken = Accounts._generateStampedLoginToken();
-  insertUnhashedLoginToken(userId4, stampedToken);
+  const userId4 = Accounts.insertUserDoc({}, {username: Random.id()});
+  const stampedToken2 = Accounts._generateStampedLoginToken();
+  insertUnhashedLoginToken(userId4, stampedToken2);
   connection = DDP.connect(Meteor.absoluteUrl());
-  connection.call('login', {resume: stampedToken.token});
+  connection.call('login', {resume: stampedToken2.token});
   connection.disconnect();
 
   // The token is no longer available to be stolen.
-  stolenToken = Meteor.users.findOne(userId4).services.resume.loginTokens[0].token;
-  test.isFalse(stolenToken);
+  const stolenToken3 = Meteor.users.findOne(userId4).services.resume.loginTokens[0].token;
+  test.isFalse(stolenToken3);
 
   // After the upgrade, the client can still login with their original
   // unhashed login token.
   connection = DDP.connect(Meteor.absoluteUrl());
-  connection.call('login', {resume: stampedToken.token});
+  connection.call('login', {resume: stampedToken2.token});
   connection.disconnect();
 
   onComplete();
@@ -329,13 +321,13 @@ Tinytest.addAsync('accounts - login token', function (test, onComplete) {
 
 Tinytest.addAsync(
   'accounts - connection data cleaned up',
-  function (test, onComplete) {
+  (test, onComplete) => {
     makeTestConnection(
       test,
-      function (clientConn, serverConn) {
+      (clientConn, serverConn) => {
         // onClose callbacks are called in order, so we run after the
         // close callback in accounts.
-        serverConn.onClose(function () {
+        serverConn.onClose(() => {
           test.isFalse(Accounts._getAccountData(serverConn.id, 'connection'));
           onComplete();
         });
@@ -348,20 +340,18 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.add(
-  'accounts - get new token',
-  function (test) {
+Tinytest.add('accounts - get new token', test => {
     // Test that the `getNewToken` method returns us a valid token, with
     // the same expiration as our original token.
-    var userId = Accounts.insertUserDoc({}, { username: Random.id() });
-    var stampedToken = Accounts._generateStampedLoginToken();
+    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
-    var conn = DDP.connect(Meteor.absoluteUrl());
+    const conn = DDP.connect(Meteor.absoluteUrl());
     conn.call('login', { resume: stampedToken.token });
     test.equal(conn.call('getCurrentLoginToken'),
                Accounts._hashLoginToken(stampedToken.token));
 
-    var newTokenResult = conn.call('getNewToken');
+    const newTokenResult = conn.call('getNewToken');
     test.equal(newTokenResult.tokenExpires,
                Accounts._tokenExpiration(stampedToken.when));
     test.equal(conn.call('getCurrentLoginToken'),
@@ -370,48 +360,41 @@ Tinytest.add(
 
     // A second connection should be able to log in with the new token
     // we got.
-    var secondConn = DDP.connect(Meteor.absoluteUrl());
+    const secondConn = DDP.connect(Meteor.absoluteUrl());
     secondConn.call('login', { resume: newTokenResult.token });
     secondConn.disconnect();
   }
 );
 
-Tinytest.addAsync(
-  'accounts - remove other tokens',
-  function (test, onComplete) {
+Tinytest.addAsync('accounts - remove other tokens', (test, onComplete) => {
     // Test that the `removeOtherTokens` method removes all tokens other
     // than the caller's token, thereby logging out and closing other
     // connections.
-    var userId = Accounts.insertUserDoc({}, { username: Random.id() });
-    var stampedTokens = [];
-    var conns = [];
+    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    const stampedTokens = [];
+    const conns = [];
 
-    _.times(2, function (i) {
+    for(let i = 0; i < 2; i++) {
       stampedTokens.push(Accounts._generateStampedLoginToken());
       Accounts._insertLoginToken(userId, stampedTokens[i]);
-      var conn = DDP.connect(Meteor.absoluteUrl());
+      const conn = DDP.connect(Meteor.absoluteUrl());
       conn.call('login', { resume: stampedTokens[i].token });
       test.equal(conn.call('getCurrentLoginToken'),
                  Accounts._hashLoginToken(stampedTokens[i].token));
       conns.push(conn);
-    });
+    };
 
     conns[0].call('removeOtherTokens');
-    simplePoll(
-      function () {
-        var tokens = _.map(conns, function (conn) {
-          return conn.call('getCurrentLoginToken');
-        });
+    simplePoll(() => {
+        const tokens = conns.map(conn => conn.call('getCurrentLoginToken'));
         return ! tokens[1] &&
           tokens[0] === Accounts._hashLoginToken(stampedTokens[0].token);
       },
-      function () { // success
-        _.each(conns, function (conn) {
-          conn.disconnect();
-        });
+      () => { // success
+        conns.forEach(conn => conn.disconnect());
         onComplete();
       },
-      function () { // timed out
+      () => { // timed out
         throw new Error("accounts - remove other tokens timed out");
       }
     );
@@ -420,31 +403,31 @@ Tinytest.addAsync(
 
 Tinytest.add(
   'accounts - hook callbacks can access Meteor.userId()',
-  function (test) {
-    var userId = Accounts.insertUserDoc({}, { username: Random.id() });
-    var stampedToken = Accounts._generateStampedLoginToken();
+  test => {
+    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
 
-    var validateStopper = Accounts.validateLoginAttempt(function(attempt) {
+    const validateStopper = Accounts.validateLoginAttempt(attempt => {
       test.equal(Meteor.userId(), validateAttemptExpectedUserId, "validateLoginAttempt");
       return true;
     });
-    var onLoginStopper = Accounts.onLogin(function(attempt) {
-      test.equal(Meteor.userId(), onLoginExpectedUserId, "onLogin");
-    });
-    var onLogoutStopper = Accounts.onLogout(function(logoutContext) {
+    const onLoginStopper = Accounts.onLogin(attempt => 
+      test.equal(Meteor.userId(), onLoginExpectedUserId, "onLogin")
+    );
+    const onLogoutStopper = Accounts.onLogout(logoutContext => {
       test.equal(logoutContext.user._id, onLogoutExpectedUserId, "onLogout");
       test.instanceOf(logoutContext.connection, Object);
     });
-    var onLoginFailureStopper = Accounts.onLoginFailure(function(attempt) {
-      test.equal(Meteor.userId(), onLoginFailureExpectedUserId, "onLoginFailure");
-    });
+    const onLoginFailureStopper = Accounts.onLoginFailure(attempt => 
+      test.equal(Meteor.userId(), onLoginFailureExpectedUserId, "onLoginFailure")
+    );
 
-    var conn = DDP.connect(Meteor.absoluteUrl());
+    const conn = DDP.connect(Meteor.absoluteUrl());
 
     // On a new connection, Meteor.userId() should be null until logged in.
-    var validateAttemptExpectedUserId = null;
-    var onLoginExpectedUserId = userId;
+    let validateAttemptExpectedUserId = null;
+    const onLoginExpectedUserId = userId;
     conn.call('login', { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
@@ -453,11 +436,11 @@ Tinytest.add(
     conn.call('login', { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks
-    var onLoginFailureExpectedUserId = userId;
-    test.throws(function() { conn.call('login', { resume: "bogus" }) }, '403');
+    const onLoginFailureExpectedUserId = userId;
+    test.throws(() => conn.call('login', { resume: "bogus" }), '403');
 
     // Trigger onLogout callbacks
-    var onLogoutExpectedUserId = userId;
+    const onLogoutExpectedUserId = userId;
     conn.call('logout');
 
     conn.disconnect();
@@ -470,7 +453,7 @@ Tinytest.add(
 
 Tinytest.add(
   'accounts - verify onExternalLogin hook can update oauth user profiles',
-  function (test) {
+  test => {
     // Verify user profile data is saved properly when not using the
     // onExternalLogin hook.
     let facebookId = Random.id();

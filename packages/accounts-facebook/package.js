@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Login service for Facebook accounts",
-  version: "1.3.1"
+  version: "1.3.2",
 });
 
-Package.onUse(function(api) {
+Package.onUse(api => {
   api.use('ecmascript');
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
