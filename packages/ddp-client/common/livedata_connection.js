@@ -1607,9 +1607,8 @@ export class Connection {
   }
 
   onMessage(raw_msg) {
-    let msg;
     try {
-      msg = DDPCommon.parseDDP(raw_msg);
+      var messages = DDPCommon.parseDDP(raw_msg);
     } catch (e) {
       Meteor._debug('Exception while parsing DDP', e);
       return;
@@ -1621,46 +1620,52 @@ export class Connection {
       this._heartbeat.messageReceived();
     }
 
-    if (msg === null || !msg.msg) {
-      // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
-      // compat.  Remove this 'if' once the server stops sending welcome
-      // messages (stream_server.js).
-      if (!(msg && msg.server_id))
-        Meteor._debug('discarding invalid livedata message', msg);
-      return;
-    }
+    messages = Array.isArray(messages) ? messages : [messages];
 
-    if (msg.msg === 'connected') {
-      this._version = this._versionSuggestion;
-      this._livedata_connected(msg);
-      this.options.onConnected();
-    } else if (msg.msg === 'failed') {
-      if (this._supportedDDPVersions.indexOf(msg.version) >= 0) {
-        this._versionSuggestion = msg.version;
-        this._stream.reconnect({ _force: true });
-      } else {
-        const description =
-          'DDP version negotiation failed; server requested version ' +
-          msg.version;
-        this._stream.disconnect({ _permanent: true, _error: description });
-        this.options.onDDPVersionNegotiationFailure(description);
+    for (var i = 0; i < messages.length; i++) {
+      var msg = messages[i];
+
+      if (msg === null || !msg.msg) {
+        // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
+        // compat.  Remove this 'if' once the server stops sending welcome
+        // messages (stream_server.js).
+        if (!(msg && msg.server_id))
+          Meteor._debug('discarding invalid livedata message', msg);
+        return;
       }
-    } else if (msg.msg === 'ping' && this.options.respondToPings) {
-      this._send({ msg: 'pong', id: msg.id });
-    } else if (msg.msg === 'pong') {
-      // noop, as we assume everything's a pong
-    } else if (
-      ['added', 'changed', 'removed', 'ready', 'updated'].includes(msg.msg)
-    ) {
-      this._livedata_data(msg);
-    } else if (msg.msg === 'nosub') {
-      this._livedata_nosub(msg);
-    } else if (msg.msg === 'result') {
-      this._livedata_result(msg);
-    } else if (msg.msg === 'error') {
-      this._livedata_error(msg);
-    } else {
-      Meteor._debug('discarding unknown livedata message type', msg);
+
+      if (msg.msg === 'connected') {
+        this._version = this._versionSuggestion;
+        this._livedata_connected(msg);
+        this.options.onConnected();
+      } else if (msg.msg === 'failed') {
+        if (this._supportedDDPVersions.indexOf(msg.version) >= 0) {
+          this._versionSuggestion = msg.version;
+          this._stream.reconnect({ _force: true });
+        } else {
+          const description =
+            'DDP version negotiation failed; server requested version ' +
+            msg.version;
+          this._stream.disconnect({ _permanent: true, _error: description });
+          this.options.onDDPVersionNegotiationFailure(description);
+        }
+      } else if (msg.msg === 'ping' && this.options.respondToPings) {
+        this._send({ msg: 'pong', id: msg.id });
+      } else if (msg.msg === 'pong') {
+        // noop, as we assume everything's a pong
+      } else if (
+        ['added', 'changed', 'removed', 'ready', 'updated'].includes(msg.msg)
+      ) {
+        this._livedata_data(msg);
+      } else if (msg.msg === 'nosub') {
+        this._livedata_nosub(msg);
+      } else if (msg.msg === 'result') {
+        this._livedata_result(msg);
+      } else if (msg.msg === 'error') {
+        this._livedata_error(msg);
+      } else {
+        Meteor._debug('discarding unknown livedata message type', msg);
+      }
     }
   }
 
