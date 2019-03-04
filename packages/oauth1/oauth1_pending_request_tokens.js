@@ -31,13 +31,13 @@ OAuth._pendingRequestTokens._ensureIndex('createdAt');
 
 
 // Periodically clear old entries that never got completed
-var _cleanStaleResults = function() {
+const _cleanStaleResults = () => {
   // Remove request tokens older than 5 minute
-  var timeCutoff = new Date();
+  const timeCutoff = new Date();
   timeCutoff.setMinutes(timeCutoff.getMinutes() - 5);
   OAuth._pendingRequestTokens.remove({ createdAt: { $lt: timeCutoff } });
 };
-var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
+const _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 
 
 // Stores the key and request token in the _pendingRequestTokens collection.
@@ -47,16 +47,16 @@ var _cleanupHandle = Meteor.setInterval(_cleanStaleResults, 60 * 1000);
 // @param requestToken {string}
 // @param requestTokenSecret {string}
 //
-OAuth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
+OAuth._storeRequestToken = (key, requestToken, requestTokenSecret) => {
   check(key, String);
 
   // We do an upsert here instead of an insert in case the user happens
   // to somehow send the same `state` parameter twice during an OAuth
   // login; we don't want a duplicate key error.
   OAuth._pendingRequestTokens.upsert({
-    key: key
+    key,
   }, {
-    key: key,
+    key,
     requestToken: OAuth.sealSecret(requestToken),
     requestTokenSecret: OAuth.sealSecret(requestTokenSecret),
     createdAt: new Date()
@@ -69,10 +69,10 @@ OAuth._storeRequestToken = function (key, requestToken, requestTokenSecret) {
 //
 // @param key {string}
 //
-OAuth._retrieveRequestToken = function (key) {
+OAuth._retrieveRequestToken = key => {
   check(key, String);
 
-  var pendingRequestToken = OAuth._pendingRequestTokens.findOne({ key: key });
+  const pendingRequestToken = OAuth._pendingRequestTokens.findOne({ key: key });
   if (pendingRequestToken) {
     OAuth._pendingRequestTokens.remove({ _id: pendingRequestToken._id });
     return {

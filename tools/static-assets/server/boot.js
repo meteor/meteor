@@ -196,13 +196,13 @@ var specialArgPaths = {
 
   "packages/dynamic-import.js": function (file) {
     var dynamicImportInfo = {};
+    var programsDir = path.dirname(serverDir);
+    var clientArchs = configJson.clientArchs ||
+      Object.keys(configJson.clientPaths);
 
-    Object.keys(configJson.clientPaths).map(function (key) {
-      var programJsonPath = path.resolve(configJson.clientPaths[key]);
-      var programJson = require(programJsonPath);
-
-      dynamicImportInfo[key] = {
-        dynamicRoot: path.join(path.dirname(programJsonPath), "dynamic")
+    clientArchs.forEach(function (arch) {
+      dynamicImportInfo[arch] = {
+        dynamicRoot: path.join(programsDir, arch, "dynamic")
       };
     });
 

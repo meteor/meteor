@@ -19,10 +19,7 @@ export default class Cursor {
       this._selectorId = undefined;
 
       if (this.matcher.hasGeoQuery() || options.sort) {
-        this.sorter = new Minimongo.Sorter(
-          options.sort || [],
-          {matcher: this.matcher}
-        );
+        this.sorter = new Minimongo.Sorter(options.sort || []);
       }
     }
 

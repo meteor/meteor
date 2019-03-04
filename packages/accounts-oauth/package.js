@@ -1,14 +1,12 @@
 Package.describe({
   summary: "Common code for OAuth-based login services",
-  version: "1.1.15"
+  version: "1.1.16",
 });
 
-Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
-  api.use('random', ['client', 'server']);
-  api.use('check', ['client', 'server']);
+Package.onUse(api => {
+  api.use('check', 'server');
   api.use('webapp', 'server');
-  api.use('accounts-base', ['client', 'server']);
+  api.use(['accounts-base', 'ecmascript'], ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
   api.use('oauth');
@@ -19,6 +17,6 @@ Package.onUse(function (api) {
 });
 
 
-Package.onTest(function (api) {
+Package.onTest(api => {
   api.addFiles("oauth_tests.js", 'server');
 });

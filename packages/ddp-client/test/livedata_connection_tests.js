@@ -2,7 +2,7 @@ import lolex from 'lolex';
 import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
 
-var newConnection = function(stream, options) {
+const newConnection = function(stream, options) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
@@ -18,8 +18,8 @@ var newConnection = function(stream, options) {
   );
 };
 
-var makeConnectMessage = function(session) {
-  var msg = {
+const makeConnectMessage = function(session) {
+  const msg = {
     msg: 'connect',
     version: DDPCommon.SUPPORTED_DDP_VERSIONS[0],
     support: DDPCommon.SUPPORTED_DDP_VERSIONS
@@ -35,13 +35,13 @@ var makeConnectMessage = function(session) {
 // Returns the message (parsed as a JSON object if expected is an object);
 // which is particularly handy if you want to extract a value that was
 // matched as a wildcard.
-var testGotMessage = function(test, stream, expected) {
+const testGotMessage = function(test, stream, expected) {
   if (stream.sent.length === 0) {
     test.fail({ error: 'no message received', expected: expected });
     return undefined;
   }
 
-  var got = stream.sent.shift();
+  let got = stream.sent.shift();
 
   if (typeof got === 'string' && typeof expected === 'object')
     got = JSON.parse(got);
@@ -50,7 +50,7 @@ var testGotMessage = function(test, stream, expected) {
   // array of matching values, if there are multiple) is returned from this
   // function.
   if (typeof expected === 'object') {
-    var keysWithStarValues = [];
+    const keysWithStarValues = [];
     _.each(expected, function(v, k) {
       if (v === '*') keysWithStarValues.push(k);
     });
@@ -63,7 +63,7 @@ var testGotMessage = function(test, stream, expected) {
   return got;
 };
 
-var startAndConnect = function(test, stream) {
+const startAndConnect = function(test, stream) {
   stream.reset(); // initial connection start.
 
   testGotMessage(test, stream, makeConnectMessage());
@@ -73,16 +73,16 @@ var startAndConnect = function(test, stream) {
   test.length(stream.sent, 0);
 };
 
-var SESSION_ID = '17';
+const SESSION_ID = '17';
 
 Tinytest.add('livedata stub - receive data', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
   // data comes in for unknown collection.
-  var coll_name = Random.id();
+  const coll_name = Random.id();
   stream.receive({
     msg: 'added',
     collection: coll_name,
@@ -94,7 +94,7 @@ Tinytest.add('livedata stub - receive data', function(test) {
 
   // XXX: Test that the old signature of passing manager directly instead of in
   // options works.
-  var coll = new Mongo.Collection(coll_name, conn);
+  const coll = new Mongo.Collection(coll_name, conn);
 
   // queue has been emptied and doc is in db.
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
@@ -176,26 +176,26 @@ Tinytest.add('livedata stub - buffering data', function(test) {
 });
 
 Tinytest.add('livedata stub - subscribe', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
   // subscribe
-  var callback_fired = false;
-  var sub = conn.subscribe('my_data', function() {
+  let callback_fired = false;
+  const sub = conn.subscribe('my_data', function() {
     callback_fired = true;
   });
   test.isFalse(callback_fired);
 
   test.length(stream.sent, 1);
-  var message = JSON.parse(stream.sent.shift());
-  var id = message.id;
+  let message = JSON.parse(stream.sent.shift());
+  const id = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'my_data', params: [] });
 
-  var reactivelyReady = false;
-  var autorunHandle = Tracker.autorun(function() {
+  let reactivelyReady = false;
+  const autorunHandle = Tracker.autorun(function() {
     reactivelyReady = sub.ready();
   });
   test.isFalse(reactivelyReady);
@@ -218,23 +218,23 @@ Tinytest.add('livedata stub - subscribe', function(test) {
   conn.subscribe('my_data');
   test.length(stream.sent, 1);
   message = JSON.parse(stream.sent.shift());
-  var id2 = message.id;
+  const id2 = message.id;
   test.notEqual(id, id2);
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'my_data', params: [] });
 });
 
 Tinytest.add('livedata stub - reactive subscribe', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
-  var rFoo = new ReactiveVar('foo1');
-  var rBar = new ReactiveVar('bar1');
+  const rFoo = new ReactiveVar('foo1');
+  const rBar = new ReactiveVar('bar1');
 
-  var onReadyCount = {};
-  var onReady = function(tag) {
+  const onReadyCount = {};
+  const onReady = function(tag) {
     return function() {
       if (_.has(onReadyCount, tag)) ++onReadyCount[tag];
       else onReadyCount[tag] = 1;
@@ -242,38 +242,38 @@ Tinytest.add('livedata stub - reactive subscribe', function(test) {
   };
 
   // Subscribe to some subs.
-  var stopperHandle, completerHandle;
-  var autorunHandle = Tracker.autorun(function() {
+  let stopperHandle, completerHandle;
+  const autorunHandle = Tracker.autorun(function() {
     conn.subscribe('foo', rFoo.get(), onReady(rFoo.get()));
     conn.subscribe('bar', rBar.get(), onReady(rBar.get()));
     completerHandle = conn.subscribe('completer', onReady('completer'));
     stopperHandle = conn.subscribe('stopper', onReady('stopper'));
   });
 
-  var completerReady;
-  var readyAutorunHandle = Tracker.autorun(function() {
+  let completerReady;
+  const readyAutorunHandle = Tracker.autorun(function() {
     completerReady = completerHandle.ready();
   });
 
   // Check sub messages. (Assume they are sent in the order executed.)
   test.length(stream.sent, 4);
-  var message = JSON.parse(stream.sent.shift());
-  var idFoo1 = message.id;
+  let message = JSON.parse(stream.sent.shift());
+  const idFoo1 = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'foo', params: ['foo1'] });
 
   message = JSON.parse(stream.sent.shift());
-  var idBar1 = message.id;
+  const idBar1 = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'bar', params: ['bar1'] });
 
   message = JSON.parse(stream.sent.shift());
-  var idCompleter = message.id;
+  const idCompleter = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'completer', params: [] });
 
   message = JSON.parse(stream.sent.shift());
-  var idStopper = message.id;
+  const idStopper = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'stopper', params: [] });
 
@@ -310,12 +310,12 @@ Tinytest.add('livedata stub - reactive subscribe', function(test) {
   test.length(stream.sent, 3);
 
   message = JSON.parse(stream.sent.shift());
-  var idFoo2 = message.id;
+  const idFoo2 = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'foo', params: ['foo2'] });
 
   message = JSON.parse(stream.sent.shift());
-  var idStopperAgain = message.id;
+  const idStopperAgain = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'stopper', params: [] });
 
@@ -343,11 +343,11 @@ Tinytest.add('livedata stub - reactive subscribe', function(test) {
 
   test.length(stream.sent, 4);
   // The order of unsubs here is not important.
-  var unsubMessages = _.map(stream.sent, JSON.parse);
+  const unsubMessages = _.map(stream.sent, JSON.parse);
   stream.sent.length = 0;
   test.equal(_.unique(_.pluck(unsubMessages, 'msg')), ['unsub']);
-  var actualIds = _.pluck(unsubMessages, 'id');
-  var expectedIds = [idFoo2, idBar1, idCompleter, idStopperAgain];
+  const actualIds = _.pluck(unsubMessages, 'id');
+  const expectedIds = [idFoo2, idBar1, idCompleter, idStopperAgain];
   actualIds.sort();
   expectedIds.sort();
   test.equal(actualIds, expectedIds);
@@ -356,24 +356,24 @@ Tinytest.add('livedata stub - reactive subscribe', function(test) {
 Tinytest.add('livedata stub - reactive subscribe handle correct', function(
   test
 ) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
-  var rFoo = new ReactiveVar('foo1');
+  const rFoo = new ReactiveVar('foo1');
 
   // Subscribe to some subs.
-  var fooHandle, fooReady;
-  var autorunHandle = Tracker.autorun(function() {
+  let fooHandle, fooReady;
+  const autorunHandle = Tracker.autorun(function() {
     fooHandle = conn.subscribe('foo', rFoo.get());
     Tracker.autorun(function() {
       fooReady = fooHandle.ready();
     });
   });
 
-  var message = JSON.parse(stream.sent.shift());
-  var idFoo1 = message.id;
+  let message = JSON.parse(stream.sent.shift());
+  const idFoo1 = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'foo', params: ['foo1'] });
 
@@ -390,7 +390,7 @@ Tinytest.add('livedata stub - reactive subscribe handle correct', function(
   test.length(stream.sent, 2);
 
   message = JSON.parse(stream.sent.shift());
-  var idFoo2 = message.id;
+  const idFoo2 = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'foo', params: ['foo2'] });
 
@@ -415,7 +415,7 @@ Tinytest.add('livedata stub - reactive subscribe handle correct', function(
   test.length(stream.sent, 2);
 
   message = JSON.parse(stream.sent.shift());
-  var idFoo3 = message.id;
+  const idFoo3 = message.id;
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'foo', params: ['foo3'] });
 
@@ -437,8 +437,8 @@ Tinytest.add('livedata stub - reactive subscribe handle correct', function(
 });
 
 Tinytest.add('livedata stub - this', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
   conn.methods({
@@ -451,7 +451,7 @@ Tinytest.add('livedata stub - this', function(test) {
   // should throw no exceptions
   conn.call('test_this', _.identity);
   // satisfy method, quiesce connection
-  var message = JSON.parse(stream.sent.shift());
+  let message = JSON.parse(stream.sent.shift());
   test.isUndefined(message.randomSeed);
   test.equal(message, {
     msg: 'method',
@@ -467,13 +467,13 @@ Tinytest.add('livedata stub - this', function(test) {
 
 if (Meteor.isClient) {
   Tinytest.add('livedata stub - methods', function(test) {
-    var stream = new StubStream();
-    var conn = newConnection(stream);
+    const stream = new StubStream();
+    const conn = newConnection(stream);
 
     startAndConnect(test, stream);
 
-    var collName = Random.id();
-    var coll = new Mongo.Collection(collName, { connection: conn });
+    const collName = Random.id();
+    const coll = new Mongo.Collection(collName, { connection: conn });
 
     // setup method
     conn.methods({
@@ -483,8 +483,8 @@ if (Meteor.isClient) {
     });
 
     // setup observers
-    var counts = { added: 0, removed: 0, changed: 0, moved: 0 };
-    var handle = coll.find({}).observe({
+    const counts = { added: 0, removed: 0, changed: 0, moved: 0 };
+    const handle = coll.find({}).observe({
       addedAt: function() {
         counts.added += 1;
       },
@@ -500,7 +500,7 @@ if (Meteor.isClient) {
     });
 
     // call method with results callback
-    var callback1Fired = false;
+    let callback1Fired = false;
     conn.call('do_something', 'friday!', function(err, res) {
       test.isUndefined(err);
       test.equal(res, '1234');
@@ -512,7 +512,7 @@ if (Meteor.isClient) {
     test.equal(counts, { added: 1, removed: 0, changed: 0, moved: 0 });
 
     // get response from server
-    var message = testGotMessage(test, stream, {
+    const message = testGotMessage(test, stream, {
       msg: 'method',
       method: 'do_something',
       params: ['friday!'],
@@ -522,7 +522,7 @@ if (Meteor.isClient) {
 
     test.equal(coll.find({}).count(), 1);
     test.equal(coll.find({ value: 'friday!' }).count(), 1);
-    var docId = coll.findOne({ value: 'friday!' })._id;
+    const docId = coll.findOne({ value: 'friday!' })._id;
 
     // results does not yet result in callback, because data is not
     // ready.
@@ -546,7 +546,7 @@ if (Meteor.isClient) {
     test.equal(counts, { added: 1, removed: 0, changed: 0, moved: 0 });
 
     // send another methods (unknown on client)
-    var callback2Fired = false;
+    let callback2Fired = false;
     conn.call('do_something_else', 'monday', function(err, res) {
       callback2Fired = true;
     });
@@ -554,7 +554,7 @@ if (Meteor.isClient) {
     test.isFalse(callback2Fired);
 
     // test we still send a method request to server
-    var message2 = JSON.parse(stream.sent.shift());
+    const message2 = JSON.parse(stream.sent.shift());
     test.isUndefined(message2.randomSeed);
     test.equal(message2, {
       msg: 'method',
@@ -591,8 +591,8 @@ if (Meteor.isClient) {
 }
 
 Tinytest.add('livedata stub - mutating method args', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
@@ -605,7 +605,7 @@ Tinytest.add('livedata stub - mutating method args', function(test) {
   conn.call('mutateArgs', { foo: 50 }, _.identity);
 
   // Method should be called with original arg, not mutated arg.
-  var message = JSON.parse(stream.sent.shift());
+  let message = JSON.parse(stream.sent.shift());
   test.isUndefined(message.randomSeed);
   test.equal(message, {
     msg: 'method',
@@ -616,10 +616,10 @@ Tinytest.add('livedata stub - mutating method args', function(test) {
   test.length(stream.sent, 0);
 });
 
-var observeCursor = function(test, cursor) {
-  var counts = { added: 0, removed: 0, changed: 0, moved: 0 };
-  var expectedCounts = _.clone(counts);
-  var handle = cursor.observe({
+const observeCursor = function(test, cursor) {
+  const counts = { added: 0, removed: 0, changed: 0, moved: 0 };
+  const expectedCounts = _.clone(counts);
+  const handle = cursor.observe({
     addedAt: function() {
       counts.added += 1;
     },
@@ -647,13 +647,13 @@ var observeCursor = function(test, cursor) {
 // method calls another method in simulation. see not sent.
 if (Meteor.isClient) {
   Tinytest.add('livedata stub - methods calling methods', function(test) {
-    var stream = new StubStream();
-    var conn = newConnection(stream);
+    const stream = new StubStream();
+    const conn = newConnection(stream);
 
     startAndConnect(test, stream);
 
-    var coll_name = Random.id();
-    var coll = new Mongo.Collection(coll_name, { connection: conn });
+    const coll_name = Random.id();
+    const coll = new Mongo.Collection(coll_name, { connection: conn });
 
     // setup methods
     conn.methods({
@@ -665,13 +665,13 @@ if (Meteor.isClient) {
       }
     });
 
-    var o = observeCursor(test, coll.find());
+    const o = observeCursor(test, coll.find());
 
     // call method.
     conn.call('do_something', _.identity);
 
     // see we only send message for outer methods
-    var message = testGotMessage(test, stream, {
+    const message = testGotMessage(test, stream, {
       msg: 'method',
       method: 'do_something',
       params: [],
@@ -683,7 +683,7 @@ if (Meteor.isClient) {
     // but inner method runs locally.
     o.expectCallbacks({ added: 1 });
     test.equal(coll.find().count(), 1);
-    var docId = coll.findOne()._id;
+    const docId = coll.findOne()._id;
     test.equal(coll.findOne(), { _id: docId, a: 1 });
 
     // we get the results
@@ -707,7 +707,7 @@ if (Meteor.isClient) {
     });
     o.expectCallbacks({ added: 1 });
     test.equal(coll.findOne(docId), { _id: docId, a: 1 });
-    var newDoc = coll.findOne({ value: 'bla' });
+    const newDoc = coll.findOne({ value: 'bla' });
     test.isTrue(newDoc);
     test.equal(newDoc, { _id: newDoc._id, value: 'bla' });
 
@@ -722,10 +722,10 @@ if (Meteor.isClient) {
   });
 }
 Tinytest.add('livedata stub - method call before connect', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
-  var callbackOutput = [];
+  const callbackOutput = [];
   conn.call('someMethod', function(err, result) {
     callbackOutput.push(result);
   });
@@ -747,24 +747,24 @@ Tinytest.add('livedata stub - method call before connect', function(test) {
 });
 
 Tinytest.add('livedata stub - reconnect', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
-  var collName = Random.id();
-  var coll = new Mongo.Collection(collName, { connection: conn });
+  const collName = Random.id();
+  const coll = new Mongo.Collection(collName, { connection: conn });
 
-  var o = observeCursor(test, coll.find());
+  const o = observeCursor(test, coll.find());
 
   // subscribe
-  var subCallbackFired = false;
-  var sub = conn.subscribe('my_data', function() {
+  let subCallbackFired = false;
+  const sub = conn.subscribe('my_data', function() {
     subCallbackFired = true;
   });
   test.isFalse(subCallbackFired);
 
-  var subMessage = JSON.parse(stream.sent.shift());
+  let subMessage = JSON.parse(stream.sent.shift());
   test.equal(subMessage, {
     msg: 'sub',
     name: 'my_data',
@@ -801,7 +801,7 @@ Tinytest.add('livedata stub - reconnect', function(test) {
   o.expectCallbacks({ changed: 1 });
 
   // call method.
-  var methodCallbackFired = false;
+  let methodCallbackFired = false;
   conn.call('do_something', function() {
     methodCallbackFired = true;
   });
@@ -812,7 +812,7 @@ Tinytest.add('livedata stub - reconnect', function(test) {
   test.isFalse(methodCallbackFired);
 
   // The non-wait method should send, but not the wait method.
-  var methodMessage = JSON.parse(stream.sent.shift());
+  let methodMessage = JSON.parse(stream.sent.shift());
   test.isUndefined(methodMessage.randomSeed);
   test.equal(methodMessage, {
     msg: 'method',
@@ -888,7 +888,7 @@ Tinytest.add('livedata stub - reconnect', function(test) {
   test.equal(coll.findOne('2345'), { _id: '2345', e: 5 });
   o.expectCallbacks({ added: 1, changed: 1 });
 
-  var waitMethodMessage = JSON.parse(stream.sent.shift());
+  let waitMethodMessage = JSON.parse(stream.sent.shift());
   test.isUndefined(waitMethodMessage.randomSeed);
   test.equal(waitMethodMessage, {
     msg: 'method',
@@ -903,7 +903,7 @@ Tinytest.add('livedata stub - reconnect', function(test) {
 
   // wait method done means we can send the third method
   test.equal(stream.sent.length, 1);
-  var laterMethodMessage = JSON.parse(stream.sent.shift());
+  let laterMethodMessage = JSON.parse(stream.sent.shift());
   test.isUndefined(laterMethodMessage.randomSeed);
   test.equal(laterMethodMessage, {
     msg: 'method',
@@ -920,15 +920,15 @@ if (Meteor.isClient) {
     test
   ) {
     // This test is for https://github.com/meteor/meteor/issues/6108
-    var stream = new StubStream();
-    var conn = newConnection(stream);
+    const stream = new StubStream();
+    const conn = newConnection(stream);
 
     startAndConnect(test, stream);
 
-    var firstMethodCallbackFired = false;
-    var firstMethodCallbackErrored = false;
-    var secondMethodCallbackFired = false;
-    var secondMethodCallbackErrored = false;
+    let firstMethodCallbackFired = false;
+    let firstMethodCallbackErrored = false;
+    let secondMethodCallbackFired = false;
+    let secondMethodCallbackErrored = false;
 
     // call with noRetry true so that the method should fail to retry on reconnect.
     conn.apply('do_something', [], { noRetry: true }, function(error) {
@@ -982,7 +982,7 @@ function addReconnectTests(name, testFunc) {
   });
 
   Tinytest.add(name, function(test) {
-    var stopper;
+    let stopper;
     function setOnReconnect(conn, handler) {
       stopper && stopper.stop();
       stopper = DDP.onReconnect(function(reconnectingConn) {
@@ -1000,13 +1000,13 @@ if (Meteor.isClient) {
   addReconnectTests(
     'livedata stub - reconnect method which only got result',
     function(test, setOnReconnect) {
-      var stream = new StubStream();
-      var conn = newConnection(stream);
+      const stream = new StubStream();
+      const conn = newConnection(stream);
       startAndConnect(test, stream);
 
-      var collName = Random.id();
-      var coll = new Mongo.Collection(collName, { connection: conn });
-      var o = observeCursor(test, coll.find());
+      const collName = Random.id();
+      const coll = new Mongo.Collection(collName, { connection: conn });
+      const o = observeCursor(test, coll.find());
 
       conn.methods({
         writeSomething: function() {
@@ -1018,8 +1018,8 @@ if (Meteor.isClient) {
       test.equal(coll.find({ foo: 'bar' }).count(), 0);
 
       // Call a method. We'll get the result but not data-done before reconnect.
-      var callbackOutput = [];
-      var onResultReceivedOutput = [];
+      const callbackOutput = [];
+      const onResultReceivedOutput = [];
       conn.apply(
         'writeSomething',
         [],
@@ -1034,13 +1034,13 @@ if (Meteor.isClient) {
       );
       // Stub write is visible.
       test.equal(coll.find({ foo: 'bar' }).count(), 1);
-      var stubWrittenId = coll.findOne({ foo: 'bar' })._id;
+      const stubWrittenId = coll.findOne({ foo: 'bar' })._id;
       o.expectCallbacks({ added: 1 });
       // Callback not called.
       test.equal(callbackOutput, []);
       test.equal(onResultReceivedOutput, []);
       // Method sent.
-      var methodId = testGotMessage(test, stream, {
+      const methodId = testGotMessage(test, stream, {
         msg: 'method',
         method: 'writeSomething',
         params: [],
@@ -1124,13 +1124,13 @@ if (Meteor.isClient) {
       );
       // Stub write is visible.
       test.equal(coll.find({ foo: 'bar' }).count(), 1);
-      var stubWrittenId2 = coll.findOne({ foo: 'bar' })._id;
+      const stubWrittenId2 = coll.findOne({ foo: 'bar' })._id;
       o.expectCallbacks({ added: 1 });
       // Callback not called.
       test.equal(callbackOutput, ['bla']);
       test.equal(onResultReceivedOutput, ['bla']);
       // Method sent.
-      var methodId2 = testGotMessage(test, stream, {
+      const methodId2 = testGotMessage(test, stream, {
         msg: 'method',
         method: 'writeSomething',
         params: [],
@@ -1177,7 +1177,7 @@ if (Meteor.isClient) {
       // blocking on slowMethod.
       stream.reset();
       testGotMessage(test, stream, makeConnectMessage(SESSION_ID + 1));
-      var slowMethodId = testGotMessage(test, stream, {
+      const slowMethodId = testGotMessage(test, stream, {
         msg: 'method',
         method: 'slowMethod',
         params: [],
@@ -1236,18 +1236,18 @@ if (Meteor.isClient) {
 Tinytest.add('livedata stub - reconnect method which only got data', function(
   test
 ) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var collName = Random.id();
-  var coll = new Mongo.Collection(collName, { connection: conn });
-  var o = observeCursor(test, coll.find());
+  const collName = Random.id();
+  const coll = new Mongo.Collection(collName, { connection: conn });
+  const o = observeCursor(test, coll.find());
 
   // Call a method. We'll get the data-done message but not the result before
   // reconnect.
-  var callbackOutput = [];
-  var onResultReceivedOutput = [];
+  const callbackOutput = [];
+  const onResultReceivedOutput = [];
   conn.apply(
     'doLittle',
     [],
@@ -1264,7 +1264,7 @@ Tinytest.add('livedata stub - reconnect method which only got data', function(
   test.equal(callbackOutput, []);
   test.equal(onResultReceivedOutput, []);
   // Method sent.
-  var methodId = testGotMessage(test, stream, {
+  const methodId = testGotMessage(test, stream, {
     msg: 'method',
     method: 'doLittle',
     params: [],
@@ -1337,13 +1337,13 @@ Tinytest.add('livedata stub - reconnect method which only got data', function(
 });
 if (Meteor.isClient) {
   Tinytest.add('livedata stub - multiple stubs same doc', function(test) {
-    var stream = new StubStream();
-    var conn = newConnection(stream);
+    const stream = new StubStream();
+    const conn = newConnection(stream);
     startAndConnect(test, stream);
 
-    var collName = Random.id();
-    var coll = new Mongo.Collection(collName, { connection: conn });
-    var o = observeCursor(test, coll.find());
+    const collName = Random.id();
+    const coll = new Mongo.Collection(collName, { connection: conn });
+    const o = observeCursor(test, coll.find());
 
     conn.methods({
       insertSomething: function() {
@@ -1361,10 +1361,10 @@ if (Meteor.isClient) {
     conn.call('insertSomething', _.identity);
     // Stub write is visible.
     test.equal(coll.find({ foo: 'bar' }).count(), 1);
-    var stubWrittenId = coll.findOne({ foo: 'bar' })._id;
+    const stubWrittenId = coll.findOne({ foo: 'bar' })._id;
     o.expectCallbacks({ added: 1 });
     // Method sent.
-    var insertMethodId = testGotMessage(test, stream, {
+    const insertMethodId = testGotMessage(test, stream, {
       msg: 'method',
       method: 'insertSomething',
       params: [],
@@ -1384,7 +1384,7 @@ if (Meteor.isClient) {
     });
     o.expectCallbacks({ changed: 1 });
     // Method sent.
-    var updateMethodId = testGotMessage(test, stream, {
+    const updateMethodId = testGotMessage(test, stream, {
       msg: 'method',
       method: 'updateIt',
       params: [stubWrittenId],
@@ -1460,12 +1460,12 @@ if (Meteor.isClient) {
     function(test) {
       // This test is for https://github.com/meteor/meteor/issues/555
 
-      var stream = new StubStream();
-      var conn = newConnection(stream);
+      const stream = new StubStream();
+      const conn = newConnection(stream);
       startAndConnect(test, stream);
 
-      var collName = Random.id();
-      var coll = new Mongo.Collection(collName, { connection: conn });
+      const collName = Random.id();
+      const coll = new Mongo.Collection(collName, { connection: conn });
 
       conn.methods({
         insertSomething: function() {
@@ -1485,10 +1485,10 @@ if (Meteor.isClient) {
 
       // Stub write is visible.
       test.equal(coll.find({ foo: 'bar' }).count(), 1);
-      var stubWrittenId = coll.findOne({ foo: 'bar' })._id;
+      const stubWrittenId = coll.findOne({ foo: 'bar' })._id;
 
       // first method sent
-      var firstMethodId = testGotMessage(test, stream, {
+      const firstMethodId = testGotMessage(test, stream, {
         msg: 'method',
         method: 'no-op',
         params: [],
@@ -1501,7 +1501,7 @@ if (Meteor.isClient) {
       stream.receive({ msg: 'result', id: firstMethodId });
 
       // Wait method sent.
-      var waitMethodId = testGotMessage(test, stream, {
+      const waitMethodId = testGotMessage(test, stream, {
         msg: 'method',
         method: 'no-op',
         params: [],
@@ -1514,7 +1514,7 @@ if (Meteor.isClient) {
       stream.receive({ msg: 'result', id: waitMethodId });
 
       // insert method sent.
-      var insertMethodId = testGotMessage(test, stream, {
+      const insertMethodId = testGotMessage(test, stream, {
         msg: 'method',
         method: 'insertSomething',
         params: [],
@@ -1533,13 +1533,13 @@ if (Meteor.isClient) {
   );
 }
 Tinytest.add('livedata stub - reactive resub', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
-  var readiedSubs = {};
-  var markAllReady = function() {
+  const readiedSubs = {};
+  const markAllReady = function() {
     // synthesize a "ready" message in response to any "sub"
     // message with an id we haven't seen before
     _.each(stream.sent, function(msg) {
@@ -1551,11 +1551,11 @@ Tinytest.add('livedata stub - reactive resub', function(test) {
     });
   };
 
-  var fooArg = new ReactiveVar('A');
-  var fooReady = 0;
+  const fooArg = new ReactiveVar('A');
+  let fooReady = 0;
 
-  var inner;
-  var outer = Tracker.autorun(function() {
+  let inner;
+  const outer = Tracker.autorun(function() {
     inner = Tracker.autorun(function() {
       conn.subscribe('foo-sub', fooArg.get(), function() {
         fooReady++;
@@ -1564,7 +1564,7 @@ Tinytest.add('livedata stub - reactive resub', function(test) {
   });
 
   markAllReady();
-  var message = JSON.parse(stream.sent.shift());
+  let message = JSON.parse(stream.sent.shift());
   delete message.id;
   test.equal(message, { msg: 'sub', name: 'foo-sub', params: ['A'] });
   test.equal(fooReady, 1);
@@ -1619,8 +1619,8 @@ Tinytest.add('livedata stub - reactive resub', function(test) {
 });
 
 Tinytest.add('livedata connection - reactive userId', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   test.equal(conn.userId(), null);
   conn.setUserId(1337);
@@ -1628,21 +1628,21 @@ Tinytest.add('livedata connection - reactive userId', function(test) {
 });
 
 Tinytest.add('livedata connection - two wait methods', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var collName = Random.id();
-  var coll = new Mongo.Collection(collName, { connection: conn });
+  const collName = Random.id();
+  const coll = new Mongo.Collection(collName, { connection: conn });
 
   // setup method
   conn.methods({ do_something: function(x) {} });
 
-  var responses = [];
+  const responses = [];
   conn.apply('do_something', ['one!'], function() {
     responses.push('one');
   });
-  var one_message = JSON.parse(stream.sent.shift());
+  let one_message = JSON.parse(stream.sent.shift());
   test.equal(one_message.params, ['one!']);
 
   conn.apply('do_something', ['two!'], { wait: true }, function() {
@@ -1689,7 +1689,7 @@ Tinytest.add('livedata connection - two wait methods', function(test) {
   test.equal(responses, ['one']);
 
   // Now we've send out "two!".
-  var two_message = JSON.parse(stream.sent.shift());
+  let two_message = JSON.parse(stream.sent.shift());
   test.equal(two_message.params, ['two!']);
 
   // But still haven't sent "three!".
@@ -1719,9 +1719,9 @@ Tinytest.add('livedata connection - two wait methods', function(test) {
   // Verify that we just sent "three!" and "four!" now that we got
   // responses for "one!" and "two!"
   test.equal(stream.sent.length, 2);
-  var three_message = JSON.parse(stream.sent.shift());
+  let three_message = JSON.parse(stream.sent.shift());
   test.equal(three_message.params, ['three!']);
-  var four_message = JSON.parse(stream.sent.shift());
+  let four_message = JSON.parse(stream.sent.shift());
   test.equal(four_message.params, ['four!']);
 
   // Out of order response is OK for non-wait methods.
@@ -1737,7 +1737,7 @@ Tinytest.add('livedata connection - two wait methods', function(test) {
 
   // Verify that we just sent "five!" (the next wait method).
   test.equal(stream.sent.length, 1);
-  var five_message = JSON.parse(stream.sent.shift());
+  let five_message = JSON.parse(stream.sent.shift());
   test.equal(five_message.params, ['five!']);
   test.equal(responses, ['one', 'two', 'four', 'three']);
 
@@ -1746,15 +1746,15 @@ Tinytest.add('livedata connection - two wait methods', function(test) {
   stream.receive({ msg: 'updated', methods: [five_message.id] });
   test.equal(responses, ['one', 'two', 'four', 'three', 'five']);
 
-  var six_message = JSON.parse(stream.sent.shift());
+  let six_message = JSON.parse(stream.sent.shift());
   test.equal(six_message.params, ['six!']);
 });
 
 addReconnectTests(
   'livedata connection - onReconnect prepends messages correctly with a wait method',
   function(test, setOnReconnect) {
-    var stream = new StubStream();
-    var conn = newConnection(stream);
+    const stream = new StubStream();
+    const conn = newConnection(stream);
     startAndConnect(test, stream);
 
     // setup method
@@ -1808,8 +1808,8 @@ addReconnectTests(
 );
 
 Tinytest.add('livedata connection - ping without id', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
   startAndConnect(test, stream);
 
   stream.receive({ msg: 'ping' });
@@ -1817,11 +1817,11 @@ Tinytest.add('livedata connection - ping without id', function(test) {
 });
 
 Tinytest.add('livedata connection - ping with id', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var id = Random.id();
+  const id = Random.id();
   stream.receive({ msg: 'ping', id: id });
   testGotMessage(test, stream, { msg: 'pong', id: id });
 });
@@ -1831,7 +1831,7 @@ _.each(DDPCommon.SUPPORTED_DDP_VERSIONS, function(version) {
     test,
     onComplete
   ) {
-    var connection = new Connection(getSelfConnectionUrl(), {
+    const connection = new Connection(getSelfConnectionUrl(), {
       reloadWithOutstanding: true,
       supportedDDPVersions: [version],
       onDDPVersionNegotiationFailure: function() {
@@ -1842,8 +1842,8 @@ _.each(DDPCommon.SUPPORTED_DDP_VERSIONS, function(version) {
         test.equal(connection._version, version);
         // It's a little naughty to access _stream and _send, but it works...
         connection._stream.on('message', function(json) {
-          var msg = JSON.parse(json);
-          var done = false;
+          let msg = JSON.parse(json);
+          let done = false;
           if (msg.msg === 'pong') {
             test.notEqual(version, 'pre1');
             done = true;
@@ -1865,9 +1865,9 @@ _.each(DDPCommon.SUPPORTED_DDP_VERSIONS, function(version) {
   });
 });
 
-var getSelfConnectionUrl = function() {
+const getSelfConnectionUrl = function() {
   if (Meteor.isClient) {
-    var ddpUrl = Meteor._relativeToSiteRootUrl('/');
+    let ddpUrl = Meteor._relativeToSiteRootUrl('/');
     if (typeof __meteor_runtime_config__ !== 'undefined') {
       if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
         ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
@@ -1894,7 +1894,7 @@ if (Meteor.isServer) {
 
 testAsyncMulti('livedata connection - reconnect to a different server', [
   function(test, expect) {
-    var self = this;
+    const self = this;
     self.conn = DDP.connect('reverse.meteor.com');
     pollUntil(
       expect,
@@ -1907,7 +1907,7 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
     );
   },
   function(test, expect) {
-    var self = this;
+    const self = this;
     self.doTest = self.conn.status().connected;
     if (self.doTest) {
       self.conn.call(
@@ -1920,7 +1920,7 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
     }
   },
   function(test, expect) {
-    var self = this;
+    const self = this;
     if (self.doTest) {
       self.conn.reconnect({ url: getSelfConnectionUrl() });
       self.conn.call(
@@ -1937,7 +1937,7 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
 Tinytest.addAsync(
   'livedata connection - version negotiation requires renegotiating',
   function(test, onComplete) {
-    var connection = new Connection(getSelfConnectionUrl(), {
+    const connection = new Connection(getSelfConnectionUrl(), {
       reloadWithOutstanding: true,
       supportedDDPVersions: ['garbled', DDPCommon.SUPPORTED_DDP_VERSIONS[0]],
       onDDPVersionNegotiationFailure: function() {
@@ -1957,7 +1957,7 @@ Tinytest.addAsync('livedata connection - version negotiation error', function(
   test,
   onComplete
 ) {
-  var connection = new Connection(getSelfConnectionUrl(), {
+  const connection = new Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ['garbled', 'more garbled'],
     onDDPVersionNegotiationFailure: function() {
@@ -1979,8 +1979,8 @@ Tinytest.addAsync('livedata connection - version negotiation error', function(
 addReconnectTests(
   'livedata connection - onReconnect prepends messages correctly without a wait method',
   function(test, setOnReconnect) {
-    var stream = new StubStream();
-    var conn = newConnection(stream);
+    const stream = new StubStream();
+    const conn = newConnection(stream);
     startAndConnect(test, stream);
 
     // setup method
@@ -2035,8 +2035,8 @@ addReconnectTests(
 addReconnectTests(
   'livedata connection - onReconnect with sent messages',
   function(test, setOnReconnect) {
-    var stream = new StubStream();
-    var conn = newConnection(stream);
+    const stream = new StubStream();
+    const conn = newConnection(stream);
     startAndConnect(test, stream);
 
     // setup method
@@ -2054,7 +2054,7 @@ addReconnectTests(
     testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId));
 
     // Test that we sent just the login message.
-    var loginId = testGotMessage(test, stream, {
+    const loginId = testGotMessage(test, stream, {
       msg: 'method',
       method: 'do_something',
       params: ['login'],
@@ -2085,11 +2085,11 @@ addReconnectTests('livedata stub - reconnect double wait method', function(
   test,
   setOnReconnect
 ) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
   startAndConnect(test, stream);
 
-  var output = [];
+  const output = [];
   setOnReconnect(conn, function() {
     conn.apply('reconnectMethod', [], { wait: true }, function(err, result) {
       output.push('reconnect');
@@ -2102,7 +2102,7 @@ addReconnectTests('livedata stub - reconnect double wait method', function(
 
   test.equal(output, []);
   // Method sent.
-  var halfwayId = testGotMessage(test, stream, {
+  const halfwayId = testGotMessage(test, stream, {
     msg: 'method',
     method: 'halfwayMethod',
     params: [],
@@ -2119,7 +2119,7 @@ addReconnectTests('livedata stub - reconnect double wait method', function(
   // Reconnect quiescence happens when reconnectMethod is done.
   stream.reset();
   testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
-  var reconnectId = testGotMessage(test, stream, {
+  const reconnectId = testGotMessage(test, stream, {
     msg: 'method',
     method: 'reconnectMethod',
     params: [],
@@ -2159,15 +2159,15 @@ addReconnectTests('livedata stub - reconnect double wait method', function(
 });
 
 Tinytest.add('livedata stub - subscribe errors', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
   // subscribe
-  var onReadyFired = false;
-  var subErrorInStopped = null;
-  var subErrorInError = null;
+  let onReadyFired = false;
+  let subErrorInStopped = null;
+  let subErrorInError = null;
 
   conn.subscribe('unknownSub', {
     onReady: function() {
@@ -2193,7 +2193,7 @@ Tinytest.add('livedata stub - subscribe errors', function(test) {
   // XXX COMPAT WITH 1.0.3.1 #errorCallback
   test.equal(subErrorInError, null);
 
-  var subMessage = JSON.parse(stream.sent.shift());
+  let subMessage = JSON.parse(stream.sent.shift());
   test.equal(subMessage, {
     msg: 'sub',
     name: 'unknownSub',
@@ -2230,17 +2230,17 @@ Tinytest.add('livedata stub - subscribe errors', function(test) {
 });
 
 Tinytest.add('livedata stub - subscribe stop', function(test) {
-  var stream = new StubStream();
-  var conn = newConnection(stream);
+  const stream = new StubStream();
+  const conn = newConnection(stream);
 
   startAndConnect(test, stream);
 
   // subscribe
-  var onReadyFired = false;
-  var onStopFired = false;
-  var subErrorInStopped = null;
+  let onReadyFired = false;
+  let onStopFired = false;
+  let subErrorInStopped = null;
 
-  var sub = conn.subscribe('my_data', {
+  const sub = conn.subscribe('my_data', {
     onStop: function(error) {
       onStopFired = true;
       subErrorInStopped = error;
@@ -2257,11 +2257,11 @@ Tinytest.add('livedata stub - subscribe stop', function(test) {
 
 if (Meteor.isClient) {
   Tinytest.add('livedata stub - stubs before connected', function(test) {
-    var stream = new StubStream();
-    var conn = newConnection(stream);
+    const stream = new StubStream();
+    const conn = newConnection(stream);
 
-    var collName = Random.id();
-    var coll = new Mongo.Collection(collName, { connection: conn });
+    const collName = Random.id();
+    const coll = new Mongo.Collection(collName, { connection: conn });
 
     // Start and send "connect", but DON'T get 'connected' quite yet.
     stream.reset(); // initial connection start.
@@ -2274,7 +2274,7 @@ if (Meteor.isClient) {
     test.equal(coll.find().count(), 1);
     test.equal(coll.findOne(), { _id: 'foo', bar: 42 });
     // It also sends the method message.
-    var methodMessage = JSON.parse(stream.sent.shift());
+    let methodMessage = JSON.parse(stream.sent.shift());
     test.isUndefined(methodMessage.randomSeed);
     test.equal(methodMessage, {
       msg: 'method',
@@ -2302,13 +2302,13 @@ if (Meteor.isClient) {
   Tinytest.add(
     'livedata stub - method call between reset and quiescence',
     function(test) {
-      var stream = new StubStream();
-      var conn = newConnection(stream);
+      const stream = new StubStream();
+      const conn = newConnection(stream);
 
       startAndConnect(test, stream);
 
-      var collName = Random.id();
-      var coll = new Mongo.Collection(collName, { connection: conn });
+      const collName = Random.id();
+      const coll = new Mongo.Collection(collName, { connection: conn });
 
       conn.methods({
         update_value: function() {
@@ -2317,8 +2317,8 @@ if (Meteor.isClient) {
       });
 
       // Set up test subscription.
-      var sub = conn.subscribe('test_data');
-      var subMessage = JSON.parse(stream.sent.shift());
+      const sub = conn.subscribe('test_data');
+      let subMessage = JSON.parse(stream.sent.shift());
       test.equal(subMessage, {
         msg: 'sub',
         name: 'test_data',
@@ -2327,14 +2327,14 @@ if (Meteor.isClient) {
       });
       test.length(stream.sent, 0);
 
-      var subDocMessage = {
+      const subDocMessage = {
         msg: 'added',
         collection: collName,
         id: 'aaa',
         fields: { value: 111 }
       };
 
-      var subReadyMessage = { msg: 'ready', subs: [subMessage.id] };
+      const subReadyMessage = { msg: 'ready', subs: [subMessage.id] };
 
       stream.receive(subDocMessage);
       stream.receive(subReadyMessage);
@@ -2354,7 +2354,7 @@ if (Meteor.isClient) {
       // Observe the stub-written value.
       test.isTrue(coll.findOne('aaa').value == 222);
 
-      var methodMessage = JSON.parse(stream.sent.shift());
+      let methodMessage = JSON.parse(stream.sent.shift());
       test.equal(methodMessage, {
         msg: 'method',
         method: 'update_value',
@@ -2388,8 +2388,8 @@ if (Meteor.isClient) {
   Tinytest.add('livedata stub - buffering and methods interaction', function(
     test
   ) {
-    var stream = new StubStream();
-    var conn = newConnection(stream, {
+    const stream = new StubStream();
+    const conn = newConnection(stream, {
       // A very high values so that all messages are effectively buffered.
       bufferedWritesInterval: 10000,
       bufferedWritesMaxAge: 10000
@@ -2397,8 +2397,8 @@ if (Meteor.isClient) {
 
     startAndConnect(test, stream);
 
-    var collName = Random.id();
-    var coll = new Mongo.Collection(collName, { connection: conn });
+    const collName = Random.id();
+    const coll = new Mongo.Collection(collName, { connection: conn });
 
     conn.methods({
       update_value: function() {
@@ -2409,8 +2409,8 @@ if (Meteor.isClient) {
     });
 
     // Set up test subscription.
-    var sub = conn.subscribe('test_data');
-    var subMessage = JSON.parse(stream.sent.shift());
+    const sub = conn.subscribe('test_data');
+    let subMessage = JSON.parse(stream.sent.shift());
     test.equal(subMessage, {
       msg: 'sub',
       name: 'test_data',
@@ -2419,20 +2419,20 @@ if (Meteor.isClient) {
     });
     test.length(stream.sent, 0);
 
-    var subDocMessage = {
+    const subDocMessage = {
       msg: 'added',
       collection: collName,
       id: 'aaa',
       fields: { subscription: 111 }
     };
 
-    var subReadyMessage = { msg: 'ready', subs: [subMessage.id] };
+    const subReadyMessage = { msg: 'ready', subs: [subMessage.id] };
 
     stream.receive(subDocMessage);
     stream.receive(subReadyMessage);
     test.equal(coll.findOne('aaa').subscription, 111);
 
-    var subDocChangeMessage = {
+    const subDocChangeMessage = {
       msg: 'changed',
       collection: collName,
       id: 'aaa',
@@ -2452,7 +2452,7 @@ if (Meteor.isClient) {
     // because of the method call.
     test.equal(coll.findOne('aaa').subscription, 112);
 
-    var methodMessage = JSON.parse(stream.sent.shift());
+    let methodMessage = JSON.parse(stream.sent.shift());
     test.equal(methodMessage, {
       msg: 'method',
       method: 'update_value',

@@ -1,14 +1,16 @@
 // connect middleware
-OAuth._requestHandlers['2'] = function (service, query, res) {
+OAuth._requestHandlers['2'] = (service, query, res) => {
+  let credentialSecret;
+
   // check if user authorized access
   if (!query.error) {
     // Prepare the login results before returning.
 
     // Run service-specific handler.
-    var oauthResult = service.handleOauthRequest(query);
-    var credentialSecret = Random.secret();
+    const oauthResult = service.handleOauthRequest(query);
+    credentialSecret = Random.secret();
 
-    var credentialToken = OAuth._credentialTokenFromQuery(query);
+    const credentialToken = OAuth._credentialTokenFromQuery(query);
 
     // Store the login result so it can be retrieved in another
     // browser tab by the result handler

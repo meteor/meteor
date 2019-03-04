@@ -1,16 +1,15 @@
+import { passwordSignupFields } from './accounts_ui.js';
+
 // for convenience
-var loginButtonsSession = Accounts._loginButtonsSession;
+const loginButtonsSession = Accounts._loginButtonsSession;
 
 // shared between dropdown and single mode
 Template.loginButtons.events({
-  'click #login-buttons-logout': function() {
-    Meteor.logout(function () {
-      loginButtonsSession.closeDropdown();
-    });
-  }
+  'click #login-buttons-logout': () =>
+    Meteor.logout(() => loginButtonsSession.closeDropdown()),
 });
 
-Template.registerHelper('loginButtons', function () {
+Template.registerHelper('loginButtons', () => {
   throw new Error("Use {{> loginButtons}} instead of {{loginButtons}}");
 });
 
@@ -18,8 +17,8 @@ Template.registerHelper('loginButtons', function () {
 // helpers
 //
 
-displayName = function () {
-  var user = Meteor.user();
+export const displayName = () => {
+  const user = Meteor.user();
   if (!user)
     return '';
 
@@ -43,11 +42,9 @@ displayName = function () {
 // NOTE: It is very important to have this return password last
 // because of the way we render the different providers in
 // login_buttons_dropdown.html
-getLoginServices = function () {
-  var self = this;
-
+export const getLoginServices = () => {
   // First look for OAuth services.
-  var services = Package['accounts-oauth'] ? Accounts.oauth.serviceNames() : [];
+  const services = Package['accounts-oauth'] ? Accounts.oauth.serviceNames() : [];
 
   // Be equally kind to all login services. This also preserves
   // backwards-compatibility. (But maybe order should be
@@ -58,24 +55,19 @@ getLoginServices = function () {
   if (hasPasswordService())
     services.push('password');
 
-  return _.map(services, function(name) {
-    return {name: name};
-  });
+  return services.map(name => ({ name }));
 };
 
-hasPasswordService = function () {
-  return !!Package['accounts-password'];
-};
+export const hasPasswordService = () => !!Package['accounts-password'];
 
-dropdown = function () {
-  return hasPasswordService() || getLoginServices().length > 1;
-};
+export const dropdown = () => 
+  hasPasswordService() || getLoginServices().length > 1;
 
 // XXX improve these. should this be in accounts-password instead?
 //
 // XXX these will become configurable, and will be validated on
 // the server as well.
-validateUsername = function (username) {
+export const validateUsername = username => {
   if (username.length >= 3) {
     return true;
   } else {
@@ -83,18 +75,20 @@ validateUsername = function (username) {
     return false;
   }
 };
-validateEmail = function (email) {
+
+export const validateEmail = email => {
   if (passwordSignupFields() === "USERNAME_AND_OPTIONAL_EMAIL" && email === '')
     return true;
 
-  if (email.indexOf('@') !== -1) {
+  if (email.includes('@')) {
     return true;
   } else {
     loginButtonsSession.errorMessage("Invalid email");
     return false;
   }
 };
-validatePassword = function (password) {
+
+export const validatePassword = password => {
   if (password.length >= 6) {
     return true;
   } else {
@@ -108,18 +102,16 @@ validatePassword = function (password) {
 //
 
 Template._loginButtonsLoggedOut.helpers({
-  dropdown: dropdown,
+  dropdown,
   services: getLoginServices,
-  singleService: function () {
-    var services = getLoginServices();
+  singleService: () => {
+    const services = getLoginServices();
     if (services.length !== 1)
       throw new Error(
         "Shouldn't be rendering this template with more than one configured service");
     return services[0];
   },
-  configurationLoaded: function () {
-    return Accounts.loginServicesConfigured();
-  }
+  configurationLoaded: () => Accounts.loginServicesConfigured(),
 });
 
 
@@ -129,9 +121,7 @@ Template._loginButtonsLoggedOut.helpers({
 
   // decide whether we should show a dropdown rather than a row of
   // buttons
-Template._loginButtonsLoggedIn.helpers({
-  dropdown: dropdown
-});
+Template._loginButtonsLoggedIn.helpers({ dropdown });
 
 
 
@@ -139,9 +129,7 @@ Template._loginButtonsLoggedIn.helpers({
 // loginButtonsLoggedInSingleLogoutButton template
 //
 
-Template._loginButtonsLoggedInSingleLogoutButton.helpers({
-  displayName: displayName
-});
+Template._loginButtonsLoggedInSingleLogoutButton.helpers({ displayName });
 
 
 
@@ -150,15 +138,11 @@ Template._loginButtonsLoggedInSingleLogoutButton.helpers({
 //
 
 Template._loginButtonsMessages.helpers({
-  errorMessage: function () {
-    return loginButtonsSession.get('errorMessage');
-  }
+  errorMessage: () => loginButtonsSession.get('errorMessage'),
 });
 
 Template._loginButtonsMessages.helpers({
-  infoMessage: function () {
-    return loginButtonsSession.get('infoMessage');
-  }
+  infoMessage: () => loginButtonsSession.get('infoMessage'),
 });
 
 
@@ -166,6 +150,4 @@ Template._loginButtonsMessages.helpers({
 // loginButtonsLoggingInPadding template
 //
 
-Template._loginButtonsLoggingInPadding.helpers({
-  dropdown: dropdown
-});
+Template._loginButtonsLoggingInPadding.helpers({ dropdown });

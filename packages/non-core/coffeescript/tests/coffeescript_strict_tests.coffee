@@ -9,4 +9,4 @@ x in y
 
 Tinytest.add "coffeescript - shared", (test) ->
   test.equal share.coffeeShared, 789
-  test.equal sharedFromJavascript, 135
+  test.equal sharedFromJavaScript, 135

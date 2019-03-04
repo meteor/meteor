@@ -10,7 +10,7 @@ _.each(packageNames, function (name) {
 
   var content = fs.readFileSync(name, {encoding: "utf-8"});
 
-  match = content.match(/\d+\.\d+\.\d+-winr.\d+/);
+  var match = content.match(/\d+\.\d+\.\d+-winr.\d+/);
   if (match) {
     var versionNumber = match[0];
     var s = versionNumber.split(".");

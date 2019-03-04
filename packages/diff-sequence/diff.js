@@ -238,6 +238,24 @@ DiffSequence.diffObjects = function (left, right, callbacks) {
   }
 };
 
+DiffSequence.diffMaps = function (left, right, callbacks) {
+  left.forEach(function (leftValue, key) {
+    if (right.has(key)){
+      callbacks.both && callbacks.both(key, leftValue, right.get(key));
+    } else {
+      callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
+    }
+  });
+
+  if (callbacks.rightOnly) {
+    right.forEach(function (rightValue, key) {
+      if (!left.has(key)){
+        callbacks.rightOnly(key, rightValue);
+      }
+    });
+  }
+};
+
 
 DiffSequence.makeChangedFields = function (newDoc, oldDoc) {
   var fields = {};

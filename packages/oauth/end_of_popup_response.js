@@ -1,4 +1,5 @@
-(function () {
+// NOTE: This file is added to the client as asset and hence ecmascript package has no effect here.
+(function() {
 
   var config = JSON.parse(document.getElementById("config").innerHTML);
 
@@ -31,7 +32,7 @@
 
   if (! config.isCordova) {
     document.getElementById("completedText").style.display = "block";
-    document.getElementById("loginCompleted").onclick = function(){ window.close(); };
+    document.getElementById("loginCompleted").onclick = function() { window.close() };
     window.close();
   }
 })();

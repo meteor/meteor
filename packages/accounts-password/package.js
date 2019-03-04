@@ -8,7 +8,7 @@ Package.describe({
   version: "1.5.1"
 });
 
-Package.onUse(function(api) {
+Package.onUse(api => {
   api.use('npm-bcrypt', 'server');
 
   api.use([
@@ -22,10 +22,9 @@ Package.onUse(function(api) {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
 
-  api.use('email', ['server']);
-  api.use('random', ['server']);
-  api.use('check');
-  api.use('underscore');
+  api.use('email', 'server');
+  api.use('random', 'server');
+  api.use('check', 'server');
   api.use('ecmascript');
 
   api.addFiles('email_templates.js', 'server');
@@ -33,10 +32,9 @@ Package.onUse(function(api) {
   api.addFiles('password_client.js', 'client');
 });
 
-Package.onTest(function(api) {
+Package.onTest(api => {
   api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
-           'accounts-base', 'random', 'email', 'underscore', 'check',
-           'ddp', 'ecmascript']);
+           'accounts-base', 'random', 'email', 'check', 'ddp', 'ecmascript']);
   api.addFiles('password_tests_setup.js', 'server');
   api.addFiles('password_tests.js', ['client', 'server']);
   api.addFiles('email_tests_setup.js', 'server');
