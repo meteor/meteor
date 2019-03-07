@@ -52,9 +52,9 @@ meteor add akryum:vue-component
 
 You will end up with at least 3 files: 
 
-1. `/client/App.vue` (The root component of your app)
-2. `/client/main.js` (Initializing the Vue app in Meteor startup)
-3. `/client/main.html` (containing the body with the #app div)
+1. a `/client/App.vue` The root component of your app
+2. a `/client/main.js` Initializing the Vue app in Meteor startup
+3. a `/client/main.html` containing the body with the #app div
 
 We need a base HTML document that has the `app` id.  If you created a new project from `meteor create .`, put this in your `/client/main.html`.
 
@@ -151,13 +151,13 @@ Let's add a button to update the time in the app.  To flex Meteor's plumbing, we
 
 The first 3 steps are basic Meteor:
 
-1.  In `/imports/collections/Time.js`
+1)  In `/imports/collections/Time.js`
 
 ``` javascript
 Time = new Mongo.Collection("time");
 ```
 
-2.  In `/imports/publications/Time.js`
+2)  In `/imports/publications/Time.js`
 
 ``` javascript
 Meteor.publish('Time', function () {
@@ -165,7 +165,7 @@ Meteor.publish('Time', function () {
 });
 ```
 
-3.  In `/imports/methods/UpdateTime.js`
+3)  In `/imports/methods/UpdateTime.js`
 
 ``` javascript
 Meteor.methods({
@@ -211,7 +211,7 @@ Start your Meteor app, your should see a message pulling data from Mongo.  We ha
 ``` bash
 NO_HMR=1 meteor
 ```
-4. and 5.  Great, let's integrate this with Vue using [Vue Meteor Tracker](https://github.com/meteor-vue/vue-meteor-tracker].
+4) and 5)  Great, let's integrate this with Vue using [Vue Meteor Tracker](https://github.com/meteor-vue/vue-meteor-tracker) and update our `/client/App.vue` file:
 
 ```javascript
 <template>
@@ -300,7 +300,7 @@ You should see:
   - startup times for the server (added to the Time collection on startup)
   - The Meteor settings from your settings file
 
-There may be better or alternative ways to do these things.  Please PR if you have improvements.
+Excellent!  That's a tour of some of Meteor's features, and how to integrate with Vue.  Have a better approach?  Please send a PR.
 
 
 <h2 id="style-guide">Meteor’s and Vue’s Style Guides and Structure</h2>
