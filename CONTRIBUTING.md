@@ -44,6 +44,7 @@ Current Issue Triagers:
 - [@laosb](https://github.com/laosb)
 - [@abernix](https://github.com/abernix)
 - [@lorensr](https://github.com/lorensr)
+- [@klaussner](https://github.com/klaussner)
 
 #### Reviewer
 
@@ -53,6 +54,8 @@ Current Reviewers:
 - [@hwillson](https://github.com/hwillson)
 - [@lorensr](https://github.com/lorensr)
 - [@abernix](https://github.com/abernix)
+- [@klaussner](https://github.com/klaussner)
+- [@zodern](https://github.com/zodern)
 
 #### Core Committer
 
@@ -63,7 +66,7 @@ Project Lead: [@benjamn](https://github.com/benjamn)
 Current Core Committers:
 - [@abernix](https://github.com/abernix)
 - [@glasser](https://github.com/glasser)
-- [@stubailo](https://github.com/stubailo)
+- [@hwillson](https://github.com/hwillson)
 
 #### Documentation Maintainer
 
@@ -84,7 +87,7 @@ Current Community Package Maintainers:
 
 The community manager helps to coordinate resources, documentation, events, and other supportive work needed to ensure the health of the Meteor project.
 
-Current Community Manager:
+Previous Community Manager (this role is currently unfilled):
 - [@theadactyl](https://github.com/theadactyl)
 
 ### Tracking project work
