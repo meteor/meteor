@@ -657,62 +657,29 @@ var launchMongo = function (options) {
         return;
       }
 
-      let wasJustSecondary = false;
+      let writableTimestamp = Date.now();
 
-      // XXX timeout eventually?
+      // Wait until the primary is writable. If it isn't writable after one
+      // minute, throw an error and report the replica set status.
       while (!stopped) {
-        var status = yieldingMethod(
-          db.admin(), 'command', {replSetGetStatus: 1});
+        const { ismaster } = yieldingMethod(db.admin(), "command", {
+          isMaster: 1
+        });
 
-        // See https://docs.mongodb.com/manual/reference/replica-states/
-        // for information on various states
+        if (ismaster) {
+          break;
+        } else if (Date.now() - writableTimestamp > 60000) {
+          const status = yieldingMethod(db.admin(), "command", {
+            replSetGetStatus: 1
+          });
 
-        // Are any of the members starting up or recovering?
-        if (_.any(status.members, function (member) {
-          return member.stateStr === 'STARTUP' ||
-            member.stateStr === 'STARTUP2' ||
-            member.stateStr === 'RECOVERING';
-        })) {
-          utils.sleepMs(20);
-          continue;
+          throw new Error(
+            "Primary not writable after one minute. Last replica set status: " +
+             JSON.stringify(status)
+          );
         }
 
-        const firstMemberState = status.members[0].stateStr;
-
-        // Is the intended primary currently a secondary? (It passes through
-        // that phase briefly.)
-        if (firstMemberState === 'SECONDARY') {
-          utils.sleepMs(20);
-          wasJustSecondary = true;
-          continue;
-        }
-
-        // Mongo 3.2 introduced a new heartbeatIntervalMillis property
-        // on replica sets, used during "primary" negotiation.
-        //
-        // If the first member was _just_ promoted, we'll wait until
-        // the heartbeat interval has elapsed before proceeding since
-        // the decision is not official until the heartbeat has elapsed.
-        if (firstMemberState === 'PRIMARY' && wasJustSecondary) {
-          wasJustSecondary = false;
-          utils.sleepMs(status.heartbeatIntervalMillis);
-          continue;
-        }
-
-        // Anything else for the intended primary is probably an error.
-        if (firstMemberState !== 'PRIMARY') {
-          throw Error("Unexpected Mongo status: " + JSON.stringify(status));
-        }
-
-        // Anything but secondary for the other members is probably an error.
-        for (var i = 1; i < status.members.length; ++i) {
-          if (status.members[i].stateStr !== 'SECONDARY') {
-            throw Error("Unexpected Mongo secondary status: " +
-                        JSON.stringify(status));
-          }
-        }
-
-        break;
+        utils.sleepMs(50);
       }
 
       client.close(true /* means "the app is closing the connection" */);
