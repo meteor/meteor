@@ -26,11 +26,6 @@ const DYNAMIC_PRELINKED_OUTPUT_CACHE = new LRU({
   max: Math.pow(2, 11)
 });
 
-// Caches main bundle for client architectures that have dynamic imports
-const PRELINKED_MAIN_CACHE = new LRU({
-  max: Math.pow(2, 3)
-});
-
 var packageDot = function (name) {
   if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name)) {
     return "Package." + name;
@@ -214,54 +209,6 @@ _.extend(Module.prototype, {
       });
     }
 
-    // Caching is only useful when there are dynamic files.
-    const canCache = self.useGlobalNamespace && results.find(result => result.dynamic);
-    const key = `${self.bundleArch}-${self.name}`;
-    let inputHash;
-
-    // When only dynamic files changed, reuse the main result from
-    // the last time it was generated
-    if (canCache) {
-      const files = [];
-
-      self.files.forEach(file => {
-        if (file.bare || !file.isDynamic()) {
-          files.push({
-            hash: file._inputHash,
-            meteorInstallOptions: file.meteorInstallOptions,
-            sourceMap: !!file.sourceMap,
-            mainModule: file.imported,
-            alias: file.alias,
-            lazy: file.lazy,
-            bare: file.bare
-          });
-        }
-      });
-
-      inputHash = watch.sha1(JSON.stringify({
-        useGlobalNamespace: this.useGlobalNamespace,
-        combinedServePath: this.combinedServePath,
-        name: self.name,
-        files
-      }));
-
-      // By using a more general key only the latest result is stored
-      // The inputHash is used to know when the cache is stale
-      if (PRELINKED_MAIN_CACHE.has(key)) {
-        let {
-          inputHash: cachedInputHash,
-          result: cachedResult
-        } = PRELINKED_MAIN_CACHE.get(key);
-
-        if (cachedInputHash === inputHash) {
-          result.source = cachedResult.source;
-          result.sourceMap = cachedResult.sourceMap;
-
-          return results;
-        }
-      }
-    }
-
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
     Profile.time(
@@ -284,13 +231,6 @@ _.extend(Module.prototype, {
         }
       }
     );
-
-    if (canCache) {
-      PRELINKED_MAIN_CACHE.set(key, {
-        inputHash,
-        result
-      });
-    }
 
     return results;
   }),
