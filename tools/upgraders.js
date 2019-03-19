@@ -277,7 +277,7 @@ be removed if there is no need for the Blaze configuration interface.`,
 
       // If `<service>`, it changes to `<service>-oauth`
       if (packagesFile.getConstraint(service)) {
-        packagesFile.removePackages([service])
+        packagesFile.removePackages([service]);
         packagesFile.addPackages([`${service}-oauth`]);
       }
     });
