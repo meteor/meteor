@@ -27,9 +27,9 @@ N/A
   fixed. [Issue #10216](https://github.com/meteor/meteor/issues/10216)
 
 * The `npm` tool has been upgraded to version
-  [6.8.0](https://github.com/npm/cli/releases/tag/v6.8.0), and our
-  [fork](https://github.com/meteor/pacote/tree/v9.4.1-meteor) of its
-  `pacote` dependency has been updated to version 9.4.1.
+  [6.9.0](https://github.com/npm/cli/releases/tag/v6.9.0), and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.0-meteor) of its
+  `pacote` dependency has been updated to version 9.5.0.
 
 * Mongo has been upgraded to version 4.0.6 for 64-bit systems (was 4.0.2),
   and 3.2.22 for 32-bit systems (was 3.2.19). The `mongodb` npm package
