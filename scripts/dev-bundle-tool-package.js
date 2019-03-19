@@ -52,7 +52,7 @@ var packageJson = {
     split2: "2.2.0",
     multipipe: "2.0.1",
     pathwatcher: "8.0.2",
-    optimism: "0.6.8",
+    optimism: "0.8.3",
     'lru-cache': '4.1.3'
   }
 };
