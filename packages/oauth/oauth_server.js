@@ -158,7 +158,31 @@ const middleware = (req, res, next) => {
     const handler = OAuth._requestHandlers[service.version];
     if (!handler)
       throw new Error(`Unexpected OAuth version ${service.version}`);
-    handler(service, req.query, res);
+      if (req.method === "POST") {
+        let getBodyPromise = new Promise((resolve, reject) => {
+          let body = [];
+          req
+            .on("data", chunk => {
+              body.push(chunk);
+            })
+            .on("end", () => {
+              body = Buffer.concat(body).toString();
+              resolve(body);
+            })
+            .on("error", e => reject(e.message));
+        });
+  
+        getBodyPromise.then(body => {
+          let params = body.split("&").reduce((arr, kv) => {
+            let kvPair = kv.split("=");
+            arr[kvPair[0]] = decodeURIComponent(kvPair[1]);
+            return arr;
+          }, {});
+          handler(service, params, res);
+        });
+      } else {
+        handler(service, req.query, res);
+      }
   } catch (err) {
     // if we got thrown an error, save it off, it will get passed to
     // the appropriate login call (if any) and reported there.
