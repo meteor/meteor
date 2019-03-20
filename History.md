@@ -81,6 +81,12 @@ N/A
   deployment tools. If you are not using Git, neither property will be
   defined. [PR #10442](https://github.com/meteor/meteor/pull/10442)
 
+* The Meteor Tool now uses a more reliable method (the MongoDB
+  [`isMaster` command](https://docs.mongodb.com/manual/reference/command/isMaster/))
+  to detect when the local development database has started and is ready to
+  accept read and write operations.
+  [PR #10500](https://github.com/meteor/meteor/pull/10500)
+
 ## v1.8.0.2, 2019-01-07
 
 ### Breaking changes
