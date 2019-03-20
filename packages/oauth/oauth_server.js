@@ -172,14 +172,18 @@ const middleware = (req, res, next) => {
             .on("error", e => reject(e.message));
         });
   
-        getBodyPromise.then(body => {
-          let params = body.split("&").reduce((arr, kv) => {
-            let kvPair = kv.split("=");
-            arr[kvPair[0]] = decodeURIComponent(kvPair[1]);
-            return arr;
-          }, {});
-          handler(service, params, res);
-        });
+        getBodyPromise
+          .then(body => {
+            let params = body.split("&").reduce((arr, kv) => {
+              let kvPair = kv.split("=");
+              arr[kvPair[0]] = decodeURIComponent(kvPair[1]);
+              return arr;
+            }, {});
+            handler(service, params, res);
+          })
+          .catch(err => {
+            Log.warn(`Unable to parse message body: ${err}`);
+          });
       } else {
         handler(service, req.query, res);
       }
