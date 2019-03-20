@@ -21,7 +21,7 @@ const testPendingCredential = function (test) {
     });
 
     // simulate logging in using foobook
-    const req = {method: "POST",
+    const req = {method: "GET",
                url: `/_oauth/${serviceName}`,
                query: {
                  state: OAuth._generateState('popup', credentialToken),

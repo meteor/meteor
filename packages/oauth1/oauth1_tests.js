@@ -43,7 +43,7 @@ const testPendingCredential = test => {
     Oauth._storeRequestToken(credentialToken, twitterfooAccessToken);
 
     const req = {
-      method: "POST",
+      method: "GET",
       url: `/_oauth/${serviceName}`,
       query: {
         state: OAuth._generateState('popup', credentialToken),
