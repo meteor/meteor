@@ -28,6 +28,7 @@ Package.onUse(function(api) {
     'es5-shim',
 
     // Push code changes to the client and automatically reload the page
-    'hot-code-push'
+    'hot-code-push',
+    'build-events'
   ]);
 });

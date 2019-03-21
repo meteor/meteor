@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var runLog = require('./run-log.js');
+var buildErrorPage = require('./error-page/build-error-page.js');
 
 // options: listenPort, proxyToPort, proxyToHost, onFailure
 var Proxy = function (options) {
@@ -15,6 +16,7 @@ var Proxy = function (options) {
   self.mode = "hold";
   self.httpQueue = []; // keys: req, res
   self.websocketQueue = []; // keys: req, socket, head
+  self.sseResponses = [];
 
   self.proxy = null;
   self.server = null;
@@ -188,11 +190,32 @@ _.extend(Proxy.prototype, {
         break;
       }
 
-      var c = self.httpQueue.shift();
-      if (self.mode === "errorpage") {
-        showErrorPage(c.res);
+      const { res, req } = self.httpQueue.shift();
+
+      if (req.url === "/__meteor__/build-events") {
+        res.writeHead(200, {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache"
+        });
+
+        self.sseResponses.push(res);
+
+        // Send a heartbeat every ten seconds to keep the connection alive.
+        const interval = setInterval(() => res.write(":\n\n"), 10000);
+
+        res.on("close", () => {
+          const index = self.sseResponses.indexOf(res);
+          clearInterval(interval);
+
+          if (index > -1) {
+            self.sseResponses.splice(index, 1);
+          }
+        });
+      } else if (self.mode === "errorpage") {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(buildErrorPage(runLog.getLog()));
       } else {
-        attempt(c.res, () => self.proxy.web(c.req, c.res, {
+        attempt(res, () => self.proxy.web(req, res, {
           target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
         }));
       }
@@ -219,64 +242,22 @@ _.extend(Proxy.prototype, {
   // The initial mode is "hold".
   setMode: function (mode) {
     var self = this;
+
+    function notify(event) {
+      self.sseResponses.forEach((res) => {
+        res.write(`data: ${event}\n\n`);
+      });
+    }
+
+    if (mode === "errorpage") {
+      notify("error");
+    } else if (mode === "proxy") {
+      notify("success");
+    }
+
     self.mode = mode;
     self._tryHandleConnections();
   }
 });
-
-function showErrorPage(res) {
-  // XXX serve an app that shows the logs nicely and that also
-  // knows how to reload when the server comes back up
-  res.writeHead(200, {'Content-Type': 'text/html'});
-  res.write(`
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>App crashing</title>
-    <style type='text/css'>
-      body { margin: 0; }
-      h3 {
-        margin: 0;
-        font-family: sans-serif;
-        padding: 20px 10px 10px 10px;
-        background: #eee;
-      }
-      pre { margin: 20px; }
-    </style>
-  </head>
-
-  <body>
-    <h3>Your app is crashing. Here's the latest log:</h3>
-
-    <pre>`);
-
-      _.each(runLog.getLog(), function (item) {
-        res.write(escapeEntities(item.message) + "\n");
-      });
-
-      res.write(`</pre>
-  </body>
-</html>`)
-
-  res.end();
-}
-
-// Copied from packages/blaze/preamble.js
-function escapeEntities(str) {
-  const escapeMap = {
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#x27;",
-    "`": "&#x60;", /* IE allows backtick-delimited attributes?? */
-    "&": "&amp;"
-  };
-
-  const escapeChar = function(c) {
-    return escapeMap[c];
-  };
-
-  return str.replace(/[&<>"'`]/g, escapeChar);
-}
 
 exports.Proxy = Proxy;

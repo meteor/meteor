@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>Application crashing</title>
+
+    <style>
+      body {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: sans-serif;
+        font-size: 1.3em;
+        padding: 20px;
+        background: #eee;
+      }
+
+      pre {
+        flex: 1;
+        overflow: auto;
+        margin: 0;
+        padding: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Your application is crashing.</h1>
+    <pre>{{log}}</pre>
+    <script>{{script}}</script>
+  </body>
+</html>
