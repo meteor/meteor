@@ -36,7 +36,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
 
   private var status: Status = .suspended
 
-  private var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
+  private var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskIdentifier.invalid
 
   init(configuration: WebAppConfiguration, assetBundle: AssetBundle, baseURL: URL, missingAssets: Set<Asset>) {
     self.configuration = configuration
@@ -78,7 +78,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
     networkReachabilityManager.delegateQueue = queue
     networkReachabilityManager.startMonitoring()
 
-    NotificationCenter.default.addObserver(self, selector: #selector(AssetBundleDownloader.applicationWillEnterForeground), name: NSNotification.Name.UIApplicationWillEnterForeground, object: nil)
+    NotificationCenter.default.addObserver(self, selector: #selector(AssetBundleDownloader.applicationWillEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
   }
 
   deinit {
@@ -87,7 +87,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
 
   func resume() {
     queue.async {
-      if self.backgroundTask == UIBackgroundTaskInvalid {
+      if self.backgroundTask == UIBackgroundTaskIdentifier.invalid {
         NSLog("Start downloading assets from bundle with version: \(self.assetBundle.version)")
 
         CDVTimer.start("assetBundleDownload")
@@ -170,8 +170,8 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
 
   private func endBackgroundTask() {
     let application = UIApplication.shared
-    application.endBackgroundTask(self.backgroundTask)
-    self.backgroundTask = UIBackgroundTaskInvalid;
+    application.endBackgroundTask(convertToUIBackgroundTaskIdentifier(self.backgroundTask.rawValue))
+    self.backgroundTask = UIBackgroundTaskIdentifier.invalid;
 
     CDVTimer.stop("assetBundleDownload")
   }
@@ -208,7 +208,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
 
   // MARK: Application State Notifications
 
-  func applicationWillEnterForeground() {
+  @objc func applicationWillEnterForeground() {
     if status == .suspended {
       resume()
     }
@@ -362,4 +362,9 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
       throw WebAppError.unsuitableAssetBundle(reason: "appId in downloaded asset bundle does not match current appId. Make sure the server at \(rootURL) is serving the right app.", underlyingError: nil)
     }
   }
+}
+
+// Helper function inserted by Swift 4.2 migrator.
+fileprivate func convertToUIBackgroundTaskIdentifier(_ input: Int) -> UIBackgroundTaskIdentifier {
+	return UIBackgroundTaskIdentifier(rawValue: input)
 }

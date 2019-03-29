@@ -117,7 +117,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
     NotificationCenter.default.addObserver(self, selector: #selector(WebAppLocalServer.pageDidLoad), name: NSNotification.Name.CDVPageDidLoad, object: webView)
 
-    NotificationCenter.default.addObserver(self, selector: #selector(WebAppLocalServer.applicationDidEnterBackground), name: NSNotification.Name.UIApplicationDidEnterBackground, object: nil)
+    NotificationCenter.default.addObserver(self, selector: #selector(WebAppLocalServer.applicationDidEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
   }
 
   func initializeAssetBundles() {
@@ -204,10 +204,10 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       startStartupTimer();
     }
   }
-    
+
   func startStartupTimer() {
     // Don't start the startup timer if the app started up in the background
-    if UIApplication.shared.applicationState == UIApplicationState.active {
+    if UIApplication.shared.applicationState == UIApplication.State.active {
       NSLog("App startup timer started")
       startupTimer?.start(withTimeInterval: startupTimeoutInterval)
     }
@@ -215,10 +215,10 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
   // MARK: - Notifications
 
-  func pageDidLoad() {
+  @objc func pageDidLoad() {
   }
 
-  func applicationDidEnterBackground() {
+  @objc func applicationDidEnterBackground() {
     // Stop startup timer when going into the background, to avoid
     // blacklisting a version just because the web view has been suspended
     startupTimer?.stop()
