@@ -1,9 +1,12 @@
 ## v.NEXT
 
-## v1.8.1, TBD
+## v1.8.1, 2019-04-03
 
 ### Breaking changes
-N/A
+
+* Although we are not aware of any specific backwards incompatibilities,
+  the major upgrade of `cordova-android` from 6.4.0 to 7.1.4 likely
+  deserves extra attention, if you use Cordova to build Android apps.
 
 ### Migration Steps
 N/A
@@ -59,6 +62,13 @@ N/A
 * The `cordova-android` and `cordova-ios` npm dependencies have been
   updated to 7.1.4 (from 6.4.0) and 4.5.5 (from 4.5.4), respectively.
 
+* Build performance has improved (especially on Windows) thanks to
+  additional caching implemented by [@zodern](https://github.com/zodern)
+  in PRs [#10399](https://github.com/meteor/meteor/pull/10399),
+  [#10452](https://github.com/meteor/meteor/pull/10452),
+  [#10453](https://github.com/meteor/meteor/pull/10453), and
+  [#10454](https://github.com/meteor/meteor/pull/10454).
+
 * The `meteor mongo` command no longer uses the `--quiet` option, so the
   normal startup text will be displayed, albeit without the banner about
   Mongo's free monitoring service. See this
@@ -86,6 +96,12 @@ N/A
   to detect when the local development database has started and is ready to
   accept read and write operations.
   [PR #10500](https://github.com/meteor/meteor/pull/10500)
+
+* Setting the `x-no-compression` request header will prevent the `webapp`
+  package from compressing responses with `gzip`, which may be useful if
+  your Meteor app is behind a proxy that compresses resources with another
+  compression algorithm, such as [brotli](https://github.com/google/brotli).
+  [PR #10378](https://github.com/meteor/meteor/pull/10378)
 
 ## v1.8.0.2, 2019-01-07
 
