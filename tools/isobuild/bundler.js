@@ -176,6 +176,9 @@ import { PackageRegistry } from "../../packages/meteor/define-package.js";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
+const MINIFY_PLAIN_FUNCTION = Buffer.from('function(', 'utf8');
+const MINIFY_RENAMED_FUNCTION = Buffer.from('function __minifyJs(', 'utf8');
+
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
     /~$/, /^\.#/,
@@ -546,6 +549,9 @@ class File {
     // disk).
     this.sourcePath = options.sourcePath;
 
+    // Allows not calculating sri when it isn't needed
+    this._skipSri = options.skipSri
+
     // info is just for help with debugging the tool; it isn't written to disk or
     // anything.
     this.info = options.info || '?';
@@ -619,7 +625,9 @@ class File {
         hashes.push(this._inputHash);
       }
 
-      hashes.push(this.sri());
+      if (!this._skipSri) {
+        hashes.push(this.sri());
+      }
 
       this._hash = watch.sha1(...hashes);
     }
@@ -628,7 +636,7 @@ class File {
   }
 
   sri() {
-    if (! this._sri) {
+    if (! this._sri && !this._skipSri) {
       this._sri = watch.sha512(this.contents());
     }
 
@@ -1160,6 +1168,7 @@ class Target {
           data: resource.data,
           cacheable: false,
           hash: resource.hash,
+          skipSri: !!resource.hash
         };
 
         const file = new File(fileOptions);
@@ -1326,13 +1335,10 @@ class Target {
         // expression, which some minifiers (e.g. UglifyJS) either fail to
         // parse or mistakenly eliminate as dead code. To avoid these
         // problems, we temporarily name the function __minifyJs.
-        file._contents = Buffer.from(
-          file.contents()
-            .toString("utf8")
-            .replace(/^\s*function\s*\(/,
-                     "function __minifyJs("),
-          "utf8"
-        );
+        file._contents = Buffer.concat([
+          MINIFY_RENAMED_FUNCTION,
+          file.contents().slice(MINIFY_PLAIN_FUNCTION.length)
+        ]);
 
         dynamicFiles.push(jsf);
 
@@ -1364,15 +1370,24 @@ class Target {
     function handle(source, dynamic) {
       source._minifiedFiles.forEach(file => {
         // Remove the function name __minifyJs that was added above.
-        file.data = file.data
-          .toString("utf8")
-          .replace(/^\s*function\s+__minifyJs\s*\(/,
-                   "function(");
+        if (typeof file.data === 'string') {
+          file.data = Buffer.from(
+            file.data
+              .replace(/^\s*function\s+__minifyJs\s*\(/,
+                       "function("),
+            "utf8"
+          );
+        } else if (dynamic) {
+          file.data = Buffer.concat([
+            MINIFY_PLAIN_FUNCTION,
+            file.data.slice(MINIFY_RENAMED_FUNCTION.length)
+          ]);
+        }
 
         const newFile = new File({
           info: 'minified js',
           arch,
-          data: Buffer.from(file.data, 'utf8'),
+          data: file.data,
           hash: inputHashesByJsFile.get(source),
         });
 
@@ -2420,7 +2435,9 @@ class JsImage {
     _.each(nodeModulesDirectories, function (nmd) {
       assert.strictEqual(typeof nmd.preferredBundlePath, "string");
 
-      if (! nmd.isPortable()) {
+      // Skip calculating isPortable in 'meteor run' since the
+      // modules are never rebuilt
+      if (includeNodeModules !== 'symlink' && !nmd.isPortable()) {
         const parentDir = files.pathDirname(nmd.preferredBundlePath);
         rebuildDirs[parentDir] = parentDir;
       }
@@ -2742,6 +2759,10 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   let data = file.contents();
   const hash = file.hash();
 
+  if (builder.usePreviousWrite(file.targetPath, hash)) {
+    return;
+  }
+
   if (options && options.sourceMapUrl) {
     data = addSourceMappingURL(data, options.sourceMapUrl);
   } else {
@@ -2823,9 +2844,12 @@ var writeTargetToPath = Profile(
       // .meteor/local/build/programs/web.browser.legacy, because they
       // tend to be written atomically, and it's important on Windows to
       // avoid overwriting files that might be open currently in the build
-      // or server process. If in-place builds were safer on Windows, they
+      // or server process.
+      // Server builds do use an in-place build since the server is always stopped 
+      // during the build.
+      // If client in-place builds were safer on Windows, they
       // would be much quicker than from-scratch rebuilds.
-      forceInPlaceBuild: false,
+      forceInPlaceBuild: name === 'server',
     });
 
     var targetBuild = target.write(builder, {
@@ -2876,7 +2900,8 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     releaseName,
     previousBuilders = Object.create(null),
     buildMode,
-    minifyMode
+    minifyMode,
+    sourceRoot,
   }) {
 
   const builders = {};
@@ -2893,6 +2918,12 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
   });
 
   try {
+    Object.keys(targets).forEach(key => {
+      // Both makeClientTarget and makeServerTarget get their sourceRoot
+      // from packageSource.sourceRoot, so this should always be true:
+      assert.strictEqual(targets[key].sourceRoot, sourceRoot);
+    });
+
     var json = {
       format: "site-archive-pre1",
       builtBy,
@@ -2900,6 +2931,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       meteorRelease: releaseName,
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
+      gitCommitHash: files.findGitCommitHash(sourceRoot),
     };
 
     // Tell the deploy server what version of the dependency kit we're using, so
@@ -3309,6 +3341,7 @@ function bundle({
         starResult = writeSiteArchive(targets, outputPath, {
           buildMode: buildOptions.buildMode,
           previousBuilders,
+          sourceRoot: packageSource.sourceRoot,
           ...writeOptions,
         });
         serverWatchSet.merge(starResult.serverWatchSet);

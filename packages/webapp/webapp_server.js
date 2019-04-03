@@ -14,10 +14,7 @@ import query from "qs-middleware";
 import parseRequest from "parseurl";
 import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
-import {
-  isModern,
-  calculateHashOfMinimumVersions,
-} from "meteor/modern-browsers";
+import { isModern } from "meteor/modern-browsers";
 import send from "send";
 import {
   removeExistingSocketFile,
@@ -62,6 +59,16 @@ var sha1 = function (contents) {
   var hash = createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
+};
+
+ function shouldCompress(req, res) {
+  if (req.headers['x-no-compression']) {
+    // don't compress responses with this request header
+    return false;
+  }
+
+  // fallback to standard filter function
+  return compress.filter(req, res);
 };
 
 // #BrowserIdentification
@@ -356,8 +363,6 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
 // - content: the stringified content that should be served at this path
 // - absolutePath: the absolute path on disk to the file
 
-var staticFilesByArch;
-
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
 WebAppInternals.staticFilesMiddleware = async function (
@@ -408,7 +413,7 @@ WebAppInternals.staticFilesMiddleware = async function (
     return;
   }
 
-  const info = getStaticFileInfo(pathname, path, arch);
+  const info = getStaticFileInfo(staticFilesByArch, pathname, path, arch);
   if (! info) {
     next();
     return;
@@ -478,7 +483,7 @@ WebAppInternals.staticFilesMiddleware = async function (
   }
 };
 
-function getStaticFileInfo(originalPath, path, arch) {
+function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
   if (! hasOwn.call(WebApp.clientPrograms, arch)) {
     return null;
   }
@@ -587,14 +592,16 @@ function runWebAppServer() {
 
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
-      staticFilesByArch = Object.create(null);
+      const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
       const clientArchs = configJson.clientArchs ||
         Object.keys(configJson.clientPaths);
 
       try {
-        clientArchs.forEach(generateClientProgram);
+        clientArchs.forEach(arch => {
+          generateClientProgram(arch, staticFilesByArch);
+        });
         WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error("Error reloading the client program: " + e.stack);
@@ -628,7 +635,10 @@ function runWebAppServer() {
     syncQueue.runTask(() => generateClientProgram(arch));
   };
 
-  function generateClientProgram(arch) {
+  function generateClientProgram(
+    arch,
+    staticFilesByArch = WebAppInternals.staticFilesByArch,
+  ) {
     const clientDir = pathJoin(
       pathDirname(__meteor_bootstrap__.serverDir),
       arch,
@@ -683,11 +693,6 @@ function runWebAppServer() {
     const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
     const configOverrides = {
       PUBLIC_SETTINGS,
-      // Since the minimum modern versions defined in the modern-versions
-      // package affect which bundle a given client receives, any changes
-      // in those versions should trigger a corresponding change in the
-      // versions calculated below.
-      minimumModernVersionsHash: calculateHashOfMinimumVersions(),
     };
 
     const oldProgram = WebApp.clientPrograms[arch];
@@ -697,6 +702,10 @@ function runWebAppServer() {
       // Use arrow functions so that these versions can be lazily
       // calculated later, and so that they will not be included in the
       // staticFiles[manifestUrl].content string below.
+      //
+      // Note: these version calculations must be kept in agreement with
+      // CordovaBuilder#appendVersion in tools/cordova/builder.js, or hot
+      // code push will reload Cordova apps unnecessarily.
       version: () => WebAppHashing.calculateClientHash(
         manifest, null, configOverrides),
       versionRefreshable: () => WebAppHashing.calculateClientHash(
@@ -819,7 +828,7 @@ function runWebAppServer() {
   app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
-  app.use(compress());
+  app.use(compress({filter: shouldCompress}));
 
   // parse cookies into an object
   app.use(cookieParser());
@@ -887,7 +896,10 @@ function runWebAppServer() {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    WebAppInternals.staticFilesMiddleware(staticFilesByArch, req, res, next);
+    WebAppInternals.staticFilesMiddleware(
+      WebAppInternals.staticFilesByArch,
+      req, res, next
+    );
   });
 
   // Core Meteor packages like dynamic-import can add handlers before

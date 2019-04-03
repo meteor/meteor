@@ -451,6 +451,10 @@ export class CordovaBuilder {
   }
 
   appendVersion(program, publicSettings) {
+    // Note: these version calculations must be kept in agreement with
+    // generateClientProgram in packages/webapp/webapp_server.js, or hot
+    // code push will reload the app unnecessarily.
+
     let configDummy = {};
     configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
@@ -480,6 +484,7 @@ export class CordovaBuilder {
 
     const runtimeConfig = {
       meteorRelease: meteorRelease,
+      gitCommitHash: files.findGitCommitHash(applicationPath),
       ROOT_URL: mobileServerUrl,
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: '',

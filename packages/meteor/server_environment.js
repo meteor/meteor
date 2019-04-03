@@ -3,8 +3,11 @@ meteorEnv = {
   TEST_METADATA: process.env.TEST_METADATA || "{}"
 };
 
-if (typeof __meteor_runtime_config__ === "object") {
-  __meteor_runtime_config__.meteorEnv = meteorEnv;
+const config = typeof __meteor_runtime_config__ === "object" &&
+  __meteor_runtime_config__;
+
+if (config) {
+  config.meteorEnv = meteorEnv;
 }
 
 Meteor = {
@@ -39,6 +42,10 @@ if (! Meteor.settings.public) {
 // server, it also mutates
 // `__meteor_runtime_config__.PUBLIC_SETTINGS`, and the modified
 // settings will be sent to the client.
-if (typeof __meteor_runtime_config__ === "object") {
-  __meteor_runtime_config__.PUBLIC_SETTINGS = Meteor.settings.public;
+if (config) {
+  config.PUBLIC_SETTINGS = Meteor.settings.public;
+}
+
+if (config && config.gitCommitHash) {
+  Meteor.gitCommitHash = config.gitCommitHash;
 }

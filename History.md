@@ -1,12 +1,79 @@
 ## v.NEXT
 
-### Breaking changes
-N/A
+## v1.8.1, 2019-04-03
 
-### Migration steps
+### Breaking changes
+
+* Although we are not aware of any specific backwards incompatibilities,
+  the major upgrade of `cordova-android` from 6.4.0 to 7.1.4 likely
+  deserves extra attention, if you use Cordova to build Android apps.
+
+### Migration Steps
 N/A
 
 ### Changes
+
+* Node has been updated from version 8.11.4 to version
+  [8.15.1](https://nodejs.org/en/blog/release/v8.15.1/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/february-2019-security-releases/),
+  which includes the changes from four other minor releases:
+  * [8.15.0](https://nodejs.org/en/blog/release/v8.15.0/)
+  * [8.14.0](https://nodejs.org/en/blog/release/v8.14.0/), an important
+    [security release](https://nodejs.org/en/blog/vulnerability/november-2018-security-releases/)
+  * [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/)
+  * [8.13.0](https://nodejs.org/en/blog/release/v8.13.0/)
+
+  > Note: While Node 8.12.0 included changes that may improve the
+  performance of Meteor apps, there have been reports of CPU usage spikes
+  in production due to excessive garbage collection, so this version of
+  Meteor should be considered experimental until those problems have been
+  fixed. [Issue #10216](https://github.com/meteor/meteor/issues/10216)
+
+* The `npm` tool has been upgraded to version
+  [6.9.0](https://github.com/npm/cli/releases/tag/v6.9.0), and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.0-meteor) of its
+  `pacote` dependency has been updated to version 9.5.0.
+
+* Mongo has been upgraded to version 4.0.6 for 64-bit systems (was 4.0.2),
+  and 3.2.22 for 32-bit systems (was 3.2.19). The `mongodb` npm package
+  used by `npm-mongo` has been updated to version 3.1.13 (was 3.1.6).
+
+* The `fibers` npm package has been updated to version 3.1.1, a major
+  update from version 2.0.0. Building this version of `fibers` requires a
+  C++11 compiler, unlike previous versions. If you deploy your Meteor app
+  manually (without using Galaxy), you may need to update the version of
+  `g++` used when running `npm install` in the `bundle/programs/server`
+  directory.
+
+* The `meteor-babel` npm package has been updated to version 7.3.4.
+
+* Cordova Hot Code Push mechanism is now switching versions explicitly with
+  call to `WebAppLocalServer.switchToPendingVersion` instead of trying to 
+  switch every time a browser reload is detected. If you use any third 
+  party package or have your own HCP routines implemented be sure to call
+  it before forcing a browser reload. If you use the automatic reload from
+  the `Reload` meteor package you do not need to do anything.
+  [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62) 
+
+* Multiple Cordova-related bugs have been fixed, including Xcode 10 build
+  incompatibilities and hot code push errors due to duplicated
+  images/assets. [PR #10339](https://github.com/meteor/meteor/pull/10339)
+
+* The `cordova-android` and `cordova-ios` npm dependencies have been
+  updated to 7.1.4 (from 6.4.0) and 4.5.5 (from 4.5.4), respectively.
+
+* Build performance has improved (especially on Windows) thanks to
+  additional caching implemented by [@zodern](https://github.com/zodern)
+  in PRs [#10399](https://github.com/meteor/meteor/pull/10399),
+  [#10452](https://github.com/meteor/meteor/pull/10452),
+  [#10453](https://github.com/meteor/meteor/pull/10453), and
+  [#10454](https://github.com/meteor/meteor/pull/10454).
+
+* The `meteor mongo` command no longer uses the `--quiet` option, so the
+  normal startup text will be displayed, albeit without the banner about
+  Mongo's free monitoring service. See this
+  [MongoDB Jira issue](https://jira.mongodb.org/browse/SERVER-38862)
+  for more details.
 
 * In Meteor packages, `client/` and `server/` directories no longer have
   any special meaning. In application code, `client/` directories are
@@ -15,6 +82,26 @@ N/A
   applied to packages as well, but has now been removed.
   [Issue #10393](https://github.com/meteor/meteor/issues/10393)
   [PR #10414](https://github.com/meteor/meteor/pull/10414)
+
+* If your application is using Git for version control, the current Git
+  commit hash will now be exposed via the `Meteor.gitCommitHash` property
+  while the app is running (in both server and client code), and also via
+  the `"gitCommitHash"` property in the `star.json` file located in the
+  root directory of builds produced by `meteor build`, for consumption by
+  deployment tools. If you are not using Git, neither property will be
+  defined. [PR #10442](https://github.com/meteor/meteor/pull/10442)
+
+* The Meteor Tool now uses a more reliable method (the MongoDB
+  [`isMaster` command](https://docs.mongodb.com/manual/reference/command/isMaster/))
+  to detect when the local development database has started and is ready to
+  accept read and write operations.
+  [PR #10500](https://github.com/meteor/meteor/pull/10500)
+
+* Setting the `x-no-compression` request header will prevent the `webapp`
+  package from compressing responses with `gzip`, which may be useful if
+  your Meteor app is behind a proxy that compresses resources with another
+  compression algorithm, such as [brotli](https://github.com/google/brotli).
+  [PR #10378](https://github.com/meteor/meteor/pull/10378)
 
 ## v1.8.0.2, 2019-01-07
 
