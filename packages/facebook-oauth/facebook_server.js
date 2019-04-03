@@ -5,8 +5,7 @@ Facebook.handleAuthFromAccessToken = (accessToken, expiresAt) => {
   // include basic fields from facebook
   // https://developers.facebook.com/docs/facebook-login/permissions/
   const whitelisted = ['id', 'email', 'name', 'first_name', 'last_name',
-    'middle_name', 'name_format', 'picture', 'short_name', 'age_range',
-    'birthday', 'friends', 'gender', 'hometown', 'link', 'location', 'locale'];
+    'middle_name', 'name_format', 'picture', 'short_name'];
 
   const identity = getIdentity(accessToken, whitelisted);
 

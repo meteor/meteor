@@ -1,0 +1,20 @@
+{
+  "name": "git-commit-hash",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "test": "TEST_BROWSER_DRIVER=puppeteer meteor test --once --full-app --driver-package meteortesting:mocha"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.1.5",
+    "meteor-node-stubs": "^0.4.1",
+    "puppeteer": "^1.6.2"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "testModule": "tests/main.js"
+  }
+}

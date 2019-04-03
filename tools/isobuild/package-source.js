@@ -1113,11 +1113,12 @@ _.extend(PackageSource.prototype, {
 
     const anyLevelExcludes = [];
 
-    if (testModule) {
+    if (testModule || !isApp) {
       // If we have a meteor.testModule from package.json, then we don't
       // need to exclude tests/ directories or *.tests.js files from the
       // search, because we trust meteor.testModule to identify a single
-      // test entry point.
+      // test entry point. Likewise, in packages (!isApp), test files are
+      // added explicitly, and thus do not need to be excluded here.
     } else {
       anyLevelExcludes.push(/^tests\/$/);
 
@@ -1157,10 +1158,18 @@ _.extend(PackageSource.prototype, {
       }
     }
 
+    if (isApp) {
+      // In the app, server/ directories are ignored by client builds, and
+      // client/ directories are ignored by server builds. In packages,
+      // these directories should not matter (#10393).
+      anyLevelExcludes.push(
+        archinfo.matches(arch, "os")
+          ? /^client\/$/
+          : /^server\/$/
+      );
+    }
+
     anyLevelExcludes.push(
-      archinfo.matches(arch, "os")
-        ? /^client\/$/
-        : /^server\/$/,
       ...sourceReadOptions.exclude,
     );
 

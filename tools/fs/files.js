@@ -12,7 +12,7 @@ var util = require('util');
 var _ = require('underscore');
 var Fiber = require('fibers');
 var crypto = require('crypto');
-var spawn = require("child_process").spawn;
+const { spawn, execFile } = require("child_process");
 
 var rimraf = require('rimraf');
 var sourcemap = require('source-map');
@@ -127,6 +127,29 @@ files.findPackageDir = function (filepath) {
   };
 
   return findUpwards(isPackageDir, filepath);
+};
+
+// Returns the hash of the current Git HEAD revision of the application,
+// if possible. Always resolves rather than rejecting (unless something
+// truly unexpected happens). The result value is a string when a Git
+// revision was successfully resolved, or undefined otherwise.
+files.findGitCommitHash = function (path) {
+  return new Promise(resolve => {
+    const appDir = files.findAppDir(path);
+    if (appDir) {
+      const proc = execFile("git", ["rev-parse", "HEAD"], {
+        cwd: files.convertToOSPath(appDir),
+      }, (error, stdout) => {
+        if (! error && typeof stdout === "string") {
+          resolve(stdout.trim());
+        } else {
+          resolve();
+        }
+      });
+    } else {
+      resolve();
+    }
+  }).await();
 };
 
 // create a .gitignore file in dirPath if one doesn't exist. add
@@ -528,7 +551,7 @@ files.cp_r = function(from, to, options = {}) {
 
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
-export function symlinkWithOverwrite(source, target) {
+export const symlinkWithOverwrite = Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(source, target) {
   const args = [source, target];
 
   if (process.platform === "win32") {
@@ -543,8 +566,12 @@ export function symlinkWithOverwrite(source, target) {
     files.symlink(...args);
   } catch (e) {
     if (e.code === "EEXIST") {
+      function normalizePath (path) {
+        return files.convertToOSPath(path).replace(/[\/\\]$/, "")
+      }
+
       if (files.lstat(target).isSymbolicLink() &&
-          files.readlink(target) === source) {
+          normalizePath(files.readlink(target)) === normalizePath(source)) {
         // If the target already points to the desired source, we don't
         // need to do anything.
         return;
@@ -556,7 +583,7 @@ export function symlinkWithOverwrite(source, target) {
       throw e;
     }
   }
-}
+})
 
 /**
  * Get every path in a directory recursively, treating symlinks as files
@@ -1005,7 +1032,12 @@ files.createTarball = Profile(function (dirPath, tarball) {
 // is in a state other than initial or final".)
 files.renameDirAlmostAtomically =
   Profile("files.renameDirAlmostAtomically", (fromDir, toDir) => {
-    const garbageDir = `${toDir}-garbage-${utils.randomToken()}`;
+    const garbageDir = files.pathJoin(
+      files.pathDirname(toDir),
+      // Begin the base filename with a '.' character so that it can be
+      // ignored by other directory-scanning code.
+      `.${files.pathBasename(toDir)}-garbage-${utils.randomToken()}`,
+    );
 
     // Get old dir out of the way, if it exists.
     let cleanupGarbage = false;
@@ -1054,7 +1086,7 @@ files.renameDirAlmostAtomically =
     // ... and take out the trash.
     if (cleanupGarbage) {
       // We don't care about how long this takes, so we'll let it go async.
-      files.rm_recursive(garbageDir);
+      files.rm_recursive_async(garbageDir);
     }
   });
 
@@ -1757,11 +1789,6 @@ function enableCache(name) {
   };
 }
 
-enableCache("readdir");
-enableCache("realpath");
-enableCache("stat");
-enableCache("lstat");
-
 // The fs.exists method is deprecated in Node v4:
 // https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
 files.exists =
@@ -1870,3 +1897,8 @@ files.readBufferWithLengthAndOffset = function (filename, length, offset) {
   }
   return data;
 };
+
+enableCache("readdir");
+enableCache("realpath");
+enableCache("stat");
+enableCache("lstat");

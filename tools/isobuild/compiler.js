@@ -34,7 +34,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/31';
+compiler.BUILT_BY = 'meteor/32';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -479,12 +479,8 @@ var compileUnibuild = Profile(function (options) {
     const relPath = asset.relPath;
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
 
-    // readAndWatchFileWithHash returns an object carrying a buffer with the
-    // file-contents. The buffer contains the original data of the file (no EOL
-    // transforms from the tools/files.js part).
-    const file = watch.readAndWatchFileWithHash(watchSet, absPath);
-    const hash = file.hash;
-    const contents = file.contents;
+    const hash = optimisticHashOrNull(absPath)
+    const contents = optimisticReadFile(absPath)
 
     addAsset(contents, relPath, hash);
   });

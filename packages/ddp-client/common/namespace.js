@@ -44,7 +44,7 @@ DDP.ForcedReconnectError = Meteor.makeErrorType(
 // The scope will be DDP._CurrentMethodInvocation.get(), so the stream will produce
 // consistent values for method calls on the client and server.
 DDP.randomStream = name => {
-  var scope = DDP._CurrentMethodInvocation.get();
+  const scope = DDP._CurrentMethodInvocation.get();
   return DDPCommon.RandomStream.get(scope, name);
 };
 
@@ -61,7 +61,7 @@ DDP.randomStream = name => {
  * @param {String} url The URL of another Meteor application.
  */
 DDP.connect = (url, options) => {
-  var ret = new Connection(url, options);
+  const ret = new Connection(url, options);
   allConnections.push(ret); // hack. see below.
   return ret;
 };
@@ -77,17 +77,11 @@ DDP._reconnectHook = new Hook({ bindEnvironment: false });
  * @param {Function} callback The function to call. It will be called with a
  * single argument, the [connection object](#ddp_connect) that is reconnecting.
  */
-DDP.onReconnect = callback => {
-  return DDP._reconnectHook.register(callback);
-};
+DDP.onReconnect = callback => DDP._reconnectHook.register(callback);
 
 // Hack for `spiderable` package: a way to see if the page is done
 // loading all the data it needs.
 //
-DDP._allSubscriptionsReady = () => {
-  return allConnections.every(conn => {
-    return keys(conn._subscriptions).every(id => {
-      return conn._subscriptions[id].ready;
-    });
-  });
-};
+DDP._allSubscriptionsReady = () => allConnections.every(
+  conn => Object.values(conn._subscriptions).every(sub => sub.ready)
+);

@@ -1,12 +1,12 @@
 Package.describe({
   name: "fetch",
-  version: "0.1.0",
+  version: "0.1.1",
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG fetch()",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "node-fetch": "2.1.2",
+  "node-fetch": "2.3.0",
   "whatwg-fetch": "2.0.4"
 });
 
