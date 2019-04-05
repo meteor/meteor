@@ -70,6 +70,11 @@ implemented as methods.
 server and receives the changed values back from it over DDP. Unlike on the
 client, it does not execute the write locally first.
 
+If you pass a name to a client-only collection, it will not be synchronized
+with the server and you need to populate the collection "manually" using the
+low-level publication interface (`added/changed/removed`).
+See [`added`](#publish_added) for more information.
+
 If you pass `null` as the `name`, then you're creating a local
 collection. It's not synchronized anywhere; it's just a local scratchpad
 that supports Mongo-style [`find`](#find), [`insert`](#insert),
