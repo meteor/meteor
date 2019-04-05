@@ -269,6 +269,14 @@ domain and callback URL that you configure with the external service (for
 instance, if you are running Meteor behind a proxy server, `$ROOT_URL` should be
 the externally-accessible URL, not the URL inside your proxy).
 
+<h3 id="manual-settings-configuration">Manual settings configuration</h3>
+
+You can use `Accounts.loginServiceConfiguration` to view and edit the settings collection:
+
+```js
+Accounts.loginServiceConfiguration.find();
+```
+
 <h3 id="popup-vs-redirect-flow">Popup versus redirect flow</h3>
 
 When configuring OAuth login with a provider (such as Facebook or Google), Meteor lets you choose a popup- or redirect-based flow. In a popup-based flow, when a user logs in, they will be prompted to login at the provider in a popup window. In a redirect-based flow, the user's whole browser window will be redirected to the login provider, and the window will redirect back to your app when the login is completed.
