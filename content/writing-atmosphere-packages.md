@@ -167,6 +167,24 @@ api.use([
 ]);
 ```
 
+Additionally, you can call `api.versionsFrom(<release>)` multiple times, or with
+an array (eg `api.versionsFrom([<release1>, <release2>])`. Meteor will interpret
+this to mean that the package will work with packages from all the listed releases.
+
+```js
+api.versionsFrom('1.2.1');
+api.versionsFrom('1.4');
+api.versionsFrom('1.8');
+
+// or
+
+api.versionsFrom(['1.2.1', '1.4', '1.8']);
+```
+
+This usually isn't necessary, but can help in cases where you support more than 
+one major version of a core package.
+
+
 <h4 id="version-constraints">Semantic versioning and version constraints</h4>
 
 Meteor's package system relies heavily on [Semantic Versioning](http://semver.org/), or SemVer. When one package declares a dependency on another, it always comes with a version constraint. These version constraints are then solved by Meteor's industrial-grade Version Solver to arrive at a set of package versions that meet all of the requirements, or display a helpful error if there is no solution.
@@ -179,6 +197,16 @@ The mental model here is:
 The constraint solver is necessary because Meteor's package system is **single-loading** - that is, you can never have two different versions of the same package loaded side-by-side in the same app. This is particularly useful for packages that include a lot of client-side code, or packages that expect to be singletons.
 
 Note that the version solver also has a concept of "gravity" - when many solutions are possible for a certain set of dependencies, it always selects the oldest possible version. This is helpful if you are trying to develop a package to ship to lots of users, since it ensures your package will be compatible with the lowest common denominator of a dependency. If your package needs a newer version than is currently being selected for a certain dependency, you need to update your `package.js` to have a newer version constraint.
+
+If your package supports multiple major versions of a dependency, you can supply
+both versions to `api.use` like so:
+
+```js
+api.use('blaze@1.0.0 || 2.0.0');
+```
+
+Meteor will use whichever major version is compatible with your other packages, 
+or the most recent of the options given.
 
 <h3 id="npm-dependencies">npm dependencies</h3>
 
