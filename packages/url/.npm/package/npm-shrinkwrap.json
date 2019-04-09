@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "url-polyfill": {
+      "version": "1.1.3",
+      "resolved": "https://registry.npmjs.org/url-polyfill/-/url-polyfill-1.1.3.tgz",
+      "integrity": "sha512-xIAXc0DyXJCd767sSeRu4eqisyYhR0z0sohWArCn+WPwIatD39xGrc09l+tluIUi6jGkpGa8Gz8TKwkKYxMQvQ=="
+    }
+  }
+}
