@@ -261,7 +261,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     }
   }
 
-  open func checkForUpdates(_ command: CDVInvokedUrlCommand) {
+  @objc open func checkForUpdates(_ command: CDVInvokedUrlCommand) {
     guard let rootURL = configuration.rootURL else {
       let errorMessage = "checkForUpdates requires a rootURL to be configured"
       let result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: errorMessage)
@@ -276,7 +276,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     commandDelegate?.send(result, callbackId: command.callbackId)
   }
 
-  open func onNewVersionReady(_ command: CDVInvokedUrlCommand) {
+  @objc open func onNewVersionReady(_ command: CDVInvokedUrlCommand) {
     newVersionReadyCallbackId = command.callbackId
 
     let result = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
@@ -294,7 +294,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     commandDelegate?.send(result, callbackId: newVersionReadyCallbackId)
   }
 
-  open func onError(_ command: CDVInvokedUrlCommand) {
+  @objc open func onError(_ command: CDVInvokedUrlCommand) {
     errorCallbackId = command.callbackId
 
     let result = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
