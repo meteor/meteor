@@ -23,7 +23,7 @@
   "author": "Meteor Development Group",
   "license": "MIT",
   "scripts": {
-    "pretest": "ios-sim start --devicetypeid=iPhone-X",
+    "pretest": "ios-sim start --devicetypeid=iPhone-Xs",
     "test": "cordova-paramedic --config ./.paramedic.config.js"
   },
   "devDependencies": {
