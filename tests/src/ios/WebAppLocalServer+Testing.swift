@@ -1,12 +1,12 @@
 extension WebAppLocalServer {
-  func simulatePageReload(_ command: CDVInvokedUrlCommand) {
+  @objc func simulatePageReload(_ command: CDVInvokedUrlCommand) {
     onReset()
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
     commandDelegate?.send(result, callbackId:command.callbackId)
   }
 
-  func simulateAppRestart(_ command: CDVInvokedUrlCommand) {
+  @objc func simulateAppRestart(_ command: CDVInvokedUrlCommand) {
     initializeAssetBundles()
     onReset()
 
@@ -14,7 +14,7 @@ extension WebAppLocalServer {
     commandDelegate?.send(result, callbackId:command.callbackId)
   }
 
-  func resetToInitialState(_ command: CDVInvokedUrlCommand) {
+  @objc func resetToInitialState(_ command: CDVInvokedUrlCommand) {
     commandDelegate?.run() {
       self.configuration.reset()
       self.initializeAssetBundles()
@@ -25,12 +25,12 @@ extension WebAppLocalServer {
     }
   }
 
-  func getAuthTokenKeyValuePair(_ command: CDVInvokedUrlCommand) {
+  @objc func getAuthTokenKeyValuePair(_ command: CDVInvokedUrlCommand) {
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: authTokenKeyValuePair)
     commandDelegate?.send(result, callbackId:command.callbackId)
   }
 
-  func downloadedVersionExists(_ command: CDVInvokedUrlCommand) {
+  @objc func downloadedVersionExists(_ command: CDVInvokedUrlCommand) {
     guard let version = command.argument(at: 0) as? String else {
       let errorMessage = "'version' argument required"
       let result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: errorMessage)
@@ -44,7 +44,7 @@ extension WebAppLocalServer {
     commandDelegate?.send(result, callbackId:command.callbackId)
   }
 
-  func simulatePartialDownload(_ command: CDVInvokedUrlCommand) {
+  @objc func simulatePartialDownload(_ command: CDVInvokedUrlCommand) {
     guard let version = command.argument(at: 0) as? String else {
       let errorMessage = "'version' argument required"
       let result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: errorMessage)

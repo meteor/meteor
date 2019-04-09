@@ -21,7 +21,7 @@ module.exports = function(context) {
   configurations = nonComments(xcodeProject.pbxXCBuildConfigurationSection());
 	Object.keys(configurations).forEach(function (config) {
 		buildSettings = configurations[config].buildSettings;
-		buildSettings.SWIFT_VERSION = '3.0';
+		buildSettings.SWIFT_VERSION = '4.2';
 	});
 
   fs.writeFileSync(projectPath, xcodeProject.writeSync());

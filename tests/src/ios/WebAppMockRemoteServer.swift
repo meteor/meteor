@@ -44,7 +44,7 @@ class WebAppMockRemoteServer: CDVPlugin, GCDWebServerTestingDelegate {
 
   // MARK: Public plugin API
 
-  func serveVersion(_ command: CDVInvokedUrlCommand) {
+  @objc func serveVersion(_ command: CDVInvokedUrlCommand) {
     guard let version = command.arguments[0] as? String else {
       let message = "'version' argument required"
       let result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs:message)
@@ -102,7 +102,7 @@ class WebAppMockRemoteServer: CDVPlugin, GCDWebServerTestingDelegate {
     }
   }
 
-  func receivedRequests(_ command: CDVInvokedUrlCommand) {
+  @objc func receivedRequests(_ command: CDVInvokedUrlCommand) {
     let receivedRequestURLs = receivedRequests!.map {
       ["path": $0.path, "query": $0.query, "headers": $0.headers]
     }
