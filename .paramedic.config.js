@@ -6,5 +6,5 @@ module.exports = {
   skipAppiumTests: true,
   ci: true,
   target: "iPhone-X\\,",
-  args: "--buildFlag=\" - UseModernBuildSystem=0\""
+  args: "--buildFlag=\" -UseModernBuildSystem=0\""
 };
