@@ -1,3 +1,5 @@
+import { Tinytest } from "meteor/tinytest";
+
 Tinytest.add('url - serializes params to query correctly', function (test) {
   var hash = {
     filter: {
