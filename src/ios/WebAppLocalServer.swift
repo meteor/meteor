@@ -226,7 +226,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
 
   // MARK: - Public plugin commands
 
-  open func startupDidComplete(_ command: CDVInvokedUrlCommand) {
+  @objc open func startupDidComplete(_ command: CDVInvokedUrlCommand) {
     NSLog("App startup confirmed")
     startupTimer?.stop()
 
@@ -245,7 +245,7 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     self.commandDelegate?.send(result, callbackId: command.callbackId)
   }
 
-  open func switchPendingVersion(_ command: CDVInvokedUrlCommand) {
+  @objc open func switchPendingVersion(_ command: CDVInvokedUrlCommand) {
     // If there is a pending asset bundle, we make it the current
     if let pendingAssetBundle = pendingAssetBundle {
       NSLog("Switching pending version \(pendingAssetBundle.version) as the current asset bundle")
