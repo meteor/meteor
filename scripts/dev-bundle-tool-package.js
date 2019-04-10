@@ -23,6 +23,7 @@ var packageJson = {
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
+    tslib: "1.9.3",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -52,7 +53,10 @@ var packageJson = {
     split2: "2.2.0",
     multipipe: "2.0.1",
     pathwatcher: "8.0.2",
-    optimism: "0.9.1",
+    // The @wry/context package version must be compatible with the
+    // version constraint imposed by optimism/package.json.
+    optimism: "0.9.3",
+    "@wry/context": "0.3.1",
     'lru-cache': '4.1.3'
   }
 };
