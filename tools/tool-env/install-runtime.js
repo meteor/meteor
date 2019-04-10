@@ -1,16 +1,8 @@
 "use strict";
 
-const { noContext } = require("optimism");
-if (noContext) {
-  // If we're using a modern version of the optimism package that supports
-  // noContext, we can use it to wrap Fiber.yield so that the current
-  // context is suspended before any yield and restored immediately after.
-  const Fiber = require("fibers");
-  const originalYield = Fiber.yield;
-  Fiber.yield = function () {
-    return noContext(originalYield, arguments, Fiber);
-  };
-}
+// This module gets imported again in install-promise.js, but we might as
+// well import it here as well, in case we ever stop using meteor-promise.
+require("./wrap-fibers.js");
 
 // Install ES2015-complaint polyfills for Object, Array, String, Function,
 // Symbol, Map, Set, and Promise, patching the native implementations when
