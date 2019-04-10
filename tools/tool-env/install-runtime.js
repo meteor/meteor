@@ -1,5 +1,17 @@
 "use strict";
 
+const { noContext } = require("optimism");
+if (noContext) {
+  // If we're using a modern version of the optimism package that supports
+  // noContext, we can use it to wrap Fiber.yield so that the current
+  // context is suspended before any yield and restored immediately after.
+  const Fiber = require("fibers");
+  const originalYield = Fiber.yield;
+  Fiber.yield = function () {
+    return noContext(originalYield, arguments, Fiber);
+  };
+}
+
 // Install ES2015-complaint polyfills for Object, Array, String, Function,
 // Symbol, Map, Set, and Promise, patching the native implementations when
 // they are available.
