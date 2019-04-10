@@ -20,6 +20,9 @@ var packageJson = {
     fibers: "3.1.1",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.4.3",
+    // For backwards compatibility with isopackets that still depend on
+    // babel-runtime rather than @babel/runtime.
+    "babel-runtime": "7.0.0-beta.3",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
