@@ -55,8 +55,8 @@ var packageJson = {
     pathwatcher: "8.0.2",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
-    optimism: "0.9.3",
-    "@wry/context": "0.3.1",
+    optimism: "0.9.5",
+    "@wry/context": "0.4.0",
     'lru-cache': '4.1.3'
   }
 };
