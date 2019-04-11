@@ -336,7 +336,7 @@ class ProgressDisplayFull {
       this._progressBarRenderer.start = startTime;
     }
 
-    if (!this._renderTimeout && this._lastWrittenTime) {
+    if (!this._rerenderTimeout && this._lastWrittenTime) {
       this._rerenderTimeout = setTimeout(() => {
         this._rerenderTimeout = null;
         this._render()
