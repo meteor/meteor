@@ -1,7 +1,7 @@
 Package.describe({
   name: "context",
   version: "0.4.0",
-  summary: "Manage contextual information needed by (a)synchronous tasks without explicitly passing objects around",
+  summary: "Manage contextual information without passing objects around",
   documentation: "README.md"
 });
 
