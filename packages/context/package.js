@@ -1,8 +1,7 @@
 Package.describe({
   name: "context",
   version: "0.4.0",
-  summary: "",
-  git: "",
+  summary: "Manage contextual information without passing objects around",
   documentation: "README.md"
 });
 
