@@ -1,3 +1,9 @@
+// It's vitally important that we wrap Fiber.yield and other yielding
+// methods before we call makeCompatible, because the meteor-promise
+// implementation captures Fiber.yield and keeps calling the captured
+// version, which ignores any wrapping that happens later.
+require("./wrap-fibers.js");
+
 // Ensure the global Promise constructor knows how to run all its
 // callbacks in Fibers.
 
