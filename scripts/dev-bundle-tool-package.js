@@ -14,15 +14,16 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/c5043daa1b768594e01d76275e3854fc19f038f9",
     "node-gyp": "3.7.0",
     "node-pre-gyp": "0.10.3",
-    "meteor-babel": "7.3.4",
+    "meteor-babel": "7.4.3",
     "meteor-promise": "0.8.7",
     reify: "0.17.3",
     fibers: "3.1.1",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.3.4",
+    "@babel/runtime": "7.4.3",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
+    tslib: "1.9.3",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -52,7 +53,10 @@ var packageJson = {
     split2: "2.2.0",
     multipipe: "2.0.1",
     pathwatcher: "8.0.2",
-    optimism: "0.8.3",
+    // The @wry/context package version must be compatible with the
+    // version constraint imposed by optimism/package.json.
+    optimism: "0.9.5",
+    "@wry/context": "0.4.0",
     'lru-cache': '4.1.3'
   }
 };
