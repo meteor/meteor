@@ -196,10 +196,7 @@ function getHostArch() {
   }
 
   if (process.platform === "linux") {
-    if (process.arch === "x64") {
-      return "os.linux.x86_64";
-    }
-    return "os.linux.x86_32";
+    return "os.linux.x86_64";
   }
 
   if (process.platform === "darwin") {
