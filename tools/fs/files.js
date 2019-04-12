@@ -1878,7 +1878,7 @@ files.unwatchFile = function (...args) {
 };
 
 files.readBufferWithLengthAndOffset = function (filename, length, offset) {
-  var data = new Buffer(length);
+  var data = Buffer.alloc(length);
   // Read the data from disk, if it is non-empty. Avoid doing IO for empty
   // files, because (a) unnecessary and (b) fs.readSync with length 0
   // throws instead of acting like POSIX read:
