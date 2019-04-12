@@ -1,5 +1,18 @@
 ## v.NEXT
 
+## v1.9
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node has been updated to version
+  [11.13.0](https://nodejs.org/en/blog/release/v11.13.0/).
+
 ## v1.8.1, 2019-04-03
 
 ### Breaking changes
