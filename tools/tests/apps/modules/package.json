@@ -12,7 +12,6 @@
     "aws-sdk": "^2.2.41",
     "cli-color": "^0.2.3",
     "github": "^0.2.4",
-    "idle-gc": "^1.0.1",
     "immutable-tuple": "^0.4.4",
     "jsx-import-test": "file:imports/links/jsx-import-test",
     "lodash-es": "^4.17.7",
