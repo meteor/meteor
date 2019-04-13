@@ -1,0 +1,19 @@
+# Configuration for probot-auto-merge - https://github.com/bobvanderlinden/probot-auto-merge
+
+deleteBranchAfterMerge: true
+updateBranch: true
+mergeMethod: rebase
+
+minApprovals:
+  MEMBER: 1
+maxRequestedChanges:
+  COLLABORATOR: 0
+blockingLabels:
+  - WIP
+  - Blocked
+
+rules:
+  - minApprovals:
+      OWNER: 1
+  - requiredLabels:
+      - Automerge
