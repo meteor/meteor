@@ -10,7 +10,8 @@ function babelRegister() {
   const meteorPath = path.dirname(toolsPath);
   const cacheDir = path.join(meteorPath, ".babel-cache");
   const babelOptions = meteorBabel.getDefaultOptions({
-    nodeMajorVersion: parseInt(process.versions.node)
+    nodeMajorVersion: parseInt(process.versions.node),
+    typescript: true
   });
 
   // Make sure that source maps are included in the generated code for
