@@ -7,7 +7,7 @@ var buildmessage = require('../utils/buildmessage.js');
 import Builder from './builder.js';
 var bundler = require('./bundler.js');
 var watch = require('../fs/watch.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 import {
   ISOPACKETS,
   makeIsopacketBuildContext,

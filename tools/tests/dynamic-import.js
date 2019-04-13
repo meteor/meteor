@@ -1,6 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-const { mkdtemp } = require("../fs/files.js");
+const { mkdtemp } = require("../fs/files");
 
 const offlineStorageQuotaKB = 10000;
 

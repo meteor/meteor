@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var parseStack = require('./parse-stack.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var Progress = require('../console/progress.js').Progress;

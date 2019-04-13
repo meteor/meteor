@@ -5,7 +5,7 @@ import child_process from 'child_process';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import runLog from '../runners/run-log.js';
 import { Console } from '../console/console.js';
-import files from '../fs/files.js';
+import files from '../fs/files';
 import { execFileSync, execFileAsync } from '../utils/processes.js';
 
 export class CordovaRunTarget {
