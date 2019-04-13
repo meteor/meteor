@@ -49,23 +49,28 @@ exports.allowDirectory = function (dir) {
   return exports;
 };
 
-var defaultHandler = require.extensions[".js"];
-require.extensions[".js"] = function(module, filename) {
-  if (shouldNotTransform(filename)) {
-    defaultHandler(module, filename);
-  } else {
-    module._compile(
-      getBabelResult(filename).code,
-      filename
-    );
+var defaultJsHandler = require.extensions[".js"];
+function enableExtension(ext) {
+  const defaultHandler = require.extensions[ext] || defaultJsHandler;
+  require.extensions[ext] = function(module, filename) {
+    if (shouldNotTransform(filename)) {
+      defaultHandler(module, filename);
+    } else {
+      module._compile(
+        getBabelResult(filename).code,
+        filename
+      );
 
-    // As of version 0.10.0, the Reify require.extensions[".js"] handler
-    // is responsible for running parent setters after the module has
-    // finished loading for the first time, so we need to call that method
-    // here because we are not calling the defaultHandler.
-    module.runSetters();
-  }
-};
+      // As of version 0.10.0, the Reify require.extensions[".js"] handler
+      // is responsible for running parent setters after the module has
+      // finished loading for the first time, so we need to call that
+      // method here because we are not calling the defaultHandler.
+      module.runSetters();
+    }
+  };
+}
+enableExtension(".js");
+enableExtension(".ts");
 
 exports.retrieveSourceMap = function(filename) {
   if (shouldNotTransform(filename)) {

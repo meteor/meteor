@@ -3,6 +3,7 @@ var meteorBabelTestPath = __dirname;
 var meteorBabelPath = path.dirname(meteorBabelTestPath);
 var features = {
   react: true,
+  typescript: true,
   jscript: true
 };
 

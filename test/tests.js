@@ -454,6 +454,12 @@ val = "zxcv";`;
     assert.strictEqual(add(1, 2, 3, 4, 5), 15);
   });
 
+  it("TypeScript", () => {
+    import { TSClass } from "./class";
+    const tsObj = new TSClass("oyez");
+    assert.strictEqual(tsObj.name, "oyez");
+  });
+
   it("async/await", async () => {
     var two = Promise.resolve(2);
     var three = Promise.resolve(3);

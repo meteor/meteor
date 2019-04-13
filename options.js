@@ -58,7 +58,7 @@ exports.getDefaults = function getDefaults(features) {
   }
 
   maybeAddReactPlugins(features, combined);
-  maybeAddTypeScriptPlugin(features, combined.plugins);
+  maybeAddTypeScriptPreset(features, combined.presets);
 
   if (features && features.jscript) {
     combined.plugins.push(
@@ -87,13 +87,9 @@ function maybeAddReactPlugins(features, options) {
   }
 }
 
-function maybeAddTypeScriptPlugin(features, plugins) {
+function maybeAddTypeScriptPreset(features, presets) {
   if (features && features.typescript) {
-    plugins.push(
-      [require("@babel/plugin-transform-typescript"), {
-        isTSX: features.typescript === "tsx"
-      }]
-    );
+    presets.push(require("@babel/preset-typescript"));
   }
 }
 
@@ -117,7 +113,7 @@ function getDefaultsForModernBrowsers(features) {
   }
 
   maybeAddReactPlugins(features, combined);
-  maybeAddTypeScriptPlugin(features, combined.plugins);
+  maybeAddTypeScriptPreset(features, combined.presets);
 
   // Even though we use Reify to transpile `import` and `export`
   // declarations in the original source, Babel sometimes inserts its own
@@ -212,7 +208,7 @@ function getDefaultsForNode8(features) {
   }];
 
   maybeAddReactPlugins(features, { plugins, presets });
-  maybeAddTypeScriptPlugin(features, plugins);
+  maybeAddTypeScriptPreset(features, presets);
 
   return finish(presets);
 }
