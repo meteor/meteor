@@ -1353,7 +1353,7 @@ _.extend(PackageSource.prototype, {
       return sources;
     }
 
-    return files.withCache(() => find("", 0, false));
+    return find("", 0, false);
   }),
 
   _findAssets({

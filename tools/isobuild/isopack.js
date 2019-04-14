@@ -7,7 +7,8 @@ var buildmessage = require('../utils/buildmessage.js');
 import Builder from './builder.js';
 var bundler = require('./bundler.js');
 var watch = require('../fs/watch.js');
-var files = require('../fs/files');
+import * as files from '../fs/files';
+import * as fsFixPath from '../fs/fsFixPath';
 import {
   ISOPACKETS,
   makeIsopacketBuildContext,
@@ -805,7 +806,7 @@ _.extend(Isopack.prototype, {
         extname: files.pathExtname,
         sep: files.pathSep
       },
-      fs: files.fsFixPath
+      fs: fsFixPath,
     };
     return Plugin;
   },
