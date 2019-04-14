@@ -7,7 +7,7 @@ import {
 import {sha1} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
-import {cssToCommonJS} from "./css-modules.js";
+import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
 import LRU from "lru-cache";
 import {Profile} from "../tool-env/profile.js";

@@ -14,7 +14,7 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/c5043daa1b768594e01d76275e3854fc19f038f9",
     "node-gyp": "3.7.0",
     "node-pre-gyp": "0.10.3",
-    "meteor-babel": "7.4.3",
+    "meteor-babel": "7.4.4",
     "meteor-promise": "0.8.7",
     reify: "0.17.3",
     fibers: "3.1.1",
@@ -23,7 +23,6 @@ var packageJson = {
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
-    tslib: "1.9.3",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).

@@ -1409,33 +1409,20 @@ _.extend(Isopack.prototype, {
         !f.match(/^examples\/unfinished/);
     });
 
-    // Regexes matching paths to transpile using babel
-    var transpileRegexes = [
-      /^tools\/[^\/]+\.js$/, // General tools files
-      /^tools\/isobuild\/[^\/]+\.js$/, // Isobuild files
-      /^tools\/cli\/[^\/]+\.js$/, // CLI files
-      /^tools\/tool-env\/[^\/]+\.js$/, // Tool initiation and clean up
-      /^tools\/runners\/[^\/]+\.js$/, // Parts of tool process
-      /^tools\/packaging\/[^\/]+\.js$/,
-      /^tools\/packaging\/catalog\/[^\/]+\.js$/,
-      /^tools\/utils\/[^\/]+\.js$/,
-      /^tools\/fs\/[^\/]+\.js$/,
-      /^tools\/meteor-services\/[^\/]+\.js$/,
-      /^tools\/tool-testing\/[^\/]+\.js$/,
-      /^tools\/console\/[^\/]+\.js$/,
-      /^tools\/cordova\/[^\/]+\.js$/,
-      // We don't support running self-test from an install anymore
-    ];
+    function shouldTranspile(path) {
+      return path.startsWith("tools/") &&
+        (path.endsWith(".js") || path.endsWith(".ts")) &&
+        !path.startsWith("tools/node_modules/") &&
+        !path.startsWith("tools/static-assets/") &&
+        !path.startsWith("tools/tests/");
+    }
 
     // Split pathsToCopy into two arrays - one of files that should be copied
     // directly, and one of files that should be transpiled with Babel
     var pathsToTranspile = [];
     var pathsToCopyStraight = [];
-    pathsToCopy.forEach((path) => {
-      var shouldTranspile =
-        _.some(transpileRegexes, (regex) => path.match(regex));
-
-      if (shouldTranspile) {
+    pathsToCopy.forEach(path => {
+      if (shouldTranspile(path)) {
         pathsToTranspile.push(path);
       } else {
         pathsToCopyStraight.push(path);
@@ -1446,8 +1433,14 @@ _.extend(Isopack.prototype, {
     var toolPath = 'mt-' + archinfo.host();
     builder = builder.enter(toolPath);
 
+    const babel = require("meteor-babel");
+    const commonBabelOptions = babel.getDefaultOptions({
+      nodeMajorVersion: parseInt(process.versions.node),
+      typescript: true
+    });
+    commonBabelOptions.sourceMaps = true;
+
     // Transpile the files we selected
-    var babel = require("meteor-babel");
     pathsToTranspile.forEach((path) => {
       const toolsDir = files.getCurrentToolsDir();
       const fullPath = files.convertToOSPath(files.pathJoin(toolsDir, path));
@@ -1464,29 +1457,36 @@ _.extend(Isopack.prototype, {
         inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
       }
 
-      var babelOptions = babel.getDefaultOptions({
-        nodeMajorVersion: parseInt(process.versions.node)
-      });
-
-      _.extend(babelOptions, {
+      var transpiled = babel.compile(inputFileContents, {
+        ...commonBabelOptions,
         filename: path,
         sourceFileName: "/" + path,
-        sourceMaps: true
-      });
-
-      var transpiled = babel.compile(inputFileContents, babelOptions, {
+      }, {
         cacheDirectory: babelCacheDirectory,
       });
 
       var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
 
-      builder.write(path, {
+      let outputPath = path;
+      if (path.endsWith(".ts")) {
+        // The published implementation of the meteor-tool package should
+        // contain only .js files, like any compiled TypeScript project.
+        // This design has the unfortunate consequence of forbidding
+        // explicit .ts file extensions in imported module identifier
+        // strings, but that's just how it goes with TypeScript.
+        const parts = path.split(".");
+        assert.strictEqual(parts.pop(), "ts");
+        parts.push("js");
+        outputPath = parts.join(".");
+      }
+
+      builder.write(outputPath, {
         data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
       });
 
       // The babelOptions.sourceMapTarget option was deprecated in Babel
       // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
-      const sourceMapTarget = path + ".map";
+      const sourceMapTarget = outputPath + ".map";
       transpiled.map.file = sourceMapTarget;
 
       builder.write(sourceMapTarget, {
