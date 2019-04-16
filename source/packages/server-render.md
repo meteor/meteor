@@ -33,6 +33,24 @@ class Sink {
 
   // Replaces the content of the identified element.
   renderIntoElementById(id, content)
+
+  // Redirects request to new location.
+  redirect(location, code)
+
+
+  // server only methods
+
+  // sets the status code of the response.
+  setStatusCode(code)
+
+  // sets a header of the response.
+  setHeader(key, value)
+
+  // gets request headers
+  getHeaders()
+
+  // gets request cookies
+  getCookies()
 }
 ```
 
