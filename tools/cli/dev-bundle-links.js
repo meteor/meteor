@@ -1,9 +1,9 @@
-var fs = require("fs");
-var files = require("../fs/mini-files.js");
+const fs = require("fs");
+const { convertToOSPath } = require("./convert-to-os-path.js");
 
 exports.makeLink = function (target, linkPath) {
-  target = files.convertToOSPath(target);
-  linkPath = files.convertToOSPath(linkPath);
+  target = convertToOSPath(target);
+  linkPath = convertToOSPath(linkPath);
 
   var tempPath = linkPath + "-" + Math.random().toString(36).slice(2);
 
@@ -24,7 +24,7 @@ exports.makeLink = function (target, linkPath) {
 
 // Note: this function returns an OS-specific path!
 exports.readLink = function (linkPath) {
-  linkPath = files.convertToOSPath(linkPath);
+  linkPath = convertToOSPath(linkPath);
 
   var stat = fs.lstatSync(linkPath);
   if (stat.isSymbolicLink()) {
