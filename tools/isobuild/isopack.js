@@ -1410,11 +1410,18 @@ _.extend(Isopack.prototype, {
     });
 
     function shouldTranspile(path) {
-      return path.startsWith("tools/") &&
-        (path.endsWith(".js") || path.endsWith(".ts")) &&
-        !path.startsWith("tools/node_modules/") &&
-        !path.startsWith("tools/static-assets/") &&
-        !path.startsWith("tools/tests/");
+      const parts = path.split("/");
+      if (parts[0] === "tools" &&
+          (path.endsWith(".js") || path.endsWith(".ts"))) {
+        if (parts[1] === "static-assets") {
+          return parts[2] === "server";
+        }
+        if (parts[1] !== "node_modules" &&
+            parts[1] !== "tests") {
+          return true;
+        }
+      }
+      return false;
     }
 
     // Split pathsToCopy into two arrays - one of files that should be copied
