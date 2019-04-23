@@ -10,8 +10,13 @@ N/A
 
 ### Changes
 
-* Node has been updated to version
-  [11.14.0](https://nodejs.org/en/blog/release/v11.14.0/).
+* Node.js has been updated to version
+  [12.1.0](https://nodejs.org/en/blog/release/v12.1.0/), which includes
+  several major Node.js versions since 8.16.0 (used by Meteor 1.8.2):
+  * [12.0.0](https://nodejs.org/en/blog/release/v12.0.0/)
+  * [11.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
 
 ## v1.8.2
 
