@@ -11,7 +11,7 @@ N/A
 ### Changes
 
 * Node has been updated to version
-  [11.14.0](https://nodejs.org/en/blog/release/v11.14.0/).
+  [12.0.0](https://nodejs.org/en/blog/release/v12.0.0/).
 
 ## v1.8.2
 
