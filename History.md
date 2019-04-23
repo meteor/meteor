@@ -8,6 +8,9 @@ N/A
 
 ### Changes
 
+* Node has been updated to version
+  [8.16.0](https://nodejs.org/en/blog/release/v8.16.0/).
+
 * The `meteor-babel` npm package has been updated to version 7.4.3.
 
 ## v1.8.1, 2019-04-03
