@@ -211,6 +211,7 @@ exports._mainJsContents = [
   "",
   "process.argv.splice(2, 0, 'program.json');",
   "process.chdir(require('path').join(__dirname, 'programs', 'server'));",
+  'require("./programs/server/runtime.js");',
   "require('./programs/server/boot.js');",
 ].join("\n");
 
@@ -2709,6 +2710,7 @@ class ServerTarget extends JsImageTarget {
       "npm-require.js",
       "npm-rebuild.js",
       "npm-rebuild-args.js",
+      "runtime.js",
     ], {
       sourceRootDir: files.pathJoin(
         toolsDir,
