@@ -2700,7 +2700,7 @@ class ServerTarget extends JsImageTarget {
     });
 
     // Server bootstrap
-    _.each([
+    builder.transpile([
       "boot.js",
       "boot-utils.js",
       "debug.js",
@@ -2709,15 +2709,12 @@ class ServerTarget extends JsImageTarget {
       "npm-require.js",
       "npm-rebuild.js",
       "npm-rebuild-args.js",
-    ], function (filename) {
-      builder.write(filename, {
-        file: files.pathJoin(
-          toolsDir,
-          'static-assets',
-          'server',
-          filename
-        )
-      });
+    ], {
+      sourceRootDir: files.pathJoin(
+        toolsDir,
+        "static-assets",
+        "server",
+      ),
     });
 
     // Script that fetches the dev_bundle and runs the server bootstrap

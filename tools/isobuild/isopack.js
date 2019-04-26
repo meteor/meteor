@@ -1440,66 +1440,8 @@ _.extend(Isopack.prototype, {
     var toolPath = 'mt-' + archinfo.host();
     builder = builder.enter(toolPath);
 
-    const babel = require("meteor-babel");
-    const commonBabelOptions = babel.getDefaultOptions({
-      nodeMajorVersion: parseInt(process.versions.node),
-      typescript: true
-    });
-    commonBabelOptions.sourceMaps = true;
-
-    // Transpile the files we selected
-    pathsToTranspile.forEach((path) => {
-      const toolsDir = files.getCurrentToolsDir();
-      const fullPath = files.convertToOSPath(files.pathJoin(toolsDir, path));
-      let inputFileContents = files.readFile(fullPath, "utf-8");
-      const babelCacheDirectory =
-        files.pathJoin(files.pathDirname(toolsDir), ".babel-cache");
-
-      // #RemoveInProd
-      // We don't actually want to load the babel auto-transpiler when we are
-      // in a Meteor installation where everything is already transpiled for us.
-      // Therefore, strip out that line in main.js
-      if (path === "tools/tool-env/install-babel.js" ||
-          path === "tools/tool-env/source-map-retriever-stack.js") {
-        inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
-      }
-
-      var transpiled = babel.compile(inputFileContents, {
-        ...commonBabelOptions,
-        filename: path,
-        sourceFileName: "/" + path,
-      }, {
-        cacheDirectory: babelCacheDirectory,
-      });
-
-      var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
-
-      let outputPath = path;
-      if (path.endsWith(".ts")) {
-        // The published implementation of the meteor-tool package should
-        // contain only .js files, like any compiled TypeScript project.
-        // This design has the unfortunate consequence of forbidding
-        // explicit .ts file extensions in imported module identifier
-        // strings, but that's just how it goes with TypeScript.
-        const parts = path.split(".");
-        assert.strictEqual(parts.pop(), "ts");
-        parts.push("js");
-        outputPath = parts.join(".");
-      }
-
-      builder.write(outputPath, {
-        data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
-      });
-
-      // The babelOptions.sourceMapTarget option was deprecated in Babel
-      // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
-      const sourceMapTarget = outputPath + ".map";
-      transpiled.map.file = sourceMapTarget;
-
-      builder.write(sourceMapTarget, {
-        data: Buffer.from(JSON.stringify(transpiled.map), 'utf8')
-      });
-    });
+    const sourceRootDir = files.getCurrentToolsDir();
+    builder.transpile(pathsToTranspile, { sourceRootDir });
 
     var gitSha = utils.runGitInCheckout('rev-parse', 'HEAD');
     builder.reserve('isopackets', {directory: true});

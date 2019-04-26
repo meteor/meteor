@@ -343,6 +343,70 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return relPath;
   }
 
+  transpile(relativePaths, {
+    sourceRootDir,
+    targetRootDir = this.outputPath,
+  }) {
+    const babel = require("meteor-babel");
+    const commonBabelOptions = babel.getDefaultOptions({
+      nodeMajorVersion: parseInt(process.versions.node),
+      typescript: true
+    });
+    commonBabelOptions.sourceMaps = true;
+
+    const toolsDir = files.getCurrentToolsDir();
+    const babelCacheDirectory =
+      files.pathJoin(files.pathDirname(toolsDir), ".babel-cache");
+
+    // Transpile the files we selected
+    relativePaths.forEach(relPath => {
+      assert.ok(!files.pathIsAbsolute(relPath), relPath);
+      const fullPath = files.pathJoin(sourceRootDir, relPath);
+      let inputFileContents = files.readFile(fullPath, "utf-8");
+
+      // If certain behavior should be disabled in the transpiled code, the
+      // #RemoveInProd comment can be added to strip out appropriate lines.
+      inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
+
+      var transpiled = babel.compile(inputFileContents, {
+        ...commonBabelOptions,
+        filename: relPath,
+        sourceFileName: "/" + relPath,
+      }, {
+        cacheDirectory: babelCacheDirectory,
+      });
+
+      let outputPath = relPath;
+      if (outputPath.endsWith(".ts")) {
+        // The published implementation of the meteor-tool package should
+        // contain only .js files, like any compiled TypeScript project.
+        // This design has the unfortunate consequence of forbidding
+        // explicit .ts file extensions in imported module identifier
+        // strings, but that's just how it goes with TypeScript.
+        const parts = outputPath.split(".");
+        assert.strictEqual(parts.pop(), "ts");
+        parts.push("js");
+        outputPath = parts.join(".");
+      }
+
+      const sourceMapUrlComment =
+        "//# sourceMappingURL=" + files.pathBasename(outputPath + ".map");
+
+      this.write(outputPath, {
+        data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
+      });
+
+      // The babelOptions.sourceMapTarget option was deprecated in Babel
+      // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
+      const sourceMapTarget = outputPath + ".map";
+      transpiled.map.file = sourceMapTarget;
+
+      this.write(sourceMapTarget, {
+        data: Buffer.from(JSON.stringify(transpiled.map), 'utf8')
+      });
+    });
+  }
+
   // Serialize `data` as JSON and write it to `relPath` (a path to a
   // file relative to the bundle root), creating parent directories as
   // necessary. Throw an exception if the file already exists.
@@ -731,6 +795,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     const methods = [
       "write",
       "writeJson",
+      "transpile",
       "reserve",
       "generateFilename",
       "copyDirectory",
@@ -744,6 +809,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             method === "copyNodeModulesDirectory") {
           // The copy methods take their relative paths via options.to.
           args[0].to = files.pathJoin(relPath, args[0].to);
+        } else if (method === "transpile") {
+          // The transpile method takes an array of relative paths.
+          args[0] = args[0].map(path => files.pathJoin(relPath, path));
         } else {
           // Other methods have relPath as the first argument.
           args[0] = files.pathJoin(relPath, args[0]);
