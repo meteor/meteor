@@ -2704,7 +2704,7 @@ class ServerTarget extends JsImageTarget {
     builder.transpile([
       "boot.js",
       "boot-utils.js",
-      "debug.js",
+      "debug.ts",
       "server-json.js",
       "mini-files.js",
       "npm-require.js",
