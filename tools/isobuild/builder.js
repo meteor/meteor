@@ -343,6 +343,79 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return relPath;
   }
 
+  copyTranspiledModules(relativePaths, {
+    sourceRootDir,
+    targetRootDir = this.outputPath,
+    needToTranspile = files.inCheckout(),
+  }) {
+    if (!needToTranspile) {
+      // If these files have already been transpiled, copy the transpiled files
+      // (both .js and .js.map) directly to the builder output directory, without
+      // recompiling them.
+      relativePaths.forEach(relPath => {
+        const jsPath = jsToTs(relPath);
+        [jsPath, jsPath + ".map"].forEach(path => {
+          this.write(path, {
+            file: files.pathJoin(sourceRootDir, path),
+          });
+        });
+      });
+      return;
+    }
+
+    const babel = require("meteor-babel");
+    const commonBabelOptions = babel.getDefaultOptions({
+      nodeMajorVersion: parseInt(process.versions.node),
+      typescript: true
+    });
+    commonBabelOptions.sourceMaps = true;
+
+    const toolsDir = files.getCurrentToolsDir();
+    const babelCacheDirectory =
+      files.pathJoin(files.pathDirname(toolsDir), ".babel-cache");
+
+    relativePaths.forEach(relPath => {
+      assert.ok(!files.pathIsAbsolute(relPath), relPath);
+      const fullPath = files.pathJoin(sourceRootDir, relPath);
+      let inputFileContents = files.readFile(fullPath, "utf-8");
+
+      // If certain behavior should be disabled in the transpiled code, the
+      // #RemoveInProd comment can be added to strip out appropriate lines.
+      inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
+
+      var transpiled = babel.compile(inputFileContents, {
+        ...commonBabelOptions,
+        filename: relPath,
+        sourceFileName: "/" + relPath,
+      }, {
+        cacheDirectory: babelCacheDirectory,
+      });
+
+      // The published implementation of the meteor-tool package should
+      // contain only .js files, like any compiled TypeScript project.
+      // This design has the unfortunate consequence of forbidding
+      // explicit .ts file extensions in imported module identifier
+      // strings, but that's just how it goes with TypeScript.
+      let outputPath = jsToTs(relPath);
+
+      const sourceMapUrlComment =
+        "//# sourceMappingURL=" + files.pathBasename(outputPath + ".map");
+
+      this.write(outputPath, {
+        data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
+      });
+
+      // The babelOptions.sourceMapTarget option was deprecated in Babel
+      // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
+      const sourceMapTarget = outputPath + ".map";
+      transpiled.map.file = sourceMapTarget;
+
+      this.write(sourceMapTarget, {
+        data: Buffer.from(JSON.stringify(transpiled.map), 'utf8')
+      });
+    });
+  }
+
   // Serialize `data` as JSON and write it to `relPath` (a path to a
   // file relative to the bundle root), creating parent directories as
   // necessary. Throw an exception if the file already exists.
@@ -770,7 +843,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     // Methods that don't have to fix up arguments or return values, because
     // they are implemented purely in terms of other methods which do.
-    const passThroughMethods = ["writeToGeneratedFilename"];
+    const passThroughMethods = [
+      "writeToGeneratedFilename",
+      "copyTranspiledModules",
+    ];
     passThroughMethods.forEach(method => {
       subBuilder[method] = this[method];
     });
@@ -832,6 +908,16 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   getWatchSet() {
     return this.watchSet;
   }
+}
+
+function jsToTs(path) {
+  if (path.endsWith(".ts")) {
+    const parts = path.split(".");
+    assert.strictEqual(parts.pop(), "ts");
+    parts.push("js");
+    path = parts.join(".");
+  }
+  return path;
 }
 
 function atomicallyRewriteFile(path, data, options) {
