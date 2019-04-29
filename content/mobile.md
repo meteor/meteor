@@ -82,7 +82,7 @@ In order to build and run mobile apps, you will need to install some prerequisit
 
 <h3 id="installing-prerequisites-ios">iOS</h3>
 
-In order to build and run iOS apps, you will need a Mac with [Apple Xcode](https://developer.apple.com/xcode/) developer tools installed.  We usually recommend installing the latest version, but Meteor v1.8.x currently requires Xcode 10.1 as some dependencies are not supported in Xcode 10.2.  You can download previous versions of Xcode [here](https://developer.apple.com/download/more/?name=Xcode).  Support for Xcode 10.2 is planned to be included in Meteor v1.9 as discussed in [this issue](https://github.com/meteor/meteor/issues/10511).  You should also check the [Meteor history](https://github.com/meteor/meteor/blob/devel/History.md) for any specific version dependencies.
+In order to build and run iOS apps, you will need a Mac with [Apple Xcode](https://developer.apple.com/xcode/) developer tools installed. We recommend installing the latest version, but you should also check the [Meteor history](https://github.com/meteor/meteor/blob/devel/History.md) for any specific version dependencies.  NOTE: To build with Xcode 10.2+, your webapp package must be v1.7.4 or higher.
 
 <h4>Installing Xcode from the App Store</h4>
 
