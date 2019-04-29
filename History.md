@@ -18,6 +18,8 @@ N/A
   * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
   * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
 
+* The `fibers` npm package has been updated to version 4.0.1.
+
 ## v1.8.2
 
 ### Breaking changes
