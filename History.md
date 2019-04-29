@@ -13,6 +13,8 @@ N/A
 * Node has been updated to version
   [12.0.0](https://nodejs.org/en/blog/release/v12.0.0/).
 
+* The `fibers` npm package has been updated to version 4.0.0.
+
 ## v1.8.2
 
 ### Breaking changes

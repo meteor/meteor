@@ -10,7 +10,7 @@ var packageJson = {
   dependencies: {
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-tool-package.js.
-    fibers: "3.1.1",
+    fibers: "4.0.0",
     "meteor-promise": "0.8.7",
     promise: "8.0.2",
     reify: "0.18.1",
