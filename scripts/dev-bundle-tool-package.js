@@ -35,7 +35,9 @@ var packageJson = {
     uuid: "3.3.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
-    kexec: "3.0.0",
+    // Removed temporarily until Node 12 is fully supported:
+    // https://github.com/jprichardson/node-kexec/issues/36
+    // kexec: "3.0.0",
     "source-map": "0.5.7",
     chalk: "0.5.1",
     sqlite3: "4.0.6",

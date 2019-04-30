@@ -543,7 +543,11 @@ var springboard = function (rel, options) {
   // process, so that the springboarded process can reestablish it.
   catalog.official.closePermanently();
 
-  if (process.platform === 'win32') {
+  // Since kexec does not currently compile against Node 12.1.0 (and has
+  // never worked with Windows), use the same non-kexec solution for all
+  // platforms until https://github.com/jprichardson/node-kexec/issues/36
+  // is resolved.
+  if (true || process.platform === 'win32') {
     process.exit(new Promise(function (resolve) {
       var batPath = files.convertToOSPath(executable + ".bat");
       var child = require("child_process").spawn(batPath, newArgv, {
@@ -554,7 +558,7 @@ var springboard = function (rel, options) {
   }
 
   // Now exec; we're not coming back.
-  require('kexec')(executable, newArgv);
+  // require('kexec')(executable, newArgv);
   throw Error('exec failed?');
 };
 
