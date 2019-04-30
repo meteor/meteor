@@ -63,46 +63,26 @@ exports.formatUrl = function (options) {
 };
 
 exports.ipAddress = function () {
-  let defaultRoute;
-  // netroute is not available on Windows
-  if (process.platform !== "win32") {
-    const netroute = require('netroute');
-    const info = netroute.getInfo();
-    defaultRoute = _.findWhere(info.IPv4 || [], { destination: "0.0.0.0" });
-  }
-
   const interfaces = os.networkInterfaces();
 
-  if (defaultRoute) {
-    // If we know the default route, find the IPv4 address associated
-    // with that interface
-    const iface = defaultRoute["interface"];
-    const addressEntry = _.findWhere(interfaces[iface], { family: "IPv4" });
+  // If we don't know the default route, we'll lookup all non-internal
+  // IPv4 addresses and hope to find only one
+  let addressEntries = _.chain(interfaces)
+    .values()
+    .flatten()
+    .where({ family: "IPv4", internal: false })
+    .value();
 
-    if (!addressEntry) {
-      throw new Error(
-`Network interface '${iface}', which seems to be the default route,
-not found in interface list, or does not have an IPv4 address.`);
-    }
-
-    return addressEntry.address;
-  } else {
-    // If we don't know the default route, we'll lookup all non-internal
-    // IPv4 addresses and hope to find only one
-    let addressEntries = _.chain(interfaces).values().flatten().
-      where({ family: "IPv4", internal: false }).value();
-
-    if (addressEntries.length == 0) {
-      throw new Error(
-`Could not find a network interface with a non-internal IPv4 address.`);
-    } else if (addressEntries.length > 1) {
-      throw new Error(
-`Found multiple network interfaces with non-internal IPv4 addresses:
-${addressEntries.map(entry => entry.address).join(', ')}`);
-    } else {
-      return addressEntries[0].address;
-    }
+  if (addressEntries.length == 0) {
+    throw new Error(`Could not find a network interface with a non-internal IPv4 address.`);
   }
+
+  if (addressEntries.length > 1) {
+    throw new Error(`Found multiple network interfaces with non-internal IPv4 addresses:
+${addressEntries.map(entry => entry.address).join(', ')}`);
+  }
+
+  return addressEntries[0].address;
 };
 
 exports.hasScheme = function (str) {
