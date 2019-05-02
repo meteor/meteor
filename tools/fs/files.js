@@ -529,23 +529,22 @@ files.cp_r = function(from, to, options = {}) {
   if (stat.isSymbolicLink()) {
     symlinkWithOverwrite(files.readlink(from), to);
 
+  } else if (options.transformContents) {
+    files.writeFile(to, options.transformContents(
+      files.readFile(from),
+      files.pathBasename(from)
+    ), {
+      // Create the file as readable and writable by everyone, and
+      // executable by everyone if the original file is executable by
+      // owner. (This mode will be modified by umask.) We don't copy the
+      // mode *directly* because this function is used by 'meteor create'
+      // which is copying from the read-only tools tree into a writable app.
+      mode: (stat.mode & 0o100) ? 0o777 : 0o666,
+    });
+
   } else {
-    // Create the file as readable and writable by everyone, and
-    // executable by everyone if the original file is executable by
-    // owner. (This mode will be modified by umask.) We don't copy the
-    // mode *directly* because this function is used by 'meteor create'
-    // which is copying from the read-only tools tree into a writable app.
-    const mode = (stat.mode & 0o100) ? 0o777 : 0o666;
-
-    if (options.transformContents) {
-      files.writeFile(to, options.transformContents(
-        files.readFile(from),
-        files.pathBasename(from)
-      ), { mode });
-
-    } else {
-      copyFileHelper(from, to, mode);
-    }
+    // Note: files.copyFile applies the same stat.mode logic as above.
+    files.copyFile(from, to);
   }
 };
 
@@ -644,44 +643,6 @@ files.findPathsWithRegex = function (dir, regex, options) {
   return _.filter(allPaths, function (path) {
     return path.match(regex);
   });
-};
-
-// Copies a file, which is expected to exist. Parent directories of "to" do not
-// have to exist. Treats symbolic links transparently (copies the contents, not
-// the link itself, and it's an error if the link doesn't point to a file).
-files.copyFile = function (from, to, origMode=null) {
-  files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0o755);
-
-  if (origMode === null) {
-    var stats = files.stat(from);
-    if (!stats.isFile()) {
-      throw Error("cannot copy non-files");
-    }
-    origMode = stats.mode;
-  }
-
-  // Create the file as readable and writable by everyone, and executable by
-  // everyone if the original file is executably by owner. (This mode will be
-  // modified by umask.) We don't copy the mode *directly* because this function
-  // is used by 'meteor create' which is copying from the read-only tools tree
-  // into a writable app.
-  var mode = (origMode & 0o100) ? 0o777 : 0o666;
-
-  copyFileHelper(from, to, mode);
-};
-files.copyFile = Profile("files.copyFile", files.copyFile);
-
-var copyFileHelper = function (from, to, mode) {
-  var readStream = files.createReadStream(from);
-  var writeStream = files.createWriteStream(to, { mode: mode });
-  new Promise(function (resolve, reject) {
-    readStream.on('error', reject);
-    writeStream.on('error', reject);
-    writeStream.on('open', function () {
-      readStream.pipe(writeStream);
-    });
-    writeStream.once('finish', resolve);
-  }).await();
 };
 
 // Make a temporary directory. Returns the path to the newly created
@@ -1732,6 +1693,25 @@ wrapFsFunc("stat", [0]);
 wrapFsFunc("lstat", [0]);
 
 wrapDestructiveFsFunc("rename", [0, 1]);
+
+wrapDestructiveFsFunc("copyFile", [0, 1]);
+const wrappedCopyFile = files.copyFile;
+// Copies a file, which is expected to exist. Parent directories of "to" do not
+// have to exist. Treats symbolic links transparently (copies the contents, not
+// the link itself, and it's an error if the link doesn't point to a file).
+files.copyFile = function copyFile(from, to, flags = 0) {
+  files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0o755);
+  wrappedCopyFile(from, to, flags);
+  const stat = statOrNull(from);
+  if (stat && stat.isFile()) {
+    // Create the file as readable and writable by everyone, and executable by
+    // everyone if the original file is executably by owner. (This mode will be
+    // modified by umask.) We don't copy the mode *directly* because this function
+    // is used by 'meteor create' which is copying from the read-only tools tree
+    // into a writable app.
+    files.chmod(to, (stat.mode & 0o100) ? 0o777 : 0o666);
+  }
+};
 
 // After the outermost files.withCache call returns, the withCacheCache is
 // reset to null so that it does not survive server restarts.
