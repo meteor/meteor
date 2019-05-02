@@ -381,7 +381,7 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   // This sleep should be a little more time than the interval at which
   // the child checks if the parent is still alive, in
   // packages/webapp/webapp_server.js.
-  utils.sleepMs(3500);
+  utils.sleepMs(10000);
 
   // Send the child process a signal of 0. If there is no error, it
   // means that the process is still running, which is not what we
