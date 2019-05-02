@@ -41,6 +41,7 @@ var packageJson = {
     sqlite3: "3.1.8",
     netroute: "1.0.2",
     "http-proxy": "1.16.2",
+    "is-reachable": "3.1.0",
     "wordwrap": "0.0.2",
     "moment": "2.20.1",
     "rimraf": "2.6.2",
