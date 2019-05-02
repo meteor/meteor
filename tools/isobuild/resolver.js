@@ -83,6 +83,12 @@ export default class Resolver {
 
     this._cacheMethod("_findPkgJsonSubsetForPath");
     this._cacheMethod("_getPkgJsonSubsetForDir");
+
+    if (archMatches(this.targetArch, "web")) {
+      this.mainFields = ["browser", "module", "main"];
+    } else {
+      this.mainFields = ["main"];
+    }
   }
 
   _cacheMethod(name) {
@@ -366,11 +372,7 @@ export default class Resolver {
       }
     }
 
-    if (archMatches(this.targetArch, "web")) {
-      tryMain("browser");
-    }
-
-    tryMain("main");
+    this.mainFields.forEach(tryMain);
 
     return {
       path: pkgJsonPath,
