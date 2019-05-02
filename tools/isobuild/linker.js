@@ -299,6 +299,7 @@ _.extend(Module.prototype, {
           }
 
           tryMain("browser");
+          tryMain("module");
           tryMain("main");
 
           stubArray.push(stub);

@@ -34,6 +34,7 @@ import {
   optimisticHashOrNull,
   optimisticStatOrNull,
   optimisticReadMeteorIgnore,
+  optimisticLookupPackageJson,
 } from "../fs/optimistic.js";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
@@ -1020,7 +1021,13 @@ _.extend(PackageSource.prototype, {
 
       if (dir === "node_modules") {
         fileOptions.lazy = true;
-        fileOptions.transpile = false;
+
+        // We used to disable transpilation for modules within node_modules,
+        // mostly for build performance reasons, but now that we have a lazy
+        // compilation system, we no longer need to worry about build times
+        // for unused modules, which unlocks opportunities such as compiling
+        // ECMAScript import/export syntax in npm packages.
+        // fileOptions.transpile = false;
 
         // Return immediately so that we don't apply special meanings to
         // client or server directories inside node_modules directories.
@@ -1089,6 +1096,7 @@ _.extend(PackageSource.prototype, {
   }) {
     const self = this;
     const arch = sourceArch.arch;
+    const isWeb = archinfo.matches(arch, "web");
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
@@ -1262,7 +1270,12 @@ _.extend(PackageSource.prototype, {
         }
       }
 
-      const readOptions = inNodeModules
+      const pkgJson = optimisticLookupPackageJson(self.sourceRoot, dir);
+      const hasModuleEntryPoint = pkgJson && (
+        isWeb ? typeof pkgJson.module === "string" : pkgJson.type === "module"
+      );
+
+      const readOptions = inNodeModules && !hasModuleEntryPoint
         ? nodeModulesReadOptions
         : sourceReadOptions;
 

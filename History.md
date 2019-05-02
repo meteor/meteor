@@ -13,6 +13,13 @@ N/A
 
 * The `meteor-babel` npm package has been updated to version 7.4.3.
 
+* When bundling client code, the Meteor module system now prefers the
+  `"module"` field in `package.json`, if defined. Additionally, npm
+  packages with a `"module"` entry point will now be compiled
+  automatically by `meteor-babel`, like application code, without any
+  special symlinking tricks.
+  [PR #10541](https://github.com/meteor/meteor/pull/10541)
+
 ## v1.8.1, 2019-04-03
 
 ### Breaking changes

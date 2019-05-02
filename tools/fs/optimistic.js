@@ -275,6 +275,21 @@ export const optimisticReadMeteorIgnore = wrap(dir => {
   return null;
 });
 
+export const optimisticLookupPackageJson = wrap((absRootDir, relDir) => {
+  const absPkgJsonPath = pathJoin(absRootDir, relDir, "package.json");
+  const pkgJson = optimisticReadJsonOrNull(absPkgJsonPath);
+  if (pkgJson) {
+    return pkgJson;
+  }
+
+  const relParentDir = pathDirname(relDir);
+  if (relParentDir === relDir) {
+    return null;
+  }
+
+  return optimisticLookupPackageJson(absRootDir, relParentDir);
+});
+
 const optimisticIsSymbolicLink = wrap(path => {
   try {
     return lstat(path).isSymbolicLink();

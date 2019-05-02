@@ -344,6 +344,20 @@ describe("local node_modules", () => {
     // module layout, so we shouldn't let this change without notice.
     assert.strictEqual(pkg.version, "0.2.3");
   });
+
+  it('should prefer "module" field of package.json on client', () => {
+    assert.strictEqual(
+      require.resolve("@wry/context"),
+      "/node_modules/@wry/context/lib/" + (
+        Meteor.isClient ? "context.esm.js" : "context.js"
+      ),
+    );
+
+    assert.strictEqual(
+      typeof require("@wry/context").Slot,
+      "function",
+    );
+  });
 });
 
 describe("Meteor packages", () => {
