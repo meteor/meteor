@@ -196,7 +196,10 @@ export class AccountsCommon {
    *                        as user details, connection information, etc.
    */
   onLogin(func) {
-    return this._onLoginHook.register(func);
+    let ret = this._onLoginHook.register(func);
+    // call the just registered callback if already logged in
+    this._startupCallback(this._onLoginHook.nextCallbackId - 1);
+    return ret;
   }
 
   /**
@@ -285,6 +288,9 @@ export class AccountsCommon {
     }
     return new Date() > (new Date(when) - minLifetimeMs);
   }
+
+  // noop on the server overridden on the client
+  _startupCallback(callbackId) {}
 }
 
 // Note that Accounts is defined separately in accounts_client.js and

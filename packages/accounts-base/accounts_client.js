@@ -435,7 +435,24 @@ export class AccountsClient extends AccountsCommon {
     this._pageLoadLoginCallbacks.forEach(callback => callback(attemptInfo));
     this._pageLoadLoginCallbacks = [];
     this._pageLoadLoginAttemptInfo = attemptInfo;
-  };
+  }
+
+  // _startupCallback executes on onLogin callbacks
+  // at registration time if already logged in
+  // this can happen when new AccountsClient is created
+  // before callbacks are registered see #10157
+  _startupCallback(callbackId) {
+    // Are we already logged in?
+    if (this.connection._userId) {
+      // Then go ahead and call the callback that we just registered.
+      const cb = this._onLoginHook.callbacks[callbackId];
+      // If already logged in before handler is registered, it's safe to
+      // assume type is a 'resume', and execute the callback at the end of
+      // the queue so that Meteor.startup can complete before any embedded
+      // onLogin callbacks would execute.
+      Meteor.setTimeout(() => cb({ type: 'resume' }), 0);
+    }
+  }
 
   ///
   /// LOGIN TOKENS
