@@ -1,6 +1,11 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
+    "@wry/context": {
+      "version": "0.4.0",
+      "resolved": "https://registry.npmjs.org/@wry/context/-/context-0.4.0.tgz",
+      "integrity": "sha512-rVjwzFjVYXJ8pWJ8ZRCHv6meOebQvfTlvnUYUNX93Ce0KNeMTqCkf0GiOJc6BNVB96s7qfvwoLN3nUgDnSFOOg=="
+    },
     "assert": {
       "version": "1.3.0",
       "resolved": "https://registry.npmjs.org/assert/-/assert-1.3.0.tgz",
