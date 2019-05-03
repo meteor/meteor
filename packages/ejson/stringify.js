@@ -25,7 +25,7 @@ const str = (key, holder, singleIndent, outerIndent, canonical) => {
     return String(value);
   // If the type is 'object', we might be dealing with an object or an array or
   // null.
-  case 'object':
+  case 'object': {
     // Due to a specification blunder in ECMAScript, typeof null is 'object',
     // so watch out for that case.
     if (!value) {
@@ -35,6 +35,7 @@ const str = (key, holder, singleIndent, outerIndent, canonical) => {
     // value.
     const innerIndent = outerIndent + singleIndent;
     const partial = [];
+    let v;
 
     // Is the value an array?
     if (Array.isArray(value) || ({}).hasOwnProperty.call(value, 'callee')) {
@@ -48,7 +49,6 @@ const str = (key, holder, singleIndent, outerIndent, canonical) => {
 
       // Join all of the elements together, separated with commas, and wrap
       // them in brackets.
-      let v;
       if (partial.length === 0) {
         v = '[]';
       } else if (innerIndent) {
@@ -93,6 +93,7 @@ const str = (key, holder, singleIndent, outerIndent, canonical) => {
       v = '{' + partial.join(',') + '}';
     }
     return v;
+  }
 
   default: // Do nothing
   }
