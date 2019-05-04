@@ -251,6 +251,7 @@ export class Unibuild {
 
     // Figure out where the npm dependencies go.
     let node_modules = {};
+    let nonLocalNodeModulesBundlePath;
     _.each(unibuild.nodeModulesDirectories, nmd => {
       const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
       // We already have this npm directory from another unibuild.
@@ -258,6 +259,9 @@ export class Unibuild {
         : npmDirsToCopy[nmd.sourcePath] =
             nmd.getPreferredBundlePath("isopack");
       node_modules[bundlePath] = nmd.toJSON();
+      if (!nmd.local) {
+        nonLocalNodeModulesBundlePath = nonLocalNodeModulesBundlePath || bundlePath;
+      }
     });
 
     const preferredPaths = Object.keys(node_modules);
@@ -315,13 +319,37 @@ export class Unibuild {
     });
 
     // Output other resources each to their own file
-    _.each(unibuild.resources, function (resource) {
+    _.each(unibuild.resources, resource => {
       if (_.contains(["head", "body"], resource.type)) {
         // already did this one
         return;
       }
 
-      const generatedFilename =
+      let generatedFilename;
+
+      // Although non-local npm dependencies installed by Npm.depends start
+      // with relative paths like .npm/**/node_modules/*, the files are stored
+      // in the bundle under npm/node_modules, so we need to reroot relative
+      // .npm/ paths against the npm/node_modules path.
+      if (
+        unibuild.pkg.name &&
+        typeof nonLocalNodeModulesBundlePath === "string" &&
+        typeof resource.path === "string" &&
+        resource.path.startsWith(".npm/")
+      ) {
+        const parts = resource.path.split("/");
+        const nmi = parts.indexOf("node_modules");
+        if (nmi >= 0) {
+          // Skip builder.writeToGeneratedFilename below since the file already
+          // (should) exist at this new generatedFilename path.
+          generatedFilename = files.pathJoin(
+            nonLocalNodeModulesBundlePath,
+            parts.slice(nmi + 1).join("/"),
+          );
+        }
+      }
+
+      generatedFilename = generatedFilename ||
         builder.writeToGeneratedFilename(
           files.pathJoin(
             unibuildDir,

@@ -426,6 +426,9 @@ _.extend(PackageSource.prototype, {
       sourceRoot: self.sourceRoot,
       uses: _.map(options.use, splitConstraint),
       getFiles() {
+        // TODO We might want to call _findSources here, if we want plugins to
+        // be able to import compiled files that were not explicitly included in
+        // the sources array passed to Package.registerBuildPlugin.
         return {
           sources: sources
         }
@@ -1298,10 +1301,6 @@ _.extend(PackageSource.prototype, {
 
       subdirectories.forEach(subdir => {
         if (/(^|\/)node_modules\/$/.test(subdir)) {
-          if (! inNodeModules) {
-            sourceArch.localNodeModulesDirs[subdir] = true;
-          }
-
           // Defer handling node_modules until after we handle all other
           // subdirectories, so that we know whether we need to descend
           // further. If sources is still empty after we handle everything
@@ -1309,21 +1308,29 @@ _.extend(PackageSource.prototype, {
           // imported by anthing outside of it, so we can ignore it.
           nodeModulesDir = subdir;
 
+          // A "local" node_modules directory is one that's managed by the
+          // application developer using npm, rather than by Meteor using
+          // Npm.depends, which is available only in Meteor packages, and
+          // installs its dependencies into .npm/*/node_modules. Local
+          // node_modules directories may contain other nested node_modules
+          // directories, but we care about recording only the top-level
+          // node_modules directories here (hence !inNodeModules).
+          if (!inNodeModules && (isApp || !subdir.startsWith(".npm/"))) {
+            sourceArch.localNodeModulesDirs[subdir] = true;
+          }
+
         } else {
           sources.push(...find(subdir, depth + 1, inNodeModules));
         }
       });
 
-      if (isApp &&
-          nodeModulesDir &&
-          (! inNodeModules || sources.length > 0)) {
+      if (nodeModulesDir && (!inNodeModules || sources.length > 0)) {
         // If we found a node_modules subdirectory above, and either we
         // are not already inside another node_modules directory or we
         // found source files elsewhere in this directory or its other
-        // subdirectories, and we're building an app (as opposed to a
-        // Meteor package), continue searching this node_modules
-        // directory, so that any non-.js(on) files it contains can be
-        // imported by the app (#6037).
+        // subdirectories, continue searching this node_modules directory,
+        // so that any non-.js(on) files it contains can be imported by
+        // the app (#6037).
         sources.push(...find(nodeModulesDir, depth + 1, true));
       }
 
@@ -1336,7 +1343,27 @@ _.extend(PackageSource.prototype, {
       return sources;
     }
 
-    return files.withCache(() => find("", 0, false));
+    const sources = find("", 0, false);
+
+    if (!isApp && typeof this.npmCacheDirectory === "string") {
+      // If this PackageSource has an npmCacheDirectory, scan it as well for
+      // sources that might need to be compiled.
+      const stat = optimisticStatOrNull(this.npmCacheDirectory);
+      if (stat && stat.isDirectory()) {
+        const relNpmDir = files.pathRelative(
+          this.sourceRoot,
+          this.npmCacheDirectory,
+        );
+        if (! relNpmDir.startsWith("..")) {
+          const relParts = relNpmDir.split("/");
+          const depth = relParts.length;
+          const inNodeModules = relParts.indexOf("node_modules") >= 0;
+          sources.push(...find(relNpmDir, depth, inNodeModules));
+        }
+      }
+    }
+
+    return sources;
   }),
 
   _findAssets({

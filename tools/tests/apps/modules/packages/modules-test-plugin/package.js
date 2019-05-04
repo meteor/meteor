@@ -14,6 +14,7 @@ Package.registerBuildPlugin({
   npmDependencies: {
     // TODO Figure out what to do about the duplication between this list
     // and the Npm.depends list below.
+    "ts-invariant": "0.4.1",
     "babel-plugin-transform-class-properties": "6.9.0",
     "babel-plugin-transform-strict-mode": "6.8.0"
   }

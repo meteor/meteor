@@ -375,6 +375,27 @@ export default class ImportScanner {
   _checkSourceAndTargetPaths(file) {
     file.sourcePath = this._getSourcePath(file);
 
+    // If we're scanning a Meteor package (as indicated by this.name), and we
+    // come across a file whose sourcePath starts with .npm/, it's a file that
+    // was installed by Npm.depends, so we should reroot it relative to one of
+    // this.nodeModulesPaths, rather than preserving the .npm/ path.
+    if (this.name && file.sourcePath.startsWith(".npm/")) {
+      const parts = file.sourcePath.split("/");
+      const nmi = parts.indexOf("node_modules");
+      if (nmi >= 0) {
+        const suffix = parts.slice(nmi + 1).join("/");
+        this.nodeModulesPaths.some(nodeModulesPath => {
+          const newAbsPath = pathJoin(nodeModulesPath, suffix);
+          if (optimisticStatOrNull(newAbsPath)) {
+            file.sourcePath = file.targetPath =
+              pathRelative(this.sourceRoot, newAbsPath);
+            return true;
+          }
+          return false;
+        });
+      }
+    }
+
     if (! isString(file.targetPath)) {
       return;
     }
