@@ -1722,7 +1722,9 @@ class ClientTarget extends Target {
       manifestItem.sri = file.sri();
 
       if (! file.targetPath.startsWith("dynamic/")) {
-        writeFile(file, builder);
+        writeFile(file, builder, {
+          leaveSourceMapUrls: type === 'asset'
+        });
         manifest.push(manifestItem);
         return;
       }
@@ -2768,7 +2770,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
 
   if (options && options.sourceMapUrl) {
     data = addSourceMappingURL(data, options.sourceMapUrl);
-  } else {
+  } else if (!options || !options.leaveSourceMapUrls) {
     // If we do not have an options.sourceMapUrl to append, then we still
     // want to remove any existing //# sourceMappingURL comments.
     // https://github.com/meteor/meteor/issues/9894
