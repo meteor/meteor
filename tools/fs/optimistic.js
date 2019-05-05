@@ -5,6 +5,7 @@ import { watch } from "./safe-watcher.js";
 import { sha1 } from "./watch.js";
 import {
   pathSep,
+  pathBasename,
   pathDirname,
   pathIsAbsolute,
   pathJoin,
@@ -284,6 +285,11 @@ export const optimisticLookupPackageJson = wrap((absRootDir, relDir) => {
 
   const relParentDir = pathDirname(relDir);
   if (relParentDir === relDir) {
+    return null;
+  }
+
+  // Stop searching if an ancestor node_modules directory is encountered.
+  if (pathBasename(relParentDir) === "node_modules") {
     return null;
   }
 

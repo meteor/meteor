@@ -23,6 +23,7 @@ import {
   convertToOSPath,
   convertToPosixPath,
   realpathOrNull,
+  writeFileAtomically,
 } from "../fs/files.js";
 
 const {
@@ -34,10 +35,14 @@ const {
 import {
   optimisticReadFile,
   optimisticStatOrNull,
+  optimisticLookupPackageJson,
   optimisticLStatOrNull,
   optimisticHashOrNull,
   shouldWatch,
 } from "../fs/optimistic.js";
+
+import { wrap } from "optimism";
+import { compile as reifyCompile } from "reify/lib/compiler";
 
 import Resolver from "./resolver.js";
 
@@ -55,24 +60,91 @@ const fakeFileStat = {
 // to prevent them from being added to scanner.outputFiles.
 const fakeSymbol = Symbol("fake");
 
-// Default handlers for well-known file extensions.
-// Note that these function expect strings, not Buffer objects.
-const defaultExtensionHandlers = {
-  ".js"(dataString) {
-    // Strip any #! line from the beginning of the file.
-    return dataString.replace(/^#![^\n]*/, "");
-  },
+function stripHashBang(dataString) {
+  return dataString.replace(/^#![^\n]*/, "");
+}
 
-  ".json"(dataString) {
-    const file = this;
-    file.jsonData = JSON.parse(dataString);
+const reifyCompileWithCache = wrap(function ({ dataString }) {
+  return reifyCompile(stripHashBang(dataString)).code;
+}, {
+  makeCacheKey({ hash }) {
+    return hash;
+  }
+});
+
+class DefaultHandlers {
+  constructor({
+    bundleArch,
+    sourceRoot,
+    cacheDir,
+  }) {
+    Object.assign(this, {
+      isWeb: ! archMatches(bundleArch, "os"),
+      sourceRoot,
+      cacheDir,
+    });
+  }
+
+  lookupPackageJson(file) {
+    const relDir = pathRelative(
+      this.sourceRoot,
+      pathDirname(file.absPath),
+    );
+
+    if (relDir.startsWith("..")) {
+      const absParts = file.absPath.split("/");
+      absParts.pop(); // Get rid of base filename.
+      const nmi = absParts.lastIndexOf("node_modules");
+      return optimisticLookupPackageJson(
+        absParts.slice(0, nmi + 1).join("/"),
+        absParts.slice(nmi + 1).join("/"),
+      );
+    }
+
+    return optimisticLookupPackageJson(this.sourceRoot, relDir);
+  }
+
+  js(file) {
+    const pkgJson = this.lookupPackageJson(file);
+
+    // Similar to logic in PackageSource#_findSources.
+    const hasModuleEntryPoint = pkgJson && (
+      this.isWeb
+        ? typeof pkgJson.module === "string"
+        : pkgJson.type === "module"
+    );
+
+    if (! hasModuleEntryPoint) {
+      return stripHashBang(file.dataString);
+    }
+
+    if (this.cacheDir) {
+      const cacheFileName = pathJoin(
+        this.cacheDir,
+        "reify-" + file.hash + ".js",
+      );
+      try {
+        return optimisticReadFile(cacheFileName, "utf8");
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e;
+        const code = reifyCompileWithCache(file);
+        process.nextTick(writeFileAtomically, cacheFileName, code);
+        return code;
+      }
+    } else {
+      return reifyCompileWithCache(file);
+    }
+  }
+
+  json(file) {
+    file.jsonData = JSON.parse(file.dataString);
     return jsonDataToCommonJS(file.jsonData);
-  },
+  }
 
-  ".css"(dataString, hash) {
+  css({ dataString, hash }) {
     return cssToCommonJS(dataString, hash);
   }
-};
+}
 
 function jsonDataToCommonJS(data) {
   return "module.exports = " +
@@ -184,6 +256,7 @@ export default class ImportScanner {
     sourceRoot,
     nodeModulesPaths = [],
     watchSet,
+    cacheDir,
   }) {
     assert.ok(isString(sourceRoot));
 
@@ -192,11 +265,17 @@ export default class ImportScanner {
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
+    this.cacheDir = cacheDir;
     this.absPathToOutputIndex = Object.create(null);
     this.realPathToFiles = Object.create(null);
     this.realPathCache = Object.create(null);
     this.allMissingModules = Object.create(null);
     this.outputFiles = [];
+    this.defaultHandlers = new DefaultHandlers({
+      bundleArch,
+      sourceRoot,
+      cacheDir,
+    });
 
     this.resolver = Resolver.getOrCreate({
       caller: "ImportScanner#constructor",
@@ -274,21 +353,22 @@ export default class ImportScanner {
       // system, but any import statements or require calls in file.data
       // will be interpreted relative to this path, so it needs to be
       // something plausible. #6411 #6383
-      const absPath = pathJoin(this.sourceRoot, file.sourcePath);
+      file.absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
       // This property can have values false, true, "dynamic" (which
       // indicates that the file has been imported, but only dynamically).
       file.imported = false;
 
-      file.absModuleId = file.absModuleId || this._getAbsModuleId(absPath);
+      file.absModuleId = file.absModuleId ||
+        this._getAbsModuleId(file.absPath);
 
-      if (! this._addFile(absPath, file)) {
+      if (! this._addFile(file.absPath, file)) {
         // Collisions can happen if a compiler plugin calls addJavaScript
         // multiple times with the same sourcePath. #6422
-        this._combineFiles(this._getFile(absPath), file);
+        this._combineFiles(this._getFile(file.absPath), file);
       }
 
-      this._addFileByRealPath(file, this._realPath(absPath));
+      this._addFileByRealPath(file, this._realPath(file.absPath));
     });
 
     return this;
@@ -374,27 +454,6 @@ export default class ImportScanner {
   // file.targetPath differs from file.sourcePath.
   _checkSourceAndTargetPaths(file) {
     file.sourcePath = this._getSourcePath(file);
-
-    // If we're scanning a Meteor package (as indicated by this.name), and we
-    // come across a file whose sourcePath starts with .npm/, it's a file that
-    // was installed by Npm.depends, so we should reroot it relative to one of
-    // this.nodeModulesPaths, rather than preserving the .npm/ path.
-    if (this.name && file.sourcePath.startsWith(".npm/")) {
-      const parts = file.sourcePath.split("/");
-      const nmi = parts.indexOf("node_modules");
-      if (nmi >= 0) {
-        const suffix = parts.slice(nmi + 1).join("/");
-        this.nodeModulesPaths.some(nodeModulesPath => {
-          const newAbsPath = pathJoin(nodeModulesPath, suffix);
-          if (optimisticStatOrNull(newAbsPath)) {
-            file.sourcePath = file.targetPath =
-              pathRelative(this.sourceRoot, newAbsPath);
-            return true;
-          }
-          return false;
-        });
-      }
-    }
 
     if (! isString(file.targetPath)) {
       return;
@@ -957,16 +1016,18 @@ export default class ImportScanner {
       return file.dataString;
     }
 
-    const dotExt = "." + file.type;
-    const dataString = file.data.toString("utf8");
-    file.dataString = defaultExtensionHandlers[dotExt].call(
-      file,
-      dataString,
-      file.hash,
-    );
+    const rawDataString = file.data.toString("utf8");
+    if (file.type === "js") {
+      // Avoid compiling .js file with Reify when all we want is a string
+      // version of file.data.
+      file.dataString = stripHashBang(rawDataString);
+    } else {
+      file.dataString = rawDataString;
+      file.dataString = this.defaultHandlers[file.type](file);
+    }
 
     if (! (file.data instanceof Buffer) ||
-        file.dataString !== dataString) {
+        file.dataString !== rawDataString) {
       file.data = Buffer.from(file.dataString, "utf8");
     }
 
@@ -975,6 +1036,7 @@ export default class ImportScanner {
 
   _readFile(absPath) {
     const info = {
+      absPath,
       data: optimisticReadFile(absPath),
       hash: optimisticHashOrNull(absPath),
     };
@@ -1025,9 +1087,9 @@ export default class ImportScanner {
   }
 
   _readModule(absPath) {
-    let ext = pathExtname(absPath).toLowerCase();
+    const dotExt = pathExtname(absPath).toLowerCase();
 
-    if (ext === ".node") {
+    if (dotExt === ".node") {
       const dataString = "throw new Error(" + JSON.stringify(
         this.isWeb()
           ? "cannot load native .node modules on the client"
@@ -1037,7 +1099,7 @@ export default class ImportScanner {
       const data = Buffer.from(dataString, "utf8");
       const hash = sha1(data);
 
-      return { data, dataString, hash };
+      return { absPath, data, dataString, hash };
     }
 
     try {
@@ -1049,20 +1111,16 @@ export default class ImportScanner {
 
     const dataString = info.dataString;
 
-    if (! has(defaultExtensionHandlers, ext)) {
+    let ext = dotExt.slice(1);
+    if (! has(DefaultHandlers.prototype, ext)) {
       if (canBeParsedAsPlainJS(dataString)) {
-        ext = ".js";
+        ext = "js";
       } else {
         return null;
       }
     }
 
-    info.dataString = defaultExtensionHandlers[ext].call(
-      info,
-      info.dataString,
-      info.hash,
-    );
-
+    info.dataString = this.defaultHandlers[ext](info);
     if (info.dataString !== dataString) {
       info.data = Buffer.from(info.dataString, "utf8");
     }

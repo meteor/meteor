@@ -1078,13 +1078,20 @@ class Target {
     }
 
     const target = this;
+
+    const linkerCacheDir = this.bundlerCacheDir &&
+          files.pathJoin(this.bundlerCacheDir, "linker");
+
+    const scannerCacheDir = this.bundlerCacheDir &&
+          files.pathJoin(this.bundlerCacheDir, "scanner");
+
     const processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: this.unibuilds,
       arch: this.arch,
       sourceRoot: this.sourceRoot,
       isopackCache: this.isopackCache,
-      linkerCacheDir: this.bundlerCacheDir &&
-        files.pathJoin(this.bundlerCacheDir, 'linker'),
+      linkerCacheDir,
+      scannerCacheDir,
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.

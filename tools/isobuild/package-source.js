@@ -1343,27 +1343,7 @@ _.extend(PackageSource.prototype, {
       return sources;
     }
 
-    const sources = find("", 0, false);
-
-    if (!isApp && typeof this.npmCacheDirectory === "string") {
-      // If this PackageSource has an npmCacheDirectory, scan it as well for
-      // sources that might need to be compiled.
-      const stat = optimisticStatOrNull(this.npmCacheDirectory);
-      if (stat && stat.isDirectory()) {
-        const relNpmDir = files.pathRelative(
-          this.sourceRoot,
-          this.npmCacheDirectory,
-        );
-        if (! relNpmDir.startsWith("..")) {
-          const relParts = relNpmDir.split("/");
-          const depth = relParts.length;
-          const inNodeModules = relParts.indexOf("node_modules") >= 0;
-          sources.push(...find(relNpmDir, depth, inNodeModules));
-        }
-      }
-    }
-
-    return sources;
+    return files.withCache(() => find("", 0, false));
   }),
 
   _findAssets({
