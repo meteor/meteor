@@ -20,6 +20,10 @@ N/A
 
 * The `fibers` npm package has been updated to version 4.0.1.
 
+* The `pathwatcher` npm package has been updated to use a fork of version
+  8.0.2, with [PR #128](https://github.com/atom/node-pathwatcher/pull/128)
+  applied.
+
 ## v1.8.2
 
 ### Breaking changes

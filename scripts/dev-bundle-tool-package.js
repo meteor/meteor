@@ -54,7 +54,9 @@ var packageJson = {
     escope: "3.6.0",
     split2: "2.2.0",
     multipipe: "2.0.1",
-    pathwatcher: "8.0.2",
+    // Our fork of node-pathwatcher@8.0.2 with my PR
+    // https://github.com/atom/node-pathwatcher/pull/128 applied.
+    pathwatcher: "https://github.com/meteor/node-pathwatcher/tarball/3623544bddb4cd290d890a0e625164fc557fc461",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: "0.9.5",
