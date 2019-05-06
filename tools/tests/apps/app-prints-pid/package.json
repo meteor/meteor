@@ -1,0 +1,14 @@
+{
+  "name": "app-prints-pid",
+  "private": true,
+  "dependencies": {
+    "@babel/runtime": "^7.3.4",
+    "meteor-node-stubs": "^0.4.1"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": false,
+      "server": "print.js"
+    }
+  }
+}

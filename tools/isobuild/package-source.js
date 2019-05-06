@@ -34,6 +34,7 @@ import {
   optimisticHashOrNull,
   optimisticStatOrNull,
   optimisticReadMeteorIgnore,
+  optimisticLookupPackageJson,
 } from "../fs/optimistic.js";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
@@ -425,6 +426,9 @@ _.extend(PackageSource.prototype, {
       sourceRoot: self.sourceRoot,
       uses: _.map(options.use, splitConstraint),
       getFiles() {
+        // TODO We might want to call _findSources here, if we want plugins to
+        // be able to import compiled files that were not explicitly included in
+        // the sources array passed to Package.registerBuildPlugin.
         return {
           sources: sources
         }
@@ -1020,7 +1024,13 @@ _.extend(PackageSource.prototype, {
 
       if (dir === "node_modules") {
         fileOptions.lazy = true;
-        fileOptions.transpile = false;
+
+        // We used to disable transpilation for modules within node_modules,
+        // mostly for build performance reasons, but now that we have a lazy
+        // compilation system, we no longer need to worry about build times
+        // for unused modules, which unlocks opportunities such as compiling
+        // ECMAScript import/export syntax in npm packages.
+        // fileOptions.transpile = false;
 
         // Return immediately so that we don't apply special meanings to
         // client or server directories inside node_modules directories.
@@ -1089,6 +1099,7 @@ _.extend(PackageSource.prototype, {
   }) {
     const self = this;
     const arch = sourceArch.arch;
+    const isWeb = archinfo.matches(arch, "web");
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
@@ -1262,7 +1273,12 @@ _.extend(PackageSource.prototype, {
         }
       }
 
-      const readOptions = inNodeModules
+      const pkgJson = optimisticLookupPackageJson(self.sourceRoot, dir);
+      const hasModuleEntryPoint = pkgJson && (
+        isWeb ? typeof pkgJson.module === "string" : pkgJson.type === "module"
+      );
+
+      const readOptions = inNodeModules && !hasModuleEntryPoint
         ? nodeModulesReadOptions
         : sourceReadOptions;
 
@@ -1285,10 +1301,6 @@ _.extend(PackageSource.prototype, {
 
       subdirectories.forEach(subdir => {
         if (/(^|\/)node_modules\/$/.test(subdir)) {
-          if (! inNodeModules) {
-            sourceArch.localNodeModulesDirs[subdir] = true;
-          }
-
           // Defer handling node_modules until after we handle all other
           // subdirectories, so that we know whether we need to descend
           // further. If sources is still empty after we handle everything
@@ -1296,21 +1308,29 @@ _.extend(PackageSource.prototype, {
           // imported by anthing outside of it, so we can ignore it.
           nodeModulesDir = subdir;
 
+          // A "local" node_modules directory is one that's managed by the
+          // application developer using npm, rather than by Meteor using
+          // Npm.depends, which is available only in Meteor packages, and
+          // installs its dependencies into .npm/*/node_modules. Local
+          // node_modules directories may contain other nested node_modules
+          // directories, but we care about recording only the top-level
+          // node_modules directories here (hence !inNodeModules).
+          if (!inNodeModules && (isApp || !subdir.startsWith(".npm/"))) {
+            sourceArch.localNodeModulesDirs[subdir] = true;
+          }
+
         } else {
           sources.push(...find(subdir, depth + 1, inNodeModules));
         }
       });
 
-      if (isApp &&
-          nodeModulesDir &&
-          (! inNodeModules || sources.length > 0)) {
+      if (nodeModulesDir && (!inNodeModules || sources.length > 0)) {
         // If we found a node_modules subdirectory above, and either we
         // are not already inside another node_modules directory or we
         // found source files elsewhere in this directory or its other
-        // subdirectories, and we're building an app (as opposed to a
-        // Meteor package), continue searching this node_modules
-        // directory, so that any non-.js(on) files it contains can be
-        // imported by the app (#6037).
+        // subdirectories, continue searching this node_modules directory,
+        // so that any non-.js(on) files it contains can be imported by
+        // the app (#6037).
         sources.push(...find(nodeModulesDir, depth + 1, true));
       }
 

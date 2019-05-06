@@ -65,7 +65,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 22; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 23; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -110,6 +110,7 @@ export class CompilerPluginProcessor {
     sourceRoot,
     isopackCache,
     linkerCacheDir,
+    scannerCacheDir,
     minifyCssResource,
   }) {
     Object.assign(this, {
@@ -118,11 +119,16 @@ export class CompilerPluginProcessor {
       sourceRoot,
       isopackCache,
       linkerCacheDir,
+      scannerCacheDir,
       minifyCssResource,
     });
 
-    if (this.linkerCacheDir) {
-      files.mkdir_p(this.linkerCacheDir);
+    if (linkerCacheDir) {
+      files.mkdir_p(linkerCacheDir);
+    }
+
+    if (scannerCacheDir) {
+      files.mkdir_p(scannerCacheDir);
     }
   }
 
@@ -141,7 +147,8 @@ export class CompilerPluginProcessor {
 
       return new PackageSourceBatch(unibuild, self, {
         sourceRoot,
-        linkerCacheDir: self.linkerCacheDir
+        linkerCacheDir: self.linkerCacheDir,
+        scannerCacheDir: self.scannerCacheDir,
       });
     });
 
@@ -1036,6 +1043,7 @@ export class PackageSourceBatch {
   constructor(unibuild, processor, {
     sourceRoot,
     linkerCacheDir,
+    scannerCacheDir,
   }) {
     const self = this;
     buildmessage.assertInJob();
@@ -1044,6 +1052,7 @@ export class PackageSourceBatch {
     self.processor = processor;
     self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
+    self.scannerCacheDir = scannerCacheDir;
     self.importExtensions = [".js", ".json"];
     self._nodeModulesPaths = null;
 
@@ -1293,6 +1302,7 @@ export class PackageSourceBatch {
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
         watchSet: batch.unibuild.watchSet,
+        cacheDir: batch.scannerCacheDir,
       });
 
       scanner.addInputFiles(map.get(name).files);

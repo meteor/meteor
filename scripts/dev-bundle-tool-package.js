@@ -43,6 +43,7 @@ var packageJson = {
     // Latest master version of sqlite3, based on version 4.0.6.
     sqlite3: "https://github.com/mapbox/node-sqlite3/tarball/4f5b9963161c4ab8abd255f22d226361aa434cf4",
     "http-proxy": "1.16.2",
+    "is-reachable": "3.1.0",
     "wordwrap": "0.0.2",
     "moment": "2.20.1",
     "rimraf": "2.6.2",
