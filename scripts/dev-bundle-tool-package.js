@@ -40,7 +40,8 @@ var packageJson = {
     // kexec: "3.0.0",
     "source-map": "0.5.7",
     chalk: "0.5.1",
-    sqlite3: "4.0.6",
+    // Latest master version of sqlite3, based on version 4.0.6.
+    sqlite3: "https://github.com/mapbox/node-sqlite3/tarball/4f5b9963161c4ab8abd255f22d226361aa434cf4",
     "http-proxy": "1.16.2",
     "wordwrap": "0.0.2",
     "moment": "2.20.1",

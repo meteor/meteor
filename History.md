@@ -24,6 +24,8 @@ N/A
   8.0.2, with [PR #128](https://github.com/atom/node-pathwatcher/pull/128)
   applied.
 
+* The `sqlite3` npm package has been updated to version 4.0.6.
+
 ## v1.8.2
 
 ### Breaking changes
