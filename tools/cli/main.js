@@ -509,8 +509,6 @@ var springboard = function (rel, options) {
     }
   }
 
-  const executable = files.pathJoin(newToolsDir, "meteor");
-
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = [];
@@ -547,10 +545,15 @@ var springboard = function (rel, options) {
   // never worked with Windows), use the same non-kexec solution for all
   // platforms until https://github.com/jprichardson/node-kexec/issues/36
   // is resolved.
-  if (true || process.platform === 'win32') {
+  const isWindows = process.platform === "win32";
+  const executable = files.pathJoin(
+    newToolsDir,
+    isWindows ? "meteor.bat" : "meteor",
+  );
+  if (true || isWindows) {
     process.exit(new Promise(function (resolve) {
-      var batPath = files.convertToOSPath(executable + ".bat");
-      var child = require("child_process").spawn(batPath, newArgv, {
+      var execPath = files.convertToOSPath(executable);
+      var child = require("child_process").spawn(execPath, newArgv, {
         env: process.env,
         stdio: 'inherit'
       }).on('exit', resolve);
