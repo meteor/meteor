@@ -1,6 +1,6 @@
 Package.describe({
   name: "context",
-  version: "0.4.0-alpha190.1",
+  version: "0.4.0-alpha190.2",
   summary: "Manage contextual information without passing objects around",
   documentation: "README.md"
 });
