@@ -1,4 +1,4 @@
-import * as watchLibrary from "pathwatcher";
+import * as watchLibrary from "@meteorjs/pathwatcher";
 import { Profile } from "../tool-env/profile.js";
 import {
   statOrNull,
