@@ -35,9 +35,9 @@ var packageJson = {
     uuid: "3.3.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
-    // Removed temporarily until Node 12 is fully supported:
-    // https://github.com/jprichardson/node-kexec/issues/36
-    // kexec: "3.0.0",
+    // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
+    // https://github.com/jprichardson/node-kexec/pull/37 applied.
+    kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.5.7",
     chalk: "0.5.1",
     // Latest master version of sqlite3, based on version 4.0.6.
