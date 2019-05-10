@@ -13,6 +13,7 @@ import LRU from "lru-cache";
 import {Profile} from "../tool-env/profile.js";
 import {SourceNode, SourceMapConsumer} from "source-map";
 import {
+  mkdir_p,
   pathJoin,
   pathRelative,
   pathNormalize,
@@ -74,55 +75,32 @@ const reifyCompileWithCache = wrap(function ({ dataString }) {
 
 class DefaultHandlers {
   constructor({
-    bundleArch,
-    sourceRoot,
     cacheDir,
+    bundleArch,
   }) {
     Object.assign(this, {
-      isWeb: ! archMatches(bundleArch, "os"),
-      sourceRoot,
       cacheDir,
+      isWeb: ! archMatches(bundleArch, "os"),
     });
   }
 
-  lookupPackageJson(file) {
-    const relDir = pathRelative(
-      this.sourceRoot,
-      pathDirname(file.absPath),
+  getCacheFileName(file) {
+    return pathJoin(
+      this.cacheDir,
+      "reify-" + file.hash + ".js",
     );
-
-    if (relDir.startsWith("..")) {
-      const absParts = file.absPath.split("/");
-      absParts.pop(); // Get rid of base filename.
-      const nmi = absParts.lastIndexOf("node_modules");
-      return optimisticLookupPackageJson(
-        absParts.slice(0, nmi + 1).join("/"),
-        absParts.slice(nmi + 1).join("/"),
-      );
-    }
-
-    return optimisticLookupPackageJson(this.sourceRoot, relDir);
   }
 
   js(file) {
-    const pkgJson = this.lookupPackageJson(file);
-
-    // Similar to logic in PackageSource#_findSources.
-    const hasModuleEntryPoint = pkgJson && (
-      this.isWeb
-        ? typeof pkgJson.module === "string"
-        : pkgJson.type === "module"
-    );
-
-    if (! hasModuleEntryPoint) {
+    if (!this.isWeb) {
+      // Since we don't use the "module" entry point in package.json for
+      // server packages yet, we don't need to compile ESM syntax on the
+      // server yet.
       return stripHashBang(file.dataString);
     }
 
     if (this.cacheDir) {
-      const cacheFileName = pathJoin(
-        this.cacheDir,
-        "reify-" + file.hash + ".js",
-      );
+      const cacheFileName = this.getCacheFileName(file);
       try {
         return optimisticReadFile(cacheFileName, "utf8");
       } catch (e) {
@@ -145,6 +123,14 @@ class DefaultHandlers {
     return cssToCommonJS(dataString, hash);
   }
 }
+
+[
+  "js",
+  "json",
+  "css",
+].forEach(function (type) {
+  this[type] = Profile("DefaultHandlers." + type, this[type]);
+}, DefaultHandlers.prototype);
 
 function jsonDataToCommonJS(data) {
   return "module.exports = " +
@@ -265,16 +251,23 @@ export default class ImportScanner {
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
-    this.cacheDir = cacheDir;
     this.absPathToOutputIndex = Object.create(null);
     this.realPathToFiles = Object.create(null);
     this.realPathCache = Object.create(null);
     this.allMissingModules = Object.create(null);
     this.outputFiles = [];
+
+    if (cacheDir) {
+      mkdir_p(cacheDir = pathJoin(
+        cacheDir,
+        bundleArch,
+      ));
+    }
+    this.cacheDir = cacheDir;
+
     this.defaultHandlers = new DefaultHandlers({
-      bundleArch,
-      sourceRoot,
       cacheDir,
+      bundleArch,
     });
 
     this.resolver = Resolver.getOrCreate({
