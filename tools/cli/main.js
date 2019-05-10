@@ -541,16 +541,13 @@ var springboard = function (rel, options) {
   // process, so that the springboarded process can reestablish it.
   catalog.official.closePermanently();
 
-  // Since kexec does not currently compile against Node 12.1.0 (and has
-  // never worked with Windows), use the same non-kexec solution for all
-  // platforms until https://github.com/jprichardson/node-kexec/issues/36
-  // is resolved.
   const isWindows = process.platform === "win32";
   const executable = files.pathJoin(
     newToolsDir,
     isWindows ? "meteor.bat" : "meteor",
   );
-  if (true || isWindows) {
+
+  if (isWindows) {
     process.exit(new Promise(function (resolve) {
       var execPath = files.convertToOSPath(executable);
       var child = require("child_process").spawn(execPath, newArgv, {
@@ -561,7 +558,7 @@ var springboard = function (rel, options) {
   }
 
   // Now exec; we're not coming back.
-  // require('kexec')(executable, newArgv);
+  require('kexec')(executable, newArgv);
   throw Error('exec failed?');
 };
 
