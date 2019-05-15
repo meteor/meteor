@@ -66,7 +66,9 @@ function stripHashBang(dataString) {
 }
 
 const reifyCompileWithCache = wrap(function ({ dataString }) {
-  return reifyCompile(stripHashBang(dataString)).code;
+  return reifyCompile(stripHashBang(dataString), {
+    dynamicImport: true,
+  }).code;
 }, {
   makeCacheKey({ hash }) {
     return hash;
