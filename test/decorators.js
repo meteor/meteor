@@ -28,10 +28,6 @@ describe("@decorators", function () {
       return plugin.key === "regenerator-transform";
     }));
 
-    assert.ok(legacyResult.options.plugins.some(function (plugin) {
-      return plugin.key === "transform-meteor-dynamic-import";
-    }));
-
     assert.strictEqual(legacyResult.code.trim(), [
       "var _class;",
       "",
@@ -64,10 +60,6 @@ describe("@decorators", function () {
       return plugin.key !== "regenerator-transform";
     }));
 
-    assert.ok(legacyResult.options.plugins.some(function (plugin) {
-      return plugin.key === "transform-meteor-dynamic-import";
-    }));
-
     assert.strictEqual(legacyResult.code.trim(), [
       "var _class;",
       "",
@@ -98,10 +90,6 @@ describe("@decorators", function () {
 
     assert.ok(legacyResult.options.plugins.every(function (plugin) {
       return plugin.key !== "regenerator-transform";
-    }));
-
-    assert.ok(legacyResult.options.plugins.some(function (plugin) {
-      return plugin.key === "transform-meteor-dynamic-import";
     }));
 
     assert.ok(legacyResult.options.plugins.some(function (plugin) {

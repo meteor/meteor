@@ -41,13 +41,13 @@
     "@babel/template": "^7.4.0",
     "@babel/traverse": "^7.4.3",
     "@babel/types": "^7.4.0",
-    "babel-plugin-transform-es2015-modules-reify": "^0.18.0",
+    "babel-plugin-transform-es2015-modules-reify": "^0.19.0",
     "babel-preset-meteor": "^7.4.3",
     "babel-preset-minify": "^0.5.0",
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.11",
     "meteor-babel-helpers": "0.0.3",
-    "reify": "^0.18.1"
+    "reify": "^0.19.1"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.4.0",

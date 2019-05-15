@@ -46,9 +46,9 @@ exports.getDefaults = function getDefaults(features) {
     plugins: [
       [reifyPlugin, {
         generateLetDeclarations: true,
-        enforceStrictMode: false
-      }],
-      require("./plugins/dynamic-import.js")
+        enforceStrictMode: false,
+        dynamicImport: true
+      }]
     ]
   };
 
@@ -102,9 +102,9 @@ function getDefaultsForModernBrowsers(features) {
   combined.plugins.push(
     [reifyPlugin, {
       generateLetDeclarations: true,
-      enforceStrictMode: false
-    }],
-    require("./plugins/dynamic-import.js")
+      enforceStrictMode: false,
+      dynamicImport: true
+    }]
   );
 
   const rt = getRuntimeTransform(features);
@@ -163,7 +163,8 @@ function getDefaultsForNode8(features) {
   // Compile import/export syntax with Reify.
   plugins.push([reifyPlugin, {
     generateLetDeclarations: true,
-    enforceStrictMode: false
+    enforceStrictMode: false,
+    dynamicImport: true
   }]);
 
   // Support Flow type syntax by simply stripping it out.
@@ -190,9 +191,6 @@ function getDefaultsForNode8(features) {
     // 8 has native support for await expressions.
     useNativeAsyncAwait: false
   }]);
-
-  // Transform `import(id)` to `module.dynamicImport(id)`.
-  plugins.push(require("./plugins/dynamic-import.js"));
 
   // Enable async generator functions proposal.
   plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
