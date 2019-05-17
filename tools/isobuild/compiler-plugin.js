@@ -1056,42 +1056,12 @@ export class PackageSourceBatch {
     self.importExtensions = [".js", ".json"];
     self._nodeModulesPaths = null;
 
-    var sourceProcessorSet = self._getSourceProcessorSet();
-
     self.resourceSlots = [];
-    unibuild.resources.forEach(function (resource) {
-      let sourceProcessor = null;
-      if (resource.type === "source") {
-        var extension = resource.extension;
-        if (extension === null) {
-          const filename = files.pathBasename(resource.path);
-          sourceProcessor = sourceProcessorSet.getByFilename(filename);
-          if (! sourceProcessor) {
-            buildmessage.error(
-              `no plugin found for ${ resource.path } in ` +
-                `${ unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
-                `was active when it was published but none is now`);
-            return;
-            // recover by ignoring
-          }
-        } else {
-          sourceProcessor = sourceProcessorSet.getByExtension(extension);
-          // If resource.extension === 'js', it's ok for there to be no
-          // sourceProcessor, since we #HardcodeJs in ResourceSlot.
-          if (! sourceProcessor && extension !== 'js') {
-            buildmessage.error(
-              `no plugin found for ${ resource.path } in ` +
-                `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
-                `was active when it was published but none is now`);
-            return;
-            // recover by ignoring
-          }
-
-          self.addImportExtension(extension);
-        }
+    unibuild.resources.forEach(resource => {
+      const slot = self.makeResourceSlot(resource);
+      if (slot) {
+        self.resourceSlots.push(slot);
       }
-
-      self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
     });
 
     // Compute imports by merging the exports of all of the packages we
@@ -1141,6 +1111,41 @@ export class PackageSourceBatch {
     } : null;
   }
 
+  makeResourceSlot(resource) {
+    let sourceProcessor = null;
+    if (resource.type === "source") {
+      var extension = resource.extension;
+      if (extension === null) {
+        const filename = files.pathBasename(resource.path);
+        sourceProcessor = this._getSourceProcessorSet().getByFilename(filename);
+        if (! sourceProcessor) {
+          buildmessage.error(
+            `no plugin found for ${ resource.path } in ` +
+              `${ this.unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
+              `was active when it was published but none is now`);
+          return null;
+          // recover by ignoring
+        }
+      } else {
+        sourceProcessor = this._getSourceProcessorSet().getByExtension(extension);
+        // If resource.extension === 'js', it's ok for there to be no
+        // sourceProcessor, since we #HardcodeJs in ResourceSlot.
+        if (! sourceProcessor && extension !== 'js') {
+          buildmessage.error(
+            `no plugin found for ${ resource.path } in ` +
+              `${ this.unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
+              `was active when it was published but none is now`);
+          return null;
+          // recover by ignoring
+        }
+
+        this.addImportExtension(extension);
+      }
+    }
+
+    return new ResourceSlot(resource, sourceProcessor, this);
+  }
+
   addImportExtension(extension) {
     extension = extension.toLowerCase();
 
@@ -1181,26 +1186,27 @@ export class PackageSourceBatch {
   }
 
   _getSourceProcessorSet() {
-    const self = this;
+    if (! this._sourceProcessorSet) {
+      buildmessage.assertInJob();
 
-    buildmessage.assertInJob();
+      const isopack = this.unibuild.pkg;
+      const activePluginPackages = compiler.getActivePluginPackages(isopack, {
+        uses: this.unibuild.uses,
+        isopackCache: this.processor.isopackCache
+      });
 
-    var isopack = self.unibuild.pkg;
-    const activePluginPackages = compiler.getActivePluginPackages(isopack, {
-      uses: self.unibuild.uses,
-      isopackCache: self.processor.isopackCache
-    });
-    const sourceProcessorSet = new buildPluginModule.SourceProcessorSet(
-      isopack.displayName(), { hardcodeJs: true });
+      this._sourceProcessorSet = new buildPluginModule.SourceProcessorSet(
+        isopack.displayName(), { hardcodeJs: true });
 
-    _.each(activePluginPackages, function (otherPkg) {
-      otherPkg.ensurePluginsInitialized();
+      _.each(activePluginPackages, otherPkg => {
+        otherPkg.ensurePluginsInitialized();
+        this._sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler, {
+          arch: this.processor.arch,
+        });
+      });
+    }
 
-      sourceProcessorSet.merge(
-        otherPkg.sourceProcessors.compiler, {arch: self.processor.arch});
-    });
-
-    return sourceProcessorSet;
+    return this._sourceProcessorSet;
   }
 
   // Returns a map from package names to arrays of JS output files.
