@@ -80,27 +80,19 @@ class DefaultHandlers {
     cacheDir,
     bundleArch,
   }) {
-    Object.assign(this, {
-      cacheDir,
-      isWeb: ! archMatches(bundleArch, "os"),
-    });
+    if (cacheDir) {
+      mkdir_p(this.cacheDir = pathJoin(
+        cacheDir,
+        bundleArch,
+      ));
+    }
   }
 
   getCacheFileName(file) {
-    return pathJoin(
-      this.cacheDir,
-      "reify-" + file.hash + ".js",
-    );
+    return pathJoin(this.cacheDir, "reify-" + file.hash + ".js");
   }
 
   js(file) {
-    if (!this.isWeb) {
-      // Since we don't use the "module" entry point in package.json for
-      // server packages yet, we don't need to compile ESM syntax on the
-      // server yet.
-      return stripHashBang(file.dataString);
-    }
-
     if (this.cacheDir) {
       const cacheFileName = this.getCacheFileName(file);
       try {
@@ -253,19 +245,12 @@ export default class ImportScanner {
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
     this.watchSet = watchSet;
+    this.cacheDir = cacheDir;
     this.absPathToOutputIndex = Object.create(null);
     this.realPathToFiles = Object.create(null);
     this.realPathCache = Object.create(null);
     this.allMissingModules = Object.create(null);
     this.outputFiles = [];
-
-    if (cacheDir) {
-      mkdir_p(cacheDir = pathJoin(
-        cacheDir,
-        bundleArch,
-      ));
-    }
-    this.cacheDir = cacheDir;
 
     this.defaultHandlers = new DefaultHandlers({
       cacheDir,
