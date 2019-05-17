@@ -1129,7 +1129,15 @@ export default class ImportScanner {
       // raw version found in node_modules. See also:
       // https://github.com/meteor/meteor-feature-requests/issues/6
 
-    } else if (this._shouldUseNode(absModuleId)) {
+    } else if (
+      this._shouldUseNode(absModuleId) &&
+      // If the package has a "module" entry point in its package.json file,
+      // there's a chance someone might import an ESM module from the package
+      // on the server (without going through package.json), so to be safe we
+      // need to compile ESM syntax for any modules imported from the package,
+      // instead of just calling module.useNode() and hoping for the best.
+      ! this._hasModuleEntryPoint(absPath)
+    ) {
       // On the server, modules in node_modules directories will be
       // handled natively by Node, so we just need to generate a stub
       // module that calls module.useNode(), rather than calling
@@ -1174,6 +1182,34 @@ export default class ImportScanner {
     this._addFileByRealPath(depFile, realPath);
 
     return depFile;
+  }
+
+  _hasModuleEntryPoint(absPath) {
+    const pkgJson = this._lookupPackageJson(absPath);
+    // Similar to logic in PackageSource#_findSources.
+    return pkgJson && (
+      typeof pkgJson.module === "string" ||
+      pkgJson.type === "module"
+    );
+  }
+
+  _lookupPackageJson(absPath) {
+    const relDir = pathRelative(
+      this.sourceRoot,
+      pathDirname(absPath),
+    );
+
+    if (relDir.startsWith("..")) {
+      const absParts = absPath.split("/");
+      absParts.pop(); // Get rid of base filename.
+      const nmi = absParts.lastIndexOf("node_modules");
+      return optimisticLookupPackageJson(
+        absParts.slice(0, nmi + 1).join("/"),
+        absParts.slice(nmi + 1).join("/"),
+      );
+    }
+
+    return optimisticLookupPackageJson(this.sourceRoot, relDir);
   }
 
   // Similar to logic in Module.prototype.useNode as defined in
