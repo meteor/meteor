@@ -479,8 +479,9 @@ var compileUnibuild = Profile(function (options) {
     const relPath = asset.relPath;
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
 
-    const hash = optimisticHashOrNull(absPath)
-    const contents = optimisticReadFile(absPath)
+    const hash = optimisticHashOrNull(absPath);
+    const contents = optimisticReadFile(absPath);
+    watchSet.addFile(absPath, hash);
 
     addAsset(contents, relPath, hash);
   });
