@@ -1674,6 +1674,49 @@ describe('roles', function () {
     assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
   })
 
+  it('adds children of the added role to the assignments', function () {
+    Roles.createRole('admin')
+    Roles.createRole('ALBUM.ADMIN')
+    Roles.createRole('ALBUM.VIEW')
+    Roles.createRole('TRACK.ADMIN')
+    Roles.createRole('TRACK.VIEW')
+
+    Roles.addRolesToParent('ALBUM.VIEW', 'ALBUM.ADMIN')
+    Roles.addRolesToParent('TRACK.VIEW', 'TRACK.ADMIN')
+
+    Roles.addRolesToParent('ALBUM.ADMIN', 'admin')
+
+    Roles.addUsersToRoles(users.eve, ['admin'])
+
+    assert.isFalse(Roles.userIsInRole(users.eve, 'TRACK.VIEW'))
+
+    Roles.addRolesToParent('TRACK.ADMIN', 'admin')
+
+    assert.isTrue(Roles.userIsInRole(users.eve, 'TRACK.VIEW'))
+  })
+
+  it('removes children of the removed role from the assignments', function () {
+    Roles.createRole('admin')
+    Roles.createRole('ALBUM.ADMIN')
+    Roles.createRole('ALBUM.VIEW')
+    Roles.createRole('TRACK.ADMIN')
+    Roles.createRole('TRACK.VIEW')
+
+    Roles.addRolesToParent('ALBUM.VIEW', 'ALBUM.ADMIN')
+    Roles.addRolesToParent('TRACK.VIEW', 'TRACK.ADMIN')
+
+    Roles.addRolesToParent('ALBUM.ADMIN', 'admin')
+    Roles.addRolesToParent('TRACK.ADMIN', 'admin')
+
+    Roles.addUsersToRoles(users.eve, ['admin'])
+
+    assert.isTrue(Roles.userIsInRole(users.eve, 'TRACK.VIEW'))
+
+    Roles.removeRolesFromParent('TRACK.ADMIN', 'admin')
+
+    assert.isFalse(Roles.userIsInRole(users.eve, 'TRACK.VIEW'))
+  })
+
   it('modify assigned hierarchical roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')

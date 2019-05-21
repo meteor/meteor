@@ -256,7 +256,7 @@ Object.assign(Roles, {
       'inheritedRoles._id': parentName
     }, {
       $push: {
-        inheritedRoles: { _id: role._id }
+        inheritedRoles: { $each: [role._id, ...Roles._getInheritedRoleNames(role)].map(r => ({ _id: r })) }
       }
     }, { multi: true })
   },
@@ -317,15 +317,20 @@ Object.assign(Roles, {
     // already not a subrole; in any case we do not have anything more to do
     if (!count) return
 
-    Meteor.roleAssignment.update({
-      'inheritedRoles._id': parentName
-    }, {
-      $pull: {
-        inheritedRoles: {
-          _id: role._id
+    // For all roles who have had it as a dependency ...
+    roles = [...Roles._getParentRoleNames(Meteor.roles.findOne({ _id: parentName })), parentName]
+
+    Meteor.roles.find({ _id: { $in: roles } }).fetch().forEach(r => {
+      inheritedRoles = Roles._getInheritedRoleNames(Meteor.roles.findOne({ _id: r._id }))
+      Meteor.roleAssignment.update({
+        'role._id': r._id,
+        'inheritedRoles._id': role._id
+      }, {
+        $set: {
+          inheritedRoles: [r._id, ...inheritedRoles].map(r2 => ({ _id: r2 }))
         }
-      }
-    }, { multi: true })
+      }, { multi: true })
+    })
   },
 
   /**
