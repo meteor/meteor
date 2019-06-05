@@ -91,14 +91,18 @@ export class CordovaBuilder {
   }
 
   initalizeDefaults() {
-    // Convert the appId (a base 36 string) to a number
-    const appIdAsNumber = parseInt(this.projectContext.appIdentifier, 36);
-    // We use the appId to choose a local server port between 12000-13000.
-    // This range should be large enough to avoid collisions with other
-    // Meteor apps, and has also been chosen to avoid collisions
-    // with other apps or services on the device (although this can never be
-    // guaranteed).
-    const localServerPort = 12000 + (appIdAsNumber % 1000);
+    let localServerPort = this.options.localServerPort;
+    // if --local-server-port is not present on run command
+    if(!localServerPort) {
+      // Convert the appId (a base 36 string) to a number
+      const appIdAsNumber = parseInt(this.projectContext.appIdentifier, 36);
+      // We use the appId to choose a local server port between 12000-13000.
+      // This range should be large enough to avoid collisions with other
+      // Meteor apps, and has also been chosen to avoid collisions
+      // with other apps or services on the device (although this can never be
+      // guaranteed).
+      localServerPort = 12000 + (appIdAsNumber % 1000);
+    }
 
     this.metadata = {
       id: 'com.id' + this.projectContext.appIdentifier,
