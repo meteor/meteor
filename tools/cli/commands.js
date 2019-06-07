@@ -898,6 +898,7 @@ var buildCommands = {
     "server-only": { type: Boolean },
     'mobile-settings': { type: String },
     server: { type: String },
+    "local-server-port": { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
     // Indicates whether these build is running headless, e.g. in a
