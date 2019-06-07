@@ -49,7 +49,7 @@
     "eslint-plugin-react": "~7.13.0",
     "mocha": "~6.1.0",
     "nyc": "~14.1.0",
-    "prettier": "~1.17.0",
+    "prettier": "~1.18.2",
     "readline-sync": "~1.4.9",
     "semantic-release": "~15.13.0",
     "validate-commit-msg": "~2.14.0"
