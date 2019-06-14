@@ -508,6 +508,10 @@ Object.assign(Roles, {
   _getParentRoleNames: function (role) {
     var parentRoles
 
+    if (!role) {
+      return []
+    }
+
     parentRoles = new Set([role._id])
 
     parentRoles.forEach(roleName => {

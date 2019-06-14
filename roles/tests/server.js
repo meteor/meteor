@@ -90,6 +90,10 @@ describe('roles', function () {
     assert.equal(typeof Meteor.roles.findOne(), 'undefined')
   })
 
+  it('can try to remove non-existing roles without crashing', function () {
+    Roles.deleteRole('non-existing-role')
+  })
+
   it('can\'t create duplicate roles', function () {
     Roles.createRole('test1')
     assert.throws(function () { Roles.createRole('test1') })
