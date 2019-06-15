@@ -42,7 +42,7 @@
     "cz-conventional-changelog": "~2.1.0",
     "eslint": "5.16.0",
     "eslint-config-airbnb": "~17.1.0",
-    "eslint-config-prettier": "~4.3.0",
+    "eslint-config-prettier": "~5.0.0",
     "eslint-plugin-import": "~2.17.0",
     "eslint-plugin-jsx-a11y": "~6.1.1",
     "eslint-plugin-prettier": "~3.1.0",
