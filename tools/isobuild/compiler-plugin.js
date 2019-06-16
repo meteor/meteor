@@ -288,19 +288,10 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   readAndWatchFileWithHash(path) {
-    const osPath = files.convertToOSPath(path);
-    const sourceRoot = this.getSourceRoot();
-    const relPath = files.pathRelative(sourceRoot, osPath);
-    if (relPath.startsWith("..")) {
-      throw new Error(
-        `Attempting to read file outside ${
-          this.getPackageName() || "the app"}: ${osPath}`
-      );
-    }
     const sourceBatch = this._resourceSlot.packageSourceBatch;
     return readAndWatchFileWithHash(
       sourceBatch.unibuild.watchSet,
-      osPath
+      files.convertToOSPath(path),
     );
   }
 
@@ -1111,6 +1102,50 @@ export class PackageSourceBatch {
     } : null;
   }
 
+  compileOneJsResource(resource) {
+    const slot = this.makeResourceSlot({
+      type: "source",
+      extension: "js",
+      // Need { data, path, hash } here, at least.
+      ...resource,
+      fileOptions: {
+        lazy: true,
+        ...resource.fileOptions,
+      }
+    });
+
+    if (slot) {
+      // If the resource was not handled by a source processor, it will be
+      // added directly to slot.jsOutputResources by makeResourceSlot,
+      // meaning we do not need to compile it.
+      if (slot.jsOutputResources.length > 0) {
+        return slot.jsOutputResources
+      }
+
+      const inputFile = new InputFile(slot);
+      inputFile.supportsLazyCompilation = false;
+
+      if (slot.sourceProcessor) {
+        const { userPlugin } = slot.sourceProcessor;
+        if (userPlugin) {
+          const markedMethod = buildmessage.markBoundary(
+            userPlugin.processFilesForTarget,
+            userPlugin
+          );
+          try {
+            Promise.await(markedMethod([inputFile]));
+          } catch (e) {
+            buildmessage.exception(e);
+          }
+        }
+      }
+
+      return slot.jsOutputResources;
+    }
+
+    return [];
+  }
+
   makeResourceSlot(resource) {
     let sourceProcessor = null;
     if (resource.type === "source") {
@@ -1308,6 +1343,7 @@ export class PackageSourceBatch {
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
         watchSet: batch.unibuild.watchSet,
+        compileOneJsResource: batch.compileOneJsResource.bind(batch),
         cacheDir: batch.scannerCacheDir,
       });
 
