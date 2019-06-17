@@ -682,3 +682,15 @@ describe("issue #10409", () => {
     assert.strictEqual(typeof action, "function");
   });
 });
+
+describe("issue #10563", () => {
+  it("should be able to import pify@4.0.1 in legacy browsers", () => {
+    const pify = require("pify");
+    assert.strictEqual(typeof pify, "function");
+    const code = Function.prototype.toString.call(pify);
+    assert.strictEqual(
+      /\bconst\b/.test(code),
+      Meteor.isModern,
+    );
+  });
+});
