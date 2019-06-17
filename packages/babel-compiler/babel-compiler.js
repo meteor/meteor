@@ -67,12 +67,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     sourceMap: null,
     bare: !! fileOptions.bare
   };
-  var cacheOptions = {
-    cacheDirectory: this.cacheDirectory,
-    cacheDeps: {
-      sourceHash: toBeAdded.hash,
-    },
-  };
 
   // If you need to exclude a specific file within a package from Babel
   // compilation, pass the { transpile: false } options to api.addFiles
@@ -105,6 +99,13 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     var babelOptions = Babel.getDefaultOptions(extraFeatures);
     babelOptions.caller = { name: "meteor", arch };
+
+    const cacheOptions = {
+      cacheDirectory: this.cacheDirectory,
+      cacheDeps: {
+        sourceHash: toBeAdded.hash,
+      },
+    };
 
     this.inferExtraBabelOptions(
       inputFile,
