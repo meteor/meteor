@@ -114,7 +114,7 @@ function parseMobileServerOption(mobileServerOption,
 
 function parseLocalServerPortOption(options = {}) {
   const localServerPortOption = options['local-server-port'];
-  return localServerPortOption ? parseInt(localServerPortOption) : null;
+  return localServerPortOption ? parseInt(localServerPortOption, 10) : null;
 }
 
 function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
