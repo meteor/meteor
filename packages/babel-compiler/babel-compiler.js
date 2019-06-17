@@ -77,8 +77,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ! toBeAdded.bare &&
       // If you need to exclude a specific file within an app from Babel
       // compilation, give it the following file extension: .es5.js
-      ! excludedFileExtensionPattern.test(inputFilePath)) {
-
+      ! isInputFilePathExcluded(inputFilePath)) {
     var extraFeatures = Object.assign({}, this.extraFeatures);
     var arch = inputFile.getArch();
 
@@ -165,6 +164,36 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
   return toBeAdded;
 };
+
+function isInputFilePathExcluded(path) {
+  if (excludedFileExtensionPattern.test(path)) {
+    return true;
+  }
+
+  const parts = path.split("/");
+  const nmi = parts.lastIndexOf("node_modules");
+  if (nmi >= 0) {
+    const part1 = parts[nmi + 1];
+    // We trust that any code related to @babel/runtime has already been
+    // compiled adequately. The @babel/runtime/helpers/typeof module is a
+    // good example of why double-compilation is risky for these packages,
+    // since it uses native typeof syntax to implement its polyfill for
+    // Symbol-aware typeof, so compiling it again would cause the
+    // generated code to try to require itself. In general, compiling code
+    // more than once with Babel should be safe (just unnecessary), except
+    // for code that Babel itself relies upon at runtime. Finally, if this
+    // hard-coded list of package names proves to be incomplete, we can
+    // always add to it (or even replace it completely) by releasing a new
+    // version of the babel-compiler package.
+    if (part1 === "@babel" ||
+        part1 === "core-js" ||
+        part1 === "regenerator-runtime") {
+      return true;
+    }
+  }
+
+  return false;
+}
 
 BCp.setDiskCacheDirectory = function (cacheDir) {
   this.cacheDirectory = cacheDir;
