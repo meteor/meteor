@@ -91,7 +91,7 @@ export class CordovaBuilder {
   }
 
   initalizeDefaults() {
-    let localServerPort = this.options.localServerPort;
+    let { localServerPort } = this.options;
     // if --local-server-port is not present on run command
     if (!localServerPort) {
       // Convert the appId (a base 36 string) to a number
