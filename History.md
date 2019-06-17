@@ -8,7 +8,7 @@ N/A
 
 ### Changes
 
-* Add `--local-server-port` option to override local port where Cordova will 
+* Add `--cordova-server-port` option to override local port where Cordova will 
 serve the content. It's important when multiple Cordova apps are build from 
 the same Meteor app source code as by default the port is generated using 
 the id inside .meteor/.id file.

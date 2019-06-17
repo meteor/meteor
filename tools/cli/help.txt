@@ -83,7 +83,7 @@ Options:
                    Defaults to your local IP and the port that the Meteor
                    server binds to. Can include a URL scheme (for
                    example, --mobile-server=https://example.com:443).
-  --local-server-port
+  --cordova-server-port
                    Local port where Cordova will serve the content. It's
                    important when multiple Cordova apps are build from the same
                    Meteor app source code as by default the port is generated
@@ -603,7 +603,7 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
-  --local-server-port
+  --cordova-server-port
                     Local port where Cordova will serve the content. It's
                     important when multiple Cordova apps are build from the same
                     Meteor app source code as by default the port is generated
@@ -692,7 +692,7 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
-  --local-server-port
+  --cordova-server-port
                     Local port where Cordova will serve the content. It's
                     important when multiple Cordova apps are build from the same
                     Meteor app source code as by default the port is generated

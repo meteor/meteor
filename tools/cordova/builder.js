@@ -91,9 +91,9 @@ export class CordovaBuilder {
   }
 
   initalizeDefaults() {
-    let { localServerPort } = this.options;
-    // if --local-server-port is not present on run command
-    if (!localServerPort) {
+    let { cordovaServerPort } = this.options;
+    // if --cordova-server-port is not present on run command
+    if (!cordovaServerPort) {
       // Convert the appId (a base 36 string) to a number
       const appIdAsNumber = parseInt(this.projectContext.appIdentifier, 36);
       // We use the appId to choose a local server port between 12000-13000.
@@ -101,7 +101,7 @@ export class CordovaBuilder {
       // Meteor apps, and has also been chosen to avoid collisions
       // with other apps or services on the device (although this can never be
       // guaranteed).
-      localServerPort = 12000 + (appIdAsNumber % 1000);
+      cordovaServerPort = 12000 + (appIdAsNumber % 1000);
     }
 
     this.metadata = {
@@ -113,7 +113,7 @@ export class CordovaBuilder {
       author: 'A Meteor Developer',
       email: 'n/a',
       website: 'n/a',
-      contentUrl: `http://localhost:${localServerPort}/`
+      contentUrl: `http://localhost:${cordovaServerPort}/`
     };
 
     // Set some defaults different from the Cordova defaults
