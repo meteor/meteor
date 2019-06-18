@@ -9,26 +9,7 @@ require = function require(id) {
 
 const babelPresetMeteor = require("babel-preset-meteor");
 const babelPresetMeteorModern = require("babel-preset-meteor/modern");
-const reifyPlugin = require("babel-plugin-transform-es2015-modules-reify");
-const strictModulesPluginFactory =
-  require("@babel/plugin-transform-modules-commonjs");
-
-const babelModulesPlugin = [function () {
-  const plugin = strictModulesPluginFactory.apply(this, arguments);
-  // Since babel-preset-meteor uses an exact version of the
-  // @babel/plugin-transform-modules-commonjs transform (6.8.0), we can be
-  // sure this plugin.inherits property is indeed the
-  // @babel/plugin-transform-strict-mode transform that we wish to
-  // disable. Otherwise it would be difficult to know exactly what we're
-  // deleting here, since plugins don't provide much identifying
-  // information.
-  delete plugin.inherits;
-  return plugin;
-}, {
-  allowTopLevelThis: true,
-  strictMode: false,
-  loose: true
-}];
+const reifyPlugin = require("reify/plugins/babel");
 
 exports.getDefaults = function getDefaults(features) {
   if (features) {
@@ -66,12 +47,6 @@ exports.getDefaults = function getDefaults(features) {
       require("./plugins/sanitize-for-in-objects.js")
     );
   }
-
-  // Even though we use Reify to transpile `import` and `export`
-  // declarations in the original source, Babel sometimes inserts its own
-  // `import` declarations later on, and of course Babel knows best how to
-  // compile those declarations.
-  combined.plugins.push(babelModulesPlugin);
 
   return finish([combined]);
 };
@@ -114,12 +89,6 @@ function getDefaultsForModernBrowsers(features) {
 
   maybeAddReactPlugins(features, combined);
   maybeAddTypeScriptPreset(features, combined.presets);
-
-  // Even though we use Reify to transpile `import` and `export`
-  // declarations in the original source, Babel sometimes inserts its own
-  // `import` declarations later on, and of course Babel knows best how to
-  // compile those declarations.
-  combined.plugins.push(babelModulesPlugin);
 
   return finish([combined]);
 }
@@ -194,12 +163,6 @@ function getDefaultsForNode8(features) {
 
   // Enable async generator functions proposal.
   plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
-
-  // Even though we use Reify to transpile `import` and `export`
-  // declarations in the original source, Babel sometimes inserts its own
-  // `import` declarations later on, and of course Babel knows best how to
-  // compile those declarations.
-  plugins.push(babelModulesPlugin);
 
   const presets = [{
     plugins
