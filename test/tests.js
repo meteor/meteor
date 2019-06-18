@@ -113,6 +113,19 @@ describe("meteor-babel", () => {
     checkPos({ line: 2, column: 10 },
              { line: 3, column: 12 });
   });
+
+  it("should tolerate exported declarations named `module`", function () {
+    const absId = require.resolve("d3/build/package.js");
+    const source = require("fs").readFileSync(absId, "utf8");
+    const { code } = meteorBabel.compile(source);
+
+    // Make sure the generated code uses a renamed module1 reference.
+    assert.ok(/\bmodule1\.export\(/.test(code));
+
+    // The d3/build/package.js file exports an identifier named module, so
+    // we need to make sure Reify didn't mangle its name.
+    assert.strictEqual(require("d3/build/package").module, "index");
+  });
 });
 
 describe("Babel", function() {

@@ -21,4 +21,6 @@ require("../register")
   .setCacheDirectory(process.env.BABEL_CACHE_DIR)
   .setSourceMapRootPath(meteorBabelPath)
   .allowDirectory(meteorBabelTestPath)
+  // Needed by the d3 test in ../test/tests.js:
+  .allowDirectory(path.join(meteorBabelPath, "node_modules", "d3"))
   .setBabelOptions(babelOptions);

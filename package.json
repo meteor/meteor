@@ -51,6 +51,7 @@
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "^7.4.0",
     "@babel/plugin-syntax-decorators": "^7.2.0",
+    "d3": "^4.13.0",
     "fibers": "^3.1.1",
     "meteor-promise": "^0.8.7",
     "mocha": "^6.0.2",
