@@ -104,7 +104,7 @@ function compile(source, options) {
       result = babelCore.transformFromAstSync(
         result.ast,
         result.code,
-        optionsCopy,
+        optionsCopy
       );
     } else {
       result = babelCore.transformSync(result.code, optionsCopy);
