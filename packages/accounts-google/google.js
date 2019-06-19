@@ -50,7 +50,7 @@ if (Meteor.isClient) {
       Google.whitelistedFields.filter(
         field => field !== 'email' && field !== 'verified_email'
       ).map(
-        subfield => `services.google${subfield}`
+        subfield => `services.google.${subfield}`
       ),
   });
 }

@@ -152,6 +152,7 @@ outdated platforms`);
         this.projectContext,
         templatePath,
         { mobileServerUrl: this.options.mobileServerUrl,
+          cordovaServerPort: this.options.cordovaServerPort,
           settingsFile: this.options.settingsFile }
       );
 
@@ -226,6 +227,7 @@ outdated platforms`);
       this.projectContext,
       this.projectRoot,
       { mobileServerUrl: this.options.mobileServerUrl,
+        cordovaServerPort: this.options.cordovaServerPort,
         settingsFile: this.options.settingsFile }
     );
 

@@ -82,7 +82,9 @@ export function parseServerOptionsForRunCommand(options, runTargets) {
       isRunOnDeviceRequested);
   }
 
-  return { parsedServerUrl, parsedMobileServerUrl };
+  const parsedCordovaServerPort = parseCordovaServerPortOption(options);
+
+  return { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort };
 }
 
 function parsePortOption(portOption) {
@@ -108,6 +110,11 @@ function parseMobileServerOption(mobileServerOption,
   }
 
   return parsedMobileServerUrl;
+}
+
+function parseCordovaServerPortOption(options = {}) {
+  const cordovaServerPortOption = options['cordova-server-port'];
+  return cordovaServerPortOption ? parseInt(cordovaServerPortOption, 10) : null;
 }
 
 function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
@@ -290,6 +297,7 @@ var runCommandOptions = {
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
+    'cordova-server-port': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'app-port': { type: String },
@@ -326,7 +334,7 @@ function doRunCommand(options) {
   // Additional args are interpreted as run targets
   const runTargets = parseRunTargets(options.args);
 
-  const { parsedServerUrl, parsedMobileServerUrl } =
+  const { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort } =
     parseServerOptionsForRunCommand(options, runTargets);
 
   var includePackages = [];
@@ -401,7 +409,8 @@ function doRunCommand(options) {
       main.captureAndExit('', 'preparing Cordova project', () => {
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+          cordovaServerPort: parsedCordovaServerPort });
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
@@ -431,6 +440,7 @@ function doRunCommand(options) {
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+    cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
     cordovaRunner: cordovaRunner
@@ -888,6 +898,7 @@ var buildCommands = {
     "server-only": { type: Boolean },
     'mobile-settings': { type: String },
     server: { type: String },
+    "cordova-server-port": { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
     // Indicates whether these build is running headless, e.g. in a
@@ -986,6 +997,7 @@ var buildCommand = function (options) {
 
   let cordovaPlatforms;
   let parsedMobileServerUrl;
+  let parsedCordovaServerPort;
   if (!serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
@@ -1008,6 +1020,7 @@ on an OS X system.");
       }
       parsedMobileServerUrl = parseMobileServerOption(mobileServerOption,
         'server');
+      parsedCordovaServerPort = parseCordovaServerPortOption(options);
     }
   } else {
     cordovaPlatforms = [];
@@ -1096,7 +1109,8 @@ ${Console.command("meteor build ../output")}`,
 
         cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+          cordovaServerPort: parsedCordovaServerPort });
         if (buildmessage.jobHasMessages()) return;
 
         const pluginVersions = pluginVersionsFromStarManifest(
@@ -1550,6 +1564,7 @@ testCommandOptions = {
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
+    'cordova-server-port': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'debug-port': { type: String },
@@ -1648,7 +1663,7 @@ function doTestCommand(options) {
   const runTargets = parseRunTargets(_.intersection(
     Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
 
-  const { parsedServerUrl, parsedMobileServerUrl } =
+  const { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort } =
     parseServerOptionsForRunCommand(options, runTargets);
 
   // Make a temporary app dir (based on the test runner app). This will be
@@ -1865,7 +1880,8 @@ function doTestCommand(options) {
 
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+          cordovaServerPort: parsedCordovaServerPort });
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
@@ -1884,6 +1900,7 @@ function doTestCommand(options) {
     options,
     {
       mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+      cordovaServerPort: parsedCordovaServerPort,
       proxyPort: parsedServerUrl.port,
       proxyHost: parsedServerUrl.hostname,
     }
