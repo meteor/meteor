@@ -13,6 +13,9 @@ N/A
 
 * The `meteor-babel` npm package has been updated to version 7.4.3.
 
+* The `core-js` npm package used by `ecmascript-runtime-client` and
+  `ecmascript-runtime-server` has been updated to version 3.1.4.
+
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined. Additionally, npm
   packages with a `"module"` entry point will now be compiled
