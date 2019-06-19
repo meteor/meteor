@@ -168,6 +168,27 @@ describe("meteor-babel", () => {
       "register(async (a, b) => (await a) + (await b));",
     ].join("\n"));
   });
+
+  it("should import appropriate runtime helpers", function () {
+    const { Test } = require("./obj-without-props.js");
+
+    const code = String(Test.prototype.constructor);
+    assert.ok(/objectWithoutProperties/.test(code), code);
+
+    const test = new Test({
+      left: "asdf",
+      right: "ghjk",
+      middle: "zxcv",
+      top: "qwer",
+    });
+
+    assert.strictEqual(test.left, "asdf");
+    assert.strictEqual(test.right, "ghjk");
+    assert.deepEqual(test.rest, {
+      middle: "zxcv",
+      top: "qwer",
+    });
+  });
 });
 
 describe("Babel", function() {
