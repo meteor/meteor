@@ -77,9 +77,10 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ! toBeAdded.bare &&
       // If you need to exclude a specific file within an app from Babel
       // compilation, give it the following file extension: .es5.js
-      ! isInputFilePathExcluded(inputFilePath)) {
-    var extraFeatures = Object.assign({}, this.extraFeatures);
-    var arch = inputFile.getArch();
+      ! excludedFileExtensionPattern.test(inputFilePath)) {
+
+    const extraFeatures = { ...this.extraFeatures };
+    const arch = inputFile.getArch();
 
     if (arch.startsWith("os.")) {
       // Start with a much simpler set of Babel presets and plugins if
@@ -94,6 +95,14 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // in older browsers (e.g. wrapping named function expressions, per
       // http://kiro.me/blog/nfe_dilemma.html).
       extraFeatures.jscript = true;
+    }
+
+    if (shouldCompileModulesOnly(inputFilePath)) {
+      // Modules like @babel/runtime/helpers/esm/typeof.js need to be
+      // compiled to support ECMAScript modules syntax, but should *not*
+      // be compiled in any other way (for more explanation, see my longer
+      // comment in shouldCompileModulesOnly).
+      extraFeatures.compileModulesOnly = true;
     }
 
     var babelOptions = Babel.getDefaultOptions(extraFeatures);
@@ -165,11 +174,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   return toBeAdded;
 };
 
-function isInputFilePathExcluded(path) {
-  if (excludedFileExtensionPattern.test(path)) {
-    return true;
-  }
-
+function shouldCompileModulesOnly(path) {
   const parts = path.split("/");
   const nmi = parts.lastIndexOf("node_modules");
   if (nmi >= 0) {
