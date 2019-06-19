@@ -11,7 +11,9 @@ N/A
 * Node has been updated to version
   [8.16.0](https://nodejs.org/en/blog/release/v8.16.0/).
 
-* The `meteor-babel` npm package has been updated to version 7.4.3.
+* The `meteor-babel` npm package has been updated to version 7.4.10.
+
+* The `reify` npm package has been updated to version 0.20.3.
 
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined. Additionally, npm
