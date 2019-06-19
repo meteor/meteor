@@ -2931,7 +2931,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       meteorRelease: releaseName,
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
-      gitCommitHash: files.findGitCommitHash(sourceRoot),
+      gitCommitHash: process.env.METEOR_GIT_COMMIT_HASH || files.findGitCommitHash(sourceRoot),
     };
 
     // Tell the deploy server what version of the dependency kit we're using, so
