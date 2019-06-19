@@ -604,9 +604,9 @@
       "integrity": "sha1-G7nzFO9ri63tE7VJFpsqlF62jk0="
     },
     "meteor-babel": {
-      "version": "7.4.8",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.4.8.tgz",
-      "integrity": "sha512-Z0M97Aq6TtXjDYehg5ejoO4oMEBCRYuOwfnGn++FlanUnkNBLyq0NuiDPrtX7p3ZG3qVaOczg7AUZj7nkFdY1g=="
+      "version": "7.4.10",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.4.10.tgz",
+      "integrity": "sha512-LkqP9fJAh8tL3TJ2NE83dk5kCa2Q+RiumzK/jmzLnqGup9Ztw6UdsQcPI+k8I0rl9vZcN4/+NvOEE+keroD7zQ=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -676,9 +676,9 @@
       }
     },
     "reify": {
-      "version": "0.20.1",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.20.1.tgz",
-      "integrity": "sha512-Z3BD00rtG8QusNLSwgfQ6sRr4N4cwHKKury7FohWtFGs7X1ANlR/qlncn3v+UQgI6BNb5fgC41dxLZCTQq3ywg=="
+      "version": "0.20.3",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.20.3.tgz",
+      "integrity": "sha512-WoI/Z6XXJniegpwITbUoQ7HQCtCnEmH6Od3nd8ko1KKE9g60UOJVoxEzInP2Bg9faXoocB3bAWY8YaFovA1ABg=="
     },
     "resolve": {
       "version": "1.11.0",
