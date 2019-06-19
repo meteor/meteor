@@ -83,6 +83,11 @@ Options:
                    Defaults to your local IP and the port that the Meteor
                    server binds to. Can include a URL scheme (for
                    example, --mobile-server=https://example.com:443).
+  --cordova-server-port
+                   Local port where Cordova will serve the content. It's
+                   important when multiple Cordova apps are build from the same
+                   Meteor app source code as by default the port is generated
+                   using the id inside .meteor/.id file.
   --production     Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs       Run without parsing logs from stdout and stderr.
   --settings, -s   Set optional data for Meteor.settings on the server.
@@ -598,6 +603,11 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
+  --cordova-server-port
+                    Local port where Cordova will serve the content. It's
+                    important when multiple Cordova apps are build from the same
+                    Meteor app source code as by default the port is generated
+                    using the id inside .meteor/.id file.
   --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings, -s    Set optional data for Meteor.settings on the server
 
@@ -682,6 +692,11 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
+  --cordova-server-port
+                    Local port where Cordova will serve the content. It's
+                    important when multiple Cordova apps are build from the same
+                    Meteor app source code as by default the port is generated
+                    using the id inside .meteor/.id file.
   --raw-logs        Run without parsing logs from stdout and stderr.
   --settings, -s    Set optional data for Meteor.settings on the server
 

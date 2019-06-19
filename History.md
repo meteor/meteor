@@ -1,5 +1,18 @@
 ## v.NEXT
 
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Add `--cordova-server-port` option to override local port where Cordova will 
+  serve static resources, which is useful when multiple Cordova apps are built
+  from the same application source code, since by default the port is generated
+  using the ID from the application's `.meteor/.id` file.
+
 ## v1.8.1, 2019-04-03
 
 ### Breaking changes
