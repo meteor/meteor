@@ -23,7 +23,7 @@ exports.getDefaults = function getDefaults(features) {
   }
 
   const combined = {
-    presets: [babelPresetMeteor],
+    presets: [],
     plugins: [
       [reifyPlugin, {
         generateLetDeclarations: true,
@@ -33,19 +33,24 @@ exports.getDefaults = function getDefaults(features) {
     ]
   };
 
-  const rt = getRuntimeTransform(features);
-  if (rt) {
-    combined.plugins.push(rt);
-  }
+  const compileModulesOnly = features && features.compileModulesOnly;
+  if (! compileModulesOnly) {
+    combined.presets.push(babelPresetMeteor);
 
-  maybeAddReactPlugins(features, combined);
-  maybeAddTypeScriptPreset(features, combined.presets);
+    const rt = getRuntimeTransform(features);
+    if (rt) {
+      combined.plugins.push(rt);
+    }
 
-  if (features && features.jscript) {
-    combined.plugins.push(
-      require("./plugins/named-function-expressions.js"),
-      require("./plugins/sanitize-for-in-objects.js")
-    );
+    maybeAddReactPlugins(features, combined);
+    maybeAddTypeScriptPreset(features, combined.presets);
+
+    if (features && features.jscript) {
+      combined.plugins.push(
+        require("./plugins/named-function-expressions.js"),
+        require("./plugins/sanitize-for-in-objects.js")
+      );
+    }
   }
 
   return finish([combined]);
@@ -70,7 +75,7 @@ function maybeAddTypeScriptPreset(features, presets) {
 
 function getDefaultsForModernBrowsers(features) {
   const combined = {
-    presets: [babelPresetMeteorModern.getPreset],
+    presets: [],
     plugins: []
   };
 
@@ -82,13 +87,18 @@ function getDefaultsForModernBrowsers(features) {
     }]
   );
 
-  const rt = getRuntimeTransform(features);
-  if (rt) {
-    combined.plugins.push(rt);
-  }
+  const compileModulesOnly = features && features.compileModulesOnly;
+  if (! compileModulesOnly) {
+    combined.presets.push(babelPresetMeteorModern.getPreset);
 
-  maybeAddReactPlugins(features, combined);
-  maybeAddTypeScriptPreset(features, combined.presets);
+    const rt = getRuntimeTransform(features);
+    if (rt) {
+      combined.plugins.push(rt);
+    }
+
+    maybeAddReactPlugins(features, combined);
+    maybeAddTypeScriptPreset(features, combined.presets);
+  }
 
   return finish([combined]);
 }
@@ -136,40 +146,45 @@ function getDefaultsForNode8(features) {
     dynamicImport: true
   }]);
 
-  // Support Flow type syntax by simply stripping it out.
-  plugins.push(
-    require("@babel/plugin-syntax-flow"),
-    require("@babel/plugin-transform-flow-strip-types")
-  );
+  const compileModulesOnly = features && features.compileModulesOnly;
+  if (! compileModulesOnly) {
+    // Support Flow type syntax by simply stripping it out.
+    plugins.push(
+      require("@babel/plugin-syntax-flow"),
+      require("@babel/plugin-transform-flow-strip-types")
+    );
 
-  const rt = getRuntimeTransform(features);
-  if (rt) {
-    plugins.push(rt);
+    const rt = getRuntimeTransform(features);
+    if (rt) {
+      plugins.push(rt);
+    }
+
+    // Not fully supported in Node 8 without the --harmony flag.
+    plugins.push(
+      require("@babel/plugin-syntax-object-rest-spread"),
+      require("@babel/plugin-proposal-object-rest-spread")
+    );
+
+    // Ensure that async functions run in a Fiber, while also taking
+    // full advantage of native async/await support in Node 8.
+    plugins.push([require("./plugins/async-await.js"), {
+      // Do not transform `await x` to `Promise.await(x)`, since Node
+      // 8 has native support for await expressions.
+      useNativeAsyncAwait: false
+    }]);
+
+    // Enable async generator functions proposal.
+    plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
   }
-
-  // Not fully supported in Node 8 without the --harmony flag.
-  plugins.push(
-    require("@babel/plugin-syntax-object-rest-spread"),
-    require("@babel/plugin-proposal-object-rest-spread")
-  );
-
-  // Ensure that async functions run in a Fiber, while also taking
-  // full advantage of native async/await support in Node 8.
-  plugins.push([require("./plugins/async-await.js"), {
-    // Do not transform `await x` to `Promise.await(x)`, since Node
-    // 8 has native support for await expressions.
-    useNativeAsyncAwait: false
-  }]);
-
-  // Enable async generator functions proposal.
-  plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
 
   const presets = [{
     plugins
   }];
 
-  maybeAddReactPlugins(features, { plugins, presets });
-  maybeAddTypeScriptPreset(features, presets);
+  if (! compileModulesOnly) {
+    maybeAddReactPlugins(features, { plugins, presets });
+    maybeAddTypeScriptPreset(features, presets);
+  }
 
   return finish(presets);
 }

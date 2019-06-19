@@ -126,6 +126,48 @@ describe("meteor-babel", () => {
     // we need to make sure Reify didn't mangle its name.
     assert.strictEqual(require("d3/build/package").module, "index");
   });
+
+  it("can compile just module syntax and nothing else", function () {
+    const source = [
+      'import register from "./registry";',
+      "register(async (a, b) => (await a) + (await b));",
+    ].join("\n");
+
+    const everythingResult = meteorBabel.compile(
+      source,
+      meteorBabel.getDefaultOptions({
+        compileModulesOnly: false
+      })
+    );
+
+    assert.ok(
+      /\bmodule\.link\(/.test(everythingResult.code),
+      everythingResult.code
+    );
+
+    assert.ok(
+      /regeneratorRuntime.async\(/.test(everythingResult.code),
+      everythingResult.code
+    );
+
+    const justModulesResult = meteorBabel.compile(
+      source,
+      meteorBabel.getDefaultOptions({
+        compileModulesOnly: true
+      })
+    );
+
+    assert.strictEqual(justModulesResult.code, [
+      "let register;",
+      'module.link("./registry", {',
+      "  default(v) {",
+      "    register = v;",
+      "  }",
+      "",
+      "}, 0);",
+      "register(async (a, b) => (await a) + (await b));",
+    ].join("\n"));
+  });
 });
 
 describe("Babel", function() {
