@@ -1,4 +1,4 @@
-export class Test {
+class Test {
   constructor({
     left,
     right,
@@ -7,3 +7,5 @@ export class Test {
     Object.assign(this, { left, right, rest });
   }
 }
+
+exports.Test = Test;

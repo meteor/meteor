@@ -1,4 +1,5 @@
 import assert from "assert";
+import { readFileSync } from "fs";
 import { transform } from "@babel/core";
 import { SourceMapConsumer } from "source-map";
 import {
@@ -116,7 +117,7 @@ describe("meteor-babel", () => {
 
   it("should tolerate exported declarations named `module`", function () {
     const absId = require.resolve("d3/build/package.js");
-    const source = require("fs").readFileSync(absId, "utf8");
+    const source = readFileSync(absId, "utf8");
     const { code } = meteorBabel.compile(source);
 
     // Make sure the generated code uses a renamed module1 reference.
@@ -170,7 +171,8 @@ describe("meteor-babel", () => {
   });
 
   it("should import appropriate runtime helpers", function () {
-    const { Test } = require("./obj-without-props.js");
+    const absId = require.resolve("./obj-without-props.js");
+    const { Test } = require(absId);
 
     const code = String(Test.prototype.constructor);
     assert.ok(/objectWithoutProperties/.test(code), code);
@@ -188,6 +190,19 @@ describe("meteor-babel", () => {
       middle: "zxcv",
       top: "qwer",
     });
+
+    const source = readFileSync(absId, "utf8");
+    const result = meteorBabel.compile(source);
+
+    assert.ok(
+      /objectWithoutProperties\(/.test(result.code),
+      result.code
+    );
+
+    assert.ok(
+      /@babel\/runtime\/helpers\/objectWithoutProperties/.test(result.code),
+      result.code
+    );
   });
 });
 
