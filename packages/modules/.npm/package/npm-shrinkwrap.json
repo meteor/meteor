@@ -2,19 +2,24 @@
   "lockfileVersion": 1,
   "dependencies": {
     "acorn": {
-      "version": "5.7.1",
-      "resolved": "https://registry.npmjs.org/acorn/-/acorn-5.7.1.tgz",
-      "integrity": "sha512-d+nbxBUGKg7Arpsvbnlq61mc12ek3EY8EQldM3GPAhWJ1UVxC6TDGbIvUMNU6obBX3i1+ptCIzV4vq0gFPEGVQ=="
+      "version": "6.1.1",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-6.1.1.tgz",
+      "integrity": "sha512-jPTiwtOxaHNaAPg/dmrJ/beuzLRnXtB0kQPQ8JpotKJgTB6rX6c8mlf315941pyjBSaPg8NHXS9fhP4u17DpGA=="
+    },
+    "acorn-dynamic-import": {
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
+      "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
     },
     "reify": {
-      "version": "0.17.3",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.17.3.tgz",
-      "integrity": "sha512-i0t837UYnWyJPCeesupZjmpThIppOPSs4I/uHmsWzQaiGQqtsYlbeJNN5i+61fe6UEA3Famc3IHnlm511poMnA=="
+      "version": "0.20.1",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.20.1.tgz",
+      "integrity": "sha512-Z3BD00rtG8QusNLSwgfQ6sRr4N4cwHKKury7FohWtFGs7X1ANlR/qlncn3v+UQgI6BNb5fgC41dxLZCTQq3ywg=="
     },
     "semver": {
-      "version": "5.5.0",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.5.0.tgz",
-      "integrity": "sha512-4SJ3dm0WAwWy/NVeioZh5AntkdJoWKxHxcmyP622fOkgHa4z3R0TdBJICINyaSDE6uNwVc8gZr+ZinwZAH4xIA=="
+      "version": "5.7.0",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.7.0.tgz",
+      "integrity": "sha512-Ya52jSX2u7QKghxeoFGpLwCtGlt7j0oY9DYb5apt9nPlJ42ID+ulTXESnt/qAQcoSERyZ5sl3LDIOw0nAn/5DA=="
     }
   }
 }
