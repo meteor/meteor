@@ -1,7 +1,7 @@
 try {
-  Symbol = exports.Symbol = require("core-js/modules/es.symbol");
-  Map = exports.Map = require("core-js/modules/es.map");
-  Set = exports.Set = require("core-js/modules/es.set");
+  Symbol = exports.Symbol = require("core-js/es/symbol");
+  Map = exports.Map = require("core-js/es/map");
+  Set = exports.Set = require("core-js/es/set");
 
 } catch (e) {
   throw new Error([
