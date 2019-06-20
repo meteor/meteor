@@ -37,8 +37,7 @@ exports.getMinimumModernBrowserVersions = function () {
   return require("./modern-versions.js").get();
 };
 
-const parse = exports.parse =
-  require("reify/lib/parsers/babylon.js").parse;
+const parse = exports.parse = require("./parser").parse;
 
 let didWarnAboutNoCache = false;
 
@@ -94,6 +93,10 @@ function compile(source, options) {
   optionsCopy.ast = true;
 
   function transform(presets) {
+    optionsCopy.plugins = [{
+      parserOverride: parse
+    }];
+
     optionsCopy.presets = presets;
     optionsCopy.sourceMaps = true;
     if (result.map) {

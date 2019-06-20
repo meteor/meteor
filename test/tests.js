@@ -204,6 +204,11 @@ describe("meteor-babel", () => {
       result.code
     );
   });
+
+  it("should be tolerant of exporting undeclared identifiers", () => {
+    import { GlobalArray } from "./undeclared-export.js";
+    assert.strictEqual(GlobalArray, Array);
+  });
 });
 
 describe("Babel", function() {
