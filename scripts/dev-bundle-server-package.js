@@ -8,8 +8,8 @@ var packageJson = {
   name: "meteor-dev-bundle",
   private: true,
   dependencies: {
+    fibers: "3.1.1",
     "meteor-promise": "0.8.7",
-    fibers: "2.0.0",
     promise: "8.0.2",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead

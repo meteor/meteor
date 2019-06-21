@@ -343,21 +343,27 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   // directory paths.
   const tempPkgDirs = {};
 
-  dirsToRebuild.forEach(function (pkgPath) {
+  dirsToRebuild.splice(0).forEach(pkgPath => {
     const tempPkgDir = tempPkgDirs[pkgPath] = files.pathJoin(
       tempNodeModules,
       files.pathRelative(nodeModulesDir, pkgPath)
     );
 
-    // Copy the package directory instead of renaming it, so that the
-    // original package will be left untouched if the rebuild fails. We
-    // could just run files.cp_r(pkgPath, tempPkgDir) here, except that we
-    // want to handle nested node_modules directories specially.
-    copyNpmPackageWithSymlinkedNodeModules(pkgPath, tempPkgDir);
+    // It's possible the pkgPath directory may have been deleted since we
+    // did the scan above: https://circleci.com/gh/meteor/meteor/31330
+    if (isDirectory(pkgPath)) {
+      // Copy the package directory instead of renaming it, so that the
+      // original package will be left untouched if the rebuild fails. We
+      // could just run files.cp_r(pkgPath, tempPkgDir) here, except that we
+      // want to handle nested node_modules directories specially.
+      copyNpmPackageWithSymlinkedNodeModules(pkgPath, tempPkgDir);
 
-    // Record the current process.versions so that we can avoid
-    // copying/rebuilding/renaming next time.
-    recordLastRebuildVersions(tempPkgDir);
+      // Record the current process.versions so that we can avoid
+      // copying/rebuilding/renaming next time.
+      recordLastRebuildVersions(tempPkgDir);
+
+      dirsToRebuild.push(pkgPath);
+    }
   });
 
   // The `npm rebuild` command must be run in the parent directory of the
@@ -478,8 +484,9 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
   const pkgJsonPath = files.pathJoin(dir, "package.json");
   const pkgJsonStat = optimisticStatOrNull(pkgJsonPath);
   const canCache = pkgJsonStat && pkgJsonStat.isFile();
-  const portableFile = files.pathJoin(
-    dir, ".meteor-portable-" + portableVersion + ".json");
+  const portableFile = files.convertToOSPath(
+    files.pathJoin(dir, ".meteor-portable-" + portableVersion + ".json")
+  );
 
   if (canCache) {
     // Cache previous results by writing a boolean value to a hidden file
@@ -1073,7 +1080,7 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
 
   if (! result.success) {
     const pkgNotFound =
-      `404 Not Found: ${utils.quotemeta(name)}@${utils.quotemeta(version)}`;
+      `404 Not Found - GET ${utils.quotemeta("https://registry.npmjs.org/"+name)}`;
 
     const versionNotFound =
       "No matching version found for " +

@@ -14,11 +14,8 @@ export const CORDOVA_DEV_BUNDLE_VERSIONS = {
 };
 
 export const CORDOVA_PLATFORM_VERSIONS = {
-  // This commit represents cordova-android@6.4.0 plus
-  // https://github.com/apache/cordova-android/pull/417, aka
-  // https://github.com/meteor/cordova-android/tree/v6.4.0-with-pr-417:
-  'android': 'https://github.com/meteor/cordova-android/tarball/317db7df0f7a054444197bc6d28453cf4ab23280',
-  'ios': '4.5.4'
+  'android': '7.1.4',
+  'ios': '4.5.5',
 };
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {

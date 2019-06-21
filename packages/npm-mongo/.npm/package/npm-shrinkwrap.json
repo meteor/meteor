@@ -7,19 +7,19 @@
       "integrity": "sha512-9Aeai9TacfNtWXOYarkFJRW2CWo+dRon+fuLZYJmvLV3+MiUp0bEI6IAZfXEIg7/Pl/7IWlLaDnhzTsD81etQA=="
     },
     "memory-pager": {
-      "version": "1.1.0",
-      "resolved": "https://registry.npmjs.org/memory-pager/-/memory-pager-1.1.0.tgz",
-      "integrity": "sha512-Mf9OHV/Y7h6YWDxTzX/b4ZZ4oh9NSXblQL8dtPCOomOtZciEHxePR78+uHFLLlsk01A6jVHhHsQZZ/WcIPpnzg=="
+      "version": "1.5.0",
+      "resolved": "https://registry.npmjs.org/memory-pager/-/memory-pager-1.5.0.tgz",
+      "integrity": "sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg=="
     },
     "mongodb": {
-      "version": "3.1.6",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.1.6.tgz",
-      "integrity": "sha512-E5QJuXQoMlT7KyCYqNNMfAkhfQD79AT4F8Xd+6x37OX+8BL17GyXyWvfm6wuyx4wnzCCPoCSLeMeUN2S7dU9yw=="
+      "version": "3.1.13",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.1.13.tgz",
+      "integrity": "sha512-sz2dhvBZQWf3LRNDhbd30KHVzdjZx9IKC0L+kSZ/gzYquCF5zPOgGqRz6sSCqYZtKP2ekB4nfLxhGtzGHnIKxA=="
     },
     "mongodb-core": {
-      "version": "3.1.5",
-      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.1.5.tgz",
-      "integrity": "sha512-emT/tM4ZBinqd6RZok+EzDdtN4LjYJIckv71qQVOEFmvXgT5cperZegVmTgox/1cx4XQu6LJ5ZuIwipP/eKdQg=="
+      "version": "3.1.11",
+      "resolved": "https://registry.npmjs.org/mongodb-core/-/mongodb-core-3.1.11.tgz",
+      "integrity": "sha512-rD2US2s5qk/ckbiiGFHeu+yKYDXdJ1G87F6CG3YdaZpzdOm5zpoAZd/EKbPmFO6cQZ+XVXBXBJ660sSI0gc6qg=="
     },
     "require_optional": {
       "version": "1.0.1",
@@ -42,9 +42,9 @@
       "integrity": "sha512-4cDsYuAjXssUSjxHKRe4DTZC0agDwsCqcMqtJAQPzC74nJ7LfAJflAtC1Zed5hMzEQKj82d3tuzqdGNRsLJ4Gw=="
     },
     "semver": {
-      "version": "5.5.1",
-      "resolved": "https://registry.npmjs.org/semver/-/semver-5.5.1.tgz",
-      "integrity": "sha512-PqpAxfrEhlSUWge8dwIp4tZnQ25DIOthpiaHNIthsjEFQD6EvqUKUDM7L8O2rShkFccYo1VjJR0coWfNkCubRw=="
+      "version": "5.6.0",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.6.0.tgz",
+      "integrity": "sha512-RS9R6R35NYgQn++fkDWaOmqGoj4Ek9gGs+DPxNUZKuwE183xjJroKvyo1IzVFeXvUrvmALy6FWD5xrdJT25gMg=="
     },
     "sparse-bitfield": {
       "version": "3.0.3",

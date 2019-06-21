@@ -6,8 +6,6 @@ import {coalesce} from '../utils/func-utils.js';
 import {Profile} from '../tool-env/profile.js';
 
 import {
-  optimisticStatOrNull,
-  optimisticReaddir,
   optimisticHashOrNull,
 } from "./optimistic.js";
 
@@ -272,7 +270,7 @@ export const sha512 = Profile("sha512", function (...args) {
   return hash.digest('base64');
 });
 
-export function readDirectory({absPath, include, exclude, names}) {
+function readAndStatDirectory(absPath) {
   // Read the directory.
   try {
     var contents = files.readdir(absPath);
@@ -303,8 +301,12 @@ export function readDirectory({absPath, include, exclude, names}) {
     contentsWithSlashes.push(entry);
   });
 
+  return contentsWithSlashes
+}
+
+function filterDirectoryContents(contents, { include, exclude, names }) {
   // Filter based on regexps.
-  var filtered = contentsWithSlashes.filter((entry) => {
+  return contents.filter((entry) => {
     // Is it one of the names we explicitly requested?
     if (names && names.indexOf(entry) !== -1) {
       return true;
@@ -318,17 +320,21 @@ export function readDirectory({absPath, include, exclude, names}) {
       return true;
     }
     return false;
-  });
+  }).sort();
+}
 
-  // Sort it!
-  filtered.sort();
-  return filtered;
+export function readDirectory({absPath, include, exclude, names}) {
+  const contents = readAndStatDirectory(absPath);
+  return filterDirectoryContents(contents, { include, exclude, names });
 }
 
 // All fields are private.
 export class Watcher {
   constructor(options) {
     var self = this;
+
+    // Run initial check asyncly
+    self._async = options.async;
 
     // The set to watch.
     self.watchSet = options.watchSet;
@@ -407,40 +413,38 @@ export class Watcher {
     return true;
   }
 
-  _fireIfDirectoryChanged(info) {
+  // infos must all be for the same directory
+  _fireIfDirectoryChanged(infos) {
     var self = this;
 
     if (self.stopped) {
       return true;
     }
 
-    var newContents = readDirectory({
-      absPath: info.absPath,
-      include: info.include,
-      exclude: info.exclude,
-      names: info.names
-    });
+    const contents = readAndStatDirectory(infos[0].absPath);
 
-    // If the directory has changed (including being deleted or created).
-    if (! _.isEqual(info.contents, newContents)) {
-      self._fire();
-      return true;
+    for (let i = 0; i < infos.length; i++) {
+      const info = infos[i];
+      const newContents = filterDirectoryContents(contents, info);
+
+      // If the directory has changed (including being deleted or created).
+      if (! _.isEqual(info.contents, newContents)) {
+        self._fire();
+        return true;
+      }
     }
 
     return false;
   }
 
   _startFileWatches() {
-    var self = this;
+    const self = this;
+    const keys = Object.keys(self.watchSet.files);
 
     // Set up a watch for each file
-    _.each(self.watchSet.files, function (hash, absPath) {
-      if (self.stopped) {
-        return;
-      }
-
+    self._processBatches(keys, absPath => {
       if (! self.justCheckOnce) {
-        self._watchFileOrDirectory(absPath);
+        self._watchFileOrDirectory(absPath, true);
       }
 
       // Check for the case where by the time we created the watch,
@@ -449,7 +453,7 @@ export class Watcher {
     });
   }
 
-  _watchFileOrDirectory(absPath) {
+  _watchFileOrDirectory(absPath, skipCheck) {
     var self = this;
 
     if (! _.has(self.watches, absPath)) {
@@ -476,9 +480,13 @@ export class Watcher {
       var onWatchEvent = self._makeWatchEventCallback(absPath);
       entry.watcher = safeWatcher.watch(absPath, onWatchEvent);
 
-      // If we successfully created the watcher, invoke the callback
-      // immediately, so that we examine this file at least once.
-      onWatchEvent();
+      if (!skipCheck) {
+        // If we successfully created the watcher, invoke the callback
+        // immediately, so that we examine this file at least once.
+        onWatchEvent();
+      } else {
+        self._updateStatForWatch(absPath);
+      }
 
     } else {
       if (self._mustBeAFile(absPath)) {
@@ -559,13 +567,12 @@ export class Watcher {
 
         // If self.watchSet.directories contains any entries for the
         // directory we are examining, call self._fireIfDirectoryChanged.
-        _.some(self.watchSet.directories, function(info) {
-          return self.stopped ||
-            (absPath === info.absPath &&
-             self._fireIfDirectoryChanged(info, true));
-          // XXX #3335 We probably should check again in a second, due to low
-          // filesystem modtime resolution.
-        });
+        const infos = self.watchSet.directories.filter(info => info.absPath === absPath );
+        if (infos.length) {
+          self._fireIfDirectoryChanged(infos);
+        }
+        // XXX #3335 We probably should check again in a second, due to low
+        // filesystem modtime resolution.
       }
     });
   }
@@ -640,26 +647,60 @@ export class Watcher {
 
     return stat;
   }
+  
+  // Iterates over the array, calling handleItem for each item
+  // When this._async is true, it pauses ocassionally to avoid blocking for too long
+  // Stops iterating after watcher is stopped
+  _processBatches(array, handleItem) {
+    const self = this;
+    const async = self._async;
+    let index = 0;
 
+    function processBatch() {
+      const stopTime = async ? Date.now() + 50 : Infinity;
+      while (Date.now() < stopTime && index < array.length) {
+        if (self.stopped) {
+          return;
+        }
+
+        handleItem(array[index]);
+
+        index += 1;
+      }
+
+      if (index < array.length) {
+        if (async) {
+          setImmediate(processBatch);
+        } else {
+          processBatch();
+        }
+      }
+    }
+
+    processBatch();
+  }
   _checkDirectories() {
-    var self = this;
+    const self = this;
+    const dirs = Object.values(self.watchSet.directories.reduce((result, dir) => {
+      result[dir.absPath] = result[dir.absPath] || [];
+      result[dir.absPath].push(dir);
+
+      return result;
+    }, {}));
+
 
     if (self.stopped) {
       return;
     }
 
-    _.each(self.watchSet.directories, function (info) {
-      if (self.stopped) {
-        return;
-      }
-
+    self._processBatches(dirs, infos => {
       if (! self.justCheckOnce) {
-        self._watchFileOrDirectory(info.absPath);
+        self._watchFileOrDirectory(infos[0].absPath, true);
       }
 
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
-      self._fireIfDirectoryChanged(info);
+      self._fireIfDirectoryChanged(infos);
     });
   }
 

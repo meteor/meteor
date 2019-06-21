@@ -27,12 +27,21 @@ var serverJson = require("./server-json.js");
 var configJson =
   JSON.parse(fs.readFileSync(path.resolve(serverDir, 'config.json'), 'utf8'));
 
+var programsDir = path.dirname(serverDir);
+var buildDir = path.dirname(programsDir);
+var starJson = JSON.parse(fs.readFileSync(path.join(buildDir, "star.json")));
+
 // Set up environment
 __meteor_bootstrap__ = {
   startupHooks: [],
   serverDir: serverDir,
-  configJson: configJson };
-__meteor_runtime_config__ = { meteorRelease: configJson.meteorRelease };
+  configJson: configJson
+};
+
+__meteor_runtime_config__ = {
+  meteorRelease: configJson.meteorRelease,
+  gitCommitHash: starJson.gitCommitHash
+};
 
 if (!process.env.APP_ID) {
   process.env.APP_ID = configJson.appId;
@@ -196,7 +205,6 @@ var specialArgPaths = {
 
   "packages/dynamic-import.js": function (file) {
     var dynamicImportInfo = {};
-    var programsDir = path.dirname(serverDir);
     var clientArchs = configJson.clientArchs ||
       Object.keys(configJson.clientPaths);
 

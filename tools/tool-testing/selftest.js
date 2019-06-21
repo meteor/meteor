@@ -21,7 +21,7 @@ import "../tool-env/install-runtime.js";
 // Use this to decorate functions that throw TestFailure. Decorate the
 // first function that should not be included in the call stack shown
 // to the user.
-export const markStack = parseStackMarkTop;
+export { parseStackMarkTop as markStack };
 
 // Call from a test to throw a TestFailure exception and bail out of the test
 export const fail = parseStackMarkTop(function (reason) {

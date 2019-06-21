@@ -17,14 +17,14 @@
       "integrity": "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="
     },
     "source-map-support": {
-      "version": "0.5.9",
-      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.5.9.tgz",
-      "integrity": "sha512-gR6Rw4MvUlYy83vP0vxoVNzM6t8MUXqNuRsuBmBHQDu1Fh6X015FrLdgoDKcNdkwGubozq0P4N0Q37UyFVr1EA=="
+      "version": "0.5.10",
+      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.5.10.tgz",
+      "integrity": "sha512-YfQ3tQFTK/yzlGJuX8pTwa4tifQj4QS2Mj7UegOu8jAz59MqIiMGPXxQhVQiIMNzayuUSF/jEuVnfFF5JqybmQ=="
     },
     "terser": {
-      "version": "3.9.2",
-      "resolved": "https://registry.npmjs.org/terser/-/terser-3.9.2.tgz",
-      "integrity": "sha512-zOaL2PwflERZkVWbzv8rGbDR493fUaD/KXIUz/vjuvyH6Cxwu4pitM6con3Jy4bWtcQJwNOvN4rHltFeTEwZQA=="
+      "version": "3.16.1",
+      "resolved": "https://registry.npmjs.org/terser/-/terser-3.16.1.tgz",
+      "integrity": "sha512-JDJjgleBROeek2iBcSNzOHLKsB/MdDf+E/BOAJ0Tk9r7p9/fVobfv7LMJ/g/k3v9SXdmjZnIlFd5nfn/Rt0Xow=="
     }
   }
 }

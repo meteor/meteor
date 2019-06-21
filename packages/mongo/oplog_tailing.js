@@ -270,7 +270,11 @@ _.extend(OplogHandle.prototype, {
           if (doc.o.applyOps) {
             // This was a successful transaction, so we need to apply the
             // operations that were involved.
-            doc.o.applyOps.forEach(handleDoc);
+            doc.o.applyOps.forEach(op => {
+              // See https://github.com/meteor/meteor/issues/10420.
+              op.ts = op.ts || doc.ts;
+              handleDoc(op);
+            });
             return;
           }
           throw new Error("Unknown command " + EJSON.stringify(doc));

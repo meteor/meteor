@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.5.1'
+  version: '1.6.0'
 });
 
 Package.onUse(function (api) {
@@ -15,10 +15,11 @@ Package.onUse(function (api) {
     'retry'
   ], 'client');
 
+  api.use('reload', 'client', { weak: true });
+
   api.use([
     'ecmascript',
-    'ddp',
-    'mongo',
+    'ddp'
   ], ['client', 'server']);
 
   api.mainModule('autoupdate_server.js', 'server');

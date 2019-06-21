@@ -10,6 +10,7 @@ import {
   optimisticReaddir,
   optimisticStatOrNull,
   optimisticLStatOrNull,
+  optimisticHashOrNull,
 } from "../fs/optimistic.js";
 
 // Builder is in charge of writing "bundles" to disk, which are
@@ -75,7 +76,9 @@ export default class Builder {
     this.previousUsedAsFile = {};
 
     this.writtenHashes = {};
+    this.createdSymlinks = {};
     this.previousWrittenHashes = {};
+    this.previousCreatedSymlinks = {};
 
     // foo/bar => foo/.build1234.bar
     // Should we include a random number? The advantage is that multiple
@@ -106,6 +109,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         this.previousWrittenHashes = previousBuilder.writtenHashes;
         this.previousUsedAsFile = previousBuilder.usedAsFile;
+        this.previousCreatedSymlinks = previousBuilder.createdSymlinks;
 
         resetBuildPath = false;
       } else {
@@ -228,6 +232,39 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return partsOut.join(files.pathSep);
   }
 
+  // Checks if a file with the same path and hash was written by
+  // the previous builder. If it was, it adds it to the cache and makes
+  // sure the parent directories exist and are part of the cache.
+  //
+  // Returns true if the file was already written
+  usePreviousWrite(relPath, hash, sanitize) {
+    relPath = this._normalizeFilePath(relPath, sanitize);
+
+    if (this.previousWrittenHashes[relPath] === hash) {
+      this._ensureDirectory(files.pathDirname(relPath));
+      this.writtenHashes[relPath] = hash;
+      this.usedAsFile[relPath] = true;
+      return true;
+    }
+
+    return false;
+  }
+
+  _normalizeFilePath(relPath, sanitize) {
+    // Ensure no trailing slash
+    if (relPath.slice(-1) === files.pathSep) {
+      relPath = relPath.slice(0, -1);
+    }
+
+    // In sanitize mode, ensure path does not contain segments like
+    // '..', does not contain forbidden characters, and is unique.
+    if (sanitize) {
+      relPath = this._sanitize(relPath);
+    }
+
+    return relPath;
+  }
+
   // Write either a buffer or the contents of a file to `relPath` (a
   // path to a file relative to the bundle root), creating it (and any
   // enclosing directories) if it doesn't exist yet. Exactly one of
@@ -250,16 +287,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //
   // If `file` is used then it will be added to the builder's WatchSet.
   write(relPath, {data, file, hash, sanitize, executable, symlink}) {
-    // Ensure no trailing slash
-    if (relPath.slice(-1) === files.pathSep) {
-      relPath = relPath.slice(0, -1);
-    }
-
-    // In sanitize mode, ensure path does not contain segments like
-    // '..', does not contain forbidden characters, and is unique.
-    if (sanitize) {
-      relPath = this._sanitize(relPath);
-    }
+    relPath = this._normalizeFilePath(relPath, sanitize);
 
     let getData = null;
     if (data) {
@@ -285,13 +313,27 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     } else {
       hash = hash || sha1(getData());
 
-      if (this.previousWrittenHashes[relPath] !== hash) {
+      // Write is called multiple times for assets when they have multiple urls for the same file
+      if (this.previousWrittenHashes[relPath] !== hash && this.writtenHashes[relPath] !== hash) {
+
         // Builder is used to create build products, which should be read-only;
         // users shouldn't be manually editing automatically generated files and
         // expecting the results to "stick".
-        atomicallyRewriteFile(absPath, getData(), {
-          mode: executable ? 0o555 : 0o444
-        });
+        const mode = executable ? 0o555 : 0o444
+
+        if (this.buildPath === this.outputPath || this.writtenHashes[relPath]) {
+          // atomicallyRewriteFile handles overwriting files that have already been created
+          atomicallyRewriteFile(absPath, getData(), {
+              mode
+          });
+        } else {
+          // Since builder is not updating in place, and
+          // this build is only used if every file is successfully written,
+          // it is not important to write atomically.
+          files.writeFile(absPath, getData(), {
+            mode
+          })
+      }
       }
 
       this.writtenHashes[relPath] = hash;
@@ -499,8 +541,6 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       to = to.slice(0, -1);
     }
 
-    const absPathTo = files.pathJoin(this.buildPath, to);
-
     if (symlink) {
       if (specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
@@ -530,7 +570,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
-        symlinkWithOverwrite(absFrom, absTo);
+        if (this.previousCreatedSymlinks[absFrom] !== relTo) {
+          symlinkWithOverwrite(absFrom, absTo);
+        }
+        this.usedAsFile[relTo] = false;
+        this.createdSymlinks[absFrom] = relTo;
         return;
       }
 
@@ -641,23 +685,28 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // could not be created above.
         fileStatus = optimisticStatOrNull(thisAbsFrom);
         if (fileStatus && fileStatus.isFile()) {
-          // XXX can't really optimize this copying without reading
-          // the file into memory to calculate the hash.
-          files.writeFile(
-            files.pathResolve(this.buildPath, thisRelTo),
-            // The reason we call files.writeFile here instead of
-            // files.copyFile is so that we can read the file using
-            // optimisticReadFile instead of files.createReadStream.
-            optimisticReadFile(thisAbsFrom),
-            // Logic borrowed from files.copyFile: "Create the file as
-            // readable and writable by everyone, and executable by everyone
-            // if the original file is executably by owner. (This mode will be
-            // modified by umask.) We don't copy the mode *directly* because
-            // this function is used by 'meteor create' which is copying from
-            // the read-only tools tree into a writable app."
-            { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
-          );
+          const hash = optimisticHashOrNull(thisAbsFrom);
 
+          if (this.previousWrittenHashes[thisRelTo] !== hash) {
+            const content = optimisticReadFile(thisAbsFrom);
+
+            files.writeFile(
+              files.pathResolve(this.buildPath, thisRelTo),
+              // The reason we call files.writeFile here instead of
+              // files.copyFile is so that we can read the file using
+              // optimisticReadFile instead of files.createReadStream.
+              content,
+              // Logic borrowed from files.copyFile: "Create the file as
+              // readable and writable by everyone, and executable by everyone
+              // if the original file is executably by owner. (This mode will be
+              // modified by umask.) We don't copy the mode *directly* because
+              // this function is used by 'meteor create' which is copying from
+              // the read-only tools tree into a writable app."
+              { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
+            );
+          }
+
+          this.writtenHashes[thisRelTo] = hash;
           this.usedAsFile[thisRelTo] = true;
         }
       });

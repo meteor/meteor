@@ -1,8 +1,7 @@
-// Install a global ES2015-compliant Promise constructor that knows how to
-// run all its callbacks in Fibers.
+// Ensure the global Promise constructor knows how to run all its
+// callbacks in Fibers.
 
-var Promise = global.Promise ||
-  require("promise/lib/es6-extensions");
+const { Promise } = global;
 
 function makeCompatible(newPromise) {
   require("meteor-promise").makeCompatible(

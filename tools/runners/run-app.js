@@ -697,6 +697,7 @@ _.extend(AppRunner.prototype, {
     Promise.await(self.runPromise);
 
     var runPromise = self.runPromise = self._makePromise("run");
+    var listenPromise = self._makePromise("listen");
 
     // Run the program
     options.beforeRun && options.beforeRun();
@@ -722,6 +723,7 @@ _.extend(AppRunner.prototype, {
         self.proxy.setMode("proxy");
         options.onListen && options.onListen();
         self._resolvePromise("start");
+        self._resolvePromise("listen");
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings,
@@ -772,20 +774,22 @@ _.extend(AppRunner.prototype, {
           self._resolvePromise("run", {
             outcome: 'changed'
           });
-        }
+        },
+        async: true
       });
     }
 
     var setupClientWatcher = function () {
       clientWatcher && clientWatcher.stop();
       clientWatcher = new watch.Watcher({
-         watchSet: bundleResult.clientWatchSet,
-         onChange: function () {
+        watchSet: bundleResult.clientWatchSet,
+        onChange: function () {
           var outcome = watch.isUpToDate(serverWatchSet)
                       ? 'changed-refreshable' // only a client asset has changed
                       : 'changed'; // both a client and server asset changed
           self._resolvePromise('run', { outcome: outcome });
-         }
+        },
+        async: true
       });
     };
     if (self.watchForChanges && canRefreshClient) {
@@ -839,7 +843,13 @@ _.extend(AppRunner.prototype, {
 
     Console.enableProgressDisplay(false);
 
-    const postStartupResult = runPostStartupCallbacks(bundleResult);
+    const postStartupResult = Promise.race([
+      listenPromise,
+      runPromise
+    ]).then(() => {
+      return runPostStartupCallbacks(bundleResult);
+    }).await();
+
     if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a

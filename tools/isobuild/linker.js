@@ -21,6 +21,10 @@ const APP_PRELINK_CACHE = new LRU({
     return prelinked.source.length + sourceMapLength(prelinked.sourceMap);
   }
 });
+// Caches code with source map for dynamic files
+const DYNAMIC_PRELINKED_OUTPUT_CACHE = new LRU({
+  max: Math.pow(2, 11)
+});
 
 var packageDot = function (name) {
   if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name)) {
@@ -271,11 +275,7 @@ _.extend(Module.prototype, {
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);
         const { code: source, map } =
-          file.getPrelinkedOutput({
-            sourceWidth: sourceWidth,
-          }).toStringWithSourceMap({
-            file: servePath,
-          });
+          getOutputWithSourceMapCached(file, servePath, { sourceWidth })
 
         results.push({
           source,
@@ -812,12 +812,15 @@ const getPrelinkedOutputCached = require("optimism").wrap(
     }
 
     return new sourcemap.SourceNode(null, null, null, chunks);
-
   }, {
     // Store at most 4096 Files worth of prelinked output in this cache.
     max: Math.pow(2, 12),
 
     makeCacheKey(file, options) {
+      if (options.disableCache) {
+        return;
+      }
+
       return JSON.stringify({
         hash: file._inputHash,
         arch: file.module.bundleArch,
@@ -828,6 +831,32 @@ const getPrelinkedOutputCached = require("optimism").wrap(
     }
   }
 );
+
+function getOutputWithSourceMapCached(file, servePath, options) {
+  const key = JSON.stringify({
+    hash: file._inputHash,
+    arch: file.module.bundleArch,
+    bare: file.bare,
+    servePath: file.servePath,
+    dynamic: file.isDynamic(),
+    options,
+  });
+
+  if (DYNAMIC_PRELINKED_OUTPUT_CACHE.has(key)) {
+    return DYNAMIC_PRELINKED_OUTPUT_CACHE.get(key);
+  }
+
+  const result = file.getPrelinkedOutput({
+    ...options,
+    disableCache: true
+  }).toStringWithSourceMap({
+    file: servePath,
+  });
+
+  DYNAMIC_PRELINKED_OUTPUT_CACHE.set(key, result);
+
+  return result;
+}
 
 // Given a list of lines (not newline-terminated), returns a string placing them
 // in a pretty banner of width bannerWidth. All lines must have length at most

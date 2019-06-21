@@ -69,6 +69,10 @@ export default class OutputLog {
   }
 
   forbid(pattern, channel) {
+    const failure = new TestFailure('forbidden-string-present', {
+      run: this.run,
+    });
+
     this.lines.forEach((line) => {
       if (channel && channel !== line.channel) {
         return;
@@ -77,7 +81,7 @@ export default class OutputLog {
       const match = (pattern instanceof RegExp) ?
         (line.text.match(pattern)) : (line.text.indexOf(pattern) !== -1);
       if (match) {
-        throw new TestFailure('forbidden-string-present', { run: this.run });
+        throw failure;
       }
     });
   }
@@ -86,3 +90,6 @@ export default class OutputLog {
     return this.lines;
   }
 }
+
+import { markThrowingMethods } from "./test-utils.js";
+markThrowingMethods(OutputLog.prototype);
