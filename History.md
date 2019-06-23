@@ -11,7 +11,7 @@ N/A
 * Node has been updated to version
   [8.16.0](https://nodejs.org/en/blog/release/v8.16.0/).
 
-* The `meteor-babel` npm package has been updated to version 7.4.13.
+* The `meteor-babel` npm package has been updated to version 7.4.14.
 
 * The `reify` npm package has been updated to version 0.20.5.
 

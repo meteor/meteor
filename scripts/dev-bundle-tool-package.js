@@ -14,7 +14,7 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/c5043daa1b768594e01d76275e3854fc19f038f9",
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.10.3",
-    "meteor-babel": "7.4.13",
+    "meteor-babel": "7.4.14",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
