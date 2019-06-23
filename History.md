@@ -11,9 +11,9 @@ N/A
 * Node has been updated to version
   [8.16.0](https://nodejs.org/en/blog/release/v8.16.0/).
 
-* The `meteor-babel` npm package has been updated to version 7.4.12.
+* The `meteor-babel` npm package has been updated to version 7.4.13.
 
-* The `reify` npm package has been updated to version 0.20.4.
+* The `reify` npm package has been updated to version 0.20.5.
 
 * The `core-js` npm package used by `ecmascript-runtime-client` and
   `ecmascript-runtime-server` has been updated to version 3.1.4.

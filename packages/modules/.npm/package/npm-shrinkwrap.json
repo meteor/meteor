@@ -12,9 +12,9 @@
       "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
     },
     "reify": {
-      "version": "0.20.4",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.20.4.tgz",
-      "integrity": "sha512-uE8mYe+JsW9C7Cuaweo9bMRSx3+nNHUSFkJkT1kLogJnhtSENqqmm9D4J9EqTKsApqLSczl7vYKG6Kn4/3Kcqw=="
+      "version": "0.20.5",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.20.5.tgz",
+      "integrity": "sha512-Pk4eu8KcVdIzZHT5Uviax2hUDcGp7lS6/VZuWEtPhy0hkXMSegi/uZKKEMV6PcpjpCBVgwyw7KgCHaUy5uJkeQ=="
     },
     "semver": {
       "version": "5.7.0",
