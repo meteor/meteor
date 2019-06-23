@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Fail the entire test suite if any runTests command fails:
+set -e
+
 cd $(dirname $0)
 TEST_DIR=$(pwd)
 
