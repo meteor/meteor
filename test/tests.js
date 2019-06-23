@@ -684,7 +684,7 @@ val = "zxcv";`;
 require("./decorators.js");
 
 describe("Reify", function () {
-  (isLegacy ? xit : it)
+  (isLegacy || !isNode8OrLater ? xit : it)
   ("should declare imported symbols with block scope", function () {
     import def, { value } from "./export-value-a.js";
     assert.strictEqual(def, "value: a");
