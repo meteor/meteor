@@ -26,7 +26,7 @@ exports.getDefaults = function getDefaults(features) {
     presets: [],
     plugins: [
       [reifyPlugin, {
-        generateLetDeclarations: true,
+        avoidModernSyntax: true,
         enforceStrictMode: false,
         dynamicImport: true
       }]

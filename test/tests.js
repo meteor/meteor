@@ -8,7 +8,17 @@ import {
 } from "./test-module";
 
 const hasOwn = Object.prototype.hasOwnProperty;
-const isNode8OrLater = parseInt(process.versions.node) >= 8;
+
+const isLegacy =
+  process.env.IGNORE_NODE_MAJOR_VERSION &&
+  !process.env.COMPILE_FOR_MODERN_BROWSERS;
+
+const isNode8OrLater =
+  !isLegacy && parseInt(process.versions.node) >= 8;
+
+function removeBlankLines(string) {
+  return string.split("\n").filter(Boolean).join("\n");
+}
 
 describe("meteor-babel", () => {
   import meteorBabel from "../index.js";
@@ -151,20 +161,39 @@ describe("meteor-babel", () => {
       everythingResult.code
     );
 
-    const justModulesResult = meteorBabel.compile(
+
+
+    const justModulesLegacy = meteorBabel.compile(
       source,
       meteorBabel.getDefaultOptions({
         compileModulesOnly: true
       })
     );
 
-    assert.strictEqual(justModulesResult.code, [
+    assert.strictEqual(removeBlankLines(justModulesLegacy.code), [
+      "var register;",
+      'module.link("./registry", {',
+      "  default: function (v) {",
+      "    register = v;",
+      "  }",
+      "}, 0);",
+      "register(async (a, b) => (await a) + (await b));",
+    ].join("\n"));
+
+    const justModulesModern = meteorBabel.compile(
+      source,
+      meteorBabel.getDefaultOptions({
+        modernBrowsers: true,
+        compileModulesOnly: true
+      })
+    );
+
+    assert.strictEqual(removeBlankLines(justModulesModern.code), [
       "let register;",
       'module.link("./registry", {',
       "  default(v) {",
       "    register = v;",
       "  }",
-      "",
       "}, 0);",
       "register(async (a, b) => (await a) + (await b));",
     ].join("\n"));
@@ -655,7 +684,8 @@ val = "zxcv";`;
 require("./decorators.js");
 
 describe("Reify", function () {
-  it("should declare imported symbols with block scope", function () {
+  (isLegacy ? xit : it)
+  ("should declare imported symbols with block scope", function () {
     import def, { value } from "./export-value-a.js";
     assert.strictEqual(def, "value: a");
 
