@@ -58,7 +58,7 @@ var packageJson = {
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: "0.9.5",
-    "@wry/context": "0.4.0",
+    "@wry/context": "0.4.4",
     'lru-cache': '4.1.3'
   }
 };
