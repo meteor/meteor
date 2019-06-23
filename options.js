@@ -103,7 +103,7 @@ function getDefaultsForModernBrowsers(features) {
   return finish([combined]);
 }
 
-const parserOpts = require("reify/lib/parsers/babylon.js").options;
+const parserOpts = require("reify/lib/parsers/babel.js").options;
 const util = require("./util.js");
 
 function finish(presets) {
