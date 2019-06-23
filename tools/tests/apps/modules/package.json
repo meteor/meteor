@@ -22,6 +22,7 @@
     "moment": "^2.22.2",
     "mssql": "^3.1.1",
     "mysql": "^2.15.0",
+    "pify": "^4.0.1",
     "puppeteer": "^1.6.2",
     "regenerator-runtime": "^0.11.1",
     "stripe": "^4.4.0",

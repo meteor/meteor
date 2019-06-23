@@ -77,9 +77,16 @@ const reifyCompileWithCache = wrap(function ({ dataString }) {
 
 class DefaultHandlers {
   constructor({
+    sourceRoot,
     cacheDir,
     bundleArch,
+    compileOneJsResource,
   }) {
+    Object.assign(this, {
+      sourceRoot,
+      compileOneJsResource,
+    });
+
     if (cacheDir) {
       mkdir_p(this.cacheDir = pathJoin(
         cacheDir,
@@ -93,6 +100,17 @@ class DefaultHandlers {
   }
 
   js(file) {
+    if (this.compileOneJsResource) {
+      const jsOutputResources = this.compileOneJsResource({
+        data: file.data,
+        path: pathRelative(this.sourceRoot, file.absPath),
+        hash: file.hash,
+      });
+      if (jsOutputResources.length > 0) {
+        return jsOutputResources[0].data.toString("utf8");
+      }
+    }
+
     if (this.cacheDir) {
       const cacheFileName = this.getCacheFileName(file);
       try {
@@ -237,6 +255,7 @@ export default class ImportScanner {
     nodeModulesPaths = [],
     watchSet,
     cacheDir,
+    compileOneJsResource,
   }) {
     assert.ok(isString(sourceRoot));
 
@@ -253,8 +272,10 @@ export default class ImportScanner {
     this.outputFiles = [];
 
     this.defaultHandlers = new DefaultHandlers({
+      sourceRoot,
       cacheDir,
       bundleArch,
+      compileOneJsResource,
     });
 
     this.resolver = Resolver.getOrCreate({
