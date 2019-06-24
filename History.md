@@ -42,7 +42,18 @@ N/A
 * Node has been updated to version
   [8.16.0](https://nodejs.org/en/blog/release/v8.16.0/).
 
-* The `meteor-babel` npm package has been updated to version 7.4.3.
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 3.2.7.
+
+* The `meteor-babel` npm package has been updated to version 7.4.15.
+
+* The `reify` npm package has been updated to version 0.20.6.
+
+* The `core-js` npm package used by `ecmascript-runtime-client` and
+  `ecmascript-runtime-server` has been updated to version 3.1.4.
+
+* The `node-gyp` npm package has been updated to version 5.0.1, and
+  `node-pre-gyp` has been updated to 0.13.0.
 
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined. Additionally, npm
@@ -50,6 +61,11 @@ N/A
   automatically by `meteor-babel`, like application code, without any
   special symlinking tricks.
   [PR #10541](https://github.com/meteor/meteor/pull/10541)
+
+* Add `--cordova-server-port` option to override local port where Cordova will 
+  serve static resources, which is useful when multiple Cordova apps are built
+  from the same application source code, since by default the port is generated
+  using the ID from the application's `.meteor/.id` file.
 
 ## v1.8.1, 2019-04-03
 

@@ -9,9 +9,9 @@
 
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
+import { DocFetcher } from "./doc_fetcher.js";
 
 MongoInternals = {};
-MongoTest = {};
 
 MongoInternals.NpmModules = {
   mongodb: {

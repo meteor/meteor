@@ -18,3 +18,8 @@ Mp.load = function (filename) {
   }
   return result;
 };
+
+const resolved = Promise.resolve();
+Mp.dynamicImport = function (id) {
+  return resolved.then(() => require(id));
+};

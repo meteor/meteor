@@ -279,7 +279,7 @@ export const optimisticReadMeteorIgnore = wrap(dir => {
 export const optimisticLookupPackageJson = wrap((absRootDir, relDir) => {
   const absPkgJsonPath = pathJoin(absRootDir, relDir, "package.json");
   const pkgJson = optimisticReadJsonOrNull(absPkgJsonPath);
-  if (pkgJson) {
+  if (pkgJson && typeof pkgJson.name === "string") {
     return pkgJson;
   }
 

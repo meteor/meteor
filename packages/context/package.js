@@ -1,12 +1,12 @@
 Package.describe({
   name: "context",
-  version: "0.4.0-alpha190.5",
+  version: "0.5.0-alpha190.5",
   summary: "Manage contextual information without passing objects around",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "@wry/context": "0.4.0"
+  "@wry/context": "0.4.4"
 });
 
 Package.onUse(function(api) {
