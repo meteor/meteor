@@ -69,8 +69,7 @@ Package.onUse(function (api) {
 
   // Stuff that should be exposed via a real API, but we haven't yet.
   api.export('MongoInternals', 'server');
-  // For tests only.
-  api.export('MongoTest', 'server', {testOnly: true});
+
   api.export("Mongo");
 
   api.addFiles(['mongo_driver.js', 'oplog_tailing.js',
