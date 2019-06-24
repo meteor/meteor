@@ -21,6 +21,9 @@ N/A
 * The `core-js` npm package used by `ecmascript-runtime-client` and
   `ecmascript-runtime-server` has been updated to version 3.1.4.
 
+* The `node-gyp` npm package has been updated to version 5.0.1, and
+  `node-pre-gyp` has been updated to 0.13.0.
+
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined. Additionally, npm
   packages with a `"module"` entry point will now be compiled
