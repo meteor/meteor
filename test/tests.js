@@ -20,6 +20,10 @@ function removeBlankLines(string) {
   return string.split("\n").filter(Boolean).join("\n");
 }
 
+function count(string, substring) {
+  return string.split(substring).length - 1;
+}
+
 describe("meteor-babel", () => {
   import meteorBabel from "../index.js";
 
@@ -237,6 +241,36 @@ describe("meteor-babel", () => {
   it("should be tolerant of exporting undeclared identifiers", () => {
     import { GlobalArray } from "./undeclared-export.js";
     assert.strictEqual(GlobalArray, Array);
+  });
+
+  it("should not double-wrap module.runSetters expressions", () => {
+    import { value, check } from "./runtime-double-pass";
+
+    assert.strictEqual(value, 0);
+    const a = 12, b = 34;
+    check({ a, b });
+    assert.strictEqual(value, a + b);
+
+    const absId = require.resolve("./runtime-double-pass");
+    const source = readFileSync(absId, "utf8");
+
+    const defaultResult = meteorBabel.compile(source);
+    assert.strictEqual(
+      count(defaultResult.code, "runSetters"), 2,
+      defaultResult.code
+    );
+
+    const modernResult = meteorBabel.compile(
+      source,
+      meteorBabel.getDefaultOptions({
+        modernBrowsers: true
+      })
+    );
+
+    assert.strictEqual(
+      count(modernResult.code, "runSetters"), 2,
+      modernResult.code
+    );
   });
 });
 
