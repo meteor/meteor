@@ -14,9 +14,9 @@ N/A
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.4.14.
+* The `meteor-babel` npm package has been updated to version 7.4.15.
 
-* The `reify` npm package has been updated to version 0.20.5.
+* The `reify` npm package has been updated to version 0.20.6.
 
 * The `core-js` npm package used by `ecmascript-runtime-client` and
   `ecmascript-runtime-server` has been updated to version 3.1.4.
