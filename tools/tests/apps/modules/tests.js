@@ -358,6 +358,19 @@ describe("local node_modules", () => {
       "function",
     );
   });
+
+  it("packages with .mjs entry points can be imported", () => {
+    assert.strictEqual(
+      require.resolve("graphql"),
+      "/node_modules/graphql/index." + (
+        Meteor.isClient ? "mjs" : "js"
+      ),
+    );
+    const { parse } = require("graphql");
+    const nestedParse = require("graphql/language/parser").parse;
+    assert.strictEqual(typeof parse, "function");
+    assert.strictEqual(parse, nestedParse);
+  });
 });
 
 describe("Meteor packages", () => {
