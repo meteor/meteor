@@ -31,6 +31,10 @@ N/A
   special symlinking tricks.
   [PR #10541](https://github.com/meteor/meteor/pull/10541)
 
+* In addition to the `.js` and `.jsx` file extensions, the `ecmascript`
+  compiler plugin now automatically handles JavaScript modules with the
+  `.mjs` file extension.
+
 * Add `--cordova-server-port` option to override local port where Cordova will 
   serve static resources, which is useful when multiple Cordova apps are built
   from the same application source code, since by default the port is generated
