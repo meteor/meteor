@@ -1,5 +1,3 @@
-exports.meteorBabelHelpers = require("meteor-babel-helpers");
-
 try {
   var babelRuntimeVersion = require("@babel/runtime/package.json").version;
 } catch (e) {
