@@ -54,7 +54,7 @@ var packageJson = {
     escope: "3.6.0",
     split2: "2.2.0",
     multipipe: "2.0.1",
-    pathwatcher: "8.0.2",
+    pathwatcher: "8.1.0",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: "0.10.0",

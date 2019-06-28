@@ -27,6 +27,8 @@ N/A
 * The `optimism` npm package has been updated to version 0.10.0, which
   enables caching of thrown exceptions, as well as ordinary results.
 
+* The `pathwatcher` npm package has been updated to version 8.1.0.
+
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined. Additionally, npm
   packages with a `"module"` entry point will now be compiled
