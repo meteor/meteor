@@ -65,26 +65,36 @@ function stripHashBang(dataString) {
   return dataString.replace(/^#![^\n]*/, "");
 }
 
-const reifyCompileWithCache = wrap(function ({ dataString }) {
-  return reifyCompile(stripHashBang(dataString), {
+const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
+  source,
+  hash,
+  bundleArch,
+) {
+  const isLegacy =
+    bundleArch === "web.browser.legacy" ||
+    bundleArch === "web.cordova";
+
+  return reifyCompile(stripHashBang(source), {
+    generateLetDeclarations: !isLegacy,
+    avoidModernSyntax: isLegacy,
+    enforceStrictMode: false,
     dynamicImport: true,
+    ast: false,
   }).code;
 }, {
-  makeCacheKey({ hash }) {
-    return hash;
+  makeCacheKey(source, hash, bundleArch) {
+    return JSON.stringify([hash, bundleArch]);
   }
-});
+}));
 
 class DefaultHandlers {
   constructor({
     sourceRoot,
     cacheDir,
     bundleArch,
-    compileOneJsResource,
   }) {
     Object.assign(this, {
       sourceRoot,
-      compileOneJsResource,
     });
 
     if (cacheDir) {
@@ -100,14 +110,16 @@ class DefaultHandlers {
   }
 
   js(file) {
-    if (this.compileOneJsResource) {
-      const jsOutputResources = this.compileOneJsResource({
-        data: file.data,
-        path: pathRelative(this.sourceRoot, file.absPath),
-        hash: file.hash,
-      });
-      if (jsOutputResources.length > 0) {
-        return jsOutputResources[0].data.toString("utf8");
+    const parts = file.absPath.split("/");
+    const nmi = parts.lastIndexOf("node_modules");
+    if (nmi >= 0) {
+      const nextPart = parts[nmi + 1];
+      // The core-js package is one example of a package that does not
+      // need recompilation to support import/export syntax. Since it is
+      // used heavily by the ecmascript-runtime-{client,server} Meteor
+      // packages, it makes sense to hard-code this exception.
+      if (nextPart === "core-js") {
+        return stripHashBang(file.dataString);
       }
     }
 
@@ -117,12 +129,20 @@ class DefaultHandlers {
         return optimisticReadFile(cacheFileName, "utf8");
       } catch (e) {
         if (e.code !== "ENOENT") throw e;
-        const code = reifyCompileWithCache(file);
+        const code = reifyCompileWithCache(
+          file.dataString,
+          file.hash,
+          this.bundleArch,
+        );
         process.nextTick(writeFileAtomically, cacheFileName, code);
         return code;
       }
     } else {
-      return reifyCompileWithCache(file);
+      return reifyCompileWithCache(
+        file.dataString,
+        file.hash,
+        this.bundleArch,
+      );
     }
   }
 
@@ -255,7 +275,6 @@ export default class ImportScanner {
     nodeModulesPaths = [],
     watchSet,
     cacheDir,
-    compileOneJsResource,
   }) {
     assert.ok(isString(sourceRoot));
 
@@ -275,7 +294,6 @@ export default class ImportScanner {
       sourceRoot,
       cacheDir,
       bundleArch,
-      compileOneJsResource,
     });
 
     this.resolver = Resolver.getOrCreate({
