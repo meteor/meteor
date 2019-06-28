@@ -24,6 +24,9 @@ N/A
 * The `node-gyp` npm package has been updated to version 5.0.1, and
   `node-pre-gyp` has been updated to 0.13.0.
 
+* The `optimism` npm package has been updated to version 0.10.0, which
+  enables caching of thrown exceptions, as well as ordinary results.
+
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined. Additionally, npm
   packages with a `"module"` entry point will now be compiled
