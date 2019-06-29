@@ -860,6 +860,9 @@ _.extend(PackageSource.prototype, {
     const testModulesByArch =
       projectContext.meteorConfig.getTestModulesByArch();
 
+    const nodeModulesToRecompileByArch =
+      projectContext.meteorConfig.getNodeModulesToRecompileByArch();
+
     projectWatchSet.merge(projectContext.meteorConfig.watchSet);
 
     _.each(compiler.ALL_ARCHES, function (arch) {
@@ -871,10 +874,13 @@ _.extend(PackageSource.prototype, {
       }
 
       const mainModule = projectContext.meteorConfig
-        .getMainModuleForArch(arch, mainModulesByArch);
+        .getMainModule(arch, mainModulesByArch);
 
       const testModule = projectContext.meteorConfig
-        .getTestModuleForArch(arch, testModulesByArch);
+        .getTestModule(arch, testModulesByArch);
+
+      const nodeModulesToRecompile = projectContext.meteorConfig
+        .getNodeModulesToRecompile(arch, nodeModulesToRecompileByArch);
 
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
@@ -895,6 +901,7 @@ _.extend(PackageSource.prototype, {
             ignoreFiles,
             isApp: true,
             testModule,
+            nodeModulesToRecompile,
           };
 
           // If this architecture has a mainModule defined in
@@ -1094,6 +1101,7 @@ _.extend(PackageSource.prototype, {
     isApp,
     sourceArch,
     testModule,
+    nodeModulesToRecompile = new Set,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = []
   }) {
@@ -1254,7 +1262,7 @@ _.extend(PackageSource.prototype, {
 
       // If we're in a node_modules directory, cache the results of the
       // find function for the duration of the process.
-      const cacheKey = inNodeModules && makeCacheKey(dir);
+      let cacheKey = inNodeModules && makeCacheKey(dir);
       if (cacheKey &&
           cacheKey in self._findSourcesCache) {
         return self._findSourcesCache[cacheKey];
@@ -1273,14 +1281,22 @@ _.extend(PackageSource.prototype, {
         }
       }
 
-      const pkgJson = optimisticLookupPackageJson(self.sourceRoot, dir);
-      const hasModuleEntryPoint = pkgJson && (
-        isWeb ? typeof pkgJson.module === "string" : pkgJson.type === "module"
-      );
+      let readOptions = sourceReadOptions;
+      if (inNodeModules) {
+        const pkgJson = optimisticLookupPackageJson(self.sourceRoot, dir);
+        const shouldRecompile =
+          pkgJson && nodeModulesToRecompile.has(pkgJson.name);
+        const hasModuleEntryPoint = pkgJson && (
+          typeof pkgJson.module === "string" || pkgJson.type === "module"
+        );
 
-      const readOptions = inNodeModules && !hasModuleEntryPoint
-        ? nodeModulesReadOptions
-        : sourceReadOptions;
+        if (hasModuleEntryPoint || shouldRecompile) {
+          // Avoid caching node_modules code recompiled by Meteor.
+          cacheKey = false;
+        } else {
+          readOptions = nodeModulesReadOptions;
+        }
+      }
 
       const sources = _.difference(
         self._readAndWatchDirectory(dir, watchSet, readOptions),
