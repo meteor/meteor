@@ -23,3 +23,18 @@ const resolved = Promise.resolve();
 Mp.dynamicImport = function (id) {
   return resolved.then(() => require(id));
 };
+
+const parse = require("reify/lib/parsers/default").parse;
+const reifyCompile = require("reify/lib/compiler").compile;
+const _compile = Mp._compile;
+Mp._compile = function (content, filename) {
+  const result = reifyCompile(content, {
+    parse: parse,
+    generateLetDeclarations: false,
+    ast: false,
+  });
+  if (!result.identical) {
+    content = result.code;
+  }
+  return _compile.call(this, content, filename);
+};

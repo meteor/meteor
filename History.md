@@ -13,12 +13,28 @@ N/A
 
 * The `npm` npm package has been updated to version 6.9.2.
 
+* When bundling client code, the Meteor module system now prefers the
+  `"module"` field in `package.json`, if defined.
+  [PR #10541](https://github.com/meteor/meteor/pull/10541)
+
+* ECMAScript module syntax (`import`, `export`, and dynamic `import()`) is
+  now supported by default everywhere, including in modules imported from
+  `node_modules`, thanks to the [Reify](https://github.com/benjamn/reify)
+  compiler.
+
+* If you need to import code from `node_modules` that uses modern syntax
+  beyond module syntax, it is now possible to enable recompilation for
+  specific npm packages using the `meteor.nodeModules.recompile` option in
+  your application's `package.json` file.
+  See [PR #10603](https://github.com/meteor/meteor/pull/10603) for further
+  explanation.
+
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.4.15.
+* The `meteor-babel` npm package has been updated to version 7.4.18.
 
-* The `reify` npm package has been updated to version 0.20.6.
+* The `reify` npm package has been updated to version 0.20.10.
 
 * The `core-js` npm package used by `ecmascript-runtime-client` and
   `ecmascript-runtime-server` has been updated to version 3.1.4.
@@ -30,13 +46,6 @@ N/A
   enables caching of thrown exceptions, as well as ordinary results.
 
 * The `pathwatcher` npm package has been updated to version 8.1.0.
-
-* When bundling client code, the Meteor module system now prefers the
-  `"module"` field in `package.json`, if defined. Additionally, npm
-  packages with a `"module"` entry point will now be compiled
-  automatically by `meteor-babel`, like application code, without any
-  special symlinking tricks.
-  [PR #10541](https://github.com/meteor/meteor/pull/10541)
 
 * In addition to the `.js` and `.jsx` file extensions, the `ecmascript`
   compiler plugin now automatically handles JavaScript modules with the

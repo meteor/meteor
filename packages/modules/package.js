@@ -1,12 +1,12 @@
 Package.describe({
   name: "modules",
-  version: "0.14.0-beta182.10",
+  version: "0.14.0-beta182.11",
   summary: "CommonJS module system",
   documentation: "README.md"
 });
 
 Npm.depends({
-  reify: "0.20.6",
+  reify: "0.20.10",
   "meteor-babel-helpers": "0.0.3"
 });
 

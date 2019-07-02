@@ -1343,7 +1343,6 @@ export class PackageSourceBatch {
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
         watchSet: batch.unibuild.watchSet,
-        compileOneJsResource: batch.compileOneJsResource.bind(batch),
         cacheDir: batch.scannerCacheDir,
       });
 
