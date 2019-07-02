@@ -34,7 +34,7 @@ N/A
 
 * The `meteor-babel` npm package has been updated to version 7.4.18.
 
-* The `reify` npm package has been updated to version 0.20.9.
+* The `reify` npm package has been updated to version 0.20.10.
 
 * The `core-js` npm package used by `ecmascript-runtime-client` and
   `ecmascript-runtime-server` has been updated to version 3.1.4.
