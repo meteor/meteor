@@ -32,7 +32,7 @@ N/A
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.4.17.
+* The `meteor-babel` npm package has been updated to version 7.4.18.
 
 * The `reify` npm package has been updated to version 0.20.9.
 
