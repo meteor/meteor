@@ -11,6 +11,34 @@ const babelPresetMeteor = require("babel-preset-meteor");
 const babelPresetMeteorModern = require("babel-preset-meteor/modern");
 const reifyPlugin = require("reify/plugins/babel");
 
+function getReifyPlugin(features) {
+  return [reifyPlugin, getReifyOptions(features)];
+}
+
+function getReifyOptions(features) {
+  const reifyOptions = {
+    avoidModernSyntax: true,
+    enforceStrictMode: false,
+    dynamicImport: true
+  };
+
+  if (features) {
+    if (features.modernBrowsers ||
+        features.nodeMajorVersion >= 8) {
+      reifyOptions.avoidModernSyntax = false;
+      reifyOptions.generateLetDeclarations = true;
+    }
+
+    if (features.compileForShell) {
+      // If we're compiling code to run in the Node REPL; we never want to
+      // wrap it with a function to rename the `module` identifier.
+      reifyOptions.moduleAlias = "module";
+    }
+  }
+
+  return reifyOptions;
+}
+
 exports.getDefaults = function getDefaults(features) {
   if (features) {
     if (features.nodeMajorVersion >= 8) {
@@ -24,13 +52,7 @@ exports.getDefaults = function getDefaults(features) {
 
   const combined = {
     presets: [],
-    plugins: [
-      [reifyPlugin, {
-        avoidModernSyntax: true,
-        enforceStrictMode: false,
-        dynamicImport: true
-      }]
-    ]
+    plugins: [getReifyPlugin(features)]
   };
 
   const compileModulesOnly = features && features.compileModulesOnly;
@@ -76,16 +98,8 @@ function maybeAddTypeScriptPreset(features, presets) {
 function getDefaultsForModernBrowsers(features) {
   const combined = {
     presets: [],
-    plugins: []
+    plugins: [getReifyPlugin(features)]
   };
-
-  combined.plugins.push(
-    [reifyPlugin, {
-      generateLetDeclarations: true,
-      enforceStrictMode: false,
-      dynamicImport: true
-    }]
-  );
 
   const compileModulesOnly = features && features.compileModulesOnly;
   if (! compileModulesOnly) {
@@ -137,16 +151,10 @@ function getRuntimeTransform(features) {
 }
 
 function getDefaultsForNode8(features) {
-  const plugins = [];
-
   // Compile import/export syntax with Reify.
-  plugins.push([reifyPlugin, {
-    generateLetDeclarations: true,
-    enforceStrictMode: false,
-    dynamicImport: true
-  }]);
+  const plugins = [getReifyPlugin(features)];
 
-  const compileModulesOnly = features && features.compileModulesOnly;
+  const compileModulesOnly = features.compileModulesOnly;
   if (! compileModulesOnly) {
     // Support Flow type syntax by simply stripping it out.
     plugins.push(

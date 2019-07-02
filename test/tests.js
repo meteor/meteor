@@ -165,8 +165,6 @@ describe("meteor-babel", () => {
       everythingResult.code
     );
 
-
-
     const justModulesLegacy = meteorBabel.compile(
       source,
       meteorBabel.getDefaultOptions({
@@ -270,6 +268,18 @@ describe("meteor-babel", () => {
     assert.strictEqual(
       count(modernResult.code, "runSetters"), 2,
       modernResult.code
+    );
+  });
+
+  it("should support compiling for a REPL", () => {
+    const options = meteorBabel.getDefaultOptions({
+      nodeMajorVersion: 8,
+      compileForShell: true
+    });
+    const source = "console.log(module.constructor.prototype);";
+    assert.strictEqual(
+      meteorBabel.compile(source, options).code,
+      source
     );
   });
 });
