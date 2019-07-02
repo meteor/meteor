@@ -371,6 +371,47 @@ describe("local node_modules", () => {
     assert.strictEqual(typeof parse, "function");
     assert.strictEqual(parse, nestedParse);
   });
+
+  Meteor.isClient && it("can import @polymer/lit-element", () => {
+    // This import is enabled by the meteor.nodeModules.recompile section of
+    // the package.json file for the modules test application.
+    const litElement = require("@polymer/lit-element");
+    const typeofMap = {};
+    Object.keys(litElement).forEach(key => {
+      typeofMap[key] = typeof litElement[key];
+    });
+
+    assert.deepEqual(typeofMap, {
+      defaultConverter: "object",
+      notEqual: "function",
+      UpdatingElement: "function",
+      customElement: "function",
+      property: "function",
+      query: "function",
+      queryAll: "function",
+      eventOptions: "function",
+      html: "function",
+      svg: "function",
+      TemplateResult: "function",
+      SVGTemplateResult: "function",
+      supportsAdoptingStyleSheets: "boolean",
+      CSSResult: "function",
+      css: "function",
+      LitElement: "function"
+    });
+  });
+
+  it("can import @babel/runtime/helpers/esm/*", () => {
+    function check(exports) {
+      assert.strictEqual(typeof exports.default, "function");
+    }
+    check(require("@babel/runtime/helpers/esm/asyncIterator.js"));
+    check(require("@babel/runtime/helpers/esm/createClass.js"));
+    check(require("@babel/runtime/helpers/esm/getPrototypeOf.js"));
+    check(require("@babel/runtime/helpers/esm/inherits.js"));
+    check(require("@babel/runtime/helpers/esm/toArray.js"));
+    check(require("@babel/runtime/helpers/esm/typeof.js"));
+  });
 });
 
 describe("Meteor packages", () => {

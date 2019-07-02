@@ -8,6 +8,7 @@
     "@babel/plugin-proposal-do-expressions": "^7.2.0",
     "@babel/plugin-proposal-optional-chaining": "^7.2.0",
     "@babel/runtime": "^7.4.5",
+    "@polymer/lit-element": "0.7.1",
     "@wry/context": "^0.4.0",
     "acorn": "file:imports/links/acorn",
     "aws-sdk": "^2.2.41",
@@ -36,6 +37,12 @@
     "test-packages": "TEST_BROWSER_DRIVER=puppeteer meteor test-packages --driver-package meteortesting:mocha packages/modules-test-package"
   },
   "meteor": {
-    "testModule": "tests.js"
+    "testModule": "tests.js",
+    "nodeModules": {
+      "recompile": {
+        "pify": "legacy",
+        "@polymer/lit-element": true
+      }
+    }
   }
 }
