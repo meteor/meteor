@@ -24,12 +24,12 @@ Mp.dynamicImport = function (id) {
   return resolved.then(() => require(id));
 };
 
-const babelParse = require("reify/lib/parsers/babel").parse;
+const parse = require("reify/lib/parsers/default").parse;
 const reifyCompile = require("reify/lib/compiler").compile;
 const _compile = Mp._compile;
 Mp._compile = function (content, filename) {
   const result = reifyCompile(content, {
-    parse: babelParse,
+    parse: parse,
     generateLetDeclarations: false,
     ast: false,
   });
