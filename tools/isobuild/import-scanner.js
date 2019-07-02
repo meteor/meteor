@@ -1222,17 +1222,6 @@ export default class ImportScanner {
       return false;
     }
 
-    if (
-      absModuleId.endsWith(".js") ||
-      absModuleId.endsWith(".mjs")
-    ) {
-      return false;
-    }
-
-    if (absModuleId.endsWith(".node")) {
-      return true;
-    }
-
     const parts = absModuleId.split("/");
     let start = 0;
 
