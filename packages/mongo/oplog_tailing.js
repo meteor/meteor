@@ -296,8 +296,6 @@ _.extend(OplogHandle.prototype, {
         if (typeof doc.ns === "string" &&
             doc.ns.startsWith(self._dbName + ".")) {
           trigger.collection = doc.ns.slice(self._dbName.length + 1);
-        } else {
-          throw new Error("Unexpected ns");
         }
 
         // Is it a special command and the collection name is hidden

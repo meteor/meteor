@@ -603,10 +603,15 @@
       "resolved": "https://registry.npmjs.org/lodash.some/-/lodash.some-4.6.0.tgz",
       "integrity": "sha1-G7nzFO9ri63tE7VJFpsqlF62jk0="
     },
+    "magic-string": {
+      "version": "0.25.3",
+      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.25.3.tgz",
+      "integrity": "sha512-6QK0OpF/phMz0Q2AxILkX2mFhi7m+WMwTRg0LQKq/WBB0cDP4rYH3Wp4/d3OTXlrPLVJT/RFqj8tFeAR4nk8AA=="
+    },
     "meteor-babel": {
-      "version": "7.4.15",
-      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.4.15.tgz",
-      "integrity": "sha512-1HYThnReelvxW31ry5rZVTdvNqml8+JDsZYvvOjc2pIaMmo/6e3VlPU3Jv3hoYRDjxOO9OTohvWewfu6j0o+XA=="
+      "version": "7.4.18",
+      "resolved": "https://registry.npmjs.org/meteor-babel/-/meteor-babel-7.4.18.tgz",
+      "integrity": "sha512-7nJgy09paSOMlZFonv2qb6nUOiAtYXcg+fN+v/npZ7ToMPCqaLavzjjPj8PMvw7KxcdSBFw+52YVw6XFKm2zcQ=="
     },
     "meteor-babel-helpers": {
       "version": "0.0.3",
@@ -676,9 +681,9 @@
       }
     },
     "reify": {
-      "version": "0.20.6",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.20.6.tgz",
-      "integrity": "sha512-kCgL6HyzFBK3fIKwurPn0O4+mzdK4R4uOYyQxXaYm4B+QgrQ1EHiQ222qsLPEhB1ReBRh+njO0I4kw7hCGfM2w=="
+      "version": "0.20.11",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.20.11.tgz",
+      "integrity": "sha512-49cFoN92EJW5t4xAJtvRa5ip5Gnuej7k/iiHIQ0qjWcXUCO3gUJrF/HtJIQg8yaFHPdbO+YKKot3CrjHdMM7rw=="
     },
     "resolve": {
       "version": "1.11.1",
@@ -699,6 +704,11 @@
       "version": "0.5.7",
       "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.5.7.tgz",
       "integrity": "sha1-igOdLRAh0i0eoUyA2OpGi6LvP8w="
+    },
+    "sourcemap-codec": {
+      "version": "1.4.4",
+      "resolved": "https://registry.npmjs.org/sourcemap-codec/-/sourcemap-codec-1.4.4.tgz",
+      "integrity": "sha512-CYAPYdBu34781kLHkaW3m6b/uUSyMOC2R61gcYMWooeuaGtjof86ZA/8T+qVPPt7np1085CR9hmMGrySwEc8Xg=="
     },
     "supports-color": {
       "version": "5.5.0",

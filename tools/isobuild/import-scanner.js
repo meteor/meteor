@@ -36,7 +36,6 @@ const {
 import {
   optimisticReadFile,
   optimisticStatOrNull,
-  optimisticLookupPackageJson,
   optimisticLStatOrNull,
   optimisticHashOrNull,
   shouldWatch,
@@ -44,6 +43,7 @@ import {
 
 import { wrap } from "optimism";
 import { compile as reifyCompile } from "reify/lib/compiler";
+import { parse as reifyBabelParse } from "reify/lib/parsers/babel";
 
 import Resolver from "./resolver.js";
 
@@ -65,26 +65,37 @@ function stripHashBang(dataString) {
   return dataString.replace(/^#![^\n]*/, "");
 }
 
-const reifyCompileWithCache = wrap(function ({ dataString }) {
-  return reifyCompile(stripHashBang(dataString), {
+const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
+  source,
+  hash,
+  bundleArch,
+) {
+  const isLegacy =
+    bundleArch === "web.browser.legacy" ||
+    bundleArch === "web.cordova";
+
+  return reifyCompile(stripHashBang(source), {
+    parse: reifyBabelParse,
+    generateLetDeclarations: !isLegacy,
+    avoidModernSyntax: isLegacy,
+    enforceStrictMode: false,
     dynamicImport: true,
+    ast: false,
   }).code;
 }, {
-  makeCacheKey({ hash }) {
-    return hash;
+  makeCacheKey(source, hash, bundleArch) {
+    return JSON.stringify([hash, bundleArch]);
   }
-});
+}));
 
 class DefaultHandlers {
   constructor({
     sourceRoot,
     cacheDir,
     bundleArch,
-    compileOneJsResource,
   }) {
     Object.assign(this, {
       sourceRoot,
-      compileOneJsResource,
     });
 
     if (cacheDir) {
@@ -100,14 +111,16 @@ class DefaultHandlers {
   }
 
   js(file) {
-    if (this.compileOneJsResource) {
-      const jsOutputResources = this.compileOneJsResource({
-        data: file.data,
-        path: pathRelative(this.sourceRoot, file.absPath),
-        hash: file.hash,
-      });
-      if (jsOutputResources.length > 0) {
-        return jsOutputResources[0].data.toString("utf8");
+    const parts = file.absPath.split("/");
+    const nmi = parts.lastIndexOf("node_modules");
+    if (nmi >= 0) {
+      const nextPart = parts[nmi + 1];
+      // The core-js package is one example of a package that does not
+      // need recompilation to support import/export syntax. Since it is
+      // used heavily by the ecmascript-runtime-{client,server} Meteor
+      // packages, it makes sense to hard-code this exception.
+      if (nextPart === "core-js") {
+        return stripHashBang(file.dataString);
       }
     }
 
@@ -117,12 +130,20 @@ class DefaultHandlers {
         return optimisticReadFile(cacheFileName, "utf8");
       } catch (e) {
         if (e.code !== "ENOENT") throw e;
-        const code = reifyCompileWithCache(file);
+        const code = reifyCompileWithCache(
+          file.dataString,
+          file.hash,
+          this.bundleArch,
+        );
         process.nextTick(writeFileAtomically, cacheFileName, code);
         return code;
       }
     } else {
-      return reifyCompileWithCache(file);
+      return reifyCompileWithCache(
+        file.dataString,
+        file.hash,
+        this.bundleArch,
+      );
     }
   }
 
@@ -255,7 +276,6 @@ export default class ImportScanner {
     nodeModulesPaths = [],
     watchSet,
     cacheDir,
-    compileOneJsResource,
   }) {
     assert.ok(isString(sourceRoot));
 
@@ -275,7 +295,6 @@ export default class ImportScanner {
       sourceRoot,
       cacheDir,
       bundleArch,
-      compileOneJsResource,
     });
 
     this.resolver = Resolver.getOrCreate({
@@ -1150,15 +1169,7 @@ export default class ImportScanner {
       // raw version found in node_modules. See also:
       // https://github.com/meteor/meteor-feature-requests/issues/6
 
-    } else if (
-      this._shouldUseNode(absModuleId) &&
-      // If the package has a "module" entry point in its package.json file,
-      // there's a chance someone might import an ESM module from the package
-      // on the server (without going through package.json), so to be safe we
-      // need to compile ESM syntax for any modules imported from the package,
-      // instead of just calling module.useNode() and hoping for the best.
-      ! this._hasModuleEntryPoint(absPath)
-    ) {
+    } else if (this._shouldUseNode(absModuleId)) {
       // On the server, modules in node_modules directories will be
       // handled natively by Node, so we just need to generate a stub
       // module that calls module.useNode(), rather than calling
@@ -1203,34 +1214,6 @@ export default class ImportScanner {
     this._addFileByRealPath(depFile, realPath);
 
     return depFile;
-  }
-
-  _hasModuleEntryPoint(absPath) {
-    const pkgJson = this._lookupPackageJson(absPath);
-    // Similar to logic in PackageSource#_findSources.
-    return pkgJson && (
-      typeof pkgJson.module === "string" ||
-      pkgJson.type === "module"
-    );
-  }
-
-  _lookupPackageJson(absPath) {
-    const relDir = pathRelative(
-      this.sourceRoot,
-      pathDirname(absPath),
-    );
-
-    if (relDir.startsWith("..")) {
-      const absParts = absPath.split("/");
-      absParts.pop(); // Get rid of base filename.
-      const nmi = absParts.lastIndexOf("node_modules");
-      return optimisticLookupPackageJson(
-        absParts.slice(0, nmi + 1).join("/"),
-        absParts.slice(nmi + 1).join("/"),
-      );
-    }
-
-    return optimisticLookupPackageJson(this.sourceRoot, relDir);
   }
 
   // Similar to logic in Module.prototype.useNode as defined in
