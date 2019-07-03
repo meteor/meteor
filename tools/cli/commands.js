@@ -307,6 +307,7 @@ var runCommandOptions = {
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String, short: "s" },
+    'allow-settings-from-env': { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -443,6 +444,7 @@ function doRunCommand(options) {
     cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
+    allowSettingsFromEnv: options['allow-settings-from-env'],
     cordovaRunner: cordovaRunner
   });
 }

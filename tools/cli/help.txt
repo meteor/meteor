@@ -500,6 +500,7 @@ Options:
   --delete, -D    permanently delete this deployment
   --debug         deploy in debug mode (don't minify, etc)
   --settings, -s  set optional data for Meteor.settings
+  --allow-settings-from-env   Allow to pass settings from the environment-variable METEOR_SETTINGS
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                   downgraded to versions that are potentially incompatible with
                   the current versions, if required to satisfy all package version

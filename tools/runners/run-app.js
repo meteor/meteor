@@ -65,12 +65,13 @@ var AppProcess = function (options) {
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
   self.mobileServerUrl = options.mobileServerUrl;
-
+  
   self.onExit = options.onExit;
   self.onListen = options.onListen;
   self.nodeOptions = options.nodeOptions || [];
   self.inspect = options.inspect;
   self.settings = options.settings;
+  self.allowSettingsFromEnv = options.allowSettingsFromEnv;
   self.testMetadata = options.testMetadata;
   self.autoRestart = options.autoRestart;
 
@@ -172,7 +173,7 @@ _.extend(AppProcess.prototype, {
       env.METEOR_SETTINGS = self.settings;
     } else {
       // Warn the developer that we are not going to use their environment var.
-      if (env.METEOR_SETTINGS) {
+      if (env.METEOR_SETTINGS && !self.allowSettingsFromEnv) {
         runLog.log(
           "WARNING: The 'METEOR_SETTINGS' environment variable is ignored " +
           "when running in development (as you are doing now).  Instead, use " +
@@ -181,11 +182,10 @@ _.extend(AppProcess.prototype, {
           "documentation for 'Meteor.settings': " +
           "https://docs.meteor.com/api/core.html#Meteor-settings" +
           "\n");
+        // To provide a consistent, reactive experience in development, do
+        // not use settings provided via the environment variable.
+        delete env.METEOR_SETTINGS;
       }
-
-      // To provide a consistent, reactive experience in development, do
-      // not use settings provided via the environment variable.
-      delete env.METEOR_SETTINGS;
     }
     if (self.testMetadata) {
       env.TEST_METADATA = JSON.stringify(self.testMetadata);
@@ -356,6 +356,7 @@ var AppRunner = function (options) {
   self.mobileServerUrl = options.mobileServerUrl;
   self.cordovaRunner = options.cordovaRunner;
   self.settingsFile = options.settingsFile;
+  self.allowSettingsFromEnv = options.allowSettingsFromEnv;
   self.testMetadata = options.testMetadata;
   self.inspect = options.inspect;
   self.proxy = options.proxy;
@@ -727,6 +728,7 @@ _.extend(AppRunner.prototype, {
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings,
+      allowSettingsFromEnv: self.allowSettingsFromEnv,
       testMetadata: self.testMetadata,
       autoRestart: self.autoRestart,
     });
