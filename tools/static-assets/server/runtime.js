@@ -24,17 +24,20 @@ Mp.dynamicImport = function (id) {
   return resolved.then(() => require(id));
 };
 
-const parse = require("reify/lib/parsers/default").parse;
+const reifyBabelParse = require("reify/lib/parsers/babel").parse;
 const reifyCompile = require("reify/lib/compiler").compile;
 const _compile = Mp._compile;
 Mp._compile = function (content, filename) {
-  const result = reifyCompile(content, {
-    parse: parse,
-    generateLetDeclarations: false,
-    ast: false,
-  });
-  if (!result.identical) {
-    content = result.code;
+  try {
+    const result = reifyCompile(content, {
+      parse: reifyBabelParse,
+      generateLetDeclarations: false,
+      ast: false,
+    });
+    if (!result.identical) {
+      content = result.code;
+    }
+  } finally {
+    return _compile.call(this, content, filename);
   }
-  return _compile.call(this, content, filename);
 };

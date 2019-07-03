@@ -43,6 +43,7 @@ import {
 
 import { wrap } from "optimism";
 import { compile as reifyCompile } from "reify/lib/compiler";
+import { parse as reifyBabelParse } from "reify/lib/parsers/babel";
 
 import Resolver from "./resolver.js";
 
@@ -74,6 +75,7 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
     bundleArch === "web.cordova";
 
   return reifyCompile(stripHashBang(source), {
+    parse: reifyBabelParse,
     generateLetDeclarations: !isLegacy,
     avoidModernSyntax: isLegacy,
     enforceStrictMode: false,
