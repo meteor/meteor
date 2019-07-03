@@ -139,17 +139,21 @@ export default class Resolver {
         _seenDirPaths.add(dirPath);
 
         const found = this._getPkgJsonSubsetForDir(dirPath);
+        const foundPkgJsonMain = found && this.mainFields.some(name => {
+          const value = found.pkg[name];
+          if (isString(value)) {
+            // The "main" field of package.json does not have to begin with ./
+            // to be considered relative, so first we try simply appending it
+            // to the directory path before falling back to a full resolve,
+            // which might return a package from a node_modules directory.
+            resolved = this._joinAndStat(dirPath, value) ||
+              this._resolve(value, found.path, _seenDirPaths);
+            return resolved && typeof resolved === "object";
+          }
+          return false;
+        });
 
-        // The "main" field of package.json does not have to begin with ./
-        // to be considered relative, so first we try simply appending it
-        // to the directory path before falling back to a full resolve,
-        // which might return a package from a node_modules directory.
-        resolved = found &&
-          isString(found.main) &&
-          (this._joinAndStat(dirPath, found.main) ||
-           this._resolve(found.main, found.path, _seenDirPaths));
-
-        if (resolved && typeof resolved === "object") {
+        if (foundPkgJsonMain) {
           if (! resolved.packageJsonMap) {
             resolved.packageJsonMap = Object.create(null);
           }
@@ -358,26 +362,17 @@ export default class Resolver {
       pkgSubset.version = pkg.version;
     }
 
-    let main;
-    function tryMain(name) {
+    this.mainFields.forEach(name => {
       const value = pkg[name];
-
-      if (isString(value)) {
-        main = main || value;
-      }
-
       if (isString(value) ||
           isObject(value)) {
         pkgSubset[name] = value;
       }
-    }
-
-    this.mainFields.forEach(tryMain);
+    });
 
     return {
       path: pkgJsonPath,
       pkg: pkgSubset,
-      main,
     };
   }
 

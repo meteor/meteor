@@ -412,6 +412,22 @@ describe("local node_modules", () => {
     check(require("@babel/runtime/helpers/esm/toArray.js"));
     check(require("@babel/runtime/helpers/esm/typeof.js"));
   });
+
+  it('can import packages with broken "module" fields', () => {
+    assert.strictEqual(
+      require.resolve("markdown-to-jsx"),
+      "/node_modules/markdown-to-jsx/index.es5.js",
+    );
+    const md2jsx = require("markdown-to-jsx");
+    assert.strictEqual(typeof md2jsx.default, "function");
+
+    assert.strictEqual(
+      require.resolve("react-trello"),
+      "/node_modules/react-trello/dist/index.js",
+    );
+    const reactTrello = require("react-trello");
+    assert.strictEqual(typeof reactTrello.default, "function");
+  });
 });
 
 describe("Meteor packages", () => {
