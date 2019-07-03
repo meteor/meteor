@@ -1284,13 +1284,7 @@ _.extend(PackageSource.prototype, {
       let readOptions = sourceReadOptions;
       if (inNodeModules) {
         const pkgJson = optimisticLookupPackageJson(self.sourceRoot, dir);
-        const shouldRecompile =
-          pkgJson && nodeModulesToRecompile.has(pkgJson.name);
-        const hasModuleEntryPoint = pkgJson && (
-          typeof pkgJson.module === "string" || pkgJson.type === "module"
-        );
-
-        if (hasModuleEntryPoint || shouldRecompile) {
+        if (pkgJson && nodeModulesToRecompile.has(pkgJson.name)) {
           // Avoid caching node_modules code recompiled by Meteor.
           cacheKey = false;
         } else {
