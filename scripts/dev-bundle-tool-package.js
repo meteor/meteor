@@ -18,7 +18,7 @@ var packageJson = {
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
-    reify: "0.20.10",
+    reify: "0.20.11",
     fibers: "3.1.1",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.4.4",
