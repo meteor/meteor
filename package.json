@@ -49,7 +49,7 @@
     "reify": "^0.20.12"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-decorators": "7.4.0",
+    "@babel/plugin-proposal-decorators": "7.4.4",
     "@babel/plugin-syntax-decorators": "7.2.0",
     "d3": "4.13.0",
     "fibers": "4.0.1",
