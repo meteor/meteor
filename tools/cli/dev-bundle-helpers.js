@@ -1,4 +1,4 @@
-import { pathJoin, getDevBundle } from '../fs/files.js';
+import { pathJoin, getDevBundle } from '../fs/files';
 import { installNpmModule, moduleDoesResolve } from '../isobuild/meteor-npm.js';
 
 export function ensureDependencies(deps) {

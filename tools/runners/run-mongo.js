@@ -1,4 +1,4 @@
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var mongoExitCodes = require('../utils/mongo-exit-codes.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');

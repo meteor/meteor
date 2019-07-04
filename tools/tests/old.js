@@ -3,7 +3,7 @@ var Future = require('fibers/future');
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var release = require('../packaging/release.js');
 
 // old tests don't get to test --release, and always run this release

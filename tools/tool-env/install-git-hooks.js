@@ -1,4 +1,4 @@
-import files from '../fs/files.js';
+import files from '../fs/files';
 
 const hookDestination =
   files.pathJoin(files.getCurrentToolsDir(), '.git', 'hooks');

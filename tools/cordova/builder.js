@@ -3,7 +3,7 @@ import util from 'util';
 import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
-import files from '../fs/files.js';
+import files from '../fs/files';
 import { optimisticReadJsonOrNull } from "../fs/optimistic.js";
 import bundler from '../isobuild/bundler.js';
 import archinfo from '../utils/archinfo.js';

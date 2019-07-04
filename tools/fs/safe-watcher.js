@@ -8,7 +8,7 @@ import {
   convertToStandardPath,
   watchFile,
   unwatchFile,
-} from "./files.js";
+} from "./files";
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of watchLibrary.watch.

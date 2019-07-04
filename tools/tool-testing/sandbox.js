@@ -37,7 +37,7 @@
 // - clients
 //   - browserstack: true if browserstack clients should be used
 //   - port: the port that the clients should run on
-import * as files from '../fs/files.js';
+import * as files from '../fs/files';
 import PhantomClient from './clients/phantom/index.js';
 import PuppeteerClient from './clients/puppeteer/index.js';
 import BrowserStackClient from './clients/browserstack/index.js';

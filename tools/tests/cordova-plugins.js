@@ -1,6 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 import { execFileSync } from '../utils/processes.js';
 var _ = require('underscore');
 

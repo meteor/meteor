@@ -14,7 +14,7 @@ import {
   readFile,
   readdir,
   dependOnPath,
-} from "./files.js";
+} from "./files";
 
 // When in doubt, the optimistic caching system can be completely disabled
 // by setting this environment variable.

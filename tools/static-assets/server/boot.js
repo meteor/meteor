@@ -5,7 +5,7 @@ var Future = require("fibers/future");
 var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
-var files = require('./mini-files.js');
+var files = require('./mini-files');
 var npmRequire = require('./npm-require.js').require;
 var Profile = require('./profile.js').Profile;
 

@@ -9,7 +9,7 @@ import {
   createTarGzStream,
   getSettings,
   mkdtemp,
-} from '../fs/files.js';
+} from '../fs/files';
 import { request } from '../utils/http-helpers.js';
 import buildmessage from '../utils/buildmessage.js';
 import {

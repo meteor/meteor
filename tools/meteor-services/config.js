@@ -4,7 +4,7 @@ import {
   getCurrentToolsDir,
   getHomeDir,
   inCheckout,
-} from '../fs/files.js';
+} from '../fs/files';
 import tropohouse from '../packaging/tropohouse.js';
 
 // A few functions in the `meteor` tool talk to MDG servers: primarily

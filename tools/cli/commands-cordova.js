@@ -3,7 +3,7 @@ import main from './main.js';
 import { Console } from '../console/console.js';
 import catalog from '../packaging/catalog/catalog.js';
 import buildmessage from '../utils/buildmessage.js';
-import files from '../fs/files.js';
+import files from '../fs/files';
 import {
   CORDOVA_PLATFORMS,
   ensureDevBundleDependencies,

@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var sqlite3 = require('sqlite3');
 
-var files = require('../../fs/files.js');
+var files = require('../../fs/files');
 var utils = require('../../utils/utils.js');
 var buildmessage = require('../../utils/buildmessage.js');
 var config = require('../../meteor-services/config.js');

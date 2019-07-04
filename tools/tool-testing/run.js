@@ -12,7 +12,7 @@
 // Arguments in the 'args' option are not assumed to be standard paths, so
 // calling any of the 'files.*' methods on them is not safe.
 import { spawn } from 'child_process';
-import * as files from '../fs/files.js';
+import * as files from '../fs/files';
 import {
   markTop as parseStackMarkTop,
   parse as parseStackParse,

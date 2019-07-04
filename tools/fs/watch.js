@@ -1,4 +1,4 @@
-import files from './files.js';
+import files from './files';
 import _ from "underscore";
 import * as safeWatcher from './safe-watcher.js';
 import {createHash} from "crypto";

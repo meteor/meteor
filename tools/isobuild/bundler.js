@@ -161,7 +161,7 @@ import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
 import { addToTree } from "./linker.js";
 
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var archinfo = require('../utils/archinfo.js');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch.js');
@@ -2715,7 +2715,7 @@ class ServerTarget extends JsImageTarget {
       "boot-utils.js",
       "debug.ts",
       "server-json.js",
-      "mini-files.js",
+      "mini-files.ts",
       "npm-require.js",
       "npm-rebuild.js",
       "npm-rebuild-args.js",
