@@ -1393,10 +1393,12 @@ export class KeyValueFile {
 
 export function getHomeDir() {
   if (process.platform === "win32") {
-    return pathDirname(convertToStandardPath(process.env.METEOR_INSTALLATION));
-  } else {
-    return process.env.HOME;
+    const MI = process.env.METEOR_INSTALLATION;
+    if (typeof MI === "string") {
+      return pathDirname(convertToStandardPath(MI));
+    }
   }
+  return process.env.HOME;
 }
 
 export function currentEnvWithPathsAdded(...paths: string[]) {
@@ -1675,7 +1677,7 @@ function wrapDestructiveFsFunc<
 
 export const readFile = wrapFsFunc("readFile", fs.readFileSync, [0], {
   modifyReturnValue: function (fileData: Buffer | string) {
-    if (_.isString(fileData)) {
+    if (typeof fileData === "string") {
       return convertToStandardLineEndings(fileData);
     }
     return fileData;
@@ -1738,7 +1740,7 @@ export const realpath = wrapFsFunc("realpath", fs.realpathSync, [0], {
 export const readdir = wrapFsFunc("readdir", fs.readdirSync, [0], {
   cached: true,
   modifyReturnValue(entries: string[]) {
-    return entries.map(convertToStandardPath);
+    return entries.map(entry => convertToStandardPath(entry));
   },
 });
 
