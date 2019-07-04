@@ -11,7 +11,9 @@ N/A
 * Node has been updated to version
   [8.16.0](https://nodejs.org/en/blog/release/v8.16.0/).
 
-* The `npm` npm package has been updated to version 6.9.2.
+* The `npm` npm package has been updated to version 6.10.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.1-meteor) of its
+  `pacote` dependency has been updated to version 9.5.1.
 
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined.
