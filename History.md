@@ -4,7 +4,12 @@
 N/A
 
 ### Migration Steps
-N/A
+
+* Be sure to update the `@babel/runtime` npm package to its latest version
+  (currently 7.5.0):
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
 
 ### Changes
 
@@ -34,9 +39,9 @@ N/A
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.4.18.
+* The `meteor-babel` npm package has been updated to version 7.5.0.
 
-* The `reify` npm package has been updated to version 0.20.11.
+* The `reify` npm package has been updated to version 0.20.12.
 
 * The `core-js` npm package used by `ecmascript-runtime-client` and
   `ecmascript-runtime-server` has been updated to version 3.1.4.
@@ -224,7 +229,6 @@ N/A
 ### Migration Steps
 
 * Update the `@babel/runtime` npm package to version 7.0.0 or later:
-
   ```sh
   meteor npm install @babel/runtime@latest
   ```
