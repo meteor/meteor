@@ -1588,11 +1588,12 @@ function wrapFsFunc<
   TResult,
   F extends (...args: TArgs) => TResult,
 >(
+  fnName: string,
   fn: F,
   pathArgIndices: number[],
   options?: wrapFsFuncOptions<TArgs, TResult>,
 ): F {
-  return function wrapper(...args: TArgs) {
+  return Profile("files." + fnName, function (...args: TArgs) {
     for (let j = pathArgIndices.length - 1; j >= 0; --j) {
       const i = pathArgIndices[j];
       args[i] = convertToOSPath(args[i]);
@@ -1634,7 +1635,7 @@ function wrapFsFunc<
     }
 
     return finalResult;
-  } as F;
+  }) as F;
 }
 
 const withCacheSlot = new Slot<Record<string, any>>();
@@ -1659,11 +1660,12 @@ function wrapDestructiveFsFunc<
   TResult,
   F extends (...args: TArgs) => TResult,
 >(
+  fnName: string,
   fn: F,
   pathArgIndices: number[] = [0],
   options?: wrapFsFuncOptions<TArgs, TResult>,
 ): F {
-  return wrapFsFunc<TArgs, TResult, F>(fn, pathArgIndices, {
+  return wrapFsFunc<TArgs, TResult, F>(fnName, fn, pathArgIndices, {
     ...options,
     dirty(...args: TArgs) {
       pathArgIndices.forEach(i => dependOnPath.dirty(args[i]));
@@ -1671,7 +1673,7 @@ function wrapDestructiveFsFunc<
   }) as F;
 }
 
-export const readFile = wrapFsFunc(fs.readFileSync, [0], {
+export const readFile = wrapFsFunc("readFile", fs.readFileSync, [0], {
   modifyReturnValue: function (fileData: Buffer | string) {
     if (_.isString(fileData)) {
       return convertToStandardLineEndings(fileData);
@@ -1683,7 +1685,7 @@ export const readFile = wrapFsFunc(fs.readFileSync, [0], {
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
-const wrappedCopyFile = wrapDestructiveFsFunc(fs.copyFileSync, [0, 1]);
+const wrappedCopyFile = wrapDestructiveFsFunc("copyFile", fs.copyFileSync, [0, 1]);
 export function copyFile(from: string, to: string, flags = 0) {
   mkdir_p(pathDirname(pathResolve(to)), 0o755);
   wrappedCopyFile(from, to, flags);
@@ -1698,7 +1700,7 @@ export function copyFile(from: string, to: string, flags = 0) {
   }
 }
 
-const wrappedRename = wrapDestructiveFsFunc(fs.renameSync, [0, 1]);
+const wrappedRename = wrapDestructiveFsFunc("rename", fs.renameSync, [0, 1]);
 export const rename = isWindowsLikeFilesystem() ? function (from: string, to: string) {
   // Retries are necessary only on Windows, because the rename call can
   // fail with EBUSY, which means the file is in use.
@@ -1728,33 +1730,33 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
 } : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg
-export const realpath = wrapFsFunc(fs.realpathSync, [0], {
+export const realpath = wrapFsFunc("realpath", fs.realpathSync, [0], {
   cached: true,
   modifyReturnValue: convertToStandardPath,
 });
 
-export const readdir = wrapFsFunc(fs.readdirSync, [0], {
+export const readdir = wrapFsFunc("readdir", fs.readdirSync, [0], {
   cached: true,
   modifyReturnValue(entries: string[]) {
     return entries.map(convertToStandardPath);
   },
 });
 
-export const appendFile = wrapDestructiveFsFunc(fs.appendFileSync);
-export const chmod = wrapDestructiveFsFunc(fs.chmodSync);
-export const close = wrapFsFunc(fs.closeSync, []);
-export const createReadStream = wrapFsFunc(fs.createReadStream, [0]);
-export const createWriteStream = wrapFsFunc(fs.createWriteStream, [0]);
-export const lstat = wrapFsFunc(fs.lstatSync, [0], { cached: true });
-export const mkdir = wrapDestructiveFsFunc(fs.mkdirSync);
-export const open = wrapFsFunc(fs.openSync, [0]);
-export const read = wrapFsFunc(fs.readSync, []);
-export const readlink = wrapFsFunc(fs.readlinkSync, [0]);
-export const rmdir = wrapDestructiveFsFunc(fs.rmdirSync);
-export const stat = wrapFsFunc(fs.statSync, [0], { cached: true });
-export const symlink = wrapFsFunc(fs.symlinkSync, [0, 1]);
-export const unlink = wrapDestructiveFsFunc(fs.unlinkSync);
-export const unwatchFile = wrapFsFunc(fs.unwatchFile, [0]);
-export const watchFile = wrapFsFunc(fs.watchFile, [0]);
-export const write = wrapFsFunc(fs.writeSync, []);
-export const writeFile = wrapDestructiveFsFunc(fs.writeFileSync);
+export const appendFile = wrapDestructiveFsFunc("appendFile", fs.appendFileSync);
+export const chmod = wrapDestructiveFsFunc("chmod", fs.chmodSync);
+export const close = wrapFsFunc("close", fs.closeSync, []);
+export const createReadStream = wrapFsFunc("createReadStream", fs.createReadStream, [0]);
+export const createWriteStream = wrapFsFunc("createWriteStream", fs.createWriteStream, [0]);
+export const lstat = wrapFsFunc("lstat", fs.lstatSync, [0], { cached: true });
+export const mkdir = wrapDestructiveFsFunc("mkdir", fs.mkdirSync);
+export const open = wrapFsFunc("open", fs.openSync, [0]);
+export const read = wrapFsFunc("read", fs.readSync, []);
+export const readlink = wrapFsFunc("readlink", fs.readlinkSync, [0]);
+export const rmdir = wrapDestructiveFsFunc("rmdir", fs.rmdirSync);
+export const stat = wrapFsFunc("stat", fs.statSync, [0], { cached: true });
+export const symlink = wrapFsFunc("symlink", fs.symlinkSync, [0, 1]);
+export const unlink = wrapDestructiveFsFunc("unlink", fs.unlinkSync);
+export const unwatchFile = wrapFsFunc("unwatchFile", fs.unwatchFile, [0]);
+export const watchFile = wrapFsFunc("watchFile", fs.watchFile, [0]);
+export const write = wrapFsFunc("write", fs.writeSync, []);
+export const writeFile = wrapDestructiveFsFunc("writeFile", fs.writeFileSync);
