@@ -8,22 +8,23 @@ import assert from "assert";
 import fs from "fs";
 
 // var fs = require("fs");
-var path = require('path');
-var os = require('os');
-var _ = require('underscore');
+const path = require('path');
+const os = require('os');
+const _ = require('underscore');
+const Fiber = require("fibers");
 const { spawn, execFile } = require("child_process");
 
-var rimraf = require('rimraf');
-var sourcemap = require('source-map');
-var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
+const rimraf = require('rimraf');
+const sourcemap = require('source-map');
+const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
 
-var utils = require('../utils/utils.js');
-var cleanup = require('../tool-env/cleanup.js');
-var buildmessage = require('../utils/buildmessage.js');
-var fiberHelpers = require('../utils/fiber-helpers.js');
-var colonConverter = require('../utils/colon-converter.js');
+const utils = require('../utils/utils.js');
+const cleanup = require('../tool-env/cleanup.js');
+const buildmessage = require('../utils/buildmessage.js');
+const fiberHelpers = require('../utils/fiber-helpers.js');
+const colonConverter = require('../utils/colon-converter.js');
 
-var Profile = require('../tool-env/profile.js').Profile;
+const Profile = require('../tool-env/profile.js').Profile;
 
 export * from './mini-files';
 import {
@@ -43,8 +44,8 @@ import {
   pathSep,
 } from "./mini-files";
 
-var parsedSourceMaps: Record<string, any> = {};
-var nextStackFilenameCounter = 1;
+const parsedSourceMaps: Record<string, any> = {};
+let nextStackFilenameCounter = 1;
 
 // Use the source maps specified to runJavaScript
 function useParsedSourceMap(pathForSourceMap: string) {
@@ -152,10 +153,10 @@ export function findGitCommitHash(path: string) {
 // 'entry' to the .gitignore on its own line at the bottom of the
 // file, if the exact line does not already exist in the file.
 export function addToGitignore(dirPath: string, entry: string) {
-  var filepath = pathJoin(dirPath, ".gitignore");
-  if (exists(filepath)) {
-    var data = readFile(filepath, 'utf8');
-    var lines = data.split(/\n/);
+  const filePath = pathJoin(dirPath, ".gitignore");
+  if (exists(filePath)) {
+    let data = readFile(filePath, 'utf8');
+    const lines = data.split(/\n/);
     if (lines.some(line => line === entry)) {
       // already there do nothing
     } else {
@@ -164,11 +165,11 @@ export function addToGitignore(dirPath: string, entry: string) {
         data = data + "\n";
       }
       data = data + entry + "\n";
-      writeFile(filepath, data, 'utf8');
+      writeFile(filePath, data, 'utf8');
     }
   } else {
     // doesn't exist, just write it.
-    writeFile(filepath, entry + "\n", 'utf8');
+    writeFile(filePath, entry + "\n", 'utf8');
   }
 }
 
@@ -199,29 +200,25 @@ export function usesWarehouse() {
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
 export function getToolsVersion() {
   if (! inCheckout()) {
-    var isopackJsonPath = pathJoin(getCurrentToolsDir(),
+    const isopackJsonPath = pathJoin(getCurrentToolsDir(),
       '..',  // get out of tool, back to package
       'isopack.json');
 
-    var parsed;
+    let parsed;
 
     if (exists(isopackJsonPath)) {
-      var isopackJson = readFile(isopackJsonPath);
-      parsed = JSON.parse(isopackJson);
-
       // XXX "isopack-1" is duplicate of isopack.currentFormat
-      parsed = parsed["isopack-1"]; // get the right format from the JSON
+      parsed = JSON.parse(readFile(isopackJsonPath))["isopack-1"];
       return parsed.name + '@' + parsed.version;
     }
 
     // XXX COMPAT WITH 0.9.3
-    var unipackageJsonPath = pathJoin(
+    const unipackageJsonPath = pathJoin(
       getCurrentToolsDir(),
       '..',  // get out of tool, back to package
       'unipackage.json'
     );
-    var unipackageJson = readFile(unipackageJsonPath);
-    parsed = JSON.parse(unipackageJson);
+    parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
 
   } else {
@@ -249,8 +246,8 @@ export function getCurrentToolsDir() {
 // emitted).
 export function getSettings(filename: string, watchSet: any) {
   buildmessage.assertInCapture();
-  var absPath = pathResolve(filename);
-  var buffer = require("./watch.js").readAndWatchFile(watchSet, absPath);
+  const absPath = pathResolve(filename);
+  const buffer = require("./watch.js").readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
     buildmessage.error("file not found (settings file)",
                        { file: filename });
@@ -263,7 +260,7 @@ export function getSettings(filename: string, watchSet: any) {
     return null;
   }
 
-  var str = buffer.toString('utf8');
+  let str = buffer.toString('utf8');
 
   // The use of a byte order mark crashes JSON parsing. Since a BOM is not
   // required (or recommended) when using UTF-8, let's remove it if it exists.
@@ -287,11 +284,11 @@ export function getSettings(filename: string, watchSet: any) {
 // user. Presently, the main thing it does is replace $HOME with ~.
 export function prettyPath(p: string) {
   p = realpath(p);
-  var home = getHomeDir();
+  const home = getHomeDir();
   if (! home) {
     return p;
   }
-  var relativeToHome = pathRelative(home, p);
+  const relativeToHome = pathRelative(home, p);
   if (relativeToHome.substr(0, 3) === ('..' + pathSep)) {
     return p;
   }
@@ -350,10 +347,10 @@ export const rm_recursive = Profile("files.rm_recursive", (path: string) => {
 
 // Returns the base64 SHA256 of the given file.
 export function fileHash(filename: string) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
+  const crypto = require('crypto');
+  const hash = crypto.createHash('sha256');
   hash.setEncoding('base64');
-  var rs = createReadStream(filename);
+  const rs = createReadStream(filename);
   return new Promise(function (resolve) {
     rs.on('end', function () {
       rs.close();
@@ -422,10 +419,10 @@ export function treeHash(root: string, options: {
 // it was already created). if it returns false, the item is not a
 // directory and we couldn't make it one.
 export function mkdir_p(dir: string, mode: number | null = null) {
-  var p = pathResolve(dir);
-  var ps = pathNormalize(p).split(pathSep);
+  const p = pathResolve(dir);
+  const ps = pathNormalize(p).split(pathSep);
 
-  var stat = statOrNull(p);
+  const stat = statOrNull(p);
   if (stat) {
     return stat.isDirectory();
   }
@@ -433,8 +430,8 @@ export function mkdir_p(dir: string, mode: number | null = null) {
   // doesn't exist. recurse to build parent.
   // Don't use pathJoin here because it can strip off the leading slash
   // accidentally.
-  var parentPath = ps.slice(0, -1).join(pathSep);
-  var success = mkdir_p(parentPath, mode);
+  const parentPath = ps.slice(0, -1).join(pathSep);
+  const success = mkdir_p(parentPath, mode);
   // parent is not a directory.
   if (! success) { return false; }
 
@@ -604,14 +601,14 @@ export function getPathsInDir(dir: string, options: {
         cwd);
     }
 
-    var absoluteDir = pathResolve(cwd, dir);
+    const absoluteDir = pathResolve(cwd, dir);
 
     if (! exists(absoluteDir)) {
       // There are no paths in this dir, so don't do anything
       return;
     }
 
-    var output = options.output || [];
+    const output = options.output || [];
 
     function pathIsDirectory(path: string) {
       var stat = lstat(path);
@@ -619,8 +616,8 @@ export function getPathsInDir(dir: string, options: {
     }
 
     readdir(absoluteDir).forEach(entry => {
-      var newPath = pathJoin(dir, entry);
-      var newAbsPath = pathJoin(absoluteDir, entry);
+      const newPath = pathJoin(dir, entry);
+      const newAbsPath = pathJoin(absoluteDir, entry);
 
       output.push(newPath);
 
@@ -682,8 +679,10 @@ export function mkdtemp(prefix: string): string {
     // crappy random.
     var tries = 3;
     while (tries > 0) {
-      var dirPath = pathJoin(
-        tmpDir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
+      const dirPath = pathJoin(
+        tmpDir,
+        prefix + (Math.random() * 0x100000000 + 1).toString(36),
+      );
       try {
         mkdir(dirPath, 0o700);
         return dirPath;
@@ -693,7 +692,7 @@ export function mkdtemp(prefix: string): string {
     }
     throw new Error("failed to make temporary directory in " + tmpDir);
   };
-  var dir = make();
+  const dir = make();
   tempDirs[dir] = true;
   return dir;
 }
@@ -750,9 +749,8 @@ export function extractTarGz(
   destPath: string,
   options: TarOptions = {},
 ) {
-  var options = options || {};
-  var parentDir = pathDirname(destPath);
-  var tempDir = pathJoin(parentDir, '.tmp' + utils.randomToken());
+  const parentDir = pathDirname(destPath);
+  const tempDir = pathJoin(parentDir, '.tmp' + utils.randomToken());
   mkdir_p(tempDir);
 
   if (! _.has(options, "verbose")) {
@@ -772,7 +770,7 @@ export function extractTarGz(
   promise.await();
 
   // succeed!
-  var topLevelOfArchive = readdir(tempDir)
+  const topLevelOfArchive = readdir(tempDir)
     // On Windows, the 7z.exe tool sometimes creates an auxiliary
     // PaxHeader directory.
     .filter(file => ! file.startsWith("PaxHeader"));
@@ -782,7 +780,7 @@ export function extractTarGz(
       "Extracted archive '" + tempDir + "' should only contain one entry");
   }
 
-  var extractDir = pathJoin(tempDir, topLevelOfArchive[0]);
+  const extractDir = pathJoin(tempDir, topLevelOfArchive[0]);
   rename(extractDir, destPath);
   rm_recursive(tempDir);
 
@@ -898,12 +896,12 @@ function tryExtractWithNpmTar(
 ) {
   ensureDirectoryEmpty(tempDir);
 
-  var tar = require("tar");
-  var zlib = require("zlib");
+  const tar = require("tar");
+  const zlib = require("zlib");
 
   return new Promise((resolve, reject) => {
-    var gunzip = zlib.createGunzip().on('error', reject);
-    var extractor = new tar.Extract({
+    const gunzip = zlib.createGunzip().on('error', reject);
+    const extractor = new tar.Extract({
       path: convertToOSPath(tempDir)
     }).on('entry', function (e: any) {
       if (process.platform === "win32" || options.forceConvert) {
@@ -935,15 +933,15 @@ function addExecBitWhenReadBitPresent(fileMode: number) {
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
 export function createTarGzStream(dirPath: string) {
-  var tar = require("tar");
-  var fstream = require('fstream');
-  var zlib = require("zlib");
+  const tar = require("tar");
+  const fstream = require('fstream');
+  const zlib = require("zlib");
 
   // Create a segment of the file path which we will look for to
   // identify exactly what we think is a "bin" file (that is, something
   // which should be expected to work within the context of an
   // 'npm run-script').
-  var binPathMatch = ["", "node_modules", ".bin", ""].join(path.sep);
+  const binPathMatch = ["", "node_modules", ".bin", ""].join(path.sep);
 
   // Don't use `{ path: dirPath, type: 'Directory' }` as an argument to
   // fstream.Reader. This triggers a collection of odd behaviors in fstream
@@ -968,7 +966,7 @@ export function createTarGzStream(dirPath: string) {
   // with the same permissions as the first file inside it. This manifests as
   // an EACCESS when untarring if the first file inside the top-level directory
   // is not writeable.
-  var fileStream = fstream.Reader({
+  const fileStream = fstream.Reader({
     path: convertToOSPath(dirPath),
     filter(entry: any) {
       if (process.platform !== "win32") {
@@ -996,9 +994,10 @@ export function createTarGzStream(dirPath: string) {
       return true;
     }
   });
-  var tarStream = fileStream.pipe(tar.Pack({ noProprietary: true }));
 
-  return tarStream.pipe(zlib.createGzip());
+  return fileStream.pipe(tar.Pack({
+    noProprietary: true,
+  })).pipe(zlib.createGzip());
 }
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
@@ -1006,7 +1005,7 @@ export function createTarGzStream(dirPath: string) {
 export const createTarball = Profile(function (_: string, tarball: string) {
   return "files.createTarball " + pathBasename(tarball);
 }, function (dirPath: string, tarball: string) {
-  var out = createWriteStream(tarball);
+  const out = createWriteStream(tarball);
   new Promise(function (resolve, reject) {
     out.on('error', reject);
     out.on('close', resolve);
@@ -1100,7 +1099,7 @@ Profile("files.writeFileAtomically", function (filename: string, contents: strin
 // Do not use this function on Windows, it won't work.
 export function symlinkOverSync(linkText: string, file: string) {
   file = pathResolve(file);
-  var tmpSymlink = pathJoin(
+  const tmpSymlink = pathJoin(
     pathDirname(file),
     "." + pathBasename(file) + ".tmp" + utils.randomToken());
   symlink(linkText, tmpSymlink);
@@ -1137,7 +1136,7 @@ export function runJavaScript(code: string, {
   sourceMapRoot?: string;
 }) {
   return Profile.time('runJavaScript ' + filename, () => {
-    var keys: string[] = [], values: any[] = [];
+    const keys: string[] = [], values: any[] = [];
     // don't assume that _.keys and _.values are guaranteed to
     // enumerate in the same order
     _.each(symbols, function (value: any, name: string) {
@@ -1145,31 +1144,31 @@ export function runJavaScript(code: string, {
       values.push(value);
     });
 
-    var stackFilename = filename;
+    let stackFilename = filename;
     if (sourceMap) {
       // We want to generate an arbitrary filename that we use to associate the
       // file with its source map.
       stackFilename = "<runJavaScript-" + nextStackFilenameCounter++ + ">";
     }
 
-    var chunks = [];
-    var header = "(function(" + keys.join(',') + "){";
+    const chunks = [];
+    const header = "(function(" + keys.join(',') + "){";
     chunks.push(header);
     if (sourceMap) {
-      var consumer = new sourcemap.SourceMapConsumer(sourceMap);
       chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-        code, consumer));
+        code, new sourcemap.SourceMapConsumer(sourceMap)));
     } else {
       chunks.push(code);
     }
     // \n is necessary in case final line is a //-comment
     chunks.push("\n})");
 
-    var wrapped;
-    var parsedSourceMap = null;
+    let wrapped;
+    let parsedSourceMap = null;
     if (sourceMap) {
-      var node = new sourcemap.SourceNode(null, null, null, chunks);
-      var results = node.toStringWithSourceMap({
+      const results = new sourcemap.SourceNode(
+        null, null, null, chunks
+      ).toStringWithSourceMap({
         file: stackFilename
       });
       wrapped = results.code;
@@ -1213,7 +1212,7 @@ export function runJavaScript(code: string, {
       // node to run the code and parse its output. We instead run an
       // entirely different JS parser, from the Babel project, but
       // which at least has a nice API for reporting errors.
-      var parse = require('meteor-babel').parse;
+      const { parse } = require('meteor-babel');
       try {
         parse(wrapped, { strictMode: false });
       } catch (parseError) {
@@ -1221,7 +1220,7 @@ export function runJavaScript(code: string, {
           throw parseError;
         }
 
-        var err = new FancySyntaxError;
+        const err = new FancySyntaxError;
         err.message = parseError.message;
 
         if (parsedSourceMap) {
@@ -1254,9 +1253,9 @@ export function runJavaScript(code: string, {
       throw nodeParseError;
     }
 
-    var func = script.runInThisContext();
-
-    return (buildmessage.markBoundary(func)).apply(null, values);
+    return buildmessage.markBoundary(
+      script.runInThisContext()
+    ).apply(null, values);
   });
 }
 
@@ -1361,12 +1360,12 @@ export class KeyValueFile {
   constructor(public path: string) {}
 
   set(k: string, v: any) {
-    var data = this.readAll() || '';
-    var lines = data.split(/\n/);
+    const data = this.readAll() || '';
+    const lines = data.split(/\n/);
 
-    var found = false;
-    for (var i = 0; i < lines.length; i++) {
-      var trimmed = lines[i].trim();
+    let found = false;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
       if (trimmed.indexOf(k + '=') == 0) {
         lines[i] = k + '=' + v;
         found = true;
@@ -1375,7 +1374,7 @@ export class KeyValueFile {
     if (!found) {
       lines.push(k + "=" + v);
     }
-    var newdata = lines.join('\n') + '\n';
+    const newdata = lines.join('\n') + '\n';
     writeFile(this.path, newdata, 'utf8');
   }
 
@@ -1432,12 +1431,12 @@ function ensureBatExtension(p: string) {
 
 // Windows-only, generates a bat script that calls the destination bat script
 export function _generateScriptLinkToMeteorScript(scriptLocation: string) {
-  var scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
-  var scriptLocationConverted = scriptLocationIsAbsolutePath
+  const scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
+  const scriptLocationConverted = scriptLocationIsAbsolutePath
     ? convertToWindowsPath(scriptLocation)
     : "%~dp0\\" + convertToWindowsPath(scriptLocation);
 
-  var newScript = [
+  return [
     "@echo off",
     "SETLOCAL",
     "SET METEOR_INSTALLATION=%~dp0%",
@@ -1454,16 +1453,13 @@ export function _generateScriptLinkToMeteorScript(scriptLocation: string) {
     // by files.readLinkToMeteorScript
     "rem " + scriptLocationConverted,
   ].join(os.EOL);
-
-  return newScript;
 }
 
 export function _getLocationFromScriptLinkToMeteorScript(script: string | Buffer) {
-  var lines = _.compact(script.toString().split('\n'));
+  const lines = _.compact(script.toString().split('\n'));
 
-  var scriptLocation = _.last(lines)
-    .replace(/^rem /g, '');
-  var isAbsolute = true;
+  let scriptLocation = _.last(lines).replace(/^rem /g, '');
+  let isAbsolute = true;
 
   if (scriptLocation.match(/^%~dp0/)) {
     isAbsolute = false;
@@ -1486,11 +1482,9 @@ export function linkToMeteorScript(
 
   if (platform === 'win32') {
     // Make a meteor batch script that points to current tool
-
     linkLocation = ensureBatExtension(linkLocation);
     scriptLocation = ensureBatExtension(scriptLocation);
-    var script = _generateScriptLinkToMeteorScript(scriptLocation);
-
+    const script = _generateScriptLinkToMeteorScript(scriptLocation);
     writeFile(linkLocation, script, { encoding: "ascii" });
   } else {
     // Symlink meteor tool
@@ -1504,7 +1498,7 @@ export function readLinkToMeteorScript(
 ) {
   if (platform === 'win32') {
     linkLocation = ensureBatExtension(linkLocation);
-    var script = readFile(linkLocation);
+    const script = readFile(linkLocation);
     return _getLocationFromScriptLinkToMeteorScript(script);
   } else {
     return readlink(linkLocation);
