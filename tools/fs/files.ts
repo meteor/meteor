@@ -9,6 +9,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
+import { Slot } from "@wry/context";
 
 const _ = require('underscore');
 const Fiber = require("fibers");
@@ -43,13 +44,15 @@ import {
   pathSep,
 } from "./mini-files";
 
+const { hasOwnProperty } = Object.prototype;
+
 const parsedSourceMaps: Record<string, any> = {};
 let nextStackFilenameCounter = 1;
 
 // Use the source maps specified to runJavaScript
 function useParsedSourceMap(pathForSourceMap: string) {
   // Check our fancy source map data structure, used for isopacks
-  if (_.has(parsedSourceMaps, pathForSourceMap)) {
+  if (hasOwnProperty.call(parsedSourceMaps, pathForSourceMap)) {
     return {map: parsedSourceMaps[pathForSourceMap]};
   }
 
@@ -752,7 +755,7 @@ export function extractTarGz(
   const tempDir = pathJoin(parentDir, '.tmp' + utils.randomToken());
   mkdir_p(tempDir);
 
-  if (! _.has(options, "verbose")) {
+  if (! hasOwnProperty.call(options, "verbose")) {
     options.verbose = require("../console/console.js").Console.verbose;
   }
 
@@ -1574,6 +1577,12 @@ export function readBufferWithLengthAndOffset(
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
+type wrapFsFuncOptions<TArgs extends any[], TResult> = {
+  cached?: boolean;
+  modifyReturnValue?: (result: TResult) => any;
+  dirty?: (...args: TArgs) => any;
+}
+
 function wrapFsFunc<
   TArgs extends any[],
   TResult,
@@ -1581,10 +1590,7 @@ function wrapFsFunc<
 >(
   fn: F,
   pathArgIndices: number[],
-  options?: {
-    modifyReturnValue?: (result: TResult) => any;
-    dirty?: (...args: TArgs) => any;
-  },
+  options?: wrapFsFuncOptions<TArgs, TResult>,
 ): F {
   return function wrapper(...args: TArgs) {
     for (let j = pathArgIndices.length - 1; j >= 0; --j) {
@@ -1592,20 +1598,49 @@ function wrapFsFunc<
       args[i] = convertToOSPath(args[i]);
     }
 
-    const result = fn.apply(fs, args);
-
-    if (! options) {
-      return result;
+    let cacheKey: string | null = null;
+    if (options && options.cached) {
+      const cache = withCacheSlot.getValue();
+      if (cache) {
+        const strings = [fnName];
+        const allStrings = args.every(arg => {
+          if (typeof arg === "string") {
+            strings.push(arg);
+            return true;
+          }
+          return false;
+        });
+        if (allStrings) {
+          cacheKey = JSON.stringify(strings);
+          if (hasOwnProperty.call(cache, cacheKey)) {
+            return cache[cacheKey];
+          }
+        }
+      }
     }
 
-    if (options.dirty) {
+    const result = fn.apply(fs, args);
+
+    if (options && options.dirty) {
       options.dirty(...args);
     }
 
-    return options.modifyReturnValue
+    const finalResult = options && options.modifyReturnValue
       ? options.modifyReturnValue(result)
       : result;
+
+    if (cacheKey) {
+      withCacheSlot.getValue()![cacheKey] = finalResult;
+    }
+
+    return finalResult;
   } as F;
+}
+
+const withCacheSlot = new Slot<Record<string, any>>();
+export function withCache<R>(fn: () => R): R {
+  const cache = withCacheSlot.getValue();
+  return cache ? fn() : withCacheSlot.withValue(Object.create(null), fn);
 }
 
 let dependOnPathSalt = 0;
@@ -1626,8 +1661,10 @@ function wrapDestructiveFsFunc<
 >(
   fn: F,
   pathArgIndices: number[] = [0],
+  options?: wrapFsFuncOptions<TArgs, TResult>,
 ): F {
   return wrapFsFunc<TArgs, TResult, F>(fn, pathArgIndices, {
+    ...options,
     dirty(...args: TArgs) {
       pathArgIndices.forEach(i => dependOnPath.dirty(args[i]));
     }
@@ -1692,10 +1729,12 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
 
 // Warning: doesn't convert slashes in the second 'cache' arg
 export const realpath = wrapFsFunc(fs.realpathSync, [0], {
-  modifyReturnValue: convertToStandardPath
+  cached: true,
+  modifyReturnValue: convertToStandardPath,
 });
 
 export const readdir = wrapFsFunc(fs.readdirSync, [0], {
+  cached: true,
   modifyReturnValue(entries: string[]) {
     return entries.map(convertToStandardPath);
   },
@@ -1706,13 +1745,13 @@ export const chmod = wrapDestructiveFsFunc(fs.chmodSync);
 export const close = wrapFsFunc(fs.closeSync, []);
 export const createReadStream = wrapFsFunc(fs.createReadStream, [0]);
 export const createWriteStream = wrapFsFunc(fs.createWriteStream, [0]);
-export const lstat = wrapFsFunc(fs.lstatSync, [0]);
+export const lstat = wrapFsFunc(fs.lstatSync, [0], { cached: true });
 export const mkdir = wrapDestructiveFsFunc(fs.mkdirSync);
 export const open = wrapFsFunc(fs.openSync, [0]);
 export const read = wrapFsFunc(fs.readSync, []);
 export const readlink = wrapFsFunc(fs.readlinkSync, [0]);
 export const rmdir = wrapDestructiveFsFunc(fs.rmdirSync);
-export const stat = wrapFsFunc(fs.statSync, [0]);
+export const stat = wrapFsFunc(fs.statSync, [0], { cached: true });
 export const symlink = wrapFsFunc(fs.symlinkSync, [0, 1]);
 export const unlink = wrapDestructiveFsFunc(fs.unlinkSync);
 export const unwatchFile = wrapFsFunc(fs.unwatchFile, [0]);

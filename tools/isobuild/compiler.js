@@ -182,15 +182,17 @@ compiler.compile = Profile(function (packageSource, options) {
       return;
     }
 
-    var unibuildResult = compileUnibuild({
-      isopack: isopk,
-      sourceArch: architecture,
-      isopackCache: isopackCache,
-      nodeModulesPath: nodeModulesPath,
-    });
+    files.withCache(() => {
+      var unibuildResult = compileUnibuild({
+        isopack: isopk,
+        sourceArch: architecture,
+        isopackCache: isopackCache,
+        nodeModulesPath: nodeModulesPath,
+      });
 
-    _.extend(pluginProviderPackageNames,
-              unibuildResult.pluginProviderPackageNames);
+      _.extend(pluginProviderPackageNames,
+               unibuildResult.pluginProviderPackageNames);
+    });
   });
 
   if (options.includePluginProviderPackageMap) {
