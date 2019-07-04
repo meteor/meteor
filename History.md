@@ -11,6 +11,12 @@ N/A
   meteor npm install @babel/runtime@latest
   ```
 
+* New Meteor applications now depend on `meteor-node-stubs@1.0.0`, so it
+  may be a good idea to update to the same major version:
+  ```sh
+  meteor npm install meteor-node-stubs@next
+  ```
+
 ### Changes
 
 * Node has been updated to version
