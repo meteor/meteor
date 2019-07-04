@@ -13,8 +13,8 @@ var packageJson = {
     fibers: "4.0.1",
     "meteor-promise": "0.8.7",
     promise: "8.0.2",
-    reify: "0.20.11",
-    "@babel/parser": "7.4.5",
+    reify: "0.20.12",
+    "@babel/parser": "7.5.0",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).

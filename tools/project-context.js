@@ -6,7 +6,7 @@ var buildmessage = require('./utils/buildmessage.js');
 var catalog = require('./packaging/catalog/catalog.js');
 var catalogLocal = require('./packaging/catalog/catalog-local.js');
 var Console = require('./console/console.js').Console;
-var files = require('./fs/files.js');
+var files = require('./fs/files');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
 import { loadIsopackage } from './tool-env/isopackets.js';
 var packageMapModule = require('./packaging/package-map.js');

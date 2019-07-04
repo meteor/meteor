@@ -29,20 +29,33 @@ N/A
 * The `node-gyp` npm package has been updated to version 4.0.0, and
   `node-pre-gyp` has been updated to version 0.13.0.
 
-## v1.8.2
+## v1.8.2, TBD
 
 ### Breaking changes
 N/A
 
 ### Migration Steps
-N/A
+
+* Be sure to update the `@babel/runtime` npm package to its latest version
+  (currently 7.5.0):
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+
+* New Meteor applications now depend on `meteor-node-stubs@1.0.0`, so it
+  may be a good idea to update to the same major version:
+  ```sh
+  meteor npm install meteor-node-stubs@next
+  ```
 
 ### Changes
 
 * Node has been updated to version
   [8.16.0](https://nodejs.org/en/blog/release/v8.16.0/).
 
-* The `npm` npm package has been updated to version 6.9.2.
+* The `npm` npm package has been updated to version 6.10.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.1-meteor) of its
+  `pacote` dependency has been updated to version 9.5.1.
 
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined.
@@ -63,9 +76,9 @@ N/A
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.4.18.
+* The `meteor-babel` npm package has been updated to version 7.5.0.
 
-* The `reify` npm package has been updated to version 0.20.11.
+* The `reify` npm package has been updated to version 0.20.12.
 
 * The `core-js` npm package used by `ecmascript-runtime-client` and
   `ecmascript-runtime-server` has been updated to version 3.1.4.
@@ -253,7 +266,6 @@ N/A
 ### Migration Steps
 
 * Update the `@babel/runtime` npm package to version 7.0.0 or later:
-
   ```sh
   meteor npm install @babel/runtime@latest
   ```

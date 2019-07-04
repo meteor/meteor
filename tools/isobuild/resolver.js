@@ -16,7 +16,7 @@ import {
   pathBasename,
   convertToOSPath,
   convertToPosixPath,
-} from "../fs/files.js";
+} from "../fs/files";
 
 import LRU from "lru-cache";
 

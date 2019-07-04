@@ -6,7 +6,7 @@ var Profile = require('../tool-env/profile.js').Profile;
 import assert from 'assert';
 import LRU from 'lru-cache';
 import { sourceMapLength } from '../utils/utils.js';
-import files from '../fs/files.js';
+import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
 

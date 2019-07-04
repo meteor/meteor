@@ -25,7 +25,7 @@ import {
   convertToPosixPath,
   realpathOrNull,
   writeFileAtomically,
-} from "../fs/files.js";
+} from "../fs/files";
 
 const {
   relative: posixRelative,

@@ -6,7 +6,7 @@ var url = require('url');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 
 var utils = exports;

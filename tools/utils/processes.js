@@ -1,6 +1,6 @@
 import _ from 'underscore';
 import child_process from 'child_process';
-import files from '../fs/mini-files';
+import files from '../static-assets/server/mini-files';
 
 // The execFileSync function is meant to resemble the similarly-named Node 0.12
 // synchronous process creation API, but instead of being fully blocking it

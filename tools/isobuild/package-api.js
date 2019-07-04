@@ -12,7 +12,7 @@ var catalog = require('../packaging/catalog/catalog.js');
 import {
   pathRelative,
   convertToPosixPath,
-} from "../fs/files.js";
+} from "../fs/files";
 
 function toArray (x) {
   if (_.isArray(x)) {

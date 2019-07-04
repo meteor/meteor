@@ -13,7 +13,7 @@ import {
   readFile,
   createWriteStream,
   getDevBundle,
-} from '../../../fs/files.js';
+} from '../../../fs/files';
 
 const NPM_DEPENDENCIES = {
   'browserstack-webdriver': '2.41.1',

@@ -1,5 +1,5 @@
 import selftest from '../tool-testing/selftest.js';
-import files from '../fs/files.js';
+import files from '../fs/files';
 import { installNpmModule } from '../isobuild/meteor-npm.js';
 
 const Sandbox = selftest.Sandbox;

@@ -4,64 +4,68 @@
 /// (such as testing whether an directory is a meteor app)
 ///
 
-var assert = require("assert");
-var fs = require("fs");
-var path = require('path');
-var os = require('os');
-var util = require('util');
-var _ = require('underscore');
-var Fiber = require('fibers');
-var crypto = require('crypto');
-const { spawn, execFile } = require("child_process");
+import assert from "assert";
+import fs from "fs";
+import path from "path";
+import os from "os";
+import { spawn, execFile } from "child_process";
+import { Slot } from "@wry/context";
 
-var rimraf = require('rimraf');
-var sourcemap = require('source-map');
-var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
+const _ = require('underscore');
+const Fiber = require("fibers");
 
-var utils = require('../utils/utils.js');
-var cleanup = require('../tool-env/cleanup.js');
-var buildmessage = require('../utils/buildmessage.js');
-var fiberHelpers = require('../utils/fiber-helpers.js');
-var colonConverter = require('../utils/colon-converter.js');
+const rimraf = require('rimraf');
+const sourcemap = require('source-map');
+const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
 
-var miniFiles = require('./mini-files.js');
+const utils = require('../utils/utils.js');
+const cleanup = require('../tool-env/cleanup.js');
+const buildmessage = require('../utils/buildmessage.js');
+const fiberHelpers = require('../utils/fiber-helpers.js');
+const colonConverter = require('../utils/colon-converter.js');
 
-var Profile = require('../tool-env/profile.js').Profile;
+const Profile = require('../tool-env/profile.js').Profile;
 
-// Attach all exports of miniFiles here to avoid code duplication
-var files = exports;
-_.extend(files, miniFiles);
+export * from '../static-assets/server/mini-files';
+import {
+  convertToOSPath,
+  convertToPosixPath,
+  convertToStandardLineEndings,
+  convertToStandardPath,
+  convertToWindowsPath,
+  isWindowsLikeFilesystem,
+  pathBasename,
+  pathDirname,
+  pathJoin,
+  pathNormalize,
+  pathOsDelimiter,
+  pathRelative,
+  pathResolve,
+  pathSep,
+} from "../static-assets/server/mini-files";
 
-var parsedSourceMaps = {};
-var nextStackFilenameCounter = 1;
+const { hasOwnProperty } = Object.prototype;
+
+const parsedSourceMaps: Record<string, any> = {};
+let nextStackFilenameCounter = 1;
 
 // Use the source maps specified to runJavaScript
-var useParsedSourceMap = function (pathForSourceMap) {
+function useParsedSourceMap(pathForSourceMap: string) {
   // Check our fancy source map data structure, used for isopacks
-  if (_.has(parsedSourceMaps, pathForSourceMap)) {
+  if (hasOwnProperty.call(parsedSourceMaps, pathForSourceMap)) {
     return {map: parsedSourceMaps[pathForSourceMap]};
   }
 
   return null;
-};
+}
 
 // Try this source map first
 sourceMapRetrieverStack.push(useParsedSourceMap);
-
-// Fibers are disabled by default for files.* operations unless
-// process.env.METEOR_DISABLE_FS_FIBERS parses to a falsy value.
-const YIELD_ALLOWED = !! (
-  _.has(process.env, "METEOR_DISABLE_FS_FIBERS") &&
-  ! JSON.parse(process.env.METEOR_DISABLE_FS_FIBERS));
 
 function canYield() {
   return Fiber.current &&
     Fiber.yield &&
     ! Fiber.yield.disallowed;
-}
-
-function mayYield() {
-  return YIELD_ALLOWED && canYield();
 }
 
 // given a predicate function and a starting path, traverse upwards
@@ -70,76 +74,71 @@ function mayYield() {
 // returns either the path to the lowest level directory that passed
 // the test or null for none found. if starting path isn't given, use
 // cwd.
-var findUpwards = function (predicate, startPath) {
-  var testDir = startPath || files.cwd();
+function findUpwards(
+  predicate: (path: string) => boolean,
+  startPath: string = cwd(),
+): string | null {
+  let testDir: string | null = startPath;
   while (testDir) {
     if (predicate(testDir)) {
       break;
     }
-    var newDir = files.pathDirname(testDir);
+    var newDir: string = pathDirname(testDir);
     if (newDir === testDir) {
       testDir = null;
     } else {
       testDir = newDir;
     }
   }
-  if (!testDir) {
-    return null;
-  }
+  return testDir || null;
+}
 
-  return testDir;
-};
-
-files.cwd = function () {
-  return files.convertToStandardPath(process.cwd());
-};
+export function cwd() {
+  return convertToStandardPath(process.cwd());
+}
 
 // Determine if 'filepath' (a path, or omit for cwd) is within an app
 // directory. If so, return the top-level app directory.
-files.findAppDir = function (filepath) {
-  var isAppDir = function (filepath) {
+export function findAppDir(filepath: string) {
+  return findUpwards(function isAppDir(filepath) {
     // XXX once we are done with the transition to engine, this should
-    // change to: `return files.exists(path.join(filepath, '.meteor',
+    // change to: `return exists(path.join(filepath, '.meteor',
     // 'release'))`
 
     // .meteor/packages can be a directory, if .meteor is a warehouse
     // directory.  since installing meteor initializes a warehouse at
     // $HOME/.meteor, we want to make sure your home directory (and all
     // subdirectories therein) don't count as being within a meteor app.
-    try { // use try/catch to avoid the additional syscall to files.exists
-      return files.stat(
-        files.pathJoin(filepath, '.meteor', 'packages')).isFile();
+    try { // use try/catch to avoid the additional syscall to exists
+      return stat(
+        pathJoin(filepath, '.meteor', 'packages')).isFile();
     } catch (e) {
       return false;
     }
-  };
+  }, filepath);
+}
 
-  return findUpwards(isAppDir, filepath);
-};
-
-files.findPackageDir = function (filepath) {
-  var isPackageDir = function (filepath) {
+export function findPackageDir(filepath: string) {
+  return findUpwards(function isPackageDir(filepath) {
     try {
-      return files.stat(files.pathJoin(filepath, 'package.js')).isFile();
+      return stat(pathJoin(filepath, 'package.js')).isFile();
     } catch (e) {
       return false;
     }
-  };
-
-  return findUpwards(isPackageDir, filepath);
-};
+  }, filepath);
+}
 
 // Returns the hash of the current Git HEAD revision of the application,
 // if possible. Always resolves rather than rejecting (unless something
 // truly unexpected happens). The result value is a string when a Git
 // revision was successfully resolved, or undefined otherwise.
-files.findGitCommitHash = function (path) {
+export function findGitCommitHash(path: string) {
   return new Promise(resolve => {
-    const appDir = files.findAppDir(path);
+    const appDir = findAppDir(path);
     if (appDir) {
-      const proc = execFile("git", ["rev-parse", "HEAD"], {
-        cwd: files.convertToOSPath(appDir),
-      }, (error, stdout) => {
+      execFile("git", ["rev-parse", "HEAD"], {
+        cwd: convertToOSPath(appDir),
+      }, (error: any, stdout: string) => {
         if (! error && typeof stdout === "string") {
           resolve(stdout.trim());
         } else {
@@ -150,17 +149,17 @@ files.findGitCommitHash = function (path) {
       resolve();
     }
   }).await();
-};
+}
 
 // create a .gitignore file in dirPath if one doesn't exist. add
 // 'entry' to the .gitignore on its own line at the bottom of the
 // file, if the exact line does not already exist in the file.
-files.addToGitignore = function (dirPath, entry) {
-  var filepath = files.pathJoin(dirPath, ".gitignore");
-  if (files.exists(filepath)) {
-    var data = files.readFile(filepath, 'utf8');
-    var lines = data.split(/\n/);
-    if (_.any(lines, function (x) { return x === entry; })) {
+export function addToGitignore(dirPath: string, entry: string) {
+  const filePath = pathJoin(dirPath, ".gitignore");
+  if (exists(filePath)) {
+    let data = readFile(filePath, 'utf8');
+    const lines = data.split(/\n/);
+    if (lines.some(line => line === entry)) {
       // already there do nothing
     } else {
       // rewrite file w/ new entry.
@@ -168,18 +167,18 @@ files.addToGitignore = function (dirPath, entry) {
         data = data + "\n";
       }
       data = data + entry + "\n";
-      files.writeFile(filepath, data, 'utf8');
+      writeFile(filePath, data, 'utf8');
     }
   } else {
     // doesn't exist, just write it.
-    files.writeFile(filepath, entry + "\n", 'utf8');
+    writeFile(filePath, entry + "\n", 'utf8');
   }
-};
+}
 
 // Are we running Meteor from a git checkout?
-files.inCheckout = _.once(function () {
+export const inCheckout = _.once(function () {
   try {
-    if (files.exists(files.pathJoin(files.getCurrentToolsDir(), '.git'))) {
+    if (exists(pathJoin(getCurrentToolsDir(), '.git'))) {
       return true;
     }
   } catch (e) { console.log(e); }
@@ -190,71 +189,67 @@ files.inCheckout = _.once(function () {
 // True if we are using a warehouse: either installed Meteor, or if
 // $METEOR_WAREHOUSE_DIR is set. Otherwise false (we're in a git checkout and
 // just using packages from the checkout).
-files.usesWarehouse = function () {
+export function usesWarehouse() {
   // Test hook: act like we're "installed" using a non-homedir warehouse
   // directory.
   if (process.env.METEOR_WAREHOUSE_DIR) {
     return true;
   } else {
-    return ! files.inCheckout();
+    return ! inCheckout();
   }
-};
+}
 
 // Read the '.tools_version.txt' file. If in a checkout, throw an error.
-files.getToolsVersion = function () {
-  if (! files.inCheckout()) {
-    var isopackJsonPath = files.pathJoin(files.getCurrentToolsDir(),
+export function getToolsVersion() {
+  if (! inCheckout()) {
+    const isopackJsonPath = pathJoin(getCurrentToolsDir(),
       '..',  // get out of tool, back to package
       'isopack.json');
 
-    var parsed;
+    let parsed;
 
-    if (files.exists(isopackJsonPath)) {
-      var isopackJson = files.readFile(isopackJsonPath);
-      parsed = JSON.parse(isopackJson);
-
+    if (exists(isopackJsonPath)) {
       // XXX "isopack-1" is duplicate of isopack.currentFormat
-      parsed = parsed["isopack-1"]; // get the right format from the JSON
+      parsed = JSON.parse(readFile(isopackJsonPath))["isopack-1"];
       return parsed.name + '@' + parsed.version;
     }
 
     // XXX COMPAT WITH 0.9.3
-    var unipackageJsonPath = files.pathJoin(files.getCurrentToolsDir(),
+    const unipackageJsonPath = pathJoin(
+      getCurrentToolsDir(),
       '..',  // get out of tool, back to package
-      'unipackage.json');
-    var unipackageJson = files.readFile(unipackageJsonPath);
-    parsed = JSON.parse(unipackageJson);
+      'unipackage.json'
+    );
+    parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
 
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
   }
-};
+}
 
 // Return the root of dev_bundle (probably /usr/local/meteor in an
 // install, or (checkout root)/dev_bundle in a checkout.).
-files.getDevBundle = function () {
-  return files.pathJoin(files.getCurrentToolsDir(), 'dev_bundle');
-};
+export function getDevBundle() {
+  return pathJoin(getCurrentToolsDir(), 'dev_bundle');
+}
 
-files.getCurrentNodeBinDir = function () {
-  return files.pathJoin(files.getDevBundle(), "bin");
+export function getCurrentNodeBinDir() {
+  return pathJoin(getDevBundle(), "bin");
 }
 
 // Return the top-level directory for this meteor install or checkout
-files.getCurrentToolsDir = function () {
-  return files.pathDirname(
-    files.pathDirname(
-      files.convertToStandardPath(__dirname)));
-};
+export function getCurrentToolsDir() {
+  return pathDirname(pathDirname(convertToStandardPath(__dirname)));
+}
 
 // Read a settings file and sanity-check it. Returns a string on
 // success or null on failure (in which case buildmessages will be
 // emitted).
-files.getSettings = function (filename, watchSet) {
+export function getSettings(filename: string, watchSet: any) {
   buildmessage.assertInCapture();
-  var absPath = files.pathResolve(filename);
-  var buffer = require("./watch.js").readAndWatchFile(watchSet, absPath);
+  const absPath = pathResolve(filename);
+  const buffer = require("./watch.js").readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
     buildmessage.error("file not found (settings file)",
                        { file: filename });
@@ -267,7 +262,7 @@ files.getSettings = function (filename, watchSet) {
     return null;
   }
 
-  var str = buffer.toString('utf8');
+  let str = buffer.toString('utf8');
 
   // The use of a byte order mark crashes JSON parsing. Since a BOM is not
   // required (or recommended) when using UTF-8, let's remove it if it exists.
@@ -285,33 +280,33 @@ files.getSettings = function (filename, watchSet) {
   }
 
   return str;
-};
+}
 
 // Try to find the prettiest way to present a path to the
 // user. Presently, the main thing it does is replace $HOME with ~.
-files.prettyPath = function (p) {
-  p = files.realpath(p);
-  var home = files.getHomeDir();
+export function prettyPath(p: string) {
+  p = realpath(p);
+  const home = getHomeDir();
   if (! home) {
     return p;
   }
-  var relativeToHome = files.pathRelative(home, p);
-  if (relativeToHome.substr(0, 3) === ('..' + files.pathSep)) {
+  const relativeToHome = pathRelative(home, p);
+  if (relativeToHome.substr(0, 3) === ('..' + pathSep)) {
     return p;
   }
-  return files.pathJoin('~', relativeToHome);
-};
+  return pathJoin('~', relativeToHome);
+}
 
 // Like statSync, but null if file not found
-files.statOrNull = function (path) {
-  return statOrNull(path);
-};
+export function statOrNull(path: string) {
+  return statOrNullHelper(path, false);
+}
 
-function statOrNull(path, preserveSymlinks) {
+function statOrNullHelper(path: string, preserveSymlinks = false) {
   try {
     return preserveSymlinks
-      ? files.lstat(path)
-      : files.stat(path);
+      ? lstat(path)
+      : stat(path);
   } catch (e) {
     if (e.code === "ENOENT") {
       return null;
@@ -320,32 +315,32 @@ function statOrNull(path, preserveSymlinks) {
   }
 }
 
-export function realpathOrNull(path) {
+export function realpathOrNull(path: string) {
   try {
-    return files.realpath(path);
+    return realpath(path);
   } catch (e) {
     if (e.code !== "ENOENT") throw e;
     return null;
   }
 }
 
-files.rm_recursive_async = (path) => {
+export function rm_recursive_async(path: string) {
   return new Promise((resolve, reject) => {
-    rimraf(files.convertToOSPath(path), err => err
+    rimraf(convertToOSPath(path), (err: Error) => err
       ? reject(err)
       : resolve());
   });
-};
+}
 
 // Like rm -r.
-files.rm_recursive = Profile("files.rm_recursive", (path) => {
+export const rm_recursive = Profile("files.rm_recursive", (path: string) => {
   try {
-    rimraf.sync(files.convertToOSPath(path));
+    rimraf.sync(convertToOSPath(path));
   } catch (e) {
     if ((e.code === "ENOTEMPTY" ||
          e.code === "EPERM") &&
         canYield()) {
-      files.rm_recursive_async(path).await();
+      rm_recursive_async(path).await();
       return;
     }
     throw e;
@@ -353,11 +348,11 @@ files.rm_recursive = Profile("files.rm_recursive", (path) => {
 });
 
 // Returns the base64 SHA256 of the given file.
-files.fileHash = function (filename) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
+export function fileHash(filename: string) {
+  const crypto = require('crypto');
+  const hash = crypto.createHash('sha256');
   hash.setEncoding('base64');
-  var rs = files.createReadStream(filename);
+  const rs = createReadStream(filename);
   return new Promise(function (resolve) {
     rs.on('end', function () {
       rs.close();
@@ -365,99 +360,85 @@ files.fileHash = function (filename) {
     });
     rs.pipe(hash, { end: false });
   }).await();
-};
+}
 
 // This is the result of running fileHash on a blank file.
-files.blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
+export const blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 
 // Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
 // to modtime, uid/gid, or any permissions bits other than the current-user-exec
 // bit on normal files.
-files.treeHash = function (root, options) {
-  options = _.extend({
-    ignore: function (relativePath) {
-      return false;
-    }
-  }, options);
-
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
-
-  var hashLog = process.env.TREE_HASH_DEBUG ?
-        ['\n\nTREE HASH for ' + root + '\n'] : null;
-
-  var updateHash = function (text) {
-    hashLog && hashLog.push(text);
-    hash.update(text);
+export function treeHash(root: string, options: {
+  ignore: (path: string) => boolean;
+}) {
+  options = {
+    ignore() { return false; },
+    ...options,
   };
 
-  var traverse = function (relativePath) {
+  const hash = require('crypto').createHash('sha256');
+
+  function traverse(relativePath: string) {
     if (options.ignore(relativePath)) {
-      hashLog && hashLog.push('SKIP ' + JSON.stringify(relativePath) + '\n');
       return;
     }
 
-    var absPath = files.pathJoin(root, relativePath);
-    var stat = files.lstat(absPath);
+    var absPath = pathJoin(root, relativePath);
+    var stat = lstat(absPath);
 
     if (stat.isDirectory()) {
       if (relativePath) {
-        updateHash('dir ' + JSON.stringify(relativePath) + '\n');
+        hash.update('dir ' + JSON.stringify(relativePath) + '\n');
       }
-      _.each(files.readdir(absPath), function (entry) {
-        traverse(files.pathJoin(relativePath, entry));
+      readdir(absPath).forEach(entry => {
+        traverse(pathJoin(relativePath, entry));
       });
     } else if (stat.isFile()) {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
-      updateHash('file ' + JSON.stringify(relativePath) + ' ' +
-                  stat.size + ' ' + files.fileHash(absPath) + '\n');
+      hash.update('file ' + JSON.stringify(relativePath) + ' ' +
+                  stat.size + ' ' + fileHash(absPath) + '\n');
       if (stat.mode & 0o100) {
-        updateHash('exec\n');
+        hash.update('exec\n');
       }
     } else if (stat.isSymbolicLink()) {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
-      updateHash('symlink ' + JSON.stringify(relativePath) + ' ' +
-                 JSON.stringify(files.readlink(absPath)) + '\n');
+      hash.update('symlink ' + JSON.stringify(relativePath) + ' ' +
+                  JSON.stringify(readlink(absPath)) + '\n');
     }
     // ignore anything weirder
   };
 
   traverse('');
-  hashLog && files.appendFile(process.env.TREE_HASH_DEBUG, hashLog.join(''));
+
   return hash.digest('base64');
-};
+}
 
 // like mkdir -p. if it returns true, the item is a directory (even if
 // it was already created). if it returns false, the item is not a
 // directory and we couldn't make it one.
-files.mkdir_p = function (dir, mode) {
-  var p = files.pathResolve(dir);
-  var ps = files.pathNormalize(p).split(files.pathSep);
+export function mkdir_p(dir: string, mode: number | null = null) {
+  const p = pathResolve(dir);
+  const ps = pathNormalize(p).split(pathSep);
 
-  var stat = files.statOrNull(p);
+  const stat = statOrNull(p);
   if (stat) {
     return stat.isDirectory();
   }
 
   // doesn't exist. recurse to build parent.
-  // Don't use files.pathJoin here because it can strip off the leading slash
+  // Don't use pathJoin here because it can strip off the leading slash
   // accidentally.
-  var parentPath = ps.slice(0, -1).join(files.pathSep);
-  var success = files.mkdir_p(parentPath, mode);
+  const parentPath = ps.slice(0, -1).join(pathSep);
+  const success = mkdir_p(parentPath, mode);
   // parent is not a directory.
   if (! success) { return false; }
 
-  var pathIsDirectory = function (path) {
-    var stat = files.statOrNull(path);
-    return stat && stat.isDirectory();
-  };
-
   try {
-    files.mkdir(p, mode);
+    mkdir(p, mode);
   } catch (err) {
     if (err.code === "EEXIST") {
       if (pathIsDirectory(p)) {
@@ -474,7 +455,12 @@ files.mkdir_p = function (dir, mode) {
 
   // double check we exist now
   return pathIsDirectory(p);
-};
+}
+
+function pathIsDirectory(path: string) {
+  const stat = statOrNull(path);
+  return stat && stat.isDirectory();
+}
 
 // Roughly like cp -R.
 //
@@ -490,33 +476,40 @@ files.mkdir_p = function (dir, mode) {
 // If options.ignore is present, it should be a list of regexps. Any
 // file whose basename matches one of the regexps, before
 // transformation, will be skipped.
-files.cp_r = function(from, to, options = {}) {
-  from = files.pathResolve(from);
+export function cp_r(from: string, to: string, options: {
+  preserveSymlinks?: boolean;
+  ignore?: RegExp[];
+  transformFilename?: (f: string) => string;
+  transformContents?: (
+    contents: ReturnType<typeof readFile>,
+    file: string,
+  ) => typeof contents;
+} = {}) {
+  from = pathResolve(from);
 
-  const stat = statOrNull(from, options.preserveSymlinks);
+  const stat = statOrNullHelper(from, options.preserveSymlinks);
   if (! stat) {
     return;
   }
 
   if (stat.isDirectory()) {
-    files.mkdir_p(to, 0o755);
+    mkdir_p(to, 0o755);
 
-    files.readdir(from).forEach(f => {
+    readdir(from).forEach(f => {
       if (options.ignore &&
-          _.any(options.ignore,
-                pattern => f.match(pattern))) {
+          options.ignore.some(pattern => f.match(pattern))) {
         return;
       }
 
-      const fullFrom = files.pathJoin(from, f);
+      const fullFrom = pathJoin(from, f);
 
       if (options.transformFilename) {
         f = options.transformFilename(f);
       }
 
-      files.cp_r(
+      cp_r(
         fullFrom,
-        files.pathJoin(to, f),
+        pathJoin(to, f),
         options
       );
     })
@@ -524,15 +517,15 @@ files.cp_r = function(from, to, options = {}) {
     return;
   }
 
-  files.mkdir_p(files.pathDirname(to));
+  mkdir_p(pathDirname(to));
 
   if (stat.isSymbolicLink()) {
-    symlinkWithOverwrite(files.readlink(from), to);
+    symlinkWithOverwrite(readlink(from), to);
 
   } else if (options.transformContents) {
-    files.writeFile(to, options.transformContents(
-      files.readFile(from),
-      files.pathBasename(from)
+    writeFile(to, options.transformContents(
+      readFile(from),
+      pathBasename(from)
     ), {
       // Create the file as readable and writable by everyone, and
       // executable by everyone if the original file is executable by
@@ -544,40 +537,44 @@ files.cp_r = function(from, to, options = {}) {
 
   } else {
     // Note: files.copyFile applies the same stat.mode logic as above.
-    files.copyFile(from, to);
+    copyFile(from, to);
   }
-};
+}
 
 // create a symlink, overwriting the target link, file, or directory
 // if it exists
-export const symlinkWithOverwrite = Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(source, target) {
-  const args = [source, target];
+export const symlinkWithOverwrite =
+Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
+  source: string,
+  target: string,
+) {
+  const args: [string, string, "junction"?] = [source, target];
 
   if (process.platform === "win32") {
-    const absoluteSource = files.pathResolve(target, source);
+    const absoluteSource = pathResolve(target, source);
 
-    if (files.stat(absoluteSource).isDirectory()) {
+    if (stat(absoluteSource).isDirectory()) {
       args[2] = "junction";
     }
   }
 
   try {
-    files.symlink(...args);
+    symlink(...args);
   } catch (e) {
     if (e.code === "EEXIST") {
-      function normalizePath (path) {
-        return files.convertToOSPath(path).replace(/[\/\\]$/, "")
+      function normalizePath(path: string) {
+        return convertToOSPath(path).replace(/[\/\\]$/, "")
       }
 
-      if (files.lstat(target).isSymbolicLink() &&
-          normalizePath(files.readlink(target)) === normalizePath(source)) {
+      if (lstat(target).isSymbolicLink() &&
+          normalizePath(readlink(target)) === normalizePath(source)) {
         // If the target already points to the desired source, we don't
         // need to do anything.
         return;
       }
       // overwrite existing link, file, or directory
-      files.rm_recursive(target);
-      files.symlink(...args);
+      rm_recursive(target);
+      symlink(...args);
     } else {
       throw e;
     }
@@ -592,39 +589,42 @@ export const symlinkWithOverwrite = Profile("files.symlinkWithOverwrite", functi
  * @param {String[]} options.output An array to push results to
  * @return {String[]}         All of the paths in the directory recursively
  */
-files.getPathsInDir = function (dir, options) {
+export function getPathsInDir(dir: string, options: {
+  cwd?: string;
+  output?: string[];
+}) {
   // Don't let this function yield so that the file system doesn't get changed
   // underneath us
   return fiberHelpers.noYieldsAllowed(function () {
-    var cwd = options.cwd || files.convertToStandardPath(process.cwd());
+    var cwd = options.cwd || convertToStandardPath(process.cwd());
 
-    if (! files.exists(cwd)) {
+    if (! exists(cwd)) {
       throw new Error("Specified current working directory doesn't exist: " +
         cwd);
     }
 
-    var absoluteDir = files.pathResolve(cwd, dir);
+    const absoluteDir = pathResolve(cwd, dir);
 
-    if (! files.exists(absoluteDir)) {
+    if (! exists(absoluteDir)) {
       // There are no paths in this dir, so don't do anything
       return;
     }
 
-    var output = options.output || [];
+    const output = options.output || [];
 
-    var pathIsDirectory = function (path) {
-      var stat = files.lstat(path);
+    function pathIsDirectory(path: string) {
+      var stat = lstat(path);
       return stat.isDirectory();
-    };
+    }
 
-    _.each(files.readdir(absoluteDir), function (entry) {
-      var newPath = files.pathJoin(dir, entry);
-      var newAbsPath = files.pathJoin(absoluteDir, entry);
+    readdir(absoluteDir).forEach(entry => {
+      const newPath = pathJoin(dir, entry);
+      const newAbsPath = pathJoin(absoluteDir, entry);
 
       output.push(newPath);
 
       if (pathIsDirectory(newAbsPath)) {
-        files.getPathsInDir(newPath, {
+        getPathsInDir(newPath, {
           cwd: cwd,
           output: output
         });
@@ -633,30 +633,39 @@ files.getPathsInDir = function (dir, options) {
 
     return output;
   });
-};
+}
 
-files.findPathsWithRegex = function (dir, regex, options) {
-  var allPaths = files.getPathsInDir(dir, {
+export function findPathsWithRegex(
+  dir: string,
+  regex: RegExp,
+  options: {
+    cwd: string;
+  },
+) {
+  return getPathsInDir(dir, {
     cwd: options.cwd
-  });
-
-  return _.filter(allPaths, function (path) {
+  }).filter(function (path: string) {
     return path.match(regex);
   });
-};
+}
 
 // Make a temporary directory. Returns the path to the newly created
 // directory. Only the current user is allowed to read or write the
 // files in the directory (or add files to it). The directory will
 // be cleaned up on exit.
 const tempDirs = Object.create(null);
-files.mkdtemp = function (prefix) {
-  var make = function () {
+export function mkdtemp(prefix: string): string {
+  function make(): string {
     prefix = prefix || 'mt-';
     // find /tmp
-    var tmpDir = _.first(_.map(['TMPDIR', 'TMP', 'TEMP'], function (t) {
-      return process.env[t];
-    }).filter(_.identity));
+    let tmpDir: string | undefined;
+    ['TMPDIR', 'TMP', 'TEMP'].some(t => {
+      const value = process.env[t];
+      if (value) {
+        tmpDir = value;
+        return true;
+      }
+    });
 
     if (! tmpDir && process.platform !== 'win32') {
       tmpDir = '/tmp';
@@ -666,16 +675,18 @@ files.mkdtemp = function (prefix) {
       throw new Error("Couldn't create a temporary directory.");
     }
 
-    tmpDir = files.realpath(tmpDir);
+    tmpDir = realpath(tmpDir);
 
     // make the directory. give it 3 tries in case of collisions from
     // crappy random.
     var tries = 3;
     while (tries > 0) {
-      var dirPath = files.pathJoin(
-        tmpDir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
+      const dirPath = pathJoin(
+        tmpDir,
+        prefix + (Math.random() * 0x100000000 + 1).toString(36),
+      );
       try {
-        files.mkdir(dirPath, 0o700);
+        mkdir(dirPath, 0o700);
         return dirPath;
       } catch (err) {
         tries--;
@@ -683,14 +694,14 @@ files.mkdtemp = function (prefix) {
     }
     throw new Error("failed to make temporary directory in " + tmpDir);
   };
-  var dir = make();
+  const dir = make();
   tempDirs[dir] = true;
   return dir;
-};
+}
 
 // Call this if you're done using a temporary directory. It will asynchronously
 // be deleted.
-files.freeTempDir = function (dir) {
+export function freeTempDir(dir: string) {
   if (! tempDirs[dir]) {
     throw Error("not a tracked temp dir: " + dir);
   }
@@ -699,7 +710,7 @@ files.freeTempDir = function (dir) {
     return;
   }
 
-  return files.rm_recursive_async(dir).then(() => {
+  return rm_recursive_async(dir).then(() => {
     // Delete tempDirs[dir] only when the removal finishes, so that the
     // cleanup.onExit handler can attempt the removal synchronously if it
     // fires in the meantime.
@@ -709,14 +720,14 @@ files.freeTempDir = function (dir) {
     // to delete it again when the process exits.
     console.log(error);
   });
-};
+}
 
 if (! process.env.METEOR_SAVE_TMPDIRS) {
-  cleanup.onExit(function (sig) {
+  cleanup.onExit(function () {
     Object.keys(tempDirs).forEach(dir => {
       delete tempDirs[dir];
       try {
-        files.rm_recursive(dir);
+        rm_recursive(dir);
       } catch (err) {
         // Don't crash and print a stack trace because we failed to delete
         // a temp directory. This happens sometimes on Windows and seems
@@ -726,17 +737,25 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
   });
 }
 
+type TarOptions = {
+  verbose?: boolean;
+  forceConvert?: boolean;
+}
+
 // Takes a buffer containing `.tar.gz` data and extracts the archive
 // into a destination directory. destPath should not exist yet, and
 // the archive should contain a single top-level directory, which will
 // be renamed atomically to destPath.
-files.extractTarGz = function (buffer, destPath, options) {
-  var options = options || {};
-  var parentDir = files.pathDirname(destPath);
-  var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
-  files.mkdir_p(tempDir);
+export function extractTarGz(
+  buffer: Buffer,
+  destPath: string,
+  options: TarOptions = {},
+) {
+  const parentDir = pathDirname(destPath);
+  const tempDir = pathJoin(parentDir, '.tmp' + utils.randomToken());
+  mkdir_p(tempDir);
 
-  if (! _.has(options, "verbose")) {
+  if (! hasOwnProperty.call(options, "verbose")) {
     options.verbose = require("../console/console.js").Console.verbose;
   }
 
@@ -747,13 +766,13 @@ files.extractTarGz = function (buffer, destPath, options) {
     : tryExtractWithNativeTar(buffer, tempDir, options)
 
   promise = promise.catch(
-    error => tryExtractWithNpmTar(buffer, tempDir, options)
+    () => tryExtractWithNpmTar(buffer, tempDir, options)
   );
 
   promise.await();
 
   // succeed!
-  var topLevelOfArchive = files.readdir(tempDir)
+  const topLevelOfArchive = readdir(tempDir)
     // On Windows, the 7z.exe tool sometimes creates an auxiliary
     // PaxHeader directory.
     .filter(file => ! file.startsWith("PaxHeader"));
@@ -763,22 +782,26 @@ files.extractTarGz = function (buffer, destPath, options) {
       "Extracted archive '" + tempDir + "' should only contain one entry");
   }
 
-  var extractDir = files.pathJoin(tempDir, topLevelOfArchive[0]);
-  files.rename(extractDir, destPath);
-  files.rm_recursive(tempDir);
+  const extractDir = pathJoin(tempDir, topLevelOfArchive[0]);
+  rename(extractDir, destPath);
+  rm_recursive(tempDir);
 
   if (options.verbose) {
-    console.log("Finished extracting in", new Date - startTime, "ms");
+    console.log("Finished extracting in", Date.now() - startTime, "ms");
   }
-};
+}
 
-function ensureDirectoryEmpty(dir) {
-  files.readdir(dir).forEach(file => {
-    files.rm_recursive(files.pathJoin(dir, file));
+function ensureDirectoryEmpty(dir: string) {
+  readdir(dir).forEach(file => {
+    rm_recursive(pathJoin(dir, file));
   });
 }
 
-function tryExtractWithNativeTar(buffer, tempDir, options) {
+function tryExtractWithNativeTar(
+  buffer: Buffer,
+  tempDir: string,
+  options: TarOptions = {},
+) {
   ensureDirectoryEmpty(tempDir);
 
   if (options.forceConvert) {
@@ -789,7 +812,7 @@ function tryExtractWithNativeTar(buffer, tempDir, options) {
   return new Promise((resolve, reject) => {
     const flags = options.verbose ? "-xzvf" : "-xzf";
     const tarProc = spawn("tar", [flags, "-"], {
-      cwd: files.convertToOSPath(tempDir),
+      cwd: convertToOSPath(tempDir),
       stdio: options.verbose ? [
         "pipe", // Always need to write to tarProc.stdin.
         process.stdout,
@@ -800,12 +823,18 @@ function tryExtractWithNativeTar(buffer, tempDir, options) {
     tarProc.on("error", reject);
     tarProc.on("exit", resolve);
 
-    tarProc.stdin.write(buffer);
-    tarProc.stdin.end();
+    if (tarProc.stdin) {
+      tarProc.stdin.write(buffer);
+      tarProc.stdin.end();
+    }
   });
 }
 
-function tryExtractWithNative7z(buffer, tempDir, options) {
+function tryExtractWithNative7z(
+  buffer: Buffer,
+  tempDir: string,
+  options: TarOptions = {},
+) {
   ensureDirectoryEmpty(tempDir);
 
   if (options.forceConvert) {
@@ -813,15 +842,14 @@ function tryExtractWithNative7z(buffer, tempDir, options) {
       "Native 7z.exe cannot convert colons in package names"));
   }
 
-  const exeOSPath = files.convertToOSPath(
-    files.pathJoin(files.getCurrentNodeBinDir(), "7z.exe"));
+  const exeOSPath = convertToOSPath(pathJoin(getCurrentNodeBinDir(), "7z.exe"));
   const tarGzBasename = "out.tar.gz";
   const spawnOptions = {
-    cwd: files.convertToOSPath(tempDir),
-    stdio: options.verbose ? "inherit" : "pipe",
+    cwd: convertToOSPath(tempDir),
+    stdio: (options.verbose ? "inherit" : "pipe") as ("inherit" | "pipe"),
   };
 
-  files.writeFile(files.pathJoin(tempDir, tarGzBasename), buffer);
+  writeFile(pathJoin(tempDir, tarGzBasename), buffer);
 
   return new Promise((resolve, reject) => {
     spawn(exeOSPath, [
@@ -833,8 +861,8 @@ function tryExtractWithNative7z(buffer, tempDir, options) {
   }).then(code => {
     assert.strictEqual(code, 0);
 
-    let tarBasename;
-    const foundTar = files.readdir(tempDir).some(file => {
+    let tarBasename: string;
+    const foundTar = readdir(tempDir).some(file => {
       if (file !== tarGzBasename) {
         tarBasename = file;
         return true;
@@ -844,8 +872,8 @@ function tryExtractWithNative7z(buffer, tempDir, options) {
     assert.ok(foundTar, "failed to find .tar file");
 
     function cleanUp() {
-      files.unlink(files.pathJoin(tempDir, tarGzBasename));
-      files.unlink(files.pathJoin(tempDir, tarBasename));
+      unlink(pathJoin(tempDir, tarGzBasename));
+      unlink(pathJoin(tempDir, tarBasename));
     }
 
     return new Promise((resolve, reject) => {
@@ -865,17 +893,21 @@ function tryExtractWithNative7z(buffer, tempDir, options) {
   });
 }
 
-function tryExtractWithNpmTar(buffer, tempDir, options) {
+function tryExtractWithNpmTar(
+  buffer: Buffer,
+  tempDir: string,
+  options: TarOptions = {},
+) {
   ensureDirectoryEmpty(tempDir);
 
-  var tar = require("tar");
-  var zlib = require("zlib");
+  const tar = require("tar");
+  const zlib = require("zlib");
 
   return new Promise((resolve, reject) => {
-    var gunzip = zlib.createGunzip().on('error', reject);
-    var extractor = new tar.Extract({
-      path: files.convertToOSPath(tempDir)
-    }).on('entry', function (e) {
+    const gunzip = zlib.createGunzip().on('error', reject);
+    const extractor = new tar.Extract({
+      path: convertToOSPath(tempDir)
+    }).on('entry', function (e: any) {
       if (process.platform === "win32" || options.forceConvert) {
         // On Windows, try to convert old packages that have colons in
         // paths by blindly replacing all of the paths. Otherwise, we
@@ -897,23 +929,23 @@ function tryExtractWithNpmTar(buffer, tempDir, options) {
 // bit but only if the read bit was present.  Same as:
 // https://github.com/mapbox/node-pre-gyp/blob/7a28f4b0f562ba4712722fefe4eeffb7b20fbf7a/lib/install.js#L71-L77
 // and others reported in: https://github.com/npm/node-tar/issues/7
-function addExecBitWhenReadBitPresent(fileMode) {
+function addExecBitWhenReadBitPresent(fileMode: number) {
   return fileMode |= (fileMode >>> 2) & 0o111;
 }
 
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
-files.createTarGzStream = function (dirPath, options) {
-  var tar = require("tar");
-  var fstream = require('fstream');
-  var zlib = require("zlib");
+export function createTarGzStream(dirPath: string) {
+  const tar = require("tar");
+  const fstream = require('fstream');
+  const zlib = require("zlib");
 
   // Create a segment of the file path which we will look for to
   // identify exactly what we think is a "bin" file (that is, something
   // which should be expected to work within the context of an
   // 'npm run-script').
-  var binPathMatch = ["", "node_modules", ".bin", ""].join(path.sep);
+  const binPathMatch = ["", "node_modules", ".bin", ""].join(path.sep);
 
   // Don't use `{ path: dirPath, type: 'Directory' }` as an argument to
   // fstream.Reader. This triggers a collection of odd behaviors in fstream
@@ -938,9 +970,9 @@ files.createTarGzStream = function (dirPath, options) {
   // with the same permissions as the first file inside it. This manifests as
   // an EACCESS when untarring if the first file inside the top-level directory
   // is not writeable.
-  var fileStream = fstream.Reader({
-    path: files.convertToOSPath(dirPath),
-    filter: function (entry) {
+  const fileStream = fstream.Reader({
+    path: convertToOSPath(dirPath),
+    filter(entry: any) {
       if (process.platform !== "win32") {
         return true;
       }
@@ -966,21 +998,22 @@ files.createTarGzStream = function (dirPath, options) {
       return true;
     }
   });
-  var tarStream = fileStream.pipe(tar.Pack({ noProprietary: true }));
 
-  return tarStream.pipe(zlib.createGzip());
-};
+  return fileStream.pipe(tar.Pack({
+    noProprietary: true,
+  })).pipe(zlib.createGzip());
+}
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
 // The tar archive will contain a top-level directory named after dirPath.
-files.createTarball = Profile(function (dirPath, tarball) {
-  return "files.createTarball " + files.pathBasename(tarball);
-}, function (dirPath, tarball, options) {
-  var out = files.createWriteStream(tarball);
+export const createTarball = Profile(function (_: string, tarball: string) {
+  return "files.createTarball " + pathBasename(tarball);
+}, function (dirPath: string, tarball: string) {
+  const out = createWriteStream(tarball);
   new Promise(function (resolve, reject) {
     out.on('error', reject);
     out.on('close', resolve);
-    files.createTarGzStream(dirPath, options).pipe(out);
+    createTarGzStream(dirPath).pipe(out);
   }).await();
 });
 
@@ -991,93 +1024,91 @@ files.createTarball = Profile(function (dirPath, tarball) {
 // toDir does not exist" and "you can end up with garbage directories
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
-files.renameDirAlmostAtomically =
-  Profile("files.renameDirAlmostAtomically", (fromDir, toDir) => {
-    const garbageDir = files.pathJoin(
-      files.pathDirname(toDir),
-      // Begin the base filename with a '.' character so that it can be
-      // ignored by other directory-scanning code.
-      `.${files.pathBasename(toDir)}-garbage-${utils.randomToken()}`,
-    );
+export const renameDirAlmostAtomically =
+Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
+  const garbageDir = pathJoin(
+    pathDirname(toDir),
+    // Begin the base filename with a '.' character so that it can be
+    // ignored by other directory-scanning code.
+    `.${pathBasename(toDir)}-garbage-${utils.randomToken()}`,
+  );
 
-    // Get old dir out of the way, if it exists.
-    let cleanupGarbage = false;
-    let forceCopy = false;
+  // Get old dir out of the way, if it exists.
+  let cleanupGarbage = false;
+  let forceCopy = false;
+  try {
+    rename(toDir, garbageDir);
+    cleanupGarbage = true;
+  } catch (e) {
+    if (e.code === 'EXDEV') {
+      // Some (notably Docker) file systems will fail to do a seemingly
+      // harmless operation, such as renaming, on what is apparently the same
+      // file system.  AUFS will do this even if the `fromDir` and `toDir`
+      // are on the same layer, and OverlayFS will fail if the `fromDir` and
+      // `toDir` are on different layers.  In these cases, we will not be
+      // atomic and will need to do a recursive copy.
+      forceCopy = true;
+    } else if (e.code !== 'ENOENT') {
+      // No such file or directory is okay, but anything else is not.
+      throw e;
+    }
+  }
+
+  if (! forceCopy) {
     try {
-      files.rename(toDir, garbageDir);
-      cleanupGarbage = true;
+      rename(fromDir, toDir);
     } catch (e) {
+      // It's possible that there may not have been a `toDir` to have
+      // advanced warning about this, so we're prepared to handle it again.
       if (e.code === 'EXDEV') {
-        // Some (notably Docker) file systems will fail to do a seemingly
-        // harmless operation, such as renaming, on what is apparently the same
-        // file system.  AUFS will do this even if the `fromDir` and `toDir`
-        // are on the same layer, and OverlayFS will fail if the `fromDir` and
-        // `toDir` are on different layers.  In these cases, we will not be
-        // atomic and will need to do a recursive copy.
         forceCopy = true;
-      } else if (e.code !== 'ENOENT') {
-        // No such file or directory is okay, but anything else is not.
+      } else {
         throw e;
       }
     }
+  }
 
-    if (! forceCopy) {
-      try {
-        files.rename(fromDir, toDir);
-      } catch (e) {
-        // It's possible that there may not have been a `toDir` to have
-        // advanced warning about this, so we're prepared to handle it again.
-        if (e.code === 'EXDEV') {
-          forceCopy = true;
-        } else {
-          throw e;
-        }
-      }
-    }
+  // If we've been forced to jeopardize our atomicity due to file-system
+  // limitations, we'll resort to copying.
+  if (forceCopy) {
+    rm_recursive(toDir);
+    cp_r(fromDir, toDir, {
+      preserveSymlinks: true,
+    });
+  }
 
-    // If we've been forced to jeopardize our atomicity due to file-system
-    // limitations, we'll resort to copying.
-    if (forceCopy) {
-      files.rm_recursive(toDir);
-      files.cp_r(fromDir, toDir, {
-        preserveSymlinks: true,
-      });
-    }
+  // ... and take out the trash.
+  if (cleanupGarbage) {
+    // We don't care about how long this takes, so we'll let it go async.
+    rm_recursive_async(garbageDir);
+  }
+});
 
-    // ... and take out the trash.
-    if (cleanupGarbage) {
-      // We don't care about how long this takes, so we'll let it go async.
-      files.rm_recursive_async(garbageDir);
-    }
-  });
+export const writeFileAtomically =
+Profile("files.writeFileAtomically", function (filename: string, contents: string | Buffer) {
+  const parentDir = pathDirname(filename);
+  mkdir_p(parentDir);
 
-files.writeFileAtomically =
-  Profile("files.writeFileAtomically", function (filename, contents) {
-    const parentDir = files.pathDirname(filename);
-    files.mkdir_p(parentDir);
+  const tmpFile = pathJoin(
+    parentDir,
+    '.' + pathBasename(filename) + '.' + utils.randomToken()
+  );
 
-    const tmpFile = files.pathJoin(
-      parentDir,
-      '.' + files.pathBasename(filename) + '.' + utils.randomToken()
-    );
-
-    files.writeFile(tmpFile, contents);
-    files.rename(tmpFile, filename);
-  });
+  writeFile(tmpFile, contents);
+  rename(tmpFile, filename);
+});
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
 // Do not use this function on Windows, it won't work.
-files.symlinkOverSync = function (linkText, file) {
-  fiberHelpers.noYieldsAllowed(function () {
-    file = files.pathResolve(file);
-    var tmpSymlink = files.pathJoin(
-      files.pathDirname(file),
-      "." + files.pathBasename(file) + ".tmp" + utils.randomToken());
-    files.symlink(linkText, tmpSymlink);
-    files.rename(tmpSymlink, file);
-  });
-};
+export function symlinkOverSync(linkText: string, file: string) {
+  file = pathResolve(file);
+  const tmpSymlink = pathJoin(
+    pathDirname(file),
+    "." + pathBasename(file) + ".tmp" + utils.randomToken());
+  symlink(linkText, tmpSymlink);
+  rename(tmpSymlink, file);
+}
 
 // Return the result of evaluating `code` using
 // `runInThisContext`. `code` will be wrapped in a closure. You can
@@ -1097,57 +1128,59 @@ files.symlinkOverSync = function (linkText, file) {
 // different parser with a better error handling API. Ah well.  The
 // underlying V8 issue is:
 //   https://code.google.com/p/v8/issues/detail?id=1281
-files.runJavaScript = function (code, options) {
-  if (typeof code !== 'string') {
-    throw new Error("code must be a string");
-  }
-
-  options = options || {};
-  var filename = options.filename || "<anonymous>";
-
+export function runJavaScript(code: string, {
+  symbols = Object.create(null),
+  filename = "<anonymous>",
+  sourceMap,
+  sourceMapRoot,
+}: {
+  symbols: Record<string, any>;
+  filename: string;
+  sourceMap?: object;
+  sourceMapRoot?: string;
+}) {
   return Profile.time('runJavaScript ' + filename, () => {
-
-    var keys = [], values = [];
+    const keys: string[] = [], values: any[] = [];
     // don't assume that _.keys and _.values are guaranteed to
     // enumerate in the same order
-    _.each(options.symbols, function (value, name) {
+    _.each(symbols, function (value: any, name: string) {
       keys.push(name);
       values.push(value);
     });
 
-    var stackFilename = filename;
-    if (options.sourceMap) {
+    let stackFilename = filename;
+    if (sourceMap) {
       // We want to generate an arbitrary filename that we use to associate the
       // file with its source map.
       stackFilename = "<runJavaScript-" + nextStackFilenameCounter++ + ">";
     }
 
-    var chunks = [];
-    var header = "(function(" + keys.join(',') + "){";
+    const chunks = [];
+    const header = "(function(" + keys.join(',') + "){";
     chunks.push(header);
-    if (options.sourceMap) {
-      var consumer = new sourcemap.SourceMapConsumer(options.sourceMap);
+    if (sourceMap) {
       chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-        code, consumer));
+        code, new sourcemap.SourceMapConsumer(sourceMap)));
     } else {
       chunks.push(code);
     }
     // \n is necessary in case final line is a //-comment
     chunks.push("\n})");
 
-    var wrapped;
-    var parsedSourceMap = null;
-    if (options.sourceMap) {
-      var node = new sourcemap.SourceNode(null, null, null, chunks);
-      var results = node.toStringWithSourceMap({
+    let wrapped;
+    let parsedSourceMap = null;
+    if (sourceMap) {
+      const results = new sourcemap.SourceNode(
+        null, null, null, chunks
+      ).toStringWithSourceMap({
         file: stackFilename
       });
       wrapped = results.code;
       parsedSourceMap = results.map.toJSON();
-      if (options.sourceMapRoot) {
+      if (sourceMapRoot) {
         // Add the specified root to any root that may be in the file.
-        parsedSourceMap.sourceRoot = files.pathJoin(
-          options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+        parsedSourceMap.sourceRoot = pathJoin(
+          sourceMapRoot, parsedSourceMap.sourceRoot || '');
       }
       // source-map-support doesn't ever look at the sourcesContent field, so
       // there's no point in keeping it in memory.
@@ -1183,7 +1216,7 @@ files.runJavaScript = function (code, options) {
       // node to run the code and parse its output. We instead run an
       // entirely different JS parser, from the Babel project, but
       // which at least has a nice API for reporting errors.
-      var parse = require('meteor-babel').parse;
+      const { parse } = require('meteor-babel');
       try {
         parse(wrapped, { strictMode: false });
       } catch (parseError) {
@@ -1191,7 +1224,7 @@ files.runJavaScript = function (code, options) {
           throw parseError;
         }
 
-        var err = new files.FancySyntaxError;
+        const err = new FancySyntaxError;
         err.message = parseError.message;
 
         if (parsedSourceMap) {
@@ -1211,7 +1244,7 @@ files.runJavaScript = function (code, options) {
         err.column = parseError.loc.column;
 
         // adjust errors on line 1 to account for our header
-        if (err.line === 1) {
+        if (err.line === 1 && typeof err.column === "number") {
           err.column -= header.length;
         }
 
@@ -1224,46 +1257,51 @@ files.runJavaScript = function (code, options) {
       throw nodeParseError;
     }
 
-    var func = script.runInThisContext();
-
-    return (buildmessage.markBoundary(func)).apply(null, values);
+    return buildmessage.markBoundary(
+      script.runInThisContext()
+    ).apply(null, values);
   });
-};
+}
 
 // - message: an error message from the parser
 // - file: filename
 // - line: 1-based
 // - column: 1-based
-files.FancySyntaxError = function () {};
+export class FancySyntaxError {
+  public file?: string;
+  public line?: number;
+  public column?: number;
+  constructor(public message?: string) {}
+}
 
-files.OfflineError = function (error) {
-  this.error = error;
-};
-files.OfflineError.prototype.toString = function () {
-  return "[Offline: " + this.error.toString() + "]";
-};
+export class OfflineError {
+  constructor(public error: Error) {}
+  toString() {
+    return "[Offline: " + this.error.toString() + "]";
+  }
+}
 
 // Like files.readdir, but skips entries whose names begin with dots, and
 // converts ENOENT to [].
-files.readdirNoDots = function (path) {
+export function readdirNoDots(path: string) {
   try {
-    var entries = files.readdir(path);
+    var entries = readdir(path);
   } catch (e) {
     if (e.code === 'ENOENT') {
       return [];
     }
     throw e;
   }
-  return _.filter(entries, function (entry) {
+  return entries.filter(entry => {
     return entry && entry[0] !== '.';
   });
-};
+}
 
 // Read a file in line by line. Returns an array of lines to be
 // processed individually. Throws if the file doesn't exist or if
 // anything else goes wrong.
-var getLines = function (file) {
-  var buffer = files.readFile(file);
+export function getLines(file: string) {
+  var buffer = readFile(file);
   var lines = exports.splitBufferToLines(buffer);
 
   // strip blank lines at the end
@@ -1276,16 +1314,14 @@ var getLines = function (file) {
   }
 
   return lines;
-};
+}
 
-exports.getLines = getLines;
-
-exports.splitBufferToLines = function (buffer) {
+export function splitBufferToLines(buffer: Buffer) {
   return buffer.toString('utf8').split(/\r*\n\r*/);
-};
+}
 
 // Same as `getLines`, but returns [] if the file doesn't exist.
-exports.getLinesOrEmpty = function (file) {
+export function getLinesOrEmpty(file: string) {
   try {
     return getLines(file);
   } catch (e) {
@@ -1294,13 +1330,13 @@ exports.getLinesOrEmpty = function (file) {
     }
     throw e;
   }
-};
+}
 
 // Returns null if the file does not exist, otherwise returns the parsed JSON in
 // the file. Throws on errors other than ENOENT (including JSON parse failure).
-exports.readJSONOrNull = function (file) {
+export function readJSONOrNull(file: string) {
   try {
-    var raw = files.readFile(file, 'utf8');
+    var raw = readFile(file, 'utf8');
   } catch (e) {
     if (e && e.code === 'ENOENT') {
       return null;
@@ -1308,38 +1344,32 @@ exports.readJSONOrNull = function (file) {
     throw e;
   }
   return JSON.parse(raw);
-};
+}
 
 // Trims whitespace & other filler characters of a line in a project file.
-files.trimSpaceAndComments = function (line) {
+export function trimSpaceAndComments(line: string) {
   var match = line.match(/^([^#]*)#/);
   if (match) {
     line = match[1];
   }
-  return files.trimSpace(line);
-};
-
-// Trims leading and trailing whilespace in a project file.
-files.trimSpace = function (line) {
-  return line.replace(/^\s+|\s+$/g, '');
-};
-
-
-files.KeyValueFile = function (path) {
-  var self = this;
-  self.path = path;
+  return trimSpace(line);
 }
 
-_.extend(files.KeyValueFile.prototype, {
-  set: function (k, v) {
-    var self = this;
+// Trims leading and trailing whilespace in a project file.
+export function trimSpace(line: string) {
+  return line.replace(/^\s+|\s+$/g, '');
+}
 
-    var data = self._readAll() || '';
-    var lines = data.split(/\n/);
+export class KeyValueFile {
+  constructor(public path: string) {}
 
-    var found = false;
-    for (var i = 0; i < lines.length; i++) {
-      var trimmed = lines[i].trim();
+  set(k: string, v: any) {
+    const data = this.readAll() || '';
+    const lines = data.split(/\n/);
+
+    let found = false;
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
       if (trimmed.indexOf(k + '=') == 0) {
         lines[i] = k + '=' + v;
         found = true;
@@ -1348,31 +1378,30 @@ _.extend(files.KeyValueFile.prototype, {
     if (!found) {
       lines.push(k + "=" + v);
     }
-    var newdata = lines.join('\n') + '\n';
-    files.writeFile(self.path, newdata, 'utf8');
-  },
+    const newdata = lines.join('\n') + '\n';
+    writeFile(this.path, newdata, 'utf8');
+  }
 
-  _readAll: function () {
-    var self = this;
-
-    if (files.exists(self.path)) {
-      return files.readFile(self.path, 'utf8');
+  private readAll() {
+    if (exists(this.path)) {
+      return readFile(this.path, 'utf8');
     } else {
       return null;
     }
   }
-});
+}
 
-files.getHomeDir = function () {
+export function getHomeDir() {
   if (process.platform === "win32") {
-    return files.pathDirname(
-      files.convertToStandardPath(process.env.METEOR_INSTALLATION));
-  } else {
-    return process.env.HOME;
+    const MI = process.env.METEOR_INSTALLATION;
+    if (typeof MI === "string") {
+      return pathDirname(convertToStandardPath(MI));
+    }
   }
-};
+  return process.env.HOME;
+}
 
-files.currentEnvWithPathsAdded = function (...paths) {
+export function currentEnvWithPathsAdded(...paths: string[]) {
   const env = {...process.env};
 
   let pathPropertyName;
@@ -1383,7 +1412,7 @@ files.currentEnvWithPathsAdded = function (...paths) {
     // of setting Path for instance.
     // We want to make sure we're setting the right property, so we
     // lookup the property name case insensitively ourselves.
-    pathPropertyName = _.find(Object.keys(env), (key) => {
+    pathPropertyName = _.find(Object.keys(env), (key: string) => {
       return key.toUpperCase() === 'PATH';
     });
     if (!pathPropertyName) {
@@ -1393,30 +1422,27 @@ files.currentEnvWithPathsAdded = function (...paths) {
     pathPropertyName = 'PATH';
   }
 
-  const convertedPaths = paths.map(path => files.convertToOSPath(path));
-  let pathDecomposed = (env[pathPropertyName] || "").split(files.pathOsDelimiter);
+  const convertedPaths = paths.map(path => convertToOSPath(path));
+  let pathDecomposed = (env[pathPropertyName] || "").split(pathOsDelimiter);
   pathDecomposed.unshift(...convertedPaths);
 
-  env[pathPropertyName] = pathDecomposed.join(files.pathOsDelimiter);
+  env[pathPropertyName] = pathDecomposed.join(pathOsDelimiter);
   return env;
 }
 
 // add .bat extension to link file if not present
-var ensureBatExtension = function (p) {
-  if (p.indexOf(".bat") !== p.length - 4) {
-    p = p + ".bat";
-  }
-  return p;
-};
+function ensureBatExtension(p: string) {
+  return p.endsWith(".bat") ? p : p + ".bat";
+}
 
 // Windows-only, generates a bat script that calls the destination bat script
-files._generateScriptLinkToMeteorScript = function (scriptLocation) {
-  var scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
-  var scriptLocationConverted = scriptLocationIsAbsolutePath
-    ? files.convertToWindowsPath(scriptLocation)
-    : "%~dp0\\" + files.convertToWindowsPath(scriptLocation);
+export function _generateScriptLinkToMeteorScript(scriptLocation: string) {
+  const scriptLocationIsAbsolutePath = scriptLocation.match(/^\//);
+  const scriptLocationConverted = scriptLocationIsAbsolutePath
+    ? convertToWindowsPath(scriptLocation)
+    : "%~dp0\\" + convertToWindowsPath(scriptLocation);
 
-  var newScript = [
+  return [
     "@echo off",
     "SETLOCAL",
     "SET METEOR_INSTALLATION=%~dp0%",
@@ -1433,16 +1459,13 @@ files._generateScriptLinkToMeteorScript = function (scriptLocation) {
     // by files.readLinkToMeteorScript
     "rem " + scriptLocationConverted,
   ].join(os.EOL);
+}
 
-  return newScript;
-};
+export function _getLocationFromScriptLinkToMeteorScript(script: string | Buffer) {
+  const lines = _.compact(script.toString().split('\n'));
 
-files._getLocationFromScriptLinkToMeteorScript = function (script) {
-  var lines = _.compact(script.toString().split('\n'));
-
-  var scriptLocation = _.last(lines)
-    .replace(/^rem /g, '');
-  var isAbsolute = true;
+  let scriptLocation = _.last(lines).replace(/^rem /g, '');
+  let isAbsolute = true;
 
   if (scriptLocation.match(/^%~dp0/)) {
     isAbsolute = false;
@@ -1453,36 +1476,70 @@ files._getLocationFromScriptLinkToMeteorScript = function (script) {
     throw new Error('Failed to parse script location from meteor.bat');
   }
 
-  return files.convertToPosixPath(scriptLocation, ! isAbsolute);
-};
+  return convertToPosixPath(scriptLocation, ! isAbsolute);
+}
 
-files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
+export function linkToMeteorScript(
+  scriptLocation: string,
+  linkLocation: string,
+  platform: string,
+) {
   platform = platform || process.platform;
 
   if (platform === 'win32') {
     // Make a meteor batch script that points to current tool
-
     linkLocation = ensureBatExtension(linkLocation);
     scriptLocation = ensureBatExtension(scriptLocation);
-    var script = files._generateScriptLinkToMeteorScript(scriptLocation);
-
-    files.writeFile(linkLocation, script, {encoding: "ascii"});
+    const script = _generateScriptLinkToMeteorScript(scriptLocation);
+    writeFile(linkLocation, script, { encoding: "ascii" });
   } else {
     // Symlink meteor tool
-    files.symlinkOverSync(scriptLocation, linkLocation);
+    symlinkOverSync(scriptLocation, linkLocation);
   }
-};
+}
 
-files.readLinkToMeteorScript = function (linkLocation, platform) {
-  platform = platform || process.platform;
+export function readLinkToMeteorScript(
+  linkLocation: string,
+  platform = process.platform,
+) {
   if (platform === 'win32') {
     linkLocation = ensureBatExtension(linkLocation);
-    var script = files.readFile(linkLocation);
-    return files._getLocationFromScriptLinkToMeteorScript(script);
+    const script = readFile(linkLocation);
+    return _getLocationFromScriptLinkToMeteorScript(script);
   } else {
-    return files.readlink(linkLocation);
+    return readlink(linkLocation);
   }
-};
+}
+
+// The fs.exists method is deprecated in Node v4:
+// https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
+export function exists(path: string) {
+  return !! statOrNull(path);
+}
+
+export function readBufferWithLengthAndOffset(
+  filename: string,
+  length: number,
+  offset: number,
+) {
+  const data = Buffer.alloc(length);
+  // Read the data from disk, if it is non-empty. Avoid doing IO for empty
+  // files, because (a) unnecessary and (b) fs.readSync with length 0
+  // throws instead of acting like POSIX read:
+  // https://github.com/joyent/node/issues/5685
+  if (length > 0) {
+    const fd = open(filename, "r");
+    try {
+      var count = read(fd, data, 0, length, offset);
+    } finally {
+      close(fd);
+    }
+    if (count !== length) {
+      throw new Error("couldn't read entire resource");
+    }
+  }
+  return data;
+}
 
 // Summary of cross platform file system handling strategy
 
@@ -1522,185 +1579,117 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
-files.fsFixPath = {};
-/**
- * Wrap a function from node's fs module to use the right slashes for this OS
- * and run in a fiber, then assign it to the "files" namespace. Each call
- * creates a files.func that runs asynchronously with Fibers (yielding and
- * until the call is done), unless run outside a Fiber or in noYieldsAllowed, in
- * which case it uses fs.funcSync.
- *
- * Also creates a simpler version on files.fsFixPath.* that just fixes the path
- * and fiberizes the Sync version if possible.
- *
- * @param  {String} fsFuncName         The name of the node fs function to wrap
- * @param  {Number[]} pathArgIndices Indices of arguments that have paths, these
- * arguments will be converted to the correct OS slashes
- * @param  {Object} options        Some options for lesser-used cases
- * @param {Boolean} options.noErr If true, the callback of the wrapped function
- * doesn't have a first "error" argument, for example in fs.exists.
- * @param {Function} options.modifyReturnValue Pass in a function to modify the
- * return value
- */
-function wrapFsFunc(fsFuncName, pathArgIndices, options) {
-  options = options || {};
+type wrapFsFuncOptions<TArgs extends any[], TResult> = {
+  cached?: boolean;
+  modifyReturnValue?: (result: TResult) => any;
+  dirty?: (...args: TArgs) => any;
+}
 
-  const fsFunc = fs[fsFuncName];
-  const fsFuncSync = fs[fsFuncName + "Sync"];
-
-  function makeWrapper ({alwaysSync, sync}) {
-    function wrapper(...args) {
-      for (let j = pathArgIndices.length - 1; j >= 0; --j) {
-        const i = pathArgIndices[j];
-        args[i] = files.convertToOSPath(args[i]);
-      }
-
-      const shouldBeSync = alwaysSync || sync;
-      // There's some overhead in awaiting a Promise of an async call,
-      // vs just doing the sync call, which for a call like "stat"
-      // takes longer than the call itself.  Different parts of the tool
-      // may perform 1,000s or 10,000s of stats each under certain
-      // conditions, so we get a nice performance boost from making
-      // these calls sync.
-      const isQuickie = (fsFuncName === 'stat' ||
-                         fsFuncName === 'rename' ||
-                         fsFuncName === 'symlink');
-
-      const dirty = options && options.dirty;
-      const dirtyFn = typeof dirty === "function" ? dirty : null;
-
-      if (mayYield() &&
-          shouldBeSync &&
-          ! isQuickie) {
-        const promise = new Promise((resolve, reject) => {
-          args.push((err, value) => {
-            if (options.noErr) {
-              resolve(err);
-            } else if (err) {
-              reject(err);
-            } else {
-              resolve(value);
-            }
-          });
-
-          fsFunc.apply(fs, args);
-        });
-
-        const result = promise.await();
-
-        if (dirtyFn) {
-          dirtyFn(...args);
-        }
-
-        return options.modifyReturnValue
-          ? options.modifyReturnValue(result)
-          : result;
-
-      } else if (shouldBeSync) {
-        // Should be sync but can't yield: we are not in a Fiber.
-        // Run the sync version of the fs.* method.
-        const result = fsFuncSync.apply(fs, args);
-
-        if (dirtyFn) {
-          dirtyFn(...args);
-        }
-
-        return options.modifyReturnValue ?
-               options.modifyReturnValue(result) : result;
-
-      } else if (! sync) {
-        // wrapping a plain async version
-        let cb = args[args.length - 1];
-        if (typeof cb === "function") {
-          args.pop();
-        } else {
-          cb = null;
-        }
-
-        new Promise((resolve, reject) => {
-          args.push((err, res) => {
-            err ? reject(err) : resolve(res);
-          });
-
-          fsFunc.apply(fs, args);
-
-        }).then(res => {
-          if (dirtyFn) {
-            dirtyFn(...args);
-          }
-
-          if (options.modifyReturnValue) {
-            res = options.modifyReturnValue(res);
-          }
-
-          cb && cb(null, res);
-
-        }, cb);
-
-        return;
-      }
-
-      throw new Error('unexpected');
+function wrapFsFunc<
+  TArgs extends any[],
+  TResult,
+  F extends (...args: TArgs) => TResult,
+>(
+  fnName: string,
+  fn: F,
+  pathArgIndices: number[],
+  options?: wrapFsFuncOptions<TArgs, TResult>,
+): F {
+  return Profile("files." + fnName, function (...args: TArgs) {
+    for (let j = pathArgIndices.length - 1; j >= 0; --j) {
+      const i = pathArgIndices[j];
+      args[i] = convertToOSPath(args[i]);
     }
 
-    wrapper.displayName = fsFuncName;
-    return wrapper;
-  }
+    let cacheKey: string | null = null;
+    if (options && options.cached) {
+      const cache = withCacheSlot.getValue();
+      if (cache) {
+        const strings = [fnName];
+        const allStrings = args.every(arg => {
+          if (typeof arg === "string") {
+            strings.push(arg);
+            return true;
+          }
+          return false;
+        });
+        if (allStrings) {
+          cacheKey = JSON.stringify(strings);
+          if (hasOwnProperty.call(cache, cacheKey)) {
+            return cache[cacheKey];
+          }
+        }
+      }
+    }
 
-  files[fsFuncName] = Profile('files.' + fsFuncName, makeWrapper({ alwaysSync: true }));
+    const result = fn.apply(fs, args);
 
-  files.fsFixPath[fsFuncName] =
-    Profile('wrapped.fs.' + fsFuncName, makeWrapper({ sync: false }));
-  files.fsFixPath[fsFuncName + 'Sync'] =
-    Profile('wrapped.fs.' + fsFuncName + 'Sync', makeWrapper({ sync: true }));
+    if (options && options.dirty) {
+      options.dirty(...args);
+    }
+
+    const finalResult = options && options.modifyReturnValue
+      ? options.modifyReturnValue(result)
+      : result;
+
+    if (cacheKey) {
+      withCacheSlot.getValue()![cacheKey] = finalResult;
+    }
+
+    return finalResult;
+  }) as F;
+}
+
+const withCacheSlot = new Slot<Record<string, any>>();
+export function withCache<R>(fn: () => R): R {
+  const cache = withCacheSlot.getValue();
+  return cache ? fn() : withCacheSlot.withValue(Object.create(null), fn);
 }
 
 let dependOnPathSalt = 0;
-export const dependOnPath = require("optimism").wrap(
+import { wrap } from "optimism";
+export const dependOnPath = wrap(
   // Always return something different to prevent optimism from
   // second-guessing the dirtiness of this function.
-  path => ++dependOnPathSalt,
+  (_path: string) => ++dependOnPathSalt,
   // This function is disposable because we don't care about its result,
   // only its role in optimistic dependency tracking/dirtying.
   { disposable: true }
 );
 
-function wrapDestructiveFsFunc(name, pathArgIndices) {
-  pathArgIndices = pathArgIndices || [0];
-  wrapFsFunc(name, pathArgIndices, {
-    dirty(...args) {
-      // Immediately reset all optimistic functions (defined in
-      // tools/fs/optimistic.js) that depend on these paths.
+function wrapDestructiveFsFunc<
+  TArgs extends any[],
+  TResult,
+  F extends (...args: TArgs) => TResult,
+>(
+  fnName: string,
+  fn: F,
+  pathArgIndices: number[] = [0],
+  options?: wrapFsFuncOptions<TArgs, TResult>,
+): F {
+  return wrapFsFunc<TArgs, TResult, F>(fnName, fn, pathArgIndices, {
+    ...options,
+    dirty(...args: TArgs) {
       pathArgIndices.forEach(i => dependOnPath.dirty(args[i]));
     }
-  });
+  }) as F;
 }
 
-wrapDestructiveFsFunc("writeFile");
-wrapDestructiveFsFunc("appendFile");
-
-wrapFsFunc("readFile", [0], {
-  modifyReturnValue: function (fileData) {
-    if (_.isString(fileData)) {
-      return files.convertToStandardLineEndings(fileData);
+export const readFile = wrapFsFunc("readFile", fs.readFileSync, [0], {
+  modifyReturnValue: function (fileData: Buffer | string) {
+    if (typeof fileData === "string") {
+      return convertToStandardLineEndings(fileData);
     }
-
     return fileData;
   }
 });
 
-wrapFsFunc("stat", [0]);
-wrapFsFunc("lstat", [0]);
-
-wrapDestructiveFsFunc("rename", [0, 1]);
-
-wrapDestructiveFsFunc("copyFile", [0, 1]);
-const wrappedCopyFile = files.copyFile;
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
-files.copyFile = function copyFile(from, to, flags = 0) {
-  files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0o755);
+const wrappedCopyFile = wrapDestructiveFsFunc("copyFile", fs.copyFileSync, [0, 1]);
+export function copyFile(from: string, to: string, flags = 0) {
+  mkdir_p(pathDirname(pathResolve(to)), 0o755);
   wrappedCopyFile(from, to, flags);
   const stat = statOrNull(from);
   if (stat && stat.isFile()) {
@@ -1709,176 +1698,67 @@ files.copyFile = function copyFile(from, to, flags = 0) {
     // modified by umask.) We don't copy the mode *directly* because this function
     // is used by 'meteor create' which is copying from the read-only tools tree
     // into a writable app.
-    files.chmod(to, (stat.mode & 0o100) ? 0o777 : 0o666);
+    chmod(to, (stat.mode & 0o100) ? 0o777 : 0o666);
   }
-};
-
-// After the outermost files.withCache call returns, the withCacheCache is
-// reset to null so that it does not survive server restarts.
-let withCacheCache = null;
-
-files.withCache = Profile("files.withCache", function (fn) {
-  const oldCache = withCacheCache;
-  withCacheCache = oldCache || Object.create(null);
-  try {
-    return fn();
-  } finally {
-    withCacheCache = oldCache;
-  }
-});
-
-function enableCache(name) {
-  const method = files[name];
-
-  function makeCacheKey(args) {
-    var parts = [name];
-
-    for (var i = 0; i < args.length; ++i) {
-      var arg = args[i];
-
-      if (typeof arg !== "string") {
-        // If any of the arguments is not a string, then we won't cache
-        // the result of the corresponding file.* method invocation.
-        return null;
-      }
-
-      parts.push(arg);
-    }
-
-    return parts.join("\0");
-  }
-
-  files[name] = function (...args) {
-    if (withCacheCache) {
-      var cacheKey = makeCacheKey(args);
-      if (cacheKey && cacheKey in withCacheCache) {
-        return withCacheCache[cacheKey];
-      }
-    }
-
-    const result = method.apply(files, args);
-
-    if (withCacheCache && cacheKey !== null) {
-      // If cacheKey === null, then we called makeCacheKey above and it
-      // failed because one of the arguments was not a string, so we
-      // should not try to call makeCacheKey again.
-      withCacheCache[cacheKey || makeCacheKey(args)] = result;
-    }
-
-    return result;
-  };
 }
 
-// The fs.exists method is deprecated in Node v4:
-// https://nodejs.org/api/fs.html#fs_fs_exists_path_callback
-files.exists =
-files.existsSync = function (path, callback) {
-  if (typeof callback === "function") {
-    throw new Error("Passing a callback to files.exists is no longer supported");
-  }
-  return !! files.statOrNull(path);
-};
+const wrappedRename = wrapDestructiveFsFunc("rename", fs.renameSync, [0, 1]);
+export const rename = isWindowsLikeFilesystem() ? function (from: string, to: string) {
+  // Retries are necessary only on Windows, because the rename call can
+  // fail with EBUSY, which means the file is in use.
+  let maxTries = 10;
+  let success = false;
+  const osTo = convertToOSPath(to);
 
-if (files.isWindowsLikeFilesystem()) {
-  const rename = files.rename;
-
-  files.rename = function (from, to) {
-    // Retries are necessary only on Windows, because the rename call can
-    // fail with EBUSY, which means the file is in use.
-    let maxTries = 10;
-    let success = false;
-    const osTo = files.convertToOSPath(to);
-
-    while (! success && maxTries-- > 0) {
-      try {
-        // Despite previous failures, the top-level destination directory
-        // may have been successfully created, so we must remove it to
-        // avoid moving the source file *into* the destination directory.
-        rimraf.sync(osTo);
-        rename(from, to);
-        success = true;
-      } catch (err) {
-        if (err.code !== 'EPERM' && err.code !== 'EACCES') {
-          throw err;
-        }
+  while (! success && maxTries-- > 0) {
+    try {
+      // Despite previous failures, the top-level destination directory
+      // may have been successfully created, so we must remove it to
+      // avoid moving the source file *into* the destination directory.
+      rimraf.sync(osTo);
+      wrappedRename(from, to);
+      success = true;
+    } catch (err) {
+      if (err.code !== 'EPERM' && err.code !== 'EACCES') {
+        throw err;
       }
     }
+  }
 
-    if (! success) {
-      files.cp_r(from, to, { preserveSymlinks: true });
-      files.rm_recursive(from);
-    }
-  };
-}
+  if (! success) {
+    cp_r(from, to, { preserveSymlinks: true });
+    rm_recursive(from);
+  }
+} : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg
-wrapFsFunc("realpath", [0], {
-  modifyReturnValue: files.convertToStandardPath
+export const realpath = wrapFsFunc("realpath", fs.realpathSync, [0], {
+  cached: true,
+  modifyReturnValue: convertToStandardPath,
 });
 
-wrapFsFunc("readdir", [0], {
-  modifyReturnValue: function (entries) {
-    return _.map(entries, files.convertToStandardPath);
-  }
+export const readdir = wrapFsFunc("readdir", fs.readdirSync, [0], {
+  cached: true,
+  modifyReturnValue(entries: string[]) {
+    return entries.map(entry => convertToStandardPath(entry));
+  },
 });
 
-wrapDestructiveFsFunc("rmdir");
-wrapDestructiveFsFunc("mkdir");
-wrapDestructiveFsFunc("unlink");
-wrapDestructiveFsFunc("chmod");
-
-wrapFsFunc("open", [0]);
-
-// XXX this doesn't give you the second argument to the callback
-wrapFsFunc("read", []);
-wrapFsFunc("write", []);
-wrapFsFunc("close", []);
-wrapFsFunc("symlink", [0, 1]);
-wrapFsFunc("readlink", [0]);
-
-// These don't need to be Fiberized
-files.createReadStream = function (...args) {
-  args[0] = files.convertToOSPath(args[0]);
-  return fs.createReadStream(...args);
-};
-
-files.createWriteStream = function (...args) {
-  args[0] = files.convertToOSPath(args[0]);
-  return fs.createWriteStream(...args);
-};
-
-files.watchFile = function (...args) {
-  args[0] = files.convertToOSPath(args[0]);
-  return fs.watchFile(...args);
-};
-
-files.unwatchFile = function (...args) {
-  args[0] = files.convertToOSPath(args[0]);
-  return fs.unwatchFile(...args);
-};
-
-files.readBufferWithLengthAndOffset = function (filename, length, offset) {
-  var data = Buffer.alloc(length);
-  // Read the data from disk, if it is non-empty. Avoid doing IO for empty
-  // files, because (a) unnecessary and (b) fs.readSync with length 0
-  // throws instead of acting like POSIX read:
-  // https://github.com/joyent/node/issues/5685
-  if (length > 0) {
-    var fd = files.open(filename, "r");
-    try {
-      var count = files.read(
-        fd, data, 0, length, offset);
-    } finally {
-      files.close(fd);
-    }
-    if (count !== length) {
-      throw new Error("couldn't read entire resource");
-    }
-  }
-  return data;
-};
-
-enableCache("readdir");
-enableCache("realpath");
-enableCache("stat");
-enableCache("lstat");
+export const appendFile = wrapDestructiveFsFunc("appendFile", fs.appendFileSync);
+export const chmod = wrapDestructiveFsFunc("chmod", fs.chmodSync);
+export const close = wrapFsFunc("close", fs.closeSync, []);
+export const createReadStream = wrapFsFunc("createReadStream", fs.createReadStream, [0]);
+export const createWriteStream = wrapFsFunc("createWriteStream", fs.createWriteStream, [0]);
+export const lstat = wrapFsFunc("lstat", fs.lstatSync, [0], { cached: true });
+export const mkdir = wrapDestructiveFsFunc("mkdir", fs.mkdirSync);
+export const open = wrapFsFunc("open", fs.openSync, [0]);
+export const read = wrapFsFunc("read", fs.readSync, []);
+export const readlink = wrapFsFunc("readlink", fs.readlinkSync, [0]);
+export const rmdir = wrapDestructiveFsFunc("rmdir", fs.rmdirSync);
+export const stat = wrapFsFunc("stat", fs.statSync, [0], { cached: true });
+export const symlink = wrapFsFunc("symlink", fs.symlinkSync, [0, 1]);
+export const unlink = wrapDestructiveFsFunc("unlink", fs.unlinkSync);
+export const unwatchFile = wrapFsFunc("unwatchFile", fs.unwatchFile, [0]);
+export const watchFile = wrapFsFunc("watchFile", fs.watchFile, [0]);
+export const write = wrapFsFunc("write", fs.writeSync, []);
+export const writeFile = wrapDestructiveFsFunc("writeFile", fs.writeFileSync);

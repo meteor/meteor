@@ -4,7 +4,7 @@ import assert from 'assert';
 import chalk from 'chalk';
 import semver from 'semver';
 
-import files from '../fs/files.js';
+import files from '../fs/files';
 import utils from '../utils/utils.js';
 import { Console } from '../console/console.js';
 import { Profile } from '../tool-env/profile.js';

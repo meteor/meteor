@@ -1,7 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../fs/files.js');
 
+import * as files from "../fs/files";
 import { execSync } from 'child_process';
 // Default maxBuffer for execSync is 1024 * 1024 bytes, so this is 10x that.
 const maxBuffer = 10 * 1024 * 1024;

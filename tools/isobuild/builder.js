@@ -2,7 +2,7 @@ import assert from "assert";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
 import files, {
   symlinkWithOverwrite,
-} from '../fs/files.js';
+} from '../fs/files';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../tool-env/profile.js';
 import {

@@ -2,7 +2,7 @@ var _ = require('underscore');
 
 var buildmessage = require('../utils/buildmessage.js');
 var compiler = require('./compiler.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch.js');
 var colonConverter = require('../utils/colon-converter.js');

@@ -7,7 +7,7 @@ var isopack = require('../isobuild/isopack.js');
 var buildmessage = require('../utils/buildmessage.js');
 var Console = require('../console/console.js').Console;
 var auth = require('../meteor-services/auth.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 
 var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');

@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
 
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var watch = require('../fs/watch.js');
 var buildmessage = require('../utils/buildmessage.js');
@@ -23,7 +23,7 @@ import {
   TEST_FILENAME_REGEXPS,
   APP_TEST_FILENAME_REGEXPS,
   isTestFilePath,
-} from './test-files.js';
+} from './test-files';
 
 import {
   convert as convertColonsInPath
