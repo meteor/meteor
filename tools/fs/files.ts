@@ -6,13 +6,12 @@
 
 import assert from "assert";
 import fs from "fs";
+import path from "path";
+import os from "os";
+import { spawn, execFile } from "child_process";
 
-// var fs = require("fs");
-const path = require('path');
-const os = require('os');
 const _ = require('underscore');
 const Fiber = require("fibers");
-const { spawn, execFile } = require("child_process");
 
 const rimraf = require('rimraf');
 const sourcemap = require('source-map');
@@ -821,8 +820,10 @@ function tryExtractWithNativeTar(
     tarProc.on("error", reject);
     tarProc.on("exit", resolve);
 
-    tarProc.stdin.write(buffer);
-    tarProc.stdin.end();
+    if (tarProc.stdin) {
+      tarProc.stdin.write(buffer);
+      tarProc.stdin.end();
+    }
   });
 }
 
@@ -842,7 +843,7 @@ function tryExtractWithNative7z(
   const tarGzBasename = "out.tar.gz";
   const spawnOptions = {
     cwd: convertToOSPath(tempDir),
-    stdio: options.verbose ? "inherit" : "pipe",
+    stdio: (options.verbose ? "inherit" : "pipe") as ("inherit" | "pipe"),
   };
 
   writeFile(pathJoin(tempDir, tarGzBasename), buffer);
