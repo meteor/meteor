@@ -26,7 +26,7 @@ const colonConverter = require('../utils/colon-converter.js');
 
 const Profile = require('../tool-env/profile.js').Profile;
 
-export * from './mini-files';
+export * from '../static-assets/server/mini-files';
 import {
   convertToOSPath,
   convertToPosixPath,
@@ -42,7 +42,7 @@ import {
   pathRelative,
   pathResolve,
   pathSep,
-} from "./mini-files";
+} from "../static-assets/server/mini-files";
 
 const { hasOwnProperty } = Object.prototype;
 

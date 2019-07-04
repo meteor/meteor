@@ -2715,7 +2715,7 @@ class ServerTarget extends JsImageTarget {
       "boot-utils.js",
       "debug.ts",
       "server-json.js",
-      "mini-files.js",
+      "mini-files.ts",
       "npm-require.js",
       "npm-rebuild.js",
       "npm-rebuild-args.js",
