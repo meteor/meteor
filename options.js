@@ -151,50 +151,50 @@ function getRuntimeTransform(features) {
 }
 
 function getDefaultsForNode8(features) {
-  // Compile import/export syntax with Reify.
-  const plugins = [getReifyPlugin(features)];
+  const combined = {
+    presets: [],
+    plugins: [getReifyPlugin(features)]
+  };
 
   const compileModulesOnly = features.compileModulesOnly;
   if (! compileModulesOnly) {
+    combined.presets.push(babelPresetMeteorModern.getPreset);
+
     // Support Flow type syntax by simply stripping it out.
-    plugins.push(
+    combined.plugins.push(
       require("@babel/plugin-syntax-flow"),
       require("@babel/plugin-transform-flow-strip-types")
     );
 
     const rt = getRuntimeTransform(features);
     if (rt) {
-      plugins.push(rt);
+      combined.plugins.push(rt);
     }
 
     // Not fully supported in Node 8 without the --harmony flag.
-    plugins.push(
+    combined.plugins.push(
       require("@babel/plugin-syntax-object-rest-spread"),
       require("@babel/plugin-proposal-object-rest-spread")
     );
 
     // Ensure that async functions run in a Fiber, while also taking
     // full advantage of native async/await support in Node 8.
-    plugins.push([require("./plugins/async-await.js"), {
+    combined.plugins.push([require("./plugins/async-await.js"), {
       // Do not transform `await x` to `Promise.await(x)`, since Node
       // 8 has native support for await expressions.
       useNativeAsyncAwait: false
     }]);
 
     // Enable async generator functions proposal.
-    plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
+    combined.plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
   }
-
-  const presets = [{
-    plugins
-  }];
 
   if (! compileModulesOnly) {
-    maybeAddReactPlugins(features, { plugins, presets });
-    maybeAddTypeScriptPreset(features, presets);
+    maybeAddReactPlugins(features, combined);
+    maybeAddTypeScriptPreset(features, combined.presets);
   }
 
-  return finish(presets);
+  return finish([combined]);
 }
 
 exports.getMinifierDefaults = function getMinifierDefaults(features) {
