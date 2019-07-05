@@ -5,10 +5,11 @@
 ///
 
 import assert from "assert";
-import fs from "fs";
+import fs, { Stats } from "fs";
 import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
+import { EventEmitter } from "events";
 import { Slot } from "@wry/context";
 
 const _ = require('underscore');
@@ -1755,7 +1756,43 @@ export const rmdir = wrapDestructiveFsFunc("rmdir", fs.rmdirSync);
 export const stat = wrapFsFunc("stat", fs.statSync, [0], { cached: true });
 export const symlink = wrapFsFunc("symlink", fs.symlinkSync, [0, 1]);
 export const unlink = wrapDestructiveFsFunc("unlink", fs.unlinkSync);
-export const unwatchFile = wrapFsFunc("unwatchFile", fs.unwatchFile, [0]);
-export const watchFile = wrapFsFunc("watchFile", fs.watchFile, [0]);
 export const write = wrapFsFunc("write", fs.writeSync, []);
 export const writeFile = wrapDestructiveFsFunc("writeFile", fs.writeFileSync);
+
+type StatListener = (
+  current: Stats,
+  previous: Stats,
+) => void;
+
+type StatWatcherOptions = {
+  persistent?: boolean;
+  interval?: number;
+};
+
+interface StatWatcher extends EventEmitter {
+  stop: () => void;
+  start: (
+    filename: string,
+    options: StatWatcherOptions,
+    listener: StatListener,
+  ) => void;
+}
+
+export const watchFile = wrapFsFunc("watchFile", (
+  filename: string,
+  options: StatWatcherOptions,
+  listener: StatListener,
+) => {
+  return fs.watchFile(
+    filename,
+    options,
+    listener,
+  ) as any as StatWatcher;
+}, [0]);
+
+export const unwatchFile = wrapFsFunc("unwatchFile", (
+  filename: string,
+  listener: StatListener,
+) => {
+  return fs.unwatchFile(filename, listener);
+}, [0]);
