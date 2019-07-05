@@ -4,7 +4,7 @@ import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files';
-import { optimisticReadJsonOrNull } from "../fs/optimistic.js";
+import { optimisticReadJsonOrNull } from "../fs/optimistic";
 import bundler from '../isobuild/bundler.js';
 import archinfo from '../utils/archinfo.js';
 import release from '../packaging/release.js';

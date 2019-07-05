@@ -39,7 +39,7 @@ import {
   optimisticLStatOrNull,
   optimisticHashOrNull,
   shouldWatch,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 import { wrap } from "optimism";
 import { compile as reifyCompile } from "reify/lib/compiler";

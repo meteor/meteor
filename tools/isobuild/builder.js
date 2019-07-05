@@ -11,7 +11,7 @@ import {
   optimisticStatOrNull,
   optimisticLStatOrNull,
   optimisticHashOrNull,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In

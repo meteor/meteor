@@ -24,7 +24,7 @@ import { wrap } from "optimism";
 import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 const nativeModulesMap = Object.create(null);
 const nativeNames = Object.keys(process.binding("natives"));

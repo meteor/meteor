@@ -20,7 +20,7 @@ import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 import {
   optimisticReadJsonOrNull,
   optimisticHashOrNull,
-} from "./fs/optimistic.js";
+} from "./fs/optimistic";
 
 import {
   mapWhereToArches,

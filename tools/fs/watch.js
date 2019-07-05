@@ -7,7 +7,7 @@ import {Profile} from '../tool-env/profile.js';
 
 import {
   optimisticHashOrNull,
-} from "./optimistic.js";
+} from "./optimistic";
 
 const WATCH_COALESCE_MS =
   process.env.METEOR_FILE_WATCH_COALESCE_MS || 100;

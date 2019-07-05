@@ -19,7 +19,7 @@ import Resolver from "./resolver.js";
 import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 import { isTestFilePath } from './test-files.js';
 

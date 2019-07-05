@@ -17,7 +17,7 @@ import { SourceProcessorSet } from './build-plugin.js';
 import {
   optimisticReadFile,
   optimisticHashOrNull,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 var compiler = exports;
 

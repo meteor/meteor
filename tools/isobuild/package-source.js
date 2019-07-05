@@ -35,7 +35,7 @@ import {
   optimisticStatOrNull,
   optimisticReadMeteorIgnore,
   optimisticLookupPackageJson,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file

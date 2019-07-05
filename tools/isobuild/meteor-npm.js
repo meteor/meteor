@@ -30,7 +30,7 @@ import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
   optimisticReaddir,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 var meteorNpm = exports;
 

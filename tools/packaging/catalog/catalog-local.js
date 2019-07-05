@@ -8,7 +8,7 @@ import { sync as glob } from "glob";
 import { Profile } from "../../tool-env/profile.js";
 import {
   optimisticHashOrNull,
-} from "../../fs/optimistic.js";
+} from "../../fs/optimistic";
 
 // LocalCatalog represents packages located in the application's
 // package directory, other package directories specified via an
