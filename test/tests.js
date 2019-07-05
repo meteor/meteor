@@ -282,6 +282,15 @@ describe("meteor-babel", () => {
       source
     );
   });
+
+  it("should support class properties", () => {
+    import { Test } from "./class-properties.ts";
+    const tsTest = new Test("asdf");
+    assert.strictEqual(tsTest.property, 1234);
+    assert.strictEqual(tsTest.value, "asdf");
+    const jsTest = new (class { foo = 42 });
+    assert.strictEqual(jsTest.foo, 42);
+  });
 });
 
 describe("Babel", function() {
