@@ -157,7 +157,7 @@ export function findGitCommitHash(path: string) {
 export function addToGitignore(dirPath: string, entry: string) {
   const filePath = pathJoin(dirPath, ".gitignore");
   if (exists(filePath)) {
-    let data = readFile(filePath, 'utf8');
+    let data = readFile(filePath, 'utf8') as string;
     const lines = data.split(/\n/);
     if (lines.some(line => line === entry)) {
       // already there do nothing
@@ -1364,7 +1364,7 @@ export class KeyValueFile {
   constructor(public path: string) {}
 
   set(k: string, v: any) {
-    const data = this.readAll() || '';
+    const data = (this.readAll() || '').toString("utf8");
     const lines = data.split(/\n/);
 
     let found = false;
@@ -1585,16 +1585,12 @@ type wrapFsFuncOptions<TArgs extends any[], TResult> = {
   dirty?: (...args: TArgs) => any;
 }
 
-function wrapFsFunc<
-  TArgs extends any[],
-  TResult,
-  F extends (...args: TArgs) => TResult,
->(
+function wrapFsFunc<TArgs extends any[], TResult>(
   fnName: string,
-  fn: F,
+  fn: (...args: TArgs) => TResult,
   pathArgIndices: number[],
   options?: wrapFsFuncOptions<TArgs, TResult>,
-): F {
+): typeof fn {
   return Profile("files." + fnName, function (...args: TArgs) {
     for (let j = pathArgIndices.length - 1; j >= 0; --j) {
       const i = pathArgIndices[j];
@@ -1637,7 +1633,7 @@ function wrapFsFunc<
     }
 
     return finalResult;
-  }) as F;
+  });
 }
 
 const withCacheSlot = new Slot<Record<string, any>>();
@@ -1657,22 +1653,18 @@ export const dependOnPath = wrap(
   { disposable: true }
 );
 
-function wrapDestructiveFsFunc<
-  TArgs extends any[],
-  TResult,
-  F extends (...args: TArgs) => TResult,
->(
+function wrapDestructiveFsFunc<TArgs extends any[], TResult>(
   fnName: string,
-  fn: F,
+  fn: (...args: TArgs) => TResult,
   pathArgIndices: number[] = [0],
   options?: wrapFsFuncOptions<TArgs, TResult>,
-): F {
-  return wrapFsFunc<TArgs, TResult, F>(fnName, fn, pathArgIndices, {
+): typeof fn {
+  return wrapFsFunc<TArgs, TResult>(fnName, fn, pathArgIndices, {
     ...options,
     dirty(...args: TArgs) {
       pathArgIndices.forEach(i => dependOnPath.dirty(args[i]));
     }
-  }) as F;
+  });
 }
 
 export const readFile = wrapFsFunc("readFile", fs.readFileSync, [0], {
@@ -1732,12 +1724,14 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
 } : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg
-export const realpath = wrapFsFunc("realpath", fs.realpathSync, [0], {
+export const realpath =
+wrapFsFunc<[string], string>("realpath", fs.realpathSync, [0], {
   cached: true,
   modifyReturnValue: convertToStandardPath,
 });
 
-export const readdir = wrapFsFunc("readdir", fs.readdirSync, [0], {
+export const readdir =
+wrapFsFunc<[string], string[]>("readdir", fs.readdirSync, [0], {
   cached: true,
   modifyReturnValue(entries: string[]) {
     return entries.map(entry => convertToStandardPath(entry));
@@ -1753,7 +1747,7 @@ export const lstat = wrapFsFunc("lstat", fs.lstatSync, [0], { cached: true });
 export const mkdir = wrapDestructiveFsFunc("mkdir", fs.mkdirSync);
 export const open = wrapFsFunc("open", fs.openSync, [0]);
 export const read = wrapFsFunc("read", fs.readSync, []);
-export const readlink = wrapFsFunc("readlink", fs.readlinkSync, [0]);
+export const readlink = wrapFsFunc<[string], string>("readlink", fs.readlinkSync, [0]);
 export const rmdir = wrapDestructiveFsFunc("rmdir", fs.rmdirSync);
 export const stat = wrapFsFunc("stat", fs.statSync, [0], { cached: true });
 export const symlink = wrapFsFunc("symlink", fs.symlinkSync, [0, 1]);
