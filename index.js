@@ -7,6 +7,8 @@ module.exports = function (api, options) {
       require("@babel/plugin-transform-arrow-functions"),
       require("@babel/plugin-transform-block-scoped-functions"),
       require("@babel/plugin-transform-block-scoping"),
+      require("@babel/plugin-syntax-class-properties"),
+      require("@babel/plugin-proposal-class-properties"),
       [require("@babel/plugin-transform-classes"), {
         loose: true
       }],

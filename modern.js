@@ -9,9 +9,8 @@ exports.getPreset = function (api, options) {
       }],
       require("@babel/plugin-transform-literals"),
       require("@babel/plugin-transform-template-literals"),
-      // [require("@babel/plugin-transform-classes"), {
-      //   loose: true
-      // }],
+      require("@babel/plugin-syntax-class-properties"),
+      require("@babel/plugin-proposal-class-properties"),
       require("@babel/plugin-transform-parameters"),
       // require("@babel/plugin-transform-unicode-regex"),
       require("@babel/plugin-proposal-object-rest-spread"),
