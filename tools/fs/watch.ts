@@ -1,16 +1,17 @@
-import files from './files';
-import _ from "underscore";
-import * as safeWatcher from './safe-watcher.js';
-import {createHash} from "crypto";
-import {coalesce} from '../utils/func-utils.js';
-import {Profile} from '../tool-env/profile.js';
-
+import { Stats, FSWatcher } from "fs";
+import * as files from "./files";
+import * as safeWatcher from "./safe-watcher.js";
+import { createHash } from "crypto";
+import { coalesce } from "../utils/func-utils.js";
+import { Profile } from "../tool-env/profile.js";
 import {
   optimisticHashOrNull,
 } from "./optimistic";
 
+const _ = require("underscore");
+
 const WATCH_COALESCE_MS =
-  process.env.METEOR_FILE_WATCH_COALESCE_MS || 100;
+  +(process.env.METEOR_FILE_WATCH_COALESCE_MS || 100);
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -68,120 +69,123 @@ const WATCH_COALESCE_MS =
 // nonexistent if they point to something nonexist, etc). Not sure if this is
 // correct.
 
+type DirectoryEntry = {
+  absPath: string;
+  include: RegExp[];
+  exclude: RegExp[];
+  names: string[];
+  contents: string[] | null;
+}
+
 export class WatchSet {
-  constructor() {
-    var self = this;
+  // Set this to true if any Watcher built on this WatchSet must immediately
+  // fire (eg, if this WatchSet was given two different sha1 for the same file).
+  public alwaysFire = false;
 
-    // Set this to true if any Watcher built on this WatchSet must immediately
-    // fire (eg, if this WatchSet was given two different sha1 for the same file).
-    self.alwaysFire = false;
+  // Map from the absolute path to a file, to a sha1 hash, or null if the file
+  // should not exist. A Watcher created from this set fires when the file
+  // changes from that sha, or is deleted (if non-null) or created (if null).
+  //
+  // Note that Isopack.getSourceFilesUnderSourceRoot() depends on this field
+  // existing (it's not just an internal implementation detail of watch.ts).
+  public readonly files: Record<string, string | null> = Object.create(null);
 
-    // Map from the absolute path to a file, to a sha1 hash, or null if the file
-    // should not exist. A Watcher created from this set fires when the file
-    // changes from that sha, or is deleted (if non-null) or created (if null).
-    //
-    // Note that Isopack.getSourceFilesUnderSourceRoot() depends on this field
-    // existing (it's not just an internal implementation detail of watch.js).
-    self.files = {};
+  // This represents the assertion that 'absPath' is a directory and that
+  // 'contents' is its immediate contents, as filtered by the regular
+  // expressions.  Entries in 'contents' are file and subdirectory names;
+  // directory names end with '/'. 'contents' is sorted. An entry is in
+  // 'contents' if its value (including the slash, for directories) matches at
+  // least one regular expression in 'include' and no regular expressions in
+  // 'exclude'... or if it is in 'names'.
+  //
+  // There is no recursion here: files contained in subdirectories never appear.
+  //
+  // A directory may have multiple entries (presumably with different
+  // include/exclude filters).
+  public readonly directories: DirectoryEntry[] = [];
 
-    // Array of object with keys:
-    // - 'absPath': absolute path to a directory
-    // - 'include': array of RegExps
-    // - 'exclude': array of RegExps
-    // - 'names': array of strings
-    // - 'contents': array of strings, or null if the directory should not exist
-    //
-    // This represents the assertion that 'absPath' is a directory and that
-    // 'contents' is its immediate contents, as filtered by the regular
-    // expressions.  Entries in 'contents' are file and subdirectory names;
-    // directory names end with '/'. 'contents' is sorted. An entry is in
-    // 'contents' if its value (including the slash, for directories) matches at
-    // least one regular expression in 'include' and no regular expressions in
-    // 'exclude'... or if it is in 'names'.
-    //
-    // There is no recursion here: files contained in subdirectories never appear.
-    //
-    // A directory may have multiple entries (presumably with different
-    // include/exclude filters).
-    self.directories = [];
-  }
-
-  addFile(filePath, hash) {
-    var self = this;
+  public addFile(filePath: string, hash: string | null) {
     // No need to update if this is in always-fire mode already.
-    if (self.alwaysFire) {
+    if (this.alwaysFire) {
       return;
     }
-    if (_.has(self.files, filePath)) {
+    if (_.has(this.files, filePath)) {
       // Redundant?
-      if (self.files[filePath] === hash) {
+      if (this.files[filePath] === hash) {
         return;
       }
       // Nope, inconsistent.
-      self.alwaysFire = true;
+      this.alwaysFire = true;
       return;
     }
-    self.files[filePath] = hash;
+    this.files[filePath] = hash;
   }
 
-  addDirectory({absPath, include, exclude, names, contents: unsortedContents}) {
-    var self = this;
-    if (self.alwaysFire) {
-      return;
-    }
+  public addDirectory({
+    absPath,
+    include,
+    exclude,
+    names,
+    contents,
+  }: DirectoryEntry) {
+    if (this.alwaysFire) return;
     if (_.isEmpty(include) && _.isEmpty(names)) {
       return;
     }
-    const contents = _.clone(unsortedContents);
-    if (contents) {
-      contents.sort();
-    }
-
-    self.directories.push({absPath, include, exclude, names, contents});
+    this.directories.push({
+      absPath,
+      include,
+      exclude,
+      names,
+      contents: contents && contents.slice(0).sort(),
+    });
   }
 
   // Merges another WatchSet into this one. This one will now fire if either
   // WatchSet would have fired.
-  merge(other) {
-    var self = this;
-    if (self.alwaysFire) {
+  public merge(that: WatchSet) {
+    if (this.alwaysFire) return;
+    if (that.alwaysFire) {
+      this.alwaysFire = true;
       return;
     }
-    if (other.alwaysFire) {
-      self.alwaysFire = true;
-      return;
-    }
-   _.each(other.files, function (hash, name) {
-     self.addFile(name, hash);
-   });
-    _.each(other.directories, function (dir) {
+
+    Object.keys(that.files).forEach(name => {
+      this.addFile(name, that.files[name]);
+    });
+
+    that.directories.forEach(dir => {
       // XXX this doesn't deep-clone the directory, but I think these objects
-      // are never mutated #WatchSetShallowClone
-      self.directories.push(dir);
+      // are never mutated #WatchSetShallowClone #TypeScriptOpportunity
+      this.directories.push(dir);
     });
   }
 
-  clone() {
-    var self = this;
-    var ret = new WatchSet();
+  public clone() {
+    const ret = new WatchSet();
+
+    ret.alwaysFire = this.alwaysFire;
+
+    Object.keys(this.files).forEach(name => {
+      ret.files[name] = this.files[name];
+    });
 
     // XXX doesn't bother to deep-clone the directory info
     // #WatchSetShallowClone
-    ret.alwaysFire = self.alwaysFire;
-    ret.files = _.clone(self.files);
-    ret.directories = _.clone(self.directories);
+    this.directories.forEach(entry => {
+      ret.directories.push(entry);
+    });
+
     return ret;
   }
 
   toJSON() {
-    var self = this;
-    if (self.alwaysFire) {
-      return {alwaysFire: true};
+    if (this.alwaysFire) {
+      return { alwaysFire: true };
     }
-    var ret = {files: self.files};
 
-    var reToJSON = function (r) {
-      var options = '';
+    function reToJSON(r: RegExp) {
+      let options = '';
       if (r.ignoreCase) {
         options += 'i';
       }
@@ -192,60 +196,64 @@ export class WatchSet {
         options += 'g';
       }
       if (options) {
-        return {$regex: r.source, $options: options};
+        return {
+          $regex: r.source,
+          $options: options,
+        };
       }
       return r.source;
-    };
+    }
 
-    ret.directories = _.map(self.directories, function (d) {
-      return {
+    return {
+      files: this.files,
+      directories: this.directories.map(d => ({
         absPath: d.absPath,
-        include: _.map(d.include, reToJSON),
-        exclude: _.map(d.exclude, reToJSON),
+        include: d.include.map(reToJSON),
+        exclude: d.exclude.map(reToJSON),
         names: d.names,
         contents: d.contents
-      };
-    });
-
-    return ret;
+      })),
+    };
   }
 
-  static fromJSON(json) {
-    var set = new WatchSet();
+  static fromJSON(json: any) {
+    const watchSet = new WatchSet();
 
     if (! json) {
-      return set;
+      return watchSet;
     }
 
     if (json.alwaysFire) {
-      set.alwaysFire = true;
-      return set;
+      watchSet.alwaysFire = true;
+      return watchSet;
     }
 
-    set.files = _.clone(json.files);
+    Object.keys(json.files).forEach(name => {
+      watchSet.files[name] = json.files[name];
+    });
 
-    var reFromJSON = function (j) {
-      if (_.has(j, '$regex')) {
+    function reFromJSON(j: any) {
+      if (j.$regex) {
         return new RegExp(j.$regex, j.$options);
       }
       return new RegExp(j);
-    };
+    }
 
-    set.directories = _.map(json.directories, function (d) {
-      return {
+    json.directories.forEach((d: any) => {
+      watchSet.directories.push({
         absPath: d.absPath,
-        include: _.map(d.include, reFromJSON),
-        exclude: _.map(d.exclude, reFromJSON),
+        include: d.include.map(reFromJSON),
+        exclude: d.exclude.map(reFromJSON),
         names: d.names,
-        contents: d.contents
-      };
+        contents: d.contents,
+      })
     });
 
-    return set;
+    return watchSet;
   }
 }
 
-export function readFile(absPath) {
+export function readFile(absPath: string) {
   try {
     return files.readFile(absPath);
   } catch (e) {
@@ -258,19 +266,19 @@ export function readFile(absPath) {
   }
 };
 
-export const sha1 = Profile("sha1", function (...args) {
-  var hash = createHash('sha1');
+export const sha1 = Profile("sha1", function (...args: (string | Buffer)[]) {
+  const hash = createHash('sha1');
   args.forEach(arg => hash.update(arg));
   return hash.digest('hex');
 });
 
-export const sha512 = Profile("sha512", function (...args) {
-  var hash = createHash('sha512');
+export const sha512 = Profile("sha512", function (...args: (string | Buffer)[]) {
+  const hash = createHash('sha512');
   args.forEach(arg => hash.update(arg));
   return hash.digest('base64');
 });
 
-function readAndStatDirectory(absPath) {
+function readAndStatDirectory(absPath: string) {
   // Read the directory.
   try {
     var contents = files.readdir(absPath);
@@ -283,8 +291,8 @@ function readAndStatDirectory(absPath) {
   }
 
   // Add slashes to the end of directories.
-  var contentsWithSlashes = [];
-  _.each(contents, function (entry) {
+  const contentsWithSlashes: string[] = [];
+  contents.forEach(entry => {
     // We do stat instead of lstat here, so that we treat symlinks to
     // directories just like directories themselves.
     const stat = files.statOrNull(files.pathJoin(absPath, entry));
@@ -301,12 +309,20 @@ function readAndStatDirectory(absPath) {
     contentsWithSlashes.push(entry);
   });
 
-  return contentsWithSlashes
+  return contentsWithSlashes;
 }
 
-function filterDirectoryContents(contents, { include, exclude, names }) {
+function filterDirectoryContents(contents: string[], {
+  include,
+  exclude,
+  names,
+}: {
+  include?: RegExp[],
+  exclude?: RegExp[],
+  names?: string[],
+}) {
   // Filter based on regexps.
-  return contents.filter((entry) => {
+  return contents.filter(entry => {
     // Is it one of the names we explicitly requested?
     if (names && names.indexOf(entry) !== -1) {
       return true;
@@ -323,70 +339,66 @@ function filterDirectoryContents(contents, { include, exclude, names }) {
   }).sort();
 }
 
-export function readDirectory({absPath, include, exclude, names}) {
+export function readDirectory({ absPath, include, exclude, names }: {
+  absPath: string;
+  include?: RegExp[],
+  exclude?: RegExp[],
+  names?: string[],
+}) {
   const contents = readAndStatDirectory(absPath);
-  return filterDirectoryContents(contents, { include, exclude, names });
+  return contents ? filterDirectoryContents(contents, {
+    include, exclude, names
+  }) : [];
 }
 
 // All fields are private.
 export class Watcher {
-  constructor(options) {
-    var self = this;
+  private watchSet: WatchSet;
+  private onChange: () => any;
+  private stopped = false;
+  private justCheckOnce = false;
+  private async = false;
 
-    // Run initial check asyncly
-    self._async = options.async;
+  private watches: Record<string, {
+    // Null until safeWatcher.watch succeeds in watching the file.
+    watcher: FSWatcher | null;
+    // Undefined until we stat the file for the first time, then null
+    // if the file is observed to be missing.
+    lastStat?: Stats | null
+  }> = Object.create(null);
 
-    // The set to watch.
-    self.watchSet = options.watchSet;
-    if (! self.watchSet) {
-      throw new Error("watchSet option is required");
-    }
-
-    // Function to call when a change is detected according to one of
-    // the above.
-    self.onChange = options.onChange;
-    if (! self.onChange) {
-      throw new Error("onChange option is required");
-    }
-
-    self.stopped = false;
-    self.justCheckOnce = !! options._justCheckOnce;
-
-    self.watches = {
-      // <absolute path of watched file or directory>: {
-      //   // Null until safeWatcher.watch succeeds in watching the file.
-      //   watcher: <object returned by safeWatcher.watch> | null,
-      //   // Undefined until we stat the file for the first time, then null
-      //   // if the file is observed to be missing.
-      //   lastStat: <object returned by files.stat> | null | undefined
-      // }
-    };
+  constructor(options: {
+    watchSet: WatchSet;
+    onChange: () => any;
+    async?: boolean;
+    justCheckOnce?: boolean;
+  }) {
+    this.async = !! options.async;
+    this.watchSet = options.watchSet;
+    this.onChange = options.onChange;
+    this.justCheckOnce = !! options.justCheckOnce;
 
     // Were we given an inconsistent WatchSet? Fire now and be done with it.
-    if (self.watchSet.alwaysFire) {
-      self._fire();
+    if (this.watchSet.alwaysFire) {
+      this.fire();
       return;
     }
 
-    self._startFileWatches();
-    self._checkDirectories();
+    this.startFileWatches();
+    this.checkDirectories();
   }
 
-  _fireIfFileChanged(absPath) {
-    var self = this;
-
-    if (self.stopped) {
+  private fireIfFileChanged(absPath: string) {
+    if (this.stopped) {
       return true;
     }
 
-    var oldHash = self.watchSet.files[absPath];
-
-    if (oldHash === undefined) {
+    const oldHash = this.watchSet.files[absPath];
+    if (typeof oldHash === "undefined") {
       throw new Error("Checking unknown file " + absPath);
     }
 
-    var newHash = optimisticHashOrNull(absPath);
-
+    const newHash = optimisticHashOrNull(absPath);
     if (newHash === null) {
       // File does not exist (or is a directory).
       // Is this what we expected?
@@ -394,13 +406,13 @@ export class Watcher {
         return false;
       }
       // Nope, not what we expected.
-      self._fire();
+      this.fire();
       return true;
     }
 
     // File exists! Is that what we expected?
     if (oldHash === null) {
-      self._fire();
+      this.fire();
       return true;
     }
 
@@ -409,27 +421,24 @@ export class Watcher {
       return false;
     }
 
-    self._fire();
+    this.fire();
     return true;
   }
 
   // infos must all be for the same directory
-  _fireIfDirectoryChanged(infos) {
-    var self = this;
-
-    if (self.stopped) {
+  private fireIfDirectoryChanged(infos: DirectoryEntry[]) {
+    if (this.stopped) {
       return true;
     }
 
     const contents = readAndStatDirectory(infos[0].absPath);
 
-    for (let i = 0; i < infos.length; i++) {
-      const info = infos[i];
-      const newContents = filterDirectoryContents(contents, info);
+    for (const info of infos) {
+      const newContents = filterDirectoryContents(contents || [], info);
 
       // If the directory has changed (including being deleted or created).
       if (! _.isEqual(info.contents, newContents)) {
-        self._fire();
+        this.fire();
         return true;
       }
     }
@@ -437,27 +446,24 @@ export class Watcher {
     return false;
   }
 
-  _startFileWatches() {
-    const self = this;
-    const keys = Object.keys(self.watchSet.files);
+  private startFileWatches() {
+    const keys = Object.keys(this.watchSet.files);
 
     // Set up a watch for each file
-    self._processBatches(keys, absPath => {
-      if (! self.justCheckOnce) {
-        self._watchFileOrDirectory(absPath, true);
+    this.processBatches(keys, absPath => {
+      if (! this.justCheckOnce) {
+        this.watchFileOrDirectory(absPath, true);
       }
 
       // Check for the case where by the time we created the watch,
       // the file had already changed from the sha we were provided.
-      self._fireIfFileChanged(absPath);
+      this.fireIfFileChanged(absPath);
     });
   }
 
-  _watchFileOrDirectory(absPath, skipCheck) {
-    var self = this;
-
-    if (! _.has(self.watches, absPath)) {
-      self.watches[absPath] = {
+  private watchFileOrDirectory(absPath: string, skipCheck = false) {
+    if (! _.has(this.watches, absPath)) {
+      this.watches[absPath] = {
         watcher: null,
         // Initially undefined (instead of null) to indicate we have never
         // called files.stat on this file before.
@@ -465,19 +471,19 @@ export class Watcher {
       };
     }
 
-    var entry = self.watches[absPath];
+    const entry = this.watches[absPath];
     if (entry.watcher) {
       // Already watching this path.
       return;
     }
 
     if (files.statOrNull(absPath)) {
-      if (self._mustNotExist(absPath)) {
-        self._fire();
+      if (this.mustNotExist(absPath)) {
+        this.fire();
         return;
       }
 
-      var onWatchEvent = self._makeWatchEventCallback(absPath);
+      const onWatchEvent = this.makeWatchEventCallback(absPath);
       entry.watcher = safeWatcher.watch(absPath, onWatchEvent);
 
       if (!skipCheck) {
@@ -485,27 +491,25 @@ export class Watcher {
         // immediately, so that we examine this file at least once.
         onWatchEvent();
       } else {
-        self._updateStatForWatch(absPath);
+        this.updateStatForWatch(absPath);
       }
 
     } else {
-      if (self._mustBeAFile(absPath)) {
-        self._fire();
+      if (this.mustBeAFile(absPath)) {
+        this.fire();
         return;
       }
 
-      var parentDir = files.pathDirname(absPath);
+      const parentDir = files.pathDirname(absPath);
       if (parentDir === absPath) {
         throw new Error("Unable to watch parent directory of " + absPath);
       }
 
-      self._watchFileOrDirectory(parentDir);
+      this.watchFileOrDirectory(parentDir);
     }
   }
 
-  _makeWatchEventCallback(absPath) {
-    var self = this;
-
+  private makeWatchEventCallback(absPath: string) {
     // Sometimes we receive a rapid succession of change events, perhaps
     // because several files were modified at once (e.g. by git reset
     // --hard), or a file was deleted and then recreated by an editor like
@@ -516,22 +520,22 @@ export class Watcher {
     // additional calls if they happen within that window of time, so that
     // a rapid succession of calls will tend to trigger only one inspection
     // of the file system.
-    return coalesce(WATCH_COALESCE_MS, function onWatchEvent() {
-      if (self.stopped) {
+    return coalesce(WATCH_COALESCE_MS, () => {
+      if (this.stopped) {
         return;
       }
 
-      // This helper method will call self._fire() if the old and new stat
+      // This helper method will call this._fire() if the old and new stat
       // objects have different types (missing, file, or directory), so we
       // can assume they have the same type for the rest of this method.
-      var stat = self._updateStatForWatch(absPath);
-      if (self.stopped) {
+      const stat = this.updateStatForWatch(absPath);
+      if (this.stopped) {
         return;
       }
 
       if (stat === null || stat.isFile()) {
-        if (_.has(self.watchSet.files, absPath)) {
-          self._fireIfFileChanged(absPath);
+        if (_.has(this.watchSet.files, absPath)) {
+          this.fireIfFileChanged(absPath);
           // XXX #3335 We probably should check again in a second, due to low
           // filesystem modtime resolution.
         }
@@ -543,15 +547,15 @@ export class Watcher {
           if (err.code === "ENOENT" ||
               err.code === "ENOTDIR") {
             // The directory was removed or changed type since we called
-            // self._updateStatForWatch, so we fire unconditionally.
-            self._fire();
+            // this._updateStatForWatch, so we fire unconditionally.
+            this.fire();
             return;
           }
           throw err;
         }
 
-        _.each(dirFiles, function(file) {
-          var fullPath = files.pathJoin(absPath, file);
+        dirFiles.forEach(file => {
+          const fullPath = files.pathJoin(absPath, file);
 
           // Recursively watch new files, if we ever previously tried to
           // watch them. Recall that when we attempt to watch a
@@ -560,16 +564,16 @@ export class Watcher {
           // intermediate directories) are created, we begin watching
           // those directories in response to change events fired for
           // directories we're already watching.
-          if (_.has(self.watches, fullPath)) {
-            self._watchFileOrDirectory(fullPath);
+          if (_.has(this.watches, fullPath)) {
+            this.watchFileOrDirectory(fullPath);
           }
         });
 
-        // If self.watchSet.directories contains any entries for the
-        // directory we are examining, call self._fireIfDirectoryChanged.
-        const infos = self.watchSet.directories.filter(info => info.absPath === absPath );
+        // If this.watchSet.directories contains any entries for the
+        // directory we are examining, call this._fireIfDirectoryChanged.
+        const infos = this.watchSet.directories.filter(info => info.absPath === absPath );
         if (infos.length) {
-          self._fireIfDirectoryChanged(infos);
+          this.fireIfDirectoryChanged(infos);
         }
         // XXX #3335 We probably should check again in a second, due to low
         // filesystem modtime resolution.
@@ -577,48 +581,47 @@ export class Watcher {
     });
   }
 
-  _mustNotExist(absPath) {
-    var wsFiles = this.watchSet.files;
+  private mustNotExist(absPath: string) {
+    const wsFiles = this.watchSet.files;
     if (_.has(wsFiles, absPath)) {
       return wsFiles[absPath] === null;
     }
     return false;
   }
 
-  _mustBeAFile(absPath) {
-    var wsFiles = this.watchSet.files;
+  private mustBeAFile(absPath: string) {
+    const wsFiles = this.watchSet.files;
     if (_.has(wsFiles, absPath)) {
       return _.isString(wsFiles[absPath]);
     }
     return false;
   }
 
-  _updateStatForWatch(absPath) {
-    var self = this;
-    var entry = self.watches[absPath];
-    var lastStat = entry.lastStat;
-    var stat = files.statOrNull(absPath);
-    var mustNotExist = self._mustNotExist(absPath);
-    var mustBeAFile = self._mustBeAFile(absPath);
+  private updateStatForWatch(absPath: string) {
+    const entry = this.watches[absPath];
+    const lastStat = entry.lastStat;
+    let stat = files.statOrNull(absPath);
+    const mustNotExist = this.mustNotExist(absPath);
+    const mustBeAFile = this.mustBeAFile(absPath);
 
     if (stat && lastStat === undefined) {
       // We have not checked for this file before, so our expectations are
       // somewhat relaxed (namely, we don't care about lastStat), but
-      // self._fire() might still need to be called if self.watchSet.files
+      // this._fire() might still need to be called if this.watchSet.files
       // has conflicting expectations.
       if (stat.isFile()) {
         if (mustNotExist) {
-          self._fire();
+          this.fire();
         }
       } else if (stat.isDirectory()) {
         if (mustNotExist || mustBeAFile) {
-          self._fire();
+          this.fire();
         }
       } else {
         // Neither a file nor a directory, so treat as non-existent.
         stat = null;
         if (mustBeAFile) {
-          self._fire();
+          this.fire();
         }
       }
 
@@ -629,37 +632,38 @@ export class Watcher {
     } else if (stat && stat.isFile()) {
       entry.lastStat = stat;
       if (! lastStat || ! lastStat.isFile()) {
-        self._fire();
+        this.fire();
       }
 
     } else if (stat && stat.isDirectory()) {
       entry.lastStat = stat;
       if (! lastStat || ! lastStat.isDirectory()) {
-        self._fire();
+        this.fire();
       }
 
     } else {
       entry.lastStat = stat = null;
       if (lastStat) {
-        self._fire();
+        this.fire();
       }
     }
 
     return stat;
   }
-  
+
   // Iterates over the array, calling handleItem for each item
   // When this._async is true, it pauses ocassionally to avoid blocking for too long
   // Stops iterating after watcher is stopped
-  _processBatches(array, handleItem) {
-    const self = this;
-    const async = self._async;
+  private processBatches<T>(
+    array: T[],
+    handleItem: (item: T) => any,
+  ) {
     let index = 0;
 
-    function processBatch() {
-      const stopTime = async ? Date.now() + 50 : Infinity;
+    const processBatch = () => {
+      const stopTime = this.async ? Date.now() + 50 : Infinity;
       while (Date.now() < stopTime && index < array.length) {
-        if (self.stopped) {
+        if (this.stopped) {
           return;
         }
 
@@ -669,7 +673,7 @@ export class Watcher {
       }
 
       if (index < array.length) {
-        if (async) {
+        if (this.async) {
           setImmediate(processBatch);
         } else {
           processBatch();
@@ -679,70 +683,65 @@ export class Watcher {
 
     processBatch();
   }
-  _checkDirectories() {
-    const self = this;
-    const dirs = Object.values(self.watchSet.directories.reduce((result, dir) => {
-      result[dir.absPath] = result[dir.absPath] || [];
-      result[dir.absPath].push(dir);
 
+  private checkDirectories() {
+    const dirs = Object.values(this.watchSet.directories.reduce((result, dir) => {
+      const dirs = result[dir.absPath];
+      if (dirs) {
+        dirs.push(dir);
+      } else {
+        result[dir.absPath] = [dir];
+      }
       return result;
-    }, {}));
+    }, {} as Record<string, DirectoryEntry[]>));
 
-
-    if (self.stopped) {
+    if (this.stopped) {
       return;
     }
 
-    self._processBatches(dirs, infos => {
-      if (! self.justCheckOnce) {
-        self._watchFileOrDirectory(infos[0].absPath, true);
+    this.processBatches(dirs, entries => {
+      if (! this.justCheckOnce) {
+        this.watchFileOrDirectory(entries[0].absPath, true);
       }
 
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
-      self._fireIfDirectoryChanged(infos);
+      this.fireIfDirectoryChanged(entries);
     });
   }
 
-  _fire() {
-    var self = this;
-
-    if (self.stopped) {
-      return;
-    }
-
-    self.stop();
-    self.onChange();
+  private fire() {
+    if (this.stopped) return;
+    this.stop();
+    this.onChange();
   }
 
   stop() {
-    var self = this;
-    self.stopped = true;
-
+    this.stopped = true;
     // Clean up file watches
-    _.each(self.watches, function (entry) {
+    _.each(this.watches, function (entry: { watcher: FSWatcher | null }) {
       if (entry.watcher) {
         entry.watcher.close();
         entry.watcher = null;
       }
     });
-    self.watches = {};
+    this.watches = Object.create(null);
   }
 }
 
 // Given a WatchSet, returns true if it currently describes the state of the
 // disk.
-export function isUpToDate(watchSet) {
+export function isUpToDate(watchSet: WatchSet) {
   return Profile.time('watch.isUpToDate', () => {
-    var upToDate = true;
-    var watcher = new Watcher({
+    let upToDate = true;
+    const watcher = new Watcher({
       watchSet: watchSet,
-      onChange: function () {
+      onChange() {
         upToDate = false;
       },
       // internal flag which prevents us from starting watches and timers that
       // we're about to cancel anyway
-      _justCheckOnce: true
+      justCheckOnce: true
     });
     watcher.stop();
     return upToDate;
@@ -750,9 +749,15 @@ export function isUpToDate(watchSet) {
 }
 
 // Options should have absPath/include/exclude/names.
-export function readAndWatchDirectory(watchSet, options) {
-  var contents = readDirectory(options);
-  watchSet.addDirectory(_.extend({contents: contents}, options));
+export function readAndWatchDirectory(
+  watchSet: WatchSet,
+  options: DirectoryEntry,
+) {
+  const contents = readDirectory(options);
+  watchSet.addDirectory({
+    contents,
+    ...options,
+  });
   return contents;
 }
 
@@ -763,8 +768,11 @@ export function readAndWatchDirectory(watchSet, options) {
 // We only calculate the hash if needed here, so callers must not
 // *rely* on the hash being returned; merely that if the hash is
 // present, it is the correct hash of the contents.
-export function readAndWatchFileWithHash(watchSet, absPath) {
-  const result = {
+export function readAndWatchFileWithHash(watchSet: WatchSet, absPath: string) {
+  const result: {
+    contents: string | Buffer | null;
+    hash: string | null;
+  } = {
     contents: null,
     hash: null,
   };
@@ -799,6 +807,6 @@ export function readAndWatchFileWithHash(watchSet, absPath) {
   return result;
 }
 
-export function readAndWatchFile(watchSet, absPath) {
+export function readAndWatchFile(watchSet: WatchSet, absPath: string) {
   return readAndWatchFileWithHash(watchSet, absPath).contents;
 }

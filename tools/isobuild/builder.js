@@ -1,5 +1,5 @@
 import assert from "assert";
-import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
+import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
   symlinkWithOverwrite,
 } from '../fs/files';

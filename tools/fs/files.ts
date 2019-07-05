@@ -246,10 +246,13 @@ export function getCurrentToolsDir() {
 // Read a settings file and sanity-check it. Returns a string on
 // success or null on failure (in which case buildmessages will be
 // emitted).
-export function getSettings(filename: string, watchSet: any) {
+export function getSettings(
+  filename: string,
+  watchSet: import("./watch").WatchSet,
+) {
   buildmessage.assertInCapture();
   const absPath = pathResolve(filename);
-  const buffer = require("./watch.js").readAndWatchFile(watchSet, absPath);
+  const buffer = require("./watch").readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
     buildmessage.error("file not found (settings file)",
                        { file: filename });

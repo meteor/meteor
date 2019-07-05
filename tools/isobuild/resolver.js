@@ -6,7 +6,7 @@ import {
   has,
 } from "underscore";
 
-import { sha1 } from "../fs/watch.js";
+import { sha1 } from "../fs/watch";
 import { matches as archMatches } from "../utils/archinfo.js";
 import {
   pathJoin,

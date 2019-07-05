@@ -3,7 +3,7 @@ import { wrap, OptimisticWrapperFunction } from "optimism";
 import ignore from "ignore";
 import { Profile } from "../tool-env/profile.js";
 import { watch } from "./safe-watcher.js";
-import { sha1 } from "./watch.js";
+import { sha1 } from "./watch";
 import {
   pathSep,
   pathBasename,
@@ -229,7 +229,7 @@ export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);
 export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   path: string,
-  options: Parameters<typeof optimisticReadFile>[1],
+  options?: Parameters<typeof optimisticReadFile>[1],
 ) => {
   try {
     return sha1(optimisticReadFile(path, options)) as string;

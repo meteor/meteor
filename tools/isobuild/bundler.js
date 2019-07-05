@@ -164,7 +164,7 @@ import { addToTree } from "./linker.js";
 var files = require('../fs/files');
 var archinfo = require('../utils/archinfo.js');
 var buildmessage = require('../utils/buildmessage.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');

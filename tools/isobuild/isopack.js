@@ -6,7 +6,7 @@ var linker = require('./linker.js');
 var buildmessage = require('../utils/buildmessage.js');
 import Builder from './builder.js';
 var bundler = require('./bundler.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 import * as files from '../fs/files';
 import * as fsFixPath from '../fs/fsFixPath';
 import {

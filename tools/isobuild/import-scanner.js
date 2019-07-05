@@ -4,7 +4,7 @@ import {Script} from "vm";
 import {
   isString, isObject, isEmpty, has, keys, each, map, omit,
 } from "underscore";
-import {sha1} from "../fs/watch.js";
+import {sha1} from "../fs/watch";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";

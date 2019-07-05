@@ -3,7 +3,7 @@ var sourcemap = require('source-map');
 
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 var buildmessage = require('../utils/buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
 import Builder from './builder.js';
