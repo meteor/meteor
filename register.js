@@ -107,6 +107,13 @@ exports.retrieveSourceMap = function(filename) {
 };
 
 function shouldNotTransform(filename) {
+  if (filename.endsWith(".d.ts")) {
+    // The official TypeScript compiler's transpileModule function fails for
+    // .d.ts declaration files with the cryptic error "Error: Debug Failure.
+    // Output generation failed".
+    return true;
+  }
+
   if (path.resolve(filename) !==
       path.normalize(filename)) {
     // If the filename is not absolute, then it's a file in a core Node
