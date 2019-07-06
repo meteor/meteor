@@ -1414,6 +1414,12 @@ _.extend(Isopack.prototype, {
       const parts = path.split("/");
       if (parts[0] === "tools" &&
           (path.endsWith(".js") || path.endsWith(".ts"))) {
+        if (path.endsWith(".d.ts")) {
+          // The official TypeScript compiler's transpileModule function fails
+          // for .d.ts declaration files with the cryptic error "Error: Debug
+          // Failure. Output generation failed".
+          return false;
+        }
         if (parts[1] === "static-assets") {
           return parts[2] === "server";
         }
