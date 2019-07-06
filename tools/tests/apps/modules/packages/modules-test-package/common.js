@@ -15,6 +15,9 @@ assert.strictEqual(
   idPrefix + (Meteor.isClient ? "context.esm.js" : "context.js"),
 );
 
+import ganalytics from "ganalytics";
+assert.strictEqual(typeof ganalytics, "function");
+
 export function checkWhere(where) {
   const { where: serverWhere } = require("./server/where.js");
   const { where: clientWhere } = require("./client/where.js");
