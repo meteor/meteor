@@ -361,7 +361,7 @@ export class Watcher {
 
   private watches: Record<string, {
     // Null until safeWatcher.watch succeeds in watching the file.
-    watcher: FSWatcher | null;
+    watcher: safeWatcher.SafeWatcher | null;
     // Undefined until we stat the file for the first time, then null
     // if the file is observed to be missing.
     lastStat?: Stats | null

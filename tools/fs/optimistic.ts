@@ -2,7 +2,7 @@ import assert from "assert";
 import { wrap, OptimisticWrapperFunction } from "optimism";
 import ignore from "ignore";
 import { Profile } from "../tool-env/profile";
-import { watch } from "./safe-watcher";
+import { watch, SafeWatcher } from "./safe-watcher";
 import { sha1 } from "./watch";
 import {
   pathSep,
@@ -63,7 +63,7 @@ function makeOptimistic<
 
       assert.ok(pathIsAbsolute(path));
 
-      let watcher = watch(path, () => {
+      let watcher: SafeWatcher | null = watch(path, () => {
         wrapper.dirty(...args);
       });
 
@@ -154,7 +154,7 @@ const dependOnDirectory = wrap((_dir: string) => {
   return ++dependOnDirectorySalt;
 }, {
   subscribe(dir: string) {
-    let watcher = watch(
+    let watcher: SafeWatcher | null = watch(
       dir,
       () => dependOnDirectory.dirty(dir),
     );
@@ -323,7 +323,7 @@ const optimisticIsSymbolicLink = wrap((path: string) => {
   }
 }, {
   subscribe(path) {
-    let watcher = watch(path, () => {
+    let watcher: SafeWatcher | null = watch(path, () => {
       optimisticIsSymbolicLink.dirty(path);
     });
 

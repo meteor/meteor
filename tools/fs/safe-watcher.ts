@@ -35,13 +35,16 @@ var NO_WATCHER_POLLING_INTERVAL =
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
 
+export type SafeWatcher = {
+  close: () => void;
+}
+
 type EntryCallback = (event: string) => void;
 
-interface Entry {
+interface Entry extends SafeWatcher {
   callbacks: Set<EntryCallback>;
   rewatch: () => void;
   release: (callback: EntryCallback) => void;
-  close: () => void;
 }
 
 const entries: Record<string, Entry | null> = Object.create(null);
@@ -392,6 +395,6 @@ export const watch = Profile(
       close() {
         entry.release(callback);
       }
-    };
+    } as SafeWatcher;
   }
 );
