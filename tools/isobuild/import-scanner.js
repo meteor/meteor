@@ -147,6 +147,11 @@ class DefaultHandlers {
     }
   }
 
+  // Files with an .mjs extension are just JavaScript plus module syntax.
+  mjs(file) {
+    return this.js(file);
+  }
+
   json(file) {
     file.jsonData = JSON.parse(file.dataString);
     return jsonDataToCommonJS(file.jsonData);
