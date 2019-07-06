@@ -65,10 +65,6 @@ meteor add barbatus:typescript
 
 It is necessary to configure the TypeScript compiler with a `tsconfig.json` file.
 
-A complete guide on installation, configuration, and usage of TypeScript, and how type definitions for libraries are installed, can be found [here](https://medium.com/@birkskyum/modern-meteor-development-with-typescript-introduction-836f2a89f79).
-
-The guide also includes sample applications created with Angular, React, Vue, and Blaze—all written in TypeScript. See the code [here](https://github.com/birkskyum/meteor-typescript-samples).
-
 <h4 id="typescript-conditional-imports">Conditional imports</h4>
 
 TypeScript does not support nested `import` statements, therefore conditionally importing modules requires you to use the `require` statement (see [Using `require`](https://guide.meteor.com/structure.html#using-require)).
