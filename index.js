@@ -142,16 +142,22 @@ function precompileTypeScript(result, options) {
   }
 
   const ts = require("typescript");
-  const tsResult = ts.transpileModule(result.code, {
-    fileName,
-    compilerOptions: {
-      target: ts.ScriptTarget.ES2018,
-      // Leave module syntax intact so that Babel/Reify can handle it.
-      module: ts.ModuleKind.ESNext,
-      sourceMap: true,
-      inlineSources: true,
-    }
-  });
+  let tsResult;
+  try {
+    tsResult = ts.transpileModule(result.code, {
+      fileName,
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2018,
+        // Leave module syntax intact so that Babel/Reify can handle it.
+        module: ts.ModuleKind.ESNext,
+        sourceMap: true,
+        inlineSources: true,
+      }
+    });
+  } catch (e) {
+    e.message = "While compiling " + fileName + ": " + e.message;
+    throw e;
+  }
 
   result.code = tsResult.outputText.replace(
     /\/\/# sourceMappingURL=.*?(\n|$)/g,
