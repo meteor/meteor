@@ -329,6 +329,18 @@ describe("meteor-babel", () => {
       '}',
     ].join("\n"));
   });
+
+  it("imports @babel/runtime/helpers/objectSpread when appropriate", () => {
+    const result = meteorBabel.compile(
+      "console.log({ a, ...bs, c, ...ds, e })",
+      meteorBabel.getDefaultOptions(),
+    );
+    assert.notStrictEqual(
+      result.code.indexOf('module.link("@babel/runtime/helpers/objectSpread'),
+      -1,
+      result.code,
+    );
+  });
 });
 
 describe("Babel", function() {

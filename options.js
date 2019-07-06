@@ -7,6 +7,7 @@ require = function require(id) {
   return getESModule(exports) && exports.default || exports;
 };
 
+const babelRuntimeVersion = require("@babel/runtime/package.json").version;
 const babelPresetMeteor = require("babel-preset-meteor");
 const babelPresetMeteorModern = require("babel-preset-meteor/modern");
 const reifyPlugin = require("reify/plugins/babel");
@@ -147,7 +148,18 @@ function getRuntimeTransform(features) {
 
   // Import helpers from the babel-runtime package rather than redefining
   // them at the top of each module.
-  return require("@babel/plugin-transform-runtime");
+  return [require("@babel/plugin-transform-runtime"), {
+    // Necessary to enable importing helpers like objectSpread:
+    // https://github.com/babel/babel/pull/10170#issuecomment-508936150
+    version: babelRuntimeVersion,
+    // Use @babel/runtime/helpers/*.js:
+    helpers: true,
+    // Do not use @babel/runtime/helpers/esm/*.js:
+    useESModules: false,
+    // Do not import from @babel/runtime-corejs2
+    // or @babel/runtime-corejs3:
+    corejs: false,
+  }];
 }
 
 function getDefaultsForNode8(features) {
