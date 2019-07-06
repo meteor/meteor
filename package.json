@@ -36,7 +36,6 @@
     "@babel/plugin-transform-modules-commonjs": "^7.5.0",
     "@babel/plugin-transform-runtime": "^7.5.0",
     "@babel/preset-react": "^7.0.0",
-    "@babel/preset-typescript": "^7.3.3",
     "@babel/runtime": "^7.5.0",
     "@babel/template": "^7.4.4",
     "@babel/traverse": "^7.5.0",
@@ -46,7 +45,8 @@
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.11",
     "meteor-babel-helpers": "0.0.3",
-    "reify": "^0.20.12"
+    "reify": "^0.20.12",
+    "typescript": "^3.5.2"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "7.4.4",

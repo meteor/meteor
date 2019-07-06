@@ -65,7 +65,6 @@ exports.getDefaults = function getDefaults(features) {
     }
 
     maybeAddReactPlugins(features, combined);
-    maybeAddTypeScriptPreset(features, combined.presets);
 
     if (features && features.jscript) {
       combined.plugins.push(
@@ -75,7 +74,7 @@ exports.getDefaults = function getDefaults(features) {
     }
   }
 
-  return finish([combined]);
+  return finish(features, [combined]);
 };
 
 function maybeAddReactPlugins(features, options) {
@@ -86,12 +85,6 @@ function maybeAddReactPlugins(features, options) {
         loose: true
       }]
     );
-  }
-}
-
-function maybeAddTypeScriptPreset(features, presets) {
-  if (features && features.typescript) {
-    presets.push(require("@babel/preset-typescript"));
   }
 }
 
@@ -111,17 +104,16 @@ function getDefaultsForModernBrowsers(features) {
     }
 
     maybeAddReactPlugins(features, combined);
-    maybeAddTypeScriptPreset(features, combined.presets);
   }
 
-  return finish([combined]);
+  return finish(features, [combined]);
 }
 
 const parserOpts = require("reify/lib/parsers/babel.js").options;
 const util = require("./util.js");
 
-function finish(presets) {
-  return {
+function finish(features, presets) {
+  const options = {
     compact: false,
     sourceMaps: false,
     ast: false,
@@ -132,6 +124,14 @@ function finish(presets) {
     parserOpts: util.deepClone(parserOpts),
     presets: presets
   };
+
+  if (features && features.typescript) {
+    // This additional option will be consumed by the meteorBabel.compile
+    // function before the options are passed to Babel.
+    options.typescript = true;
+  }
+
+  return options;
 }
 
 function isObject(value) {
@@ -191,10 +191,9 @@ function getDefaultsForNode8(features) {
 
   if (! compileModulesOnly) {
     maybeAddReactPlugins(features, combined);
-    maybeAddTypeScriptPreset(features, combined.presets);
   }
 
-  return finish([combined]);
+  return finish(features, [combined]);
 }
 
 exports.getMinifierDefaults = function getMinifierDefaults(features) {

@@ -90,7 +90,12 @@ function compile(source, options) {
   const optionsCopy = util.deepClone(options);
   const { ast, plugins, presets } = optionsCopy;
   delete optionsCopy.plugins;
+  delete optionsCopy.typescript;
   optionsCopy.ast = true;
+
+  if (options.typescript) {
+    precompileTypeScript(result, options);
+  }
 
   function transform(presets) {
     optionsCopy.plugins = [{
@@ -128,6 +133,36 @@ function compile(source, options) {
   }
 
   return result;
+}
+
+function precompileTypeScript(result, options) {
+  const fileName = options.filename || options.sourceFileName;
+  if (fileName && ! fileName.endsWith(".ts") && ! fileName.endsWith(".tsx")) {
+    return;
+  }
+
+  const ts = require("typescript");
+  const tsResult = ts.transpileModule(result.code, {
+    fileName,
+    compilerOptions: {
+      target: ts.ScriptTarget.ES2018,
+      // Leave module syntax intact so that Babel/Reify can handle it.
+      module: ts.ModuleKind.ESNext,
+      sourceMap: true,
+      inlineSources: true,
+    }
+  });
+
+  result.code = tsResult.outputText.replace(
+    /\/\/# sourceMappingURL=.*?(\n|$)/g,
+    "$1" // preserve trailing \n characters
+  );
+
+  result.map = JSON.parse(tsResult.sourceMapText);
+  if (fileName) {
+    result.map.file = fileName;
+    result.map.sources = [fileName];
+  }
 }
 
 exports.minify = function minify(source, options) {
