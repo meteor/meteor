@@ -14,7 +14,7 @@ var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var packageMapModule = require('../packaging/package-map.js');
 var archinfo = require('../utils/archinfo.js');
-var Profile = require('./profile.js').Profile;
+var Profile = require('./profile').Profile;
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
 // meteor-tool.

@@ -14,7 +14,7 @@ var release = require('./packaging/release.js');
 var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
 var watch = require('./fs/watch');
-var Profile = require('./tool-env/profile.js').Profile;
+var Profile = require('./tool-env/profile').Profile;
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 
 import {

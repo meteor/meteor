@@ -16,7 +16,7 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
-const { Profile } = require("../tool-env/profile.js");
+const { Profile } = require("../tool-env/profile");
 
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';

@@ -11,7 +11,7 @@ var Console = require('../../console/console.js').Console;
 var tropohouse = require('../tropohouse.js');
 var packageClient = require('../package-client.js');
 var VersionParser = require('../package-version-parser.js');
-var Profile = require('../../tool-env/profile.js').Profile;
+var Profile = require('../../tool-env/profile').Profile;
 
 // XXX: Rationalize these flags.  Maybe use the logger?
 var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;

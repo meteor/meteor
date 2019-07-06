@@ -11,7 +11,7 @@ var archinfo = require('../utils/archinfo.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var compiler = require('./compiler.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 
 import SourceArch from './source-arch.js';
 import { PackageNamespace } from "./package-namespace.js";

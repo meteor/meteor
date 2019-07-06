@@ -5,7 +5,7 @@ var watch = require('../../fs/watch');
 var PackageSource = require('../../isobuild/package-source.js');
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../../isobuild/compiler.js';
 import { sync as glob } from "glob";
-import { Profile } from "../../tool-env/profile.js";
+import { Profile } from "../../tool-env/profile";
 import {
   optimisticHashOrNull,
 } from "../../fs/optimistic";

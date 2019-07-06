@@ -1,7 +1,7 @@
 import assert from "assert";
 import { wrap, OptimisticWrapperFunction } from "optimism";
 import ignore from "ignore";
-import { Profile } from "../tool-env/profile.js";
+import { Profile } from "../tool-env/profile";
 import { watch } from "./safe-watcher";
 import { sha1 } from "./watch";
 import {

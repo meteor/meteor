@@ -7,7 +7,7 @@ var compiler = require('./compiler.js');
 var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
 import {sha1, readAndWatchFileWithHash} from  '../fs/watch';
 import LRU from 'lru-cache';

@@ -166,7 +166,7 @@ var archinfo = require('../utils/archinfo.js');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
 import { loadIsopackage } from '../tool-env/isopackets.js';
@@ -2705,8 +2705,10 @@ class ServerTarget extends JsImageTarget {
     const toolsDir = files.pathDirname(
       files.convertToStandardPath(__dirname));
 
-    builder.write("profile.js", {
-      file: files.pathJoin(toolsDir, "tool-env", "profile.js"),
+    builder.copyTranspiledModules([
+      "profile.ts"
+    ], {
+      sourceRootDir: files.pathJoin(toolsDir, "tool-env"),
     });
 
     // Server bootstrap

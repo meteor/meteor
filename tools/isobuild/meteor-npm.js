@@ -13,7 +13,7 @@ var httpHelpers = require('../utils/http-helpers.js');
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import { version as npmVersion } from 'npm';
 import { execFileAsync } from "../utils/processes.js";
 import {

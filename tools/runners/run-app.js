@@ -10,7 +10,7 @@ var runLog = require('./run-log.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
 var catalog = require('../packaging/catalog/catalog.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 var release = require('../packaging/release.js');
 import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { CordovaBuilder } from '../cordova/builder.js';

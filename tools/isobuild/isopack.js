@@ -17,7 +17,7 @@ var colonConverter = require('../utils/colon-converter.js');
 var utils = require('../utils/utils.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console/console.js').Console;
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 import { Unibuild } from "./unibuild.js";
 

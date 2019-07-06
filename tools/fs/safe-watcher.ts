@@ -1,5 +1,5 @@
 import { FSWatcher, Stats } from "fs";
-import { Profile } from "../tool-env/profile.js";
+import { Profile } from "../tool-env/profile";
 import {
   statOrNull,
   pathResolve,

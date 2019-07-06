@@ -404,7 +404,7 @@ export default class Resolver {
   }
 };
 
-import { Profile } from "../tool-env/profile.js";
+import { Profile } from "../tool-env/profile";
 each(Resolver.prototype, (value, key) => {
   if (key === "constructor") return;
   Resolver.prototype[key] = Profile(

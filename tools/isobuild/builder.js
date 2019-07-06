@@ -4,7 +4,7 @@ import files, {
   symlinkWithOverwrite,
 } from '../fs/files';
 import NpmDiscards from './npm-discards.js';
-import {Profile} from '../tool-env/profile.js';
+import {Profile} from '../tool-env/profile';
 import {
   optimisticReadFile,
   optimisticReaddir,

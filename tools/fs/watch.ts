@@ -3,7 +3,7 @@ import * as files from "./files";
 import * as safeWatcher from "./safe-watcher";
 import { createHash } from "crypto";
 import { coalesce } from "../utils/func-utils.js";
-import { Profile } from "../tool-env/profile.js";
+import { Profile } from "../tool-env/profile";
 import {
   optimisticHashOrNull,
 } from "./optimistic";

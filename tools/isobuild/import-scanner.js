@@ -10,7 +10,7 @@ import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
 import LRU from "lru-cache";
-import {Profile} from "../tool-env/profile.js";
+import {Profile} from "../tool-env/profile";
 import {SourceNode, SourceMapConsumer} from "source-map";
 import {
   mkdir_p,

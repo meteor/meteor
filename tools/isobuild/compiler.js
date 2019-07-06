@@ -11,7 +11,7 @@ var files = require('../fs/files');
 var colonConverter = require('../utils/colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
 
 import {

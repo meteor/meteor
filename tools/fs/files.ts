@@ -25,7 +25,7 @@ const buildmessage = require('../utils/buildmessage.js');
 const fiberHelpers = require('../utils/fiber-helpers.js');
 const colonConverter = require('../utils/colon-converter.js');
 
-const Profile = require('../tool-env/profile.js').Profile;
+const Profile = require('../tool-env/profile').Profile;
 
 export * from '../static-assets/server/mini-files';
 import {

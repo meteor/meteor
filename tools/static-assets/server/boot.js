@@ -7,7 +7,7 @@ var sourcemap_support = require('source-map-support');
 var bootUtils = require('./boot-utils.js');
 var files = require('./mini-files');
 var npmRequire = require('./npm-require.js').require;
-var Profile = require('./profile.js').Profile;
+var Profile = require('./profile').Profile;
 
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v8.0.0';
