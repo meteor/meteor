@@ -708,6 +708,14 @@ describe("ecmascript miscellany", () => {
   });
 });
 
+describe("TypeScript", () => {
+  it("can be imported", () => {
+    const { Test } = require("./typescript");
+    assert.strictEqual(typeof Test, "function");
+    assert.strictEqual(new Test(1234).value, 1234);
+  });
+});
+
 Meteor.isClient &&
 describe("client/compatibility directories", () => {
   it("should contain bare files", () => {
