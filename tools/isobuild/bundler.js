@@ -1136,6 +1136,22 @@ class Target {
     const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
 
+    sourceBatches.forEach(batch => {
+      const { unibuild } = batch;
+
+      // Depend on the source files that produced these resources.
+      this.watchSet.merge(unibuild.watchSet);
+
+      // Remember the versions of all of the build-time dependencies
+      // that were used in these resources. Depend on them as well.
+      // XXX assumes that this merges cleanly
+      this.watchSet.merge(unibuild.pkg.pluginWatchSet);
+    });
+
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
+
     const versions = {};
     const dynamicImportFiles = new Set;
 
@@ -1293,14 +1309,6 @@ class Target {
           addToTree(file.hash(), file.targetPath, versions);
         }
       });
-
-      // Depend on the source files that produced these resources.
-      this.watchSet.merge(unibuild.watchSet);
-
-      // Remember the versions of all of the build-time dependencies
-      // that were used in these resources. Depend on them as well.
-      // XXX assumes that this merges cleanly
-       this.watchSet.merge(unibuild.pkg.pluginWatchSet);
     });
 
     dynamicImportFiles.forEach(file => {
