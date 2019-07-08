@@ -1,12 +1,9 @@
-import {
+const {
   isString,
   isObject,
-  isFunction,
-  each,
   has,
-} from "underscore";
+} = require("underscore");
 
-import { sha1 } from "../fs/watch";
 import { matches as archMatches } from "../utils/archinfo.js";
 import {
   pathJoin,
@@ -18,16 +15,14 @@ import {
   convertToPosixPath,
 } from "../fs/files";
 
-import LRU from "lru-cache";
-
 import { wrap } from "optimism";
 import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
 } from "../fs/optimistic";
 
-const nativeModulesMap = Object.create(null);
-const nativeNames = Object.keys(process.binding("natives"));
+const nativeModulesMap: Record<string, string> = Object.create(null);
+const nativeNames = Object.keys((process as any).binding("natives"));
 
 // Node 0.10 does not include process as a built-in module, but later
 // versions of Node do, and we provide a stub for it on the client.
@@ -46,34 +41,46 @@ nativeNames.forEach(id => {
   nativeModulesMap[id] =  "meteor-node-stubs/deps/" + id;
 });
 
-const resolverCache = new LRU({
-  max: Math.pow(2, 12)
-});
+export type ResolverOptions = {
+  sourceRoot: string;
+  targetArch: string;
+  extensions: string[];
+  nodeModulesPaths: string[];
+  caller?: string;
+}
 
 export default class Resolver {
-  static getOrCreate(options) {
-    const key = JSON.stringify(options);
-    let resolver = resolverCache.get(key);
-    if (! resolver) {
-      resolverCache.set(key, resolver = new Resolver(options));
+  static getOrCreate = wrap(function (options: ResolverOptions) {
+    return new Resolver(options);
+  }, {
+    makeCacheKey(options) {
+      return JSON.stringify(options);
     }
-    return resolver;
-  }
+  });
+
+  private sourceRoot: string;
+  private targetArch: string;
+  private extensions: string[];
+  private nodeModulesPaths: string[];
+  private mainFields: string[];
+
+  public statOrNull = optimisticStatOrNull;
 
   constructor({
     sourceRoot,
     targetArch,
     extensions = [".js", ".json"],
     nodeModulesPaths = [],
-  }) {
+  }: ResolverOptions) {
     this.sourceRoot = sourceRoot;
     this.extensions = extensions;
     this.targetArch = targetArch;
     this.nodeModulesPaths = nodeModulesPaths;
     this.statOrNull = optimisticStatOrNull;
 
+    const { resolve } = this;
     this.resolve = wrap((id, absParentPath) => {
-      return this._resolve(id, absParentPath);
+      return resolve.call(this, id, absParentPath);
     }, {
       makeCacheKey(id, absParentPath) {
         // Only the directory of the absParentPath matters for caching.
@@ -81,8 +88,16 @@ export default class Resolver {
       }
     });
 
-    this._cacheMethod("_findPkgJsonSubsetForPath");
-    this._cacheMethod("_getPkgJsonSubsetForDir");
+    const {
+      findPkgJsonSubsetForPath,
+      getPkgJsonSubsetForDir,
+    } = this;
+
+    this.findPkgJsonSubsetForPath = wrap(
+      path => findPkgJsonSubsetForPath.call(this, path));
+
+    this.getPkgJsonSubsetForDir = wrap(
+      path => getPkgJsonSubsetForDir.call(this, path));
 
     if (archMatches(this.targetArch, "web")) {
       this.mainFields = ["browser", "module", "main"];
@@ -91,33 +106,26 @@ export default class Resolver {
     }
   }
 
-  _cacheMethod(name) {
-    const original = this[name];
-    this[name] = wrap(
-      (...args) => original.apply(this, args)
-    );
-  }
-
-  static isTopLevel(id) {
+  static isTopLevel(id: string) {
     return "./".indexOf(id.charAt(0)) < 0;
   }
 
-  static isNative(id) {
+  static isNative(id: string): boolean {
     return has(nativeModulesMap, id);
   }
 
-  static getNativeStubId(id) {
+  static getNativeStubId(id: string) {
     return nativeModulesMap[id] || null;
   }
 
   // Resolve the given module identifier to an object { path, stat } or
   // null, relative to an absolute parent path. The _seenDirPaths
   // parameter is for internal use only and should be ommitted.
-  _resolve(id, absParentPath, _seenDirPaths) {
+  public resolve(id: string, absParentPath: string, _seenDirPaths?: Set<string>) {
     let resolved =
-      this._resolveAbsolute(id, absParentPath) ||
-      this._resolveRelative(id, absParentPath) ||
-      this._resolveNodeModule(id, absParentPath);
+      this.resolveAbsolute(id, absParentPath) ||
+      this.resolveRelative(id, absParentPath) ||
+      this.resolveNodeModule(id, absParentPath);
 
     if (typeof resolved === "string") {
       // The _resolveNodeModule method can return "missing" to indicate
@@ -128,7 +136,7 @@ export default class Resolver {
 
     let packageJsonMap = null;
 
-    while (resolved && resolved.stat.isDirectory()) {
+    while (resolved && resolved.stat && resolved.stat.isDirectory()) {
       let dirPath = resolved.path;
       _seenDirPaths = _seenDirPaths || new Set;
 
@@ -138,7 +146,7 @@ export default class Resolver {
       if (! _seenDirPaths.has(dirPath)) {
         _seenDirPaths.add(dirPath);
 
-        const found = this._getPkgJsonSubsetForDir(dirPath);
+        const found = this.getPkgJsonSubsetForDir(dirPath);
         const foundPkgJsonMain = found && this.mainFields.some(name => {
           const value = found.pkg[name];
           if (isString(value)) {
@@ -146,19 +154,19 @@ export default class Resolver {
             // to be considered relative, so first we try simply appending it
             // to the directory path before falling back to a full resolve,
             // which might return a package from a node_modules directory.
-            resolved = this._joinAndStat(dirPath, value) ||
-              this._resolve(value, found.path, _seenDirPaths);
+            resolved = this.joinAndStat(dirPath, value) ||
+              this.resolve(value, found.path, _seenDirPaths);
             return resolved && typeof resolved === "object";
           }
           return false;
         });
 
-        if (foundPkgJsonMain) {
+        if (foundPkgJsonMain && found) {
           if (! resolved.packageJsonMap) {
             resolved.packageJsonMap = Object.create(null);
           }
 
-          resolved.packageJsonMap[found.path] = found.pkg;
+          resolved.packageJsonMap![found.path] = found.pkg;
 
           // The resolution above may have returned a directory, so we
           // merge resolved.packageJsonMap into packageJsonMap so that we
@@ -192,7 +200,7 @@ export default class Resolver {
       // there's very little chance an `index.js` file will be a
       // directory. However, in principle it is remotely possible that a
       // file called `index.js` could be a directory instead of a file.
-      resolved = this._joinAndStat(dirPath, "index");
+      resolved = this.joinAndStat(dirPath, "index");
     }
 
     if (resolved) {
@@ -203,13 +211,13 @@ export default class Resolver {
       // If the package.json file that governs resolved.path has a
       // "browser" field, include it in resolved.packageJsonMap so that
       // the ImportScanner can register the appropriate browser aliases.
-      const pkgJsonInfo = this._findPkgJsonSubsetForPath(resolved.path);
+      const pkgJsonInfo = this.findPkgJsonSubsetForPath(resolved.path);
       if (pkgJsonInfo &&
           isObject(pkgJsonInfo.pkg.browser)) {
         if (! resolved.packageJsonMap) {
           resolved.packageJsonMap = Object.create(null);
         }
-        resolved.packageJsonMap[pkgJsonInfo.path] = pkgJsonInfo.pkg;
+        resolved.packageJsonMap![pkgJsonInfo.path] = pkgJsonInfo.pkg;
       }
 
       resolved.id = convertToPosixPath(
@@ -221,15 +229,20 @@ export default class Resolver {
     return resolved;
   }
 
-  _joinAndStat(...joinArgs) {
-    const joined = pathJoin(...joinArgs);
+  private joinAndStat(...joinArgs: string[]) {
+    const joined: string = pathJoin(...joinArgs);
     const path = pathNormalize(joined);
     const exactStat = this.statOrNull(path);
     const exactResult = exactStat && { path, stat: exactStat };
 
-    let result = null;
+    let result: {
+      stat: typeof exactStat;
+      path: string;
+      packageJsonMap?: Record<string, Record<string, any>>;
+      id?: string;
+    } | null = null;
 
-    if (exactResult && exactStat.isFile()) {
+    if (exactResult && exactStat && exactStat.isFile()) {
       result = exactResult;
     } else {
       // No point in trying alternate file extensions if the parent
@@ -247,7 +260,7 @@ export default class Resolver {
       }
     }
 
-    if (! result && exactResult && exactStat.isDirectory()) {
+    if (! result && exactResult && exactStat && exactStat.isDirectory()) {
       // After trying all available file extensions, fall back to the
       // original result if it was a directory.
       result = exactResult;
@@ -256,18 +269,18 @@ export default class Resolver {
     return result;
   }
 
-  _resolveAbsolute(id, absParentPath) {
+  private resolveAbsolute(id: string, _absParentPath: string) {
     return id.charAt(0) === "/" &&
-      this._joinAndStat(this.sourceRoot, id.slice(1));
+      this.joinAndStat(this.sourceRoot, id.slice(1));
   }
 
-  _resolveRelative(id, absParentPath) {
+  private resolveRelative(id: string, absParentPath: string) {
     if (id.charAt(0) === ".") {
-      return this._joinAndStat(absParentPath, "..", id);
+      return this.joinAndStat(absParentPath, "..", id);
     }
   }
 
-  _resolveNodeModule(id, absParentPath) {
+  private resolveNodeModule(id: string, absParentPath: string) {
     if (! Resolver.isTopLevel(id)) {
       return null;
     }
@@ -279,7 +292,7 @@ export default class Resolver {
       return null;
     }
 
-    let sourceRoot;
+    let sourceRoot: string | undefined;
     const relParentPath = pathRelative(this.sourceRoot, absParentPath);
     if (! relParentPath.startsWith("..")) {
       // If the file is contained by this.sourceRoot, then it's safe to
@@ -309,7 +322,7 @@ export default class Resolver {
         dir = pathDirname(dir);
       }
 
-      while (! (resolved = this._joinAndStat(dir, "node_modules", id))) {
+      while (! (resolved = this.joinAndStat(dir, "node_modules", id))) {
         if (dir === sourceRoot) {
           break;
         }
@@ -328,7 +341,7 @@ export default class Resolver {
       // After checking any local node_modules directories, fall back to
       // the package NPM directory, if one was specified.
       this.nodeModulesPaths.some(path => {
-        return resolved = this._joinAndStat(path, id);
+        return resolved = this.joinAndStat(path, id);
       });
     }
 
@@ -343,7 +356,7 @@ export default class Resolver {
     return resolved || "missing";
   }
 
-  _getPkgJsonSubsetForDir(dirPath) {
+  private getPkgJsonSubsetForDir(dirPath: string) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
     const pkg = optimisticReadJsonOrNull(pkgJsonPath);
     if (! pkg) {
@@ -352,7 +365,7 @@ export default class Resolver {
 
     // Output a JS module that exports just the "name", "version", "main",
     // and "browser" properties (if defined) from the package.json file.
-    const pkgSubset = {};
+    const pkgSubset: Partial<typeof pkg> = {};
 
     if (has(pkg, "name")) {
       pkgSubset.name = pkg.name;
@@ -376,11 +389,13 @@ export default class Resolver {
     };
   }
 
-  _findPkgJsonSubsetForPath(path) {
+  private findPkgJsonSubsetForPath(
+    path: string,
+  ): ReturnType<Resolver["getPkgJsonSubsetForDir"]> {
     const stat = this.statOrNull(path);
 
     if (stat && stat.isDirectory()) {
-      const found = this._getPkgJsonSubsetForDir(path);
+      const found = this.getPkgJsonSubsetForDir(path);
       if (found) {
         return found;
       }
@@ -400,15 +415,13 @@ export default class Resolver {
       return null;
     }
 
-    return this._findPkgJsonSubsetForPath(parentDir);
+    return this.findPkgJsonSubsetForPath(parentDir);
   }
 };
 
 import { Profile } from "../tool-env/profile";
-each(Resolver.prototype, (value, key) => {
+const Rp = Resolver.prototype as any;
+Object.keys(Rp).forEach(key => {
   if (key === "constructor") return;
-  Resolver.prototype[key] = Profile(
-    `Resolver#${key}`,
-    Resolver.prototype[key]
-  );
+  Rp[key] = Profile(`Resolver#${key}`, Rp[key]);
 });

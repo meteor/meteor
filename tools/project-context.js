@@ -26,7 +26,7 @@ import {
   mapWhereToArches,
 } from "./isobuild/package-api.js";
 
-import Resolver from "./isobuild/resolver.js";
+import Resolver from "./isobuild/resolver";
 
 const CAN_DELAY_LEGACY_BUILD = ! JSON.parse(
   process.env.METEOR_DISALLOW_DELAYED_LEGACY_BUILD || "false"

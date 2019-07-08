@@ -45,7 +45,7 @@ import { wrap } from "optimism";
 import { compile as reifyCompile } from "reify/lib/compiler";
 import { parse as reifyBabelParse } from "reify/lib/parsers/babel";
 
-import Resolver from "./resolver.js";
+import Resolver from "./resolver";
 
 const fakeFileStat = {
   isFile() {
