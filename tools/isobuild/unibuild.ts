@@ -1,12 +1,14 @@
 "use strict";
 
 import _ from "underscore";
-import files from "../fs/files";
+import * as files from "../fs/files";
 import { WatchSet, sha1 } from "../fs/watch";
 import { NodeModulesDirectory } from "./bundler.js";
 import * as archinfo from "../utils/archinfo.js";
+import Isopack from "./isopack";
+import Builder from "./builder";
 
-function rejectBadPath(p) {
+function rejectBadPath(p: string) {
   if (p.indexOf("..") >= 0) {
     throw new Error("bad path: " + p);
   }
@@ -14,8 +16,62 @@ function rejectBadPath(p) {
 
 let nextBuildId = 1;
 
+type IsopackConstraint = {
+  package: string;
+  constraint: string;
+  unordered: boolean;
+  weak: boolean;
+};
+
+type PrelinkResource = {
+  type: string;
+  extension?: string;
+  data?: Buffer;
+  path?: string;
+  sourceMap?: string;
+  servePath?: string;
+  hash?: string;
+  usesDefaultSourceProcessor?: boolean;
+  legacyPrelink?: {
+    packageVariables: string[];
+    sourceMap?: string | Buffer;
+  };
+  fileOptions?: {
+    lazy?: boolean;
+    bare?: boolean;
+    mainModule?: boolean;
+    testModule?: boolean;
+  };
+  file?: string;
+  length?: number;
+  offset?: number;
+};
+
+type UnibuildOptions = {
+  kind: string;
+  arch: string;
+  uses: IsopackConstraint[];
+  implies: IsopackConstraint[];
+  watchSet: WatchSet;
+  nodeModulesDirectories: Record<string, NodeModulesDirectory>;
+  declaredExports: { name: string, testOnly?: boolean }[];
+  resources: PrelinkResource[];
+};
+
 export class Unibuild {
-  constructor(isopack, {
+  private pkg: Isopack;
+  private kind: string;
+  private arch: string;
+  private uses: IsopackConstraint[];
+  private implies: IsopackConstraint[];
+  private nodeModulesDirectories: Record<string, NodeModulesDirectory>;
+  private declaredExports: { name: string, testOnly?: boolean }[];
+  private resources: PrelinkResource[];
+  public id: string;
+  public nodeModulesPath: string | undefined;
+  public watchSet: WatchSet;
+
+  constructor(isopack: Isopack, {
     kind, // required (main/plugin/app)
     arch, // required
     uses,
@@ -24,7 +80,7 @@ export class Unibuild {
     nodeModulesDirectories,
     declaredExports,
     resources,
-  }) {
+  }: UnibuildOptions) {
     this.pkg = isopack;
     this.kind = kind;
     this.arch = arch;
@@ -84,7 +140,7 @@ export class Unibuild {
 
     // Provided for backwards compatibility; please use
     // unibuild.nodeModulesDirectories instead!
-    _.some(this.nodeModulesDirectories, (nmd, nodeModulesPath) => {
+    _.some(this.nodeModulesDirectories, (nmd: NodeModulesDirectory, nodeModulesPath: string) => {
       if (! nmd.local) {
         this.nodeModulesPath = nodeModulesPath;
         return true;
@@ -92,7 +148,7 @@ export class Unibuild {
     });
   }
 
-  static fromJSON(unibuildJson, {
+  static fromJSON(unibuildJson: any, {
     isopack,
     // At some point we stopped writing 'kind's to the metadata file, so
     // default to main.
@@ -100,6 +156,12 @@ export class Unibuild {
     arch,
     unibuildBasePath,
     watchSet,
+  }: {
+    isopack: Isopack,
+    kind: string,
+    arch: string,
+    unibuildBasePath: string,
+    watchSet: WatchSet,
   }) {
     if (unibuildJson.format !== "unipackage-unibuild-pre1" &&
         unibuildJson.format !== "isopack-2-unibuild") {
@@ -114,9 +176,9 @@ export class Unibuild {
     const unibuildHasPrelink =
       unibuildJson.format === "unipackage-unibuild-pre1";
 
-    const resources = [];
+    const resources: PrelinkResource[] = [];
 
-    _.each(unibuildJson.resources, function (resource) {
+    _.each(unibuildJson.resources, function (resource: any) {
       rejectBadPath(resource.file);
 
       const data = files.readBufferWithLengthAndOffset(
@@ -138,7 +200,7 @@ export class Unibuild {
         // was just a single js source file, but leave a "legacyPrelink" field
         // on it so we can not re-link that part (and not re-analyze for
         // assigned variables).
-        const prelinkResource = {
+        const prelinkResource: PrelinkResource = {
           type: "source",
           extension: "js",
           data: data,
@@ -151,13 +213,13 @@ export class Unibuild {
           // source processors!
           usesDefaultSourceProcessor: true,
           legacyPrelink: {
-            packageVariables: unibuildJson.packageVariables || []
+            packageVariables: unibuildJson.packageVariables || [],
           }
         };
 
         if (resource.sourceMap) {
           rejectBadPath(resource.sourceMap);
-          prelinkResource.legacyPrelink.sourceMap = files.readFile(
+          prelinkResource.legacyPrelink!.sourceMap = files.readFile(
             files.pathJoin(unibuildBasePath, resource.sourceMap), 'utf8');
         }
 
@@ -166,12 +228,12 @@ export class Unibuild {
       } else if (resource.type === "source") {
         resources.push({
           type: "source",
-          extension: resource.extension,
+          extension: resource.extension as string,
           usesDefaultSourceProcessor:
           !! resource.usesDefaultSourceProcessor,
           data: data,
-          path: resource.path,
-          hash: resource.hash,
+          path: resource.path as string,
+          hash: resource.hash as string,
           fileOptions: resource.fileOptions
         });
 
@@ -197,7 +259,7 @@ export class Unibuild {
       // are exports.
       declaredExports = [];
 
-      _.each(unibuildJson.packageVariables, function (pv) {
+      _.each(unibuildJson.packageVariables, function (pv: any) {
         if (pv.export) {
           declaredExports.push({
             name: pv.name,
@@ -232,12 +294,25 @@ export class Unibuild {
     unibuildDir,
     usesModules,
     npmDirsToCopy,
+  }: {
+    builder: Builder,
+    unibuildDir: string,
+    usesModules: boolean,
+    npmDirsToCopy: Record<string, string>,
   }) {
     const unibuild = this;
-    const unibuildJson = {
+    type UnibuildJson = {
+      format: "isopack-2-unibuild";
+      declaredExports: { name: string, testOnly?: boolean }[];
+      uses: IsopackConstraint[];
+      implies?: IsopackConstraint[];
+      resources: PrelinkResource[];
+      node_modules?: Record<string, any> | string;
+    };
+    const unibuildJson: UnibuildJson = {
       format: "isopack-2-unibuild",
       declaredExports: unibuild.declaredExports,
-      uses: _.map(unibuild.uses, u => ({
+      uses: _.map(unibuild.uses, (u: IsopackConstraint) => ({
         'package': u.package,
         // For cosmetic value, leave false values for these options out of
         // the JSON file.
@@ -250,14 +325,14 @@ export class Unibuild {
     };
 
     // Figure out where the npm dependencies go.
-    let node_modules = {};
-    _.each(unibuild.nodeModulesDirectories, nmd => {
+    let node_modules: Record<string, any> | string = {};
+    _.each(unibuild.nodeModulesDirectories, (nmd: NodeModulesDirectory) => {
       const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
       // We already have this npm directory from another unibuild.
         ? npmDirsToCopy[nmd.sourcePath]
         : npmDirsToCopy[nmd.sourcePath] =
             nmd.getPreferredBundlePath("isopack");
-      node_modules[bundlePath] = nmd.toJSON();
+      (node_modules as Record<string, any>)[bundlePath] = nmd.toJSON();
     });
 
     const preferredPaths = Object.keys(node_modules);
@@ -274,10 +349,10 @@ export class Unibuild {
     }
 
     // Output 'head', 'body' resources nicely
-    const concat = { head: [], body: [] };
-    const offset = { head: 0, body: 0 };
+    const concat: Record<string, Buffer[]> = { head: [], body: [] };
+    const offset: Record<string, number> = { head: 0, body: 0 };
 
-    _.each(unibuild.resources, function (resource) {
+    _.each(unibuild.resources, function (resource: PrelinkResource) {
       if (_.contains(["head", "body"], resource.type)) {
         if (concat[resource.type].length) {
           concat[resource.type].push(Buffer.from("\n", "utf8"));
@@ -306,16 +381,16 @@ export class Unibuild {
       }
     });
 
-    _.each(concat, function (parts, type) {
+    _.each(concat, function (parts: Buffer[], type: string) {
       if (parts.length) {
         builder.write(files.pathJoin(unibuildDir, type), {
           data: Buffer.concat(concat[type], offset[type])
-        });
+        } as any);
       }
     });
 
     // Output other resources each to their own file
-    _.each(unibuild.resources, function (resource) {
+    _.each(unibuild.resources, function (resource: PrelinkResource) {
       if (_.contains(["head", "body"], resource.type)) {
         // already did this one
         return;
@@ -325,7 +400,7 @@ export class Unibuild {
         builder.writeToGeneratedFilename(
           files.pathJoin(
             unibuildDir,
-            resource.servePath || resource.path,
+            resource.servePath || resource.path as string,
           ),
           { data: resource.data }
         );
@@ -342,7 +417,7 @@ export class Unibuild {
         type: resource.type,
         extension: resource.extension,
         file: generatedFilename,
-        length: resource.data.length,
+        length: resource.data!.length,
         offset: 0,
         usesDefaultSourceProcessor:
           resource.usesDefaultSourceProcessor || undefined,
@@ -357,7 +432,7 @@ export class Unibuild {
   }
 
   getLegacyJsResources() {
-    const legacyJsResources = [];
+    const legacyJsResources: any[] = [];
 
     this.resources.forEach(resource => {
       if (resource.type === "source" &&
