@@ -566,6 +566,8 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "es5-shim",
   "shell-server",
   "modern-browsers",
+  "ecmascript",
+  "typescript",
 ];
 
 function newSelfTestCatalog() {
