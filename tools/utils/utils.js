@@ -532,7 +532,7 @@ exports.isValidVersion = function (version, {forCordova}) {
 
 exports.execFileSync = function (file, args, opts) {
   var child_process = require('child_process');
-  var { eachline } = require('./eachline.js');
+  var { eachline } = require('./eachline');
 
   opts = opts || {};
   if (! _.has(opts, 'maxBuffer')) {
@@ -573,7 +573,7 @@ exports.execFileSync = function (file, args, opts) {
 exports.execFileAsync = function (file, args, opts) {
   opts = opts || {};
   var child_process = require('child_process');
-  var { eachline } = require('./eachline.js');
+  var { eachline } = require('./eachline');
   var p = child_process.spawn(file, args, opts);
   var mapper = opts.lineMapper || _.identity;
 

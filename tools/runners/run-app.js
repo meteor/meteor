@@ -15,7 +15,7 @@ var release = require('../packaging/release.js');
 import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
-import { eachline } from "../utils/eachline.js";
+import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;

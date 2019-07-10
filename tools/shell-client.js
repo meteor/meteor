@@ -181,7 +181,7 @@ Cp.setUpSocket = function setUpSocket(sock, key) {
 
   sock.pipe(process.stdout);
 
-  require("./utils/eachline.js").eachline(sock, function (line) {
+  require("./utils/eachline").eachline(sock, function (line) {
     self.exitOnClose = line.indexOf(EXITING_MESSAGE) >= 0;
   });
 
