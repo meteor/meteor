@@ -31,7 +31,7 @@ tools/func-utils.js
 tools/http-helpers.js
 tools/inspector.js
 tools/index.js
-tools/mongo-exit-codes.js
+tools/mongo-exit-codes.ts
 tools/processes.js
 tools/progress.js
 tools/project-context.js
