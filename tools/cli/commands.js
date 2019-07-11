@@ -9,7 +9,7 @@ var config = require('../meteor-services/config.js');
 var runLog = require('../runners/run-log.js');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
@@ -961,7 +961,7 @@ var buildCommand = function (options) {
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
-  // Error handling for options.architecture. See archinfo.js for more
+  // Error handling for options.architecture. See archinfo for more
   // information on what the architectures are, what they mean, et cetera.
   if (options.architecture &&
       !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {

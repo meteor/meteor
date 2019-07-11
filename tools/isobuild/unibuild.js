@@ -4,7 +4,7 @@ import _ from "underscore";
 import files from "../fs/files";
 import { WatchSet, sha1 } from "../fs/watch";
 import { NodeModulesDirectory } from "./bundler.js";
-import * as archinfo from "../utils/archinfo.js";
+import * as archinfo from "../utils/archinfo";
 
 function rejectBadPath(p) {
   if (p.indexOf("..") >= 0) {
