@@ -1,6 +1,6 @@
 var _ = require('underscore');
 
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var bundler = require('./bundler.js');
 var isopack = require('./isopack.js');

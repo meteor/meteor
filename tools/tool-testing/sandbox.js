@@ -48,7 +48,7 @@ import {
   getPackagesDirectoryName,
   getPackageStorage,
 } from '../meteor-services/config.js';
-import { host as archInfoHost } from '../utils/archinfo.js';
+import { host as archInfoHost } from '../utils/archinfo';
 import { current as releaseCurrent } from '../packaging/release.js';
 import { FinishedUpgraders } from '../project-context.js';
 import { allUpgraders } from '../upgraders.js';

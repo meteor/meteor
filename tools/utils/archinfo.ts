@@ -1,7 +1,7 @@
-var _ = require('underscore');
-var os = require('os');
+const { max } = require('underscore');
+import os from 'os';
 
-var utils = require('./utils.js');
+import { architecture, execFileSync } from './utils';
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
@@ -129,7 +129,7 @@ var utils = require('./utils.js');
  */
 
 // Valid architectures that Meteor officially supports.
-export const VALID_ARCHITECTURES = {
+export const VALID_ARCHITECTURES: Record<string, boolean> = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
   "os.linux.x86_32": true,
@@ -142,18 +142,21 @@ export const VALID_ARCHITECTURES = {
 // a fiber. Throws an error if it's not a supported architecture.
 //
 // If you change this, also change scripts/admin/launch-meteor
-var _host = null; // memoize
+let _host: string | null = null; // memoize
+
 export function host() {
-  if (! _host) {
-    var run = function (...args) {
-      var result = utils.execFileSync(args[0], args.slice(1)).stdout;
+  if (!_host) {
+    const run = function (...args: Array<string | boolean>) {
+      const result = execFileSync(args[0], args.slice(1)).stdout;
+
       if (! result) {
-        throw new Error("can't get arch with " + args.join(" ") + "?");
+        throw new Error(`Can't get arch with ${args.join(" ")}?`);
       }
+
       return result.replace(/\s*$/, ''); // trailing whitespace
     };
 
-    var platform = os.platform();
+    const platform = os.platform();
 
     if (platform === "darwin") {
       // Can't just test uname -m = x86_64, because Snow Leopard can
@@ -162,28 +165,26 @@ export function host() {
           run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel processors are supported on OS X");
       }
-      _host  = "os.osx.x86_64";
-    }
 
-    else if (platform === "linux") {
-      var machine = run('uname', '-m');
-      if (_.contains(["i386", "i686", "x86"], machine)) {
+      _host  = "os.osx.x86_64";
+    } else if (platform === "linux") {
+      const machine = run('uname', '-m');
+
+      if (["i386", "i686", "x86"].includes(machine)) {
         _host = "os.linux.x86_32";
-      } else if (_.contains(["x86_64", "amd64", "ia64"], machine)) {
+      } else if (["x86_64", "amd64", "ia64"].includes(machine)) {
         _host = "os.linux.x86_64";
       } else {
-        throw new Error("Unsupported architecture: " + machine);
+        throw new Error(`Unsupported architecture: ${machine}`);
       }
-    }
-
-    else if (platform === "win32") {
+    } else if (platform === "win32") {
       if (process.arch === "x64") {
         _host = "os.windows.x86_64";
       } else {
         _host = "os.windows.x86_32";
       }
     } else {
-      throw new Error("Unsupported operating system: " + platform);
+      throw new Error(`Unsupported operating system: ${platform}`);
     }
   }
 
@@ -193,9 +194,9 @@ export function host() {
 // In order to springboard to earlier Meteor releases that did not have
 // 64-bit Windows builds, Windows installations must be allowed to
 // download 32-bit builds of meteor-tool.
-exports.acceptableMeteorToolArches = function () {
+export function acceptableMeteorToolArches(): string[] {
   if (os.platform() === "win32") {
-    switch (utils.architecture()) {
+    switch (architecture()) {
     case "x86_32":
       return ["os.windows.x86_32"];
     case "x86_64":
@@ -207,18 +208,18 @@ exports.acceptableMeteorToolArches = function () {
   }
 
   return [host()];
-};
+}
 
 // 64-bit Windows machines that have been using a 32-bit version of Meteor
 // are eligible to switch to 64-bit beginning with Meteor 1.6, which is
 // the first version of Meteor that contains this code.
-export function canSwitchTo64Bit() {
+export function canSwitchTo64Bit(): boolean {
   // Automatically switching from 32-bit to 64-bit Windows builds is
   // disabled for the time being, since downloading additional builds of
   // meteor-tool isn't stable enough at the moment (on Windows, at least)
   // to introduce in a release candidate.
   return false &&
-    utils.architecture() === "x86_64" &&
+    architecture() === "x86_64" &&
     host() === "os.windows.x86_32";
 }
 
@@ -230,7 +231,7 @@ export function canSwitchTo64Bit() {
 // necessarily have to be a fully qualified architecture name. This
 // function just checks to see if `program` describes a set of
 // environments that is a (non-strict) superset of `host`.
-export function matches(host, program) {
+export function matches(host: string, program: string): boolean {
   return host.substr(0, program.length) === program &&
     (host.length === program.length ||
      host.substr(program.length, 1) === ".");
@@ -240,18 +241,19 @@ export function matches(host, program) {
 // architectures as its second argument. Returns the most specific
 // match, or null if none match. Throws an error if `programs`
 // contains exact duplicates.
-export function mostSpecificMatch(host, programs) {
-  var seen = {};
-  var best = null;
+export function mostSpecificMatch(host: string, programs: string[]): string | null  {
+  let best: string | null = null;
+  const seen: Record<string, boolean> = {};
 
-  _.each(programs, function (p) {
-    if (seen[p]) {
-      throw new Error("Duplicate architecture: " + p);
+  programs.forEach((program: string) => {
+    if (seen[program]) {
+      throw new Error(`Duplicate architecture: ${program}`);
     }
-    seen[p] = true;
-    if (matches(host, p) &&
-        (! best || p.length > best.length)) {
-      best = p;
+
+    seen[program] = true;
+
+    if (matches(host, program) && (!best || program.length > best.length)) {
+      best = program;
     }
   });
 
@@ -267,31 +269,31 @@ export function mostSpecificMatch(host, programs) {
 // For example, for 'os' and 'os.osx', return 'os.osx'. For 'os' and
 // 'os.linux.x86_64', return 'os.linux.x86_64'. For 'os' and 'browser', throw an
 // exception.
-export function leastSpecificDescription(programs) {
+export function leastSpecificDescription(programs: string[]): string {
   if (programs.length === 0) {
     return '';
   }
 
   // Find the longest string
-  var longest = _.max(programs, function (p) { return p.length; });
+  const longest = max(programs, (p: string) => p.length);
 
   // If everything else in the list is compatible with the longest,
   // then it must be the most specific, and if everything is
   // compatible with the most specific then it must be the least
   // specific compatible description.
-  _.each(programs, function (p) {
-    if (! matches(longest, p)) {
-      throw new Error("Incompatible architectures: '" + p + "' and '" +
-                      longest + "'");
+  programs.forEach((program: string) => {
+    if (!matches(longest, program)) {
+      throw new Error(`Incompatible architectures: '${program}' and '${longest}'`);
     }
   });
 
   return longest;
 }
 
-export function withoutSpecificOs(arch) {
+export function withoutSpecificOs(arch: string): string {
   if (arch.substr(0, 3) === 'os.') {
     return 'os';
   }
+
   return arch;
 }

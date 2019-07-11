@@ -5,7 +5,7 @@ var files = require('../../fs/files');
 var utils = require('../../utils/utils.js');
 var buildmessage = require('../../utils/buildmessage.js');
 var config = require('../../meteor-services/config.js');
-var archinfo = require('../../utils/archinfo.js');
+var archinfo = require('../../utils/archinfo');
 var Console = require('../../console/console.js').Console;
 
 var tropohouse = require('../tropohouse.js');
