@@ -1,6 +1,6 @@
-import _ from 'underscore';
 import child_process from 'child_process';
-import files from '../static-assets/server/mini-files';
+import { Writable } from 'stream';
+import { convertToOSPath } from '../static-assets/server/mini-files';
 
 // The execFileSync function is meant to resemble the similarly-named Node 0.12
 // synchronous process creation API, but instead of being fully blocking it
@@ -11,58 +11,81 @@ import files from '../static-assets/server/mini-files';
 // Eventually, these versions should replace the ones in tools/utils/utils.js
 // and tools/tool-testing/selftest.js.
 
-/**
- * @summary Executes a command synchronously, returning either the captured
- * stdout output or throwing an error containing the stderr output as part of
- * the message. In addition, the error will contain fields pid, stderr, stdout,
- * status and signal.
- * @param {String} command The command to run
- * @param {Array} [args] List of string arguments
- * @param {Object} [options]
- * @param {Object} [options.cwd] Current working directory of the child process
- * @param {Object} [options.env] Environment key-value pairs
- * @param {Array|String} [options.stdio] Child's stdio configuration.
- * (Default: 'pipe') Specifying anything else than 'pipe' will disallow
- * capture.
- * @param {Writable} [options.destination] If specified, instead of capturing
- * the output, the child process stdout will be piped to the destination stream.
- * @param {String} [options.waitForClose] Whether to wait for the child process
- * streams to close or to resolve the promise when the child process exits.
- * @returns {String} The stdout from the command
- */
-export function execFileSync(command, args, options) {
-  return Promise.await(execFileAsync(command, args, options));
+type ExecFileOptions = {
+  /**
+   * Current working directory of the child process
+   */
+  cwd?: string,
+
+  /**
+   * Environment key-value pairs
+   */
+  env?: NodeJS.ProcessEnv,
+
+  /**
+   * Child's stdio configuration.
+   * (Default: 'pipe') Specifying anything but 'pipe' will disallow capture.
+   */
+  stdio?: 'pipe' | Array<null | undefined | 'pipe'>,
+
+  /**
+   * If specified, instead of capturing the output, the child process stdout
+   * will be piped to the destination stream.
+   */
+  destination?: Writable,
+
+  /**
+   * Whether to wait for the child process streams to close or to resolve
+   * the promise when the child process exits.
+   */
+  waitForClose?: boolean,
 }
 
-/**
- * @summary Executes a command asynchronously, returning a promise that will
- * either be resolved to the captured stdout output or be rejected with an
- * error containing the stderr output as part of the message. In addition,
- * the error will contain fields pid, stderr, stdout, status and signal.
- * @param {String} command The command to run
- * @param {Array} [args] List of string arguments
- * @param {Object} [options]
- * @param {Object} [options.cwd] Current working directory of the child process
- * @param {Object} [options.env] Environment key-value pairs
- * @param {Array|String} [options.stdio] Child's stdio configuration.
- * (Default: 'pipe') Specifying anything else than 'pipe' will disallow
- * capture.
- * @param {Writable} [options.destination] If specified, instead of capturing
- * the output, the child process stdout will be piped to the destination stream.
- * @param {String} [options.waitForClose] Whether to wait for the child process
- * streams to close or to resolve the promise when the child process exits.
- * @returns {Promise<String>}
- */
-export function execFileAsync(command, args,
-  options = { waitForClose: true }) {
+ /**
+  * @summary Executes a command synchronously, returning either the captured
+  * stdout output or throwing an error containing the stderr output as part of
+  * the message. In addition, the error will contain fields pid, stderr, stdout,
+  * status and signal.
+  * @param command The command to run
+  * @param args List of string arguments
+  * @param options 
+  * @returns The stdout from the command
+  */
+export function execFileSync(
+  command: string,
+  args?: ReadonlyArray<string> | ExecFileOptions,
+  options?: ExecFileOptions
+) {
+  const meteorPromise: any = Promise; // TypeScript doesn't recognize "Promise.await"
+  return meteorPromise.await(execFileAsync(command, args, options));
+}
+
+ /**
+  * @summary Executes a command asynchronously, returning a promise that will
+  * either be resolved to the captured stdout output or be rejected with an
+  * error containing the stderr output as part of the message. In addition,
+  * the error will contain fields pid, stderr, stdout, status and signal.
+  * @param command The command to run
+  * @param args List of string arguments
+  * @param options 
+  */
+export function execFileAsync(
+  command: string,
+  args?: ReadonlyArray<string> | ExecFileOptions,
+  options: ExecFileOptions = { waitForClose: true }
+) {
   // args is optional, so if it's not an array we interpret it as options
   if (!Array.isArray(args)) {
-    options = _.extend(options, args);
-    args = [];
+    options = {
+      ...options,
+      ...args,
+    }
   }
+
   if (options.cwd) {
-    options.cwd = files.convertToOSPath(options.cwd);
+    options.cwd = convertToOSPath(options.cwd);
   }
+
   // The child process close event is emitted when the stdio streams
   // have all terminated. If those streams are shared with other
   // processes, that means we won't receive a 'close' until all processes
@@ -73,18 +96,18 @@ export function execFileAsync(command, args,
   const exitEvent = options.waitForClose ? 'close' : 'exit';
 
   return new Promise((resolve, reject) => {
-    var child; 
+    let child: ReturnType<typeof child_process.exec>; 
+    const spawnArgs: ReadonlyArray<string> = Array.isArray(args) ? args : [];
+    const { cwd, env, stdio } = options;
 
     if (process.platform !== 'win32') {
-      child = child_process.spawn(command, args,
-      { cwd, env, stdio } = options);
+      child = child_process.spawn(command, spawnArgs, { cwd, env, stdio });
     } else {
       // https://github.com/nodejs/node-v0.x-archive/issues/2318
-      args.forEach(arg => {
+      spawnArgs.forEach(arg => {
         command += ' ' + arg;
       });
-      child = child_process.exec(command,
-      { cwd, env, stdio } = options);
+      child = child_process.exec(command, { cwd, env });
     }
 
     let capturedStdout = '';
@@ -93,7 +116,7 @@ export function execFileAsync(command, args,
         child.stdout.pipe(options.destination);
       } else {
         child.stdout.setEncoding('utf8');
-        child.stdout.on('data', (data) => {
+        child.stdout.on('data', (data: string) => {
           capturedStdout += data;
         });
       }
@@ -102,12 +125,12 @@ export function execFileAsync(command, args,
     let capturedStderr = '';
     if (child.stderr) {
       child.stderr.setEncoding('utf8');
-      child.stderr.on('data', (data) => {
+      child.stderr.on('data', (data: string) => {
         capturedStderr += data;
       });
     }
 
-    const errorCallback = (error) => {
+    const errorCallback = (error: NodeJS.ErrnoException) => {
       // Make sure we only receive one type of callback
       child.removeListener(exitEvent, exitCallback);
 
@@ -115,7 +138,7 @@ export function execFileAsync(command, args,
       capturedStdout = capturedStdout.trim();
       capturedStderr = capturedStderr.trim();
 
-      _.extend(error, {
+      Object.assign(error, {
         pid: child.pid,
         stdout: capturedStdout,
         stderr: capturedStderr,
@@ -131,7 +154,7 @@ export function execFileAsync(command, args,
     };
     child.on('error', errorCallback);
 
-    const exitCallback = (code, signal) => {
+    const exitCallback = (code: number, signal: string) => {
       // Make sure we only receive one type of callback
       child.removeListener('error', errorCallback);
 
@@ -143,20 +166,20 @@ export function execFileAsync(command, args,
         resolve(capturedStdout);
       } else {
         let errorMessage = `Command failed: ${command}`;
-        if (args) {
-          errorMessage += ` ${args.join(' ')}`;
+        if (spawnArgs) {
+          errorMessage += ` ${spawnArgs.join(' ')}`;
         }
         errorMessage += `\n${capturedStderr}`;
 
         const error = new Error(errorMessage);
 
-        _.extend(error, {
+        Object.assign(error, {
           pid: child.pid,
           stdout: capturedStdout,
           stderr: capturedStderr,
           status: code,
           signal: signal
-        });
+        })
 
         reject(error);
       }
