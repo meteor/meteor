@@ -25,5 +25,10 @@
     "types": ["node"],
     "esModuleInterop": true,
     "preserveSymlinks": true,
-  }
+  },
+  "exclude": [
+    "./tests/apps/**",
+    "./tests/packages/**",
+    "./static-assets/skel*/**"
+  ]
 }
