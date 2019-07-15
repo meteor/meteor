@@ -9,7 +9,7 @@
   "dependencies": {
     "@babel/plugin-proposal-async-generator-functions": "^7.2.0",
     "@babel/plugin-proposal-class-properties": "^7.5.0",
-    "@babel/plugin-proposal-object-rest-spread": "^7.5.1",
+    "@babel/plugin-proposal-object-rest-spread": "^7.5.4",
     "@babel/plugin-syntax-async-generators": "^7.2.0",
     "@babel/plugin-syntax-class-properties": "^7.2.0",
     "@babel/plugin-syntax-flow": "^7.2.0",
