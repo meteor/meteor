@@ -361,7 +361,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
 
 // Test that when the parent runner process is SIGKILLed, the child
 // process exits also.
-selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure"], function () {
+selftest.skip.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox();
   var run;
 
