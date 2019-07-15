@@ -32,19 +32,19 @@ const encode = array => {
   let c = null;
   let d = null;
 
-  array.forEach((elm, i) => {
+  for (let i = 0; i < array.length; i++) {
     switch (i % 3) {
       case 0:
-        a = (elm >> 2) & 0x3F;
-        b = (elm & 0x03) << 4;
+        a = (array[i] >> 2) & 0x3F;
+        b = (array[i] & 0x03) << 4;
         break;
       case 1:
-        b = b | (elm >> 4) & 0xF;
-        c = (elm & 0xF) << 2;
+        b = b | (array[i] >> 4) & 0xF;
+        c = (array[i] & 0xF) << 2;
         break;
       case 2:
-        c = c | (elm >> 6) & 0x03;
-        d = elm & 0x3F;
+        c = c | (array[i] >> 6) & 0x03;
+        d = array[i] & 0x3F;
         answer.push(getChar(a));
         answer.push(getChar(b));
         answer.push(getChar(c));
@@ -55,7 +55,7 @@ const encode = array => {
         d = null;
         break;
     }
-  });
+  }
 
   if (a != null) {
     answer.push(getChar(a));
@@ -65,7 +65,7 @@ const encode = array => {
     } else {
       answer.push(getChar(c));
     }
-    
+
     if (d == null) {
       answer.push('=');
     }
@@ -102,7 +102,7 @@ const decode = str => {
       len--;
     }
   }
-  
+
   const arr = newBinary(len);
 
   let one = null;
@@ -147,7 +147,7 @@ const decode = str => {
         break;
     }
   }
-  
+
   return arr;
 };
 
