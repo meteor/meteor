@@ -18,6 +18,7 @@ var packageJson = {
     "@types/underscore": "1.9.2",
     underscore: "1.9.1",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "@types/semver": "5.4.0",
     semver: "5.4.1"
   },
   // These are only used in dev mode (by shell.js) so end-users can avoid
