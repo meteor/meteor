@@ -62,6 +62,11 @@ N/A
 
 * The `pathwatcher` npm package has been updated to version 8.1.0.
 
+* The `underscore` npm package installed in the Meteor dev bundle (for use
+  by the `meteor/tools` codebase) has been updated from version 1.5.2 to
+  version 1.9.1, and `@types/underscore` has been installed for better
+  TypeScript support.
+
 * In addition to the `.js` and `.jsx` file extensions, the `ecmascript`
   compiler plugin now automatically handles JavaScript modules with the
   `.mjs` file extension.

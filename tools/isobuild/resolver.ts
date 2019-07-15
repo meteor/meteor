@@ -1,8 +1,8 @@
-const {
+import {
   isString,
   isObject,
   has,
-} = require("underscore");
+} from "underscore";
 
 import { matches as archMatches } from "../utils/archinfo.js";
 import {
