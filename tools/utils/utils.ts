@@ -1,15 +1,20 @@
-var _ = require('underscore');
-var semver = require('semver');
-var os = require('os');
-var url = require('url');
+import _ from 'underscore';
+import semver from 'semver';
+import os from 'os';
+import url from 'url';
 
-var fiberHelpers = require('./fiber-helpers.js');
-var archinfo = require('./archinfo');
-var buildmessage = require('./buildmessage.js');
-var files = require('../fs/files');
-var packageVersionParser = require('../packaging/package-version-parser.js');
+import'./fiber-helpers.js';
+import * as archinfo from './archinfo';
+import buildmessage from './buildmessage.js';
+import * as files from '../fs/files';
+import packageVersionParser from '../packaging/package-version-parser.js';
+import { PackageConstraint } from '../../packages/package-version-parser/package-version-parser.js';
 
-var utils = exports;
+type TemporaryParseUrlOptions = {
+  hostname: string;
+  port: string;
+  protocol: string;
+}
 
 // Parses <protocol>://<host>:<port> into an object { protocol: *, host:
 // *, port: * }. The input can also be of the form <host>:<port> or just
@@ -19,7 +24,7 @@ var utils = exports;
 // undefined} or something like that.
 //
 // 'defaults' is an optional object with 'hostname', 'port', and 'protocol' keys.
-exports.parseUrl = function (str, defaults) {
+export function parseUrl(str: string, defaults: TemporaryParseUrlOptions) {
   // XXX factor this out into a {type: host/port}?
 
   defaults = defaults || {};
@@ -34,8 +39,8 @@ exports.parseUrl = function (str, defaults) {
       protocol: defaultProtocol };
   }
 
-  var hasScheme = exports.hasScheme(str);
-  if (! hasScheme) {
+  var hasSchemeResult = hasScheme(str);
+  if (! hasSchemeResult) {
     str = "http://" + str;
   }
 
@@ -45,7 +50,7 @@ exports.parseUrl = function (str, defaults) {
   parsed.protocol = parsed.protocol.replace(/\:$/, '');
 
   return {
-    protocol: hasScheme ? parsed.protocol : defaultProtocol,
+    protocol: hasSchemeResult ? parsed.protocol : defaultProtocol,
     hostname: parsed.hostname || defaultHostname,
     port: parsed.port || defaultPort
   };
@@ -53,7 +58,7 @@ exports.parseUrl = function (str, defaults) {
 
 // 'options' is an object with 'hostname', 'port', and 'protocol' keys, such as
 // the return value of parseUrl.
-exports.formatUrl = function (options) {
+export function formatUrl(options: TemporaryParseUrlOptions) {
   // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
   // this a valid URL
   if (!options.pathname)
@@ -62,7 +67,7 @@ exports.formatUrl = function (options) {
   return url.format(options);
 };
 
-exports.ipAddress = function () {
+export function ipAddress() {
   let defaultRoute;
   // netroute is not available on Windows
   if (process.platform !== "win32") {
@@ -105,23 +110,18 @@ ${addressEntries.map(entry => entry.address).join(', ')}`);
   }
 };
 
-exports.hasScheme = function (str) {
+export function hasScheme(str: string): boolean {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
 
-
-exports.hasScheme = function (str) {
-  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
-};
-
-exports.isIPv4Address = function (str) {
+export function isIPv4Address(str: string): RegExpMatchArray | null {
   return str.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
 }
 
 // XXX: Move to e.g. formatters.js?
 // Prints a package list in a nice format.
 // Input is an array of objects with keys 'name' and 'description'.
-exports.printPackageList = function (items, options) {
+export function printPackageList(items, options) {
   options = options || {};
 
   var rows = _.map(items, function (item) {
@@ -143,10 +143,10 @@ exports.printPackageList = function (items, options) {
 // that make sense to users (eg, the name they manually gave their
 // computer on OS X, which might contain spaces) over names that have
 // any particular technical significance (eg, might resolve in DNS).
-exports.getHost = function (...args) {
+export function getHost(...args): string {
   var ret;
   var attempt = function (...args) {
-    var output = exports.execFileSync(args[0], args.slice(1)).stdout;
+    var output = execFileSync(args[0], args.slice(1)).stdout;
     if (output) {
       ret = output.trim();
     }
@@ -188,10 +188,10 @@ exports.getHost = function (...args) {
 // Meteor Accounts, mostly so that when the user is seeing a list of
 // their open sessions in their profile on the web, they have a way to
 // decide which ones they want to revoke.
-exports.getAgentInfo = function () {
+export function getAgentInfo() {
   var ret = {};
 
-  var host = utils.getHost();
+  var host = getHost();
   if (host) {
     ret.host = host;
   }
@@ -206,7 +206,7 @@ exports.getAgentInfo = function () {
 // Wait for 'ms' milliseconds, and then return. Yields. (Must be
 // called within a fiber, and blocks only the calling fiber, not the
 // whole program.)
-exports.sleepMs = function (ms) {
+export function sleepMs(ms: number): void {
   if (ms <= 0) {
     return;
   }
@@ -218,26 +218,26 @@ exports.sleepMs = function (ms) {
 
 // Return a short, high entropy string without too many funny
 // characters in it.
-exports.randomToken = function () {
+export function randomToken(): string {
   return (Math.random() * 0x100000000 + 1).toString(36);
 };
 
 // Like utils.randomToken, except a legal variable name, i.e. the first
 // character is guaranteed to be [a-z] and the rest [a-z0-9].
-exports.randomIdentifier = function () {
+export function randomIdentifier(): string {
   const firstLetter = String.fromCharCode(
     "a".charCodeAt(0) + Math.floor(Math.random() * 26));
   return firstLetter + Math.random().toString(36).slice(2);
 };
 
 // Returns a random non-privileged port number.
-exports.randomPort = function () {
+export function randomPort(): number {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
 // Like packageVersionParser.parsePackageConstraint, but if called in a
 // buildmessage context uses buildmessage to raise errors.
-exports.parsePackageConstraint = function (constraintString, options) {
+export function parsePackageConstraint(constraintString, options): PackageConstraint | null {
   try {
     return packageVersionParser.parsePackageConstraint(constraintString);
   } catch (e) {
@@ -249,7 +249,7 @@ exports.parsePackageConstraint = function (constraintString, options) {
   }
 };
 
-exports.validatePackageName = function (name, options) {
+export function validatePackageName(name, options) {
   try {
     return packageVersionParser.validatePackageName(name, options);
   } catch (e) {
@@ -267,7 +267,7 @@ exports.validatePackageName = function (name, options) {
 //
 // Lines of `.meteor/versions` are parsed using this function, among
 // other uses.
-exports.parsePackageAndVersion = function (packageAtVersionString, options) {
+export function parsePackageAndVersion(packageAtVersionString, options) {
   var error = null;
   var separatorPos = Math.max(packageAtVersionString.lastIndexOf(' '),
                               packageAtVersionString.lastIndexOf('@'));
@@ -314,9 +314,9 @@ exports.parsePackageAndVersion = function (packageAtVersionString, options) {
 // eg package-client.js) prints and throws the "exit with code 1" exception
 // on failure.
 
-exports.isValidPackageName = function (packageName) {
+export function isValidPackageName(packageName: string): boolean {
   try {
-    exports.validatePackageName(packageName);
+    validatePackageName(packageName);
     return true;
   } catch (e) {
     if (!e.versionParserError) {
@@ -326,9 +326,9 @@ exports.isValidPackageName = function (packageName) {
   }
 };
 
-exports.validatePackageNameOrExit = function (packageName, options) {
+export function validatePackageNameOrExit(packageName: string, options) {
   try {
-    exports.validatePackageName(packageName, options);
+    validatePackageName(packageName, options);
   } catch (e) {
     if (!e.versionParserError) {
       throw e;
@@ -347,22 +347,22 @@ exports.validatePackageNameOrExit = function (packageName, options) {
 // - quoted usernames (eg, "foo"@bar.com, " "@bar.com, "@"@bar.com)
 // - IP addresses in domains (eg, foo@1.2.3.4 or the IPv6 equivalent)
 // because they're weird and we don't want them in our database.
-exports.validEmail = function (address) {
+export function validEmail(address: string): boolean {
   return /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/.test(address);
 };
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
-exports.quotemeta = function (str) {
+export function quotemeta(str: string): string {
     return String(str).replace(/(\W)/g, '\\$1');
 };
 
 // Allow a simple way to scale up all timeouts from the command line
-var timeoutScaleFactor = 1.0;
+var localTimeoutScaleFactor = 1.0;
 if (process.env.TIMEOUT_SCALE_FACTOR) {
-  timeoutScaleFactor = parseFloat(process.env.TIMEOUT_SCALE_FACTOR);
+  localTimeoutScaleFactor = parseFloat(process.env.TIMEOUT_SCALE_FACTOR);
 }
-exports.timeoutScaleFactor = timeoutScaleFactor;
+export const timeoutScaleFactor = localTimeoutScaleFactor;
 
 // If the given version matches a template (essentially, semver-style, but with
 // a bounded number of digits per number part, and with no restriction on the
@@ -373,7 +373,7 @@ exports.timeoutScaleFactor = timeoutScaleFactor;
 // prerelease tags), and appends a $. (Because ! sorts before $, this means that
 // the prerelease for a given release will sort before it. Because $ sorts
 // before '.', this means that 1.2 will sort before 1.2.3.)
-exports.defaultOrderKeyForReleaseVersion = function (v) {
+export function defaultOrderKeyForReleaseVersion(v: string): string | null {
   var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/);
   if (!m) {
     return null;
@@ -385,14 +385,14 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
   var hasRedundantLeadingZero = function (x) {
     return x.length > 1 && x[0] === '0';
   };
-  var leftPad = function (chr, len, str) {
+  var leftPad = function (chr: string, len: number, str: string): string {
     if (str.length > len) {
       throw Error("too long to pad!");
     }
     var padding = new Array(len - str.length + 1).join(chr);
     return padding + str;
   };
-  var rightPad = function (chr, len, str) {
+  var rightPad = function (chr: string, len: number, str: string): string {
     if (str.length > len) {
       throw Error("too long to pad!");
     }
@@ -426,7 +426,7 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
 };
 
 // XXX should be in files.js
-exports.isDirectory = function (dir) {
+export function isDirectory(dir: string) {
   try {
     // use stat rather than lstat since symlink to dir is OK
     var stats = files.stat(dir);
@@ -439,7 +439,7 @@ exports.isDirectory = function (dir) {
 // Calls cb with each subset of the array "total", with non-decreasing size,
 // until all subsets have been used or cb returns true. The array passed
 // to cb may be safely mutated or retained by cb.
-exports.generateSubsetsOfIncreasingSize = function (total, cb) {
+export function generateSubsetsOfIncreasingSize(total, cb) {
   // We'll throw this if cb ever returns true, which is a simple way to pop us
   // out of our recursion.
   var Done = function () {};
@@ -484,25 +484,25 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
   }
 };
 
-exports.isUrlWithFileScheme = function (x) {
+export function isUrlWithFileScheme(x): boolean {
   return /^file:\/\/.+/.test(x);
 };
 
-exports.isUrlWithSha = function (x) {
+export function isUrlWithSha(x): boolean {
   // Is a URL with a fixed SHA? We use this for Cordova -- although theoretically we could use
   // a URL like isNpmUrl(), there are a variety of problems with this,
   // see https://github.com/meteor/meteor/pull/5562
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
 }
 
-exports.isNpmUrl = function (x) {
+export function isNpmUrl(x): boolean {
   // These are the various protocols that NPM supports, which we use to download NPM dependencies
   // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
-  return exports.isUrlWithSha(x) ||
+  return isUrlWithSha(x) ||
     /^(git|git\+ssh|git\+http|git\+https|https|http)?:\/\//.test(x);
 };
 
-exports.isPathRelative = function (x) {
+export function isPathRelative(x): boolean {
   return x.charAt(0) !== '/';
 };
 
@@ -512,25 +512,25 @@ exports.isPathRelative = function (x) {
 //
 // This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
-exports.ensureOnlyValidVersions = function (dependencies, {forCordova}) {
+export function ensureOnlyValidVersions(dependencies, {forCordova}) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (! exports.isValidVersion(version, {forCordova})) {
+    if (! isValidVersion(version, {forCordova})) {
       throw new Error(
         "Must declare valid version of dependency: " + name + '@' + version);
     }
   });
 };
-exports.isValidVersion = function (version, {forCordova}) {
-  return semver.valid(version) || exports.isUrlWithFileScheme(version)
-    || (forCordova ? exports.isUrlWithSha(version): exports.isNpmUrl(version));
+export function isValidVersion(version, {forCordova}) {
+  return semver.valid(version) || isUrlWithFileScheme(version)
+    || (forCordova ? isUrlWithSha(version): isNpmUrl(version));
 };
 
 
-exports.execFileSync = function (file, args, opts) {
+export function execFileSync(file, args, opts) {
   var child_process = require('child_process');
   var { eachline } = require('./eachline');
 
@@ -570,7 +570,7 @@ exports.execFileSync = function (file, args, opts) {
   }).await();
 };
 
-exports.execFileAsync = function (file, args, opts) {
+export function execFileAsync(file, args, opts) {
   opts = opts || {};
   var child_process = require('child_process');
   var { eachline } = require('./eachline');
@@ -593,15 +593,15 @@ exports.execFileAsync = function (file, args, opts) {
 };
 
 
-exports.runGitInCheckout = function (...args) {
+export function runGitInCheckout(...args) {
   args.unshift(
     '--git-dir=' +
     files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
 
-  return exports.execFileSync('git', args).stdout;
+  return execFileSync('git', args).stdout;
 };
 
-exports.Throttled = function (options) {
+export function Throttled(options) {
   var self = this;
 
   options = _.extend({ interval: 150 }, options || {});
@@ -611,7 +611,7 @@ exports.Throttled = function (options) {
   self.next = now;
 };
 
-_.extend(exports.Throttled.prototype, {
+_.extend(Throttled.prototype, {
   isAllowed: function () {
     var self = this;
     var now = +(new Date);
@@ -633,13 +633,13 @@ _.extend(exports.Throttled.prototype, {
 // options:
 //   interval: minimum interval of time between yield calls
 //             (more frequent calls are simply dropped)
-exports.ThrottledYield = function (options) {
+export function ThrottledYield(options) {
   var self = this;
 
-  self._throttle = new exports.Throttled(options);
+  self._throttle = new Throttled(options);
 };
 
-_.extend(exports.ThrottledYield.prototype, {
+_.extend(ThrottledYield.prototype, {
   yield: function () {
     var self = this;
     if (self._throttle.isAllowed()) {
@@ -659,7 +659,7 @@ _.extend(exports.ThrottledYield.prototype, {
 // Takes in either null, a raw date string (ex: 2014-12-09T18:37:48.977Z) or a
 // date object and returns a long-form human-readable date (ex: December 9th,
 // 2014) or unknown for null.
-exports.longformDate = function (date) {
+export function longformDate(date) {
   if (! date) {
     return "Unknown";
   }
@@ -671,17 +671,17 @@ exports.longformDate = function (date) {
 // Length of the longest possible string that could come out of longformDate
 // (September is the longest month name, so "September 24th, 2014" would be an
 // example).
-exports.maxDateLength = "September 24th, 2014".length;
+export const maxDateLength = "September 24th, 2014".length;
 
 // Returns a sha256 hash of a given string.
-exports.sha256 = function (contents) {
+export function sha256(contents) {
   var crypto = require('crypto');
   var hash = crypto.createHash('sha256');
   hash.update(contents);
   return hash.digest('base64');
 };
 
-exports.sourceMapLength = function (sm) {
+export function sourceMapLength(sm) {
   if (! sm) {
     return 0;
   }
@@ -725,7 +725,7 @@ export function architecture() {
 
   const osType = os.type();
   const osArch = os.arch();
-
+ 
   if (!supportedArchitectures[osType]) {
     throw new Error(`Unsupported OS ${osType}`);
   }
@@ -737,8 +737,8 @@ export function architecture() {
   return supportedArchitectures[osType][osArch];
 };
 
-let emacsDetected;
-export function isEmacs() {
+let emacsDetected: boolean | undefined;
+export function isEmacs(): boolean {
   // Checking `process.env` is expensive, so only check once.
   if (typeof emacsDetected === "boolean") {
     return emacsDetected;
