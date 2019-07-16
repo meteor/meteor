@@ -9,7 +9,6 @@ import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
-import LRU from "lru-cache";
 import {Profile} from "../tool-env/profile";
 import {SourceNode, SourceMapConsumer} from "source-map";
 import {
@@ -241,22 +240,6 @@ function setImportedStatus(file: File, status: string | boolean) {
   }
 }
 
-// Map from SHA (which is already calculated, so free for us)
-// to the results of calling findImportedModuleIdentifiers.
-// Each entry is an array of strings, and this is a case where
-// the computation is expensive but the output is very small.
-// The cache can be global because findImportedModuleIdentifiers
-// is a pure function, and that way it applies across instances
-// of ImportScanner (which do not persist across builds).
-const IMPORT_SCANNER_CACHE = new LRU({
-  max: 1024*1024,
-  length(ids) {
-    let total = 40; // size of key
-    each(ids, (_info, id) => { total += id.length; });
-    return total;
-  }
-});
-
 // Stub used for entry point modules within node_modules directories on
 // the server. These stub modules delegate to native Node evaluation by
 // calling module.useNode() immediately, but it's important that we have
@@ -328,6 +311,18 @@ export default class ImportScanner {
     this.defaultHandlers = new DefaultHandlers({
       cacheDir,
       bundleArch,
+    });
+
+    const {
+      findImportedModuleIdentifiers,
+    } = this;
+
+    this.findImportedModuleIdentifiers = wrap(file => {
+      return findImportedModuleIdentifiers.call(this, file);
+    }, {
+      makeCacheKey(file) {
+        return file.hash;
+      }
     });
 
     this.resolver = Resolver.getOrCreate({
@@ -872,21 +867,7 @@ export default class ImportScanner {
   }
 
   private findImportedModuleIdentifiers(file: File): Record<string, ImportInfo> {
-    if (IMPORT_SCANNER_CACHE.has(file.hash)) {
-      return IMPORT_SCANNER_CACHE.get(file.hash);
-    }
-
-    const result = findImportedModuleIdentifiers(
-      this.getDataString(file),
-      file.hash,
-    );
-
-    // there should always be file.hash, but better safe than sorry
-    if (file.hash) {
-      IMPORT_SCANNER_CACHE.set(file.hash, result);
-    }
-
-    return result;
+    return findImportedModuleIdentifiers(this.getDataString(file), file.hash);
   }
 
   private resolve(
