@@ -43,7 +43,7 @@ import { wrap } from "optimism";
 import { compile as reifyCompile } from "reify/lib/compiler";
 import { parse as reifyBabelParse } from "reify/lib/parsers/babel";
 
-import Resolver from "./resolver";
+import Resolver, { Resolution } from "./resolver";
 
 const fakeFileStat = {
   isFile() {
@@ -897,7 +897,7 @@ export default class ImportScanner {
     parentFile: File,
     id: string,
     forDynamicImport = false,
-  ): ReturnType<Resolver["resolve"]> {
+  ): Resolution {
     const absPath = pathJoin(this.sourceRoot, parentFile.sourcePath);
     const resolved = this.resolver.resolve(id, absPath);
 
@@ -1389,7 +1389,7 @@ export default class ImportScanner {
     parentFile: File,
     id: string,
     forDynamicImport = false,
-  ): ReturnType<Resolver["resolve"]> {
+  ): Resolution {
     const isApp = ! this.name;
     const absParentPath = pathJoin(
       this.sourceRoot,
