@@ -175,7 +175,7 @@ function jsonDataToCommonJS(data: any) {
 // eviction logic.
 const scriptParseCache = Object.create(null);
 
-function canBeParsedAsPlainJS(dataString: string, hash: string) {
+function canBeParsedAsPlainJS(dataString: string, hash: string): boolean {
   if (hash && has(scriptParseCache, hash)) {
     return scriptParseCache[hash];
   }
@@ -274,6 +274,9 @@ type MissingMap = Record<string, ImportInfo[]>;
 type ImportInfo = {
   parentPath: string;
   helpers: Record<string, boolean>;
+  dynamic: boolean;
+  parentWasDynamic: boolean;
+  possiblySpurious: boolean;
   // TODO
 }
 
@@ -351,14 +354,15 @@ export default class ImportScanner {
     };
   }
 
-  private getFile(absPath: string) {
+  private getFile(absPath: string): File | null {
     absPath = absPath.toLowerCase();
     if (has(this.absPathToOutputIndex, absPath)) {
       return this.outputFiles[this.absPathToOutputIndex[absPath]];
     }
+    return null;
   }
 
-  private addFile(absPath: string, file: File) {
+  private addFile(absPath: string, file: File | null): File | null {
     if (! file || file[fakeSymbol]) {
       // Return file without adding it to this.outputFiles.
       return file;
@@ -391,6 +395,8 @@ export default class ImportScanner {
 
       return file;
     }
+
+    return null;
   }
 
   addInputFiles(files: File[]) {
@@ -667,8 +673,8 @@ export default class ImportScanner {
       this.allMissingModules = newlyMissing;
 
       Object.keys(missingModules).forEach(id => {
-        let staticImportInfo = null;
-        let dynamicImportInfo = null;
+        let staticImportInfo: ImportInfo | null = null;
+        let dynamicImportInfo: ImportInfo | null = null;
 
         // Although it would be logically valid to call this._scanFile for
         // each and every importInfo object, there can be a lot of them
@@ -989,7 +995,7 @@ export default class ImportScanner {
          info.dynamic);
 
       const resolved = this.resolve(file, id, dynamic);
-      const absImportedPath = resolved && resolved.path;
+      const absImportedPath = resolved && resolved !== "missing" && resolved.path;
       if (! absImportedPath) {
         return;
       }
@@ -1144,7 +1150,7 @@ export default class ImportScanner {
 
     let ext = dotExt.slice(1);
     if (! has(DefaultHandlers.prototype, ext)) {
-      if (canBeParsedAsPlainJS(dataString)) {
+      if (canBeParsedAsPlainJS(dataString, info.hash)) {
         ext = "js";
       } else {
         return null;
@@ -1283,25 +1289,26 @@ export default class ImportScanner {
   }
 
   private getNodeModulesAbsModuleId(absPath: string) {
-    let absModuleId;
+    let absModuleId: string | undefined;
 
     this.nodeModulesPaths.some(path => {
       const relPathWithinNodeModules = pathRelative(path, absPath);
 
       if (relPathWithinNodeModules.startsWith("..")) {
         // absPath is not a subdirectory of path.
-        return;
+        return false;
       }
 
       // Install the module into the local node_modules directory within
       // this app or package.
-      return absModuleId = pathJoin(
+      absModuleId = pathJoin(
         "node_modules",
         relPathWithinNodeModules
       );
+      return true;
     });
 
-    return ensureLeadingSlash(absModuleId);
+    return absModuleId && ensureLeadingSlash(absModuleId);
   }
 
   private getSourceRootAbsModuleId(absPath: string) {
@@ -1439,7 +1446,11 @@ export default class ImportScanner {
     return null;
   }
 
-  private addPkgJsonToOutput(pkgJsonPath: string, pkg, forDynamicImport = false) {
+  private addPkgJsonToOutput(
+    pkgJsonPath: string,
+    pkg: Record<string, any>,
+    forDynamicImport = false,
+  ): File {
     const file = this.getFile(pkgJsonPath);
 
     if (file) {
@@ -1453,7 +1464,7 @@ export default class ImportScanner {
     const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
     const absModuleId = this.getAbsModuleId(pkgJsonPath);
 
-    const pkgFile = {
+    const pkgFile: File = {
       type: "js", // We represent the JSON module with JS.
       data,
       jsonData: pkg,
@@ -1480,12 +1491,12 @@ export default class ImportScanner {
       this.watchSet.addFile(pkgJsonPath, hash);
     }
 
-    this.resolvePkgJsonBrowserAliases(pkgFile, forDynamicImport);
+    this.resolvePkgJsonBrowserAliases(pkgFile);
 
     return pkgFile;
   }
 
-  private resolvePkgJsonBrowserAliases(pkgFile: File, forDynamicImport = false) {
+  private resolvePkgJsonBrowserAliases(pkgFile: File) {
     if (! this.isWeb()) {
       return;
     }
