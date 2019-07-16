@@ -64,7 +64,7 @@ export default class Resolver {
   private nodeModulesPaths: string[];
   private mainFields: string[];
 
-  public statOrNull = optimisticStatOrNull;
+  public statOrNull = optimisticStatOrNull as (path: string) => import("fs").Stats | null;
 
   constructor({
     sourceRoot,
@@ -229,7 +229,7 @@ export default class Resolver {
     return resolved;
   }
 
-  private joinAndStat(...joinArgs: string[]) {
+  public joinAndStat(...joinArgs: string[]) {
     const joined: string = pathJoin(...joinArgs);
     const path = pathNormalize(joined);
     const exactStat = this.statOrNull(path);
