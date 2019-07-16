@@ -2,7 +2,7 @@ import assert from "assert";
 import {inspect} from "util";
 import {Script} from "vm";
 import {
-  isString, isObject, isEmpty, has, keys, each, map, omit,
+  isString, isObject, isEmpty, has, keys, each, omit,
 } from "underscore";
 import {sha1, WatchSet} from "../fs/watch";
 import {matches as archMatches} from "../utils/archinfo.js";
@@ -87,15 +87,14 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
 }));
 
 class DefaultHandlers {
+  private cacheDir?: string;
+  private bundleArch: string;
+
   constructor({
-    sourceRoot,
     cacheDir,
     bundleArch,
-  }) {
-    Object.assign(this, {
-      sourceRoot,
-    });
-
+  }: Record<string, string>) {
+    this.bundleArch = bundleArch;
     if (cacheDir) {
       mkdir_p(this.cacheDir = pathJoin(
         cacheDir,
@@ -104,11 +103,11 @@ class DefaultHandlers {
     }
   }
 
-  getCacheFileName(file) {
-    return pathJoin(this.cacheDir, "reify-" + file.hash + ".js");
+  getCacheFileName(file: File) {
+    return this.cacheDir && pathJoin(this.cacheDir, "reify-" + file.hash + ".js");
   }
 
-  js(file) {
+  js(file: File) {
     const parts = file.absPath.split("/");
     const nmi = parts.lastIndexOf("node_modules");
     if (nmi >= 0) {
@@ -123,7 +122,7 @@ class DefaultHandlers {
     }
 
     if (this.cacheDir) {
-      const cacheFileName = this.getCacheFileName(file);
+      const cacheFileName = this.getCacheFileName(file)!;
       try {
         return optimisticReadFile(cacheFileName, "utf8");
       } catch (e) {
@@ -146,16 +145,16 @@ class DefaultHandlers {
   }
 
   // Files with an .mjs extension are just JavaScript plus module syntax.
-  mjs(file) {
+  mjs(file: File) {
     return this.js(file);
   }
 
-  json(file) {
+  json(file: File) {
     file.jsonData = JSON.parse(file.dataString);
     return jsonDataToCommonJS(file.jsonData);
   }
 
-  css({ dataString, hash }) {
+  css({ dataString, hash }: File) {
     return cssToCommonJS(dataString, hash);
   }
 }
@@ -164,11 +163,11 @@ class DefaultHandlers {
   "js",
   "json",
   "css",
-].forEach(function (type) {
+].forEach(function (this: any, type: string) {
   this[type] = Profile("DefaultHandlers." + type, this[type]);
 }, DefaultHandlers.prototype);
 
-function jsonDataToCommonJS(data) {
+function jsonDataToCommonJS(data: any) {
   return "module.exports = " +
     JSON.stringify(data, null, 2) + ";\n";
 }
@@ -177,7 +176,7 @@ function jsonDataToCommonJS(data) {
 // eviction logic.
 const scriptParseCache = Object.create(null);
 
-function canBeParsedAsPlainJS(dataString, hash) {
+function canBeParsedAsPlainJS(dataString: string, hash: string) {
   if (hash && has(scriptParseCache, hash)) {
     return scriptParseCache[hash];
   }
@@ -195,7 +194,7 @@ function canBeParsedAsPlainJS(dataString, hash) {
   return result;
 }
 
-function stripLeadingSlash(path) {
+function stripLeadingSlash(path: string) {
   if (typeof path === "string" &&
       path.charAt(0) === "/") {
     return path.slice(1);
@@ -204,7 +203,7 @@ function stripLeadingSlash(path) {
   return path;
 }
 
-function ensureLeadingSlash(path) {
+function ensureLeadingSlash(path: string) {
   if (typeof path !== "string") {
     return path;
   }
@@ -253,7 +252,7 @@ const IMPORT_SCANNER_CACHE = new LRU({
   max: 1024*1024,
   length(ids) {
     let total = 40; // size of key
-    each(ids, (info, id) => { total += id.length; });
+    each(ids, (_info, id) => { total += id.length; });
     return total;
   }
 });
@@ -283,6 +282,7 @@ export type ImportScannerOptions = {
 export type File = {
   // TODO
   [key: string]: any;
+  deps?: Record<string, ImportInfo>;
   implicit?: boolean;
   [fakeSymbol]?: boolean;
 }
@@ -290,6 +290,7 @@ export type File = {
 type MissingMap = Record<string, ImportInfo[]>;
 type ImportInfo = {
   parentPath: string;
+  helpers: Record<string, boolean>;
   // TODO
 }
 
@@ -325,7 +326,6 @@ export default class ImportScanner {
     this.watchSet = watchSet;
 
     this.defaultHandlers = new DefaultHandlers({
-      sourceRoot,
       cacheDir,
       bundleArch,
     });
@@ -428,9 +428,6 @@ export default class ImportScanner {
   }
 
   private addFileByRealPath(file: File, realPath: string) {
-    assert.ok(isObject(file));
-    assert.strictEqual(typeof realPath, "string");
-
     if (! has(this.realPathToFiles, realPath)) {
       this.realPathToFiles[realPath] = [];
     }
@@ -444,8 +441,7 @@ export default class ImportScanner {
     return file;
   }
 
-  private getInfoByRealPath(realPath: string) {
-    assert.strictEqual(typeof realPath, "string");
+  private getInfoByRealPath(realPath: string): File | null {
     const files = this.realPathToFiles[realPath];
     if (files && files.length > 0) {
       const firstFile = files[0];
@@ -875,7 +871,7 @@ export default class ImportScanner {
     return pathNormalize(pathJoin(".", sourcePath));
   }
 
-  private findImportedModuleIdentifiers(file: File) {
+  private findImportedModuleIdentifiers(file: File): Record<string, ImportInfo> {
     if (IMPORT_SCANNER_CACHE.has(file.hash)) {
       return IMPORT_SCANNER_CACHE.get(file.hash);
     }
@@ -1002,7 +998,7 @@ export default class ImportScanner {
       throw e;
     }
 
-    each(file.deps, (info, id) => {
+    each(file.deps, (info: ImportInfo, id: string) => {
       // Asynchronous module fetching only really makes sense in the
       // browser (even though it works equally well on the server), so
       // it's better if forDynamicImport never becomes true on the server.
@@ -1089,7 +1085,7 @@ export default class ImportScanner {
   }
 
   private readFile(absPath: string) {
-    const info = {
+    const info: File = {
       absPath,
       data: optimisticReadFile(absPath),
       hash: optimisticHashOrNull(absPath),
@@ -1518,7 +1514,7 @@ export default class ImportScanner {
       return;
     }
 
-    const deps = pkgFile.deps;
+    const deps = pkgFile.deps || (pkgFile.deps = Object.create(null));
     const absPkgJsonPath = pathJoin(this.sourceRoot, pkgFile.sourcePath);
 
     Object.keys(browser).forEach(sourceId => {
