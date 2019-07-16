@@ -1,8 +1,8 @@
-import * as assert from "assert";
 import * as fs from "fs";
 import * as path from "path";
 import * as net from "net";
 import { isEmacs } from "./utils/utils";
+import { eachline } from "./utils/eachline";
 
 const chalk = require("chalk");
 const EOL = require("os").EOL;
@@ -22,18 +22,14 @@ export function connect(shellDir: string) {
 }
 
 class Client {
-  shellDir: string;
-  exitOnClose = false;
-  firstTimeConnecting = true;
-  connected = false;
-  reconnectCount = 0;
-  reconnectTimer?: NodeJS.Timeout;
+  public connected = false;
 
-  constructor(shellDir: string) {
-    assert.ok(this instanceof Client);
+  private exitOnClose = false;
+  private firstTimeConnecting = true;
+  private reconnectCount = 0;
+  private reconnectTimer?: NodeJS.Timeout;
 
-    this.shellDir = shellDir;
-  }
+  constructor(public shellDir: string) {}
 
   reconnect(delay: number = 100) {
     // Display the "Server unavailable" warning only on the third attempt
@@ -182,8 +178,9 @@ class Client {
 
     sock.pipe(process.stdout);
 
-    require("./utils/eachline").eachline(sock, (line: string) => {
+    eachline(sock, (line: string) => {
       this.exitOnClose = line.indexOf(EXITING_MESSAGE) >= 0;
+      return line;
     });
 
     sock.on("connect", onConnect);
