@@ -1105,7 +1105,11 @@ function runWebAppServer() {
     if (unixSocketPath) {
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
-      startHttpServer({ path: unixSocketPath });
+      startHttpServer({
+        path: unixSocketPath,
+        readableAll: (process.env.UNIX_SOCKET_PATH_READABLE_ALL === "true"),
+        writableAll: (process.env.UNIX_SOCKET_PATH_WRITABLE_ALL === "true"),
+      });
       registerSocketFileCleanup(unixSocketPath);
     } else {
       localPort = isNaN(Number(localPort)) ? localPort : Number(localPort);
