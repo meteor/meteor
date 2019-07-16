@@ -13,7 +13,7 @@ import {sha1, readAndWatchFileWithHash} from  '../fs/watch';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
-import ImportScanner from './import-scanner.js';
+import ImportScanner from './import-scanner';
 import {cssToCommonJS} from "./css-modules";
 import Resolver from "./resolver";
 import {
