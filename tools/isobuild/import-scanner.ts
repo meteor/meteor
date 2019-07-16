@@ -10,7 +10,6 @@ import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
 import {Profile} from "../tool-env/profile";
-import {SourceNode, SourceMapConsumer} from "source-map";
 import {
   mkdir_p,
   pathJoin,
@@ -25,10 +24,7 @@ import {
   writeFileAtomically,
 } from "../fs/files";
 
-const {
-  relative: posixRelative,
-  dirname: posixDirname,
-} = require("path").posix;
+const { SourceNode, SourceMapConsumer } = require("source-map");
 
 import {
   optimisticReadFile,
@@ -39,8 +35,8 @@ import {
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
-import { compile as reifyCompile } from "reify/lib/compiler";
-import { parse as reifyBabelParse } from "reify/lib/parsers/babel";
+const { compile: reifyCompile } = require("reify/lib/compiler");
+const { parse: reifyBabelParse } = require("reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
 
@@ -57,6 +53,10 @@ const fakeFileStat = {
 // Symbol used by scanMissingModules to mark certain files as temporary,
 // to prevent them from being added to scanner.outputFiles.
 const fakeSymbol = Symbol("fake");
+
+const emptyDataString = "";
+const emptyData = Buffer.from(emptyDataString, "utf8");
+const emptyHash = sha1(emptyDataString);
 
 function stripHashBang(dataString: string) {
   return dataString.replace(/^#![^\n]*/, "");
@@ -102,11 +102,18 @@ class DefaultHandlers {
     }
   }
 
-  getCacheFileName(file: File) {
+  getCacheFileName(file: RawFile) {
     return this.cacheDir && pathJoin(this.cacheDir, "reify-" + file.hash + ".js");
   }
 
-  js(file: File) {
+  call(
+    method: "js" | "mjs" | "json" | "css",
+    file: RawFile,
+  ): string {
+    return this[method](file);
+  }
+
+  js(file: RawFile) {
     const parts = file.absPath.split("/");
     const nmi = parts.lastIndexOf("node_modules");
     if (nmi >= 0) {
@@ -144,16 +151,16 @@ class DefaultHandlers {
   }
 
   // Files with an .mjs extension are just JavaScript plus module syntax.
-  mjs(file: File) {
+  mjs(file: RawFile) {
     return this.js(file);
   }
 
-  json(file: File) {
+  json(file: RawFile) {
     file.jsonData = JSON.parse(file.dataString);
     return jsonDataToCommonJS(file.jsonData);
   }
 
-  css({ dataString, hash }: File) {
+  css({ dataString, hash }: RawFile) {
     return cssToCommonJS(dataString, hash);
   }
 }
@@ -193,7 +200,7 @@ function canBeParsedAsPlainJS(dataString: string, hash: string): boolean {
   return result;
 }
 
-function stripLeadingSlash(path: string) {
+function stripLeadingSlash(path?: string) {
   if (typeof path === "string" &&
       path.charAt(0) === "/") {
     return path.slice(1);
@@ -202,7 +209,7 @@ function stripLeadingSlash(path: string) {
   return path;
 }
 
-function ensureLeadingSlash(path: string) {
+function ensureLeadingSlash(path?: string) {
   if (typeof path !== "string") {
     return path;
   }
@@ -245,12 +252,17 @@ function setImportedStatus(file: File, status: string | boolean) {
 // calling module.useNode() immediately, but it's important that we have
 // something to include in the bundle so that parent modules have
 // something to resolve.
-const useNodeStub: File = {
-  dataString: "module.useNode();",
-  deps: Object.create(null),
-};
-useNodeStub.data = Buffer.from(useNodeStub.dataString, "utf8");
-useNodeStub.hash = sha1(useNodeStub.data);
+const useNodeStub: Omit<RawFile, "absPath"> = function () {
+  const dataString = "module.useNode();";
+  const data = Buffer.from(dataString, "utf8");
+  return {
+    type: "js",
+    data,
+    dataString,
+    hash: sha1(data),
+    deps: Object.create(null),
+  };
+}();
 
 export type ImportScannerOptions = {
   name: string;
@@ -262,22 +274,49 @@ export type ImportScannerOptions = {
   cacheDir: string;
 }
 
-export type File = {
-  // TODO
-  [key: string]: any;
+interface RawFile {
+  absPath: string;
+  data: Buffer;
+  dataString: string;
+  hash: string;
+  jsonData?: Record<string, any>;
+}
+
+interface File extends RawFile {
+  type: string;
+  sourcePath: string;
+  targetPath?: string;
+  servePath?: string;
+  absModuleId?: string;
   deps?: Record<string, ImportInfo>;
+  lazy: boolean;
+  bare?: boolean;
+  // TODO Improve the sourceMap type.
+  sourceMap?: Record<string, any>;
   implicit?: boolean;
+  imported: string | boolean;
   [fakeSymbol]?: boolean;
+  reportPendingErrors?: () => number;
+  hasErrors?: boolean;
+  missingModules?: Record<string, ImportInfo>;
+  alias?: FileAlias;
+}
+
+type FileAlias = {
+  path: string;
+  absModuleId?: string | false;
 }
 
 type MissingMap = Record<string, ImportInfo[]>;
+// TODO Get this type from js-analyze.ts (after converting from .js).
 type ImportInfo = {
-  parentPath: string;
-  helpers: Record<string, boolean>;
   dynamic: boolean;
-  parentWasDynamic: boolean;
   possiblySpurious: boolean;
-  // TODO
+  parentPath: string;
+  bundleArch?: string;
+  packageName?: string;
+  parentWasDynamic?: boolean;
+  helpers?: Record<string, boolean>;
 }
 
 export default class ImportScanner {
@@ -362,7 +401,7 @@ export default class ImportScanner {
     return null;
   }
 
-  private addFile(absPath: string, file: File | null): File | null {
+  private addFile(absPath: string, file: File): File | null {
     if (! file || file[fakeSymbol]) {
       // Return file without adding it to this.outputFiles.
       return file;
@@ -442,12 +481,13 @@ export default class ImportScanner {
     return file;
   }
 
-  private getInfoByRealPath(realPath: string): File | null {
+  private getInfoByRealPath(realPath: string): RawFile | null {
     const files = this.realPathToFiles[realPath];
     if (files && files.length > 0) {
       const firstFile = files[0];
       const dataString = this.getDataString(firstFile);
       return {
+        absPath: realPath,
         data: firstFile.data,
         dataString: dataString,
         hash: firstFile.hash,
@@ -518,18 +558,22 @@ export default class ImportScanner {
       const absSourceId = this.getAbsModuleId(absSourcePath);
       const absTargetId = this.getAbsModuleId(absTargetPath);
 
+      if (!absSourceId || !absTargetId) {
+        return;
+      }
+
       // If file.targetPath differs from file.sourcePath, generate a new
       // file object with that .sourcePath that imports the original file.
       // This allows either the .sourcePath or the .targetPath to be used
       // when importing the original file, and also allows multiple files
       // to have the same .sourcePath but different .targetPaths.
       const sourceFile = this.getFile(absSourcePath) || this.addFile(absSourcePath, {
-        type: file.type,
-        sourcePath: file.sourcePath,
+        ...file,
         servePath: stripLeadingSlash(absSourceId),
         absModuleId: absSourceId,
-        dataString: "",
-        deps: {},
+        data: emptyData,
+        dataString: emptyDataString,
+        deps: Object.create(null),
         lazy: true,
         imported: false,
         implicit: true,
@@ -574,10 +618,11 @@ export default class ImportScanner {
 
       sourceFile.data = Buffer.from(sourceFile.dataString, "utf8");
       sourceFile.hash = sha1(sourceFile.data);
-      sourceFile.deps[relativeId] = {
-        absModuleId: file.absModuleId,
+      sourceFile.deps = sourceFile.deps || Object.create(null);
+      sourceFile.deps![relativeId] = {
+        dynamic: false,
         possiblySpurious: false,
-        dynamic: false
+        parentPath: absSourcePath,
       };
     }
   }
@@ -588,13 +633,13 @@ export default class ImportScanner {
   private combineFiles(oldFile: File, newFile: File) {
     const scanner = this;
 
-    function checkProperty(name: string) {
+    function checkProperty(name: "lazy" | "bare") {
       if (has(oldFile, name)) {
         if (! has(newFile, name)) {
-          newFile[name] = oldFile[name];
+          newFile[name] = oldFile[name]!;
         }
       } else if (has(newFile, name)) {
-        oldFile[name] = newFile[name];
+        oldFile[name] = newFile[name]!;
       }
 
       if (oldFile[name] !== newFile[name]) {
@@ -645,8 +690,8 @@ export default class ImportScanner {
     alignImportedStatuses(oldFile, newFile);
 
     oldFile.sourceMap = combinedSourceMap.toJSON();
-    if (! oldFile.sourceMap.mappings) {
-      oldFile.sourceMap = null;
+    if (! oldFile.sourceMap!.mappings) {
+      oldFile.sourceMap = void 0;
     }
   }
 
@@ -694,23 +739,33 @@ export default class ImportScanner {
           return staticImportInfo && dynamicImportInfo;
         });
 
+        const fakeStub = {
+          type: "js",
+          sourcePath: "fake.js",
+          absPath: pathJoin(this.sourceRoot, "fake.js"),
+          data: emptyData,
+          dataString: emptyDataString,
+          hash: emptyHash,
+          [fakeSymbol]: true,
+          imported: false,
+          lazy: true,
+        }
+
         if (staticImportInfo) {
           this.scanFile({
-            sourcePath: "fake.js",
-            [fakeSymbol]: true,
+            ...fakeStub,
             // By specifying the .deps property of this fake file ahead of
             // time, we can avoid calling findImportedModuleIdentifiers in
             // the _scanFile method, which is important because this file
             // doesn't have a .data or .dataString property.
-            deps: { [id]: staticImportInfo }
+            deps: { [id]: staticImportInfo },
           }, false); // !forDynamicImport
         }
 
         if (dynamicImportInfo) {
           this.scanFile({
-            sourcePath: "fake.js",
-            [fakeSymbol]: true,
-            deps: { [id]: dynamicImportInfo }
+            ...fakeStub,
+            deps: { [id]: dynamicImportInfo },
           }, true); // forDynamicImport
         }
       });
@@ -811,11 +866,13 @@ export default class ImportScanner {
         }
       });
 
+      const absContainerPath = pathJoin(this.sourceRoot, container.sourcePath);
+
       // Alias every non-container file to container.absModuleId.
       files.forEach(file => {
         if (file !== container) {
-          file.alias = file.alias || {};
-          file.alias.absModuleId = container.absModuleId;
+          file.alias = file.alias || { path: absContainerPath };
+          file.alias!.absModuleId = container.absModuleId;
         }
       });
     });
@@ -865,14 +922,16 @@ export default class ImportScanner {
     } else if (file.servePath) {
       sourcePath = convertToOSPath(file.servePath.replace(/^\//, ""));
 
-    } else if (file.path) {
-      sourcePath = file.path;
+    } else if ((file as any).path) {
+      sourcePath = (file as any).path;
     }
 
     return pathNormalize(pathJoin(".", sourcePath));
   }
 
-  private findImportedModuleIdentifiers(file: File): Record<string, ImportInfo> {
+  private findImportedModuleIdentifiers(
+    file: File,
+  ): Record<string, ImportInfo> {
     return findImportedModuleIdentifiers(this.getDataString(file), file.hash);
   }
 
@@ -880,23 +939,23 @@ export default class ImportScanner {
     parentFile: File,
     id: string,
     forDynamicImport = false,
-  ): Resolution {
+  ): Resolution | FileAlias {
     const absPath = pathJoin(this.sourceRoot, parentFile.sourcePath);
     const resolved = this.resolver.resolve(id, absPath);
 
-    if (typeof resolved === "string") {
+    if (resolved === "missing") {
       return this.onMissing(parentFile, id, forDynamicImport);
     }
 
     if (resolved && resolved.packageJsonMap) {
-      const info = parentFile.deps[id];
+      const info = parentFile.deps![id];
       info.helpers = info.helpers || {};
 
       each(resolved.packageJsonMap, (pkg, path) => {
         const packageJsonFile =
           this.addPkgJsonToOutput(path, pkg, forDynamicImport);
 
-        if (! parentFile.absModuleId) {
+        if (! parentFile.absModuleId || ! packageJsonFile.absModuleId) {
           // If parentFile is not installable, then we won't return it
           // from getOutputFiles, so we don't need to worry about
           // recording any parentFile.deps[id].helpers.
@@ -911,7 +970,7 @@ export default class ImportScanner {
         // Although not explicitly imported, any package.json modules
         // involved in resolving this import should be recorded as
         // implicit "helpers."
-        info.helpers[relativeId] = forDynamicImport;
+        info.helpers![relativeId] = forDynamicImport;
       });
 
       // Any relevant package.json files must have already been added via
@@ -930,8 +989,8 @@ export default class ImportScanner {
   }
 
   private getRelativeImportId(absParentId: string, absChildId: string) {
-    const relativeId = posixRelative(
-      posixDirname(absParentId),
+    const relativeId = pathRelative(
+      pathDirname(absParentId),
       absChildId
     );
 
@@ -975,7 +1034,7 @@ export default class ImportScanner {
       file.deps = file.deps || this.findImportedModuleIdentifiers(file);
     } catch (e) {
       if (e.$ParseError) {
-        buildmessage.error(e.message, {
+        (buildmessage as any).error(e.message, {
           file: file.sourcePath,
           line: e.loc.line,
           column: e.loc.column,
@@ -1009,6 +1068,7 @@ export default class ImportScanner {
         // If the module is an implicit package.json stub, update to the
         // explicit version now.
         if (depFile.jsonData &&
+            depFile.absModuleId &&
             depFile.absModuleId.endsWith("/package.json") &&
             depFile.implicit === true) {
           const file = this.readPackageJson(absImportedPath);
@@ -1060,7 +1120,7 @@ export default class ImportScanner {
       file.dataString = stripHashBang(rawDataString);
     } else {
       file.dataString = rawDataString;
-      file.dataString = this.defaultHandlers[file.type](file);
+      file.dataString = this.defaultHandlers.call(file.type as any, file);
     }
 
     if (! (file.data instanceof Buffer) ||
@@ -1072,15 +1132,15 @@ export default class ImportScanner {
   }
 
   private readFile(absPath: string) {
-    const info: File = {
+    const data = optimisticReadFile(absPath) as Buffer;
+    const info: RawFile = {
       absPath,
-      data: optimisticReadFile(absPath),
-      hash: optimisticHashOrNull(absPath),
+      data,
+      dataString: data.toString("utf8"),
+      hash: optimisticHashOrNull(absPath)!,
     };
 
     this.watchSet.addFile(absPath, info.hash);
-
-    info.dataString = info.data.toString("utf8");
 
     // Same logic/comment as stripBOM in node/lib/module.js:
     // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
@@ -1123,7 +1183,7 @@ export default class ImportScanner {
     return info;
   }
 
-  private readModule(absPath: string) {
+  private readModule(absPath: string): RawFile | null {
     const dotExt = pathExtname(absPath).toLowerCase();
 
     if (dotExt === ".node") {
@@ -1157,7 +1217,7 @@ export default class ImportScanner {
       }
     }
 
-    info.dataString = this.defaultHandlers[ext](info);
+    info.dataString = this.defaultHandlers.call(ext as any, info);
     if (info.dataString !== dataString) {
       info.data = Buffer.from(info.dataString, "utf8");
     }
@@ -1165,7 +1225,7 @@ export default class ImportScanner {
     return info;
   }
 
-  private readDepFile(absPath: string) {
+  private readDepFile(absPath: string): File | null {
     const absModuleId = this.getAbsModuleId(absPath);
     if (! absModuleId) {
       // The given path cannot be installed on this architecture.
@@ -1174,8 +1234,8 @@ export default class ImportScanner {
 
     const realPath = this.realPath(absPath);
 
-    let depFile = this.getInfoByRealPath(realPath);
-    if (depFile) {
+    let rawFile = this.getInfoByRealPath(realPath);
+    if (rawFile) {
       // If we already have a file with the same real path, use its data
       // rather than reading the file again, or generating a stub. This
       // logic enables selective compilation of node_modules in an elegant
@@ -1193,7 +1253,10 @@ export default class ImportScanner {
       // this._readModule to read the actual module file. Note that
       // useNodeStub includes an empty .deps property, which will make
       // this._scanFile(depFile, dynamic) return immediately.
-      depFile = { ...useNodeStub };
+      rawFile = {
+        ...useNodeStub,
+        absPath,
+      };
 
       // If optimistic functions care about this file, e.g. because it
       // resides in a linked npm package, then we should allow it to
@@ -1207,26 +1270,29 @@ export default class ImportScanner {
       }
 
     } else {
-      depFile = absModuleId.endsWith("/package.json")
+      rawFile = absModuleId.endsWith("/package.json")
         ? this.readPackageJson(absPath)
         : this.readModule(absPath);
 
       // If the module is not readable, _readModule may return null.
       // Otherwise it will return { data, dataString, hash }.
-      if (! depFile) {
+      if (! rawFile) {
         return null;
       }
     }
 
-    depFile.type = "js"; // TODO Is this correct?
-    depFile.sourcePath = pathRelative(this.sourceRoot, absPath);
-    depFile.absModuleId = absModuleId;
-    depFile.servePath = stripLeadingSlash(absModuleId);
-    depFile.lazy = true;
-    // Setting depFile.imported = false is necessary so that
-    // this._scanFile(depFile, dynamic) doesn't think the file has been
-    // scanned already and return immediately.
-    depFile.imported = false;
+    const depFile: File = {
+      ...rawFile,
+      type: "js",
+      sourcePath: pathRelative(this.sourceRoot, absPath),
+      absModuleId,
+      servePath: stripLeadingSlash(absModuleId),
+      lazy: true,
+      // Setting depFile.imported = false is necessary so that
+      // this._scanFile(depFile, dynamic) doesn't think the file has been
+      // scanned already and return immediately.
+      imported: false,
+    };
 
     this.addFileByRealPath(depFile, realPath);
 
@@ -1373,7 +1439,7 @@ export default class ImportScanner {
     parentFile: File,
     id: string,
     forDynamicImport = false,
-  ): Resolution {
+  ): Resolution | FileAlias {
     const isApp = ! this.name;
     const absParentPath = pathJoin(
       this.sourceRoot,
@@ -1387,7 +1453,7 @@ export default class ImportScanner {
       // a dependency on meteor-node-stubs/deps/<id>.js.
       const stubId = Resolver.getNativeStubId(id);
       if (isString(stubId) && stubId !== id) {
-        const info = parentFile.deps[id];
+        const info = parentFile.deps![id];
 
         // Although not explicitly imported, any stubs associated with
         // this native import should be recorded as implicit "helpers."
@@ -1398,7 +1464,7 @@ export default class ImportScanner {
       }
     }
 
-    const info = {
+    const info: ImportInfo = {
       packageName: this.name,
       parentPath: absParentPath,
       bundleArch: this.bundleArch,
@@ -1460,13 +1526,16 @@ export default class ImportScanner {
       return file;
     }
 
-    const data = Buffer.from(jsonDataToCommonJS(pkg), "utf8");
+    const dataString = jsonDataToCommonJS(pkg);
+    const data = Buffer.from(dataString, "utf8");
     const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
     const absModuleId = this.getAbsModuleId(pkgJsonPath);
 
     const pkgFile: File = {
       type: "js", // We represent the JSON module with JS.
+      absPath: pkgJsonPath,
       data,
+      dataString,
       jsonData: pkg,
       deps: {}, // Avoid accidentally re-scanning this file.
       sourcePath: relPkgJsonPath,
@@ -1501,7 +1570,7 @@ export default class ImportScanner {
       return;
     }
 
-    const browser = pkgFile.jsonData.browser;
+    const browser = pkgFile.jsonData!.browser;
     if (! isObject(browser)) {
       return;
     }
@@ -1526,6 +1595,10 @@ export default class ImportScanner {
       }
 
       const sourceAbsModuleId = this.getAbsModuleId(source.path);
+      if (! sourceAbsModuleId || ! pkgFile.absModuleId) {
+        return;
+      }
+
       const hasAuthorityToCreateAlias =
         this.areAbsModuleIdsInSamePackage(
           pkgFile.absModuleId,
@@ -1539,7 +1612,10 @@ export default class ImportScanner {
       }
 
       const targetId = browser[sourceId];
-      const alias = {};
+      const alias: FileAlias = {
+        path: source.path,
+        absModuleId: sourceAbsModuleId,
+      };
 
       if (typeof targetId === "string") {
         deps[targetId] = deps[targetId] || {};
@@ -1572,9 +1648,12 @@ export default class ImportScanner {
         const relSourcePath = pathRelative(this.sourceRoot, source.path);
 
         this.addFile(source.path, {
+          type: "js",
           alias,
-          data: Buffer.from("", "utf8"),
-          dataString: "",
+          absPath: absPkgJsonPath,
+          data: emptyData,
+          dataString: emptyDataString,
+          hash: emptyHash,
           sourcePath: relSourcePath,
           absModuleId: sourceAbsModuleId,
           servePath: stripLeadingSlash(sourceAbsModuleId),
@@ -1608,13 +1687,13 @@ export default class ImportScanner {
 
 const ISp = ImportScanner.prototype as any;
 
-[ "_addPkgJsonToOutput",
-  "_findImportedModuleIdentifiers",
-  "_getAbsModuleId",
-  "_readFile",
-  "_realPath",
-  "_resolve",
-  "_resolvePkgJsonBrowserAliases",
+[ "addPkgJsonToOutput",
+  "findImportedModuleIdentifiers",
+  "getAbsModuleId",
+  "readFile",
+  "realPath",
+  "resolve",
+  "resolvePkgJsonBrowserAliases",
   // We avoid profiling _scanFile here because it doesn't typically have
   // much "own time," and it gets called recursively, resulting in deeply
   // nested METEOR_PROFILE output, which often obscures actual problems.
