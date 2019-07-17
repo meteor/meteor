@@ -26,6 +26,11 @@ import {
 
 const { SourceNode, SourceMapConsumer } = require("source-map");
 
+const {
+  relative: posixRelative,
+  dirname: posixDirname,
+} = require("path").posix;
+
 import {
   optimisticReadFile,
   optimisticStatOrNull,
@@ -989,8 +994,8 @@ export default class ImportScanner {
   }
 
   private getRelativeImportId(absParentId: string, absChildId: string) {
-    const relativeId = pathRelative(
-      pathDirname(absParentId),
+    const relativeId = posixRelative(
+      posixDirname(absParentId),
       absChildId
     );
 
