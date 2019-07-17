@@ -132,15 +132,21 @@ export function bindEnvironment(func: Function) {
 
 // Returns a Promise that supports .resolve(result) and .reject(error).
 export function makeFulfillablePromise() {
-  let resolve: (value?: any) => void = () => { };
-  let reject: (reason?: any) => void = () => { };
+  let resolve: ((value?: any) => void) | null = null;
+  let reject: ((reason?: any) => void) | null = null;
 
   const promise = new Promise((res, rej) => {
     resolve = res;
     reject = rej;
   });
-  promise.resolve = resolve;
-  promise.reject = reject;
+
+  if (resolve) {
+    promise.resolve = resolve;
+  }
+
+  if (reject) {
+    promise.reject = reject;
+  }
 
   return promise;
 };
