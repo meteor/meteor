@@ -65,28 +65,27 @@ export class EnvironmentVariable {
     if (!Fiber.current._meteorDynamics) {
       return this.defaultValue;
     }
-    if (!Fiber.current._meteorDynamics.has(this.slot)) {
+    if (!_.has(Fiber.current._meteorDynamics, this.slot)) {
       return this.defaultValue;
     }
-    return Fiber.current._meteorDynamics.get(this.slot);
+    return Fiber.current._meteorDynamics[this.slot];
   }
 
   set(value: any): Function {
     nodeCodeMustBeInFiber();
 
     const fiber = Fiber.current;
-    const currentValues: Map<string, any> = fiber._meteorDynamics || (
-      fiber._meteorDynamics = new Map()
-    );
+    const currentValues: any = fiber._meteorDynamics || (
+      fiber._meteorDynamics = {});
 
-    const saved = currentValues.has(this.slot)
-      ? currentValues.get(this.slot)
+    const saved = _.has(currentValues, this.slot)
+      ? currentValues[this.slot]
       : this.defaultValue;
 
-    currentValues.set(this.slot, value);
+    currentValues[this.slot] = value;
 
     return () => {
-      currentValues.set(this.slot, saved);
+      currentValues[this.slot] = saved;
     };
   }
 
@@ -105,7 +104,7 @@ export class EnvironmentVariable {
 export function bindEnvironment(func: Function) {
   nodeCodeMustBeInFiber();
 
-  const boundValues = new Map(Fiber.current._meteorDynamics || {});
+  const boundValues = { ...(Fiber.current._meteorDynamics || {}) };
 
   return function (...args: any[]) {
     //@ts-ignore
@@ -116,7 +115,7 @@ export function bindEnvironment(func: Function) {
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
-        Fiber.current._meteorDynamics = new Map(boundValues);
+        Fiber.current._meteorDynamics = { ...boundValues };
         return func.apply(self, args);
       } finally {
         Fiber.current._meteorDynamics = savedValues;
