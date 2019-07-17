@@ -107,13 +107,16 @@ export function bindEnvironment(func: Function) {
   const boundValues = new Map(Fiber.current._meteorDynamics || {});
 
   return function (...args: any[]) {
+    //@ts-ignore
+    const self = this;
+
     const runWithEnvironment = () => {
       const savedValues = Fiber.current._meteorDynamics;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
         Fiber.current._meteorDynamics = new Map(boundValues);
-        return func.apply(this, args);
+        return func.apply(self, args);
       } finally {
         Fiber.current._meteorDynamics = savedValues;
       }
