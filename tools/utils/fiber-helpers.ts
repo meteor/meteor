@@ -51,10 +51,11 @@ export function nodeCodeMustBeInFiber() {
 };
 
 let nextSlot = 0;
-export class EnvironmentVariable {
-  slot: string;
 
-  constructor(public defaultValue: any) {
+export class EnvironmentVariable {
+  private readonly slot: string;
+
+  constructor(private readonly defaultValue: any) {
     this.slot = 'slot' + nextSlot++;
   }
 
