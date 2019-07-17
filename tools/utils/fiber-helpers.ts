@@ -1,9 +1,8 @@
-var _ = require("underscore");
-var Fiber = require("fibers");
+import _ from "underscore";
+const Fiber = require("fibers");
 
-exports.parallelEach = function (collection, callback, context) {
-  const errors = [];
-  context = context || null;
+export function parallelEach(collection: any, callback: Function, context: any | null = null) {
+  const errors: Error[] = [];
 
   const results = Promise.all(_.map(collection, (...args) => {
     async function run() {
@@ -30,8 +29,8 @@ function disallowedYield() {
 // Allow testing Fiber.yield.disallowed.
 disallowedYield.disallowed = true;
 
-exports.noYieldsAllowed = function (f, context) {
-  var savedYield = Fiber.yield;
+export function noYieldsAllowed(f: Function, context: any) {
+  const savedYield = Fiber.yield;
   Fiber.yield = disallowedYield;
   try {
     return f.call(context || null);
@@ -43,55 +42,54 @@ exports.noYieldsAllowed = function (f, context) {
 // Borrowed from packages/meteor/dynamics_nodejs.js
 // Used by buildmessage
 
-exports.nodeCodeMustBeInFiber = function () {
+export function nodeCodeMustBeInFiber() {
   if (!Fiber.current) {
     throw new Error("Meteor code must always run within a Fiber. " +
-                    "Try wrapping callbacks that you pass to non-Meteor " +
-                    "libraries with Meteor.bindEnvironment.");
+      "Try wrapping callbacks that you pass to non-Meteor " +
+      "libraries with Meteor.bindEnvironment.");
   }
 };
 
-var nextSlot = 0;
-exports.EnvironmentVariable = function (defaultValue) {
-  var self = this;
-  self.slot = 'slot' + nextSlot++;
-  self.defaultValue = defaultValue;
-};
+let nextSlot = 0;
+export class EnvironmentVariable {
+  slot: string;
 
-_.extend(exports.EnvironmentVariable.prototype, {
+  constructor(public defaultValue: any) {
+    this.slot = 'slot' + nextSlot++;
+  }
+
   get() {
-    var self = this;
-    exports.nodeCodeMustBeInFiber();
+    nodeCodeMustBeInFiber();
 
     if (!Fiber.current._meteorDynamics) {
-      return self.defaultValue;
+      return this.defaultValue;
     }
-    if (!_.has(Fiber.current._meteorDynamics, self.slot)) {
-      return self.defaultValue;
+    if (!Fiber.current._meteorDynamics.has(this.slot)) {
+      return this.defaultValue;
     }
-    return Fiber.current._meteorDynamics[self.slot];
-  },
+    return Fiber.current._meteorDynamics.get(this.slot);
+  }
 
-  set(value) {
-    exports.nodeCodeMustBeInFiber();
+  set(value: any): Function {
+    nodeCodeMustBeInFiber();
 
     const fiber = Fiber.current;
-    const currentValues = fiber._meteorDynamics || (
-      fiber._meteorDynamics = {}
+    const currentValues: Map<string, any> = fiber._meteorDynamics || (
+      fiber._meteorDynamics = new Map()
     );
 
-    const saved = _.has(currentValues, this.slot)
-      ? currentValues[this.slot]
+    const saved = currentValues.has(this.slot)
+      ? currentValues.get(this.slot)
       : this.defaultValue;
 
-    currentValues[this.slot] = value;
+    currentValues.set(this.slot, value);
 
     return () => {
-      currentValues[this.slot] = saved;
+      currentValues.set(this.slot, saved);
     };
-  },
+  }
 
-  withValue(value, func) {
+  withValue(value: any, func: Function) {
     const reset = this.set(value);
     try {
       return func();
@@ -99,25 +97,23 @@ _.extend(exports.EnvironmentVariable.prototype, {
       reset();
     }
   }
-});
+}
 
 // This is like Meteor.bindEnvironment.
 // Experimentally, we are NOT including onException or _this in this version.
-exports.bindEnvironment = function (func) {
-  exports.nodeCodeMustBeInFiber();
+export function bindEnvironment(func: Function) {
+  nodeCodeMustBeInFiber();
 
-  var boundValues = _.clone(Fiber.current._meteorDynamics || {});
+  const boundValues = new Map(Fiber.current._meteorDynamics || {});
 
-  return function (...args) {
-    var self = this;
-
-    var runWithEnvironment = function () {
-      var savedValues = Fiber.current._meteorDynamics;
+  return function (...args: any[]) {
+    const runWithEnvironment = () => {
+      const savedValues = Fiber.current._meteorDynamics;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
-        Fiber.current._meteorDynamics = _.clone(boundValues);
-        return func.apply(self, args);
+        Fiber.current._meteorDynamics = new Map(boundValues);
+        return func.apply(this, args);
       } finally {
         Fiber.current._meteorDynamics = savedValues;
       }
@@ -126,18 +122,17 @@ exports.bindEnvironment = function (func) {
     if (Fiber.current) {
       return runWithEnvironment();
     }
+
     Fiber(runWithEnvironment).run();
   };
 };
 
 // Returns a Promise that supports .resolve(result) and .reject(error).
-exports.makeFulfillablePromise = function () {
-  var resolve, reject;
-  var promise = new Promise(function (res, rej) {
-    resolve = res;
-    reject = rej;
+export function makeFulfillablePromise() {
+  const promise = new Promise((res, rej) => {
+    promise.resolve = res;
+    promise.reject = rej;
   });
-  promise.resolve = resolve;
-  promise.reject = reject;
+
   return promise;
 };
