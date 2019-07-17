@@ -1,7 +1,7 @@
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var mongoExitCodes = require('../utils/mongo-exit-codes.js');
-var fiberHelpers = require('../utils/fiber-helpers.js');
+var fiberHelpers = require('../utils/fiber-helpers');
 var runLog = require('./run-log.js');
 var child_process = require('child_process');
 

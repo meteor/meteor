@@ -1,6 +1,6 @@
 // A simple interface to register functions to be called when the process exits.
 
-import { noYieldsAllowed } from "../utils/fiber-helpers.js";
+import { noYieldsAllowed } from "../utils/fiber-helpers";
 
 const exitHandlers = [];
 

@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var files = require('../fs/files');
 var parseStack = require('./parse-stack.js');
-var fiberHelpers = require('./fiber-helpers.js');
+var fiberHelpers = require('./fiber-helpers');
 var Progress = require('../console/progress.js').Progress;
 
 var debugBuild = !!process.env.METEOR_DEBUG_BUILD;

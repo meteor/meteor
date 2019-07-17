@@ -1,7 +1,7 @@
 var _ = require("underscore");
 import { loadIsopackage } from '../tool-env/isopackets.js';
 var files = require('../fs/files');
-var fiberHelpers = require("../utils/fiber-helpers.js");
+var fiberHelpers = require("../utils/fiber-helpers");
 
 // Wrapper to manage a connection to a DDP service. The main difference between
 // it and a raw DDP connection is that the constructor blocks until a successful

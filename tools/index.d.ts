@@ -1,4 +1,4 @@
-export {}
+export { }
 
 declare global {
   interface JSON {
@@ -11,5 +11,7 @@ declare global {
     // meteor-promise npm package. TODO Eventually these declarations should be
     // moved into that package.
     await: () => T;
+    resolve: (value?: any) => void;
+    reject: (reason?: any) => void;
   }
 }

@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
-var fiberHelpers = require('../utils/fiber-helpers.js');
+var fiberHelpers = require('../utils/fiber-helpers');
 var Console = require('../console/console.js').Console;
 
 var Updater = function () {

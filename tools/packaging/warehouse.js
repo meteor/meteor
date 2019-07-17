@@ -41,7 +41,7 @@ var _ = require("underscore");
 
 var files = require('../fs/files');
 var httpHelpers = require('../utils/http-helpers.js');
-var fiberHelpers = require('../utils/fiber-helpers.js');
+var fiberHelpers = require('../utils/fiber-helpers');
 var utils = require('../utils/utils.js');
 
 // Use `METEOR_WAREHOUSE_URLBASE` to override the default warehouse

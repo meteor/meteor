@@ -24,7 +24,7 @@ tools/colon-converter.js
 tools/config.js
 tools/console.js
 tools/deploy.js
-tools/fiber-helpers.js
+tools/fiber-helpers.ts
 tools/fs/files.js
 tools/fs/mini-files.js
 tools/func-utils.js
