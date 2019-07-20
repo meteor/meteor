@@ -5,13 +5,13 @@ type AnyFunction = (...args: any[]) => any;
 // milliseconds of each other, and prevents overlapping invocations of fn
 // by postponing the next invocation until after fn's fiber finishes.
 export function coalesce<ContextT> (delayMs: number, callback : EmptyFunction, context?: ContextT) : EmptyFunction {
-  var pending = false;
-  var inProgress = 0;
+  let pending = false;
+  let inProgress = 0;
 
   const actualDelayMs = delayMs || 100;
 
   function coalescingWrapper(this: ContextT) {
-    var self = context || this;
+    const self = context || this;
 
     if (inProgress) {
       // Indicate that coalescingWrapper should be called again after the
@@ -57,7 +57,7 @@ function wrap<WrapperT extends AnyFunction, WrappedT extends AnyFunction>(wrappe
   wrapper.prototype = wrapped.prototype;
 
   // https://medium.com/@cramforce/on-the-awesomeness-of-fn-displayname-9511933a714a
-  var name = wrapped.displayName || wrapped.name;
+  const name = wrapped.displayName || wrapped.name;
   if (name) {
     wrapper.displayName = name;
   }
