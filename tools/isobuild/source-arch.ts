@@ -1,8 +1,30 @@
-import {isString, isFunction} from 'underscore';
-import {WatchSet} from '../fs/watch';
+import { isString, isFunction } from 'underscore';
+import { WatchSet } from '../fs/watch';
 
-function reportMissingOption(name) {
+
+function reportMissingOption(name: string) {
   throw new Error(`must provide options.${name} when creating SourceArch`);
+}
+
+type ImpliedPackageType = {
+  package: string,
+  constraint: string | null,
+}
+
+type UsedPackageType = ImpliedPackageType & {
+  unordered: boolean,
+  weak: boolean,
+}
+
+type SourceArchOptions = {
+  kind: string,
+  arch: string,
+  sourceRoot: string,
+  getFiles: Function, // TODO: Check the function type
+  uses: UsedPackageType[] | undefined,
+  implies: ImpliedPackageType[] | undefined,
+  declaredExports: string[] | null,
+  watchSet: WatchSet | undefined,
 }
 
 /**
@@ -11,18 +33,32 @@ function reportMissingOption(name) {
  * Used in ./package-source.js.
  */
 export default class SourceArch {
-  constructor(pkg, {
-    kind, // required
-    arch, // required
-    sourceRoot, // required
-    getFiles, // required
-    uses = [],
-    implies = [],
-    declaredExports = null,
-    // Do not include the source files in watchSet. They will be added at
-    // compile time when the sources are actually read.
-    watchSet = new WatchSet(),
-  }) {
+  public pkg: string;
+  public kind: string;
+  public arch: string;
+  public sourceRoot: string;
+  public getFiles: Function;
+  public uses: UsedPackageType[];
+  public implies: ImpliedPackageType[];
+  public localNodeModulesDirs: Object; // TODO: Check how to declare this type
+  public declaredExports: string[] | null;
+  public watchSet: WatchSet;
+
+  constructor(pkg: string, options: SourceArchOptions) {
+    const {
+      kind,
+      arch,
+      sourceRoot,
+      getFiles,
+      uses = [],
+      implies = [],
+      declaredExports = null,
+      // Do not include the source files in watchSet. They will be added at
+      // compile time when the sources are actually read.
+      watchSet = new WatchSet(),
+    } = options;
+
+    // TODO: Is this necessary now that we are using typescript?
     isString(kind) || reportMissingOption('kind');
     isString(arch) || reportMissingOption('arch');
     isString(sourceRoot) || reportMissingOption('sourceRoot');
