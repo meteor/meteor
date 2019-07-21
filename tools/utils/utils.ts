@@ -1,20 +1,41 @@
 import _ from 'underscore';
 import semver from 'semver';
 import os from 'os';
-import url from 'url';
+import url, { UrlObject } from 'url';
 
 import'./fiber-helpers.js';
 import * as archinfo from './archinfo';
-import buildmessage from './buildmessage.js';
+const buildmessage = require('./buildmessage');
 import * as files from '../fs/files';
 import packageVersionParser from '../packaging/package-version-parser.js';
 import { PackageConstraint } from '../../packages/package-version-parser/package-version-parser.js';
 
-type TemporaryParseUrlOptions = {
-  hostname: string;
-  port: string;
-  protocol: string;
+// XXX: @types/child_process
+type ChildProcessOptions = {
+  cwd?: string;
+  stdio?: any;
+  custom?: any;
+  env?: any;
+  detached?: boolean;
+  maxBuffer?: number;
+
+  // INFO: This property is only being used in execFileSync()
+  pipeOutput?: string;
 }
+
+// XXX: Defined these in a global .d.ts file or better in @types/netroute
+type NetrouteInfoIP = {
+  interface: string;
+  destination: string;
+}
+
+type NetrouteInfo = {
+  IPv4: NetrouteInfoIP[];
+  IPv6: NetrouteInfoIP[];
+}
+
+// XXX: Define and move this into console.js 
+type ConsolePrintTwoColumnsOptions = {}
 
 // Parses <protocol>://<host>:<port> into an object { protocol: *, host:
 // *, port: * }. The input can also be of the form <host>:<port> or just
@@ -24,13 +45,12 @@ type TemporaryParseUrlOptions = {
 // undefined} or something like that.
 //
 // 'defaults' is an optional object with 'hostname', 'port', and 'protocol' keys.
-export function parseUrl(str: string, defaults: TemporaryParseUrlOptions) {
+export function parseUrl(str: string, defaults: UrlObject = {}) {
   // XXX factor this out into a {type: host/port}?
 
-  defaults = defaults || {};
-  var defaultHostname = defaults.hostname || undefined;
-  var defaultPort = defaults.port || undefined;
-  var defaultProtocol = defaults.protocol || undefined;
+  const defaultHostname = defaults.hostname || undefined;
+  const defaultPort = defaults.port || undefined;
+  const defaultProtocol = defaults.protocol || undefined;
 
   if (str.match(/^[0-9]+$/)) { // just a port
     return {
@@ -39,15 +59,15 @@ export function parseUrl(str: string, defaults: TemporaryParseUrlOptions) {
       protocol: defaultProtocol };
   }
 
-  var hasSchemeResult = hasScheme(str);
+  const hasSchemeResult = hasScheme(str);
   if (! hasSchemeResult) {
     str = "http://" + str;
   }
 
-  var parsed = url.parse(str);
+  const parsed = url.parse(str);
 
   // for consistency remove colon at the end of protocol
-  parsed.protocol = parsed.protocol.replace(/\:$/, '');
+  parsed.protocol = (parsed.protocol || '').replace(/\:$/, '');
 
   return {
     protocol: hasSchemeResult ? parsed.protocol : defaultProtocol,
@@ -58,7 +78,7 @@ export function parseUrl(str: string, defaults: TemporaryParseUrlOptions) {
 
 // 'options' is an object with 'hostname', 'port', and 'protocol' keys, such as
 // the return value of parseUrl.
-export function formatUrl(options: TemporaryParseUrlOptions) {
+export function formatUrl(options: UrlObject) {
   // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
   // this a valid URL
   if (!options.pathname)
@@ -68,11 +88,11 @@ export function formatUrl(options: TemporaryParseUrlOptions) {
 };
 
 export function ipAddress() {
-  let defaultRoute;
+  let defaultRoute: NetrouteInfoIP | undefined;
   // netroute is not available on Windows
   if (process.platform !== "win32") {
     const netroute = require('netroute');
-    const info = netroute.getInfo();
+    const info: NetrouteInfo = netroute.getInfo();
     defaultRoute = _.findWhere(info.IPv4 || [], { destination: "0.0.0.0" });
   }
 
@@ -94,16 +114,19 @@ not found in interface list, or does not have an IPv4 address.`);
   } else {
     // If we don't know the default route, we'll lookup all non-internal
     // IPv4 addresses and hope to find only one
-    let addressEntries = _.chain(interfaces).values().flatten().
-      where({ family: "IPv4", internal: false }).value();
+    const addressEntries: os.NetworkInterfaceInfo[] = _.chain(interfaces)
+      .values()
+      .flatten()
+      .where({ family: "IPv4", internal: false })
+      .value();
 
     if (addressEntries.length == 0) {
-      throw new Error(
-`Could not find a network interface with a non-internal IPv4 address.`);
+      throw new Error(`Could not find a network interface with a non-internal IPv4 address.`);
     } else if (addressEntries.length > 1) {
+      const addressEntriesStr = addressEntries.map(entry => entry.address).join(', ');
       throw new Error(
 `Found multiple network interfaces with non-internal IPv4 addresses:
-${addressEntries.map(entry => entry.address).join(', ')}`);
+${addressEntriesStr}`);
     } else {
       return addressEntries[0].address;
     }
@@ -121,32 +144,23 @@ export function isIPv4Address(str: string): RegExpMatchArray | null {
 // XXX: Move to e.g. formatters.js?
 // Prints a package list in a nice format.
 // Input is an array of objects with keys 'name' and 'description'.
-export function printPackageList(items, options) {
-  options = options || {};
+export function printPackageList(items: Array<{name: string; description?: string}>, options: ConsolePrintTwoColumnsOptions = {}) {
+  const sortedItems = _.sortBy(items, item => item.name);
 
-  var rows = _.map(items, function (item) {
-    var name = item.name;
-    var description = item.description || 'No description';
-    return [name, description];
-  });
+  const sortedRows = _.map(sortedItems, item => [item.name, item.description || 'No description']);
 
-  var alphaSort = function (row) {
-    return row[0];
-  };
-  rows = _.sortBy(rows, alphaSort);
-
-  var Console = require('../console/console.js').Console;
-  return Console.printTwoColumns(rows, options);
+  const Console = require('../console/console.js').Console;
+  return Console.printTwoColumns(sortedRows, options);
 };
 
 // Determine a human-readable hostname for this computer. Prefer names
 // that make sense to users (eg, the name they manually gave their
 // computer on OS X, which might contain spaces) over names that have
 // any particular technical significance (eg, might resolve in DNS).
-export function getHost(...args): string {
-  var ret;
-  var attempt = function (...args) {
-    var output = execFileSync(args[0], args.slice(1)).stdout;
+export function getHost(): string {
+  let ret;
+  const attempt = function (...args: string[]) {
+    const output = execFileSync(args[0], args.slice(1)).stdout;
     if (output) {
       ret = output.trim();
     }
@@ -184,23 +198,31 @@ export function getHost(...args): string {
   return ret || os.hostname();
 };
 
+type AgentInfo = {
+  host?: string;
+  agent: string;
+  agentVersion: string;
+  arch: string;
+}
+
 // Return standard info about this user-agent. Used when logging in to
 // Meteor Accounts, mostly so that when the user is seeing a list of
 // their open sessions in their profile on the web, they have a way to
 // decide which ones they want to revoke.
-export function getAgentInfo() {
-  var ret = {};
+export function getAgentInfo(): AgentInfo {
+  const host = getHost();
 
-  var host = getHost();
+  const agentInfo: AgentInfo = {
+    agent: "Meteor",
+    agentVersion: files.inCheckout() ? "checkout" : files.getToolsVersion(),
+    arch: archinfo.host()
+  };
+
   if (host) {
-    ret.host = host;
+    agentInfo.host = host;
   }
-  ret.agent = "Meteor";
-  ret.agentVersion =
-    files.inCheckout() ? "checkout" : files.getToolsVersion();
-  ret.arch = archinfo.host();
 
-  return ret;
+  return agentInfo;
 };
 
 // Wait for 'ms' milliseconds, and then return. Yields. (Must be
@@ -235,9 +257,14 @@ export function randomPort(): number {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
+type TempOptions = {
+  useBuildmessage?: string;
+  buildmessageFile?: string;
+}
+
 // Like packageVersionParser.parsePackageConstraint, but if called in a
 // buildmessage context uses buildmessage to raise errors.
-export function parsePackageConstraint(constraintString, options): PackageConstraint | null {
+export function parsePackageConstraint(constraintString: string, options?: TempOptions): PackageConstraint | null {
   try {
     return packageVersionParser.parsePackageConstraint(constraintString);
   } catch (e) {
@@ -249,7 +276,7 @@ export function parsePackageConstraint(constraintString, options): PackageConstr
   }
 };
 
-export function validatePackageName(name, options) {
+export function validatePackageName(name: string, options?: TempOptions) {
   try {
     return packageVersionParser.validatePackageName(name, options);
   } catch (e) {
@@ -267,16 +294,16 @@ export function validatePackageName(name, options) {
 //
 // Lines of `.meteor/versions` are parsed using this function, among
 // other uses.
-export function parsePackageAndVersion(packageAtVersionString, options) {
-  var error = null;
-  var separatorPos = Math.max(packageAtVersionString.lastIndexOf(' '),
+export function parsePackageAndVersion(packageAtVersionString: string, options?: TempOptions) {
+  let error = null;
+  const separatorPos = Math.max(packageAtVersionString.lastIndexOf(' '),
                               packageAtVersionString.lastIndexOf('@'));
   if (separatorPos < 0) {
     error = new Error("Malformed package version: " +
                       JSON.stringify(packageAtVersionString));
   } else {
-    var packageName = packageAtVersionString.slice(0, separatorPos);
-    var version = packageAtVersionString.slice(separatorPos+1);
+    const packageName = packageAtVersionString.slice(0, separatorPos);
+    const version = packageAtVersionString.slice(separatorPos+1);
     try {
       packageVersionParser.validatePackageName(packageName);
       // validate the version, ignoring the parsed result:
@@ -326,18 +353,18 @@ export function isValidPackageName(packageName: string): boolean {
   }
 };
 
-export function validatePackageNameOrExit(packageName: string, options) {
+export function validatePackageNameOrExit(packageName: string, options?: TempOptions) {
   try {
     validatePackageName(packageName, options);
   } catch (e) {
     if (!e.versionParserError) {
       throw e;
     }
-    var Console = require('../console/console.js').Console;
+    const Console = require('../console/console.js').Console;
     Console.error(e.message, Console.options({ bulletPoint: "Error: " }));
     // lazy-load main: old bundler tests fail if you add a circular require to
     // this file
-    var main = require('../tests/apps/app-using-stylus/main.js');
+    const main = require('../tests/apps/app-using-stylus/main.js');
     throw new main.ExitWithCode(1);
   }
 };
@@ -358,13 +385,13 @@ export function quotemeta(str: string): string {
 };
 
 // Allow a simple way to scale up all timeouts from the command line
-var localTimeoutScaleFactor = 1.0;
+let localTimeoutScaleFactor = 1.0;
 if (process.env.TIMEOUT_SCALE_FACTOR) {
   localTimeoutScaleFactor = parseFloat(process.env.TIMEOUT_SCALE_FACTOR);
 }
 export const timeoutScaleFactor = localTimeoutScaleFactor;
 
-// If the given version matches a template (essentially, semver-style, but with
+// If the given version matches a template (essentially,  -style, but with
 // a bounded number of digits per number part, and with no restriction on the
 // amount of number parts, and some restrictions on legal prerelease labels),
 // then return an orderKey for it. Otherwise return null.
@@ -373,36 +400,37 @@ export const timeoutScaleFactor = localTimeoutScaleFactor;
 // prerelease tags), and appends a $. (Because ! sorts before $, this means that
 // the prerelease for a given release will sort before it. Because $ sorts
 // before '.', this means that 1.2 will sort before 1.2.3.)
-export function defaultOrderKeyForReleaseVersion(v: string): string | null {
-  var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/);
-  if (!m) {
+export function defaultOrderKeyForReleaseVersion(version: string): string | null {
+  const match = version.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/);
+  if (!match) {
     return null;
   }
-  var numberPart = m[1];
-  var prereleaseTag = m[2];
-  var prereleaseNumber = m[3];
 
-  var hasRedundantLeadingZero = function (x) {
+  const numberPart = match[1];
+  const prereleaseTag = match[2];
+  const prereleaseNumber = match[3];
+
+  function hasRedundantLeadingZero(x: string): boolean {
     return x.length > 1 && x[0] === '0';
   };
-  var leftPad = function (chr: string, len: number, str: string): string {
+
+  function leftPad(chr: string, len: number, str: string): string {
     if (str.length > len) {
       throw Error("too long to pad!");
     }
-    var padding = new Array(len - str.length + 1).join(chr);
-    return padding + str;
+    return str.padStart(len, chr);
   };
-  var rightPad = function (chr: string, len: number, str: string): string {
+
+  function rightPad(chr: string, len: number, str: string): string {
     if (str.length > len) {
       throw Error("too long to pad!");
     }
-    var padding = new Array(len - str.length + 1).join(chr);
-    return str + padding;
+    return str.padEnd(len, chr);
   };
 
   // Versions must have no redundant leading zeroes, or else this encoding would
   // be ambiguous.
-  var numbers = numberPart.split('.');
+  const numbers = numberPart.split('.');
   if (_.any(numbers, hasRedundantLeadingZero)) {
     return null;
   }
@@ -411,7 +439,7 @@ export function defaultOrderKeyForReleaseVersion(v: string): string | null {
   }
 
   // First, put together the non-prerelease part.
-  var ret = _.map(numbers, _.partial(leftPad, '0', 4)).join('.');
+  let ret = _.map(numbers, number => leftPad('0', 4, number)).join('.');
 
   if (!prereleaseTag) {
     return ret + '$';
@@ -429,29 +457,29 @@ export function defaultOrderKeyForReleaseVersion(v: string): string | null {
 export function isDirectory(dir: string) {
   try {
     // use stat rather than lstat since symlink to dir is OK
-    var stats = files.stat(dir);
+    const stats = files.stat(dir);
+    return stats.isDirectory();
   } catch (e) {
     return false;
   }
-  return stats.isDirectory();
 };
 
 // Calls cb with each subset of the array "total", with non-decreasing size,
 // until all subsets have been used or cb returns true. The array passed
 // to cb may be safely mutated or retained by cb.
-export function generateSubsetsOfIncreasingSize(total, cb) {
+export function generateSubsetsOfIncreasingSize(total: string[], cb: (elements: string[]) => boolean) {
   // We'll throw this if cb ever returns true, which is a simple way to pop us
   // out of our recursion.
-  var Done = function () {};
+  class Done {};
 
   // Generates all subsets of size subsetSize which contain the indices already
   // in chosenIndices (and no indices that are "less than" any of them).
-  var generateSubsetsOfFixedSize = function (goalSize, chosenIndices) {
+  const generateSubsetsOfFixedSize = function (goalSize: number, chosenIndices: number[]) {
     // If we've found a subset of the size we're looking for, output it.
     if (chosenIndices.length === goalSize) {
       // Change from indices into the actual elements. Note that 'elements' is
       // a newly allocated array which cb may mutate or retain.
-      var elements = [];
+      const elements: string[] = [];
       _.each(chosenIndices, function (index) {
         elements.push(total[index]);
       });
@@ -464,17 +492,17 @@ export function generateSubsetsOfIncreasingSize(total, cb) {
     // Otherwise try adding another index and call this recursively.  We're
     // trying to produce a sorted list of indices, so if there are already
     // indices, we start with the one after the biggest one we already have.
-    var firstIndexToConsider = chosenIndices.length ?
+    const firstIndexToConsider = chosenIndices.length ?
           chosenIndices[chosenIndices.length - 1] + 1 : 0;
-    for (var i = firstIndexToConsider; i < total.length; ++i) {
-      var withThisChoice = _.clone(chosenIndices);
+    for (let i = firstIndexToConsider; i < total.length; ++i) {
+      const withThisChoice = _.clone(chosenIndices);
       withThisChoice.push(i);
       generateSubsetsOfFixedSize(goalSize, withThisChoice);
     }
   };
 
   try {
-    for (var goalSize = 0; goalSize <= total.length; ++goalSize) {
+    for (let goalSize = 0; goalSize <= total.length; ++goalSize) {
       generateSubsetsOfFixedSize(goalSize, []);
     }
   } catch (e) {
@@ -484,25 +512,25 @@ export function generateSubsetsOfIncreasingSize(total, cb) {
   }
 };
 
-export function isUrlWithFileScheme(x): boolean {
+export function isUrlWithFileScheme(x: string): boolean {
   return /^file:\/\/.+/.test(x);
 };
 
-export function isUrlWithSha(x): boolean {
+export function isUrlWithSha(x: string): boolean {
   // Is a URL with a fixed SHA? We use this for Cordova -- although theoretically we could use
   // a URL like isNpmUrl(), there are a variety of problems with this,
   // see https://github.com/meteor/meteor/pull/5562
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
 }
 
-export function isNpmUrl(x): boolean {
+export function isNpmUrl(x: string): boolean {
   // These are the various protocols that NPM supports, which we use to download NPM dependencies
   // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
   return isUrlWithSha(x) ||
     /^(git|git\+ssh|git\+http|git\+https|https|http)?:\/\//.test(x);
 };
 
-export function isPathRelative(x): boolean {
+export function isPathRelative(x: string): boolean {
   return x.charAt(0) !== '/';
 };
 
@@ -512,7 +540,7 @@ export function isPathRelative(x): boolean {
 //
 // This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
-export function ensureOnlyValidVersions(dependencies, {forCordova}) {
+export function ensureOnlyValidVersions(dependencies: string[], {forCordova}: {forCordova: boolean}) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
@@ -524,29 +552,29 @@ export function ensureOnlyValidVersions(dependencies, {forCordova}) {
     }
   });
 };
-export function isValidVersion(version, {forCordova}) {
+export function isValidVersion(version: string, {forCordova}: {forCordova: boolean}) {
   return semver.valid(version) || isUrlWithFileScheme(version)
     || (forCordova ? isUrlWithSha(version): isNpmUrl(version));
 };
 
+type ExecFileResponse = {success: boolean; stdout: string; stderr: string};
 
-export function execFileSync(file, args, opts) {
-  var child_process = require('child_process');
-  var { eachline } = require('./eachline');
+export function execFileSync(file: string, args: string[], opts: ChildProcessOptions = {}): ExecFileResponse {
+  const child_process = require('child_process');
+  const { eachline } = require('./eachline');
 
-  opts = opts || {};
   if (! _.has(opts, 'maxBuffer')) {
     opts.maxBuffer = 1024 * 1024 * 10;
   }
 
   if (opts && opts.pipeOutput) {
-    var p = child_process.spawn(file, args, opts);
+    const p = child_process.spawn(file, args, opts);
 
-    eachline(p.stdout, function (line) {
+    eachline(p.stdout, function (line: string) {
       process.stdout.write(line + '\n');
     });
 
-    eachline(p.stderr, function (line) {
+    eachline(p.stderr, function (line: string) {
       process.stderr.write(line + '\n');
     });
 
@@ -560,24 +588,25 @@ export function execFileSync(file, args, opts) {
   }
 
   return new Promise(function (resolve) {
-    child_process.execFile(file, args, opts, function (err, stdout, stderr) {
+    child_process.execFile(file, args, opts, function (err: Error, stdout: Buffer, stderr: Buffer) {
       resolve({
         success: ! err,
         stdout: stdout,
         stderr: stderr
       });
     });
-  }).await();
+  }).await() as ExecFileResponse;
 };
 
-export function execFileAsync(file, args, opts) {
+// WARN: This function doesn't seem to be used anywhere
+export function execFileAsync(file: string, args: string[], opts: ChildProcessOptions & {lineMapper?: (line: string) => string; verbose?: boolean}) {
   opts = opts || {};
-  var child_process = require('child_process');
-  var { eachline } = require('./eachline');
-  var p = child_process.spawn(file, args, opts);
-  var mapper = opts.lineMapper || _.identity;
+  const child_process = require('child_process');
+  const { eachline } = require('./eachline');
+  const p = child_process.spawn(file, args, opts);
+  const mapper = opts.lineMapper || _.identity;
 
-  function logOutput(line) {
+  function logOutput(line: string) {
     if (opts.verbose) {
       line = mapper(line);
       if (line) {
@@ -593,7 +622,7 @@ export function execFileAsync(file, args, opts) {
 };
 
 
-export function runGitInCheckout(...args) {
+export function runGitInCheckout(...args: string[]) {
   args.unshift(
     '--git-dir=' +
     files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
@@ -601,30 +630,30 @@ export function runGitInCheckout(...args) {
   return execFileSync('git', args).stdout;
 };
 
-export function Throttled(options) {
-  var self = this;
 
-  options = _.extend({ interval: 150 }, options || {});
-  self.interval = options.interval;
-  var now = +(new Date);
+export class Throttled {
+  interval: number;
+  next: number;
 
-  self.next = now;
-};
+  constructor(options?: {interval?: number}) {
+    const actualOptions = _.extend({ interval: 150 }, options || {});
+    this.interval = actualOptions.interval;
 
-_.extend(Throttled.prototype, {
-  isAllowed: function () {
-    var self = this;
-    var now = +(new Date);
+    const now = +(new Date);
+    this.next = now;
+  }
 
-    if (now < self.next) {
+  isAllowed(){
+    const now = +(new Date);
+
+    if (now < this.next) {
       return false;
     }
 
-    self.next = now + self.interval;
+    this.next = now + this.interval;
     return true;
   }
-});
-
+}
 
 // ThrottledYield just regulates the frequency of calling yield.
 // It should behave similarly to calling yield on every iteration of a loop,
@@ -633,16 +662,15 @@ _.extend(Throttled.prototype, {
 // options:
 //   interval: minimum interval of time between yield calls
 //             (more frequent calls are simply dropped)
-export function ThrottledYield(options) {
-  var self = this;
+export class ThrottledYield {
+  _throttle: Throttled;
+  
+  constructor(options?: {interval?: number}) {
+    this._throttle = new Throttled(options);
+  }
 
-  self._throttle = new Throttled(options);
-};
-
-_.extend(ThrottledYield.prototype, {
-  yield: function () {
-    var self = this;
-    if (self._throttle.isAllowed()) {
+  yield() {
+    if (this._throttle.isAllowed()) {
       // setImmediate allows signals and IO to be processed but doesn't
       // otherwise add time-based delays. It is better for yielding than
       // process.nextTick (which doesn't allow signals or IO to be processed) or
@@ -652,19 +680,19 @@ _.extend(ThrottledYield.prototype, {
       new Promise(setImmediate).await();
     }
   }
-});
+}
 
 // Use this to convert dates into our preferred human-readable format.
 //
 // Takes in either null, a raw date string (ex: 2014-12-09T18:37:48.977Z) or a
 // date object and returns a long-form human-readable date (ex: December 9th,
 // 2014) or unknown for null.
-export function longformDate(date) {
+export function longformDate(date?: string | Date) {
   if (! date) {
     return "Unknown";
   }
-  var moment = require('moment');
-  var pubDate = moment(date).format('MMMM Do, YYYY');
+  const moment = require('moment');
+  const pubDate = moment(date).format('MMMM Do, YYYY');
   return pubDate;
 };
 
@@ -674,14 +702,14 @@ export function longformDate(date) {
 export const maxDateLength = "September 24th, 2014".length;
 
 // Returns a sha256 hash of a given string.
-export function sha256(contents) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha256');
+export function sha256(contents: string) {
+  const crypto = require('crypto');
+  const hash = crypto.createHash('sha256');
   hash.update(contents);
   return hash.digest('base64');
 };
 
-export function sourceMapLength(sm) {
+export function sourceMapLength(sm?: {mappings: number[], sourcesContent?: string[]}) {
   if (! sm) {
     return 0;
   }
@@ -707,7 +735,7 @@ export function sourceMapLength(sm) {
 // Windows architecture is 64-bit, then convert to a "uname -m" matching
 // architecture label (e.g. i386, x86_64).
 export function architecture() {
-  const supportedArchitectures = {
+  const supportedArchitectures: { [osType: string]: { [osArch: string]: string }} = {
     Darwin: {
       x64: 'x86_64',
     },
