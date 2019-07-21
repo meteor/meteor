@@ -21,7 +21,7 @@ import {
   optimisticReadJsonOrNull,
 } from "../fs/optimistic";
 
-import { isTestFilePath } from './test-files.js';
+import { isTestFilePath } from './test-files';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
