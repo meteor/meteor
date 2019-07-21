@@ -13,7 +13,7 @@ var packageVersionParser = require('../packaging/package-version-parser.js');
 var compiler = require('./compiler.js');
 var Profile = require('../tool-env/profile').Profile;
 
-import SourceArch from './source-arch.js';
+import SourceArch from './source-arch';
 import { PackageNamespace } from "./package-namespace.js";
 import { PackageNpm } from "./package-npm.js";
 import { PackageCordova } from "./package-cordova.js";
