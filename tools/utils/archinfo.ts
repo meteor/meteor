@@ -1,7 +1,6 @@
-const { max } = require('underscore');
+import { max } from 'underscore';
 import os from 'os';
-
-import { architecture, execFileSync } from './utils';
+const utils = require('./utils');
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
@@ -147,7 +146,7 @@ let _host: string | null = null; // memoize
 export function host() {
   if (!_host) {
     const run = function (...args: Array<string | boolean>) {
-      const result = execFileSync(args[0], args.slice(1)).stdout;
+      const result = utils.execFileSync(args[0], args.slice(1)).stdout;
 
       if (! result) {
         throw new Error(`Can't get arch with ${args.join(" ")}?`);
@@ -196,7 +195,7 @@ export function host() {
 // download 32-bit builds of meteor-tool.
 export function acceptableMeteorToolArches(): string[] {
   if (os.platform() === "win32") {
-    switch (architecture()) {
+    switch (utils.architecture()) {
     case "x86_32":
       return ["os.windows.x86_32"];
     case "x86_64":
@@ -219,7 +218,7 @@ export function canSwitchTo64Bit(): boolean {
   // meteor-tool isn't stable enough at the moment (on Windows, at least)
   // to introduce in a release candidate.
   return false &&
-    architecture() === "x86_64" &&
+    utils.architecture() === "x86_64" &&
     host() === "os.windows.x86_32";
 }
 

@@ -132,7 +132,7 @@ export class AndroidRunTarget extends CordovaRunTarget {
   }
 
   async tailLogs(cordovaProject, target) {
-    const { transform } = require("../utils/eachline.js");
+    const { transform } = require("../utils/eachline");
 
     cordovaProject.runCommands(`tailing logs for ${this.displayName}`, async () => {
       await this.checkPlatformRequirementsAndSetEnv(cordovaProject);

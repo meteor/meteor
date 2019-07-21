@@ -14,6 +14,7 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/74fafef8d16c3c5bdf4d3aca5123d49db63680e9",
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.13.0",
+    typescript: "3.5.3",
     "meteor-babel": "7.5.5",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
@@ -25,11 +26,10 @@ var packageJson = {
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
-    // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
-    // in the package too) because we should consider using lodash instead
-    // (and there are backwards-incompatible changes either way).
-    underscore: "1.5.2",
+    "@types/underscore": "1.9.2",
+    underscore: "1.9.1",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "@types/semver": "5.4.0",
     semver: "5.4.1",
     request: "2.88.0",
     uuid: "3.3.2",
