@@ -5,7 +5,7 @@ var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
 import assert from 'assert';
 import LRU from 'lru-cache';
-import { sourceMapLength } from '../utils/utils.js';
+import { sourceMapLength } from '../utils/utils';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';

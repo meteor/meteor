@@ -20,7 +20,7 @@ const rimraf = require('rimraf');
 const sourcemap = require('source-map');
 const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
 
-const utils = require('../utils/utils.js');
+const utils = require('../utils/utils');
 const cleanup = require('../tool-env/cleanup.js');
 const buildmessage = require('../utils/buildmessage.js');
 const fiberHelpers = require('../utils/fiber-helpers.js');

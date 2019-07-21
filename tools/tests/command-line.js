@@ -4,7 +4,7 @@ var archinfo = require('../utils/archinfo');
 var release = require('../packaging/release.js');
 var _ = require('underscore');
 var files = require('../fs/files');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 var runMongo = require('../runners/run-mongo.js');
 
 selftest.define("argument parsing", function () {

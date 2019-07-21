@@ -42,7 +42,6 @@ tools/shell-client.ts
 tools/stats.js
 tools/test-utils.js
 tools/upgraders.js
-tools/utils/utils.js
 tools/fs/watch.js
 
 tools/catalog/catalog-local.js

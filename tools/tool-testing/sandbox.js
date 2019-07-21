@@ -55,7 +55,7 @@ import { allUpgraders } from '../upgraders.js';
 import { DEFAULT_TRACK } from '../packaging/catalog/catalog.js';
 import { RemoteCatalog } from '../packaging/catalog/catalog-remote.js';
 import { IsopackCache } from '../isobuild/isopack-cache.js';
-import { randomToken } from '../utils/utils.js';
+import { randomToken } from '../utils/utils';
 import { Tropohouse } from '../packaging/tropohouse.js';
 import { PackageMap } from '../packaging/package-map.js';
 import { capture, enterJob } from '../utils/buildmessage.js';

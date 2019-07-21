@@ -10,7 +10,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 var main = require('./main.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var projectContextModule = require('../project-context.js');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 var catalogUtils = require('../packaging/catalog/catalog-utils.js');
 var compiler = require('../isobuild/compiler.js');
 

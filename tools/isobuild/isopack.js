@@ -14,7 +14,7 @@ import {
   makeIsopacketBuildContext,
 } from '../tool-env/isopackets.js';
 var colonConverter = require('../utils/colon-converter.js');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile').Profile;

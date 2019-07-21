@@ -1,6 +1,6 @@
 import _ from 'underscore';
 import assert from 'assert';
-import utils from '../utils/utils.js';
+import utils from '../utils/utils';
 import buildmessage from '../utils/buildmessage.js';
 import {
   pathJoin,

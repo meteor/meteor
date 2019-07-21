@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 var files = require('../fs/files');
 var config = require('./config.js');
 var httpHelpers = require('../utils/http-helpers.js');

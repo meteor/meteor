@@ -52,7 +52,7 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
     setBanner(s, "v2", "=> New hotness v2 being downloaded.\n");
 
     // console.log("WE ARE READY NOW", s.warehouse, s.cwd)
-    // require('../utils/utils.js').sleepMs(1000*10000)
+    // require('../utils/utils').sleepMs(1000*10000)
 
     // Run it and see the banner for the current version.
     run = s.run("--port", "21000");
@@ -63,7 +63,7 @@ selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
     // being printed more than once).
     run.match(runningHotnessPattern);
     run.match(runningHotnessPattern);
-    require('../utils/utils.js').sleepMs(500);
+    require('../utils/utils').sleepMs(500);
     run.stop();
 
     // We won't see the banner a second time, or any other message about

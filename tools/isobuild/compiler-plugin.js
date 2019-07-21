@@ -11,7 +11,7 @@ var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
 import {sha1, readAndWatchFileWithHash} from  '../fs/watch';
 import LRU from 'lru-cache';
-import {sourceMapLength} from '../utils/utils.js';
+import {sourceMapLength} from '../utils/utils';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner';
 import {cssToCommonJS} from "./css-modules";

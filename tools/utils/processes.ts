@@ -8,7 +8,7 @@ import { convertToOSPath } from '../static-assets/server/mini-files';
 // execFileAsync directly, which returns a promise.
 // Some functionality is currently missing but could be added when the need
 // arises (e.g. support for timeout, maxBuffer, and encoding options).
-// Eventually, these versions should replace the ones in tools/utils/utils.js
+// Eventually, these versions should replace the ones in tools/utils/utils
 // and tools/tool-testing/selftest.js.
 
 type ExecFileOptions = {

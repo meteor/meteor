@@ -1,5 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 
 import { sha1 } from '../fs/watch';
 import httpHelpers from '../utils/http-helpers';

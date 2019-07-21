@@ -1,6 +1,6 @@
 var _ = require("underscore");
 var files = require('../fs/files');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../utils/archinfo');
 var catalog = require('./catalog/catalog.js');

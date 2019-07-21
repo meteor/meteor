@@ -3,7 +3,7 @@ var selftest = require('../tool-testing/selftest.js');
 var Run = selftest.Run;
 var testUtils = require('../tool-testing/test-utils.js');
 var files = require('../fs/files');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 var authClient = require('../meteor-services/auth-client.js');
 var auth = require('../meteor-services/auth.js');
 

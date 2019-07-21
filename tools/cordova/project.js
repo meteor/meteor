@@ -5,7 +5,7 @@ import chalk from 'chalk';
 import semver from 'semver';
 
 import files from '../fs/files';
-import utils from '../utils/utils.js';
+import utils from '../utils/utils';
 import { Console } from '../console/console.js';
 import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';

@@ -9,7 +9,7 @@ import bundler from '../isobuild/bundler.js';
 import archinfo from '../utils/archinfo';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
-import utils from '../utils/utils.js';
+import utils from '../utils/utils';
 
 import { CORDOVA_ARCH } from './index.js';
 

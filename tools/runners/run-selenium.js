@@ -2,7 +2,7 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var files = require('../fs/files');
 var runLog = require('./run-log.js');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 
 // options: runner url browserId xunitOutputFile
 var Selenium = function (options) {

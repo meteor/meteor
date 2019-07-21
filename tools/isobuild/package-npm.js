@@ -1,4 +1,4 @@
-import { ensureOnlyValidVersions } from "../utils/utils.js";
+import { ensureOnlyValidVersions } from "../utils/utils";
 import buildmessage from "../utils/buildmessage.js";
 import NpmDiscards from "./npm-discards.js";
 

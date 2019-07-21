@@ -2,7 +2,7 @@ const _ = require('underscore');
 
 const files = require('../fs/files');
 const buildmessage = require('../utils/buildmessage.js');
-const utils = require('../utils/utils.js');
+const utils = require('../utils/utils');
 const runLog = require('./run-log.js');
 const release = require('../packaging/release.js');
 
@@ -247,7 +247,7 @@ class Runner {
     if (self.specifiedAppPort) {
       self.appPort = self.specifiedAppPort;
     } else {
-      self.appPort = require('../utils/utils.js').randomPort();
+      self.appPort = require('../utils/utils').randomPort();
     }
     if (self.proxy) {
       self.proxy.proxyToPort = self.appPort;

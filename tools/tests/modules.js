@@ -1,6 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 import { getUrl } from '../utils/http-helpers.js';
 
 var MONGO_LISTENING =

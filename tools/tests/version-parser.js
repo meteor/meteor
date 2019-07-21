@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var utils = require('../utils/utils.js');
+var utils = require('../utils/utils');
 var selftest = require('../tool-testing/selftest.js');
 
 

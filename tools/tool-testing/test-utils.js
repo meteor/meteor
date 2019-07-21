@@ -1,5 +1,5 @@
 import { getAuthDDPUrl } from '../meteor-services/config.js';
-import { timeoutScaleFactor } from '../utils/utils.js';
+import { timeoutScaleFactor } from '../utils/utils';
 import { withAccountsConnection } from '../meteor-services/auth.js';
 import { fail, markStack } from './selftest.js';
 import { request } from '../utils/http-helpers.js';

@@ -67,7 +67,7 @@ import {
   sleepMs,
   Throttled,
   ThrottledYield,
-} from "../utils/utils.js";
+} from "../utils/utils";
 
 const PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 // Set the default CR to \r unless we're running with cmd
