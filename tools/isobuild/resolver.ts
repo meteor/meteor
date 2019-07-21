@@ -4,7 +4,7 @@ import {
   has,
 } from "underscore";
 
-import { matches as archMatches } from "../utils/archinfo.js";
+import { matches as archMatches } from "../utils/archinfo";
 import {
   pathJoin,
   pathRelative,
