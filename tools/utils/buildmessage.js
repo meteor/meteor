@@ -641,23 +641,23 @@ var forkJoin = function (options, iterable, fn) {
   }).await();
 };
 
+const _MessageSet = MessageSet;
 
-var buildmessage = exports;
-_.extend(exports, {
-  capture: capture,
-  enterJob: enterJob,
-  markBoundary: markBoundary,
-  error: error,
-  exception: exception,
-  jobHasMessages: jobHasMessages,
-  assertInJob: assertInJob,
-  assertInCapture: assertInCapture,
-  mergeMessagesIntoCurrentJob: mergeMessagesIntoCurrentJob,
-  forkJoin: forkJoin,
-  getRootProgress: getRootProgress,
-  reportProgress: reportProgress,
-  reportProgressDone: reportProgressDone,
-  getCurrentProgressTracker: getCurrentProgressTracker,
-  addChildTracker: addChildTracker,
-  _MessageSet: MessageSet
-});
+export {
+  capture,
+  enterJob,
+  markBoundary,
+  error,
+  exception,
+  jobHasMessages,
+  assertInJob,
+  assertInCapture,
+  mergeMessagesIntoCurrentJob,
+  forkJoin,
+  getRootProgress,
+  reportProgress,
+  reportProgressDone,
+  getCurrentProgressTracker,
+  addChildTracker,
+  _MessageSet,
+};
