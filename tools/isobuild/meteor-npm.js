@@ -14,6 +14,7 @@ var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile').Profile;
+import { parse } from "semver";
 import { version as npmVersion } from 'npm';
 import { execFileAsync } from "../utils/processes";
 import {
@@ -239,8 +240,6 @@ function recordLastRebuildVersions(pkgDir) {
 // Returns true iff isSubtreeOf(currentVersions, versions), allowing
 // valid semantic versions to differ in their patch versions.
 function versionsAreCompatible(versions) {
-  import { parse } from "semver";
-
   return isSubtreeOf(currentVersions, versions, (a, b) => {
     // Technically already handled by isSubtreeOf, but doesn't hurt.
     if (a === b) {

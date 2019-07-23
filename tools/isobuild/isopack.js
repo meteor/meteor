@@ -1,6 +1,6 @@
 var assert = require('assert');
 var compiler = require('./compiler.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('../utils/buildmessage.js');

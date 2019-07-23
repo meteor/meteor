@@ -1,7 +1,7 @@
 var assert = require("assert");
 var _ = require('underscore');
 
-var archinfo = require('./utils/archinfo.js');
+var archinfo = require('./utils/archinfo');
 var buildmessage = require('./utils/buildmessage.js');
 var catalog = require('./packaging/catalog/catalog.js');
 var catalogLocal = require('./packaging/catalog/catalog-local.js');
@@ -26,7 +26,7 @@ import {
   mapWhereToArches,
 } from "./isobuild/package-api.js";
 
-import Resolver from "./isobuild/resolver.js";
+import Resolver from "./isobuild/resolver";
 
 const CAN_DELAY_LEGACY_BUILD = ! JSON.parse(
   process.env.METEOR_DISALLOW_DELAYED_LEGACY_BUILD || "false"

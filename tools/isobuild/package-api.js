@@ -3,7 +3,7 @@ var _ = require("underscore");
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var compiler = require('./compiler.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 
 // It's important that we import these functions individually instead of

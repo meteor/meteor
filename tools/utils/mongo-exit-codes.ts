@@ -4,10 +4,7 @@
 
 // Explanations have been rewritten, not copied, for license reasons.
 
-
-var _ = require('underscore');
-
-exports.Codes = {
+export const MongoExitCodes = {
   0 : { code: 0,
         symbol: "EXIT_CLEAN",
         longText: "MongoDB exited cleanly"
@@ -68,6 +65,4 @@ exports.Codes = {
         }
 };
 
-_.each(exports.Codes, function (value) {
-  exports[value.symbol] = value;
-});
+export type MongoExitCode = keyof typeof MongoExitCodes;
