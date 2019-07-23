@@ -565,12 +565,19 @@ class StatusPoller {
   }
 }
 
+type RawConsoleOptions = {
+  bulletPoint?: string,
+  indent?: number,
+}
+
 // We use a special class to represent the options that we send to the Console
 // because it allows us to call 'instance of' on the last argument of variadic
 // functions. This allows us to keep the signature of our custom output
 // functions (ex: info) roughly the same as the originals.
 class ConsoleOptions {
-  constructor(o) {
+  options: RawConsoleOptions;
+  
+  constructor(o: RawConsoleOptions) {
     this.options = o;
   }
 }
@@ -625,7 +632,7 @@ class Console extends ConsoleBase {
     );
 
     // The progress display we are showing on-screen
-    this._progressDisplay = new ProgressDisplayNone(this);
+    this._progressDisplay = new ProgressDisplayNone();
 
     this._statusPoller = null;
 
@@ -765,7 +772,7 @@ class Console extends ConsoleBase {
   //  "  => this mesage indented by two and
   //        and also starts with an arrow."
   //
-  options(o) {
+  options(o: RawConsoleOptions) {
     // (This design pattern allows us to call 'instance of' on the
     // ConsoleOptions in parseVariadicInput, by ensuring that the object created
     // with Console.options is, in fact, a new object.
@@ -808,7 +815,7 @@ class Console extends ConsoleBase {
 
   // Don't pretty-fy this output by trying to, for example, line-wrap it. Just
   // print it to the screen as it is.
-  rawDebug(...args) {
+  rawDebug(...args: any[]) {
     if (! this.isDebugEnabled()) {
       return;
     }
@@ -826,7 +833,7 @@ class Console extends ConsoleBase {
   //   - indent: offset the entire string by a specific number of
   //     characters. See _wrap for more details.
   //
-  debug(...args) {
+  debug(...args: any[]) {
     if (! this.isDebugEnabled()) { return; }
 
     var message = this._prettifyMessage(args);
@@ -839,7 +846,7 @@ class Console extends ConsoleBase {
 
   // Don't pretty-fy this output by trying to, for example, line-wrap it. Just
   // print it to the screen as it is.
-  rawInfo(...args) {
+  rawInfo(...args: any[]) {
     if (! this.isInfoEnabled()) {
       return;
     }
@@ -851,7 +858,7 @@ class Console extends ConsoleBase {
   // Generally, we want to process the output for legibility, for example, by
   // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
   // rawInfo function. For more information about options, see: debug.
-  info(...args) {
+  info(...args: any[]) {
     if (! this.isInfoEnabled()) { return; }
 
     var message = this._prettifyMessage(args);
@@ -862,7 +869,7 @@ class Console extends ConsoleBase {
     return this.isLevelEnabled(LEVEL_CODE_WARN);
   }
 
-  rawWarn(...args) {
+  rawWarn(...args: any[]) {
     if (! this.isWarnEnabled()) {
       return;
     }
@@ -874,14 +881,14 @@ class Console extends ConsoleBase {
   // Generally, we want to process the output for legibility, for example, by
   // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
   // rawWarn function. For more information about options, see: debug.
-  warn(...args) {
+  warn(...args: any[]) {
     if (! this.isWarnEnabled()) { return; }
 
     var message = this._prettifyMessage(args);
     this._print(LEVEL_WARN, message);
   }
 
-  rawError(...args) {
+  rawError(...args: any[]) {
     var message = this._format(args);
     this._print(LEVEL_ERROR, message);
   }
@@ -889,7 +896,7 @@ class Console extends ConsoleBase {
   // Generally, we want to process the output for legibility, for example, by
   // wrapping it. For raw output (ex: stack traces, user logs, etc), use the
   // rawError function. For more information about options, see: debug.
-  error(...args) {
+  error(...args: any[]) {
     var message = this._prettifyMessage(args);
     this._print(LEVEL_ERROR, message);
   }
@@ -901,7 +908,7 @@ class Console extends ConsoleBase {
     this.rawInfo('\u001b[2J\u001b[0;0H');
   }
 
-  _prettifyMessage(msgArguments) {
+  _prettifyMessage(msgArguments: any[]) {
     var parsedArgs = this._parseVariadicInput(msgArguments);
     var wrapOpts = {
       indent: parsedArgs.options.indent,
@@ -1170,7 +1177,7 @@ class Console extends ConsoleBase {
   //   - bulletPoint: (see: Console.options)
   //   - indent: (see: Console.options)
   //
-  _wrapText(text: string, options: { bulletPoint?: string, indent?: number } = Object.create(null)) {
+  _wrapText(text: string, options: RawConsoleOptions = Object.create(null)) {
     // Compute the maximum offset on the bulk of the message.
     var maxIndent = 0;
     if (options.indent && options.indent > 0) {
@@ -1247,7 +1254,7 @@ class Console extends ConsoleBase {
       newProgressDisplay = new ProgressDisplayNone();
     } else if ((! this._stream.isTTY) || (! this._pretty)) {
       // No progress bar if not in pretty / on TTY.
-      newProgressDisplay = new ProgressDisplayNone(this);
+      newProgressDisplay = new ProgressDisplayNone();
     } else if (isEmacs() || this.isPseudoTTY()) {
       // Resort to a more basic mode if we're in an environment which
       // misbehaves when using clearLine() and cursorTo(...).
