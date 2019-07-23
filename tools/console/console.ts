@@ -141,6 +141,10 @@ class ProgressDisplayNone {
   repaint() {
     // No-op
   }
+
+  updateStatus(_status: string | null) {
+    // No-op
+  }
 }
 
 // Status display only, primarily for use with emacs
@@ -520,7 +524,7 @@ class StatusPoller {
     const reportState = (state, startTime: Date) => {
       var progressDisplay = this._console._progressDisplay;
       // Do the % computation, if it is going to be used
-      if (progressDisplay.updateProgress) {
+      if (progressDisplay instanceof ProgressDisplayFull) {
         if (state.end === undefined || state.end == 0) {
           progressDisplay.updateProgress(null, startTime);
         } else {
@@ -549,7 +553,7 @@ class StatusPoller {
     var title = (watching != null ? watching._title : null) || FALLBACK_STATUS;
 
     var progressDisplay = this._console._progressDisplay;
-    progressDisplay.updateStatus && progressDisplay.updateStatus(title);
+    progressDisplay.updateStatus(title);
 
     if (watching) {
       watching.addWatcher((state) => {
@@ -564,6 +568,8 @@ class StatusPoller {
     }
   }
 }
+
+type ProgressDisplay = ProgressDisplayNone | ProgressDisplayFull | ProgressDisplayStatus;
 
 type RawConsoleOptions = {
   bulletPoint?: string,
@@ -621,6 +627,7 @@ class Console extends ConsoleBase {
   verbose: boolean;
   _pretty: boolean;
   _logThreshold: ConsoleLevelCode;
+  _progressDisplay: ProgressDisplay;
   _progressDisplayEnabled: boolean;
 
   constructor() {
@@ -1294,13 +1301,12 @@ class Console extends ConsoleBase {
   setHeadless(headless = true) {
     this._headless = !! headless;
 
-    if (this._progressDisplay &&
-        this._progressDisplay.setHeadless) {
+    if (this._progressDisplay instanceof ProgressDisplayFull) {
       this._progressDisplay.setHeadless(this._headless);
     }
   }
 
-  _setProgressDisplay(newProgressDisplay) {
+  _setProgressDisplay(newProgressDisplay: ProgressDisplay) {
     // XXX: Optimize case of no-op transitions? (same mode -> same mode)
 
     var oldProgressDisplay = this._progressDisplay;
@@ -1313,11 +1319,11 @@ class Console extends ConsoleBase {
   //   - echo (boolean): defaults to true
   //   - prompt (string)
   //   - stream: defaults to process.stdout (you might want process.stderr)
-  readLine(options) {
-    options = Object.assign(Object.create(null), {
+  readLine(opts?: { echo?: boolean, prompt?: string, stream?: NodeJS.WriteStream }) {
+    const options = Object.assign(Object.create(null), {
       echo: true,
       stream: this._stream
-    }, options);
+    }, opts);
 
     var silentStream = {
       write: function () {
