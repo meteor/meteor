@@ -253,6 +253,7 @@ class ProgressBarRenderer {
     complete: string,
     incomplete: string,
   };
+  start: Date;
 
   constructor(format: string, options?: { maxWidth: number }) {
     const opts = options || Object.create(null);
@@ -265,6 +266,7 @@ class ProgressBarRenderer {
       complete   : '=',
       incomplete : ' '
     };
+    this.start = new Date();
   }
 
   asString(availableSpace: number) {
@@ -273,7 +275,7 @@ class ProgressBarRenderer {
 
     var percent = ratio * 100;
     var incomplete, complete, completeLength;
-    var elapsed = Date.now() - this.start;
+    var elapsed = Date.now() - this.start.valueOf();
     var eta = (percent == 100) ? 0 : elapsed * (this.total / this.curr - 1);
 
     /* populate the bar template with percentages and timestamps */
@@ -307,6 +309,7 @@ class ProgressDisplayFull {
   _progressBarRenderer: ProgressBarRenderer;
   _headless: boolean;
   _spinnerRenderer: SpinnerRenderer;
+  _fraction: number | null;
   _printedLength: number;
   _lastWrittenLine: string | null;
   _lastWrittenTime: number;
@@ -334,7 +337,7 @@ class ProgressDisplayFull {
 
     this._spinnerRenderer = new SpinnerRenderer();
 
-    this._fraction = undefined;
+    this._fraction = null;
 
     this._printedLength = 0;
 
@@ -357,9 +360,9 @@ class ProgressDisplayFull {
     this._render();
   }
 
-  updateProgress(fraction, startTime) {
+  updateProgress(fraction: number | null, startTime: Date) {
     this._fraction = fraction;
-    if (fraction !== undefined) {
+    if (fraction !== null) {
       this._progressBarRenderer.curr = Math.floor(fraction * this._progressBarRenderer.total);
     }
     if (startTime) {
@@ -414,7 +417,7 @@ class ProgressDisplayFull {
       progressColumns = Math.min(PROGRESS_MAX_WIDTH, streamColumns - indentColumns - statusColumns);
     }
 
-    if (this._fraction !== undefined && progressColumns > 16) {
+    if (this._fraction !== null && progressColumns > 16) {
       // 16 is a heuristic number that allows enough space for a meaningful progress bar
       progressGraphic = "  " + this._progressBarRenderer.asString(progressColumns - 2);
 
@@ -514,12 +517,12 @@ class StatusPoller {
       rootProgress.dump(process.stdout, {skipDone: true});
     }
 
-    const reportState = (state, startTime) => {
+    const reportState = (state, startTime: Date) => {
       var progressDisplay = this._console._progressDisplay;
       // Do the % computation, if it is going to be used
       if (progressDisplay.updateProgress) {
         if (state.end === undefined || state.end == 0) {
-          progressDisplay.updateProgress(undefined, startTime);
+          progressDisplay.updateProgress(null, startTime);
         } else {
           var fraction = state.done ? 1.0 : (state.current / state.end);
 
@@ -577,10 +580,16 @@ const LEVEL_CODE_WARN = 3;
 const LEVEL_CODE_INFO = 2;
 const LEVEL_CODE_DEBUG = 1;
 
-export const LEVEL_ERROR = { code: LEVEL_CODE_ERROR };
-export const LEVEL_WARN = { code: LEVEL_CODE_WARN };
-export const LEVEL_INFO = { code: LEVEL_CODE_INFO };
-export const LEVEL_DEBUG = { code: LEVEL_CODE_DEBUG };
+type ConsoleLevelCode = typeof LEVEL_CODE_ERROR |
+  typeof LEVEL_CODE_WARN |
+  typeof LEVEL_CODE_INFO |
+  typeof LEVEL_CODE_DEBUG;
+type ConsoleLevel = { code: ConsoleLevelCode };
+
+export const LEVEL_ERROR: ConsoleLevel = { code: LEVEL_CODE_ERROR };
+export const LEVEL_WARN: ConsoleLevel = { code: LEVEL_CODE_WARN };
+export const LEVEL_INFO: ConsoleLevel = { code: LEVEL_CODE_INFO };
+export const LEVEL_DEBUG: ConsoleLevel = { code: LEVEL_CODE_DEBUG };
 
 // This base class is just here to preserve some of the "static properties"
 // which were being set on the `Console.prototype` prior to this being a
@@ -601,14 +610,14 @@ Object.assign(ConsoleBase.prototype, {
 class Console extends ConsoleBase {
   _stream: NodeJS.WriteStream;
   _headless: boolean;
+  _statusPoller: StatusPoller | null;
   verbose: boolean;
   _pretty: boolean;
-  _logThreshold: number;
+  _logThreshold: ConsoleLevelCode;
+  _progressDisplayEnabled: boolean;
 
-  constructor(options) {
+  constructor() {
     super();
-
-    options = options || Object.create(null);
 
     this._headless = !! (
       process.env.METEOR_HEADLESS &&
@@ -642,7 +651,7 @@ class Console extends ConsoleBase {
       }
     }
 
-    cleanupOnExit((_sig) => {
+    cleanupOnExit(() => {
       this.enableProgressDisplay(false);
     });
   }
@@ -770,7 +779,7 @@ class Console extends ConsoleBase {
   //  - options: The options that were passed in, or an empty object.
   //  - message: Arguments to the original function, parsed as a string.
   //
-  _parseVariadicInput(args) {
+  _parseVariadicInput(args: any[]) {
     var msgArgs;
     var options;
     // If the last argument is an instance of ConsoleOptions, then we should
@@ -788,7 +797,7 @@ class Console extends ConsoleBase {
     return { message: message, options: options };
   }
 
-  isLevelEnabled(levelCode: number) {
+  isLevelEnabled(levelCode: ConsoleLevelCode) {
     return (this.verbose || this._logThreshold <= levelCode);
   }
 
@@ -904,7 +913,7 @@ class Console extends ConsoleBase {
     return wrappedMessage;
   }
 
-  _print(level, message: string) {
+  _print(level: ConsoleLevel, message: string) {
     // We need to hide the progress bar/spinner before printing the message
     var progressDisplay = this._progressDisplay;
     progressDisplay.depaint();
@@ -976,12 +985,12 @@ class Console extends ConsoleBase {
 
   // Wrapper around Console.warn. Prints the message out in red (if pretty)
   // with the ascii x as the bullet point in front of it.
-  failWarn(message) {
+  failWarn(message: string) {
     return this._fail(message, "warn");
   }
 
   // Print the message in red (if pretty) with an x bullet point in front of it.
-  _fail(message, printFn) {
+  _fail(message: string, printFn) {
     if (! this._pretty) {
       return this[printFn](message);
     }
@@ -993,7 +1002,7 @@ class Console extends ConsoleBase {
   }
 
   // Wrapper around Console.warn that prints a large "WARNING" label in front.
-  labelWarn(message) {
+  labelWarn(message: string) {
     return this.warn(message, this.options({ bulletPoint: "WARNING: " }));
   }
 
@@ -1053,7 +1062,7 @@ class Console extends ConsoleBase {
   // --example leaderboard") + moretext).
   //
   // If pretty print is on, this will also bold the commands.
-  command(message) {
+  command(message: string) {
     var unwrapped = this.noWrap(message);
     return this.bold(unwrapped);
   }
@@ -1111,7 +1120,7 @@ class Console extends ConsoleBase {
   //        character limit instead of trailing off with '...'. Useful for
   //        printing directories, for examle.
   //      - indent: indent the entire table by a given number of spaces.
-  printTwoColumns(rows, options) {
+  printTwoColumns(rows: [string, string], options) {
     options = options || Object.create(null);
 
     var longest = '';
@@ -1139,7 +1148,7 @@ class Console extends ConsoleBase {
       out += line + "\n";
     });
 
-    var level = options.level || this.LEVEL_INFO;
+    var level = options.level || LEVEL_INFO;
     out += "\n";
     this._print(level, out);
 
@@ -1147,8 +1156,9 @@ class Console extends ConsoleBase {
   }
 
   // Format logs according to the spec in utils.
-  _format(logArguments) {
-    return utilFormat(...logArguments);
+  _format(logArguments: any[]) {
+    const [format, ...rest] = logArguments;
+    return utilFormat(format, ...rest);
   }
 
   // Wraps long strings to the length of user's terminal. Inserts linebreaks
@@ -1160,9 +1170,7 @@ class Console extends ConsoleBase {
   //   - bulletPoint: (see: Console.options)
   //   - indent: (see: Console.options)
   //
-  _wrapText(text: string, options) {
-    options = options || Object.create(null);
-
+  _wrapText(text: string, options: { bulletPoint?: string, indent?: number } = Object.create(null)) {
     // Compute the maximum offset on the bulk of the message.
     var maxIndent = 0;
     if (options.indent && options.indent > 0) {
