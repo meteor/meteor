@@ -11,7 +11,7 @@ var files = require('../fs/files');
 var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');
 var release = require('../packaging/release.js');
-var Console = require('../console/console.js').Console;
+var Console = require('../console/console').Console;
 var timeoutScaleFactor = require('./utils.js').timeoutScaleFactor;
 
 import { Writable } from "stream";

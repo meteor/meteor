@@ -6,7 +6,7 @@ var httpHelpers = require('../utils/http-helpers.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var querystring = require('querystring');
 var url = require('url');
-var Console = require('../console/console.js').Console;
+var Console = require('../console/console').Console;
 
 var auth = exports;
 

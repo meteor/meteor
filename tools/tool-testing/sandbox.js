@@ -43,7 +43,7 @@ import PuppeteerClient from './clients/puppeteer/index.js';
 import BrowserStackClient from './clients/browserstack/index.js';
 import Builder from '../isobuild/builder.js';
 import Run from './run.js';
-import { Console } from '../console/console.js';
+import { Console } from '../console/console';
 import {
   getPackagesDirectoryName,
   getPackageStorage,

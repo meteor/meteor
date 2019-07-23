@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var remoteCatalog = require('./catalog-remote.js');
-var Console = require('../../console/console.js').Console;
+var Console = require('../../console/console').Console;
 var buildmessage = require('../../utils/buildmessage.js');
 
 var catalog = exports;

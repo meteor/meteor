@@ -7,7 +7,7 @@ var catalog = require('./catalog/catalog.js');
 var Isopack = require('../isobuild/isopack.js').Isopack;
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
-var Console = require('../console/console.js').Console;
+var Console = require('../console/console').Console;
 var colonConverter = require('../utils/colon-converter.js');
 
 exports.Tropohouse = function (root, options) {

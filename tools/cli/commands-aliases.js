@@ -1,6 +1,6 @@
 var main = require('./main.js');
 var catalog = require('../packaging/catalog/catalog.js');
-var Console = require('../console/console.js').Console;
+var Console = require('../console/console').Console;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Command reminders for those more familiar with Rails

@@ -6,7 +6,7 @@ import {
   markTop as parseStackMarkTop,
   parse as parseStackParse,
 } from '../utils/parse-stack.js';
-import { Console } from '../console/console.js';
+import { Console } from '../console/console';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import TestFailure from './test-failure.js';
 import { setRunningTest } from './run.js';

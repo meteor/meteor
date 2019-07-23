@@ -6,7 +6,7 @@ const utils = require('../utils/utils.js');
 const runLog = require('./run-log.js');
 const release = require('../packaging/release.js');
 
-const Console = require('../console/console.js').Console;
+const Console = require('../console/console').Console;
 
 const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;

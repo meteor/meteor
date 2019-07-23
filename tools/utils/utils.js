@@ -135,7 +135,7 @@ exports.printPackageList = function (items, options) {
   };
   rows = _.sortBy(rows, alphaSort);
 
-  var Console = require('../console/console.js').Console;
+  var Console = require('../console/console').Console;
   return Console.printTwoColumns(rows, options);
 };
 
@@ -333,7 +333,7 @@ exports.validatePackageNameOrExit = function (packageName, options) {
     if (!e.versionParserError) {
       throw e;
     }
-    var Console = require('../console/console.js').Console;
+    var Console = require('../console/console').Console;
     Console.error(e.message, Console.options({ bulletPoint: "Error: " }));
     // lazy-load main: old bundler tests fail if you add a circular require to
     // this file

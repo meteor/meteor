@@ -1,7 +1,7 @@
 import _ from 'underscore';
 import util from 'util';
 import path from 'path';
-import { Console } from '../console/console.js';
+import { Console } from '../console/console';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files';
 import { optimisticReadJsonOrNull } from "../fs/optimistic";

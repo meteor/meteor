@@ -760,7 +760,7 @@ export function extractTarGz(
   mkdir_p(tempDir);
 
   if (! hasOwnProperty.call(options, "verbose")) {
-    options.verbose = require("../console/console.js").Console.verbose;
+    options.verbose = require("../console/console").Console.verbose;
   }
 
   const startTime = +new Date;

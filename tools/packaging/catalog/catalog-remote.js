@@ -6,7 +6,7 @@ var utils = require('../../utils/utils.js');
 var buildmessage = require('../../utils/buildmessage.js');
 var config = require('../../meteor-services/config.js');
 var archinfo = require('../../utils/archinfo');
-var Console = require('../../console/console.js').Console;
+var Console = require('../../console/console').Console;
 
 var tropohouse = require('../tropohouse.js');
 var packageClient = require('../package-client.js');

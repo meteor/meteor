@@ -6,7 +6,7 @@ import semver from 'semver';
 
 import files from '../fs/files';
 import utils from '../utils/utils.js';
-import { Console } from '../console/console.js';
+import { Console } from '../console/console';
 import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';

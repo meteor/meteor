@@ -4,7 +4,7 @@
 var _ = require('underscore');
 var buildmessage = require('../utils/buildmessage.js');
 var catalog = require('../packaging/catalog/catalog.js');
-var Console = require('../console/console.js').Console;
+var Console = require('../console/console').Console;
 var files = require('../fs/files');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 var main = require('./main.js');

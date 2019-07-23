@@ -22,7 +22,7 @@ tools/buildmessage.js
 tools/cleanup.js
 tools/colon-converter.js
 tools/config.js
-tools/console.js
+tools/console.ts
 tools/deploy.js
 tools/fiber-helpers.js
 tools/fs/files.js

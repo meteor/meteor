@@ -17,7 +17,7 @@ import {
   markTop as parseStackMarkTop,
   parse as parseStackParse,
 } from '../utils/parse-stack.js';
-import { Console } from '../console/console.js';
+import { Console } from '../console/console';
 import Matcher from './matcher.js';
 import OutputLog from './output-log.js';
 import { randomPort, timeoutScaleFactor, sleepMs } from '../utils/utils.js';

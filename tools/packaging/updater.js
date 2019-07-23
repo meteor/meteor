@@ -5,7 +5,7 @@ var catalog = require('./catalog/catalog.js');
 var archinfo = require('../utils/archinfo');
 var isopack = require('../isobuild/isopack.js');
 var buildmessage = require('../utils/buildmessage.js');
-var Console = require('../console/console.js').Console;
+var Console = require('../console/console').Console;
 var auth = require('../meteor-services/auth.js');
 var files = require('../fs/files');
 

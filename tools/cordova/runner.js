@@ -1,7 +1,7 @@
 import _ from 'underscore';
 import buildmessage from '../utils/buildmessage.js';
 import runLog from '../runners/run-log.js';
-import { Console } from '../console/console.js';
+import { Console } from '../console/console';
 import main from '../cli/main.js';
 
 import { displayNameForPlatform, prepareProjectForBuild } from './index.js';

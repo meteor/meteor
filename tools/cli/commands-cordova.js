@@ -1,6 +1,6 @@
 import _ from 'underscore';
 import main from './main.js';
-import { Console } from '../console/console.js';
+import { Console } from '../console/console';
 import catalog from '../packaging/catalog/catalog.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files';

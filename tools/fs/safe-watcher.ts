@@ -376,7 +376,7 @@ async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
     if (suggestedRaisingWatchLimit) return;
     suggestedRaisingWatchLimit = true;
 
-    var Console = require('../console/console.js').Console;
+    var Console = require('../console/console').Console;
     if (! Console.isHeadless()) {
       Console.arrowWarn(
         "It looks like a simple tweak to your system's configuration will " +

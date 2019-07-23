@@ -8,7 +8,7 @@ var child_process = require('child_process');
 
 var _ = require('underscore');
 import { loadIsopackage } from '../tool-env/isopackets.js';
-var Console = require('../console/console.js').Console;
+var Console = require('../console/console').Console;
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.

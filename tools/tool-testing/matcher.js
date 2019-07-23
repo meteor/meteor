@@ -2,7 +2,7 @@
 // regular expression.
 import { makeFulfillablePromise } from '../utils/fiber-helpers.js';
 import TestFailure from './test-failure.js';
-import { Console } from '../console/console.js';
+import { Console } from '../console/console';
 
 export default class Matcher {
   constructor(run) {

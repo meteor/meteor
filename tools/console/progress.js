@@ -151,7 +151,7 @@ _.extend(Progress.prototype, {
     self._updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
-    require('./console.js').Console.nudge(false);
+    require('./console').Console.nudge(false);
 
     self._notifyState();
   },

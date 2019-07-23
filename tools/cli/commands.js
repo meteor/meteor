@@ -12,7 +12,7 @@ var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
-var Console = require('../console/console.js').Console;
+var Console = require('../console/console').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
