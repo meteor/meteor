@@ -60,14 +60,15 @@ import { format as utilFormat }  from "util";
 import { getRootProgress } from "../utils/buildmessage.js";
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 const chalk = require("chalk");
+const wordwrap = require("wordwrap");
 import { onExit as cleanupOnExit } from "../tool-env/cleanup.js";
-import wordwrap from "wordwrap";
+
 import {
   isEmacs,
   sleepMs,
   Throttled,
   ThrottledYield,
-} from "../utils/utils.js";
+} from "../utils/utils";
 
 const PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 // Set the default CR to \r unless we're running with cmd
@@ -103,10 +104,10 @@ const FALLBACK_STATUS = '';
 const SPACE_REPLACEMENT = '\u2600';
 // In Javascript, replace only replaces the first occurance and this is the
 // proposed alternative.
-const replaceAll = (str, search, replace) => str.split(search).join(replace);
+const replaceAll = (str: string, search: string | RegExp, replace: string) => str.split(search).join(replace);
 
 let spacesArray = new Array(200).join(' ');
-const spacesString = (length) => {
+const spacesString = (length: number) => {
   if (length > spacesArray.length) {
     spacesArray = new Array(length * 2).join(' ');
   }
@@ -115,7 +116,7 @@ const spacesString = (length) => {
 const ARROW = "=> ";
 
 
-const toFixedLength = (text, length) => {
+const toFixedLength = (text: string | null, length: number) => {
   text = text || "";
 
   // pad or truncate `text` to length
@@ -156,7 +157,12 @@ class ProgressDisplayNone {
 // There's also a bug when using the progress bar in Emacs where
 // the cursor doesn't seem to return to column 0.
 class ProgressDisplayStatus {
-  constructor(console) {
+  _console: Console;
+  _stream: NodeJS.WriteStream;
+  _status: string | null;
+  _wroteStatusMessage: boolean;
+
+  constructor(console: Console) {
     this._console = console;
     this._stream = console._stream;
 
@@ -178,7 +184,7 @@ class ProgressDisplayStatus {
     // We don't repaint after a log message (is that right?)
   }
 
-  updateStatus(status) {
+  updateStatus(status: string | null) {
     if (status == this._status) {
       return;
     }
@@ -203,6 +209,10 @@ class ProgressDisplayStatus {
 }
 
 class SpinnerRenderer {
+  frames: string[];
+  start: number;
+  interval: number;
+
   constructor() {
     this.frames = ['-', '\\', '|', '/'];
     this.start = +(new Date);
@@ -235,32 +245,41 @@ class SpinnerRenderer {
 
 // Renders a progressbar.  Based on the npm 'progress' module, but tailored to our needs (i.e. renders to string)
 class ProgressBarRenderer {
-  constructor(format, options) {
-    options = options || Object.create(null);
+  fmt: string;
+  curr: number;
+  total: number;
+  maxWidth: number;
+  chars: {
+    complete: string,
+    incomplete: string,
+  };
+
+  constructor(format: string, options?: { maxWidth: number }) {
+    const opts = options || Object.create(null);
 
     this.fmt = format;
     this.curr = 0;
     this.total = 100;
-    this.maxWidth = options.maxWidth || this.total;
+    this.maxWidth = opts.maxWidth || this.total;
     this.chars = {
       complete   : '=',
       incomplete : ' '
     };
   }
 
-  asString(availableSpace) {
+  asString(availableSpace: number) {
     var ratio = this.curr / this.total;
     ratio = Math.min(Math.max(ratio, 0), 1);
 
     var percent = ratio * 100;
     var incomplete, complete, completeLength;
-    var elapsed = new Date - this.start;
+    var elapsed = Date.now() - this.start;
     var eta = (percent == 100) ? 0 : elapsed * (this.total / this.curr - 1);
 
     /* populate the bar template with percentages and timestamps */
     var str = this.fmt
-      .replace(':current', this.curr)
-      .replace(':total', this.total)
+      .replace(':current', this.curr.toString())
+      .replace(':total', this.total.toString())
       .replace(':elapsed', isNaN(elapsed) ? '0.0' : (elapsed / 1000).toFixed(1))
       .replace(':eta', (isNaN(eta) || ! isFinite(eta)) ? '0.0' : (eta / 1000).toFixed(1))
       .replace(':percent', percent.toFixed(0) + '%');
@@ -282,7 +301,18 @@ class ProgressBarRenderer {
 
 
 class ProgressDisplayFull {
-  constructor(console) {
+  _console: Console;
+  _stream: NodeJS.WriteStream;
+  _status: string;
+  _progressBarRenderer: ProgressBarRenderer;
+  _headless: boolean;
+  _spinnerRenderer: SpinnerRenderer;
+  _printedLength: number;
+  _lastWrittenLine: string | null;
+  _lastWrittenTime: number;
+  _rerenderTimeout: NodeJS.Timeout | null;
+
+  constructor(console: Console) {
     this._console = console;
     this._stream = console._stream;
 
@@ -310,7 +340,7 @@ class ProgressDisplayFull {
 
     this._lastWrittenLine = null;
     this._lastWrittenTime = 0;
-    this._renderTimeout = null;
+    this._rerenderTimeout = null;
   }
 
   depaint() {
@@ -318,7 +348,7 @@ class ProgressDisplayFull {
     this._stream.write(spacesString(this._printedLength) + CARRIAGE_RETURN);
   }
 
-  updateStatus(status) {
+  updateStatus(status: string) {
     if (status == this._status) {
       return;
     }
@@ -350,8 +380,8 @@ class ProgressDisplayFull {
     this._render();
   }
 
-  setHeadless(headless) {
-    this._headless = !! headless;
+  setHeadless(headless: boolean) {
+    this._headless = headless;
   }
 
   _clearDelayedRender() {
@@ -392,7 +422,7 @@ class ProgressDisplayFull {
       // 3 = 2 spaces + 1 spinner character
       progressGraphic = "  " + this._spinnerRenderer.asString();
 
-    } else if (new Date - this._lastWrittenTime > 5 * 60 * 1000) {
+    } else if (Date.now() - this._lastWrittenTime > 5 * 60 * 1000) {
       // Print something every five minutes, to avoid test timeouts.
       progressGraphic = "  [ProgressDisplayFull keepalive]";
       this._lastWrittenLine = null; // Force printing.
@@ -433,7 +463,11 @@ class ProgressDisplayFull {
 }
 
 class StatusPoller {
-  constructor(console) {
+  _console: Console;
+  _pollPromise: Promise<void> | null;
+  _stop: boolean;
+
+  constructor(console: Console) {
     // The current progress we are watching
     this._watching = null;
 
@@ -565,6 +599,12 @@ Object.assign(ConsoleBase.prototype, {
 });
 
 class Console extends ConsoleBase {
+  _stream: NodeJS.WriteStream;
+  _headless: boolean;
+  verbose: boolean;
+  _pretty: boolean;
+  _logThreshold: number;
+
   constructor(options) {
     super();
 
@@ -590,7 +630,7 @@ class Console extends ConsoleBase {
 
     this._stream = process.stdout;
 
-    this._pretty = (FORCE_PRETTY !== undefined ? FORCE_PRETTY : false);
+    this._pretty = (FORCE_PRETTY !== undefined ? Boolean(FORCE_PRETTY) : false);
     this._progressDisplayEnabled = false;
 
     this._logThreshold = LEVEL_CODE_INFO;
@@ -602,12 +642,12 @@ class Console extends ConsoleBase {
       }
     }
 
-    cleanupOnExit((sig) => {
+    cleanupOnExit((_sig) => {
       this.enableProgressDisplay(false);
     });
   }
 
-  setPretty(pretty) {
+  setPretty(pretty: boolean) {
     // If we're being forced, do nothing.
     if (FORCE_PRETTY !== undefined) {
       return;
@@ -647,7 +687,7 @@ class Console extends ConsoleBase {
     }
   }
 
-  setVerbose(verbose) {
+  setVerbose(verbose: boolean) {
     this.verbose = verbose;
   }
 
@@ -688,7 +728,7 @@ class Console extends ConsoleBase {
   // The caller should be OK with yielding --- it has to be in a Fiber and it can't be
   // anything that depends for correctness on not yielding.  You can also call nudge(false)
   // if you just want to update the spinner and not yield, but you should avoid this.
-  nudge(canYield) {
+  nudge(canYield?: boolean) {
     if (this._statusPoller) {
       this._statusPoller.statusPoll();
     }
@@ -748,7 +788,7 @@ class Console extends ConsoleBase {
     return { message: message, options: options };
   }
 
-  isLevelEnabled(levelCode) {
+  isLevelEnabled(levelCode: number) {
     return (this.verbose || this._logThreshold <= levelCode);
   }
 
@@ -864,7 +904,7 @@ class Console extends ConsoleBase {
     return wrappedMessage;
   }
 
-  _print(level, message) {
+  _print(level, message: string) {
     // We need to hide the progress bar/spinner before printing the message
     var progressDisplay = this._progressDisplay;
     progressDisplay.depaint();
@@ -910,7 +950,7 @@ class Console extends ConsoleBase {
 
   // A wrapper around Console.info. Prints the message out in green (if pretty),
   // with the CHECKMARK as the bullet point in front of it.
-  success(message, uglySuccessKeyword = "success") {
+  success(message: string, uglySuccessKeyword = "success") {
     var checkmark;
 
     if (! this._pretty) {
@@ -930,7 +970,7 @@ class Console extends ConsoleBase {
 
   // Wrapper around Console.info. Prints the message out in red (if pretty)
   // with the BALLOT X as the bullet point in front of it.
-  failInfo(message) {
+  failInfo(message: string) {
     return this._fail(message, "info");
   }
 
@@ -959,16 +999,16 @@ class Console extends ConsoleBase {
 
   // Wrappers around Console functions to prints an "=> " in front. Optional
   // indent to indent the arrow.
-  arrowError(message, indent) {
+  arrowError(message: string, indent?: number) {
     return this._arrowPrint("error", message, indent);
   }
-  arrowWarn(message, indent) {
+  arrowWarn(message: string, indent?: number) {
     return this._arrowPrint("warn", message, indent);
   }
-  arrowInfo(message, indent) {
+  arrowInfo(message: string, indent?: number) {
     return this._arrowPrint("info", message, indent);
   }
-  _arrowPrint(printFn, message, indent) {
+  _arrowPrint(printFn, message: string, indent?: number) {
     indent = indent || 0;
     return this[printFn](
       message,
@@ -978,7 +1018,7 @@ class Console extends ConsoleBase {
   // A wrapper around console.error. Given an error and some background
   // information, print out the correct set of messages depending on verbose
   // level, etc.
-  printError(err, info) {
+  printError(err: Error, info: string) {
     var message = err.message;
     if (! message) {
       message = "Unexpected error";
@@ -1019,7 +1059,7 @@ class Console extends ConsoleBase {
   }
 
   // Underline the URLs (if pretty print is on).
-  url(message) {
+  url(message: string) {
     // If we are going to print URLs with spaces, we should turn spaces into
     // things browsers understand.
     var unspaced =
@@ -1033,7 +1073,7 @@ class Console extends ConsoleBase {
   // Format a filepath to not wrap. This does NOT automatically escape spaces
   // (ie: add a slash in front so the user could copy paste the file path into a
   // terminal).
-  path(message) {
+  path(message: string) {
     // Make sure that we don't wrap this.
     var unwrapped = this.noWrap(message);
     return this.bold(unwrapped);
@@ -1041,13 +1081,13 @@ class Console extends ConsoleBase {
 
   // Do not wrap this substring when you send it into a non-raw print function.
   // DO NOT print the result of this call with a raw function.
-  noWrap(message) {
+  noWrap(message: string) {
     var noBlanks = replaceAll(message, ' ', SPACE_REPLACEMENT);
     return noBlanks;
   }
 
   // A wrapper around the underline functionality of chalk.
-  underline(message) {
+  underline(message: string) {
     if (! this._pretty) {
       return message;
     }
@@ -1055,7 +1095,7 @@ class Console extends ConsoleBase {
   }
 
   // A wrapper around the bold functionality of chalk.
-  bold(message) {
+  bold(message: string) {
     if (! this._pretty) {
       return message;
     }
@@ -1120,7 +1160,7 @@ class Console extends ConsoleBase {
   //   - bulletPoint: (see: Console.options)
   //   - indent: (see: Console.options)
   //
-  _wrapText(text, options) {
+  _wrapText(text: string, options) {
     options = options || Object.create(null);
 
     // Compute the maximum offset on the bulk of the message.
@@ -1176,7 +1216,7 @@ class Console extends ConsoleBase {
 
 
   // Enables the progress bar, or disables it when called with (false)
-  enableProgressDisplay(enabled) {
+  enableProgressDisplay(enabled?: boolean) {
     // No arg => enable
     if (enabled === undefined) {
       enabled = true;
@@ -1308,4 +1348,4 @@ class Console extends ConsoleBase {
   }
 }
 
-exports.Console = new Console;
+exports.Console = new Console();

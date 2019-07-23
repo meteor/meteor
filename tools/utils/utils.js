@@ -206,7 +206,7 @@ exports.getAgentInfo = function () {
 // Wait for 'ms' milliseconds, and then return. Yields. (Must be
 // called within a fiber, and blocks only the calling fiber, not the
 // whole program.)
-exports.sleepMs = function (ms) {
+export function sleepMs(ms) {
   if (ms <= 0) {
     return;
   }
@@ -601,7 +601,7 @@ exports.runGitInCheckout = function (...args) {
   return exports.execFileSync('git', args).stdout;
 };
 
-exports.Throttled = function (options) {
+export function Throttled(options) {
   var self = this;
 
   options = _.extend({ interval: 150 }, options || {});
@@ -611,7 +611,7 @@ exports.Throttled = function (options) {
   self.next = now;
 };
 
-_.extend(exports.Throttled.prototype, {
+_.extend(Throttled.prototype, {
   isAllowed: function () {
     var self = this;
     var now = +(new Date);
@@ -633,13 +633,13 @@ _.extend(exports.Throttled.prototype, {
 // options:
 //   interval: minimum interval of time between yield calls
 //             (more frequent calls are simply dropped)
-exports.ThrottledYield = function (options) {
+export function ThrottledYield(options) {
   var self = this;
 
-  self._throttle = new exports.Throttled(options);
+  self._throttle = new Throttled(options);
 };
 
-_.extend(exports.ThrottledYield.prototype, {
+_.extend(ThrottledYield.prototype, {
   yield: function () {
     var self = this;
     if (self._throttle.isAllowed()) {
