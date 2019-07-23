@@ -8,51 +8,43 @@
 ///
 /// If end is not set, we'll display a spinner instead of a progress bar
 ///
+class Progress {
+  constructor(options) {
+    options = options || {};
 
-var _ = require('underscore');
-
-var Progress = function (options) {
-  var self = this;
-
-  options = options || {};
-
-  self._lastState = null;
-  self._parent = options.parent;
-  self._watchers = options.watchers || [];
-
-  self._title = options.title;
-  if (self._title) {
-    // Capitalize job titles when displayed in the progress bar.
-    self._title = self._title[0].toUpperCase() + self._title.slice(1);
+    this._lastState = null;
+    this._parent = options.parent;
+    this._watchers = options.watchers || [];
+  
+    this._title = options.title;
+    if (this._title) {
+      // Capitalize job titles when displayed in the progress bar.
+      this._title = this._title[0].toUpperCase() + this._title.slice(1);
+    }
+  
+    // XXX: Should we have a strict/mdg mode that enables this test?
+    //if (!this._title && this._parent) {
+    //  throw new Error("No title passed");
+    //}
+  
+    this._forkJoin = options.forkJoin;
+  
+    this._allTasks = [];
+  
+    this._selfState = { current: 0, done: false };
+    this._state = {...this.selfState};
+  
+    this._isDone = false;
+  
+    this.startTime = +(new Date);
   }
 
-  // XXX: Should we have a strict/mdg mode that enables this test?
-  //if (!self._title && self._parent) {
-  //  throw new Error("No title passed");
-  //}
+  toString() {
+    return "Progress [state=" + JSON.stringify(this._state) + "]";
+  }
 
-  self._forkJoin = options.forkJoin;
-
-  self._allTasks = [];
-
-  self._selfState = { current: 0, done: false };
-  self._state = _.clone(self._selfState);
-
-  self._isDone = false;
-
-  self.startTime = +(new Date);
-};
-
-_.extend(Progress.prototype, {
-  toString: function() {
-    var self = this;
-    return "Progress [state=" + JSON.stringify(self._state) + "]";
-  },
-
-  reportProgressDone: function () {
-    var self = this;
-
-    var state = _.clone(self._selfState);
+  reportProgressDone() {
+    var state = {...this.selfState};
     state.done = true;
     if (state.end !== undefined) {
       if (state.current > state.end) {
@@ -60,15 +52,15 @@ _.extend(Progress.prototype, {
       }
       state.current = state.end;
     }
-    self.reportProgress(state);
-  },
+    this.reportProgress(state);
+  }
 
   // Tries to determine which is the 'current' job in the tree
   // This is very heuristical... we use some hints, like:
   // don't descend into fork-join jobs; we know these execute concurrently,
   // so we assume the top-level task has the title
   // i.e. "Downloading packages", not "downloading supercool-1.0"
-  getCurrentProgress: function () {
+  getCurrentProgress() {
     var self = this;
 
     var isRoot = !self._parent;
@@ -90,12 +82,10 @@ _.extend(Progress.prototype, {
     }
 
     if (self._allTasks.length) {
-      var candidates = _.map(self._allTasks, function (task) {
-        return task.getCurrentProgress();
-      });
-      var active = _.filter(candidates, function (s) {
-        return !!s;
-      });
+      const active = self._allTasks
+        .map(task => task.getCurrentProgress())
+        .filter(Boolean);
+
       if (active.length) {
         // pick one to display, somewhat arbitrarily
         return active[active.length - 1];
@@ -105,20 +95,23 @@ _.extend(Progress.prototype, {
     }
 
     return self;
-  },
+  }
 
   // Creates a subtask that must be completed as part of this (bigger) task
-  addChildTask: function (options) {
+  addChildTask(options) {
     var self = this;
-    options = _.extend({ parent: self }, options || {});
+    options = {
+      parent: self,
+      ...options,
+    };
     var child = new Progress(options);
     self._allTasks.push(child);
     self._reportChildState(child, child._state);
     return child;
-  },
+  }
 
   // Dumps the tree, for debug
-  dump: function (stream, options, prefix) {
+  dump(stream, options, prefix) {
     var self = this;
 
     options = options || {};
@@ -135,15 +128,12 @@ _.extend(Progress.prototype, {
     }
     stream.write("Task [" + self._title + "] " + self._state.current + "/" + end
       + (self._isDone ? " done" : "") +"\n");
-    if (self._allTasks.length) {
-      _.each(self._allTasks, function (child) {
-        child.dump(stream, options, (prefix || '') + '  ');
-      });
-    }
-  },
+    
+    self._allTasks.forEach(child => child.dump(stream, options, (prefix || '') + '  '));
+  }
 
   // Receives a state report indicating progress of self
-  reportProgress: function (state) {
+  reportProgress(state) {
     var self = this;
 
     self._selfState = state;
@@ -154,37 +144,34 @@ _.extend(Progress.prototype, {
     require('./console.js').Console.nudge(false);
 
     self._notifyState();
-  },
+  }
 
   // Subscribes a watcher to changes
-  addWatcher: function (watcher) {
+  addWatcher(watcher) {
     var self = this;
 
     self._watchers.push(watcher);
-  },
+  }
 
   // Notifies watchers & parents
-  _notifyState: function () {
+  _notifyState() {
     var self = this;
 
     if (self._parent) {
       self._parent._reportChildState(self, self._state);
     }
 
-    if (self._watchers.length) {
-      _.each(self._watchers, function (watcher) {
-        watcher(self._state);
-      });
-    }
-  },
+    self._watchers.forEach(watcher => watcher(self._state));
+  }
 
   // Recomputes state, incorporating children's states
-  _updateTotalState: function () {
+  _updateTotalState() {
     var self = this;
 
     var allChildrenDone = true;
-    var state = _.clone(self._selfState);
-    _.each(self._allTasks, function (child) {
+    var state = {...self._selfState};
+
+    self._allTasks.forEach(child => {
       var childState = child._state;
 
       if (!child._isDone) {
@@ -202,6 +189,7 @@ _.extend(Progress.prototype, {
         }
       }
     });
+
     self._isDone = allChildrenDone && !!self._selfState.done;
     if (!allChildrenDone) {
       state.done = false;
@@ -213,19 +201,17 @@ _.extend(Progress.prototype, {
     }
 
     self._state = state;
-  },
+  }
 
   // Called by a child when its state changes
-  _reportChildState: function (child, state) {
-    var self = this;
+  _reportChildState(child, state) {
+    this._updateTotalState();
+    this._notifyState();
+  }
 
-    self._updateTotalState();
-    self._notifyState();
-  },
-
-  getState: function() {
+  getState() {
     return this._state;
   }
-});
+}
 
-exports.Progress = Progress;
+export { Progress };
