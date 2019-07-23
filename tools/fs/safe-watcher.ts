@@ -357,7 +357,7 @@ let suggestedRaisingWatchLimit = false;
 // utils.execFileSync) will run in a Fiber.
 async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
   var constants = require('constants');
-  var archinfo = require('../utils/archinfo.js');
+  var archinfo = require('../utils/archinfo');
   if (! suggestedRaisingWatchLimit &&
       // Note: the not-super-documented require('constants') maps from
       // strings to SYSTEM errno values. System errno values aren't the same
