@@ -5,6 +5,8 @@ type ProgressState = {
   end?: number,
 };
 
+type ProgressWatcher = (state: ProgressState) => void;
+
 /// utility functions for computing progress of complex tasks
 ///
 /// State callback here is an object with these keys:
@@ -17,8 +19,10 @@ type ProgressState = {
 class Progress {
   private title: string | null;
   private isDone: boolean;
+  private forkJoin?: boolean;
 
   private parent?: Progress;
+  private watchers: ProgressWatcher[];
 
   private selfState: ProgressState;
   private state: ProgressState;
@@ -29,7 +33,7 @@ class Progress {
     options = options || {};
 
     this.parent = options.parent;
-    this._watchers = options.watchers || [];
+    this.watchers = options.watchers || [];
   
     this.title = options.title;
     if (this.title) {
@@ -42,7 +46,7 @@ class Progress {
     //  throw new Error("No title passed");
     //}
   
-    this._forkJoin = options.forkJoin;
+    this.forkJoin = options.forkJoin;
   
     this.allTasks = [];
   
@@ -89,7 +93,7 @@ class Progress {
       return self;
     }
 
-    if (self._forkJoin) {
+    if (self.forkJoin) {
       // Don't descend into fork-join tasks (by choice)
       return self;
     }
@@ -125,7 +129,11 @@ class Progress {
   }
 
   // Dumps the tree, for debug
-  dump(stream, options, prefix) {
+  dump(
+    stream: NodeJS.WriteStream,
+    options: { skipDone?: boolean } = {},
+    prefix: string,
+  ) {
     var self = this;
 
     options = options || {};
@@ -136,18 +144,15 @@ class Progress {
     if (prefix) {
       stream.write(prefix);
     }
-    var end = self.state.end;
-    if (!end) {
-      end = '?';
-    }
-    stream.write("Task [" + self.title + "] " + self.state.current + "/" + end
+    const end = self.state.end;
+    stream.write("Task [" + self.title + "] " + self.state.current + "/" + (end || '?')
       + (self.isDone ? " done" : "") +"\n");
     
     self.allTasks.forEach(child => child.dump(stream, options, (prefix || '') + '  '));
   }
 
   // Receives a state report indicating progress of self
-  reportProgress(state) {
+  reportProgress(state: ProgressState) {
     var self = this;
 
     self.selfState = state;
@@ -161,10 +166,10 @@ class Progress {
   }
 
   // Subscribes a watcher to changes
-  addWatcher(watcher) {
+  addWatcher(watcher: (state: ProgressState) => void) {
     var self = this;
 
-    self._watchers.push(watcher);
+    self.watchers.push(watcher);
   }
 
   // Notifies watchers & parents
@@ -175,7 +180,7 @@ class Progress {
       self.parent._reportChildState(self, self.state);
     }
 
-    self._watchers.forEach(watcher => watcher(self.state));
+    self.watchers.forEach(watcher => watcher(self.state));
   }
 
   // Recomputes state, incorporating children's states
