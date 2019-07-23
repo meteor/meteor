@@ -73,7 +73,7 @@ class Progress {
   // don't descend into fork-join jobs; we know these execute concurrently,
   // so we assume the top-level task has the title
   // i.e. "Downloading packages", not "downloading supercool-1.0"
-  getCurrentProgress() {
+  getCurrentProgress(): Progress | null {
     var self = this;
 
     var isRoot = !self.parent;
@@ -103,6 +103,7 @@ class Progress {
         // pick one to display, somewhat arbitrarily
         return active[active.length - 1];
       }
+
       // No single active task, return self
       return self;
     }
@@ -217,7 +218,7 @@ class Progress {
   }
 
   // Called by a child when its state changes
-  _reportChildState(child, state) {
+  _reportChildState(_child: Progress, _state: ProgressState) {
     this._updateTotalState();
     this._notifyState();
   }
