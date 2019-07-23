@@ -1,4 +1,10 @@
-///
+
+type ProgressState = {
+  done: boolean,
+  current: number,
+  end?: number,
+};
+
 /// utility functions for computing progress of complex tasks
 ///
 /// State callback here is an object with these keys:
@@ -9,38 +15,45 @@
 /// If end is not set, we'll display a spinner instead of a progress bar
 ///
 class Progress {
+  private title: string | null;
+  private isDone: boolean;
+
+  private parent?: Progress;
+
+  private selfState: ProgressState;
+  private state: ProgressState;
+
+  private allTasks: Progress[];
+
   constructor(options) {
     options = options || {};
 
-    this._lastState = null;
-    this._parent = options.parent;
+    this.parent = options.parent;
     this._watchers = options.watchers || [];
   
-    this._title = options.title;
-    if (this._title) {
+    this.title = options.title;
+    if (this.title) {
       // Capitalize job titles when displayed in the progress bar.
-      this._title = this._title[0].toUpperCase() + this._title.slice(1);
+      this.title = this.title[0].toUpperCase() + this.title.slice(1);
     }
   
     // XXX: Should we have a strict/mdg mode that enables this test?
-    //if (!this._title && this._parent) {
+    //if (!this.title && this.parent) {
     //  throw new Error("No title passed");
     //}
   
     this._forkJoin = options.forkJoin;
   
-    this._allTasks = [];
+    this.allTasks = [];
   
-    this._selfState = { current: 0, done: false };
-    this._state = {...this.selfState};
+    this.selfState = { current: 0, done: false };
+    this.state = {...this.selfState};
   
-    this._isDone = false;
-  
-    this.startTime = +(new Date);
+    this.isDone = false;
   }
 
   toString() {
-    return "Progress [state=" + JSON.stringify(this._state) + "]";
+    return "Progress [state=" + JSON.stringify(this.state) + "]";
   }
 
   reportProgressDone() {
@@ -63,14 +76,14 @@ class Progress {
   getCurrentProgress() {
     var self = this;
 
-    var isRoot = !self._parent;
+    var isRoot = !self.parent;
 
-    if (self._isDone) {
+    if (self.isDone) {
       // A done task cannot be the active task
       return null;
     }
 
-    if (!self._state.done && (self._state.current != 0) && self._state.end &&
+    if (!self.state.done && (self.state.current != 0) && self.state.end &&
         !isRoot) {
       // We are not done and we have interesting state to report
       return self;
@@ -81,8 +94,8 @@ class Progress {
       return self;
     }
 
-    if (self._allTasks.length) {
-      const active = self._allTasks
+    if (self.allTasks.length) {
+      const active = self.allTasks
         .map(task => task.getCurrentProgress())
         .filter(Boolean);
 
@@ -105,8 +118,8 @@ class Progress {
       ...options,
     };
     var child = new Progress(options);
-    self._allTasks.push(child);
-    self._reportChildState(child, child._state);
+    self.allTasks.push(child);
+    self._reportChildState(child, child.state);
     return child;
   }
 
@@ -115,28 +128,28 @@ class Progress {
     var self = this;
 
     options = options || {};
-    if (options.skipDone && self._isDone) {
+    if (options.skipDone && self.isDone) {
       return;
     }
 
     if (prefix) {
       stream.write(prefix);
     }
-    var end = self._state.end;
+    var end = self.state.end;
     if (!end) {
       end = '?';
     }
-    stream.write("Task [" + self._title + "] " + self._state.current + "/" + end
-      + (self._isDone ? " done" : "") +"\n");
+    stream.write("Task [" + self.title + "] " + self.state.current + "/" + end
+      + (self.isDone ? " done" : "") +"\n");
     
-    self._allTasks.forEach(child => child.dump(stream, options, (prefix || '') + '  '));
+    self.allTasks.forEach(child => child.dump(stream, options, (prefix || '') + '  '));
   }
 
   // Receives a state report indicating progress of self
   reportProgress(state) {
     var self = this;
 
-    self._selfState = state;
+    self.selfState = state;
 
     self._updateTotalState();
 
@@ -157,11 +170,11 @@ class Progress {
   _notifyState() {
     var self = this;
 
-    if (self._parent) {
-      self._parent._reportChildState(self, self._state);
+    if (self.parent) {
+      self.parent._reportChildState(self, self.state);
     }
 
-    self._watchers.forEach(watcher => watcher(self._state));
+    self._watchers.forEach(watcher => watcher(self.state));
   }
 
   // Recomputes state, incorporating children's states
@@ -169,12 +182,12 @@ class Progress {
     var self = this;
 
     var allChildrenDone = true;
-    var state = {...self._selfState};
+    var state = {...self.selfState};
 
-    self._allTasks.forEach(child => {
-      var childState = child._state;
+    self.allTasks.forEach(child => {
+      var childState = child.state;
 
-      if (!child._isDone) {
+      if (!child.isDone) {
         allChildrenDone = false;
       }
 
@@ -190,17 +203,17 @@ class Progress {
       }
     });
 
-    self._isDone = allChildrenDone && !!self._selfState.done;
+    self.isDone = allChildrenDone && !!self.selfState.done;
     if (!allChildrenDone) {
       state.done = false;
     }
 
-    if (!state.done && self._state.done) {
+    if (!state.done && self.state.done) {
       // This shouldn't happen
       throw new Error("Progress transition from done => !done");
     }
 
-    self._state = state;
+    self.state = state;
   }
 
   // Called by a child when its state changes
@@ -210,7 +223,7 @@ class Progress {
   }
 
   getState() {
-    return this._state;
+    return this.state;
   }
 }
 
