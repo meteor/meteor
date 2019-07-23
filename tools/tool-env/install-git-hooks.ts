@@ -1,4 +1,4 @@
-import files from '../fs/files';
+import * as files from '../fs/files';
 
 const hookDestination =
   files.pathJoin(files.getCurrentToolsDir(), '.git', 'hooks');
@@ -32,7 +32,6 @@ const METEOR_HOOK_SUFFIX = '.meteor-hook';
 const METEOR_HOOK_LINE_REGEX = /.*meteor-hook.*/;
 
 export default function installGitHooks() {
-
   if (!files.exists(hookDestination)) {
     // Don't do anything if the hook destination does not exist, eg.,
     // we are not running from a git clone.
@@ -88,7 +87,7 @@ ${METEOR_HOOK_INJECTED_LINE}`,
   });
 }
 
-function removeMeteorInjectedHook(hookFile) {
+function removeMeteorInjectedHook(hookFile: string) {
   // Remove the script added by Meteor
   try {
     files.unlink(hookFile + METEOR_HOOK_SUFFIX);
@@ -101,6 +100,6 @@ function removeMeteorInjectedHook(hookFile) {
 
   // Remove the line added to the file
   files.writeFile(hookFile,
-    files.readFile(hookFile, 'utf8').replace(METEOR_HOOK_LINE_REGEX, ''),
+    files.readFile(hookFile, 'utf8').toString().replace(METEOR_HOOK_LINE_REGEX, ''),
     'utf8');
 }
