@@ -1,11 +1,18 @@
 
+type ProgressWatcher = (state: ProgressState) => void;
+
+type ProgressOptions = {
+  parent?: Progress,
+  watchers?: ProgressWatcher[],
+  title?: string,
+  forkJoin?: boolean,
+};
+
 type ProgressState = {
   done: boolean,
   current: number,
   end?: number,
 };
-
-type ProgressWatcher = (state: ProgressState) => void;
 
 /// utility functions for computing progress of complex tasks
 ///
@@ -17,7 +24,7 @@ type ProgressWatcher = (state: ProgressState) => void;
 /// If end is not set, we'll display a spinner instead of a progress bar
 ///
 class Progress {
-  private title: string | null;
+  private title: string | null | void;
   private isDone: boolean;
   private forkJoin?: boolean;
 
@@ -29,9 +36,7 @@ class Progress {
 
   private allTasks: Progress[];
 
-  constructor(options) {
-    options = options || {};
-
+  constructor(options: ProgressOptions = {}) {
     this.parent = options.parent;
     this.watchers = options.watchers || [];
   
@@ -116,7 +121,7 @@ class Progress {
   }
 
   // Creates a subtask that must be completed as part of this (bigger) task
-  addChildTask(options) {
+  addChildTask(options: ProgressOptions = {}) {
     var self = this;
     options = {
       parent: self,
