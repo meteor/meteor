@@ -83,28 +83,26 @@ class Progress {
   // so we assume the top-level task has the title
   // i.e. "Downloading packages", not "downloading supercool-1.0"
   getCurrentProgress(): Progress | null {
-    var self = this;
+    var isRoot = !this.parent;
 
-    var isRoot = !self.parent;
-
-    if (self.isDone) {
+    if (this.isDone) {
       // A done task cannot be the active task
       return null;
     }
 
-    if (!self.state.done && (self.state.current != 0) && self.state.end &&
+    if (!this.state.done && (this.state.current != 0) && this.state.end &&
         !isRoot) {
       // We are not done and we have interesting state to report
-      return self;
+      return this;
     }
 
-    if (self.forkJoin) {
+    if (this.forkJoin) {
       // Don't descend into fork-join tasks (by choice)
-      return self;
+      return this;
     }
 
-    if (self.allTasks.length) {
-      const active = self.allTasks
+    if (this.allTasks.length) {
+      const active = this.allTasks
         .map(task => task.getCurrentProgress())
         .filter(Boolean);
 
@@ -114,22 +112,21 @@ class Progress {
       }
 
       // No single active task, return self
-      return self;
+      return this;
     }
 
-    return self;
+    return this;
   }
 
   // Creates a subtask that must be completed as part of this (bigger) task
   addChildTask(options: ProgressOptions = {}) {
-    var self = this;
     options = {
-      parent: self,
+      parent: this,
       ...options,
     };
     var child = new Progress(options);
-    self.allTasks.push(child);
-    self._reportChildState(child, child.state);
+    this.allTasks.push(child);
+    this._reportChildState(child, child.state);
     return child;
   }
 
@@ -139,63 +136,53 @@ class Progress {
     options: { skipDone?: boolean } = {},
     prefix: string,
   ) {
-    var self = this;
-
     options = options || {};
-    if (options.skipDone && self.isDone) {
+    if (options.skipDone && this.isDone) {
       return;
     }
 
     if (prefix) {
       stream.write(prefix);
     }
-    const end = self.state.end;
-    stream.write("Task [" + self.title + "] " + self.state.current + "/" + (end || '?')
-      + (self.isDone ? " done" : "") +"\n");
+    const end = this.state.end;
+    stream.write("Task [" + this.title + "] " + this.state.current + "/" + (end || '?')
+      + (this.isDone ? " done" : "") +"\n");
     
-    self.allTasks.forEach(child => child.dump(stream, options, (prefix || '') + '  '));
+    this.allTasks.forEach(child => child.dump(stream, options, (prefix || '') + '  '));
   }
 
   // Receives a state report indicating progress of self
   reportProgress(state: ProgressState) {
-    var self = this;
+    this.selfState = state;
 
-    self.selfState = state;
-
-    self._updateTotalState();
+    this._updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
     require('./console.js').Console.nudge(false);
 
-    self._notifyState();
+    this._notifyState();
   }
 
   // Subscribes a watcher to changes
   addWatcher(watcher: (state: ProgressState) => void) {
-    var self = this;
-
-    self.watchers.push(watcher);
+    this.watchers.push(watcher);
   }
 
   // Notifies watchers & parents
   _notifyState() {
-    var self = this;
-
-    if (self.parent) {
-      self.parent._reportChildState(self, self.state);
+    if (this.parent) {
+      this.parent._reportChildState(this, this.state);
     }
 
-    self.watchers.forEach(watcher => watcher(self.state));
+    this.watchers.forEach(watcher => watcher(this.state));
   }
 
   // Recomputes state, incorporating children's states
   _updateTotalState() {
-    var self = this;
-
     var allChildrenDone = true;
-    var state = {...self.selfState};
+    var state = {...this.selfState};
 
-    self.allTasks.forEach(child => {
+    this.allTasks.forEach(child => {
       var childState = child.state;
 
       if (!child.isDone) {
@@ -214,17 +201,17 @@ class Progress {
       }
     });
 
-    self.isDone = allChildrenDone && !!self.selfState.done;
+    this.isDone = allChildrenDone && !!this.selfState.done;
     if (!allChildrenDone) {
       state.done = false;
     }
 
-    if (!state.done && self.state.done) {
+    if (!state.done && this.state.done) {
       // This shouldn't happen
       throw new Error("Progress transition from done => !done");
     }
 
-    self.state = state;
+    this.state = state;
   }
 
   // Called by a child when its state changes
