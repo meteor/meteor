@@ -1,4 +1,3 @@
-
 type ProgressWatcher = (state: ProgressState) => void;
 
 type ProgressOptions = {
@@ -9,20 +8,16 @@ type ProgressOptions = {
 };
 
 type ProgressState = {
-  done: boolean,
-  current: number,
-  end?: number,
+  done: boolean, // true if job is done
+  current: number, // the current progress value
+  end?: number, // the value of current where we expect to be done
 };
 
-/// utility functions for computing progress of complex tasks
-///
-/// State callback here is an object with these keys:
-///   done: bool, true if done
-///   current: number, the current progress value
-///   end: number, optional, the value of current where we expect to be done
-///
-/// If end is not set, we'll display a spinner instead of a progress bar
-///
+/**
+ * Utility class for computing the progress of complex tasks.
+ * 
+ * Watchers are invoked with a ProgressState object.
+ */
 class Progress {
   private title: string | null | void;
   private isDone: boolean;
@@ -66,14 +61,16 @@ class Progress {
   }
 
   reportProgressDone() {
-    var state = {...this.selfState};
+    const state = {...this.selfState};
     state.done = true;
-    if (state.end !== undefined) {
+
+    if (typeof state.end !== 'undefined') {
       if (state.current > state.end) {
         state.end = state.current;
       }
       state.current = state.end;
     }
+
     this.reportProgress(state);
   }
 
@@ -83,14 +80,14 @@ class Progress {
   // so we assume the top-level task has the title
   // i.e. "Downloading packages", not "downloading supercool-1.0"
   getCurrentProgress(): Progress | null {
-    var isRoot = !this.parent;
+    const isRoot = !this.parent;
 
     if (this.isDone) {
       // A done task cannot be the active task
       return null;
     }
 
-    if (!this.state.done && (this.state.current != 0) && this.state.end &&
+    if (!this.state.done && (this.state.current !== 0) && this.state.end &&
         !isRoot) {
       // We are not done and we have interesting state to report
       return this;
@@ -124,9 +121,11 @@ class Progress {
       parent: this,
       ...options,
     };
-    var child = new Progress(options);
+
+    const child = new Progress(options);
     this.allTasks.push(child);
     this._reportChildState(child, child.state);
+
     return child;
   }
 
@@ -136,7 +135,6 @@ class Progress {
     options: { skipDone?: boolean } = {},
     prefix: string,
   ) {
-    options = options || {};
     if (options.skipDone && this.isDone) {
       return;
     }
@@ -144,10 +142,11 @@ class Progress {
     if (prefix) {
       stream.write(prefix);
     }
+
     const end = this.state.end;
     stream.write("Task [" + this.title + "] " + this.state.current + "/" + (end || '?')
       + (this.isDone ? " done" : "") +"\n");
-    
+
     this.allTasks.forEach(child => child.dump(stream, options, (prefix || '') + '  '));
   }
 
@@ -179,11 +178,11 @@ class Progress {
 
   // Recomputes state, incorporating children's states
   _updateTotalState() {
-    var allChildrenDone = true;
-    var state = {...this.selfState};
+    let allChildrenDone = true;
+    const state = {...this.selfState};
 
     this.allTasks.forEach(child => {
-      var childState = child.state;
+      const childState = child.state;
 
       if (!child.isDone) {
         allChildrenDone = false;
