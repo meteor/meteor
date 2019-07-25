@@ -32,7 +32,7 @@ tools/http-helpers.js
 tools/inspector.js
 tools/index.js
 tools/mongo-exit-codes.ts
-tools/processes.js
+tools/processes.ts
 tools/progress.ts
 tools/project-context.js
 tools/runners/run-log.js
