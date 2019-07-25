@@ -161,9 +161,7 @@ To orchestrate your own container-based deployment there are existing base image
 
  - [tozd/docker-meteor](https://github.com/tozd/docker-meteor) with Mongo and Nginx images
  - [jshimko/meteor-launchpad](https://github.com/jshimko/meteor-launchpad)
- - [meteorhacks/meteord](https://github.com/kadirahq/meteord)
- - [chriswessels/meteor-tupperware](https://github.com/chriswessels/meteor-tupperware)
-
+ - [disney/meteor-base](https://github.com/disney/meteor-base)
 
 _The recommendation above is primarily based on current state of maintenance to address upstream security vulnerabilities. Review the Dockerfiles and build scripts to make your own assessment._
 
