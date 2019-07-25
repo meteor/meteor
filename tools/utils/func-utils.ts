@@ -4,13 +4,17 @@ type AnyFunction = (...args: any[]) => any;
 // Return a function that coalesceses calls to fn that occur within delay
 // milliseconds of each other, and prevents overlapping invocations of fn
 // by postponing the next invocation until after fn's fiber finishes.
-export function coalesce<ContextT> (delayMs: number, callback : EmptyFunction, context?: ContextT) : EmptyFunction {
+export function coalesce<TContext>(
+  delayMs: number,
+  callback: EmptyFunction,
+  context?: TContext,
+): EmptyFunction {
   let pending = false;
   let inProgress = 0;
 
   const actualDelayMs = delayMs || 100;
 
-  function coalescingWrapper(this: ContextT) {
+  function coalescingWrapper(this: TContext) {
     const self = context || this;
 
     if (inProgress) {
@@ -51,7 +55,10 @@ export function coalesce<ContextT> (delayMs: number, callback : EmptyFunction, c
   return wrap(coalescingWrapper, callback);
 };
 
-function wrap<WrapperT extends AnyFunction, WrappedT extends AnyFunction>(wrapper: WrapperT, wrapped: WrappedT): WrapperT {
+function wrap<
+  TWrapper extends AnyFunction,
+  TWrapped extends AnyFunction,
+>(wrapper: TWrapper, wrapped: TWrapped): TWrapper {
   // Allow the wrapper to be used as a constructor function, just in case
   // the wrapped function was meant to be used as a constructor.
   wrapper.prototype = wrapped.prototype;
