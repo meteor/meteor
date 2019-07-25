@@ -1,16 +1,16 @@
 type ProgressWatcher = (state: ProgressState) => void;
 
 type ProgressOptions = {
-  parent?: Progress,
-  watchers?: ProgressWatcher[],
-  title?: string,
-  forkJoin?: boolean,
+  parent?: Progress;
+  watchers?: ProgressWatcher[];
+  title?: string;
+  forkJoin?: boolean;
 };
 
 type ProgressState = {
-  done: boolean, // true if job is done
-  current: number, // the current progress value
-  end?: number, // the value of current where we expect to be done
+  done: boolean; // true if job is done
+  current: number; // the current progress value
+  end?: number; // the value of current where we expect to be done
 };
 
 /**
@@ -18,7 +18,7 @@ type ProgressState = {
  * 
  * Watchers are invoked with a ProgressState object.
  */
-class Progress {
+export class Progress {
   private title: string | null | void;
   private isDone: boolean;
   private forkJoin?: boolean;
@@ -61,8 +61,10 @@ class Progress {
   }
 
   reportProgressDone() {
-    const state = {...this.selfState};
-    state.done = true;
+    const state = {
+      ...this.selfState,
+      done: true,
+    };
 
     if (typeof state.end !== 'undefined') {
       if (state.current > state.end) {
@@ -124,7 +126,7 @@ class Progress {
 
     const child = new Progress(options);
     this.allTasks.push(child);
-    this._reportChildState(child, child.state);
+    this.reportChildState(child, child.state);
 
     return child;
   }
@@ -154,12 +156,12 @@ class Progress {
   reportProgress(state: ProgressState) {
     this.selfState = state;
 
-    this._updateTotalState();
+    this.updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
     require('./console.js').Console.nudge(false);
 
-    this._notifyState();
+    this.notifyState();
   }
 
   // Subscribes a watcher to changes
@@ -168,16 +170,16 @@ class Progress {
   }
 
   // Notifies watchers & parents
-  _notifyState() {
+  private notifyState() {
     if (this.parent) {
-      this.parent._reportChildState(this, this.state);
+      this.parent.reportChildState(this, this.state);
     }
 
     this.watchers.forEach(watcher => watcher(this.state));
   }
 
   // Recomputes state, incorporating children's states
-  _updateTotalState() {
+  private updateTotalState() {
     let allChildrenDone = true;
     const state = {...this.selfState};
 
@@ -214,14 +216,12 @@ class Progress {
   }
 
   // Called by a child when its state changes
-  _reportChildState(_child: Progress, _state: ProgressState) {
-    this._updateTotalState();
-    this._notifyState();
+  private reportChildState(_child: Progress, _state: ProgressState) {
+    this.updateTotalState();
+    this.notifyState();
   }
 
   getState() {
     return this.state;
   }
 }
-
-export { Progress };
