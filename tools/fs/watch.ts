@@ -2,7 +2,7 @@ import { Stats, FSWatcher } from "fs";
 import * as files from "./files";
 import * as safeWatcher from "./safe-watcher";
 import { createHash } from "crypto";
-import { coalesce } from "../utils/func-utils.js";
+import { coalesce } from "../utils/func-utils";
 import { Profile } from "../tool-env/profile";
 import {
   optimisticHashOrNull,
@@ -520,7 +520,7 @@ export class Watcher {
     // additional calls if they happen within that window of time, so that
     // a rapid succession of calls will tend to trigger only one inspection
     // of the file system.
-    return coalesce(WATCH_COALESCE_MS, () => {
+    return coalesce<WatchSet>(WATCH_COALESCE_MS, () => {
       if (this.stopped) {
         return;
       }

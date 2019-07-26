@@ -12,4 +12,9 @@ declare global {
     // moved into that package.
     await: () => T;
   }
+
+  interface Function {
+    // func-utils.ts makes usage of this feature
+    displayName?: string;
+  }
 }

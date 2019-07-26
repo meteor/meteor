@@ -27,7 +27,6 @@ tools/deploy.js
 tools/fiber-helpers.js
 tools/fs/files.js
 tools/fs/mini-files.js
-tools/func-utils.js
 tools/http-helpers.js
 tools/inspector.js
 tools/index.js
