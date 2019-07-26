@@ -158,7 +158,7 @@ Linters are programs that check the code for undeclared variables or find code
 that doesn't correspond to certain style guidelines. Some of the popular
 examples of linters are [JSHint](http://jshint.com/about/) and
 [ESLint](http://eslint.org/). Some of the non-JavaScript linter examples include
-[CoffeeLint](http://www.coffeelint.org/) for CoffeeScript and
+[CoffeeLint](https://github.com/clutchski/coffeelint) for CoffeeScript and
 [CSSLint](http://csslint.net/) for CSS.
 
 To register a linter build plugin in your package, you need to do a couple of
