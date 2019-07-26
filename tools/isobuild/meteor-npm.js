@@ -16,7 +16,7 @@ var runLog = require('../runners/run-log.js');
 var Profile = require('../tool-env/profile').Profile;
 import { parse } from "semver";
 import { version as npmVersion } from 'npm';
-import { execFileAsync } from "../utils/processes.js";
+import { execFileAsync } from "../utils/processes";
 import {
   get as getRebuildArgs
 } from "../static-assets/server/npm-rebuild-args.js";

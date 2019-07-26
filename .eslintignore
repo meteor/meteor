@@ -27,13 +27,12 @@ tools/deploy.js
 tools/fiber-helpers.js
 tools/fs/files.js
 tools/fs/mini-files.js
-tools/func-utils.js
 tools/http-helpers.js
 tools/inspector.js
 tools/index.js
 tools/mongo-exit-codes.ts
-tools/processes.js
-tools/progress.js
+tools/processes.ts
+tools/progress.ts
 tools/project-context.js
 tools/runners/run-log.js
 tools/fs/safe-pathwatcher.js

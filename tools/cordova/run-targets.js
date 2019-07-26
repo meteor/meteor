@@ -6,7 +6,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import runLog from '../runners/run-log.js';
 import { Console } from '../console/console.js';
 import files from '../fs/files';
-import { execFileSync, execFileAsync } from '../utils/processes.js';
+import { execFileSync, execFileAsync } from '../utils/processes';
 
 export class CordovaRunTarget {
   get title() {

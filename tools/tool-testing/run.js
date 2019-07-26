@@ -22,7 +22,7 @@ import Matcher from './matcher.js';
 import OutputLog from './output-log.js';
 import { randomPort, timeoutScaleFactor, sleepMs } from '../utils/utils.js';
 import TestFailure from './test-failure.js';
-import { execFileSync } from '../utils/processes.js';
+import { execFileSync } from '../utils/processes';
 
 let runningTest = null;
 
