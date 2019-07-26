@@ -1,6 +1,6 @@
 import { max } from 'underscore';
 import os from 'os';
-const utils = require('./utils');
+import * as utils from './utils';
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
@@ -145,7 +145,7 @@ let _host: string | null = null; // memoize
 
 export function host() {
   if (!_host) {
-    const run = function (...args: Array<string | boolean>) {
+    const run = function (...args: string[]) {
       const result = utils.execFileSync(args[0], args.slice(1)).stdout;
 
       if (! result) {

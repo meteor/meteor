@@ -2,26 +2,13 @@ import _ from 'underscore';
 import semver from 'semver';
 import os from 'os';
 import url, { UrlObject } from 'url';
+import child_process, { SpawnOptions, ExecOptions } from 'child_process';
 
 import'./fiber-helpers.js';
 import * as archinfo from './archinfo';
 const buildmessage = require('./buildmessage');
 import * as files from '../fs/files';
 import packageVersionParser from '../packaging/package-version-parser.js';
-import { PackageConstraint } from '../../packages/package-version-parser/package-version-parser.js';
-
-// XXX: @types/child_process
-type ChildProcessOptions = {
-  cwd?: string;
-  stdio?: any;
-  custom?: any;
-  env?: any;
-  detached?: boolean;
-  maxBuffer?: number;
-
-  // INFO: This property is only being used in execFileSync()
-  pipeOutput?: string;
-}
 
 // XXX: Defined these in a global .d.ts file or better in @types/netroute
 type NetrouteInfoIP = {
@@ -36,6 +23,24 @@ type NetrouteInfo = {
 
 // XXX: Define and move this into console.js 
 type ConsolePrintTwoColumnsOptions = {}
+
+type ExecFileResponse = {
+  success: boolean;
+  stdout: string;
+  stderr: string;
+};
+
+type AgentInfo = {
+  host?: string;
+  agent: string;
+  agentVersion: string;
+  arch: string;
+}
+
+type PackageOptions = {
+  useBuildmessage?: string;
+  buildmessageFile?: string;
+}
 
 // Parses <protocol>://<host>:<port> into an object { protocol: *, host:
 // *, port: * }. The input can also be of the form <host>:<port> or just
@@ -198,13 +203,6 @@ export function getHost(): string {
   return ret || os.hostname();
 };
 
-type AgentInfo = {
-  host?: string;
-  agent: string;
-  agentVersion: string;
-  arch: string;
-}
-
 // Return standard info about this user-agent. Used when logging in to
 // Meteor Accounts, mostly so that when the user is seeing a list of
 // their open sessions in their profile on the web, they have a way to
@@ -257,14 +255,9 @@ export function randomPort(): number {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-type TempOptions = {
-  useBuildmessage?: string;
-  buildmessageFile?: string;
-}
-
 // Like packageVersionParser.parsePackageConstraint, but if called in a
 // buildmessage context uses buildmessage to raise errors.
-export function parsePackageConstraint(constraintString: string, options?: TempOptions): PackageConstraint | null {
+export function parsePackageConstraint(constraintString: string, options?: PackageOptions) {
   try {
     return packageVersionParser.parsePackageConstraint(constraintString);
   } catch (e) {
@@ -276,7 +269,7 @@ export function parsePackageConstraint(constraintString: string, options?: TempO
   }
 };
 
-export function validatePackageName(name: string, options?: TempOptions) {
+export function validatePackageName(name: string, options?: PackageOptions) {
   try {
     return packageVersionParser.validatePackageName(name, options);
   } catch (e) {
@@ -294,7 +287,7 @@ export function validatePackageName(name: string, options?: TempOptions) {
 //
 // Lines of `.meteor/versions` are parsed using this function, among
 // other uses.
-export function parsePackageAndVersion(packageAtVersionString: string, options?: TempOptions) {
+export function parsePackageAndVersion(packageAtVersionString: string, options?: PackageOptions) {
   let error = null;
   const separatorPos = Math.max(packageAtVersionString.lastIndexOf(' '),
                               packageAtVersionString.lastIndexOf('@'));
@@ -353,7 +346,7 @@ export function isValidPackageName(packageName: string): boolean {
   }
 };
 
-export function validatePackageNameOrExit(packageName: string, options?: TempOptions) {
+export function validatePackageNameOrExit(packageName: string, options?: PackageOptions) {
   try {
     validatePackageName(packageName, options);
   } catch (e) {
@@ -557,10 +550,7 @@ export function isValidVersion(version: string, {forCordova}: {forCordova: boole
     || (forCordova ? isUrlWithSha(version): isNpmUrl(version));
 };
 
-type ExecFileResponse = {success: boolean; stdout: string; stderr: string};
-
-export function execFileSync(file: string, args: string[], opts: ChildProcessOptions = {}): ExecFileResponse {
-  const child_process = require('child_process');
+export function execFileSync(file: string, args: string[], opts: ExecOptions & {pipeOutput?: boolean} = {}): ExecFileResponse {
   const { eachline } = require('./eachline');
 
   if (! _.has(opts, 'maxBuffer')) {
@@ -587,21 +577,20 @@ export function execFileSync(file: string, args: string[], opts: ChildProcessOpt
     };
   }
 
-  return new Promise(function (resolve) {
-    child_process.execFile(file, args, opts, function (err: Error, stdout: Buffer, stderr: Buffer) {
+  return new Promise<ExecFileResponse>(function (resolve) {
+    child_process.execFile(file, args, opts, function (err, stdout, stderr) {
       resolve({
         success: ! err,
-        stdout: stdout,
-        stderr: stderr
+        stdout: stdout.toString(),
+        stderr: stderr.toString()
       });
     });
-  }).await() as ExecFileResponse;
+  }).await();
 };
 
 // WARN: This function doesn't seem to be used anywhere
-export function execFileAsync(file: string, args: string[], opts: ChildProcessOptions & {lineMapper?: (line: string) => string; verbose?: boolean}) {
+export function execFileAsync(file: string, args: string[], opts: SpawnOptions & {lineMapper?: (line: string) => string; verbose?: boolean}) {
   opts = opts || {};
-  const child_process = require('child_process');
   const { eachline } = require('./eachline');
   const p = child_process.spawn(file, args, opts);
   const mapper = opts.lineMapper || _.identity;
