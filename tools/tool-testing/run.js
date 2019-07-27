@@ -16,7 +16,7 @@ import * as files from '../fs/files';
 import {
   markTop as parseStackMarkTop,
   parse as parseStackParse,
-} from '../utils/parse-stack.js';
+} from '../utils/parse-stack';
 import { Console } from '../console/console.js';
 import Matcher from './matcher.js';
 import OutputLog from './output-log.js';
