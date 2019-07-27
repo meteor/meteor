@@ -1,64 +1,69 @@
-// Use path instead of files.js here because we are explicitly trying to
-// track requires, and files.js is often a culprit of slow requires.
-var path = require('path');
+// Use path instead of files.ts here because we are explicitly trying to
+// track requires, and files.ts is often a culprit of slow requires.
+import path from 'path';
 
 // seconds since epoch
-var now = function () {
-  return (+ new Date)/1000;
-};
+const getNow = () => Date.now() / 1000;
 
-var currentInvocation;
-var RequireInvocation = function (name, filename) {
-  var self = this;
-  self.name = name; // module required
-  self.filename = filename; // file doing the requiring, if known
-  self.timeStarted = now();
-  self.timeFinished = null;
-  self.parent = currentInvocation;
-  self.children = []; // array of RequireInvocation
+let currentInvocation: RequireInvocation;
 
-  self.selfTime = null;
-  self.totalTime = null;
-};
+class RequireInvocation {
+  timeStarted: number;
+  timeFinished: number | null;
+  parent: RequireInvocation;
+  children: RequireInvocation[];
+  selfTime: number | null;
+  totalTime: number | null;
 
-RequireInvocation.prototype.isOurCode = function () {
-  var self = this;
-
-  if (! self.filename) {
-    return self.name === 'TOP';
+  constructor(
+    public name: string, // module required
+    private filename: string | null // file doing the requiring, if known
+  ) {
+    this.timeStarted = getNow();
+    this.timeFinished = null;
+    this.parent = currentInvocation;
+    this.children = [];
+  
+    this.selfTime = null;
+    this.totalTime = null;
   }
 
-  if (! self.name.match(/\//)) {
-    // we always require our stuff via a path
-    return false;
+  isOurCode() {
+    if (!this.filename) {
+      return this.name === 'TOP';
+    }
+  
+    if (!this.name.match(/\//)) {
+      // we always require our stuff via a path
+      return false;
+    }
+  
+    const ourSource = path.resolve(__dirname);
+    const required = path.resolve(path.dirname(this.filename), this.name);
+    if (ourSource.length > required.length) {
+      return false;
+    }
+    return required.substr(0, ourSource.length) === ourSource;
   }
 
-  var ourSource = path.resolve(__dirname);
-  var required = path.resolve(path.dirname(self.filename), self.name);
-  if (ourSource.length > required.length) {
-    return false;
+  why() {
+    let walk: RequireInvocation = this;
+    let last: RequireInvocation | null = null;
+  
+    while (walk && ! walk.isOurCode()) {
+      last = walk;
+      walk = walk.parent;
+    }
+  
+    if (!walk) {
+      return "???";
+    }
+    if (last) {
+      return `${path.basename(walk.name)}:${path.basename(last.name)}`;
+    }
+    return path.basename(walk.name);
   }
-  return required.substr(0, ourSource.length) === ourSource;
-};
-
-RequireInvocation.prototype.why = function () {
-  var self = this;
-  var walk = self;
-  var last = null;
-
-  while (walk && ! walk.isOurCode()) {
-    last = walk;
-    walk = walk.parent;
-  }
-
-  if (! walk) {
-    return "???";
-  }
-  if (last) {
-    return path.basename(walk.name) + ":" + path.basename(last.name);
-  }
-  return path.basename(walk.name);
-};
+}
 
 exports.start = function () {
   var moduleModule = require('module');
@@ -75,14 +80,14 @@ exports.start = function () {
     try {
       return realLoader.apply(this, args);
     } finally {
-      inv.timeFinished = now();
+      inv.timeFinished = getNow();
       currentInvocation = parent;
     }
   };
 };
 
 exports.printReport = function () {
-  currentInvocation.timeFinished = now();
+  currentInvocation.timeFinished = getNow();
   var _ = require('underscore');
 
   var computeTimes = function (inv) {
