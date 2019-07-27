@@ -1,5 +1,3 @@
-const _ = require('underscore');
-
 // Given an Error (eg, 'new Error'), return the stack associated with
 // that error as an array. More recently called functions appear first
 // and each element is an object with keys:
@@ -147,7 +145,7 @@ function parseStackFrames(frames) {
       return stop = true;
     }
 
-    if (_.isEmpty(ret)) {
+    if (!ret.length) {
       // We haven't found any stack frames, so probably we have newlines in the
       // error message. Just skip this line.
       return;
