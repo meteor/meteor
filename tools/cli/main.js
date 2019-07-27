@@ -1,6 +1,6 @@
 var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile) {
-  require('../tool-env/profile-require.js').start();
+  require('../tool-env/profile-require').start();
 }
 
 var assert = require("assert");
@@ -1505,7 +1505,7 @@ Fiber(function () {
   // Now that we're ready to start executing the command, if we are in
   // startup time profiling mode, print the profile.
   if (showRequireProfile) {
-    require('../tool-env/profile-require.js').printReport();
+    require('../tool-env/profile-require').printReport();
   }
 
   Console.setPretty(command.evaluateOption('pretty', options));
