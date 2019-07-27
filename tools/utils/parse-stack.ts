@@ -17,7 +17,7 @@ type ParsedStackFrame = {
   /**
    * name of the function in the frame
    */
-  func?: string | null;
+  func: string | null;
 };
 
 /**
@@ -160,7 +160,8 @@ function parseStackFrames(frames: string[]): ParsedStackFrame[] {
       parsedFrames.push({
         file: m[1],
         line: m[3] ? +m[3] : null,
-        column: m[5] ? +m[5] : null
+        column: m[5] ? +m[5] : null,
+        func: null,
       });
       return;
     }
