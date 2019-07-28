@@ -1,4 +1,4 @@
-/* eslint-disable no-console, max-len, import/no-extraneous-dependencies */
+/* eslint-disable no-console, max-len */
 
 const readlineSync = require('readline-sync');
 const colors = require('colors/safe');

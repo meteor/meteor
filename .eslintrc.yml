@@ -1,7 +1,10 @@
 root: true # ignore config in main folder
 
+parserOptions:
+  ecmaVersion: 6
+  sourceType: module
+
 extends:
-  - airbnb/base
   - prettier
 
 env:
@@ -12,6 +15,6 @@ plugins:
   - prettier
 
 rules:
-  prettier/prettier: ["error", {"trailingComma": "es5", "singleQuote": true}]
-  semi: ["error", "always"]
+  prettier/prettier: ['error', { 'trailingComma': 'es5', 'singleQuote': true }]
+  semi: ['error', 'always']
   global-require: 0

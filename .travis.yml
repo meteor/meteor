@@ -8,9 +8,9 @@ notifications:
   email: false
 
 node_js:
-  - 6
   - 8
   - 10
+  - 12
 
 script:
   - npm run test || travis_terminate 1
@@ -20,7 +20,7 @@ jobs:
   include:
     # Define the release stage that runs semantic-release
     - stage: release
-      node_js: 8
+      node_js: 12
       env: NODE_ENV=production
       before_install: skip
       script: skip
