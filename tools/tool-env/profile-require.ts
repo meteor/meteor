@@ -8,16 +8,20 @@ const getNow = () => Date.now() / 1000;
 let currentInvocation: RequireInvocation;
 
 class RequireInvocation {
-  timeStarted: number;
-  timeFinished: number | null;
+  public timeStarted: number;
+  public timeFinished: number | null;
   parent: RequireInvocation;
   children: RequireInvocation[];
   selfTime: number | null;
   totalTime: number | null;
 
+  /**
+   * @param name module required
+   * @param filename file doing the requiring, if known
+   */
   constructor(
-    public name: string, // module required
-    private filename: string | null // file doing the requiring, if known
+    public name: string,
+    private filename: string | null = null
   ) {
     this.timeStarted = getNow();
     this.timeFinished = null;
@@ -28,7 +32,7 @@ class RequireInvocation {
     this.totalTime = null;
   }
 
-  isOurCode() {
+  isOurCode(): boolean {
     if (!this.filename) {
       return this.name === 'TOP';
     }
@@ -46,7 +50,7 @@ class RequireInvocation {
     return required.substr(0, ourSource.length) === ourSource;
   }
 
-  why() {
+  why(): string {
     let walk: RequireInvocation = this;
     let last: RequireInvocation | null = null;
   
@@ -65,15 +69,16 @@ class RequireInvocation {
   }
 }
 
-exports.start = function () {
-  var moduleModule = require('module');
+export function start() {
+  const moduleModule = require('module');
   currentInvocation = new RequireInvocation('TOP');
 
-  var realLoader = moduleModule._load;
-  moduleModule._load = function (...args) {
-    var [id, { filename }] = args;
-    var inv = new RequireInvocation(id, filename);
-    var parent = currentInvocation;
+  const realLoader = moduleModule._load;
+  moduleModule._load = function (...args: [string, { filename?: string }]) {
+    const [id, { filename }] = args;
+    const inv = new RequireInvocation(id, filename);
+    const parent = currentInvocation;
+
     currentInvocation.children.push(inv);
     currentInvocation = inv;
 
@@ -84,67 +89,97 @@ exports.start = function () {
       currentInvocation = parent;
     }
   };
-};
+}
 
-exports.printReport = function () {
+/**
+ * The discrepancy in computed times that we are willing to tolerate
+ * before deciding that the times don't add up.
+ */
+const TOLERANCE = 1/1000;
+
+export function printReport() {
   currentInvocation.timeFinished = getNow();
-  var _ = require('underscore');
-
-  var computeTimes = function (inv) {
-    inv.totalTime = inv.timeFinished - inv.timeStarted;
-
-    var childTime = 0;
-    _.each(inv.children, function (child) {
-      computeTimes(child);
-      childTime += child.totalTime;
-    });
-
-    if (inv.totalTime !== null) {
-      inv.selfTime = inv.totalTime - childTime;
-    }
-  };
   computeTimes(currentInvocation);
 
-  var summary = {};
-  var summarize = function (inv, depth) {
-    // var padding = (new Array(depth*2 + 1)).join(' ');
-    // console.log(padding + inv.name + " [" + inv.selfTime + "]");
-    if (! (inv.name in summary)) {
-      summary[inv.name] = { name: inv.name, time: 0, ours: inv.isOurCode(),
-                            via: {} };
-    }
-    summary[inv.name].time += inv.selfTime;
-    if (! inv.isOurCode()) {
-      summary[inv.name].via[inv.why()] = true;
+  const summary = summarize(currentInvocation, 0);
+  const times = Object.values(summary).sort((a, b) => 
+    b.time - a.time
+  );
+
+  let ourTotal = 0, otherTotal = 0;
+
+  times.forEach(item => {
+    let line = `${formatTime(item.time)} ${item.name}`;
+
+    if (!item.ours) {
+      line += ` [via ${Object.keys(item.via).join(', ')}]`;
     }
 
-    _.each(inv.children, function (inv) {
-      summarize(inv, depth + 1);
-    });
-  };
-  summarize(currentInvocation, 0);
-
-  var times = _.sortBy(_.values(summary), 'time').reverse();
-  var ourTotal = 0, otherTotal = 0;
-  _.each(times, function (item) {
-    var line = (item.time * 1000).toFixed(2) + " " + item.name;
-    if (! item.ours) {
-      line += " [via " + _.keys(item.via).join(", ") + "]";
-    }
     console.log(line);
+
     if (item.ours) {
       ourTotal += item.time;
     } else {
       otherTotal += item.time;
     }
-  });
+  })
 
-
-  var grandTotal = currentInvocation.totalTime;
-  if (grandTotal - ourTotal - otherTotal > 1/1000) {
+  const grandTotal = currentInvocation.totalTime || 0;
+  if (grandTotal - ourTotal - otherTotal > TOLERANCE) {
     throw new Error("Times don't add up");
   }
-  console.log("TOTAL: ours " + (ourTotal * 1000).toFixed(2) +
-              ", other " + (otherTotal * 1000).toFixed(2) +
-              ", grand total " + (grandTotal * 1000).toFixed(2));
+  
+  console.log("TOTAL: ours " + formatTime(ourTotal) +
+              ", other " + formatTime(otherTotal) +
+              ", grand total " + formatTime(grandTotal));
+}
+
+function computeTimes(inv: RequireInvocation) {
+  inv.totalTime = inv.timeFinished! - inv.timeStarted;
+
+  let childTime = 0;
+  inv.children.forEach(child => {
+    computeTimes(child);
+    childTime += child.totalTime!;
+  });
+
+  if (inv.totalTime !== null) {
+    inv.selfTime = inv.totalTime - childTime;
+  }
 };
+
+type Summary = Record<string, {
+  name: string;
+  time: number;
+  ours: boolean;
+  via: Record<string, boolean>;
+}>;
+
+function summarize(inv: RequireInvocation, depth: number, summary: Summary = {}) {
+  if (!(inv.name in summary)) {
+    summary[inv.name] = {
+      name: inv.name,
+      time: 0,
+      ours: inv.isOurCode(),
+      via: {}
+    };
+  }
+
+  summary[inv.name].time += inv.selfTime || 0;
+  if (!inv.isOurCode()) {
+    summary[inv.name].via[inv.why()] = true;
+  }
+
+  inv.children.forEach(inv => {
+    summarize(inv, depth + 1);
+  })
+
+  return summary;
+};
+
+/**
+ * Formats time in seconds for display in milliseconds.
+ */
+function formatTime(time: number) {
+  return (time * 1000).toFixed(2);
+}
