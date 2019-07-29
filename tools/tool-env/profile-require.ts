@@ -171,7 +171,7 @@ function summarize(inv: RequireInvocation, depth: number, summary: Summary = {})
   }
 
   inv.children.forEach(inv => {
-    summarize(inv, depth + 1);
+    summarize(inv, depth + 1, summary);
   })
 
   return summary;
