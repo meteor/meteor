@@ -8,8 +8,8 @@ const getNow = () => Date.now() / 1000;
 let currentInvocation: RequireInvocation;
 
 class RequireInvocation {
-  public timeStarted: number;
-  public timeFinished: number | null;
+  timeStarted: number;
+  timeFinished: number | null;
   parent: RequireInvocation;
   children: RequireInvocation[];
   selfTime: number | null;
