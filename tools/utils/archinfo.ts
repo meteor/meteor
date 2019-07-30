@@ -165,7 +165,7 @@ export function host() {
       _host  = "os.osx.x86_64";
     } else if (platform === "linux") {
       const machine = run('uname', '-m');
-      if (_.contains(["x86_64", "amd64", "ia64"], machine)) {
+      if (["x86_64", "amd64", "ia64"].includes(machine)) {
         _host = "os.linux.x86_64";
       } else {
         throw new Error(`Unsupported architecture: ${machine}`);
