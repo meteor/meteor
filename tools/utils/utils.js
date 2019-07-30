@@ -4,7 +4,7 @@ var os = require('os');
 var url = require('url');
 
 var fiberHelpers = require('./fiber-helpers.js');
-var archinfo = require('./archinfo.js');
+var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files');
 var packageVersionParser = require('../packaging/package-version-parser.js');
@@ -512,7 +512,7 @@ exports.isValidVersion = function (version, {forCordova}) {
 
 exports.execFileSync = function (file, args, opts) {
   var child_process = require('child_process');
-  var { eachline } = require('./eachline.js');
+  var { eachline } = require('./eachline');
 
   opts = opts || {};
   if (! _.has(opts, 'maxBuffer')) {
@@ -553,7 +553,7 @@ exports.execFileSync = function (file, args, opts) {
 exports.execFileAsync = function (file, args, opts) {
   opts = opts || {};
   var child_process = require('child_process');
-  var { eachline } = require('./eachline.js');
+  var { eachline } = require('./eachline');
   var p = child_process.spawn(file, args, opts);
   var mapper = opts.lineMapper || _.identity;
 

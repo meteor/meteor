@@ -9,7 +9,7 @@ var catalog = require('../../packaging/catalog/catalog.js');
 var buildmessage = require('../../utils/buildmessage.js');
 var isopackets = require('../../tool-env/isopackets.js');
 var projectContextModule = require('../../project-context.js');
-var safeWatcher = require("../../fs/safe-watcher.js");
+var safeWatcher = require("../../fs/safe-watcher");
 
 var lastTmpDir = null;
 var tmpDir = function () {

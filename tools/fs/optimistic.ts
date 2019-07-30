@@ -1,8 +1,9 @@
 import assert from "assert";
-import { wrap } from "optimism";
-import { Profile } from "../tool-env/profile.js";
-import { watch } from "./safe-watcher.js";
-import { sha1 } from "./watch.js";
+import { wrap, OptimisticWrapperFunction } from "optimism";
+import ignore from "ignore";
+import { Profile } from "../tool-env/profile";
+import { watch, SafeWatcher } from "./safe-watcher";
+import { sha1 } from "./watch";
 import {
   pathSep,
   pathBasename,
@@ -20,12 +21,20 @@ import {
 // by setting this environment variable.
 const ENABLED = ! process.env.METEOR_DISABLE_OPTIMISTIC_CACHING;
 
-function makeOptimistic(name, fn) {
-  const wrapper = wrap(ENABLED ? function (...args) {
-    maybeDependOnPath(args[0]);
-    return fn.apply(this, args);
-  } : fn, {
-    makeCacheKey(...args) {
+function makeOptimistic<
+  TArgs extends any[],
+  TResult,
+>(
+  name: string,
+  fn: (...args: TArgs) => TResult,
+): OptimisticWrapperFunction<TArgs, TResult> {
+  fn = Profile("optimistic " + name, fn);
+
+  const wrapper = wrap(ENABLED ? function (this: any) {
+    maybeDependOnPath(arguments[0]);
+    return fn.apply(this, arguments as any);
+  } as typeof fn : fn, {
+    makeCacheKey(...args: TArgs) {
       if (! ENABLED) {
         // Cache nothing when the optimistic caching system is disabled.
         return;
@@ -36,24 +45,16 @@ function makeOptimistic(name, fn) {
         return;
       }
 
-      var parts = [];
-
-      for (var i = 0; i < args.length; ++i) {
-        var arg = args[i];
-
-        if (typeof arg !== "string") {
-          // If any of the arguments is not a string, then we won't cache the
-          // result of the corresponding file.* method invocation.
-          return;
-        }
-
-        parts.push(arg);
+      if (! args.every(arg => typeof arg === "string")) {
+        // If any of the arguments is not a string, then we won't cache the
+        // result of the corresponding file.* method invocation.
+        return;
       }
 
-      return parts.join("\0");
+      return args.join("\0");
     },
 
-    subscribe(...args) {
+    subscribe(...args: TArgs) {
       const path = args[0];
 
       if (! shouldWatch(path)) {
@@ -62,7 +63,7 @@ function makeOptimistic(name, fn) {
 
       assert.ok(pathIsAbsolute(path));
 
-      let watcher = watch(path, () => {
+      let watcher: SafeWatcher | null = watch(path, () => {
         wrapper.dirty(...args);
       });
 
@@ -75,10 +76,10 @@ function makeOptimistic(name, fn) {
     }
   });
 
-  return Profile("optimistic " + name, wrapper);
+  return wrapper;
 }
 
-export const shouldWatch = wrap(path => {
+export const shouldWatch = wrap((path: string) => {
   const parts = path.split(pathSep);
   const nmi = parts.indexOf("node_modules");
 
@@ -119,14 +120,14 @@ export const shouldWatch = wrap(path => {
   return false;
 });
 
-function maybeDependOnPath(path) {
+function maybeDependOnPath(path: string) {
   if (typeof path === "string") {
     dependOnPath(path);
     maybeDependOnNodeModules(path);
   }
 }
 
-function maybeDependOnNodeModules(path) {
+function maybeDependOnNodeModules(path: string) {
   if (typeof path !== "string") {
     return;
   }
@@ -147,13 +148,13 @@ function maybeDependOnNodeModules(path) {
 
 let dependOnDirectorySalt = 0;
 
-const dependOnDirectory = wrap(dir => {
+const dependOnDirectory = wrap((_dir: string) => {
   // Always return something different to prevent optimism from
   // second-guessing the dirtiness of this function.
   return ++dependOnDirectorySalt;
 }, {
-  subscribe(dir) {
-    let watcher = watch(
+  subscribe(dir: string) {
+    let watcher: SafeWatcher | null = watch(
       dir,
       () => dependOnDirectory.dirty(dir),
     );
@@ -177,7 +178,7 @@ const dependOnDirectory = wrap(dir => {
 // file change notification for the parent directory, so it's important to
 // depend on the parent directory using this function, so that we don't
 // cache the unsuccessful result forever.
-function dependOnParentDirectory(path) {
+function dependOnParentDirectory(path: string) {
   const parentDir = pathDirname(path);
   if (parentDir !== path) {
     dependOnDirectory(parentDir);
@@ -190,7 +191,7 @@ function dependOnParentDirectory(path) {
 // Note that this strategy will not detect changes within subdirectories
 // of this node_modules directory, but that's ok because the use case we
 // care about is adding or removing npm packages.
-const dependOnNodeModules = wrap(nodeModulesDir => {
+const dependOnNodeModules = wrap((nodeModulesDir: string) => {
   assert(pathIsAbsolute(nodeModulesDir));
   assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
   return dependOnDirectory(nodeModulesDir);
@@ -202,11 +203,11 @@ const dependOnNodeModules = wrap(nodeModulesDir => {
 
 // Invalidate all optimistic results derived from paths involving the
 // given node_modules directory.
-export function dirtyNodeModulesDirectory(nodeModulesDir) {
+export function dirtyNodeModulesDirectory(nodeModulesDir: string) {
   dependOnNodeModules.dirty(nodeModulesDir);
 }
 
-export const optimisticStatOrNull = makeOptimistic("statOrNull", path => {
+export const optimisticStatOrNull = makeOptimistic("statOrNull", (path: string) => {
   const result = statOrNull(path);
   if (result === null) {
     dependOnParentDirectory(path);
@@ -215,7 +216,7 @@ export const optimisticStatOrNull = makeOptimistic("statOrNull", path => {
 });
 
 export const optimisticLStat = makeOptimistic("lstat", lstat);
-export const optimisticLStatOrNull = makeOptimistic("lstatOrNull", path => {
+export const optimisticLStatOrNull = makeOptimistic("lstatOrNull", (path: string) => {
   try {
     return optimisticLStat(path);
   } catch (e) {
@@ -226,9 +227,12 @@ export const optimisticLStatOrNull = makeOptimistic("lstatOrNull", path => {
 });
 export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);
-export const optimisticHashOrNull = makeOptimistic("hashOrNull", (...args) => {
+export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
+  path: string,
+  options?: Parameters<typeof optimisticReadFile>[1],
+) => {
   try {
-    return sha1(optimisticReadFile(...args));
+    return sha1(optimisticReadFile(path, options)) as string;
 
   } catch (e) {
     if (e.code !== "EISDIR" &&
@@ -237,15 +241,22 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (...args) => {
     }
   }
 
-  dependOnParentDirectory(args[0]);
+  dependOnParentDirectory(path);
 
   return null;
 });
 
 export const optimisticReadJsonOrNull =
-makeOptimistic("readJsonOrNull", (path, options) => {
+makeOptimistic("readJsonOrNull", (
+  path: string,
+  options?: Parameters<typeof optimisticReadFile>[1] & {
+    allowSyntaxError?: boolean;
+  },
+) => {
   try {
-    return JSON.parse(optimisticReadFile(path, options));
+    return JSON.parse(
+      optimisticReadFile(path, options)
+    ) as Record<string, any>;
 
   } catch (e) {
     if (e.code === "ENOENT") {
@@ -262,21 +273,27 @@ makeOptimistic("readJsonOrNull", (path, options) => {
   }
 });
 
-export const optimisticReadMeteorIgnore = wrap(dir => {
+export const optimisticReadMeteorIgnore = wrap((dir: string) => {
   const meteorIgnorePath = pathJoin(dir, ".meteorignore");
   const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
 
   if (meteorIgnoreStat &&
       meteorIgnoreStat.isFile()) {
-    return require("ignore")().add(
-      optimisticReadFile(meteorIgnorePath, "utf8")
+    return ignore().add(
+      optimisticReadFile(meteorIgnorePath).toString("utf8")
     );
   }
 
   return null;
 });
 
-export const optimisticLookupPackageJson = wrap((absRootDir, relDir) => {
+type LookupPkgJsonType = OptimisticWrapperFunction<
+  [string, string],
+  ReturnType<typeof optimisticReadJsonOrNull>
+>;
+
+export const optimisticLookupPackageJson: LookupPkgJsonType =
+wrap((absRootDir: string, relDir: string) => {
   const absPkgJsonPath = pathJoin(absRootDir, relDir, "package.json");
   const pkgJson = optimisticReadJsonOrNull(absPkgJsonPath);
   if (pkgJson && typeof pkgJson.name === "string") {
@@ -296,7 +313,7 @@ export const optimisticLookupPackageJson = wrap((absRootDir, relDir) => {
   return optimisticLookupPackageJson(absRootDir, relParentDir);
 });
 
-const optimisticIsSymbolicLink = wrap(path => {
+const optimisticIsSymbolicLink = wrap((path: string) => {
   try {
     return lstat(path).isSymbolicLink();
   } catch (e) {
@@ -306,7 +323,7 @@ const optimisticIsSymbolicLink = wrap(path => {
   }
 }, {
   subscribe(path) {
-    let watcher = watch(path, () => {
+    let watcher: SafeWatcher | null = watch(path, () => {
       optimisticIsSymbolicLink.dirty(path);
     });
 

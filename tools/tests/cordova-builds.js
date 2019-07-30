@@ -2,7 +2,7 @@ var files = require('../fs/files');
 var selftest = require('../tool-testing/selftest.js');
 var testUtils = require('../tool-testing/test-utils.js');
 var Sandbox = selftest.Sandbox;
-import { host } from "../utils/archinfo.js";
+import { host } from "../utils/archinfo";
 const relBuildDir = "../build";
 const isOSX = host().split(".", 2).join(".") === "os.osx";
 

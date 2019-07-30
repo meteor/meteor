@@ -5,10 +5,11 @@
 ///
 
 import assert from "assert";
-import fs from "fs";
+import fs, { Stats } from "fs";
 import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
+import { EventEmitter } from "events";
 import { Slot } from "@wry/context";
 
 const _ = require('underscore');
@@ -24,7 +25,7 @@ const buildmessage = require('../utils/buildmessage.js');
 const fiberHelpers = require('../utils/fiber-helpers.js');
 const colonConverter = require('../utils/colon-converter.js');
 
-const Profile = require('../tool-env/profile.js').Profile;
+const Profile = require('../tool-env/profile').Profile;
 
 export * from '../static-assets/server/mini-files';
 import {
@@ -157,7 +158,7 @@ export function findGitCommitHash(path: string) {
 export function addToGitignore(dirPath: string, entry: string) {
   const filePath = pathJoin(dirPath, ".gitignore");
   if (exists(filePath)) {
-    let data = readFile(filePath, 'utf8');
+    let data = readFile(filePath, 'utf8') as string;
     const lines = data.split(/\n/);
     if (lines.some(line => line === entry)) {
       // already there do nothing
@@ -246,10 +247,13 @@ export function getCurrentToolsDir() {
 // Read a settings file and sanity-check it. Returns a string on
 // success or null on failure (in which case buildmessages will be
 // emitted).
-export function getSettings(filename: string, watchSet: any) {
+export function getSettings(
+  filename: string,
+  watchSet: import("./watch").WatchSet,
+) {
   buildmessage.assertInCapture();
   const absPath = pathResolve(filename);
-  const buffer = require("./watch.js").readAndWatchFile(watchSet, absPath);
+  const buffer = require("./watch").readAndWatchFile(watchSet, absPath);
   if (buffer === null) {
     buildmessage.error("file not found (settings file)",
                        { file: filename });
@@ -1364,7 +1368,7 @@ export class KeyValueFile {
   constructor(public path: string) {}
 
   set(k: string, v: any) {
-    const data = this.readAll() || '';
+    const data = (this.readAll() || '').toString("utf8");
     const lines = data.split(/\n/);
 
     let found = false;
@@ -1585,16 +1589,12 @@ type wrapFsFuncOptions<TArgs extends any[], TResult> = {
   dirty?: (...args: TArgs) => any;
 }
 
-function wrapFsFunc<
-  TArgs extends any[],
-  TResult,
-  F extends (...args: TArgs) => TResult,
->(
+function wrapFsFunc<TArgs extends any[], TResult>(
   fnName: string,
-  fn: F,
+  fn: (...args: TArgs) => TResult,
   pathArgIndices: number[],
   options?: wrapFsFuncOptions<TArgs, TResult>,
-): F {
+): typeof fn {
   return Profile("files." + fnName, function (...args: TArgs) {
     for (let j = pathArgIndices.length - 1; j >= 0; --j) {
       const i = pathArgIndices[j];
@@ -1637,7 +1637,7 @@ function wrapFsFunc<
     }
 
     return finalResult;
-  }) as F;
+  });
 }
 
 const withCacheSlot = new Slot<Record<string, any>>();
@@ -1657,22 +1657,18 @@ export const dependOnPath = wrap(
   { disposable: true }
 );
 
-function wrapDestructiveFsFunc<
-  TArgs extends any[],
-  TResult,
-  F extends (...args: TArgs) => TResult,
->(
+function wrapDestructiveFsFunc<TArgs extends any[], TResult>(
   fnName: string,
-  fn: F,
+  fn: (...args: TArgs) => TResult,
   pathArgIndices: number[] = [0],
   options?: wrapFsFuncOptions<TArgs, TResult>,
-): F {
-  return wrapFsFunc<TArgs, TResult, F>(fnName, fn, pathArgIndices, {
+): typeof fn {
+  return wrapFsFunc<TArgs, TResult>(fnName, fn, pathArgIndices, {
     ...options,
     dirty(...args: TArgs) {
       pathArgIndices.forEach(i => dependOnPath.dirty(args[i]));
     }
-  }) as F;
+  });
 }
 
 export const readFile = wrapFsFunc("readFile", fs.readFileSync, [0], {
@@ -1732,12 +1728,14 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
 } : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg
-export const realpath = wrapFsFunc("realpath", fs.realpathSync, [0], {
+export const realpath =
+wrapFsFunc<[string], string>("realpath", fs.realpathSync, [0], {
   cached: true,
   modifyReturnValue: convertToStandardPath,
 });
 
-export const readdir = wrapFsFunc("readdir", fs.readdirSync, [0], {
+export const readdir =
+wrapFsFunc<[string], string[]>("readdir", fs.readdirSync, [0], {
   cached: true,
   modifyReturnValue(entries: string[]) {
     return entries.map(entry => convertToStandardPath(entry));
@@ -1753,12 +1751,48 @@ export const lstat = wrapFsFunc("lstat", fs.lstatSync, [0], { cached: true });
 export const mkdir = wrapDestructiveFsFunc("mkdir", fs.mkdirSync);
 export const open = wrapFsFunc("open", fs.openSync, [0]);
 export const read = wrapFsFunc("read", fs.readSync, []);
-export const readlink = wrapFsFunc("readlink", fs.readlinkSync, [0]);
+export const readlink = wrapFsFunc<[string], string>("readlink", fs.readlinkSync, [0]);
 export const rmdir = wrapDestructiveFsFunc("rmdir", fs.rmdirSync);
 export const stat = wrapFsFunc("stat", fs.statSync, [0], { cached: true });
 export const symlink = wrapFsFunc("symlink", fs.symlinkSync, [0, 1]);
 export const unlink = wrapDestructiveFsFunc("unlink", fs.unlinkSync);
-export const unwatchFile = wrapFsFunc("unwatchFile", fs.unwatchFile, [0]);
-export const watchFile = wrapFsFunc("watchFile", fs.watchFile, [0]);
 export const write = wrapFsFunc("write", fs.writeSync, []);
 export const writeFile = wrapDestructiveFsFunc("writeFile", fs.writeFileSync);
+
+type StatListener = (
+  current: Stats,
+  previous: Stats,
+) => void;
+
+type StatWatcherOptions = {
+  persistent?: boolean;
+  interval?: number;
+};
+
+interface StatWatcher extends EventEmitter {
+  stop: () => void;
+  start: (
+    filename: string,
+    options: StatWatcherOptions,
+    listener: StatListener,
+  ) => void;
+}
+
+export const watchFile = wrapFsFunc("watchFile", (
+  filename: string,
+  options: StatWatcherOptions,
+  listener: StatListener,
+) => {
+  return fs.watchFile(
+    filename,
+    options,
+    listener,
+  ) as any as StatWatcher;
+}, [0]);
+
+export const unwatchFile = wrapFsFunc("unwatchFile", (
+  filename: string,
+  listener: StatListener,
+) => {
+  return fs.unwatchFile(filename, listener);
+}, [0]);

@@ -1,4 +1,4 @@
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var buildPluginModule = require('./build-plugin.js');
 var colonConverter = require('../utils/colon-converter.js');
@@ -7,19 +7,19 @@ var compiler = require('./compiler.js');
 var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
-import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
+import {sha1, readAndWatchFileWithHash} from  '../fs/watch';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
-import ImportScanner from './import-scanner.js';
+import ImportScanner from './import-scanner';
 import {cssToCommonJS} from "./css-modules";
-import Resolver from "./resolver.js";
+import Resolver from "./resolver";
 import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 import { isTestFilePath } from './test-files.js';
 

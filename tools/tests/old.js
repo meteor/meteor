@@ -55,9 +55,9 @@ selftest.define("watch", ["slow"], function () {
   var runFuture = runOldTest.future();
   var futures = [
     // Run with pathwatcher (if possible)
-    runFuture('test-watch.js'),
+    runFuture('test-watch'),
     // Run with fs.watchFile fallback
-    runFuture('test-watch.js', {
+    runFuture('test-watch', {
       METEOR_WATCH_FORCE_POLLING: 1
     })
   ];

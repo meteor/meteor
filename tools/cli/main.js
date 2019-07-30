@@ -15,7 +15,7 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
-const archinfo = require('../utils/archinfo.js');
+const archinfo = require('../utils/archinfo');
 import { isEmacs } from "../utils/utils.js";
 
 var main = exports;

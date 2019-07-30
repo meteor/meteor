@@ -3,15 +3,15 @@ var sourcemap = require('source-map');
 
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 var buildmessage = require('../utils/buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
 import Builder from './builder.js';
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var compiler = require('./compiler.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 
 import SourceArch from './source-arch.js';
 import { PackageNamespace } from "./package-namespace.js";
@@ -35,7 +35,7 @@ import {
   optimisticStatOrNull,
   optimisticReadMeteorIgnore,
   optimisticLookupPackageJson,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file

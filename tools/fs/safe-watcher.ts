@@ -1,14 +1,14 @@
-import * as watchLibrary from "pathwatcher";
-import { Profile } from "../tool-env/profile.js";
+import { FSWatcher, Stats } from "fs";
+import { Profile } from "../tool-env/profile";
 import {
   statOrNull,
-  pathDirname,
   pathResolve,
   convertToOSPath,
-  convertToStandardPath,
   watchFile,
   unwatchFile,
 } from "./files";
+
+const watchLibrary = require("pathwatcher");
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of watchLibrary.watch.
@@ -26,16 +26,28 @@ if (process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
 }
 
 var DEFAULT_POLLING_INTERVAL =
-  ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000;
+  +(process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000);
 
 var NO_WATCHER_POLLING_INTERVAL =
-  ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 500;
+  +(process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 500);
 
 // This may seems like a long time to wait before actually closing the
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
 
-const entries = Object.create(null);
+export type SafeWatcher = {
+  close: () => void;
+}
+
+type EntryCallback = (event: string) => void;
+
+interface Entry extends SafeWatcher {
+  callbacks: Set<EntryCallback>;
+  rewatch: () => void;
+  release: (callback: EntryCallback) => void;
+}
+
+const entries: Record<string, Entry | null> = Object.create(null);
 
 // Pathwatcher complains (using console.error, ugh) if you try to watch
 // two files with the same stat.ino number but different paths, so we have
@@ -47,7 +59,7 @@ const entriesByIno = new Map;
 // practice it should never grow large enough for that to matter.
 const changedPaths = new Set;
 
-function hasPriority(absPath) {
+function hasPriority(absPath: string) {
   // If we're not prioritizing changed files, then all files have
   // priority, which means they should be watched with native file
   // watchers if the platform supports them. If we are prioritizing
@@ -57,7 +69,7 @@ function hasPriority(absPath) {
     : true;
 }
 
-function acquireWatcher(absPath, callback) {
+function acquireWatcher(absPath: string, callback: EntryCallback) {
   const entry = entries[absPath] || (
     entries[absPath] = startNewWatcher(absPath));
 
@@ -73,11 +85,10 @@ function acquireWatcher(absPath, callback) {
   return entry;
 }
 
-function startNewWatcher(absPath) {
+function startNewWatcher(absPath: string): Entry {
   const stat = statOrNull(absPath);
-  const ino = stat && stat.ino;
-  if (ino > 0 && entriesByIno.has(ino)) {
-    const entry = entriesByIno.get(ino);
+  if (stat && stat.ino > 0 && entriesByIno.has(stat.ino)) {
+    const entry = entriesByIno.get(stat.ino);
     if (entries[absPath] === entry) {
       return entry;
     }
@@ -87,16 +98,16 @@ function startNewWatcher(absPath) {
     if (watcher) {
       watcher.close();
       watcher = null;
-      if (ino > 0) {
-        entriesByIno.delete(ino);
+      if (stat && stat.ino > 0) {
+        entriesByIno.delete(stat.ino);
       }
     }
   }
 
-  let lastWatcherEventTime = +new Date;
-  const callbacks = new Set;
-  let watcherCleanupTimer = null;
-  let watcher;
+  let lastWatcherEventTime = Date.now();
+  const callbacks = new Set<EntryCallback>();
+  let watcherCleanupTimer: ReturnType<typeof setTimeout> | null = null;
+  let watcher: FSWatcher | null = null;
 
   // Determines the polling interval to be used for the fs.watchFile-based
   // safety net that works on all platforms and file systems.
@@ -125,7 +136,7 @@ function startNewWatcher(absPath) {
     return NO_WATCHER_POLLING_INTERVAL;
   }
 
-  function fire(event) {
+  function fire(event: string) {
     if (event !== "change") {
       // When we receive a "delete" or "rename" event, the watcher is
       // probably not going to generate any more notifications for this
@@ -144,12 +155,12 @@ function startNewWatcher(absPath) {
       rewatch();
     }
 
-    callbacks.forEach(cb => cb.call(this, event));
+    callbacks.forEach(cb => cb(event));
   }
 
-  function watchWrapper(event) {
-    lastWatcherEventTime = +new Date;
-    fire.call(this, event);
+  function watchWrapper(event: string) {
+    lastWatcherEventTime = Date.now();
+    fire(event);
 
     // It's tempting to call unwatchFile(absPath, watchFileWrapper) here,
     // but previous watcher success is no guarantee of future watcher
@@ -183,9 +194,7 @@ function startNewWatcher(absPath) {
     statWatch(absPath, getPollingInterval(), watchFileWrapper);
   }
 
-  function watchFileWrapper(...args) {
-    const [newStat, oldStat] = args;
-
+  function watchFileWrapper(newStat: Stats, oldStat: Stats) {
     if (newStat.ino === 0 &&
         oldStat.ino === 0 &&
         +newStat.mtime === +oldStat.mtime) {
@@ -196,8 +205,8 @@ function startNewWatcher(absPath) {
 
     // If a watcher event fired in the last polling interval, ignore
     // this event.
-    if (new Date - lastWatcherEventTime > getPollingInterval()) {
-      fire.call(this, "change");
+    if (Date.now() - lastWatcherEventTime > getPollingInterval()) {
+      fire("change");
     }
   }
 
@@ -205,7 +214,7 @@ function startNewWatcher(absPath) {
     callbacks,
     rewatch,
 
-    release(callback) {
+    release(callback: EntryCallback) {
       if (! entries[absPath]) {
         return;
       }
@@ -217,7 +226,10 @@ function startNewWatcher(absPath) {
 
       // Once there are no more callbacks in the Set, close both watchers
       // and nullify the shared data.
-      clearTimeout(watcherCleanupTimer);
+      if (watcherCleanupTimer) {
+        clearTimeout(watcherCleanupTimer);
+      }
+
       watcherCleanupTimer = setTimeout(() => {
         if (callbacks.size > 0) {
           // If another callback was added while the timer was pending, we
@@ -243,8 +255,8 @@ function startNewWatcher(absPath) {
     }
   };
 
-  if (ino > 0) {
-    entriesByIno.set(ino, entry);
+  if (stat && stat.ino > 0) {
+    entriesByIno.set(stat.ino, entry);
   }
 
   return entry;
@@ -261,7 +273,11 @@ export function closeAllWatchers() {
 
 const statWatchers = Object.create(null);
 
-function statWatch(absPath, interval, callback) {
+function statWatch(
+  absPath: string,
+  interval: number,
+  callback: (current: Stats, previous: Stats) => void,
+) {
   const oldWatcher = statWatchers[absPath];
 
   while (oldWatcher) {
@@ -321,7 +337,7 @@ function statWatch(absPath, interval, callback) {
   return oldWatcher;
 }
 
-function watchLibraryWatch(absPath, callback) {
+function watchLibraryWatch(absPath: string, callback: EntryCallback) {
   if (WATCHER_ENABLED) {
     try {
       return watchLibrary.watch(convertToOSPath(absPath), callback);
@@ -339,9 +355,9 @@ let suggestedRaisingWatchLimit = false;
 
 // This function is async so that archinfo.host() (which may call
 // utils.execFileSync) will run in a Fiber.
-async function maybeSuggestRaisingWatchLimit(error) {
+async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
   var constants = require('constants');
-  var archinfo = require('../utils/archinfo.js');
+  var archinfo = require('../utils/archinfo');
   if (! suggestedRaisingWatchLimit &&
       // Note: the not-super-documented require('constants') maps from
       // strings to SYSTEM errno values. System errno values aren't the same
@@ -373,12 +389,12 @@ async function maybeSuggestRaisingWatchLimit(error) {
 
 export const watch = Profile(
   "safeWatcher.watch",
-  (absPath, callback) => {
+  (absPath: string, callback: EntryCallback) => {
     const entry = acquireWatcher(absPath, callback);
     return {
       close() {
         entry.release(callback);
       }
-    };
+    } as SafeWatcher;
   }
 );

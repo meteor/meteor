@@ -1,17 +1,17 @@
 import assert from "assert";
-import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
+import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
   symlinkWithOverwrite,
 } from '../fs/files';
 import NpmDiscards from './npm-discards.js';
-import {Profile} from '../tool-env/profile.js';
+import {Profile} from '../tool-env/profile';
 import {
   optimisticReadFile,
   optimisticReaddir,
   optimisticStatOrNull,
   optimisticLStatOrNull,
   optimisticHashOrNull,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In

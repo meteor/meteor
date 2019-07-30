@@ -147,6 +147,10 @@ jobs:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
+            pushd tools
+            # Ensure that meteor/tools has no TypeScript errors.
+            ../meteor npx tsc --noEmit
+            popd
             ./meteor --get-ready
           # shouldn't take longer than 20 minutes
           no_output_timeout: 20m

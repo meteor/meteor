@@ -21,7 +21,7 @@ import {
 } from './auth.js';
 import { recordPackages } from './stats.js';
 import { Console } from '../console/console.js';
-import { Profile } from '../tool-env/profile.js';
+import { Profile } from '../tool-env/profile';
 
 function sleepForMilliseconds(millisecondsToWait) {
   return new Promise(function(resolve) {

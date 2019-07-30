@@ -1,12 +1,12 @@
 var assert = require('assert');
 var compiler = require('./compiler.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('../utils/buildmessage.js');
 import Builder from './builder.js';
 var bundler = require('./bundler.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 import * as files from '../fs/files';
 import * as fsFixPath from '../fs/fsFixPath';
 import {
@@ -17,7 +17,7 @@ var colonConverter = require('../utils/colon-converter.js');
 var utils = require('../utils/utils.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console/console.js').Console;
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 import { Unibuild } from "./unibuild.js";
 
@@ -1414,6 +1414,12 @@ _.extend(Isopack.prototype, {
       const parts = path.split("/");
       if (parts[0] === "tools" &&
           (path.endsWith(".js") || path.endsWith(".ts"))) {
+        if (path.endsWith(".d.ts")) {
+          // The official TypeScript compiler's transpileModule function fails
+          // for .d.ts declaration files with the cryptic error "Error: Debug
+          // Failure. Output generation failed".
+          return false;
+        }
         if (parts[1] === "static-assets") {
           return parts[2] === "server";
         }

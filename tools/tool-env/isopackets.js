@@ -9,12 +9,12 @@ var isopackCacheModule = require('../isobuild/isopack-cache.js');
 var buildmessage = require('../utils/buildmessage.js');
 var files = require('../fs/files');
 var config = require('../meteor-services/config.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var packageMapModule = require('../packaging/package-map.js');
-var archinfo = require('../utils/archinfo.js');
-var Profile = require('./profile.js').Profile;
+var archinfo = require('../utils/archinfo');
+var Profile = require('./profile').Profile;
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
 // meteor-tool.

@@ -1,7 +1,7 @@
 var assert = require("assert");
 var _ = require('underscore');
 
-var archinfo = require('./utils/archinfo.js');
+var archinfo = require('./utils/archinfo');
 var buildmessage = require('./utils/buildmessage.js');
 var catalog = require('./packaging/catalog/catalog.js');
 var catalogLocal = require('./packaging/catalog/catalog-local.js');
@@ -13,20 +13,20 @@ var packageMapModule = require('./packaging/package-map.js');
 var release = require('./packaging/release.js');
 var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
-var watch = require('./fs/watch.js');
-var Profile = require('./tool-env/profile.js').Profile;
+var watch = require('./fs/watch');
+var Profile = require('./tool-env/profile').Profile;
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 
 import {
   optimisticReadJsonOrNull,
   optimisticHashOrNull,
-} from "./fs/optimistic.js";
+} from "./fs/optimistic";
 
 import {
   mapWhereToArches,
 } from "./isobuild/package-api.js";
 
-import Resolver from "./isobuild/resolver.js";
+import Resolver from "./isobuild/resolver";
 
 const CAN_DELAY_LEGACY_BUILD = ! JSON.parse(
   process.env.METEOR_DISALLOW_DELAYED_LEGACY_BUILD || "false"

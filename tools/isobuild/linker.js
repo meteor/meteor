@@ -1,8 +1,8 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('../utils/buildmessage.js');
-var watch = require('../fs/watch.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var watch = require('../fs/watch');
+var Profile = require('../tool-env/profile').Profile;
 import assert from 'assert';
 import LRU from 'lru-cache';
 import { sourceMapLength } from '../utils/utils.js';
