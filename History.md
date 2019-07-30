@@ -3,7 +3,10 @@
 ## v1.9
 
 ### Breaking changes
-N/A
+
+* Because Node.js 12 no longer supports 32-bit Linux, Meteor 1.9 has also
+  dropped support for 32-bit Linux. In other words, Meteor 1.9 supports
+  64-bit Mac, Windows, and Linux, as well as 32-bit Windows.
 
 ### Migration Steps
 N/A
