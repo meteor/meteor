@@ -4,9 +4,6 @@ exports.getPreset = function (api, options) {
       require("@babel/plugin-syntax-flow"),
       require("@babel/plugin-syntax-async-generators"),
       require("@babel/plugin-syntax-object-rest-spread"),
-      [require("@babel/plugin-transform-for-of"), {
-        loose: true
-      }],
       require("@babel/plugin-transform-literals"),
       require("@babel/plugin-transform-template-literals"),
       require("@babel/plugin-syntax-class-properties"),
@@ -28,7 +25,7 @@ exports.getPreset = function (api, options) {
 exports.minimumVersions = {
   chrome: 55,
   edge: 15,
-  firefox: 52,
+  firefox: 53,
   mobile_safari: [10, 3],
   node: 8,
   opera: 42,
