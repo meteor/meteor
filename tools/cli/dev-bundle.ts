@@ -111,12 +111,12 @@ function getDevBundleForRelease(release: string) {
     db.get(
       "SELECT content FROM releaseVersions WHERE track=? AND version=?",
       [track, version],
-      function (error: Error, data) {
+      function (error: Error | null, data: any) {
         error ? reject(error) : resolve(data);
       }
     );
 
-  }).then(function (data) {
+  }).then(function (data: any) {
     if (data) {
       const tool = JSON.parse(data.content).tool;
       const devBundleDir = path.join(
@@ -140,7 +140,9 @@ function getDevBundleForRelease(release: string) {
   });
 }
 
-function statOrNull(path: string, statMethod?: (() => void) | string) {
+type StatMethod = "isDirectory" | "isFile";
+
+function statOrNull(path: string, statMethod?: StatMethod) {
   let stat;
   try {
     stat = fs.statSync(path);
@@ -163,7 +165,7 @@ function statOrNull(path: string, statMethod?: (() => void) | string) {
   return null;
 }
 
-function find(dir: string, predicate: (input: string) => boolean, ...joinArgs: string[]) {
+function find(dir: string, predicate: (input: string) => fs.Stats | null, ...joinArgs: string[]) {
   joinArgs.unshift('');
 
   while (true) {
@@ -181,7 +183,7 @@ function find(dir: string, predicate: (input: string) => boolean, ...joinArgs: s
   return null;
 }
 
-function makeStatTest(method: string) {
+function makeStatTest(method: StatMethod) {
   return function (file: string) {
     return statOrNull(file, method);
   };
@@ -207,6 +209,4 @@ function getHostArch() {
   }
 }
 
-module.exports = getDevBundleDir().catch(function (error) {
-  return defaultDevBundlePromise;
-});
+module.exports = getDevBundleDir().catch(() => defaultDevBundlePromise);
