@@ -7,7 +7,7 @@ var extensions = isWindows ? [".cmd", ".exe"] : [""];
 var hasOwn = Object.prototype.hasOwnProperty;
 
 function getDevBundle() {
-  return require("./dev-bundle.js");
+  return require("./dev-bundle");
 }
 exports.getDevBundle = getDevBundle;
 
