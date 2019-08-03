@@ -18,7 +18,7 @@ function getDevBundleDir() {
   // file of the current app, if possible.
 
   const releaseFile = find(
-    (process as any).cwd(),
+    process.cwd(),
     makeStatTest("isFile"),
     ".meteor", "release"
   );
@@ -190,21 +190,21 @@ function makeStatTest(method: StatMethod) {
 }
 
 function getHostArch() {
-  if ((process as any).platform === "win32") {
-    if ((process as any).arch === "x64") {
+  if (process.platform === "win32") {
+    if (process.arch === "x64") {
       return "os.windows.x86_64";
     }
     return "os.windows.x86_32";
   }
 
-  if ((process as any).platform === "linux") {
-    if ((process as any).arch === "x64") {
+  if (process.platform === "linux") {
+    if (process.arch === "x64") {
       return "os.linux.x86_64";
     }
     return "os.linux.x86_32";
   }
 
-  if ((process as any).platform === "darwin") {
+  if (process.platform === "darwin") {
     return "os.osx.x86_64";
   }
 }
