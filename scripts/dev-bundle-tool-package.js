@@ -38,6 +38,7 @@ var packageJson = {
     kexec: "3.0.0",
     "source-map": "0.5.7",
     chalk: "0.5.1",
+    "@types/sqlite3": "3.1.5",
     sqlite3: "3.1.8",
     netroute: "1.0.2",
     "http-proxy": "1.16.2",
