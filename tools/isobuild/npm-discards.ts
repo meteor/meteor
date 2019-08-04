@@ -68,7 +68,7 @@ function merge(into: Discards, from: Discards): void {
         intoValue.push.apply(intoValue, fromValue);
       } else {
         // Make a defensive copy of any arrays passed to `Npm.strip`.
-        into[packageName] = fromValue.slice(0);
+        into[packageName] = Array.from(fromValue);
       }
     }
   });
