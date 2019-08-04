@@ -17,11 +17,11 @@ class NpmDiscards {
   // patterns that should be discarded. See the comment in package-source.js
   // about `Npm.strip` for an explanation of what should be passed for the
   // `discards` parameter.
-  merge(discards: Discards) {
+  merge(discards: Discards): void {
     merge(this.discards, discards);
   }
 
-  shouldDiscard(candidatePath: string, isDirectory?: boolean) {
+  shouldDiscard(candidatePath: string, isDirectory?: boolean): boolean {
     if (isDirectory === void 0) {
       isDirectory = files.lstat(candidatePath).isDirectory();
     }
@@ -53,7 +53,7 @@ class NpmDiscards {
   }
 }
 
-function merge(into: Discards, from: Discards) {
+function merge(into: Discards, from: Discards): void {
   Object.keys(from).forEach((packageName: string) => {
     const fromValue = from[packageName];
     const intoValue = hasOwn.call(into, packageName) && into[packageName];
@@ -78,9 +78,9 @@ function merge(into: Discards, from: Discards) {
 
 // TODO Improve this. For example we don't currently support wildcard
 // string patterns (just use a RegExp if you need that flexibility).
-function matches(pattern: StringOrRegExp, relPath: string) {
+function matches(pattern: StringOrRegExp, relPath: string): boolean {
   if (pattern instanceof RegExp) {
-    return relPath.match(pattern);
+    return pattern.test(relPath);
   }
 
   if (pattern.charAt(0) === files.pathSep) {
