@@ -14,9 +14,7 @@ class NpmDiscards {
   }
 
   // Update the current specification of discarded files with additional
-  // patterns that should be discarded. See the comment in package-source.js
-  // about `Npm.strip` for an explanation of what should be passed for the
-  // `discards` parameter.
+  // patterns that should be discarded.
   merge(discards: Discards): void {
     merge(this.discards, discards);
   }
