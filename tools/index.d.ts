@@ -17,4 +17,10 @@ declare global {
     // func-utils.ts makes usage of this feature
     displayName?: string;
   }
+
+  type StringOrRegExp = string | RegExp;
+
+  interface Discards {
+    [packageName: string]: StringOrRegExp[];
+  }
 }

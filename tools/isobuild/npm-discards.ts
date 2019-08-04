@@ -2,12 +2,6 @@ import * as files from "../fs/files";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
-type StringOrRegExp = string | RegExp;
-
-interface Discards {
-  [packageName: string]: StringOrRegExp[];
-}
-
 // This class encapsulates a structured specification of files and
 // directories that should be stripped from the node_modules directories
 // of Meteor packages during `meteor build`, as requested by calling
