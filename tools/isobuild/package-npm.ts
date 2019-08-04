@@ -4,7 +4,17 @@ import NpmDiscards from "./npm-discards";
 
 const nodeRequire = require;
 
+interface Dependencies {
+  [packageName: string]: string;
+}
+
+interface Discards {
+  [packageName: string]: (string | RegExp)[];
+}
+
 export class PackageNpm {
+  private _dependencies: Dependencies | null;
+
   /**
    * @summary Class of the 'Npm' object visible in package.js
    * @locus package.js
@@ -46,7 +56,7 @@ export class PackageNpm {
    * ```
    * @locus package.js
    */
-  depends(dependencies) {
+  depends(dependencies: Dependencies) {
     // XXX make dependencies be separate between use and test, so that
     // production doesn't have to ship all of the npm modules used by test
     // code
@@ -106,11 +116,11 @@ export class PackageNpm {
   // This means (1) "remove any files with the `.wmv` extension from
   // the 'connect' package directory" and (2) "remove the 'tests'
   // directory from the 'useragent' package directory."
-  strip(discards) {
+  strip(discards: Discards) {
     this._discards.merge(discards);
   }
 
-  require(name) {
+  require(name: string) {
     try {
       return nodeRequire(name); // from the dev bundle
     } catch (e) {
