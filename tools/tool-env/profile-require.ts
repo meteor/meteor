@@ -27,7 +27,6 @@ class RequireInvocation {
     this.timeFinished = null;
     this.parent = currentInvocation;
     this.children = [];
-  
     this.selfTime = null;
     this.totalTime = null;
   }
@@ -47,6 +46,7 @@ class RequireInvocation {
     if (ourSource.length > required.length) {
       return false;
     }
+
     return required.substr(0, ourSource.length) === ourSource;
   }
 
@@ -62,9 +62,11 @@ class RequireInvocation {
     if (!walk) {
       return "???";
     }
+
     if (last) {
       return `${path.basename(walk.name)}:${path.basename(last.name)}`;
     }
+
     return path.basename(walk.name);
   }
 }
@@ -155,7 +157,11 @@ type Summary = Record<string, {
   via: Record<string, boolean>;
 }>;
 
-function summarize(inv: RequireInvocation, depth: number, summary: Summary = {}) {
+function summarize(
+  inv: RequireInvocation,
+  depth: number,
+  summary: Summary = {}
+): Summary {
   if (!(inv.name in summary)) {
     summary[inv.name] = {
       name: inv.name,
@@ -180,6 +186,6 @@ function summarize(inv: RequireInvocation, depth: number, summary: Summary = {})
 /**
  * Formats time in seconds for display in milliseconds.
  */
-function formatTime(time: number) {
+function formatTime(time: number): string {
   return (time * 1000).toFixed(2);
 }
