@@ -18,9 +18,9 @@ declare global {
     displayName?: string;
   }
 
-  type StringOrRegExp = string | RegExp;
+  type DiscardPattern = string | RegExp;
 
   interface Discards {
-    [packageName: string]: StringOrRegExp[];
+    [packageName: string]: DiscardPattern[];
   }
 }

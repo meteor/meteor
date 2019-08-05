@@ -76,7 +76,7 @@ function merge(into: Discards, from: Discards): void {
 
 // TODO Improve this. For example we don't currently support wildcard
 // string patterns (just use a RegExp if you need that flexibility).
-function matches(pattern: StringOrRegExp, relPath: string): boolean {
+function matches(pattern: DiscardPattern, relPath: string): boolean {
   if (pattern instanceof RegExp) {
     return pattern.test(relPath);
   }
