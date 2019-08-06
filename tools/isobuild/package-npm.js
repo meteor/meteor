@@ -103,6 +103,14 @@ export class PackageNpm {
   //     useragent: ["tests/"]
   //   });
   //
+  // Alternatively, a single string or regular expression can be passed
+  // instead of an array:
+  //
+  //   Npm.strip({
+  //     connect: /*\.wmv$/,
+  //     useragent: "tests/"
+  //   });
+  //
   // This means (1) "remove any files with the `.wmv` extension from
   // the 'connect' package directory" and (2) "remove the 'tests'
   // directory from the 'useragent' package directory."
