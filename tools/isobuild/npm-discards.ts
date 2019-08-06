@@ -15,7 +15,7 @@ class NpmDiscards {
 
   // Update the current specification of discarded files with additional
   // patterns that should be discarded.
-  merge(discards: Discards): void {
+  merge(discards: DiscardsInput): void {
     merge(this.discards, discards);
   }
 
@@ -51,7 +51,7 @@ class NpmDiscards {
   }
 }
 
-function merge(into: Discards, from: Discards): void {
+function merge(into: Discards, from: DiscardsInput): void {
   Object.keys(from).forEach((packageName: string) => {
     const fromValue = from[packageName];
     const intoValue = hasOwn.call(into, packageName) && into[packageName];

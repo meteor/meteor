@@ -23,4 +23,8 @@ declare global {
   interface Discards {
     [packageName: string]: DiscardPattern[];
   }
+
+  interface DiscardsInput {
+    [packageName: string]: DiscardPattern[] | DiscardPattern;
+  }
 }
