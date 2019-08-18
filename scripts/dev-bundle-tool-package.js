@@ -60,7 +60,8 @@ var packageJson = {
     // version constraint imposed by optimism/package.json.
     optimism: "0.11.3",
     "@wry/context": "0.4.4",
-    'lru-cache': '4.1.3'
+    'lru-cache': '4.1.3',
+    "anser": "1.4.8"
   }
 };
 
