@@ -13,7 +13,7 @@
     "hexo-prism-plus": "1.1.0",
     "hexo-renderer-ejs": "0.3.1",
     "hexo-renderer-less": "0.2.0",
-    "hexo-renderer-marked": "1.0.1",
+    "hexo-renderer-marked": "2.0.0",
     "hexo-server": "0.3.3",
     "hexo-versioned-netlify-redirects": "1.1.0",
     "jsdoc": "3.5.5",
