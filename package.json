@@ -37,7 +37,7 @@
     "invariant": "2.2.4"
   },
   "devDependencies": {
-    "babel-eslint": "10.0.2",
+    "babel-eslint": "10.0.3",
     "colors": "1.3.3",
     "coveralls": "3.0.6",
     "cz-conventional-changelog": "~3.0.2",
