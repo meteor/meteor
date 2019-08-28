@@ -39,7 +39,7 @@ For example: `NODE_OPTIONS='--debug'` or `NODE_OPTIONS='--debug-brk'`
 To specify a port to listen on (instead of the default 3000), use `--port [PORT]`.
 (The development server also uses port `N+1` for the default MongoDB instance)
 
-For example: `meteor run --port 4000` 
+For example: `meteor run --port 4000`
 will run the development server on `http://localhost:4000`
 and the development MongoDB instance on `mongodb://localhost:4001`.
 
@@ -112,7 +112,7 @@ directory.
 **Packages**
 
 || Default | `--bare`  | `--full`  | `--minimal` |
-|--------------------|--------|---|---|
+|--------------------|--------|---|---|---|
 |[autopublish](https://atmospherejs.com/meteor/autopublish)|    X    |   |   | |
 |[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)| X | |X | |
 |[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|X|
