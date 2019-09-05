@@ -10,8 +10,8 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.10.2",
-    pacote: "https://github.com/meteor/pacote/tarball/bdd1a189f71142c9eb87c4298784e2f17746a5d7",
+    npm: "6.11.3",
+    pacote: "https://github.com/meteor/pacote/tarball/00b3b094e6074e45fc221d5bd96419d07ea34c6a",
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.13.0",
     typescript: "3.5.3",
