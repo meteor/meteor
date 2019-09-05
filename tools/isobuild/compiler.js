@@ -557,7 +557,11 @@ api.addAssets('${relPath}', 'client').`);
     const contents = optimisticReadFile(absPath);
     const hash = optimisticHashOrNull(absPath);
     const file = { contents, hash };
-    watchSet.addFile(absPath, hash);
+
+    // Watch only eager (non-lazy) files.
+    if (fileOptions && ! fileOptions.lazy) {
+      watchSet.addFile(absPath, hash);
+    }
 
     Console.nudge(true);
 

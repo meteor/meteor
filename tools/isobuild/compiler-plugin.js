@@ -19,6 +19,8 @@ import Resolver from "./resolver";
 import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
+  optimisticHashOrNull,
+  shouldWatch,
 } from "../fs/optimistic";
 
 import { isTestFilePath } from './test-files.js';
@@ -1267,7 +1269,7 @@ export class PackageSourceBatch {
       // In the unlikely event that no package is using the modules
       // package, then the map is already complete, and we don't need to
       // do any import scanning.
-      return map;
+      return this._watchOutputFiles(map);
     }
 
     // Append install(<name>) calls to the install-packages.js file in the
@@ -1482,7 +1484,22 @@ export class PackageSourceBatch {
       }
     });
 
-    return map;
+    return this._watchOutputFiles(map);
+  }
+
+  static _watchOutputFiles(jsOutputFilesMap) {
+    // Watch all output files produced by computeJsOutputFilesMap.
+    jsOutputFilesMap.forEach(entry => {
+      entry.files.forEach(file => {
+        const absPath = file.absPath ||
+          files.pathJoin(entry.batch.sourceRoot, file.sourcePath);
+        if (shouldWatch(absPath)) {
+          const hash = optimisticHashOrNull(absPath);
+          entry.batch.unibuild.watchSet.addFile(absPath, hash);
+        }
+      });
+    });
+    return jsOutputFilesMap;
   }
 
   static _warnAboutMissingModules(missingModules) {

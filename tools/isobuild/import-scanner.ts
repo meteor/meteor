@@ -4,7 +4,7 @@ import {Script} from "vm";
 import {
   isString, isObject, isEmpty, has, keys, each, omit,
 } from "underscore";
-import {sha1, WatchSet} from "../fs/watch";
+import {sha1} from "../fs/watch";
 import {matches as archMatches} from "../utils/archinfo";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
@@ -36,7 +36,6 @@ import {
   optimisticStatOrNull,
   optimisticLStatOrNull,
   optimisticHashOrNull,
-  shouldWatch,
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
@@ -275,7 +274,6 @@ export type ImportScannerOptions = {
   extensions: string[];
   sourceRoot: string;
   nodeModulesPaths: string[];
-  watchSet: WatchSet;
   cacheDir: string;
 }
 
@@ -330,7 +328,6 @@ export default class ImportScanner {
   private bundleArch: string;
   private sourceRoot: string;
   private nodeModulesPaths: string[];
-  private watchSet: WatchSet;
   private defaultHandlers: DefaultHandlers;
   private resolver: Resolver;
 
@@ -346,14 +343,12 @@ export default class ImportScanner {
     extensions,
     sourceRoot,
     nodeModulesPaths = [],
-    watchSet,
     cacheDir,
   }: ImportScannerOptions) {
     this.name = name;
     this.bundleArch = bundleArch;
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
-    this.watchSet = watchSet;
 
     this.defaultHandlers = new DefaultHandlers({
       cacheDir,
@@ -1145,8 +1140,6 @@ export default class ImportScanner {
       hash: optimisticHashOrNull(absPath)!,
     };
 
-    this.watchSet.addFile(absPath, info.hash);
-
     // Same logic/comment as stripBOM in node/lib/module.js:
     // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
     // because the buffer-to-string conversion in `fs.readFileSync()`
@@ -1262,17 +1255,6 @@ export default class ImportScanner {
         ...useNodeStub,
         absPath,
       };
-
-      // If optimistic functions care about this file, e.g. because it
-      // resides in a linked npm package, then we should allow it to
-      // be watched even though we are replacing it with a stub that
-      // merely calls module.useNode().
-      if (shouldWatch(absPath)) {
-        this.watchSet.addFile(
-          absPath,
-          optimisticHashOrNull(absPath),
-        );
-      }
 
     } else {
       rawFile = absModuleId.endsWith("/package.json")
@@ -1559,11 +1541,6 @@ export default class ImportScanner {
     };
 
     this.addFile(pkgJsonPath, pkgFile);
-
-    const hash = optimisticHashOrNull(pkgJsonPath);
-    if (hash) {
-      this.watchSet.addFile(pkgJsonPath, hash);
-    }
 
     this.resolvePkgJsonBrowserAliases(pkgFile);
 
