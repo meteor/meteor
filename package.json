@@ -17,10 +17,10 @@
     "@babel/plugin-transform-arrow-functions": "^7.2.0",
     "@babel/plugin-transform-async-to-generator": "^7.5.0",
     "@babel/plugin-transform-block-scoped-functions": "^7.2.0",
-    "@babel/plugin-transform-block-scoping": "^7.5.5",
+    "@babel/plugin-transform-block-scoping": "^7.6.0",
     "@babel/plugin-transform-classes": "^7.5.5",
     "@babel/plugin-transform-computed-properties": "^7.2.0",
-    "@babel/plugin-transform-destructuring": "^7.5.0",
+    "@babel/plugin-transform-destructuring": "^7.6.0",
     "@babel/plugin-transform-exponentiation-operator": "^7.2.0",
     "@babel/plugin-transform-flow-strip-types": "^7.4.4",
     "@babel/plugin-transform-for-of": "^7.4.4",
@@ -37,6 +37,6 @@
     "@babel/plugin-transform-unicode-regex": "^7.4.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.5.5"
+    "@babel/core": "^7.6.0"
   }
 }
