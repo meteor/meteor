@@ -57,7 +57,7 @@ N/A
 
 * The `meteor-babel` npm package has been updated to version 7.6.0,
   enabling compilation of the `meteor/tools` codebase with TypeScript
-  (specifically, version 3.5.3 of the `typescript` npm package).
+  (specifically, version 3.6.2 of the `typescript` npm package).
 
 * The `reify` npm package has been updated to version 0.20.12.
 
