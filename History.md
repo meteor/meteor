@@ -44,6 +44,14 @@ N/A
   See [PR #10603](https://github.com/meteor/meteor/pull/10603) for further
   explanation.
 
+* The Meteor build process is now able to detect whether files changed in
+  development were actually used by the server bundle, so that a full
+  server restart can be avoided when no files used by the server bundle
+  have changed. Client-only refreshes are typically much faster than
+  server restarts.
+  [Issue #10449](https://github.com/meteor/meteor/issues/10449)
+  [PR #10686](https://github.com/meteor/meteor/pull/10686)
+
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 

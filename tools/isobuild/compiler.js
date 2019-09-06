@@ -557,7 +557,15 @@ api.addAssets('${relPath}', 'client').`);
     const contents = optimisticReadFile(absPath);
     const hash = optimisticHashOrNull(absPath);
     const file = { contents, hash };
-    watchSet.addFile(absPath, hash);
+
+    if (fileOptions && ! fileOptions.lazy) {
+      watchSet.addFile(absPath, hash);
+    } else {
+      // Lazy files might not ultimately be used by the current unibuild/bundle,
+      // so we add them to the watchSet using a provisional status that may be
+      // updated later, at the end of PackageSourceBatch.computeJsOutputFilesMap.
+      watchSet.addPotentiallyUnusedFile(absPath, hash);
+    }
 
     Console.nudge(true);
 

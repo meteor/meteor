@@ -105,10 +105,17 @@ export class WatchSet {
   public readonly directories: DirectoryEntry[] = [];
 
   public addFile(filePath: string, hash: string | null) {
+    // Calling addFile directly instead of addPotentiallyUnusedFile implies
+    // that the file will be used, so we can mark it as such here. Note that
+    // addPotentiallyUnusedFile overrides this value based on the alreadyUsed
+    // variable after calling this.addFile.
+    this.potentiallyUnusedFiles.delete(filePath);
+
     // No need to update if this is in always-fire mode already.
     if (this.alwaysFire) {
       return;
     }
+
     if (_.has(this.files, filePath)) {
       // Redundant?
       if (this.files[filePath] === hash) {
@@ -118,7 +125,37 @@ export class WatchSet {
       this.alwaysFire = true;
       return;
     }
+
     this.files[filePath] = hash;
+  }
+
+  public hasFile(filePath: string): boolean {
+    return _.has(this.files, filePath);
+  }
+
+  // Files added via addPotentiallyUnusedFile will be included in this Set
+  // until addFile is called at a later time, which removes them from the
+  // potentiallyUnusedFiles Set and prevents them from being considered as
+  // potentially unused in the future. Either way, this.files will have
+  // the same contents as if addFile was called instead, which is
+  // important for checks such as IsopackCache._checkUpToDate, which need
+  // to take everything (even potentially unused files) into account.
+  private potentiallyUnusedFiles = new Set<string>();
+
+  public isDefinitelyUsed(filePath: string): boolean {
+    return this.hasFile(filePath) && ! this.isPotentiallyUnused(filePath);
+  }
+
+  public isPotentiallyUnused(filePath: string): boolean {
+    return this.potentiallyUnusedFiles.has(filePath);
+  }
+
+  public addPotentiallyUnusedFile(filePath: string, hash: string | null) {
+    const alreadyUsed = this.isDefinitelyUsed(filePath);
+    this.addFile(filePath, hash);
+    if (! alreadyUsed) {
+      this.potentiallyUnusedFiles.add(filePath);
+    }
   }
 
   public addDirectory({
@@ -151,7 +188,11 @@ export class WatchSet {
     }
 
     Object.keys(that.files).forEach(name => {
-      this.addFile(name, that.files[name]);
+      if (that.isPotentiallyUnused(name)) {
+        this.addPotentiallyUnusedFile(name, that.files[name]);
+      } else {
+        this.addFile(name, that.files[name]);
+      }
     });
 
     that.directories.forEach(dir => {
@@ -168,6 +209,10 @@ export class WatchSet {
 
     Object.keys(this.files).forEach(name => {
       ret.files[name] = this.files[name];
+    });
+
+    this.potentiallyUnusedFiles.forEach(name => {
+      ret.potentiallyUnusedFiles.add(name);
     });
 
     // XXX doesn't bother to deep-clone the directory info
@@ -204,8 +249,14 @@ export class WatchSet {
       return r.source;
     }
 
+    const potentiallyUnusedFiles: string[] = [];
+    this.potentiallyUnusedFiles.forEach(name => {
+      potentiallyUnusedFiles.push(name);
+    });
+
     return {
       files: this.files,
+      potentiallyUnusedFiles,
       directories: this.directories.map(d => ({
         absPath: d.absPath,
         include: d.include.map(reToJSON),
@@ -231,6 +282,12 @@ export class WatchSet {
     Object.keys(json.files).forEach(name => {
       watchSet.files[name] = json.files[name];
     });
+
+    if (Array.isArray(json.potentiallyUnusedFiles)) {
+      json.potentiallyUnusedFiles.forEach((name: string) => {
+        watchSet.potentiallyUnusedFiles.add(name);
+      });
+    }
 
     function reFromJSON(j: any) {
       if (j.$regex) {
@@ -358,6 +415,7 @@ export class Watcher {
   private stopped = false;
   private justCheckOnce = false;
   private async = false;
+  private includePotentiallyUnusedFiles = true;
 
   private watches: Record<string, {
     // Null until safeWatcher.watch succeeds in watching the file.
@@ -372,11 +430,15 @@ export class Watcher {
     onChange: () => any;
     async?: boolean;
     justCheckOnce?: boolean;
+    includePotentiallyUnusedFiles?: boolean;
   }) {
     this.async = !! options.async;
     this.watchSet = options.watchSet;
     this.onChange = options.onChange;
     this.justCheckOnce = !! options.justCheckOnce;
+    if (options.includePotentiallyUnusedFiles === false) {
+      this.includePotentiallyUnusedFiles = false;
+    }
 
     // Were we given an inconsistent WatchSet? Fire now and be done with it.
     if (this.watchSet.alwaysFire) {
@@ -391,6 +453,13 @@ export class Watcher {
   private fireIfFileChanged(absPath: string) {
     if (this.stopped) {
       return true;
+    }
+
+    if (
+      ! this.includePotentiallyUnusedFiles &&
+      this.watchSet.isPotentiallyUnused(absPath)
+    ) {
+      return false;
     }
 
     const oldHash = this.watchSet.files[absPath];
@@ -731,7 +800,10 @@ export class Watcher {
 
 // Given a WatchSet, returns true if it currently describes the state of the
 // disk.
-export function isUpToDate(watchSet: WatchSet) {
+export function isUpToDate(
+  watchSet: WatchSet,
+  includePotentiallyUnusedFiles = true
+) {
   return Profile.time('watch.isUpToDate', () => {
     let upToDate = true;
     const watcher = new Watcher({
@@ -741,7 +813,8 @@ export function isUpToDate(watchSet: WatchSet) {
       },
       // internal flag which prevents us from starting watches and timers that
       // we're about to cancel anyway
-      justCheckOnce: true
+      justCheckOnce: true,
+      includePotentiallyUnusedFiles,
     });
     watcher.stop();
     return upToDate;
