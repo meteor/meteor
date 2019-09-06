@@ -20,7 +20,6 @@ import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
   optimisticHashOrNull,
-  shouldWatch,
 } from "../fs/optimistic";
 
 import { isTestFilePath } from './test-files.js';
@@ -1493,9 +1492,19 @@ export class PackageSourceBatch {
       entry.files.forEach(file => {
         const absPath = file.absPath ||
           files.pathJoin(entry.batch.sourceRoot, file.sourcePath);
-        if (shouldWatch(absPath)) {
-          const hash = optimisticHashOrNull(absPath);
-          entry.batch.unibuild.watchSet.addFile(absPath, hash);
+        const watchSet = entry.batch.unibuild.watchSet;
+        if (
+          // Blindly calling watchSet.addFile would be logically correct here,
+          // but we can save the cost of calling optimisticHashOrNull(absPath)
+          // if the watchSet already knows about the file and it was not marked
+          // as potentially unused.
+          ! watchSet.isDefinitelyUsed(absPath)
+        ) {
+          // If this file was previously added to the unibuild.watchSet using
+          // the addPotentiallyUnusedFile method (see compileUnibuild), calling
+          // addFile here will update its usage status to reflect that the
+          // ImportScanner did, in fact, end up "using" the file.
+          watchSet.addFile(absPath, optimisticHashOrNull(absPath));
         }
       });
     });
