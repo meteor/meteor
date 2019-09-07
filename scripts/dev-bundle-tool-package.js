@@ -10,19 +10,19 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.10.2",
-    pacote: "https://github.com/meteor/pacote/tarball/bdd1a189f71142c9eb87c4298784e2f17746a5d7",
+    npm: "6.11.3",
+    pacote: "https://github.com/meteor/pacote/tarball/00b3b094e6074e45fc221d5bd96419d07ea34c6a",
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.13.0",
-    typescript: "3.5.3",
-    "meteor-babel": "7.5.7",
+    typescript: "3.6.2",
+    "meteor-babel": "7.6.0",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
     fibers: "4.0.1",
     reify: "0.20.12",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.5.5",
+    "@babel/runtime": "7.6.0",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
@@ -33,6 +33,7 @@ var packageJson = {
     semver: "5.4.1",
     request: "2.88.0",
     uuid: "3.3.2",
+    "graceful-fs": "4.2.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
     // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR

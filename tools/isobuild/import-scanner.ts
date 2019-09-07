@@ -4,7 +4,7 @@ import {Script} from "vm";
 import {
   isString, isObject, isEmpty, has, keys, each, omit,
 } from "underscore";
-import {sha1, WatchSet} from "../fs/watch";
+import {sha1} from "../fs/watch";
 import {matches as archMatches} from "../utils/archinfo";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
@@ -36,7 +36,6 @@ import {
   optimisticStatOrNull,
   optimisticLStatOrNull,
   optimisticHashOrNull,
-  shouldWatch,
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
@@ -252,6 +251,23 @@ function setImportedStatus(file: File, status: string | boolean) {
   }
 }
 
+// Map from SHA (which is already calculated, so free for us)
+// to the results of calling findImportedModuleIdentifiers.
+// Each entry is an array of strings, and this is a case where
+// the computation is expensive but the output is very small.
+// The cache can be global because findImportedModuleIdentifiers
+// is a pure function, and that way it applies across instances
+// of ImportScanner (which do not persist across builds).
+const LRU = require("lru-cache");
+const IMPORT_SCANNER_CACHE = new LRU({
+  max: 1024*1024,
+  length(ids: Record<string, ImportInfo>) {
+    let total = 40; // size of key
+    each(ids, (_info, id) => { total += id.length; });
+    return total;
+  }
+});
+
 // Stub used for entry point modules within node_modules directories on
 // the server. These stub modules delegate to native Node evaluation by
 // calling module.useNode() immediately, but it's important that we have
@@ -275,7 +291,6 @@ export type ImportScannerOptions = {
   extensions: string[];
   sourceRoot: string;
   nodeModulesPaths: string[];
-  watchSet: WatchSet;
   cacheDir: string;
 }
 
@@ -330,7 +345,6 @@ export default class ImportScanner {
   private bundleArch: string;
   private sourceRoot: string;
   private nodeModulesPaths: string[];
-  private watchSet: WatchSet;
   private defaultHandlers: DefaultHandlers;
   private resolver: Resolver;
 
@@ -346,30 +360,16 @@ export default class ImportScanner {
     extensions,
     sourceRoot,
     nodeModulesPaths = [],
-    watchSet,
     cacheDir,
   }: ImportScannerOptions) {
     this.name = name;
     this.bundleArch = bundleArch;
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
-    this.watchSet = watchSet;
 
     this.defaultHandlers = new DefaultHandlers({
       cacheDir,
       bundleArch,
-    });
-
-    const {
-      findImportedModuleIdentifiers,
-    } = this;
-
-    this.findImportedModuleIdentifiers = wrap(file => {
-      return findImportedModuleIdentifiers.call(this, file);
-    }, {
-      makeCacheKey(file) {
-        return file.hash;
-      }
     });
 
     this.resolver = Resolver.getOrCreate({
@@ -937,7 +937,21 @@ export default class ImportScanner {
   private findImportedModuleIdentifiers(
     file: File,
   ): Record<string, ImportInfo> {
-    return findImportedModuleIdentifiers(this.getDataString(file), file.hash);
+    if (IMPORT_SCANNER_CACHE.has(file.hash)) {
+      return IMPORT_SCANNER_CACHE.get(file.hash);
+    }
+
+    const result = findImportedModuleIdentifiers(
+      this.getDataString(file),
+      file.hash,
+    );
+
+    // there should always be file.hash, but better safe than sorry
+    if (file.hash) {
+      IMPORT_SCANNER_CACHE.set(file.hash, result);
+    }
+
+    return result;
   }
 
   private resolve(
@@ -1145,8 +1159,6 @@ export default class ImportScanner {
       hash: optimisticHashOrNull(absPath)!,
     };
 
-    this.watchSet.addFile(absPath, info.hash);
-
     // Same logic/comment as stripBOM in node/lib/module.js:
     // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
     // because the buffer-to-string conversion in `fs.readFileSync()`
@@ -1262,17 +1274,6 @@ export default class ImportScanner {
         ...useNodeStub,
         absPath,
       };
-
-      // If optimistic functions care about this file, e.g. because it
-      // resides in a linked npm package, then we should allow it to
-      // be watched even though we are replacing it with a stub that
-      // merely calls module.useNode().
-      if (shouldWatch(absPath)) {
-        this.watchSet.addFile(
-          absPath,
-          optimisticHashOrNull(absPath),
-        );
-      }
 
     } else {
       rawFile = absModuleId.endsWith("/package.json")
@@ -1559,11 +1560,6 @@ export default class ImportScanner {
     };
 
     this.addFile(pkgJsonPath, pkgFile);
-
-    const hash = optimisticHashOrNull(pkgJsonPath);
-    if (hash) {
-      this.watchSet.addFile(pkgJsonPath, hash);
-    }
 
     this.resolvePkgJsonBrowserAliases(pkgFile);
 

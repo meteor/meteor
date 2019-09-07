@@ -19,6 +19,7 @@ import Resolver from "./resolver";
 import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
+  optimisticHashOrNull,
 } from "../fs/optimistic";
 
 import { isTestFilePath } from './test-files.js';
@@ -1267,7 +1268,7 @@ export class PackageSourceBatch {
       // In the unlikely event that no package is using the modules
       // package, then the map is already complete, and we don't need to
       // do any import scanning.
-      return map;
+      return this._watchOutputFiles(map);
     }
 
     // Append install(<name>) calls to the install-packages.js file in the
@@ -1482,7 +1483,32 @@ export class PackageSourceBatch {
       }
     });
 
-    return map;
+    return this._watchOutputFiles(map);
+  }
+
+  static _watchOutputFiles(jsOutputFilesMap) {
+    // Watch all output files produced by computeJsOutputFilesMap.
+    jsOutputFilesMap.forEach(entry => {
+      entry.files.forEach(file => {
+        const absPath = file.absPath ||
+          files.pathJoin(entry.batch.sourceRoot, file.sourcePath);
+        const watchSet = entry.batch.unibuild.watchSet;
+        if (
+          // Blindly calling watchSet.addFile would be logically correct here,
+          // but we can save the cost of calling optimisticHashOrNull(absPath)
+          // if the watchSet already knows about the file and it was not marked
+          // as potentially unused.
+          ! watchSet.isDefinitelyUsed(absPath)
+        ) {
+          // If this file was previously added to the unibuild.watchSet using
+          // the addPotentiallyUnusedFile method (see compileUnibuild), calling
+          // addFile here will update its usage status to reflect that the
+          // ImportScanner did, in fact, end up "using" the file.
+          watchSet.addFile(absPath, optimisticHashOrNull(absPath));
+        }
+      });
+    });
+    return jsOutputFilesMap;
   }
 
   static _warnAboutMissingModules(missingModules) {
