@@ -36,6 +36,7 @@ var packageJson = {
     "graceful-fs": "4.2.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
+    json5: "2.1.0",
     kexec: "3.0.0",
     "source-map": "0.5.7",
     chalk: "0.5.1",
