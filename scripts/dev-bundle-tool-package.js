@@ -36,6 +36,7 @@ var packageJson = {
     "graceful-fs": "4.2.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
+    json5: "2.1.0",
     // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",

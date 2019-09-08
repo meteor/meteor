@@ -246,6 +246,9 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   return null;
 });
 
+// A more tolerant implementation of JSON.parse.
+import JSON from "json5";
+
 export const optimisticReadJsonOrNull =
 makeOptimistic("readJsonOrNull", (
   path: string,
