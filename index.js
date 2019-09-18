@@ -3,12 +3,10 @@ module.exports = function (api, options) {
   return {
     plugins: [
       require("@babel/plugin-syntax-flow"),
-      require("@babel/plugin-syntax-async-generators"),
+      ...require("./proposals.js").plugins,
       require("@babel/plugin-transform-arrow-functions"),
       require("@babel/plugin-transform-block-scoped-functions"),
       require("@babel/plugin-transform-block-scoping"),
-      require("@babel/plugin-syntax-class-properties"),
-      require("@babel/plugin-proposal-class-properties"),
       [require("@babel/plugin-transform-classes"), {
         loose: true
       }],
@@ -30,13 +28,10 @@ module.exports = function (api, options) {
       }],
       require("@babel/plugin-transform-typeof-symbol"),
       require("@babel/plugin-transform-unicode-regex"),
-      require("@babel/plugin-syntax-object-rest-spread"),
-      require("@babel/plugin-proposal-object-rest-spread"),
       require("@babel/plugin-transform-property-literals"),
       require("@babel/plugin-transform-flow-strip-types"),
       require("@babel/plugin-transform-exponentiation-operator"),
-      require("@babel/plugin-proposal-async-generator-functions"),
-      require("@babel/plugin-transform-regenerator")
+      require("@babel/plugin-transform-regenerator"),
     ]
   };
 };
