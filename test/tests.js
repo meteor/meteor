@@ -782,6 +782,53 @@ val = "zxcv";`;
   it("exponentiation operator", function () {
     assert.strictEqual(2 ** 13, Math.pow(2, 13));
   });
+
+  it("optional chaining", function () {
+    const a = {
+      b: {
+        c: {
+          d: "abcd",
+        },
+      },
+    };
+    assert.strictEqual(a?.b?.c?.d, "abcd");
+
+    assert.strictEqual(
+      {
+        foo: {
+          bar: {
+            baz: true
+          }
+        }
+      }.foo.barf?.baz,
+      void 0,
+    );
+
+    const api = {
+      method() {
+        return "yay";
+      },
+    };
+
+    assert.strictEqual(api.method?.(), "yay");
+    assert.strictEqual(api.schmethod?.(), void 0);
+  });
+
+  it("nullish coalescing", function () {
+    assert.strictEqual(0 ?? 1234, 0);
+    assert.strictEqual(null ?? 2345, 2345);
+    assert.strictEqual(void 0 ?? 3456, 3456);
+  });
+
+  it("optional catch parameter", function () {
+    let caught = false;
+    try {
+      throw "expected";
+    } catch {
+      caught = true;
+    }
+    assert.strictEqual(caught, true);
+  });
 });
 
 require("./decorators.js");
