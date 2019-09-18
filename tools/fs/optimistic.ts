@@ -1,5 +1,5 @@
 import assert from "assert";
-import { wrap, OptimisticWrapperFunction } from "optimism";
+import { wrap, OptimisticWrapperFunction, dep } from "optimism";
 import ignore from "ignore";
 import { Profile } from "../tool-env/profile";
 import { watch, SafeWatcher } from "./safe-watcher";
@@ -146,13 +146,7 @@ function maybeDependOnNodeModules(path: string) {
   }
 }
 
-let dependOnDirectorySalt = 0;
-
-const dependOnDirectory = wrap((_dir: string) => {
-  // Always return something different to prevent optimism from
-  // second-guessing the dirtiness of this function.
-  return ++dependOnDirectorySalt;
-}, {
+const dependOnDirectory = dep({
   subscribe(dir: string) {
     let watcher: SafeWatcher | null = watch(
       dir,
@@ -166,10 +160,6 @@ const dependOnDirectory = wrap((_dir: string) => {
       }
     };
   },
-
-  // This function is disposable because we don't care about its result,
-  // only its role in optimistic dependency tracking/dirtying.
-  disposable: true
 });
 
 // Called when an optimistic function detects the given file does not
@@ -191,20 +181,16 @@ function dependOnParentDirectory(path: string) {
 // Note that this strategy will not detect changes within subdirectories
 // of this node_modules directory, but that's ok because the use case we
 // care about is adding or removing npm packages.
-const dependOnNodeModules = wrap((nodeModulesDir: string) => {
+function dependOnNodeModules(nodeModulesDir: string) {
   assert(pathIsAbsolute(nodeModulesDir));
   assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
-  return dependOnDirectory(nodeModulesDir);
-}, {
-  // This function is disposable because we don't care about its result,
-  // only its role in optimistic dependency tracking/dirtying.
-  disposable: true
-});
+  dependOnDirectory(nodeModulesDir);
+}
 
 // Invalidate all optimistic results derived from paths involving the
 // given node_modules directory.
 export function dirtyNodeModulesDirectory(nodeModulesDir: string) {
-  dependOnNodeModules.dirty(nodeModulesDir);
+  dependOnDirectory.dirty(nodeModulesDir);
 }
 
 export const optimisticStatOrNull = makeOptimistic("statOrNull", (path: string) => {

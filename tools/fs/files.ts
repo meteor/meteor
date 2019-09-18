@@ -11,6 +11,7 @@ import os from "os";
 import { spawn, execFile } from "child_process";
 import { EventEmitter } from "events";
 import { Slot } from "@wry/context";
+import { dep } from "optimism";
 
 const _ = require('underscore');
 const Fiber = require("fibers");
@@ -1646,16 +1647,7 @@ export function withCache<R>(fn: () => R): R {
   return cache ? fn() : withCacheSlot.withValue(Object.create(null), fn);
 }
 
-let dependOnPathSalt = 0;
-import { wrap } from "optimism";
-export const dependOnPath = wrap(
-  // Always return something different to prevent optimism from
-  // second-guessing the dirtiness of this function.
-  (_path: string) => ++dependOnPathSalt,
-  // This function is disposable because we don't care about its result,
-  // only its role in optimistic dependency tracking/dirtying.
-  { disposable: true }
-);
+export const dependOnPath = dep<string>();
 
 function wrapDestructiveFsFunc<TArgs extends any[], TResult>(
   fnName: string,
