@@ -15,6 +15,7 @@ import {
   readFile,
   readdir,
   dependOnPath,
+  findAppDir,
 } from "./files";
 
 // When in doubt, the optimistic caching system can be completely disabled
@@ -79,13 +80,26 @@ function makeOptimistic<
   return wrapper;
 }
 
-export const shouldWatch = wrap((path: string) => {
+// The Meteor application directory should never change during the lifetime
+// of the build process, so it should be safe to cache findAppDir without
+// subscribing to file changes.
+const optimisticFindAppDir = wrap(findAppDir);
+
+const shouldWatch = wrap(Profile("shouldWatch", (path: string) => {
   const parts = path.split(pathSep);
   const nmi = parts.indexOf("node_modules");
 
   if (nmi < 0) {
     // Watch everything not in a node_modules directory.
     return true;
+  }
+
+  const dotMeteorIndex = parts.lastIndexOf(".meteor", nmi);
+  if (dotMeteorIndex >= 0) {
+    // Watch nothing inside of .meteor, at least for the purposes of the
+    // optimistic caching system. Meteor watches files inside .meteor/local
+    // via the WatchSet abstraction, unrelatedly.
+    return false;
   }
 
   if (nmi < parts.length - 1) {
@@ -95,6 +109,21 @@ export const shouldWatch = wrap((path: string) => {
       // directory, then it isn't part of a linked npm package, so we
       // should not watch it.
       return false;
+    }
+
+    const parentDirParts = parts.slice(0, nmi);
+    const parentDir = parentDirParts.join(pathSep);
+    const appDir = optimisticFindAppDir(parentDir);
+    if (
+      appDir &&
+      parentDir.startsWith(appDir) &&
+      appDir.split(pathSep).length < parentDirParts.length
+    ) {
+      // If the given path is contained by the Meteor application directory,
+      // but the node_modules directory we're considering is not directly
+      // contained by the root application directory, watch the file. See
+      // discussion in issue https://github.com/meteor/meteor/issues/10664
+      return true;
     }
 
     const packageDirParts = parts.slice(0, nmi + 2);
@@ -118,7 +147,7 @@ export const shouldWatch = wrap((path: string) => {
   // instead we rely on dependOnNodeModules to tell us when files in
   // node_modules directories might have changed.
   return false;
-});
+}));
 
 function maybeDependOnPath(path: string) {
   if (typeof path === "string") {
