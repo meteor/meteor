@@ -2,8 +2,8 @@
   "compilerOptions": {
     /* Basic Options */
     "target": "es2018",
-    "module": "es2015",
-    "lib": ["esnext"],
+    "module": "esNext",
+    "lib": ["esnext", "dom"],
     "allowJs": true,
     "checkJs": false,
     "jsx": "preserve",
@@ -22,14 +22,19 @@
     "noFallthroughCasesInSwitch": false,
 
     /* Module Resolution Options */
+    "baseUrl": ".",
+    "paths": {
+      /* Support absolute /imports/* with a leading '/' */
+      "/*": ["*"]
+    },
     "moduleResolution": "node",
-    "types": ["node"],
+    "resolveJsonModule": true,
+    "types": ["node", "mocha"],
     "esModuleInterop": true,
-    "preserveSymlinks": true,
+    "preserveSymlinks": true
   },
   "exclude": [
-    "./tests/apps/**",
-    "./tests/packages/**",
-    "./static-assets/skel*/**"
+    "./.meteor/**",
+    "./packages/**"
   ]
 }

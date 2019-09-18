@@ -505,6 +505,7 @@ main.registerCommand({
     minimal: { type: Boolean },
     full: { type: Boolean },
     react: { type: Boolean },
+    typescript: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -593,7 +594,7 @@ main.registerCommand({
           return transform(f);
         },
         transformContents: function (contents, f) {
-          if ((/(\.html|\.js|\.css)/).test(f)) {
+          if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
@@ -757,6 +758,8 @@ main.registerCommand({
     skelName += "-full";
   } else if (options.react) {
     skelName += "-react";
+  } else if (options.typescript) {
+    skelName += "-typescript";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -764,7 +767,7 @@ main.registerCommand({
       return transform(f);
     },
     transformContents: function (contents, f) {
-      if ((/(\.html|\.js|\.css)/).test(f)) {
+      if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
         return Buffer.from(transform(contents.toString()));
       } else {
         return contents;
@@ -864,20 +867,20 @@ main.registerCommand({
   if (! options.bare &&
       ! options.minimal &&
       ! options.full &&
-      ! options.react) {
-    // Notify people about --bare, --minimal, --full, and --react.
+      ! options.react &&
+      ! options.typescript) {
+    // Notify people about --bare, --minimal, --full, --react, and --typescript.
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
       "",
     ].join("\n"));
 
-    cmd("meteor create --bare    # to create an empty app");
-    cmd("meteor create --minimal # to create an app with as few " +
-        "Meteor packages as possible");
-    cmd("meteor create --full    # to create a more complete " +
-        "scaffolded app");
-    cmd("meteor create --react   # to create a basic React-based app");
+    cmd("meteor create --bare       # to create an empty app");
+    cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
+    cmd("meteor create --full       # to create a more complete scaffolded app");
+    cmd("meteor create --react      # to create a basic React-based app");
+    cmd("meteor create --typescript # to create an app using TypeScript and React");
   }
 
   Console.info("");
