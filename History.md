@@ -55,7 +55,7 @@ N/A
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.6.0,
+* The `meteor-babel` npm package has been updated to version 7.6.1,
   enabling compilation of the `meteor/tools` codebase with TypeScript
   (specifically, version 3.6.2 of the `typescript` npm package).
 
