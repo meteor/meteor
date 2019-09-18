@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.6.0",
-    "@babel/parser": "^7.5.5",
+    "@babel/parser": "^7.6.0",
     "@babel/plugin-proposal-class-properties": "^7.5.5",
     "@babel/plugin-syntax-dynamic-import": "^7.2.0",
     "@babel/plugin-transform-modules-commonjs": "^7.6.0",
@@ -40,13 +40,13 @@
     "@babel/template": "^7.6.0",
     "@babel/traverse": "^7.6.0",
     "@babel/types": "^7.6.1",
-    "babel-preset-meteor": "^7.6.0",
+    "babel-preset-meteor": "^7.6.1",
     "babel-preset-minify": "^0.5.1",
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.15",
     "meteor-babel-helpers": "0.0.3",
     "reify": "^0.20.12",
-    "typescript": "^3.6.2"
+    "typescript": "^3.6.3"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "7.6.0",
