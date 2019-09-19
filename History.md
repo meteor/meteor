@@ -28,6 +28,19 @@ N/A
   [fork](https://github.com/meteor/pacote/tree/v9.5.8-meteor) of its
   `pacote` dependency has been updated to version 9.5.8.
 
+* New Meteor applications now include an official `typescript` package,
+  supporting TypeScript compilation of `.ts` and `.tsx` modules, which can
+  be added to existing apps by running `meteor add typescript`.
+
+* New TypeScript-based Meteor applications can be created by running
+  ```sh
+  meteor create --typescript new-typescript-app
+  ```
+  This app skeleton contains a recommended tsconfig.json file, and should
+  serve as a reference for how to make TypeScript and Meteor work together
+  (to the best of our current knowledge).
+  [PR #10695](https://github.com/meteor/meteor/pull/10695)
+
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined.
   [PR #10541](https://github.com/meteor/meteor/pull/10541)
