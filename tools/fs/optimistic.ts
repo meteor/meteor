@@ -261,27 +261,44 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   return null;
 });
 
+const riskyJsonWhitespacePattern =
+  // Turns out a lot of weird characters technically count as /\s/ characters.
+  // This is all of them except for " ", "\n", and "\r", which are safe:
+  /[\t\b\f\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+/g;
+
 export const optimisticReadJsonOrNull =
 makeOptimistic("readJsonOrNull", (
   path: string,
   options?: Parameters<typeof optimisticReadFile>[1] & {
     allowSyntaxError?: boolean;
   },
-) => {
+): Record<string, any> | null => {
+  let contents: string | Buffer;
   try {
-    return JSON.parse(
-      optimisticReadFile(path, options)
-    ) as Record<string, any>;
-
+    contents = optimisticReadFile(path, options);
   } catch (e) {
     if (e.code === "ENOENT") {
       dependOnParentDirectory(path);
       return null;
     }
+    throw e;
+  }
 
+  try {
+    return JSON.parse(contents);
+  } catch (e) {
     if (e instanceof SyntaxError &&
         options && options.allowSyntaxError) {
       return null;
+    }
+
+    const stringContents: string = contents.toString("utf8");
+    // Replace any risky whitespace characters with spaces, to address issue
+    // https://github.com/meteor/meteor/issues/10688
+    const cleanContents = stringContents.replace(riskyJsonWhitespacePattern, " ");
+    if (cleanContents !== stringContents) {
+      // Try one last time to parse cleanContents before throwing.
+      return JSON.parse(cleanContents);
     }
 
     throw e;
