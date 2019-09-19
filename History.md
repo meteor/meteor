@@ -75,7 +75,7 @@ N/A
 * The `reify` npm package has been updated to version 0.20.12.
 
 * The `core-js` npm package used by `ecmascript-runtime-client` and
-  `ecmascript-runtime-server` has been updated to version 3.1.4.
+  `ecmascript-runtime-server` has been updated to version 3.2.1.
 
 * The `terser` npm package used by `minifier-js` (and indirectly by
   `standard-minifier-js`) has been updated to version 4.3.1.

@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "core-js": "3.1.4"
+  "core-js": "3.2.1"
 });
 
 Package.onUse(function(api) {
