@@ -261,9 +261,6 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   return null;
 });
 
-// A more tolerant implementation of JSON.parse.
-const { parse: jsonParse } = require("json5");
-
 export const optimisticReadJsonOrNull =
 makeOptimistic("readJsonOrNull", (
   path: string,
@@ -272,7 +269,7 @@ makeOptimistic("readJsonOrNull", (
   },
 ) => {
   try {
-    return jsonParse(
+    return JSON.parse(
       optimisticReadFile(path, options)
     ) as Record<string, any>;
 
