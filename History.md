@@ -77,6 +77,9 @@ N/A
 * The `core-js` npm package used by `ecmascript-runtime-client` and
   `ecmascript-runtime-server` has been updated to version 3.1.4.
 
+* The `terser` npm package used by `minifier-js` (and indirectly by
+  `standard-minifier-js`) has been updated to version 4.3.1.
+
 * The `node-gyp` npm package has been updated to version 5.0.1, and
   `node-pre-gyp` has been updated to 0.13.0.
 
