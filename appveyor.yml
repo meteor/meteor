@@ -43,5 +43,5 @@ on_failure:
 
 cache:
   - dev_bundle -> meteor
-  - .babel-cache
+  - .babel-cache -> meteor
   - .meteor
