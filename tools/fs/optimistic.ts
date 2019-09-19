@@ -1,5 +1,5 @@
 import assert from "assert";
-import { wrap, OptimisticWrapperFunction } from "optimism";
+import { wrap, OptimisticWrapperFunction, dep } from "optimism";
 import ignore from "ignore";
 import { Profile } from "../tool-env/profile";
 import { watch, SafeWatcher } from "./safe-watcher";
@@ -15,6 +15,7 @@ import {
   readFile,
   readdir,
   dependOnPath,
+  findAppDir,
 } from "./files";
 
 // When in doubt, the optimistic caching system can be completely disabled
@@ -79,13 +80,26 @@ function makeOptimistic<
   return wrapper;
 }
 
-export const shouldWatch = wrap((path: string) => {
+// The Meteor application directory should never change during the lifetime
+// of the build process, so it should be safe to cache findAppDir without
+// subscribing to file changes.
+const optimisticFindAppDir = wrap(findAppDir);
+
+const shouldWatch = wrap(Profile("shouldWatch", (path: string) => {
   const parts = path.split(pathSep);
   const nmi = parts.indexOf("node_modules");
 
   if (nmi < 0) {
     // Watch everything not in a node_modules directory.
     return true;
+  }
+
+  const dotMeteorIndex = parts.lastIndexOf(".meteor", nmi);
+  if (dotMeteorIndex >= 0) {
+    // Watch nothing inside of .meteor, at least for the purposes of the
+    // optimistic caching system. Meteor watches files inside .meteor/local
+    // via the WatchSet abstraction, unrelatedly.
+    return false;
   }
 
   if (nmi < parts.length - 1) {
@@ -95,6 +109,21 @@ export const shouldWatch = wrap((path: string) => {
       // directory, then it isn't part of a linked npm package, so we
       // should not watch it.
       return false;
+    }
+
+    const parentDirParts = parts.slice(0, nmi);
+    const parentDir = parentDirParts.join(pathSep);
+    const appDir = optimisticFindAppDir(parentDir);
+    if (
+      appDir &&
+      parentDir.startsWith(appDir) &&
+      appDir.split(pathSep).length < parentDirParts.length
+    ) {
+      // If the given path is contained by the Meteor application directory,
+      // but the node_modules directory we're considering is not directly
+      // contained by the root application directory, watch the file. See
+      // discussion in issue https://github.com/meteor/meteor/issues/10664
+      return true;
     }
 
     const packageDirParts = parts.slice(0, nmi + 2);
@@ -118,7 +147,7 @@ export const shouldWatch = wrap((path: string) => {
   // instead we rely on dependOnNodeModules to tell us when files in
   // node_modules directories might have changed.
   return false;
-});
+}));
 
 function maybeDependOnPath(path: string) {
   if (typeof path === "string") {
@@ -146,13 +175,7 @@ function maybeDependOnNodeModules(path: string) {
   }
 }
 
-let dependOnDirectorySalt = 0;
-
-const dependOnDirectory = wrap((_dir: string) => {
-  // Always return something different to prevent optimism from
-  // second-guessing the dirtiness of this function.
-  return ++dependOnDirectorySalt;
-}, {
+const dependOnDirectory = dep({
   subscribe(dir: string) {
     let watcher: SafeWatcher | null = watch(
       dir,
@@ -166,10 +189,6 @@ const dependOnDirectory = wrap((_dir: string) => {
       }
     };
   },
-
-  // This function is disposable because we don't care about its result,
-  // only its role in optimistic dependency tracking/dirtying.
-  disposable: true
 });
 
 // Called when an optimistic function detects the given file does not
@@ -191,20 +210,16 @@ function dependOnParentDirectory(path: string) {
 // Note that this strategy will not detect changes within subdirectories
 // of this node_modules directory, but that's ok because the use case we
 // care about is adding or removing npm packages.
-const dependOnNodeModules = wrap((nodeModulesDir: string) => {
+function dependOnNodeModules(nodeModulesDir: string) {
   assert(pathIsAbsolute(nodeModulesDir));
   assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
-  return dependOnDirectory(nodeModulesDir);
-}, {
-  // This function is disposable because we don't care about its result,
-  // only its role in optimistic dependency tracking/dirtying.
-  disposable: true
-});
+  dependOnDirectory(nodeModulesDir);
+}
 
 // Invalidate all optimistic results derived from paths involving the
 // given node_modules directory.
 export function dirtyNodeModulesDirectory(nodeModulesDir: string) {
-  dependOnNodeModules.dirty(nodeModulesDir);
+  dependOnDirectory.dirty(nodeModulesDir);
 }
 
 export const optimisticStatOrNull = makeOptimistic("statOrNull", (path: string) => {
@@ -247,7 +262,7 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
 });
 
 // A more tolerant implementation of JSON.parse.
-import JSON from "json5";
+const { parse: jsonParse } = require("json5");
 
 export const optimisticReadJsonOrNull =
 makeOptimistic("readJsonOrNull", (
@@ -257,7 +272,7 @@ makeOptimistic("readJsonOrNull", (
   },
 ) => {
   try {
-    return JSON.parse(
+    return jsonParse(
       optimisticReadFile(path, options)
     ) as Record<string, any>;
 

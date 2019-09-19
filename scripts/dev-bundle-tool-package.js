@@ -15,7 +15,7 @@ var packageJson = {
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.13.0",
     typescript: "3.6.2",
-    "meteor-babel": "7.6.0",
+    "meteor-babel": "7.6.1",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
@@ -61,7 +61,7 @@ var packageJson = {
     pathwatcher: "8.1.0",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
-    optimism: "0.10.2",
+    optimism: "0.11.2",
     "@wry/context": "0.4.4",
     'lru-cache': '4.1.3'
   }

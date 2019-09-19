@@ -60,6 +60,19 @@ N/A
   [fork](https://github.com/meteor/pacote/tree/v9.5.8-meteor) of its
   `pacote` dependency has been updated to version 9.5.8.
 
+* New Meteor applications now include an official `typescript` package,
+  supporting TypeScript compilation of `.ts` and `.tsx` modules, which can
+  be added to existing apps by running `meteor add typescript`.
+
+* New TypeScript-based Meteor applications can be created by running
+  ```sh
+  meteor create --typescript new-typescript-app
+  ```
+  This app skeleton contains a recommended tsconfig.json file, and should
+  serve as a reference for how to make TypeScript and Meteor work together
+  (to the best of our current knowledge).
+  [PR #10695](https://github.com/meteor/meteor/pull/10695)
+
 * When bundling client code, the Meteor module system now prefers the
   `"module"` field in `package.json`, if defined.
   [PR #10541](https://github.com/meteor/meteor/pull/10541)
@@ -87,20 +100,24 @@ N/A
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.6.0,
+* The `meteor-babel` npm package has been updated to version 7.6.1,
   enabling compilation of the `meteor/tools` codebase with TypeScript
   (specifically, version 3.6.2 of the `typescript` npm package).
 
 * The `reify` npm package has been updated to version 0.20.12.
 
 * The `core-js` npm package used by `ecmascript-runtime-client` and
-  `ecmascript-runtime-server` has been updated to version 3.1.4.
+  `ecmascript-runtime-server` has been updated to version 3.2.1.
+
+* The `terser` npm package used by `minifier-js` (and indirectly by
+  `standard-minifier-js`) has been updated to version 4.3.1.
 
 * The `node-gyp` npm package has been updated to version 5.0.1, and
   `node-pre-gyp` has been updated to 0.13.0.
 
-* The `optimism` npm package has been updated to version 0.10.2, which
-  enables caching of thrown exceptions, as well as ordinary results.
+* The `optimism` npm package has been updated to version 0.11.2, which
+  enables caching of thrown exceptions as well as ordinary results, in
+  addition to performance improvements.
 
 * The `pathwatcher` npm package has been updated to version 8.1.0.
 
