@@ -463,7 +463,7 @@ _.extend(exports, {
       if (masterProgress &&
           masterProgress.addChildTask) {
         options.progress = masterProgress.addChildTask({
-          title: masterProgress._title
+          title: masterProgress.title
         });
       }
 

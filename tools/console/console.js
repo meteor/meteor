@@ -509,7 +509,7 @@ class StatusPoller {
 
     this._watching = watching;
 
-    var title = (watching != null ? watching._title : null) || FALLBACK_STATUS;
+    var title = (watching != null ? watching.title : null) || FALLBACK_STATUS;
 
     var progressDisplay = this._console._progressDisplay;
     progressDisplay.updateStatus && progressDisplay.updateStatus(title);
