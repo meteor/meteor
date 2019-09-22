@@ -211,7 +211,7 @@ In a server-side-rendered framework like Ruby on Rails, it's sufficient to not d
 
 All of the points above about Methods apply to publications as well:
 
-1. Validate all arguments using `check` or `aldeed:simple-schema`.
+1. Validate all arguments using `check` or npm `simpl-schema`.
 1. Never pass the current user ID as an argument.
 1. Don't take generic arguments; make sure you know exactly what your publication is getting from the client.
 1. Use rate limiting to stop people from spamming you with subscriptions.

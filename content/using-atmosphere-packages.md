@@ -52,7 +52,7 @@ You can get more details on all the package commands in the [Meteor Command line
 To use an Atmosphere Package in your app you can import it with the `meteor/` prefix:
 
 ```js
-import { SimpleSchema } from 'meteor/aldeed:simple-schema';
+import { Mongo } from "meteor/mongo";
 ```
 
 Typically a package will export one or more symbols, which you'll need to reference with the destructuring syntax. You can find these exported symbols by either looking in that package's `package.js` file for [`api.export`](http://docs.meteor.com/#/full/pack_export) calls or by looking in that package's main JavaScript file for ES2015 `export ` calls like `export const packageName = 'package-name';`.
