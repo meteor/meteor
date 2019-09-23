@@ -1490,10 +1490,14 @@ export class PackageSourceBatch {
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
-        const absPath = file.absPath ||
-          files.pathJoin(entry.batch.sourceRoot, file.sourcePath);
+        const {
+          sourcePath,
+          absPath = sourcePath &&
+            files.pathJoin(entry.batch.sourceRoot, sourcePath),
+        } = file;
         const watchSet = entry.batch.unibuild.watchSet;
         if (
+          typeof absPath === "string" &&
           // Blindly calling watchSet.addFile would be logically correct here,
           // but we can save the cost of calling optimisticHashOrNull(absPath)
           // if the watchSet already knows about the file and it was not marked
