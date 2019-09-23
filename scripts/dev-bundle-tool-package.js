@@ -14,7 +14,7 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/00b3b094e6074e45fc221d5bd96419d07ea34c6a",
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.13.0",
-    typescript: "3.6.2",
+    typescript: "3.6.3",
     "meteor-babel": "7.6.1",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
@@ -58,7 +58,7 @@ var packageJson = {
     pathwatcher: "8.1.0",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
-    optimism: "0.11.2",
+    optimism: "0.11.3",
     "@wry/context": "0.4.4",
     'lru-cache': '4.1.3'
   }
