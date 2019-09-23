@@ -6,6 +6,7 @@ import { coalesce } from "../utils/func-utils";
 import { Profile } from "../tool-env/profile";
 import {
   optimisticHashOrNull,
+  optimisticStatOrNull,
 } from "./optimistic";
 
 const _ = require("underscore");
@@ -352,7 +353,7 @@ function readAndStatDirectory(absPath: string) {
   contents.forEach(entry => {
     // We do stat instead of lstat here, so that we treat symlinks to
     // directories just like directories themselves.
-    const stat = files.statOrNull(files.pathJoin(absPath, entry));
+    const stat = optimisticStatOrNull(files.pathJoin(absPath, entry));
     if (! stat) {
       // Disappeared after the readdir (or a dangling symlink)?
       // Eh, pretend it was never there in the first place.
