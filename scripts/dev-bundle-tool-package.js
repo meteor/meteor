@@ -41,8 +41,7 @@ var packageJson = {
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.5.7",
     chalk: "0.5.1",
-    // Latest master version of sqlite3, based on version 4.0.6.
-    sqlite3: "https://github.com/mapbox/node-sqlite3/tarball/4f5b9963161c4ab8abd255f22d226361aa434cf4",
+    sqlite3: "4.1.0",
     "http-proxy": "1.16.2",
     "is-reachable": "3.1.0",
     "wordwrap": "0.0.2",

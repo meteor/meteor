@@ -27,7 +27,7 @@ N/A
   8.0.2, with [PR #128](https://github.com/atom/node-pathwatcher/pull/128)
   applied.
 
-* The `sqlite3` npm package has been updated to version 4.0.6.
+* The `sqlite3` npm package has been updated to version 4.1.0.
 
 * The `node-gyp` npm package has been updated to version 4.0.0, and
   `node-pre-gyp` has been updated to version 0.13.0.
