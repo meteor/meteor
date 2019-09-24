@@ -261,6 +261,18 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   return null;
 });
 
+export const optimisticReaddirWithSlashes = wrap(
+  Profile("optimisticReaddirWithSlashes", (dir: string) => {
+    return optimisticReaddir(dir).map(name => {
+      const stats = statOrNull(pathJoin(dir, name));
+      if (stats && stats.isDirectory()) {
+        return name + "/";
+      }
+      return name;
+    });
+  }),
+);
+
 const riskyJsonWhitespacePattern =
   // Turns out a lot of weird characters technically count as /\s/ characters.
   // This is all of them except for " ", "\n", and "\r", which are safe:

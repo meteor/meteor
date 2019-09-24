@@ -35,7 +35,10 @@ import {
   optimisticStatOrNull,
   optimisticReadMeteorIgnore,
   optimisticLookupPackageJson,
+  optimisticReaddirWithSlashes,
 } from "../fs/optimistic";
+
+import { filterDirectoryContents } from "../fs/watch";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -1292,12 +1295,20 @@ _.extend(PackageSource.prototype, {
         }
       }
 
-      const sources = _.difference(
-        self._readAndWatchDirectory(dir, watchSet, readOptions),
-        depth > 0 ? [] : controlFiles
-      );
-
-      const subdirectories = self._readAndWatchDirectory(dir, watchSet, {
+      const unfilteredSources = [];
+      const unfilteredSubdirectories = [];
+      optimisticReaddirWithSlashes(
+        files.pathJoin(self.sourceRoot, dir),
+      ).forEach(name => {
+        name = files.pathJoin(dir, name);
+        if (name.endsWith("/")) {
+          unfilteredSubdirectories.push(name);
+        } else if (depth > 0 || controlFiles.indexOf(name) < 0) {
+          unfilteredSources.push(name);
+        }
+      });
+      const sources = filterDirectoryContents(unfilteredSources, readOptions);
+      const subdirectories = filterDirectoryContents(unfilteredSubdirectories, {
         include: [/\/$/],
         exclude: depth > 0
           ? anyLevelExcludes

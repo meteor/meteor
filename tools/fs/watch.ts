@@ -369,7 +369,7 @@ function readAndStatDirectory(absPath: string) {
   return contentsWithSlashes;
 }
 
-function filterDirectoryContents(contents: string[], {
+export function filterDirectoryContents(contents: string[], {
   include,
   exclude,
   names,
