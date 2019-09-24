@@ -175,6 +175,7 @@ delete () {
 if [ -d "pacote" ]
 then
     delete npm/node_modules/pacote
+    mv pacote npm/node_modules/
 fi
 
 delete sqlite3/deps

@@ -330,7 +330,7 @@ Function Add-NpmModulesFromJsBundleFile {
   if ((Test-Path "@babel\runtime\helpers") -And
       !(Test-Path "@babel\runtime\helpers\builtin")) {
     cd @babel\runtime\helpers
-    & "$($Commands.node)" -e 'require("fs").symlinkSync(".", "builtin", "junction")'
+    & "$($Commands.node)" -e "require('fs').symlinkSync('.', 'builtin', 'junction')"
     cd ..\..\..
   }
 
@@ -338,6 +338,7 @@ Function Add-NpmModulesFromJsBundleFile {
   # we need to remove npm's bundled version to make it use the new one.
   if (Test-Path "pacote") {
     Remove-DirectoryRecursively "npm\node_modules\pacote"
+    & "$($Commands.node)" -e "require('fs').renameSync('pacote', 'npm\\node_modules\\pacote')"
   }
 
   cd "$previousCwd"
