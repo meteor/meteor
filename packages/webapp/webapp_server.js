@@ -10,7 +10,7 @@ import { createHash } from "crypto";
 import { connect } from "./connect.js";
 import compress from "compression";
 import cookieParser from "cookie-parser";
-import query from "qs-middleware";
+import qs from "qs";
 import parseRequest from "parseurl";
 import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
@@ -850,7 +850,10 @@ function runWebAppServer() {
   //
   // Do this before the next middleware destroys req.url if a path prefix
   // is set to close #10111.
-  app.use(query());
+  app.use(function (request, response, next) {
+    request.query = qs.parse(parseUrl(request.url).query);
+    next();
+  });
 
   function getPathParts(path) {
     const parts = path.split("/");

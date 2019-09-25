@@ -11,7 +11,7 @@ Npm.depends({"basic-auth-connect": "1.0.0",
              parseurl: "1.3.2",
              send: "0.16.1",
              "stream-to-string": "1.1.0",
-             "qs-middleware": "1.0.3",
+             "qs": "6.4.0",
              useragent: "2.3.0"});
 
 Npm.strip({
