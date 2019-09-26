@@ -222,24 +222,52 @@ export function dirtyNodeModulesDirectory(nodeModulesDir: string) {
   dependOnDirectory.dirty(nodeModulesDir);
 }
 
-export const optimisticStatOrNull = makeOptimistic("statOrNull", (path: string) => {
-  const result = statOrNull(path);
-  if (result === null) {
-    dependOnParentDirectory(path);
+function makeCheapPathFunction<TResult>(
+  pathFunction: (path: string) => TResult,
+): typeof pathFunction {
+  if (! ENABLED) {
+    return pathFunction;
   }
-  return result;
-});
+  const wrapper = wrap(pathFunction, {
+    subscribe(path) {
+      let watcher: SafeWatcher | null = watch(
+        path,
+        () => wrapper.dirty(path),
+      );
+      return function () {
+        if (watcher) {
+          watcher.close();
+          watcher = null;
+        }
+      };
+    }
+  });
+  return wrapper;
+}
+
+export const optimisticStatOrNull = makeCheapPathFunction(
+  (path: string) => {
+    const result = statOrNull(path);
+    if (result === null) {
+      dependOnParentDirectory(path);
+    }
+    return result;
+  },
+);
 
 export const optimisticLStat = makeOptimistic("lstat", lstat);
-export const optimisticLStatOrNull = makeOptimistic("lstatOrNull", (path: string) => {
-  try {
-    return optimisticLStat(path);
-  } catch (e) {
-    if (e.code !== "ENOENT") throw e;
-    dependOnParentDirectory(path);
-    return null;
-  }
-});
+export const optimisticLStatOrNull = makeCheapPathFunction(
+  (path: string) => {
+    try {
+      return optimisticLStat(path);
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      dependOnParentDirectory(path);
+      return null;
+    }
+  },
+);
+
 export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);
 export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
