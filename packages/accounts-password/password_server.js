@@ -280,7 +280,7 @@ const passwordValidator = Match.OneOf(
 // Note that neither password option is secure without SSL.
 //
 Accounts.registerLoginHandler("password", options => {
-  if (! options.password || options.srp)
+  if (! options.password || options.srp || (options.user && !options.user.username))
     return undefined; // don't handle
 
   check(options, {
