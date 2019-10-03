@@ -1,10 +1,11 @@
-meteor-roles v2
+meteor-roles v3
 ===============
 
-**This version of the package is being maintained just for security and compatibility issues.
-Please consider the [latest version](https://github.com/Meteor-Community-Packages/meteor-roles).**
-
 Authorization package for Meteor - compatible with built-in accounts package.
+
+There are also older versions of this package:
+* [v1](https://github.com/Meteor-Community-Packages/meteor-roles/tree/v1)
+* [v2](https://github.com/Meteor-Community-Packages/meteor-roles/tree/v2)
 
 <br />
 
