@@ -1,5 +1,8 @@
-meteor-roles
-============
+meteor-roles v2
+===============
+
+**This version of the package is being maintained just for security and compatibility issues.
+Please consider the [latest version](https://github.com/Meteor-Community-Packages/meteor-roles).**
 
 Authorization package for Meteor - compatible with built-in accounts package.
 
@@ -421,7 +424,7 @@ The `examples` directory contains Meteor apps which show off the following featu
 
 View the `flow-router` example app online @  <a href="http://roles.meteor.com/" target="_blank">http://roles.meteor.com/</a>
 
-  1. `git clone https://github.com/alanning/meteor-roles.git`
+  1. `git clone https://github.com/Meteor-Community-Packages/meteor-roles.git`
   2. choose an example, eg.
     * `cd meteor-roles/examples/iron-router` or
     * `cd meteor-roles/examples/flow-router`
