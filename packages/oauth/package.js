@@ -47,6 +47,9 @@ Package.onUse(api => {
   api.addFiles('deprecated.js', ['client', 'server']);
 });
 
+Npm.depends({
+  'body-parser': '1.19.0',
+});
 
 Package.onTest(api => {
   api.use('tinytest');
