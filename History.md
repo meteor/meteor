@@ -1,3 +1,7 @@
+## v2.0.1
+
+* Wrap localStorage in try/catch to avoid crash when disabled. Port fix from v1 branch. [#182](https://github.com/Meteor-Community-Packages/meteor-roles/issues/182)
+
 ## v2.0.0
 
 * Rewrite with the new schema for `roles` field and `Meteor.roles` collection.
