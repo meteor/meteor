@@ -62,7 +62,7 @@ those roles easier.
 <a id="roles-naming" name="roles-naming"></a>
 ### Permissions vs roles  (or What's in a name...)
 
-Although the name of this package is `roles`, you can define your **roles**, **groups** or **permissions** however you like.
+Although the name of this package is `roles`, you can define your **roles**, **scopes** or **permissions** however you like.
 They are essentially just tags that you assign to a user and which you can check upon later.
 
 You can have traditional roles like, `admin` or `webmaster`, or you can assign more granular permissions such
@@ -244,7 +244,7 @@ Check user roles before publishing sensitive data:
 ```js
 // server/publish.js
 
-// Give authorized users access to sensitive data by group
+// Give authorized users access to sensitive data by scope
 Meteor.publish('secrets', function (scope) {
   check(scope, String);
 
