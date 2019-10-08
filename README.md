@@ -1,5 +1,8 @@
-meteor-roles
-============
+meteor-roles v2
+===============
+
+**This version of the package is being maintained just for security and compatibility issues.
+Please consider the [latest version](https://github.com/Meteor-Community-Packages/meteor-roles).**
 
 Authorization package for Meteor - compatible with built-in accounts package.
 
@@ -59,7 +62,7 @@ those roles easier.
 <a id="roles-naming" name="roles-naming"></a>
 ### Permissions vs roles  (or What's in a name...)
 
-Although the name of this package is `roles`, you can define your **roles**, **groups** or **permissions** however you like.
+Although the name of this package is `roles`, you can define your **roles**, **scopes** or **permissions** however you like.
 They are essentially just tags that you assign to a user and which you can check upon later.
 
 You can have traditional roles like, `admin` or `webmaster`, or you can assign more granular permissions such
@@ -241,7 +244,7 @@ Check user roles before publishing sensitive data:
 ```js
 // server/publish.js
 
-// Give authorized users access to sensitive data by group
+// Give authorized users access to sensitive data by scope
 Meteor.publish('secrets', function (scope) {
   check(scope, String);
 
@@ -421,7 +424,7 @@ The `examples` directory contains Meteor apps which show off the following featu
 
 View the `flow-router` example app online @  <a href="http://roles.meteor.com/" target="_blank">http://roles.meteor.com/</a>
 
-  1. `git clone https://github.com/alanning/meteor-roles.git`
+  1. `git clone https://github.com/Meteor-Community-Packages/meteor-roles.git`
   2. choose an example, eg.
     * `cd meteor-roles/examples/iron-router` or
     * `cd meteor-roles/examples/flow-router`
