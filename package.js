@@ -10,7 +10,6 @@ Package.onUse(function (api) {
 
   var both = ['client', 'server'];
 
-  api.use('underscore', 'server');
   api.use(['ecmascript',
            'accounts-base',
            'tracker',
@@ -37,7 +36,6 @@ Package.onTest(function (api) {
 
   api.use(['alanning:roles',
            'accounts-password',
-           'underscore',
            'mongo',
            'tinytest'], both);
 

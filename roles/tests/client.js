@@ -48,8 +48,8 @@
     var user = users[username];
 
     // test using user object rather than userId to avoid mocking
-    _.each(roles, function (role) {
-      var expected = _.contains(expectedRoles, role),
+    roles.forEach(function (role) {
+      var expected = expectedRoles.includes(role),
           msg = username + ' expected to have \'' + role + '\' permission but does not',
           nmsg = username + ' had un-expected permission ' + role;
 
@@ -68,7 +68,7 @@
   };
 
   Tinytest.add(
-    'roles - can check current users roles via template helper', 
+    'roles - can check current users roles via template helper',
     function (test) {
       var isInRole,
           expected,
@@ -86,7 +86,7 @@
       expected = true;
       actual = isInRole('admin, editor');
       test.equal(actual, expected);
-      
+
       expected = true;
       actual = isInRole('admin');
       test.equal(actual, expected);
@@ -97,20 +97,20 @@
     });
 
   Tinytest.add(
-    'roles - can check if user is in role', 
+    'roles - can check if user is in role',
     function (test) {
       testUser(test, 'eve', ['admin', 'editor']);
     });
 
   Tinytest.add(
-    'roles - can check if user is in role by group', 
+    'roles - can check if user is in role by group',
     function (test) {
       testUser(test, 'bob', ['user'], 'group1');
       testUser(test, 'bob', ['editor'], 'group2');
     });
 
   Tinytest.add(
-    'roles - can check if user is in role with Roles.GLOBAL_GROUP', 
+    'roles - can check if user is in role with Roles.GLOBAL_GROUP',
     function (test) {
       testUser(test, 'joe', ['admin']);
       testUser(test, 'joe', ['admin'], Roles.GLOBAL_GROUP);

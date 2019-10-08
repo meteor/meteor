@@ -83,7 +83,7 @@ if (Roles.debug && console.log) {
 if ('undefined' !== typeof Package.blaze &&
     'undefined' !== typeof Package.blaze.Blaze &&
     'function'  === typeof Package.blaze.Blaze.registerHelper) {
-  Object.entries(Roles._uiHelpers).forEach(function (func, name) {
+  Object.entries(Roles._uiHelpers).forEach(([name, func]) => {
     if (Roles.debug && console.log) {
       console.log("[roles] registering Blaze helper '" + name + "'")
     }

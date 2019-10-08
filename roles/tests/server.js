@@ -26,7 +26,7 @@
   function testUser (test, username, expectedRoles, scope) {
     var userId = users[username],
         userObj = Meteor.users.findOne({_id: userId});
-        
+
     // check using user ids (makes db calls)
     _innerTest(test, userId, username, expectedRoles, scope);
 
@@ -36,8 +36,8 @@
 
   function _innerTest (test, userParam, username, expectedRoles, scope) {
     // test that user has only the roles expected and no others
-    _.each(roles, function (role) {
-      var expected = _.contains(expectedRoles, role),
+    roles.forEach(function (role) {
+      var expected = expectedRoles.includes(role),
           msg = username + ' expected to have \'' + role + '\' role but does not',
           nmsg = username + ' had the following un-expected role: ' + role;
 
@@ -49,18 +49,42 @@
     })
   }
 
+  var deepEqual = function (x, y) {
+    if (x === y) {
+      return true;
+    }
+    else if ((typeof x == "object" && x != null) && (typeof y == "object" && y != null)) {
+      if (Object.keys(x).length != Object.keys(y).length)
+        return false;
+
+      for (var prop in x) {
+        if (y.hasOwnProperty(prop))
+        {
+          if (! deepEqual(x[prop], y[prop]))
+            return false;
+        }
+        else
+          return false;
+      }
+
+      return true;
+    }
+    else
+      return false;
+  }
+
   function itemsEqual (test, actual, expected) {
     actual = actual || [];
     expected = expected || [];
 
-    function intersectionObjects(/*args*/) {
+    function intersectionObjects(...args) {
       var array, rest;
-      array = arguments[0];
-      rest = 2 <= arguments.length ? _.toArray(arguments).slice(1) : [];
-      return _.filter(_.uniq(array), function (item) {
-        return _.every(rest, function (other) {
-          return _.any(other, function (element) {
-            return _.isEqual(element, item);
+      array = args[0];
+      rest = 2 <= args.length ? args.slice(1) : [];
+      return [...new Set(array)].filter(function (item) {
+        return rest.every(function (other) {
+          return other.some(function (element) {
+            return deepEqual(element, item);
           });
         });
       });
@@ -79,7 +103,7 @@
   }
 
   Tinytest.add(
-    'roles - can create and delete roles', 
+    'roles - can create and delete roles',
     function (test) {
       reset();
 
@@ -101,7 +125,7 @@
     });
 
   Tinytest.add(
-    'roles - can\'t create duplicate roles', 
+    'roles - can\'t create duplicate roles',
     function (test) {
       reset();
 
@@ -111,7 +135,7 @@
     });
 
   Tinytest.add(
-    'roles - can\'t create role with empty names', 
+    'roles - can\'t create role with empty names',
     function (test) {
       reset();
 
@@ -161,7 +185,7 @@
     });
 
   Tinytest.add(
-    'roles - can check if user is in role', 
+    'roles - can check if user is in role',
     function (test) {
       reset();
 
@@ -309,7 +333,7 @@
     });
 
   Tinytest.add(
-    'roles - can check if non-existant user is in role', 
+    'roles - can check if non-existant user is in role',
     function (test) {
       reset();
 
@@ -317,16 +341,16 @@
     });
 
   Tinytest.add(
-    'roles - can check if null user is in role', 
+    'roles - can check if null user is in role',
     function (test) {
       var user = null;
       reset();
-      
+
       test.isFalse(Roles.userIsInRole(user, 'admin'));
     });
 
   Tinytest.add(
-    'roles - can check user against several roles at once', 
+    'roles - can check user against several roles at once',
     function (test) {
       var user;
       reset();
@@ -342,7 +366,7 @@
     });
 
   Tinytest.add(
-    'roles - can\'t add non-existent user to role', 
+    'roles - can\'t add non-existent user to role',
     function (test) {
       reset();
 
@@ -386,7 +410,7 @@
     });
 
   Tinytest.add(
-    'roles - can add individual users to roles', 
+    'roles - can add individual users to roles',
     function (test) {
       reset();
 
@@ -439,7 +463,7 @@
     });
 
   Tinytest.add(
-    'roles - can add user to roles via user object', 
+    'roles - can add user to roles via user object',
     function (test) {
       reset();
 
@@ -464,7 +488,7 @@
     });
 
   Tinytest.add(
-    'roles - can add user to roles multiple times', 
+    'roles - can add user to roles multiple times',
     function (test) {
       reset();
 
@@ -512,7 +536,7 @@
     });
 
   Tinytest.add(
-    'roles - can add multiple users to roles', 
+    'roles - can add multiple users to roles',
     function (test) {
       reset();
 
@@ -565,7 +589,7 @@
     });
 
   Tinytest.add(
-    'roles - can remove individual users from roles', 
+    'roles - can remove individual users from roles',
     function (test) {
       reset();
 
@@ -603,7 +627,7 @@
     });
 
   Tinytest.add(
-    'roles - can remove users from roles via user object', 
+    'roles - can remove users from roles via user object',
     function (test) {
       reset();
 
@@ -612,7 +636,7 @@
 
       var eve = Meteor.users.findOne({_id: users.eve}),
           bob = Meteor.users.findOne({_id: users.bob});
-    
+
       // remove user role - one user
       Roles.addUsersToRoles([eve, bob], ['editor', 'user']);
       testUser(test, 'eve', ['editor', 'user']);
@@ -679,7 +703,7 @@
     });
 
   Tinytest.add(
-    'roles - can remove multiple users from roles', 
+    'roles - can remove multiple users from roles',
     function (test) {
       reset();
 
@@ -735,7 +759,7 @@
     });
 
   Tinytest.add(
-    'roles - can set user roles', 
+    'roles - can set user roles',
     function (test) {
       reset();
 
@@ -746,7 +770,7 @@
       var eve = Meteor.users.findOne({_id: users.eve}),
           bob = Meteor.users.findOne({_id: users.bob}),
           joe = Meteor.users.findOne({_id: users.joe});
-    
+
       Roles.setUserRoles([users.eve, bob], ['editor', 'user']);
       testUser(test, 'eve', ['editor', 'user']);
       testUser(test, 'bob', ['editor', 'user']);
@@ -786,7 +810,7 @@
       var eve = Meteor.users.findOne({_id: users.eve}),
           bob = Meteor.users.findOne({_id: users.bob}),
           joe = Meteor.users.findOne({_id: users.joe});
-    
+
       Roles.setUserRoles([users.eve, users.bob], ['editor', 'user'], 'scope1');
       Roles.setUserRoles([users.bob, users.joe], ['admin'], 'scope2');
       testUser(test, 'eve', ['editor', 'user'], 'scope1');
@@ -823,8 +847,8 @@
       testUser(test, 'bob', ['admin', 'editor'], 'scope2');
       testUser(test, 'joe', ['editor'], 'scope2');
 
-      test.isTrue(_.contains(_.pluck(Roles.getRolesForUser(users.bob, {anyScope: true, fullObjects: true}), 'scope'), 'scope1'));
-      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.joe, {anyScope: true, fullObjects: true}), 'scope'), 'scope1'));
+      test.isTrue(Roles.getRolesForUser(users.bob, {anyScope: true, fullObjects: true}).map(r => r.scope).includes('scope1'));
+      test.isFalse(Roles.getRolesForUser(users.joe, {anyScope: true, fullObjects: true}).map(r => r.scope).includes('scope1'));
 
       Roles.setUserRoles([bob, users.joe], [], 'scope1');
       testUser(test, 'eve', ['user'], 'scope1');
@@ -835,8 +859,8 @@
       testUser(test, 'joe', ['editor'], 'scope2');
 
       // When roles in a given scope are removed, we do not want any dangling database content for that scope.
-      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.bob, {anyScope: true, fullObjects: true}), 'scope'), 'scope1'));
-      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.joe, {anyScope: true, fullObjects: true}), 'scope'), 'scope1'));
+      test.isFalse(Roles.getRolesForUser(users.bob, {anyScope: true, fullObjects: true}).map(r => r.scope).includes('scope1'));
+      test.isFalse(Roles.getRolesForUser(users.joe, {anyScope: true, fullObjects: true}).map(r => r.scope).includes('scope1'));
     });
 
   Tinytest.add(
@@ -850,7 +874,7 @@
       var eve = Meteor.users.findOne({_id: users.eve}),
           bob = Meteor.users.findOne({_id: users.bob}),
           joe = Meteor.users.findOne({_id: users.joe});
-    
+
       Roles.addUsersToRoles(eve, 'admin', Roles.GLOBAL_SCOPE);
       testUser(test, 'eve', ['admin'], 'scope1');
       testUser(test, 'eve', ['admin']);
@@ -862,25 +886,25 @@
 
 
   Tinytest.add(
-    'roles - can get all roles', 
+    'roles - can get all roles',
     function (test) {
       reset();
 
-      _.each(roles, function (role) {
+      roles.forEach(function (role) {
         Roles.createRole(role);
       });
 
       // compare roles, sorted alphabetically
-      var expected = _.clone(roles),
-          actual = _.pluck(Roles.getAllRoles().fetch(), '_id');
+      var expected = roles,
+          actual = Roles.getAllRoles().fetch().map(r => r._id);
 
       test.equal(actual, expected);
 
-      test.equal(_.pluck(Roles.getAllRoles({sort: {_id: -1}}).fetch(), '_id'), expected.reverse());
+      test.equal(Roles.getAllRoles({sort: {_id: -1}}).fetch().map(r => r._id), expected.reverse());
     });
 
   Tinytest.add(
-    'roles - can\'t get roles for non-existant user', 
+    'roles - can\'t get roles for non-existant user',
     function (test) {
       reset();
       test.equal(Roles.getRolesForUser('1'), []);
@@ -888,7 +912,7 @@
     });
 
   Tinytest.add(
-    'roles - can get all roles for user', 
+    'roles - can get all roles for user',
     function (test) {
       reset();
 
@@ -1133,7 +1157,7 @@
       test.equal(Roles.getRolesForUser(userObj, 'scope1'), ['editor']);
       test.equal(Roles.getRolesForUser(userObj), ['editor']);
     });
-    
+
   Tinytest.add(
     'roles - can get all scopes for user',
     function (test) {
@@ -1156,7 +1180,7 @@
       userObj = Meteor.users.findOne({_id: userId});
       test.equal(Roles.getScopesForUser(userObj), ['scope1', 'scope2']);
     });
-  
+
   Tinytest.add(
     'roles - can get all scopes for user by role',
     function (test) {
@@ -1183,7 +1207,7 @@
       test.equal(Roles.getScopesForUser(userObj, 'editor'), ['scope1', 'scope2']);
       test.equal(Roles.getScopesForUser(userObj, 'admin'), []);
   });
-  
+
   Tinytest.add(
     'roles - getScopesForUser returns [] when not using scopes',
     function (test) {
@@ -1249,7 +1273,7 @@
       test.equal(Roles.getScopesForUser(userObj, ['editor', 'moderator']), ['group1', 'group2', 'group3']);
       test.equal(Roles.getScopesForUser(userObj, ['user', 'moderator']), ['group2', 'group3']);
     });
-  
+
   Tinytest.add(
     'roles - getting all scopes for user does not include GLOBAL_SCOPE',
     function (test) {
@@ -1288,7 +1312,7 @@
 
 
   Tinytest.add(
-    'roles - can get all users in role', 
+    'roles - can get all users in role',
     function (test) {
       reset();
 
@@ -1300,7 +1324,7 @@
       Roles.addUsersToRoles([users.bob, users.joe], ['editor']);
 
       var expected = [users.eve, users.joe],
-          actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
+          actual = Roles.getUsersInRole('admin').fetch().map(r => r._id);
 
       itemsEqual(test, actual, expected);
     });
@@ -1317,22 +1341,22 @@
       Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'scope2');
 
       var expected = [users.eve, users.joe],
-          actual = _.pluck(Roles.getUsersInRole('admin', 'scope1').fetch(), '_id');
+          actual = Roles.getUsersInRole('admin', 'scope1').fetch().map(r => r._id);
 
       itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin', {scope: 'scope1'}).fetch(), '_id');
+      actual = Roles.getUsersInRole('admin', {scope: 'scope1'}).fetch().map(r => r._id);
       itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin', {anyScope: true}).fetch(), '_id');
+      actual = Roles.getUsersInRole('admin', {anyScope: true}).fetch().map(r => r._id);
       itemsEqual(test, actual, expected);
 
-      actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
+      actual = Roles.getUsersInRole('admin').fetch().map(r => r._id);
       test.equal(actual, []);
     });
-  
+
   Tinytest.add(
     'roles - can get all users in role by scope including Roles.GLOBAL_SCOPE',
     function (test) {
@@ -1345,22 +1369,22 @@
       Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'scope2');
 
       var expected = [users.eve],
-          actual = _.pluck(Roles.getUsersInRole('admin', 'scope1').fetch(), '_id');
+          actual = Roles.getUsersInRole('admin', 'scope1').fetch().map(r => r._id);
 
       itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin', 'scope2').fetch(), '_id');
+      actual = Roles.getUsersInRole('admin', 'scope2').fetch().map(r => r._id);
 
       itemsEqual(test, actual, expected);
 
       expected = [users.eve];
-      actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
+      actual = Roles.getUsersInRole('admin').fetch().map(r => r._id);
 
       itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin', {anyScope: true}).fetch(), '_id');
+      actual = Roles.getUsersInRole('admin', {anyScope: true}).fetch().map(r => r._id);
 
       itemsEqual(test, actual, expected);
     });
@@ -1436,7 +1460,7 @@
       testUser(test, 'bob', ['admin'], 'scope2');
       testUser(test, 'bob', ['admin'], 'scope1');
     });
-  
+
   Tinytest.add(
     'roles - Roles.GLOBAL_SCOPE also checked when scope not specified',
     function (test) {

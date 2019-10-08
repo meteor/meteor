@@ -121,11 +121,11 @@ Object.assign(Roles, {
           roles: 1
         }
       }
-    }).forEach(function (user, index, cursor) {
+    }).fetch().forEach(function (user, index, cursor) {
       // role can be assigned multiple times to the user, for multiple scopes
       // we have to remove the role for each of those scopes
-      roles = Array.prototype.filter.call(user.roles, Roles._roleMatcher(roleName));
-      Array.prototype.forEach.call(roles, function (role) {
+      roles = user.roles.filter(Roles._roleMatcher(roleName));
+      roles.forEach(function (role) {
         Roles._removeUserFromRole(user, roleName, {
           scope: role.scope,
           // we want to remove the role in any case
@@ -246,22 +246,21 @@ Object.assign(Roles, {
     }
 
     // detect cycles
-    alreadyCheckedRoles = [];
-    rolesToCheck = role.children.map(function (child) { return child._id; });
-    while (rolesToCheck.length) {
-      checkRoleName = rolesToCheck.pop();
+    alreadyCheckedRoles = new Set();
+    rolesToCheck = new Set(role.children.map(r => r._id));
+    rolesToCheck.forEach(checkRoleName => {
       if (checkRoleName === parentName) {
         throw new Error("Roles '" + roleName + "' and '" + parentName + "' would form a cycle.");
       }
-      alreadyCheckedRoles.push(checkRoleName);
+
+      alreadyCheckedRoles.add(checkRoleName);
 
       checkRole = Meteor.roles.findOne({_id: checkRoleName});
 
-      // This should not happen, but this is a problem to address at some other time.
-      if (!checkRole) continue;
-
-      rolesToCheck = [...new Set([...rolesToCheck, ...difference(checkRole.children.map(function (child) { return child._id; }), alreadyCheckedRoles)])];
-    }
+      if (checkRole) {
+        checkRole.children.map(r => r._id).filter(r => !alreadyCheckedRoles.has(r)).forEach(r => rolesToCheck.add(r));
+      }
+    })
 
     count = Meteor.roles.update({
       _id: parentName,
@@ -288,11 +287,11 @@ Object.assign(Roles, {
           roles: 1
         }
       }
-    }).forEach(function (user, index, cursor) {
+    }).fetch().forEach(function (user, index, cursor) {
       // parent role can be assigned multiple times to the user, for multiple scopes
       // we have to assign a new subrole for each of those scopes
-      parentRoles = Array.prototype.filter.call(user.roles, Roles._roleMatcher(parentName));
-      Array.prototype.forEach.call(parentRoles, function (parentRole) {
+      parentRoles = user.roles.filter(Roles._roleMatcher(parentName));
+      parentRoles.forEach(function (parentRole) {
         Roles._addUserToRole(user, roleName, {
           scope: parentRole.scope,
           // we are assigning a subrole, so we set it as unassigned,
@@ -318,7 +317,7 @@ Object.assign(Roles, {
     // ensure arrays
     if (!Array.isArray(rolesNames)) rolesNames = [rolesNames];
 
-    Array.prototype.forEach.call(rolesNames, function (roleName) {
+    rolesNames.forEach(function (roleName) {
       Roles._removeRoleFromParent(roleName, parentName);
     });
   },
@@ -368,11 +367,11 @@ Object.assign(Roles, {
           roles: 1
         }
       }
-    }).forEach(function (user, index, cursor) {
+    }).fetch().forEach(function (user, index, cursor) {
       // parent role can be assigned multiple times to the user, for multiple scopes
       // we have to remove the subrole for each of those scopes
-      parentRoles = Array.prototype.filter.call(user.roles, Roles._roleMatcher(parentName));
-      Array.prototype.forEach.call(parentRoles, function (parentRole) {
+      parentRoles = user.roles.filter(Roles._roleMatcher(parentName));
+      parentRoles.forEach(function (parentRole) {
         Roles._removeUserFromRole(user, roleName, {
           scope: parentRole.scope,
           // but we want to remove it only if it was not also explicitly assigned
@@ -418,19 +417,17 @@ Object.assign(Roles, {
 
     Roles._checkScopeName(options.scope);
 
-    if (typeof options.ifExists === 'undefined') {
-      options.ifExists = false
-    }
-    if (typeof options._assigned === 'undefined') {
+    options = Object.assign({
+      ifExists: false,
       // internal option, should not be used publicly because it will break assumptions
       // in te code; publicly, you can only add users to an assigned role
       // should the role be set as assigned, default is `true`; `null` is the same as `false`,
       // only that it does not force the value to `false` if the role is already assigned
-      options._assigned = true
-    }
+      _assigned: true
+    }, options);
 
-    Array.prototype.forEach.call(users, function (user) {
-      Array.prototype.forEach.call(roles, function (role) {
+    users.forEach(function (user) {
+      roles.forEach(function (role) {
         Roles._addUserToRole(user, role, options);
       });
     });
@@ -471,18 +468,16 @@ Object.assign(Roles, {
 
     Roles._checkScopeName(options.scope);
 
-    if (typeof options.ifExists === 'undefined') {
-      options.ifExists = false
-    }
-    if (typeof options._assigned === 'undefined') {
+    options = Object.assign({
+      ifExists: false,
       // internal option, should not be used publicly because it will break assumptions
       // in te code; publicly, you can only add users to an assigned role
       // should the role be set as assigned, default is `true`; `null` is the same as `false`,
       // only that it does not force the value to `false` if the role is already assigned
-      options._assigned = true
-    }
+      _assigned: true
+    }, options);
 
-    Array.prototype.forEach.call(users, function (user) {
+    users.forEach(function (user) {
       if (isObject(user)) {
         id = user._id;
       }
@@ -493,7 +488,7 @@ Object.assign(Roles, {
       Meteor.users.update(id, {$pull: {roles: {scope: options.scope}}});
 
       // and then add all
-      Array.prototype.forEach.call(roles, function (role) {
+      roles.forEach(function (role) {
         Roles._addUserToRole(user, role, options);
       });
     });
@@ -611,7 +606,7 @@ Object.assign(Roles, {
       scope: options.scope
     }];
 
-    Array.prototype.forEach.call(role.children, function (child) {
+    role.children.forEach(function (child) {
       // subroles are set as unassigned, but only if they do not already exist
       setRoles = setRoles.concat(Roles._addUserToRole(user, child._id, Object.assign({}, options, {_assigned: null})));
     });
@@ -648,20 +643,21 @@ Object.assign(Roles, {
 
     Roles._checkScopeName(options.scope);
 
-
     if (typeof options.ifExists === 'undefined') {
       options.ifExists = false
     }
     if (typeof options._assigned === 'undefined') {
+
       // internal option, should not be used publicly because it will break assumptions
       // in te code; publicly, you can only remove users from an assigned role
       // when should the role be removed, default is `true` which means only when it is assigned,
       // `false` means when it is not assigned, and `null` means always
+
       options._assigned = true
     }
 
-    Array.prototype.forEach.call(users, function (user) {
-      Array.prototype.forEach.call(roles, function (role) {
+    users.forEach(function (user) {
+      roles.forEach(function (role) {
         Roles._removeUserFromRole(user, role, options);
       });
 
@@ -732,7 +728,7 @@ Object.assign(Roles, {
     // role does not exist, we do not anything more
     if (!role) return;
 
-    Array.prototype.forEach.call(role.children, function (child) {
+    role.children.forEach(function (child) {
       // if a child role has been assigned explicitly, we do not remove it
       Roles._removeUserFromRole(user, child._id, Object.assign({}, options, {_assigned: false}));
     });
@@ -760,10 +756,10 @@ Object.assign(Roles, {
     user = Roles._resolveUser(user, true);
 
     // only assigned roles
-    roles = Array.prototype.filter.call(user.roles, Roles._onlyAssignedMatcher());
+    roles = user.roles.filter(Roles._onlyAssignedMatcher());
 
     setRoles = [];
-    Array.prototype.forEach.call(roles, function (role) {
+    roles.forEach(function (role) {
       setRoles = setRoles.concat(Roles._addUserToRole(user, role._id, {
         scope: role.scope,
         _assigned: role.assigned, // this is true
@@ -836,12 +832,12 @@ Object.assign(Roles, {
 
     if (isObject(user)) {
       if (user.hasOwnProperty('roles')) {
-        return Array.prototype.some.call(roles, function (role) {
+        return roles.some(function (role) {
           if (options.anyScope) {
-            return Array.prototype.some.call(user.roles || [], Roles._roleMatcher(role));
+            return (user.roles || []).some(Roles._roleMatcher(role));
           }
           else {
-            return Array.prototype.some.call(user.roles || [], Roles._roleAndScopeMatcher(role, options.scope));
+            return (user.roles || []).some(Roles._roleAndScopeMatcher(role, options.scope));
           }
         })
       } else {
@@ -911,18 +907,18 @@ Object.assign(Roles, {
       roles = user.roles || [];
     }
     else {
-      roles = Array.prototype.filter.call(user.roles || [], Roles._scopeMatcher(options.scope));
+      roles = (user.roles || []).filter(Roles._scopeMatcher(options.scope));
     }
 
     if (options.onlyAssigned) {
-      roles = Array.prototype.filter.call(roles, Roles._onlyAssignedMatcher());
+      roles = roles.filter(Roles._onlyAssignedMatcher());
     }
 
     if (options.fullObjects) {
       return roles;
     }
 
-    return [...new Set(roles.map(function (role) { return role._id; }))];
+    return [...new Set(roles.map(role => role._id))];
   },
 
   /**
@@ -1001,12 +997,10 @@ Object.assign(Roles, {
 
     Roles._checkScopeName(options.scope);
 
-    if (typeof options.queryOptions === 'undefined') {
-      options.queryOptions = queryOptions || {}
-    }
-    if (typeof options.anyScope === 'undefined') {
-      options.anyScope = false
-    }
+    options = Object.assign({
+      queryOptions: queryOptions || {},
+      anyScope: false
+    }, options);
 
     if (options.anyScope) {
       query = {
@@ -1067,7 +1061,7 @@ Object.assign(Roles, {
     if (!user) return [];
 
     scopes = [];
-    Array.prototype.forEach.call(user.roles || [], function (userRole) {
+    (user.roles || []).forEach(function (userRole) {
       // == used on purpose.
       if (userRole.scope == null) return;
       if (roles && !roles.includes(userRole._id)) return;
@@ -1145,6 +1139,7 @@ Object.assign(Roles, {
    */
   _resolveUser: function (user, force) {
     // TODO: We could use $elemMatch to limit returned fields here.
+
     if (!isObject(user)) {
       user = Meteor.users.findOne(
                {_id: user},

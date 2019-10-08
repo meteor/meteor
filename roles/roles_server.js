@@ -23,7 +23,7 @@ Meteor.publish('_roles', function () {
                            {fields: fields});
 });
 
-_.extend(Roles, {
+Object.assign(Roles, {
   /**
    * @method _isNewRole
    * @param {Object} role `Meteor.roles` document.
@@ -34,7 +34,7 @@ _.extend(Roles, {
    * @static
    */
   _isNewRole: function (role) {
-    return !_.has(role, 'name') && _.has(role, 'children');
+    return !('name' in role) && 'children' in role;
   },
 
   /**
@@ -47,7 +47,7 @@ _.extend(Roles, {
    * @static
    */
   _isOldRole: function (role) {
-    return _.has(role, 'name') && !_.has(role, 'children');
+    return 'name' in role && !('children' in role);
   },
 
   /**
@@ -60,7 +60,7 @@ _.extend(Roles, {
    * @static
    */
   _isNewField: function (roles) {
-    return _.isArray(roles) && _.isObject(roles[0]);
+    return Array.isArray(roles) && (typeof roles[0] === 'object');
   },
 
   /**
@@ -73,7 +73,7 @@ _.extend(Roles, {
    * @static
    */
   _isOldField: function (roles) {
-    return (_.isArray(roles) && _.isString(roles[0])) || (_.isObject(roles) && !_.isArray(roles));
+    return (Array.isArray(roles) && (typeof roles[0] === 'string')) || ((typeof roles === 'object') && !Array.isArray(roles));
   },
 
   /**
@@ -85,7 +85,7 @@ _.extend(Roles, {
    * @static
    */
   _convertToNewRole: function (oldRole) {
-    if (!_.isString(oldRole.name)) throw new Error("Role name '" + oldRole.name + "' is not a string.");
+    if (!(typeof oldRole.name === 'string')) throw new Error("Role name '" + oldRole.name + "' is not a string.");
 
     return {
       _id: oldRole.name,
@@ -102,7 +102,7 @@ _.extend(Roles, {
    * @static
    */
   _convertToOldRole: function (newRole) {
-    if (!_.isString(newRole._id)) throw new Error("Role name '" + newRole._id + "' is not a string.");
+    if (!(typeof newRole._id === 'string')) throw new Error("Role name '" + newRole._id + "' is not a string.");
 
     return {
       name: newRole._id
@@ -120,9 +120,9 @@ _.extend(Roles, {
    */
   _convertToNewField: function (oldRoles, convertUnderscoresToDots) {
     var roles = [];
-    if (_.isArray(oldRoles)) {
-      _.each(oldRoles, function (role, index) {
-        if (!_.isString(role)) throw new Error("Role '" + role + "' is not a string.");
+    if (Array.isArray(oldRoles)) {
+      oldRoles.forEach(function (role, index) {
+        if (!(typeof role === 'string')) throw new Error("Role '" + role + "' is not a string.");
 
         roles.push({
           _id: role,
@@ -131,8 +131,8 @@ _.extend(Roles, {
         })
       });
     }
-    else if (_.isObject(oldRoles)) {
-      _.each(oldRoles, function (rolesArray, group) {
+    else if (typeof oldRoles === 'object') {
+      Object.entries(oldRoles).forEach(([group, rolesArray]) => {
         if (group === '__global_roles__') {
           group = null;
         }
@@ -141,8 +141,8 @@ _.extend(Roles, {
           group = group.replace(/_/g, '.');
         }
 
-        _.each(rolesArray, function (role, index) {
-          if (!_.isString(role)) throw new Error("Role '" + role + "' is not a string.");
+        rolesArray.forEach(function (role) {
+          if (!(typeof role === 'string')) throw new Error("Role '" + role + "' is not a string.");
 
           roles.push({
             _id: role,
@@ -174,8 +174,8 @@ _.extend(Roles, {
       roles = [];
     }
 
-    _.each(newRoles, function (userRole, index) {
-      if (!_.isObject(userRole)) throw new Error("Role '" + userRole + "' is not an object.");
+    newRoles.forEach(function (userRole) {
+      if (!(typeof userRole === 'object')) throw new Error("Role '" + userRole + "' is not an object.");
 
       // We assume that we are converting back a failed migration, so values can only be
       // what were valid values in 1.0. So no group names starting with $ and no subroles.
