@@ -10,7 +10,8 @@ Package.onUse(function (api) {
 
   var both = ['client', 'server'];
 
-  api.use(['underscore',
+  api.use('underscore', 'server');
+  api.use(['ecmascript',
            'accounts-base',
            'tracker',
            'mongo',
