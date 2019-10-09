@@ -47,8 +47,8 @@ meteor
 
 Building an application with Meteor?
 
-* Announcement list: sign up at http://www.meteor.com/
-* Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
+* Announcement list: sign up at https://www.meteor.com/
+* Having problems? Ask for help at: https://stackoverflow.com/questions/tagged/meteor
 * Discussion forums: https://forums.meteor.com/
 
 Interested in helping or contributing to Meteor?  These resources will help:
