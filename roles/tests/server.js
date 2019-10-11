@@ -2609,6 +2609,8 @@
       test.isFalse(Roles.userIsInRole(users.eve, [], {anyScope: true}));
       test.isFalse(Roles.userIsInRole(users.eve, null, {anyScope: true}));
       test.isFalse(Roles.userIsInRole(users.eve, undefined, {anyScope: true}));
+
+      test.isFalse(Roles.userIsInRole(users.eve, ["Role1", "Role2", undefined], "GroupName"));
     });
 
   function printException (ex) {
