@@ -8,7 +8,7 @@ description: Documentation of Meteor's `dynamic-import` package.
 The `dynamic-import` package provides an implementation of
 `Module.prototype.dynamicImport`, an extension of the module runtime which
 powers the [dynamic `import(...)`](https://github.com/tc39/proposal-dynamic-import)
-statement, an up-and-coming (currently stage 3 out of 4) addition to the
+statement, an up-and-coming (ECMA2020) addition to the
 ECMAScript standard.
 
 The dynamic `import(...)` statement is a complimentary method to the static
@@ -19,7 +19,7 @@ runtime.
 
 Once a module is fetched dynamically from the server, it is cached permanently
 on the client and additional requests for the same version of the module will
-not incur the round-trip request to the server.  If the module is changed then a
+not incur the round-trip request to the server. If the module is changed then a
 fresh copy will always be retrieved from the server.
 
 ## Usage
@@ -61,3 +61,57 @@ async function performTask() {
 > ```js
 > import("another-tool").then(({ default: thatTool }) => thatTool.go());
 > ```
+
+### Using `import()` with dynamic expressions
+
+If you try to import using any computed expression like so:
+```js
+let path = 'example';
+const module = await import(`/libs/${path}.js`);
+```
+You'll get an error like so:
+```js
+Error: Cannot find module '/libs/example.js'
+```
+
+Meteor’s build process builds a graph of all files that are imported or required 
+using static analysis. It then creates exact bundles of the the referenced files
+and makes them available to the client for `import()`.
+
+Without a complete import statement (static, dynamic or `require`), Meteor won't
+make that module available for `import()`.
+
+The solution to make dynamic expressions work is to create a module white-list 
+that can be read by the build process, but does not actually run like so:
+```js
+if (false) {
+  import("/libs/example.js");
+  import("/libs/another-example.js");
+  import("/libs/yet-another-example.js");
+}
+```
+This whitelist must be imported in both client and server code so the 
+referenced modules are included. Make sure the whitelist is imported from the 
+client and server entry points.
+
+## Difference to other bundling systems
+
+In Meteor's implementaiton, the client has perfect information about which
+modules were in the initial bundle, which modules are in the local cache, and
+which modules still need to be fetched. There is never any overlap between
+requests made by a single client, nor will there be any unneeded modules in the
+response from the server. You might call this strategy **exact code splitting**,
+to differentiate it from bundling.
+
+Moreover, the initial bundle includes the hashes of all available dynamic
+modules, so the client doesn't have to ask the server if it can use a cached
+version of a module, and the same version of the module never needs to be
+downloaded again by the same client. This caching system has all the benefits of
+immutable caching.
+
+Meteor also allows dynamic expressions as the dependency is expressed statically
+somewhere else in your code. This is possible because Meteor's client-side module
+system understands how to resolve dynamic strings at runtime (which is not true
+in webpack or browserify, because they replace module identifier strings with 
+numbers). However, the set of available modules is constrained by the string 
+literals that you, the programmer, explicitly decided to allow to be imported.
