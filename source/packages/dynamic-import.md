@@ -49,27 +49,31 @@ async function performTask() {
   tool.task();
 }
 ```
+{% blockquote %}
+**Default exports**
 
-> **Default exports**
->
-> The `import(...)` `Promise` is resolved with the `exports` of the module.
-> If it's necessary to use the "default" export from a module, it will be
-> available on the `default` property of the resulting object.  In the above
-> examples, this means it will be available as `tool.default`.  It can be
-> helpful to use parameter de-structuring to provide additional clarity:
->
-> ```js
-> import("another-tool").then(({ default: thatTool }) => thatTool.go());
-> ```
+The `import(...)` `Promise` is resolved with the `exports` of the module.
+If it's necessary to use the "default" export from a module, it will be
+available on the `default` property of the resulting object.  In the above
+examples, this means it will be available as `tool.default`.  It can be
+helpful to use parameter de-structuring to provide additional clarity:
+
+```js
+import("another-tool").then(({ default: thatTool }) => thatTool.go());
+```
+{% endblockquote %}
 
 ### Using `import()` with dynamic expressions
 
 If you try to import using any computed expression, such as:
+
 ```js
 let path = 'example';
 const module = await import(`/libs/${path}.js`);
 ```
+
 You'll get an error like so:
+
 ```js
 Error: Cannot find module '/libs/example.js'
 ```
@@ -83,6 +87,7 @@ make that module available for `import()`.
 
 The solution to make dynamic expressions work is to create a module "whitelist"
 that can be read by the build process, but does not actually run. For example:
+
 ```js
 if (false) {
   import("/libs/example.js");
@@ -90,6 +95,7 @@ if (false) {
   import("/libs/yet-another-example.js");
 }
 ```
+
 Make sure the whitelist is imported from both the client and server entry points.
 
 ## Difference to other bundling systems
