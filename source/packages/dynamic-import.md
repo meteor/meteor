@@ -119,4 +119,4 @@ client-side module system understands how to resolve dynamic strings at runtime
 (which is not true in webpack or browserify, because they replace module
 identifier strings with numbers). However, the set of available modules is
 constrained by the string literals that you, the programmer, explicitly decided
-to allow to be imported.
+to allow to be imported (either directly or in a whitelist).
