@@ -15,8 +15,8 @@ Atmosphere packages are packages written specifically for Meteor and have severa
 - Explicitly include non-javascript files including CSS, Less, Sass, Stylus and static assets
 - Take advantage of Meteor's [build system](build-tool.html) to be automatically transpiled from languages like CoffeeScript
 - Have a well defined way to ship different code for client and server, enabling different behavior in each context
-- Get direct access to Meteor's [package namespacing](using-atmosphere-packages.md#package-namespacing) and package global exports without having to explicitly use ES2015 `import`
-- Enforce exact version dependencies between packages using Meteor's [constraint resolver](writing-atmosphere-packages.md#version-constraints)
+- Get direct access to Meteor's [package namespacing](using-atmosphere-packages.html#package-namespacing) and package global exports without having to explicitly use ES2015 `import`
+- Enforce exact version dependencies between packages using Meteor's [constraint resolver](writing-atmosphere-packages.html#version-constraints)
 - Include [build plugins](build-tool.html#compiles-with-build-plugins) for Meteor's build system
 - Include pre-built binary code for different server architectures, such as Linux or Windows
 
@@ -26,6 +26,6 @@ If your package depends on an Atmosphere package (which, in Meteor 1.3, includes
 
 npm is a repository of general JavaScript packages. These packages were originally intended solely for the Node.js server-side environment, but as the JavaScript ecosystem matured, solutions arose to enable the use of npm packages in other environments such as the browser. Today, npm is used for all types of JavaScript packages.
 
-If you want to distribute and reuse code that you've written for a Meteor application, then you should consider publishing that code on npm if it's general enough to be consumed by a wider JavaScript audience. It's simple to [use npm packages in Meteor applications](using-npm-packages.html#using-npm), and possible to [use npm packages within Atmosphere packages](writing-atmosphere-packages.html#npm-dependencies), so even if your main audience is Meteor developers, npm might be the best choice.
+If you want to distribute and reuse code that you've written for a Meteor application, then you should consider publishing that code on npm if it's general enough to be consumed by a wider JavaScript audience. It's possible to [use npm packages in Meteor applications](using-npm-packages.html#using-npm), and possible to [use npm packages within Atmosphere packages](writing-atmosphere-packages.html#npm-dependencies), so even if your main audience is Meteor developers, npm might be the best choice.
 
 > Meteor comes with npm bundled so that you can type `meteor npm` without worrying about installing it yourself. If you like, you can also use a globally installed npm to manage your packages.

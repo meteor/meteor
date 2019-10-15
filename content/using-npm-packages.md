@@ -9,11 +9,11 @@ You can use the official search at [npmjs.com](https://www.npmjs.com/) or see re
 
 <h2 id="client-npm">npm on the client</h2>
 
-Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a Node-like environment on the client so that many npm packages, even ones originally intended for the server, can run unmodified. Meteor's ES2015 module system does this for you out of the box with no additional configuration necessary. In most cases, you can simply import npm dependencies from a client file, just as you would on the server.
+Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a Node-like environment on the client so that many npm packages, even ones originally intended for the server, can run unmodified. Meteor's ES2015 module system does this for you out of the box with no additional configuration necessary. In most cases, you can import npm dependencies from a client file, just as you would on the server.
 
 > When creating a new application Meteor installs the `meteor-node-stubs` npm package to help provide this client browser compatibility. If you are upgrading an application to Meteor 1.3 you may have to run `meteor npm install --save meteor-node-stubs` manually.
 
-<h2 id="installing-npm">Installing npm Packages</h2>
+<h2 id="installing-npm">Installing npm packages</h2>
 
 npm packages are configured in a `package.json` file at the root of your project. If you create a new Meteor project, you will have such a file created for you. If not you can run `meteor npm init` to create one.
 
@@ -23,7 +23,7 @@ To install a package into your app you run the `npm install` command with the `-
 meteor npm install --save moment
 ```
 
-This will both update your `package.json` with information about the dependency and download the package into your app's local `node_modules/` directory. Typically, you don't check the `node_modules/` directory into source control and your teammates run `meteor npm install` to get up to date when dependencies change:
+This will both update your `package.json` with information about the dependency and download the package into your app's local `node_modules` directory. Typically, you don't check the `node_modules` directory into source control and your teammates run `meteor npm install` to get up to date when dependencies change:
 
 ```bash
 meteor npm install
@@ -35,9 +35,9 @@ For more information about `npm install`, check out the [official documentation]
 
 > Meteor comes with npm bundled so that you can type `meteor npm` without worrying about installing it yourself. If you like, you can also use a globally installed npm to manage your packages.
 
-<h2 id="using-npm">Using npm Packages</h2>
+<h2 id="using-npm">Using npm packages</h2>
 
-To use an npm package from a file in your application you simply `import` the name of the package:
+To use an npm package from a file in your application you `import` the name of the package:
 
 ```js
 import moment from 'moment';
@@ -59,6 +59,8 @@ You can also import other files or JS entry points from a package:
 ```js
 import { parse } from 'graphql/language';
 ```
+
+Some Meteor apps contain local Meteor packages (packages defined in the `packages/` directory of your app tree); this was an older recommendation from before Meteor had full ECMAScript support.  If your app is laid out this way, you can also `require` or `import` npm packages installed in your app from within your local Meteor packages.
 
 <h3 id="npm-styles">Importing styles from npm</h3>
 
@@ -82,7 +84,46 @@ You can also import CSS directly from a JavaScript file to control load order if
 import 'npm-package-name/stylesheets/styles.css';
 ```
 
-> When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor Build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
+> When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
+
+<h3 id="npm-assets">Building with other assets from npm</h3>
+
+Meteor also supports building other assets into your app, such as fonts, that are located in your `node_modules` directory by symbolic linking to those assets from either the `/public` or `/private` directories. For example, `font-awesome` is a very popular font library that provides lots of font-based icons. New icons appear frequently as the library is developed and it would be difficult to manage all the updates if you were to copy the entire `font-awesome` code base to your own app and git repository. Instead use the following to include these fonts:
+
+```
+cd /public
+ln -ls ../node_modules/font-awesome/fonts ./fonts
+```
+
+Any assets made available via symlinks in the `/public` and `/private` directories of an application will be copied into the Meteor application bundles when using the `meteor build` command.
+
+
+<h2 id="recompile">Recompiling npm packages</h2>
+
+Meteor does not recompile packages installed in your `node_modules` by default. However, compilation of specific npm packages (for example, to support older browsers that the package author neglected) can now be enabled in one of two ways:
+
+Option one is to clone the package repository into your application's `/imports` directory, make any modifications necessary, then use `npm install` to link the package into your `node_modules`:
+```
+meteor npm install imports/the-package
+```
+Meteor will compile the contents of the package exposed via `imports/the-package` and this compiled code will be used when you `import the-package` in any of the usual ways:
+```
+import stuff from "the-package"
+require("the-package") === require("/imports/the-package")
+import("the-package").then(...)
+```
+
+Option two is to install the package normally with `meteor npm install the-package`, then create a symbolic link to the installed package elsewhere in your application, outside of `node_modules`:
+```
+meteor npm install the-package
+cd imports
+ln -s ../node_modules/the-package .
+```
+Again, Meteor will compile the contents of the package because they are exposed outside of `node_modules` and the compiled code will be used whenever `the-package` is imported from `node_modules`.
+
+> Note: this technique also works if you create symbolic links to individual files, rather than linking the entire package directory.
+
+In both cases, Meteor will compile the exposed code as if it was part of your application, using whatever compiler plugins you have installed. You can influence this compilation using `.babelrc` files or any other techniques you would normally use to configure compilation of application code.
 
 <h2 id="npm-shrinkwrap">npm Shrinkwrap</h2>
 
@@ -96,7 +137,7 @@ meteor npm shrinkwrap
 
 This will create an `npm-shrinkwrap.json` file containing the exact versions of each dependency, and you should check this file into source control. For even more precision (the contents of a given version of a package *can* change), and to avoid a reliance on the npm server during deployment, you should consider using [`npm shrinkpack`](#npm-shrinkpack).
 
-<h2 id="async-callbacks">Asyncronous Callbacks</h2>
+<h2 id="async-callbacks">Asyncronous callbacks</h2>
 
 Many npm packages rely on an asynchronous, callback or promise-based coding style. For several reasons, Meteor is currently built around a synchronous-looking but still non-blocking style using [Fibers](https://github.com/laverdet/node-fibers).
 
@@ -119,7 +160,7 @@ Let's look at a few ways to resolve this issue.
 
 <h3 id="bind-environment">`Meteor.bindEnvironment`</h3>
 
-In most cases, simply wrapping the callback in `Meteor.bindEnvironment` will do the trick. This function both wraps the callback in a fiber, and does some work to maintain Meteor's server-side environment tracking. Here's the same code with `Meteor.bindEnvironment`:
+In most cases, wrapping the callback in `Meteor.bindEnvironment` will do the trick. This function both wraps the callback in a fiber, and does some work to maintain Meteor's server-side environment tracking. Here's the same code with `Meteor.bindEnvironment`:
 
 ```js
 // Inside a Meteor method definition
@@ -201,4 +242,4 @@ shrinkpack
 
 You should then check the generated `node_shrinkwrap/` directory into source control, but ensure it is ignored by your text editor.
 
-**NOTE**: Although this is a good idea for projects with a lot of npm dependencies, it will not affect Atmosphere dependencies, even if they themselves have direct npm dependencies.
+> NOTE: Although this is a good idea for projects with a lot of npm dependencies, it will not affect Atmosphere dependencies, even if they themselves have direct npm dependencies.

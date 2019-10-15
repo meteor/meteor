@@ -10,7 +10,7 @@ After reading this guide, you'll know:
 2. How to deploy to some common Meteor hosting environments.
 3. How to design a deployment process to make sure your application's quality is maintained.
 4. How to monitor user behavior with analytics tools.
-5. How to monitor your application with Kadira.
+5. How to monitor your application.
 6. How to make sure your site is discoverable by search engines.
 
 <h2 id="deploying">Deploying Meteor Applications</h2>
@@ -33,7 +33,7 @@ In web application deployment it's common to refer to three runtime environments
 2. **Staging.** An intermediate environment that is similar to production, but not visible to users of the application. Can be used for testing and QA.
 3. **Production.** The real deployment of your app that your customers are currently using.
 
-The idea of the staging environment is to provide a non-user-visible test environment that is as close as possible to production in terms of infrastructure. It's common for issues to appear with new code on the production infrastructure that just don't happen in a development environment. A very simple example is issues that involve latency between the client and server---connecting to a local development server with tiny latencies, you just may never see such an issue.
+The idea of the staging environment is to provide a non-user-visible test environment that is as close as possible to production in terms of infrastructure. It's common for issues to appear with new code on the production infrastructure that don't happen in a development environment. A very simple example is issues that involve latency between the client and server---connecting to a local development server with tiny latencies, you just may never see such an issue.
 
 For this reason, developers tend to try and get staging as close as possible to production. This means that all the steps we outline below about production deployment, should, if possible, also be followed for your staging server.
 
@@ -46,7 +46,7 @@ There are two main ways to configure your application outside of the code of the
 
 Settings should be used to set environment (i.e. staging vs production) specific things, like the access token and secret used to connect to Google. These settings will not change between any given process running your application in the given environment.
 
-Environment variables are used to set process specific things, which could conceivably change for different instances of your application's processes. For instance, you can set a different `KADIRA_OPTIONS_HOSTNAME` for each process to ensure that [kadira](#kadira) logs timings with useful hostnames.
+Environment variables are used to set process-specific things, which could conceivably change for different instances of your application's processes. A list of environment variables can be found [here](https://docs.meteor.com/environment-variables.html).
 
 A final note on storing these settings: It's not a good idea to store settings the same repository where you keep your app code. Read about good places to put your settings in the [Security article](security.html#api-keys).
 
@@ -94,7 +94,7 @@ Template.registerHelper("assetUrl", (asset) => {
 
 <h4 id="cdn-webfonts">CDNs and webfonts</h4>
 
-If you are hosting a webfont as part of your application and serving it via a CDN, you may need to configure the served headers for the font to allow cross-origin resource sharing (as the webfont is now served from a different origin to your site itself). You can do this easily enough in Meteor by adding a handler (you'll need to ensure your CDN is passing the header through):
+If you are hosting a webfont as part of your application and serving it via a CDN, you may need to configure the served headers for the font to allow cross-origin resource sharing (as the webfont is now served from a different origin to your site itself). You can do this in Meteor by adding a handler (you'll need to ensure your CDN is passing the header through):
 
 ```js
 import { WebApp } from 'meteor/webapp';
@@ -125,11 +125,11 @@ Meteor is an open source platform, and you can run the apps that you make with M
 
 The easiest way to operate your app with confidence is to use Galaxy, the service built by Meteor Development Group specifically to run Meteor apps.
 
-Galaxy is a distributed system that runs on Amazon AWS. If you understand what it takes to run Meteor apps correctly and just how Galaxy works, you’ll come to appreciate Galaxy’s value, and that it will save you a lot of time and trouble. Most large Meteor apps run on Galaxy today, and many of them have switched from custom solutions they used prior to Galaxy’s launch.
+Galaxy is a distributed system that runs on Amazon AWS. If you understand what it takes to run Meteor apps correctly and how Galaxy works, you’ll come to appreciate Galaxy’s value, and that it will save you a lot of time and trouble. Most large Meteor apps run on Galaxy today, and many of them have switched from custom solutions they used prior to Galaxy’s launch.
 
 In order to deploy to Galaxy, you'll need to [sign up for an account](https://www.meteor.com/galaxy/signup), and separately provision a MongoDB database (see below).
 
-Once you've done that, it's easy to [deploy to Galaxy](http://galaxy-guide.meteor.com/deploy-guide.html). You just need to [add some environment variables to your settings file](http://galaxy-guide.meteor.com/environment-variables.html) to point it at your MongoDB, and you can deploy with:
+Once you've done that, it's easy to [deploy to Galaxy](http://galaxy-guide.meteor.com/deploy-guide.html). You need to [add some environment variables to your settings file](http://galaxy-guide.meteor.com/environment-variables.html) to point it at your MongoDB, and you can deploy with:
 
 ```bash
 DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
@@ -145,33 +145,23 @@ You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you
 
 If you are following [our advice](security.html#ssl), you'll probably want to [set up SSL](http://galaxy-guide.meteor.com/encryption.html) on your Galaxy application with the certificate and key for your domain. You should also read the [Security](security.html#ssl) section of this guide for information on how to forcibly redirect HTTP to HTTPS.
 
-Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), and scaling is even easier---simply log into galaxy.meteor.com, and scale instantly from there.
+Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), as is scaling --- log into galaxy.meteor.com, and scale instantly from there.
 
 <img src="images/galaxy-scaling.png">
 
 <h3 id="mup">Meteor Up</h3>
 
-Meteor Up, often referred to as "mupx" or "mup", is a third-party open-source tool that can be used to deploy Meteor application to any online server over SSH. It handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly.  It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
+[Meteor Up](http://meteor-up.com), often referred to as "mup", is a third-party open-source tool that can be used to deploy Meteor application to any online server over SSH. It handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly.  It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
 
 You can obtain a server running Ubuntu or Debian from many generic hosting providers and Meteor Up can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
-
-Meteor Up has multiple projects so select what is best for your project:
-* Original [Meteor Up](https://github.com/arunoda/meteor-up) (not generally recommended any longer)
-* The [`mupx`](https://github.com/arunoda/meteor-up/tree/mupx) branch (best for pre-Meteor 1.4)
-* The [`kadirahq/mup`](https://github.com/kadirahq/meteor-up) fork _(best for Meteor 1.4 or higher)_
-
-> Currently, using Meteor Up with Meteor 1.4 requires `kadirahq/mup` (still in development) and a special docker image with the correct Node version.
-
-For further assistance, consult the documentation for the option you select.
 
 <h3 id="docker">Docker</h3>
 
 To orchestrate your own container-based deployment there are existing base images to consider before rolling your own:
 
- - **[jshimko/meteor-launchpad](https://github.com/jshimko/meteor-launchpad)**
- - [meteorhacks/meteord](https://github.com/kadirahq/meteord)
- - [chriswessels/meteor-tupperware](https://github.com/chriswessels/meteor-tupperware)
-
+ - [tozd/docker-meteor](https://github.com/tozd/docker-meteor) with Mongo and Nginx images
+ - [jshimko/meteor-launchpad](https://github.com/jshimko/meteor-launchpad)
+ - [disney/meteor-base](https://github.com/disney/meteor-base)
 
 _The recommendation above is primarily based on current state of maintenance to address upstream security vulnerabilities. Review the Dockerfiles and build scripts to make your own assessment._
 
@@ -189,9 +179,7 @@ meteor build /path/to/build --architecture os.linux.x86_64
 
 This will provide you with a bundled application `.tar.gz` which you can extract and run without the `meteor` tool.  The environment you choose will need the correct version of Node.js and connectivity to a MongoDB server.
 
-Depending on the version of Meteor you are using, you should install the proper version of `node` using the appropriate installation process for your platform.
-* Node 4.6.2 for *Meteor 1.4.x*
-* Node 0.10.43 for *Meteor 1.3.x and earlier*
+Depending on the version of Meteor you are using, you should install the proper version of `node` using the appropriate installation process for your platform. To find out which version of `node` you should use, run `meteor node -v` in the development environment, or check the `.node_version.txt` file within the bundle generated by `meteor build`. For example, if you are using Meteor 1.6, the version of `node` you should use is 8.8.1.
 
 > If you use a mis-matched version of Node when deploying your application, you will encounter errors!
 
@@ -270,7 +258,7 @@ If the new version involves different data formats in the database, then you nee
 
 <h2 id="analytics">Monitoring users via analytics</h2>
 
-It's common to want to know which pages of your app are most commonly visited, and where users are coming from. Here's a simple setup that will get you URL tracking using Google Analytics. We'll be using the [`okgrow:analytics`](https://atmospherejs.com/okgrow/analytics) package.
+It's common to want to know which pages of your app are most commonly visited, and where users are coming from. Here's a setup that will get you URL tracking using Google Analytics. We'll be using the [`okgrow:analytics`](https://atmospherejs.com/okgrow/analytics) package.
 
 ```
 meteor add okgrow:analytics
@@ -308,7 +296,7 @@ export const updateText = new ValidatedMethod({
 });
 ```
 
-To achieve a similar abstraction for subscriptions/publications, you may want to write a simple wrapper for `Meteor.subscribe()`.
+To achieve a similar abstraction for subscriptions/publications, you may want to write a wrapper for `Meteor.subscribe()`.
 
 <h2 id="apm">Monitoring your application</h2>
 
@@ -328,43 +316,12 @@ Galaxy's UI provides a detailed logging system, which can be invaluable to deter
 
 <img src="images/galaxy-logs.png">
 
-<h3 id="kadira">Kadira</h3>
-
-If you really want to understand the ins and outs of running your Meteor application, you should give [Kadira](https://kadira.io) a try. Kadira is a full featured Application Performance Monitoring (APM) solution that's built from the ground up for Meteor. Kadira operates by taking regular client and server side observations of your application's performance as it conducts various activities and reporting them back to a master server.
-
-When you visit the Kadira application, you can view current and past behavior of your application over various useful metrics. Kadira's [documentation](https://kadira.io/platform/kadira-apm/overview) is extensive and invaluable, but we'll discuss a few key areas here.
-
-<h4 id="kadira-method-pub">Method and Publication Latency</h4>
-
-Rather than monitoring HTTP response times, in a Meteor app it makes far more sense to consider DDP response times. The two actions your client will wait for in terms of DDP are *method calls* and *publication subscriptions*. Kadira includes tools to help you discover which of your methods and publications are slow and resource intensive.
-
-<img src="images/kadira-method-latency.png">
-
-In the above screenshot you can see the response time breakdown of the various methods commonly called by the Atmosphere application. The median time of 56ms and 99th percentile time of 200ms seems pretty reasonable, and doesn't seem like too much of a concern
-
-You can also use the "traces" section to discover particular cases of the method call that are particular slow:
-
-<img src="images/kadira-method-trace.png">
-
-In the above screenshot we're looking at a slower example of a method call (which takes 214ms), which, when we drill in further we see is mostly taken up waiting on other actions on the user's connection (principally waiting on the `searches/top` and `counts` publications). So we could consider looking to speed up the initial time of those subscriptions as they are slowing down searches a little in some cases.
-
-
-<h4 id="kadira-livequery">Livequery Monitoring</h4>
-
-A key performance characteristic of Meteor is driven by the behavior of livequery, the key technology that allows your publications to push changing data automatically in realtime. In order to achieve this, livequery needs to monitor your MongoDB instance for changes (by tailing the oplog) and decide if a given change is relevant for the given publication.
-
-If the publication is used by a lot of users, or there are a lot of changes to be compared, then these livequery observers can do a lot of work. So it's immensely useful that Kadira can tell you some statistics about your livequery usage:
-
-<img src="images/kadira-observer-usage.png">
-
-In this screenshot we can see that observers are fairly steadily created and destroyed, with a pretty low amount of reuse over time, although in general they don't survive for all that long. This would be consistent with the fact that we are looking at the `package` publication of Atmosphere which is started everytime a user visits a particular package's page. The behavior is more or less what we would expect so we probably wouldn't be too concerned by this information.
-
 <h2 id="seo">Enabling SEO</h2>
 
 If your application contains a lot of publicly accessible content, then you probably want it to rank well in Google and other search engines' indexes. As most webcrawlers do not support client-side rendering (or if they do, have spotty support for websockets), it's better to render the site on the server and deliver it as HTML in this special case.
 
-To do so, we can use the [Prerender.io](https://prerender.io) service, thanks to the [`dferber:prerender`](https://atmospherejs.com/dferber/prerender/) package. It's a simple as `meteor add`-ing it, and optionally setting your prerender token if you have a premium prerender account and would like to enable more frequent cache changes.  You can also just use the [`prerender-node` NPM package](https://www.npmjs.com/package/prerender-node) directly, mimicing the small amount of [client](https://github.com/dferber90/meteor-prerender/blob/master/client/prerender.html) and [server](https://github.com/dferber90/meteor-prerender/blob/master/server/prerender.js) code in the Atmosphere package; do this if you need to use a newer version of the NPM package than the one in `dferber:prerender`.
+If you’re using [Galaxy to host your meteor apps](https://www.meteor.com/galaxy/signup), you can take advantage of built-in automatic [Prerender.io](https://prerender.io) integration. Add [`mdg:seo`](https://atmospherejs.com/mdg/seo) to your app and Galaxy will take care of the rest: loading the code and configuring it with Galaxy-provided credentials.
 
-If you’re using [Galaxy to host your meteor apps](https://www.meteor.com/galaxy/signup), you can also take advantage of built-in automatic [Prerender.io](https://prerender.io) integration. Simply add [`mdg:seo`](https://atmospherejs.com/mdg/seo) to your app and Galaxy will take care of the rest: loading the code and configuring it with Galaxy-provided credentials.
+If you're not using Galaxy, you can still use `mdg:seo`. You will need to sign up for your own Prerender.io account and provide your token to the `mdg:seo` package in `Meteor.settings`. You can also do this if you use Galaxy but would prefer to use your own Prerender.io account with more frequent cache changes.  You can also use the [`prerender-node` NPM package](https://www.npmjs.com/package/prerender-node) directly, mimicing the small amount of [client](https://github.com/meteor/galaxy-seo-package/blob/master/client/prerender.html) and [server](https://github.com/meteor/galaxy-seo-package/blob/master/server/prerender.js) code in the Atmosphere package; do this if you need to use a newer version of the NPM package than the one in `mdg:seo`.
 
 Chances are you also want to set `<title>` tags and other `<head>` content to make your site appear nicer in search results. The best way to do so is to use the [`kadira:dochead`](https://atmospherejs.com/kadira/dochead) package. The sensible place to call out to `DocHead` is from the `onCreated` callbacks of your page-level components.

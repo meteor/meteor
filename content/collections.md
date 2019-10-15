@@ -52,7 +52,7 @@ Todos = new Mongo.Collection('todos');
 
 It does something totally different!
 
-On the client, there is no direct connection to the MongoDB database, and in fact a synchronous API to it is not possible (nor probably what you want). Instead, on the client, a collection is a client side *cache* of the database. This is achieved thanks to the [Minimongo](https://github.com/meteor/meteor/blob/master/packages/minimongo/README.md) library---an in-memory, all JS, implementation of the MongoDB API. What this means is that on the client, when you write:
+On the client, there is no direct connection to the MongoDB database, and in fact a synchronous API to it is not possible (nor probably what you want). Instead, on the client, a collection is a client side *cache* of the database. This is achieved thanks to the [Minimongo](https://github.com/meteor/meteor/blob/master/packages/minimongo/README.md) library---an in-memory, all JS, implementation of the MongoDB API.
 
 ```js
 // This line is changing an in-memory Minimongo data structure
@@ -69,13 +69,14 @@ To write data back to the server, you use a *Method*, the subject of the [method
 
 <h3 id="local-collections">Local collections</h3>
 
-There is a third way to use a collection in Meteor. On the client or server, if you create a collection but pass `null` instead of a name:
+There is a third way to use a collection in Meteor. On the client or server, if you create a collection in one of these two ways:
 
 ```js
 SelectedTodos = new Mongo.Collection(null);
+SelectedTodos = new Mongo.Collection('selectedtodos', {connection: null});
 ```
 
-This creates a *local collection*. This is a Minimongo collection that has no database connection (ordinarily a named collection would either be directly connected to the database on the server, or via a subscription on the client).
+This creates a *local collection*. This is a Minimongo collection that has no database connection (ordinarily a collection would either be directly connected to the database on the server, or via a subscription on the client).
 
 A local collection is a convenient way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you need to execute complex queries over your data. Or you may want to take advantage of its *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
 
@@ -85,7 +86,7 @@ Although MongoDB is a schema-less database, which allows maximum flexibility in 
 
 In Meteor, the pre-eminent schema package is [aldeed:simple-schema](https://atmospherejs.com/aldeed/simple-schema). It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
 
-Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simple-schema`, you can simply create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
+Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simple-schema`, you can create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
 
 ```js
 Lists.schema = new SimpleSchema({
@@ -153,7 +154,7 @@ Lists.schema = new SimpleSchema({
 });
 ```
 
-The issue with this schema is that due to the DDP behavior just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the network. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`", simply "change the field called `todos` to a totally new array".
+The issue with this schema is that due to the DDP behavior just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the network. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`". It can only "change the field called `todos` to a totally new array".
 
 <h3 id="denormalization">Denormalization and multiple collections</h3>
 
@@ -244,7 +245,7 @@ This technique has a few disadvantages:
 2. Sometimes a single piece of functionality can be spread over multiple mutators.
 3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
-A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We'll see an example of that [below](#abstracting-denormalizers).
+A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and use the mutator as a point to call out to that module in a sensible way. We'll see an example of that [below](#abstracting-denormalizers).
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.
 
@@ -302,7 +303,7 @@ class TodosCollection extends Mongo.Collection {
 
 Note that we only handled the mutators we actually use in the application---we don't deal with all possible ways the todo count on a list could change. For example, if you changed the `listId` on a todo item, it would need to change the `incompleteCount` of *two* lists. However, since our application doesn't do this, we don't handle it in the denormalizer.
 
-Dealing with every possible MongoDB operator is difficult to get right, as MongoDB has a rich modifier language. Instead we focus on just dealing with the modifiers we know we'll see in our app. If this gets too tricky, then moving the hooks for the logic into the Methods that actually make the relevant modifications could be sensible (although you need to be diligent to ensure you do it in *all* the relevant places, both now and as the app changes in the future).
+Dealing with every possible MongoDB operator is difficult to get right, as MongoDB has a rich modifier language. Instead we focus on dealing with the modifiers we know we'll see in our app. If this gets too tricky, then moving the hooks for the logic into the Methods that actually make the relevant modifications could be sensible (although you need to be diligent to ensure you do it in *all* the relevant places, both now and as the app changes in the future).
 
 It could make sense for packages to exist to completely abstract some common denormalization techniques and actually attempt to deal with all possible modifications. If you write such a package, please let us know!
 
@@ -339,7 +340,7 @@ To find out more about the API of the Migrations package, refer to [its document
 
 If your migration needs to change a lot of data, and especially if you need to stop your app server while it's running, it may be a good idea to use a [MongoDB Bulk Operation](https://docs.mongodb.org/v3.0/core/bulk-write-operations/).
 
-The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that if your migration is complex (which it usually is if you can't just do an `.update(.., .., {multi: true})`), it can take a significant amount of time to prepare the bulk update.
+The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that if your migration is complex (which it usually is if you can't do an `.update(.., .., {multi: true})`), it can take a significant amount of time to prepare the bulk update.
 
 What this means is if users are accessing the site whilst the update is being prepared, it will likely go out of date! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user experience if it takes a while. For these reason, you often need to stop your server and let your users know you are performing maintenance while the update is happening.
 
@@ -375,7 +376,7 @@ Migrations.add({
 });
 ```
 
-Note that we could make this migration faster by using an [Aggregation](https://docs.mongodb.org/v2.6/aggregation/) to gather the initial set of todo counts.
+Note that we could make this migration faster by using an [Aggregation](https://docs.mongodb.org/v3.4/aggregation/) to gather the initial set of todo counts.
 
 <h3 id="running-migrations">Running migrations</h3>
 
@@ -422,7 +423,7 @@ Some aspects of the migration strategy outlined above are possibly not the most 
 
 1. Usually it is better to not rely on your application code in migrations (because the application will change over time, and the migrations should not). For instance, having your migrations pass through your Collection2 collections (and thus check schemas, set autovalues etc) is likely to break them over time as your schemas change over time.
 
-  One way to avoid this problem is simply to not run old migrations on your database. This is a little bit limiting but can be made to work.
+  One way to avoid this problem is to not run old migrations on your database. This is a little bit limiting but can be made to work.
 
 2. Running the migration on your local machine will probably make it take a lot longer as your machine isn't as close to the production database as it could be.
 
@@ -433,6 +434,53 @@ Deploying a special "migration application" to the same hardware as your real ap
 As we discussed earlier, it's very common in Meteor applications to have associations between documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested in (for instance all the todos that are in a single list).
 
 To make this easier, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
+
+To make things even easier, we can use the [`cultofcoders:grapher`](https://atmospherejs.com/cultofcoders/grapher) package to associate collections and fetch their relations. For example:
+
+```js
+// Configure how collections relate to each other
+Todos.addLinks({
+  list: {
+    type: 'one',
+    field: 'listId',
+    collection: Lists
+  }
+});
+
+Lists.addLinks({
+  todos: {
+    collection: Todos,
+    inversedBy: 'list' // This represents the name of the link we defined in Todos
+  }
+});
+```
+
+This allows us to properly fetch a list along with its todos:
+
+```js
+// With Grapher you must always specify the fields you want
+const listsAndTodos = Lists.createQuery({
+  name: 1,
+  todos: {
+      text: 1
+  }
+}).fetch();
+```
+
+`listsAndTodos` will look like this:
+
+```
+[
+  {
+    name: 'My List',
+    todos: [
+      {text: 'Do something'}
+    ],
+  }
+]
+```
+
+Grapher supports isomorphic queries (reactive and non-reactive), has built-in security features, works with many types of relationships, and more. Refer to the [Grapher documentation](https://github.com/cult-of-coders/grapher/blob/master/docs/index.md) for more details.
 
 <h3 id="collection-helpers">Collection helpers</h3>
 
@@ -458,7 +506,7 @@ if (list.isPrivate()) {
 
 <h3 id="association-helpers">Association helpers</h3>
 
-Now we can attach helpers to documents, it's simple to define a helper that fetches related documents
+Now we can attach helpers to documents, we can define a helper that fetches related documents
 
 ```js
 Lists.helpers({
@@ -468,7 +516,7 @@ Lists.helpers({
 });
 ```
 
-Now we can easily find all the todos for a list:
+Now we can find all the todos for a list:
 
 ```js
 const list = Lists.findOne();

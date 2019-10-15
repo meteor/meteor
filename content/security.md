@@ -81,7 +81,7 @@ If someone comes along and passes a non-ID selector like `{}`, they will end up 
 
 <h3 id="validated-method">mdg:validated-method</h3>
 
-To help you write good Methods that exhaustively validate their arguments, we've written a simple wrapper package for Methods that enforces argument validation. Read more about how to use it in the [Methods article](methods.html#validated-method). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
+To help you write good Methods that exhaustively validate their arguments, we've written a wrapper package for Methods that enforces argument validation. Read more about how to use it in the [Methods article](methods.html#validated-method). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
 
 <h3 id="user-id-client">Don't pass userId from the client</h3>
 
@@ -112,7 +112,7 @@ The _only_ times you should be passing any user ID as an argument are the follow
 
 <h3 id="specific-action">One Method per action</h3>
 
-The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can easily look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
+The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
 
 ```js
 export const makePrivate = new ValidatedMethod({
@@ -142,12 +142,12 @@ export const makePrivate = new ValidatedMethod({
 });
 ```
 
-You can see that this Method does a _very specific thing_ - it just makes a single list private. An alternative would have been to have a Method called `setPrivacy`, which could set the list to private or public, but it turns out that in this particular app the security considerations for the two related operations - `makePrivate` and `makePublic` - are very different. By splitting our operations into different Methods, we make each one much clearer. It's obvious from the above Method definition which arguments we accept, what security checks we perform, and what operations we do on the database.
+You can see that this Method does a _very specific thing_ - it makes a single list private. An alternative would have been to have a Method called `setPrivacy`, which could set the list to private or public, but it turns out that in this particular app the security considerations for the two related operations - `makePrivate` and `makePublic` - are very different. By splitting our operations into different Methods, we make each one much clearer. It's obvious from the above Method definition which arguments we accept, what security checks we perform, and what operations we do on the database.
 
 However, this doesn't mean you can't have any flexibility in your Methods. Let's look at an example:
 
 ```js
-const Meteor.users.methods.setUserData = new ValidatedMethod({
+Meteor.users.methods.setUserData = new ValidatedMethod({
   name: 'Meteor.users.methods.setUserData',
   validate: new SimpleSchema({
     fullName: { type: String, optional: true },
@@ -169,7 +169,7 @@ You might run into a situation where many Methods in your app have the same secu
 
 <h3 id="rate-limiting">Rate limiting</h3>
 
-Just like REST endpoints, Meteor Methods can easily be called from anywhere - a malicious program, script in the browser console, etc. It is easy to fire many Method calls in a very short amount of time. This means it can be easy for an attacker to test lots of different inputs to find one that works. Meteor has built-in rate limiting for password login to stop password brute-forcing, but it's up to you to define rate limits for your other Methods.
+Like REST endpoints, Meteor Methods can be called from anywhere - a malicious program, script in the browser console, etc. It is easy to fire many Method calls in a very short amount of time. This means it can be easy for an attacker to test lots of different inputs to find one that works. Meteor has built-in rate limiting for password login to stop password brute-forcing, but it's up to you to define rate limits for your other Methods.
 
 In the Todos example app, we use the following code to set a basic rate limit on all Methods:
 
@@ -205,7 +205,7 @@ Publications are the primary way a Meteor server can make data available to a cl
 
 #### You can't do security at the rendering layer
 
-In a server-side-rendered framework like Ruby on Rails, it's sufficient to simply not display sensitive data in the returned HTML response. In Meteor, since the rendering is done on the client, an `if` statement in your HTML template is not secure; you need to do security at the data level to make sure that data is never sent in the first place.
+In a server-side-rendered framework like Ruby on Rails, it's sufficient to not display sensitive data in the returned HTML response. In Meteor, since the rendering is done on the client, an `if` statement in your HTML template is not secure; you need to do security at the data level to make sure that data is never sent in the first place.
 
 <h3 id="method-rules">Rules about Methods still apply</h3>
 
@@ -338,8 +338,8 @@ Secret business logic in your app should be located in code that is only loaded 
 If you have a Meteor Method in your app that has secret business logic, you might want to split the Method into two functions - the optimistic UI part that will run on the client, and the secret part that runs on the server. Most of the time, putting the entire Method on the server doesn't result in the best user experience. Let's look at an example, where you have a secret algorithm for calculating someone's MMR (ranking) in a game:
 
 ```js
-// In a server-only file
-MMR = {
+// In a server-only file, for example /imports/server/mmr.js
+export const MMR = {
   updateWithSecretAlgorithm(userId) {
     // your secret code here
   }
@@ -348,13 +348,14 @@ MMR = {
 
 ```js
 // In a file loaded on client and server
-const Meteor.users.methods.updateMMR = new ValidatedMethod({
+Meteor.users.methods.updateMMR = new ValidatedMethod({
   name: 'Meteor.users.methods.updateMMR',
   validate: null,
   run() {
     if (this.isSimulation) {
       // Simulation code for the client (optional)
     } else {
+      const { MMR } = require('/imports/server/mmr.js');
       MMR.updateWithSecretAlgorithm(this.userId);
     }
   }
@@ -435,7 +436,7 @@ This is a very short section, but it deserves its own place in the table of cont
 
 **Every production Meteor app that handles user data should run with SSL.**
 
-Yes, Meteor does hash your password or login token on the client before sending it over the wire, but that only prevents an attacker from figuring out your password - it doesn't prevent them from logging in as you, since they could just send the hashed password to the server to log in! No matter how you slice it, logging in requires the client to send sensitive data  to the server, and the only way to secure that transfer is by using SSL. Note that the same issue is present when using cookies for authentication in a normal HTTP web application, so any app that needs to reliably identify users should be running on SSL.
+Yes, Meteor does hash your password or login token on the client before sending it over the wire, but that only prevents an attacker from figuring out your password - it doesn't prevent them from logging in as you, since they could send the hashed password to the server to log in! No matter how you slice it, logging in requires the client to send sensitive data  to the server, and the only way to secure that transfer is by using SSL. Note that the same issue is present when using cookies for authentication in a normal HTTP web application, so any app that needs to reliably identify users should be running on SSL.
 
 #### Setting up SSL
 
@@ -448,7 +449,7 @@ Generally speaking, all production HTTP requests should go over HTTPS, and all W
 
 It's best to handle the redirection from HTTP to HTTPS on the platform which handles the SSL certificates and termination.
 
-* On [Galaxy](deployment.html#galaxy), simply enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
+* On [Galaxy](deployment.html#galaxy), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
 * Other deployments *may* have control panel options or may need to be manually configured on the the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
 
 In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
@@ -464,6 +465,6 @@ This is a collection of points to check about your app that might catch common e
 1. Use specific selectors and [filter fields](http://guide.meteor.com/security.html#fields) in publications.
 1. Don't use [raw HTML inclusion in Blaze](http://blazejs.org/guide/spacebars.html#Rendering-raw-HTML) unless you really know what you are doing.
 1. [Make sure secret API keys and passwords aren't in your source code.](security.html#api-keys)
-1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's just a nice UX feature.
+1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's a nice UX feature.
 1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.
-1. Set up [browser policy](https://atmospherejs.com/meteor/browser-policy), but know that not all browsers support it so it just provides an extra layer of security to users with modern browsers.
+1. Set up [browser policy](https://atmospherejs.com/meteor/browser-policy), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.

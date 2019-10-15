@@ -18,7 +18,7 @@ After reading this guide, you'll know:
 
 <h2 id="introduction">Meteor Cordova integration</h2>
 
-Meteor integrates with [Cordova](https://cordova.apache.org), a well-known Apache open source project, to build mobile apps from the same codebase you use to create regular web apps. With the Cordova integration in Meteor, you can take your existing app and run it on an iOS or Android device with a few simple commands.
+Meteor integrates with [Cordova](https://cordova.apache.org), a well-known Apache open source project, to build mobile apps from the same codebase you use to create regular web apps. With the Cordova integration in Meteor, you can take your existing app and run it on an iOS or Android device with a few commands.
 
 A Cordova app is a web app written using HTML, CSS, and JavaScript as usual, but it runs in a [web view](#what-environment) embedded in a native app instead of in a stand-alone mobile browser. An important benefit of packaging up your web app as a Cordova app is that all your assets are bundled with the app. This ensures your app will load faster than a web app running on a remote server could, which can make a huge difference for users on slow mobile connections. Another feature of the Cordova integration in Meteor is support for [hot code push](#hot-code-push), which allows you to update your app on users' devices without going through the usual app store review process.
 
@@ -35,6 +35,8 @@ Because a Cordova app is  a web app, this means you use standard web elements to
 With Meteor, there is no need to install Cordova yourself, or use the `cordova` command directly. Cordova project creation happens as part of the Meteor run and build commands, and the project itself is considered a build artifact (stored in `.meteor/local/cordova-build` in your app directory) that can be deleted and recreated at any time. Instead of having you modify Cordova's `config.xml` file, Meteor reads a [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) file in the root of your app directory and uses the settings specified there to configure the generated project.
 
 Cordova apps don’t load web content over the network, but rely on locally stored HTML, CSS, JavaScript code and other assets. While Cordova by default uses `file://` URLs to load the app, Meteor includes an integrated file serving mechanism on the device to support both bundling the initial assets and incrementally updating your app through [hot code push](#hot-code-push). This means your app will be served from `http://localhost:<port>`, which also has the benefit that web views consider it a [secure origin](https://www.chromium.org/Home/chromium-security/prefer-secure-origins-for-powerful-new-features) and won't block any sensitive features (which they increasingly do for `file://` URLs).
+
+The port mentioned above will be generated based on your app ID stored in the `.meteor/.id` file in your application. If you need to run multiple apps on the same device using the same source code, you should specify a different port for each running app, by using the `--cordova-server-port <port>` option when running the Cordova `run` and `build` commands. Otherwise you will not be able to run multiple apps simultaneously on iOS. One common symptom of this problem is the error `Failed binding IPv4 listening socket: Address already in use (48)` in the XCode console.
 
 > <h4 id="what-port">What port will your app be served from?</h4>
 
@@ -82,7 +84,7 @@ In order to build and run mobile apps, you will need to install some prerequisit
 
 <h3 id="installing-prerequisites-ios">iOS</h3>
 
-In order to build and run iOS apps, you will need a Mac with Xcode 7.2 or higher installed.
+In order to build and run iOS apps, you will need a Mac with [Apple Xcode](https://developer.apple.com/xcode/) developer tools installed. We recommend installing the latest version, but you should also check the [Meteor history](https://github.com/meteor/meteor/blob/devel/History.md) for any specific version dependencies.  NOTE: To build with Xcode 10.2+, your webapp package must be v1.7.4 or higher.
 
 <h4>Installing Xcode from the App Store</h4>
 
@@ -94,6 +96,14 @@ After the download and installation completes, you will need to accept the licen
 
 A shortcut is to run `sudo xcodebuild -license accept` from the command line. (You will still be expected to have read and understood the [Xcode and Apple SDKs Agreement](https://www.apple.com/legal/sla/docs/xcode.pdf)).
 
+> As of [Cordova iOS 4.3.0](https://cordova.apache.org/announcements/2016/10/24/ios-release.html) you may also need to `sudo gem install cocoapods` to resolve a dependency with [PhoneGap Push Plugin](https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/INSTALLATION.md). 
+
+<h4>Enabling Xcode command line tools</h4>
+
+After installing Xcode from the Mac App Store, it is still necesssary to enable those tools in the terminal environment.  This can be accompilshed by running the following from the command prompt:
+
+    sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
 <h3 id="installing-prerequisites-android">Android</h3>
 
 In order to build and run Android apps, you will need to:
@@ -102,6 +112,15 @@ In order to build and run Android apps, you will need to:
 - Install the Android SDK and download the required tools, platforms, and other components (which is done most easily by installing Android Studio)
 - Set `ANDROID_HOME` and add the tools directories to your `PATH`
 - Optionally: Create an Android Virtual Device to run apps on an emulator
+- If Gradle cannot be found: try using a package manager such as [Homebrew](https://brew.sh/), `apt-get`, or `yum` to install a system-wide, standalone version of `gradle`:
+  ```sh
+  # On Mac OSX:
+  brew install gradle
+  
+  # On Debian/Ubuntu:
+  sudo apt-get install gradle
+  ```
+  More information about installing Gradle can be found [here](https://gradle.org/install/#install).
 
 <h4>Installing the Java Development Kit (JDK)</h4>
 
@@ -121,13 +140,20 @@ Please refer to [the Android Studio installation instructions](http://developer.
 
 Make sure to select the correct version of the [Android Studio SDK Tools](https://developer.android.com/studio/releases/sdk-tools.html):
 
- * Meteor 1.4.3.1 or later: Android SDK Tools v.25.**2**.x
-   * v.25.**3**.x (or newer) **will not work** due to [extensive changes](https://developer.android.com/studio/releases/sdk-tools.html) in v.25.3.0.  See [this issue](https://github.com/meteor/meteor/issues/8464) for more information.
- * Meteor 1.4.2.x or before: Android SDK Tools v.23
+ * Meteor 1.4.3.1 or later: Android SDK Tools v.25.**2**.x ([mac](https://dl.google.com/android/repository/tools_r25.2.3-macosx.zip), [linux](https://dl.google.com/android/repository/tools_r25.2.3-linux.zip), [windows](https://dl.google.com/android/repository/tools_r25.2.3-windows.zip)) or v.26.0.0 or later
+ * v.25.**3.0** **will not work** due to [extensive changes](https://developer.android.com/studio/releases/sdk-tools.html).  See [issue #8464](https://github.com/meteor/meteor/issues/8464) for more information.
+ * Meteor 1.4.2.x or before: Android SDK Tools v.23 ([mac](https://dl.google.com/android/repository/tools_r23.0.1-macosx.zip), [linux](https://dl.google.com/android/repository/tools_r23.0.1-linux.zip), [windows](https://dl.google.com/android/repository/tools_r23.0.1-windows.zip))
+
+To install an older version of SDK tools:
+
+* Download the version that you need from the above links
+* Replace the `tools/` folder in `~/Library/Android/sdk/`
+
+> Note: If you're using older version of Meteor, you may also need to install an older version of Android SDK, for example with the Android SDK Manager that comes with Android Studio.
 
 <h4 id="ubuntu-make">Using Ubuntu Make</h4>
 
-If you're running Ubuntu, the easiest way to install both a Java Development Kit and Android Studio is by using [Ubuntu Make](https://wiki.ubuntu.com/ubuntu-make), a command line tool that sets up development environments and dependencies for you.
+If you're running Ubuntu, one way to install both a Java Development Kit and Android Studio is by using [Ubuntu Make](https://wiki.ubuntu.com/ubuntu-make), a command line tool that sets up development environments and dependencies for you.
 
 If you're on Ubuntu 14.04 LTS, you'll have to add the Ubuntu Make ppa first:
 * `sudo add-apt-repository ppa:ubuntu-desktop/ubuntu-make`
@@ -168,7 +194,7 @@ If you do want to run on an emulator however, you will have to create an Android
 During development, the Meteor [build tool](build-tool.html) integrates with Cordova to run your app on a physical device or the iOS Simulator/Android emulator. In addition to starting a development server and MongoDB instance as usual, `meteor run` accepts arguments to run the app on one or more mobile targets:
 
 - `ios`: Runs the app on the iOS Simulator
-> Currently, this will always run your app on a simulated iPhone 6s Plus. Use `ios-device` to open Xcode and select another simulator instead.
+> This will run your app on a default simulated iOS device. You can open Xcode to install and select another simulated device.
 - `ios-device`: Opens Xcode, where you can run the app on a connected iOS device or simulator
 - `android`: Runs the app on the Android emulator
 > The current Android emulator tends to be rather slow and can be unstable. Our recommendation is to run on a physical device or to use an alternative emulator like [Genymotion](https://www.genymotion.com).
@@ -184,7 +210,7 @@ A Meteor app should be able to connect to a server in order to load data and to 
 
 <h3 id="running-on-ios">On iOS</h3>
 
-> Note: If you haven't previously developed iOS apps, or haven't used the connected device for development, a series of dialogs and warnings may appear as Xcode resolves code signing issues. It may also prompt you for permission to access the key in your keychain. See [Apple's instructions](https://developer.apple.com/library/mac/documentation/IDEs/Conceptual/AppDistributionGuide/LaunchingYourApponDevices/LaunchingYourApponDevices.html#//apple_ref/doc/uid/TP40012582-CH27-SW4) for more information.
+> Note: If you haven't previously developed iOS apps, or haven't used the connected device for development, a series of dialogs and warnings may appear as Xcode resolves code signing issues. It may also prompt you for permission to access the key in your keychain. See [Apple's instructions](https://developer.apple.com/library/mac/documentation/IDEs/Conceptual/AppDistributionGuide/LaunchingYourApponDevices/LaunchingYourApponDevices.html#//apple_ref/doc/uid/TP40012582-CH27-SW4) for more information. You will also need to join the [Apple Developer Program](https://developer.apple.com/programs/) to deploy your app on the Apple iOS App Store.
 
 1. Make sure the device is connected to your computer via a USB cable.
 1. Connect the device to a WiFi network that allows for communication with the server.
@@ -243,6 +269,8 @@ See [this article](https://developers.google.com/web/tools/chrome-devtools/debug
 
 - Because you can only connect to your app after it has started up, you sometimes miss startup warnings and errors. You can invoke `location.reload()` in the DevTools console to reload a running app, this time with the remote debugger connected.
 
+- An .apk built by `meteor build` cannot be remotely debugged unless you make a debug build via `meteor build --debug`.
+
 <h2 id="hot-code-push">Hot code push on mobile</h2>
 
 During development, the Meteor [build tool](build-tool.html) detects any relevant file changes, recompiles the necessary files, and notifies all connected clients a new version is available. Clients can then automatically reload the app, switching over to the new version of the code. This is referred to as *hot code push*.
@@ -262,9 +290,43 @@ Hot code push greatly improves the development experience, but on mobile, it is 
 
 However, it is important to realize that hot code push can only be used to update the HTML, CSS, JavaScript code and other assets making up your web app. Changes to native code will still require you [to submit a new version of your app to the store](#building-and-submitting).
 
-In order to avoid a situation where JavaScript code that relies on changed native code is pushed to a client, we calculate a compatibility version from the Cordova platform and plugin versions, and only download a new version to a device when there is an exact match. This means any change to the list of plugins, or updating to a Meteor release which contains a new platform version, will block hot code push to existing mobile clients until the app has been updated from the store.
+In order to avoid a situation where JavaScript code that relies on changed native code is pushed to a client, we calculate a compatibility version hash from the Cordova platform and plugin versions, and only download a new version to a device when there is an exact match. This means any change to the list of plugins, or updating to a Meteor release which contains a new platform version, will block hot code push to existing mobile clients until the app has been updated from the store.
 
 Something else to keep in mind is that your server-side code should be prepared to handle requests from older client versions, which may not yet have been updated. As you make changes to your data schema or publication functions for example, you may want to reflect on how this will impact backwards compatibility.
+
+<h3 id="controlling-compatibility-version">Controlling compatibility version</h3>
+
+The compatibility version can be found in the `cordovaCompatibilityVersions` attribute of the JSON file served at `ROOT_URL/__cordova/manifest.json` during `meteor run [ios/android]`.
+
+![cordovaCompatibilityVersions](https://i.imgur.com/Wx7iOWu.png)
+
+You may want to override the compatibility version if you want hot code push to reach older apps that don't have the latest version of your native code from the app store. Let's say you're developing an iOS app, you have the plugin `cordova-plugin-camera@2.4.0`, and your app has the compatibility version pictured above, `3ed5b9318b2916b595f7721759ead4d708dfbd46`. If you were to update to version `2.4.1` of `cordova-plugin-camera`, your server would generate a new compatibility version and your users' apps would stop receiving hot code pushes. However, you can tell your server to use the old compatilibity version: 
+
+```sh
+METEOR_CORDOVA_COMPAT_VERSION_IOS=3ed5b9318b2916b595f7721759ead4d708dfbd46 meteor run ios-device
+# or
+METEOR_CORDOVA_COMPAT_VERSION_IOS=3ed5b9318b2916b595f7721759ead4d708dfbd46 meteor build ../build --server=127.0.0.1:3000
+```
+
+Now your users' apps will continue receiving hot code pushes. However, they won't get the new version of the Cordova plugin until they update from the app store. In this case, that's okay, because we only updated a patch version, so the `cordova-plugin-camera` API didn't change. But if you had added a new plugin, like `cordova-plugin-gyroscope`, and changed your Javascript to call `navigator.gyroscope.getCurrent()`, then when the old apps get the new JS code, they will throw the error: `Uncaught TypeError: Cannot read property 'getCurrent' of undefined`.
+
+Another option is using the `METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE` environment variable. If you were to do this:
+
+```sh
+meteor add cordova-plugin-camera
+meteor add cordova-plugin-gyroscope
+METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE='cordova-plugin-camera,cordova-plugin-gyroscope' meteor run ios-device
+```
+
+your compatibility version would not change.
+
+The `METEOR_CORDOVA_COMPAT_VERSION_*` env vars must be present __while building__ your app through `run`, `build` or `deploy`.
+
+<h4 id="access-versions-inside-app">Access compatibility versions inside your app</h4> 
+
+The `version` attribute of `manifest.json`, which reflects the version of only your JS bundle, is accessible from JS at `__meteor_runtime_config__.autoupdateVersionCordova`. 
+
+The `cordovaCompatibilityVersions.*` attributes can be read from the manifest file with `cordova-plugin-file`.
 
 <h3 id="configuring-server-for-hot-code-push">Configuring your server</h3>
 
@@ -276,7 +338,7 @@ The reason this is needed is because updates delivered through hot code push rep
 
 <h3 id="recovering-from-faulty-versions">Recovering from faulty versions</h3>
 
-Hot code pushing updated JavaScript code to a device could accidentally push code containing errors, which might leave users with a broken app (a 'white screen of death', in the worst case), and could even disable hot code push (because the code that makes a connection to the server may no longer run).
+Hot code pushing new JavaScript code to a device could accidentally push code containing errors, which might leave users with a broken app (a "white screen of death" in the worst case), and could even disable hot code push (because the code that makes a connection to the server may no longer run).
 
 To avoid this, we try to detect faulty versions and revert to the last known good version when this happens. The way detection works is that we expect all `Meteor.startup()` callbacks to complete within a set period of time. If this doesn't happen we consider the version faulty and will rollback the update. Unless the version on the server has been updated in the meantime, the server will try to hot code push the faulty version again. Therefore, we blacklist faulty versions on the device so we know not to retry.
 
@@ -464,8 +526,8 @@ What is often confusing to people is that setting `App.accessRule` is not enough
 
 To get around these restrictions, you'll have to use what is known as [Cross-Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS). In contrast to the whitelisting mechanism configured on the client, CORS relies on headers set by the server. In other words, in order to allow access to a remote resource, you may have to make configuration changes on the server, such as setting a `Access-Control-Allow-Origin` header.
 
-<h3 id="csp">System Permissions</h3>
-As of Android Marshmallow, certain system features (e.g. camera, microphone, etc.) require additional permissions in order to access them. These must be listed in the manifest and **also requested at runtime**.
+<h3 id="system-permissions">System Permissions</h3>
+Since the release of iOS 8.0 and Android 6.0 (Android Marshmallow), certain system features (e.g. camera, microphone, location, photos, etc.) typically require additional permissions in order to access them, and for iOS 10+ you must also provide a customized privacy usage notification prompt. These values for Android are specified in your app's `AndroidManifest.xml` file and are **also requested at runtime**. For iOS they are specified in your apps `Info.plist` file.
 
 To request them at runtime, consider using the [`cordova.plugins.diagnostic`](https://github.com/dpa99c/cordova-diagnostic-plugin) plugin.
 
@@ -494,9 +556,20 @@ if (Meteor.isCordova) {
 }
 ```
 
+Alternatively for iOS you can specify the required privacy usage notification prompts in your `mobile-config.js` by using [`App.appendToConfig`](https://docs.meteor.com/api/mobile-config.html#App-appendToConfig) along with the correct [Cocoa Keys](https://developer.apple.com/library/content/documentation/General/Reference/InfoPlistKeyReference/Articles/CocoaKeys.html). 
+
+Here is an example to access iOS geolocation data:
+```
+App.appendToConfig(`
+  <edit-config target="NSLocationWhenInUseUsageDescription" file="*-Info.plist" mode="merge">
+    <string>My app needs access to your location for navigation purposes</string>
+  </edit-config>
+`);
+```
+
 <h2 id="configuring-your-app">Configuring your app</h2>
 
-Meteor reads a [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) file in the root of your app directory during build, and uses the settings specified there to generate Cordova's [`config.xml`](https://cordova.apache.org/docs/en/dev/config_ref/index.html).
+Meteor reads a [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) file in the root of your app directory during build and uses the settings specified there to generate Cordova's [`config.xml`](https://cordova.apache.org/docs/en/dev/config_ref/index.html) file.
 
 <h3 id="configuring-metadata">Metadata</h3>
 
@@ -516,15 +589,26 @@ App.setPreference('Orientation', 'default');
 App.setPreference('Orientation', 'all', 'ios');
 ```
 
-Refer to the [preferences section](https://cordova.apache.org/docs/en/dev/config_ref/index.html#preference) of the Cordova documentation for more information about supported options.
+Refer to [Meteor's Mobile Configuration](http://docs.meteor.com/api/mobile-config.html) documentation and the [preferences section](https://cordova.apache.org/docs/en/dev/config_ref/index.html#preference) of the Cordova documentation for more information on Meteor's Cordova configuration API and the supported options.
 
 <h3 id="configuring-app-icons-and-launch-screens">App icons and launch screens</h3>
 
-Although Meteor includes a standard set of app icons and launch screens, you'll most likely want to configure your own images.
+Although Meteor includes a standard set of app icons and launch screens, you will want to configure your own images to match your app's branding in your `mobile-config.js` file.
 
-You configure these images with [`App.icons`](http://docs.meteor.com/api/mobile-config.html#App-icons) and [`App.launchScreens`](http://docs.meteor.com/api/mobile-config.html#App-launchScreens), which both use names to refer to the various supported image sizes (see API documentation).
+You can configure the icon and splash screen image sizes using the specific supported settings in [`App.icons`](http://docs.meteor.com/api/mobile-config.html#App-icons) and [`App.launchScreens`](http://docs.meteor.com/api/mobile-config.html#App-launchScreens).
 
-For iOS, you can also refer to the [Icon and image sizes](https://developer.apple.com/library/ios/documentation/UserExperience/Conceptual/MobileHIG/IconMatrix.html) in the iOS Human Interface Guidelines for more information about the way these different sizes are used.
+In addition, Cordova on iOS supports using [launch story board images](https://cordova.apache.org/docs/en/latest/reference/cordova-plugin-splashscreen/#launch-storyboard-images), which is now Apple's recommended approach for providing launch screens. This has the benefit of not requiring you to provide an image for every possible device screen size. Remove all the iOS `App.launchScreens` directives from your `mobile-config.js` and use [`App.appendToConfig`](http://docs.meteor.com/api/mobile-config.html#App-appendToConfig) to add the paths to your universal images.
+
+```
+App.appendToConfig(`
+  <splash src="../../../app/path/to/Default@2x~universal~anyany.png" />
+  <splash src="../../../app/path/to/Default@3x~universal~anyany.png" />
+`);
+```
+
+See the [iOS Human Interface Guidelines for icon and image sizes](https://developer.apple.com/ios/human-interface-guidelines/icons-and-images/image-size-and-resolution/) for more information.
+
+> On [iPhone X](https://developer.apple.com/ios/human-interface-guidelines/overview/iphone-x/) it is likely required that you use launch story board images if you want the launch image to cover the entire screen. There are also other app layout issues that need to be adresssed such as "safe areas" and "rounded corners", see [Apple's iOS app updates for iPhone X](https://developer.apple.com/ios/update-apps-for-iphone-x/).
 
 <h3 id="advanced-build">Advanced build customization</h3>
 
@@ -546,6 +630,8 @@ The `<host>` and `<port>` should be the address of the server you want your app 
 
 This will generate a directory at `<build-output-directory>`, which includes a server bundle tarball and the project source for each targeted mobile platform in the `/ios` and `/android` directories.
 
+If you pass `--debug`, the bundles will be compiled in Cordova's debug mode instead of release mode.  On Android, this produces a `<build-output-directory>/android/debug.apk` file that can be installed without signing.
+
 You can pass `--server-only` to only build the server bundle. This allows you to build your app without installing the mobile SDKs on the build machine. This is useful if you use an automated deployment setup for instance. (If you remove the mobile platforms before building instead, hot code push will be disabled because the assets for Cordova included in the server bundle will not be generated.)
 
 <h3 id="submitting-ios">iOS App Store</h3>
@@ -564,7 +650,8 @@ From this point on, the process for building the app archive and submitting it t
 
 In order to build your app for Android, you will need to [configure your app](#configuring-your-app) with at least a version number, and the required set of app icons and launch screens.
 
-After running `meteor build` the generated APK will be copied from the `<build-output-directory>/android/project/build/outputs/apk` directory to `<build-output-directory>/android/release-unsigned.apk`.
+After running `meteor build` the generated APK will be copied from the `<build-output-directory>/android/project/build/outputs/apk/release` directory to `<build-output-directory>/android/release-unsigned.apk`.
+> If you have installed the [Crosswalk plugin](https://crosswalk-project.org/) you will need to manually copy the APK file `cp ~/build-output-directory/android/project/build/outputs/apk/android-armv7-release-unsigned.apk ~/build-output-directory/android/release-unsigned.apk`
 
 Before submitting the APK(s) to the Play Store, you will need to sign the APK and run [`zipalign`](http://developer.android.com/tools/help/zipalign.html) on it to optimize the archive.
 
@@ -576,7 +663,6 @@ keytool -genkey -alias your-app-name -keyalg RSA -keysize 2048 -validity 10000
 ```
 Optionally, you can specify `--keystore` to use a different keystore. Don't forget to specify the same keystore when signing the APK.
 > Note: Ensure that you have secure backups of your keystore (`~/.keystore` is the default). If you publish an app to the Play Store and then lose the key with which you signed your app, you will not be able to publish any updates to your app, since you must always sign all versions of your app with the same key.
-
 
 Now, you can sign the APK:
 ```sh
