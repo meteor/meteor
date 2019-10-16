@@ -47,7 +47,9 @@ Meteor determines the browser policy when the server starts up, so you should
 call `BrowserPolicy` functions on the server in top-level application code or in
 `Meteor.startup`. `BrowserPolicy` functions cannot be used in client code.
 
-## Frame options
+## Usage
+
+### Frame options
 
 By default, if you add `browser-policy` or `browser-policy-framing`, only web 
 pages on the same origin as your app are allowed to frame your app. You can use
@@ -81,7 +83,7 @@ any webpage.
 </dd>
 </dl>
 
-## Content options
+### Content options
 
 You can use the functions in this section to control how different types of
 content can be loaded on your site.
