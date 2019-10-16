@@ -338,6 +338,7 @@ module.exports = [
     "appcache",
     "accounts-ui",
     "audit-argument-checks",
+    "browser-policy",
     "coffeescript",
     "ecmascript",
     "jquery",
