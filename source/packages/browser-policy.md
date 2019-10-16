@@ -112,7 +112,8 @@ Allows the creation of Javascript code from strings using function such as <code
 
 <dt><code>BrowserPolicy.content.disallowEval()</code></dt>
 <dd>
-Disallows eval and related functions. The default policy already disallows eval.
+Disallows eval and related functions. Note: The default policy disallows eval, 
+though for almost all Meteor apps it is enabled by the `dynamic-imports` package
 </dd>
 
 <dt><code>BrowserPolicy.content.allowInlineStyles()</code></dt>
