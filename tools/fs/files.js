@@ -1442,7 +1442,7 @@ files.currentEnvWithPathsAdded = function (...paths) {
 
 // add .bat extension to link file if not present
 var ensureBatExtension = function (p) {
-  if (p.endsWith(".bat")) {
+  if (!p.endsWith(".bat")) {
     p = p + ".bat";
   }
   return p;
