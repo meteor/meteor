@@ -159,7 +159,7 @@ CoffeeScript `import` syntax is nearly identical to the ES2015 syntax you see ab
 
 ```coffee
 import { Meteor } from 'meteor/meteor'
-import { SimpleSchema } from 'meteor/aldeed:simple-schema'
+import SimpleSchema from 'simpl-schema'
 import { Lists } from './lists.coffee'
 ```
 
