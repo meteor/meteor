@@ -6,7 +6,7 @@ set -u
 UNAME=$(uname)
 ARCH=$(uname -m)
 NODE_VERSION=12.14.0
-MONGO_VERSION_64BIT=4.0.6
+MONGO_VERSION_64BIT=4.2.1
 MONGO_VERSION_32BIT=3.2.22
 NPM_VERSION=6.13.4
 
@@ -40,7 +40,7 @@ elif [ "$UNAME" == "Darwin" ] ; then
         exit 1
     fi
 
-    OS="osx"
+    OS="macos"
 
     # We don't strip on Mac because we don't know a safe command. (Can't strip
     # too much because we do need node to be able to load objects like

@@ -52,29 +52,29 @@ downloadReleaseCandidateNode() {
 extractNodeFromTarGz || downloadNodeFromS3 || \
   downloadOfficialNode || downloadReleaseCandidateNode
 
-# Download Mongo from mongodb.com. Will download a 64-bit version of Mongo
-# by default. Will download a 32-bit version of Mongo if using a 32-bit based
-# OS.
+# On macOS, download MongoDB from mongodb.com. On Linux, download a custom build
+# that is compatible with current distributions. If a 32-bit Linux is used,
+# download a 32-bit legacy version from mongodb.com instead.
 MONGO_VERSION=$MONGO_VERSION_64BIT
-MONGO_SSL="-ssl"
 
-# The MongoDB "Generic" Linux option is not offered with SSL, which is reserved
-# for named distributions.  This works out better since the SSL support adds
-# size to the dev bundle though isn't necessary for local development.
-if [ $UNAME = "Linux" ]; then
-  MONGO_SSL=""
+if [ $ARCH = "i686" ] && [ $OS = "linux" ]; then
+    MONGO_VERSION=$MONGO_VERSION_32BIT
 fi
 
-if [ $ARCH = "i686" ]; then
-  MONGO_VERSION=$MONGO_VERSION_32BIT
-fi
+case $OS in
+    macos) MONGO_BASE_URL="https://fastdl.mongodb.org/osx" ;;
+    linux)
+        [ $ARCH = "i686" ] &&
+            MONGO_BASE_URL="https://fastdl.mongodb.org/linux" ||
+            MONGO_BASE_URL="https://github.com/meteor/mongodb-builder/releases/download/${MONGO_VERSION}"
+        ;;
+esac
 
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
-MONGO_NAME_SSL="mongodb-${OS}${MONGO_SSL}-${ARCH}-${MONGO_VERSION}"
-MONGO_TGZ="${MONGO_NAME_SSL}.tgz"
-MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"
+MONGO_TGZ="${MONGO_NAME}.tgz"
+MONGO_URL="${MONGO_BASE_URL}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"
-curl "${MONGO_URL}" | tar zx
+curl -L "${MONGO_URL}" | tar zx
 
 # Put Mongo binaries in the right spot (mongodb/bin)
 mkdir -p "mongodb/bin"
