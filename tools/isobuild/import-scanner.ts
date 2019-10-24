@@ -238,8 +238,11 @@ const Status = {
 // that it has been imported by other modules. The "dynamic" status trumps
 // false, and "static" trumps both "dynamic" and false. A file can never
 // be demoted to a lower status after it has been promoted.
-const importedStatusOrder = [Status.NOT_IMPORTED, Status.DYNAMIC,
-  Status.STATIC];
+const importedStatusOrder = [
+  Status.NOT_IMPORTED,
+  Status.DYNAMIC,
+  Status.STATIC,
+];
 
 // Set each file.imported status to the maximum status of provided files.
 function alignImportedStatuses(...files: File[]) {
@@ -249,12 +252,16 @@ function alignImportedStatuses(...files: File[]) {
   files.forEach(file => file.imported = maxStatus);
 }
 
-function getParentStatus(importInfo) {
-  return importInfo.some(entry => !entry.parentWasDynamic) ? Status.STATIC :
-    Status.DYNAMIC;
+function getParentStatus(importInfos: ImportInfo[]) {
+  return importInfos.some(entry => !entry.parentWasDynamic)
+    ? Status.STATIC
+    : Status.DYNAMIC;
 }
 
-function isHigherStatus(newStatus, previousStatus) {
+function isHigherStatus(
+  newStatus: string | boolean,
+  previousStatus: string | boolean,
+) {
   return importedStatusOrder.indexOf(newStatus) >
     importedStatusOrder.indexOf(previousStatus);
 }
@@ -806,7 +813,8 @@ export default class ImportScanner {
       // this.allMissingModules.
       Object.keys(newlyMissing).forEach(id => {
         const skipScan = has(previousAllMissingModules, id) &&
-          !isHigherStatus(getParentStatus(newlyMissing[id]),
+          !isHigherStatus(
+            getParentStatus(newlyMissing[id]),
             getParentStatus(previousAllMissingModules[id]));
 
         if (skipScan) {
@@ -1019,8 +1027,7 @@ export default class ImportScanner {
       // they can be handled by the loop above.
       const file = this.getFile(resolved.path);
       if (file && file.alias) {
-        setImportedStatus(file, forDynamicImport ? Status.DYNAMIC :
-          Status.STATIC);
+        setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
         return file.alias;
       }
     }
@@ -1549,8 +1556,7 @@ export default class ImportScanner {
     if (file) {
       // If the file already exists, just update file.imported according
       // to the forDynamicImport parameter.
-      setImportedStatus(file, forDynamicImport ? Status.DYNAMIC :
-        Status.STATIC);
+      setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
       return file;
     }
 
