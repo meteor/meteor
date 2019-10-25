@@ -54,7 +54,7 @@ N/A
 ### Changes
 
 * Node has been updated to version
-  [8.16.1](https://nodejs.org/en/blog/release/v8.16.1/).
+  [8.16.2](https://nodejs.org/en/blog/release/v8.16.2/).
 
 * The `npm` npm package has been updated to version 6.11.3, and our
   [fork](https://github.com/meteor/pacote/tree/v9.5.8-meteor) of its

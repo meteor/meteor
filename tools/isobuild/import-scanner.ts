@@ -227,12 +227,22 @@ function ensureLeadingSlash(path?: string) {
   return posix;
 }
 
+const Status = {
+  NOT_IMPORTED: false,
+  DYNAMIC: 'dynamic',
+  STATIC: 'static',
+};
+
 // Files start with file.imported === false. As we scan the dependency
 // graph, a file can get promoted to "dynamic" or "static" to indicate
 // that it has been imported by other modules. The "dynamic" status trumps
 // false, and "static" trumps both "dynamic" and false. A file can never
 // be demoted to a lower status after it has been promoted.
-const importedStatusOrder = [false, "dynamic", "static"];
+const importedStatusOrder = [
+  Status.NOT_IMPORTED,
+  Status.DYNAMIC,
+  Status.STATIC,
+];
 
 // Set each file.imported status to the maximum status of provided files.
 function alignImportedStatuses(...files: File[]) {
@@ -242,11 +252,24 @@ function alignImportedStatuses(...files: File[]) {
   files.forEach(file => file.imported = maxStatus);
 }
 
+function getParentStatus(importInfos: ImportInfo[]) {
+  return importInfos.some(entry => !entry.parentWasDynamic)
+    ? Status.STATIC
+    : Status.DYNAMIC;
+}
+
+function isHigherStatus(
+  newStatus: string | boolean,
+  previousStatus: string | boolean,
+) {
+  return importedStatusOrder.indexOf(newStatus) >
+    importedStatusOrder.indexOf(previousStatus);
+}
+
 // Set file.imported to status if status has a higher index than the
 // current value of file.imported.
 function setImportedStatus(file: File, status: string | boolean) {
-  if (importedStatusOrder.indexOf(status) >
-      importedStatusOrder.indexOf(file.imported)) {
+  if (isHigherStatus(status, file.imported)) {
     file.imported = status;
   }
 }
@@ -789,7 +812,12 @@ export default class ImportScanner {
       // newlyMissing and merge the new identifiers back into
       // this.allMissingModules.
       Object.keys(newlyMissing).forEach(id => {
-        if (has(previousAllMissingModules, id)) {
+        const skipScan = has(previousAllMissingModules, id) &&
+          !isHigherStatus(
+            getParentStatus(newlyMissing[id]),
+            getParentStatus(previousAllMissingModules[id]));
+
+        if (skipScan) {
           delete newlyMissing[id];
         } else {
           ImportScanner.mergeMissing(
@@ -999,7 +1027,7 @@ export default class ImportScanner {
       // they can be handled by the loop above.
       const file = this.getFile(resolved.path);
       if (file && file.alias) {
-        setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
+        setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
         return file.alias;
       }
     }
@@ -1031,14 +1059,14 @@ export default class ImportScanner {
     }
 
     if (forDynamicImport &&
-        file.imported === "dynamic") {
+        file.imported === Status.DYNAMIC) {
       // If we've already scanned this file dynamically, then we don't
       // need to scan it dynamically again.
       return;
     }
 
     // Set file.imported to a truthy value (either "dynamic" or true).
-    setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
+    setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
 
     if (file.reportPendingErrors &&
         file.reportPendingErrors() > 0) {
@@ -1528,7 +1556,7 @@ export default class ImportScanner {
     if (file) {
       // If the file already exists, just update file.imported according
       // to the forDynamicImport parameter.
-      setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
+      setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
       return file;
     }
 
@@ -1549,7 +1577,7 @@ export default class ImportScanner {
       servePath: stripLeadingSlash(absModuleId),
       hash: sha1(data),
       lazy: true,
-      imported: forDynamicImport ? "dynamic" : "static",
+      imported: forDynamicImport ? Status.DYNAMIC : Status.STATIC,
       // Since _addPkgJsonToOutput is only ever called for package.json
       // files that are involved in resolving package directories, and pkg
       // is only a subset of the information in the actual package.json

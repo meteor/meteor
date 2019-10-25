@@ -5,7 +5,7 @@
 ///
 
 import assert from "assert";
-import fs, { Stats } from "fs";
+import fs, { PathLike, Stats } from "fs";
 import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
@@ -1745,7 +1745,7 @@ export const open = wrapFsFunc("open", fs.openSync, [0]);
 export const read = wrapFsFunc("read", fs.readSync, []);
 export const readlink = wrapFsFunc<[string], string>("readlink", fs.readlinkSync, [0]);
 export const rmdir = wrapDestructiveFsFunc("rmdir", fs.rmdirSync);
-export const stat = wrapFsFunc("stat", fs.statSync, [0], { cached: true });
+export const stat = wrapFsFunc("stat", fs.statSync as (path: PathLike) => Stats, [0], { cached: true });
 export const symlink = wrapFsFunc("symlink", fs.symlinkSync, [0, 1]);
 export const unlink = wrapDestructiveFsFunc("unlink", fs.unlinkSync);
 export const write = wrapFsFunc("write", fs.writeSync, []);
