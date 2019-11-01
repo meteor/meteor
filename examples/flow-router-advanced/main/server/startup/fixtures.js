@@ -26,9 +26,9 @@ function createUsers () {
       {name:"Admin User",email:"admin@example.com",roles:['admin']}
     ];
 
-    _.each(users, function (userData) {
+    users.forEach(function (userData) {
       var id
-      
+
       console.log(userData);
 
       id = Accounts.createUser({
@@ -41,12 +41,12 @@ function createUsers () {
       Meteor.users.update({_id: id},
                           {$set:{'emails.0.verified': true}});
 
-      _.each(userData.roles, function (role) {
+      userData.roles.forEach(function (role) {
         Roles.createRole(role, {unlessExists: true});
       });
 
       Roles.addUsersToRoles(id, userData.roles);
-    
+
     });
   }
 }
