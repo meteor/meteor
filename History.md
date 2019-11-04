@@ -6,7 +6,7 @@
 * Be sure you are not using variables named `exports` otherwise you will get 
   this error `Uncaught SyntaxError: Identifier 'exports' has already been 
   declared`. [Comment #535535056](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056) 
-  Thanks @SimonSimCity
+  Thanks [@SimonSimCity](https://github.com/SimonSimCity)
 
 ### Migration Steps
 
