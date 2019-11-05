@@ -330,7 +330,7 @@ Function Add-NpmModulesFromJsBundleFile {
   if ((Test-Path "@babel\runtime\helpers") -And
       !(Test-Path "@babel\runtime\helpers\builtin")) {
     cd @babel\runtime\helpers
-    & "$($Commands.node)" -e 'require("fs").symlinkSync(".", "builtin", "junction")'
+    & "$($Commands.node)" -e "require('fs').symlinkSync('.', 'builtin', 'junction')"
     cd ..\..\..
   }
 
