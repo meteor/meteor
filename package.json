@@ -49,7 +49,7 @@
     "typescript": "^3.7.2"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-decorators": "7.6.0",
+    "@babel/plugin-proposal-decorators": "7.7.0",
     "@babel/plugin-syntax-decorators": "7.2.0",
     "d3": "4.13.0",
     "fibers": "4.0.1",
