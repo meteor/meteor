@@ -11,7 +11,7 @@
 ### Migration Steps
 
 * Be sure to update the `@babel/runtime` npm package to its latest version
-  (currently 7.6.0):
+  (currently 7.7.0):
   ```sh
   meteor npm install @babel/runtime@latest
   ```
@@ -71,9 +71,9 @@
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.6.1,
+* The `meteor-babel` npm package has been updated to version 7.7.0,
   enabling compilation of the `meteor/tools` codebase with TypeScript
-  (specifically, version 3.6.2 of the `typescript` npm package).
+  (specifically, version 3.7.2 of the `typescript` npm package).
 
 * The `reify` npm package has been updated to version 0.20.12.
 
