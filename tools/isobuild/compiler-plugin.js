@@ -9,7 +9,11 @@ var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
-import {sha1, readAndWatchFileWithHash} from  '../fs/watch';
+import {
+  WatchSet,
+  sha1,
+  readAndWatchFileWithHash,
+} from  '../fs/watch';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
@@ -1261,6 +1265,7 @@ export class PackageSourceBatch {
         files: inputFiles,
         mainModule: _.find(inputFiles, file => file.mainModule) || null,
         batch,
+        importScannerWatchSet: new WatchSet(),
       });
     });
 
@@ -1337,17 +1342,19 @@ export class PackageSourceBatch {
         }
       });
 
+      const entry = map.get(name);
+
       const scanner = new ImportScanner({
         name,
         bundleArch: batch.processor.arch,
         extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
-        watchSet: batch.unibuild.watchSet,
+        watchSet: entry.importScannerWatchSet,
         cacheDir: batch.scannerCacheDir,
       });
 
-      scanner.addInputFiles(map.get(name).files);
+      scanner.addInputFiles(entry.files);
 
       if (batch.useMeteorInstall) {
         scanner.scanImports();
@@ -1495,20 +1502,21 @@ export class PackageSourceBatch {
           absPath = sourcePath &&
             files.pathJoin(entry.batch.sourceRoot, sourcePath),
         } = file;
-        const watchSet = entry.batch.unibuild.watchSet;
+        const { importScannerWatchSet } = entry;
         if (
           typeof absPath === "string" &&
-          // Blindly calling watchSet.addFile would be logically correct here,
-          // but we can save the cost of calling optimisticHashOrNull(absPath)
-          // if the watchSet already knows about the file and it was not marked
-          // as potentially unused.
-          ! watchSet.isDefinitelyUsed(absPath)
+          // Blindly calling importScannerWatchSet.addFile would be
+          // logically correct here, but we can save the cost of calling
+          // optimisticHashOrNull(absPath) if the importScannerWatchSet
+          // already knows about the file and it has not been marked as
+          // potentially unused.
+          ! importScannerWatchSet.isDefinitelyUsed(absPath)
         ) {
-          // If this file was previously added to the unibuild.watchSet using
-          // the addPotentiallyUnusedFile method (see compileUnibuild), calling
-          // addFile here will update its usage status to reflect that the
-          // ImportScanner did, in fact, end up "using" the file.
-          watchSet.addFile(absPath, optimisticHashOrNull(absPath));
+          // If this file was previously added to the importScannerWatchSet
+          // using the addPotentiallyUnusedFile method (see compileUnibuild),
+          // calling addFile here will update its usage status to reflect that
+          // the ImportScanner did, in fact, end up "using" the file.
+          importScannerWatchSet.addFile(absPath, optimisticHashOrNull(absPath));
         }
       });
     });
