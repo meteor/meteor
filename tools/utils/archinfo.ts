@@ -236,6 +236,42 @@ export function matches(host: string, program: string): boolean {
      host.substr(program.length, 1) === ".");
 }
 
+const legacyArches = [
+  "web.browser.legacy",
+  // It's important to include web.browser.legacy resources in the Cordova
+  // bundle, since Cordova bundles are built into the mobile application,
+  // rather than being downloaded from a web server at runtime. This means
+  // we can't distinguish between clients at runtime, so we have to use
+  // code that works for all clients.
+  "web.cordova",
+];
+
+export function isLegacyArch(arch: string): boolean {
+  return legacyArches.some(la => matches(arch, la));
+}
+
+export function mapWhereToArches(where: string) {
+  const arches: string[] = [];
+
+  // Shorthands for common arch prefixes:
+  // "server" => os.*
+  // "client" => web.*
+  // "legacy" => web.browser.legacy, web.cordova
+  if (where === "server") {
+    arches.push("os");
+  } else if (where === "client") {
+    arches.push("web");
+  } else if (where === "modern") {
+    arches.push("web.browser");
+  } else if (where === "legacy") {
+    arches.push(...legacyArches);
+  } else {
+    arches.push(where);
+  }
+
+  return arches;
+}
+
 // Like `supports`, but instead taken an array of possible
 // architectures as its second argument. Returns the most specific
 // match, or null if none match. Throws an error if `programs`
