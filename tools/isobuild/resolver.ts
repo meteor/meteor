@@ -4,7 +4,7 @@ import {
   has,
 } from "underscore";
 
-import { matches as archMatches } from "../utils/archinfo";
+import { matches as archMatches, isLegacyArch } from "../utils/archinfo";
 import {
   pathJoin,
   pathRelative,
@@ -107,7 +107,14 @@ export default class Resolver {
       path => getPkgJsonSubsetForDir.call(this, path));
 
     if (archMatches(this.targetArch, "web")) {
-      this.mainFields = ["browser", "module", "main"];
+      if (isLegacyArch(this.targetArch)) {
+        // The legacy bundle prefers the "main" field over the "module"
+        // field, since many npm packages ship modern syntax other than
+        // import/export in their "module" dependency trees.
+        this.mainFields = ["browser", "main", "module"];
+      } else {
+        this.mainFields = ["browser", "module", "main"];
+      }
     } else {
       this.mainFields = ["main"];
     }

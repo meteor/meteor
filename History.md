@@ -44,9 +44,14 @@
   (to the best of our current knowledge).
   [PR #10695](https://github.com/meteor/meteor/pull/10695)
 
-* When bundling client code, the Meteor module system now prefers the
-  `"module"` field in `package.json`, if defined.
-  [PR #10541](https://github.com/meteor/meteor/pull/10541)
+* When bundling modern client code, the Meteor module system now prefers
+  the `"module"` field in `package.json` (if defined) over the `"main"`
+  field, which should unlock various `import`/`export`-based optimizations
+  such as tree shaking in future versions of Meteor. As before, server
+  code uses only the `"main"` field, like Node.js, and legacy client code
+  prefers `"browser"`, `"main"`, and then `"module"`.
+  [PR #10541](https://github.com/meteor/meteor/pull/10541),
+  [PR #10765](https://github.com/meteor/meteor/pull/10765).
 
 * ECMAScript module syntax (`import`, `export`, and dynamic `import()`) is
   now supported by default everywhere, including in modules imported from

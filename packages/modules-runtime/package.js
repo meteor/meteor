@@ -18,7 +18,8 @@ Package.onUse(function(api) {
     bare: true
   });
 
-  api.addFiles("client.js", "client");
+  api.addFiles("modern.js", "modern");
+  api.addFiles("legacy.js", "legacy");
   api.addFiles("server.js", "server");
   api.addFiles("profile.js");
 

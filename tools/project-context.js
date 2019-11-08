@@ -24,7 +24,7 @@ import {
 
 import {
   mapWhereToArches,
-} from "./isobuild/package-api.js";
+} from "./utils/archinfo";
 
 import Resolver from "./isobuild/resolver";
 

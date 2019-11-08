@@ -5,7 +5,10 @@ import {
   isString, isObject, isEmpty, has, keys, each, omit,
 } from "underscore";
 import {sha1} from "../fs/watch";
-import {matches as archMatches} from "../utils/archinfo";
+import {
+  matches as archMatches,
+  isLegacyArch,
+} from "../utils/archinfo";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
@@ -71,10 +74,7 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
   _hash,
   bundleArch,
 ) {
-  const isLegacy =
-    bundleArch === "web.browser.legacy" ||
-    bundleArch === "web.cordova";
-
+  const isLegacy = isLegacyArch(bundleArch);
   return reifyCompile(stripHashBang(source), {
     parse: reifyBabelParse,
     generateLetDeclarations: !isLegacy,
