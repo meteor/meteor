@@ -27,9 +27,9 @@
 * Node has been updated to version
   [8.16.2](https://nodejs.org/en/blog/release/v8.16.2/).
 
-* The `npm` npm package has been updated to version 6.11.3, and our
-  [fork](https://github.com/meteor/pacote/tree/v9.5.8-meteor) of its
-  `pacote` dependency has been updated to version 9.5.8.
+* The `npm` npm package has been updated to version 6.13.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.9-meteor) of its
+  `pacote` dependency has been updated to version 9.5.9.
 
 * New Meteor applications now include an official `typescript` package,
   supporting TypeScript compilation of `.ts` and `.tsx` modules, which can
