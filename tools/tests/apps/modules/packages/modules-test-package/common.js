@@ -12,7 +12,9 @@ assert.strictEqual(typeof Slot, "function");
 const idPrefix = "/node_modules/meteor/modules-test-package/node_modules/@wry/context/lib/";
 assert.strictEqual(
   require.resolve("@wry/context"),
-  idPrefix + (Meteor.isClient ? "context.esm.js" : "context.js"),
+  idPrefix + (
+    Meteor.isClient && Meteor.isModern ? "context.esm.js" : "context.js"
+  ),
 );
 
 import ganalytics from "ganalytics";
