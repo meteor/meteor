@@ -1,4 +1,5 @@
 import assert from "assert";
+import path from "path";
 import { readFileSync } from "fs";
 import { transform } from "@babel/core";
 import { SourceMapConsumer } from "source-map";
@@ -317,6 +318,49 @@ describe("meteor-babel", () => {
       "(function (Test) {",
       "  Test.enabled = true;",
       "})(Test || module.runSetters(Test = {}));",
+    ].join("\n"));
+  });
+
+  it("can compile TypeScript with import/export syntax", () => {
+    import * as tsParent from "./typescript/parent";
+    assert.deepEqual(tsParent, {
+      def: "oyez",
+      child: {
+        default: "oyez",
+        onoz: "onoz",
+      },
+    });
+
+    const parentPath = path.join(__dirname, "typescript", "parent.ts");
+    const parentSource = readFileSync(parentPath, "utf8");
+
+    const options = meteorBabel.getDefaultOptions({
+      typescript: true,
+    });
+
+    const result = meteorBabel.compile(parentSource, options);
+
+    assert.strictEqual(result.code, [
+      'module.export({',
+      '  def: function () {',
+      '    return def;',
+      '  },',
+      '  child: function () {',
+      '    return child;',
+      '  }',
+      '});',
+      'var def;',
+      'module.link("./child", {',
+      '  "default": function (v) {',
+      '    def = v;',
+      '  }',
+      '}, 0);',
+      'var child;',
+      'module.link("./child", {',
+      '  "*": function (v) {',
+      '    child = v;',
+      '  }',
+      '}, 1);',
     ].join("\n"));
   });
 
