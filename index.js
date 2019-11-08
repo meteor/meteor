@@ -147,9 +147,15 @@ function precompileTypeScript(result, options) {
     tsResult = ts.transpileModule(result.code, {
       fileName,
       compilerOptions: {
-        target: ts.ScriptTarget.ES2018,
+        target: ts.ScriptTarget.ESNext,
         // Leave module syntax intact so that Babel/Reify can handle it.
         module: ts.ModuleKind.ESNext,
+        // This used to be false by default, but appears to have become
+        // true by default around the release of typescript@3.7. It's
+        // important to disable this option because enabling it allows
+        // TypeScript to use helpers like __importDefault, which are much
+        // better handled by Babel/Reify later in the pipeline.
+        esModuleInterop: false,
         sourceMap: true,
         inlineSources: true,
       }
