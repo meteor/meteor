@@ -30,6 +30,21 @@ selftest.define("client refresh for application code", () => testHelper({
   },
 }));
 
+selftest.define("client refresh for non-npm node_modules", () => testHelper({
+  client: {
+    path: "client/main.js",
+    id: "/client/main.js",
+  },
+  server: {
+    path: "server/main.js",
+    id: "/server/main.js",
+  },
+  both: {
+    path: "imports/node_modules/some-package/index.js",
+    id: "/imports/node_modules/some-package/index.js",
+  },
+}));
+
 function testHelper(pathsAndIds) {
   const s = new selftest.Sandbox();
   s.createApp("myapp", "client-refresh");
