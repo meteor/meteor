@@ -229,6 +229,11 @@ function makeCheapPathFunction<TResult>(
     return pathFunction;
   }
   const wrapper = wrap(pathFunction, {
+    // The maximum LRU cache size is Math.pow(2, 16) by default, but it's
+    // important to prevent eviction churn for very-frequently-called
+    // functions like optimisticStatOrNull. While it's tempting to set
+    // this limit to Infinity, increasing it by 16x comes close enough.
+    max: Math.pow(2, 20),
     subscribe(path) {
       let watcher: SafeWatcher | null = watch(
         path,

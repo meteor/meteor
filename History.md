@@ -35,12 +35,15 @@ N/A
 ## v1.8.2, TBD
 
 ### Breaking changes
-N/A
+* Be sure you are not using variables named `exports` otherwise you will get 
+  this error `Uncaught SyntaxError: Identifier 'exports' has already been 
+  declared`. [Comment #535535056](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056) 
+  Thanks [@SimonSimCity](https://github.com/SimonSimCity)
 
 ### Migration Steps
 
 * Be sure to update the `@babel/runtime` npm package to its latest version
-  (currently 7.6.0):
+  (currently 7.7.0):
   ```sh
   meteor npm install @babel/runtime@latest
   ```
@@ -56,9 +59,9 @@ N/A
 * Node has been updated to version
   [8.16.2](https://nodejs.org/en/blog/release/v8.16.2/).
 
-* The `npm` npm package has been updated to version 6.11.3, and our
-  [fork](https://github.com/meteor/pacote/tree/v9.5.8-meteor) of its
-  `pacote` dependency has been updated to version 9.5.8.
+* The `npm` npm package has been updated to version 6.13.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.9-meteor) of its
+  `pacote` dependency has been updated to version 9.5.9.
 
 * New Meteor applications now include an official `typescript` package,
   supporting TypeScript compilation of `.ts` and `.tsx` modules, which can
@@ -73,9 +76,14 @@ N/A
   (to the best of our current knowledge).
   [PR #10695](https://github.com/meteor/meteor/pull/10695)
 
-* When bundling client code, the Meteor module system now prefers the
-  `"module"` field in `package.json`, if defined.
-  [PR #10541](https://github.com/meteor/meteor/pull/10541)
+* When bundling modern client code, the Meteor module system now prefers
+  the `"module"` field in `package.json` (if defined) over the `"main"`
+  field, which should unlock various `import`/`export`-based optimizations
+  such as tree shaking in future versions of Meteor. As before, server
+  code uses only the `"main"` field, like Node.js, and legacy client code
+  prefers `"browser"`, `"main"`, and then `"module"`.
+  [PR #10541](https://github.com/meteor/meteor/pull/10541),
+  [PR #10765](https://github.com/meteor/meteor/pull/10765).
 
 * ECMAScript module syntax (`import`, `export`, and dynamic `import()`) is
   now supported by default everywhere, including in modules imported from
@@ -100,9 +108,9 @@ N/A
 * The `mongodb` npm package used by the `npm-mongo` Meteor package has
   been updated to version 3.2.7.
 
-* The `meteor-babel` npm package has been updated to version 7.6.1,
+* The `meteor-babel` npm package has been updated to version 7.7.0,
   enabling compilation of the `meteor/tools` codebase with TypeScript
-  (specifically, version 3.6.2 of the `typescript` npm package).
+  (specifically, version 3.7.2 of the `typescript` npm package).
 
 * The `reify` npm package has been updated to version 0.20.12.
 

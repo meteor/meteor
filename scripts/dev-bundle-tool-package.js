@@ -10,19 +10,19 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.11.3",
-    pacote: "https://github.com/meteor/pacote/tarball/00b3b094e6074e45fc221d5bd96419d07ea34c6a",
+    npm: "6.13.0",
+    pacote: "https://github.com/meteor/pacote/tarball/a1853763676463c458aa8ce7b91c20205c44ae6a",
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.13.0",
-    typescript: "3.6.3",
-    "meteor-babel": "7.6.1",
+    typescript: "3.7.2",
+    "meteor-babel": "7.7.0",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
     fibers: "4.0.1",
     reify: "0.20.12",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.6.0",
+    "@babel/runtime": "7.7.0",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
