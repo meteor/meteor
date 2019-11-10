@@ -674,9 +674,9 @@ jobs:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
     steps:
       - run:
-          name: Cloning "meteor/docs" Repository's "master" branch
+          name: Cloning "meteor/docs" Repository's "update-to-meteor-1.9" branch
           command: |
-            git clone https://github.com/meteor/docs.git ${CHECKOUT_METEOR_DOCS}
+            git clone --branch update-to-meteor-1.9 https://github.com/meteor/docs.git ${CHECKOUT_METEOR_DOCS}
       # The "docs" repository normally brings in the Meteor code as a Git
       # submodule checked out into the "code" directory.  As the goal of this
       # test is to run it against the _current_ repository's code, we'll move
