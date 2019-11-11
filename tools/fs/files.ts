@@ -1753,7 +1753,7 @@ export const writeFile = wrapDestructiveFsFunc("writeFile", fs.writeFileSync);
 
 // Asynchronous versions of some of the above functions.
 export const promises = {
-  writeFile: wrapFsFunc(
+  writeFile: wrapDestructiveFsFunc(
     "promises.writeFile",
     // TODO This will be easier with the fs.promises namespace (available
     // in Node.js 12, in Meteor 1.9+).
@@ -1762,7 +1762,6 @@ export const promises = {
         error ? reject(error) : resolve();
       });
     }),
-    [0],
   ),
 };
 
