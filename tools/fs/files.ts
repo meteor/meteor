@@ -35,6 +35,7 @@ import {
   convertToStandardLineEndings,
   convertToStandardPath,
   convertToWindowsPath,
+  isWindowsLikeFilesystem,
   pathBasename,
   pathDirname,
   pathJoin,
@@ -1690,7 +1691,7 @@ export function copyFile(from: string, to: string, flags = 0) {
 }
 
 const wrappedRename = wrapDestructiveFsFunc("rename", fs.renameSync, [0, 1]);
-export function rename(from: string, to: string) {
+export const rename = isWindowsLikeFilesystem() ? function (from: string, to: string) {
   // Retries are necessary only on Windows, because the rename call can
   // fail with EBUSY, which means the file is in use.
   const osTo = convertToOSPath(to);
@@ -1727,7 +1728,7 @@ export function rename(from: string, to: string) {
       throw error;
     }
   }).await();
-}
+} : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg
 export const realpath =
