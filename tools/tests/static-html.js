@@ -15,7 +15,10 @@ function startRun(sandbox) {
   run.match("myapp");
   run.match("proxy");
   run.tellMongo(MONGO_LISTENING);
-  run.match("MongoDB");
+  // Since the "=> Started MongoDB" message can appear after the
+  // "Attributes on <head> are not supported" message, we should not
+  // enforce the opposite order here:
+  // run.match("MongoDB");
   return run;
 };
 
