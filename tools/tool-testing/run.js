@@ -461,10 +461,37 @@ export default class Run {
 
       if (failure instanceof TestFailure) {
         const frames = parseStackParse(failure).outsideFiber;
-        const relpath = files.pathRelative(files.getCurrentToolsDir(),
-                                         frames[0].file);
+        const toolsDir = files.getCurrentToolsDir();
+        let pathWithLineNumber;
+        frames.some(frame => {
+          // The parsed stack trace will typically include frame.file
+          // strings of the form "/tools/tests/whatever.js", which can be
+          // made absolute by joining them with toolsDir. If the resulting
+          // absPath exists, then we know we interpreted the frame.file
+          // correctly, and we can normalize away the leading '/'
+          // character to get a safe relative path.
+          const absPath = files.pathJoin(toolsDir, frame.file);
+          if (files.exists(absPath)) {
+            const relPath = files.pathRelative(toolsDir, absPath);
+            const parts = relPath.split("/");
+            if (parts[0] === "tools" &&
+                parts[1] === "tool-testing") {
+              // Ignore frames inside the /tools/tool-testing directory,
+              // like run.js and selftest.js.
+              return false;
+            }
+            pathWithLineNumber = `${relPath}:${frame.line}`;
+            return true;
+          }
+          // If frame.file was not joinable with toolsDir to obtain an
+          // absolute path that exists, show it to the user without trying
+          // to interpret what it means.
+          pathWithLineNumber = `${frame.file}:${frame.line}`;
+          return true;
+        });
+
         Console.rawError(
-          `  => ${failure.reason} at ${relpath}:${frames[0].line}\n`);
+          `  => ${failure.reason} at ${pathWithLineNumber}\n`);
         if (failure.reason === 'no-match' || failure.reason === 'junk-before' ||
             failure.reason === 'match-timeout') {
           Console.arrowError(`Pattern: ${failure.details.pattern}`, 2);
