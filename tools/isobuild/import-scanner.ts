@@ -142,7 +142,9 @@ class DefaultHandlers {
           file.hash,
           this.bundleArch,
         );
-        process.nextTick(writeFileAtomically, cacheFileName, code);
+        Promise.resolve().then(
+          () => writeFileAtomically(cacheFileName, code),
+        );
         return code;
       }
     } else {
