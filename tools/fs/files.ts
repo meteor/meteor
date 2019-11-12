@@ -1694,29 +1694,40 @@ const wrappedRename = wrapDestructiveFsFunc("rename", fs.renameSync, [0, 1]);
 export const rename = isWindowsLikeFilesystem() ? function (from: string, to: string) {
   // Retries are necessary only on Windows, because the rename call can
   // fail with EBUSY, which means the file is in use.
-  let maxTries = 10;
-  let success = false;
   const osTo = convertToOSPath(to);
+  const startTimeMs = Date.now();
+  const intervalMs = 50;
+  const timeLimitMs = 1000;
 
-  while (! success && maxTries-- > 0) {
-    try {
-      // Despite previous failures, the top-level destination directory
-      // may have been successfully created, so we must remove it to
-      // avoid moving the source file *into* the destination directory.
-      rimraf.sync(osTo);
-      wrappedRename(from, to);
-      success = true;
-    } catch (err) {
-      if (err.code !== 'EPERM' && err.code !== 'EACCES') {
-        throw err;
+  return new Promise((resolve, reject) => {
+    function attempt() {
+      try {
+        // Despite previous failures, the top-level destination directory
+        // may have been successfully created, so we must remove it to
+        // avoid moving the source file *into* the destination directory.
+        rimraf.sync(osTo);
+        wrappedRename(from, to);
+        resolve();
+      } catch (err) {
+        if (err.code !== 'EPERM' && err.code !== 'EACCES') {
+          reject(err);
+        } else if (Date.now() - startTimeMs < timeLimitMs) {
+          setTimeout(attempt, intervalMs);
+        } else {
+          reject(err);
+        }
       }
     }
-  }
-
-  if (! success) {
-    cp_r(from, to, { preserveSymlinks: true });
-    rm_recursive(from);
-  }
+    attempt();
+  }).catch(error => {
+    if (error.code === 'EPERM' ||
+        error.code === 'EACCESS') {
+      cp_r(from, to, { preserveSymlinks: true });
+      rm_recursive(from);
+    } else {
+      throw error;
+    }
+  }).await();
 } : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg
