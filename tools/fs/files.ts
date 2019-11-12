@@ -1751,6 +1751,20 @@ export const unlink = wrapDestructiveFsFunc("unlink", fs.unlinkSync);
 export const write = wrapFsFunc("write", fs.writeSync, []);
 export const writeFile = wrapDestructiveFsFunc("writeFile", fs.writeFileSync);
 
+// Asynchronous versions of some of the above functions.
+export const promises = {
+  writeFile: wrapDestructiveFsFunc(
+    "promises.writeFile",
+    // TODO This will be easier with the fs.promises namespace (available
+    // in Node.js 12, in Meteor 1.9+).
+    (path, data, options) => new Promise((resolve, reject) => {
+      fs.writeFile(path, data, options, error => {
+        error ? reject(error) : resolve();
+      });
+    }),
+  ),
+};
+
 type StatListener = (
   current: Stats,
   previous: Stats,
