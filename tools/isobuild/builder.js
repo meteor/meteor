@@ -545,9 +545,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       );
     }
 
-    // Call this._copyDirectoryAsync rather than this.copyDirectory so the
+    // Call this._copyDirectory rather than this.copyDirectory so that the
     // subBuilder hacks from Builder#enter won't apply a second time.
-    return this._copyDirectoryAsync(options).await();
+    return this._copyDirectory(options);
   }
 
   _ensureAllNonPackageDirectories(absFromDir, relToDir) {
@@ -598,10 +598,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   copyDirectory(options) {
     // TODO(benjamn) Remove this wrapper when Builder#enter is no longer
     // implemented using ridiculous hacks.
-    return this._copyDirectoryAsync(options).await();
+    return this._copyDirectory(options);
   }
 
-  _copyDirectoryAsync({
+  _copyDirectory({
     from, to,
     ignore,
     specificFiles,
@@ -763,7 +763,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           if (this.previousWrittenHashes[thisRelTo] !== hash) {
             const content = optimisticReadFile(thisAbsFrom);
 
-            writePromises.push(files.promises.writeFile(
+            files.writeFile(
               files.pathResolve(this.buildPath, thisRelTo),
               // The reason we call files.writeFile here instead of
               // files.copyFile is so that we can read the file using
@@ -776,7 +776,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
               // this function is used by 'meteor create' which is copying from
               // the read-only tools tree into a writable app."
               { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
-            ));
+            );
           }
 
           this.writtenHashes[thisRelTo] = hash;
@@ -785,9 +785,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     };
 
-    const writePromises = [];
     walk(rootDir, to);
-    return Promise.all(writePromises);
   }
 
   // Returns a new Builder-compatible object that works just like a
