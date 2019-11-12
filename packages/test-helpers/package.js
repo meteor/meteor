@@ -14,8 +14,6 @@ Package.onUse(function (api) {
     'blaze',
   ]);
 
-  api.use(['jquery@1.11.1'], 'client');
-
   // XXX for connection.js. Not sure this really belongs in
   // test-helpers. It probably would be better off in livedata. But it's
   // unclear how to put it in livedata so that it can both be used by
