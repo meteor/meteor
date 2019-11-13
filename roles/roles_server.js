@@ -283,6 +283,33 @@ Object.assign(Roles, {
   },
 
   /**
+   * Moves the assignments from `Meteor.users` to `Meteor.roleAssignment`.
+   *
+   * @method _forwardMigrate2
+   * @param {Object} userSelector An opportunity to share the work among instances. It's advisable to do the division based on user-id.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _forwardMigrate2: function (userSelector) {
+    userSelector = userSelector || {}
+    Object.assign(userSelector, { roles: { $ne: null } })
+
+    Meteor.users.find(userSelector).forEach(function (user, index) {
+      user.roles.filter((r) => r.assigned).forEach(r => {
+        // Added `ifExists` to make it less error-prone
+        Roles._addUserToRole(user._id, r._id, { scope: r.scope, ifExists: true })
+      })
+
+      Meteor.users.update({ _id: user._id }, { $unset: { roles: '' } })
+    })
+
+    // No need to keep the indexes around
+    Roles._dropCollectionIndex(Meteor.users, 'roles._id_1_roles.scope_1')
+    Roles._dropCollectionIndex(Meteor.users, 'roles.scope_1')
+  },
+
+  /**
    * Migrates `Meteor.users` and `Meteor.roles` to the old format.
    *
    * We assume that we are converting back a failed migration, so values can only be
@@ -314,6 +341,52 @@ Object.assign(Roles, {
       if (!Roles._isOldField(user.roles)) {
         updateUser(user, Roles._convertToOldField(user.roles, usingGroups))
       }
+    })
+  },
+
+  /**
+   * Moves the assignments from `Meteor.roleAssignment` back to to `Meteor.users`.
+   *
+   * @method _backwardMigrate2
+   * @param {Object} assignmentSelector An opportunity to share the work among instances. It's advisable to do the division based on user-id.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _backwardMigrate2: function (assignmentSelector) {
+    assignmentSelector = assignmentSelector || {}
+
+    Meteor.users._ensureIndex({ 'roles._id': 1, 'roles.scope': 1 })
+    Meteor.users._ensureIndex({ 'roles.scope': 1 })
+
+    Meteor.roleAssignment.find(assignmentSelector).forEach(r => {
+      const roles = Meteor.users.findOne({ _id: r.user._id }).roles || []
+
+      const currentRole = roles.find(oldRole => oldRole._id === r.role._id && oldRole.scope === r.scope)
+      if (currentRole) {
+        currentRole.assigned = true
+      } else {
+        roles.push({
+          _id: r.role._id,
+          scope: r.scope,
+          assigned: true
+        })
+
+        r.inheritedRoles.forEach(inheritedRole => {
+          const currentInheritedRole = roles.find(oldRole => oldRole._id === inheritedRole._id && oldRole.scope === r.scope)
+
+          if (!currentInheritedRole) {
+            roles.push({
+              _id: inheritedRole._id,
+              scope: r.scope,
+              assigned: false
+            })
+          }
+        })
+      }
+
+      Meteor.users.update({ _id: r.user._id }, { $set: { roles } })
+      Meteor.roleAssignment.remove({ _id: r._id })
     })
   }
 })
