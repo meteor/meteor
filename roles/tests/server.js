@@ -602,6 +602,30 @@ describe('roles', function () {
     testUser('joe', [], 'scope2')
   })
 
+  it('can remove multiple users from roles of any scope', function () {
+    Roles.createRole('admin')
+    Roles.createRole('user')
+    Roles.createRole('editor')
+
+    // remove user role - one user
+    Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], 'scope1')
+    Roles.addUsersToRoles([users.joe, users.bob], ['user'], 'scope2')
+    testUser('eve', ['editor', 'user'], 'scope1')
+    testUser('bob', ['editor', 'user'], 'scope1')
+    testUser('joe', [], 'scope1')
+    testUser('eve', [], 'scope2')
+    testUser('bob', ['user'], 'scope2')
+    testUser('joe', ['user'], 'scope2')
+
+    Roles.removeUsersFromRoles([users.eve, users.bob], ['user'], { anyScope: true })
+    testUser('eve', ['editor'], 'scope1')
+    testUser('bob', ['editor'], 'scope1')
+    testUser('joe', [], 'scope1')
+    testUser('eve', [], 'scope2')
+    testUser('bob', [], 'scope2')
+    testUser('joe', ['user'], 'scope2')
+  })
+
   it('can set user roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')

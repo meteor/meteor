@@ -558,6 +558,7 @@ Object.assign(Roles, {
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {Object|String} [options] Options:
    *   - `scope`: name of the scope, or `null` for the global role
+   *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
    *
    * Alternatively, it can be a scope name string.
    * @static
@@ -598,6 +599,7 @@ Object.assign(Roles, {
    * @param {String} roleName Name of the role to add the user to. The role have to exist.
    * @param {Object} options Options:
    *   - `scope`: name of the scope, or `null` for the global role
+   *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
    * @private
    * @static
    */
@@ -607,11 +609,16 @@ Object.assign(Roles, {
 
     if (!userId) return
 
-    Meteor.roleAssignment.remove({
+    const selector = {
       'user._id': userId,
-      'role._id': roleName,
-      scope: options.scope
-    })
+      'role._id': roleName
+    }
+
+    if (!options.anyScope) {
+      selector.scope = options.scope
+    }
+
+    Meteor.roleAssignment.remove(selector)
   },
 
   /**
