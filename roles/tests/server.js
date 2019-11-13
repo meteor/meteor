@@ -1,4 +1,6 @@
-/* global Roles, describe, it, beforeEach */
+/* eslint-env mocha */
+/* global Roles */
+
 import { Meteor } from 'meteor/meteor'
 import { assert } from 'chai'
 

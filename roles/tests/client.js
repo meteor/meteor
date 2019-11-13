@@ -1,4 +1,6 @@
-/* global Roles, describe, it, beforeEach */
+/* eslint-env mocha */
+/* global Roles */
+
 import { Meteor } from 'meteor/meteor'
 import { Tracker } from 'meteor/tracker'
 import { assert } from 'chai'
@@ -43,10 +45,18 @@ describe('roles', function () {
     })
   }
 
-  // Mock Meteor.user() for isInRole handlebars helper testing
-  Meteor.user = function () {
-    return users.eve
-  }
+  let meteorUserMethod
+  before(() => {
+    meteorUserMethod = Meteor.user
+    // Mock Meteor.user() for isInRole handlebars helper testing
+    Meteor.user = function () {
+      return users.eve
+    }
+  })
+
+  after(() => {
+    Meteor.user = meteorUserMethod
+  })
 
   beforeEach((done) => {
     Meteor.roleAssignment.insert({
