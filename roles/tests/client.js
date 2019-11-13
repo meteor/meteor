@@ -1,6 +1,9 @@
-/* global Meteor, Roles, Tinytest */
+/* global Roles, describe, it, beforeEach */
+import { Meteor } from 'meteor/meteor'
+import { Tracker } from 'meteor/tracker'
+import { assert } from 'chai'
 
-;(function () {
+describe('roles', function () {
   var users
   var roles = ['admin', 'editor', 'user']
 
@@ -43,7 +46,7 @@
     }
   }
 
-  function testUser (test, username, expectedRoles, group) {
+  function testUser (username, expectedRoles, group) {
     var user = users[username]
 
     // test using user object rather than userId to avoid mocking
@@ -53,9 +56,9 @@
       var nmsg = username + ' had un-expected permission ' + role
 
       if (expected) {
-        test.isTrue(Roles.userIsInRole(user, role, group), msg)
+        assert.isTrue(Roles.userIsInRole(user, role, group), msg)
       } else {
-        test.isFalse(Roles.userIsInRole(user, role, group), nmsg)
+        assert.isFalse(Roles.userIsInRole(user, role, group), nmsg)
       }
     })
   }
@@ -65,53 +68,45 @@
     return users.eve
   }
 
-  Tinytest.add(
-    'roles - can check current users roles via template helper',
-    function (test) {
-      var isInRole
-      var expected
-      var actual
+  it('can check current users roles via template helper', function () {
+    var isInRole
+    var expected
+    var actual
 
-      if (!Roles._handlebarsHelpers) {
-        // probably running package tests outside of a Meteor app.
-        // skip this test.
-        return
-      }
+    if (!Roles._handlebarsHelpers) {
+      // probably running package tests outside of a Meteor app.
+      // skip this test.
+      return
+    }
 
-      isInRole = Roles._handlebarsHelpers.isInRole
-      test.equal(typeof isInRole, 'function', "'isInRole' helper not registered")
+    isInRole = Roles._handlebarsHelpers.isInRole
+    assert.equal(typeof isInRole, 'function', "'isInRole' helper not registered")
 
-      expected = true
-      actual = isInRole('admin, editor')
-      test.equal(actual, expected)
+    expected = true
+    actual = isInRole('admin, editor')
+    assert.equal(actual, expected)
 
-      expected = true
-      actual = isInRole('admin')
-      test.equal(actual, expected)
+    expected = true
+    actual = isInRole('admin')
+    assert.equal(actual, expected)
 
-      expected = false
-      actual = isInRole('unknown')
-      test.equal(actual, expected)
-    })
+    expected = false
+    actual = isInRole('unknown')
+    assert.equal(actual, expected)
+  })
 
-  Tinytest.add(
-    'roles - can check if user is in role',
-    function (test) {
-      testUser(test, 'eve', ['admin', 'editor'])
-    })
+  it('can check if user is in role', function () {
+    testUser('eve', ['admin', 'editor'])
+  })
 
-  Tinytest.add(
-    'roles - can check if user is in role by group',
-    function (test) {
-      testUser(test, 'bob', ['user'], 'group1')
-      testUser(test, 'bob', ['editor'], 'group2')
-    })
+  it('can check if user is in role by group', function () {
+    testUser('bob', ['user'], 'group1')
+    testUser('bob', ['editor'], 'group2')
+  })
 
-  Tinytest.add(
-    'roles - can check if user is in role with Roles.GLOBAL_GROUP',
-    function (test) {
-      testUser(test, 'joe', ['admin'])
-      testUser(test, 'joe', ['admin'], Roles.GLOBAL_GROUP)
-      testUser(test, 'joe', ['admin', 'editor'], 'group1')
-    })
-}())
+  it('can check if user is in role with Roles.GLOBAL_GROUP', function () {
+    testUser('joe', ['admin'])
+    testUser('joe', ['admin'], Roles.GLOBAL_GROUP)
+    testUser('joe', ['admin', 'editor'], 'group1')
+  })
+})

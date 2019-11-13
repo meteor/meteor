@@ -18,3 +18,4 @@ smart.lock
 .idea
 docs/
 node_modules/
+.npm/
