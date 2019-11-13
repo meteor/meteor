@@ -727,7 +727,13 @@ describe('roles', function () {
     assert.sameMembers(Roles.getAllRoles({ sort: { _id: -1 } }).fetch().map(r => r._id), expected.reverse())
   })
 
-  it('can\'t get roles for non-existant user', function () {
+  it('get an empty list of roles for an empty user', function () {
+    assert.sameMembers(Roles.getRolesForUser(undefined), [])
+    assert.sameMembers(Roles.getRolesForUser(null), [])
+    assert.sameMembers(Roles.getRolesForUser({}), [])
+  })
+  
+  it('get an empty list of roles for non-existant user', function () {
     assert.sameMembers(Roles.getRolesForUser('1'), [])
     assert.sameMembers(Roles.getRolesForUser('1', 'scope1'), [])
   })
@@ -966,6 +972,14 @@ describe('roles', function () {
     userObj = Meteor.users.findOne({ _id: userId })
     assert.sameMembers(Roles.getRolesForUser(userObj, 'scope1'), ['editor'])
     assert.sameMembers(Roles.getRolesForUser(userObj), ['editor'])
+  })
+
+  it('returns an empty list of scopes for null as user-id', function () {
+    assert.sameMembers(Roles.getScopesForUser(undefined), [])
+    assert.sameMembers(Roles.getScopesForUser(null), [])
+    assert.sameMembers(Roles.getScopesForUser('foo'), [])
+    assert.sameMembers(Roles.getScopesForUser({}), [])
+    assert.sameMembers(Roles.getScopesForUser({ _id: 'foo' }), [])
   })
 
   it('can get all scopes for user', function () {
