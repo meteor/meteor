@@ -111,6 +111,9 @@
   from the same application source code, since by default the port is generated
   using the ID from the application's `.meteor/.id` file.
 
+* The `--test-app-path <directory>` option for `meteor test-packages` and
+  `meteor test` now accepts relative paths as well as absolute paths.
+
 ## v1.8.1, 2019-04-03
 
 ### Breaking changes
