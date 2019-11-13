@@ -63,7 +63,7 @@ those roles easier.
 <a id="roles-naming" name="roles-naming"></a>
 ### Permissions vs roles  (or What's in a name...)
 
-Although the name of this package is `roles`, you can define your **roles**, **groups** or **permissions** however you like.
+Although the name of this package is `roles`, you can define your **roles**, **scopes** or **permissions** however you like.
 They are essentially just tags that you assign to a user and which you can check upon later.
 
 You can have traditional roles like, `admin` or `webmaster`, or you can assign more granular permissions such
@@ -212,7 +212,7 @@ var users = [
       {name:"Admin User",email:"admin@example.com",roles:['admin']}
     ];
 
-_.each(users, function (user) {
+users.forEach(function (user) {
   var id;
 
   id = Accounts.createUser({
@@ -222,7 +222,7 @@ _.each(users, function (user) {
   });
 
   if (user.roles.length > 0) {
-    _.each(user.roles, function (role) {
+    user.roles.forEach(function (role) {
       Roles.createRole(role, {unlessExists: true});
     });
     // Need _id of existing user record so this call must come after `Accounts.createUser`.
@@ -245,7 +245,7 @@ Check user roles before publishing sensitive data:
 ```js
 // server/publish.js
 
-// Give authorized users access to sensitive data by group
+// Give authorized users access to sensitive data by scope
 Meteor.publish('secrets', function (scope) {
   check(scope, String);
 

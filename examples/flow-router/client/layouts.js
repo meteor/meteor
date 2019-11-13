@@ -1,5 +1,5 @@
 Template.mainLayout.helpers({
-  notVerified: function () { 
+  notVerified: function () {
     var user = Meteor.user()
 
     return !emailVerified(user)
@@ -7,7 +7,7 @@ Template.mainLayout.helpers({
 })
 
 function emailVerified (user) {
-  return _.some(user.emails, function (email) {
+  return user.emails.some(function (email) {
     return email.verified
   })
 }

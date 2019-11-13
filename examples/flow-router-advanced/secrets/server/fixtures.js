@@ -14,7 +14,7 @@ Meteor.startup(function () {
 
 function createSecrets () {
   var secrets
- 
+
   if (Meteor.secrets.find().fetch().length === 0) {
     console.log('Creating secrets: ');
 
@@ -23,7 +23,7 @@ function createSecrets () {
       {secret:"domain registration pw: apple3"}
     ]
 
-    _.each(secrets, function (secret) {
+    secrets.forEach(function (secret) {
       console.log(secret)
 
       Meteor.secrets.insert(secret);

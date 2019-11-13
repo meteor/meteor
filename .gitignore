@@ -16,3 +16,7 @@ npm-debug.log
 smart.lock
 
 .idea
+docs/
+node_modules/
+.npm/
+someapp/

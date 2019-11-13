@@ -1,9 +1,12 @@
-"use strict";
+/* global Meteor, Roles */
 
-// Create default indexes on users collection.
-// Index only on "roles._id" is not needed because the combined index works for it as well.
-Meteor.users._ensureIndex({'roles._id': 1, 'roles.scope': 1});
-Meteor.users._ensureIndex({'roles.scope': 1});
+Meteor.roleAssignment._ensureIndex({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
+Meteor.roleAssignment._ensureIndex({ 'user._id': 1, 'role._id': 1, scope: 1 })
+Meteor.roleAssignment._ensureIndex({ 'role._id': 1 })
+Meteor.roleAssignment._ensureIndex({ scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }) // Adding userId and roleId might speed up other queries depending on the first index
+Meteor.roleAssignment._ensureIndex({ 'inheritedRoles._id': 1 })
+
+Meteor.roles._ensureIndex({ 'children._id': 1 })
 
 /*
  * Publish logged-in user's roles so client-side checks can work.
@@ -11,19 +14,21 @@ Meteor.users._ensureIndex({'roles.scope': 1});
  * Use a named publish function so clients can check `ready()` state.
  */
 Meteor.publish('_roles', function () {
-  var loggedInUserId = this.userId,
-      fields = {roles: 1};
+  var loggedInUserId = this.userId
+  var fields = { roles: 1 }
 
   if (!loggedInUserId) {
-    this.ready();
-    return;
+    this.ready()
+    return
   }
 
-  return Meteor.users.find({_id: loggedInUserId},
-                           {fields: fields});
-});
+  return Meteor.users.find(
+    { _id: loggedInUserId },
+    { fields: fields }
+  )
+})
 
-_.extend(Roles, {
+Object.assign(Roles, {
   /**
    * @method _isNewRole
    * @param {Object} role `Meteor.roles` document.
@@ -34,7 +39,7 @@ _.extend(Roles, {
    * @static
    */
   _isNewRole: function (role) {
-    return !_.has(role, 'name') && _.has(role, 'children');
+    return !('name' in role) && 'children' in role
   },
 
   /**
@@ -47,7 +52,7 @@ _.extend(Roles, {
    * @static
    */
   _isOldRole: function (role) {
-    return _.has(role, 'name') && !_.has(role, 'children');
+    return 'name' in role && !('children' in role)
   },
 
   /**
@@ -60,7 +65,7 @@ _.extend(Roles, {
    * @static
    */
   _isNewField: function (roles) {
-    return _.isArray(roles) && _.isObject(roles[0]);
+    return Array.isArray(roles) && (typeof roles[0] === 'object')
   },
 
   /**
@@ -73,7 +78,7 @@ _.extend(Roles, {
    * @static
    */
   _isOldField: function (roles) {
-    return (_.isArray(roles) && _.isString(roles[0])) || (_.isObject(roles) && !_.isArray(roles));
+    return (Array.isArray(roles) && (typeof roles[0] === 'string')) || ((typeof roles === 'object') && !Array.isArray(roles))
   },
 
   /**
@@ -85,12 +90,12 @@ _.extend(Roles, {
    * @static
    */
   _convertToNewRole: function (oldRole) {
-    if (!_.isString(oldRole.name)) throw new Error("Role name '" + oldRole.name + "' is not a string.");
+    if (!(typeof oldRole.name === 'string')) throw new Error("Role name '" + oldRole.name + "' is not a string.")
 
     return {
       _id: oldRole.name,
       children: []
-    };
+    }
   },
 
   /**
@@ -102,11 +107,11 @@ _.extend(Roles, {
    * @static
    */
   _convertToOldRole: function (newRole) {
-    if (!_.isString(newRole._id)) throw new Error("Role name '" + newRole._id + "' is not a string.");
+    if (!(typeof newRole._id === 'string')) throw new Error("Role name '" + newRole._id + "' is not a string.")
 
     return {
       name: newRole._id
-    };
+    }
   },
 
   /**
@@ -119,40 +124,38 @@ _.extend(Roles, {
    * @static
    */
   _convertToNewField: function (oldRoles, convertUnderscoresToDots) {
-    var roles = [];
-    if (_.isArray(oldRoles)) {
-      _.each(oldRoles, function (role, index) {
-        if (!_.isString(role)) throw new Error("Role '" + role + "' is not a string.");
+    var roles = []
+    if (Array.isArray(oldRoles)) {
+      oldRoles.forEach(function (role, index) {
+        if (!(typeof role === 'string')) throw new Error("Role '" + role + "' is not a string.")
 
         roles.push({
           _id: role,
           scope: null,
           assigned: true
         })
-      });
-    }
-    else if (_.isObject(oldRoles)) {
-      _.each(oldRoles, function (rolesArray, group) {
+      })
+    } else if (typeof oldRoles === 'object') {
+      Object.entries(oldRoles).forEach(([group, rolesArray]) => {
         if (group === '__global_roles__') {
-          group = null;
-        }
-        else if (convertUnderscoresToDots) {
+          group = null
+        } else if (convertUnderscoresToDots) {
           // unescape
-          group = group.replace(/_/g, '.');
+          group = group.replace(/_/g, '.')
         }
 
-        _.each(rolesArray, function (role, index) {
-          if (!_.isString(role)) throw new Error("Role '" + role + "' is not a string.");
+        rolesArray.forEach(function (role) {
+          if (!(typeof role === 'string')) throw new Error("Role '" + role + "' is not a string.")
 
           roles.push({
             _id: role,
             scope: group,
             assigned: true
           })
-        });
+        })
       })
     }
-    return roles;
+    return roles
   },
 
   /**
@@ -165,43 +168,40 @@ _.extend(Roles, {
    * @static
    */
   _convertToOldField: function (newRoles, usingGroups) {
-    var roles;
+    var roles
 
     if (usingGroups) {
-      roles = {};
-    }
-    else {
-      roles = [];
+      roles = {}
+    } else {
+      roles = []
     }
 
-    _.each(newRoles, function (userRole, index) {
-      if (!_.isObject(userRole)) throw new Error("Role '" + userRole + "' is not an object.");
+    newRoles.forEach(function (userRole) {
+      if (!(typeof userRole === 'object')) throw new Error("Role '" + userRole + "' is not an object.")
 
       // We assume that we are converting back a failed migration, so values can only be
       // what were valid values in 1.0. So no group names starting with $ and no subroles.
 
       if (userRole.scope) {
-        if (!usingGroups) throw new Error("Role '" + userRole._id + "' with scope '" + userRole.scope + "' without enabled groups.");
+        if (!usingGroups) throw new Error("Role '" + userRole._id + "' with scope '" + userRole.scope + "' without enabled groups.")
 
         // escape
-        var scope = userRole.scope.replace(/\./g, '_');
+        var scope = userRole.scope.replace(/\./g, '_')
 
-        if (scope[0] === '$') throw new Error("Group name '" + scope + "' start with $.");
+        if (scope[0] === '$') throw new Error("Group name '" + scope + "' start with $.")
 
-        roles[scope] = roles[scope] || [];
-        roles[scope].push(userRole._id);
-      }
-      else {
+        roles[scope] = roles[scope] || []
+        roles[scope].push(userRole._id)
+      } else {
         if (usingGroups) {
-          roles.__global_roles__ = roles.__global_roles__ || [];
-          roles.__global_roles__.push(userRole._id);
-        }
-        else {
-          roles.push(userRole._id);
+          roles.__global_roles__ = roles.__global_roles__ || []
+          roles.__global_roles__.push(userRole._id)
+        } else {
+          roles.push(userRole._id)
         }
       }
-    });
-    return roles;
+    })
+    return roles
   },
 
   /**
@@ -218,8 +218,8 @@ _.extend(Roles, {
       // making sure nothing changed in meantime
       roles: user.roles
     }, {
-      $set: {roles: roles}
-    });
+      $set: { roles }
+    })
   },
 
   /**
@@ -231,8 +231,8 @@ _.extend(Roles, {
    * @static
    */
   _defaultUpdateRole: function (oldRole, newRole) {
-    Meteor.roles.remove(oldRole._id);
-    Meteor.roles.insert(newRole);
+    Meteor.roles.remove(oldRole._id)
+    Meteor.roles.insert(newRole)
   },
 
   /**
@@ -245,10 +245,10 @@ _.extend(Roles, {
    */
   _dropCollectionIndex: function (collection, indexName) {
     try {
-      collection._dropIndex(indexName);
+      collection._dropIndex(indexName)
     } catch (e) {
-      if (e.name !== 'MongoError') throw e;
-      if (!/index not found/.test(e.err || e.errmsg)) throw e;
+      if (e.name !== 'MongoError') throw e
+      if (!/index not found/.test(e.err || e.errmsg)) throw e
     }
   },
 
@@ -264,22 +264,49 @@ _.extend(Roles, {
    * @static
    */
   _forwardMigrate: function (updateUser, updateRole, convertUnderscoresToDots) {
-    updateUser = updateUser || Roles._defaultUpdateUser;
-    updateRole = updateRole || Roles._defaultUpdateRole;
+    updateUser = updateUser || Roles._defaultUpdateUser
+    updateRole = updateRole || Roles._defaultUpdateRole
 
-    Roles._dropCollectionIndex(Meteor.roles, 'name_1');
+    Roles._dropCollectionIndex(Meteor.roles, 'name_1')
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isNewRole(role)) {
-        updateRole(role, Roles._convertToNewRole(role));
+        updateRole(role, Roles._convertToNewRole(role))
       }
-    });
+    })
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isNewField(user.roles)) {
-        updateUser(user, Roles._convertToNewField(user.roles, convertUnderscoresToDots));
+        updateUser(user, Roles._convertToNewField(user.roles, convertUnderscoresToDots))
       }
-    });
+    })
+  },
+
+  /**
+   * Moves the assignments from `Meteor.users` to `Meteor.roleAssignment`.
+   *
+   * @method _forwardMigrate2
+   * @param {Object} userSelector An opportunity to share the work among instances. It's advisable to do the division based on user-id.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _forwardMigrate2: function (userSelector) {
+    userSelector = userSelector || {}
+    Object.assign(userSelector, { roles: { $ne: null } })
+
+    Meteor.users.find(userSelector).forEach(function (user, index) {
+      user.roles.filter((r) => r.assigned).forEach(r => {
+        // Added `ifExists` to make it less error-prone
+        Roles._addUserToRole(user._id, r._id, { scope: r.scope, ifExists: true })
+      })
+
+      Meteor.users.update({ _id: user._id }, { $unset: { roles: '' } })
+    })
+
+    // No need to keep the indexes around
+    Roles._dropCollectionIndex(Meteor.users, 'roles._id_1_roles.scope_1')
+    Roles._dropCollectionIndex(Meteor.users, 'roles.scope_1')
   },
 
   /**
@@ -298,22 +325,68 @@ _.extend(Roles, {
    * @static
    */
   _backwardMigrate: function (updateUser, updateRole, usingGroups) {
-    updateUser = updateUser || Roles._defaultUpdateUser;
-    updateRole = updateRole || Roles._defaultUpdateRole;
+    updateUser = updateUser || Roles._defaultUpdateUser
+    updateRole = updateRole || Roles._defaultUpdateRole
 
-    Roles._dropCollectionIndex(Meteor.users, 'roles._id_1_roles.scope_1');
-    Roles._dropCollectionIndex(Meteor.users, 'roles.scope_1');
+    Roles._dropCollectionIndex(Meteor.users, 'roles._id_1_roles.scope_1')
+    Roles._dropCollectionIndex(Meteor.users, 'roles.scope_1')
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isOldRole(role)) {
-        updateRole(role, Roles._convertToOldRole(role));
+        updateRole(role, Roles._convertToOldRole(role))
       }
-    });
+    })
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isOldField(user.roles)) {
-        updateUser(user, Roles._convertToOldField(user.roles, usingGroups));
+        updateUser(user, Roles._convertToOldField(user.roles, usingGroups))
       }
-    });
+    })
+  },
+
+  /**
+   * Moves the assignments from `Meteor.roleAssignment` back to to `Meteor.users`.
+   *
+   * @method _backwardMigrate2
+   * @param {Object} assignmentSelector An opportunity to share the work among instances. It's advisable to do the division based on user-id.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _backwardMigrate2: function (assignmentSelector) {
+    assignmentSelector = assignmentSelector || {}
+
+    Meteor.users._ensureIndex({ 'roles._id': 1, 'roles.scope': 1 })
+    Meteor.users._ensureIndex({ 'roles.scope': 1 })
+
+    Meteor.roleAssignment.find(assignmentSelector).forEach(r => {
+      const roles = Meteor.users.findOne({ _id: r.user._id }).roles || []
+
+      const currentRole = roles.find(oldRole => oldRole._id === r.role._id && oldRole.scope === r.scope)
+      if (currentRole) {
+        currentRole.assigned = true
+      } else {
+        roles.push({
+          _id: r.role._id,
+          scope: r.scope,
+          assigned: true
+        })
+
+        r.inheritedRoles.forEach(inheritedRole => {
+          const currentInheritedRole = roles.find(oldRole => oldRole._id === inheritedRole._id && oldRole.scope === r.scope)
+
+          if (!currentInheritedRole) {
+            roles.push({
+              _id: inheritedRole._id,
+              scope: r.scope,
+              assigned: false
+            })
+          }
+        })
+      }
+
+      Meteor.users.update({ _id: r.user._id }, { $set: { roles } })
+      Meteor.roleAssignment.remove({ _id: r._id })
+    })
   }
-});
+})

@@ -1,4 +1,4 @@
-"use strict"
+/* global Meteor, Roles, Match, Package */
 
 /**
  * Convenience functions for use on client.
@@ -10,13 +10,12 @@
  * @module UIHelpers
  */
 
-
-////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////
 // UI helpers
 //
 // Use a semi-private variable rather than declaring UI
 // helpers directly so that we can unit test the helpers.
-// XXX For some reason, the UI helpers are not registered 
+// XXX For some reason, the UI helpers are not registered
 // before the tests run.
 //
 Roles._uiHelpers = {
@@ -40,18 +39,18 @@ Roles._uiHelpers = {
    * @param {String} [scope] Optional, name of scope to check.
    * @return {Boolean} `true` if current user is in at least one of the target roles.
    * @static
-   * @for UIHelpers 
+   * @for UIHelpers
    */
   isInRole: function (role, scope) {
-    var user = Meteor.user(),
-        comma = (role || '').indexOf(','),
-        roles
+    var user = Meteor.user()
+    var comma = (role || '').indexOf(',')
+    var roles
 
     if (!user) return false
     if (!Match.test(role, String)) return false
 
     if (comma !== -1) {
-      roles = _.reduce(role.split(','), function (memo, r) {
+      roles = role.split(',').reduce(function (memo, r) {
         if (!r || !Roles._trim(r)) {
           return memo
         }
@@ -70,23 +69,21 @@ Roles._uiHelpers = {
   }
 }
 
-
-
-////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////
 // Register UI helpers
 //
 
 if (Roles.debug && console.log) {
-  console.log("[roles] Roles.debug =", Roles.debug)
+  console.log('[roles] Roles.debug =', Roles.debug)
 }
 
-if ('undefined' !== typeof Package.blaze &&
-    'undefined' !== typeof Package.blaze.Blaze &&
-    'function'  === typeof Package.blaze.Blaze.registerHelper) {
-  _.each(Roles._uiHelpers, function (func, name) {
+if (typeof Package.blaze !== 'undefined' &&
+    typeof Package.blaze.Blaze !== 'undefined' &&
+    typeof Package.blaze.Blaze.registerHelper === 'function') {
+  Object.entries(Roles._uiHelpers).forEach(([name, func]) => {
     if (Roles.debug && console.log) {
-      console.log("[roles] registering Blaze helper '" + name + "'")
+      console.log('[roles] registering Blaze helper \'' + name + '\'')
     }
-    Package.blaze.Blaze.registerHelper(name, func) 
+    Package.blaze.Blaze.registerHelper(name, func)
   })
 }
