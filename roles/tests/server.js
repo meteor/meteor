@@ -755,14 +755,16 @@ describe('roles', function () {
     userObj = Meteor.users.findOne({ _id: userId })
     assert.sameMembers(Roles.getRolesForUser(userObj), ['admin', 'user'])
 
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: null,
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }, {
-      _id: 'user',
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ '_id': 'user' }]
     }])
   })
 
@@ -795,107 +797,117 @@ describe('roles', function () {
     assert.sameMembers(Roles.getRolesForUser(userObj, 'scope2'), ['admin'])
     assert.sameMembers(Roles.getRolesForUser(userObj), [])
 
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1' }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1' }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }, {
-      _id: 'user',
+      role: { _id: 'user' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }]
     }])
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2' }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2' }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope2',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }])
 
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }, {
-      _id: 'user',
+      role: { _id: 'user' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }]
     }, {
-      _id: 'admin',
+      role: { _id: 'admin' },
       scope: 'scope2',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }])
 
     Roles.createRole('PERMISSION')
     Roles.addRolesToParent('PERMISSION', 'user')
 
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1' }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1' }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }, {
-      _id: 'user',
+      role: { _id: 'user' },
       scope: 'scope1',
-      assigned: true
-    }, {
-      _id: 'PERMISSION',
-      scope: 'scope1',
-      assigned: false
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
     }])
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2' }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2' }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope2',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }])
     assert.sameMembers(Roles.getRolesForUser(userId, { scope: 'scope1' }), ['admin', 'user', 'PERMISSION'])
     assert.sameMembers(Roles.getRolesForUser(userId, { scope: 'scope2' }), ['admin'])
 
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }, {
-      _id: 'user',
+      role: { _id: 'user' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
     }, {
-      _id: 'admin',
+      role: { _id: 'admin' },
       scope: 'scope2',
-      assigned: true
-    }, {
-      _id: 'PERMISSION',
-      scope: 'scope1',
-      assigned: false
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }])
     assert.sameMembers(Roles.getRolesForUser(userId, { anyScope: true }), ['admin', 'user', 'PERMISSION'])
 
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1', onlyAssigned: true }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope1', onlyAssigned: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }, {
-      _id: 'user',
+      role: { _id: 'user' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
     }])
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2', onlyAssigned: true }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, scope: 'scope2', onlyAssigned: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope2',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }])
     assert.sameMembers(Roles.getRolesForUser(userId, { scope: 'scope1', onlyAssigned: true }), ['admin', 'user'])
     assert.sameMembers(Roles.getRolesForUser(userId, { scope: 'scope2', onlyAssigned: true }), ['admin'])
 
-    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true, onlyAssigned: true }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(userId, { fullObjects: true, anyScope: true, onlyAssigned: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }, {
-      _id: 'user',
+      role: { _id: 'user' },
       scope: 'scope1',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'user' }, { _id: 'PERMISSION' }]
     }, {
-      _id: 'admin',
+      role: { _id: 'admin' },
       scope: 'scope2',
-      assigned: true
+      user: { _id: userId },
+      inheritedRoles: [{ _id: 'admin' }]
     }])
     assert.sameMembers(Roles.getRolesForUser(userId, { anyScope: true, onlyAssigned: true }), ['admin', 'user'])
   })
@@ -1484,14 +1496,15 @@ describe('roles', function () {
   it('_addUserToRole', function () {
     Roles.createRole('admin')
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [])
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
 
     Roles._addUserToRole(users.eve, 'admin', { scope: null, ifExists: false })
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'admin' }]
     }])
   })
 
@@ -1500,15 +1513,16 @@ describe('roles', function () {
 
     Roles.addUsersToRoles(users.eve, 'admin')
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'admin',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'admin' }]
     }])
 
     Roles._removeUserFromRole(users.eve, 'admin', { scope: null })
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [])
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
   })
 
   it('keep assigned roles', function () {
@@ -1527,61 +1541,59 @@ describe('roles', function () {
 
     assert.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
-    }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: null,
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' }
+      ]
     }])
 
     Roles.addUsersToRoles(users.eve, 'VIEW_PERMISSION')
 
     assert.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' }
+      ]
     }, {
-      _id: 'ALL_PERMISSIONS',
+      role: { _id: 'VIEW_PERMISSION' },
       scope: null,
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'VIEW_PERMISSION' }
+      ]
     }])
 
     Roles.removeUsersFromRoles(users.eve, 'user')
 
     assert.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'VIEW_PERMISSION',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'VIEW_PERMISSION' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'VIEW_PERMISSION' }
+      ]
     }])
 
     Roles.removeUsersFromRoles(users.eve, 'VIEW_PERMISSION')
 
     assert.isFalse(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [])
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
   })
 
   it('modify assigned hierarchical roles', function () {
@@ -1602,34 +1614,25 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'scope'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' }
+      ]
     }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'ALL_PERMISSIONS',
+      role: { _id: 'ALL_PERMISSIONS' },
       scope: 'scope',
-      assigned: true
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: 'scope',
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' }
+      ]
     }])
 
     Roles.createRole('MODERATE_PERMISSION')
@@ -1639,42 +1642,27 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'))
     assert.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'scope'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' }
+      ]
     }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'ALL_PERMISSIONS',
+      role: { _id: 'ALL_PERMISSIONS' },
       scope: 'scope',
-      assigned: true
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'MODERATE_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'MODERATE_PERMISSION',
-      scope: 'scope',
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' }
+      ]
     }])
 
     Roles.addUsersToRoles(users.eve, ['admin'])
@@ -1682,50 +1670,35 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'))
     assert.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'scope'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' }
+      ]
     }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'ALL_PERMISSIONS',
+      role: { _id: 'ALL_PERMISSIONS' },
       scope: 'scope',
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' }
+      ]
     }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'MODERATE_PERMISSION',
+      role: { _id: 'admin' },
       scope: null,
-      assigned: false
-    }, {
-      _id: 'MODERATE_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'admin',
-      scope: null,
-      assigned: true
-    }, {
-      _id: 'DELETE_PERMISSION',
-      scope: null,
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'admin' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
     }])
 
     Roles.addRolesToParent('DELETE_PERMISSION', 'ALL_PERMISSIONS')
@@ -1733,54 +1706,37 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'))
     assert.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'scope'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
     }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'ALL_PERMISSIONS',
+      role: { _id: 'ALL_PERMISSIONS' },
       scope: 'scope',
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
     }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'MODERATE_PERMISSION',
+      role: { _id: 'admin' },
       scope: null,
-      assigned: false
-    }, {
-      _id: 'MODERATE_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'admin',
-      scope: null,
-      assigned: true
-    }, {
-      _id: 'DELETE_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'DELETE_PERMISSION',
-      scope: 'scope',
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'admin' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
     }])
 
     Roles.removeUsersFromRoles(users.eve, ['admin'])
@@ -1788,50 +1744,29 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'))
     assert.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'scope'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' },
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
     }, {
-      _id: 'ALL_PERMISSIONS',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'ALL_PERMISSIONS',
+      role: { _id: 'ALL_PERMISSIONS' },
       scope: 'scope',
-      assigned: true
-    }, {
-      _id: 'EDIT_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'VIEW_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'MODERATE_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'MODERATE_PERMISSION',
-      scope: 'scope',
-      assigned: false
-    }, {
-      _id: 'DELETE_PERMISSION',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'DELETE_PERMISSION',
-      scope: 'scope',
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'ALL_PERMISSIONS' },
+        { _id: 'EDIT_PERMISSION' },
+        { _id: 'VIEW_PERMISSION' },
+        { _id: 'MODERATE_PERMISSION' },
+        { _id: 'DELETE_PERMISSION' }
+      ]
     }])
 
     Roles.deleteRole('ALL_PERMISSIONS')
@@ -1842,10 +1777,13 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'scope'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'user',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'user' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'user' }
+      ]
     }])
   })
 
@@ -1875,34 +1813,28 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
     assert.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'role1',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'role1' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role1' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_1' }
+      ]
     }, {
-      _id: 'role2',
+      role: { _id: 'role2' },
       scope: null,
-      assigned: true
-    }, {
-      _id: 'COMMON_PERMISSION_1',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'COMMON_PERMISSION_2',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'COMMON_PERMISSION_3',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EXTRA_PERMISSION_ROLE_1',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EXTRA_PERMISSION_ROLE_2',
-      scope: null,
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role2' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_2' }
+      ]
     }])
 
     Roles.removeUsersFromRoles(users.eve, 'role2')
@@ -1911,26 +1843,17 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'role1',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'role1' },
       scope: null,
-      assigned: true
-    }, {
-      _id: 'COMMON_PERMISSION_1',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'COMMON_PERMISSION_2',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'COMMON_PERMISSION_3',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EXTRA_PERMISSION_ROLE_1',
-      scope: null,
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role1' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_1' }
+      ]
     }])
 
     Roles.addUsersToRoles(users.eve, 'role2')
@@ -1939,34 +1862,28 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
     assert.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'role1',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'role1' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role1' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_1' }
+      ]
     }, {
-      _id: 'role2',
+      role: { _id: 'role2' },
       scope: null,
-      assigned: true
-    }, {
-      _id: 'COMMON_PERMISSION_1',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'COMMON_PERMISSION_2',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'COMMON_PERMISSION_3',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EXTRA_PERMISSION_ROLE_1',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EXTRA_PERMISSION_ROLE_2',
-      scope: null,
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role2' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_2' }
+      ]
     }])
 
     Roles.deleteRole('role2')
@@ -1975,26 +1892,17 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'role1',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'role1' },
       scope: null,
-      assigned: true
-    }, {
-      _id: 'COMMON_PERMISSION_1',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'COMMON_PERMISSION_2',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'COMMON_PERMISSION_3',
-      scope: null,
-      assigned: false
-    }, {
-      _id: 'EXTRA_PERMISSION_ROLE_1',
-      scope: null,
-      assigned: false
+      user: { _id: users.eve },
+      inheritedRoles: [
+        { _id: 'role1' },
+        { _id: 'COMMON_PERMISSION_1' },
+        { _id: 'COMMON_PERMISSION_2' },
+        { _id: 'COMMON_PERMISSION_3' },
+        { _id: 'EXTRA_PERMISSION_ROLE_1' }
+      ]
     }])
   })
 
@@ -2007,10 +1915,11 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'admin'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'EDIT_PERMISSION',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
     }])
 
     Roles.addRolesToParent('EDIT_PERMISSION', 'admin')
@@ -2018,10 +1927,11 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'admin'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'EDIT_PERMISSION',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
     }])
   })
 
@@ -2036,10 +1946,11 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'admin'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'EDIT_PERMISSION',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
     }])
 
     Roles.removeRolesFromParent('EDIT_PERMISSION', 'admin')
@@ -2047,10 +1958,11 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'admin'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'EDIT_PERMISSION',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
     }])
   })
 
@@ -2066,10 +1978,11 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'admin'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'EDIT_PERMISSION',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
     }])
 
     Roles.addRolesToParent('EDIT_PERMISSION', 'user')
@@ -2077,10 +1990,11 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'admin'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'EDIT_PERMISSION',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
     }])
 
     Roles.removeRolesFromParent('EDIT_PERMISSION', 'user')
@@ -2088,10 +2002,11 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'))
     assert.isFalse(Roles.userIsInRole(users.eve, 'admin'))
 
-    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }), [{
-      _id: 'EDIT_PERMISSION',
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'EDIT_PERMISSION' },
       scope: null,
-      assigned: true
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'EDIT_PERMISSION' }]
     }])
   })
 

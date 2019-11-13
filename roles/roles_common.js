@@ -747,27 +747,7 @@ Object.assign(Roles, {
     roles = Meteor.roleAssignment.find(selector, filter).fetch()
 
     if (options.fullObjects) {
-      const objects = new Map();
-      roles.reduce((prev, r) =>
-        prev.concat([
-          { _id: r.role._id, scope: r.scope, assigned: true },
-          ...r.inheritedRoles.map(i => ({ _id: i._id, scope: r.scope, assigned: false }))
-        ]),
-        []
-      ).forEach(r => {
-        if (options.onlyAssigned && !r.assigned) {
-          return
-        }
-
-        const key = `${r._id}||${r.scope}`
-        if (!objects.has(key)) {
-          objects.set(key, r)
-        } else if (r.assigned) {
-          objects.get(key).assigned = true
-        }
-      })
-
-      return [...objects.values()]
+      return roles
     }
 
     return [...new Set(roles.map(r => r.inheritedRoles || [r.role]).reduce((rev, current) => rev.concat(current), []).map(r => r._id))]
