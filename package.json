@@ -1,7 +1,7 @@
 {
   "scripts": {
     "setup-test": "rm -rf ./someapp && meteor create --minimal someapp && cd someapp && cp ../.coverage.json . && meteor npm i --save puppeteer && mkdir packages && ln -s ../../ ./packages/roles",
-    "test": "npm run setup-test && cd someapp && TEST_BROWSER_DRIVER=puppeteer COVERAGE=1 COVERAGE_OUT_JSON=1 COVERAGE_APP_FOLDER=$(pwd)/ meteor test-packages --raw-logs --once --driver-package meteortesting:mocha ./packages/roles; npx istanbul report --include .coverage/summary.json --root . --dir .coverage",
+    "test": "npm run setup-test && cd someapp && TEST_BROWSER_DRIVER=puppeteer COVERAGE=1 COVERAGE_OUT_JSON=1 COVERAGE_APP_FOLDER=$(pwd)/ meteor test-packages --raw-logs --once --driver-package meteortesting:mocha ./packages/roles; istanbul report --include .coverage/summary.json --root . --dir .coverage",
     "test:watch": "cd someapp && TEST_WATCH=1 COVERAGE=1 COVERAGE_APP_FOLDER=$(pwd)/ meteor test-packages --raw-logs --driver-package meteortesting:mocha ./packages/roles",
     "todobeforepublish": "rm -rf .npm/ node_modules/ someapp/"
   },
