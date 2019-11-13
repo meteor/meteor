@@ -1,4 +1,4 @@
-"use strict"
+/* global Meteor, Roles, Match, Package */
 
 /**
  * Convenience functions for use on client.
@@ -10,8 +10,7 @@
  * @module UIHelpers
  */
 
-
-////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////
 // UI helpers
 //
 // Use a semi-private variable rather than declaring UI
@@ -43,9 +42,9 @@ Roles._uiHelpers = {
    * @for UIHelpers
    */
   isInRole: function (role, scope) {
-    var user = Meteor.user(),
-        comma = (role || '').indexOf(','),
-        roles
+    var user = Meteor.user()
+    var comma = (role || '').indexOf(',')
+    var roles
 
     if (!user) return false
     if (!Match.test(role, String)) return false
@@ -70,22 +69,20 @@ Roles._uiHelpers = {
   }
 }
 
-
-
-////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////
 // Register UI helpers
 //
 
 if (Roles.debug && console.log) {
-  console.log("[roles] Roles.debug =", Roles.debug)
+  console.log('[roles] Roles.debug =', Roles.debug)
 }
 
-if ('undefined' !== typeof Package.blaze &&
-    'undefined' !== typeof Package.blaze.Blaze &&
-    'function'  === typeof Package.blaze.Blaze.registerHelper) {
+if (typeof Package.blaze !== 'undefined' &&
+    typeof Package.blaze.Blaze !== 'undefined' &&
+    typeof Package.blaze.Blaze.registerHelper === 'function') {
   Object.entries(Roles._uiHelpers).forEach(([name, func]) => {
     if (Roles.debug && console.log) {
-      console.log("[roles] registering Blaze helper '" + name + "'")
+      console.log('[roles] registering Blaze helper \'' + name + '\'')
     }
     Package.blaze.Blaze.registerHelper(name, func)
   })

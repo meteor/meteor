@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "standard": "^12.0.1",
     "yuidocjs": "^0.10.2"
   }
 }

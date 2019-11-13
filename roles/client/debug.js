@@ -1,7 +1,6 @@
-"use strict"
+/* global Roles, localStorage */
 
-
-////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////
 // Debugging helpers
 //
 // Run this in your browser console to turn on debugging
@@ -14,9 +13,9 @@ Roles.debug = false
 
 try {
   if (localStorage) {
-    var temp = localStorage.getItem("Roles.debug")
+    var temp = localStorage.getItem('Roles.debug')
 
-    if ('undefined' !== typeof temp) {
+    if (typeof temp !== 'undefined') {
       Roles.debug = !!temp
     }
   }
