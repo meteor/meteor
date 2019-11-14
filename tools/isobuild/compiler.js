@@ -1,23 +1,23 @@
 var _ = require('underscore');
 
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var bundler = require('./bundler.js');
 var isopack = require('./isopack.js');
 var meteorNpm = require('./meteor-npm.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 var Console = require('../console/console.js').Console;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var colonConverter = require('../utils/colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
 
 import {
   optimisticReadFile,
   optimisticHashOrNull,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 var compiler = exports;
 
@@ -34,7 +34,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/32';
+compiler.BUILT_BY = 'meteor/34';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -479,8 +479,9 @@ var compileUnibuild = Profile(function (options) {
     const relPath = asset.relPath;
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
 
-    const hash = optimisticHashOrNull(absPath)
-    const contents = optimisticReadFile(absPath)
+    const hash = optimisticHashOrNull(absPath);
+    const contents = optimisticReadFile(absPath);
+    watchSet.addFile(absPath, hash);
 
     addAsset(contents, relPath, hash);
   });
@@ -556,7 +557,15 @@ api.addAssets('${relPath}', 'client').`);
     const contents = optimisticReadFile(absPath);
     const hash = optimisticHashOrNull(absPath);
     const file = { contents, hash };
-    watchSet.addFile(absPath, hash);
+
+    if (fileOptions && ! fileOptions.lazy) {
+      watchSet.addFile(absPath, hash);
+    } else {
+      // Lazy files might not ultimately be used by the current unibuild/bundle,
+      // so we add them to the watchSet using a provisional status that may be
+      // updated later, at the end of PackageSourceBatch.computeJsOutputFilesMap.
+      watchSet.addPotentiallyUnusedFile(absPath, hash);
+    }
 
     Console.nudge(true);
 

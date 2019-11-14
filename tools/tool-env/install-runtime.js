@@ -1,31 +1,17 @@
 "use strict";
 
+// This module gets imported again in install-promise.js, but we might as
+// well import it here as well, in case we ever stop using meteor-promise.
+require("./wrap-fibers.js");
+
 // Install ES2015-complaint polyfills for Object, Array, String, Function,
 // Symbol, Map, Set, and Promise, patching the native implementations when
 // they are available.
 require("./install-promise.js");
 
-const Module = module.constructor;
-const Mp = Module.prototype;
-
-Mp.resolve = function (id) {
-  return Module._resolveFilename(id, this);
-};
-
-// Enable the module.{watch,export,...} runtime API needed by Reify.
-require("reify/lib/runtime").enable(Mp);
-
-const moduleLoad = Mp.load;
-Mp.load = function (filename) {
-  const result = moduleLoad.apply(this, arguments);
-  const runSetters = this.runSetters || this.runModuleSetters;
-  if (typeof runSetters === "function") {
-    // Make sure we call module.runSetters (or module.runModuleSetters, a
-    // legacy synonym) whenever a module finishes loading.
-    runSetters.call(this);
-  }
-  return result;
-};
+// Enable the Reify module runtime: Module.prototype.{link,export,...}.
+// The same runtime.js code is used by server code (see boot.js).
+require("../static-assets/server/runtime.js");
 
 // Installs source map support with a hook to add functions to look for
 // source maps in custom places.

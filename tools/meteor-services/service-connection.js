@@ -1,6 +1,6 @@
 var _ = require("underscore");
 import { loadIsopackage } from '../tool-env/isopackets.js';
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var fiberHelpers = require("../utils/fiber-helpers.js");
 
 // Wrapper to manage a connection to a DDP service. The main difference between

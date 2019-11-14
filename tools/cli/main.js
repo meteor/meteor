@@ -7,7 +7,7 @@ var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Console = require('../console/console.js').Console;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var warehouse = require('../packaging/warehouse.js');
 var tropohouse = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
@@ -15,7 +15,7 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
-const archinfo = require('../utils/archinfo.js');
+const archinfo = require('../utils/archinfo');
 import { isEmacs } from "../utils/utils.js";
 
 var main = exports;

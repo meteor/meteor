@@ -1,6 +1,6 @@
 var _ = require('underscore');
 
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var catalog = require('./catalog/catalog.js');
 
 var release = exports;

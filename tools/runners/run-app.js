@@ -2,20 +2,20 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 const uuid = require("uuid");
 var fiberHelpers = require('../utils/fiber-helpers.js');
-var files = require('../fs/files.js');
-var watch = require('../fs/watch.js');
+var files = require('../fs/files');
+var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
 var buildmessage = require('../utils/buildmessage.js');
 var runLog = require('./run-log.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
 var catalog = require('../packaging/catalog/catalog.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 var release = require('../packaging/release.js');
 import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { CordovaBuilder } from '../cordova/builder.js';
-import { closeAllWatchers } from "../fs/safe-watcher.js";
-import { eachline } from "../utils/eachline.js";
+import { closeAllWatchers } from "../fs/safe-watcher";
+import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -775,7 +775,8 @@ _.extend(AppRunner.prototype, {
             outcome: 'changed'
           });
         },
-        async: true
+        includePotentiallyUnusedFiles: false,
+        async: true,
       });
     }
 
@@ -784,7 +785,13 @@ _.extend(AppRunner.prototype, {
       clientWatcher = new watch.Watcher({
         watchSet: bundleResult.clientWatchSet,
         onChange: function () {
-          var outcome = watch.isUpToDate(serverWatchSet)
+          // Pass false for the includePotentiallyUnusedFiles parameter (which
+          // defaults to true) to avoid restarting the server due to changes in
+          // files that were not used by the server bundle. This assumes we have
+          // already called PackageSourceBatch.computeJsOutputFilesMap and
+          // _watchOutputFiles to finalize the usage statuses of potentially
+          // unused files in serverWatchSet, which is a safe assumption here.
+          var outcome = watch.isUpToDate(serverWatchSet, false)
                       ? 'changed-refreshable' // only a client asset has changed
                       : 'changed'; // both a client and server asset changed
           self._resolvePromise('run', { outcome: outcome });

@@ -1,5 +1,5 @@
 import { inspect } from 'util';
-import * as files from '../fs/files.js';
+import * as files from '../fs/files';
 import { createHash } from 'crypto';
 import {
   markBottom as parseStackMarkBottom,

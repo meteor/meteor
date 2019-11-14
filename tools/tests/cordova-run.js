@@ -44,4 +44,11 @@ selftest.define('get mobile server argument for meteor run', ['cordova'], functi
     port: "example.com:3000",
     "mobile-server": "http://example.com:4000"
   }).parsedMobileServerUrl, { hostname: "example.com", port: "4000", protocol: "http" });
+
+  // meteor run -p example.com:3000 --cordova-server-port 12500 =>
+  // cordovaServerPort should be 12500
+  selftest.expectEqual(parseServerOptionsForRunCommand({
+    port: "example.com:3000",
+    "cordova-server-port": "12500"
+  }).parsedCordovaServerPort, 12500);
 });
