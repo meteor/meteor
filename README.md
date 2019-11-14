@@ -17,7 +17,7 @@ There are also older versions of this package:
 * [What are "scopes"?](#roles-scopes)
 * [Changes to default Meteor](#roles-changes)
 * [Installation](#roles-installing)
-* [Migration to 2.0](#roles-migration)
+* [Migration to 3.0](#roles-migration)
 * [Usage examples](#roles-usage)
 * [Online API docs](#roles-docs)
 * [Example apps](#roles-example-apps)
