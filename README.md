@@ -45,6 +45,7 @@ Thanks to:
   * [@nickmoylan](https://github.com/nickmoylan)
   * [@mcrider](https://github.com/mcrider)
   * [@alanning](https://github.com/alanning)
+  * [@simonsimcity](https://github.com/simonsimcity)
 
 <br />
 
@@ -53,10 +54,9 @@ Thanks to:
 ### Authorization
 
 This package lets you attach roles to a user which you can then check against later when deciding whether to grant
-access to Meteor methods or publish data.  The core concept is very simple, essentially you are attaching roles
-to a user object and then checking for the existence of those roles later. In some sense, it is very similar to
-tags on blog posts. This package provides helper methods to make the process of adding, removing, and verifying
-those roles easier.
+access to Meteor methods or publish data. The core concept is very simple, essentially you are creating an assignment
+of roles to a user and then checking for the existence of those roles later. This package provides helper methods
+to make the process of adding, removing, and verifying those roles easier.
 
 <br />
 
@@ -71,10 +71,10 @@ as, `view-secrets`, `users.view`, or `users.manage`.  Often, more granular is ac
 able to handle all those pesky edge cases that come up in real-life usage without creating a ton of higher-level
 `roles`.  With the `roles` package, it's all just a role object.
 
-Roles can be put into a **hierarchy**.  
+Roles can be put into a **hierarchy**.
 Roles can have multiple parents and can be children (subroles) of multiple roles.
-If a parent role is set to the user, all its descendants are also applying. 
-You can use this to create "super roles" aggregating permissions all the way through the bottom of the tree.  
+If a parent role is set to the user, all its descendants are also applying.
+You can use this to create "super roles" aggregating permissions all the way through the bottom of the tree.
 For example, you could name two top-level roles `user` and `admin` and then you could use your second-level roles as permissions and name them `USERS_VIEW`, `POST_EDIT`, and similar.
 Then you could set `admin` role as parent role for `USERS_VIEW` and `POST_EDIT`, while `user` would be parent
 only of the `POST_EDIT` role. You can then assign `user` and `admin` roles to your users. And if you need to
@@ -96,12 +96,11 @@ Roles.addRolesToParent('POST_EDIT', 'user');
 <a id="roles-scopes" name="roles-scopes"></a>
 ### What are "scopes"?
 
-Sometimes it is useful to let a user have independent sets of roles.  The `roles` package calls these independent
+Sometimes it is useful to let a user have independent sets of roles. The `roles` package calls these independent
 sets "scopes" for lack of a better term. You can use them to represent various communities inside of your
 application. Or maybe your application supports [multiple tenants](https://en.wikipedia.org/wiki/Multitenancy).
 You can put each of those tenants into their own scope. Alternatively, you can use scopes to represent
-various resources you have. But if you really need per-document permissions, if might be that storing permissions
-with documents is a better approach (than one takes by this package, where roles are stored with users).
+various resources you have.
 
 Users can have both scope roles assigned, and global roles. Global roles are in effect for all scopes.
 But scopes are independent from each other. Users can have one set of roles in scope A and another set
@@ -135,27 +134,37 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 <a id="roles-changes" name="roles-changes"></a>
 ### Changes to default Meteor behavior
 
-  1. User entries in the `Meteor.users` collection gain a new field named `roles` corresponding to the user's roles.
-  2. A new collection `Meteor.roles` contains a global list of defined role names.
-  3. The currently logged-in user's `roles` field is automatically published to the client.
-  4. All existing roles are automatically published to the client.
+  1. A new collection `Meteor.roleAssignment` contains the information which role has been assigned to which user.
+  1. A new collection `Meteor.roles` contains a global list of defined role names.
+  1. All existing roles are automatically published to the client.
 
 <br />
 
 <a id="roles-installing" name="roles-installing"></a>
 ### Installing
 
-1. Add one of the built-in accounts packages so the `Meteor.users` collection exists.  From a command prompt:
+1. Add one of the built-in accounts packages so the `Meteor.users` collection exists. From a command prompt:
     ```bash
     meteor add accounts-password
     ```
 
-3. Add this package to your project.  From a command prompt:
+1. Add this package to your project. From a command prompt:
     ```bash
     meteor add alanning:roles
     ```
 
-4. Run your application:
+1. Publish the role assignments you need to the client:
+    ```js
+    Meteor.publish(null, function () {
+      if (this.userId) {
+        return Meteor.roleAssignment.find({ 'user._id': this.userId });
+      } else {
+        this.ready()
+      }
+    })
+    ```
+
+1. Run your application:
     ```bash
     meteor
     ```
@@ -163,30 +172,42 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 <br />
 
 <a id="roles-migration" name="roles-migration"></a>
-### Migration to 2.0
+### Migration to 3.0
 
-In meteor-roles 2.0, functions are mostly backwards compatible with 1.0, but roles are stored differently in the database. To migrate the database to new schema, run `Meteor._forwardMigrate()` on the server:
+In meteor-roles 3.0, functions are mostly backwards compatible with 2.0, but roles are stored differently in the database. Please take a backup of the `users` collection before migrating. To migrate the database to the new schema, run `Meteor._forwardMigrate2()` on the server:
 
 ```bash
 meteor shell
-> Package['alanning:roles'].Roles._forwardMigrate()
+> Package['alanning:roles'].Roles._forwardMigrate2()
 ```
 
-#### Changes between 1.0 and 2.0
+In case something fails, there is also a script available for rolling back the changes. But be warned that a backward migration takes a magnitude longer than a foward migration. To migrate the database back to the old schema, run `Meteor._backwardMigrate2()` on the server:
 
-Here is the list of important changes between meteor-roles 1.0 and 2.0 to consider when migrating to 2.0:
+```bash
+meteor shell
+> Package['alanning:roles'].Roles._backwardMigrate2()
+```
 
-* New schema for `roles` field and `Meteor.roles` collection.
-* Groups were renamed to scopes.
-* Scopes are always available, if you do not specify a scope, role is seen as a global role.
-* `GLOBAL_GROUP` is deprecated and should not be used anymore (just do not specify a scope, or use `null`).
-* `getGroupsForUser` is deprecated, `getScopesForUser` should be used instead.
-* Functions which modify roles are available both on the client and server side, but should be called on the
-  client side only from inside Meteor methods.
-* `deleteRole` can now delete role even when in use, it is automatically unset from all users.
-* Functions `addRolesToParent` and `removeRolesFromParent` were added.
-* `addUsersToRoles` and `setUserRoles` now require that roles exist and will not create missing roles automatically.
-* All functions work with 1.0 arguments, but in 2.0 accept extra arguments and/or options.
+#### Changes between 2.0 and 3.0
+
+Here is the list of important changes between meteor-roles 2.0 and 3.0 to consider when migrating to 3.0:
+
+* Role assignments have been moved from the `users` documents to a separate collection called `role-assignment`, available at `Meteor.roleAssignment`.
+* Role assignments are not published automatically. If you want all your role-assignments to be published automatically please include the following code:
+```js
+Meteor.publish(null, function () {
+  if (this.userId) {
+    return Meteor.roleAssignment.find({ 'user._id': this.userId });
+  } else {
+    this.ready()
+  }
+})
+```
+* [BC] The behavior of `getRolesForUser()` used with the option `fullObjects` changed. [In case you need the old behavior ...](https://github.com/Meteor-Community-Packages/meteor-roles/pull/276/commits/41d2ed493852f21cf508b5b0b76e4f8a09ae8f5c#diff-b2ab7f7879884835e55802c6a35ee27e)
+* Added option `anyScope` to `removeUsersFromRoles()`
+* Add option `onlyScoped` to `getRolesForUser()` to allow limiting the result to only scoped permissions
+* All functions (excepted for those listed above) work with 2.x arguments, but in 3.x accept extra arguments and/or options.
+* Details and reasoning can be found in [#276](https://github.com/Meteor-Community-Packages/meteor-roles/pull/276)
 
 <br />
 
@@ -221,7 +242,7 @@ users.forEach(function (user) {
     profile: { name: user.name }
   });
 
-  if (user.roles.length > 0) {
+  if (Meteor.roleAssignment.find({ 'user._id': id }).count() === 0) {
     user.roles.forEach(function (role) {
       Roles.createRole(role, {unlessExists: true});
     });
@@ -346,12 +367,13 @@ Meteor.methods({
 
 -- **Client** --
 
-Client javascript has access to all the same Roles functions as the server with the addition of a `isInRole`
-handlebars helper which is automatically registered by the Roles package.
+Client javascript doese not by default have access to all the same Roles functions as the server unless you publish
+these role-assignments. In addition, Blaze will have the addition of a `isInRole` handlebars helper which is
+automatically registered by the Roles package.
 
 As with all Meteor applications, client-side checks are a convenience, rather than a true security implementation 
-since Meteor bundles the same client-side code to all users.  Providing the Roles functions client-side also allows
-for latency compensation during Meteor method calls.  Roles functions which modify the database should not be
+since Meteor bundles the same client-side code to all users. Providing the Roles functions client-side also allows
+for latency compensation during Meteor method calls. Roles functions which modify the database should not be
 called directly, but inside the Meteor methods.
 
 NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted disclosure. To be clear, Meteor sends
@@ -395,7 +417,7 @@ To check for roles when using scopes:
 <a id="roles-docs" name="roles-docs"></a>
 ### API Docs
 
-Online API docs found here: http://alanning.github.io/meteor-roles/classes/Roles.html
+Online API docs found here: https://meteor-community-packages.github.io/meteor-roles/
 
 API docs generated using [YUIDoc](http://yui.github.com/yuidoc/)
 
@@ -438,15 +460,6 @@ View the `flow-router` example app online @  <a href="http://roles.meteor.com/" 
 <a id="roles-testing" name="roles-testing"></a>
 ### Tests
 
-
 To run tests:
   1. `cd meteor-roles`
-  2. `meteor test-packages ./`
-  3. point browser at http://localhost:3000/
-
-_NOTE_: If you see an error message regarding **"The package named roles does not exist"** that means you are either:
-  a) in the wrong directory or 
-  b) forgot the './' in step 2.  
-
-Step 2 needs to be run in the main 'meteor-roles' directory and the './' is needed because otherwise Meteor
-expects to be in a Meteor app directory.
+  2. `npm run test`

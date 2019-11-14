@@ -81,6 +81,14 @@ Meteor.startup(function () {
 // Publish
 //
 
+// Publish all role-assignments
+Meteor.publish(null, function () {
+  if (this.userId) {
+    return Meteor.roleAssignment.find({ 'user._id': this.userId });
+  } else {
+    this.ready();
+  }
+});
 
 // Authorized users can view secrets
 Meteor.publish("secrets", function () {
@@ -101,7 +109,10 @@ Meteor.publish("users", function () {
 
   if (Roles.userIsInRole(user, ["admin","manage-users"])) {
     console.log('publishing users', this.userId);
-    return Meteor.users.find({}, {fields: {emails: 1, profile: 1, roles: 1}});
+    return [
+      Meteor.roleAssignment.find({}),
+      Meteor.users.find({}, {fields: {emails: 1, profile: 1}})
+    ];
   }
 
   this.stop();
