@@ -1676,9 +1676,10 @@ function doTestCommand(options) {
   let testRunnerAppDir;
   const testAppPath = options['test-app-path'];
   if (testAppPath) {
+    const absTestAppPath = files.pathResolve(testAppPath);
     try {
-      if (files.mkdir_p(testAppPath, 0o700)) {
-        testRunnerAppDir = testAppPath;
+      if (files.mkdir_p(absTestAppPath, 0o700)) {
+        testRunnerAppDir = absTestAppPath;
       } else {
         Console.error(
           'The specified --test-app-path directory could not be used, as ' +

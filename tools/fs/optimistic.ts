@@ -211,7 +211,7 @@ function dependOnParentDirectory(path: string) {
 // of this node_modules directory, but that's ok because the use case we
 // care about is adding or removing npm packages.
 function dependOnNodeModules(nodeModulesDir: string) {
-  assert(pathIsAbsolute(nodeModulesDir));
+  assert(pathIsAbsolute(nodeModulesDir), nodeModulesDir);
   assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
   dependOnDirectory(nodeModulesDir);
 }
