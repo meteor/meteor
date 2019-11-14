@@ -1,3 +1,7 @@
+## v3.1.0
+
+* Allow setUserRoles() to replace the roles of all scopes [#294](https://github.com/Meteor-Community-Packages/meteor-roles/pull/294)
+
 ## v3.0.0
 
 * Role assignments have been moved from the `users` documents to a separate collection called `role-assignment`, available at `Meteor.roleAssignment`.
