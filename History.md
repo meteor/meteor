@@ -1,17 +1,122 @@
 ## v.NEXT
 
+## v1.8.2, 2019-11-14
+
 ### Breaking changes
-N/A
+
+* Module-level variable declarations named `require` or `exports` are no
+  longer automatically renamed, so they may collide with module function
+  parameters of the same name, leading to errors like
+  `Uncaught SyntaxError: Identifier 'exports' has already been declared`.
+  See [this comment](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056)
+  by [@SimonSimCity](https://github.com/SimonSimCity).
 
 ### Migration Steps
-N/A
+
+* Be sure to update the `@babel/runtime` npm package to its latest version
+  (currently 7.7.2):
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+
+* New Meteor applications now depend on `meteor-node-stubs@1.0.0`, so it
+  may be a good idea to update to the same major version:
+  ```sh
+  meteor npm install meteor-node-stubs@next
+  ```
 
 ### Changes
+
+* Node has been updated to version
+  [8.16.2](https://nodejs.org/en/blog/release/v8.16.2/).
+
+* The `npm` npm package has been updated to version 6.13.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.9-meteor) of its
+  `pacote` dependency has been updated to version 9.5.9.
+
+* New Meteor applications now include an official `typescript` package,
+  supporting TypeScript compilation of `.ts` and `.tsx` modules, which can
+  be added to existing apps by running `meteor add typescript`.
+
+* New TypeScript-based Meteor applications can be created by running
+  ```sh
+  meteor create --typescript new-typescript-app
+  ```
+  This app skeleton contains a recommended tsconfig.json file, and should
+  serve as a reference for how to make TypeScript and Meteor work together
+  (to the best of our current knowledge).
+  [PR #10695](https://github.com/meteor/meteor/pull/10695)
+
+* When bundling modern client code, the Meteor module system now prefers
+  the `"module"` field in `package.json` (if defined) over the `"main"`
+  field, which should unlock various `import`/`export`-based optimizations
+  such as tree shaking in future versions of Meteor. As before, server
+  code uses only the `"main"` field, like Node.js, and legacy client code
+  prefers `"browser"`, `"main"`, and then `"module"`.
+  [PR #10541](https://github.com/meteor/meteor/pull/10541),
+  [PR #10765](https://github.com/meteor/meteor/pull/10765).
+
+* ECMAScript module syntax (`import`, `export`, and dynamic `import()`) is
+  now supported by default everywhere, including in modules imported from
+  `node_modules`, thanks to the [Reify](https://github.com/benjamn/reify)
+  compiler.
+
+* If you need to import code from `node_modules` that uses modern syntax
+  beyond module syntax, it is now possible to enable recompilation for
+  specific npm packages using the `meteor.nodeModules.recompile` option in
+  your application's `package.json` file.
+  See [PR #10603](https://github.com/meteor/meteor/pull/10603) for further
+  explanation.
+
+* The Meteor build process is now able to detect whether files changed in
+  development were actually used by the server bundle, so that a full
+  server restart can be avoided when no files used by the server bundle
+  have changed. Client-only refreshes are typically much faster than
+  server restarts. Run `meteor add autoupdate` to enable client refreshes,
+  if you are not already using the `autoupdate` package.
+  [Issue #10449](https://github.com/meteor/meteor/issues/10449)
+  [PR #10686](https://github.com/meteor/meteor/pull/10686)
+
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 3.2.7.
+
+* The `meteor-babel` npm package has been updated to version 7.7.0,
+  enabling compilation of the `meteor/tools` codebase with TypeScript
+  (specifically, version 3.7.2 of the `typescript` npm package).
+
+* The `reify` npm package has been updated to version 0.20.12.
+
+* The `core-js` npm package used by `ecmascript-runtime-client` and
+  `ecmascript-runtime-server` has been updated to version 3.2.1.
+
+* The `terser` npm package used by `minifier-js` (and indirectly by
+  `standard-minifier-js`) has been updated to version 4.3.1.
+
+* The `node-gyp` npm package has been updated to version 5.0.1, and
+  `node-pre-gyp` has been updated to 0.13.0.
+
+* The `optimism` npm package has been updated to version 0.11.3, which
+  enables caching of thrown exceptions as well as ordinary results, in
+  addition to performance improvements.
+
+* The `pathwatcher` npm package has been updated to version 8.1.0.
+
+* The `underscore` npm package installed in the Meteor dev bundle (for use
+  by the `meteor/tools` codebase) has been updated from version 1.5.2 to
+  version 1.9.1, and `@types/underscore` has been installed for better
+  TypeScript support.
+
+* In addition to the `.js` and `.jsx` file extensions, the `ecmascript`
+  compiler plugin now automatically handles JavaScript modules with the
+  `.mjs` file extension.
 
 * Add `--cordova-server-port` option to override local port where Cordova will 
   serve static resources, which is useful when multiple Cordova apps are built
   from the same application source code, since by default the port is generated
   using the ID from the application's `.meteor/.id` file.
+
+* The `--test-app-path <directory>` option for `meteor test-packages` and
+  `meteor test` now accepts relative paths as well as absolute paths.
 
 ## v1.8.1, 2019-04-03
 
@@ -179,7 +284,6 @@ N/A
 ### Migration Steps
 
 * Update the `@babel/runtime` npm package to version 7.0.0 or later:
-
   ```sh
   meteor npm install @babel/runtime@latest
   ```

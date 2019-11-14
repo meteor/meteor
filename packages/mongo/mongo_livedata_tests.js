@@ -3471,17 +3471,18 @@ if (Meteor.isServer) {
     }, 2000);
 
     const session = client.startSession();
-    session.startTransaction();
-
-    Promise.awaitAll(["a", "b"].map((id, index) => {
-      return rawCollection.update(
-        { _id: id },
-        { $set: { field: `updated${index + 1}` } },
-        { session }
-      );
-    }));
-
-    Promise.await(session.commitTransaction());
-    session.endSession();
+    session.withTransaction(session => {
+      let promise = Promise.resolve();
+      ["a", "b"].forEach((id, index) => {
+        promise = promise.then(() => rawCollection.update(
+          { _id: id },
+          { $set: { field: `updated${index + 1}` } },
+          { session }
+        ));
+      });
+      return promise;
+    }).finally(() => {
+      session.endSession();
+    });
   });
 }

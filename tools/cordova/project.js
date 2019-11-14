@@ -4,14 +4,14 @@ import assert from 'assert';
 import chalk from 'chalk';
 import semver from 'semver';
 
-import files from '../fs/files.js';
+import files from '../fs/files';
 import utils from '../utils/utils.js';
 import { Console } from '../console/console.js';
-import { Profile } from '../tool-env/profile.js';
+import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
 import httpHelpers from '../utils/http-helpers.js';
-import { execFileSync, execFileAsync } from '../utils/processes.js';
+import { execFileSync, execFileAsync } from '../utils/processes';
 
 import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }

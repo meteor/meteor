@@ -1,6 +1,6 @@
 var main = require('./main.js');
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var buildmessage = require('../utils/buildmessage.js');
 var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');

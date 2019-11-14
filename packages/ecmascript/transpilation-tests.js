@@ -78,11 +78,13 @@ Tinytest.add("ecmascript - transpilation - helpers - bind", (test) => {
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
-  const output = transform(`
-  var full = {a:1, ...middle, d:4};
-`);
+  const output = transform("class A extends getBaseClass() {}");
+  test.isTrue(/helpers\/inheritsLoose/.test(output));
+});
 
-  test.isTrue(/helpers\/(builtin\/)?(extends|objectSpread)/.test(output));
+Tinytest.add("ecmascript - transpilation - helpers - objectSpread", (test) => {
+  const output = transform("var full = {a:1, ...middle, d:4};");
+  test.isTrue(/objectSpread/.test(output));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (test) => {

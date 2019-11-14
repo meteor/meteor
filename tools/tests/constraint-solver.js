@@ -1,6 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var _= require('underscore');
 
 // Runs all of the constraint-solver tests, including ones that tie up the CPU

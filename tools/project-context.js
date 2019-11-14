@@ -1,32 +1,32 @@
 var assert = require("assert");
 var _ = require('underscore');
 
-var archinfo = require('./utils/archinfo.js');
+var archinfo = require('./utils/archinfo');
 var buildmessage = require('./utils/buildmessage.js');
 var catalog = require('./packaging/catalog/catalog.js');
 var catalogLocal = require('./packaging/catalog/catalog-local.js');
 var Console = require('./console/console.js').Console;
-var files = require('./fs/files.js');
+var files = require('./fs/files');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
 import { loadIsopackage } from './tool-env/isopackets.js';
 var packageMapModule = require('./packaging/package-map.js');
 var release = require('./packaging/release.js');
 var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
-var watch = require('./fs/watch.js');
-var Profile = require('./tool-env/profile.js').Profile;
+var watch = require('./fs/watch');
+var Profile = require('./tool-env/profile').Profile;
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 
 import {
   optimisticReadJsonOrNull,
   optimisticHashOrNull,
-} from "./fs/optimistic.js";
+} from "./fs/optimistic";
 
 import {
   mapWhereToArches,
-} from "./isobuild/package-api.js";
+} from "./utils/archinfo";
 
-import Resolver from "./isobuild/resolver.js";
+import Resolver from "./isobuild/resolver";
 
 const CAN_DELAY_LEGACY_BUILD = ! JSON.parse(
   process.env.METEOR_DISALLOW_DELAYED_LEGACY_BUILD || "false"
@@ -1649,9 +1649,47 @@ export class MeteorConfig {
     }
   }
 
-  // Call this first if you plan to call getMainModuleForArch multiple
+  getNodeModulesToRecompileByArch() {
+    const packageNamesByArch = Object.create(null);
+    const recompile = this.get("nodeModules", "recompile");
+
+    if (recompile && typeof recompile === "object") {
+      const get = arch => packageNamesByArch[arch] || (
+        packageNamesByArch[arch] = new Set);
+
+      Object.keys(recompile).forEach(packageName => {
+        const info = recompile[packageName];
+        if (! info) return;
+        if (info === true) {
+          get("web").add(packageName);
+          get("os").add(packageName);
+        } else if (typeof info === "string") {
+          mapWhereToArches(info).forEach(arch => {
+            get(arch).add(packageName);
+          });
+        } else if (Array.isArray(info)) {
+          info.forEach(where => {
+            mapWhereToArches(where).forEach(arch => {
+              get(arch).add(packageName);
+            });
+          });
+        }
+      });
+    }
+
+    return packageNamesByArch;
+  }
+
+  getNodeModulesToRecompile(
+    arch,
+    packageNamesByArch = this.getNodeModulesToRecompileByArch(),
+  ) {
+    return packageNamesByArch[arch];
+  }
+
+  // Call this first if you plan to call getMainModule multiple
   // times, so that you can avoid repeating this work each time.
-  getMainModulesByArch(arch) {
+  getMainModulesByArch() {
     return this._getEntryModulesByArch("mainModule");
   }
 
@@ -1659,24 +1697,24 @@ export class MeteorConfig {
   // that architecture. For example, if this.config.mainModule.client is
   // defined, then because mapWhereToArch("client") === "web", and "web"
   // matches web.browser, return this.config.mainModule.client.
-  getMainModuleForArch(
+  getMainModule(
     arch,
     mainModulesByArch = this.getMainModulesByArch(),
   ) {
-    return this._getEntryModuleForArch(arch, mainModulesByArch);
+    return this._getEntryModule(arch, mainModulesByArch);
   }
 
   // Analogous to getMainModulesByArch, except for this.config.testModule.
-  getTestModulesByArch(arch) {
+  getTestModulesByArch() {
     return this._getEntryModulesByArch("testModule");
   }
 
-  // Analogous to getMainModuleForArch, except for this.config.testModule.
-  getTestModuleForArch(
+  // Analogous to getMainModule, except for this.config.testModule.
+  getTestModule(
     arch,
     testModulesByArch = this.getTestModulesByArch(),
   ) {
-    return this._getEntryModuleForArch(arch, testModulesByArch);
+    return this._getEntryModule(arch, testModulesByArch);
   }
 
   _getEntryModulesByArch(...keys) {
@@ -1703,7 +1741,7 @@ export class MeteorConfig {
     return entryModulesByArch;
   }
 
-  _getEntryModuleForArch(
+  _getEntryModule(
     arch,
     entryModulesByArch,
   ) {

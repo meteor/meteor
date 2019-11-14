@@ -3,7 +3,7 @@ import { parse, markBottom } from '../utils/parse-stack.js';
 import _ from 'underscore';
 import Fiber from 'fibers';
 import Future from 'fibers/future';
-import files from '../fs/files.js';
+import files from '../fs/files';
 
 selftest.define("parse-stack - parse stack traces without fibers", () => {
   const err = new Error();

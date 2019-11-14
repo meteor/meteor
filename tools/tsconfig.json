@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    /* Basic Options */
+    "target": "es2018",
+    "module": "es2015",
+    "lib": ["esnext"],
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "preserve",
+    "incremental": true,
+    "noEmit": true,
+
+    /* Strict Type-Checking Options */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+
+    /* Additional Checks */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+
+    /* Module Resolution Options */
+    "moduleResolution": "node",
+    "types": ["node"],
+    "esModuleInterop": true,
+    "preserveSymlinks": true,
+  },
+  "exclude": [
+    "./tests/apps/**",
+    "./tests/packages/**",
+    "./static-assets/skel*/**"
+  ]
+}

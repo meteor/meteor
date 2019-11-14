@@ -1,7 +1,7 @@
 /* eslint no-console: 0 */
 
 var _ = require('underscore');
-var files = require('./fs/files.js');
+var files = require('./fs/files');
 var Console = require('./console/console.js').Console;
 import main from './cli/main.js';
 import buildmessage from './utils/buildmessage.js';

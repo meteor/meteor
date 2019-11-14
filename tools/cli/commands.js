@@ -1,6 +1,6 @@
 var main = require('./main.js');
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var deploy = require('../meteor-services/deploy.js');
 var buildmessage = require('../utils/buildmessage.js');
 var auth = require('../meteor-services/auth.js');
@@ -9,14 +9,14 @@ var config = require('../meteor-services/config.js');
 var runLog = require('../runners/run-log.js');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
-const { Profile } = require("../tool-env/profile.js");
+const { Profile } = require("../tool-env/profile");
 
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
@@ -482,7 +482,7 @@ main.registerCommand({
 
     // Convert to OS path here because shell/server.js doesn't know how to
     // convert paths, since it exists in the app and in the tool.
-    require('../shell-client.js').connect(
+    require('../shell-client').connect(
       files.convertToOSPath(projectContext.getMeteorShellDirectory())
     );
 
@@ -505,6 +505,7 @@ main.registerCommand({
     minimal: { type: Boolean },
     full: { type: Boolean },
     react: { type: Boolean },
+    typescript: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -593,7 +594,7 @@ main.registerCommand({
           return transform(f);
         },
         transformContents: function (contents, f) {
-          if ((/(\.html|\.js|\.css)/).test(f)) {
+          if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
@@ -757,6 +758,8 @@ main.registerCommand({
     skelName += "-full";
   } else if (options.react) {
     skelName += "-react";
+  } else if (options.typescript) {
+    skelName += "-typescript";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -764,7 +767,7 @@ main.registerCommand({
       return transform(f);
     },
     transformContents: function (contents, f) {
-      if ((/(\.html|\.js|\.css)/).test(f)) {
+      if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
         return Buffer.from(transform(contents.toString()));
       } else {
         return contents;
@@ -864,20 +867,20 @@ main.registerCommand({
   if (! options.bare &&
       ! options.minimal &&
       ! options.full &&
-      ! options.react) {
-    // Notify people about --bare, --minimal, --full, and --react.
+      ! options.react &&
+      ! options.typescript) {
+    // Notify people about --bare, --minimal, --full, --react, and --typescript.
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
       "",
     ].join("\n"));
 
-    cmd("meteor create --bare    # to create an empty app");
-    cmd("meteor create --minimal # to create an app with as few " +
-        "Meteor packages as possible");
-    cmd("meteor create --full    # to create a more complete " +
-        "scaffolded app");
-    cmd("meteor create --react   # to create a basic React-based app");
+    cmd("meteor create --bare       # to create an empty app");
+    cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
+    cmd("meteor create --full       # to create a more complete scaffolded app");
+    cmd("meteor create --react      # to create a basic React-based app");
+    cmd("meteor create --typescript # to create an app using TypeScript and React");
   }
 
   Console.info("");
@@ -961,7 +964,7 @@ var buildCommand = function (options) {
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
-  // Error handling for options.architecture. See archinfo.js for more
+  // Error handling for options.architecture. See archinfo for more
   // information on what the architectures are, what they mean, et cetera.
   if (options.architecture &&
       !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
@@ -1673,9 +1676,10 @@ function doTestCommand(options) {
   let testRunnerAppDir;
   const testAppPath = options['test-app-path'];
   if (testAppPath) {
+    const absTestAppPath = files.pathResolve(testAppPath);
     try {
-      if (files.mkdir_p(testAppPath, 0o700)) {
-        testRunnerAppDir = testAppPath;
+      if (files.mkdir_p(absTestAppPath, 0o700)) {
+        testRunnerAppDir = absTestAppPath;
       } else {
         Console.error(
           'The specified --test-app-path directory could not be used, as ' +

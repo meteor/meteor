@@ -3,10 +3,10 @@ import util from 'util';
 import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
-import files from '../fs/files.js';
-import { optimisticReadJsonOrNull } from "../fs/optimistic.js";
+import files from '../fs/files';
+import { optimisticReadJsonOrNull } from "../fs/optimistic";
 import bundler from '../isobuild/bundler.js';
-import archinfo from '../utils/archinfo.js';
+import archinfo from '../utils/archinfo';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
@@ -488,7 +488,7 @@ export class CordovaBuilder {
 
     const runtimeConfig = {
       meteorRelease: meteorRelease,
-      gitCommitHash: files.findGitCommitHash(applicationPath),
+      gitCommitHash: process.env.METEOR_GIT_COMMIT_HASH || files.findGitCommitHash(applicationPath),
       ROOT_URL: mobileServerUrl,
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: '',

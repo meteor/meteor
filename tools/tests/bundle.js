@@ -1,6 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../fs/files.js');
+import * as files from "../fs/files";
 import { execSync } from 'child_process';
 
 selftest.define("bundle", function () {
