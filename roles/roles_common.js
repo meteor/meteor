@@ -401,6 +401,7 @@ Object.assign(Roles, {
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {Object|String} [options] Options:
    *   - `scope`: name of the scope, or `null` for the global role
+   *   - `anyScope`: if `true`, remove all roles the user has, of any scope, if `false`, only the one in the same scope
    *   - `ifExists`: if `true`, do not throw an exception if the role does not exist
    *
    * Alternatively, it can be a scope name string.
@@ -421,7 +422,8 @@ Object.assign(Roles, {
     Roles._checkScopeName(options.scope)
 
     options = Object.assign({
-      ifExists: false
+      ifExists: false,
+      anyScope: false
     }, options)
 
     users.forEach(function (user) {
@@ -431,7 +433,12 @@ Object.assign(Roles, {
         id = user
       }
       // we first clear all roles for the user
-      Meteor.roleAssignment.remove({ 'user._id': id, scope: options.scope })
+      const selector = { 'user._id': id }
+      if (!options.anyScope) {
+        selector.scope = options.scope
+      }
+
+      Meteor.roleAssignment.remove(selector)
 
       // and then add all
       roles.forEach(function (role) {
