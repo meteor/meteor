@@ -1,17 +1,20 @@
 ## v.NEXT
 
-## v1.8.2, TBD
+## v1.8.2, 2019-11-14
 
 ### Breaking changes
-* Be sure you are not using variables named `exports` otherwise you will get 
-  this error `Uncaught SyntaxError: Identifier 'exports' has already been 
-  declared`. [Comment #535535056](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056) 
-  Thanks [@SimonSimCity](https://github.com/SimonSimCity)
+
+* Module-level variable declarations named `require` or `exports` are no
+  longer automatically renamed, so they may collide with module function
+  parameters of the same name, leading to errors like
+  `Uncaught SyntaxError: Identifier 'exports' has already been declared`.
+  See [this comment](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056)
+  by [@SimonSimCity](https://github.com/SimonSimCity).
 
 ### Migration Steps
 
 * Be sure to update the `@babel/runtime` npm package to its latest version
-  (currently 7.7.0):
+  (currently 7.7.2):
   ```sh
   meteor npm install @babel/runtime@latest
   ```
@@ -69,7 +72,8 @@
   development were actually used by the server bundle, so that a full
   server restart can be avoided when no files used by the server bundle
   have changed. Client-only refreshes are typically much faster than
-  server restarts.
+  server restarts. Run `meteor add autoupdate` to enable client refreshes,
+  if you are not already using the `autoupdate` package.
   [Issue #10449](https://github.com/meteor/meteor/issues/10449)
   [PR #10686](https://github.com/meteor/meteor/pull/10686)
 
