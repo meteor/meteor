@@ -743,6 +743,33 @@ describe('roles', function () {
     testUser('eve', ['editor'])
   })
 
+  it('can set user roles by scope and anyScope', function () {
+    Roles.createRole('admin')
+    Roles.createRole('editor')
+
+    var eve = Meteor.users.findOne({ _id: users.eve })
+
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
+
+    Roles.addUsersToRoles(eve, 'admin')
+
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'admin' },
+      scope: null,
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'admin' }]
+    }])
+
+    Roles.setUserRoles(eve, 'editor', { anyScope: true, scope: 'scope2' })
+
+    assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [{
+      role: { _id: 'editor' },
+      scope: 'scope2',
+      user: { _id: users.eve },
+      inheritedRoles: [{ _id: 'editor' }]
+    }])
+  })
+
   it('can get all roles', function () {
     roles.forEach(function (role) {
       Roles.createRole(role)
