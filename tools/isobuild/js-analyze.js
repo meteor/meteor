@@ -46,7 +46,7 @@ function tryToParse(source, hash) {
 /**
  * The `findImportedModuleIdentifiers` function takes a string of module
  * source code and returns a map from imported module identifiers to AST
- * nodes. The keys of this map are used in ./import-scanner.js to traverse
+ * nodes. The keys of this map are used in ./import-scanner.ts to traverse
  * the module dependency graph. The AST nodes are generally ignored.
  *
  * The implementation uses a regular expression to scan quickly for

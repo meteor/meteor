@@ -83,12 +83,11 @@ Community package maintainers are community members who maintain packages outsid
 Current Community Package Maintainers:
 - [@mitar](https://github.com/mitar) for [Blaze](https://github.com/meteor/blaze)
 
-#### Community Manager
+#### Developer Evangelist
 
-The community manager helps to coordinate resources, documentation, events, and other supportive work needed to ensure the health of the Meteor project.
+- [@filipenevola](https://github.com/filipenevola) (Feel free to reach him out on [Twitter](https://twitter.com/FilipeNevola))
 
-Previous Community Manager (this role is currently unfilled):
-- [@theadactyl](https://github.com/theadactyl)
+[Read more](https://forums.meteor.com/t/im-joining-meteor-as-developer-evangelist/50613/2)
 
 ### Tracking project work
 

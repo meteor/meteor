@@ -5,9 +5,9 @@ var Future = require("fibers/future");
 var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
-var files = require('./mini-files.js');
+var files = require('./mini-files');
 var npmRequire = require('./npm-require.js').require;
-var Profile = require('./profile.js').Profile;
+var Profile = require('./profile').Profile;
 
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v8.0.0';
@@ -55,7 +55,7 @@ const meteorDebugFuture =
 
 function maybeWaitForDebuggerToAttach() {
   if (meteorDebugFuture) {
-    const { pause } = require("./debug.js");
+    const { pause } = require("./debug");
     const pauseThresholdMs = 50;
     const pollIntervalMs = 500;
     const waitStartTimeMs = +new Date;

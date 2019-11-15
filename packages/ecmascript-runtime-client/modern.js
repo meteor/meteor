@@ -1,5 +1,5 @@
 try {
-  require("core-js/modules/es7.object.get-own-property-descriptors");
+  require("core-js/modules/es.object.get-own-property-descriptors");
 } catch (e) {
   throw new Error([
     "The core-js npm package could not be found in your node_modules ",
@@ -10,13 +10,14 @@ try {
   ].join("\n"));
 }
 
-require("core-js/modules/es6.object.is");
-require("core-js/modules/es6.function.name");
-require("core-js/modules/es6.number.is-finite");
-require("core-js/modules/es6.number.is-nan");
-require("core-js/modules/es7.array.flatten");
-require("core-js/modules/es7.array.flat-map");
-require("core-js/modules/es7.object.values");
-require("core-js/modules/es7.object.entries");
-require("core-js/modules/es7.string.pad-start");
-require("core-js/modules/es7.string.pad-end");
+require("core-js/modules/es.object.is");
+require("core-js/modules/es.function.name");
+require("core-js/modules/es.number.is-finite");
+require("core-js/modules/es.number.is-nan");
+require("core-js/modules/es.array.flat");
+require("core-js/modules/es.array.flat-map");
+require("core-js/modules/es.object.values");
+require("core-js/modules/es.object.entries");
+require("core-js/modules/es.string.pad-start");
+require("core-js/modules/es.string.pad-end");
+require("core-js/modules/es.symbol.async-iterator");
