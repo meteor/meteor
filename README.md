@@ -174,7 +174,9 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 <a id="roles-migration" name="roles-migration"></a>
 ### Migration to 3.0
 
-In meteor-roles 3.0, functions are mostly backwards compatible with 2.0, but roles are stored differently in the database. Please take a backup of the `users` collection before migrating. To migrate the database to the new schema, run `Meteor._forwardMigrate2()` on the server:
+If you are currently using this package in a version older than 2.x, please upgrade to 2.0 by running the migration script required there: https://github.com/Meteor-Community-Packages/meteor-roles/tree/v2#migration-to-20
+
+In meteor-roles 3.0, functions are mostly backwards compatible with 2.x, but roles are stored differently in the database. Please take a backup of the `users` collection before migrating. To migrate the database to the new schema, run `Meteor._forwardMigrate2()` on the server:
 
 ```bash
 meteor shell
@@ -188,9 +190,9 @@ meteor shell
 > Package['alanning:roles'].Roles._backwardMigrate2()
 ```
 
-#### Changes between 2.0 and 3.0
+#### Changes between 2.x and 3.0
 
-Here is the list of important changes between meteor-roles 2.0 and 3.0 to consider when migrating to 3.0:
+Here is the list of important changes between meteor-roles 2.x and 3.0 to consider when migrating to 3.0:
 
 * Role assignments have been moved from the `users` documents to a separate collection called `role-assignment`, available at `Meteor.roleAssignment`.
 * Role assignments are not published automatically. If you want all your role-assignments to be published automatically please include the following code:
