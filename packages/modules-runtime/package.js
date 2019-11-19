@@ -1,13 +1,13 @@
 Package.describe({
   name: "modules-runtime",
-  version: "0.10.3",
+  version: "0.11.0",
   summary: "CommonJS module system",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"
 });
 
 Npm.depends({
-  install: "0.12.2"
+  install: "0.13.0"
 });
 
 Package.onUse(function(api) {
@@ -18,7 +18,8 @@ Package.onUse(function(api) {
     bare: true
   });
 
-  api.addFiles("client.js", "client");
+  api.addFiles("modern.js", "modern");
+  api.addFiles("legacy.js", "legacy");
   api.addFiles("server.js", "server");
   api.addFiles("profile.js");
 

@@ -161,12 +161,12 @@ import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
 import { addToTree } from "./linker.js";
 
-var files = require('../fs/files.js');
-var archinfo = require('../utils/archinfo.js');
+var files = require('../fs/files');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
 import { loadIsopackage } from '../tool-env/isopackets.js';
@@ -211,6 +211,7 @@ exports._mainJsContents = [
   "",
   "process.argv.splice(2, 0, 'program.json');",
   "process.chdir(require('path').join(__dirname, 'programs', 'server'));",
+  'require("./programs/server/runtime.js");',
   "require('./programs/server/boot.js');",
 ].join("\n");
 
@@ -1077,13 +1078,20 @@ class Target {
     }
 
     const target = this;
+
+    const linkerCacheDir = this.bundlerCacheDir &&
+          files.pathJoin(this.bundlerCacheDir, "linker");
+
+    const scannerCacheDir = this.bundlerCacheDir &&
+          files.pathJoin(this.bundlerCacheDir, "scanner");
+
     const processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: this.unibuilds,
       arch: this.arch,
       sourceRoot: this.sourceRoot,
       isopackCache: this.isopackCache,
-      linkerCacheDir: this.bundlerCacheDir &&
-        files.pathJoin(this.bundlerCacheDir, 'linker'),
+      linkerCacheDir,
+      scannerCacheDir,
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
@@ -1127,6 +1135,29 @@ class Target {
 
     const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
+
+    sourceBatches.forEach(batch => {
+      const { unibuild } = batch;
+
+      // Depend on the source files that produced these resources.
+      this.watchSet.merge(unibuild.watchSet);
+
+      // Remember the versions of all of the build-time dependencies
+      // that were used in these resources. Depend on them as well.
+      // XXX assumes that this merges cleanly
+      this.watchSet.merge(unibuild.pkg.pluginWatchSet);
+
+      const entry = jsOutputFilesMap.get(unibuild.pkg.name || null);
+      if (entry && entry.importScannerWatchSet) {
+        // Populated in PackageSourceBatch._watchOutputFiles, based on the
+        // ImportScanner's knowledge of which modules are really imported.
+        this.watchSet.merge(entry.importScannerWatchSet);
+      }
+    });
+
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     const versions = {};
     const dynamicImportFiles = new Set;
@@ -1285,14 +1316,6 @@ class Target {
           addToTree(file.hash(), file.targetPath, versions);
         }
       });
-
-      // Depend on the source files that produced these resources.
-      this.watchSet.merge(unibuild.watchSet);
-
-      // Remember the versions of all of the build-time dependencies
-      // that were used in these resources. Depend on them as well.
-      // XXX assumes that this merges cleanly
-       this.watchSet.merge(unibuild.pkg.pluginWatchSet);
     });
 
     dynamicImportFiles.forEach(file => {
@@ -1721,7 +1744,9 @@ class ClientTarget extends Target {
       manifestItem.sri = file.sri();
 
       if (! file.targetPath.startsWith("dynamic/")) {
-        writeFile(file, builder);
+        writeFile(file, builder, {
+          leaveSourceMapUrls: type === 'asset'
+        });
         manifest.push(manifestItem);
         return;
       }
@@ -2695,29 +2720,33 @@ class ServerTarget extends JsImageTarget {
     const toolsDir = files.pathDirname(
       files.convertToStandardPath(__dirname));
 
-    builder.write("profile.js", {
-      file: files.pathJoin(toolsDir, "tool-env", "profile.js"),
+    builder.copyTranspiledModules([
+      "profile.ts"
+    ], {
+      sourceRootDir: files.pathJoin(toolsDir, "tool-env"),
     });
 
     // Server bootstrap
-    _.each([
+    builder.copyTranspiledModules([
       "boot.js",
       "boot-utils.js",
-      "debug.js",
+      "debug.ts",
       "server-json.js",
-      "mini-files.js",
+      "mini-files.ts",
       "npm-require.js",
       "npm-rebuild.js",
       "npm-rebuild-args.js",
-    ], function (filename) {
-      builder.write(filename, {
-        file: files.pathJoin(
-          toolsDir,
-          'static-assets',
-          'server',
-          filename
-        )
-      });
+      "runtime.js",
+    ], {
+      sourceRootDir: files.pathJoin(
+        toolsDir,
+        "static-assets",
+        "server",
+      ),
+      // If we're not in a checkout, then <toolsDir>/static-assets/server
+      // already contains transpiled files, so we can just copy them, without
+      // also transpiling them again.
+      needToTranspile: files.inCheckout(),
     });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
@@ -2765,7 +2794,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
 
   if (options && options.sourceMapUrl) {
     data = addSourceMappingURL(data, options.sourceMapUrl);
-  } else {
+  } else if (!options || !options.leaveSourceMapUrls) {
     // If we do not have an options.sourceMapUrl to append, then we still
     // want to remove any existing //# sourceMappingURL comments.
     // https://github.com/meteor/meteor/issues/9894
@@ -2931,7 +2960,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       meteorRelease: releaseName,
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
-      gitCommitHash: files.findGitCommitHash(sourceRoot),
+      gitCommitHash: process.env.METEOR_GIT_COMMIT_HASH || files.findGitCommitHash(sourceRoot),
     };
 
     // Tell the deploy server what version of the dependency kit we're using, so

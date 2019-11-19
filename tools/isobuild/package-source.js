@@ -1,17 +1,17 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
 
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var utils = require('../utils/utils.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 var buildmessage = require('../utils/buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
 import Builder from './builder.js';
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var compiler = require('./compiler.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 
 import SourceArch from './source-arch.js';
 import { PackageNamespace } from "./package-namespace.js";
@@ -23,7 +23,7 @@ import {
   TEST_FILENAME_REGEXPS,
   APP_TEST_FILENAME_REGEXPS,
   isTestFilePath,
-} from './test-files.js';
+} from './test-files';
 
 import {
   convert as convertColonsInPath
@@ -34,7 +34,8 @@ import {
   optimisticHashOrNull,
   optimisticStatOrNull,
   optimisticReadMeteorIgnore,
-} from "../fs/optimistic.js";
+  optimisticLookupPackageJson,
+} from "../fs/optimistic";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -425,6 +426,9 @@ _.extend(PackageSource.prototype, {
       sourceRoot: self.sourceRoot,
       uses: _.map(options.use, splitConstraint),
       getFiles() {
+        // TODO We might want to call _findSources here, if we want plugins to
+        // be able to import compiled files that were not explicitly included in
+        // the sources array passed to Package.registerBuildPlugin.
         return {
           sources: sources
         }
@@ -856,6 +860,9 @@ _.extend(PackageSource.prototype, {
     const testModulesByArch =
       projectContext.meteorConfig.getTestModulesByArch();
 
+    const nodeModulesToRecompileByArch =
+      projectContext.meteorConfig.getNodeModulesToRecompileByArch();
+
     projectWatchSet.merge(projectContext.meteorConfig.watchSet);
 
     _.each(compiler.ALL_ARCHES, function (arch) {
@@ -867,10 +874,13 @@ _.extend(PackageSource.prototype, {
       }
 
       const mainModule = projectContext.meteorConfig
-        .getMainModuleForArch(arch, mainModulesByArch);
+        .getMainModule(arch, mainModulesByArch);
 
       const testModule = projectContext.meteorConfig
-        .getTestModuleForArch(arch, testModulesByArch);
+        .getTestModule(arch, testModulesByArch);
+
+      const nodeModulesToRecompile = projectContext.meteorConfig
+        .getNodeModulesToRecompile(arch, nodeModulesToRecompileByArch);
 
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
@@ -891,6 +901,7 @@ _.extend(PackageSource.prototype, {
             ignoreFiles,
             isApp: true,
             testModule,
+            nodeModulesToRecompile,
           };
 
           // If this architecture has a mainModule defined in
@@ -1020,7 +1031,13 @@ _.extend(PackageSource.prototype, {
 
       if (dir === "node_modules") {
         fileOptions.lazy = true;
-        fileOptions.transpile = false;
+
+        // We used to disable transpilation for modules within node_modules,
+        // mostly for build performance reasons, but now that we have a lazy
+        // compilation system, we no longer need to worry about build times
+        // for unused modules, which unlocks opportunities such as compiling
+        // ECMAScript import/export syntax in npm packages.
+        // fileOptions.transpile = false;
 
         // Return immediately so that we don't apply special meanings to
         // client or server directories inside node_modules directories.
@@ -1084,11 +1101,13 @@ _.extend(PackageSource.prototype, {
     isApp,
     sourceArch,
     testModule,
+    nodeModulesToRecompile = new Set,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
     ignoreFiles = []
   }) {
     const self = this;
     const arch = sourceArch.arch;
+    const isWeb = archinfo.matches(arch, "web");
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
 
@@ -1243,7 +1262,7 @@ _.extend(PackageSource.prototype, {
 
       // If we're in a node_modules directory, cache the results of the
       // find function for the duration of the process.
-      const cacheKey = inNodeModules && makeCacheKey(dir);
+      let cacheKey = inNodeModules && makeCacheKey(dir);
       if (cacheKey &&
           cacheKey in self._findSourcesCache) {
         return self._findSourcesCache[cacheKey];
@@ -1262,9 +1281,16 @@ _.extend(PackageSource.prototype, {
         }
       }
 
-      const readOptions = inNodeModules
-        ? nodeModulesReadOptions
-        : sourceReadOptions;
+      let readOptions = sourceReadOptions;
+      if (inNodeModules) {
+        const pkgJson = optimisticLookupPackageJson(self.sourceRoot, dir);
+        if (pkgJson && nodeModulesToRecompile.has(pkgJson.name)) {
+          // Avoid caching node_modules code recompiled by Meteor.
+          cacheKey = false;
+        } else {
+          readOptions = nodeModulesReadOptions;
+        }
+      }
 
       const sources = _.difference(
         self._readAndWatchDirectory(dir, watchSet, readOptions),
@@ -1285,10 +1311,6 @@ _.extend(PackageSource.prototype, {
 
       subdirectories.forEach(subdir => {
         if (/(^|\/)node_modules\/$/.test(subdir)) {
-          if (! inNodeModules) {
-            sourceArch.localNodeModulesDirs[subdir] = true;
-          }
-
           // Defer handling node_modules until after we handle all other
           // subdirectories, so that we know whether we need to descend
           // further. If sources is still empty after we handle everything
@@ -1296,21 +1318,29 @@ _.extend(PackageSource.prototype, {
           // imported by anthing outside of it, so we can ignore it.
           nodeModulesDir = subdir;
 
+          // A "local" node_modules directory is one that's managed by the
+          // application developer using npm, rather than by Meteor using
+          // Npm.depends, which is available only in Meteor packages, and
+          // installs its dependencies into .npm/*/node_modules. Local
+          // node_modules directories may contain other nested node_modules
+          // directories, but we care about recording only the top-level
+          // node_modules directories here (hence !inNodeModules).
+          if (!inNodeModules && (isApp || !subdir.startsWith(".npm/"))) {
+            sourceArch.localNodeModulesDirs[subdir] = true;
+          }
+
         } else {
           sources.push(...find(subdir, depth + 1, inNodeModules));
         }
       });
 
-      if (isApp &&
-          nodeModulesDir &&
-          (! inNodeModules || sources.length > 0)) {
+      if (nodeModulesDir && (!inNodeModules || sources.length > 0)) {
         // If we found a node_modules subdirectory above, and either we
         // are not already inside another node_modules directory or we
         // found source files elsewhere in this directory or its other
-        // subdirectories, and we're building an app (as opposed to a
-        // Meteor package), continue searching this node_modules
-        // directory, so that any non-.js(on) files it contains can be
-        // imported by the app (#6037).
+        // subdirectories, continue searching this node_modules directory,
+        // so that any non-.js(on) files it contains can be imported by
+        // the app (#6037).
         sources.push(...find(nodeModulesDir, depth + 1, true));
       }
 

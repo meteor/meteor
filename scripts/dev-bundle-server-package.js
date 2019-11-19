@@ -8,14 +8,17 @@ var packageJson = {
   name: "meteor-dev-bundle",
   private: true,
   dependencies: {
+    // Keep the versions of these packages consistent with the versions
+    // found in dev-bundle-tool-package.js.
     fibers: "3.1.1",
     "meteor-promise": "0.8.7",
     promise: "8.0.2",
-    // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
-    // in the package too) because we should consider using lodash instead
-    // (and there are backwards-incompatible changes either way).
-    underscore: "1.5.2",
+    reify: "0.20.12",
+    "@babel/parser": "7.7.0",
+    "@types/underscore": "1.9.2",
+    underscore: "1.9.1",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
+    "@types/semver": "5.4.0",
     semver: "5.4.1"
   },
   // These are only used in dev mode (by shell.js) so end-users can avoid

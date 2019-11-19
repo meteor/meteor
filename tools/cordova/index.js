@@ -2,6 +2,12 @@ import _ from 'underscore';
 import assert from 'assert';
 import utils from '../utils/utils.js';
 import buildmessage from '../utils/buildmessage.js';
+import {
+  pathJoin,
+  statOrNull,
+  getDevBundle,
+  rm_recursive,
+} from '../fs/files';
 
 export const CORDOVA_ARCH = "web.cordova";
 
@@ -31,6 +37,27 @@ export function ensureDevBundleDependencies() {
     () => {
       require("../cli/dev-bundle-helpers.js")
         .ensureDependencies(CORDOVA_DEV_BUNDLE_VERSIONS);
+
+      const cordovaNodeModulesDir = pathJoin(
+        getDevBundle(),
+        "lib",
+        "node_modules",
+        "cordova-lib",
+        "node_modules",
+      );
+
+      [
+        // Remove these bundled packages in preference to
+        // dev_bundle/lib/node_modules/<package name>:
+        "graceful-fs",
+        pathJoin("npm", "node_modules", "graceful-fs"),
+      ].forEach(pkg => {
+        const path = pathJoin(cordovaNodeModulesDir, pkg);
+        const stat = statOrNull(path);
+        if (stat && stat.isDirectory()) {
+          rm_recursive(path);
+        }
+      });
     }
   );
 }

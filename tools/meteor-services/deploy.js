@@ -9,7 +9,7 @@ import {
   createTarGzStream,
   getSettings,
   mkdtemp,
-} from '../fs/files.js';
+} from '../fs/files';
 import { request } from '../utils/http-helpers.js';
 import buildmessage from '../utils/buildmessage.js';
 import {
@@ -21,7 +21,7 @@ import {
 } from './auth.js';
 import { recordPackages } from './stats.js';
 import { Console } from '../console/console.js';
-import { Profile } from '../tool-env/profile.js';
+import { Profile } from '../tool-env/profile';
 
 function sleepForMilliseconds(millisecondsToWait) {
   return new Promise(function(resolve) {
@@ -428,12 +428,13 @@ async function pollForDeploy(pollingState, versionId, site) {
     // keep polling as per usual – this may have just been a whiff from Galaxy.
     // We do the retry here because we might hit an error if we try to parse the
     // result of the version-status call below.
-    Console.warn(versionStatusResult.errorMessage || 'Unexpected error from Galaxy');
     pollingState.errors++;
+    const errorMessage = versionStatusResult.errorMessage || 'Unexpected error from Galaxy';
     if (pollingState.errors >= pollingState.maxErrors) {
-      Console.error(versionStatusResult.errorMessage);
+      Console.error(`Error checking deploy status; giving up: ${errorMessage}`);
       return 1;
     } else if (new Date() < deadline) {
+      Console.warn(`Error checking deploy status; will retry: ${errorMessage}`);
       await sleepForMilliseconds(pollIntervalMs);
       return await pollForDeploy(pollingState, versionId, site);
     }

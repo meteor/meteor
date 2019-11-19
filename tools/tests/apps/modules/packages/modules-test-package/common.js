@@ -5,6 +5,21 @@ export const ModulesTestPackage = "loaded";
 import { parse } from "acorn";
 assert.strictEqual(typeof parse, "function");
 
+// Test that an npm package with a "module" entry point in its package.json
+// file can be imported.
+import { Slot } from "@wry/context";
+assert.strictEqual(typeof Slot, "function");
+const idPrefix = "/node_modules/meteor/modules-test-package/node_modules/@wry/context/lib/";
+assert.strictEqual(
+  require.resolve("@wry/context"),
+  idPrefix + (
+    Meteor.isClient && Meteor.isModern ? "context.esm.js" : "context.js"
+  ),
+);
+
+import ganalytics from "ganalytics";
+assert.strictEqual(typeof ganalytics, "function");
+
 export function checkWhere(where) {
   const { where: serverWhere } = require("./server/where.js");
   const { where: clientWhere } = require("./client/where.js");

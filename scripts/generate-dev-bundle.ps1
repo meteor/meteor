@@ -327,12 +327,12 @@ Function Add-NpmModulesFromJsBundleFile {
   # plugins might still refer to the old directory layout (at least for the
   # time being), but we can accommodate that by symlinking to the parent
   # directory, since all the module names are the same.
-  if ((Test-Path "@babel\runtime\helpers") -And
-      !(Test-Path "@babel\runtime\helpers\builtin")) {
-    cd @babel\runtime\helpers
-    & "$($Commands.node)" -e 'require("fs").symlinkSync(".", "builtin", "junction")'
-    cd ..\..\..
-  }
+  # if ((Test-Path "@babel\runtime\helpers") -And
+  #     !(Test-Path "@babel\runtime\helpers\builtin")) {
+  #   cd @babel\runtime\helpers
+  #   & "$($Commands.node)" -e "require('fs').symlinkSync('.', 'builtin', 'junction')"
+  #   cd ..\..\..
+  # }
 
   # Since we install a patched version of pacote in $Destination\lib\node_modules,
   # we need to remove npm's bundled version to make it use the new one.

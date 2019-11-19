@@ -14,7 +14,7 @@ Package.onUse(function(api) {
 Package.onTest(function(api) {
   api.use("tinytest");
   api.use("check");
+  api.use("ecmascript");
   api.use("es5-shim");
-  api.use("ecmascript-runtime");
   api.addFiles("runtime-tests.js");
 });

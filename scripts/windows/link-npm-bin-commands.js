@@ -32,7 +32,7 @@ Object.keys(npmPkgBin).forEach(cmd => {
 });
 
 Promise.all(promises).then(items => {
-  console.error("Linked npm bin commands: " + items.join(", "));
+  console.log("Linked npm bin commands: " + items.join(", "));
 }, error => {
   console.error("Failed to link bin commands: " + error);
 });

@@ -37,7 +37,7 @@
 // - clients
 //   - browserstack: true if browserstack clients should be used
 //   - port: the port that the clients should run on
-import * as files from '../fs/files.js';
+import * as files from '../fs/files';
 import PhantomClient from './clients/phantom/index.js';
 import PuppeteerClient from './clients/puppeteer/index.js';
 import BrowserStackClient from './clients/browserstack/index.js';
@@ -48,7 +48,7 @@ import {
   getPackagesDirectoryName,
   getPackageStorage,
 } from '../meteor-services/config.js';
-import { host as archInfoHost } from '../utils/archinfo.js';
+import { host as archInfoHost } from '../utils/archinfo';
 import { current as releaseCurrent } from '../packaging/release.js';
 import { FinishedUpgraders } from '../project-context.js';
 import { allUpgraders } from '../upgraders.js';
@@ -368,7 +368,7 @@ export default class Sandbox {
     // Allow user to set TOOL_NODE_FLAGS for self-test app.
     if (process.env.TOOL_NODE_FLAGS && ! process.env.SELF_TEST_TOOL_NODE_FLAGS)
       console.log('Consider setting SELF_TEST_TOOL_NODE_FLAGS to configure ' +
-                  'self-test test applicaion spawns');
+                  'self-test test application spawns');
     env.TOOL_NODE_FLAGS = process.env.SELF_TEST_TOOL_NODE_FLAGS || '';
 
     return env;
@@ -566,6 +566,8 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   "es5-shim",
   "shell-server",
   "modern-browsers",
+  "ecmascript",
+  "typescript",
 ];
 
 function newSelfTestCatalog() {

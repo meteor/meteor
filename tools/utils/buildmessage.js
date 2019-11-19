@@ -1,8 +1,8 @@
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var parseStack = require('./parse-stack.js');
 var fiberHelpers = require('./fiber-helpers.js');
-var Progress = require('../console/progress.js').Progress;
+var Progress = require('../console/progress').Progress;
 
 var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 
@@ -13,7 +13,7 @@ var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 // relative to that path.
 //
 // Jobs are used both for error handling (via buildmessage.capture) and to set
-// the progress bar title (via progress.js).
+// the progress bar title (via progress.ts).
 //
 // Job titles should begin with a lower-case letter (unless they begin with a
 // proper noun), so that they look correct in error messages which say "While

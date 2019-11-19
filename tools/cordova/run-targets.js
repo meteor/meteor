@@ -5,8 +5,8 @@ import child_process from 'child_process';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import runLog from '../runners/run-log.js';
 import { Console } from '../console/console.js';
-import files from '../fs/files.js';
-import { execFileSync, execFileAsync } from '../utils/processes.js';
+import files from '../fs/files';
+import { execFileSync, execFileAsync } from '../utils/processes';
 
 export class CordovaRunTarget {
   get title() {
@@ -132,7 +132,7 @@ export class AndroidRunTarget extends CordovaRunTarget {
   }
 
   async tailLogs(cordovaProject, target) {
-    const { transform } = require("../utils/eachline.js");
+    const { transform } = require("../utils/eachline");
 
     cordovaProject.runCommands(`tailing logs for ${this.displayName}`, async () => {
       await this.checkPlatformRequirementsAndSetEnv(cordovaProject);

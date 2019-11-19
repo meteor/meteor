@@ -4,9 +4,10 @@ var utils = require('../utils/utils.js');
 var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var catalog = require('../packaging/catalog/catalog.js');
 var os = require('os');
+var isReachable = require("is-reachable");
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
@@ -361,7 +362,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
 
 // Test that when the parent runner process is SIGKILLed, the child
 // process exits also.
-selftest.skip.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure"], function () {
+selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox();
   var run;
 
@@ -377,23 +378,20 @@ selftest.skip.define("run and SIGKILL parent process", ["yet-unsolved-windows-fa
   }
   childPid = match[1];
 
+  if (!isReachable("localhost:3000").await()) {
+    selftest.fail("Child process " + childPid + " already dead?");
+  }
+
   process.kill(run.proc.pid, "SIGKILL");
   // This sleep should be a little more time than the interval at which
   // the child checks if the parent is still alive, in
   // packages/webapp/webapp_server.js.
-  utils.sleepMs(3500);
+  utils.sleepMs(10000);
 
   // Send the child process a signal of 0. If there is no error, it
   // means that the process is still running, which is not what we
   // expect.
-  var caughtError;
-  try {
-    process.kill(childPid, 0);
-  } catch (err) {
-    caughtError = err;
-  }
-
-  if (! caughtError) {
+  if (isReachable("localhost:3000").await()) {
     selftest.fail("Child process " + childPid + " is still running");
   }
 

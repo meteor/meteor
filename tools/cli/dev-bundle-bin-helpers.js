@@ -1,6 +1,7 @@
-var fs = require("fs");
-var path = require("path");
-var files = require("../fs/mini-files.js");
+const fs = require("fs");
+const path = require("path");
+const { convertToOSPath } = require("./convert-to-os-path.js");
+
 var isWindows = process.platform === "win32";
 var extensions = isWindows ? [".cmd", ".exe"] : [""];
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -37,7 +38,8 @@ exports.getCommand = function (name, devBundleDir) {
 
 function isValidCommand(name, devBundleDir) {
   if (name === "node" ||
-      name === "npm") {
+      name === "npm" ||
+      name === "npx") {
     return true;
   }
 
@@ -63,7 +65,7 @@ function isValidCommand(name, devBundleDir) {
 exports.getEnv = function (options) {
   var devBundle = options && options.devBundle;
   var devBundlePromise = typeof devBundle === "string"
-    ? Promise.resolve(files.convertToOSPath(devBundle))
+    ? Promise.resolve(convertToOSPath(devBundle))
     : getDevBundle();
 
   return devBundlePromise.then(function (devBundleDir) {

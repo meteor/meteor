@@ -2,12 +2,12 @@ var _ = require('underscore');
 
 var runLog = require('../runners/run-log.js');
 var catalog = require('./catalog/catalog.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var isopack = require('../isobuild/isopack.js');
 var buildmessage = require('../utils/buildmessage.js');
 var Console = require('../console/console.js').Console;
 var auth = require('../meteor-services/auth.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 
 var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
