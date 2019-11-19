@@ -1,5 +1,8 @@
 ## v.NEXT
 
+### Changes
+* Facebook OAuth has been updated to call v4 API endpoints.
+
 ## v1.8.2, 2019-11-14
 
 ### Breaking changes
@@ -132,7 +135,6 @@
   serve static resources, which is useful when multiple Cordova apps are built
   from the same application source code, since by default the port is generated
   using the ID from the application's `.meteor/.id` file.
-* Facebook OAuth has been updated to call v4 API endpoints.
 
 * The `--test-app-path <directory>` option for `meteor test-packages` and
   `meteor test` now accepts relative paths as well as absolute paths.
