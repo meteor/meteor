@@ -1349,6 +1349,7 @@ export class PackageSourceBatch {
         bundleArch: batch.processor.arch,
         extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
+        npmDependencies: batch.unibuild.pkg.npmDependencies,
         nodeModulesPaths,
         watchSet: entry.importScannerWatchSet,
         cacheDir: batch.scannerCacheDir,

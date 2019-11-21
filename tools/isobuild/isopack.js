@@ -261,6 +261,7 @@ _.extend(Isopack.prototype, {
     self.plugins = options.plugins;
     self.cordovaDependencies = options.cordovaDependencies;
     self.pluginWatchSet = options.pluginWatchSet;
+    self.npmDependencies = options.npmDependencies;
     self.npmDiscards = options.npmDiscards;
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
@@ -945,6 +946,8 @@ _.extend(Isopack.prototype, {
 
     self.cordovaDependencies = mainJson.cordovaDependencies || null;
 
+    self.npmDependencies = mainJson.npmDependencies;
+
     _.each(mainJson.tools, function (toolMeta) {
       toolMeta.rootDir = dir;
       // XXX check for overlap
@@ -1040,6 +1043,9 @@ _.extend(Isopack.prototype, {
       }
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
+      }
+      if (!_.isEmpty(self.npmDependencies)) {
+        mainJson.npmDependencies = self.npmDependencies;
       }
 
       const writeLegacyBuilds = (

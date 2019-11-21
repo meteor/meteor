@@ -168,6 +168,7 @@ compiler.compile = Profile(function (packageSource, options) {
     plugins: plugins,
     pluginWatchSet: pluginWatchSet,
     cordovaDependencies: packageSource.cordovaDependencies,
+    npmDependencies: packageSource.npmDependencies,
     npmDiscards: packageSource.npmDiscards,
     includeTool: packageSource.includeTool,
     debugOnly: packageSource.debugOnly,

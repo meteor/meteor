@@ -315,6 +315,7 @@ export type ImportScannerOptions = {
   bundleArch: string;
   extensions: string[];
   sourceRoot: string;
+  npmDependencies: Record<string, string>;
   nodeModulesPaths: string[];
   cacheDir: string;
 }
@@ -384,6 +385,7 @@ export default class ImportScanner {
     bundleArch,
     extensions,
     sourceRoot,
+    npmDependencies,
     nodeModulesPaths = [],
     cacheDir,
   }: ImportScannerOptions) {
@@ -402,6 +404,7 @@ export default class ImportScanner {
       sourceRoot,
       targetArch: bundleArch,
       extensions,
+      npmDependencies,
       nodeModulesPaths,
     });
 

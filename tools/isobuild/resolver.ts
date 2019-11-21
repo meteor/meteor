@@ -45,6 +45,7 @@ export type ResolverOptions = {
   sourceRoot: string;
   targetArch: string;
   extensions: string[];
+  npmDependencies: Record<string, string>,
   nodeModulesPaths: string[];
   caller?: string;
 }
@@ -68,6 +69,7 @@ export default class Resolver {
   private sourceRoot: string;
   private targetArch: string;
   private extensions: string[];
+  private npmDependencies: string[];
   private nodeModulesPaths: string[];
   private mainFields: string[];
 
@@ -77,11 +79,13 @@ export default class Resolver {
     sourceRoot,
     targetArch,
     extensions = [".js", ".json"],
+    npmDependencies,
     nodeModulesPaths = [],
   }: ResolverOptions) {
     this.sourceRoot = sourceRoot;
     this.extensions = extensions;
     this.targetArch = targetArch;
+    this.npmDependencies = Object.keys(npmDependencies || {});
     this.nodeModulesPaths = nodeModulesPaths;
     this.statOrNull = optimisticStatOrNull;
 
@@ -349,6 +353,38 @@ export default class Resolver {
         }
 
         dir = parentDir;
+      }
+    }
+
+    if (this.npmDependencies.length > 0) {
+      // In case a file within a package requires/imports an npm dependency
+      // We should only resolve this if it is mentioned in the npm dependencies
+      // of that package (thus in `Npm.depends` in the package.js file).
+      // Otherwise, the package author likely wants to get it from the app's
+      // node_modules.
+      // The npm package could be in a node modules path of the meteor package
+      // through some other npm package.
+      // So we still want this other npm package to resolve to that package
+      // Since its version may differ from the app's npm package
+      // For more info, see:
+      // https://github.com/meteor/meteor/issues/10230#issuecomment-557022580
+      const requireFromNpmPackage = this.nodeModulesPaths.some(path =>
+        absParentPath.startsWith(path));
+
+      let idPackageName: string;
+      if (id.charAt(0) === '@') {
+        const [scope, pkg] = id.split('/');
+        idPackageName = `${scope}/${pkg}`;
+      } else {
+        const [pkg] = id.split('/');
+        idPackageName = pkg;
+      }
+
+      const meteorPackageDependsOnNpmPackage = this.npmDependencies.some(dep =>
+        dep === idPackageName);
+
+      if (! requireFromNpmPackage && ! meteorPackageDependsOnNpmPackage) {
+        return "missing";
       }
     }
 
