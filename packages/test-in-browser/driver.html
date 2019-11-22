@@ -1,15 +1,18 @@
 
 <template name="testInBrowserBody">
-  <div class="container-fluid">
-  {{> navBars}}
-  {{> uncaughtErrors}}
-  {{> failedTests}}
-  {{> testTable}}
+  <div class="test-in-browser">
+  {{> navBar}}
+  <div class="test-results">
+    {{> uncaughtErrors}}
+    {{> failedTests}}
+    {{> testTable}}
+  </div>
+  {{> groupNav}}
   </div>
 </template>
 
-<template name="navBars">
-  <nav class="navbar fixed-top navbar-dark bg-dark">
+<template name="navBar">
+  <nav class="navbar navbar-dark bg-dark">
     <a class="navbar-brand" href="#">
         {{#if running}}
           Testing in progress...
@@ -26,7 +29,6 @@
     {{/unless}}
     {{> progressBar}}
   </nav>
-  {{> groupNav}}
 </template>
 
 <template name="progressBar">
@@ -38,7 +40,7 @@
 </template>
 
 <template name="groupNav">
-  <nav class="navbar navbar-expand-sm fixed-bottom navbar-dark bg-dark">
+  <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
     <ul class="navbar-nav mr-auto">
       {{#each groupPaths}}
         <li class="nav-item"><span class="nav-link">&nbsp;-&nbsp;</span></li>

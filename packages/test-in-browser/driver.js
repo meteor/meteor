@@ -245,7 +245,7 @@ var _testStatus = function(t) {
 
 //// Template - navBars
 
-Template.navBars.helpers({
+Template.navBar.helpers({
   running: function() {
     countDep.depend();
     return running;
