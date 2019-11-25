@@ -657,7 +657,7 @@ _.extend(File.prototype, {
         column: e.column
       };
       if (self.sourceMap) {
-        var parsed = new sourcemap.SourceMapConsumer(self.sourceMap);
+        var parsed = Promise.await(new sourcemap.SourceMapConsumer(self.sourceMap));
         var original = parsed.originalPositionFor(
           {line: e.lineNumber, column: e.column - 1});
         if (original.source) {
@@ -665,6 +665,7 @@ _.extend(File.prototype, {
           errorOptions.line = original.line;
           errorOptions.column = original.column + 1;
         }
+        parsed.destroy();
       }
 
       buildmessage.error(e.message, errorOptions);
@@ -779,10 +780,12 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       let chunk = result.code;
 
       if (result.map) {
+        const sourcemapConsumer = Promise.await(new sourcemap.SourceMapConsumer(result.map));
         chunk = sourcemap.SourceNode.fromStringWithSourceMap(
           result.code,
-          new sourcemap.SourceMapConsumer(result.map),
+          sourcemapConsumer,
         );
+        sourcemapConsumer.destroy();
       }
 
       chunks.push(chunk);

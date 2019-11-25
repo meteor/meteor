@@ -39,7 +39,7 @@ var packageJson = {
     // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
-    "source-map": "0.5.7",
+    "source-map": "0.7.3",
     chalk: "0.5.1",
     sqlite3: "4.1.0",
     "http-proxy": "1.16.2",
