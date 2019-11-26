@@ -31,8 +31,8 @@ N/A
 
 * The `sqlite3` npm package has been updated to version 4.1.0.
 
-* The `node-gyp` npm package has been updated to version 4.0.0, and
-  `node-pre-gyp` has been updated to version 0.13.0.
+* The `node-gyp` npm package has been updated to version 6.0.1, and
+  `node-pre-gyp` has been updated to version 0.14.0.
 
 ## v.NEXT
 

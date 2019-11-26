@@ -12,8 +12,8 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "6.13.1",
     pacote: "https://github.com/meteor/pacote/tarball/a1853763676463c458aa8ce7b91c20205c44ae6a",
-    "node-gyp": "5.0.1",
-    "node-pre-gyp": "0.13.0",
+    "node-gyp": "6.0.1",
+    "node-pre-gyp": "0.14.0",
     typescript: "3.7.2",
     "meteor-babel": "7.7.4",
     // Keep the versions of these packages consistent with the versions
