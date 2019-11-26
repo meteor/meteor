@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.1.1'
+  version: '1.2.0-beta190.4'
 });
 
 Package.onUse(function (api) {

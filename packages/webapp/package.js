@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.8.0-beta190.3'
+  version: '1.8.0-beta190.4'
 });
 
 Npm.depends({"basic-auth-connect": "1.0.0",
