@@ -14,7 +14,7 @@ var packageJson = {
     "meteor-promise": "0.8.7",
     promise: "8.0.2",
     reify: "0.20.12",
-    "@babel/parser": "7.7.0",
+    "@babel/parser": "7.7.4",
     "@types/underscore": "1.9.2",
     underscore: "1.9.1",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
