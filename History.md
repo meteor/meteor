@@ -19,6 +19,10 @@ N/A
   * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
   * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
 
+* The `npm` npm package has been updated to version 6.13.1, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.9-meteor) of its
+  `pacote` dependency remains at version 9.5.9.
+
 * The `fibers` npm package has been updated to version 4.0.2.
 
 * The `pathwatcher` npm package has been updated to use a fork of version
