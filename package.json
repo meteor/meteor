@@ -6,6 +6,9 @@
   "license": "MIT",
   "repository": "https://github.com/meteor/babel-preset-meteor",
   "main": "index.js",
+  "scripts": {
+    "update-versions": "bash scripts/update-versions"
+  },
   "dependencies": {
     "@babel/plugin-proposal-async-generator-functions": "^7.7.0",
     "@babel/plugin-proposal-class-properties": "^7.7.0",

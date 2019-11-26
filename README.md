@@ -8,6 +8,13 @@
 $ npm install --save-dev babel-preset-meteor
 ```
 
+## Updating dependency versions
+
+```sh
+$ cd path/to/babel-preset-meteor
+$ npm run update-versions
+```
+
 ## Usage
 
 ### Via `.babelrc` (Recommended)
