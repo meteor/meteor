@@ -28,9 +28,12 @@ describe('roles', function () {
     }
   }
 
-  function testUser (username, expectedRoles, group) {
+  function testUser (username, expectedRoles, scope) {
     var user = users[username]
-
+    console.log(`testUser client scope=${typeof scope}`);
+    if(typeof scope == 'string') {
+      scope = {scope: scope}
+    }
     // test using user object rather than userId to avoid mocking
     roles.forEach(function (role) {
       var expected = expectedRoles.includes(role)
@@ -38,9 +41,9 @@ describe('roles', function () {
       var nmsg = username + ' had un-expected permission ' + role
 
       if (expected) {
-        assert.isTrue(Roles.userIsInRole(user, role, group), msg)
+        assert.isTrue(Roles.userIsInRole(user, role, scope), msg)
       } else {
-        assert.isFalse(Roles.userIsInRole(user, role, group), nmsg)
+        assert.isFalse(Roles.userIsInRole(user, role, scope), nmsg)
       }
     })
   }
@@ -87,6 +90,12 @@ describe('roles', function () {
       user: users.joe,
       role: { _id: 'admin' },
       inheritedRoles: [{ _id: 'admin' }]
+    })
+    Meteor.roleAssignment.insert({
+      user: users.joe,
+      role: { _id: 'admin' },
+      inheritedRoles: [{ _id: 'admin' }],
+      scope: 'group1'
     })
     Meteor.roleAssignment.insert({
       user: users.joe,
@@ -146,5 +155,12 @@ describe('roles', function () {
     testUser('joe', ['admin'])
     testUser('joe', ['admin'], Roles.GLOBAL_GROUP)
     testUser('joe', ['admin', 'editor'], 'group1')
+  })
+
+  it('check if user is in role with scope only, ignoring global', function(){
+    // this is supposed to be true
+    testUser('joe', ['admin'], { scope: 'group1', onlyScoped: true })
+    // this is supposed to fail
+    testUser('eve', ['admin'], { scope: 'group1', onlyScoped: true })
   })
 })
