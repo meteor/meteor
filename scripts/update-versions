@@ -1,0 +1,18 @@
+#!/usr/bin/env bash -eux
+
+cd $(dirname $0)/..
+
+# Update dependencies that start with @babel/ or babel-
+npm i $(node -p 'Object.keys(require("./package.json").dependencies).filter(d => d.startsWith("@babel/") || d.startsWith("babel-")).map(d => d + "@latest").join(" ")')
+
+# Update devDependencies that start with @babel/
+npm i --save-dev --save-exact $(node -p 'Object.keys(require("./package.json").devDependencies).filter(d => d.startsWith("@babel/")).map(d => d + "@latest").join(" ")')
+
+git add package.json
+git commit -m "Update eligible dependencies to latest versions."
+
+git rm -f package-lock.json
+rm -rf node_modules
+npm i
+git add package-lock.json
+git commit -m "Update package-lock.json."

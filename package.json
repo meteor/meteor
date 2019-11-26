@@ -18,7 +18,8 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "test/run.sh"
+    "test": "test/run.sh",
+    "update-versions": "bash scripts/update-versions"
   },
   "homepage": "https://github.com/meteor/babel",
   "repository": {
