@@ -38,7 +38,6 @@ describe('roles', function () {
     var userId = users[username]
     var userObj = Meteor.users.findOne({ _id: userId })
 
-    // console.log(`testUser server scope=${typeof scope}`);
     if (typeof scope == 'string') {
       scope = { scope: scope }
     }
