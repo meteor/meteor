@@ -18,7 +18,6 @@ Meteor.roleAssignment.allow({
 describe('roles', function () {
   var users = {}
   var roles = ['admin', 'editor', 'user']
-  const allTests = false;
 
   Meteor.publish('_roleAssignments', function () {
     var loggedInUserId = this.userId
@@ -78,7 +77,7 @@ describe('roles', function () {
     }
   })
 
-  if(allTests) it('can create and delete roles', function () {
+  it('can create and delete roles', function () {
     var role1Id = Roles.createRole('test1')
     assert.equal(Meteor.roles.findOne()._id, 'test1')
     assert.equal(Meteor.roles.findOne(role1Id)._id, 'test1')
@@ -96,17 +95,17 @@ describe('roles', function () {
     assert.equal(typeof Meteor.roles.findOne(), 'undefined')
   })
 
-  if(allTests) it('can try to remove non-existing roles without crashing', function () {
+  it('can try to remove non-existing roles without crashing', function () {
     Roles.deleteRole('non-existing-role')
   })
 
-  if(allTests) it('can\'t create duplicate roles', function () {
+  it('can\'t create duplicate roles', function () {
     Roles.createRole('test1')
     assert.throws(function () { Roles.createRole('test1') })
     assert.isNull(Roles.createRole('test1', { unlessExists: true }))
   })
 
-  if(allTests) it('can\'t create role with empty names', function () {
+  it('can\'t create role with empty names', function () {
     assert.throws(function () {
       Roles.createRole('')
     }, /Invalid role name/)
@@ -124,7 +123,7 @@ describe('roles', function () {
     }, /Invalid role name/)
   })
 
-  if(allTests) it('can\'t use invalid scope names', function () {
+  it('can\'t use invalid scope names', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -148,7 +147,7 @@ describe('roles', function () {
     }, /Invalid scope name/)
   })
 
-  if(allTests) it('can check if user is in role', function () {
+  it('can check if user is in role', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.addUsersToRoles(users.eve, ['admin', 'user'])
@@ -156,7 +155,7 @@ describe('roles', function () {
     testUser('eve', ['admin', 'user'])
   })
 
-  if(allTests) it('can check if user is in role by scope', function () {
+  it('can check if user is in role by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -173,7 +172,7 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, ['editor'], { anyScope: true }))
   })
 
-  if(allTests) it('can check if user is in role by scope through options', function () {
+  it('can check if user is in role by scope through options', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -184,7 +183,7 @@ describe('roles', function () {
     testUser('eve', ['editor'], { scope: 'scope2' })
   })
 
-  if(allTests) it('can check if user is in role by scope with global role', function () {
+  it('can check if user is in role by scope with global role', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -209,7 +208,7 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, ['admin'], null))
   })
 
-  if(allTests) it('renaming scopes', function () {
+  it('renaming scopes', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -254,7 +253,7 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, ['user'], null))
   })
 
-  if(allTests) it('removing scopes', function () {
+  it('removing scopes', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -272,15 +271,15 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'scope2'))
   })
 
-  if(allTests) it('can check if non-existant user is in role', function () {
+  it('can check if non-existant user is in role', function () {
     assert.isFalse(Roles.userIsInRole('1', 'admin'))
   })
 
-  if(allTests) it('can check if null user is in role', function () {
+  it('can check if null user is in role', function () {
     assert.isFalse(Roles.userIsInRole(null, 'admin'))
   })
 
-  if(allTests) it('can check user against several roles at once', function () {
+  it('can check user against several roles at once', function () {
     var user
 
     Roles.createRole('admin')
@@ -293,35 +292,35 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(user, ['editor', 'admin']))
   })
 
-  if(allTests) it('can\'t add non-existent user to role', function () {
+  it('can\'t add non-existent user to role', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles(['1'], ['admin'])
     assert.equal(Meteor.users.findOne({ _id: '1' }), undefined)
   })
 
-  if(allTests) it('can\'t add user to non-existent role', function () {
+  it('can\'t add user to non-existent role', function () {
     assert.throws(function () {
       Roles.addUsersToRoles(users.eve, ['admin'])
     }, /Role 'admin' does not exist/)
     Roles.addUsersToRoles(users.eve, ['admin'], { ifExists: true })
   })
 
-  if(allTests) it('can\'t set non-existent user to role', function () {
+  it('can\'t set non-existent user to role', function () {
     Roles.createRole('admin')
 
     Roles.setUserRoles(['1'], ['admin'])
     assert.equal(Meteor.users.findOne({ _id: '1' }), undefined)
   })
 
-  if(allTests) it('can\'t set user to non-existent role', function () {
+  it('can\'t set user to non-existent role', function () {
     assert.throws(function () {
       Roles.setUserRoles(users.eve, ['admin'])
     }, /Role 'admin' does not exist/)
     Roles.setUserRoles(users.eve, ['admin'], { ifExists: true })
   })
 
-  if(allTests) it('can add individual users to roles', function () {
+  it('can add individual users to roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -339,7 +338,7 @@ describe('roles', function () {
     testUser('joe', ['editor', 'user'])
   })
 
-  if(allTests) it('can add individual users to roles by scope', function () {
+  it('can add individual users to roles by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -366,7 +365,7 @@ describe('roles', function () {
     testUser('joe', [], 'scope2')
   })
 
-  if(allTests) it('can add user to roles via user object', function () {
+  it('can add user to roles via user object', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -387,7 +386,7 @@ describe('roles', function () {
     testUser('joe', [])
   })
 
-  if(allTests) it('can add user to roles multiple times', function () {
+  it('can add user to roles multiple times', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -407,7 +406,7 @@ describe('roles', function () {
     testUser('joe', [])
   })
 
-  if(allTests) it('can add user to roles multiple times by scope', function () {
+  it('can add user to roles multiple times by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -427,7 +426,7 @@ describe('roles', function () {
     testUser('joe', [], 'scope1')
   })
 
-  if(allTests) it('can add multiple users to roles', function () {
+  it('can add multiple users to roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -445,7 +444,7 @@ describe('roles', function () {
     testUser('joe', ['editor', 'user'])
   })
 
-  if(allTests) it('can add multiple users to roles by scope', function () {
+  it('can add multiple users to roles by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -472,7 +471,7 @@ describe('roles', function () {
     testUser('joe', ['editor', 'user'], 'scope2')
   })
 
-  if(allTests) it('can remove individual users from roles', function () {
+  it('can remove individual users from roles', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
@@ -485,7 +484,7 @@ describe('roles', function () {
     testUser('bob', ['editor', 'user'])
   })
 
-  if(allTests) it('can remove user from roles multiple times', function () {
+  it('can remove user from roles multiple times', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
@@ -502,7 +501,7 @@ describe('roles', function () {
     testUser('eve', ['editor'])
   })
 
-  if(allTests) it('can remove users from roles via user object', function () {
+  it('can remove users from roles via user object', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
@@ -518,7 +517,7 @@ describe('roles', function () {
     testUser('bob', ['editor', 'user'])
   })
 
-  if(allTests) it('can remove individual users from roles by scope', function () {
+  it('can remove individual users from roles by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -542,7 +541,7 @@ describe('roles', function () {
     testUser('joe', ['admin'], 'scope2')
   })
 
-  if(allTests) it('can remove individual users from roles by scope through options', function () {
+  it('can remove individual users from roles by scope through options', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -566,7 +565,7 @@ describe('roles', function () {
     testUser('joe', ['admin'], 'scope2')
   })
 
-  if(allTests) it('can remove multiple users from roles', function () {
+  it('can remove multiple users from roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -585,7 +584,7 @@ describe('roles', function () {
     testUser('joe', ['user'])
   })
 
-  if(allTests) it('can remove multiple users from roles by scope', function () {
+  it('can remove multiple users from roles by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -614,7 +613,7 @@ describe('roles', function () {
     testUser('joe', [], 'scope2')
   })
 
-  if(allTests) it('can remove multiple users from roles of any scope', function () {
+  it('can remove multiple users from roles of any scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -638,7 +637,7 @@ describe('roles', function () {
     testUser('joe', ['user'], 'scope2')
   })
 
-  if(allTests) it('can set user roles', function () {
+  it('can set user roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -673,7 +672,7 @@ describe('roles', function () {
     testUser('joe', [])
   })
 
-  if(allTests) it('can set user roles by scope', function () {
+  it('can set user roles by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -749,7 +748,7 @@ describe('roles', function () {
     testUser('eve', ['editor'])
   })
 
-  if(allTests) it('can set user roles by scope and anyScope', function () {
+  it('can set user roles by scope and anyScope', function () {
     Roles.createRole('admin')
     Roles.createRole('editor')
 
@@ -776,7 +775,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('can get all roles', function () {
+  it('can get all roles', function () {
     roles.forEach(function (role) {
       Roles.createRole(role)
     })
@@ -790,18 +789,18 @@ describe('roles', function () {
     assert.sameMembers(Roles.getAllRoles({ sort: { _id: -1 } }).fetch().map(r => r._id), expected.reverse())
   })
 
-  if(allTests) it('get an empty list of roles for an empty user', function () {
+  it('get an empty list of roles for an empty user', function () {
     assert.sameMembers(Roles.getRolesForUser(undefined), [])
     assert.sameMembers(Roles.getRolesForUser(null), [])
     assert.sameMembers(Roles.getRolesForUser({}), [])
   })
 
-  if(allTests) it('get an empty list of roles for non-existant user', function () {
+  it('get an empty list of roles for non-existant user', function () {
     assert.sameMembers(Roles.getRolesForUser('1'), [])
     assert.sameMembers(Roles.getRolesForUser('1', 'scope1'), [])
   })
 
-  if(allTests) it('can get all roles for user', function () {
+  it('can get all roles for user', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
@@ -837,7 +836,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('can get all roles for user by scope', function () {
+  it('can get all roles for user by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
@@ -981,7 +980,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getRolesForUser(userId, { anyScope: true, onlyAssigned: true }), ['admin', 'user'])
   })
 
-  if(allTests) it('can get only scoped roles for user', function () {
+  it('can get only scoped roles for user', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
@@ -1004,7 +1003,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('can get all roles for user by scope with periods in name', function () {
+  it('can get all roles for user by scope with periods in name', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles(users.joe, ['admin'], 'example.k12.va.us')
@@ -1012,7 +1011,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getRolesForUser(users.joe, 'example.k12.va.us'), ['admin'])
   })
 
-  if(allTests) it('can get all roles for user by scope including Roles.GLOBAL_SCOPE', function () {
+  it('can get all roles for user by scope including Roles.GLOBAL_SCOPE', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -1033,7 +1032,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getRolesForUser(userObj), ['editor'])
   })
 
-  if(allTests) it('getRolesForUser should not return null entries if user has no roles for scope', function () {
+  it('getRolesForUser should not return null entries if user has no roles for scope', function () {
     Roles.createRole('editor')
 
     var userId = users.eve
@@ -1060,7 +1059,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getRolesForUser(userObj), ['editor'])
   })
 
-  if(allTests) it('returns an empty list of scopes for null as user-id', function () {
+  it('returns an empty list of scopes for null as user-id', function () {
     assert.sameMembers(Roles.getScopesForUser(undefined), [])
     assert.sameMembers(Roles.getScopesForUser(null), [])
     assert.sameMembers(Roles.getScopesForUser('foo'), [])
@@ -1068,7 +1067,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser({ _id: 'foo' }), [])
   })
 
-  if(allTests) it('can get all scopes for user', function () {
+  it('can get all scopes for user', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -1087,7 +1086,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userObj), ['scope1', 'scope2'])
   })
 
-  if(allTests) it('can get all scopes for user by role', function () {
+  it('can get all scopes for user by role', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -1110,7 +1109,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userObj, 'admin'), [])
   })
 
-  if(allTests) it('getScopesForUser returns [] when not using scopes', function () {
+  it('getScopesForUser returns [] when not using scopes', function () {
     Roles.createRole('user')
     Roles.createRole('editor')
 
@@ -1133,7 +1132,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userObj, ['editor', 'user']), [])
   })
 
-  if(allTests) it('can get all groups for user by role array', function () {
+  it('can get all groups for user by role array', function () {
     var userId = users.eve
     var userObj
 
@@ -1168,7 +1167,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userObj, ['user', 'moderator']), ['group2', 'group3'])
   })
 
-  if(allTests) it('getting all scopes for user does not include GLOBAL_SCOPE', function () {
+  it('getting all scopes for user does not include GLOBAL_SCOPE', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -1200,7 +1199,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userObj, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
   })
 
-  if (allTests) if(allTests) it('can get all users in role', function () {
+  if (allTests) it('can get all users in role', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -1214,7 +1213,7 @@ describe('roles', function () {
     assert.sameMembers(actual, expected)
   })
 
-  if(allTests) it('can get all users in role by scope', function () {
+  it('can get all users in role by scope', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
@@ -1285,7 +1284,7 @@ describe('roles', function () {
     assert.sameMembers(actual, expected)
   })
 
-  if(allTests) it('can get all users in role by scope and passes through mongo query arguments', function () {
+  it('can get all users in role by scope and passes through mongo query arguments', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
@@ -1299,7 +1298,7 @@ describe('roles', function () {
     assert.isFalse(results[0].hasOwnProperty('username'))
   })
 
-  if(allTests) it('can use Roles.GLOBAL_SCOPE to assign blanket roles', function () {
+  it('can use Roles.GLOBAL_SCOPE to assign blanket roles', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles([users.joe, users.bob], ['admin'], Roles.GLOBAL_SCOPE)
@@ -1319,7 +1318,7 @@ describe('roles', function () {
     testUser('bob', ['admin'], 'scope1')
   })
 
-  if(allTests) it('Roles.GLOBAL_SCOPE is independent of other scopes', function () {
+  it('Roles.GLOBAL_SCOPE is independent of other scopes', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles([users.joe, users.bob], ['admin'], 'scope5')
@@ -1344,7 +1343,7 @@ describe('roles', function () {
     testUser('bob', ['admin'], 'scope1')
   })
 
-  if(allTests) it('Roles.GLOBAL_SCOPE also checked when scope not specified', function () {
+  it('Roles.GLOBAL_SCOPE also checked when scope not specified', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles(users.joe, 'admin', Roles.GLOBAL_SCOPE)
@@ -1356,21 +1355,21 @@ describe('roles', function () {
     testUser('joe', [])
   })
 
-  if(allTests) it('can use \'.\' in scope name', function () {
+  it('can use \'.\' in scope name', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles(users.joe, ['admin'], 'example.com')
     testUser('joe', ['admin'], 'example.com')
   })
 
-  if(allTests) it('can use multiple periods in scope name', function () {
+  it('can use multiple periods in scope name', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles(users.joe, ['admin'], 'example.k12.va.us')
     testUser('joe', ['admin'], 'example.k12.va.us')
   })
 
-  if(allTests) it('renaming of roles', function () {
+  it('renaming of roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -1415,7 +1414,7 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, 'user', 'scope2'))
   })
 
-  if(allTests) it('migration without global groups', function () {
+  it('migration without global groups', function () {
     assert.isOk(Meteor.roles.insert({ name: 'admin' }))
     assert.isOk(Meteor.roles.insert({ name: 'editor' }))
     assert.isOk(Meteor.roles.insert({ name: 'user' }))
@@ -1484,7 +1483,7 @@ describe('roles', function () {
     })
   })
 
-  if(allTests) it('migration with global groups', function () {
+  it('migration with global groups', function () {
     assert.isOk(Meteor.roles.insert({ name: 'admin' }))
     assert.isOk(Meteor.roles.insert({ name: 'editor' }))
     assert.isOk(Meteor.roles.insert({ name: 'user' }))
@@ -1612,7 +1611,7 @@ describe('roles', function () {
     })
   })
 
-  if(allTests) it('_addUserToRole', function () {
+  it('_addUserToRole', function () {
     Roles.createRole('admin')
 
     assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
@@ -1642,7 +1641,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('_removeUserFromRole', function () {
+  it('_removeUserFromRole', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles(users.eve, 'admin')
@@ -1659,7 +1658,7 @@ describe('roles', function () {
     assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
   })
 
-  if(allTests) it('keep assigned roles', function () {
+  it('keep assigned roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('ALL_PERMISSIONS')
@@ -1730,7 +1729,7 @@ describe('roles', function () {
     assert.sameDeepMembers(Roles.getRolesForUser(users.eve, { anyScope: true, fullObjects: true }).map(obj => { delete obj._id; return obj }), [])
   })
 
-  if(allTests) it('adds children of the added role to the assignments', function () {
+  it('adds children of the added role to the assignments', function () {
     Roles.createRole('admin')
     Roles.createRole('ALBUM.ADMIN')
     Roles.createRole('ALBUM.VIEW')
@@ -1751,7 +1750,7 @@ describe('roles', function () {
     assert.isTrue(Roles.userIsInRole(users.eve, 'TRACK.VIEW'))
   })
 
-  if(allTests) it('removes children of the removed role from the assignments', function () {
+  it('removes children of the removed role from the assignments', function () {
     Roles.createRole('admin')
     Roles.createRole('ALBUM.ADMIN')
     Roles.createRole('ALBUM.VIEW')
@@ -1773,7 +1772,7 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, 'TRACK.VIEW'))
   })
 
-  if(allTests) it('modify assigned hierarchical roles', function () {
+  it('modify assigned hierarchical roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('ALL_PERMISSIONS')
@@ -1964,7 +1963,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('delete role with overlapping hierarchical roles', function () {
+  it('delete role with overlapping hierarchical roles', function () {
     Roles.createRole('role1')
     Roles.createRole('role2')
     Roles.createRole('COMMON_PERMISSION_1')
@@ -2083,7 +2082,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('set parent on assigned role', function () {
+  it('set parent on assigned role', function () {
     Roles.createRole('admin')
     Roles.createRole('EDIT_PERMISSION')
 
@@ -2112,7 +2111,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('remove parent on assigned role', function () {
+  it('remove parent on assigned role', function () {
     Roles.createRole('admin')
     Roles.createRole('EDIT_PERMISSION')
 
@@ -2143,7 +2142,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('adding and removing extra role parents', function () {
+  it('adding and removing extra role parents', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('EDIT_PERMISSION')
@@ -2187,7 +2186,7 @@ describe('roles', function () {
     }])
   })
 
-  if(allTests) it('cyclic roles', function () {
+  it('cyclic roles', function () {
     Roles.createRole('admin')
     Roles.createRole('editor')
     Roles.createRole('user')
@@ -2200,7 +2199,7 @@ describe('roles', function () {
     }, /form a cycle/)
   })
 
-  if(allTests) it('userIsInRole returns false for unknown roles', function () {
+  it('userIsInRole returns false for unknown roles', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
