@@ -773,14 +773,20 @@ Object.assign(Roles, {
     if (options.fullObjects) {
       delete filter.fields
     }
-
+// console.log(selector, filter);
     roles = Meteor.roleAssignment.find(selector, filter).fetch()
 
     if (options.fullObjects) {
       return roles
     }
 
-    return [...new Set(roles.map(r => r.inheritedRoles || [r.role]).reduce((rev, current) => rev.concat(current), []).map(r => r._id))]
+    return [
+      ...new Set(roles
+        .map(r => r.inheritedRoles || [r.role])
+        .reduce((rev, current) => rev.concat(current), [])
+        .map(r => r ? r._id : null)
+      )
+    ]
   },
 
   /**
