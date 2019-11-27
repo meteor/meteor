@@ -733,7 +733,7 @@ describe('roles', function () {
     assert.isFalse(Roles.getRolesForUser(users.joe, { anyScope: true, fullObjects: true }).map(r => r.scope).includes('scope1'))
   })
 
-  if (allTests) it('can set user roles by scope including GLOBAL_SCOPE', function () {
+ it('can set user roles by scope including GLOBAL_SCOPE', function () {
     Roles.createRole('admin')
     Roles.createRole('editor')
 
@@ -1199,7 +1199,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userObj, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
   })
 
-  if (allTests) it('can get all users in role', function () {
+ it('can get all users in role', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
