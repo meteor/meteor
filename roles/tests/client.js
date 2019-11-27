@@ -30,7 +30,7 @@ describe('roles', function () {
 
   function testUser (username, expectedRoles, scope) {
     var user = users[username]
-    console.log(`testUser client scope=${typeof scope}`);
+    // console.log(`testUser client scope=${typeof scope}`);
     if(typeof scope == 'string') {
       scope = {scope: scope}
     }
@@ -104,6 +104,13 @@ describe('roles', function () {
       scope: 'group1'
     })
 
+    Meteor.roleAssignment.insert({
+      user: users.jan,
+      role: { _id: 'admin' },
+      inheritedRoles: [{ _id: 'admin' }],
+      scope: 'group1'
+    })
+
     const timer = () => {
       if (!Roles.assignmentSubscription.ready()) {
         Meteor.setTimeout(timer, 100)
@@ -155,12 +162,5 @@ describe('roles', function () {
     testUser('joe', ['admin'])
     testUser('joe', ['admin'], Roles.GLOBAL_GROUP)
     testUser('joe', ['admin', 'editor'], 'group1')
-  })
-
-  it('check if user is in role with scope only, ignoring global', function(){
-    // this is supposed to be true
-    testUser('joe', ['admin'], { scope: 'group1', onlyScoped: true })
-    // this is supposed to fail
-    testUser('eve', ['admin'], { scope: 'group1', onlyScoped: true })
   })
 })

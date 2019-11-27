@@ -812,6 +812,7 @@ Object.assign(Roles, {
    *   - `scope`: name of the scope to restrict roles to; user's global
    *     roles will also be checked
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
+   *   - `onlyScoped`: if set, only roles in the specified scope are returned
    *   - `queryOptions`: options which are passed directly
    *     through to `Meteor.users.find(query, options)`
    *
@@ -885,7 +886,8 @@ Object.assign(Roles, {
     options = Roles._normalizeOptions(options)
 
     options = Object.assign({
-      anyScope: false
+      anyScope: false,
+      onlyScoped: false
     }, options)
 
     // ensure array to simplify code
@@ -902,7 +904,11 @@ Object.assign(Roles, {
     }
 
     if (!options.anyScope) {
-      selector.scope = { $in: [options.scope, null] }
+      selector.scope = { $in: [options.scope] }
+
+      if (!options.onlyScoped) {
+        selector.scope.$in.push(null)
+      }
     }
 
     return Meteor.roleAssignment.find(selector, filter)

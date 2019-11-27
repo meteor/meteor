@@ -28,7 +28,7 @@ describe('roles', function () {
       return
     }
 
-    return Meteor.roleAssignment.find({ _id: loggedInUserId })
+    return Meteor.roleAssignment.find( { _id: loggedInUserId });
   })
 
   function addUser (name) {
@@ -74,7 +74,7 @@ describe('roles', function () {
     users = {
       'eve': addUser('eve'),
       'bob': addUser('bob'),
-      'joe': addUser('joe')
+      'joe': addUser('joe'),
     }
   })
 
@@ -734,7 +734,7 @@ describe('roles', function () {
     assert.isFalse(Roles.getRolesForUser(users.joe, { anyScope: true, fullObjects: true }).map(r => r.scope).includes('scope1'))
   })
 
-  if(allTests) it('can set user roles by scope including GLOBAL_SCOPE', function () {
+  if (allTests) it('can set user roles by scope including GLOBAL_SCOPE', function () {
     Roles.createRole('admin')
     Roles.createRole('editor')
 
@@ -1238,7 +1238,7 @@ describe('roles', function () {
     assert.sameMembers(actual, [])
   })
 
-  if(allTests) it('can get all users in role by scope including Roles.GLOBAL_SCOPE', function () {
+  it('can get all users in role by scope including Roles.GLOBAL_SCOPE', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
 
@@ -1266,14 +1266,18 @@ describe('roles', function () {
     assert.sameMembers(actual, expected)
   })
 
-  if ('can get all users in role by scope excluding Roles.GLOBAL_SCOPE', function(){
+  it ('can get all users in role by scope excluding Roles.GLOBAL_SCOPE', function(){
     Roles.createRole('admin')
 
     Roles.addUsersToRoles([users.eve], ['admin'], Roles.GLOBAL_SCOPE)
     Roles.addUsersToRoles([users.bob], ['admin'], 'scope1')
 
-    var expected = [users.eve, users.bob]
+    var expected = [users.eve]
     var actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
+    assert.sameMembers(actual, expected)
+
+    expected = [users.eve, users.bob]
+    actual = Roles.getUsersInRole('admin', { scope: 'scope1' }).fetch().map(r => r._id)
     assert.sameMembers(actual, expected)
 
     expected = [users.bob]
