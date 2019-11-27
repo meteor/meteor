@@ -2219,7 +2219,6 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, ['Role1', 'Role2', undefined], 'GroupName'))
   })
 
-  if(allTests)
   describe('isParentOf', function () {
     it('returns false for unknown roles', function () {
       Roles.createRole('admin')
