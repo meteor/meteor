@@ -104,13 +104,6 @@ describe('roles', function () {
       scope: 'group1'
     })
 
-    Meteor.roleAssignment.insert({
-      user: users.jan,
-      role: { _id: 'admin' },
-      inheritedRoles: [{ _id: 'admin' }],
-      scope: 'group1'
-    })
-
     const timer = () => {
       if (!Roles.assignmentSubscription.ready()) {
         Meteor.setTimeout(timer, 100)
