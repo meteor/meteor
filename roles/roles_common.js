@@ -773,7 +773,7 @@ Object.assign(Roles, {
     if (options.fullObjects) {
       delete filter.fields
     }
-// console.log(selector, filter);
+
     roles = Meteor.roleAssignment.find(selector, filter).fetch()
 
     if (options.fullObjects) {
