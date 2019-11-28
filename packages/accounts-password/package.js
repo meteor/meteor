@@ -9,6 +9,7 @@ Package.describe({
 });
 
 Package.onUse(api => {
+  api.versionsFrom("1.8.1");
   api.use('npm-bcrypt', 'server');
 
   api.use([
