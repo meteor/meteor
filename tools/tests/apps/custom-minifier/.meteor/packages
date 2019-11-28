@@ -1,4 +1,5 @@
 meteor-base
 custom-minifier
-blaze-html-templates
 ecmascript
+jquery
+static-html

@@ -15,14 +15,14 @@ var packageJson = {
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.13.0",
     typescript: "3.7.2",
-    "meteor-babel": "7.7.0",
+    "meteor-babel": "7.7.4",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
     reify: "0.20.12",
     fibers: "3.1.1",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.7.0",
+    "@babel/runtime": "7.7.4",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",

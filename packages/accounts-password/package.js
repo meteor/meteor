@@ -5,10 +5,11 @@ Package.describe({
   // 2.2.x in the future. The version was also bumped to 2.0.0 temporarily
   // during the Meteor 1.5.1 release process, so versions 2.0.0-beta.2
   // through -beta.5 and -rc.0 have already been published.
-  version: "1.5.1"
+  version: "1.5.2"
 });
 
 Package.onUse(api => {
+  api.versionsFrom("1.8.1");
   api.use('npm-bcrypt', 'server');
 
   api.use([
