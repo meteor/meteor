@@ -356,7 +356,7 @@ export default class Resolver {
       }
     }
 
-    if (this.npmDependencies.length > 0) {
+    if (! resolved && this.npmDependencies.length > 0) {
       // In case a file within a package requires/imports an npm dependency
       // We should only resolve this if it is mentioned in the npm dependencies
       // of that package (thus in `Npm.depends` in the package.js file).
