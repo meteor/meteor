@@ -289,21 +289,18 @@ Object.assign(Roles, {
    * @static
    */
   _removeRoleFromParent: function (roleName, parentName) {
-    var role
-    var count
-
     Roles._checkRoleName(roleName)
     Roles._checkRoleName(parentName)
 
     // check for role existence
     // this would not really be needed, but we are trying to match addRolesToParent
-    role = Meteor.roles.findOne({ _id: roleName }, { fields: { _id: 1 } })
+    let role = Meteor.roles.findOne({ _id: roleName }, { fields: { _id: 1 } })
 
     if (!role) {
       throw new Error('Role \'' + roleName + '\' does not exist.')
     }
 
-    count = Meteor.roles.update({
+    const count = Meteor.roles.update({
       _id: parentName
     }, {
       $pull: {
@@ -318,10 +315,10 @@ Object.assign(Roles, {
     if (!count) return
 
     // For all roles who have had it as a dependency ...
-    roles = [...Roles._getParentRoleNames(Meteor.roles.findOne({ _id: parentName })), parentName]
+    const roles = [...Roles._getParentRoleNames(Meteor.roles.findOne({ _id: parentName })), parentName]
 
     Meteor.roles.find({ _id: { $in: roles } }).fetch().forEach(r => {
-      inheritedRoles = Roles._getInheritedRoleNames(Meteor.roles.findOne({ _id: r._id }))
+      const inheritedRoles = Roles._getInheritedRoleNames(Meteor.roles.findOne({ _id: r._id }))
       Meteor.roleAssignment.update({
         'role._id': r._id,
         'inheritedRoles._id': role._id
@@ -780,13 +777,7 @@ Object.assign(Roles, {
       return roles
     }
 
-    return [
-      ...new Set(roles
-        .map(r => r.inheritedRoles || [r.role])
-        .reduce((rev, current) => rev.concat(current), [])
-        .map(r => r ? r._id : null)
-      )
-    ]
+    return [...new Set(roles.map(r => r.inheritedRoles || [r.role]).reduce((rev, current) => rev.concat(current), []).map(r => r._id))]
   },
 
   /**

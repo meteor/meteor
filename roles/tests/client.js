@@ -30,10 +30,7 @@ describe('roles', function () {
 
   function testUser (username, expectedRoles, scope) {
     var user = users[username]
-    // console.log(`testUser client scope=${typeof scope}`);
-    if(typeof scope == 'string') {
-      scope = {scope: scope}
-    }
+
     // test using user object rather than userId to avoid mocking
     roles.forEach(function (role) {
       var expected = expectedRoles.includes(role)
@@ -90,12 +87,6 @@ describe('roles', function () {
       user: users.joe,
       role: { _id: 'admin' },
       inheritedRoles: [{ _id: 'admin' }]
-    })
-    Meteor.roleAssignment.insert({
-      user: users.joe,
-      role: { _id: 'admin' },
-      inheritedRoles: [{ _id: 'admin' }],
-      scope: 'group1'
     })
     Meteor.roleAssignment.insert({
       user: users.joe,

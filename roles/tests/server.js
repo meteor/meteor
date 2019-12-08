@@ -27,7 +27,7 @@ describe('roles', function () {
       return
     }
 
-    return Meteor.roleAssignment.find( { _id: loggedInUserId });
+    return Meteor.roleAssignment.find({ _id: loggedInUserId })
   })
 
   function addUser (name) {
@@ -37,10 +37,6 @@ describe('roles', function () {
   function testUser (username, expectedRoles, scope) {
     var userId = users[username]
     var userObj = Meteor.users.findOne({ _id: userId })
-
-    if (typeof scope == 'string') {
-      scope = { scope: scope }
-    }
 
     // check using user ids (makes db calls)
     _innerTest(userId, username, expectedRoles, scope)
@@ -72,7 +68,7 @@ describe('roles', function () {
     users = {
       'eve': addUser('eve'),
       'bob': addUser('bob'),
-      'joe': addUser('joe'),
+      'joe': addUser('joe')
     }
   })
 
@@ -732,7 +728,7 @@ describe('roles', function () {
     assert.isFalse(Roles.getRolesForUser(users.joe, { anyScope: true, fullObjects: true }).map(r => r.scope).includes('scope1'))
   })
 
- it('can set user roles by scope including GLOBAL_SCOPE', function () {
+  it('can set user roles by scope including GLOBAL_SCOPE', function () {
     Roles.createRole('admin')
     Roles.createRole('editor')
 
@@ -1198,7 +1194,7 @@ describe('roles', function () {
     assert.sameMembers(Roles.getScopesForUser(userObj, ['user', 'editor', 'admin']), ['scope1', 'scope2'])
   })
 
- it('can get all users in role', function () {
+  it('can get all users in role', function () {
     Roles.createRole('admin')
     Roles.createRole('user')
     Roles.createRole('editor')
@@ -1264,7 +1260,7 @@ describe('roles', function () {
     assert.sameMembers(actual, expected)
   })
 
-  it ('can get all users in role by scope excluding Roles.GLOBAL_SCOPE', function(){
+  it('can get all users in role by scope excluding Roles.GLOBAL_SCOPE', function () {
     Roles.createRole('admin')
 
     Roles.addUsersToRoles([users.eve], ['admin'], Roles.GLOBAL_SCOPE)
@@ -1279,7 +1275,7 @@ describe('roles', function () {
     assert.sameMembers(actual, expected)
 
     expected = [users.bob]
-    actual = Roles.getUsersInRole('admin', {scope: 'scope1', onlyScoped: true}).fetch().map(r => r._id)
+    actual = Roles.getUsersInRole('admin', { scope: 'scope1', onlyScoped: true }).fetch().map(r => r._id)
     assert.sameMembers(actual, expected)
   })
 

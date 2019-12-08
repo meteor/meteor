@@ -41,7 +41,7 @@ Roles._uiHelpers = {
    * @static
    * @for UIHelpers
    */
-  isInRole: function isInRoleHelper(role, scope) {
+  isInRole: function (role, scope) {
     var user = Meteor.user()
     var comma = (role || '').indexOf(',')
     var roles
