@@ -289,21 +289,18 @@ Object.assign(Roles, {
    * @static
    */
   _removeRoleFromParent: function (roleName, parentName) {
-    var role
-    var count
-
     Roles._checkRoleName(roleName)
     Roles._checkRoleName(parentName)
 
     // check for role existence
     // this would not really be needed, but we are trying to match addRolesToParent
-    role = Meteor.roles.findOne({ _id: roleName }, { fields: { _id: 1 } })
+    let role = Meteor.roles.findOne({ _id: roleName }, { fields: { _id: 1 } })
 
     if (!role) {
       throw new Error('Role \'' + roleName + '\' does not exist.')
     }
 
-    count = Meteor.roles.update({
+    const count = Meteor.roles.update({
       _id: parentName
     }, {
       $pull: {
@@ -318,10 +315,10 @@ Object.assign(Roles, {
     if (!count) return
 
     // For all roles who have had it as a dependency ...
-    roles = [...Roles._getParentRoleNames(Meteor.roles.findOne({ _id: parentName })), parentName]
+    const roles = [...Roles._getParentRoleNames(Meteor.roles.findOne({ _id: parentName })), parentName]
 
     Meteor.roles.find({ _id: { $in: roles } }).fetch().forEach(r => {
-      inheritedRoles = Roles._getInheritedRoleNames(Meteor.roles.findOne({ _id: r._id }))
+      const inheritedRoles = Roles._getInheritedRoleNames(Meteor.roles.findOne({ _id: r._id }))
       Meteor.roleAssignment.update({
         'role._id': r._id,
         'inheritedRoles._id': role._id
@@ -812,6 +809,7 @@ Object.assign(Roles, {
    *   - `scope`: name of the scope to restrict roles to; user's global
    *     roles will also be checked
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
+   *   - `onlyScoped`: if set, only roles in the specified scope are returned
    *   - `queryOptions`: options which are passed directly
    *     through to `Meteor.users.find(query, options)`
    *
@@ -885,7 +883,8 @@ Object.assign(Roles, {
     options = Roles._normalizeOptions(options)
 
     options = Object.assign({
-      anyScope: false
+      anyScope: false,
+      onlyScoped: false
     }, options)
 
     // ensure array to simplify code
@@ -902,7 +901,11 @@ Object.assign(Roles, {
     }
 
     if (!options.anyScope) {
-      selector.scope = { $in: [options.scope, null] }
+      selector.scope = { $in: [options.scope] }
+
+      if (!options.onlyScoped) {
+        selector.scope.$in.push(null)
+      }
     }
 
     return Meteor.roleAssignment.find(selector, filter)

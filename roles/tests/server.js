@@ -1260,6 +1260,25 @@ describe('roles', function () {
     assert.sameMembers(actual, expected)
   })
 
+  it('can get all users in role by scope excluding Roles.GLOBAL_SCOPE', function () {
+    Roles.createRole('admin')
+
+    Roles.addUsersToRoles([users.eve], ['admin'], Roles.GLOBAL_SCOPE)
+    Roles.addUsersToRoles([users.bob], ['admin'], 'scope1')
+
+    var expected = [users.eve]
+    var actual = Roles.getUsersInRole('admin').fetch().map(r => r._id)
+    assert.sameMembers(actual, expected)
+
+    expected = [users.eve, users.bob]
+    actual = Roles.getUsersInRole('admin', { scope: 'scope1' }).fetch().map(r => r._id)
+    assert.sameMembers(actual, expected)
+
+    expected = [users.bob]
+    actual = Roles.getUsersInRole('admin', { scope: 'scope1', onlyScoped: true }).fetch().map(r => r._id)
+    assert.sameMembers(actual, expected)
+  })
+
   it('can get all users in role by scope and passes through mongo query arguments', function () {
     Roles.createRole('admin')
     Roles.createRole('user')

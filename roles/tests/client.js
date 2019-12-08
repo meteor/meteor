@@ -28,7 +28,7 @@ describe('roles', function () {
     }
   }
 
-  function testUser (username, expectedRoles, group) {
+  function testUser (username, expectedRoles, scope) {
     var user = users[username]
 
     // test using user object rather than userId to avoid mocking
@@ -38,9 +38,9 @@ describe('roles', function () {
       var nmsg = username + ' had un-expected permission ' + role
 
       if (expected) {
-        assert.isTrue(Roles.userIsInRole(user, role, group), msg)
+        assert.isTrue(Roles.userIsInRole(user, role, scope), msg)
       } else {
-        assert.isFalse(Roles.userIsInRole(user, role, group), nmsg)
+        assert.isFalse(Roles.userIsInRole(user, role, scope), nmsg)
       }
     })
   }
