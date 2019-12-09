@@ -913,8 +913,6 @@ function expectVersionServedToEqual(expectedVersion, done) {
     response.text().then(function(html) {
       var config = runtimeConfigFromHTML(html);
       var version = config.autoupdateVersionCordova;
-      console.log(`version`, version);
-
       expect(version).toEqual(expectedVersion);
       done();
     });
