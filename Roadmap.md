@@ -14,14 +14,14 @@ Ideally, every item in this roadmap should have at least two leaders, leaders ar
 
 ## Core
 ### Update to Node.js 12
-- Leaders: Ben
+- Leaders: [Ben Newman](https://github.com/benjamn)
 - Status: In Progress
 - PRs: https://github.com/meteor/meteor/pull/10527
 
 Since Node.js 12 is scheduled to become the LTS version on October 1st, 2019, Meteor 1.9 will update the Node.js version used by Meteor from 8.16.1 (in Meteor 1.8.2) to 12.10.0 (the most recent current version).
 
 ### Tree Shaking
-- Leaders: Ben
+- Leaders: [Ben Newman](https://github.com/benjamn)
 - Status: -
 - PRs: -
 
@@ -78,7 +78,7 @@ Migrate packages that do not depend on Meteor exclusive features to NPM and we a
 
 ## Cordova
 ### Update Cordova to 9
-- Leaders: Filipe
+- Leaders: [Filipe Névola](https://github.com/filipenevola)
 - Status: In Progress
 - PRs: https://github.com/meteor/meteor/pull/10810
 
@@ -129,7 +129,7 @@ Blaze tutorial should reflect latest best practices.
 Angular tutorial should reflect latest best practices for using Meteor and Angular together.
 
 ### Update React Tutorial
-- Leaders: Filipe
+- Leaders: [Filipe Névola](https://github.com/filipenevola)
 - Status: -
 - PRs: -
 
@@ -150,7 +150,7 @@ Provide a skeleton with PWA configurations already in place such as `manifest`, 
 Provide a skeleton with SSR configurations already in place.
 
 ### Tests documentation
-- Leaders: <you?>
+- Leaders: [Simon Schick](https://github.com/SimonSimCity)
 - Status: -
 - PRs: -
 
