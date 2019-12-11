@@ -39,7 +39,20 @@ A proper service worker build target. Regular Web Workers can be built from a fu
 - Status: -
 - PRs: -
 
-Have a ultra-thin version of Meteor that does not depend in anyway to mongo. Allow completely shutting down DDP and dependencies on DDP. ([MFR #31](https://github.com/meteor/meteor-feature-requests/issues/31), [MFR #354](https://github.com/meteor/meteor-feature-requests/issues/354), [Issue #9960](https://github.com/meteor/meteor/issues/9960))
+[Meteor 1.7](https://github.com/meteor/meteor/blob/devel/History.md#v17-2018-05-28) introduced the `meteor create --minimal` command, which generates a new application without any unnecessary Meteor packages, like `mongo` and `ddp`.
+
+When minified and gzip-compressed, the JS bundle for this app weighs in at less than 20kB, which is much smaller than the default `meteor create` application. Nevertheless, there is still room for improvement, using techniques like bundle visualization (`meteor npm run visualize`) and converting static `import`s to dynamic `import()`s.
+
+Additionally, minimal Meteor applications do not include the `autoupdate` package by default, because it is not strictly necessary for building an application, and its dependencies (`ddp` in particular, but no longer `mongo` or `minimongo`, thanks to [PR #10238](https://github.com/meteor/meteor/pull/10238)) contribute an additional 30kB to the JS bundle. The drawback of not using `autoupdate` is that instantaneous client refreshes are disabled, which can slow down development, so it would be great to find a way of making `autoupdate` less expensive, or enable it only in development.
+
+In other words, we want minimal Meteor apps to be not only as tiny as possible, but also just as developer-friendly as a normal Meteor application.
+
+Related issues:
+* [MFR #31](https://github.com/meteor/meteor-feature-requests/issues/31)
+* [MFR #354](https://github.com/meteor/meteor-feature-requests/issues/354)
+* [Issue #9960](https://github.com/meteor/meteor/issues/9960)
+* [PR #8853](https://github.com/meteor/meteor/pull/8853)
+* [PR #10238](https://github.com/meteor/meteor/pull/10238)
 
 ### Page load performance improvements
 - Leaders: <you?>
