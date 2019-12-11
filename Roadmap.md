@@ -89,7 +89,7 @@ Update Cordoba lib and its dependencies to latest (version 9)
 - Status: -
 - PRs: -
 
-Provide a skeleton with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide.
+Provide a skeleton with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide ([Forums post](https://forums.meteor.com/t/lets-create-the-ultimate-cordova-hot-code-push-faq-doc/50500)).
 
 ## DB
 ### Update MongoDB driver
