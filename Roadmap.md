@@ -25,7 +25,7 @@ Since Node.js 12 is scheduled to become the LTS version on October 1st, 2019, Me
 - Status: -
 - PRs: -
 
-Implement tree shaking / dead code elimination, which involves pruning the dependency tree while scanning imports in the `ImportScanner`. We believe it should be possible to treat values like `Meteor.isProduction` as constants during this process, and eliminate those branches if their conditions are false, so that the `./routes` dependency would not show up at all in the production bundle.
+Implement tree shaking / dead code elimination, which involves pruning the dependency tree while scanning imports in the `ImportScanner`. We believe it should be possible to treat values like `Meteor.isProduction` as constants during this process, and eliminate those branches if their conditions are false.
 
 ### Service worker build target
 - Leaders: <you?>
@@ -39,24 +39,24 @@ A proper service worker build target. Regular Web Workers can be built from a fu
 - Status: -
 - PRs: -
 
-Have a ultra-thin version of Meteor that does not depend in anyway to mongo. Allow completely shutting down DDP and dependencies on DDP.
+Have a ultra-thin version of Meteor that does not depend in anyway to mongo. Allow completely shutting down DDP and dependencies on DDP. ([MFR #31](https://github.com/meteor/meteor-feature-requests/issues/31), [MFR #354](https://github.com/meteor/meteor-feature-requests/issues/354), [Issue #9960](https://github.com/meteor/meteor/issues/9960))
 
 ### Page load performance improvements
 - Leaders: <you?>
 - Status: -
 - PRs: -
 
-Make sure we are not delivering any dependency that is not used
+Make sure we are not delivering any dependency that is not used ([Issue #10701](https://github.com/meteor/meteor/issues/10701), [Issue #10702](https://github.com/meteor/meteor/issues/10702), [Issue #10704](https://github.com/meteor/meteor/issues/10704), [PR #10792](https://github.com/meteor/meteor/pull/10792))
 
 ### Improve Rebuild performance
-- Leaders: <you?>
+- Leaders: [zodern](https://github.com/zodern)
 - Status: -
 - PRs: -
 
-Explore ideas to improve rebuild time such as split main client bundle into several bundles, split the server bundle into several bundles, store less file content in memory, etc
+Explore ideas to improve rebuild time such as split main client bundle into several bundles, split the server bundle into several bundles, store less file content in memory, option to disabling the legacy build (at least in dev mode), etc
 
 ### Performance improvements on Windows
-- Leaders: <you?>
+- Leaders: [zodern](https://github.com/zodern)
 - Status: -
 - PRs: -
 
@@ -104,7 +104,7 @@ Update to Mongodb driver from 3.2.7 to 3.3.5, this version is compatible with Mo
 - Status: -
 - PRs: -
 
-Improve index support for Minimongo to enable better performance in the client for databases with thousands of documents.
+Improve index support for Minimongo to enable better performance in the client for databases with thousands of documents. ([Issue #10703](https://github.com/meteor/meteor/issues/10703))
 
 ## Documentation
 ### Step-by-step guide
