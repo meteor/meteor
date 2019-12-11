@@ -95,7 +95,7 @@ Provide a skeleton with mobile native configurations already in place such as `m
 ### Update MongoDB driver
 - Leaders: <you?>
 - Status: -
-- PRs: -
+- PRs: https://github.com/meteor/meteor/pull/10723
 
 Update to Mongodb driver from 3.2.7 to 3.3.5, this version is compatible with MongoDB 4.2.
 
