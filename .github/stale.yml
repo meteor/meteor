@@ -12,4 +12,5 @@ markComment: >
   for your contributions.
 closeComment: >
   This issue has been automatically closed it has not had recent activity.
+only: issues
 
