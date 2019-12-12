@@ -78,7 +78,7 @@ Migrate packages that do not depend on Meteor exclusive features to NPM and we a
 
 ## Cordova
 ### Update Cordova to 9
-- Leaders: [Filipe Névola](https://github.com/filipenevola)
+- Leaders: [Filipe Névola](https://github.com/filipenevola) / [Renan Castro](https://github.com/renanccastro)
 - Status: In Progress
 - PRs: https://github.com/meteor/meteor/pull/10810
 
@@ -150,7 +150,7 @@ Provide a skeleton with PWA configurations already in place such as `manifest`, 
 Provide a skeleton with SSR configurations already in place.
 
 ### Tests documentation
-- Leaders: [Simon Schick](https://github.com/SimonSimCity)
+- Leaders: [Simon Schick](https://github.com/SimonSimCity) / [Florian Bienefelt](https://github.com/Floriferous)
 - Status: -
 - PRs: -
 
