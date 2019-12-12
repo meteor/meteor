@@ -28,7 +28,7 @@ try {
     "  meteor npm install --save bcrypt",
     "",
     "in the root directory of your application. You may also need to",
-    "install build tools to compile bcrypt. For more information see:,
+    "install build tools to compile bcrypt. For more information see:",
     "https://github.com/nodejs/node-gyp#installation"
   ].join("\n"));
 }
