@@ -177,6 +177,8 @@ each technology we would like to have:
 - documentation (how to use)
 - examples
 
+as we already have for Blaze, React and Angular.
+
 ### Vue.js
 - Leaders: <you?>
 - Status: -
