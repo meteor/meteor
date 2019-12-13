@@ -139,7 +139,7 @@ _.extend(exports, {
   // - You can provide a 'bodyStream' option which is a stream that
   //   will be used for the body of the request.
   //
-  // - For authenticated MDG services, you can set the
+  // - For authenticated Meteor Software services, you can set the
   //   'useSessionHeader' and/or 'useAuthHeader' options (to true) to
   //   send X-Meteor-Session/X-Meteor-Auth headers using values from
   //   the session file.
