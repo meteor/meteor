@@ -1150,9 +1150,9 @@ export class AccountsServer extends AccountsCommon {
     Meteor.startup(() => {
       this.users.find({
         "services.resume.haveLoginTokensToDelete": true
-      }, {
+      }, {fields: {
         "services.resume.loginTokensToDelete": 1
-      }).forEach(user => {
+      }}).forEach(user => {
         this._deleteSavedTokensForUser(
           user._id,
           user.services.resume.loginTokensToDelete
@@ -1322,7 +1322,8 @@ const defaultResumeLoginHandler = (accounts, options) => {
   // sending the unhashed token to the database in a query if we don't
   // need to.
   let user = accounts.users.findOne(
-    {"services.resume.loginTokens.hashedToken": hashedToken});
+    {"services.resume.loginTokens.hashedToken": hashedToken},
+    {fields: {"services.resume.loginTokens": 1}});
 
   if (! user) {
     // If we didn't find the hashed login token, try also looking for
@@ -1335,7 +1336,8 @@ const defaultResumeLoginHandler = (accounts, options) => {
         {"services.resume.loginTokens.hashedToken": hashedToken},
         {"services.resume.loginTokens.token": options.resume}
       ]
-    });
+    },
+    {fields: {"services.resume.loginTokens": 1}});
   }
 
   if (! user)
