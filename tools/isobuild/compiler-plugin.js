@@ -1,4 +1,4 @@
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var buildPluginModule = require('./build-plugin.js');
 var colonConverter = require('../utils/colon-converter.js');
@@ -9,16 +9,21 @@ var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
-import {sha1, readAndWatchFileWithHash} from  '../fs/watch';
+import {
+  WatchSet,
+  sha1,
+  readAndWatchFileWithHash,
+} from  '../fs/watch';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
-import ImportScanner from './import-scanner.js';
+import ImportScanner from './import-scanner';
 import {cssToCommonJS} from "./css-modules";
 import Resolver from "./resolver";
 import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
+  optimisticHashOrNull,
 } from "../fs/optimistic";
 
 import { isTestFilePath } from './test-files.js';
@@ -65,7 +70,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 23; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 24; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -1260,6 +1265,7 @@ export class PackageSourceBatch {
         files: inputFiles,
         mainModule: _.find(inputFiles, file => file.mainModule) || null,
         batch,
+        importScannerWatchSet: new WatchSet(),
       });
     });
 
@@ -1267,7 +1273,7 @@ export class PackageSourceBatch {
       // In the unlikely event that no package is using the modules
       // package, then the map is already complete, and we don't need to
       // do any import scanning.
-      return map;
+      return this._watchOutputFiles(map);
     }
 
     // Append install(<name>) calls to the install-packages.js file in the
@@ -1336,17 +1342,19 @@ export class PackageSourceBatch {
         }
       });
 
+      const entry = map.get(name);
+
       const scanner = new ImportScanner({
         name,
         bundleArch: batch.processor.arch,
         extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
-        watchSet: batch.unibuild.watchSet,
+        watchSet: entry.importScannerWatchSet,
         cacheDir: batch.scannerCacheDir,
       });
 
-      scanner.addInputFiles(map.get(name).files);
+      scanner.addInputFiles(entry.files);
 
       if (batch.useMeteorInstall) {
         scanner.scanImports();
@@ -1482,7 +1490,37 @@ export class PackageSourceBatch {
       }
     });
 
-    return map;
+    return this._watchOutputFiles(map);
+  }
+
+  static _watchOutputFiles(jsOutputFilesMap) {
+    // Watch all output files produced by computeJsOutputFilesMap.
+    jsOutputFilesMap.forEach(entry => {
+      entry.files.forEach(file => {
+        const {
+          sourcePath,
+          absPath = sourcePath &&
+            files.pathJoin(entry.batch.sourceRoot, sourcePath),
+        } = file;
+        const { importScannerWatchSet } = entry;
+        if (
+          typeof absPath === "string" &&
+          // Blindly calling importScannerWatchSet.addFile would be
+          // logically correct here, but we can save the cost of calling
+          // optimisticHashOrNull(absPath) if the importScannerWatchSet
+          // already knows about the file and it has not been marked as
+          // potentially unused.
+          ! importScannerWatchSet.isDefinitelyUsed(absPath)
+        ) {
+          // If this file was previously added to the importScannerWatchSet
+          // using the addPotentiallyUnusedFile method (see compileUnibuild),
+          // calling addFile here will update its usage status to reflect that
+          // the ImportScanner did, in fact, end up "using" the file.
+          importScannerWatchSet.addFile(absPath, optimisticHashOrNull(absPath));
+        }
+      });
+    });
+    return jsOutputFilesMap;
   }
 
   static _warnAboutMissingModules(missingModules) {

@@ -349,7 +349,7 @@ describe("local node_modules", () => {
     assert.strictEqual(
       require.resolve("@wry/context"),
       "/node_modules/@wry/context/lib/" + (
-        Meteor.isClient ? "context.esm.js" : "context.js"
+        Meteor.isClient && Meteor.isModern ? "context.esm.js" : "context.js"
       ),
     );
 
@@ -363,7 +363,7 @@ describe("local node_modules", () => {
     assert.strictEqual(
       require.resolve("graphql"),
       "/node_modules/graphql/index." + (
-        Meteor.isClient ? "mjs" : "js"
+        Meteor.isClient && Meteor.isModern ? "mjs" : "js"
       ),
     );
     const { parse } = require("graphql");

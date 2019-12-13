@@ -785,15 +785,10 @@ export class AccountsServer extends AccountsCommon {
 
   // {token, when} => {hashedToken, when}
   _hashStampedToken(stampedToken) {
-    const hashedStampedToken = Object.keys(stampedToken).reduce(
-      (prev, key) => key === 'token' ?
-        prev :
-        { ...prev, [key]: stampedToken[key] },
-      {},
-    )
+    const { token, ...hashedStampedToken } = stampedToken;
     return {
       ...hashedStampedToken,
-      hashedToken: this._hashLoginToken(stampedToken.token)
+      hashedToken: this._hashLoginToken(token)
     };
   };
 

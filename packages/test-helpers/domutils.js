@@ -41,7 +41,7 @@ DomUtils.setElementValue = function (node, value) {
   // match valid OPTION values... and moreover, the OPTION value must be
   // explicitly given as an attribute, not just as the text. So we hunt for
   // the OPTION and select it.
-  var options = $(node).find('option');
+  var options = node.querySelectorAll('option');
   for (var i = 0; i < options.length; ++i) {
     if (DomUtils.getElementValue(options[i]) === value) {
       options[i].selected = true;

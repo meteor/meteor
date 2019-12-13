@@ -10,19 +10,19 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.10.0",
-    pacote: "https://github.com/meteor/pacote/tarball/74fafef8d16c3c5bdf4d3aca5123d49db63680e9",
+    npm: "6.13.0",
+    pacote: "https://github.com/meteor/pacote/tarball/a1853763676463c458aa8ce7b91c20205c44ae6a",
     "node-gyp": "5.0.1",
     "node-pre-gyp": "0.13.0",
-    typescript: "3.5.3",
-    "meteor-babel": "7.5.5",
+    typescript: "3.7.2",
+    "meteor-babel": "7.7.4",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
     reify: "0.20.12",
     fibers: "3.1.1",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.5.1",
+    "@babel/runtime": "7.7.4",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
@@ -33,6 +33,7 @@ var packageJson = {
     semver: "5.4.1",
     request: "2.88.0",
     uuid: "3.3.2",
+    "graceful-fs": "4.2.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
     kexec: "3.0.0",
@@ -57,7 +58,7 @@ var packageJson = {
     pathwatcher: "8.1.0",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
-    optimism: "0.10.2",
+    optimism: "0.11.3",
     "@wry/context": "0.4.4",
     'lru-cache': '4.1.3'
   }

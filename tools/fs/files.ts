@@ -5,12 +5,13 @@
 ///
 
 import assert from "assert";
-import fs, { Stats } from "fs";
+import fs, { PathLike, Stats } from "fs";
 import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
 import { EventEmitter } from "events";
 import { Slot } from "@wry/context";
+import { dep } from "optimism";
 
 const _ = require('underscore');
 const Fiber = require("fibers");
@@ -1646,16 +1647,7 @@ export function withCache<R>(fn: () => R): R {
   return cache ? fn() : withCacheSlot.withValue(Object.create(null), fn);
 }
 
-let dependOnPathSalt = 0;
-import { wrap } from "optimism";
-export const dependOnPath = wrap(
-  // Always return something different to prevent optimism from
-  // second-guessing the dirtiness of this function.
-  (_path: string) => ++dependOnPathSalt,
-  // This function is disposable because we don't care about its result,
-  // only its role in optimistic dependency tracking/dirtying.
-  { disposable: true }
-);
+export const dependOnPath = dep<string>();
 
 function wrapDestructiveFsFunc<TArgs extends any[], TResult>(
   fnName: string,
@@ -1702,29 +1694,40 @@ const wrappedRename = wrapDestructiveFsFunc("rename", fs.renameSync, [0, 1]);
 export const rename = isWindowsLikeFilesystem() ? function (from: string, to: string) {
   // Retries are necessary only on Windows, because the rename call can
   // fail with EBUSY, which means the file is in use.
-  let maxTries = 10;
-  let success = false;
   const osTo = convertToOSPath(to);
+  const startTimeMs = Date.now();
+  const intervalMs = 50;
+  const timeLimitMs = 1000;
 
-  while (! success && maxTries-- > 0) {
-    try {
-      // Despite previous failures, the top-level destination directory
-      // may have been successfully created, so we must remove it to
-      // avoid moving the source file *into* the destination directory.
-      rimraf.sync(osTo);
-      wrappedRename(from, to);
-      success = true;
-    } catch (err) {
-      if (err.code !== 'EPERM' && err.code !== 'EACCES') {
-        throw err;
+  return new Promise((resolve, reject) => {
+    function attempt() {
+      try {
+        // Despite previous failures, the top-level destination directory
+        // may have been successfully created, so we must remove it to
+        // avoid moving the source file *into* the destination directory.
+        rimraf.sync(osTo);
+        wrappedRename(from, to);
+        resolve();
+      } catch (err) {
+        if (err.code !== 'EPERM' && err.code !== 'EACCES') {
+          reject(err);
+        } else if (Date.now() - startTimeMs < timeLimitMs) {
+          setTimeout(attempt, intervalMs);
+        } else {
+          reject(err);
+        }
       }
     }
-  }
-
-  if (! success) {
-    cp_r(from, to, { preserveSymlinks: true });
-    rm_recursive(from);
-  }
+    attempt();
+  }).catch(error => {
+    if (error.code === 'EPERM' ||
+        error.code === 'EACCESS') {
+      cp_r(from, to, { preserveSymlinks: true });
+      rm_recursive(from);
+    } else {
+      throw error;
+    }
+  }).await();
 } : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg
@@ -1753,7 +1756,7 @@ export const open = wrapFsFunc("open", fs.openSync, [0]);
 export const read = wrapFsFunc("read", fs.readSync, []);
 export const readlink = wrapFsFunc<[string], string>("readlink", fs.readlinkSync, [0]);
 export const rmdir = wrapDestructiveFsFunc("rmdir", fs.rmdirSync);
-export const stat = wrapFsFunc("stat", fs.statSync, [0], { cached: true });
+export const stat = wrapFsFunc("stat", fs.statSync as (path: PathLike) => Stats, [0], { cached: true });
 export const symlink = wrapFsFunc("symlink", fs.symlinkSync, [0, 1]);
 export const unlink = wrapDestructiveFsFunc("unlink", fs.unlinkSync);
 export const write = wrapFsFunc("write", fs.writeSync, []);

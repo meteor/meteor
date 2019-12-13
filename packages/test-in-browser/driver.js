@@ -2,6 +2,7 @@
 //// Setup
 ////
 
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 // dependency for the count of tests running/passed/failed, etc. drives
 // the navbar and the like.
@@ -244,7 +245,7 @@ var _testStatus = function(t) {
 
 //// Template - navBars
 
-Template.navBars.helpers({
+Template.navBar.helpers({
   running: function() {
     countDep.depend();
     return running;
@@ -309,12 +310,12 @@ Template.progressBar.helpers({
   },
   barOuterClass: function () {
     countDep.depend();
-    return running ? 'progress-striped' : '';
+    return running ? 'progress-bar-animated progress-bar-striped' : '';
   },
   barInnerClass: function () {
     countDep.depend();
     return (failedCount > 0 ?
-            'bar-warning' : 'bar-success');
+            'bg-warning' : 'bg-success');
   }
 });
 

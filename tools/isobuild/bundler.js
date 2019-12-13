@@ -162,7 +162,7 @@ var meteorNpm = require('./meteor-npm.js');
 import { addToTree } from "./linker.js";
 
 var files = require('../fs/files');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
@@ -1146,6 +1146,13 @@ class Target {
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
       this.watchSet.merge(unibuild.pkg.pluginWatchSet);
+
+      const entry = jsOutputFilesMap.get(unibuild.pkg.name || null);
+      if (entry && entry.importScannerWatchSet) {
+        // Populated in PackageSourceBatch._watchOutputFiles, based on the
+        // ImportScanner's knowledge of which modules are really imported.
+        this.watchSet.merge(entry.importScannerWatchSet);
+      }
     });
 
     if (buildmessage.jobHasMessages()) {
@@ -2747,7 +2754,7 @@ class ServerTarget extends JsImageTarget {
     // anything anymore
     if (archinfo.VALID_ARCHITECTURES[self.arch] !== true) {
       throw new Error(
-        `MDG does not publish dev_bundles for arch: ${self.arch}`
+        `Meteor Software does not publish dev_bundles for arch: ${self.arch}`
       );
     }
 
@@ -2867,7 +2874,7 @@ var writeTargetToPath = Profile(
       // tend to be written atomically, and it's important on Windows to
       // avoid overwriting files that might be open currently in the build
       // or server process.
-      // Server builds do use an in-place build since the server is always stopped 
+      // Server builds do use an in-place build since the server is always stopped
       // during the build.
       // If client in-place builds were safer on Windows, they
       // would be much quicker than from-scratch rebuilds.

@@ -79,22 +79,22 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // compilation, give it the following file extension: .es5.js
       ! excludedFileExtensionPattern.test(inputFilePath)) {
 
-    const extraFeatures = { ...this.extraFeatures };
+    const features = { ...this.extraFeatures };
     const arch = inputFile.getArch();
 
     if (arch.startsWith("os.")) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
-      extraFeatures.nodeMajorVersion = parseInt(process.versions.node, 10);
+      features.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
-      extraFeatures.modernBrowsers = true;
+      features.modernBrowsers = true;
     }
 
-    if (! extraFeatures.hasOwnProperty("jscript")) {
+    if (! features.hasOwnProperty("jscript")) {
       // Perform some additional transformations to improve compatibility
       // in older browsers (e.g. wrapping named function expressions, per
       // http://kiro.me/blog/nfe_dilemma.html).
-      extraFeatures.jscript = true;
+      features.jscript = true;
     }
 
     if (shouldCompileModulesOnly(inputFilePath)) {
@@ -102,11 +102,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // compiled to support ECMAScript modules syntax, but should *not*
       // be compiled in any other way (for more explanation, see my longer
       // comment in shouldCompileModulesOnly).
-      extraFeatures.compileModulesOnly = true;
+      features.compileModulesOnly = true;
     }
-
-    var babelOptions = Babel.getDefaultOptions(extraFeatures);
-    babelOptions.caller = { name: "meteor", arch };
 
     const cacheOptions = {
       cacheDirectory: this.cacheDirectory,
@@ -114,6 +111,12 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         sourceHash: toBeAdded.hash,
       },
     };
+
+    this.inferTypeScriptConfig(
+      features, inputFile, cacheOptions.cacheDeps);
+
+    var babelOptions = Babel.getDefaultOptions(features);
+    babelOptions.caller = { name: "meteor", arch };
 
     this.inferExtraBabelOptions(
       inputFile,
@@ -210,6 +213,20 @@ function profile(name, func) {
   } else {
     return func();
   }
+};
+
+BCp.inferTypeScriptConfig = function (features, inputFile, cacheDeps) {
+  if (features.typescript && inputFile.findControlFile) {
+    const tsconfigPath = inputFile.findControlFile("tsconfig.json");
+    if (tsconfigPath) {
+      if (typeof features.typescript !== "object") {
+        features.typescript = Object.create(null);
+      }
+      Object.assign(features.typescript, { tsconfigPath });
+      return true;
+    }
+  }
+  return false;
 };
 
 BCp.inferExtraBabelOptions = function (inputFile, babelOptions, cacheDeps) {

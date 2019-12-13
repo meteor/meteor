@@ -1,5 +1,5 @@
 import assert from "assert";
-import { wrap, OptimisticWrapperFunction } from "optimism";
+import { wrap, OptimisticWrapperFunction, dep } from "optimism";
 import ignore from "ignore";
 import { Profile } from "../tool-env/profile";
 import { watch, SafeWatcher } from "./safe-watcher";
@@ -15,6 +15,7 @@ import {
   readFile,
   readdir,
   dependOnPath,
+  findAppDir,
 } from "./files";
 
 // When in doubt, the optimistic caching system can be completely disabled
@@ -79,13 +80,26 @@ function makeOptimistic<
   return wrapper;
 }
 
-export const shouldWatch = wrap((path: string) => {
+// The Meteor application directory should never change during the lifetime
+// of the build process, so it should be safe to cache findAppDir without
+// subscribing to file changes.
+const optimisticFindAppDir = wrap(findAppDir);
+
+const shouldWatch = wrap(Profile("shouldWatch", (path: string) => {
   const parts = path.split(pathSep);
   const nmi = parts.indexOf("node_modules");
 
   if (nmi < 0) {
     // Watch everything not in a node_modules directory.
     return true;
+  }
+
+  const dotMeteorIndex = parts.lastIndexOf(".meteor", nmi);
+  if (dotMeteorIndex >= 0) {
+    // Watch nothing inside of .meteor, at least for the purposes of the
+    // optimistic caching system. Meteor watches files inside .meteor/local
+    // via the WatchSet abstraction, unrelatedly.
+    return false;
   }
 
   if (nmi < parts.length - 1) {
@@ -95,6 +109,21 @@ export const shouldWatch = wrap((path: string) => {
       // directory, then it isn't part of a linked npm package, so we
       // should not watch it.
       return false;
+    }
+
+    const parentDirParts = parts.slice(0, nmi);
+    const parentDir = parentDirParts.join(pathSep);
+    const appDir = optimisticFindAppDir(parentDir);
+    if (
+      appDir &&
+      parentDir.startsWith(appDir) &&
+      appDir.split(pathSep).length < parentDirParts.length
+    ) {
+      // If the given path is contained by the Meteor application directory,
+      // but the node_modules directory we're considering is not directly
+      // contained by the root application directory, watch the file. See
+      // discussion in issue https://github.com/meteor/meteor/issues/10664
+      return true;
     }
 
     const packageDirParts = parts.slice(0, nmi + 2);
@@ -118,7 +147,7 @@ export const shouldWatch = wrap((path: string) => {
   // instead we rely on dependOnNodeModules to tell us when files in
   // node_modules directories might have changed.
   return false;
-});
+}));
 
 function maybeDependOnPath(path: string) {
   if (typeof path === "string") {
@@ -146,13 +175,7 @@ function maybeDependOnNodeModules(path: string) {
   }
 }
 
-let dependOnDirectorySalt = 0;
-
-const dependOnDirectory = wrap((_dir: string) => {
-  // Always return something different to prevent optimism from
-  // second-guessing the dirtiness of this function.
-  return ++dependOnDirectorySalt;
-}, {
+const dependOnDirectory = dep({
   subscribe(dir: string) {
     let watcher: SafeWatcher | null = watch(
       dir,
@@ -166,10 +189,6 @@ const dependOnDirectory = wrap((_dir: string) => {
       }
     };
   },
-
-  // This function is disposable because we don't care about its result,
-  // only its role in optimistic dependency tracking/dirtying.
-  disposable: true
 });
 
 // Called when an optimistic function detects the given file does not
@@ -191,40 +210,69 @@ function dependOnParentDirectory(path: string) {
 // Note that this strategy will not detect changes within subdirectories
 // of this node_modules directory, but that's ok because the use case we
 // care about is adding or removing npm packages.
-const dependOnNodeModules = wrap((nodeModulesDir: string) => {
-  assert(pathIsAbsolute(nodeModulesDir));
+function dependOnNodeModules(nodeModulesDir: string) {
+  assert(pathIsAbsolute(nodeModulesDir), nodeModulesDir);
   assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
-  return dependOnDirectory(nodeModulesDir);
-}, {
-  // This function is disposable because we don't care about its result,
-  // only its role in optimistic dependency tracking/dirtying.
-  disposable: true
-});
+  dependOnDirectory(nodeModulesDir);
+}
 
 // Invalidate all optimistic results derived from paths involving the
 // given node_modules directory.
 export function dirtyNodeModulesDirectory(nodeModulesDir: string) {
-  dependOnNodeModules.dirty(nodeModulesDir);
+  dependOnDirectory.dirty(nodeModulesDir);
 }
 
-export const optimisticStatOrNull = makeOptimistic("statOrNull", (path: string) => {
-  const result = statOrNull(path);
-  if (result === null) {
-    dependOnParentDirectory(path);
+function makeCheapPathFunction<TResult>(
+  pathFunction: (path: string) => TResult,
+): typeof pathFunction {
+  if (! ENABLED) {
+    return pathFunction;
   }
-  return result;
-});
+  const wrapper = wrap(pathFunction, {
+    // The maximum LRU cache size is Math.pow(2, 16) by default, but it's
+    // important to prevent eviction churn for very-frequently-called
+    // functions like optimisticStatOrNull. While it's tempting to set
+    // this limit to Infinity, increasing it by 16x comes close enough.
+    max: Math.pow(2, 20),
+    subscribe(path) {
+      let watcher: SafeWatcher | null = watch(
+        path,
+        () => wrapper.dirty(path),
+      );
+      return function () {
+        if (watcher) {
+          watcher.close();
+          watcher = null;
+        }
+      };
+    }
+  });
+  return wrapper;
+}
+
+export const optimisticStatOrNull = makeCheapPathFunction(
+  (path: string) => {
+    const result = statOrNull(path);
+    if (result === null) {
+      dependOnParentDirectory(path);
+    }
+    return result;
+  },
+);
 
 export const optimisticLStat = makeOptimistic("lstat", lstat);
-export const optimisticLStatOrNull = makeOptimistic("lstatOrNull", (path: string) => {
-  try {
-    return optimisticLStat(path);
-  } catch (e) {
-    if (e.code !== "ENOENT") throw e;
-    dependOnParentDirectory(path);
-    return null;
-  }
-});
+export const optimisticLStatOrNull = makeCheapPathFunction(
+  (path: string) => {
+    try {
+      return optimisticLStat(path);
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+      dependOnParentDirectory(path);
+      return null;
+    }
+  },
+);
+
 export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);
 export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
@@ -246,27 +294,44 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   return null;
 });
 
+const riskyJsonWhitespacePattern =
+  // Turns out a lot of weird characters technically count as /\s/ characters.
+  // This is all of them except for " ", "\n", and "\r", which are safe:
+  /[\t\b\f\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+/g;
+
 export const optimisticReadJsonOrNull =
 makeOptimistic("readJsonOrNull", (
   path: string,
   options?: Parameters<typeof optimisticReadFile>[1] & {
     allowSyntaxError?: boolean;
   },
-) => {
+): Record<string, any> | null => {
+  let contents: string | Buffer;
   try {
-    return JSON.parse(
-      optimisticReadFile(path, options)
-    ) as Record<string, any>;
-
+    contents = optimisticReadFile(path, options);
   } catch (e) {
     if (e.code === "ENOENT") {
       dependOnParentDirectory(path);
       return null;
     }
+    throw e;
+  }
 
+  try {
+    return JSON.parse(contents);
+  } catch (e) {
     if (e instanceof SyntaxError &&
         options && options.allowSyntaxError) {
       return null;
+    }
+
+    const stringContents: string = contents.toString("utf8");
+    // Replace any risky whitespace characters with spaces, to address issue
+    // https://github.com/meteor/meteor/issues/10688
+    const cleanContents = stringContents.replace(riskyJsonWhitespacePattern, " ");
+    if (cleanContents !== stringContents) {
+      // Try one last time to parse cleanContents before throwing.
+      return JSON.parse(cleanContents);
     }
 
     throw e;

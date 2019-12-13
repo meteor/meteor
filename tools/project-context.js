@@ -1,7 +1,7 @@
 var assert = require("assert");
 var _ = require('underscore');
 
-var archinfo = require('./utils/archinfo.js');
+var archinfo = require('./utils/archinfo');
 var buildmessage = require('./utils/buildmessage.js');
 var catalog = require('./packaging/catalog/catalog.js');
 var catalogLocal = require('./packaging/catalog/catalog-local.js');
@@ -24,7 +24,7 @@ import {
 
 import {
   mapWhereToArches,
-} from "./isobuild/package-api.js";
+} from "./utils/archinfo";
 
 import Resolver from "./isobuild/resolver";
 

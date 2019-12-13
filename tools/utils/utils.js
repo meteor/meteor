@@ -4,7 +4,7 @@ var os = require('os');
 var url = require('url');
 
 var fiberHelpers = require('./fiber-helpers');
-var archinfo = require('./archinfo.js');
+var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files');
 var packageVersionParser = require('../packaging/package-version-parser.js');

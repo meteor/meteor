@@ -14,4 +14,9 @@ declare global {
     resolve: (value?: any) => void;
     reject: (reason?: any) => void;
   }
+
+  interface Function {
+    // func-utils.ts makes usage of this feature
+    displayName?: string;
+  }
 }

@@ -4,7 +4,7 @@ import {
   has,
 } from "underscore";
 
-import { matches as archMatches } from "../utils/archinfo.js";
+import { matches as archMatches, isLegacyArch } from "../utils/archinfo";
 import {
   pathJoin,
   pathRelative,
@@ -14,7 +14,7 @@ import {
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files";
-
+import { Stats } from "fs";
 import { wrap } from "optimism";
 import {
   optimisticStatOrNull,
@@ -49,6 +49,13 @@ export type ResolverOptions = {
   caller?: string;
 }
 
+export type Resolution = {
+  stat: Stats;
+  path: string;
+  packageJsonMap?: Record<string, Record<string, any>>;
+  id?: string;
+} | "missing" | null
+
 export default class Resolver {
   static getOrCreate = wrap(function (options: ResolverOptions) {
     return new Resolver(options);
@@ -64,7 +71,7 @@ export default class Resolver {
   private nodeModulesPaths: string[];
   private mainFields: string[];
 
-  public statOrNull = optimisticStatOrNull;
+  public statOrNull = optimisticStatOrNull as (path: string) => Stats | null;
 
   constructor({
     sourceRoot,
@@ -100,7 +107,14 @@ export default class Resolver {
       path => getPkgJsonSubsetForDir.call(this, path));
 
     if (archMatches(this.targetArch, "web")) {
-      this.mainFields = ["browser", "module", "main"];
+      if (isLegacyArch(this.targetArch)) {
+        // The legacy bundle prefers the "main" field over the "module"
+        // field, since many npm packages ship modern syntax other than
+        // import/export in their "module" dependency trees.
+        this.mainFields = ["browser", "main", "module"];
+      } else {
+        this.mainFields = ["browser", "module", "main"];
+      }
     } else {
       this.mainFields = ["main"];
     }
@@ -121,13 +135,17 @@ export default class Resolver {
   // Resolve the given module identifier to an object { path, stat } or
   // null, relative to an absolute parent path. The _seenDirPaths
   // parameter is for internal use only and should be ommitted.
-  public resolve(id: string, absParentPath: string, _seenDirPaths?: Set<string>) {
+  public resolve(
+    id: string,
+    absParentPath: string,
+    _seenDirPaths?: Set<string>,
+  ): Resolution {
     let resolved =
       this.resolveAbsolute(id, absParentPath) ||
       this.resolveRelative(id, absParentPath) ||
       this.resolveNodeModule(id, absParentPath);
 
-    if (typeof resolved === "string") {
+    if (resolved === "missing") {
       // The _resolveNodeModule method can return "missing" to indicate
       // that the ImportScanner should look elsewhere for this module,
       // such as in the app node_modules directory.
@@ -229,18 +247,13 @@ export default class Resolver {
     return resolved;
   }
 
-  private joinAndStat(...joinArgs: string[]) {
+  public joinAndStat(...joinArgs: string[]) {
     const joined: string = pathJoin(...joinArgs);
     const path = pathNormalize(joined);
     const exactStat = this.statOrNull(path);
     const exactResult = exactStat && { path, stat: exactStat };
 
-    let result: {
-      stat: typeof exactStat;
-      path: string;
-      packageJsonMap?: Record<string, Record<string, any>>;
-      id?: string;
-    } | null = null;
+    let result: Resolution = null;
 
     if (exactResult && exactStat && exactStat.isFile()) {
       result = exactResult;
@@ -269,18 +282,20 @@ export default class Resolver {
     return result;
   }
 
-  private resolveAbsolute(id: string, _absParentPath: string) {
-    return id.charAt(0) === "/" &&
-      this.joinAndStat(this.sourceRoot, id.slice(1));
+  private resolveAbsolute(id: string, _absParentPath: string): Resolution {
+    return id.charAt(0) === "/"
+      && this.joinAndStat(this.sourceRoot, id.slice(1))
+      || null;
   }
 
-  private resolveRelative(id: string, absParentPath: string) {
+  private resolveRelative(id: string, absParentPath: string): Resolution {
     if (id.charAt(0) === ".") {
       return this.joinAndStat(absParentPath, "..", id);
     }
+    return null;
   }
 
-  private resolveNodeModule(id: string, absParentPath: string) {
+  private resolveNodeModule(id: string, absParentPath: string): Resolution {
     if (! Resolver.isTopLevel(id)) {
       return null;
     }
@@ -346,7 +361,7 @@ export default class Resolver {
     }
 
     // If the dependency is still not resolved, it might be handled by the
-    // fallback function defined in meteor/packages/modules/modules.js, or
+    // fallback function defined in meteor/packages/modules-runtime/[modern|legacy|server].js, or
     // it might be imported in code that will never run on this platform,
     // so there is always the possibility that its absence is not actually
     // a problem. As much as we might like to issue warnings about missing

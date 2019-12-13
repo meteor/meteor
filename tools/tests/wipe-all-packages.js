@@ -2,7 +2,7 @@ var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var _ = require('underscore');
 
 selftest.define("wipe all packages", ['slow', 'custom-warehouse'], function () {

@@ -1,6 +1,6 @@
 var _ = require('underscore');
 
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var bundler = require('./bundler.js');
 var isopack = require('./isopack.js');
@@ -34,7 +34,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/33';
+compiler.BUILT_BY = 'meteor/34';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -557,7 +557,15 @@ api.addAssets('${relPath}', 'client').`);
     const contents = optimisticReadFile(absPath);
     const hash = optimisticHashOrNull(absPath);
     const file = { contents, hash };
-    watchSet.addFile(absPath, hash);
+
+    if (fileOptions && ! fileOptions.lazy) {
+      watchSet.addFile(absPath, hash);
+    } else {
+      // Lazy files might not ultimately be used by the current unibuild/bundle,
+      // so we add them to the watchSet using a provisional status that may be
+      // updated later, at the end of PackageSourceBatch.computeJsOutputFilesMap.
+      watchSet.addPotentiallyUnusedFile(absPath, hash);
+    }
 
     Console.nudge(true);
 

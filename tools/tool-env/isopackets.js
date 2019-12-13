@@ -13,7 +13,7 @@ var watch = require('../fs/watch');
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers');
 var packageMapModule = require('../packaging/package-map.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var Profile = require('./profile').Profile;
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
@@ -102,7 +102,7 @@ export function loadIsopackage(packageName, isopacketName = "combined") {
   // result is cached, so no yielding occurs later.
   assert.strictEqual(archinfo.host().split(".", 1)[0], "os");
 
-  const isopacket = fiberHelpers.noYieldsAllowed(function () {
+  const isopacket = function () {
     if (_.has(loadedIsopackets, isopacketName)) {
       if (loadedIsopackets[isopacketName]) {
         return loadedIsopackets[isopacketName];
@@ -120,7 +120,7 @@ export function loadIsopackage(packageName, isopacketName = "combined") {
     }
 
     throw Error("Unknown isopacket: " + isopacketName);
-  });
+  }();
 
   if (! _.has(isopacket, packageName)) {
     throw new Error("Unknown isopacket dependency: " + packageName);
