@@ -40,22 +40,28 @@ We’ve just begun to create more defined project roles for Meteor. Here are des
 Issue Triagers are members of the community that meet with us weekly to help triage Meteor’s open issues and bug reports. Once you’ve begun triaging issues regularly on your own, we will invite you to join our dedicated Slack channel to participate in these regular coordination sessions.
 
 Current Issue Triagers:
-- [@hwillson](https://github.com/hwillson)
-- [@laosb](https://github.com/laosb)
-- [@abernix](https://github.com/abernix)
-- [@lorensr](https://github.com/lorensr)
-- [@klaussner](https://github.com/klaussner)
+- [meteor](https://github.com/meteor/meteor)
+  - [@klaussner](https://github.com/klaussner)
+
+- [docs](https://github.com/meteor/docs) / [guide](https://github.com/meteor/guide)
+  - [@lorensr](https://github.com/lorensr)
 
 #### Reviewer
 
 Our most regular and experienced Issue Triagers sometimes move on to doing code reviews for pull requests, and have input into which pull requests should be merged.
 
 Current Reviewers:
-- [@hwillson](https://github.com/hwillson)
-- [@lorensr](https://github.com/lorensr)
-- [@abernix](https://github.com/abernix)
-- [@klaussner](https://github.com/klaussner)
-- [@zodern](https://github.com/zodern)
+- [meteor](https://github.com/meteor/meteor)
+  - [@klaussner](https://github.com/klaussner)
+  - [@zodern](https://github.com/zodern)
+  - [@benjamn](https://github.com/benjamn)
+  - [@abernix](https://github.com/abernix)
+  - [@hwillson](https://github.com/hwillson)
+  - [@filipenevola](https://github.com/filipenevola)
+
+- [docs](https://github.com/meteor/docs) / [guide](https://github.com/meteor/guide)
+  - [@lorensr](https://github.com/lorensr)
+  - [@filipenevola](https://github.com/filipenevola)
 
 #### Core Committer
 
@@ -64,9 +70,6 @@ The contributors with commit access to meteor/meteor are employees of Meteor Sof
 Current Core Committers:
 - [@benjamn](https://github.com/benjamn)
 - [@filipenevola](https://github.com/filipenevola)
-- [@abernix](https://github.com/abernix)
-- [@glasser](https://github.com/glasser)
-- [@hwillson](https://github.com/hwillson)
 
 #### Documentation Maintainer
 
