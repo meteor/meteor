@@ -57,6 +57,15 @@ Tinytest.add('accounts - config - default token lifetime', test => {
   Accounts._options = options;
 });
 
+Tinytest.add('accounts - config - defaultFieldSelector', test => {
+  const options = Accounts._options;
+  Accounts._options = {};
+  const setValue = {bigArray: 0};
+  Accounts.config({defaultFieldSelector: setValue});
+  test.equal(Accounts._options.defaultFieldSelector, setValue);
+  Accounts._options = options;
+});
+
 const idsInValidateNewUser = {};
 Accounts.validateNewUser(user => {
   idsInValidateNewUser[user._id] = true;
@@ -443,6 +452,63 @@ Tinytest.add(
     const onLogoutExpectedUserId = userId;
     conn.call('logout');
 
+    conn.disconnect();
+    validateStopper.stop();
+    onLoginStopper.stop();
+    onLogoutStopper.stop();
+    onLoginFailureStopper.stop();
+  }
+);
+
+Tinytest.add(
+  'accounts - hook callbacks obey options.defaultFieldSelector',
+  test => {
+    const ignoreFieldName = "bigArray";
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const stampedToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedToken);
+    const options = Accounts._options;
+    Accounts._options = {};
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    test.equal(Accounts._options.defaultFieldSelector, {[ignoreFieldName]: 0}, 'defaultFieldSelector');
+
+    const validateStopper = Accounts.validateLoginAttempt(attempt => {
+      test.isUndefined(allowLogin != 'bogus' ? attempt.user[ignoreFieldName] : attempt.user, "validateLoginAttempt")
+      return allowLogin;
+    });
+    const onLoginStopper = Accounts.onLogin(attempt =>
+      test.isUndefined(attempt.user[ignoreFieldName], "onLogin")
+    );
+    const onLogoutStopper = Accounts.onLogout(logoutContext =>
+      test.isUndefined(logoutContext.user[ignoreFieldName], "onLogout")
+    );
+    const onLoginFailureStopper = Accounts.onLoginFailure(attempt =>
+      test.isUndefined(allowLogin != 'bogus' ? attempt.user[ignoreFieldName] : attempt.user, "onLoginFailure")
+    );
+
+    const conn = DDP.connect(Meteor.absoluteUrl());
+
+    // test a new connection
+    let allowLogin = true;
+    conn.call('login', { resume: stampedToken.token });
+
+    // Now that the user is logged in on the connection, Meteor.userId() should
+    // return that user.
+    conn.call('login', { resume: stampedToken.token });
+
+    // Trigger onLoginFailure callbacks, this will not include the user object
+    allowLogin = 'bogus';
+    test.throws(() => conn.call('login', { resume: "bogus" }), '403');
+
+    // test a forced login fail which WILL include the user object
+    allowLogin = false;
+    test.throws(() => conn.call('login', { resume: stampedToken.token }), '403');
+
+    // Trigger onLogout callbacks
+    const onLogoutExpectedUserId = userId;
+    conn.call('logout');
+
+    Accounts._options = options;
     conn.disconnect();
     validateStopper.stop();
     onLoginStopper.stop();

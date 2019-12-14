@@ -188,7 +188,7 @@ export class AccountsServer extends AccountsCommon {
   };
 
   _successfulLogout(connection, userId) {
-    const user = userId && this.users.findOne(userId);
+    const user = userId && this.users.findOne(userId, {fields: this._options.defaultFieldSelector});
     this._onLogoutHook.each(callback => {
       callback({ user, connection });
       return true;
@@ -317,7 +317,7 @@ export class AccountsServer extends AccountsCommon {
 
     let user;
     if (result.userId)
-      user = this.users.findOne(result.userId);
+      user = this.users.findOne(result.userId, {fields: this._options.defaultFieldSelector});
 
     const attempt = {
       type: result.type || "unknown",
@@ -398,7 +398,7 @@ export class AccountsServer extends AccountsCommon {
     };
 
     if (result.userId) {
-      attempt.user = this.users.findOne(result.userId);
+      attempt.user = this.users.findOne(result.userId, {fields: this._options.defaultFieldSelector});
     }
 
     this._validateLogin(methodInvocation.connection, attempt);
