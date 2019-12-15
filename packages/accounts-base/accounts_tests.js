@@ -518,6 +518,40 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  'accounts - MeteorUser() obeys options.defaultFieldSelector',
+  test => {
+    const ignoreFieldName = "bigArray";
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const stampedToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedToken);
+    const options = Accounts._options;
+
+    // stub Meteor.userId() so it works outside methods and returns the correct user:
+    const origAccountsUserId = Accounts.userId;
+    Accounts.userId = () => userId;
+
+    Accounts._options = {};
+
+    // test the field is included by default
+    let user = Meteor.user();
+    test.isNotUndefined(user[ignoreFieldName], 'included by default');
+
+    // test the field is excluded
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    user = Meteor.user();
+    test.isUndefined(user[ignoreFieldName], 'excluded');
+
+    // test the field can still be retrieved if required
+    user = Meteor.user({fields: {[ignoreFieldName]: 1}});
+    test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
+    test.isUndefined(user.username, 'field selector works');
+
+    Accounts._options = options;
+    Accounts.userId = origAccountsUserId;
+  }
+);
+
+Tinytest.add(
   'accounts - verify onExternalLogin hook can update oauth user profiles',
   test => {
     // Verify user profile data is saved properly when not using the
@@ -527,16 +561,24 @@ Tinytest.add(
       'facebook',
       { id: facebookId },
       { profile: { foo: 1 } },
-    ).id;
+    ).userId;
+    const ignoreFieldName = "bigArray";
+    const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
     let users =
       Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 1);
+    test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
 
     // Verify user profile data can be modified using the onExternalLogin
     // hook, for existing users.
-    Accounts.onExternalLogin((options) => {
+    // Also verify that the user object is filtered by _options.defaultFieldSelector
+    const accountsOptions = Accounts._options;
+    Accounts._options = {};
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    Accounts.onExternalLogin((options, user) => {
       options.profile.foo = 2;
+      test.isUndefined(users[ignoreFieldName], 'ignoreField - after limit fields');
       return options;
     });
     Accounts.updateOrCreateUserFromExternalService(
@@ -544,9 +586,11 @@ Tinytest.add(
       { id: facebookId },
       { profile: { foo: 1 } },
     );
+    // test.isUndefined(users[0][ignoreFieldName], 'ignoreField - fields limited');
     users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 2);
+    test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - still there');
 
     // Verify user profile data can be modified using the onExternalLogin
     // hook, for new users.
@@ -555,7 +599,7 @@ Tinytest.add(
       'facebook',
       { id: facebookId },
       { profile: { foo: 3 } },
-    ).id;
+    ).userId;
     users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 2);
@@ -564,5 +608,6 @@ Tinytest.add(
     Meteor.users.remove(uid1);
     Meteor.users.remove(uid2);
     Accounts._onExternalLoginHook = null;
+    Accounts._options = accountsOptions;
   }
 );

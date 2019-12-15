@@ -77,13 +77,22 @@ export class AccountsCommon {
     throw new Error("userId method not implemented");
   }
 
+  // merge the defaultFieldSelector with an existing options object
+  _addDefaultFieldSelector(options = {}) {
+    return options.fields || !this._options.defaultFieldSelector ? options : {
+      ...options,
+      fields: this._options.defaultFieldSelector,
+    };
+  }
+
   /**
    * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
    * @locus Anywhere
+   * @param {Object} [options] `options` parameter to be passed to `Meteor.user.findOne(selector, options)`. Can be used to limit the returned fields.
    */
-  user() {
+  user(options) {
     const userId = this.userId();
-    return userId ? this.users.findOne(userId) : null;
+    return userId ? this.users.findOne(userId, this._addDefaultFieldSelector(options)) : null;
   }
 
   // Set up config for the accounts system. Call this on both the client
@@ -303,8 +312,9 @@ Meteor.userId = () => Accounts.userId();
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
  * @locus Anywhere but publish functions
  * @importFromPackage meteor
+   * @param {Object} [options] `options` parameter to be passed to `Meteor.user.findOne(selector, options)`. Can be used to limit the returned fields.
  */
-Meteor.user = () => Accounts.user();
+Meteor.user = (options) => Accounts.user(options);
 
 // how long (in days) until a login token expires
 const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
