@@ -156,7 +156,7 @@ React tutorial should reflect latest best practices for using Meteor and React t
 Provide a skeleton with PWA configurations already in place such as `manifest`, service worker, Open Graph meta tags, etc. Also improve docs and guide.
 
 ### SSR documentation
-- Leaders: <you?>
+- Leaders: <you?> (Possible helper: [Eric Burel](https://github.com/eric-burel))
 - Status: -
 - PRs: -
 
