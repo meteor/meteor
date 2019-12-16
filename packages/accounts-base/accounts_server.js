@@ -1212,7 +1212,7 @@ export class AccountsServer extends AccountsCommon {
       selector[serviceIdKey] = serviceData.id;
     }
 
-    let user = this.users.findOne(selector, Accounts._addDefaultFieldSelector());
+    let user = this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
 
     // When creating a new user we pass through all options. When updating an
     // existing user, by default we only process/pass through the serviceData

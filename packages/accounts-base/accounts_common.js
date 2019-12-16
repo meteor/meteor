@@ -79,10 +79,33 @@ export class AccountsCommon {
 
   // merge the defaultFieldSelector with an existing options object
   _addDefaultFieldSelector(options = {}) {
-    return options.fields || !this._options.defaultFieldSelector ? options : {
+    // this will be the most common case for most people, so make it quick
+    if (!this._options.defaultFieldSelector) return options;
+
+    // if no field selector then just use defaultFieldSelector
+    if (!options.fields) return {
       ...options,
       fields: this._options.defaultFieldSelector,
     };
+
+    // if empty field selector then the full user object is explicitly requested, so obey
+    const keys = Object.keys(options.fields);
+    if (!keys.length) return options;
+
+    // if the requested fields are +ve then ignore defaultFieldSelector
+    // assume they are all either +ve or -ve because Mongo doesn't like mixed
+    if (!!options.fields[keys[0]]) return options;
+
+    // The requested fields are -ve.
+    // If the defaultFieldSelector is +ve then use requested fields, otherwise merge them
+    const keys2 = Object.keys(this._options.defaultFieldSelector);
+    return this._options.defaultFieldSelector[keys2[0]] ? options : {
+      ...options,
+      fields: {
+        ...options.fields,
+        ...this._options.defaultFieldSelector,
+      }
+    }
   }
 
   /**

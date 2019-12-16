@@ -518,7 +518,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  'accounts - MeteorUser() obeys options.defaultFieldSelector',
+  'accounts - Meteor.user() obeys options.defaultFieldSelector',
   test => {
     const ignoreFieldName = "bigArray";
     const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
@@ -540,11 +540,23 @@ Tinytest.add(
     Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
     user = Meteor.user();
     test.isUndefined(user[ignoreFieldName], 'excluded');
+    user = Meteor.user({});
+    test.isUndefined(user[ignoreFieldName], 'excluded {}');
 
     // test the field can still be retrieved if required
     user = Meteor.user({fields: {[ignoreFieldName]: 1}});
     test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
-    test.isUndefined(user.username, 'field selector works');
+    test.isUndefined(user.username, 'field can be retrieved username');
+
+    // test a combined negative field specifier
+    user = Meteor.user({fields: {username: 0}});
+    test.isUndefined(user[ignoreFieldName], 'combined field selector');
+    test.isUndefined(user.username, 'combined field selector username');
+
+    // test an explicit request for the full user object
+    user = Meteor.user({fields: {}});
+    test.isNotUndefined(user[ignoreFieldName], 'full selector');
+    test.isNotUndefined(user.username, 'full selector username');
 
     Accounts._options = options;
     Accounts.userId = origAccountsUserId;
