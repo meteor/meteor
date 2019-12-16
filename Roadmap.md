@@ -55,14 +55,14 @@ Related issues:
 * [PR #10238](https://github.com/meteor/meteor/pull/10238)
 
 ### Page load performance improvements
-- Leaders: <you?>
+- Leaders: [Seba Kerckhof](https://github.com/sebakerckhof)
 - Status: -
 - PRs: -
 
 Make sure we are not delivering any dependency that is not used ([Issue #10701](https://github.com/meteor/meteor/issues/10701), [Issue #10702](https://github.com/meteor/meteor/issues/10702), [Issue #10704](https://github.com/meteor/meteor/issues/10704), [PR #10792](https://github.com/meteor/meteor/pull/10792))
 
 ### Improve Rebuild performance
-- Leaders: [zodern](https://github.com/zodern)
+- Leaders: [zodern](https://github.com/zodern) / [Marcelo T Prado](https://github.com/MarceloPrado)
 - Status: -
 - PRs: -
 
