@@ -34,6 +34,15 @@ On the server, this will fetch the record from the database. To improve the
 latency of a method that uses the user document multiple times, save the
 returned record to a variable instead of re-calling `Meteor.user()`.
 
+Fetching the full user document can cause unnecessary database usage on the
+server and over-reactivity on the client, particularly if you store lots of
+custom data on it. Therefore it is recommended to use the `options`
+parameter to only fetch the fields you need:
+
+```js
+const userName = Meteor.user({fields: {'profile.name': 1}}).profile.name;
+```
+
 {% apibox "Meteor.userId" %}
 
 {% apibox "Meteor.users" %}
