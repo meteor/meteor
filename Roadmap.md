@@ -199,6 +199,18 @@ as we already have for Blaze, React and Angular.
 - Status: -
 - PRs: -
 
+### Third-party tools with their own build steps
+
+- Leaders: <you?>
+- Status: -
+- PRs: -
+
+Remove limitations that prevent using third-party tools with their own build steps, such as Storybook or Jest.
+
+Relevant discussions:
+- https://github.com/meteor/meteor/pull/10811#issuecomment-564726713
+- https://github.com/storybookjs/storybook/issues/5975
+
 ## Recently completed
 
 ### Different JS bundles for modern versus legacy browsers
