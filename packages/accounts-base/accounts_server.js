@@ -188,8 +188,10 @@ export class AccountsServer extends AccountsCommon {
   };
 
   _successfulLogout(connection, userId) {
-    const user = userId && this.users.findOne(userId, {fields: this._options.defaultFieldSelector});
+    // don't fetch the user object unless there are some callbacks registered
+    let user;
     this._onLogoutHook.each(callback => {
+      if (!user && userId) user = this.users.findOne(userId, {fields: this._options.defaultFieldSelector});
       callback({ user, connection });
       return true;
     });
