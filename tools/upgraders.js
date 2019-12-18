@@ -308,6 +308,25 @@ safely remove it using 'meteor remove underscore'.`,
       packagesFile.addPackages([`underscore`]);
       packagesFile.writeIfModified();
     }
+  },
+
+  '1.8.3-split-jquery-from-blaze': function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    if (! packagesFile.getConstraint(`jquery`) &&
+      packagesFile.getConstraint(`blaze-html-templates`)) {
+
+      maybePrintNoticeHeader();
+      Console.info(
+`The jquery package has become a weak dependency of the blaze package. \
+Since you will most likely need jquery as the commonly used blaze backend \
+and it was not listed in your .meteor/packages files, it has \
+been added automatically. If your app is not using jquery, then you can \
+safely remove it using 'meteor remove jquery'.`,
+        Console.options({ bulletPoint: "1.8.3: " })
+      );
+      packagesFile.addPackages([`jquery`]);
+      packagesFile.writeIfModified();
+    }
   }
 
   ////////////
