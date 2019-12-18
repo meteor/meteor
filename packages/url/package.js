@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "url-polyfill": "1.1.3",
+  "core-js": "3.5.0"
 });
 
 Package.onUse(function(api) {

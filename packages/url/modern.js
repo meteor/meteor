@@ -1,5 +1,8 @@
-exports.URL = global.URL;
-exports.URLSearchParams = global.URLSearchParams;
+URL = global.URL;
+URLSearchParams = global.URLSearchParams;
+
+exports.URL = URL;
+exports.URLSearchParams = URLSearchParams;
 
 // backwards compatability
-Object.assign(exports.URL, require('./bc/url_client'));
+Object.assign(URL, require('./bc/url_client'));

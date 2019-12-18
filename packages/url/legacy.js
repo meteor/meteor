@@ -1,7 +1,14 @@
-require("url-polyfill");
-
-exports.URL = global.URL;
-exports.URLSearchParams = global.URLSearchParams;
+try {
+  require("core-js/proposals/url");
+} catch (e) {
+  throw new Error([
+    "The core-js npm package could not be found in your node_modules ",
+    "directory. Please run the following command to install it:",
+    "",
+    "  meteor npm install --save core-js",
+    ""
+  ].join("\n"));
+}
 
 // backwards compatability
-Object.assign(exports.URL, require('./bc/url_client'));
+require('./modern.js');
