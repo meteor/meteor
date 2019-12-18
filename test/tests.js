@@ -323,7 +323,9 @@ describe("meteor-babel", () => {
 
   it("can compile TypeScript with import/export syntax", () => {
     import * as tsParent from "./typescript/parent";
-    assert.deepEqual(tsParent, {
+
+    // The stringify/parse is necessary to remove Symbols.
+    assert.deepEqual(JSON.parse(JSON.stringify(tsParent)), {
       def: "oyez",
       child: {
         default: "oyez",
