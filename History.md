@@ -5,6 +5,11 @@
 * Node has been updated to version
   [8.17.0](https://nodejs.org/en/blog/release/v8.17.0/).
 
+* The `npm` npm package has been updated to version 6.13.4, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.11-meteor) of its
+  `pacote` dependency has been updated to version 9.5.11, an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2019-security-releases/).
+
 * The `meteor-babel` npm package has been updated to version 7.7.5.
 
 ## v1.8.2, 2019-11-14
