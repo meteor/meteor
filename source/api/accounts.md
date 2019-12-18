@@ -24,7 +24,7 @@ Read more about customizing user accounts in the [Accounts](http://guide.meteor.
 Retrieves the user record for the current user from
 the [`Meteor.users`](#meteor_users) collection.
 
-On the client, this will be the subset of the fields in the document that
+On the client, the available fields will be those that
 are published from the server (other fields won't be available on the
 client). By default the server publishes `username`, `emails`, and
 `profile` (writable by user). See [`Meteor.users`](#meteor_users) for more on

@@ -200,7 +200,7 @@ var typeNameTranslation = {
   ],
   MongoModifier: typeLink("Mongo Modifier", "#modifiers"),
   MongoSortSpecifier: typeLink("Mongo Sort Specifier", "#sortspecifiers"),
-  MongoFieldSpecifier: typeLink("Mongo Field Specifier", "#fieldspecifiers"),
+  MongoFieldSpecifier: typeLink("Mongo Field Specifier", "collections.html#fieldspecifiers"),
   JSONCompatible: "JSON-compatible Object",
   EventMap: typeLink("Event Map", "#eventmaps"),
   DOMNode: typeLink("DOM Node", "https://developer.mozilla.org/en-US/docs/Web/API/Node"),
