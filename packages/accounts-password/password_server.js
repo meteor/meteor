@@ -166,7 +166,8 @@ Accounts._findUserByQuery = (query, options) => {
  * insensitive search, it returns null.
  * @locus Server
  * @param {String} username The username to look for
- * @param {Object} [options] `options` parameter to be passed to `Meteor.user.findOne(selector, options)`. Can be used to limit the returned fields.
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
  * @returns {Object} A user if found, else null
  * @importFromPackage accounts-base
  */
@@ -180,7 +181,8 @@ Accounts.findUserByUsername =
  * insensitive search, it returns null.
  * @locus Server
  * @param {String} email The email address to look for
- * @param {Object} [options] `options` parameter to be passed to `Meteor.user.findOne(selector, options)`. Can be used to limit the returned fields.
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
  * @returns {Object} A user if found, else null
  * @importFromPackage accounts-base
  */

@@ -111,7 +111,8 @@ export class AccountsCommon {
   /**
    * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
    * @locus Anywhere
-   * @param {Object} [options] `options` parameter to be passed to `Meteor.user.findOne(selector, options)`. Can be used to limit the returned fields.
+   * @param {Object} [options]
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    */
   user(options) {
     const userId = this.userId();
@@ -164,7 +165,7 @@ export class AccountsCommon {
    * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set inital password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
-   * @param {Object} options.defaultFieldSelector Default Mongo field selector, to exclude large custom fields from `Meteor.user()` & `Meteor.findUserBy...()` functions when called without a field selector and `onLogin`, `onLoginFailure` & `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`.
+   * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`.
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
@@ -335,7 +336,8 @@ Meteor.userId = () => Accounts.userId();
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
  * @locus Anywhere but publish functions
  * @importFromPackage meteor
-   * @param {Object} [options] `options` parameter to be passed to `Meteor.user.findOne(selector, options)`. Can be used to limit the returned fields.
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
  */
 Meteor.user = (options) => Accounts.user(options);
 
