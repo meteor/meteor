@@ -30,7 +30,10 @@ N/A
 * The `node-gyp` npm package has been updated to version 6.0.1, and
   `node-pre-gyp` has been updated to version 0.14.0.
 
-## v1.8.3
+* The feature that restarts the application up to two times if it crashes
+  on startup has been removed.
+  [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
+  [PR #10345](https://github.com/meteor/meteor/pull/10345)
 
 ## v1.8.3
 
@@ -196,17 +199,6 @@ N/A
 
 * The `--test-app-path <directory>` option for `meteor test-packages` and
   `meteor test` now accepts relative paths as well as absolute paths.
-
-### Breaking changes
-
-### Migration steps
-
-### Changes
-
-* The feature that restarts the application up to two times if it crashes
-  on startup has been removed.
-  [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
-  [PR #10345](https://github.com/meteor/meteor/pull/10345)
 
 ## v1.8.1, 2019-04-03
 
