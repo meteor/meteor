@@ -12,6 +12,8 @@
 
 * The `meteor-babel` npm package has been updated to version 7.7.5.
 
+* The `typescript` npm package has been updated to version 3.7.3.
+
 ## v1.8.2, 2019-11-14
 
 ### Breaking changes
