@@ -1,5 +1,20 @@
 ## v.NEXT
 
+* `Meteor.user()`, `Meteor.findUserByEmail()` and `Meteor.findUserByUserName()` can take a new
+  `options` parameter which can be used to limit the returned fields. Useful for minimizing
+  DB bandwidth on the server and avoiding unnecessary reactive UI updates on the client.
+  [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+* `Accounts.config()` has a new option `defaultFieldSelector` which will apply to all
+  `Meteor.user()` and `Meteor.findUserBy...()` functions without explicit field selectors, and
+  also to all `onLogin`, `onLogout` and `onLoginFailure` callbacks.  This is useful if you store
+  large data on the user document (e.g. a growing list of transactions) which do no need to be 
+  retrieved from the DB whenever you or a package author call `Meteor.user()` without limiting the
+  fields. [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+* Lots of internal calls to `Meteor.user()` without field specifiers in `accounts-base` and
+  `accounts-password` packages have been optimized with explicit field selectors to only fetch
+  the fields needed by the functions they are in.
+  [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+  
 ## v1.8.1, 2019-04-03
 
 ### Breaking changes
