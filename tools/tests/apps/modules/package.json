@@ -16,6 +16,7 @@
     "graphql": "^14.3.1",
     "idle-gc": "^1.0.1",
     "immutable-tuple": "^0.4.4",
+    "jquery": "^3.4.1",
     "jsx-import-test": "file:imports/links/jsx-import-test",
     "lodash-es": "^4.17.7",
     "markdown-to-jsx": "4.0.3",
