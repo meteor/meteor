@@ -19,10 +19,6 @@ N/A
   * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
   * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
 
-* The `npm` npm package has been updated to version 6.13.1, and our
-  [fork](https://github.com/meteor/pacote/tree/v9.5.9-meteor) of its
-  `pacote` dependency remains at version 9.5.9.
-
 * The `fibers` npm package has been updated to version 4.0.2.
 
 * The `pathwatcher` npm package has been updated to use a fork of version
@@ -34,11 +30,21 @@ N/A
 * The `node-gyp` npm package has been updated to version 6.0.1, and
   `node-pre-gyp` has been updated to version 0.14.0.
 
-## v.NEXT
+## v1.8.3
 
 ### Changes
 
-* The `meteor-babel` npm package has been updated to version 7.7.4.
+* Node has been updated to version
+  [8.17.0](https://nodejs.org/en/blog/release/v8.17.0/).
+
+* The `npm` npm package has been updated to version 6.13.4, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.11-meteor) of its
+  `pacote` dependency has been updated to version 9.5.11, an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2019-security-releases/).
+
+* The `meteor-babel` npm package has been updated to version 7.7.5.
+
+* The `typescript` npm package has been updated to version 3.7.3.
 
 ## v1.8.2, 2019-11-14
 
