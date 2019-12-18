@@ -4,26 +4,33 @@
   "description": "Test app exercising many aspects of the Meteor module system.",
   "private": true,
   "dependencies": {
-    "@babel/core": "^7.0.0-beta.56",
-    "@babel/plugin-proposal-do-expressions": "^7.0.0-beta.56",
-    "@babel/plugin-proposal-optional-chaining": "^7.0.0-beta.56",
-    "@babel/runtime": "^7.1.2",
+    "@babel/core": "^7.7.2",
+    "@babel/plugin-proposal-do-expressions": "^7.6.0",
+    "@babel/runtime": "^7.7.2",
+    "@polymer/lit-element": "0.7.1",
+    "@wry/context": "^0.4.0",
     "acorn": "file:imports/links/acorn",
     "aws-sdk": "^2.2.41",
     "cli-color": "^0.2.3",
     "github": "^0.2.4",
+    "graphql": "^14.3.1",
     "idle-gc": "^1.0.1",
     "immutable-tuple": "^0.4.4",
     "jsx-import-test": "file:imports/links/jsx-import-test",
     "lodash-es": "^4.17.7",
+    "markdown-to-jsx": "4.0.3",
     "meteor-node-stubs": "^1.0.0",
     "mobx": "5.8.0",
     "moment": "^2.22.2",
     "mssql": "^3.1.1",
     "mysql": "^2.15.0",
+    "pify": "^4.0.1",
     "puppeteer": "^1.6.2",
+    "react-dom": "^16.8.6",
+    "react-trello": "2.1.4",
     "regenerator-runtime": "^0.11.1",
     "stripe": "^4.4.0",
+    "styled-components": "^4.3.2",
     "uuid": "^3.1.0",
     "winston": "^2.3.1"
   },
@@ -33,6 +40,12 @@
     "test-packages": "TEST_BROWSER_DRIVER=puppeteer meteor test-packages --driver-package meteortesting:mocha packages/modules-test-package"
   },
   "meteor": {
-    "testModule": "tests.js"
+    "testModule": "tests.js",
+    "nodeModules": {
+      "recompile": {
+        "pify": "legacy",
+        "@polymer/lit-element": true
+      }
+    }
   }
 }

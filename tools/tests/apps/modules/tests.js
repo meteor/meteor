@@ -344,6 +344,90 @@ describe("local node_modules", () => {
     // module layout, so we shouldn't let this change without notice.
     assert.strictEqual(pkg.version, "0.2.3");
   });
+
+  it('should prefer "module" field of package.json on client', () => {
+    assert.strictEqual(
+      require.resolve("@wry/context"),
+      "/node_modules/@wry/context/lib/" + (
+        Meteor.isClient && Meteor.isModern ? "context.esm.js" : "context.js"
+      ),
+    );
+
+    assert.strictEqual(
+      typeof require("@wry/context").Slot,
+      "function",
+    );
+  });
+
+  it("packages with .mjs entry points can be imported", () => {
+    assert.strictEqual(
+      require.resolve("graphql"),
+      "/node_modules/graphql/index." + (
+        Meteor.isClient && Meteor.isModern ? "mjs" : "js"
+      ),
+    );
+    const { parse } = require("graphql");
+    const nestedParse = require("graphql/language/parser").parse;
+    assert.strictEqual(typeof parse, "function");
+    assert.strictEqual(parse, nestedParse);
+  });
+
+  Meteor.isClient && it("can import @polymer/lit-element", () => {
+    // This import is enabled by the meteor.nodeModules.recompile section of
+    // the package.json file for the modules test application.
+    const litElement = require("@polymer/lit-element");
+    const typeofMap = {};
+    Object.keys(litElement).forEach(key => {
+      typeofMap[key] = typeof litElement[key];
+    });
+
+    assert.deepEqual(typeofMap, {
+      defaultConverter: "object",
+      notEqual: "function",
+      UpdatingElement: "function",
+      customElement: "function",
+      property: "function",
+      query: "function",
+      queryAll: "function",
+      eventOptions: "function",
+      html: "function",
+      svg: "function",
+      TemplateResult: "function",
+      SVGTemplateResult: "function",
+      supportsAdoptingStyleSheets: "boolean",
+      CSSResult: "function",
+      css: "function",
+      LitElement: "function"
+    });
+  });
+
+  it("can import @babel/runtime/helpers/esm/*", () => {
+    function check(exports) {
+      assert.strictEqual(typeof exports.default, "function");
+    }
+    check(require("@babel/runtime/helpers/esm/asyncIterator.js"));
+    check(require("@babel/runtime/helpers/esm/createClass.js"));
+    check(require("@babel/runtime/helpers/esm/getPrototypeOf.js"));
+    check(require("@babel/runtime/helpers/esm/inherits.js"));
+    check(require("@babel/runtime/helpers/esm/toArray.js"));
+    check(require("@babel/runtime/helpers/esm/typeof.js"));
+  });
+
+  it('can import packages with broken "module" fields', () => {
+    assert.strictEqual(
+      require.resolve("markdown-to-jsx"),
+      "/node_modules/markdown-to-jsx/index.es5.js",
+    );
+    const md2jsx = require("markdown-to-jsx");
+    assert.strictEqual(typeof md2jsx.default, "function");
+
+    assert.strictEqual(
+      require.resolve("react-trello"),
+      "/node_modules/react-trello/dist/index.js",
+    );
+    const reactTrello = require("react-trello");
+    assert.strictEqual(typeof reactTrello.default, "function");
+  });
 });
 
 describe("Meteor packages", () => {
@@ -624,6 +708,14 @@ describe("ecmascript miscellany", () => {
   });
 });
 
+describe("TypeScript", () => {
+  it("can be imported", () => {
+    const { Test } = require("./typescript");
+    assert.strictEqual(typeof Test, "function");
+    assert.strictEqual(new Test(1234).value, 1234);
+  });
+});
+
 Meteor.isClient &&
 describe("client/compatibility directories", () => {
   it("should contain bare files", () => {
@@ -666,5 +758,17 @@ describe("issue #10409", () => {
     const { observable, action } = require("mobx");
     assert.strictEqual(typeof observable, "function");
     assert.strictEqual(typeof action, "function");
+  });
+});
+
+describe("issue #10563", () => {
+  it("should be able to import pify@4.0.1 in legacy browsers", () => {
+    const pify = require("pify");
+    assert.strictEqual(typeof pify, "function");
+    const code = Function.prototype.toString.call(pify);
+    assert.strictEqual(
+      /\bconst\b/.test(code),
+      Meteor.isModern,
+    );
   });
 });

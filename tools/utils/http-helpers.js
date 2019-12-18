@@ -7,7 +7,7 @@ var util = require('util');
 
 var _ = require('underscore');
 
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');
 var release = require('../packaging/release.js');
@@ -139,7 +139,7 @@ _.extend(exports, {
   // - You can provide a 'bodyStream' option which is a stream that
   //   will be used for the body of the request.
   //
-  // - For authenticated MDG services, you can set the
+  // - For authenticated Meteor Software services, you can set the
   //   'useSessionHeader' and/or 'useAuthHeader' options (to true) to
   //   send X-Meteor-Session/X-Meteor-Auth headers using values from
   //   the session file.
@@ -463,7 +463,7 @@ _.extend(exports, {
       if (masterProgress &&
           masterProgress.addChildTask) {
         options.progress = masterProgress.addChildTask({
-          title: masterProgress._title
+          title: masterProgress.title
         });
       }
 

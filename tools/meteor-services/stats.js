@@ -2,7 +2,7 @@ var Fiber = require("fibers");
 var _ = require("underscore");
 
 var config = require('./config.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var auth = require('./auth.js');
 var ServiceConnection = require('./service-connection.js');
 var httpHelpers = require('../utils/http-helpers.js');

@@ -7,7 +7,7 @@ var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Console = require('../console/console.js').Console;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var warehouse = require('../packaging/warehouse.js');
 var tropohouse = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
@@ -15,7 +15,7 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
-const archinfo = require('../utils/archinfo.js');
+const archinfo = require('../utils/archinfo');
 import { isEmacs } from "../utils/utils.js";
 
 var main = exports;
@@ -605,13 +605,6 @@ Fiber(function () {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');
     process.exit(1);
-  }
-
-  // Set up git hooks, but not on Windows because they don't work there and it;s
-  // not worth setting it up at the moment
-  if (files.inCheckout() && process.platform !== "win32") {
-    var installGitHooks = require('../tool-env/install-git-hooks.js')['default'];
-    installGitHooks();
   }
 
   // This is a bit of a hack, but: if we don't check this in the tool, then the

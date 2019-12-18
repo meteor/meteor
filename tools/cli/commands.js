@@ -1,6 +1,6 @@
 var main = require('./main.js');
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var deploy = require('../meteor-services/deploy.js');
 var buildmessage = require('../utils/buildmessage.js');
 var auth = require('../meteor-services/auth.js');
@@ -9,14 +9,14 @@ var config = require('../meteor-services/config.js');
 var runLog = require('../runners/run-log.js');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
-const { Profile } = require("../tool-env/profile.js");
+const { Profile } = require("../tool-env/profile");
 
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
@@ -24,8 +24,8 @@ import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
 import { EXAMPLE_REPOSITORIES } from './example-repositories.js';
 
-// The architecture used by MDG's hosted servers; it's the architecture used by
-// 'meteor deploy'.
+// The architecture used by Meteor Software's hosted servers; it's the
+// architecture used by 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
@@ -82,7 +82,9 @@ export function parseServerOptionsForRunCommand(options, runTargets) {
       isRunOnDeviceRequested);
   }
 
-  return { parsedServerUrl, parsedMobileServerUrl };
+  const parsedCordovaServerPort = parseCordovaServerPortOption(options);
+
+  return { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort };
 }
 
 function parsePortOption(portOption) {
@@ -108,6 +110,11 @@ function parseMobileServerOption(mobileServerOption,
   }
 
   return parsedMobileServerUrl;
+}
+
+function parseCordovaServerPortOption(options = {}) {
+  const cordovaServerPortOption = options['cordova-server-port'];
+  return cordovaServerPortOption ? parseInt(cordovaServerPortOption, 10) : null;
 }
 
 function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
@@ -290,6 +297,7 @@ var runCommandOptions = {
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
+    'cordova-server-port': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'app-port': { type: String },
@@ -326,7 +334,7 @@ function doRunCommand(options) {
   // Additional args are interpreted as run targets
   const runTargets = parseRunTargets(options.args);
 
-  const { parsedServerUrl, parsedMobileServerUrl } =
+  const { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort } =
     parseServerOptionsForRunCommand(options, runTargets);
 
   var includePackages = [];
@@ -401,7 +409,8 @@ function doRunCommand(options) {
       main.captureAndExit('', 'preparing Cordova project', () => {
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+          cordovaServerPort: parsedCordovaServerPort });
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
@@ -431,6 +440,7 @@ function doRunCommand(options) {
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+    cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
     cordovaRunner: cordovaRunner
@@ -472,7 +482,7 @@ main.registerCommand({
 
     // Convert to OS path here because shell/server.js doesn't know how to
     // convert paths, since it exists in the app and in the tool.
-    require('../shell-client.js').connect(
+    require('../shell-client').connect(
       files.convertToOSPath(projectContext.getMeteorShellDirectory())
     );
 
@@ -495,6 +505,7 @@ main.registerCommand({
     minimal: { type: Boolean },
     full: { type: Boolean },
     react: { type: Boolean },
+    typescript: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -583,7 +594,7 @@ main.registerCommand({
           return transform(f);
         },
         transformContents: function (contents, f) {
-          if ((/(\.html|\.js|\.css)/).test(f)) {
+          if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
@@ -747,6 +758,8 @@ main.registerCommand({
     skelName += "-full";
   } else if (options.react) {
     skelName += "-react";
+  } else if (options.typescript) {
+    skelName += "-typescript";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -754,7 +767,7 @@ main.registerCommand({
       return transform(f);
     },
     transformContents: function (contents, f) {
-      if ((/(\.html|\.js|\.css)/).test(f)) {
+      if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
         return Buffer.from(transform(contents.toString()));
       } else {
         return contents;
@@ -854,20 +867,20 @@ main.registerCommand({
   if (! options.bare &&
       ! options.minimal &&
       ! options.full &&
-      ! options.react) {
-    // Notify people about --bare, --minimal, --full, and --react.
+      ! options.react &&
+      ! options.typescript) {
+    // Notify people about --bare, --minimal, --full, --react, and --typescript.
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
       "",
     ].join("\n"));
 
-    cmd("meteor create --bare    # to create an empty app");
-    cmd("meteor create --minimal # to create an app with as few " +
-        "Meteor packages as possible");
-    cmd("meteor create --full    # to create a more complete " +
-        "scaffolded app");
-    cmd("meteor create --react   # to create a basic React-based app");
+    cmd("meteor create --bare       # to create an empty app");
+    cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
+    cmd("meteor create --full       # to create a more complete scaffolded app");
+    cmd("meteor create --react      # to create a basic React-based app");
+    cmd("meteor create --typescript # to create an app using TypeScript and React");
   }
 
   Console.info("");
@@ -888,6 +901,7 @@ var buildCommands = {
     "server-only": { type: Boolean },
     'mobile-settings': { type: String },
     server: { type: String },
+    "cordova-server-port": { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
     // Indicates whether these build is running headless, e.g. in a
@@ -950,7 +964,7 @@ var buildCommand = function (options) {
   // of the file, not a constant 'bundle' (a bit obnoxious for
   // machines, but worth it for humans)
 
-  // Error handling for options.architecture. See archinfo.js for more
+  // Error handling for options.architecture. See archinfo for more
   // information on what the architectures are, what they mean, et cetera.
   if (options.architecture &&
       !_.has(archinfo.VALID_ARCHITECTURES, options.architecture)) {
@@ -986,6 +1000,7 @@ var buildCommand = function (options) {
 
   let cordovaPlatforms;
   let parsedMobileServerUrl;
+  let parsedCordovaServerPort;
   if (!serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
@@ -1008,6 +1023,7 @@ on an OS X system.");
       }
       parsedMobileServerUrl = parseMobileServerOption(mobileServerOption,
         'server');
+      parsedCordovaServerPort = parseCordovaServerPortOption(options);
     }
   } else {
     cordovaPlatforms = [];
@@ -1096,7 +1112,8 @@ ${Console.command("meteor build ../output")}`,
 
         cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+          cordovaServerPort: parsedCordovaServerPort });
         if (buildmessage.jobHasMessages()) return;
 
         const pluginVersions = pluginVersionsFromStarManifest(
@@ -1550,6 +1567,7 @@ testCommandOptions = {
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
+    'cordova-server-port': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'debug-port': { type: String },
@@ -1648,7 +1666,7 @@ function doTestCommand(options) {
   const runTargets = parseRunTargets(_.intersection(
     Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
 
-  const { parsedServerUrl, parsedMobileServerUrl } =
+  const { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort } =
     parseServerOptionsForRunCommand(options, runTargets);
 
   // Make a temporary app dir (based on the test runner app). This will be
@@ -1658,9 +1676,10 @@ function doTestCommand(options) {
   let testRunnerAppDir;
   const testAppPath = options['test-app-path'];
   if (testAppPath) {
+    const absTestAppPath = files.pathResolve(testAppPath);
     try {
-      if (files.mkdir_p(testAppPath, 0o700)) {
-        testRunnerAppDir = testAppPath;
+      if (files.mkdir_p(absTestAppPath, 0o700)) {
+        testRunnerAppDir = absTestAppPath;
       } else {
         Console.error(
           'The specified --test-app-path directory could not be used, as ' +
@@ -1865,7 +1884,8 @@ function doTestCommand(options) {
 
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+          cordovaServerPort: parsedCordovaServerPort });
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
@@ -1884,6 +1904,7 @@ function doTestCommand(options) {
     options,
     {
       mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+      cordovaServerPort: parsedCordovaServerPort,
       proxyPort: parsedServerUrl.port,
       proxyHost: parsedServerUrl.hostname,
     }
@@ -2380,7 +2401,7 @@ main.registerCommand({
     json: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     // By default, we give you a machine for 5 minutes. You can request up to
-    // 15. (MDG can reserve machines for longer than that.)
+    // 15. (Meteor Software can reserve machines for longer than that.)
     minutes: { type: Number }
   },
   pretty: false,

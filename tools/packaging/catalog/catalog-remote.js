@@ -1,17 +1,17 @@
 var _ = require('underscore');
 var sqlite3 = require('sqlite3');
 
-var files = require('../../fs/files.js');
+var files = require('../../fs/files');
 var utils = require('../../utils/utils.js');
 var buildmessage = require('../../utils/buildmessage.js');
 var config = require('../../meteor-services/config.js');
-var archinfo = require('../../utils/archinfo.js');
+var archinfo = require('../../utils/archinfo');
 var Console = require('../../console/console.js').Console;
 
 var tropohouse = require('../tropohouse.js');
 var packageClient = require('../package-client.js');
 var VersionParser = require('../package-version-parser.js');
-var Profile = require('../../tool-env/profile.js').Profile;
+var Profile = require('../../tool-env/profile').Profile;
 
 // XXX: Rationalize these flags.  Maybe use the logger?
 var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;

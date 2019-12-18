@@ -3,10 +3,10 @@ import util from 'util';
 import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
-import files from '../fs/files.js';
-import { optimisticReadJsonOrNull } from "../fs/optimistic.js";
+import files from '../fs/files';
+import { optimisticReadJsonOrNull } from "../fs/optimistic";
 import bundler from '../isobuild/bundler.js';
-import archinfo from '../utils/archinfo.js';
+import archinfo from '../utils/archinfo';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
@@ -91,14 +91,18 @@ export class CordovaBuilder {
   }
 
   initalizeDefaults() {
-    // Convert the appId (a base 36 string) to a number
-    const appIdAsNumber = parseInt(this.projectContext.appIdentifier, 36);
-    // We use the appId to choose a local server port between 12000-13000.
-    // This range should be large enough to avoid collisions with other
-    // Meteor apps, and has also been chosen to avoid collisions
-    // with other apps or services on the device (although this can never be
-    // guaranteed).
-    const localServerPort = 12000 + (appIdAsNumber % 1000);
+    let { cordovaServerPort } = this.options;
+    // if --cordova-server-port is not present on run command
+    if (!cordovaServerPort) {
+      // Convert the appId (a base 36 string) to a number
+      const appIdAsNumber = parseInt(this.projectContext.appIdentifier, 36);
+      // We use the appId to choose a local server port between 12000-13000.
+      // This range should be large enough to avoid collisions with other
+      // Meteor apps, and has also been chosen to avoid collisions
+      // with other apps or services on the device (although this can never be
+      // guaranteed).
+      cordovaServerPort = 12000 + (appIdAsNumber % 1000);
+    }
 
     this.metadata = {
       id: 'com.id' + this.projectContext.appIdentifier,
@@ -109,7 +113,7 @@ export class CordovaBuilder {
       author: 'A Meteor Developer',
       email: 'n/a',
       website: 'n/a',
-      contentUrl: `http://localhost:${localServerPort}/`
+      contentUrl: `http://localhost:${cordovaServerPort}/`
     };
 
     // Set some defaults different from the Cordova defaults
@@ -484,7 +488,7 @@ export class CordovaBuilder {
 
     const runtimeConfig = {
       meteorRelease: meteorRelease,
-      gitCommitHash: files.findGitCommitHash(applicationPath),
+      gitCommitHash: process.env.METEOR_GIT_COMMIT_HASH || files.findGitCommitHash(applicationPath),
       ROOT_URL: mobileServerUrl,
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: '',

@@ -77,6 +77,7 @@ export class Hook {
     this.callbacks[id] = callback;
 
     return {
+      callback,
       stop: () => {
         delete this.callbacks[id];
       }

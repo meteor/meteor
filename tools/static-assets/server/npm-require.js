@@ -2,7 +2,7 @@ var assert = require("assert");
 var fs = require("fs");
 var path = require("path");
 var _ = require('underscore');
-var files = require('./mini-files.js');
+var files = require('./mini-files');
 var serverJson = require("./server-json.js");
 var topLevelIdPattern = /^[^./]/;
 

@@ -3,7 +3,7 @@ import Client from '../../client.js';
 import configuredClients from "./clients.js";
 import { enterJob } from '../../../utils/buildmessage.js';
 import { getUrlWithResuming } from '../../../utils/http-helpers.js';
-import { execFileSync } from '../../../utils/processes.js';
+import { execFileSync } from '../../../utils/processes';
 import { ensureDependencies } from '../../../cli/dev-bundle-helpers.js';
 import {
   mkdtemp,
@@ -13,7 +13,7 @@ import {
   readFile,
   createWriteStream,
   getDevBundle,
-} from '../../../fs/files.js';
+} from '../../../fs/files';
 
 const NPM_DEPENDENCIES = {
   'browserstack-webdriver': '2.41.1',

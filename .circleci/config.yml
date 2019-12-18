@@ -128,8 +128,9 @@ jobs:
             - package-npm-deps-cache-group2-v3-
       - restore_cache:
           keys:
-            - v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
-            - v2-other-deps-cache-{{ .Branch }}-
+            - v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+            - v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
+            - v3-other-deps-cache-{{ .Branch }}-
       - restore_cache:
           keys:
             - v1-test-groups-{{ .Branch }}
@@ -147,6 +148,10 @@ jobs:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
+            pushd tools
+            # Ensure that meteor/tools has no TypeScript errors.
+            ../meteor npx tsc --noEmit
+            popd
             ./meteor --get-ready
           # shouldn't take longer than 20 minutes
           no_output_timeout: 20m
@@ -764,7 +769,7 @@ jobs:
             - packages/fetch/.npm/package/node_modules
             - packages/non-core/mongo-decimal/.npm/package/node_modules
       - save_cache:
-          key: v2-other-deps-cache-{{ .Branch }}-{{ .Revision }}
+          key: v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
           paths:
             - ".babel-cache"
             - ".meteor"
