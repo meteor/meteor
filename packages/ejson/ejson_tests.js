@@ -177,6 +177,14 @@ Tinytest.add('ejson - stringify', test => {
     '  "a": 1\n' +
     '}'
   );
+
+  test.throws(
+    () => {
+      const col = new Mongo.Collection('test');
+      EJSON.stringify(col)
+    },
+    /Converting circular structure to JSON/
+  );
 });
 
 Tinytest.add('ejson - parse', test => {
