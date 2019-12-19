@@ -822,8 +822,8 @@ main.registerCommand({
   // version number, this will use buildmessage to error and exit.)
   //
   // Without any modifications about forks and package names, this particular
-  // option is not very useful outside of MDG. Right now, to run this option on
-  // a non-MDG fork of meteor, someone would probably need to go through and
+  // option is not very useful outside of Meteor Software. Right now, to run this option on
+  // a non-Meteor Software fork of meteor, someone would probably need to go through and
   // change the package names to have proper prefixes, etc.
   if (options['from-checkout']) {
     // You must be running from checkout to bundle up your checkout as a release.

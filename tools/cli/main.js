@@ -607,13 +607,6 @@ Fiber(function () {
     process.exit(1);
   }
 
-  // Set up git hooks, but not on Windows because they don't work there and it;s
-  // not worth setting it up at the moment
-  if (files.inCheckout() && process.platform !== "win32") {
-    var installGitHooks = require('../tool-env/install-git-hooks.js')['default'];
-    installGitHooks();
-  }
-
   // This is a bit of a hack, but: if we don't check this in the tool, then the
   // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.

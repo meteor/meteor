@@ -1,11 +1,23 @@
 body {
-    padding-top: 60px;
-    padding-bottom: 40px;
+  height: 100vh;
+  width: 100vw;
+}
+
+.test-in-browser {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+}
+
+.test-results {
+  flex: 1;
+  overflow: auto;
 }
 
 #testProgressBar {
-    margin-top: 10px;
-    position: relative;
+  flex: 1;
+  max-width: 400px;
+  position: relative;
 }
 
 .header {
