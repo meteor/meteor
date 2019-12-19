@@ -35,7 +35,7 @@ N/A
   [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
   [PR #10345](https://github.com/meteor/meteor/pull/10345)
 
-## v1.8.3
+## v1.8.3, 2019-12-19
 
 ### Changes
 
