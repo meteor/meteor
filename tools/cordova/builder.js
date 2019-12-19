@@ -392,23 +392,23 @@ export class CordovaBuilder {
 
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
     _.each(resourceFiles, resourceFile => {
-      // Copy file in cordova project root directory
-      var filename = path.parse(resourceFile.src).base;
+      // Copy resource files in cordova project root ./resource-files directory keeping original absolute path
+      var filepath = files.pathResolve(this.projectContext.projectDir, resourceFile.src);
       files.copyFile(
-        files.pathResolve(this.projectContext.projectDir, resourceFile.src),
-        files.pathJoin(this.projectRoot, filename));
+        filepath,
+        files.pathJoin(this.projectRoot, "/resource-files/", filepath));
       // And entry in config.xml
       if (!resourceFile.platform ||
           (resourceFile.platform && resourceFile.platform === "android")) {
         androidElement.element('resource-file', {
-          src: resourceFile.src,
+          src: files.pathJoin("./resource-files/", filepath),
           target: resourceFile.target
         });
       }
       if (!resourceFile.platform ||
           (resourceFile.platform && resourceFile.platform === "ios")) {
         iosElement.element('resource-file', {
-          src: resourceFile.src,
+          src: files.pathJoin("./resource-files/", filepath),
           target: resourceFile.target
         });
       }
