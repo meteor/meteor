@@ -1320,7 +1320,7 @@ const defaultResumeLoginHandler = (accounts, options) => {
   // need to.
   let user = accounts.users.findOne(
     {"services.resume.loginTokens.hashedToken": hashedToken},
-    {fields: {"services.resume.loginTokens": 1}});
+    {fields: {"services.resume.loginTokens.$": 1}});
 
   if (! user) {
     // If we didn't find the hashed login token, try also looking for
@@ -1334,6 +1334,7 @@ const defaultResumeLoginHandler = (accounts, options) => {
         {"services.resume.loginTokens.token": options.resume}
       ]
     },
+    // Note: Cannot use ...loginTokens.$ positional operator with $or query.
     {fields: {"services.resume.loginTokens": 1}});
   }
 
