@@ -1107,7 +1107,7 @@ _.extend(PackageSource.prototype, {
   // complete list of source files for directories within node_modules.
   _findSourcesCache: Object.create(null),
 
-  _findSources: Profile("PackageSource#_findSources", function ({
+  _findSources: Profile(({ sourceArch }) => `PackageSource#_findSources for ${sourceArch.arch}`, function ({
     sourceProcessorSet,
     watchSet,
     isApp,
