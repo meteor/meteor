@@ -16,6 +16,7 @@ import {
   readdir,
   dependOnPath,
   findAppDir,
+  realpath,
 } from "./files";
 
 // When in doubt, the optimistic caching system can be completely disabled
@@ -272,6 +273,24 @@ export const optimisticLStatOrNull = makeCheapPathFunction(
     }
   },
 );
+
+export const optimisticRealpath = makeOptimistic('realpath', realpath);
+export const optimisticRealpathOrNull = makeOptimistic('realpathOrNull', (
+  path: string,
+  options?: Parameters<typeof optimisticRealpath>[1],
+) => {
+  try {
+    return realpath(path, options)
+  } catch (e) {
+    if (e.code !== "ENOENT") {
+      throw e;
+    }
+  }
+
+  dependOnParentDirectory(path);
+
+  return null;
+});
 
 export const optimisticReadFile = makeOptimistic("readFile", readFile);
 export const optimisticReaddir = makeOptimistic("readdir", readdir);

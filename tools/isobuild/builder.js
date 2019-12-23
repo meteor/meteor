@@ -11,6 +11,7 @@ import {
   optimisticStatOrNull,
   optimisticLStatOrNull,
   optimisticHashOrNull,
+  optimisticRealpath,
 } from "../fs/optimistic";
 
 // Builder is in charge of writing "bundles" to disk, which are
@@ -540,7 +541,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       // as well as node_modules/meteor and the parent directories of any
       // scoped npm packages.
       this._ensureAllNonPackageDirectories(
-        files.realpath(options.from),
+        optimisticRealpath(options.from),
         options.to
       );
     }
@@ -637,7 +638,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     }
 
-    const rootDir = files.realpath(from);
+    const rootDir = optimisticRealpath(from);
 
     const walk = (absFrom, relTo) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
@@ -671,7 +672,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           try {
-            var real = files.realpath(thisAbsFrom);
+            var real = optimisticRealpath(thisAbsFrom);
           } catch (e) {
             if (e.code !== "ENOENT" &&
                 e.code !== "ELOOP") {

@@ -173,6 +173,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
+import { optimisticRealpathOrNull } from '../fs/optimistic';
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -486,7 +487,7 @@ export class NodeModulesDirectory {
           return true;
         }
 
-        const real = files.realpathOrNull(path);
+        const real = optimisticRealpathOrNull(path);
         if (typeof real === "string" &&
             real !== path) {
           // If node_modules/.bin/command is a symlink, determine the
