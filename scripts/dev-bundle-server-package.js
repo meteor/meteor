@@ -10,7 +10,7 @@ var packageJson = {
   dependencies: {
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-tool-package.js.
-    fibers: "https://github.com/meteor/node-fibers/tarball/df2c3f135f0f21bfd799eb7f8d33740c0cee6688",
+    fibers: "https://github.com/meteor/node-fibers/tarball/4e30aed9aba380a9f11cb6f1c51ebf535bd2875a",
     "meteor-promise": "0.8.7",
     promise: "8.0.2",
     reify: "0.20.12",
