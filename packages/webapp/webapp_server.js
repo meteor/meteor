@@ -869,14 +869,14 @@ function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname } = parseUrl(request.url);
+    const { pathname, search } = parseUrl(request.url);
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
       const prefixParts = getPathParts(pathPrefix);
       const pathParts = getPathParts(pathname);
       if (isPrefixOf(prefixParts, pathParts)) {
-        request.url = "/" + pathParts.slice(prefixParts.length).join("/");
+        request.url = "/" + pathParts.slice(prefixParts.length).join("/") + search;
         return next();
       }
     }
