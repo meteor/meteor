@@ -106,7 +106,7 @@ Provide a skeleton with mobile native configurations already in place such as `m
 
 ## DB
 ### Update MongoDB driver
-- Leaders: <you?>
+- Leaders: [Christian Klaussner](https://github.com/klaussner)
 - Status: -
 - PRs: https://github.com/meteor/meteor/pull/10723
 
