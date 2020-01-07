@@ -37,6 +37,19 @@ N/A
 
 ## v1.8.3, 2019-12-19
 
+### Migration Steps
+
+* If your application uses `blaze-html-templates`, the Meteor `jquery`
+  package will be automatically installed in your `.meteor/packages` file
+  when you update to Meteor 1.8.3. However, this new version of the Meteor
+  `jquery` package no longer bundles its own copy of the `jquery` npm
+  implementation, so you may need to install `jquery` from npm by running
+  ```sh
+  meteor npm i jquery
+  ```
+  in your application directory. Symptoms of not installing jquery include
+  a blank browser window, with helpful error messages in the console.
+
 ### Changes
 
 * Node has been updated to version
