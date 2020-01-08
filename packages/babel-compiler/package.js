@@ -6,7 +6,7 @@ Package.describe({
   // isn't possible because you can't publish a non-recommended
   // release with package versions that don't have a pre-release
   // identifier at the end (eg, -dev)
-  version: '7.5.0-rc190.3'
+  version: '7.5.0'
 });
 
 Npm.depends({
