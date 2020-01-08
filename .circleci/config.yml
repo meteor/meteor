@@ -128,9 +128,9 @@ jobs:
             - package-npm-deps-cache-group2-v3-
       - restore_cache:
           keys:
-            - v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
-            - v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
-            - v3-other-deps-cache-{{ .Branch }}-
+            - v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+            - v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
+            - v4-other-deps-cache-{{ .Branch }}-
       - restore_cache:
           keys:
             - v1-test-groups-{{ .Branch }}
@@ -756,7 +756,7 @@ jobs:
             - packages/fetch/.npm/package/node_modules
             - packages/non-core/mongo-decimal/.npm/package/node_modules
       - save_cache:
-          key: v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+          key: v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
           paths:
             - ".babel-cache"
             - ".meteor"
