@@ -19,7 +19,10 @@ N/A
   * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
   * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
 
-* The `fibers` npm package has been updated to version 4.0.2.
+* The `fibers` npm package has been updated to version 4.0.3, which
+  includes [changes](https://github.com/laverdet/node-fibers/pull/429)
+  that may drastically reduce garbage collection pressure resulting from
+  heavy `Fiber` usage.
 
 * The `pathwatcher` npm package has been updated to use a fork of version
   8.0.2, with [PR #128](https://github.com/atom/node-pathwatcher/pull/128)
