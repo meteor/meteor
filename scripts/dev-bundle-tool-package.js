@@ -12,15 +12,15 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "6.13.4",
     pacote: "https://github.com/meteor/pacote/tarball/6c03d5b9497d6c96c5e421a63bdf70b843657ae7",
-    "node-gyp": "5.0.1",
-    "node-pre-gyp": "0.13.0",
+    "node-gyp": "6.0.1",
+    "node-pre-gyp": "0.14.0",
     typescript: "3.7.3",
     "meteor-babel": "7.7.5",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
+    fibers: "4.0.3",
     reify: "0.20.12",
-    fibers: "3.1.1",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.7.6",
     // For backwards compatibility with isopackets that still depend on
@@ -36,11 +36,12 @@ var packageJson = {
     "graceful-fs": "4.2.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
-    kexec: "3.0.0",
-    "source-map": "0.5.7",
+    // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
+    // https://github.com/jprichardson/node-kexec/pull/37 applied.
+    kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
+    "source-map": "0.7.3",
     chalk: "0.5.1",
-    sqlite3: "3.1.8",
-    netroute: "1.0.2",
+    sqlite3: "4.1.0",
     "http-proxy": "1.16.2",
     "is-reachable": "3.1.0",
     "wordwrap": "0.0.2",

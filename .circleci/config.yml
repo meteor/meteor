@@ -61,7 +61,7 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: meteor/circleci:android-27-node-8
+    - image: meteor/circleci:android-27-node-12
   environment:
     # This multiplier scales the waitSecs for selftests.
     TIMEOUT_SCALE_FACTOR: 8
@@ -128,9 +128,9 @@ jobs:
             - package-npm-deps-cache-group2-v3-
       - restore_cache:
           keys:
-            - v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
-            - v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
-            - v3-other-deps-cache-{{ .Branch }}-
+            - v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+            - v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
+            - v4-other-deps-cache-{{ .Branch }}-
       - restore_cache:
           keys:
             - v1-test-groups-{{ .Branch }}
@@ -185,7 +185,6 @@ jobs:
               'add debugOnly and prodOnly packages' \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --headless \
-              --phantom
           no_output_timeout: 20m
       - run:
           name: "Running self-test (Custom Warehouse Tests)"
@@ -195,7 +194,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --with-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
@@ -232,7 +230,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/0.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -273,7 +270,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/1.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -314,7 +310,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/2.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -355,7 +350,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/3.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -396,7 +390,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/4.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -437,7 +430,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/5.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -478,7 +470,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/6.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -519,7 +510,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/7.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -560,7 +550,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/8.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -601,7 +590,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/9.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -642,7 +630,6 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --phantom \
               --junit ./tmp/results/junit/10.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 20m
@@ -669,14 +656,14 @@ jobs:
   Docs:
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
-      - image: circleci/node:8
+      - image: meteor/circleci:android-27-node-12
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
     steps:
       - run:
-          name: Cloning "meteor/docs" Repository's "master" branch
+          name: Cloning "meteor/docs" Repository's "update-to-meteor-1.9" branch
           command: |
-            git clone https://github.com/meteor/docs.git ${CHECKOUT_METEOR_DOCS}
+            git clone --branch update-to-meteor-1.9 https://github.com/meteor/docs.git ${CHECKOUT_METEOR_DOCS}
       # The "docs" repository normally brings in the Meteor code as a Git
       # submodule checked out into the "code" directory.  As the goal of this
       # test is to run it against the _current_ repository's code, we'll move
@@ -769,7 +756,7 @@ jobs:
             - packages/fetch/.npm/package/node_modules
             - packages/non-core/mongo-decimal/.npm/package/node_modules
       - save_cache:
-          key: v3-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+          key: v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
           paths:
             - ".babel-cache"
             - ".meteor"
