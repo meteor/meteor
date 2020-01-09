@@ -1,4 +1,42 @@
-## v.NEXT
+## v1.9, 2020-01-09
+
+### Breaking changes
+
+* Because Node.js 12 no longer supports 32-bit Linux, Meteor 1.9 has also
+  dropped support for 32-bit Linux. In other words, Meteor 1.9 supports
+  64-bit Mac, Windows, and Linux, as well as 32-bit Windows.
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  [12.14.0](https://nodejs.org/en/blog/release/v12.14.0/), which includes
+  several major Node.js versions since 8.17.0 (used by Meteor 1.8.3):
+  * [12.0.0](https://nodejs.org/en/blog/release/v12.0.0/)
+  * [11.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
+
+* The `fibers` npm package has been updated to version 4.0.3, which
+  includes [changes](https://github.com/laverdet/node-fibers/pull/429)
+  that may drastically reduce garbage collection pressure resulting from
+  heavy `Fiber` usage.
+
+* The `pathwatcher` npm package has been updated to use a fork of version
+  8.0.2, with [PR #128](https://github.com/atom/node-pathwatcher/pull/128)
+  applied.
+
+* The `sqlite3` npm package has been updated to version 4.1.0.
+
+* The `node-gyp` npm package has been updated to version 6.0.1, and
+  `node-pre-gyp` has been updated to version 0.14.0.
+
+* The feature that restarts the application up to two times if it crashes
+  on startup has been removed.
+  [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
+  [PR #10345](https://github.com/meteor/meteor/pull/10345)
 
 ## v1.8.3, 2019-12-19
 
