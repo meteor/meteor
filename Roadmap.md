@@ -25,7 +25,7 @@ Since Node.js 12 is scheduled to become the LTS version on October 1st, 2019, Me
 - Status: -
 - PRs: -
 
-Implement tree shaking / dead code elimination, which involves pruning the dependency tree while scanning imports in the `ImportScanner`. We believe it should be possible to treat values like `Meteor.isProduction` as constants during this process, and eliminate those branches if their conditions are false.
+Implement tree shaking / dead code elimination, which involves pruning the dependency tree while scanning imports in the `ImportScanner`. We believe it should be possible to treat values like `Meteor.isProduction` and `Meteor.isServer` as constants during this process, and eliminate those branches if their conditions are false (as in https://github.com/meteor/meteor/pull/10056).
 
 ### Service worker build target
 - Leaders: <you?>
