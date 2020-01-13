@@ -232,7 +232,7 @@ Function Add-Mongo {
   # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
   $mongo_filenames = @{
     windows_x86 = "mongodb-win32-i386-${MONGO_VERSION_32BIT}"
-    windows_x64 = "mongodb-win32-x86_64-2008plus-ssl-${MONGO_VERSION_64BIT}"
+    windows_x64 = "mongodb-win32-x86_64-2012plus-${MONGO_VERSION_64BIT}"
   }
 
   $previousCwd = $PWD

@@ -11,6 +11,12 @@ N/A
 
 ### Changes
 
+* The version of MongoDB used by Meteor in development has been updated
+  from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
+  from 3.2.7 to 3.4.0, thanks to [@klaussner](https://github.com/klaussner).
+  [Feature #361](https://github.com/meteor/meteor-feature-requests/issues/361)
+  [PR #10723](https://github.com/meteor/meteor/pull/10723)
+
 * Cordova was updated from version 7 to 9
   * cordova-lib from 7.1.0 to 9.0.1 [release notes](https://github.com/apache/cordova-lib/blob/master/RELEASENOTES.md)
   * cordova-common from 2.1.1 to 3.2.1 [release notes](https://github.com/apache/cordova-common/blob/master/RELEASENOTES.md)
