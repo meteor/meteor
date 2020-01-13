@@ -20,6 +20,11 @@ N/A
   [Feature #361](https://github.com/meteor/meteor-feature-requests/issues/361)
   [PR #10723](https://github.com/meteor/meteor/pull/10723)
 
+* The `npm` command-line tool used by the `meteor npm` command (and by
+  Meteor internally) has been updated to version 6.13.6, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.12-meteor) of its
+  `pacote` dependency has been updated to version 9.5.12.
+
 * Cordova was updated from version 7 to 9
   * cordova-lib from 7.1.0 to 9.0.1 [release notes](https://github.com/apache/cordova-lib/blob/master/RELEASENOTES.md)
   * cordova-common from 2.1.1 to 3.2.1 [release notes](https://github.com/apache/cordova-common/blob/master/RELEASENOTES.md)
