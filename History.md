@@ -21,6 +21,15 @@ N/A
   * cordova-plugin-splashscreen (included by mobile-experience > launch-screen) from 4.1.0 to 5.0.3 [release notes](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#503-may-09-2019)
   * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar) from 2.3.0 to 2.4.3 [release notes](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#243-jun-19-2019)
 
+* You can now pass an `--exclude-archs` option to the `meteor run` and
+  `meteor test` commands to temporarily disable building certain web
+  architectures. For example, `meteor run --exclude-archs web.browser.legacy`.
+  Multiple architectures should be separated by commas. This option can be
+  used to improve (re)build times if you're not actively testing the
+  excluded architectures during development.
+  [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
+  [PR #10824](https://github.com/meteor/meteor/pull/10824)
+
 ## v1.9, 2020-01-09
 
 ### Breaking changes
