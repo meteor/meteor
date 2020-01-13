@@ -210,13 +210,6 @@ exports.defineAutoTests = function() {
             });
           });
 
-          xit("should set application/woff for a .woff file", function(done) {
-            fetchFromLocalServer("/some-font.woff").then(function(response) {
-              expect(response.headers.get("Content-Type")).toEqual("application/woff");
-              done();
-            });
-          });
-
           it("should set application/octet-stream for files without an extension", function(done) {
             pendingOnAndroid();
 
@@ -238,7 +231,7 @@ exports.defineAutoTests = function() {
         WebAppLocalServer.resetToInitialState(done);
       });
 
-      it("should only serve the new verson after a page reload", function(done) {
+      it("should only serve the new version after a page reload", function(done) {
         WebAppLocalServer.onNewVersionReady(function() {
           expectVersionServedToEqual("version1", function() {
             WebAppLocalServer.simulatePageReload(function() {

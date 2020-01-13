@@ -1,6 +1,6 @@
 # `cordova-plugin-meteor-webapp` Development
 
-## Running iOS Tests
+## Setup
 
 1) Start with a cloned copy of the `cordova-plugin-meteor-webapp` repo:
 
@@ -16,14 +16,35 @@ cd cordova-plugin-meteor-webapp
 git submodule update --init --recursive
 ```
 
-3) Create a new test Cordova app:
+## Running npm Tests
+
+1) Install dependencies
+```
+npm install
+```
+
+2) Install devDependencies from package.json globally one by one
+```
+npm install -g xxx
+```
+
+Filipe: I'm not sure why it's only working when installed globally
+
+3) Run the tests
+```
+npm test
+```
+
+## Running iOS Tests
+
+1) Create a new test Cordova app:
 
 ```
 cd ~
 cordova create test-app
 ```
 
-4) Add the `cordova-plugin-meteor-webapp`, `cordova-plugin-meteor-webapp-tests`, and `cordova-plugin-test-framework` plugins:
+2) Add the `cordova-plugin-meteor-webapp`, `cordova-plugin-meteor-webapp-tests`, and `cordova-plugin-test-framework` plugins:
 
 ```
 cd test-app
@@ -32,13 +53,13 @@ cordova plugin add ../cordova-plugin-meteor-webapp/
 cordova plugin add ../cordova-plugin-meteor-webapp/tests
 ```
 
-5) Add the `ios` platform:
+3) Add the `ios` platform:
 
 ```
 cordova platform add ios
 ```
 
-6) Add a [`build.json`](https://cordova.apache.org/docs/en/latest/guide/platforms/ios/#using-buildjson) file to the root of your `test-app`, that includes your Apple Developer Team ID:
+4) Add a [`build.json`](https://cordova.apache.org/docs/en/latest/guide/platforms/ios/#using-buildjson) file to the root of your `test-app`, that includes your Apple Developer Team ID:
 
 ```json
 {
@@ -55,7 +76,7 @@ cordova platform add ios
 }
 ```
 
-7) Update the `test-app`'s `config.xml` to point to the test runner:
+5) Update the `test-app`'s `config.xml` to point to the test runner:
 
 Change
 
@@ -69,7 +90,7 @@ to
 <content src="cdvtests/index.html" />
 ```
 
-8) Run the tests on a device or using the iOS emulator:
+6) Run the tests on a device or using the iOS emulator:
 
 ```
 cordova emulate ios
