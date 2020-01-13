@@ -56,7 +56,18 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     // initializes faster. (Not recommended for production!)
     '--oplogSize', '8',
     '--replSet', replSetName,
-    '--noauth'
+    '--noauth',
+
+    // Starting with version 4.0.8/4.1.10, MongoDB performs a step down
+    // procedure if the primary receives a SIGTERM signal
+    // (https://jira.mongodb.org/browse/SERVER-38994). During this procedure,
+    // the process doesn't shut down for up to ten seconds until a secondary
+    // becomes the new primary. Since Meteor starts a single-node replica set,
+    // this is unnecessary because there are no secondaries. The following
+    // parameter disables the step down. This will be the default for single-
+    // node replica sets in MongoDB 4.3 (relevant commit: https://git.io/JeNkT),
+    // so the parameter can be removed in the future.
+    '--setParameter', 'waitForStepDownOnNonCommandShutdown=false'
   ];
 
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
