@@ -11,6 +11,9 @@ N/A
 
 ### Changes
 
+* Node.js has been updated to version
+  [12.14.1](https://nodejs.org/en/blog/release/v12.14.1/).
+
 * The version of MongoDB used by Meteor in development has been updated
   from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
   from 3.2.7 to 3.4.0, thanks to [@klaussner](https://github.com/klaussner).
