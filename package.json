@@ -53,7 +53,7 @@
     "@babel/plugin-proposal-decorators": "7.8.3",
     "@babel/plugin-syntax-decorators": "7.8.3",
     "d3": "4.13.0",
-    "fibers": "4.0.2",
+    "fibers": "4.0.3",
     "meteor-promise": "0.8.7",
     "mocha": "6.1.4",
     "promise": "8.0.3",
