@@ -5,10 +5,10 @@ set -u
 
 UNAME=$(uname)
 ARCH=$(uname -m)
-NODE_VERSION=12.14.0
+NODE_VERSION=12.14.1
 MONGO_VERSION_64BIT=4.2.1
 MONGO_VERSION_32BIT=3.2.22
-NPM_VERSION=6.13.4
+NPM_VERSION=6.13.6
 
 # If we built Node from source on Jenkins, this is the build number.
 NODE_BUILD_NUMBER=
