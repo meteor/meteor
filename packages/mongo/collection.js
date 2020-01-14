@@ -372,7 +372,7 @@ Object.assign(Mongo.Collection, {
       removed: function (id) {
         sub.removed(collection, id);
       }
-    });
+    }, { nonMutatingCallbacks: true });
 
     // We don't call sub.ready() here: it gets called in livedata_server, after
     // possibly calling _publishCursor on multiple returned cursors.

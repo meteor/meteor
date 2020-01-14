@@ -49,6 +49,11 @@ N/A
 
 * The `typescript` npm package has been updated to version 3.7.4.
 
+* `cursor.observeChanges` now accepts a second options argument.
+  If your observer functions do not mutate the passed arguments, you can specify
+  `{ nonMutatingCallbacks: true }`, which improves performance by reducing
+  the amount of data copies.
+
 ## v1.9, 2020-01-09
 
 ### Breaking changes
