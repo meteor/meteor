@@ -128,7 +128,7 @@ Improve index support for Minimongo to enable better performance in the client f
 Provide a nice and friendly introduction for people that are learning Meteor.
 
 ### Update Blaze Tutorial
-- Leaders: <you?>
+- Leaders: [Jan Küster](https://github.com/jankapunkt), [Harry Adel](https://github.com/harryadelb)
 - Status: -
 - PRs: -
 
