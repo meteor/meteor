@@ -44,6 +44,11 @@ N/A
   [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
   [PR #10824](https://github.com/meteor/meteor/pull/10824)
 
+* The `meteor-babel` npm package has been updated to version 7.8.0,
+  corresponding to version 7.8.3 for most `@babel/*` packages.
+
+* The `typescript` npm package has been updated to version 3.7.4.
+
 ## v1.9, 2020-01-09
 
 ### Breaking changes
