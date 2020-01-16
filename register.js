@@ -13,6 +13,7 @@ var config = {
   sourceMapRootPath: null,
   cacheDirectory: process.env.BABEL_CACHE_DIR,
   allowedDirectories: Object.create(null),
+  excludedFiles: Object.create(null),
   babelOptions: null
 };
 
@@ -46,6 +47,11 @@ exports.allowDirectory = function (dir) {
   // real path, and thus may not appear to be contained by an allowed
   // directory, even though it should be.
   config.allowedDirectories[fs.realpathSync(dir)] = true;
+  return exports;
+};
+
+exports.excludeFile = function (path) {
+  config.excludedFiles[fs.realpathSync(path)] = true;
   return exports;
 };
 
@@ -118,6 +124,11 @@ function shouldNotTransform(filename) {
       path.normalize(filename)) {
     // If the filename is not absolute, then it's a file in a core Node
     // module, and should not be transformed.
+    return true;
+  }
+
+  // Check if we have explicitly excluded this file.
+  if (config.excludedFiles[filename] === true) {
     return true;
   }
 

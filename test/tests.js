@@ -387,6 +387,20 @@ describe("meteor-babel", () => {
       result.code,
     );
   });
+
+  it("should support meteorBabel.excludeFile", async () => {
+    import { getCodeAsync } from "./not-transformed.js";
+    assert.strictEqual(await getCodeAsync(), [
+      '// This file is excluded from transformation in ./register.js.',
+      'const rawCode = String(arguments.callee);',
+      'exports.getCodeAsync = async function () {',
+      '  return await rawCode.slice(',
+      '    rawCode.indexOf("{") + 1,',
+      '    rawCode.lastIndexOf("}"),',
+      '  ).replace(/^\\s+|\\s+$/g, "");',
+      '};',
+    ].join("\n"))
+  });
 });
 
 describe("Babel", function() {

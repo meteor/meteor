@@ -23,4 +23,5 @@ require("../register")
   .allowDirectory(meteorBabelTestPath)
   // Needed by the d3 test in ../test/tests.js:
   .allowDirectory(path.join(meteorBabelPath, "node_modules", "d3"))
+  .excludeFile(path.join(meteorBabelTestPath, "./not-transformed.js"))
   .setBabelOptions(babelOptions);
