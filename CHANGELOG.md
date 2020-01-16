@@ -9,3 +9,11 @@ It makes cordova-plugin-meteor-webapp ready for Cordova 9.
 - declares xcode as npm dependency
 - updates dev dependencies
 - updates DEVELOPMENT.md
+
+This version should be used for apps running Meteor 1.10 forward.
+
+## v1.7.4, 2020-01-16
+We didn't had a tag for 1.7.0 that was the last version before the updates for 
+Cordova 9 then we published 1.7.4 from this revision d5a7377c.
+
+This version should be used for apps running Meteor 1.9 or previous versions.
