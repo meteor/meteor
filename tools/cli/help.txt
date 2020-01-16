@@ -103,9 +103,6 @@ Options:
                    version constraints.
   --extra-packages Run with additional packages (comma separated, for example:
                    --extra-packages "package-name1, package-name2@1.2.3")
-  --exclude-archs  Don't create bundles for certain web architectures
-                  (comma separated, for example:
-                   --exclude-archs "web.browser.legacy, web.cordova")
 
 >>> debug
 Run the project with server-side debugging enabled.
@@ -716,9 +713,6 @@ Options:
   --driver-package  Name of the optional test driver package to use to run
                     tests and display results. For example:
                     --driver-package practicalmeteor:mocha
-  --exclude-archs   Don't create test bundles for certain web architectures
-                    (comma separated, for example:
-                    --exclude-archs "web.browser.legacy, web.cordova")
 
 >>> self-test
 Run tests of the 'meteor' tool.
