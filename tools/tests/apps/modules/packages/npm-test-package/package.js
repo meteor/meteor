@@ -10,8 +10,7 @@ Package.describe({
 
 Npm.depends({
   "cheerio": "0.22.0",
-  // This includes the lodash package
-  "babel-plugin-angularjs-annotate": "0.10.0"
+  "@sebak/lodashuser": "1.0.0",
 });
 
 Package.onUse(function(api) {

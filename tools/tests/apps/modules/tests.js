@@ -556,6 +556,14 @@ describe("Meteor packages", () => {
     );
   });
 
+  it("should resolve local npm package if requested from another npm package", () => {
+    assert.strictEqual(
+      testPackage.lodashUser.lodashVersion,
+      "4.17.15", // global version = 4.16.6
+    );
+  });
+
+
   it("should resolve app npm package if not mentioned in Npm.depends", () => {
     assert.strictEqual(
       testPackage.lodashPath,
