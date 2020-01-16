@@ -25,6 +25,7 @@ Package.onUse(function(api) {
 
 Package.onTest(function (api) {
   api.use("ecmascript");
+  api.use("meteortesting:mocha@1.1.2")
   api.use("tinytest");
   api.use("modules-test-package");
   api.mainModule("tests.js");

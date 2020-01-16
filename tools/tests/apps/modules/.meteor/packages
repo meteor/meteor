@@ -28,3 +28,4 @@ import-local-json-module
 akryum:vue-component
 dummy-compiler
 typescript@3.7.2
+npm-test-package

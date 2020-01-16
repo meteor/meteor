@@ -542,6 +542,38 @@ describe("Meteor packages", () => {
     assert.strictEqual(array[1], array);
     assert.strictEqual(array[2], Infinity);
   });
+
+  import * as testPackage from 'meteor/npm-test-package';
+
+  it("should resolve local npm package if mentioned in Npm.depends", () => {
+    assert.strictEqual(
+      testPackage.cheerioPath,
+      "/node_modules/meteor/npm-test-package/node_modules/cheerio/index.js",
+    );
+    assert.strictEqual(
+      testPackage.cheerio.version,
+      "0.22.0", // global version = 0.20.0
+    );
+  });
+
+  it("should resolve app npm package if not mentioned in Npm.depends", () => {
+    assert.strictEqual(
+      testPackage.lodashPath,
+      "/node_modules/lodash/lodash.js",
+    );
+    assert.strictEqual(
+      testPackage.lodash.VERSION,
+      "4.16.6", // package local version = 4.17.15
+    );
+  });
+
+  it("should not resolve if not mentioned in Npm.depends", () => {
+    assert.strictEqual(
+      testPackage.hasFlagPath,
+      ImportedMeteor.isServer ? "has-flag" : undefined,
+    );
+  });
+
 });
 
 describe("symlinking node_modules", () => {
