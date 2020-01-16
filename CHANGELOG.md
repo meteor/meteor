@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v1.7.3, 2020-01-16
+Fixes missing GCDWebServer code
+
 ## v1.7.1, 2020-01-13
 It makes cordova-plugin-meteor-webapp ready for Cordova 9.
 - changes context.requireCordovaModule to require for non-Cordova modules
