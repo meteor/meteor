@@ -251,12 +251,10 @@ function eachResource({
 }
 
 function sizeCheck() {
-  const RESOURCE_SIZE_LIMIT = 5 * 1024 * 1024; // 5MB
-  const largeSizes = [ // Check size of each known architecture independently.
+  const sizes = [ // Check size of each known architecture independently.
     "web.browser",
     "web.browser.legacy",
-  ].filter((arch) => !!WebApp.clientPrograms[arch])
-  .map((arch) => {
+  ].reduce((filt, arch) => {
     let totalSize = 0;
 
     WebApp.clientPrograms[arch].manifest.forEach(resource => {
@@ -267,21 +265,22 @@ function sizeCheck() {
       }
     });
 
-    return {
-      arch,
-      size: totalSize,
+    if (totalSize > 5 * 1024 * 1024) {
+      filt.push({
+        arch,
+        size: totalSize
+      });
     }
-  })
-  .filter(({ size }) => size > RESOURCE_SIZE_LIMIT);
-
-  if (largeSizes.length > 0) {
+    return filt;
+  }, []);
+  if (sizes.length > 0) {
     Meteor._debug([
       "** You are using the appcache package, but the size of",
       "** one or more of your cached resources is larger than",
       "** the recommended maximum size of 5MB which may break",
       "** your app in some browsers!",
       "** ",
-      ...largeSizes.map(data => `** ${data.arch}: ${(data.size / 1024 / 1024).toFixed(1)}MB`),
+      ...sizes.map(data => `** ${data.arch}: ${(data.size / 1024 / 1024).toFixed(1)}MB`),
       "** ",
       "** See http://docs.meteor.com/#appcache for more",
       "** information and fixes."

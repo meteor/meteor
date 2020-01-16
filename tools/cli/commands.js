@@ -162,16 +162,6 @@ export function parseRunTargets(targets) {
   });
 };
 
-const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
-function filterWebArchs(webArchs, excludeArchsOption) {
-  if (excludeArchsOption) {
-    const excludeArchs = excludeArchsOption.trim().split(/\s*,\s*/)
-      .filter(arch => excludableWebArchs.includes(arch));
-    webArchs = webArchs.filter(arch => !excludeArchs.includes(arch));
-  }
-  return webArchs;
-}
-
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
 ///////////////////////////////////////////////////////////////////////////////
@@ -328,8 +318,7 @@ var runCommandOptions = {
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
     'allow-incompatible-update': { type: Boolean },
-    'extra-packages': { type: String },
-    'exclude-archs': { type: String }
+    'extra-packages': { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -410,7 +399,6 @@ function doRunCommand(options) {
       webArchs.push("web.cordova");
     }
   }
-  webArchs = filterWebArchs(webArchs, options['exclude-archs']);
 
   let cordovaRunner;
   if (!_.isEmpty(runTargets)) {
@@ -1647,9 +1635,7 @@ testCommandOptions = {
     // For 'test-packages': Run in "full app" mode
     'full-app': { type: Boolean, 'default': false },
 
-    'extra-packages': { type: String },
-
-    'exclude-archs': { type: String }
+    'extra-packages': { type: String }
   }
 };
 
@@ -1992,11 +1978,6 @@ var runTestAppForPackages = function (projectContext, options) {
     minifyMode: options.production ? 'production' : 'development'
   };
   buildOptions.buildMode = "test";
-  let webArchs = projectContext.platformList.getWebArchs();
-  if (options.cordovaRunner) {
-    webArchs.push("web.cordova");
-  }
-  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs']);
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.

@@ -402,12 +402,6 @@ WebAppInternals.staticFilesMiddleware = async function (
     identifyBrowser(req.headers["user-agent"]),
   );
 
-  if (! hasOwn.call(WebApp.clientPrograms, arch)) {
-    // We could come here in case we run with some architectures excluded
-    next();
-    return;
-  }
-
   // If pauseClient(arch) has been called, program.paused will be a
   // Promise that will be resolved when the program is unpaused.
   const program = WebApp.clientPrograms[arch];
@@ -990,19 +984,6 @@ function runWebAppServer() {
         parseRequest(req).pathname,
         request.browser,
       );
-
-      if (! hasOwn.call(WebApp.clientPrograms, arch)) {
-        // We could come here in case we run with some architectures excluded
-        headers['Cache-Control'] = 'no-cache';
-        res.writeHead(404, headers);
-        if (Meteor.isDevelopment) {
-          res.end(`No client program found for the ${arch} architecture.`);
-        } else {
-          // Safety net, but this branch should not be possible.
-          res.end("404 Not Found");
-        }
-        return;
-      }
 
       // If pauseClient(arch) has been called, program.paused will be a
       // Promise that will be resolved when the program is unpaused.
