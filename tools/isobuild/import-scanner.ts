@@ -692,15 +692,17 @@ export default class ImportScanner {
     checkProperty("bare");
 
     function getChunk(file: File) {
-      const consumer = file.sourceMap &&
-        Promise.await(new SourceMapConsumer(file.sourceMap));
-      const node = consumer &&
-        SourceNode.fromStringWithSourceMap(
+      if (file.sourceMap) {
+        const consumer = Promise.await(new SourceMapConsumer(file.sourceMap));
+        const node = SourceNode.fromStringWithSourceMap(
           scanner.getDataString(file),
           consumer
         );
-      consumer.destroy();
-      return node || scanner.getDataString(file);
+        consumer.destroy();
+        return node;
+      } else {
+        return scanner.getDataString(file);
+      }
     }
 
     const {
