@@ -228,6 +228,8 @@ selftest.define("run errors", function () {
 
 selftest.define("handle requests with large headers", function() {
   const sandbox = new Sandbox();
+  sandbox.env.NODE_OPTIONS = '--max-http-header-size=8192';
+
   sandbox.createApp('myapp', 'standard-app');
   sandbox.cd('myapp');
   sandbox.append('.meteor/packages', 'browser-policy\n');
