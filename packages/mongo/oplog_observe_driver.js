@@ -55,7 +55,7 @@ OplogObserveDriver = function (options) {
     //                      the empty buffer in STEADY phase implies that the
     //                      everything that matches the queries selector fits
     //                      into published set.
-    // - _published - Min Heap (also implements IdMap methods)
+    // - _published - Max Heap (also implements IdMap methods)
 
     var heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;

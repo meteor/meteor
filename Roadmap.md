@@ -25,7 +25,7 @@ Since Node.js 12 is scheduled to become the LTS version on October 1st, 2019, Me
 - Status: -
 - PRs: -
 
-Implement tree shaking / dead code elimination, which involves pruning the dependency tree while scanning imports in the `ImportScanner`. We believe it should be possible to treat values like `Meteor.isProduction` as constants during this process, and eliminate those branches if their conditions are false.
+Implement tree shaking / dead code elimination, which involves pruning the dependency tree while scanning imports in the `ImportScanner`. We believe it should be possible to treat values like `Meteor.isProduction` and `Meteor.isServer` as constants during this process, and eliminate those branches if their conditions are false (as in https://github.com/meteor/meteor/pull/10056).
 
 ### Service worker build target
 - Leaders: <you?>
@@ -55,14 +55,14 @@ Related issues:
 * [PR #10238](https://github.com/meteor/meteor/pull/10238)
 
 ### Page load performance improvements
-- Leaders: <you?>
+- Leaders: [Seba Kerckhof](https://github.com/sebakerckhof)
 - Status: -
 - PRs: -
 
 Make sure we are not delivering any dependency that is not used ([Issue #10701](https://github.com/meteor/meteor/issues/10701), [Issue #10702](https://github.com/meteor/meteor/issues/10702), [Issue #10704](https://github.com/meteor/meteor/issues/10704), [PR #10792](https://github.com/meteor/meteor/pull/10792))
 
 ### Improve Rebuild performance
-- Leaders: [zodern](https://github.com/zodern)
+- Leaders: [zodern](https://github.com/zodern) / [Marcelo T Prado](https://github.com/MarceloPrado)
 - Status: -
 - PRs: -
 
@@ -106,7 +106,7 @@ Provide a skeleton with mobile native configurations already in place such as `m
 
 ## DB
 ### Update MongoDB driver
-- Leaders: <you?>
+- Leaders: [Christian Klaussner](https://github.com/klaussner)
 - Status: -
 - PRs: https://github.com/meteor/meteor/pull/10723
 
@@ -128,7 +128,7 @@ Improve index support for Minimongo to enable better performance in the client f
 Provide a nice and friendly introduction for people that are learning Meteor.
 
 ### Update Blaze Tutorial
-- Leaders: <you?>
+- Leaders: [Jan Küster](https://github.com/jankapunkt), [Harry Adel](https://github.com/harryadelb)
 - Status: -
 - PRs: -
 
@@ -156,7 +156,7 @@ React tutorial should reflect latest best practices for using Meteor and React t
 Provide a skeleton with PWA configurations already in place such as `manifest`, service worker, Open Graph meta tags, etc. Also improve docs and guide.
 
 ### SSR documentation
-- Leaders: <you?>
+- Leaders: [Kevin Newman](https://github.com/CaptainN)
 - Status: -
 - PRs: -
 
@@ -185,12 +185,12 @@ as we already have for Blaze, React and Angular.
 - PRs: -
 
 ### Svelte
-- Leaders: <you?>
+- Leaders: [Kevin Newman](https://github.com/CaptainN)
 - Status: -
 - PRs: -
 
 ### React Native
-- Leaders: <you?>
+- Leaders: [Kevin Newman](https://github.com/CaptainN)
 - Status: -
 - PRs: -
 
@@ -198,6 +198,18 @@ as we already have for Blaze, React and Angular.
 - Leaders: <you?>
 - Status: -
 - PRs: -
+
+### Third-party tools with their own build steps
+
+- Leaders: <you?>
+- Status: -
+- PRs: -
+
+Remove limitations that prevent using third-party tools with their own build steps, such as Storybook or Jest.
+
+Relevant discussions:
+- https://github.com/meteor/meteor/pull/10811#issuecomment-564726713
+- https://github.com/storybookjs/storybook/issues/5975
 
 ## Recently completed
 

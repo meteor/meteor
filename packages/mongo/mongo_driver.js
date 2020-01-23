@@ -140,8 +140,8 @@ MongoConnection = function (url, options) {
     // default), with each attempt separated by 1000ms.
     reconnectTries: Infinity,
     ignoreUndefined: true,
-    // Required to silence deprecation warnings with mongodb@3.1.1.
-    useNewUrlParser: true,
+    // Required to silence deprecation warnings with mongodb@3.2.1.
+    useUnifiedTopology: true,
   }, Mongo._connectionOptions);
 
   // Disable the native parser by default, unless specifically enabled
