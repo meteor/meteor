@@ -3,6 +3,8 @@ subtitle: The Official Guide
 github_repo: meteor/guide
 content_root: content
 versions:
+  - '1.8'
+  - '1.7'
   - '1.6'
   - '1.5'
   - '1.4'
@@ -15,7 +17,7 @@ sidebar_categories:
     - index
     - code-style
     - structure
-    - 1.6-migration
+    - 1.7-migration
   Data:
     - collections
     - data-loading
@@ -28,6 +30,7 @@ sidebar_categories:
     - blaze
     - react
     - angular
+    - vue
   Build:
     - atmosphere-vs-npm
     - using-atmosphere-packages

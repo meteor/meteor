@@ -107,7 +107,7 @@ You can then access these files from the client from a URL `/packages/username_m
 
 <h2 id="exporting">Exporting</h2>
 
-While some packages exist just to provide side effects to the app, most packages provide a reusable bit of code that can be used by the consumer with `import`. To export a symbol from your package, simply use the ES2015 `export` syntax in your `mainModule`:
+While some packages exist just to provide side effects to the app, most packages provide a reusable bit of code that can be used by the consumer with `import`. To export a symbol from your package, use the ES2015 `export` syntax in your `mainModule`:
 
 ```js
 // in my-package.js:
@@ -167,6 +167,24 @@ api.use([
 ]);
 ```
 
+Additionally, you can call `api.versionsFrom(<release>)` multiple times, or with
+an array (eg `api.versionsFrom([<release1>, <release2>])`. Meteor will interpret
+this to mean that the package will work with packages from all the listed releases.
+
+```js
+api.versionsFrom('1.2.1');
+api.versionsFrom('1.4');
+api.versionsFrom('1.8');
+
+// or
+
+api.versionsFrom(['1.2.1', '1.4', '1.8']);
+```
+
+This usually isn't necessary, but can help in cases where you support more than 
+one major version of a core package.
+
+
 <h4 id="version-constraints">Semantic versioning and version constraints</h4>
 
 Meteor's package system relies heavily on [Semantic Versioning](http://semver.org/), or SemVer. When one package declares a dependency on another, it always comes with a version constraint. These version constraints are then solved by Meteor's industrial-grade Version Solver to arrive at a set of package versions that meet all of the requirements, or display a helpful error if there is no solution.
@@ -180,6 +198,16 @@ The constraint solver is necessary because Meteor's package system is **single-l
 
 Note that the version solver also has a concept of "gravity" - when many solutions are possible for a certain set of dependencies, it always selects the oldest possible version. This is helpful if you are trying to develop a package to ship to lots of users, since it ensures your package will be compatible with the lowest common denominator of a dependency. If your package needs a newer version than is currently being selected for a certain dependency, you need to update your `package.js` to have a newer version constraint.
 
+If your package supports multiple major versions of a dependency, you can supply
+both versions to `api.use` like so:
+
+```js
+api.use('blaze@1.0.0 || 2.0.0');
+```
+
+Meteor will use whichever major version is compatible with your other packages, 
+or the most recent of the options given.
+
 <h3 id="npm-dependencies">npm dependencies</h3>
 
 Meteor packages can include [npm packages](https://www.npmjs.com/) to use JavaScript code from outside the Meteor package ecosystem or to include JavaScript code with native dependencies. Use [Npm.depends](http://docs.meteor.com/#/full/Npm-depends) at the top level of your `package.js` file. For example, here's how you would include the `github` npm package:
@@ -187,6 +215,14 @@ Meteor packages can include [npm packages](https://www.npmjs.com/) to use JavaSc
 ```js
 Npm.depends({
   github: '0.2.4'
+});
+```
+
+If you want to use a local npm package, for example during development, you can give a directory instead of a version number:
+
+```js
+Npm.depends({
+  my-package: 'file:///home/user/npms/my-package'
 });
 ```
 
@@ -231,7 +267,7 @@ Read more about using Cordova in the [mobile guide](mobile.html).
 Meteor has a test mode for packages called `meteor test-packages`. If you are in a package's directory, you can run
 
 ```bash
-meteor test-packages ./ --driver-package practicalmeteor:mocha
+meteor test-packages ./ --driver-package meteortesting:mocha
 ```
 
 This will run a special app containing only a "test" version of your package and start a Mocha [test driver package](testing.html#driver-packages).
@@ -245,7 +281,7 @@ Package.onTest(function(api) {
   api.use('my-package');
 
   // You should also include any packages you need to use in the test code
-  api.use(['ecmascript', 'random', 'practicalmeteor:mocha']);
+  api.use(['ecmascript', 'random', 'meteortesting:mocha']);
 
   // Finally add an entry point for tests
   api.mainModule('my-package-tests.js');
@@ -278,7 +314,7 @@ A Meteor app can load Atmosphere packages in one of three ways, and it looks for
 
 1. Package source code in the `packages/` directory inside your app.
 2. Package source code in directories indicated by setting a `METEOR_PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `METEOR_PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
- > Note: Prior to Meteor 1.4.2, `METEOR_PACKAGE_DIRS` was simply `PACKAGE_DIRS`.  For compatibility reasons, developers should use `METEOR_PACKAGE_DIRS` going forward.
+ > Note: Prior to Meteor 1.4.2, `METEOR_PACKAGE_DIRS` was `PACKAGE_DIRS`.  For compatibility reasons, developers should use `METEOR_PACKAGE_DIRS` going forward.
 3. Pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
 
 You can use (1) or (2) to override the version from Atmosphere. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.

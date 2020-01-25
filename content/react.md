@@ -23,7 +23,7 @@ To get started with React in Meteor, you can follow along the [React tutorial](h
 
 <h3 id="using-with-meteor">Installing and using React</h3>
 
-To install React in Meteor 1.3 you should simply add it as an npm dependency:
+To install React in Meteor 1.3 you should add it as an npm dependency:
 
 ```sh
 meteor npm install --save react react-dom
@@ -129,7 +129,7 @@ Note that there a few caveats:
 
 <h4 id="passing-callbacks-from-blaze">Passing callbacks to a React component</h4>
 
-To pass a callback to a React component that you are including with this helper, simply make a [template helper that returns a function](http://blazejs.org/guide/reusable-components.html#Pass-callbacks), and pass it in as a prop, like so:
+To pass a callback to a React component that you are including with this helper, make a [template helper that returns a function](http://blazejs.org/guide/reusable-components.html#Pass-callbacks), and pass it in as a prop, like so:
 
 ```js
 Template.userDisplay.helpers({
@@ -157,9 +157,9 @@ To use it in Blaze:
 
 <h3 id="blaze-in-react">Blaze Templates in React</h3>
 
-Just like we can use React components in Blaze templates, we can also use Blaze templates in React components.  This is similarly useful for a gradual transition strategy; but more importantly, it allows us to continue to use the multitude of Atmosphere packages built for Blaze in our React projects, as well as core packages like `accounts-ui`.
+We can also use Blaze templates in React components.  This is similarly useful for a gradual transition strategy; but more importantly, it allows us to continue to use the multitude of Atmosphere packages built for Blaze in our React projects, as well as core packages like `accounts-ui`.
 
-One easy way to do this is with the [`gadicc:blaze-react-component`](https://atmospherejs.com/gadicc/blaze-react-component) package.  First run `meteor add gadicc:blaze-react-component`, then import and use it in your components as follows:
+One way to do this is with the [`gadicc:blaze-react-component`](https://atmospherejs.com/gadicc/blaze-react-component) package.  First run `meteor add gadicc:blaze-react-component`, then import and use it in your components as follows:
 
 ```jsx
 import React from 'react';
@@ -196,9 +196,9 @@ Once installed, you'll be able to import the `withTracker` function, which allow
 
 For example, in the Todos example app, we have a `ListPage` component, which renders list metadata and the tasks in the list. In order to do so, it needs to [subscribe](data-loading.html#subscriptions) to the `todos.inList` publication, check that subscription's readiness, then fetch the list of todos from the `Todos` collection.
 
-It also needs to be responsive to reactive changes in the state of those actions (for instance if a todo changes due to the action of another user). All this data loading complexity is a typical use-case for a container-presentational component split, and the `withTracker` function makes it simple to do this.
+It also needs to be responsive to reactive changes in the state of those actions (for instance if a todo changes due to the action of another user). All this data loading complexity is a typical use-case for a container-presentational component split, and the `withTracker` function makes this possible.
 
-We simply define the `ListPage` component as a presentational component that expects its data to be passed in using React `props`:
+We define the `ListPage` component as a presentational component that expects its data to be passed in using React `props`:
 
 ```jsx
 import React from 'react';
@@ -215,7 +215,7 @@ ListPage.propTypes = {
 };
 ```
 
-Then we create a `ListPageContainer` container component which wraps it and provides a data source:
+Then we create a container component which wraps it and provides a data source:
 
 ```js
 import { Meteor } from 'meteor/meteor';
@@ -223,7 +223,7 @@ import { Lists } from '../../api/lists/lists.js';
 import { withTracker } from 'meteor/react-meteor-data';
 import ListPage from '../pages/ListPage.js';
 
-export default ListPageContainer = withTracker(({ id }) => {
+const ListPageContainer = withTracker(({ id }) => {
   const todosHandle = Meteor.subscribe('todos.inList', id);
   const loading = !todosHandle.ready();
   const list = Lists.findOne(id);
@@ -235,9 +235,26 @@ export default ListPageContainer = withTracker(({ id }) => {
     todos: listExists ? list.todos().fetch() : [],
   };
 })(ListPage);
+
+export default ListPageContainer;
 ```
 
-It's a good habit to name your container exactly like the component that it wraps, with the word “Container” tacked onto the end. This way, when you're attempting to track down issues in your code, it makes it much easier to locate the appropriate files/classes.
+If you're subscribing to multiple publications, you can create an array of handles and use [`some`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/some) to determine if any is loading:
+
+```js
+export default withTracker(({ id }) => {
+  const handles = [
+    Meteor.subscribe('todos.inList', id),
+    Meteor.subscribe('otherSub'),
+  ];
+  const loading = handles.some(handle => !handle.ready());
+  return {
+    loading,
+  };
+})(ListPage);
+```
+
+It's a good habit to name your container exactly like the component that it wraps, with the word “Container” tacked onto the end (eg `ListPageContainer`). This way, when you're attempting to track down issues in your code, it makes it much easier to locate the appropriate files/classes.
 
 The container component created by `withTracker` will reactively re-render the wrapped component in response to any changes to [reactive data sources](https://atmospherejs.com/meteor/tracker) accessed from inside the function provided to it.
 
@@ -249,17 +266,63 @@ Although this `ListPageContainer` container is intended to be instantiated by th
 
 <h3 id="preventing-rerenders">Preventing re-renders</h3>
 
-Sometimes changes in your data can trigger re-computations which you know won't affect your UI. Although React is in general quite efficient in the face of unnecessary re-renders, if you need to control re-rendering, the above pattern allows you to easily use React's [`shouldComponentUpdate`](https://facebook.github.io/react/docs/component-specs.html#updating-shouldcomponentupdate) on the presentational component to avoid re-renders.
+Sometimes changes in your data can trigger re-computations which you know won't affect your UI. Although React is in general quite efficient in the face of unnecessary re-renders, if you need to control re-rendering, the above pattern allows you to use React's [`shouldComponentUpdate`](https://facebook.github.io/react/docs/component-specs.html#updating-shouldcomponentupdate) on the presentational component to avoid re-renders.
 
 <h2 id="routing">Routing</h2>
 
 Although there are many solutions for routing with Meteor and React, react-router is one of the most popular packages right now. Before you continue, we recommend consulting our [Routing article](routing.html) for some general principles of routing in Meteor before writing your app.
 
-- [`react-router`](https://www.npmjs.com/package/react-router) is a React-specific router very popular in the React community. It can also be used easily with Meteor.
+- [`react-router`](https://www.npmjs.com/package/react-router) is a React-specific router very popular in the React community. It can also be used with Meteor.
+
+<h3 id="using-flow-router">Flow Router</h3>
+
+Using Flow Router with React is very similar to using it with Blaze. The only difference is that in your route actions, you should use the [`react-mounter`](https://www.npmjs.com/package/react-mounter) package to mount components with a layout. Once you `meteor npm install --save react-mounter`, you can do the following:
+
+```js
+import React from 'react';
+import { FlowRouter } from 'meteor/kadira:flow-router';
+import { mount } from 'react-mounter';
+
+import AppContainer from '../../ui/containers/AppContainer.js';
+import ListPageContainer from '../../ui/containers/ListPageContainer.js';
+
+
+FlowRouter.route('/lists/:_id', {
+  name: 'Lists.show',
+  action() {
+    mount(AppContainer, {
+      main: <ListPageContainer/>,
+    });
+  },
+});
+```
+
+Note that `react-mounter` automatically mounts the layout component on a `#react-root` node, which you can change by using the `withOptions()` function.
+
+In the below example, your `App` component would receive a `main` prop with a instantiated React Element to render:
+
+```js
+const App = (props) => (
+  <div>
+    <section id="menu"><..></section>
+    {props.main}
+  </div>
+);
+
+const AppContainer = withTracker(props => {
+  // props here will have `main`, passed from the router
+  // anything we return from this function will be *added* to it
+  return {
+    user: Meteor.user(),
+  };
+})(App);
+
+export default AppContainer;
+```
 
 <h3 id="using-react-router">React Router</h3>
 
-Using React Router is also straightforward. Once you `meteor npm install --save react-router history`, you can simply export a list of nested routes as you would in any other React Router driven React application:
+Using React Router is also straightforward. Once you `meteor npm install --save react-router history`, you can export a list of nested routes as you would in any other React Router driven React application:
 
 ```js
 import React from 'react';

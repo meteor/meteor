@@ -18,7 +18,7 @@ After reading this guide, you'll know:
 
 <h2 id="introduction">Meteor Cordova integration</h2>
 
-Meteor integrates with [Cordova](https://cordova.apache.org), a well-known Apache open source project, to build mobile apps from the same codebase you use to create regular web apps. With the Cordova integration in Meteor, you can take your existing app and run it on an iOS or Android device with a few simple commands.
+Meteor integrates with [Cordova](https://cordova.apache.org), a well-known Apache open source project, to build mobile apps from the same codebase you use to create regular web apps. With the Cordova integration in Meteor, you can take your existing app and run it on an iOS or Android device with a few commands.
 
 A Cordova app is a web app written using HTML, CSS, and JavaScript as usual, but it runs in a [web view](#what-environment) embedded in a native app instead of in a stand-alone mobile browser. An important benefit of packaging up your web app as a Cordova app is that all your assets are bundled with the app. This ensures your app will load faster than a web app running on a remote server could, which can make a huge difference for users on slow mobile connections. Another feature of the Cordova integration in Meteor is support for [hot code push](#hot-code-push), which allows you to update your app on users' devices without going through the usual app store review process.
 
@@ -35,6 +35,8 @@ Because a Cordova app is  a web app, this means you use standard web elements to
 With Meteor, there is no need to install Cordova yourself, or use the `cordova` command directly. Cordova project creation happens as part of the Meteor run and build commands, and the project itself is considered a build artifact (stored in `.meteor/local/cordova-build` in your app directory) that can be deleted and recreated at any time. Instead of having you modify Cordova's `config.xml` file, Meteor reads a [`mobile-config.js`](http://docs.meteor.com/api/mobile-config.html) file in the root of your app directory and uses the settings specified there to configure the generated project.
 
 Cordova apps don’t load web content over the network, but rely on locally stored HTML, CSS, JavaScript code and other assets. While Cordova by default uses `file://` URLs to load the app, Meteor includes an integrated file serving mechanism on the device to support both bundling the initial assets and incrementally updating your app through [hot code push](#hot-code-push). This means your app will be served from `http://localhost:<port>`, which also has the benefit that web views consider it a [secure origin](https://www.chromium.org/Home/chromium-security/prefer-secure-origins-for-powerful-new-features) and won't block any sensitive features (which they increasingly do for `file://` URLs).
+
+The port mentioned above will be generated based on your app ID stored in the `.meteor/.id` file in your application. If you need to run multiple apps on the same device using the same source code, you should specify a different port for each running app, by using the `--cordova-server-port <port>` option when running the Cordova `run` and `build` commands. Otherwise you will not be able to run multiple apps simultaneously on iOS. One common symptom of this problem is the error `Failed binding IPv4 listening socket: Address already in use (48)` in the XCode console.
 
 > <h4 id="what-port">What port will your app be served from?</h4>
 
@@ -82,7 +84,7 @@ In order to build and run mobile apps, you will need to install some prerequisit
 
 <h3 id="installing-prerequisites-ios">iOS</h3>
 
-In order to build and run iOS apps, you will need a Mac with [Apple Xcode](https://developer.apple.com/xcode/) developer tools installed. We recommend installing the latest version, but you should also check the [Meteor history](https://github.com/meteor/meteor/blob/devel/History.md) for any specific version dependencies.
+In order to build and run iOS apps, you will need a Mac with [Apple Xcode](https://developer.apple.com/xcode/) developer tools installed. We recommend installing the latest version, but you should also check the [Meteor history](https://github.com/meteor/meteor/blob/devel/History.md) for any specific version dependencies.  NOTE: To build with Xcode 10.2+, your webapp package must be v1.7.4 or higher.
 
 <h4>Installing Xcode from the App Store</h4>
 
@@ -96,6 +98,11 @@ A shortcut is to run `sudo xcodebuild -license accept` from the command line. (Y
 
 > As of [Cordova iOS 4.3.0](https://cordova.apache.org/announcements/2016/10/24/ios-release.html) you may also need to `sudo gem install cocoapods` to resolve a dependency with [PhoneGap Push Plugin](https://github.com/phonegap/phonegap-plugin-push/blob/master/docs/INSTALLATION.md). 
 
+<h4>Enabling Xcode command line tools</h4>
+
+After installing Xcode from the Mac App Store, it is still necesssary to enable those tools in the terminal environment.  This can be accompilshed by running the following from the command prompt:
+
+    sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
 <h3 id="installing-prerequisites-android">Android</h3>
 
@@ -146,7 +153,7 @@ To install an older version of SDK tools:
 
 <h4 id="ubuntu-make">Using Ubuntu Make</h4>
 
-If you're running Ubuntu, the easiest way to install both a Java Development Kit and Android Studio is by using [Ubuntu Make](https://wiki.ubuntu.com/ubuntu-make), a command line tool that sets up development environments and dependencies for you.
+If you're running Ubuntu, one way to install both a Java Development Kit and Android Studio is by using [Ubuntu Make](https://wiki.ubuntu.com/ubuntu-make), a command line tool that sets up development environments and dependencies for you.
 
 If you're on Ubuntu 14.04 LTS, you'll have to add the Ubuntu Make ppa first:
 * `sudo add-apt-repository ppa:ubuntu-desktop/ubuntu-make`
@@ -291,7 +298,7 @@ Something else to keep in mind is that your server-side code should be prepared 
 
 The compatibility version can be found in the `cordovaCompatibilityVersions` attribute of the JSON file served at `ROOT_URL/__cordova/manifest.json` during `meteor run [ios/android]`.
 
-![cordovaCompatibilityVersions](http://i.imgur.com/Wx7iOWu.png)
+![cordovaCompatibilityVersions](https://i.imgur.com/Wx7iOWu.png)
 
 You may want to override the compatibility version if you want hot code push to reach older apps that don't have the latest version of your native code from the app store. Let's say you're developing an iOS app, you have the plugin `cordova-plugin-camera@2.4.0`, and your app has the compatibility version pictured above, `3ed5b9318b2916b595f7721759ead4d708dfbd46`. If you were to update to version `2.4.1` of `cordova-plugin-camera`, your server would generate a new compatibility version and your users' apps would stop receiving hot code pushes. However, you can tell your server to use the old compatilibity version: 
 
@@ -590,7 +597,7 @@ Although Meteor includes a standard set of app icons and launch screens, you wil
 
 You can configure the icon and splash screen image sizes using the specific supported settings in [`App.icons`](http://docs.meteor.com/api/mobile-config.html#App-icons) and [`App.launchScreens`](http://docs.meteor.com/api/mobile-config.html#App-launchScreens).
 
-In addition, Cordova on iOS supports using [launch story board images](https://cordova.apache.org/docs/en/latest/reference/cordova-plugin-splashscreen/#launch-storyboard-images), which is now Apple's recommended approach for providing launch screens. This has the benefit of not requiring you to provide an image for every possible device screen size. Just remove all the iOS `App.launchScreens` directives from your `mobile-config.js` and use [`App.appendToConfig`](http://docs.meteor.com/api/mobile-config.html#App-appendToConfig) to add the paths to your universal images.
+In addition, Cordova on iOS supports using [launch story board images](https://cordova.apache.org/docs/en/latest/reference/cordova-plugin-splashscreen/#launch-storyboard-images), which is now Apple's recommended approach for providing launch screens. This has the benefit of not requiring you to provide an image for every possible device screen size. Remove all the iOS `App.launchScreens` directives from your `mobile-config.js` and use [`App.appendToConfig`](http://docs.meteor.com/api/mobile-config.html#App-appendToConfig) to add the paths to your universal images.
 
 ```
 App.appendToConfig(`

@@ -3,19 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "hexo": {
-    "version": "3.6.0"
+    "version": "3.7.1"
   },
   "devDependencies": {
-    "chexo": "1.0.5",
-    "hexo": "3.7.1",
-    "hexo-prism-plus": "1.0.0",
-    "hexo-renderer-ejs": "0.3.1",
+    "chexo": "1.0.7",
+    "hexo": "3.9.0",
+    "hexo-prism-plus": "1.1.0",
+    "hexo-renderer-ejs": "1.0.0",
     "hexo-renderer-less": "0.2.0",
-    "hexo-renderer-marked": "0.3.2",
-    "hexo-server": "0.3.1",
-    "hexo-versioned-netlify-redirects": "1.0.7",
-    "meteor-hexo-config": "1.0.8",
-    "meteor-theme-hexo": "1.0.9"
+    "hexo-renderer-marked": "2.0.0",
+    "hexo-server": "1.0.0",
+    "hexo-versioned-netlify-redirects": "1.1.0",
+    "meteor-hexo-config": "1.0.9",
+    "meteor-theme-hexo": "2.0.1"
   },
   "scripts": {
     "build": "chexo meteor-hexo-config -- generate",
