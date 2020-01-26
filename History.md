@@ -89,6 +89,8 @@ N/A
   [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
   [PR #10345](https://github.com/meteor/meteor/pull/10345)
 
+* Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
+
 ## v1.8.3, 2019-12-19
 
 ### Migration Steps
@@ -130,9 +132,6 @@ N/A
 * The `meteor-babel` npm package has been updated to version 7.7.5.
 
 * The `typescript` npm package has been updated to version 3.7.3.
-
-### Changes
-* Facebook OAuth has been updated to call v4 API endpoints.
 
 ## v1.8.2, 2019-11-14
 
