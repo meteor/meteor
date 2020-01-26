@@ -31,10 +31,12 @@ For most apps, we recommend that you take the following steps:
 * Add `browser-policy` to your app to enable a starter policy. With this starter
 policy, your app's client code will be able to load content (images, scripts,
 fonts, etc.) only from its own origin, except that XMLHttpRequests and WebSocket
-connections can go to any origin. Further, your app's client code will not be
-able to use functions such as `eval()` that convert strings to code. Users'
+connections can go to any origin. Users'
 browsers will only let your app be framed by web pages on the same origin as
-your app.
+your app. Further, your app's client code will not be
+able to use functions such as `eval()` that convert strings to code. 
+However, note that if you also use the `dynamic-imports` package, this limitation 
+on `eval()` is lifted.
 * You can use the functions described below to customize the policies. If your
 app does not need any inline Javascript such as inline `<script>` tags, we
 recommend that you modify the policy by calling

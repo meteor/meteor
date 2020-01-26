@@ -1,3 +1,15 @@
+import {
+  isFunction,
+  isObject,
+  keysOf,
+  lengthOf,
+  hasOwn,
+  convertMapToObject,
+  isArguments,
+  isInfOrNaN,
+  handleError,
+} from './utils';
+
 /**
  * @namespace
  * @summary Namespace for EJSON functions
@@ -50,14 +62,7 @@ const EJSON = {};
  * @instance
  */
 
-const customTypes = {};
-
-const hasOwn = (obj, prop) => ({}).hasOwnProperty.call(obj, prop);
-
-const isArguments = obj => obj != null && hasOwn(obj, 'callee');
-
-const isInfOrNan =
-  obj => Number.isNaN(obj) || obj === Infinity || obj === -Infinity;
+const customTypes = new Map();
 
 // Add a custom type, using a method of your choice to get to and
 // from a basic JSON-able representation.  The factory argument
@@ -83,16 +88,16 @@ const isInfOrNan =
  *                           type's `toJSONValue` method.
  */
 EJSON.addType = (name, factory) => {
-  if (hasOwn(customTypes, name)) {
+  if (customTypes.has(name)) {
     throw new Error(`Type ${name} already present`);
   }
-  customTypes[name] = factory;
+  customTypes.set(name, factory);
 };
 
 const builtinConverters = [
   { // Date
     matchJSONValue(obj) {
-      return hasOwn(obj, '$date') && Object.keys(obj).length === 1;
+      return hasOwn(obj, '$date') && lengthOf(obj) === 1;
     },
     matchObject(obj) {
       return obj instanceof Date;
@@ -108,7 +113,7 @@ const builtinConverters = [
     matchJSONValue(obj) {
       return hasOwn(obj, '$regexp')
         && hasOwn(obj, '$flags')
-        && Object.keys(obj).length === 2;
+        && lengthOf(obj) === 2;
     },
     matchObject(obj) {
       return obj instanceof RegExp;
@@ -134,9 +139,9 @@ const builtinConverters = [
   { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
     matchJSONValue(obj) {
-      return hasOwn(obj, '$InfNaN') && Object.keys(obj).length === 1;
+      return hasOwn(obj, '$InfNaN') && lengthOf(obj) === 1;
     },
-    matchObject: isInfOrNan,
+    matchObject: isInfOrNaN,
     toJSONValue(obj) {
       let sign;
       if (Number.isNaN(obj)) {
@@ -154,7 +159,7 @@ const builtinConverters = [
   },
   { // Binary
     matchJSONValue(obj) {
-      return hasOwn(obj, '$binary') && Object.keys(obj).length === 1;
+      return hasOwn(obj, '$binary') && lengthOf(obj) === 1;
     },
     matchObject(obj) {
       return typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array
@@ -169,12 +174,12 @@ const builtinConverters = [
   },
   { // Escaping one level
     matchJSONValue(obj) {
-      return hasOwn(obj, '$escape') && Object.keys(obj).length === 1;
+      return hasOwn(obj, '$escape') && lengthOf(obj) === 1;
     },
     matchObject(obj) {
       let match = false;
       if (obj) {
-        const keyCount = Object.keys(obj).length;
+        const keyCount = lengthOf(obj);
         if (keyCount === 1 || keyCount === 2) {
           match =
             builtinConverters.some(converter => converter.matchJSONValue(obj));
@@ -184,14 +189,14 @@ const builtinConverters = [
     },
     toJSONValue(obj) {
       const newObj = {};
-      Object.keys(obj).forEach(key => {
+      keysOf(obj).forEach(key => {
         newObj[key] = EJSON.toJSONValue(obj[key]);
       });
       return {$escape: newObj};
     },
     fromJSONValue(obj) {
       const newObj = {};
-      Object.keys(obj.$escape).forEach(key => {
+      keysOf(obj.$escape).forEach(key => {
         newObj[key] = EJSON.fromJSONValue(obj.$escape[key]);
       });
       return newObj;
@@ -200,7 +205,7 @@ const builtinConverters = [
   { // Custom
     matchJSONValue(obj) {
       return hasOwn(obj, '$type')
-        && hasOwn(obj, '$value') && Object.keys(obj).length === 2;
+        && hasOwn(obj, '$value') && lengthOf(obj) === 2;
     },
     matchObject(obj) {
       return EJSON._isCustomType(obj);
@@ -211,10 +216,10 @@ const builtinConverters = [
     },
     fromJSONValue(obj) {
       const typeName = obj.$type;
-      if (!hasOwn(customTypes, typeName)) {
+      if (!customTypes.has(typeName)) {
         throw new Error(`Custom EJSON type ${typeName} is not defined`);
       }
-      const converter = customTypes[typeName];
+      const converter = customTypes.get(typeName);
       return Meteor._noYieldsAllowed(() => converter(obj.$value));
     },
   },
@@ -222,12 +227,12 @@ const builtinConverters = [
 
 EJSON._isCustomType = (obj) => (
   obj &&
-  typeof obj.toJSONValue === 'function' &&
-  typeof obj.typeName === 'function' &&
-  hasOwn(customTypes, obj.typeName())
+  isFunction(obj.toJSONValue) &&
+  isFunction(obj.typeName) &&
+  customTypes.has(obj.typeName())
 );
 
-EJSON._getTypes = () => customTypes;
+EJSON._getTypes = (isOriginal = false) => (isOriginal ? customTypes : convertMapToObject(customTypes));
 
 EJSON._getConverters = () => builtinConverters;
 
@@ -256,15 +261,15 @@ const adjustTypesToJSONValue = obj => {
   }
 
   // Other atoms are unchanged.
-  if (typeof obj !== 'object') {
+  if (!isObject(obj)) {
     return obj;
   }
 
   // Iterate over array or object structure.
-  Object.keys(obj).forEach(key => {
+  keysOf(obj).forEach(key => {
     const value = obj[key];
-    if (typeof value !== 'object' && value !== undefined &&
-        !isInfOrNan(value)) {
+    if (!isObject(value) && value !== undefined &&
+        !isInfOrNaN(value)) {
       return; // continue
     }
 
@@ -295,7 +300,7 @@ EJSON.toJSONValue = item => {
   }
 
   let newItem = item;
-  if (typeof item === 'object') {
+  if (isObject(item)) {
     newItem = EJSON.clone(item);
     adjustTypesToJSONValue(newItem);
   }
@@ -307,8 +312,8 @@ EJSON.toJSONValue = item => {
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
 const fromJSONValueHelper = value => {
-  if (typeof value === 'object' && value !== null) {
-    const keys = Object.keys(value);
+  if (isObject(value) && value !== null) {
+    const keys = keysOf(value);
     if (keys.length <= 2
         && keys.every(k => typeof k === 'string' && k.substr(0, 1) === '$')) {
       for (let i = 0; i < builtinConverters.length; i++) {
@@ -336,13 +341,13 @@ const adjustTypesFromJSONValue = obj => {
   }
 
   // Other atoms are unchanged.
-  if (typeof obj !== 'object') {
+  if (!isObject(obj)) {
     return obj;
   }
 
-  Object.keys(obj).forEach(key => {
+  keysOf(obj).forEach(key => {
     const value = obj[key];
-    if (typeof value === 'object') {
+    if (isObject(value)) {
       const changed = fromJSONValueHelper(value);
       if (value !== changed) {
         obj[key] = changed;
@@ -365,7 +370,7 @@ EJSON._adjustTypesFromJSONValue = adjustTypesFromJSONValue;
  */
 EJSON.fromJSONValue = item => {
   let changed = fromJSONValueHelper(item);
-  if (changed === item && typeof item === 'object') {
+  if (changed === item && isObject(item)) {
     changed = EJSON.clone(item);
     adjustTypesFromJSONValue(changed);
   }
@@ -386,7 +391,7 @@ EJSON.fromJSONValue = item => {
  * @param {Boolean} options.canonical When `true`, stringifies keys in an
  *                                    object in sorted order.
  */
-EJSON.stringify = (item, options) => {
+EJSON.stringify = handleError((item, options) => {
   let serialized;
   const json = EJSON.toJSONValue(item);
   if (options && (options.canonical || options.indent)) {
@@ -396,7 +401,7 @@ EJSON.stringify = (item, options) => {
     serialized = JSON.stringify(json);
   }
   return serialized;
-};
+});
 
 /**
  * @summary Parse a string into an EJSON value. Throws an error if the string
@@ -453,7 +458,7 @@ EJSON.equals = (a, b, options) => {
     return false;
   }
 
-  if (!(typeof a === 'object' && typeof b === 'object')) {
+  if (!(isObject(a) && isObject(b))) {
     return false;
   }
 
@@ -473,11 +478,11 @@ EJSON.equals = (a, b, options) => {
     return true;
   }
 
-  if (typeof (a.equals) === 'function') {
+  if (isFunction(a.equals)) {
     return a.equals(b, options);
   }
 
-  if (typeof (b.equals) === 'function') {
+  if (isFunction(b.equals)) {
     return b.equals(a, options);
   }
 
@@ -505,8 +510,8 @@ EJSON.equals = (a, b, options) => {
 
   // fall back to structural equality of objects
   let ret;
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
+  const aKeys = keysOf(a);
+  const bKeys = keysOf(b);
   if (keyOrderSensitive) {
     i = 0;
     ret = aKeys.every(key => {
@@ -545,7 +550,7 @@ EJSON.equals = (a, b, options) => {
  */
 EJSON.clone = v => {
   let ret;
-  if (typeof v !== 'object') {
+  if (!isObject(v)) {
     return v;
   }
 
@@ -572,15 +577,15 @@ EJSON.clone = v => {
   }
 
   if (Array.isArray(v)) {
-    return v.map(value => EJSON.clone(value));
+    return v.map(EJSON.clone);
   }
 
   if (isArguments(v)) {
-    return Array.from(v).map(value => EJSON.clone(value));
+    return Array.from(v).map(EJSON.clone);
   }
 
   // handle general user-defined typed Objects if they have a clone method
-  if (typeof v.clone === 'function') {
+  if (isFunction(v.clone)) {
     return v.clone();
   }
 
@@ -591,7 +596,7 @@ EJSON.clone = v => {
 
   // handle other objects
   ret = {};
-  Object.keys(v).forEach((key) => {
+  keysOf(v).forEach((key) => {
     ret[key] = EJSON.clone(v[key]);
   });
   return ret;

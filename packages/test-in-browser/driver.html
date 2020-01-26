@@ -1,81 +1,69 @@
+
 <template name="testInBrowserBody">
-  <div class="container-fluid">
-  {{> navBars}}
-  {{> uncaughtErrors}}
-  {{> failedTests}}
-  {{> testTable}}
+  <div class="test-in-browser">
+  {{> navBar}}
+  <div class="test-results">
+    {{> uncaughtErrors}}
+    {{> failedTests}}
+    {{> testTable}}
+  </div>
+  {{> groupNav}}
   </div>
 </template>
 
-<template name="navBars">
-  <div class="navbar navbar-fixed-top navbar-inverse">
-    <div class="navbar-inner">
-      <div class="row-fluid">
-        <div class="span3"><a class="brand" href="#">
-          &nbsp;
-          {{#if running}}
-            Testing in progress...
+<template name="navBar">
+  <nav class="navbar navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">
+        {{#if running}}
+          Testing in progress...
+        {{else}}
+          {{#if passed}}
+            All tests pass!
           {{else}}
-            {{#if passed}}
-              All tests pass!
-            {{else}}
-              There are failures.
-            {{/if}}
+            There are failures.
           {{/if}}
-        </a></div>
-        <div class="span2">
-          {{#unless running}}
-            <p class="navbar-text">{{total_test_time}} ms</p>
-          {{/unless}}
-        </div>
-        <div class="span6">
-          {{> progressBar}}
-        </div>
-        <div class="span1"></div>
-      </div>
-    </div>
-  </div>
-  {{> groupNav}}
+        {{/if}}
+    </a>
+    {{#unless running}}
+      <span class="navbar-text">{{total_test_time}} ms</span>
+    {{/unless}}
+    {{> progressBar}}
+  </nav>
 </template>
 
 <template name="progressBar">
   <div id="testProgressBar" class="progress {{barOuterClass}}">
     <span class="in-progress">Passed {{passedCount}} of {{totalCount}}</span>
-    <div class="bar bar-danger" style="width: {{percentFail}}%;"></div>
-    <div class="bar {{barInnerClass}}" style="width: {{percentPass}}%;"></div>
+    <div class="progress-bar bg-danger" role="progressbar" style="width: {{percentFail}}%;" aria-valuenow="{{percentFail}}" aria-valuemin="0" aria-valuemax="100"></div>
+    <div class="progress-bar {{barInnerClass}}" role="progressbar" style="width: {{percentPass}}%;" aria-valuenow="{{percentPass}}" aria-valuemin="0" aria-valuemax="100"></div>
   </div>
 </template>
 
 <template name="groupNav">
-  <div class="navbar navbar-fixed-bottom navbar-inverse">
-    <div class="navbar-inner">
-      <ul class="nav">
+  <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+    <ul class="navbar-nav mr-auto">
       {{#each groupPaths}}
-        <li class="navbar-text">&nbsp;-&nbsp;</li>
-        <li><a class="group" href="#">{{name}}</a></li>
+        <li class="nav-item"><span class="nav-link">&nbsp;-&nbsp;</span></li>
+        <li class="nav-item"><a class="nav-link" href="#">{{name}}</a></li>
       {{/each}}
-      </ul>
-      <form class="navbar-form pull-right">
-        <span id="current-client-test"></span>
-        <a class="btn rerun">
-          {{#if rerunScheduled}}
-          <i class="icon-time"></i>
-          Rerun scheduled...
-          {{else}}
-          <i class="icon-repeat"></i>
-          Rerun
-          {{/if}}
-        </a>
-      </form>
-      &nbsp;
-    </div>
-  </div>
+    </ul>
+
+    <form class="navbar-form pull-right">
+      <span id="current-client-test"></span>
+      <button class="btn btn-primary rerun">
+        {{#if rerunScheduled}}
+        Rerun scheduled...
+        {{else}}
+        Rerun
+        {{/if}}
+      </button>
+    </form>
+  </nav>
 </template>
 
 <template name="uncaughtErrors">
   {{#if uncaughtErrors}}
-    <div class="row-fluid">
-      <div class="span12">
+    <div class="container-fluid">
         <div class="alert alert-danger">
           <p>
             <strong>WARNING:</strong> The following uncaught errors might be
@@ -86,7 +74,6 @@
               <li>{{this}}</li>
             {{/each}}
           </ul>
-        </div>
       </div>
     </div>
   {{/if}}
@@ -94,26 +81,24 @@
 
 <template name="failedTests">
   {{#if failedTests}}
-    <div class="row-fluid">
-      <div class="span12">
-        <ul class="failedTests">
-          {{#each failedTests}}
-            <li>{{this}}</li>
-          {{/each}}
-        </ul>
-      </div>
+    <div class="container-fluid">
+      <ul class="failedTests">
+        {{#each failedTests}}
+          <li>{{this}}</li>
+        {{/each}}
+      </ul>
     </div>
   {{/if}}
 </template>
 
 <template name="testTable">
-  <div class="row-fluid"><div class="span12">
+  <div class="container-fluid">
   <div class="test_table">
     {{#each testdata}}
       {{> test_group thisWithDep}}
     {{/each}}
   </div>
-  </div></div>
+  </div>
 </template>
 
 <template name="test_group">

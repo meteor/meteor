@@ -361,7 +361,7 @@ export default class Resolver {
     }
 
     // If the dependency is still not resolved, it might be handled by the
-    // fallback function defined in meteor/packages/modules/modules.js, or
+    // fallback function defined in meteor/packages/modules-runtime/[modern|legacy|server].js, or
     // it might be imported in code that will never run on this platform,
     // so there is always the possibility that its absence is not actually
     // a problem. As much as we might like to issue warnings about missing

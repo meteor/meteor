@@ -458,7 +458,11 @@ _.extend(PackageSource.prototype, {
   // - name: override the name of this package with a different name.
   // - buildingIsopackets: true if this is being scanned in the process
   //   of building isopackets
-  initFromPackageDir: Profile("PackageSource#initFromPackageDir", function (dir, options) {
+  initFromPackageDir: Profile((dir, options) => {
+    return `PackageSource#initFromPackageDir for ${
+      options?.name || dir.split(files.pathSep).pop()
+    }`;
+  }, function (dir, options) {
     var self = this;
     buildmessage.assertInCapture();
     var isPortable = true;
