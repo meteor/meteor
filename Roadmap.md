@@ -1,6 +1,6 @@
 # Meteor Roadmap
 
-**Up to date as of January 31, 2019**
+**Up to date as of January 31, 2020**
 
 This document describes the high-level features and actions for the Meteor project in the near- to medium-term future. This roadmap was built based on community feedback and to improve areas where Meteor is already strong. The description of many items include sentences and ideas from Meteor community members.
 
