@@ -533,7 +533,7 @@ class InputFile extends buildPluginModule.InputFile {
    * @memberOf InputFile
    * @instance
    */
-  addHtml(options) {
+  addHtml(options, lazyFinalizer) {
     if (typeof lazyFinalizer === "function") {
       // For now, just call the lazyFinalizer function immediately. Since
       // HTML is not compiled, this immediate invocation is probably
