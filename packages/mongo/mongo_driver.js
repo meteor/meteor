@@ -134,11 +134,6 @@ MongoConnection = function (url, options) {
   self._onFailoverHook = new Hook;
 
   var mongoOptions = Object.assign({
-    // Reconnect on error.
-    autoReconnect: true,
-    // Try to reconnect forever, instead of stopping after 30 tries (the
-    // default), with each attempt separated by 1000ms.
-    reconnectTries: Infinity,
     ignoreUndefined: true,
     // Required to silence deprecation warnings with mongodb@3.2.1.
     useUnifiedTopology: true,
