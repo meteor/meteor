@@ -557,6 +557,7 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   'mobile-experience',
   'mongo',
   'blaze-html-templates',
+  "jquery", // necessary when using Blaze
   'session',
   'tracker',
   "autopublish",

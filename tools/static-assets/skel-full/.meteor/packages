@@ -8,6 +8,7 @@ meteor-base             # Packages every Meteor app needs to have
 mobile-experience       # Packages for a great mobile UX
 mongo                   # The database Meteor supports right now
 blaze-html-templates    # Compile .html files into Meteor Blaze views
+jquery                  # Wrapper package for npm-installed jquery
 reactive-var            # Reactive variable for tracker
 tracker                 # Meteor's client-side reactive programming library
 

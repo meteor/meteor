@@ -21,6 +21,4 @@
 // Note that the es6.reflect.* and es6.typed.* modules have been commented
 // out for bundle size reasons.
 
-require("core-js/modules/es.string.pad-start");
-require("core-js/modules/es.string.pad-end");
 require("core-js/modules/es.symbol.async-iterator");

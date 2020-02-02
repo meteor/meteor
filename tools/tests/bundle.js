@@ -1,7 +1,10 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
+
 import * as files from "../fs/files";
 import { execSync } from 'child_process';
+// Default maxBuffer for execSync is 1024 * 1024 bytes, so this is 10x that.
+const maxBuffer = 10 * 1024 * 1024;
 
 selftest.define("bundle", function () {
   var s = new Sandbox();
@@ -30,7 +33,9 @@ selftest.define("bundle - verify sanitized asset names", function () {
   const tarball = files.pathJoin(s.cwd, "../sanitized-app.tgz");
   const sanitizedFilename = 'Meteor_-@2x.png';
   selftest.expectTrue(
-    execSync(`tar -tf ${tarball}`).toString().indexOf(sanitizedFilename) > -1
+    execSync(`tar -tf ${tarball}`, {
+      maxBuffer,
+    }).toString().indexOf(sanitizedFilename) > -1
   );
 });
 
@@ -70,7 +75,8 @@ selftest.define("build - linked external npm package (#10177)", function () {
   build.expectExit(0);
 
   selftest.expectTrue(execSync(
-    "tar -tf " + files.pathJoin(s.home, "build", "app.tar.gz")
+    "tar -tf " + files.pathJoin(s.home, "build", "app.tar.gz"),
+    { maxBuffer },
   ).toString("utf8").split("\n").includes(
     "bundle/programs/server/npm/node_modules/external-package/package.json"
   ));

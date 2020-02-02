@@ -314,28 +314,28 @@ class Server {
   }
 
   // This function allows a persistent history of shell commands to be saved
-  // to and loaded from .meteor/local/shell-history.
+  // to and loaded from .meteor/local/shell/history.
   initializeHistory() {
-    const rli = this.repl.rli;
+    const repl = this.repl;
     const historyFile = getHistoryFile(this.shellDir);
     let historyFd = openSync(historyFile, "a+");
     const historyLines = readFileSync(historyFile, "utf8").split("\n");
     const seenLines = Object.create(null);
 
-    if (! rli.history) {
-      rli.history = [];
-      rli.historyIndex = -1;
+    if (! repl.history) {
+      repl.history = [];
+      repl.historyIndex = -1;
     }
 
-    while (rli.history && historyLines.length > 0) {
+    while (repl.history && historyLines.length > 0) {
       const line = historyLines.pop();
       if (line && /\S/.test(line) && ! seenLines[line]) {
-        rli.history.push(line);
+        repl.history.push(line);
         seenLines[line] = true;
       }
     }
 
-    rli.addListener("line", function(line) {
+    repl.addListener("line", function(line) {
       if (historyFd >= 0 && /\S/.test(line)) {
         writeSync(historyFd, line + "\n");
       }
