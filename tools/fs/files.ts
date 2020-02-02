@@ -1164,8 +1164,10 @@ export function runJavaScript(code: string, {
     const header = "(function(" + keys.join(',') + "){";
     chunks.push(header);
     if (sourceMap) {
+      const sourcemapConsumer = Promise.await(new sourcemap.SourceMapConsumer(sourceMap));
       chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-        code, new sourcemap.SourceMapConsumer(sourceMap)));
+        code, sourcemapConsumer));
+      sourcemapConsumer.destroy();
     } else {
       chunks.push(code);
     }
@@ -1234,8 +1236,9 @@ export function runJavaScript(code: string, {
 
         if (parsedSourceMap) {
           // XXX this duplicates code in computeGlobalReferences
-          var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
+          var consumer2 = Promise.await(new sourcemap.SourceMapConsumer(parsedSourceMap));
           var original = consumer2.originalPositionFor(parseError.loc);
+          consumer2.destroy();
           if (original.source) {
             err.file = original.source;
             err.line = original.line;

@@ -913,19 +913,9 @@ _.extend(AppRunner.prototype, {
 
   _fiber: function () {
     var self = this;
-
-    var crashCount = 0;
-    var crashTimer = null;
     var firstRun = true;
 
     while (true) {
-
-      var resetCrashCount = function () {
-        crashTimer = setTimeout(function () {
-          crashCount = 0;
-        }, 8000);
-      };
-
       var runResult = self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {
@@ -933,15 +923,9 @@ _.extend(AppRunner.prototype, {
             Console.enableProgressDisplay(false);
           }
         },
-        beforeRun: resetCrashCount,
         firstRun: firstRun
       });
       firstRun = false;
-
-      clearTimeout(crashTimer);
-      if (runResult.outcome !== "terminated") {
-        crashCount = 0;
-      }
 
       var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
       if (wantExit || self.exitPromise || runResult.outcome === "stopped") {
@@ -977,11 +961,6 @@ _.extend(AppRunner.prototype, {
           runLog.log('Exited with code: ' + runResult.code, { arrow: true });
         } else {
           // explanation should already have been logged
-        }
-
-        crashCount ++;
-        if (crashCount < 3) {
-          continue;
         }
 
         if (self.watchForChanges) {

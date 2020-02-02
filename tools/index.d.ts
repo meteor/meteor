@@ -1,4 +1,4 @@
-export { }
+export {}
 
 declare global {
   interface JSON {
@@ -10,9 +10,15 @@ declare global {
     // This is an incomplete list of methods added to Promise.prototype by the
     // meteor-promise npm package. TODO Eventually these declarations should be
     // moved into that package.
-    await: () => T;
-    resolve: (value?: any) => void;
-    reject: (reason?: any) => void;
+    await(): T;
+    resolve(value?: any): void;
+    reject(reason?: any): void;
+  }
+
+  // Promise.await(x) is a shorthand provided by meteor-promise for
+  // Promise.resolve(x).await().
+  interface PromiseConstructor {
+    await<T>(arg: T | PromiseLike<T>): T;
   }
 
   interface Function {

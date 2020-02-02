@@ -864,6 +864,12 @@ main.registerCommand({
     Console.url("https://www.meteor.com/tutorials"),
       Console.options({ indent: 2 }));
 
+  Console.info("");
+  Console.info("When you’re ready to deploy and host your new Meteor application, check out Galaxy:");
+  Console.info(
+    Console.url("https://www.meteor.com/hosting"),
+      Console.options({ indent: 2 }));
+
   if (! options.bare &&
       ! options.minimal &&
       ! options.full &&
