@@ -101,9 +101,9 @@ A shortcut is to run `sudo xcodebuild -license accept` from the command line. (Y
 <h4>Enabling Xcode command line tools</h4>
 
 After installing Xcode from the Mac App Store, it is still necesssary to enable those tools in the terminal environment.  This can be accompilshed by running the following from the command prompt:
-
+```
     sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-
+```
 <h3 id="installing-prerequisites-android">Android</h3>
 
 In order to build and run Android apps, you will need to:

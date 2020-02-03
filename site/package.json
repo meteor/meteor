@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "hexo": {
-    "version": "3.7.1"
+    "version": "3.9.0"
   },
   "devDependencies": {
     "chexo": "1.0.7",
