@@ -21,18 +21,25 @@ import {
   optimisticReadJsonOrNull,
 } from "../fs/optimistic";
 
-const nativeModulesMap: Record<string, string> = Object.create(null);
-const nativeNames = Object.keys((process as any).binding("natives"));
+// Note: the source code for the following function was copied from the 'builtin-modules' npm package (ver. 3.1.0)
+function getBuiltinModules() {
+  'use strict';
+  const {builtinModules} = require('module');
 
-// Node 0.10 does not include process as a built-in module, but later
-// versions of Node do, and we provide a stub for it on the client.
-nativeNames.push("process");
+  const blacklist = [
+    'sys'
+  ];
+
+  // eslint-disable-next-line node/no-deprecated-api
+  return (builtinModules || Object.keys(process.binding('natives')))
+      .filter(x => !/^_|^(internal|v8|node-inspect)\/|\//.test(x) && !blacklist.includes(x))
+      .sort();
+}
+
+const nativeModulesMap: Record<string, string> = Object.create(null);
+const nativeNames = getBuiltinModules();
 
 nativeNames.forEach(id => {
-  if (id.startsWith("internal/")) {
-    return;
-  }
-
   // When a native Node module is imported, we register a dependency on a
   // meteor-node-stubs/deps/* module of the same name, so that the
   // necessary stub modules will be included in the bundle. This alternate
