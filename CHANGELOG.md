@@ -4,6 +4,7 @@ order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
 
+- 2020/02/03: Added "Preventing unnecessary data retrieval" section to Accounts
 - 2018/10/23: Added VueJS SSR Rendering for Meteor guide
 - 2018/10/14: Added VueJS Integration guide
 - 2017/10/28: Removed mention of `react-addons-pure-render-mixin` package from "Using Meteor's data system" section as it is no longer needed.
