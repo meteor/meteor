@@ -31,15 +31,15 @@ function getBuiltinModules() {
   ];
 
   // eslint-disable-next-line node/no-deprecated-api
-  return (builtinModules || Object.keys(process.binding('natives')))
-      .filter(x => !/^_|^(internal|v8|node-inspect)\/|\//.test(x) && !blacklist.includes(x))
+  return (builtinModules || Object.keys((process as any).binding('natives')))
+      .filter((x: string) => !/^_|^(internal|v8|node-inspect)\/|\//.test(x) && !blacklist.includes(x))
       .sort();
 }
 
 const nativeModulesMap: Record<string, string> = Object.create(null);
 const nativeNames = getBuiltinModules();
 
-nativeNames.forEach(id => {
+nativeNames.forEach((id: string) => {
   // When a native Node module is imported, we register a dependency on a
   // meteor-node-stubs/deps/* module of the same name, so that the
   // necessary stub modules will be included in the bundle. This alternate
