@@ -21,23 +21,8 @@ import {
   optimisticReadJsonOrNull,
 } from "../fs/optimistic";
 
-// Note: the source code for the following function was copied from the 'builtin-modules' npm package (ver. 3.1.0)
-function getBuiltinModules() {
-  'use strict';
-  const {builtinModules} = require('module');
-
-  const blacklist = [
-    'sys'
-  ];
-
-  // eslint-disable-next-line node/no-deprecated-api
-  return (builtinModules || Object.keys((process as any).binding('natives')))
-      .filter((x: string) => !/^_|^(internal|v8|node-inspect)\/|\//.test(x) && !blacklist.includes(x))
-      .sort();
-}
-
 const nativeModulesMap: Record<string, string> = Object.create(null);
-const nativeNames = getBuiltinModules();
+const nativeNames = require('module').builtinModules;
 
 nativeNames.forEach((id: string) => {
   // When a native Node module is imported, we register a dependency on a
