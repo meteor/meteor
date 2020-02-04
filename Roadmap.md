@@ -164,8 +164,8 @@ Provide a skeleton with SSR configurations already in place.
 Provide samples on how to run tests in Meteor these samples should include unit tests and also cypress tests.
 
 ## First-class citizen Technologies
-Consider Vue.js, Svelte, React Native, and Apollo as first-class citizen, for 
-each technology we would like to have:  
+Consider Vue.js, Svelte, React Native, and Apollo as first-class citizen, for
+each technology we would like to have:
 - skeleton (meteor create)
 - tutorial
 - documentation (how to use)
@@ -174,7 +174,7 @@ each technology we would like to have:
 as we already have for Blaze, React and Angular.
 
 ### Vue.js
-- Leaders: <you?>
+- Leaders: [Tsega](https://github.com/tsega)
 - Status: -
 - PRs: -
 
