@@ -666,7 +666,7 @@ const name = Meteor.user({fields: {"profile.name": 1}}).profile.name;
 const userExists = !!Accounts.findUserByEmail(email, {fields: {_id: 1}});
 
 // get the user id from a userName:
-const userId = Accounts.findUserByUsername(userName, {fields: {_id: 1}});
+const userId = Accounts.findUserByUsername(userName, {fields: {_id: 1}})?._id;
 ```
 
 However, you may not have control over 3rd party package code or Meteor-core code which makes use of these functions. Nor does Meteor know which user fields are needed by callbacks registered with `Accounts.onLogin()`, `Accounts.onLogout()`, `Accounts.onLoginFailure()` and `Accounts.validateLoginAttempt()`. To solve this problem Meteor 1.10 also introduced a new [`Accounts.config({defaultFieldSelector: {...})`](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config) option to include or omit specific user fields by default.
