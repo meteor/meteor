@@ -99,7 +99,7 @@ If you would like to write your UI in Angular, you will need to switch out Meteo
 
 <h2 id="css">CSS processing</h2>
 
-All your CSS style files will processed using Meteor's default file load order rules along with any import statements and concatenated into a single stylesheet, `merged-stylesheets.css`. In a production build this file is also minified. By default this single stylesheet is injected at the beginning of the HTML `<head />` section of your application.
+All your CSS style files will be processed using Meteor's default file load order rules along with any import statements and concatenated into a single stylesheet, `merged-stylesheets.css`. In a production build this file is also minified. By default this single stylesheet is injected at the beginning of the HTML `<head />` section of your application.
 
 However, this can potentially be an issue for some applications that use a third party UI framework, such as Bootstrap, which is loaded from a CDN. This could cause Bootstrap's CSS to come after your CSS and override your user-defined styles.
 
