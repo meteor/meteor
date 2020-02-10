@@ -51,13 +51,14 @@ Thus it's best to keep the size of the cache below 5MB.  The
 `appcache` package will print a warning on the Meteor server console
 if the total size of the resources being cached is over 5MB.
 
-If you need more advanced logic to enable/disable the cache,
-you can use the `enableCallback` option that is evaluated 
-on a per-request basis. For example:
+Starting from `appcache@1.2.4`, if you need more advanced logic 
+to enable/disable the cache, you can use the `enableCallback` option 
+that is evaluated on a per-request basis. For example:
 
 ```js
 // Enable offline mode using a value from database and certificate validation
 Meteor.AppCache.config({
+  // This option is available starting from appcache@1.2.4
   enableCallback: () => {
     if (!getSettingsFromDb("public.appcache_enabled")) {
       return false;
