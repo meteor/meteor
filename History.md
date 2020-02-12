@@ -89,6 +89,8 @@ N/A
   [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
   [PR #10345](https://github.com/meteor/meteor/pull/10345)
 
+* Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
+
 ## v1.8.3, 2019-12-19
 
 ### Migration Steps
