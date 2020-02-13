@@ -118,7 +118,7 @@ export class ClientStream extends StreamClientCommon {
     if (noproxy) {
       for (let item of noproxy.split(',')) {
         if (targetUrl.indexOf(item.trim().replace(/\*/, '')) !== -1) {
-          return null;
+          proxy = null;
         }
       }
     }
