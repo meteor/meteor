@@ -109,32 +109,37 @@ Creates a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
+`--react`
+
+Creates a react-based project with minimal packages to run react out-of-the-box. Specifically includes `react-meteor-data`.
+
 **Packages**
 
-|| Default | `--bare`  | `--full`  | `--minimal` |
-|--------------------|--------|---|---|---|
-|[autopublish](https://atmospherejs.com/meteor/autopublish)|    X    |   |   | |
-|[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)| X | |X | |
-|[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|X|
-|[es5-shim](https://atmospherejs.com/meteor/es5-shim)|X|X|X|X|
-|[insecure](https://atmospherejs.com/meteor/insecure)|X||| |
-|[johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook:publication-collector)|||X| |
-|[kadira:blaze-layout](https://atmospherejs.com/meteor/kadira:blaze-layout)|||X| |
-|[kadira:flow-router](https://atmospherejs.com/meteor/kadira:flow-router)|||X| |
-|[less](https://atmospherejs.com/meteor/less)|||X| |
-|[meteor](https://atmospherejs.com/meteor/meteor)||||X|
-|[meteor-base](https://atmospherejs.com/meteor/meteor-base)|X|X|X| |
-|[mobile-experience](https://atmospherejs.com/meteor/mobile-experience)|X|X|X| |
-|[mongo](https://atmospherejs.com/meteor/mongo)|X|X|X| |
-|[practicalmeteor:mocha](https://atmospherejs.com/meteor/practicalmeteor:mocha)|||X| |
-|[reactive-var](https://atmospherejs.com/meteor/reactive-var)|X|X|X| |
-|[server-render](https://atmospherejs.com/meteor/server-render)||||X|
-|[shell-server](https://atmospherejs.com/meteor/shell-server)|X|X||X|
-|[standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)|X|X|X|X|
-|[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|X|
-|[static-html](https://atmospherejs.com/meteor/static-html)||X||X|
-|[tracker](https://atmospherejs.com/meteor/tracker) |X|X|X| |
-|[webapp](https://atmospherejs.com/meteor/webapp) | | | |X|
+|| Default | `--bare`  | `--full`  | `--minimal` | `--react` |
+|--------------------|--------|---|---|---|---|
+|[autopublish](https://atmospherejs.com/meteor/autopublish)|X| | | |X|
+|[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)|X| |X| | |
+|[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|X|X|
+|[es5-shim](https://atmospherejs.com/meteor/es5-shim)|X|X|X|X|X|
+|[insecure](https://atmospherejs.com/meteor/insecure)|X| | | |X|
+|[johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook:publication-collector)| | |X| | |
+|[kadira:blaze-layout](https://atmospherejs.com/meteor/kadira:blaze-layout)| | |X| | |
+|[kadira:flow-router](https://atmospherejs.com/meteor/kadira:flow-router)| | |X|| |
+|[less](https://atmospherejs.com/meteor/less)| | |X| | |
+|[meteor](https://atmospherejs.com/meteor/meteor)| | | |X| |
+|[meteor-base](https://atmospherejs.com/meteor/meteor-base)|X|X|X||X|
+|[mobile-experience](https://atmospherejs.com/meteor/mobile-experience)|X|X|X| |X|
+|[mongo](https://atmospherejs.com/meteor/mongo)|X|X|X| |X|
+|[practicalmeteor:mocha](https://atmospherejs.com/meteor/practicalmeteor:mocha)| | |X| | |
+|[reactive-var](https://atmospherejs.com/meteor/reactive-var)|X|X|X| |X|
+|[server-render](https://atmospherejs.com/meteor/server-render)| | | |X| |
+|[shell-server](https://atmospherejs.com/meteor/shell-server)|X|X| |X| |
+|[standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)|X|X|X|X|X|
+|[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|X|X|
+|[static-html](https://atmospherejs.com/meteor/static-html)| |X| |X|X| |
+|[tracker](https://atmospherejs.com/meteor/tracker)|X|X|X| | |
+|[webapp](https://atmospherejs.com/meteor/webapp)| | | |X| |
+|[react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)| | | | |X|
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
