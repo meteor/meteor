@@ -1,4 +1,220 @@
-## v.NEXT
+## v1.9, 2020-01-09
+
+### Breaking changes
+
+* Because Node.js 12 no longer supports 32-bit Linux, Meteor 1.9 has also
+  dropped support for 32-bit Linux. In other words, Meteor 1.9 supports
+  64-bit Mac, Windows, and Linux, as well as 32-bit Windows.
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  [12.14.0](https://nodejs.org/en/blog/release/v12.14.0/), which includes
+  several major Node.js versions since 8.17.0 (used by Meteor 1.8.3):
+  * [12.0.0](https://nodejs.org/en/blog/release/v12.0.0/)
+  * [11.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
+
+* The `fibers` npm package has been updated to version 4.0.3, which
+  includes [changes](https://github.com/laverdet/node-fibers/pull/429)
+  that may drastically reduce garbage collection pressure resulting from
+  heavy `Fiber` usage.
+
+* The `pathwatcher` npm package has been updated to use a fork of version
+  8.0.2, with [PR #128](https://github.com/atom/node-pathwatcher/pull/128)
+  applied.
+
+* The `sqlite3` npm package has been updated to version 4.1.0.
+
+* The `node-gyp` npm package has been updated to version 6.0.1, and
+  `node-pre-gyp` has been updated to version 0.14.0.
+
+* The feature that restarts the application up to two times if it crashes
+  on startup has been removed.
+  [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
+  [PR #10345](https://github.com/meteor/meteor/pull/10345)
+
+## v1.8.3, 2019-12-19
+
+### Migration Steps
+
+* If your application uses `blaze-html-templates`, the Meteor `jquery`
+  package will be automatically installed in your `.meteor/packages` file
+  when you update to Meteor 1.8.3. However, this new version of the Meteor
+  `jquery` package no longer bundles its own copy of the `jquery` npm
+  implementation, so you may need to install `jquery` from npm by running
+  ```sh
+  meteor npm i jquery
+  ```
+  in your application directory. Symptoms of not installing jquery include
+  a blank browser window, with helpful error messages in the console.
+
+### Changes
+
+* Node has been updated to version
+  [8.17.0](https://nodejs.org/en/blog/release/v8.17.0/).
+
+* The `npm` npm package has been updated to version 6.13.4, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.11-meteor) of its
+  `pacote` dependency has been updated to version 9.5.11, an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2019-security-releases/).
+
+* Prior to Meteor 1.8.3, installing the `jquery` package from npm along
+  with the Meteor `jquery` package could result in bundling jQuery twice.
+  Thanks to [PR #10498](https://github.com/meteor/meteor/pull/10498), the
+  Meteor `jquery` package will no longer provide its own copy of jQuery,
+  but will simply display a warning in the console if the `jquery` npm
+  package cannot be found in your `node_modules` directory. If you are
+  using `blaze` in your application, updating to Meteor 1.8.3 will
+  automatically add this new version of the Meteor `jquery` package to
+  your application if you were not already using it (thanks to
+  [PR #10801](https://github.com/meteor/meteor/pull/10801)), but you might
+  need to run `meteor npm i jquery` manually, so that `blaze` can import
+  `jquery` from your `node_modules` directory.
+
+* The `meteor-babel` npm package has been updated to version 7.7.5.
+
+* The `typescript` npm package has been updated to version 3.7.3.
+
+## v1.8.2, 2019-11-14
+
+### Breaking changes
+
+* Module-level variable declarations named `require` or `exports` are no
+  longer automatically renamed, so they may collide with module function
+  parameters of the same name, leading to errors like
+  `Uncaught SyntaxError: Identifier 'exports' has already been declared`.
+  See [this comment](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056)
+  by [@SimonSimCity](https://github.com/SimonSimCity).
+
+### Migration Steps
+
+* Be sure to update the `@babel/runtime` npm package to its latest version
+  (currently 7.7.2):
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+
+* New Meteor applications now depend on `meteor-node-stubs@1.0.0`, so it
+  may be a good idea to update to the same major version:
+  ```sh
+  meteor npm install meteor-node-stubs@next
+  ```
+
+* If you are the author of any Meteor packages, and you encounter errors
+  when using those packages in a Meteor 1.8.2 application (for example,
+  `module.watch` being undefined), we recommend that you bump the minor
+  version of your package and republish it using Meteor 1.8.2, so
+  Meteor 1.8.2 applications will automatically use the new version of the
+  package, as compiled by Meteor 1.8.2:
+  ```sh
+  cd path/to/your/package
+  # Add api.versionsFrom("1.8.2") to Package.onUse in package.js...
+  meteor --release 1.8.2 publish
+  ```
+  This may not be necessary for all packages, especially those that have
+  been recently republished using Meteor 1.8.1, or local packages in the
+  `packages/` directory (which are always recompiled from source).
+  However, republishing packages is a general solution to a wide variety
+  of package versioning and compilation problems, and package authors can
+  make their users' lives easier by handling these issues proactively.
+
+### Changes
+
+* Node has been updated to version
+  [8.16.2](https://nodejs.org/en/blog/release/v8.16.2/).
+
+* The `npm` npm package has been updated to version 6.13.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.9-meteor) of its
+  `pacote` dependency has been updated to version 9.5.9.
+
+* New Meteor applications now include an official `typescript` package,
+  supporting TypeScript compilation of `.ts` and `.tsx` modules, which can
+  be added to existing apps by running `meteor add typescript`.
+
+* New TypeScript-based Meteor applications can be created by running
+  ```sh
+  meteor create --typescript new-typescript-app
+  ```
+  This app skeleton contains a recommended tsconfig.json file, and should
+  serve as a reference for how to make TypeScript and Meteor work together
+  (to the best of our current knowledge).
+  [PR #10695](https://github.com/meteor/meteor/pull/10695)
+
+* When bundling modern client code, the Meteor module system now prefers
+  the `"module"` field in `package.json` (if defined) over the `"main"`
+  field, which should unlock various `import`/`export`-based optimizations
+  such as tree shaking in future versions of Meteor. As before, server
+  code uses only the `"main"` field, like Node.js, and legacy client code
+  prefers `"browser"`, `"main"`, and then `"module"`.
+  [PR #10541](https://github.com/meteor/meteor/pull/10541),
+  [PR #10765](https://github.com/meteor/meteor/pull/10765).
+
+* ECMAScript module syntax (`import`, `export`, and dynamic `import()`) is
+  now supported by default everywhere, including in modules imported from
+  `node_modules`, thanks to the [Reify](https://github.com/benjamn/reify)
+  compiler.
+
+* If you need to import code from `node_modules` that uses modern syntax
+  beyond module syntax, it is now possible to enable recompilation for
+  specific npm packages using the `meteor.nodeModules.recompile` option in
+  your application's `package.json` file.
+  See [PR #10603](https://github.com/meteor/meteor/pull/10603) for further
+  explanation.
+
+* The Meteor build process is now able to detect whether files changed in
+  development were actually used by the server bundle, so that a full
+  server restart can be avoided when no files used by the server bundle
+  have changed. Client-only refreshes are typically much faster than
+  server restarts. Run `meteor add autoupdate` to enable client refreshes,
+  if you are not already using the `autoupdate` package.
+  [Issue #10449](https://github.com/meteor/meteor/issues/10449)
+  [PR #10686](https://github.com/meteor/meteor/pull/10686)
+
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 3.2.7.
+
+* The `meteor-babel` npm package has been updated to version 7.7.0,
+  enabling compilation of the `meteor/tools` codebase with TypeScript
+  (specifically, version 3.7.2 of the `typescript` npm package).
+
+* The `reify` npm package has been updated to version 0.20.12.
+
+* The `core-js` npm package used by `ecmascript-runtime-client` and
+  `ecmascript-runtime-server` has been updated to version 3.2.1.
+
+* The `terser` npm package used by `minifier-js` (and indirectly by
+  `standard-minifier-js`) has been updated to version 4.3.1.
+
+* The `node-gyp` npm package has been updated to version 5.0.1, and
+  `node-pre-gyp` has been updated to 0.13.0.
+
+* The `optimism` npm package has been updated to version 0.11.3, which
+  enables caching of thrown exceptions as well as ordinary results, in
+  addition to performance improvements.
+
+* The `pathwatcher` npm package has been updated to version 8.1.0.
+
+* The `underscore` npm package installed in the Meteor dev bundle (for use
+  by the `meteor/tools` codebase) has been updated from version 1.5.2 to
+  version 1.9.1, and `@types/underscore` has been installed for better
+  TypeScript support.
+
+* In addition to the `.js` and `.jsx` file extensions, the `ecmascript`
+  compiler plugin now automatically handles JavaScript modules with the
+  `.mjs` file extension.
+
+* Add `--cordova-server-port` option to override local port where Cordova will 
+  serve static resources, which is useful when multiple Cordova apps are built
+  from the same application source code, since by default the port is generated
+  using the ID from the application's `.meteor/.id` file.
+
+* The `--test-app-path <directory>` option for `meteor test-packages` and
+  `meteor test` now accepts relative paths as well as absolute paths.
 
 ## v1.8.1, 2019-04-03
 
@@ -166,7 +382,6 @@ N/A
 ### Migration Steps
 
 * Update the `@babel/runtime` npm package to version 7.0.0 or later:
-
   ```sh
   meteor npm install @babel/runtime@latest
   ```
@@ -892,6 +1107,20 @@ N/A
   the `<head />` section as before (for backwards compatibility).
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
+
+## v1.6.1.4, 2018-08-16
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node has been updated to version
+  [8.11.4](https://nodejs.org/en/blog/release/v8.11.4/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/august-2018-security-releases/).
 
 ## v1.6.1.3, 2018-06-16
 

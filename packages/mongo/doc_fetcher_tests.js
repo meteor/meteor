@@ -1,5 +1,6 @@
 var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
+import { DocFetcher } from "./doc_fetcher.js";
 
 testAsyncMulti("mongo-livedata - doc fetcher", [
   function (test, expect) {
@@ -9,17 +10,19 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
     var id1 = collection.insert({x: 1});
     var id2 = collection.insert({y: 2});
 
-    var fetcher = new MongoTest.DocFetcher(
+    var fetcher = new DocFetcher(
       MongoInternals.defaultRemoteCollectionDriver().mongo);
 
     // Test basic operation.
-    fetcher.fetch(collName, id1, Random.id(), expect(null, {_id: id1, x: 1}));
-    fetcher.fetch(collName, "nonexistent!", Random.id(), expect(null, null));
+    const fakeOp1 = {};
+    const fakeOp2 = {};
+    fetcher.fetch(collName, id1, fakeOp1, expect(null, {_id: id1, x: 1}));
+    fetcher.fetch(collName, "nonexistent!", fakeOp2, expect(null, null));
 
     var fetched = false;
-    var cacheKey = Random.id();
+    var fakeOp3 = {};
     var expected = {_id: id2, y: 2};
-    fetcher.fetch(collName, id2, cacheKey, expect(function (e, d) {
+    fetcher.fetch(collName, id2, fakeOp3, expect(function (e, d) {
       fetched = true;
       test.isFalse(e);
       test.equal(d, expected);
@@ -27,10 +30,10 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
     // The fetcher yields.
     test.isFalse(fetched);
 
-    // Now ask for another document with the same cache key. Because a fetch for
-    // that cache key is in flight, we will get the other fetch's document, not
-    // this random document.
-    fetcher.fetch(collName, Random.id(), cacheKey, expect(function (e, d) {
+    // Now ask for another document with the same op reference. Because a
+    // fetch for that op is in flight, we will get the other fetch's
+    // document, not this random document.
+    fetcher.fetch(collName, Random.id(), fakeOp3, expect(function (e, d) {
       test.isFalse(e);
       test.equal(d, expected);
     }));

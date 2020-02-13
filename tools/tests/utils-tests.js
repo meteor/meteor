@@ -1,7 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var utils = require('../utils/utils.js');
 
-import { sha1 } from '../fs/watch.js';
+import { sha1 } from '../fs/watch';
 import httpHelpers from '../utils/http-helpers';
 
 selftest.define('subset generator', function () {

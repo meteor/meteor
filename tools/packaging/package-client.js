@@ -3,7 +3,7 @@ var _ = require('underscore');
 var config = require('../meteor-services/config.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var release = require('./release.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var buildmessage = require('../utils/buildmessage.js');
 var compiler = require('../isobuild/compiler.js');
@@ -11,7 +11,7 @@ var authClient = require('../meteor-services/auth-client.js');
 var catalog = require('./catalog/catalog.js');
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 
 import { requestGarbageCollection } from "../utils/gc.js";
 

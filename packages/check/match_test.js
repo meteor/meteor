@@ -446,7 +446,7 @@ Meteor.isServer && Tinytest.addAsync('check - non-fiber check works', (test, onC
   // Get out of a fiber with process.nextTick and ensure that we can still use
   // check.
   process.nextTick(() => {
-    const success = true;
+    let success = true;
     if (Fiber.current) {
       success = false;
     }

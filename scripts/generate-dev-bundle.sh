@@ -143,20 +143,6 @@ cd "${DIR}/lib"
 
 cd node_modules
 
-# @babel/runtime@7.0.0-beta.56 removed the @babel/runtime/helpers/builtin
-# directory, since all helpers are now implemented in the built-in style
-# (meaning they do not import core-js polyfills). Generated code in build
-# plugins might still refer to the old directory layout (at least for the
-# time being), but we can accommodate that by symlinking to the parent
-# directory, since all the module names are the same.
-if [ -d @babel/runtime/helpers ] &&
-   [ ! -d @babel/runtime/helpers/builtin ]
-then
-    pushd @babel/runtime/helpers
-    ln -s . builtin
-    popd
-fi
-
 ## Clean up some bulky stuff.
 
 # Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
@@ -175,6 +161,7 @@ delete () {
 if [ -d "pacote" ]
 then
     delete npm/node_modules/pacote
+    mv pacote npm/node_modules/
 fi
 
 delete sqlite3/deps

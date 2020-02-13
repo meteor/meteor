@@ -1,9 +1,9 @@
 var _ = require('underscore');
 var selftest = require('../tool-testing/selftest.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 import { getUrl } from '../utils/http-helpers.js';
 import { sleepMs } from '../utils/utils.js';
-import { host } from '../utils/archinfo.js';
+import { host } from '../utils/archinfo';
 const osArch = host();
 
 var Sandbox = selftest.Sandbox;

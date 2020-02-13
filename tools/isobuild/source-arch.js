@@ -1,5 +1,5 @@
 import {isString, isFunction} from 'underscore';
-import {WatchSet} from '../fs/watch.js';
+import {WatchSet} from '../fs/watch';
 
 function reportMissingOption(name) {
   throw new Error(`must provide options.${name} when creating SourceArch`);

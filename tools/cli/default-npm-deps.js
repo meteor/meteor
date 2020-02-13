@@ -4,7 +4,7 @@ import {
   statOrNull,
   writeFile,
   unlink,
-} from "../fs/files.js";
+} from "../fs/files";
 
 const INSTALL_JOB_MESSAGE = "installing npm dependencies";
 

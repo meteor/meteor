@@ -206,7 +206,7 @@ describe("dynamic import(...)", function () {
   it("can import module.exports = {...}-style modules", () => {
     return import("./imports/module-exports-esModule").then(m => {
       assert.strictEqual(typeof m, "object");
-      assert.deepEqual(m, {});
+      assert.deepEqual(Object.keys(m), []);
     });
   });
 
@@ -230,9 +230,10 @@ describe("dynamic import(...)", function () {
   });
 
   it("should track dynamic peer imports from packages (#9187)", () => {
+    const absId = require.resolve("optimism");
     const version = require(
       "meteor/dynamic-import/dynamic-versions.js"
-    ).get("/node_modules/optimism/lib/index.js");
+    ).get(absId);
 
     if (Meteor.isClient) {
       assert.strictEqual(typeof version, "string");
