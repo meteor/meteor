@@ -1,4 +1,21 @@
-## v1.9
+## v1.9.1, 2020-02-18
+
+### Breaking changes
+
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  12.16.0 from 12.14.0, which includes
+  security updates and small changes:
+  * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
+  * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
+
+## v1.9, 2020-01-08
 
 ### Breaking changes
 
