@@ -13,6 +13,7 @@ N/A
   12.16.0 from 12.14.0, which includes
   security updates and small changes:
   * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
+    * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
   * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
 
 ## v1.9, 2020-01-09
