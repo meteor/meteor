@@ -15,7 +15,7 @@ N/A
   * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
   * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
 
-## v1.9, 2020-01-08
+## v1.9, 2020-01-09
 
 ### Breaking changes
 
