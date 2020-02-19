@@ -1,4 +1,6 @@
 Tinytest.add('facts-base - increments server facts', test => {
+  Facts.resetServerFacts()
+
   Facts.incrementServerFact('newPackage', 'skyIsBlue', 42);
   test.equal(Facts._factsByPackage.newPackage, { skyIsBlue: 42 });
 

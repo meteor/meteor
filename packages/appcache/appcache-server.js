@@ -7,6 +7,7 @@ import path from 'path';
 
 let _disableSizeCheck = false;
 let disabledBrowsers = {};
+let enableCallback = null;
 
 Meteor.AppCache = {
   config: options => {
@@ -20,6 +21,9 @@ Meteor.AppCache = {
         value.forEach(urlPrefix =>
           RoutePolicy.declare(urlPrefix, 'static-online')
         );
+      }
+      else if (option === 'enableCallback') {
+        enableCallback = value;
       }
       // option to suppress warnings for tests.
       else if (option === '_disableSizeCheck') {
@@ -37,7 +41,13 @@ Meteor.AppCache = {
   }
 };
 
-const browserDisabled = request => disabledBrowsers[request.browser.name];
+const browserDisabled = request => {
+  if (enableCallback) {
+    return !enableCallback(request);
+  }
+
+  return disabledBrowsers[request.browser.name];
+}
 
 // Cache of previously computed app.manifest files.
 const manifestCache = new Map;
