@@ -317,9 +317,11 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
-  var runtimeConfig = _.extend(
-    _.clone(__meteor_runtime_config__),
-    additionalOptions.runtimeConfigOverrides || {}
+  const meteorRuntimeConfig = JSON.stringify(
+    encodeURIComponent(JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || {})
+    }))
   );
 
   return new Boilerplate(arch, manifest, _.extend({
@@ -342,8 +344,8 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
       // end up inside a <script> tag so we need to be careful to not include
       // "</script>", but normal {{spacebars}} escaping escapes too much! See
       // https://github.com/meteor/meteor/issues/3730
-      meteorRuntimeConfig: JSON.stringify(
-        encodeURIComponent(JSON.stringify(runtimeConfig))),
+      meteorRuntimeConfig,
+      meteorRuntimeHash: sha1(meteorRuntimeConfig),
       rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
       bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
       sriMode: sriMode,

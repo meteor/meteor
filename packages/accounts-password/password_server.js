@@ -164,7 +164,7 @@ Accounts._findUserByQuery = query => {
  * @returns {Object} A user if found, else null
  * @importFromPackage accounts-base
  */
-Accounts.findUserByUsername = 
+Accounts.findUserByUsername =
   username => Accounts._findUserByQuery({ username });
 
 /**
@@ -592,7 +592,7 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
   }
 
   // make sure we have a valid email
-  if (!email || 
+  if (!email ||
     !(pluckAddresses(user.emails).includes(email))) {
     handleError("No such email for user.");
   }
@@ -654,7 +654,7 @@ Accounts.generateVerificationToken = (userId, email, extraTokenData) => {
   }
 
   // make sure we have a valid email
-  if (!email || 
+  if (!email ||
     !(pluckAddresses(user.emails).includes(email))) {
     handleError("No such email for user.");
   }
@@ -977,7 +977,7 @@ Accounts.addEmail = (userId, newEmail, verified) => {
       } else {
         return prev;
       }
-    }, 
+    },
     false
   );
 
@@ -1151,6 +1151,6 @@ Accounts.createUser = (options, callback) => {
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
 Meteor.users._ensureIndex('services.email.verificationTokens.token',
-                          {unique: 1, sparse: 1});
+                          { unique: true, sparse: true });
 Meteor.users._ensureIndex('services.password.reset.token',
-                          {unique: 1, sparse: 1});
+                          { unique: true, sparse: true });
