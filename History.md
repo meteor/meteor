@@ -11,9 +11,6 @@ N/A
 
 ### Changes
 
-* Node.js has been updated to version
-  [12.14.1](https://nodejs.org/en/blog/release/v12.14.1/).
-
 * The version of MongoDB used by Meteor in development has been updated
   from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
   from 3.2.7 to 3.4.0, thanks to [@klaussner](https://github.com/klaussner).
@@ -48,6 +45,24 @@ N/A
   corresponding to version 7.8.3 for most `@babel/*` packages.
 
 * The `typescript` npm package has been updated to version 3.7.4.
+
+## v1.9.1, 2020-02-18
+
+### Breaking changes
+
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  12.16.0 from 12.14.0, which includes
+  security updates and small changes:
+  * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
+    * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
+  * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
 
 ## v1.9, 2020-01-09
 
