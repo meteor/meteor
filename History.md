@@ -14,6 +14,10 @@ N/A
   [regressions](https://github.com/nodejs/node/blob/master/doc/changelogs/CHANGELOG_V12.md#12.16.1)
   introduced in 12.16.0.
 
+* The `meteor-babel` npm package has been updated to version 7.8.2.
+
+* The `typescript` npm package has been updated to version 3.7.5.
+
 ## v1.9.1, 2020-02-18
 
 ### Breaking changes
