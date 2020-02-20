@@ -1,40 +1,39 @@
-const expectedResult = `<?xml version="1.0"?><widget id="com.meteor.xmlbuilder_test" version="0.0.1" android-versionCode="28" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0"><name>XmlBuilderTest</name><description>This is a Meteor test case</description><author href="http://cordova.io" email="dev@cordova.apache.org">Meteor Developer</author><preference name="webviewbounce" value="false"/><preference name="DisallowOverscroll" value="true"/><universal-links><host name="localhost:3000"/></universal-links><content src="http://localhost:3000/"/><allow-intent href="tel:*"/><allow-intent href="geo:*"/><allow-intent href="mailto:*"/><allow-intent href="sms:*"/><allow-intent href="market:*"/><allow-intent href="itms:*"/><allow-intent href="itms-apps:*"/><allow-navigation href="http://localhost"/><platform name="ios"/><platform name="android"/></widget>`;
-
-const accessRules = {
-    'tel:*': { type: 'intent' },
-    'geo:*': { type: 'intent' },
-    'mailto:*': { type: 'intent' },
-    'sms:*': { type: 'intent' },
-    'market:*': { type: 'intent' },
-    'itms:*': { type: 'intent' },
-    'itms-apps:*': { type: 'intent' },
-    'http://localhost': { type: 'navigation' }
-};
-
-const metadata = {
-    id: 'com.meteor.xmlbuilder_test',
-    version: '0.0.1',
-    author: 'Meteor Developer',
-    contentUrl: `http://localhost:3000/`
-};
-
-const additionalConfiguration = {
-    global: {
-        'webviewbounce': false,
-        'DisallowOverscroll': true
-    },
-    platform: {
-        ios: {},
-        android: {}
-    }
-};
-
-const custom = [`<universal-links><host name="localhost:3000"/></universal-links>`];
-
 // this test case mimics about 80 precent of the code used to build the 
 // config.xml file from the following file (meteor/tools/cordova/builder.js)
 // and it exercies all the funcitons used from the xmlbuilder2 api
 Tinytest.add("xmlbuilder - config.xml file generation", function (test) {
+    const expectedResult = `<?xml version="1.0"?><widget id="com.meteor.xmlbuilder_test" version="0.0.1" android-versionCode="28" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0"><name>XmlBuilderTest</name><description>This is a Meteor test case</description><author href="http://cordova.io" email="dev@cordova.apache.org">Meteor Developer</author><preference name="webviewbounce" value="false"/><preference name="DisallowOverscroll" value="true"/><universal-links><host name="localhost:3000"/></universal-links><content src="http://localhost:3000/"/><allow-intent href="tel:*"/><allow-intent href="geo:*"/><allow-intent href="mailto:*"/><allow-intent href="sms:*"/><allow-intent href="market:*"/><allow-intent href="itms:*"/><allow-intent href="itms-apps:*"/><allow-navigation href="http://localhost"/><platform name="ios"/><platform name="android"/></widget>`;
+
+    const accessRules = {
+        'tel:*': { type: 'intent' },
+        'geo:*': { type: 'intent' },
+        'mailto:*': { type: 'intent' },
+        'sms:*': { type: 'intent' },
+        'market:*': { type: 'intent' },
+        'itms:*': { type: 'intent' },
+        'itms-apps:*': { type: 'intent' },
+        'http://localhost': { type: 'navigation' }
+    };
+
+    const metadata = {
+        id: 'com.meteor.xmlbuilder_test',
+        version: '0.0.1',
+        author: 'Meteor Developer',
+        contentUrl: `http://localhost:3000/`
+    };
+
+    const additionalConfiguration = {
+        global: {
+            'webviewbounce': false,
+            'DisallowOverscroll': true
+        },
+        platform: {
+            ios: {},
+            android: {}
+        }
+    };
+
+    const custom = [`<universal-links><host name="localhost:3000"/></universal-links>`];
     let config = XmlBuilder.create({ version: '1.0' }).ele('widget');
 
     // Set the root attributes
@@ -102,6 +101,37 @@ Tinytest.add("xmlbuilder - config.xml file generation", function (test) {
             });
         });
     });
+
+    const formattedXmlConfig = config.end();
+    test.equal(formattedXmlConfig, expectedResult);
+});
+
+Tinytest.add("xmlbuilder - create() funciton", function (test) {
+    const expectedResult = '<?xml version="1.0"?><widget/>';
+
+    let widgetNode = XmlBuilder.create({ version: '1.0' }).ele('widget');
+    let formattedXmlConfig = widgetNode.end();
+    test.equal(formattedXmlConfig, expectedResult);
+
+    widgetNode = XmlBuilder.create().ele('widget');
+    formattedXmlConfig = widgetNode.end();
+    test.equal(formattedXmlConfig, expectedResult);
+
+});
+
+Tinytest.add("xmlbuilder - att() function", function (test) {
+    const expectedResult = '<?xml version="1.0"?><widget key="test"/>';
+
+    let config = XmlBuilder.create().ele('widget');
+    config.att({ key: 'test' });
+    let formattedXmlConfig = config.end();
+    test.equal(formattedXmlConfig, expectedResult);
+});
+
+Tinytest.add("xmlbuilder - ele() function", function (test) {
+    let expectedResult = '<?xml version="1.0"?><widget><name>XmlBuilderTest</name></widget>';
+    let config = XmlBuilder.create().ele('widget');
+    config.ele('name').txt('XmlBuilderTest');
 
     const formattedXmlConfig = config.end();
     test.equal(formattedXmlConfig, expectedResult);
