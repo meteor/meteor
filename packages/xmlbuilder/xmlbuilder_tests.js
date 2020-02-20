@@ -1,6 +1,6 @@
 // this test case mimics about 80 precent of the code used to build the 
 // config.xml file from the following file (meteor/tools/cordova/builder.js)
-// and it exercies all the funcitons used from the xmlbuilder2 api
+// and it exercises all the funcitons used from the xmlbuilder2 api
 Tinytest.add("xmlbuilder - config.xml file generation", function (test) {
     const expectedResult = `<?xml version="1.0"?><widget id="com.meteor.xmlbuilder_test" version="0.0.1" android-versionCode="28" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0"><name>XmlBuilderTest</name><description>This is a Meteor test case</description><author href="http://cordova.io" email="dev@cordova.apache.org">Meteor Developer</author><preference name="webviewbounce" value="false"/><preference name="DisallowOverscroll" value="true"/><universal-links><host name="localhost:3000"/></universal-links><content src="http://localhost:3000/"/><allow-intent href="tel:*"/><allow-intent href="geo:*"/><allow-intent href="mailto:*"/><allow-intent href="sms:*"/><allow-intent href="market:*"/><allow-intent href="itms:*"/><allow-intent href="itms-apps:*"/><allow-navigation href="http://localhost"/><platform name="ios"/><platform name="android"/></widget>`;
 
@@ -106,7 +106,7 @@ Tinytest.add("xmlbuilder - config.xml file generation", function (test) {
     test.equal(formattedXmlConfig, expectedResult);
 });
 
-Tinytest.add("xmlbuilder - create() funciton", function (test) {
+Tinytest.add("xmlbuilder - create() function", function (test) {
     const expectedResult = '<?xml version="1.0"?><widget/>';
 
     let widgetNode = XmlBuilder.create({ version: '1.0' }).ele('widget');
