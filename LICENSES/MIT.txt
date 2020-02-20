@@ -835,7 +835,7 @@ Copyright (c) 2010 Ryan McGrath
 
 
 ----------
-xmlbuilder: http://github.com/oozcitak/xmlbuilder-js
+xmlbuilder2: http://github.com/oozcitak/xmlbuilder2
 ----------
 
 Copyright (c) 2013 Ozgur Ozcitak
