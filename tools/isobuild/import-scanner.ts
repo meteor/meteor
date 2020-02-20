@@ -39,6 +39,7 @@ import {
   optimisticStatOrNull,
   optimisticLStatOrNull,
   optimisticHashOrNull,
+  optimisticLookupPackageJsonArray,
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
@@ -1296,7 +1297,7 @@ export default class ImportScanner {
       // raw version found in node_modules. See also:
       // https://github.com/meteor/meteor-feature-requests/issues/6
 
-    } else if (this.shouldUseNode(absModuleId)) {
+    } else if (this.shouldUseNode(absModuleId, absPath)) {
       // On the server, modules in node_modules directories will be
       // handled natively by Node, so we just need to generate a stub
       // module that calls module.useNode(), rather than calling
@@ -1340,7 +1341,7 @@ export default class ImportScanner {
 
   // Similar to logic in Module.prototype.useNode as defined in
   // packages/modules-runtime/server.js. Introduced to fix issue #10122.
-  private shouldUseNode(absModuleId: string) {
+  private shouldUseNode(absModuleId: string, absPath: string) {
     if (this.isWeb()) {
       // Node should never be used in a browser, obviously.
       return false;
@@ -1360,10 +1361,47 @@ export default class ImportScanner {
       start += 2;
     }
 
-    // If the remaining parts include node_modules, then this is a module
-    // that was installed by npm, and it should be evaluated by Node on
-    // the server.
-    return parts.indexOf("node_modules", start) >= 0;
+    // If the remaining parts do not include node_modules, then this
+    // module was not installed by npm, so we should not try to evaluate
+    // it natively in Node on the server.
+    if (parts.indexOf("node_modules", start) < 0) {
+      return false;
+    }
+
+    // Below this point, we know we're dealing with a module in
+    // node_modules, which means we should try to use module.useNode() to
+    // evaluate the module natively in Node, except if the module is an
+    // ESM module, because then the module cannot be imported using
+    // require (as of Node 12.16.0), so module.useNode() will not work.
+
+    const dotExt = pathExtname(absPath).toLowerCase();
+
+    if (dotExt === ".mjs") {
+      // Although few npm packages actually use .mjs, Node will always
+      // interpret these files as ESM modules, so we can return early.
+      return false;
+    }
+
+    if (dotExt === ".json") {
+      // There's no benefit to using Node to evaluate JSON modules, since
+      // there's nothing Node-specific about the parsing of JSON.
+      return false;
+    }
+
+    if (dotExt === ".js") {
+      const relDir = pathRelative(this.sourceRoot, pathDirname(absPath));
+      const pkgJsonArray =
+        optimisticLookupPackageJsonArray(this.sourceRoot, relDir);
+      // Setting "type":"module" in package.json makes Node treat .js
+      // files within the package as ESM modules.
+      if (pkgJsonArray.some(pkgJson => pkgJson?.type === "module")) {
+        return false;
+      }
+    }
+
+    // Everything else (.node, .wasm, whatever) needs to be handled
+    // natively by Node.
+    return true;
   }
 
   // Returns an absolute module identifier indicating where to install the
