@@ -1,17 +1,59 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
+    "@oozcitak/dom": {
+      "version": "1.15.2",
+      "resolved": "https://registry.npmjs.org/@oozcitak/dom/-/dom-1.15.2.tgz",
+      "integrity": "sha512-HmpUeiqNZIXaV7/lvEK89w2g6VfQjqY355umhVK/pyTHZw9xINbSrfYIGBJbpli5hYmffHCFDRVVBNYhlYgPkw=="
+    },
+    "@oozcitak/infra": {
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/@oozcitak/infra/-/infra-1.0.5.tgz",
+      "integrity": "sha512-o+zZH7M6l5e3FaAWy3ojaPIVN5eusaYPrKm6MZQt0DKNdgXa2wDYExjpP0t/zx+GoQgQKzLu7cfD8rHCLt8JrQ=="
+    },
+    "@oozcitak/url": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/@oozcitak/url/-/url-1.0.0.tgz",
+      "integrity": "sha512-LGrMeSxeLzsdaitxq3ZmBRVOrlRRQIgNNci6L0VRnOKlJFuRIkNm4B+BObXPCJA6JT5bEJtrrwjn30jueHJYZQ==",
+      "dependencies": {
+        "@oozcitak/infra": {
+          "version": "1.0.3",
+          "resolved": "https://registry.npmjs.org/@oozcitak/infra/-/infra-1.0.3.tgz",
+          "integrity": "sha512-9O2wxXGnRzy76O1XUxESxDGsXT5kzETJPvYbreO4mv6bqe1+YSuux2cZTagjJ/T4UfEwFJz5ixanOqB0QgYAag==",
+          "dependencies": {
+            "@oozcitak/util": {
+              "version": "1.0.1",
+              "resolved": "https://registry.npmjs.org/@oozcitak/util/-/util-1.0.1.tgz",
+              "integrity": "sha512-dFwFqcKrQnJ2SapOmRD1nQWEZUtbtIy9Y6TyJquzsalWNJsKIPxmTI0KG6Ypyl8j7v89L2wixH9fQDNrF78hKg=="
+            }
+          }
+        },
+        "@oozcitak/util": {
+          "version": "1.0.2",
+          "resolved": "https://registry.npmjs.org/@oozcitak/util/-/util-1.0.2.tgz",
+          "integrity": "sha512-4n8B1cWlJleSOSba5gxsMcN4tO8KkkcvXhNWW+ADqvq9Xj+Lrl9uCa90GRpjekqQJyt84aUX015DG81LFpZYXA=="
+        }
+      }
+    },
+    "@oozcitak/util": {
+      "version": "8.0.0",
+      "resolved": "https://registry.npmjs.org/@oozcitak/util/-/util-8.0.0.tgz",
+      "integrity": "sha512-+9Hq6yuoq/3TRV/n/xcpydGBq2qN2/DEDMqNTG7rm95K6ZE2/YY/sPyx62+1n8QsE9O26e5M1URlXsk+AnN9Jw=="
+    },
+    "lodash-node": {
+      "version": "2.4.1",
+      "resolved": "https://registry.npmjs.org/lodash-node/-/lodash-node-2.4.1.tgz",
+      "integrity": "sha1-6oL3sQDHM9GkKvdoAeUGEF4qgOw="
+    },
     "xmlbuilder": {
       "version": "2.4.4",
       "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-2.4.4.tgz",
-      "integrity": "sha1-biqE2l33nhGrsKBbrS8KzBLjOJM=",
-      "dependencies": {
-        "lodash-node": {
-          "version": "2.4.1",
-          "resolved": "https://registry.npmjs.org/lodash-node/-/lodash-node-2.4.1.tgz",
-          "integrity": "sha1-6oL3sQDHM9GkKvdoAeUGEF4qgOw="
-        }
-      }
+      "integrity": "sha1-biqE2l33nhGrsKBbrS8KzBLjOJM="
+    },
+    "xmlbuilder2": {
+      "version": "1.3.0",
+      "resolved": "https://registry.npmjs.org/xmlbuilder2/-/xmlbuilder2-1.3.0.tgz",
+      "integrity": "sha512-psOhoujlyalhUaIer1bgXCaDL424+tTcfZRDEGsD+Rydext6S/mlj2bNETNIUuRsOkJ8nMC72bB5idQeG/JvWg=="
     }
   }
 }
