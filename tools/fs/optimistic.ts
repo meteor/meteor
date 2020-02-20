@@ -354,28 +354,46 @@ export const optimisticReadMeteorIgnore = wrap((dir: string) => {
 
 type LookupPkgJsonType = OptimisticWrapperFunction<
   [string, string],
-  ReturnType<typeof optimisticReadJsonOrNull>
+  ReturnType<typeof optimisticReadJsonOrNull>[]
 >;
 
-export const optimisticLookupPackageJson: LookupPkgJsonType =
+// Returns an array of package.json objects encountered in any directory
+// between relDir and absRootDir. If a package.json with a "name" property
+// is found, it will always be the first object in the array.
+export const optimisticLookupPackageJsonArray: LookupPkgJsonType =
 wrap((absRootDir: string, relDir: string) => {
   const absPkgJsonPath = pathJoin(absRootDir, relDir, "package.json");
   const pkgJson = optimisticReadJsonOrNull(absPkgJsonPath);
+
+  // Named package.json files always terminate the search. This
+  // restriction was first introduced to fix #10547, before this function
+  // was updated to return an array instead of a single object, but
+  // returning here is still an important base case.
   if (pkgJson && typeof pkgJson.name === "string") {
-    return pkgJson;
+    return [pkgJson];
   }
 
   const relParentDir = pathDirname(relDir);
   if (relParentDir === relDir) {
-    return null;
+    return [];
   }
 
   // Stop searching if an ancestor node_modules directory is encountered.
   if (pathBasename(relParentDir) === "node_modules") {
-    return null;
+    return [];
   }
 
-  return optimisticLookupPackageJson(absRootDir, relParentDir);
+  const parentArray =
+    optimisticLookupPackageJsonArray(absRootDir, relParentDir);
+
+  if (pkgJson) {
+    // If an intermediate package.json file was found, add its object to
+    // the array. Since these arrays are cached, we don't want to modify
+    // them using parentArray.push(pkgJson), hence concat.
+    return parentArray.concat(pkgJson);
+  }
+
+  return parentArray;
 });
 
 const optimisticIsSymbolicLink = wrap((path: string) => {
