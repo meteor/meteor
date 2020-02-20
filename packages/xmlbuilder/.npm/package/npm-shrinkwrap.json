@@ -40,16 +40,6 @@
       "resolved": "https://registry.npmjs.org/@oozcitak/util/-/util-8.0.0.tgz",
       "integrity": "sha512-+9Hq6yuoq/3TRV/n/xcpydGBq2qN2/DEDMqNTG7rm95K6ZE2/YY/sPyx62+1n8QsE9O26e5M1URlXsk+AnN9Jw=="
     },
-    "lodash-node": {
-      "version": "2.4.1",
-      "resolved": "https://registry.npmjs.org/lodash-node/-/lodash-node-2.4.1.tgz",
-      "integrity": "sha1-6oL3sQDHM9GkKvdoAeUGEF4qgOw="
-    },
-    "xmlbuilder": {
-      "version": "2.4.4",
-      "resolved": "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-2.4.4.tgz",
-      "integrity": "sha1-biqE2l33nhGrsKBbrS8KzBLjOJM="
-    },
     "xmlbuilder2": {
       "version": "1.3.0",
       "resolved": "https://registry.npmjs.org/xmlbuilder2/-/xmlbuilder2-1.3.0.tgz",
