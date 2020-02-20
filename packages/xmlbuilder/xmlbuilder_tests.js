@@ -12,12 +12,9 @@ const accessRules = {
 };
 
 const metadata = {
+    id: 'com.meteor.xmlbuilder_test',
     version: '0.0.1',
-    buildNumber: undefined,
-    description: 'New Meteor Mobile App',
-    author: 'A Meteor Developer',
-    email: 'n/a',
-    website: 'n/a',
+    author: 'Meteor Developer',
     contentUrl: `http://localhost:3000/`
 };
 
@@ -34,13 +31,15 @@ const additionalConfiguration = {
 
 const custom = [`<universal-links><host name="localhost:3000"/></universal-links>`];
 
-
+// this test case mimics about 80 precent of the code used to build the 
+// config.xml file from the following file (meteor/tools/cordova/builder.js)
+// and it exercies all the funcitons used from the xmlbuilder2 api
 Tinytest.add("xmlbuilder - config.xml file generation", function (test) {
     let config = XmlBuilder.create({ version: '1.0' }).ele('widget');
 
     // Set the root attributes
     _.each({
-        id: 'com.meteor.xmlbuilder_test',
+        id: metadata.id,
         version: metadata.version,
         'android-versionCode': '28',
         'ios-CFBundleVersion': null,
@@ -58,7 +57,7 @@ Tinytest.add("xmlbuilder - config.xml file generation", function (test) {
     config.ele('author', {
         href: 'http://cordova.io',
         email: 'dev@cordova.apache.org'
-    }).txt('Meteor Developer');
+    }).txt(metadata.author);
 
     // Set the additional global configuration preferences
     _.each(additionalConfiguration.global, (value, key) => {
