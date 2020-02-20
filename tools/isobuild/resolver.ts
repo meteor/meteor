@@ -22,17 +22,9 @@ import {
 } from "../fs/optimistic";
 
 const nativeModulesMap: Record<string, string> = Object.create(null);
-const nativeNames = Object.keys((process as any).binding("natives"));
+const nativeNames = require('module').builtinModules;
 
-// Node 0.10 does not include process as a built-in module, but later
-// versions of Node do, and we provide a stub for it on the client.
-nativeNames.push("process");
-
-nativeNames.forEach(id => {
-  if (id.startsWith("internal/")) {
-    return;
-  }
-
+nativeNames.forEach((id: string) => {
   // When a native Node module is imported, we register a dependency on a
   // meteor-node-stubs/deps/* module of the same name, so that the
   // necessary stub modules will be included in the bundle. This alternate

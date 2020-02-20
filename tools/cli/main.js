@@ -509,8 +509,6 @@ var springboard = function (rel, options) {
     }
   }
 
-  const executable = files.pathJoin(newToolsDir, "meteor");
-
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = [];
@@ -543,10 +541,16 @@ var springboard = function (rel, options) {
   // process, so that the springboarded process can reestablish it.
   catalog.official.closePermanently();
 
-  if (process.platform === 'win32') {
+  const isWindows = process.platform === "win32";
+  const executable = files.pathJoin(
+    newToolsDir,
+    isWindows ? "meteor.bat" : "meteor",
+  );
+
+  if (isWindows) {
     process.exit(new Promise(function (resolve) {
-      var batPath = files.convertToOSPath(executable + ".bat");
-      var child = require("child_process").spawn(batPath, newArgv, {
+      var execPath = files.convertToOSPath(executable);
+      var child = require("child_process").spawn(execPath, newArgv, {
         env: process.env,
         stdio: 'inherit'
       }).on('exit', resolve);
@@ -600,7 +604,7 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v8.0.0';
+  var MIN_NODE_VERSION = 'v12.0.0';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');
