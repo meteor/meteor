@@ -2,7 +2,6 @@
 
 [![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
-[![BrowserStack Status](https://www.browserstack.com/automate/badge.svg?badge_key=S2FjOVpYTlk1eHVxdkdrR24ra0JXaXBDaVA3WjJGejdkbThaWGRnWVJvWT0tLTlQMEdYM2NJbDJOYUd3RTc3RVVGQ2c9PQ==--9e2143718a0c216274cdacef7cd5a3d12950bcb8)](https://www.browserstack.com/automate/public-build/S2FjOVpYTlk1eHVxdkdrR24ra0JXaXBDaVA3WjJGejdkbThaWGRnWVJvWT0tLTlQMEdYM2NJbDJOYUd3RTc3RVVGQ2c9PQ==--9e2143718a0c216274cdacef7cd5a3d12950bcb8)
 
 Meteor is an ultra-simple environment for building modern web
 applications.
@@ -47,6 +46,7 @@ meteor
 
 Building an application with Meteor?
 
+* Deploy on Galaxy hosting: https://www.meteor.com/hosting
 * Announcement list: sign up at https://www.meteor.com/
 * Having problems? Ask for help at: https://stackoverflow.com/questions/tagged/meteor
 * Discussion forums: https://forums.meteor.com/
@@ -57,9 +57,6 @@ Interested in helping or contributing to Meteor?  These resources will help:
 * [Contribution guidelines](CONTRIBUTING.md)
 * [Feature requests](https://github.com/meteor/meteor-feature-requests/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
-
-We are hiring!  Visit [meteor.io/jobs](https://www.meteor.io/jobs/) to
-learn more about working full-time on the Meteor project.
 
 ## Uninstalling Meteor
 
