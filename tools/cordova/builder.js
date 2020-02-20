@@ -396,19 +396,19 @@ export class CordovaBuilder {
       var filepath = files.pathResolve(this.projectContext.projectDir, resourceFile.src);
       files.copyFile(
         filepath,
-        files.pathJoin(this.projectRoot, "/resource-files/", filepath));
+        files.pathJoin(this.projectRoot, "resource-files", filepath));
       // And entry in config.xml
       if (!resourceFile.platform ||
           (resourceFile.platform && resourceFile.platform === "android")) {
         androidElement.element('resource-file', {
-          src: files.pathJoin("./resource-files/", filepath),
+          src: files.pathJoin("resource-files", filepath),
           target: resourceFile.target
         });
       }
       if (!resourceFile.platform ||
           (resourceFile.platform && resourceFile.platform === "ios")) {
         iosElement.element('resource-file', {
-          src: files.pathJoin("./resource-files/", filepath),
+          src: files.pathJoin("resource-files", filepath),
           target: resourceFile.target
         });
       }
