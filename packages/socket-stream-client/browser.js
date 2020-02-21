@@ -189,16 +189,7 @@ export class ClientStream extends StreamClientCommon {
     };
 
     this.socket.onclose = () => {
-      Promise.resolve(
-        // If the socket is closing because there was an error, and we
-        // didn't load SockJS before, try loading it dynamically before
-        // retrying the connection.
-        this.lastError &&
-        ! hasSockJS &&
-        import("./sockjs-0.3.4.js")
-      ).done(() => {
-        this._lostConnection();
-      });
+      this._lostConnection();
     };
 
     this.socket.onerror = error => {

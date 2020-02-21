@@ -86,6 +86,12 @@ StreamServer = function () {
   self._redirectWebsocketEndpoint();
 
   self.server.on('connection', function (socket) {
+    // sockjs sometimes passes us null instead of a socket object
+    // so we need to guard against that. see:
+    // https://github.com/sockjs/sockjs-node/issues/121
+    // https://github.com/meteor/meteor/issues/10468
+    if (!socket) return;
+
     // We want to make sure that if a client connects to us and does the initial
     // Websocket handshake but never gets to the DDP handshake, that we
     // eventually kill the socket.  Once the DDP handshake happens, DDP

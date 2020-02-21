@@ -2,17 +2,9 @@
 
 ### Breaking changes
 
-* Cordova was updated from version 7 to 9 then we recommend that you test 
-your features that are taking advantage of Cordova plugins to be sure they are 
-still working as expected. 
-
-### Migration Steps
-N/A
-
-### Changes
-
-* Node.js has been updated to version
-  [12.14.1](https://nodejs.org/en/blog/release/v12.14.1/).
+* Cordova has been updated from version 7 to 9. We recommend that you test
+  your features that are taking advantage of Cordova plugins to be sure
+  they are still working as expected.
 
 * The version of MongoDB used by Meteor in development has been updated
   from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
@@ -44,10 +36,42 @@ N/A
   [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
   [PR #10824](https://github.com/meteor/meteor/pull/10824)
 
-* The `meteor-babel` npm package has been updated to version 7.8.0,
-  corresponding to version 7.8.3 for most `@babel/*` packages.
+## v1.9.2, 2020-02-20
 
-* The `typescript` npm package has been updated to version 3.7.4.
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  [12.16.1](https://nodejs.org/en/blog/release/v12.16.1/), fixing several unintended
+  [regressions](https://github.com/nodejs/node/blob/master/doc/changelogs/CHANGELOG_V12.md#12.16.1)
+  introduced in 12.16.0.
+
+* The `meteor-babel` npm package has been updated to version 7.8.2.
+
+* The `typescript` npm package has been updated to version 3.7.5.
+
+## v1.9.1, 2020-02-18
+
+### Breaking changes
+
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  12.16.0 from 12.14.0, which includes
+  security updates and small changes:
+  * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
+    * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
+  * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
 
 ## v1.9, 2020-01-09
 
@@ -88,6 +112,8 @@ N/A
   on startup has been removed.
   [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
   [PR #10345](https://github.com/meteor/meteor/pull/10345)
+
+* Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
 
 ## v1.8.3, 2019-12-19
 

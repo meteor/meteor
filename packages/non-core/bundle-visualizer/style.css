@@ -37,7 +37,7 @@
 }
 
 .meteorBundleVisualizer.meteorBundleVisualizerRootContainer
-  .meteorBundleVisualizerSequence text,
+  .meteorBundleVisualizerSequence text
 {
   font-weight: 600;
   fill: #fff;
