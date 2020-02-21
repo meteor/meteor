@@ -1,3 +1,4 @@
+import { Decimal } from 'meteor/mongo-decimal'
 import LocalCollection from './local_collection.js';
 import {
   compileDocumentSelector,
@@ -170,6 +171,10 @@ LocalCollection._f = {
       return 7;
     }
 
+    if (v instanceof Decimal) {
+      return 1;
+    }
+
     // object
     return 3;
 
@@ -260,8 +265,13 @@ LocalCollection._f = {
       b = b.getTime();
     }
 
-    if (ta === 1) // double
-      return a - b;
+    if (ta === 1) { // double
+      if (a instanceof Decimal) {
+        return a.minus(b).toNumber();
+      } else {
+        return a - b;
+      }
+    }
 
     if (tb === 2) // string
       return a < b ? -1 : a === b ? 0 : 1;
