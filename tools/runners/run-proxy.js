@@ -1,3 +1,4 @@
+var Anser = require("anser");
 var _ = require('underscore');
 var runLog = require('./run-log.js');
 
@@ -251,7 +252,7 @@ function showErrorPage(res) {
     <pre>`);
 
       _.each(runLog.getLog(), function (item) {
-        res.write(escapeEntities(item.message) + "\n");
+        res.write(Anser.ansiToHtml(Anser.escapeForHtml(item.message)) + "\n");
       });
 
       res.write(`</pre>
@@ -259,24 +260,6 @@ function showErrorPage(res) {
 </html>`)
 
   res.end();
-}
-
-// Copied from packages/blaze/preamble.js
-function escapeEntities(str) {
-  const escapeMap = {
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#x27;",
-    "`": "&#x60;", /* IE allows backtick-delimited attributes?? */
-    "&": "&amp;"
-  };
-
-  const escapeChar = function(c) {
-    return escapeMap[c];
-  };
-
-  return str.replace(/[&<>"'`]/g, escapeChar);
 }
 
 exports.Proxy = Proxy;
