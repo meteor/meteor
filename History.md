@@ -6,8 +6,8 @@
   your features that are taking advantage of Cordova plugins to be sure
   they are still working as expected.
   
-* Because MongoDB since 3.4 no longer supports 32-bit Windows, Meteor 1.10 has also
-  dropped support for 32-bit Windows. In other words, Meteor 1.10 supports
+* Because MongoDB since 3.4 no longer supports 32-bit Windows, Meteor 1.10 has 
+  also dropped support for 32-bit Windows. In other words, Meteor 1.10 supports
   64-bit Mac, Windows 64-bit, and Linux 64-bit.
 
 ### Migration Steps
