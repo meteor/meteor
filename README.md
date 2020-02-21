@@ -50,6 +50,8 @@ Building an application with Meteor?
 * Announcement list: sign up at https://www.meteor.com/
 * Having problems? Ask for help at: https://stackoverflow.com/questions/tagged/meteor
 * Discussion forums: https://forums.meteor.com/
+* Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
+ 
 
 Interested in helping or contributing to Meteor?  These resources will help:
 
