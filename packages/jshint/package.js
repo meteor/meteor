@@ -1,6 +1,6 @@
 Package.describe({
   name: 'jshint',
-  version: '1.1.7',
+  version: '1.1.8',
   summary: 'Lint all your JavaScript files with JSHint.',
   documentation: 'README.md'
 });
@@ -11,15 +11,15 @@ Package.registerBuildPlugin({
     'plugin/lint-jshint.js'
   ],
   npmDependencies: {
-    "jshint": "2.7.0"
+    "jshint": "2.11.0"
   }
 });
 
-Package.onUse(function(api) {
+Package.onUse(function (api) {
   api.use('isobuild:linter-plugin@1.0.0');
 });
 
-Package.onTest(function(api) {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('jshint');
 });
