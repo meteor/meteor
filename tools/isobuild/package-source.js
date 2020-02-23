@@ -34,7 +34,7 @@ import {
   optimisticHashOrNull,
   optimisticStatOrNull,
   optimisticReadMeteorIgnore,
-  optimisticLookupPackageJson,
+  optimisticLookupPackageJsonArray,
 } from "../fs/optimistic";
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
@@ -458,7 +458,11 @@ _.extend(PackageSource.prototype, {
   // - name: override the name of this package with a different name.
   // - buildingIsopackets: true if this is being scanned in the process
   //   of building isopackets
-  initFromPackageDir: Profile("PackageSource#initFromPackageDir", function (dir, options) {
+  initFromPackageDir: Profile((dir, options) => {
+    return `PackageSource#initFromPackageDir for ${
+      options?.name || dir.split(files.pathSep).pop()
+    }`;
+  }, function (dir, options) {
     var self = this;
     buildmessage.assertInCapture();
     var isPortable = true;
@@ -1283,8 +1287,16 @@ _.extend(PackageSource.prototype, {
 
       let readOptions = sourceReadOptions;
       if (inNodeModules) {
-        const pkgJson = optimisticLookupPackageJson(self.sourceRoot, dir);
-        if (pkgJson && nodeModulesToRecompile.has(pkgJson.name)) {
+        // This is an array because (in some rare cases) an npm package
+        // may have nested package.json files with additional properties.
+        const pkgJsonArray = optimisticLookupPackageJsonArray(self.sourceRoot, dir);
+
+        // If a package.json file with a "name" property is found, it will
+        // always be the first in the array.
+        const pkgJson = pkgJsonArray[0];
+
+        if (pkgJson && pkgJson.name &&
+            nodeModulesToRecompile.has(pkgJson.name)) {
           // Avoid caching node_modules code recompiled by Meteor.
           cacheKey = false;
         } else {

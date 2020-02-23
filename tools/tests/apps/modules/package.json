@@ -6,7 +6,7 @@
   "dependencies": {
     "@babel/core": "^7.7.2",
     "@babel/plugin-proposal-do-expressions": "^7.6.0",
-    "@babel/runtime": "^7.7.2",
+    "@babel/runtime": "^7.7.7",
     "@polymer/lit-element": "0.7.1",
     "@wry/context": "^0.4.0",
     "acorn": "file:imports/links/acorn",
@@ -14,7 +14,6 @@
     "cli-color": "^0.2.3",
     "github": "^0.2.4",
     "graphql": "^14.3.1",
-    "idle-gc": "^1.0.1",
     "immutable-tuple": "^0.4.4",
     "jquery": "^3.4.1",
     "jsx-import-test": "file:imports/links/jsx-import-test",
