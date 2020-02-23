@@ -1,3 +1,7 @@
+## v3.2.1
+
+* `Roles.getRolesForUser()` should not fail during a call of `Roles.addUsersToRoles()` [#311](https://github.com/Meteor-Community-Packages/meteor-roles/pull/311) ([@ggerber](https://github.com/ggerber))
+
 ## v3.2.0
 
 * New option `onlyScope` on getUsersInRole() returning only users having this role in a scoped assignment [#298](https://github.com/Meteor-Community-Packages/meteor-roles/pull/298)
