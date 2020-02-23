@@ -777,7 +777,13 @@ Object.assign(Roles, {
       return roles
     }
 
-    return [...new Set(roles.map(r => r.inheritedRoles || [r.role]).reduce((rev, current) => rev.concat(current), []).map(r => r._id))]
+    return [...new Set(roles.reduce((rev, current) => {
+      if (current.inheritedRoles) {
+        return rev.concat(current.inheritedRoles.map(r => r._id))
+      } else if (current.role) {
+        return rev.push(current.role)
+      }
+    }, []))]
   },
 
   /**

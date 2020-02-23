@@ -1054,6 +1054,25 @@ describe('roles', function () {
     assert.sameMembers(Roles.getRolesForUser(userObj), ['editor'])
   })
 
+  it('getRolesForUser should not fail during a call of addUsersToRoles', function () {
+    Roles.createRole('editor')
+
+    var userId = users.eve
+
+    const promises = [
+    ];
+
+    const interval = setInterval(() => {
+      promises.push(Promise.resolve().then(() => { Roles.getRolesForUser(userId); }));
+    }, 0);
+    
+    Roles.addUsersToRoles([users.eve], ['editor'], Roles.GLOBAL_SCOPE)
+    clearInterval(interval);
+
+
+    return Promise.all(promises)
+  })
+
   it('returns an empty list of scopes for null as user-id', function () {
     assert.sameMembers(Roles.getScopesForUser(undefined), [])
     assert.sameMembers(Roles.getScopesForUser(null), [])
