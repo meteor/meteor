@@ -1,10 +1,28 @@
-import { Decimal } from 'meteor/mongo-decimal'
 import LocalCollection from './local_collection.js';
 import {
   compileDocumentSelector,
   hasOwn,
   nothingMatcher,
 } from './common.js';
+
+let Decimal = Package['mongo-decimal']?.Decimal;
+
+// Due to {weak: true} Decimal dependency on client
+// declare minimal Decimal functionality
+if (!Decimal) {
+  class Decimal {
+    constructor(value) {
+      this.value = value.toString();
+    }
+    minus(value) {
+      let _value = Number(this.value) - Number(value);
+      return new Decimal(_value);
+    }
+    toNumber() {
+      return Number(this.value);
+    }
+  }
+}
 
 // The minimongo selector compiler!
 
