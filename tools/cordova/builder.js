@@ -10,6 +10,7 @@ import archinfo from '../utils/archinfo';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
+import XmlBuilder from 'xmlbuilder2';
 
 import { CORDOVA_ARCH } from './index.js';
 
@@ -123,8 +124,8 @@ export class CordovaBuilder {
         'DisallowOverscroll': true
       },
       platform: {
-          ios: {},
-          android: {}
+        ios: {},
+        android: {}
       }
     };
 
@@ -246,8 +247,6 @@ export class CordovaBuilder {
   }
 
   writeConfigXmlAndCopyResources(shouldCopyResources = true) {
-    const { XmlBuilder } = loadIsopackage('xmlbuilder');
-
     let config = XmlBuilder.create({ version: '1.0' }).ele('widget');
 
     // Set the root attributes
