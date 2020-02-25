@@ -24,8 +24,8 @@ import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
 import { EXAMPLE_REPOSITORIES } from './example-repositories.js';
 
-// The architecture used by MDG's hosted servers; it's the architecture used by
-// 'meteor deploy'.
+// The architecture used by Meteor Software's hosted servers; it's the
+// architecture used by 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
@@ -862,6 +862,12 @@ main.registerCommand({
   Console.info("If you are new to Meteor, try some of the learning resources here:");
   Console.info(
     Console.url("https://www.meteor.com/tutorials"),
+      Console.options({ indent: 2 }));
+
+  Console.info("");
+  Console.info("When you’re ready to deploy and host your new Meteor application, check out Galaxy:");
+  Console.info(
+    Console.url("https://www.meteor.com/hosting"),
       Console.options({ indent: 2 }));
 
   if (! options.bare &&
@@ -2401,7 +2407,7 @@ main.registerCommand({
     json: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     // By default, we give you a machine for 5 minutes. You can request up to
-    // 15. (MDG can reserve machines for longer than that.)
+    // 15. (Meteor Software can reserve machines for longer than that.)
     minutes: { type: Number }
   },
   pretty: false,

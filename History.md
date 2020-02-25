@@ -1,8 +1,161 @@
-## v.NEXT
+## v1.10, TBD
+
+### Breaking changes
+
+* Cordova has been updated from version 7 to 9. We recommend that you test
+  your features that are taking advantage of Cordova plugins to be sure
+  they are still working as expected.
+
+* The version of MongoDB used by Meteor in development has been updated
+  from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
+  from 3.2.7 to 3.4.0, thanks to [@klaussner](https://github.com/klaussner).
+  [Feature #361](https://github.com/meteor/meteor-feature-requests/issues/361)
+  [PR #10723](https://github.com/meteor/meteor/pull/10723)
+
+* The `npm` command-line tool used by the `meteor npm` command (and by
+  Meteor internally) has been updated to version 6.13.6, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.12-meteor) of its
+  `pacote` dependency has been updated to version 9.5.12.
+
+* Cordova was updated from version 7 to 9
+  * cordova-lib from 7.1.0 to 9.0.1 [release notes](https://github.com/apache/cordova-lib/blob/master/RELEASENOTES.md)
+  * cordova-common from 2.1.1 to 3.2.1 [release notes](https://github.com/apache/cordova-common/blob/master/RELEASENOTES.md)
+  * cordova-android from 7.1.4 to 8.1.0 [release notes](https://github.com/apache/cordova-android/blob/master/RELEASENOTES.md)
+  * cordova-ios from 4.5.5 to 5.1.1 [release notes](https://github.com/apache/cordova-ios/blob/master/RELEASENOTES.md)
+  * cordova-plugin-wkwebview-engine from 1.1.4 to 1.2.1 [release notes](https://github.com/apache/cordova-plugin-wkwebview-engine/blob/master/RELEASENOTES.md#121-jul-20-2019)
+  * cordova-plugin-whitelist from 1.3.3 to 1.3.4 [release notes](https://github.com/apache/cordova-plugin-whitelist/blob/master/RELEASENOTES.md#134-jun-19-2019)
+  * cordova-plugin-splashscreen (included by mobile-experience > launch-screen) from 4.1.0 to 5.0.3 [release notes](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#503-may-09-2019)
+  * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar) from 2.3.0 to 2.4.3 [release notes](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#243-jun-19-2019)
+
+* You can now pass an `--exclude-archs` option to the `meteor run` and
+  `meteor test` commands to temporarily disable building certain web
+  architectures. For example, `meteor run --exclude-archs web.browser.legacy`.
+  Multiple architectures should be separated by commas. This option can be
+  used to improve (re)build times if you're not actively testing the
+  excluded architectures during development.
+  [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
+  [PR #10824](https://github.com/meteor/meteor/pull/10824)
+
+## v1.9.2, 2020-02-20
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
 
 ### Changes
 
-* The `meteor-babel` npm package has been updated to version 7.7.4.
+* Node.js has been updated to version
+  [12.16.1](https://nodejs.org/en/blog/release/v12.16.1/), fixing several unintended
+  [regressions](https://github.com/nodejs/node/blob/master/doc/changelogs/CHANGELOG_V12.md#12.16.1)
+  introduced in 12.16.0.
+
+* The `meteor-babel` npm package has been updated to version 7.8.2.
+
+* The `typescript` npm package has been updated to version 3.7.5.
+
+## v1.9.1, 2020-02-18
+
+### Breaking changes
+
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  12.16.0 from 12.14.0, which includes
+  security updates and small changes:
+  * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
+    * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
+  * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
+
+## v1.9, 2020-01-09
+
+### Breaking changes
+
+* Because Node.js 12 no longer supports 32-bit Linux, Meteor 1.9 has also
+  dropped support for 32-bit Linux. In other words, Meteor 1.9 supports
+  64-bit Mac, Windows, and Linux, as well as 32-bit Windows.
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  [12.14.0](https://nodejs.org/en/blog/release/v12.14.0/), which includes
+  several major Node.js versions since 8.17.0 (used by Meteor 1.8.3):
+  * [12.0.0](https://nodejs.org/en/blog/release/v12.0.0/)
+  * [11.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
+
+* The `fibers` npm package has been updated to version 4.0.3, which
+  includes [changes](https://github.com/laverdet/node-fibers/pull/429)
+  that may drastically reduce garbage collection pressure resulting from
+  heavy `Fiber` usage.
+
+* The `pathwatcher` npm package has been updated to use a fork of version
+  8.0.2, with [PR #128](https://github.com/atom/node-pathwatcher/pull/128)
+  applied.
+
+* The `sqlite3` npm package has been updated to version 4.1.0.
+
+* The `node-gyp` npm package has been updated to version 6.0.1, and
+  `node-pre-gyp` has been updated to version 0.14.0.
+
+* The feature that restarts the application up to two times if it crashes
+  on startup has been removed.
+  [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
+  [PR #10345](https://github.com/meteor/meteor/pull/10345)
+
+* Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
+
+## v1.8.3, 2019-12-19
+
+### Migration Steps
+
+* If your application uses `blaze-html-templates`, the Meteor `jquery`
+  package will be automatically installed in your `.meteor/packages` file
+  when you update to Meteor 1.8.3. However, this new version of the Meteor
+  `jquery` package no longer bundles its own copy of the `jquery` npm
+  implementation, so you may need to install `jquery` from npm by running
+  ```sh
+  meteor npm i jquery
+  ```
+  in your application directory. Symptoms of not installing jquery include
+  a blank browser window, with helpful error messages in the console.
+
+### Changes
+
+* Node has been updated to version
+  [8.17.0](https://nodejs.org/en/blog/release/v8.17.0/).
+
+* The `npm` npm package has been updated to version 6.13.4, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.11-meteor) of its
+  `pacote` dependency has been updated to version 9.5.11, an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2019-security-releases/).
+
+* Prior to Meteor 1.8.3, installing the `jquery` package from npm along
+  with the Meteor `jquery` package could result in bundling jQuery twice.
+  Thanks to [PR #10498](https://github.com/meteor/meteor/pull/10498), the
+  Meteor `jquery` package will no longer provide its own copy of jQuery,
+  but will simply display a warning in the console if the `jquery` npm
+  package cannot be found in your `node_modules` directory. If you are
+  using `blaze` in your application, updating to Meteor 1.8.3 will
+  automatically add this new version of the Meteor `jquery` package to
+  your application if you were not already using it (thanks to
+  [PR #10801](https://github.com/meteor/meteor/pull/10801)), but you might
+  need to run `meteor npm i jquery` manually, so that `blaze` can import
+  `jquery` from your `node_modules` directory.
+
+* The `meteor-babel` npm package has been updated to version 7.7.5.
+
+* The `typescript` npm package has been updated to version 3.7.3.
 
 ## v1.8.2, 2019-11-14
 

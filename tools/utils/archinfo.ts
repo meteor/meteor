@@ -15,7 +15,6 @@ const utils = require('./utils');
  *   Old versions of Internet Explorer (not sure yet exactly which
  *   versions to distinguish -- maybe 6 and 8?)
  *
- * os.linux.x86_32
  * os.linux.x86_64
  *   Linux on Intel x86 architecture. x86_64 means a system that can
  *   run 64-bit images, furnished with 64-bit builds of shared
@@ -131,7 +130,6 @@ const utils = require('./utils');
 export const VALID_ARCHITECTURES: Record<string, boolean> = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
-  "os.linux.x86_32": true,
   "os.windows.x86_64": true,
   "os.windows.x86_32": true,
 };
@@ -164,14 +162,10 @@ export function host() {
           run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel processors are supported on OS X");
       }
-
       _host  = "os.osx.x86_64";
     } else if (platform === "linux") {
       const machine = run('uname', '-m');
-
-      if (["i386", "i686", "x86"].includes(machine)) {
-        _host = "os.linux.x86_32";
-      } else if (["x86_64", "amd64", "ia64"].includes(machine)) {
+      if (["x86_64", "amd64", "ia64"].includes(machine)) {
         _host = "os.linux.x86_64";
       } else {
         throw new Error(`Unsupported architecture: ${machine}`);

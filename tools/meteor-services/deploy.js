@@ -33,8 +33,8 @@ const hasOwn = Object.prototype.hasOwnProperty;
 
 const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 
-// Make a synchronous RPC to the "classic" MDG deploy API. The deploy
-// API has the following contract:
+// Make a synchronous RPC to the "classic" Meteor Software deploy API. The
+// deploy API has the following contract:
 //
 // - Parameters are always sent in the query string.
 // - A tarball can be sent in the body (when deploying an app).
@@ -45,7 +45,7 @@ const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 //   provide a human-readable error message in the body.
 // - URLs are of the form "/[operation]/[site]".
 // - Body encodings are always utf8.
-// - Meteor Accounts auth is possible using first-party MDG cookies
+// - Meteor Accounts auth is possible using first-party Meteor Software cookies
 //   (rather than OAuth).
 //
 // Options include:

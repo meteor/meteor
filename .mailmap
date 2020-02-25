@@ -13,7 +13,7 @@
 # A command-line way to get the GitHub username for an author:
 #   scripts/admin/find-author-github.sh 'User Name <foo@bar.com>'
 # (Note that this script always outputs GITHUB so you should manually
-# check to see if they are an MDG employee!)
+# check to see if they are an Meteor Software employee!)
 
 GITHUB: 0a- <a@0a.io>
 GITHUB: adnissen <andrew_nissen@yahoo.com>

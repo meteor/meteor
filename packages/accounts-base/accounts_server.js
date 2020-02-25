@@ -1555,18 +1555,18 @@ const setupUsersCollection = users => {
   });
 
   /// DEFAULT INDEXES ON USERS
-  users._ensureIndex('username', {unique: 1, sparse: 1});
-  users._ensureIndex('emails.address', {unique: 1, sparse: 1});
+  users._ensureIndex('username', { unique: true, sparse: true });
+  users._ensureIndex('emails.address', { unique: true, sparse: true });
   users._ensureIndex('services.resume.loginTokens.hashedToken',
-    {unique: 1, sparse: 1});
+    { unique: true, sparse: true });
   users._ensureIndex('services.resume.loginTokens.token',
-    {unique: 1, sparse: 1});
+    { unique: true, sparse: true });
   // For taking care of logoutOtherClients calls that crashed before the
   // tokens were deleted.
   users._ensureIndex('services.resume.haveLoginTokensToDelete',
-    { sparse: 1 });
+    { sparse: true });
   // For expiring login tokens
-  users._ensureIndex("services.resume.loginTokens.when", { sparse: 1 });
+  users._ensureIndex("services.resume.loginTokens.when", { sparse: true });
   // For expiring password tokens
-  users._ensureIndex('services.password.reset.when', { sparse: 1 });
+  users._ensureIndex('services.password.reset.when', { sparse: true });
 };

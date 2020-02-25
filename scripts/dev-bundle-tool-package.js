@@ -10,19 +10,19 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.13.0",
-    pacote: "https://github.com/meteor/pacote/tarball/a1853763676463c458aa8ce7b91c20205c44ae6a",
-    "node-gyp": "5.0.1",
-    "node-pre-gyp": "0.13.0",
-    typescript: "3.7.2",
-    "meteor-babel": "7.7.4",
+    npm: "6.13.6",
+    pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
+    "node-gyp": "6.0.1",
+    "node-pre-gyp": "0.14.0",
+    typescript: "3.7.5",
+    "meteor-babel": "7.8.2",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
+    fibers: "4.0.3",
     reify: "0.20.12",
-    fibers: "3.1.1",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.7.4",
+    "@babel/runtime": "7.8.4",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
@@ -36,11 +36,12 @@ var packageJson = {
     "graceful-fs": "4.2.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
     tar: "2.2.1",
-    kexec: "3.0.0",
-    "source-map": "0.5.7",
+    // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
+    // https://github.com/jprichardson/node-kexec/pull/37 applied.
+    kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
+    "source-map": "0.7.3",
     chalk: "0.5.1",
-    sqlite3: "3.1.8",
-    netroute: "1.0.2",
+    sqlite3: "4.1.0",
     "http-proxy": "1.16.2",
     "is-reachable": "3.1.0",
     "wordwrap": "0.0.2",
@@ -60,7 +61,8 @@ var packageJson = {
     // version constraint imposed by optimism/package.json.
     optimism: "0.11.3",
     "@wry/context": "0.4.4",
-    'lru-cache': '4.1.3'
+    'lru-cache': '4.1.3',
+    "anser": "1.4.8"
   }
 };
 
