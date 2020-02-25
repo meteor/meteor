@@ -650,6 +650,51 @@ Meteor.publish('Meteor.users.initials', function ({ userIds }) {
 
 This publication will let the client pass an array of user IDs it's interested in, and get the initials for all of those users.
 
+<h3 id="prevent-unnecessary-data-retrival">Preventing unnecessary data retrieval</h3>
+
+Take care storing lots of custom data on the user document, particularly data which grows indefinitely, because by default the entire user document is fetched from the database whenever a user tries to log in or out. Plus any calls to (e.g.) `Meteor.user().profile.name` on the server will fetch the entire user document from the database even though may you only need their name. If you have stored lots of custom data on the user documents this could significantly waste server resources (RAM and CPU).
+
+On the client, creating a reactive property based on (e.g.) `Meteor.user().profile.name` will cause any dependent DOM to update whenever **any** user data changes, not just their name, because the entire user document is being fetched from minimongo and becomes a reactive dependency for that property.
+
+Meteor 1.10 introduced a solution to these problems.  A new `options` parameter was added to some methods which retrieves a user document. This parameter can include a [mongo field specifier](https://docs.meteor.com/api/collections.html#fieldspecifiers) to include or omit specific fields from the query.  The methods which have this new parameter, and some examples of their usage are:
+
+```js
+// fetch only the user's name from the database:
+const name = Meteor.user({fields: {"profile.name": 1}}).profile.name;
+
+// check if an email exists without fetching their entire document from the database:
+const userExists = !!Accounts.findUserByEmail(email, {fields: {_id: 1}});
+
+// get the user id from a userName:
+const userId = Accounts.findUserByUsername(userName, {fields: {_id: 1}})?._id;
+```
+
+However, you may not have control over 3rd party package code or Meteor-core code which makes use of these functions. Nor does Meteor know which user fields are needed by callbacks registered with `Accounts.onLogin()`, `Accounts.onLogout()`, `Accounts.onLoginFailure()` and `Accounts.validateLoginAttempt()`. To solve this problem Meteor 1.10 also introduced a new [`Accounts.config({defaultFieldSelector: {...})`](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config) option to include or omit specific user fields by default.
+
+You could use this to include (white-list) the standard fields as used by [the Accounts system](http://docs.meteor.com/api/accounts.html#Meteor-users):
+
+```js
+Accounts.config({
+  defaultFieldSelector: {
+    username: 1,
+    emails: 1
+    createdAt: 1,
+    profile: 1,
+    services: 1
+  }
+});
+```
+However, this may introduce bugs into any 3rd party or your own callbacks which expect non-standard fields to be present.  Alternatively you could omit (black-list) any of your own fields which include large amounts of data, e.g.:
+```js
+Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})
+```
+
+To ensure backwards compatibility, if you don't define `defaultFieldSelector` then the entire user document will be fetched as with earlier versions of Meteor.
+
+If you define a `defaultFieldSelector`, then you can override it by passing an `options` parameter, e.g. `Meteor.user({fields: {myBigArray: 1}})`.  If you want to fetch the entire user document you can use an empty field specifier: `Meteor.user({fields: {}})`.
+
+The `defaultFieldSelector` is not used within direct `Meteor.users` collection operations - e.g. `Meteor.users.findOne(Meteor.userId())` will still fetch the entire user document.
+
 <h2 id="roles-and-permissions">Roles and permissions</h2>
 
 One of the main reasons you might want to add a login system to your app is to have permissions for your data. For example, if you were running a forum, you would want administrators or moderators to be able to delete any post, but normal users can only delete their own. This uncovers two different types of permissions:
