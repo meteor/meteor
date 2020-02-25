@@ -21,7 +21,7 @@ N/A
   [PR #10723](https://github.com/meteor/meteor/pull/10723)
 
 * The `npm` command-line tool used by the `meteor npm` command (and by
-  Meteor internally) has been updated to version 6.13.6, and our
+  Meteor internally) has been updated to version 6.14.0, and our
   [fork](https://github.com/meteor/pacote/tree/v9.5.12-meteor) of its
   `pacote` dependency has been updated to version 9.5.12.
 
