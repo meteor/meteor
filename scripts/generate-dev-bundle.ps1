@@ -72,9 +72,6 @@ Function Add-7ZipTool {
   $webclient.DownloadFile("http://www.7-zip.org/a/7z1604-extra.7z", $extraArchive)
 
   $pathToExtract = 'x64/7za.exe'
-  if ($PLATFORM -eq "windows_x86") {
-    $pathToExtract = '7za.exe'
-  }
 
   Write-Host 'Placing 7za.exe from extra.7z in \bin...' -ForegroundColor Magenta
   & "$system7zip" e $extraArchive -o"$dirTemp" $pathToExtract | Out-Null
@@ -118,11 +115,7 @@ Function Add-NodeAndNpm {
     $nodeUrlBase = 'https://nodejs.org/dist'
   }
 
-  if ($PLATFORM -eq "windows_x86") {
-    $nodeArchitecture = 'win-x86'
-  } else {
-    $nodeArchitecture = 'win-x64'
-  }
+  $nodeArchitecture = 'win-x64'
 
   # Various variables which are used as part of directory paths and
   # inside Node release and header archives.
@@ -231,7 +224,6 @@ Function Add-Mongo {
   # Mongo >= 3.4 no longer supports 32-bit (x86) architectures, so we package
   # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
   $mongo_filenames = @{
-    windows_x86 = "mongodb-win32-i386-${MONGO_VERSION_32BIT}"
     windows_x64 = "mongodb-win32-x86_64-2012plus-${MONGO_VERSION_64BIT}"
   }
 

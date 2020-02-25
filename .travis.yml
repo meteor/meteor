@@ -5,7 +5,10 @@ cache:
   directories:
     - ".meteor"
     - ".babel-cache"
-script: TEST_PACKAGES_EXCLUDE="less" phantom=false ./packages/test-in-console/run.sh
+script:
+  - export TEST_PACKAGES_EXCLUDE="less"
+  - export phantom=false
+  - travis_retry ./packages/test-in-console/run.sh
 sudo: false
 env:
   - CXX=g++-4.8
