@@ -834,6 +834,13 @@ wrench: https://github.com/ryanmcgrath/wrench-js
 Copyright (c) 2010 Ryan McGrath
 
 
+----------	----------
+xmlbuilder: http://github.com/oozcitak/xmlbuilder-js
+----------	----------
+
+Copyright (c) 2013 Ozgur Ozcitak
+
+
 ----------
 xmlbuilder2: http://github.com/oozcitak/xmlbuilder2
 ----------
