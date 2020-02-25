@@ -62,7 +62,8 @@ var packageJson = {
     optimism: "0.11.3",
     "@wry/context": "0.4.4",
     'lru-cache': '4.1.3',
-    "anser": "1.4.8"
+    "anser": "1.4.8",
+    'xmlbuilder2': '1.3.0'
   }
 };
 

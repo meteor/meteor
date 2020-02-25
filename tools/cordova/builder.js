@@ -10,6 +10,7 @@ import archinfo from '../utils/archinfo';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
+import XmlBuilder from 'xmlbuilder2';
 
 import { CORDOVA_ARCH } from './index.js';
 
@@ -123,8 +124,8 @@ export class CordovaBuilder {
         'DisallowOverscroll': true
       },
       platform: {
-          ios: {},
-          android: {}
+        ios: {},
+        android: {}
       }
     };
 
@@ -246,9 +247,7 @@ export class CordovaBuilder {
   }
 
   writeConfigXmlAndCopyResources(shouldCopyResources = true) {
-    const { XmlBuilder } = loadIsopackage('xmlbuilder');
-
-    let config = XmlBuilder.create('widget');
+    let config = XmlBuilder.create({ version: '1.0' }).ele('widget');
 
     // Set the root attributes
     _.each({
@@ -265,16 +264,16 @@ export class CordovaBuilder {
     });
 
     // Set the metadata
-    config.element('name').txt(this.metadata.name);
-    config.element('description').txt(this.metadata.description);
-    config.element('author', {
+    config.ele('name').txt(this.metadata.name);
+    config.ele('description').txt(this.metadata.description);
+    config.ele('author', {
       href: this.metadata.website,
       email: this.metadata.email
     }).txt(this.metadata.author);
 
     // Set the additional global configuration preferences
     _.each(this.additionalConfiguration.global, (value, key) => {
-      config.element('preference', {
+      config.ele('preference', {
         name: key,
         value: value.toString()
       });
@@ -282,10 +281,10 @@ export class CordovaBuilder {
 
     // Set custom tags into widget element
     _.each(this.custom, elementSet => {
-      const tag = config.raw(elementSet);
+      const tag = config.ele(elementSet);
     });
 
-    config.element('content', { src: this.metadata.contentUrl });
+    config.ele('content', { src: this.metadata.contentUrl });
 
     // Copy all the access rules
     _.each(this.accessRules, (options, pattern) => {
@@ -293,23 +292,23 @@ export class CordovaBuilder {
       options = _.omit(options, 'type');
 
       if (type === 'intent') {
-        config.element('allow-intent', { href: pattern });
+        config.ele('allow-intent', { href: pattern });
       } else if (type === 'navigation') {
-        config.element('allow-navigation', _.extend({ href: pattern }, options));
+        config.ele('allow-navigation', _.extend({ href: pattern }, options));
       } else {
-        config.element('access', _.extend({ origin: pattern }, options));
+        config.ele('access', _.extend({ origin: pattern }, options));
       }
     });
 
     const platformElement = {
-      ios: config.element('platform', {name: 'ios'}),
-      android: config.element('platform', {name: 'android'})
+      ios: config.ele('platform', { name: 'ios' }),
+      android: config.ele('platform', { name: 'android' })
     }
 
     // Set the additional platform-specific configuration preferences
     _.each(this.additionalConfiguration.platform, (prefs, platform) => {
       _.each(prefs, (value, key) => {
-        platformElement[platform].element('preference', {
+        platformElement[platform].ele('preference', {
           name: key,
           value: value.toString()
         });
@@ -338,7 +337,7 @@ export class CordovaBuilder {
     Console.debug('Writing new config.xml');
 
     const configXmlPath = files.pathJoin(this.projectRoot, 'config.xml');
-    const formattedXmlConfig = config.end({ pretty: true });
+    const formattedXmlConfig = config.end({ prettyPrint: true });
     files.writeFile(configXmlPath, formattedXmlConfig, 'utf8');
   }
 
@@ -386,7 +385,7 @@ export class CordovaBuilder {
         files.pathJoin(this.resourcesPath, filename));
 
       // Set it to the xml tree
-      xmlElement.element(tag, imageAttributes(name, width, height, src));
+      xmlElement.ele(tag, imageAttributes(name, width, height, src));
     });
   }
 
@@ -399,15 +398,15 @@ export class CordovaBuilder {
         files.pathJoin(this.projectRoot, filename));
       // And entry in config.xml
       if (!resourceFile.platform ||
-          (resourceFile.platform && resourceFile.platform === "android")) {
-        androidElement.element('resource-file', {
+        (resourceFile.platform && resourceFile.platform === "android")) {
+        androidElement.ele('resource-file', {
           src: resourceFile.src,
           target: resourceFile.target
         });
       }
       if (!resourceFile.platform ||
-          (resourceFile.platform && resourceFile.platform === "ios")) {
-        iosElement.element('resource-file', {
+        (resourceFile.platform && resourceFile.platform === "ios")) {
+        iosElement.ele('resource-file', {
           src: resourceFile.src,
           target: resourceFile.target
         });
@@ -545,7 +544,7 @@ function createAppConfiguration(builder) {
   let settings = null;
   if (settingsFile) {
     settings = optimisticReadJsonOrNull(settingsFile);
-    if (! settings) {
+    if (!settings) {
       throw new Error("Unreadable --settings file: " + settingsFile);
     }
   }
