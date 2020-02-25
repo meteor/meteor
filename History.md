@@ -2,14 +2,9 @@
 
 ### Breaking changes
 
-* Cordova was updated from version 7 to 9 then we recommend that you test 
-your features that are taking advantage of Cordova plugins to be sure they are 
-still working as expected. 
-
-### Migration Steps
-N/A
-
-### Changes
+* Cordova has been updated from version 7 to 9. We recommend that you test
+  your features that are taking advantage of Cordova plugins to be sure
+  they are still working as expected.
 
 * The version of MongoDB used by Meteor in development has been updated
   from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
@@ -41,10 +36,24 @@ N/A
   [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
   [PR #10824](https://github.com/meteor/meteor/pull/10824)
 
-* The `meteor-babel` npm package has been updated to version 7.8.0,
-  corresponding to version 7.8.3 for most `@babel/*` packages.
+## v1.9.2, 2020-02-20
 
-* The `typescript` npm package has been updated to version 3.7.4.
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  [12.16.1](https://nodejs.org/en/blog/release/v12.16.1/), fixing several unintended
+  [regressions](https://github.com/nodejs/node/blob/master/doc/changelogs/CHANGELOG_V12.md#12.16.1)
+  introduced in 12.16.0.
+
+* The `meteor-babel` npm package has been updated to version 7.8.2.
+
+* The `typescript` npm package has been updated to version 3.7.5.
 
 ## v1.9.1, 2020-02-18
 
