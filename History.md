@@ -6,6 +6,14 @@
   your features that are taking advantage of Cordova plugins to be sure
   they are still working as expected.
 
+* Because MongoDB since 3.4 no longer supports 32-bit Windows, Meteor 1.10 has
+  also dropped support for 32-bit Windows. In other words, Meteor 1.10 supports
+  64-bit Mac, Windows 64-bit, and Linux 64-bit.
+
+### Migration Steps
+N/A
+
+### Changes
 * The version of MongoDB used by Meteor in development has been updated
   from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
   from 3.2.7 to 3.4.0, thanks to [@klaussner](https://github.com/klaussner).
@@ -73,6 +81,11 @@ N/A
     * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
   * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
 
+* `cursor.observeChanges` now accepts a second options argument.
+  If your observer functions do not mutate the passed arguments, you can specify
+  `{ nonMutatingCallbacks: true }`, which improves performance by reducing
+  the amount of data copies.
+
 ## v1.9, 2020-01-09
 
 ### Breaking changes
@@ -115,6 +128,25 @@ N/A
 
 * Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
 
+### Changes
+
+* `Meteor.user()`, `Meteor.findUserByEmail()` and `Meteor.findUserByUserName()` can take a new
+  `options` parameter which can be used to limit the returned fields. Useful for minimizing
+  DB bandwidth on the server and avoiding unnecessary reactive UI updates on the client.
+  [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+
+* `Accounts.config()` has a new option `defaultFieldSelector` which will apply to all
+  `Meteor.user()` and `Meteor.findUserBy...()` functions without explicit field selectors, and
+  also to all `onLogin`, `onLogout` and `onLoginFailure` callbacks.  This is useful if you store
+  large data on the user document (e.g. a growing list of transactions) which do no need to be
+  retrieved from the DB whenever you or a package author call `Meteor.user()` without limiting the
+  fields. [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+
+* Lots of internal calls to `Meteor.user()` without field specifiers in `accounts-base` and
+  `accounts-password` packages have been optimized with explicit field selectors to only fetch
+  the fields needed by the functions they are in.
+  [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+
 ## v1.8.3, 2019-12-19
 
 ### Migration Steps
@@ -131,6 +163,8 @@ N/A
   a blank browser window, with helpful error messages in the console.
 
 ### Changes
+
+* The `meteor-babel` npm package has been updated to version 7.7.4.
 
 * Node has been updated to version
   [8.17.0](https://nodejs.org/en/blog/release/v8.17.0/).
@@ -285,7 +319,7 @@ N/A
   compiler plugin now automatically handles JavaScript modules with the
   `.mjs` file extension.
 
-* Add `--cordova-server-port` option to override local port where Cordova will 
+* Add `--cordova-server-port` option to override local port where Cordova will
   serve static resources, which is useful when multiple Cordova apps are built
   from the same application source code, since by default the port is generated
   using the ID from the application's `.meteor/.id` file.
@@ -341,12 +375,12 @@ N/A
 * The `meteor-babel` npm package has been updated to version 7.3.4.
 
 * Cordova Hot Code Push mechanism is now switching versions explicitly with
-  call to `WebAppLocalServer.switchToPendingVersion` instead of trying to 
-  switch every time a browser reload is detected. If you use any third 
+  call to `WebAppLocalServer.switchToPendingVersion` instead of trying to
+  switch every time a browser reload is detected. If you use any third
   party package or have your own HCP routines implemented be sure to call
   it before forcing a browser reload. If you use the automatic reload from
   the `Reload` meteor package you do not need to do anything.
-  [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62) 
+  [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62)
 
 * Multiple Cordova-related bugs have been fixed, including Xcode 10 build
   incompatibilities and hot code push errors due to duplicated
@@ -837,7 +871,7 @@ N/A
 
 ### Migration Steps
 
-* Update `@babel/runtime` (as well as other Babel-related packages) and 
+* Update `@babel/runtime` (as well as other Babel-related packages) and
   `meteor-node-stubs` to their latest versions:
   ```sh
   meteor npm install @babel/runtime@latest meteor-node-stubs@latest
@@ -1236,7 +1270,7 @@ N/A
 N/A
 
 ### Migration Steps
-* Update `@babel/runtime` npm package and any custom Babel plugin enabled in 
+* Update `@babel/runtime` npm package and any custom Babel plugin enabled in
 `.babelrc`
   ```sh
   meteor npm install @babel/runtime@latest
@@ -1271,7 +1305,7 @@ N/A
   values are not first converted to `null`, when inserted/updated. `undefined`
   values are now removed from all Mongo queries and insert/update documents.
 
-  This is a potentially breaking change if you are upgrading an existing app 
+  This is a potentially breaking change if you are upgrading an existing app
   from an earlier version of Meteor.
 
   For example:
@@ -1281,11 +1315,11 @@ N/A
       userId: currentUser._id // undefined
   });
   ```
-  Assuming there are no documents in the `privateUserData` collection with 
-  `userId: null`, in Meteor versions prior to 1.6.1 this query will return 
-  zero documents. From Meteor 1.6.1 onwards, this query will now return 
-  _every_ document in the collection. It is highly recommend you review all 
-  your existing queries to ensure that any potential usage of `undefined` in 
+  Assuming there are no documents in the `privateUserData` collection with
+  `userId: null`, in Meteor versions prior to 1.6.1 this query will return
+  zero documents. From Meteor 1.6.1 onwards, this query will now return
+  _every_ document in the collection. It is highly recommend you review all
+  your existing queries to ensure that any potential usage of `undefined` in
   query objects won't lead to problems.
 
 ### Migration Steps
