@@ -5,7 +5,15 @@
 * Cordova has been updated from version 7 to 9. We recommend that you test
   your features that are taking advantage of Cordova plugins to be sure
   they are still working as expected.
+  
+* Because MongoDB since 3.4 no longer supports 32-bit Windows, Meteor 1.10 has 
+  also dropped support for 32-bit Windows. In other words, Meteor 1.10 supports
+  64-bit Mac, Windows 64-bit, and Linux 64-bit.
 
+### Migration Steps
+N/A
+
+### Changes
 * The version of MongoDB used by Meteor in development has been updated
   from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
   from 3.2.7 to 3.4.0, thanks to [@klaussner](https://github.com/klaussner).
@@ -72,6 +80,11 @@ N/A
   * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
     * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
   * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
+
+* `cursor.observeChanges` now accepts a second options argument.
+  If your observer functions do not mutate the passed arguments, you can specify
+  `{ nonMutatingCallbacks: true }`, which improves performance by reducing
+  the amount of data copies.
 
 ## v1.9, 2020-01-09
 
