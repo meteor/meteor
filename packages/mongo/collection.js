@@ -176,7 +176,7 @@ Object.assign(Mongo.Collection.prototype, {
       // XXX better specify this interface (not in terms of a wire message)?
       update(msg) {
         var mongoId = MongoID.idParse(msg.id);
-        var doc = self._collection.findOne(mongoId);
+        var doc = self._collection._docs.get(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
