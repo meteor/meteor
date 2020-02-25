@@ -81,6 +81,11 @@ N/A
     * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
   * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
 
+* `cursor.observeChanges` now accepts a second options argument.
+  If your observer functions do not mutate the passed arguments, you can specify
+  `{ nonMutatingCallbacks: true }`, which improves performance by reducing
+  the amount of data copies.
+
 ## v1.9, 2020-01-09
 
 ### Breaking changes

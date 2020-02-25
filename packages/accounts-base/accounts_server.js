@@ -895,7 +895,7 @@ export class AccountsServer extends AccountsCommon {
           // The onClose callback for the connection takes care of
           // cleaning up the observe handle and any other state we have
           // lying around.
-        });
+        }, { nonMutatingCallbacks: true });
 
         // If the user ran another login or logout command we were waiting for the
         // defer or added to fire (ie, another call to _setLoginToken occurred),
