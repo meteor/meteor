@@ -225,7 +225,7 @@ class SymlinkLoopChecker {
 
     if (files.lstat(absPath).isSymbolicLink()) {
       const result = files.realpath(absPath);
-      this._cache.set(relPath, result);
+      this._cache.set(relDir, result);
 
       return result;
   }
