@@ -16,7 +16,6 @@ import {
   readdir,
   dependOnPath,
   findAppDir,
-  realpath,
 } from "./files";
 
 // When in doubt, the optimistic caching system can be completely disabled
