@@ -880,7 +880,7 @@ function runWebAppServer() {
       if (isPrefixOf(prefixParts, pathParts)) {
         request.url = "/" + pathParts.slice(prefixParts.length).join("/");
         if (search) {
-         request.url += search; 
+          request.url += search; 
         }
         return next();
       }
