@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.2.8"
+  version: "1.2.9"
 });
 
 Package.onUse(api => {
@@ -47,6 +47,9 @@ Package.onUse(api => {
   api.addFiles('deprecated.js', ['client', 'server']);
 });
 
+Npm.depends({
+  'body-parser': '1.19.0',
+});
 
 Package.onTest(api => {
   api.use('tinytest');
