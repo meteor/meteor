@@ -1,3 +1,7 @@
+## v3.2.1_1
+
+* Republish without dev-dependencies
+
 ## v3.2.1
 
 * `Roles.getRolesForUser()` should not fail during a call of `Roles.addUsersToRoles()` [#311](https://github.com/Meteor-Community-Packages/meteor-roles/pull/311) ([@ggerber](https://github.com/ggerber))
