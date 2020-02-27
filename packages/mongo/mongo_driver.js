@@ -135,10 +135,20 @@ MongoConnection = function (url, options) {
 
   var mongoOptions = Object.assign({
     ignoreUndefined: true,
+    // See https://github.com/meteor/meteor/issues/10925 for discussion of
+    // why this option is not the default.
+    useUnifiedTopology: !!options.useUnifiedTopology,
   }, Mongo._connectionOptions);
 
-  if (options.useUnifiedTopology) {
-    mongoOptions.useUnifiedTopology = true;
+  // The autoReconnect and reconnectTries options are incompatible with
+  // useUnifiedTopology: https://github.com/meteor/meteor/pull/10861#commitcomment-37525845
+  if (!mongoOptions.useUnifiedTopology) {
+    // Reconnect on error. This defaults to true, but it never hurts to be
+    // explicit about it.
+    mongoOptions.autoReconnect = true;
+    // Try to reconnect forever, instead of stopping after 30 tries (the
+    // default), with each attempt separated by 1000ms.
+    mongoOptions.reconnectTries = Infinity;
   }
 
   // Disable the native parser by default, unless specifically enabled
