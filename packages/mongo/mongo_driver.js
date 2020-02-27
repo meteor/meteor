@@ -135,9 +135,11 @@ MongoConnection = function (url, options) {
 
   var mongoOptions = Object.assign({
     ignoreUndefined: true,
-    // Required to silence deprecation warnings with mongodb@3.2.1.
-    useUnifiedTopology: true,
   }, Mongo._connectionOptions);
+
+  if (options.useUnifiedTopology) {
+    mongoOptions.useUnifiedTopology = true;
+  }
 
   // Disable the native parser by default, unless specifically enabled
   // in the mongo URL.
