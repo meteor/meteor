@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Random number generator and utilities',
-  version: '1.2.0-rc110.0',
+  version: '1.2.0-rc110.1',
 });
 
 Package.onUse(function (api) {
