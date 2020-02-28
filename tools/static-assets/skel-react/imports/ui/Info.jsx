@@ -17,5 +17,4 @@ export const Info = () => {
       )}</ul>
     </div>
   );
-
-}
+};
