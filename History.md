@@ -44,6 +44,9 @@ N/A
   excluded architectures during development.
   [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
   [PR #10824](https://github.com/meteor/meteor/pull/10824)
+  
+* `meteor create --react app` now uses `useTracker` hook instead of 
+  `withTracker` HOC, it also uses `function` components instead of `classes`. 
 
 ## v1.9.2, 2020-02-20
 
