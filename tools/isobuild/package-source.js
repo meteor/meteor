@@ -833,23 +833,22 @@ _.extend(PackageSource.prototype, {
     }
   }),
 
-  // Reads a directory, applies the include and exclude filters,
-  // and returns the file paths relative to the sourceRoot
-  // If a watchSet is provided, will add the results to it
-  _maybeReadAndWatchDirectory(relDir, watchSet, {include, exclude, names}) {
+  _readAndWatchDirectory(relDir, watchSet, {include, exclude, names}) {
     const options = {
       absPath: files.pathJoin(this.sourceRoot, relDir),
       include, exclude, names
-    }
-    let result;
+    };
+
+    const contents = watch.readDirectory(options);
 
     if (watchSet) {
-      result = watch.readAndWatchDirectory(watchSet, options);
-    } else {
-      result = watch.readDirectory(options)
+      watchSet.addDirectory({
+        contents,
+        ...options
+      });
     }
 
-    return result.map(name => files.pathJoin(relDir, name));
+    return contents.map(name => files.pathJoin(relDir, name));
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
@@ -1318,11 +1317,11 @@ _.extend(PackageSource.prototype, {
       }
 
       const sources = _.difference(
-        self._maybeReadAndWatchDirectory(dir, inNodeModules ? null : watchSet, readOptions),
+        self._readAndWatchDirectory(dir, inNodeModules ? null : watchSet, readOptions),
         depth > 0 ? [] : controlFiles
       );
 
-      const subdirectories = self._maybeReadAndWatchDirectory(
+      const subdirectories = self._readAndWatchDirectory(
         dir,
         inNodeModules ? null : watchSet,
         {
@@ -1395,7 +1394,7 @@ _.extend(PackageSource.prototype, {
     // Now look for assets for this unibuild.
     const arch = sourceArch.arch;
     const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
-    var assetDirs = this._maybeReadAndWatchDirectory('', watchSet, {
+    var assetDirs = this._readAndWatchDirectory('', watchSet, {
       names: [assetDir]
     });
 
@@ -1417,7 +1416,7 @@ _.extend(PackageSource.prototype, {
         }
 
         // Find asset files in this directory.
-        var assetsAndSubdirs = this._maybeReadAndWatchDirectory(dir, watchSet, {
+        var assetsAndSubdirs = this._readAndWatchDirectory(dir, watchSet, {
           include: [/.?/],
           // we DO look under dot directories here
           exclude: ignoreFiles
