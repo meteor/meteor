@@ -506,6 +506,8 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   try {
     var collection = self.rawCollection(collection_name);
     var mongoOpts = {safe: true};
+    // Add support for filtered positional operator
+    if (_.has(options, 'arrayFilters')) mongoOpts.arrayFilters = options.arrayFilters;
     // explictly enumerate options that minimongo supports
     if (options.upsert) mongoOpts.upsert = true;
     if (options.multi) mongoOpts.multi = true;
