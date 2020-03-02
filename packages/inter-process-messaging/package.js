@@ -1,6 +1,6 @@
 Package.describe({
   name: "inter-process-messaging",
-  version: "0.1.1-rc110.2",
+  version: "0.1.1-rc110.3",
   summary: "Support for sending messages from the build process to the server process",
   documentation: "README.md"
 });
