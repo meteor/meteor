@@ -781,8 +781,9 @@ Object.assign(Roles, {
       if (current.inheritedRoles) {
         return rev.concat(current.inheritedRoles.map(r => r._id))
       } else if (current.role) {
-        return rev.push(current.role)
+        rev.push(current.role._id)
       }
+      return rev
     }, []))]
   },
 
