@@ -64,7 +64,7 @@ const pinnedPluginVersions = {
   "cordova-plugin-file-transfer": "1.6.3",
   "cordova-plugin-geolocation": "2.4.3",
   "cordova-plugin-globalization": "1.0.7",
-  "cordova-plugin-inappbrowser": "1.7.1",
+  "cordova-plugin-inappbrowser": "3.2.0",
   "cordova-plugin-legacy-whitelist": "1.1.2",
   "cordova-plugin-media": "3.0.1",
   "cordova-plugin-media-capture": "1.4.3",

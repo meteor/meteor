@@ -60,5 +60,5 @@ Package.onTest(api => {
 });
 
 Cordova.depends({
-  'cordova-plugin-inappbrowser': '1.7.1'
+  'cordova-plugin-inappbrowser': '3.2.0'
 });
