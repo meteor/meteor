@@ -12,7 +12,7 @@
 
 ### Migration Steps
 * If you get `Unexpected mongo exit code 62. Restarting.` when starting your local
-  MongoDB, you can either restart your project (`meteor reset`)
+  MongoDB, you can either reset your project (`meteor reset`)
   (if you don't care about your local data)
   or you will need to update the feature compatibility version of your local MongoDB:
   
