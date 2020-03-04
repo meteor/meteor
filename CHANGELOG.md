@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v1.9.0, 2020-03-04
+Migrates Swift code to be compatible with Swift version 5
+
 ## v1.8.0, 2020-01-16
 It makes cordova-plugin-meteor-webapp ready for Cordova 9.
 - changes context.requireCordovaModule to require for non-Cordova modules
