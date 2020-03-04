@@ -145,7 +145,7 @@ final class AssetBundleDownloader: NSObject, URLSessionDelegate, URLSessionTaskD
 
     // Remove leading / from URL path because the path should be relative to the base URL
     if urlPath.hasPrefix("/") {
-      urlPath = String(asset.urlPath.characters.dropFirst())
+      urlPath = String(asset.urlPath.dropFirst())
     }
 
     guard var urlComponents = URLComponents(string: urlPath) else {

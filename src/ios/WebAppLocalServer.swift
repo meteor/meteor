@@ -413,21 +413,21 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   // MARK: Request Handlers
 
   private func addHandlerForAssetBundle() {
-    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
+    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest? in
       if requestMethod != "GET" { return nil }
       guard let asset = self?.currentAssetBundle?.assetForURLPath(urlPath) else { return nil }
 
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
       request.setAttribute(asset, forKey: GCDWebServerRequestAttribute_Asset)
       return request
-    }) { (request) -> GCDWebServerResponse! in
+    }) { (request) -> GCDWebServerResponse? in
         let asset = request.attribute(forKey: GCDWebServerRequestAttribute_Asset) as! Asset
         return self.responseForAsset(request, asset: asset)
     }
   }
 
   private func addHandlerForWwwDirectory() {
-    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
+    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest? in
       if requestMethod != "GET" { return nil }
 
       // Do not serve files from /application, because these should only be served through the initial asset bundle
@@ -439,14 +439,14 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
       request.setAttribute(fileURL.path, forKey: GCDWebServerRequestAttribute_FilePath)
       return request
-    }) { (request) -> GCDWebServerResponse! in
+    }) { (request) -> GCDWebServerResponse? in
       let filePath = request.attribute(forKey: GCDWebServerRequestAttribute_FilePath) as! String
       return self.responseForFile(request, filePath: filePath, cacheable: false)
     }
   }
 
   private func addHandlerForLocalFileSystem() {
-    localServer.addHandler(match: { (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
+    localServer.addHandler(match: { (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest? in
       if requestMethod != "GET" { return nil }
 
       if !(urlPath.hasPrefix(localFileSystemPath)) { return nil }
@@ -458,14 +458,14 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
       request.setAttribute(filePath, forKey: GCDWebServerRequestAttribute_FilePath)
       return request
-      }) { (request) -> GCDWebServerResponse! in
+    }) { (request) -> GCDWebServerResponse? in
         let filePath = request.attribute(forKey: GCDWebServerRequestAttribute_FilePath) as! String
         return self.responseForFile(request, filePath: filePath, cacheable: false)
     }
   }
 
   private func addIndexFileHandler() {
-    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest! in
+    localServer.addHandler(match: { [weak self] (requestMethod, requestURL, requestHeaders, urlPath, urlQuery) -> GCDWebServerRequest? in
       if requestMethod != "GET" { return nil }
 
       // Don't serve index.html for local file system paths
@@ -478,14 +478,14 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: urlPath, query: urlQuery)
       request.setAttribute(indexFile, forKey: GCDWebServerRequestAttribute_Asset)
       return request
-      }) { (request) -> GCDWebServerResponse! in
+    }) { (request) -> GCDWebServerResponse? in
         let asset = request.attribute(forKey: GCDWebServerRequestAttribute_Asset) as! Asset
         return self.responseForAsset(request, asset: asset)
     }
   }
 
   private func addNotFoundHandler() {
-    localServer.addDefaultHandler(forMethod: "GET", request: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse! in
+    localServer.addDefaultHandler(forMethod: "GET", request: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse? in
       return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.httpStatusCode_NotFound.rawValue)
     }
   }
