@@ -121,7 +121,8 @@ export class CordovaBuilder {
     this.additionalConfiguration = {
       global: {
         'webviewbounce': false,
-        'DisallowOverscroll': true
+        'DisallowOverscroll': true,
+        'WKWebViewOnly': true
       },
       platform: {
         ios: {},

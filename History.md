@@ -6,6 +6,14 @@
   your features that are taking advantage of Cordova plugins to be sure
   they are still working as expected.
   
+  * WKWebViewOnly is set by default now as true so if you are relying on 
+  UIWebView or plugins that are using UIWebView APIs you probably want to
+  set it as false, you can do this by calling 
+  `App.setPreference('WKWebViewOnly', false);` in your mobile-config.js. But we 
+  don't recommend turning this into false because 
+  [Apple have said](https://developer.apple.com/news/?id=12232019b) they are 
+  going to reject apps using UIWebView.
+  
 * Because MongoDB since 3.4 no longer supports 32-bit Windows, Meteor 1.10 has
   also dropped support for 32-bit Windows. In other words, Meteor 1.10 supports
   64-bit Mac, Windows 64-bit, and Linux 64-bit.
