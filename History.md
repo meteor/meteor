@@ -11,7 +11,22 @@
   64-bit Mac, Windows 64-bit, and Linux 64-bit.
 
 ### Migration Steps
-N/A
+* If you get `Unexpected mongo exit code 62. Restarting.` when starting your local
+  MongoDB, you can either reset your project (`meteor reset`)
+  (if you don't care about your local data)
+  or you will need to update the feature compatibility version of your local MongoDB:
+  
+    1. Downgrade your app to earlier version of Meteor `meteor update --release 1.9.2`
+    2. Start your application
+    3. While your application is running open a new terminal window, navigate to the
+       app directory and open `mongo` shell: `meteor mongo`
+    4. Use: `db.adminCommand({ getParameter: 1, featureCompatibilityVersion: 1 })` to
+       check the current feature compatibility.
+    5. If the returned version is less than 4.0 update like this:
+       `db.adminCommand({ setFeatureCompatibilityVersion: "4.2" })`
+    6. You can now stop your app and update to Meteor 1.10.
+    
+    For more information about this, check out [MongoDB documentation](https://docs.mongodb.com/manual/release-notes/4.2-upgrade-standalone/).
 
 ### Changes
 
