@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v1.9.1, 2020-03-05
+Removes hook to set Swift version
+
 ## v1.9.0, 2020-03-04
 Migrates Swift code to be compatible with Swift version 5
 
