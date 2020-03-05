@@ -22,7 +22,6 @@
 
   <platform name="ios">
     <hook type="after_plugin_install" src="scripts/iosAddBridgingHeader.js" />
-    <hook type="before_prepare" src="scripts/iosSetSwiftVersion.js" />
 
     <config-file target="config.xml" parent="/*">
       <feature name="WebAppLocalServer">
