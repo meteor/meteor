@@ -12,7 +12,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
 import XmlBuilder from 'xmlbuilder2';
 
-import { CORDOVA_ARCH } from './index.js';
+import { CORDOVA_ARCH, SWIFT_VERSION } from './index.js';
 
 // Hard-coded size constants
 
@@ -122,7 +122,8 @@ export class CordovaBuilder {
       global: {
         'webviewbounce': false,
         'DisallowOverscroll': true,
-        'WKWebViewOnly': true
+        'WKWebViewOnly': true,
+        'SwiftVersion': SWIFT_VERSION
       },
       platform: {
         ios: {},
