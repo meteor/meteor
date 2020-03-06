@@ -1,6 +1,6 @@
 Package.describe({
   name: 'mobile-experience',
-  version: '1.1.0-rc110.3',
+  version: '1.1.0-rc110.4',
   summary: 'Packages for a great mobile user experience',
   documentation: 'README.md'
 });
