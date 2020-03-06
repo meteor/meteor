@@ -56,8 +56,15 @@
   * cordova-ios from 4.5.5 to 5.1.1 [release notes](https://github.com/apache/cordova-ios/blob/master/RELEASENOTES.md)
   * cordova-plugin-wkwebview-engine from 1.1.4 to 1.2.1 [release notes](https://github.com/apache/cordova-plugin-wkwebview-engine/blob/master/RELEASENOTES.md#121-jul-20-2019)
   * cordova-plugin-whitelist from 1.3.3 to 1.3.4 [release notes](https://github.com/apache/cordova-plugin-whitelist/blob/master/RELEASENOTES.md#134-jun-19-2019)
-  * cordova-plugin-splashscreen (included by mobile-experience > launch-screen) from 4.1.0 to 5.0.3 [release notes](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#503-may-09-2019)
-  * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar) from 2.3.0 to 2.4.3 [release notes](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#243-jun-19-2019)
+  * cordova-plugin-splashscreen (included by mobile-experience > launch-screen) 
+  from 4.1.0 to 5.0.3 [release notes](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#503-may-09-2019)
+  * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar) 
+  from 2.3.0 to 2.4.3 [release notes](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#243-jun-19-2019)
+  * On iOS WKWebViewOnly is set by default now as true.
+  * On iOS the Swift version is now set by default to `5` this change can make
+  your app to produce some warnings if your plugins are using old Swift code. 
+  You can override the Swift version using 
+  `App.setPreference('SwiftVersion', 4.2);` but we don't recommend that.
 
 * You can now pass an `--exclude-archs` option to the `meteor run` and
   `meteor test` commands to temporarily disable building certain web
