@@ -198,7 +198,8 @@ outdated platforms`);
     const iosCommonOptions = {
       // See https://github.com/apache/cordova-ios/issues/407:
       buildFlag: [
-        "-UseModernBuildSystem=0"
+        "-UseModernBuildSystem=0",
+        ...(Console.verbose ? [] : ["-quiet"])
       ]
     };
 
