@@ -1,3 +1,15 @@
+## v1.9.3, 2020-03-09
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+* `mongodb` driver package has been updated
+  from 3.2.7 to 3.5.4 [#10961](https://github.com/meteor/meteor/pull/10961)
+  
 ## v1.9.2, 2020-02-20
 
 ### Breaking changes
