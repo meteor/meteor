@@ -37,9 +37,9 @@
       "integrity": "sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg=="
     },
     "mongodb": {
-      "version": "3.5.2",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.5.2.tgz",
-      "integrity": "sha512-Lxt4th2tK2MxmkDBR5cMik+xEnkvhwg0BC5kGcHm9RBwaNEsrIryvV5istGXOHbnif5KslMpY1FbX6YbGJ/Trg=="
+      "version": "3.5.4",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.5.4.tgz",
+      "integrity": "sha512-xGH41Ig4dkSH5ROGezkgDbsgt/v5zbNUwE3TcFsSbDc6Qn3Qil17dhLsESSDDPTiyFDCPJRpfd4887dtsPgKtA=="
     },
     "process-nextick-args": {
       "version": "2.0.1",
