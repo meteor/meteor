@@ -10,14 +10,11 @@ import { Console } from '../console/console.js';
 import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
-import httpHelpers from '../utils/http-helpers.js';
-import { execFileSync, execFileAsync } from '../utils/processes';
+import { execFileSync } from '../utils/processes';
 
-import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
-import superspawn from 'cordova-common/src/superspawn.js';
 import PluginInfoProvider from 'cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
 import { CORDOVA_PLATFORMS, CORDOVA_PLATFORM_VERSIONS, displayNameForPlatform, displayNamesForPlatforms,
