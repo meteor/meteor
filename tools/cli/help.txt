@@ -343,6 +343,12 @@ Usage: meteor list-platforms
 
 Lists all of the platforms added to your project.
 
+>>> ensure-cordova-dependencies
+Ensure that Cordova dependencies are installed.
+Usage: meteor ensure-cordova-dependencies
+
+Check if the dependencies are installed, otherwise install them.
+
 >>> configure-android
 Run the Android configuration tool from Meteor's ADK environment.
 Usage: meteor configure-android

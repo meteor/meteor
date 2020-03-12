@@ -199,6 +199,9 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never(),
-}, function () {
+}, function (options) {
+  Console.setVerbose(!!options.verbose);
+
   ensureDevBundleDependencies();
+  Console.info("Cordova dependencies are installed.");
 });

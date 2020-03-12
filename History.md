@@ -65,6 +65,10 @@
   your app to produce some warnings if your plugins are using old Swift code. 
   You can override the Swift version using 
   `App.setPreference('SwiftVersion', 4.2);` but we don't recommend that.
+  
+* New command to ensure that Cordova dependencies are installed. Usage: 
+  `meteor ensure-cordova-dependencies`. Meteor handles this automatically but in 
+  some cases, like running in a CI, is useful to install them in advance.
 
 * You can now pass an `--exclude-archs` option to the `meteor run` and
   `meteor test` commands to temporarily disable building certain web
