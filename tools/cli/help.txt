@@ -103,6 +103,9 @@ Options:
                    version constraints.
   --extra-packages Run with additional packages (comma separated, for example:
                    --extra-packages "package-name1, package-name2@1.2.3")
+  --exclude-archs  Don't create bundles for certain web architectures
+                  (comma separated, for example:
+                   --exclude-archs "web.browser.legacy, web.cordova")
 
 >>> debug
 Run the project with server-side debugging enabled.
@@ -339,6 +342,12 @@ List the platforms added to your project.
 Usage: meteor list-platforms
 
 Lists all of the platforms added to your project.
+
+>>> ensure-cordova-dependencies
+Ensure that Cordova dependencies are installed.
+Usage: meteor ensure-cordova-dependencies
+
+Check if the dependencies are installed, otherwise install them.
 
 >>> configure-android
 Run the Android configuration tool from Meteor's ADK environment.
@@ -713,6 +722,9 @@ Options:
   --driver-package  Name of the optional test driver package to use to run
                     tests and display results. For example:
                     --driver-package practicalmeteor:mocha
+  --exclude-archs   Don't create test bundles for certain web architectures
+                    (comma separated, for example:
+                    --exclude-archs "web.browser.legacy, web.cordova")
 
 >>> self-test
 Run tests of the 'meteor' tool.

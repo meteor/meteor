@@ -77,13 +77,46 @@ export class AccountsCommon {
     throw new Error("userId method not implemented");
   }
 
+  // merge the defaultFieldSelector with an existing options object
+  _addDefaultFieldSelector(options = {}) {
+    // this will be the most common case for most people, so make it quick
+    if (!this._options.defaultFieldSelector) return options;
+
+    // if no field selector then just use defaultFieldSelector
+    if (!options.fields) return {
+      ...options,
+      fields: this._options.defaultFieldSelector,
+    };
+
+    // if empty field selector then the full user object is explicitly requested, so obey
+    const keys = Object.keys(options.fields);
+    if (!keys.length) return options;
+
+    // if the requested fields are +ve then ignore defaultFieldSelector
+    // assume they are all either +ve or -ve because Mongo doesn't like mixed
+    if (!!options.fields[keys[0]]) return options;
+
+    // The requested fields are -ve.
+    // If the defaultFieldSelector is +ve then use requested fields, otherwise merge them
+    const keys2 = Object.keys(this._options.defaultFieldSelector);
+    return this._options.defaultFieldSelector[keys2[0]] ? options : {
+      ...options,
+      fields: {
+        ...options.fields,
+        ...this._options.defaultFieldSelector,
+      }
+    }
+  }
+
   /**
    * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
    * @locus Anywhere
+   * @param {Object} [options]
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    */
-  user() {
+  user(options) {
     const userId = this.userId();
-    return userId ? this.users.findOne(userId) : null;
+    return userId ? this.users.findOne(userId, this._addDefaultFieldSelector(options)) : null;
   }
 
   // Set up config for the accounts system. Call this on both the client
@@ -132,6 +165,7 @@ export class AccountsCommon {
    * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set inital password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
+   * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`.
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
@@ -166,7 +200,8 @@ export class AccountsCommon {
     // validate option keys
     const VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
                       "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays",
-                      "ambiguousErrorMessages", "bcryptRounds"];
+                      "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector"];
+
     Object.keys(options).forEach(key => {
       if (!VALID_KEYS.includes(key)) {
         throw new Error(`Accounts.config: Invalid key: ${key}`);
@@ -307,8 +342,10 @@ Meteor.userId = () => Accounts.userId();
  * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
  * @locus Anywhere but publish functions
  * @importFromPackage meteor
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
  */
-Meteor.user = () => Accounts.user();
+Meteor.user = (options) => Accounts.user(options);
 
 // how long (in days) until a login token expires
 const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;

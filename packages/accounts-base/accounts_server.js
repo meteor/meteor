@@ -188,8 +188,10 @@ export class AccountsServer extends AccountsCommon {
   };
 
   _successfulLogout(connection, userId) {
-    const user = userId && this.users.findOne(userId);
+    // don't fetch the user object unless there are some callbacks registered
+    let user;
     this._onLogoutHook.each(callback => {
+      if (!user && userId) user = this.users.findOne(userId, {fields: this._options.defaultFieldSelector});
       callback({ user, connection });
       return true;
     });
@@ -317,7 +319,7 @@ export class AccountsServer extends AccountsCommon {
 
     let user;
     if (result.userId)
-      user = this.users.findOne(result.userId);
+      user = this.users.findOne(result.userId, {fields: this._options.defaultFieldSelector});
 
     const attempt = {
       type: result.type || "unknown",
@@ -398,7 +400,7 @@ export class AccountsServer extends AccountsCommon {
     };
 
     if (result.userId) {
-      attempt.user = this.users.findOne(result.userId);
+      attempt.user = this.users.findOne(result.userId, {fields: this._options.defaultFieldSelector});
     }
 
     this._validateLogin(methodInvocation.connection, attempt);
@@ -895,7 +897,7 @@ export class AccountsServer extends AccountsCommon {
           // The onClose callback for the connection takes care of
           // cleaning up the observe handle and any other state we have
           // lying around.
-        });
+        }, { nonMutatingCallbacks: true });
 
         // If the user ran another login or logout command we were waiting for the
         // defer or added to fire (ie, another call to _setLoginToken occurred),
@@ -1145,9 +1147,9 @@ export class AccountsServer extends AccountsCommon {
     Meteor.startup(() => {
       this.users.find({
         "services.resume.haveLoginTokensToDelete": true
-      }, {
+      }, {fields: {
         "services.resume.loginTokensToDelete": 1
-      }).forEach(user => {
+      }}).forEach(user => {
         this._deleteSavedTokensForUser(
           user._id,
           user.services.resume.loginTokensToDelete
@@ -1207,7 +1209,7 @@ export class AccountsServer extends AccountsCommon {
       selector[serviceIdKey] = serviceData.id;
     }
 
-    let user = this.users.findOne(selector);
+    let user = this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
 
     // When creating a new user we pass through all options. When updating an
     // existing user, by default we only process/pass through the serviceData
@@ -1317,7 +1319,8 @@ const defaultResumeLoginHandler = (accounts, options) => {
   // sending the unhashed token to the database in a query if we don't
   // need to.
   let user = accounts.users.findOne(
-    {"services.resume.loginTokens.hashedToken": hashedToken});
+    {"services.resume.loginTokens.hashedToken": hashedToken},
+    {fields: {"services.resume.loginTokens.$": 1}});
 
   if (! user) {
     // If we didn't find the hashed login token, try also looking for
@@ -1330,7 +1333,9 @@ const defaultResumeLoginHandler = (accounts, options) => {
         {"services.resume.loginTokens.hashedToken": hashedToken},
         {"services.resume.loginTokens.token": options.resume}
       ]
-    });
+    },
+    // Note: Cannot use ...loginTokens.$ positional operator with $or query.
+    {fields: {"services.resume.loginTokens": 1}});
   }
 
   if (! user)

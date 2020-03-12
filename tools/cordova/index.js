@@ -24,6 +24,8 @@ export const CORDOVA_PLATFORM_VERSIONS = {
   'ios': '5.1.1',
 };
 
+export const SWIFT_VERSION = 5;
+
 const PLATFORM_TO_DISPLAY_NAME_MAP = {
   'ios': 'iOS',
   'android': 'Android'

@@ -7,4 +7,4 @@ export interface Link {
   createdAt: Date;
 }
 
-export const Links = new Mongo.Collection<Link>('links');
+export const LinksCollection = new Mongo.Collection<Link>('links');

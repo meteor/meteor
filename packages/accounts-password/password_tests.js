@@ -1700,10 +1700,12 @@ if (Meteor.isServer) (() => {
   )
 
   // We should be able to change the username
-  Tinytest.add("passwords - change username", test => {
+  Tinytest.add("passwords - change username & findUserByUsername", test => {
     const username = Random.id();
+    const ignoreFieldName = "profile";
     const userId = Accounts.createUser({
-      username: username
+      username,
+      [ignoreFieldName]: {name: 'foo'},
     });
 
     test.isTrue(userId);
@@ -1714,7 +1716,27 @@ if (Meteor.isServer) (() => {
     test.equal(Accounts._findUserByQuery({id: userId}).username, newUsername);
 
     // Test findUserByUsername as well while we're here
-    test.equal(Accounts.findUserByUsername(newUsername)._id, userId);
+    let user = Accounts.findUserByUsername(newUsername);
+    test.equal(user._id, userId, 'userId - ignore');
+    test.isNotUndefined(user[ignoreFieldName], 'field - no ignore');
+
+    // Test default field selector
+    const options = Accounts._options;
+    Accounts._options = {defaultFieldSelector: {[ignoreFieldName]: 0}};
+    user = Accounts.findUserByUsername(newUsername);
+    test.equal(user.username, newUsername, 'username - default ignore');
+    test.isUndefined(user[ignoreFieldName], 'field - default ignore');
+
+    // Test default field selector over-ride
+    user = Accounts.findUserByUsername(newUsername, {
+      fields: {
+        [ignoreFieldName]: 1
+      }
+    });
+    test.isUndefined(user.username, 'username - override');
+    test.isNotUndefined(user[ignoreFieldName], 'field - override');
+
+    Accounts._options = options;
   });
 
   Tinytest.add("passwords - change username to a new one only differing " +
@@ -1760,10 +1782,14 @@ if (Meteor.isServer) (() => {
       user2OriginalUsername);
   });
 
-  Tinytest.add("passwords - add email", test => {
+  Tinytest.add("passwords - add email & findUserByEmail", test => {
     const origEmail = `${Random.id()}@turing.com`;
+    const username = Random.id();
+    const ignoreFieldName = "profile";
     const userId = Accounts.createUser({
-      email: origEmail
+      email: origEmail,
+      username,
+      [ignoreFieldName]: {name: 'foo'},
     });
 
     const newEmail = `${Random.id()}@turing.com`;
@@ -1779,7 +1805,28 @@ if (Meteor.isServer) (() => {
     ]);
 
     // Test findUserByEmail as well while we're here
-    test.equal(Accounts.findUserByEmail(origEmail)._id, userId);
+    let user = Accounts.findUserByEmail(origEmail);
+    test.equal(user._id, userId);
+    test.isNotUndefined(user[ignoreFieldName], 'field - no ignore');
+
+    // Test default field selector
+    const options = Accounts._options;
+    Accounts._options = {defaultFieldSelector: {[ignoreFieldName]: 0}};
+    user = Accounts.findUserByEmail(origEmail);
+    test.equal(user.username, username, 'username - default ignore');
+    test.isUndefined(user[ignoreFieldName], 'field - default ignore');
+
+    // Test default field selector over-ride
+    user = Accounts.findUserByEmail(origEmail, {
+      fields: {
+        [ignoreFieldName]: 1
+      }
+    });
+    test.equal(user._id, userId, 'userId - override');
+    test.isUndefined(user.username, 'username - override');
+    test.isNotUndefined(user[ignoreFieldName], 'field - override');
+
+    Accounts._options = options;
   });
 
   Tinytest.add("passwords - add email when user has not an existing email", test => {

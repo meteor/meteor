@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.2.9"
+  version: "1.3.0"
 });
 
 Package.onUse(api => {
@@ -60,5 +60,5 @@ Package.onTest(api => {
 });
 
 Cordova.depends({
-  'cordova-plugin-inappbrowser': '1.7.1'
+  'cordova-plugin-inappbrowser': '3.2.0'
 });
