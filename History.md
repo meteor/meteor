@@ -1,3 +1,14 @@
+## vNext
+
+  * To pass Node command line flags to the server node instance,
+    now it is recommended to use `SERVER_NODE_OPTIONS` instead of `NODE_OPTIONS`.
+    Since Meteor 0.5.3, Meteor allowed to pass node command line flags via the  `NODE_OPTIONS`
+    environment variable.
+    However, since Node version 8 / Meteor 1.6 this has become a default node
+    envar with the same behavior. The side effect is that this now also affects
+    Meteor tool. The command line parameters could already be set separately
+    via the `TOOL_NODE_FLAGS` envar. This is now also possible (again) for the server.
+
 ## v1.10, TBD
 
 ### Breaking changes
