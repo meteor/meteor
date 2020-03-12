@@ -269,6 +269,10 @@ list of the platforms that your application is currently using, see
 Lists all of the platforms that have been explicitly added to your project.
 
 
+<h2 id="meteorensurecordovadependencies">meteor ensure-cordova-dependencies</h2>
+
+Check if the dependencies are installed, otherwise install them.
+
 <h2 id="meteormongo">meteor mongo</h2>
 
 Open a MongoDB shell on your local development database, so that you
