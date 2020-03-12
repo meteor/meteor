@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.8.0'
+  version: '1.9.0'
 });
 
 Npm.depends({
@@ -71,6 +71,7 @@ Package.onUse(function (api) {
   api.export('MongoInternals', 'server');
 
   api.export("Mongo");
+  api.export('ObserveMultiplexer', 'server', {testOnly: true});
 
   api.addFiles(['mongo_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',

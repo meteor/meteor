@@ -842,6 +842,13 @@ Copyright (c) 2013 Ozgur Ozcitak
 
 
 ----------
+xmlbuilder2: http://github.com/oozcitak/xmlbuilder2
+----------
+
+Copyright (c) 2013 Ozgur Ozcitak
+
+
+----------
 xmldom: https://github.com/jindw/xmldom
 ----------
 

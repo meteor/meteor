@@ -61,7 +61,7 @@ run_save_node_bin: &run_save_node_bin
 build_machine_environment: &build_machine_environment
   # Specify that we want an actual machine (ala Circle 1.0), not a Docker image.
   docker:
-    - image: meteor/circleci:android-27-node-12
+    - image: meteor/circleci:android-28-node-12
   environment:
     # This multiplier scales the waitSecs for selftests.
     TIMEOUT_SCALE_FACTOR: 8
@@ -128,9 +128,9 @@ jobs:
             - package-npm-deps-cache-group2-v3-
       - restore_cache:
           keys:
-            - v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
-            - v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
-            - v4-other-deps-cache-{{ .Branch }}-
+            - v5-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+            - v5-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
+            - v5-other-deps-cache-{{ .Branch }}-
       - restore_cache:
           keys:
             - v1-test-groups-{{ .Branch }}
@@ -656,7 +656,7 @@ jobs:
   Docs:
     docker:
       # This Node version should match that in the meteor/docs CircleCI config.
-      - image: meteor/circleci:android-27-node-12
+      - image: meteor/circleci:android-28-node-12
     environment:
       CHECKOUT_METEOR_DOCS: /home/circleci/test_docs
     steps:
@@ -756,7 +756,7 @@ jobs:
             - packages/fetch/.npm/package/node_modules
             - packages/non-core/mongo-decimal/.npm/package/node_modules
       - save_cache:
-          key: v4-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+          key: v5-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
           paths:
             - ".babel-cache"
             - ".meteor"

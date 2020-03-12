@@ -3,7 +3,6 @@ import main from './main.js';
 import { Console } from '../console/console.js';
 import catalog from '../packaging/catalog/catalog.js';
 import buildmessage from '../utils/buildmessage.js';
-import files from '../fs/files';
 import {
   CORDOVA_PLATFORMS,
   ensureDevBundleDependencies,
@@ -122,7 +121,7 @@ main.registerCommand({
   notOnWindows: false
 }, function (options) {
   ensureDevBundleDependencies();
-  doAddPlatform(options);
+    doAddPlatform(options);
 });
 
 // Remove one or more Cordova platforms
@@ -189,4 +188,20 @@ Alternatively, you can launch it by running the 'android' command.
 to your PATH.)`);
 
   return 0;
+});
+
+main.registerCommand({
+  name: 'ensure-cordova-dependencies',
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  },
+  minArgs: 0,
+  maxArgs: Infinity,
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never(),
+}, function (options) {
+  Console.setVerbose(!!options.verbose);
+
+  ensureDevBundleDependencies();
+  Console.info("Cordova dependencies are installed.");
 });

@@ -134,15 +134,22 @@ MongoConnection = function (url, options) {
   self._onFailoverHook = new Hook;
 
   var mongoOptions = Object.assign({
-    // Reconnect on error.
-    autoReconnect: true,
+    ignoreUndefined: true,
+    // See https://github.com/meteor/meteor/issues/10925 for discussion of
+    // why this option is not the default.
+    useUnifiedTopology: !!options.useUnifiedTopology,
+  }, Mongo._connectionOptions);
+
+  // The autoReconnect and reconnectTries options are incompatible with
+  // useUnifiedTopology: https://github.com/meteor/meteor/pull/10861#commitcomment-37525845
+  if (!mongoOptions.useUnifiedTopology) {
+    // Reconnect on error. This defaults to true, but it never hurts to be
+    // explicit about it.
+    mongoOptions.autoReconnect = true;
     // Try to reconnect forever, instead of stopping after 30 tries (the
     // default), with each attempt separated by 1000ms.
-    reconnectTries: Infinity,
-    ignoreUndefined: true,
-    // Required to silence deprecation warnings with mongodb@3.1.1.
-    useNewUrlParser: true,
-  }, Mongo._connectionOptions);
+    mongoOptions.reconnectTries = Infinity;
+  }
 
   // Disable the native parser by default, unless specifically enabled
   // in the mongo URL.
@@ -923,7 +930,7 @@ Cursor.prototype.observe = function (callbacks) {
   return LocalCollection._observeFromObserveChanges(self, callbacks);
 };
 
-Cursor.prototype.observeChanges = function (callbacks) {
+Cursor.prototype.observeChanges = function (callbacks, options = {}) {
   var self = this;
   var methods = [
     'addedAt',
@@ -936,8 +943,8 @@ Cursor.prototype.observeChanges = function (callbacks) {
   ];
   var ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
 
-  // XXX: Can we find out if callbacks are from observe?
-  var exceptionName = ' observe/observeChanges callback';
+  let exceptionName = callbacks._fromObserve ? 'observe' : 'observeChanges';
+  exceptionName += ' callback';
   methods.forEach(function (method) {
     if (callbacks[method] && typeof callbacks[method] == "function") {
       callbacks[method] = Meteor.bindEnvironment(callbacks[method], method + exceptionName);
@@ -945,7 +952,7 @@ Cursor.prototype.observeChanges = function (callbacks) {
   });
 
   return self._mongo._observeChanges(
-    self._cursorDescription, ordered, callbacks);
+    self._cursorDescription, ordered, callbacks, options.nonMutatingCallbacks);
 };
 
 MongoConnection.prototype._createSynchronousCursor = function(
@@ -1246,7 +1253,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
 };
 
 MongoConnection.prototype._observeChanges = function (
-    cursorDescription, ordered, callbacks) {
+    cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
   var self = this;
 
   if (cursorDescription.options.tailable) {
@@ -1287,7 +1294,10 @@ MongoConnection.prototype._observeChanges = function (
     }
   });
 
-  var observeHandle = new ObserveHandle(multiplexer, callbacks);
+  var observeHandle = new ObserveHandle(multiplexer,
+    callbacks,
+    nonMutatingCallbacks,
+  );
 
   if (firstHandle) {
     var matcher, sorter;

@@ -62,8 +62,7 @@ const getIdentity = accessToken => {
   try {
     return HTTP.get(
       "https://api.github.com/user", {
-        headers: {"User-Agent": userAgent}, // http://developer.github.com/v3/#user-agent-required
-        params: {access_token: accessToken}
+        headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
       }).data;
   } catch (err) {
     throw Object.assign(
@@ -77,8 +76,7 @@ const getEmails = accessToken => {
   try {
     return HTTP.get(
       "https://api.github.com/user/emails", {
-        headers: {"User-Agent": userAgent}, // http://developer.github.com/v3/#user-agent-required
-        params: {access_token: accessToken}
+        headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
       }).data;
   } catch (err) {
     return [];

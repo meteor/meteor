@@ -10,8 +10,8 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.13.4",
-    pacote: "https://github.com/meteor/pacote/tarball/6c03d5b9497d6c96c5e421a63bdf70b843657ae7",
+    npm: "6.14.0",
+    pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
     "node-gyp": "6.0.1",
     "node-pre-gyp": "0.14.0",
     typescript: "3.7.5",
@@ -61,7 +61,9 @@ var packageJson = {
     // version constraint imposed by optimism/package.json.
     optimism: "0.11.3",
     "@wry/context": "0.4.4",
-    'lru-cache': '4.1.3'
+    'lru-cache': '4.1.3',
+    "anser": "1.4.8",
+    'xmlbuilder2': '1.3.0'
   }
 };
 

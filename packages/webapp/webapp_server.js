@@ -317,9 +317,11 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
-  var runtimeConfig = _.extend(
-    _.clone(__meteor_runtime_config__),
-    additionalOptions.runtimeConfigOverrides || {}
+  const meteorRuntimeConfig = JSON.stringify(
+    encodeURIComponent(JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || {})
+    }))
   );
 
   return new Boilerplate(arch, manifest, _.extend({
@@ -342,8 +344,8 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
       // end up inside a <script> tag so we need to be careful to not include
       // "</script>", but normal {{spacebars}} escaping escapes too much! See
       // https://github.com/meteor/meteor/issues/3730
-      meteorRuntimeConfig: JSON.stringify(
-        encodeURIComponent(JSON.stringify(runtimeConfig))),
+      meteorRuntimeConfig,
+      meteorRuntimeHash: sha1(meteorRuntimeConfig),
       rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
       bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
       sriMode: sriMode,
@@ -401,6 +403,12 @@ WebAppInternals.staticFilesMiddleware = async function (
     pathname,
     identifyBrowser(req.headers["user-agent"]),
   );
+
+  if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+    // We could come here in case we run with some architectures excluded
+    next();
+    return;
+  }
 
   // If pauseClient(arch) has been called, program.paused will be a
   // Promise that will be resolved when the program is unpaused.
@@ -869,7 +877,7 @@ function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname } = parseUrl(request.url);
+    const { pathname, search } = parseUrl(request.url);
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
@@ -877,6 +885,9 @@ function runWebAppServer() {
       const pathParts = getPathParts(pathname);
       if (isPrefixOf(prefixParts, pathParts)) {
         request.url = "/" + pathParts.slice(prefixParts.length).join("/");
+        if (search) {
+          request.url += search; 
+        }
         return next();
       }
     }
@@ -984,6 +995,19 @@ function runWebAppServer() {
         parseRequest(req).pathname,
         request.browser,
       );
+
+      if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+        // We could come here in case we run with some architectures excluded
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(404, headers);
+        if (Meteor.isDevelopment) {
+          res.end(`No client program found for the ${arch} architecture.`);
+        } else {
+          // Safety net, but this branch should not be possible.
+          res.end("404 Not Found");
+        }
+        return;
+      }
 
       // If pauseClient(arch) has been called, program.paused will be a
       // Promise that will be resolved when the program is unpaused.
