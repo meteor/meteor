@@ -1,4 +1,4 @@
-## v1.10, TBD
+## v1.10, 2020-03-12
 
 ### Breaking changes
 
