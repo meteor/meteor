@@ -12,3 +12,12 @@ Package.onUse(function (api) {
   api.export(['meteorJsMinify']);
   api.addFiles(['minifier.js'], 'server');
 });
+
+Package.onTest(function (api) {
+  api.use('ecmascript');
+  api.use('tinytest');
+  api.use('minifier-js');
+  api.addFiles([
+    'tests/minifier-tests.js',
+  ], 'server');
+});
