@@ -94,7 +94,7 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
             .replace(/\s+\/\//, "");
 
           var minError = new Error(
-            "Babili minification error " +
+            "babel-minify minification error " +
             "within " + file.getPathInBundle() + ":\n" +
             parseErrorPath +
             (lineSrcLineNumber ? ", line " + lineSrcLineNumber : "") + "\n" +
@@ -119,8 +119,9 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
     // Don't reminify *.min.js.
     if (/\.min\.js$/.test(file.getPathInBundle())) {
       toBeAdded.data += file.getContentsAsString();
-    } else {
-      var minified;
+    }
+    else {
+      let minified;
 
       try {
         minified = meteorJsMinify(file.getContentsAsString());
@@ -129,8 +130,9 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
           throw new Error();
         }
 
-      } catch (err) {
-        var filePath = file.getPathInBundle();
+      }
+      catch (err) {
+        const filePath = file.getPathInBundle();
 
         maybeThrowMinifyErrorBySourceFile(err, file);
 
