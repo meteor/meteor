@@ -22,9 +22,9 @@
       "integrity": "sha512-efyLRJDr68D9hBBNIPWFjhpFzURh+KJykQwvMyW5UiZzYwoF6l4YMMDIJJEyFWxWCqfyxLzz6tSfUFR+kXXsVQ=="
     },
     "terser": {
-      "version": "4.4.0",
-      "resolved": "https://registry.npmjs.org/terser/-/terser-4.4.0.tgz",
-      "integrity": "sha512-oDG16n2WKm27JO8h4y/w3iqBGAOSCtq7k8dRmrn4Wf9NouL0b2WpMHGChFGZq4nFAQy1FsNJrVQHfurXOSTmOA=="
+      "version": "4.6.6",
+      "resolved": "https://registry.npmjs.org/terser/-/terser-4.6.6.tgz",
+      "integrity": "sha512-4lYPyeNmstjIIESr/ysHg2vUPRGf2tzF9z2yYwnowXVuVzLEamPN1Gfrz7f8I9uEPuHcbFlW4PLIAsJoxXyJ1g=="
     }
   }
 }
