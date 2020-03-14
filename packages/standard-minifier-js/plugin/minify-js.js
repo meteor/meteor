@@ -3,29 +3,86 @@ import { extractModuleSizesTree } from "./stats.js";
 Plugin.registerMinifier({
   extensions: ['js'],
   archMatching: 'web'
-}, function () {
-  var minifier = new MeteorBabelMinifier();
-  return minifier;
-});
+}, 
+() => new MeteorBabelMinifier()
+);
 
-function MeteorBabelMinifier () {};
+class MeteorBabelMinifier {
 
-MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
-  var mode = options.minifyMode;
+  processFilesForBundle (files, options) {
+    var mode = options.minifyMode;
 
-  // don't minify anything for development
-  if (mode === 'development') {
-    files.forEach(function (file) {
-      file.addJavaScript({
-        data: file.getContentsAsBuffer(),
-        sourceMap: file.getSourceMap(),
-        path: file.getPathInBundle(),
+    // don't minify anything for development
+    if (mode === 'development') {
+      files.forEach(function (file) {
+        file.addJavaScript({
+          data: file.getContentsAsBuffer(),
+          sourceMap: file.getSourceMap(),
+          path: file.getPathInBundle(),
+        });
       });
+      return;
+    }
+
+    // this object will collect all the minified code in the 
+    // data field and then post-minfiication file sizes in
+    // stats field
+    const toBeAdded = {
+      data: "",
+      stats: Object.create(null)
+    };
+
+    files.forEach(file => {
+      // Don't reminify *.min.js.
+      if (/\.min\.js$/.test(file.getPathInBundle())) {
+        toBeAdded.data += file.getContentsAsString();
+      }
+      else {
+        let minified;
+
+        try {
+          minified = meteorJsMinify(file.getContentsAsString());
+
+          if (!(minified && typeof minified.code === "string")) {
+            throw new Error();
+          }
+
+        }
+        catch (err) {
+          const filePath = file.getPathInBundle();
+
+          maybeThrowMinifyErrorBySourceFile(err, file);
+
+          err.message += " while minifying " + filePath;
+          throw err;
+        }
+
+        const tree = extractModuleSizesTree(minified.code);
+        if (tree) {
+          toBeAdded.stats[file.getPathInBundle()] =
+            [Buffer.byteLength(minified.code), tree];
+        } else {
+          toBeAdded.stats[file.getPathInBundle()] =
+            Buffer.byteLength(minified.code);
+        }
+        // append the minified code to the "running sum"
+        // of minified code being processed
+        toBeAdded.data += minified.code;
+      }
+
+      toBeAdded.data += '\n\n';
+
+      Plugin.nudge();
     });
-    return;
+
+    // this is where the minified code gets added to one 
+    // JS file that is delivered to the client
+    if (files.length) {
+      files[0].addJavaScript(toBeAdded);
+    }
   }
 
-  function maybeThrowMinifyErrorBySourceFile(error, file) {
+  maybeThrowMinifyErrorBySourceFile(error, file) {
     var minifierErrorRegex = /^(.*?)\s?\((\d+):(\d+)\)$/;
     var parseError = minifierErrorRegex.exec(error.message);
 
@@ -109,55 +166,4 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
       }
     }
   }
-
-  const toBeAdded = {
-    data: "",
-    stats: Object.create(null)
-  };
-
-  files.forEach(file => {
-    // Don't reminify *.min.js.
-    if (/\.min\.js$/.test(file.getPathInBundle())) {
-      toBeAdded.data += file.getContentsAsString();
-    }
-    else {
-      let minified;
-
-      try {
-        minified = meteorJsMinify(file.getContentsAsString());
-
-        if (!(minified && typeof minified.code === "string")) {
-          throw new Error();
-        }
-
-      }
-      catch (err) {
-        const filePath = file.getPathInBundle();
-
-        maybeThrowMinifyErrorBySourceFile(err, file);
-
-        err.message += " while minifying " + filePath;
-        throw err;
-      }
-
-      const tree = extractModuleSizesTree(minified.code);
-      if (tree) {
-        toBeAdded.stats[file.getPathInBundle()] =
-          [Buffer.byteLength(minified.code), tree];
-      } else {
-        toBeAdded.stats[file.getPathInBundle()] =
-          Buffer.byteLength(minified.code);
-      }
-
-      toBeAdded.data += minified.code;
-    }
-
-    toBeAdded.data += '\n\n';
-
-    Plugin.nudge();
-  });
-
-  if (files.length) {
-    files[0].addJavaScript(toBeAdded);
-  }
-};
+}
