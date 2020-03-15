@@ -7,14 +7,9 @@ meteorJsMinify = function (source) {
   try {
     const options = {
       compress: {
-        passes: 1,             // default is 1 (2 or more passes could lead to better compression)
-        inline: true,          // default is true which will aggresively inline functions
         drop_debugger: false,  // remove debugger; statements
         unused: false,         // drop unreferenced functions and variables
         dead_code: true,       // remove unreachable code
-        keep_infinity: false,
-        unsafe: false,
-        unsafe_proto: false,   
         global_defs: {
           "process.env.NODE_ENV": NODE_ENV
         }
