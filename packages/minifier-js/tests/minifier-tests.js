@@ -10,7 +10,12 @@ Tinytest.add('minifier-js - verify simple JS minifications work', (test) => {
   test.equal(result.code, 'let z=[1,void 0,3];');
 
   result = meteorJsMinify('function a(z) { let returnValue = z == 10; return returnValue; }\n');
-  test.equal(result.code,'function a(n){let t;return 10==n}');
+  test.equal(result.code, 'function a(n){let t;return 10==n}');
+  
+  result = meteorJsMinify('class Person{ constructor(name, age){ this.name = name; this.age = age; } printName(){console.log(this.name)}}\n');
+  test.equal(result.code, 'class Person{constructor(s,e){this.name=s,this.age=e}printName(){console.log(this.name)}}');
+  
+
 });
 
 
@@ -76,9 +81,15 @@ Tinytest.add('minifier-js - verify unsafe_proto setting', (test) => {
 Tinytest.add('minifier-js - verify keep_numbers setting', (test) => {   
   let result = meteorJsMinify('let number = 1_000_000_000_000;\n');
   test.equal(result.code, 'let number=1e12;');
+
+  result = meteorJsMinify('let number = 1000000000;\n');
+  test.equal(result.code, 'let number=1e9;');
   
   result = meteorJsMinify('let number = 0.000_000_000_001;\n');
-  test.equal(result.code,'let number=1e-12;');
+  test.equal(result.code, 'let number=1e-12;');
+  
+  result = meteorJsMinify('let number = 0.000000001;\n');
+  test.equal(result.code,'let number=1e-9;');
 });
 
 
