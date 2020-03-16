@@ -5,14 +5,21 @@
 Standard Minifier for JS
 ========================
 
-This package provides a minifier plugin used for Meteor apps by default. The behavior
-of this plugin during a development build is that all JS files will not be minified, 
-they will include a source map, and are sent to the client as seperate files. The behavior 
-during a production build is that all JS files are concatenated into a single, minified JS 
-file and this file will not include a source map.
+This package provides a minifier plugin used for Meteor apps by default. 
 
-The JS minifier package uses `Terser` version `4.6.6` as of `Meteor` version `1.10.1`. The options 
-we setting that differ from the default settings are the following:
+The behavior of this plugin in development and production modes are depicted below
+in the table.
+
+
+|               | DEV   | PROD   |
+|---------------|:-----:|:------:|
+| Minified      |   N   |    Y   | 
+| Concatenated  |   N   |    Y   | 
+| Source Map    |   Y   |    N   | 
+
+
+
+The options that are set that differ from the default settings are the following:
 
 ```
 drop_debugger: false
@@ -20,8 +27,5 @@ unused:        false
 safari10:       true
 ```
 
-The rest of the minification options are the default values that `Terser` uses out of the box.
-Additionally, we are only making a single pass over the source in order to compress the 
-output and this could be something we want to increase in the future. JS files are only
-minified during a production build and the extra time spent on a second or third pass
-may be worth the improved compression.
+It should also be noted that by default terser will make one pass while compressing 
+source code, but additional passes could be configured to increase compression.
