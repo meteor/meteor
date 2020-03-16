@@ -1,3 +1,7 @@
+## v3.2.3
+
+* Update dependencies
+
 ## v3.2.2
 
 * Fixed fails like `rev.push is not a function` and `number 1 is not iterable (cannot read property Symbol(Symbol.iterator))` calling `Roles.getRolesForUser()`
