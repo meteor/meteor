@@ -17,6 +17,23 @@ Tinytest.add('minifier-js - verify simple JS minifications work', (test) => {
   
 });
 
+// Error handling tests
+Tinytest.add('minifier-js - errors are handled correctly', (test) => {
+  test.throws(() => meteorJsMinify('let name = {;\n'));    
+});
+
+// Unhandled Terser Syntax tests
+Tinytest.add('minifier-js - syntax terser cannot handle is handled correctly by babel-minify', (test) => {
+  
+  let result = meteorJsMinify('let number = 1_000_000_000_000;\n');
+  test.equal(result.code, 'let number=1e12;');
+  test.equal(result.minifier, 'babel-minify');
+  
+  result = meteorJsMinify('let number = 0.000_000_000_001;\n');
+  test.equal(result.code, 'let number=1e-12;');
+  test.equal(result.minifier, 'babel-minify');
+  
+});
 
 // properties -- default(true)
 Tinytest.add('minifier-js - verify properties setting', (test) => {
@@ -32,7 +49,7 @@ Tinytest.add('minifier-js - verify evaluate setting', (test) => {
 });
 
 // this test is an evaluation, but since unsafe is false it won't get evaluated
-Tinytest.add('minifier-js - verify that an unsafe evaluation will fail', (test) => {
+Tinytest.add('minifier-js - verify that an unsafe evaluation will fail event when evaluate is set to true', (test) => {
   let result = meteorJsMinify('var a = [ "foo", "bar", "baz" ].join("");\n');
   test.equal(result.code, 'var a=["foo","bar","baz"].join("");');
 });
@@ -76,14 +93,9 @@ Tinytest.add('minifier-js - verify unsafe_proto setting', (test) => {
 
 //keep_numbers -- default(false)
 Tinytest.add('minifier-js - verify keep_numbers setting', (test) => {   
-  let result = meteorJsMinify('let number = 1_000_000_000_000;\n');
-  test.equal(result.code, 'let number=1e12;');
-
-  result = meteorJsMinify('let number = 1000000000;\n');
-  test.equal(result.code, 'let number=1e9;');
   
-  result = meteorJsMinify('let number = 0.000_000_000_001;\n');
-  test.equal(result.code, 'let number=1e-12;');
+  let result = meteorJsMinify('let number = 1000000000;\n');
+  test.equal(result.code, 'let number=1e9;');
   
   result = meteorJsMinify('let number = 0.000000001;\n');
   test.equal(result.code,'let number=1e-9;');
