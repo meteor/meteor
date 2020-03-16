@@ -24,20 +24,22 @@ class MeteorBabelMinifier {
       return;
     }
 
-    // nested function
+    // nested function 
+    // this function tries its best to locate the original source file
+    // that the error being reported was located inside of
     function maybeThrowMinifyErrorBySourceFile(error, file) {
-      var minifierErrorRegex = /^(.*?)\s?\((\d+):(\d+)\)$/;
-      var parseError = minifierErrorRegex.exec(error.message);
+      const minifierErrorRegex = /^(.*?)\s?\((\d+):(\d+)\)$/;
+      const parseError = minifierErrorRegex.exec(error.message);
 
       if (!parseError) {
         // If we were unable to parse it, just let the usual error handling work.
         return;
       }
 
-      var lineErrorMessage = parseError[1];
-      var lineErrorLineNumber = parseError[2];
+      const lineErrorMessage = parseError[1];
+      const lineErrorLineNumber = parseError[2];
 
-      var parseErrorContentIndex = lineErrorLineNumber - 1;
+      const parseErrorContentIndex = lineErrorLineNumber - 1;
 
       // Unlikely, since we have a multi-line fixed header in this file.
       if (parseErrorContentIndex < 0) {
@@ -63,24 +65,24 @@ class MeteorBabelMinifier {
 
       */
 
-      var contents = file.getContentsAsString().split(/\n/);
-      var lineContent = contents[parseErrorContentIndex];
+      const contents = file.getContentsAsString().split(/\n/);
+      const lineContent = contents[parseErrorContentIndex];
 
       // Try to grab the line number, which sometimes doesn't exist on
       // line, abnormally-long lines in a larger block.
-      var lineSrcLineParts = /^(.*?)(?:\s*\/\/ (\d+))?$/.exec(lineContent);
+      const lineSrcLineParts = /^(.*?)(?:\s*\/\/ (\d+))?$/.exec(lineContent);
 
       // The line didn't match at all?  Let's just not try.
       if (!lineSrcLineParts) {
         return;
       }
 
-      var lineSrcLineContent = lineSrcLineParts[1];
-      var lineSrcLineNumber = lineSrcLineParts[2];
+      const lineSrcLineContent = lineSrcLineParts[1];
+      const lineSrcLineNumber = lineSrcLineParts[2];
 
       // Count backward from the failed line to find the filename.
-      for (var c = parseErrorContentIndex - 1; c >= 0; c--) {
-        var sourceLine = contents[c];
+      for (let c = parseErrorContentIndex - 1; c >= 0; c--) {
+        let sourceLine = contents[c];
 
         // If the line is a boatload of slashes, we're in the right place.
         if (/^\/\/\/{6,}$/.test(sourceLine)) {
@@ -89,11 +91,11 @@ class MeteorBabelMinifier {
           if (contents[c - 4] === sourceLine) {
 
             // So in that case, 2 lines back is the file path.
-            var parseErrorPath = contents[c - 2]
+            let parseErrorPath = contents[c - 2]
               .substring(3)
               .replace(/\s+\/\//, "");
 
-            var minError = new Error(
+            let minError = new Error(
               "babel-minify minification error " +
               "within " + file.getPathInBundle() + ":\n" +
               parseErrorPath +
@@ -125,25 +127,28 @@ class MeteorBabelMinifier {
       }
       else {
         let minified;
-
         try {
           minified = meteorJsMinify(file.getContentsAsString());
 
           if (!(minified && typeof minified.code === "string")) {
+            // this error gets raised when babel-minify doesn't
+            // raise an exception when it executes but fails to
+            // return any useful result in the code field
             throw new Error("Unknown babel-minify error");
           }
-
         }
         catch (err) {
+          
           const filePath = file.getPathInBundle();
 
           maybeThrowMinifyErrorBySourceFile(err, file);
-
+          
           err.message += " while minifying " + filePath;
           throw err;
         }
 
         const tree = extractModuleSizesTree(minified.code);
+
         if (tree) {
           toBeAdded.stats[file.getPathInBundle()] =
             [Buffer.byteLength(minified.code), tree];
@@ -152,7 +157,7 @@ class MeteorBabelMinifier {
             Buffer.byteLength(minified.code);
         }
         // append the minified code to the "running sum"
-        // of minified code being processed
+        // of code being minified
         toBeAdded.data += minified.code;
       }
 
@@ -166,9 +171,5 @@ class MeteorBabelMinifier {
     if (files.length) {
       files[0].addJavaScript(toBeAdded);
     }
-
-
-
   }
-
 }
