@@ -15,7 +15,6 @@ Tinytest.add('minifier-js - verify simple JS minifications work', (test) => {
   result = meteorJsMinify('class Person{ constructor(name, age){ this.name = name; this.age = age; } printName(){console.log(this.name)}}\n');
   test.equal(result.code, 'class Person{constructor(s,e){this.name=s,this.age=e}printName(){console.log(this.name)}}');
   
-
 });
 
 
@@ -30,12 +29,10 @@ Tinytest.add('minifier-js - verify properties setting', (test) => {
 Tinytest.add('minifier-js - verify evaluate setting', (test) => {
   let result = meteorJsMinify('let a = 10 + 20 + 30;\n');
   test.equal(result.code, 'let a=60;');
-
 });
 
 // this test is an evaluation, but since unsafe is false it won't get evaluated
 Tinytest.add('minifier-js - verify that an unsafe evaluation will fail', (test) => {
-
   let result = meteorJsMinify('var a = [ "foo", "bar", "baz" ].join("");\n');
   test.equal(result.code, 'var a=["foo","bar","baz"].join("");');
 });

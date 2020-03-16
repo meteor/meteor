@@ -25,11 +25,13 @@ meteorJsMinify = function (source) {
     if (typeof terserResult.code === "string") {
       result.code = terserResult.code;
       result.minifier = 'terser';
-    } else {
+    }
+    else {
       throw terserResult.error || new Error("unknown terser.minify failure");
     }
 
-  } catch (err) {
+  }
+  catch (err) {
     // Although Babel.minify can handle a wider variety of ECMAScript
     // 2015+ syntax, it is substantially slower than terser, so
     // we use it only as a fallback.
@@ -37,7 +39,9 @@ meteorJsMinify = function (source) {
       inlineNodeEnv: NODE_ENV
     });
 
-    result.code = Babel.minify(source, options).code;
+    const babelResult = Babel.minify(source, options);
+
+    result.code = babelResult.code;
     result.minifier = 'babel-minify';
   }
 
