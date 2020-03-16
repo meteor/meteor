@@ -24,65 +24,8 @@ class MeteorBabelMinifier {
       return;
     }
 
-    // this object will collect all the minified code in the 
-    // data field and then post-minfiication file sizes in
-    // stats field
-    const toBeAdded = {
-      data: "",
-      stats: Object.create(null)
-    };
-
-    files.forEach(file => {
-      // Don't reminify *.min.js.
-      if (/\.min\.js$/.test(file.getPathInBundle())) {
-        toBeAdded.data += file.getContentsAsString();
-      }
-      else {
-        let minified;
-
-        try {
-          minified = meteorJsMinify(file.getContentsAsString());
-
-          if (!(minified && typeof minified.code === "string")) {
-            throw new Error("Unknown babel-minify error");
-          }
-
-        }
-        catch (err) {
-          const filePath = file.getPathInBundle();
-
-          maybeThrowMinifyErrorBySourceFile(err, file);
-
-          err.message += " while minifying " + filePath;
-          throw err;
-        }
-
-        const tree = extractModuleSizesTree(minified.code);
-        if (tree) {
-          toBeAdded.stats[file.getPathInBundle()] =
-            [Buffer.byteLength(minified.code), tree];
-        } else {
-          toBeAdded.stats[file.getPathInBundle()] =
-            Buffer.byteLength(minified.code);
-        }
-        // append the minified code to the "running sum"
-        // of minified code being processed
-        toBeAdded.data += minified.code;
-      }
-
-      toBeAdded.data += '\n\n';
-
-      Plugin.nudge();
-    });
-
-    // this is where the minified code gets added to one 
-    // JS file that is delivered to the client
-    if (files.length) {
-      files[0].addJavaScript(toBeAdded);
-    }
-
     // nested function
-    maybeThrowMinifyErrorBySourceFile(error, file) {
+    function maybeThrowMinifyErrorBySourceFile(error, file) {
       var minifierErrorRegex = /^(.*?)\s?\((\d+):(\d+)\)$/;
       var parseError = minifierErrorRegex.exec(error.message);
 
@@ -166,6 +109,65 @@ class MeteorBabelMinifier {
         }
       }
     }
+
+    // this object will collect all the minified code in the 
+    // data field and then post-minfiication file sizes in
+    // stats field
+    const toBeAdded = {
+      data: "",
+      stats: Object.create(null)
+    };
+
+    files.forEach(file => {
+      // Don't reminify *.min.js.
+      if (/\.min\.js$/.test(file.getPathInBundle())) {
+        toBeAdded.data += file.getContentsAsString();
+      }
+      else {
+        let minified;
+
+        try {
+          minified = meteorJsMinify(file.getContentsAsString());
+
+          if (!(minified && typeof minified.code === "string")) {
+            throw new Error("Unknown babel-minify error");
+          }
+
+        }
+        catch (err) {
+          const filePath = file.getPathInBundle();
+
+          maybeThrowMinifyErrorBySourceFile(err, file);
+
+          err.message += " while minifying " + filePath;
+          throw err;
+        }
+
+        const tree = extractModuleSizesTree(minified.code);
+        if (tree) {
+          toBeAdded.stats[file.getPathInBundle()] =
+            [Buffer.byteLength(minified.code), tree];
+        } else {
+          toBeAdded.stats[file.getPathInBundle()] =
+            Buffer.byteLength(minified.code);
+        }
+        // append the minified code to the "running sum"
+        // of minified code being processed
+        toBeAdded.data += minified.code;
+      }
+
+      toBeAdded.data += '\n\n';
+
+      Plugin.nudge();
+    });
+
+    // this is where the minified code gets added to one 
+    // JS file that is delivered to the client
+    if (files.length) {
+      files[0].addJavaScript(toBeAdded);
+    }
+
+
 
   }
 
