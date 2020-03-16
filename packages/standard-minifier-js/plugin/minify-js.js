@@ -44,7 +44,7 @@ class MeteorBabelMinifier {
           minified = meteorJsMinify(file.getContentsAsString());
 
           if (!(minified && typeof minified.code === "string")) {
-            throw new Error();
+            throw new Error("Unknown babel-minify error");
           }
 
         }
