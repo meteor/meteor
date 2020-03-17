@@ -84,15 +84,8 @@ Explore ideas to implement HMR in Meteor.
 Migrate packages that do not depend on Meteor exclusive features to NPM and we also continue to encourage new packages to be published as NPM packages when possible.
 
 ## Cordova
-### Update Cordova to 9
-- Leaders: [Filipe Névola](https://github.com/filipenevola) / [Renan Castro](https://github.com/renanccastro)
-- Status: In Progress (1.10-beta.4)
-- PRs: https://github.com/meteor/meteor/pull/10861 / https://github.com/meteor/meteor/pull/10810
-
-Update Cordoba lib and its dependencies to latest (version 9)
-
 ### Cordova documentation
-- Leaders: <you?>
+- Leaders: [Filipe Névola](https://github.com/filipenevola)
 - Status: -
 - PRs: -
 
@@ -156,7 +149,7 @@ Provide a skeleton with PWA configurations already in place such as `manifest`, 
 
 Provide a skeleton with SSR configurations already in place.
 
-### Tests documentation
+### Tests documenta`tion
 - Leaders: [Simon Schick](https://github.com/SimonSimCity) / [Florian Bienefelt](https://github.com/Floriferous)
 - Status: -
 - PRs: -
@@ -206,6 +199,12 @@ Relevant discussions:
 - https://github.com/storybookjs/storybook/issues/5975
 
 ## Recently completed
+### Update Cordova to 9
+- Leaders: [Filipe Névola](https://github.com/filipenevola) / [Renan Castro](https://github.com/renanccastro)
+- Status: shipped in Meteor 1.10.1
+- PRs: https://github.com/meteor/meteor/pull/10861 / https://github.com/meteor/meteor/pull/10810 / https://github.com/meteor/meteor/pull/10861
+
+Update Cordoba lib and its dependencies to latest (version 9)
 
 ### Update to Node.js 12
 - Leaders: [Ben Newman](https://github.com/benjamn)
