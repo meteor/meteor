@@ -24,8 +24,8 @@ import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
 import { EXAMPLE_REPOSITORIES } from './example-repositories.js';
 
-// The architecture used by MDG's hosted servers; it's the architecture used by
-// 'meteor deploy'.
+// The architecture used by Meteor Software's hosted servers; it's the
+// architecture used by 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
@@ -161,6 +161,16 @@ export function parseRunTargets(targets) {
     }
   });
 };
+
+const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
+function filterWebArchs(webArchs, excludeArchsOption) {
+  if (excludeArchsOption) {
+    const excludeArchs = excludeArchsOption.trim().split(/\s*,\s*/)
+      .filter(arch => excludableWebArchs.includes(arch));
+    webArchs = webArchs.filter(arch => !excludeArchs.includes(arch));
+  }
+  return webArchs;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -318,7 +328,8 @@ var runCommandOptions = {
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
     'allow-incompatible-update': { type: Boolean },
-    'extra-packages': { type: String }
+    'extra-packages': { type: String },
+    'exclude-archs': { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -399,6 +410,7 @@ function doRunCommand(options) {
       webArchs.push("web.cordova");
     }
   }
+  webArchs = filterWebArchs(webArchs, options['exclude-archs']);
 
   let cordovaRunner;
   if (!_.isEmpty(runTargets)) {
@@ -505,6 +517,7 @@ main.registerCommand({
     minimal: { type: Boolean },
     full: { type: Boolean },
     react: { type: Boolean },
+    typescript: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -593,7 +606,7 @@ main.registerCommand({
           return transform(f);
         },
         transformContents: function (contents, f) {
-          if ((/(\.html|\.js|\.css)/).test(f)) {
+          if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
@@ -757,6 +770,8 @@ main.registerCommand({
     skelName += "-full";
   } else if (options.react) {
     skelName += "-react";
+  } else if (options.typescript) {
+    skelName += "-typescript";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -764,7 +779,7 @@ main.registerCommand({
       return transform(f);
     },
     transformContents: function (contents, f) {
-      if ((/(\.html|\.js|\.css)/).test(f)) {
+      if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
         return Buffer.from(transform(contents.toString()));
       } else {
         return contents;
@@ -861,23 +876,29 @@ main.registerCommand({
     Console.url("https://www.meteor.com/tutorials"),
       Console.options({ indent: 2 }));
 
+  Console.info("");
+  Console.info("When you’re ready to deploy and host your new Meteor application, check out Galaxy:");
+  Console.info(
+    Console.url("https://www.meteor.com/hosting"),
+      Console.options({ indent: 2 }));
+
   if (! options.bare &&
       ! options.minimal &&
       ! options.full &&
-      ! options.react) {
-    // Notify people about --bare, --minimal, --full, and --react.
+      ! options.react &&
+      ! options.typescript) {
+    // Notify people about --bare, --minimal, --full, --react, and --typescript.
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
       "",
     ].join("\n"));
 
-    cmd("meteor create --bare    # to create an empty app");
-    cmd("meteor create --minimal # to create an app with as few " +
-        "Meteor packages as possible");
-    cmd("meteor create --full    # to create a more complete " +
-        "scaffolded app");
-    cmd("meteor create --react   # to create a basic React-based app");
+    cmd("meteor create --bare       # to create an empty app");
+    cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
+    cmd("meteor create --full       # to create a more complete scaffolded app");
+    cmd("meteor create --react      # to create a basic React-based app");
+    cmd("meteor create --typescript # to create an app using TypeScript and React");
   }
 
   Console.info("");
@@ -1626,7 +1647,9 @@ testCommandOptions = {
     // For 'test-packages': Run in "full app" mode
     'full-app': { type: Boolean, 'default': false },
 
-    'extra-packages': { type: String }
+    'extra-packages': { type: String },
+
+    'exclude-archs': { type: String }
   }
 };
 
@@ -1673,9 +1696,10 @@ function doTestCommand(options) {
   let testRunnerAppDir;
   const testAppPath = options['test-app-path'];
   if (testAppPath) {
+    const absTestAppPath = files.pathResolve(testAppPath);
     try {
-      if (files.mkdir_p(testAppPath, 0o700)) {
-        testRunnerAppDir = testAppPath;
+      if (files.mkdir_p(absTestAppPath, 0o700)) {
+        testRunnerAppDir = absTestAppPath;
       } else {
         Console.error(
           'The specified --test-app-path directory could not be used, as ' +
@@ -1968,6 +1992,11 @@ var runTestAppForPackages = function (projectContext, options) {
     minifyMode: options.production ? 'production' : 'development'
   };
   buildOptions.buildMode = "test";
+  let webArchs = projectContext.platformList.getWebArchs();
+  if (options.cordovaRunner) {
+    webArchs.push("web.cordova");
+  }
+  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs']);
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.
@@ -2397,7 +2426,7 @@ main.registerCommand({
     json: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     // By default, we give you a machine for 5 minutes. You can request up to
-    // 15. (MDG can reserve machines for longer than that.)
+    // 15. (Meteor Software can reserve machines for longer than that.)
     minutes: { type: Number }
   },
   pretty: false,

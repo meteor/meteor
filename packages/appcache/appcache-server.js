@@ -7,6 +7,7 @@ import path from 'path';
 
 let _disableSizeCheck = false;
 let disabledBrowsers = {};
+let enableCallback = null;
 
 Meteor.AppCache = {
   config: options => {
@@ -20,6 +21,9 @@ Meteor.AppCache = {
         value.forEach(urlPrefix =>
           RoutePolicy.declare(urlPrefix, 'static-online')
         );
+      }
+      else if (option === 'enableCallback') {
+        enableCallback = value;
       }
       // option to suppress warnings for tests.
       else if (option === '_disableSizeCheck') {
@@ -37,7 +41,13 @@ Meteor.AppCache = {
   }
 };
 
-const browserDisabled = request => disabledBrowsers[request.browser.name];
+const browserDisabled = request => {
+  if (enableCallback) {
+    return !enableCallback(request);
+  }
+
+  return disabledBrowsers[request.browser.name];
+}
 
 // Cache of previously computed app.manifest files.
 const manifestCache = new Map;
@@ -251,10 +261,12 @@ function eachResource({
 }
 
 function sizeCheck() {
-  const sizes = [ // Check size of each known architecture independently.
+  const RESOURCE_SIZE_LIMIT = 5 * 1024 * 1024; // 5MB
+  const largeSizes = [ // Check size of each known architecture independently.
     "web.browser",
     "web.browser.legacy",
-  ].reduce((filt, arch) => {
+  ].filter((arch) => !!WebApp.clientPrograms[arch])
+  .map((arch) => {
     let totalSize = 0;
 
     WebApp.clientPrograms[arch].manifest.forEach(resource => {
@@ -265,22 +277,21 @@ function sizeCheck() {
       }
     });
 
-    if (totalSize > 5 * 1024 * 1024) {
-      filt.push({
-        arch,
-        size: totalSize
-      });
+    return {
+      arch,
+      size: totalSize,
     }
-    return filt;
-  }, []);
-  if (sizes.length > 0) {
+  })
+  .filter(({ size }) => size > RESOURCE_SIZE_LIMIT);
+
+  if (largeSizes.length > 0) {
     Meteor._debug([
       "** You are using the appcache package, but the size of",
       "** one or more of your cached resources is larger than",
       "** the recommended maximum size of 5MB which may break",
       "** your app in some browsers!",
       "** ",
-      ...sizes.map(data => `** ${data.arch}: ${(data.size / 1024 / 1024).toFixed(1)}MB`),
+      ...largeSizes.map(data => `** ${data.arch}: ${(data.size / 1024 / 1024).toFixed(1)}MB`),
       "** ",
       "** See http://docs.meteor.com/#appcache for more",
       "** information and fixes."

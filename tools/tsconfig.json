@@ -6,6 +6,7 @@
     "lib": ["esnext"],
     "allowJs": true,
     "checkJs": false,
+    "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
 

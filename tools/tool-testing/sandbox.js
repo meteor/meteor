@@ -368,7 +368,7 @@ export default class Sandbox {
     // Allow user to set TOOL_NODE_FLAGS for self-test app.
     if (process.env.TOOL_NODE_FLAGS && ! process.env.SELF_TEST_TOOL_NODE_FLAGS)
       console.log('Consider setting SELF_TEST_TOOL_NODE_FLAGS to configure ' +
-                  'self-test test applicaion spawns');
+                  'self-test test application spawns');
     env.TOOL_NODE_FLAGS = process.env.SELF_TEST_TOOL_NODE_FLAGS || '';
 
     return env;
@@ -557,6 +557,7 @@ const ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   'mobile-experience',
   'mongo',
   'blaze-html-templates',
+  "jquery", // necessary when using Blaze
   'session',
   'tracker',
   "autopublish",

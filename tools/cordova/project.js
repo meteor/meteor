@@ -10,14 +10,11 @@ import { Console } from '../console/console.js';
 import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
-import httpHelpers from '../utils/http-helpers.js';
-import { execFileSync, execFileAsync } from '../utils/processes';
+import { execFileSync } from '../utils/processes';
 
-import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
-import superspawn from 'cordova-common/src/superspawn.js';
 import PluginInfoProvider from 'cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
 import { CORDOVA_PLATFORMS, CORDOVA_PLATFORM_VERSIONS, displayNameForPlatform, displayNamesForPlatforms,
@@ -64,7 +61,7 @@ const pinnedPluginVersions = {
   "cordova-plugin-file-transfer": "1.6.3",
   "cordova-plugin-geolocation": "2.4.3",
   "cordova-plugin-globalization": "1.0.7",
-  "cordova-plugin-inappbrowser": "1.7.1",
+  "cordova-plugin-inappbrowser": "3.2.0",
   "cordova-plugin-legacy-whitelist": "1.1.2",
   "cordova-plugin-media": "3.0.1",
   "cordova-plugin-media-capture": "1.4.3",
@@ -198,7 +195,8 @@ outdated platforms`);
     const iosCommonOptions = {
       // See https://github.com/apache/cordova-ios/issues/407:
       buildFlag: [
-        "-UseModernBuildSystem=0"
+        "-UseModernBuildSystem=0",
+        ...(Console.verbose ? [] : ["-quiet"])
       ]
     };
 
@@ -305,18 +303,17 @@ ${displayNameForPlatform(platform)}`, async () => {
     options.push(isDevice ? '--device' : '--emulator');
 
     let env = this.defaultEnvWithPathsAdded(...extraPaths);
-
-    let command = files.convertToOSPath(files.pathJoin(
-      this.projectRoot, 'platforms', platform, 'cordova', 'run'));
+    const commandOptions = {
+      ...this.defaultOptions,
+      platforms: [platform],
+      device: isDevice,
+    };
 
     this.runCommands(`running Cordova app for platform \
-${displayNameForPlatform(platform)} with options ${options}`,
-    execFileAsync(command, options, {
-      env: env,
-      cwd: this.projectRoot,
-      stdio: Console.verbose ? 'inherit' : 'pipe',
-      waitForClose: false
-    }), null, null);
+${displayNameForPlatform(platform)} with options ${options}`, async () => {
+      await cordova_lib.run(commandOptions);
+    });
+
   }
 
   // Platforms
@@ -738,7 +735,7 @@ perform cordova plugins reinstall`);
     // cordova-plugin-whitelist@1.3.2 => { 'cordova-plugin-whitelist': '1.3.2' }
     // com.cordova.plugin@file://.cordova-plugins/plugin => { 'com.cordova.plugin': 'file://.cordova-plugins/plugin' }
     // @scope/plugin@1.0.0 => { 'com.cordova.plugin': 'scope/plugin' }
-    const installed = this.listInstalledPluginVersions();
+    const installed = this.listInstalledPluginVersions(true);
     const installedPluginsNames = Object.keys(installed);
     const installedPluginsVersions = Object.values(installed);
     const missingPlugins = {};

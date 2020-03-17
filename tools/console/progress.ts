@@ -19,41 +19,26 @@ type ProgressState = {
  * Watchers are invoked with a ProgressState object.
  */
 export class Progress {
-  private title: string | null | void;
-  private isDone: boolean;
-  private forkJoin?: boolean;
+  public readonly title?: string;
+  public readonly startTime = Date.now();
 
-  private parent?: Progress;
+  private parent: Progress | null;
+  private allTasks: Progress[] = [];
+  private selfState: ProgressState = { current: 0, done: false };
+  private state: ProgressState = { current: 0, done: false };
+  private isDone = false;
   private watchers: ProgressWatcher[];
-
-  private selfState: ProgressState;
-  private state: ProgressState;
-
-  private allTasks: Progress[];
+  private forkJoin: boolean;
 
   constructor(options: ProgressOptions = {}) {
-    this.parent = options.parent;
+    this.parent = options.parent || null;
     this.watchers = options.watchers || [];
-  
-    this.title = options.title;
-    if (this.title) {
+    this.forkJoin = !!options.forkJoin;
+
+    if ((this.title = options.title)) {
       // Capitalize job titles when displayed in the progress bar.
       this.title = this.title[0].toUpperCase() + this.title.slice(1);
     }
-  
-    // XXX: Should we have a strict/mdg mode that enables this test?
-    //if (!this.title && this.parent) {
-    //  throw new Error("No title passed");
-    //}
-  
-    this.forkJoin = options.forkJoin;
-  
-    this.allTasks = [];
-  
-    this.selfState = { current: 0, done: false };
-    this.state = {...this.selfState};
-  
-    this.isDone = false;
   }
 
   toString() {
@@ -118,38 +103,38 @@ export class Progress {
   }
 
   // Creates a subtask that must be completed as part of this (bigger) task
-  addChildTask(options: ProgressOptions = {}) {
+  addChildTask(options: ProgressOptions) {
     options = {
       parent: this,
       ...options,
     };
-
     const child = new Progress(options);
     this.allTasks.push(child);
-    this.reportChildState(child, child.state);
-
+    this.reportChildState();
     return child;
   }
 
   // Dumps the tree, for debug
   dump(
     stream: NodeJS.WriteStream,
-    options: { skipDone?: boolean } = {},
-    prefix: string,
+    options?: { skipDone: boolean },
+    prefix?: string,
   ) {
-    if (options.skipDone && this.isDone) {
+    if (options && options.skipDone && this.isDone) {
       return;
     }
 
     if (prefix) {
       stream.write(prefix);
     }
-
-    const end = this.state.end;
-    stream.write("Task [" + this.title + "] " + this.state.current + "/" + (end || '?')
+    const end = this.state.end || '?';
+    stream.write("Task [" + this.title + "] " + this.state.current + "/" + end
       + (this.isDone ? " done" : "") +"\n");
-
-    this.allTasks.forEach(child => child.dump(stream, options, (prefix || '') + '  '));
+    if (this.allTasks.length) {
+      this.allTasks.forEach(child => {
+        child.dump(stream, options, (prefix || '') + '  ');
+      });
+    }
   }
 
   // Receives a state report indicating progress of self
@@ -165,24 +150,27 @@ export class Progress {
   }
 
   // Subscribes a watcher to changes
-  addWatcher(watcher: (state: ProgressState) => void) {
+  addWatcher(watcher: ProgressWatcher) {
     this.watchers.push(watcher);
   }
 
   // Notifies watchers & parents
   private notifyState() {
     if (this.parent) {
-      this.parent.reportChildState(this, this.state);
+      this.parent.reportChildState();
     }
 
-    this.watchers.forEach(watcher => watcher(this.state));
+    if (this.watchers.length) {
+      this.watchers.forEach(watcher => {
+        watcher(this.state);
+      });
+    }
   }
 
   // Recomputes state, incorporating children's states
   private updateTotalState() {
     let allChildrenDone = true;
-    const state = {...this.selfState};
-
+    const state = { ...this.selfState };
     this.allTasks.forEach(child => {
       const childState = child.state;
 
@@ -216,7 +204,7 @@ export class Progress {
   }
 
   // Called by a child when its state changes
-  private reportChildState(_child: Progress, _state: ProgressState) {
+  private reportChildState() {
     this.updateTotalState();
     this.notifyState();
   }

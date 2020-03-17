@@ -72,9 +72,6 @@ Function Add-7ZipTool {
   $webclient.DownloadFile("http://www.7-zip.org/a/7z1604-extra.7z", $extraArchive)
 
   $pathToExtract = 'x64/7za.exe'
-  if ($PLATFORM -eq "windows_x86") {
-    $pathToExtract = '7za.exe'
-  }
 
   Write-Host 'Placing 7za.exe from extra.7z in \bin...' -ForegroundColor Magenta
   & "$system7zip" e $extraArchive -o"$dirTemp" $pathToExtract | Out-Null
@@ -118,11 +115,7 @@ Function Add-NodeAndNpm {
     $nodeUrlBase = 'https://nodejs.org/dist'
   }
 
-  if ($PLATFORM -eq "windows_x86") {
-    $nodeArchitecture = 'win-x86'
-  } else {
-    $nodeArchitecture = 'win-x64'
-  }
+  $nodeArchitecture = 'win-x64'
 
   # Various variables which are used as part of directory paths and
   # inside Node release and header archives.
@@ -231,8 +224,7 @@ Function Add-Mongo {
   # Mongo >= 3.4 no longer supports 32-bit (x86) architectures, so we package
   # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
   $mongo_filenames = @{
-    windows_x86 = "mongodb-win32-i386-${MONGO_VERSION_32BIT}"
-    windows_x64 = "mongodb-win32-x86_64-2008plus-ssl-${MONGO_VERSION_64BIT}"
+    windows_x64 = "mongodb-win32-x86_64-2012plus-${MONGO_VERSION_64BIT}"
   }
 
   $previousCwd = $PWD
@@ -321,23 +313,11 @@ Function Add-NpmModulesFromJsBundleFile {
 
   cd node_modules
 
-  # @babel/runtime@7.0.0-beta.56 removed the @babel/runtime/helpers/builtin
-  # directory, since all helpers are now implemented in the built-in style
-  # (meaning they do not import core-js polyfills). Generated code in build
-  # plugins might still refer to the old directory layout (at least for the
-  # time being), but we can accommodate that by symlinking to the parent
-  # directory, since all the module names are the same.
-  if ((Test-Path "@babel\runtime\helpers") -And
-      !(Test-Path "@babel\runtime\helpers\builtin")) {
-    cd @babel\runtime\helpers
-    & "$($Commands.node)" -e 'require("fs").symlinkSync(".", "builtin", "junction")'
-    cd ..\..\..
-  }
-
   # Since we install a patched version of pacote in $Destination\lib\node_modules,
   # we need to remove npm's bundled version to make it use the new one.
   if (Test-Path "pacote") {
     Remove-DirectoryRecursively "npm\node_modules\pacote"
+    & "$($Commands.node)" -e "require('fs').renameSync('pacote', 'npm\\node_modules\\pacote')"
   }
 
   cd "$previousCwd"

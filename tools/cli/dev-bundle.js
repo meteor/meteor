@@ -189,10 +189,7 @@ function makeStatTest(method) {
 
 function getHostArch() {
   if (process.platform === "win32") {
-    if (process.arch === "x64") {
-      return "os.windows.x86_64";
-    }
-    return "os.windows.x86_32";
+    return "os.windows.x86_64";
   }
 
   if (process.platform === "linux") {

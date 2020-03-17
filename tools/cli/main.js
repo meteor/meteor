@@ -604,18 +604,11 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v8.0.0';
+  var MIN_NODE_VERSION = 'v12.0.0';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');
     process.exit(1);
-  }
-
-  // Set up git hooks, but not on Windows because they don't work there and it;s
-  // not worth setting it up at the moment
-  if (files.inCheckout() && process.platform !== "win32") {
-    var installGitHooks = require('../tool-env/install-git-hooks.js')['default'];
-    installGitHooks();
   }
 
   // This is a bit of a hack, but: if we don't check this in the tool, then the

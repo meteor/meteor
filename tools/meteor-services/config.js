@@ -7,10 +7,10 @@ import {
 } from '../fs/files';
 import tropohouse from '../packaging/tropohouse.js';
 
-// A few functions in the `meteor` tool talk to MDG servers: primarily
-// checking for updates, logging into your Meteor account, and
-// deploying apps to the MDG free hosting sandbox, publishing packages,
-// getting an ssh access to a build farm. These functions need
+// A few functions in the `meteor` tool talk to Meteor Software servers:
+// primarily checking for updates, logging into your Meteor account, and
+// deploying apps to the Meteor Software free hosting sandbox, publishing
+// packages, getting an ssh access to a build farm. These functions need
 // configuration.
 
 // Base URL for Meteor Accounts OAuth services. Endpoints include /authorize

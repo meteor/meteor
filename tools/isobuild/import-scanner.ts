@@ -5,7 +5,10 @@ import {
   isString, isObject, isEmpty, has, keys, each, omit,
 } from "underscore";
 import {sha1} from "../fs/watch";
-import {matches as archMatches} from "../utils/archinfo";
+import {
+  matches as archMatches,
+  isLegacyArch,
+} from "../utils/archinfo";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
@@ -36,6 +39,7 @@ import {
   optimisticStatOrNull,
   optimisticLStatOrNull,
   optimisticHashOrNull,
+  optimisticLookupPackageJsonArray,
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
@@ -71,10 +75,7 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
   _hash,
   bundleArch,
 ) {
-  const isLegacy =
-    bundleArch === "web.browser.legacy" ||
-    bundleArch === "web.cordova";
-
+  const isLegacy = isLegacyArch(bundleArch);
   return reifyCompile(stripHashBang(source), {
     parse: reifyBabelParse,
     generateLetDeclarations: !isLegacy,
@@ -142,7 +143,9 @@ class DefaultHandlers {
           file.hash,
           this.bundleArch,
         );
-        process.nextTick(writeFileAtomically, cacheFileName, code);
+        Promise.resolve().then(
+          () => writeFileAtomically(cacheFileName, code),
+        );
         return code;
       }
     } else {
@@ -227,12 +230,22 @@ function ensureLeadingSlash(path?: string) {
   return posix;
 }
 
+const Status = {
+  NOT_IMPORTED: false,
+  DYNAMIC: 'dynamic',
+  STATIC: 'static',
+};
+
 // Files start with file.imported === false. As we scan the dependency
 // graph, a file can get promoted to "dynamic" or "static" to indicate
 // that it has been imported by other modules. The "dynamic" status trumps
 // false, and "static" trumps both "dynamic" and false. A file can never
 // be demoted to a lower status after it has been promoted.
-const importedStatusOrder = [false, "dynamic", "static"];
+const importedStatusOrder = [
+  Status.NOT_IMPORTED,
+  Status.DYNAMIC,
+  Status.STATIC,
+];
 
 // Set each file.imported status to the maximum status of provided files.
 function alignImportedStatuses(...files: File[]) {
@@ -242,11 +255,24 @@ function alignImportedStatuses(...files: File[]) {
   files.forEach(file => file.imported = maxStatus);
 }
 
+function getParentStatus(importInfos: ImportInfo[]) {
+  return importInfos.some(entry => !entry.parentWasDynamic)
+    ? Status.STATIC
+    : Status.DYNAMIC;
+}
+
+function isHigherStatus(
+  newStatus: string | boolean,
+  previousStatus: string | boolean,
+) {
+  return importedStatusOrder.indexOf(newStatus) >
+    importedStatusOrder.indexOf(previousStatus);
+}
+
 // Set file.imported to status if status has a higher index than the
 // current value of file.imported.
 function setImportedStatus(file: File, status: string | boolean) {
-  if (importedStatusOrder.indexOf(status) >
-      importedStatusOrder.indexOf(file.imported)) {
+  if (isHigherStatus(status, file.imported)) {
     file.imported = status;
   }
 }
@@ -667,14 +693,17 @@ export default class ImportScanner {
     checkProperty("bare");
 
     function getChunk(file: File) {
-      const consumer = file.sourceMap &&
-        new SourceMapConsumer(file.sourceMap);
-      const node = consumer &&
-        SourceNode.fromStringWithSourceMap(
+      if (file.sourceMap) {
+        const consumer = Promise.await(new SourceMapConsumer(file.sourceMap));
+        const node = SourceNode.fromStringWithSourceMap(
           scanner.getDataString(file),
           consumer
         );
-      return node || scanner.getDataString(file);
+        consumer.destroy();
+        return node;
+      } else {
+        return scanner.getDataString(file);
+      }
     }
 
     const {
@@ -789,7 +818,12 @@ export default class ImportScanner {
       // newlyMissing and merge the new identifiers back into
       // this.allMissingModules.
       Object.keys(newlyMissing).forEach(id => {
-        if (has(previousAllMissingModules, id)) {
+        const skipScan = has(previousAllMissingModules, id) &&
+          !isHigherStatus(
+            getParentStatus(newlyMissing[id]),
+            getParentStatus(previousAllMissingModules[id]));
+
+        if (skipScan) {
           delete newlyMissing[id];
         } else {
           ImportScanner.mergeMissing(
@@ -999,7 +1033,7 @@ export default class ImportScanner {
       // they can be handled by the loop above.
       const file = this.getFile(resolved.path);
       if (file && file.alias) {
-        setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
+        setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
         return file.alias;
       }
     }
@@ -1031,14 +1065,14 @@ export default class ImportScanner {
     }
 
     if (forDynamicImport &&
-        file.imported === "dynamic") {
+        file.imported === Status.DYNAMIC) {
       // If we've already scanned this file dynamically, then we don't
       // need to scan it dynamically again.
       return;
     }
 
     // Set file.imported to a truthy value (either "dynamic" or true).
-    setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
+    setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
 
     if (file.reportPendingErrors &&
         file.reportPendingErrors() > 0) {
@@ -1263,7 +1297,7 @@ export default class ImportScanner {
       // raw version found in node_modules. See also:
       // https://github.com/meteor/meteor-feature-requests/issues/6
 
-    } else if (this.shouldUseNode(absModuleId)) {
+    } else if (this.shouldUseNode(absModuleId, absPath)) {
       // On the server, modules in node_modules directories will be
       // handled natively by Node, so we just need to generate a stub
       // module that calls module.useNode(), rather than calling
@@ -1307,7 +1341,7 @@ export default class ImportScanner {
 
   // Similar to logic in Module.prototype.useNode as defined in
   // packages/modules-runtime/server.js. Introduced to fix issue #10122.
-  private shouldUseNode(absModuleId: string) {
+  private shouldUseNode(absModuleId: string, absPath: string) {
     if (this.isWeb()) {
       // Node should never be used in a browser, obviously.
       return false;
@@ -1327,10 +1361,47 @@ export default class ImportScanner {
       start += 2;
     }
 
-    // If the remaining parts include node_modules, then this is a module
-    // that was installed by npm, and it should be evaluated by Node on
-    // the server.
-    return parts.indexOf("node_modules", start) >= 0;
+    // If the remaining parts do not include node_modules, then this
+    // module was not installed by npm, so we should not try to evaluate
+    // it natively in Node on the server.
+    if (parts.indexOf("node_modules", start) < 0) {
+      return false;
+    }
+
+    // Below this point, we know we're dealing with a module in
+    // node_modules, which means we should try to use module.useNode() to
+    // evaluate the module natively in Node, except if the module is an
+    // ESM module, because then the module cannot be imported using
+    // require (as of Node 12.16.0), so module.useNode() will not work.
+
+    const dotExt = pathExtname(absPath).toLowerCase();
+
+    if (dotExt === ".mjs") {
+      // Although few npm packages actually use .mjs, Node will always
+      // interpret these files as ESM modules, so we can return early.
+      return false;
+    }
+
+    if (dotExt === ".json") {
+      // There's no benefit to using Node to evaluate JSON modules, since
+      // there's nothing Node-specific about the parsing of JSON.
+      return false;
+    }
+
+    if (dotExt === ".js") {
+      const relDir = pathRelative(this.sourceRoot, pathDirname(absPath));
+      const pkgJsonArray =
+        optimisticLookupPackageJsonArray(this.sourceRoot, relDir);
+      // Setting "type":"module" in package.json makes Node treat .js
+      // files within the package as ESM modules.
+      if (pkgJsonArray.some(pkgJson => pkgJson?.type === "module")) {
+        return false;
+      }
+    }
+
+    // Everything else (.node, .wasm, whatever) needs to be handled
+    // natively by Node.
+    return true;
   }
 
   // Returns an absolute module identifier indicating where to install the
@@ -1528,7 +1599,7 @@ export default class ImportScanner {
     if (file) {
       // If the file already exists, just update file.imported according
       // to the forDynamicImport parameter.
-      setImportedStatus(file, forDynamicImport ? "dynamic" : "static");
+      setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
       return file;
     }
 
@@ -1549,7 +1620,7 @@ export default class ImportScanner {
       servePath: stripLeadingSlash(absModuleId),
       hash: sha1(data),
       lazy: true,
-      imported: forDynamicImport ? "dynamic" : "static",
+      imported: forDynamicImport ? Status.DYNAMIC : Status.STATIC,
       // Since _addPkgJsonToOutput is only ever called for package.json
       // files that are involved in resolving package directories, and pkg
       // is only a subset of the information in the actual package.json
