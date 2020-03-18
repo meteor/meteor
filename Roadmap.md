@@ -92,13 +92,6 @@ Migrate packages that do not depend on Meteor exclusive features to NPM and we a
 Provide a skeleton with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide ([Forums post](https://forums.meteor.com/t/lets-create-the-ultimate-cordova-hot-code-push-faq-doc/50500)).
 
 ## DB
-### Update MongoDB driver
-- Leaders: [Christian Klaussner](https://github.com/klaussner)
-- Status: In Progress (1.10-beta.4)
-- PRs: https://github.com/meteor/meteor/pull/10861 / https://github.com/meteor/meteor/pull/10723
-
-Update to Mongodb driver from 3.2.7 to 3.3.5, this version is compatible with MongoDB 4.2.
-
 ### Minimongo secondary index support
 - Leaders: <you?>
 - Status: -
@@ -199,6 +192,13 @@ Relevant discussions:
 - https://github.com/storybookjs/storybook/issues/5975
 
 ## Recently completed
+### Update MongoDB driver
+- Leaders: [Christian Klaussner](https://github.com/klaussner)
+- Status: shipped in Meteor 1.10.1
+- PRs: https://github.com/meteor/meteor/pull/10861 / https://github.com/meteor/meteor/pull/10723
+
+Update to Mongodb driver from 3.2.7 to 3.5.4, this version is compatible with MongoDB 4.2.
+
 ### Update Cordova to 9
 - Leaders: [Filipe Névola](https://github.com/filipenevola) / [Renan Castro](https://github.com/renanccastro)
 - Status: shipped in Meteor 1.10.1
