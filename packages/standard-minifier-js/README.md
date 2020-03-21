@@ -3,7 +3,7 @@
 ***
 
 Standard Minifier for JS
-========================
+===
 
 This package provides a minifier plugin used for Meteor apps by default. 
 
@@ -15,11 +15,11 @@ in the table.
 |---------------|:-----:|:------:|
 | Minified      |   N   |    Y   | 
 | Concatenated  |   N   |    Y   | 
-| Source Map    |   Y   |    N   | 
+| Source Maps   |   Y   |    N   | 
 
 
 
-The options that are set that differ from the default settings are the following:
+The options that are set that differ from the default settings used by terser are the following:
 
 ```
 drop_debugger: false
@@ -27,5 +27,5 @@ unused:        false
 safari10:       true
 ```
 
-It should also be noted that by default terser will make one pass while compressing 
-source code, but additional passes could be configured to increase compression.
+It should also be noted that by default terser will make only one pass while compressing the source code, 
+but additional passes could be configured to increase compression of the output during a production build.
