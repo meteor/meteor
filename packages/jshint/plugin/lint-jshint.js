@@ -1,3 +1,5 @@
+/* globals Npm, Plugin */
+
 const jshint = Npm.require('jshint').JSHINT;
 
 Plugin.registerLinter({
@@ -26,12 +28,10 @@ class JsHintLinter {
 
   // this method gets called once per package and once for the app itself
   processFilesForPackage(files, options) {
-
     const globals = options.globals;
-
     const packageName = files[0].getPackageName();
 
-    // populate the cache with an entry for this package
+    // populate the cache with an entry for this package (or for the app itself)
     // if one doesn't already exist
     if (!this._cacheByPackage.hasOwnProperty(packageName)) {
       this._cacheByPackage[packageName] = {
@@ -40,10 +40,10 @@ class JsHintLinter {
       };
     }
 
-    // then access that cache entry
+    // then access the cache entry for this package (or for the app itself)
     const cache = this._cacheByPackage[packageName];
 
-    // get the package config file
+    // get the config file if one exists
     const configs = files.filter(function (file) {
       return file.getBasename() === '.jshintrc';
     });
@@ -58,6 +58,7 @@ class JsHintLinter {
       return;
     }
 
+    // if one config file is present then it will be used
     if (configs.length) {
       const newConfigString = configs[0].getContentsAsString();
       if (cache.configString !== newConfigString) {
@@ -65,7 +66,9 @@ class JsHintLinter {
         cache.files = {};
         cache.configString = newConfigString;
       }
-    } else {
+    }
+    // if no config file is present then use the default config
+    else {
       if (cache.configString !== DEFAULT_CONFIG) {
         // Reset cache.
         cache.files = {};
@@ -73,11 +76,12 @@ class JsHintLinter {
       }
     }
 
-    // attempt to parse the read in configuration file
+    // attempt to parse the configuration file
     let config;
     try {
       config = JSON.parse(cache.configString);
-    } catch (err) {
+    }
+    catch (err) {
       // This should really not happen for DEFAULT_CONFIG :)
       configs[0].error({
         message: "Failed to parse " + configs[0].getPathInPackage() +
@@ -88,13 +92,13 @@ class JsHintLinter {
 
     // JSHint has a particular format for defining globals. `false` means that the
     // global is not allowed to be redefined. `true` means it is allowed to be
-    // redefined. So we mark them false so they are read-only.
+    // redefined. So we mark them all false so they are read-only.
     const predefinedGlobals = {};
     globals.forEach(function (symbol) {
       predefinedGlobals[symbol] = false;
     });
 
-    // this is the loop where we process the files in the app or package
+    // this is the loop where we process the javascript files in the app or package
     files.forEach(function (file) {
 
       // skip the config file
