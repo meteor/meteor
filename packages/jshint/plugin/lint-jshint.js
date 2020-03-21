@@ -1,4 +1,4 @@
-var jshint = Npm.require('jshint').JSHINT;
+const jshint = Npm.require('jshint').JSHINT;
 
 Plugin.registerLinter({
   extensions: ["js"],
