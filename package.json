@@ -13,7 +13,7 @@
   "scripts": {
     "coverage:check": "nyc check-coverage --lines 100 --functions 100 --branches 100",
     "coverage:report": "nyc report",
-    "coveralls": "cat ./coverage/lcov.info | coveralls",
+    "coveralls": "nyc report --reporter=text-lcov | coveralls",
     "format": "prettier --write 'lib/**/*.js' 'tests/**/*.js' 'scripts/**/*.js'",
     "lint": "eslint ./",
     "pretest": "npm run lint",
