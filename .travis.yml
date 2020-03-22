@@ -8,7 +8,6 @@ notifications:
   email: false
 
 node_js:
-  - 8
   - 10
   - 12
 
