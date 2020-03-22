@@ -44,7 +44,7 @@
     "eslint": "6.8.0",
     "eslint-config-prettier": "6.10.1",
     "eslint-plugin-prettier": "~3.1.2",
-    "marked": "0.8.1",
+    "marked": "0.8.2",
     "mocha": "7.1.1",
     "nyc": "15.0.0",
     "prettier": "~2.0.1",
