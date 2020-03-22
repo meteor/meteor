@@ -1,3 +1,17 @@
+## v1.10.2, TBD
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Adds support to override MongoDB options via Meteor settings. Code PR 
+[#10976](https://github.com/meteor/meteor/pull/10976), Docs PR 
+[#662](https://github.com/meteor/docs/pull/662)
+
 ## v1.10.1, 2020-03-12
 
 ### Breaking changes
