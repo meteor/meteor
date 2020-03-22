@@ -39,13 +39,13 @@
   "devDependencies": {
     "babel-eslint": "10.1.0",
     "colors": "1.4.0",
-    "coveralls": "3.0.10",
+    "coveralls": "3.0.11",
     "cz-conventional-changelog": "~3.1.0",
     "eslint": "6.8.0",
-    "eslint-config-prettier": "~6.10.0",
+    "eslint-config-prettier": "6.10.1",
     "eslint-plugin-prettier": "~3.1.2",
-    "marked": "^0.8.0",
-    "mocha": "~7.1.0",
+    "marked": "0.8.1",
+    "mocha": "7.1.1",
     "nyc": "15.0.0",
     "prettier": "~2.0.1",
     "readline-sync": "1.4.10",
@@ -56,7 +56,7 @@
     "eslint": ">= 3.7.0 < 7"
   },
   "engines": {
-    "node": ">=8"
+    "node": ">=10"
   },
   "keywords": [
     "eslint",
