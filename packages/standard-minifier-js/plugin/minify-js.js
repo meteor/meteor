@@ -10,7 +10,7 @@ Plugin.registerMinifier({
 class MeteorBabelMinifier {
 
   processFilesForBundle (files, options) {
-    var mode = options.minifyMode;
+    const mode = options.minifyMode;
 
     // don't minify anything for development
     if (mode === 'development') {
