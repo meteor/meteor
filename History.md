@@ -250,7 +250,7 @@ N/A
   See [this comment](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056)
   by [@SimonSimCity](https://github.com/SimonSimCity).
 
-* Plugin.fs methods are now always sync and no longer accept a callback.
+* `Plugin.fs` methods are now always sync and no longer accept a callback.
 
 ### Migration Steps
 
