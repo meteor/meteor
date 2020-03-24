@@ -371,7 +371,7 @@ describe("meteor-babel", () => {
     assert.strictEqual(typeof Component, "function");
     assert.strictEqual(String(Component), [
       'function Component() {',
-      '  return React.createElement("div", null, "oyez");',
+      '  return /*#__PURE__*/React.createElement("div", null, "oyez");',
       '}',
     ].join("\n"));
   });
