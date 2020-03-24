@@ -1,3 +1,9 @@
+## v1.10.2, TBD
+
+* The `meteor-babel` npm package has been updated to version 7.9.0.
+
+* The `typescript` npm package has been updated to version 3.8.3.
+
 ## v1.10.1, 2020-03-12
 
 ### Breaking changes
