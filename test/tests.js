@@ -732,16 +732,6 @@ val = "zxcv";`;
     delete Array.prototype.dummy;
   });
 
-  it("flow", () => {
-    function add(...args: [number]): number {
-      let sum = 0;
-      args.forEach(arg => sum += arg);
-      return sum;
-    }
-
-    assert.strictEqual(add(1, 2, 3, 4, 5), 15);
-  });
-
   it("TypeScript", () => {
     import { TSClass } from "./class";
     const tsObj = new TSClass("oyez");

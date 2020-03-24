@@ -172,12 +172,6 @@ function getDefaultsForNode8(features) {
   if (! compileModulesOnly) {
     combined.presets.push(babelPresetMeteorModern.getPreset);
 
-    // Support Flow type syntax by simply stripping it out.
-    combined.plugins.push(
-      require("@babel/plugin-syntax-flow"),
-      require("@babel/plugin-transform-flow-strip-types")
-    );
-
     const rt = getRuntimeTransform(features);
     if (rt) {
       combined.plugins.push(rt);
