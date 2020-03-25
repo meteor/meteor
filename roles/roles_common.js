@@ -566,7 +566,7 @@ Object.assign(Roles, {
    *
    * @method removeUsersFromRoles
    * @param {Array|String} users User ID(s) or object(s) with an `_id` field.
-   * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
+   * @param {Array|String} roles Name(s) of roles to remove users from. Roles have to exist.
    * @param {Object|String} [options] Options:
    *   - `scope`: name of the scope, or `null` for the global role
    *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
