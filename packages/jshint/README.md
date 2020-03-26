@@ -5,14 +5,12 @@
 JSHint for Meteor
 ===
 
-This package adds a Linter Plugin that automatically runs all your JavaScript
-source files through the [JSHint linter](http://jshint.com/about/), correctly
-passing into [JSHint](http://jshint.com/) the global variables in scope for the
-environment that file executes inside of.
+This package adds a Linter Plugin to the Meteor build process that will automatically run all your JavaScript 
+files through the [JSHint linter](http://jshint.com/about/).
 
 To configure the plugin, put a `.jshintrc` file into your app's (or package's)
-root folder, containing valid JSON with the [JSHint
-options](http://jshint.com/docs/options/).
+root folder, containing valid JSON (an example is given below) with the [JSHint
+options](http://jshint.com/docs/options/) set to suit your needs.
 
 
 If no `.jshintrc` file is found in your app's (or package's) root folder the default 
@@ -26,3 +24,15 @@ configuration will be used. The default configuration is described below.
 |  node     |    true    | This option defines globals available when your code is running inside of the Node runtime environment  |
 |  browser  |    true    | This option defines globals exposed by modern browsers                                                  |
 
+
+Example `.jshintrc` file
+```
+{
+    "undef": true,    
+    "unused": true,
+    "node": true,    
+    "browser": true,
+    "esversion": 6,
+    "debug": false
+}
+```

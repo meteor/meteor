@@ -3,9 +3,9 @@
 const jshint = Npm.require('jshint').JSHINT;
 
 Plugin.registerLinter({
-  extensions: ["js"],
-  filenames: [".jshintrc"]
-},
+    extensions: ["js"],
+    filenames: [".jshintrc"]
+  },
   () => new JsHintLinter()
 );
 
@@ -40,7 +40,6 @@ class JsHintLinter {
       };
     }
 
-    // then access the cache entry for this package (or for the app itself)
     const cache = this._cacheByPackage[packageName];
 
     // get the config file if one exists
@@ -109,8 +108,7 @@ class JsHintLinter {
       // if the cache has an entry with that key and its hash is the same as the
       // hash of the file (meaning the file hasn't changed at all since that last time
       // the linter ran)
-      if (cache.files.hasOwnProperty(cacheKey) &&
-        cache.files[cacheKey].hash === file.getSourceHash()) {
+      if ( cache.files.hasOwnProperty(cacheKey) && cache.files[cacheKey].hash === file.getSourceHash() ) {
         // since the file hasn't changed we can report the errors found the last time
         // the plugin ran
         reportErrors(file, cache.files[cacheKey].errors);
@@ -130,6 +128,7 @@ class JsHintLinter {
       cache.files[cacheKey] = { hash: file.getSourceHash(), errors: errors };
     });
 
+    // nested function
     function reportErrors(file, errors) {
       errors.forEach(function (error) {        
         file.error({
