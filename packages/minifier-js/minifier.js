@@ -39,7 +39,7 @@ meteorJsMinify = function (source) {
     });
 
     const babelResult = Babel.minify(source, babelOptions);
-    console.log(babelResult);
+    
     if (typeof babelResult.code === "string") {
       result.code = babelResult.code;
       result.minifier = 'babel-minify';  

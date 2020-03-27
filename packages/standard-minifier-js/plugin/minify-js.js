@@ -28,6 +28,7 @@ class MeteorBabelMinifier {
     // this function tries its best to locate the original source file
     // that the error being reported was located inside of
     function maybeThrowMinifyErrorBySourceFile(error, file) {
+      // this regex matches error messages like "Unexpected token (1:12)"
       const minifierErrorRegex = /^(.*?)\s?\((\d+):(\d+)\)$/;
       const parseError = minifierErrorRegex.exec(error.message);
 
