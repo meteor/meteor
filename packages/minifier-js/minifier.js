@@ -5,7 +5,7 @@ meteorJsMinify = function (source) {
   const NODE_ENV = process.env.NODE_ENV || "development";
 
   try {
-    const options = {
+    const terserOptions = {
       compress: {
         drop_debugger: false,  // remove debugger; statements
         unused: false,         // drop unreferenced functions and variables
@@ -20,7 +20,7 @@ meteorJsMinify = function (source) {
       safari10: true,          // set this option to true to work around the Safari 10/11 await bug
     };
 
-    const terserResult = terser.minify(source, options);
+    const terserResult = terser.minify(source, terserOptions);
 
     if (typeof terserResult.code === "string") {
       result.code = terserResult.code;
@@ -34,13 +34,23 @@ meteorJsMinify = function (source) {
     // Although Babel.minify can handle a wider variety of ECMAScript
     // 2015+ syntax, it is substantially slower than terser, so
     // we use it only as a fallback.
-    const options = Babel.getMinifierOptions({
+    const babelOptions = Babel.getMinifierOptions({
       inlineNodeEnv: NODE_ENV
     });
-    const babelResult = Babel.minify(source, options);
-    
-    result.code = babelResult.code;
-    result.minifier = 'babel-minify';    
+
+    const babelResult = Babel.minify(source, babelOptions);
+    console.log(babelResult);
+    if (typeof babelResult.code === "string") {
+      result.code = babelResult.code;
+      result.minifier = 'babel-minify';  
+    }
+    else {
+       // this error gets raised when babel-minify doesn't
+      // raise an exception when it executes but fails to
+      // return any useful result in the code field
+      throw new Error("Unknown babel-minify error");
+    }
+  
   }
 
   return result;

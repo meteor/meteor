@@ -129,13 +129,6 @@ class MeteorBabelMinifier {
         let minified;
         try {
           minified = meteorJsMinify(file.getContentsAsString());
-
-          if (!(minified && typeof minified.code === "string")) {
-            // this error gets raised when babel-minify doesn't
-            // raise an exception when it executes but fails to
-            // return any useful result in the code field
-            throw new Error("Unknown babel-minify error");
-          }
         }
         catch (err) {
           
