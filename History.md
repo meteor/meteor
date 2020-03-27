@@ -1,3 +1,32 @@
+## v1.10.2, TBD
+
+### Breaking changes
+
+* The `babel-compiler` package, used by both `ecmascript` and
+  `typescript`, no longer supports stripping [Flow](https://flow.org/)
+  type annotations by default, which may be a breaking change if your
+  application (or Meteor package) relied on Flow syntax.
+
+### Migration steps
+
+* If you still need Babel's Flow plugins, you can install them with npm
+  and then enable them with a custom `.babelrc` file in your application's
+  (or package's) root directory:
+  ```json
+  {
+    "plugins": [
+      "@babel/plugin-syntax-flow",
+      "@babel/plugin-transform-flow-strip-types"
+    ]
+  }
+  ```
+
+### Changes
+
+* The `meteor-babel` npm package has been updated to version 7.9.0.
+
+* The `typescript` npm package has been updated to version 3.8.3.
+
 ## v1.10.1, 2020-03-12
 
 ### Breaking changes
