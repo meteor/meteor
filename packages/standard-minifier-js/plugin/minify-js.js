@@ -1,10 +1,10 @@
 import { extractModuleSizesTree } from "./stats.js";
 
 Plugin.registerMinifier({
-  extensions: ['js'],
-  archMatching: 'web'
-}, 
-() => new MeteorBabelMinifier()
+    extensions: ['js'],
+    archMatching: 'web',
+  }, 
+  () => new MeteorBabelMinifier()
 );
 
 class MeteorBabelMinifier {
@@ -131,8 +131,7 @@ class MeteorBabelMinifier {
         try {
           minified = meteorJsMinify(file.getContentsAsString());
         }
-        catch (err) {
-          
+        catch (err) {          
           const filePath = file.getPathInBundle();
 
           maybeThrowMinifyErrorBySourceFile(err, file);
@@ -141,14 +140,12 @@ class MeteorBabelMinifier {
           throw err;
         }
 
-        const tree = extractModuleSizesTree(minified.code);
+        const ast = extractModuleSizesTree(minified.code);
 
-        if (tree) {
-          toBeAdded.stats[file.getPathInBundle()] =
-            [Buffer.byteLength(minified.code), tree];
+        if (ast) {
+          toBeAdded.stats[file.getPathInBundle()] = [Buffer.byteLength(minified.code), ast];
         } else {
-          toBeAdded.stats[file.getPathInBundle()] =
-            Buffer.byteLength(minified.code);
+          toBeAdded.stats[file.getPathInBundle()] = Buffer.byteLength(minified.code);
         }
         // append the minified code to the "running sum"
         // of code being minified
