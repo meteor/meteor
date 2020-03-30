@@ -552,12 +552,21 @@ function getArchAndPath(path, browser) {
 
   // TODO Perhaps one day we could infer Cordova clients here, so that we
   // wouldn't have to use prefixed "/__cordova/..." URLs.
-  const arch = isModern(browser)
-    ? "web.browser"
-    : "web.browser.legacy";
+  const preferredArchOrder = isModern(browser)
+    ? ["web.browser", "web.browser.legacy"]
+    : ["web.browser.legacy", "web.browser"];
 
-  if (hasOwn.call(WebApp.clientPrograms, arch)) {
-    return { arch, path };
+  for (const arch of preferredArchOrder) {
+    // If our preferred arch is not available, it's better to use another
+    // client arch that is available than to guarantee the site won't work
+    // by returning an unknown arch. For example, if web.browser.legacy is
+    // excluded using the --exclude-archs command-line option, legacy
+    // clients are better off receiving web.browser (which might actually
+    // work) than receiving an HTTP 404 response. If none of the archs in
+    // preferredArchOrder are defined, only then should we send a 404.
+    if (hasOwn.call(WebApp.clientPrograms, arch)) {
+      return { arch, path };
+    }
   }
 
   return {
