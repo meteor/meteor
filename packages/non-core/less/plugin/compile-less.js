@@ -144,9 +144,9 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
     if (!packageMatch) {
       // shouldn't happen.  all filenames less ever sees should involve this {}
       // thing!
-      return new Promise((r, reject) => {
-        reject(new Error(`file without Meteor context? ${currentDirectory}`));
-      });
+      return Promise.reject(
+        new Error(`file without Meteor context? ${currentDirectory}`)
+      );
     }
     const currentPackagePrefix = packageMatch[1];
 
@@ -169,26 +169,29 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
     }
 
     if (!this.allFiles.has(resolvedFilename)) {
-      return new Promise((r, reject) => {
-        reject(new Error(`Unknown import: ${filename}`));
-      });
+      return Promise.reject(new Error(`Unknown import: ${filename}`));
     }
-    return new Promise((resolve) => {
-      resolve({
-        contents: this.allFiles.get(resolvedFilename).getContentsAsBuffer().toString('utf8'),
-        filename: resolvedFilename,
-      });
+
+    return Promise.resolve({
+      contents: this.allFiles.get(resolvedFilename)
+        .getContentsAsBuffer().toString('utf8'),
+      filename: resolvedFilename,
     });
   }
 }
 
-function decodeFilePath (filePath) {
+function decodeFilePath(filePath) {
   const match = filePath.match(/^{(.*)}\/(.*)$/);
-  if (! match)
-    throw new Error(`Failed to decode Less path: ${filePath}`);
+
+  if (!match) {
+    // Sometimes a filePath may be an URL, such as when loading fonts from
+    // https://fonts.googleapis.com/css. Preserve those URLs instead of
+    // trying to rewrite them.
+    return filePath;
+  }
 
   if (match[1] === '') {
-    // app
+    // Importing from the application, not from a Meteor package.
     return match[2];
   }
 
