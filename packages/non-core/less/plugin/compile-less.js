@@ -4,7 +4,7 @@ const less = Npm.require('less');
 Plugin.registerCompiler({
   // *.lessimport has been deprecated since 0.7.1, but it still works. We
   // *recommend *.import.less or the imports subdirectory instead.
-  extensions: ['less', 'lessimport'],
+  extensions: ['less', 'lessimport', 'variables'],
   archMatching: 'web'
 }, () => new LessCompiler());
 
