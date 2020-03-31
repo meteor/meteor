@@ -1,6 +1,7 @@
 import {isIdentifierStart, isIdentifierChar} from "./identifier.js"
 import {Parser} from "./state.js"
 import UNICODE_PROPERTY_VALUES from "./unicode-property-data.js"
+import {has} from "./util.js"
 
 const pp = Parser.prototype
 
@@ -8,6 +9,7 @@ export class RegExpValidationState {
   constructor(parser) {
     this.parser = parser
     this.validFlags = `gim${parser.options.ecmaVersion >= 6 ? "uy" : ""}${parser.options.ecmaVersion >= 9 ? "s" : ""}`
+    this.unicodeProperties = UNICODE_PROPERTY_VALUES[parser.options.ecmaVersion >= 11 ? 11 : parser.options.ecmaVersion]
     this.source = ""
     this.flags = ""
     this.start = 0
@@ -48,7 +50,8 @@ export class RegExpValidationState {
     if (!this.switchU || c <= 0xD7FF || c >= 0xE000 || i + 1 >= l) {
       return c
     }
-    return (c << 10) + s.charCodeAt(i + 1) - 0x35FDC00
+    const next = s.charCodeAt(i + 1)
+    return next >= 0xDC00 && next <= 0xDFFF ? (c << 10) + next - 0x35FDC00 : c
   }
 
   nextIndex(i) {
@@ -57,8 +60,9 @@ export class RegExpValidationState {
     if (i >= l) {
       return l
     }
-    const c = s.charCodeAt(i)
-    if (!this.switchU || c <= 0xD7FF || c >= 0xE000 || i + 1 >= l) {
+    let c = s.charCodeAt(i), next
+    if (!this.switchU || c <= 0xD7FF || c >= 0xE000 || i + 1 >= l ||
+        (next = s.charCodeAt(i + 1)) < 0xDC00 || next > 0xDFFF) {
       return i + 1
     }
     return i + 2
@@ -103,7 +107,7 @@ pp.validateRegExpFlags = function(state) {
 
   for (let i = 0; i < flags.length; i++) {
     const flag = flags.charAt(i)
-    if (validFlags.indexOf(flag) == -1) {
+    if (validFlags.indexOf(flag) === -1) {
       this.raise(state.start, "Invalid regular expression flag")
     }
     if (flags.indexOf(flag, i + 1) > -1) {
@@ -150,7 +154,7 @@ pp.regexp_pattern = function(state) {
     if (state.eat(0x29 /* ) */)) {
       state.raise("Unmatched ')'")
     }
-    if (state.eat(0x5D /* [ */) || state.eat(0x7D /* } */)) {
+    if (state.eat(0x5D /* ] */) || state.eat(0x7D /* } */)) {
       state.raise("Lone quantifier brackets")
     }
   }
@@ -784,14 +788,14 @@ pp.regexp_eatUnicodePropertyValueExpression = function(state) {
   return false
 }
 pp.regexp_validateUnicodePropertyNameAndValue = function(state, name, value) {
-  if (!UNICODE_PROPERTY_VALUES.hasOwnProperty(name) || UNICODE_PROPERTY_VALUES[name].indexOf(value) === -1) {
+  if (!has(state.unicodeProperties.nonBinary, name))
     state.raise("Invalid property name")
-  }
+  if (!state.unicodeProperties.nonBinary[name].test(value))
+    state.raise("Invalid property value")
 }
 pp.regexp_validateUnicodePropertyNameOrValue = function(state, nameOrValue) {
-  if (UNICODE_PROPERTY_VALUES.$LONE.indexOf(nameOrValue) === -1) {
+  if (!state.unicodeProperties.binary.test(nameOrValue))
     state.raise("Invalid property name")
-  }
 }
 
 // UnicodePropertyName ::
@@ -835,7 +839,7 @@ pp.regexp_eatCharacterClass = function(state) {
   if (state.eat(0x5B /* [ */)) {
     state.eat(0x5E /* ^ */)
     this.regexp_classRanges(state)
-    if (state.eat(0x5D /* [ */)) {
+    if (state.eat(0x5D /* ] */)) {
       return true
     }
     // Unreachable since it threw "unterminated regular expression" error before.
@@ -883,7 +887,7 @@ pp.regexp_eatClassAtom = function(state) {
   }
 
   const ch = state.current()
-  if (ch !== 0x5D /* [ */) {
+  if (ch !== 0x5D /* ] */) {
     state.lastIntValue = ch
     state.advance()
     return true
