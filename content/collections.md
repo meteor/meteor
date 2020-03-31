@@ -84,11 +84,13 @@ A local collection is a convenient way to use the full power of the Minimongo li
 
 Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constrain the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read data more often than you write it*, and so it's usually easier, and less buggy to use a schema when writing.
 
-In Meteor, the pre-eminent schema package is [aldeed:simple-schema](https://atmospherejs.com/aldeed/simple-schema). It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
+In Meteor, the pre-eminent schema package is the npm [simpl-schema](https://www.npmjs.com/package/simpl-schema) package. It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
 
-Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simple-schema`, you can create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
+Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simpl-schema`, you can create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
 
 ```js
+import SimpleSchema from 'simpl-schema';
+
 Lists.schema = new SimpleSchema({
   name: {type: String},
   incompleteCount: {type: Number, defaultValue: 0},
@@ -104,7 +106,7 @@ This example from the Todos app defines a schema with a few simple rules:
 
 We attach the schema to the namespace of `Lists` directly, which allows us to check objects against this schema directly whenever we want, such as in a form or [Method](methods.html). In the [next section](#schemas-on-write) we'll see how to use this schema automatically when writing to the collection.
 
-You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [Simple Schema docs](http://atmospherejs.com/aldeed/simple-schema).
+You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [Simple Schema docs](https://www.npmjs.com/package/simpl-schema).
 
 <h3 id="validating-schemas">Validating against a schema</h3>
 
@@ -190,7 +192,7 @@ What this means is that now every time we call `Lists.insert()`, `Lists.update()
 
 <h3 id="default-value">`defaultValue` and data cleaning</h3>
 
-One thing that Collection2 does is ["clean" the data](https://github.com/aldeed/meteor-simple-schema#cleaning-data) before sending it to the database. This includes but is not limited to:
+One thing that Collection2 does is ["clean" the data](https://www.npmjs.com/package/simpl-schema#cleaning-objects) before sending it to the database. This includes but is not limited to:
 
 1. Coercing types - converting strings to numbers
 2. Removing attributes not in the schema
