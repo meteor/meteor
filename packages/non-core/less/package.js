@@ -1,6 +1,6 @@
 Package.describe({
   name: 'less',
-  version: '2.8.0',
+  version: '3.0.0',
   summary: 'Leaner CSS language',
   documentation: 'README.md'
 });
@@ -13,8 +13,7 @@ Package.registerBuildPlugin({
   ],
   npmDependencies: {
     "@babel/runtime": "7.0.0",
-    // Fork of 2.5.0, deleted large unused files in dist directory.
-    "less": "https://github.com/meteor/less.js/tarball/8130849eb3d7f0ecf0ca8d0af7c4207b0442e3f6"
+    "less": "3.11.1"
   }
 });
 
