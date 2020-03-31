@@ -18,6 +18,6 @@ Package.onTest(function (api) {
   api.use('tinytest');
   api.use('minifier-js');
   api.addFiles([
-    'tests/minifier-tests.js',
+    'minifier-tests.js',
   ], 'server');
 });
