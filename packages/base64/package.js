@@ -3,6 +3,10 @@ Package.describe({
   version: '1.0.12',
 });
 
+Npm.depends({
+  '@trusktr/meteor-base64': '1.0.12',
+});
+
 Package.onUse(api => {
   api.export('Base64');
   api.use('ecmascript');

@@ -1,6 +1,8 @@
 // This is a magic collection that fails its writes on the server when
 // the selector (or inserted document) contains fail: true.
 
+import { Base64 } from '@trusktr/meteor-base64';
+
 var TRANSFORMS = {};
 
 // We keep track of the collections, so we can refer to them by name

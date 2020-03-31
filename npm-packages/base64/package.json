@@ -1,0 +1,51 @@
+{
+  "name": "@trusktr/meteor-base64",
+  "version": "1.0.12",
+  "description": "Base64 encoding and decoding",
+  "license": "MIT",
+  "homepage": "https://docs.meteor.com/api/check.html",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "exports COMMENT:": "This removes 'dist' from import statements, as well as replaces the 'main' field. See https://github.com/nodejs/node/issues/14970#issuecomment-571887546",
+  "exports": {
+    ".": "./dist/index.js",
+    "./": "./dist/"
+  },
+  "scripts": {
+    "LUME SCRIPTS XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX": "",
+    "clean": "lume clean",
+    "build": "lume build",
+    "dev": "lume dev",
+    "typecheck": "lume typecheck",
+    "typecheck:watch": "lume typecheckWatch",
+    "test": "lume test",
+    "test:debug": "lume testDebug",
+    "prettier": "lume prettier",
+    "prettier:check": "lume prettierCheck",
+    "release:patch": "lume releasePatch",
+    "release:minor": "lume releaseMinor",
+    "release:major": "lume releaseMajor",
+    "version": "lume versionHook",
+    "postversion": "lume postVersionHook",
+    "OTHER SCRIPTS XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX": "",
+    "prepack": "npm run build"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@lume/cli": "^1.0.0",
+    "ejson": "^2.2.0",
+    "prettier": "^1.19.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/meteor/meteor.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meteor/meteor/issues"
+  },
+  "keywords": [
+    "base64",
+    "encoding"
+  ]
+}

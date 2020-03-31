@@ -1,3 +1,5 @@
+import { Base64 } from '@trusktr/meteor-base64';
+
 // credentialToken -> credentialSecret. You must provide both the
 // credentialToken and the credentialSecret to retrieve an access token from
 // the _pendingCredentials collection.

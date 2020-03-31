@@ -12,7 +12,6 @@ Package.onUse(api => {
   api.use('mongo', 'server');
 
   api.use('reload', 'client');
-  api.use('base64', 'client');
 
   api.use(['service-configuration', 'logging'], 'server');
 
@@ -48,6 +47,7 @@ Package.onUse(api => {
 });
 
 Npm.depends({
+  '@trusktr/meteor-base64': '1.0.12',
   'body-parser': '1.19.0',
 });
 

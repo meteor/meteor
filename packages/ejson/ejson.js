@@ -9,6 +9,7 @@ import {
   isInfOrNaN,
   handleError,
 } from './utils';
+import { Base64 } from '@trusktr/meteor-base64';
 
 /**
  * @namespace

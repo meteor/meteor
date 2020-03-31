@@ -13,6 +13,7 @@ Package.describe({
 });
 
 Npm.depends({
+  '@trusktr/meteor-base64': '1.0.12',
   "mongodb-uri": "0.9.7"
 });
 
@@ -87,8 +88,7 @@ Package.onTest(function (api) {
   api.use('mongo');
   api.use('check');
   api.use('ecmascript');
-  api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
-           'ddp', 'base64']);
+  api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random', 'ddp']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles('mongo_livedata_tests.js', ['client', 'server']);

@@ -5,11 +5,6 @@
       "version": "1.0.12",
       "resolved": "https://registry.npmjs.org/@trusktr/meteor-base64/-/meteor-base64-1.0.12.tgz",
       "integrity": "sha512-IW/jqEBH5x5R22Aisrvj0QLFIWVJFqHk7c2manAtFOsICejA3QP8OL5Gp0tIWuGtLuALQlhyUm1I4eKyLmWSXw=="
-    },
-    "mongodb-uri": {
-      "version": "0.9.7",
-      "resolved": "https://registry.npmjs.org/mongodb-uri/-/mongodb-uri-0.9.7.tgz",
-      "integrity": "sha1-D3ca0W9IOuZfQoeWlCjp+8SqYYE="
     }
   }
 }

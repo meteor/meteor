@@ -1,10 +1,14 @@
 Package.describe({
   summary: 'Extended and Extensible JSON library',
-  version: '1.1.1'
+  version: '1.1.1',
+});
+
+Npm.depends({
+  '@trusktr/meteor-base64': '1.0.12',
 });
 
 Package.onUse(function onUse(api) {
-  api.use(['ecmascript', 'base64']);
+  api.use(['ecmascript']);
   api.mainModule('ejson.js');
   api.export('EJSON');
 });
