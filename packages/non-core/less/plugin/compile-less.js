@@ -144,9 +144,9 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
     if (!packageMatch) {
       // shouldn't happen.  all filenames less ever sees should involve this {}
       // thing!
-      return new Promise((r, reject) => {
-        reject(new Error(`file without Meteor context? ${currentDirectory}`));
-      });
+      return Promise.reject(
+        new Error(`file without Meteor context? ${currentDirectory}`)
+      );
     }
     const currentPackagePrefix = packageMatch[1];
 
@@ -169,15 +169,13 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
     }
 
     if (!this.allFiles.has(resolvedFilename)) {
-      return new Promise((r, reject) => {
-        reject(new Error(`Unknown import: ${filename}`));
-      });
+      return Promise.reject(new Error(`Unknown import: ${filename}`));
     }
-    return new Promise((resolve) => {
-      resolve({
-        contents: this.allFiles.get(resolvedFilename).getContentsAsBuffer().toString('utf8'),
-        filename: resolvedFilename,
-      });
+
+    return Promise.resolve({
+      contents: this.allFiles.get(resolvedFilename)
+        .getContentsAsBuffer().toString('utf8'),
+      filename: resolvedFilename,
     });
   }
 }
