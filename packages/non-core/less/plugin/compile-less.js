@@ -182,13 +182,18 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
   }
 }
 
-function decodeFilePath (filePath) {
+function decodeFilePath(filePath) {
   const match = filePath.match(/^{(.*)}\/(.*)$/);
-  if (! match)
-    throw new Error(`Failed to decode Less path: ${filePath}`);
+
+  if (!match) {
+    // Sometimes a filePath may be an URL, such as when loading fonts from
+    // https://fonts.googleapis.com/css. Preserve those URLs instead of
+    // trying to rewrite them.
+    return filePath;
+  }
 
   if (match[1] === '') {
-    // app
+    // Importing from the application, not from a Meteor package.
     return match[2];
   }
 
