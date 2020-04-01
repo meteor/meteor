@@ -572,6 +572,7 @@ describe("symlinking node_modules", () => {
     assert.strictEqual(tuple1, tuple2);
   });
 
+  Meteor.isClient &&
   it("should support application-compiled `npm link`ed packages", () => {
     assert.strictEqual(
       require.resolve("acorn"),
