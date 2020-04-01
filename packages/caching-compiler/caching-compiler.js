@@ -171,27 +171,16 @@ CachingCompilerBase = class CachingCompilerBase {
     return hash.digest('hex');
   }
 
-  // We want to write the file atomically. But we also don't want to block
-  // processing on the file write.
-  _writeFileAsync(filename, contents) {
+  // Write the file atomically.
+  _writeFile(filename, contents) {
     const tempFilename = filename + '.tmp.' + Random.id();
-    if (this._cacheDebugEnabled) {
-      // Write cache file synchronously when cache debugging enabled.
-      try {
-        fs.writeFileSync(tempFilename, contents);
-        fs.renameSync(tempFilename, filename);
-      } catch (e) {
-        // ignore errors, it's just a cache
-      }
-    } else {
-      fs.writeFile(tempFilename, contents, writeError => {
-        if (writeError) return;
-        try {
-          fs.renameSync(tempFilename, filename);
-        } catch (renameError) {
-          // ignore errors, it's just a cache
-        }
-      });
+
+    try {
+      fs.writeFileSync(tempFilename, contents);
+      fs.renameSync(tempFilename, filename);
+    } catch (e) {
+      // ignore errors, it's just a cache
+      this._cacheDebug(e);
     }
   }
 
@@ -384,7 +373,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
       return;
     const cacheFilename = this._cacheFilename(cacheKey);
     const cacheContents = this.stringifyCompileResult(compileResult);
-    this._writeFileAsync(cacheFilename, cacheContents);
+    this._writeFile(cacheFilename, cacheContents);
   }
 
   // Returns null if the file does not exist or can't be parsed; otherwise

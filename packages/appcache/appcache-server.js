@@ -1,5 +1,4 @@
 import { Meteor } from 'meteor/meteor'
-import { isModern } from "meteor/modern-browsers";
 import { WebApp } from "meteor/webapp";
 import crypto from 'crypto';
 import fs from 'fs';
@@ -88,12 +87,12 @@ WebApp.connectHandlers.use((req, res, next) => {
   }
 
   const cacheInfo = {
-    modern: isModern(request.browser),
+    // Provided by WebApp.categorizeRequest.
+    modern: request.modern,
   };
 
-  cacheInfo.arch = cacheInfo.modern
-    ? "web.browser"
-    : "web.browser.legacy";
+  // Also provided by WebApp.categorizeRequest.
+  cacheInfo.arch = request.arch;
 
   // The true hash of the client manifest for this arch, regardless of
   // AUTOUPDATE_VERSION or Autoupdate.autoupdateVersion.
