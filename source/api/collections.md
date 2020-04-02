@@ -932,7 +932,7 @@ cases you may want to pass additional options. You can do it in two ways:
 <h3 id="mongo_connection_options_settings">Meteor settings</h3>
 
 You can use your Meteor settings file to set the options in a property called 
-`overrideMongoOptions`, these values will be provided as options for MongoDB in
+`options` inside `packages` > `mongo`, these values will be provided as options for MongoDB in
 the connect method. 
 
 > this option was introduced in Meteor 1.10.2
