@@ -102,7 +102,7 @@ Pull requests that contain `dev_bundle` changes will be noted by repo collaborat
 
 The Meteor core is best documented within the code itself, however, many components also have a `README.md` in their respective directories.
 
-Some compartmentalized portions of Meteor are broken into packages ([see a list of packages](packages/)) and they almost all have a `README.md` within their directory.  For example, [`ddp`](packages/ddp/README.md), [`ecmascript`](packages/ecmascript/README.md) and [`tinytest`](packages/tinytest/README.md).
+Some compartmentalized portions of Meteor are broken into packages ([see a list of packages](packages/)) and almost all of them have a `README.md` within their directory.  For example, [`ddp`](packages/ddp/README.md), [`ecmascript`](packages/ecmascript/README.md) and [`tinytest`](packages/tinytest/README.md).
 
 For the rest, try looking nearby for a `README.md`.  For example, [`isobuild`](tools/isobuild/README.md) or [`cordova`](tools/cordova/README.md).
 
@@ -110,10 +110,10 @@ For the rest, try looking nearby for a `README.md`.  For example, [`isobuild`](t
 
 ### Test against the local meteor copy
 
-When running any of tests, be sure run them against the checked-out copy of Meteor instead of
+When running any tests, be sure to run them against the checked-out copy of Meteor instead of
 the globally-installed version.  This means ensuring that the command is `path-to-meteor-checkout/meteor` and not just `meteor`.
 
-This is important so that tests are run against the version in development and not the stable (installed) Meteor release.
+This is important so that tests are run against your local development version and not the stable (installed) Meteor release.
 
 ### Running tests on Meteor core
 
@@ -142,7 +142,7 @@ While TinyTest and the `test-packages` command can be used to test internal Mete
 
 #### Listing available tests
 
-To see a list of the tests which are included in the self-test system, list them with the `--list` option:
+To see a list of tests included in the self-test system, use the `--list` option:
 
     ./meteor self-test --list
 
