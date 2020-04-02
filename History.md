@@ -23,6 +23,10 @@
 
 ### Changes
 
+* Adds support to override MongoDB options via Meteor settings. Code PR 
+[#10976](https://github.com/meteor/meteor/pull/10976), Docs PR 
+[#662](https://github.com/meteor/docs/pull/662)
+
 * The `meteor-babel` npm package has been updated to version 7.9.0.
 
 * The `typescript` npm package has been updated to version 3.8.3.
