@@ -9,9 +9,11 @@ You can use the official search at [npmjs.com](https://www.npmjs.com/) or see re
 
 <h2 id="client-npm">npm on the client</h2>
 
-Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a Node-like environment on the client so that many npm packages, even ones originally intended for the server, can run unmodified. Meteor's ES2015 module system does this for you out of the box with no additional configuration necessary. In most cases, you can import npm dependencies from a client file, just as you would on the server.
+Tools like [browserify](http://browserify.org) and [webpack](https://webpack.github.io) are designed to provide a Node-like environment on the client so that many npm packages, even ones originally intended for the server, can run unmodified. In most cases, you can import npm dependencies from a client file, just as you would on the server.
 
-> When creating a new application Meteor installs the `meteor-node-stubs` npm package to help provide this client browser compatibility. If you are upgrading an application to Meteor 1.3 you may have to run `meteor npm install --save meteor-node-stubs` manually.
+When creating a new application Meteor installs the `meteor-node-stubs` npm package to help provide this client browser compatibility. If you are upgrading an application to Meteor 1.3 you may have to run `meteor npm install --save meteor-node-stubs` manually.
+
+The `meteor-node-stubs` npm package provides browser-friendly implementations of Node's built-in modules, like `path`, `buffer`, `util`, etc. Meteor's module system avoids actually bundling any stub modules (and their dependencies) if they are not used, so there is no cost to keeping `meteor-node-stubs` in the dependencies. In other words, leave `meteor-node-stubs` installed unless you really know what you're doing.
 
 <h2 id="installing-npm">Installing npm packages</h2>
 
