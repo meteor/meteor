@@ -940,9 +940,13 @@ the connect method.
 For example, you may want to specify a certificate for your
 TLS connection ([see the options here](https://mongodb.github.io/node-mongodb-native/3.5/tutorials/connect/tls/)) then you could use these options:
 ```json
-  "overrideMongoOptions": {
-    "tls": true,
-    "tlsCAFileAsset": "certificate.pem"
+  "packages": {
+    "mongo": {
+      "options": {
+        "tls": true,
+        "tlsCAFileAsset": "certificate.pem"
+      }
+    }
   }
 ```
 Meteor will convert relative paths to absolute paths if the option name (key) 
@@ -950,9 +954,13 @@ ends with `Asset`, for this to work properly you need to place the files in the
  `private` in the root of your project. In the example Mongo connection would  
  receive this:
 ```json
-  "overrideMongoOptions": {
-    "tls": true,
-    "tlsCAFile": "/absolute/path/certificate.pem"
+  "packages": {
+    "mongo": {
+      "options": {
+        "tls": true,
+        "tlsCAFile": "/absolute/path/certificate.pem"
+      }
+    }
   }
 ```
 See that the final option name (key) does not contain `Asset` in the end as
@@ -965,8 +973,12 @@ error `MongoNetworkError: failed to connect to server [sg-meteorappdb-32194.serv
 Another way to avoid this error is to allow invalid certificates with this 
 option:
 ```json
-  "overrideMongoOptions": {
-    "tlsAllowInvalidCertificates": true
+  "packages": {
+    "mongo": {
+      "options": {
+        "tlsAllowInvalidCertificates": true
+      }
+    }
   }
 ```
 
