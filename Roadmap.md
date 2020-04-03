@@ -142,7 +142,7 @@ Provide a skeleton with PWA configurations already in place such as `manifest`, 
 
 Provide a skeleton with SSR configurations already in place.
 
-### Tests documenta`tion
+### Tests documentation
 - Leaders: [Simon Schick](https://github.com/SimonSimCity) / [Florian Bienefelt](https://github.com/Floriferous)
 - Status: -
 - PRs: -
