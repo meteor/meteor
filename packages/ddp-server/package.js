@@ -27,6 +27,9 @@ Package.onUse(function (api) {
   // If the facts package is loaded, publish some statistics.
   api.use('facts-base', 'server', {weak: true});
 
+  // If SockJS disabled, use standard WebSocket `message` event
+  api.use('disable-sockjs', 'server', {weak: true});
+
   api.use('callback-hook', 'server');
   api.export('DDPServer', 'server');
 

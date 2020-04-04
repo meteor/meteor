@@ -2,6 +2,11 @@ DDPServer = {};
 
 var Fiber = Npm.require('fibers');
 
+// Name of the message event, by default using the `data` from SockJS
+const MESSAGE_EVENT = !Package['disable-sockjs']
+  ? 'data' // SockJS
+  : 'message'; // WebSocket
+
 // This file contains classes:
 // * Session - The server's connection to a single DDP client
 // * Subscription - A single subscription for a single client
@@ -1373,11 +1378,7 @@ Server = function (options) {
       socket.send(DDPCommon.stringifyDDP(msg));
     };
 
-    // Event listeners based on StreamServer library
-    // SockJS
-    socket.on('data', handleMessage);
-    // WebSocket
-    socket.on('message', handleMessage);
+    socket.on(MESSAGE_EVENT, handleMessage);
 
     /**
      * Handle socket message
