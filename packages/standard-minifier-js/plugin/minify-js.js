@@ -7,6 +7,8 @@ Plugin.registerMinifier({
   () => new MeteorBabelMinifier()
 );
 
+
+
 class MeteorBabelMinifier {
 
   processFilesForBundle (files, options) {
@@ -24,90 +26,36 @@ class MeteorBabelMinifier {
       return;
     }
 
-    // nested function 
+      // nested function 
     // this function tries its best to locate the original source file
     // that the error being reported was located inside of
     function maybeThrowMinifyErrorBySourceFile(error, file) {
-      // this regex matches error messages like "Unexpected token (1:12)"
-      const minifierErrorRegex = /^(.*?)\s?\((\d+):(\d+)\)$/;
-      const parseError = minifierErrorRegex.exec(error.message);
+     
+      const lines = file.getContentsAsString().split(/\n/);
+      const lineContent = lines[error.line - 1];
 
-      if (!parseError) {
-        // If we were unable to parse it, just let the usual error handling work.
-        return;
-      }
-
-      const lineErrorMessage = parseError[1];
-      const lineErrorLineNumber = parseError[2];
-
-      const parseErrorContentIndex = lineErrorLineNumber - 1;
-
-      // Unlikely, since we have a multi-line fixed header in this file.
-      if (parseErrorContentIndex < 0) {
-        return;
-      }
-
-      /*
-
-      What we're parsing looks like this:
-
-      /////////////////////////////////////////
-      //                                     //
-      // path/to/file.js                     //
-      //                                     //
-      /////////////////////////////////////////
-                                            // 1
-        var illegalECMAScript = true;       // 2
-                                            // 3
-      /////////////////////////////////////////
-
-      Btw, the above code is intentionally not newer ECMAScript so
-      we don't break ourselves.
-
-      */
-
-      const contents = file.getContentsAsString().split(/\n/);
-      const lineContent = contents[parseErrorContentIndex];
-
-      // Try to grab the line number, which sometimes doesn't exist on
-      // line, abnormally-long lines in a larger block.
-      const lineSrcLineParts = /^(.*?)(?:\s*\/\/ (\d+))?$/.exec(lineContent);
-
-      // The line didn't match at all?  Let's just not try.
-      if (!lineSrcLineParts) {
-        return;
-      }
-
-      const lineSrcLineContent = lineSrcLineParts[1];
-      const lineSrcLineNumber = lineSrcLineParts[2];
 
       // Count backward from the failed line to find the filename.
-      for (let c = parseErrorContentIndex - 1; c >= 0; c--) {
-        let sourceLine = contents[c];
+      for (let i = error.line - 1; i >= 0; i--) {
+        let currentLine = lines[i];
 
         // If the line is a boatload of slashes, we're in the right place.
-        if (/^\/\/\/{6,}$/.test(sourceLine)) {
+        if (/^\/\/\/{6,}$/.test(currentLine)) {
 
           // If 4 lines back is the same exact line, we've found the framing.
-          if (contents[c - 4] === sourceLine) {
+          if (contents[i - 4] === currentLine) {
 
             // So in that case, 2 lines back is the file path.
-            let parseErrorPath = contents[c - 2]
-              .substring(3)
-              .replace(/\s+\/\//, "");
+            let originalFilePath = contents[c - 2].substring(3).replace(/\s+\/\//, "");
 
-            let minError = new Error(
-              "babel-minify minification error " +
-              "within " + file.getPathInBundle() + ":\n" +
-              parseErrorPath +
-              (lineSrcLineNumber ? ", line " + lineSrcLineNumber : "") + "\n" +
-              "\n" +
-              lineErrorMessage + ":\n" +
-              "\n" +
-              lineSrcLineContent + "\n"
+            throw new Error(
+              "terser minification error within" +
+              file.getPathInBundle() + ":\n" +
+              originalFilePath +
+              ", line " + error.line + "\n\n" +              
+              error.message + ":\n\n" +
+              lineContent + "\n"
             );
-
-            throw minError;
           }
         }
       }
