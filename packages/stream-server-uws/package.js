@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  uws: '10.148.0'
+  '@clusterws/cws': '1.5.0'
 });
 
 Package.onUse(function (api) {

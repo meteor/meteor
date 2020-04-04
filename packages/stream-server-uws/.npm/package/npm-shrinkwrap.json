@@ -1,10 +1,10 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
-    "uws": {
-      "version": "10.148.0",
-      "resolved": "https://registry.npmjs.org/uws/-/uws-10.148.0.tgz",
-      "integrity": "sha512-aJpFgMMyxubiE/ll4nj9nWoQbv0HzZZDWXfwyu78nuFObX0Zoyv3TWjkqKPQ1vb2sMPZoz67tri7QNE6dybNmQ=="
+    "@clusterws/cws": {
+      "version": "1.5.0",
+      "resolved": "https://registry.npmjs.org/@clusterws/cws/-/cws-1.5.0.tgz",
+      "integrity": "sha512-sLkwJG6dls1vppCYS7HGJU08orAHOfsb54Cpng0xAlx9tlc2Xh95Rot80Vg8Z3/tE5Z/4HMN6cRYHuw6jQZduA=="
     }
   }
 }

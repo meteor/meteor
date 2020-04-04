@@ -4,11 +4,12 @@ import { RoutePolicy } from 'meteor/routepolicy';
 import { WebApp } from 'meteor/webapp';
 /** @type {WebSocket} */
 // noinspection NpmUsedModulesInstalled
-import WebSocket from 'uws';
+import { WebSocket } from '@clusterws/cws';
 
 // noinspection JSUnresolvedVariable
 const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
 const PATH = '/websocket';
+// @see https://github.com/ClusterWS/cWS#websocket-server
 const UWS_SERVER_OPTIONS = {
   path: pathPrefix + PATH,
   server: WebApp.httpServer,
@@ -23,7 +24,7 @@ const UWS_SERVER_OPTIONS = {
  * @type {StreamServerUWS}
  */
 StreamServerUWS = class StreamServerUWS {
-  /** @param {WebSocket.IServerOptions} options */
+  /** @param {ServerConfigs} options */
   constructor(options = UWS_SERVER_OPTIONS) {
     this.registration_callbacks = new Set();
 
