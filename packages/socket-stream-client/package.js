@@ -15,6 +15,9 @@ Package.onUse(function(api) {
   api.use("modern-browsers");
   api.use("retry"); // TODO Try to remove this.
 
+  // Used for a conditional import of the SockJS
+  api.use("disable-sockjs", "client", { weak: true });
+
   api.addFiles("sockjs-0.3.4.js", "legacy");
   api.mainModule("browser.js", "client", { lazy: true });
 
