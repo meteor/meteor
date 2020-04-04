@@ -4,7 +4,7 @@ meteorJsMinify = function (source) {
   var result = {};
   const NODE_ENV = process.env.NODE_ENV || "development";
 
-  const terserOptions = {
+  const options = {
     compress: {
       drop_debugger: false,  // remove debugger; statements
       unused: false,         // drop unreferenced functions and variables
@@ -19,7 +19,7 @@ meteorJsMinify = function (source) {
     safari10: true,          // set this option to true to work around the Safari 10/11 await bug
   };
 
-  const terserResult = terser.minify(source, terserOptions);
+  const terserResult = terser.minify(source, options);
   
   // the terser api doesnt throw exceptions, so we throw one ourselves
   if (terserResult.error) throw terserResult.error;

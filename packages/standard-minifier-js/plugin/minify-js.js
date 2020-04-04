@@ -30,13 +30,14 @@ class MeteorBabelMinifier {
 
       const lines = file.getContentsAsString().split(/\n/);    
       const lineContent = lines[error.line - 1];
+      
       let originalSourceFileLineNumber = 0;
 
       // Count backward from the failed line to find the oringal filename
       for (let i = (error.line - 1); i >= 0; i--) {
           let currentLine = lines[i];
           
-          // If the line is a boatload of slashes, we're in the right place.
+          // If the line is a boatload of slashes (8 or more), we're in the right place.
           if (/^\/\/\/{6,}$/.test(currentLine)) {
 
               // If 4 lines back is the same exact line, we've found the framing.
@@ -50,15 +51,13 @@ class MeteorBabelMinifier {
                       `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` + 
                       `Line content: ${lineContent}\n`);
               }
-              
           }
           originalSourceFileLineNumber++;
       }
     }
 
     // this object will collect all the minified code in the 
-    // data field and then post-minfiication file sizes in
-    // stats field
+    // data field and post-minfiication file sizes in the stats field
     const toBeAdded = {
       data: "",
       stats: Object.create(null)
@@ -92,7 +91,6 @@ class MeteorBabelMinifier {
         // of code being minified
         toBeAdded.data += minified.code;
       }
-
       toBeAdded.data += '\n\n';
 
       Plugin.nudge();
