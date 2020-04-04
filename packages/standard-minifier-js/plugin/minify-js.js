@@ -7,8 +7,6 @@ Plugin.registerMinifier({
   () => new MeteorBabelMinifier()
 );
 
-
-
 class MeteorBabelMinifier {
 
   processFilesForBundle (files, options) {
@@ -26,38 +24,35 @@ class MeteorBabelMinifier {
       return;
     }
 
-      // nested function 
     // this function tries its best to locate the original source file
     // that the error being reported was located inside of
     function maybeThrowMinifyErrorBySourceFile(error, file) {
-     
-      const lines = file.getContentsAsString().split(/\n/);
+
+      const lines = file.getContentsAsString().split(/\n/);    
       const lineContent = lines[error.line - 1];
+      let originalSourceFileLineNumber = 0;
 
+      // Count backward from the failed line to find the oringal filename
+      for (let i = (error.line - 1); i >= 0; i--) {
+          let currentLine = lines[i];
+          
+          // If the line is a boatload of slashes, we're in the right place.
+          if (/^\/\/\/{6,}$/.test(currentLine)) {
 
-      // Count backward from the failed line to find the filename.
-      for (let i = error.line - 1; i >= 0; i--) {
-        let currentLine = lines[i];
+              // If 4 lines back is the same exact line, we've found the framing.
+              if (lines[i - 4] === currentLine) {
 
-        // If the line is a boatload of slashes, we're in the right place.
-        if (/^\/\/\/{6,}$/.test(currentLine)) {
+                  // So in that case, 2 lines back is the file path.
+                  let originalFilePath = lines[i - 2].substring(3).replace(/\s+\/\//, "");
 
-          // If 4 lines back is the same exact line, we've found the framing.
-          if (contents[i - 4] === currentLine) {
-
-            // So in that case, 2 lines back is the file path.
-            let originalFilePath = contents[c - 2].substring(3).replace(/\s+\/\//, "");
-
-            throw new Error(
-              "terser minification error within" +
-              file.getPathInBundle() + ":\n" +
-              originalFilePath +
-              ", line " + error.line + "\n\n" +              
-              error.message + ":\n\n" +
-              lineContent + "\n"
-            );
+                  throw new Error(
+                      `terser minification error (${error.message})\n` + 
+                      `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` + 
+                      `Line content: ${lineContent}\n`);
+              }
+              
           }
-        }
+          originalSourceFileLineNumber++;
       }
     }
 
@@ -80,11 +75,9 @@ class MeteorBabelMinifier {
           minified = meteorJsMinify(file.getContentsAsString());
         }
         catch (err) {          
-          const filePath = file.getPathInBundle();
-
           maybeThrowMinifyErrorBySourceFile(err, file);
           
-          err.message += " while minifying " + filePath;
+          err.message += " while minifying " + file.getPathInBundle();
           throw err;
         }
 
