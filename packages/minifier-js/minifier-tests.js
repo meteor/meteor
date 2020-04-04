@@ -4,7 +4,7 @@ Tinytest.add('minifier-js - verify simple JS minifications work', (test) => {
 });
 
 // this feature has been reqested in this issue https://github.com/terser/terser/issues/632
-// so when we bump the version and this fails we will know when :)
+// so when we bump the terser version up and this fails we will know when its been done :)
 Tinytest.add('minifier-js - numeric seperator test', (test) => {
   test.throws(() => meteorJsMinify('let number = 1_000_000_000_000;\n')  );   
 });
