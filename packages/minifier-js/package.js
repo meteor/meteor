@@ -8,6 +8,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
+  api.use('babel-compiler');
   api.export(['meteorJsMinify']);
   api.addFiles(['minifier.js'], 'server');
 });
