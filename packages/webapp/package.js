@@ -57,7 +57,7 @@ Package.onTest(function (api) {
   api.use(['tinytest', 'ecmascript', 'webapp', 'http', 'underscore']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
-  api.addFiles('socket_file_tests.js', 'server');
+  api.addFiles('socket_file_tests.js', ['os.linux', 'os.osx']);
 
   api.addAssets('modern_test_asset.js', 'web.browser');
   api.addAssets('legacy_test_asset.js', 'legacy');
