@@ -40,6 +40,13 @@ StreamServerUWS = class StreamServerUWS {
     this.server.on('connection', (socket, req) => {
       this.connection(socket, req);
     });
+
+    // Emulate SockJS for test `stream - /websocket is a websocket endpoint` in `socket-stream-client/client-tests.js`
+    WebApp.rawConnectHandlers.use('/websocket', (req, res) => {
+      res.writeHead(400);
+      res.write('Not a valid websocket request');
+      res.end();
+    });
   }
 
   /**
