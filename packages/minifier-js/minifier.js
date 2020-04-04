@@ -20,10 +20,6 @@ meteorJsMinify = function (source) {
 
   const terserResult = terser.minify(source, terserOptions);
   
-  console.log(terserResult.error.message);
-  console.log(terserResult.error.line);
-  console.log(terserResult.error.col);
-  
   // the terser api doesnt throw exceptions, so we throw one ourselves
   if (terserResult.error) throw terserResult.error;
   
