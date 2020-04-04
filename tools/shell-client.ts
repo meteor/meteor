@@ -180,7 +180,7 @@ class Client {
 
     eachline(sock, (line: string) => {
       this.exitOnClose = line.indexOf(EXITING_MESSAGE) >= 0;
-      return line;
+      return undefined as unknown as string;
     });
 
     sock.on("connect", onConnect);
