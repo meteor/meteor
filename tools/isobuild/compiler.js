@@ -40,9 +40,6 @@ compiler.BUILT_BY = 'meteor/34';
 // is expanded into 'web.browser' and 'web.cordova')
 compiler.ALL_ARCHES = [
   "os",
-  "os.linux",
-  "os.osx",
-  "os.windows",
   "web.browser",
   "web.browser.legacy",
   "web.cordova"
