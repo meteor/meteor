@@ -93,7 +93,7 @@ Provide a skeleton with mobile native configurations already in place such as `m
 
 ## DB
 ### Minimongo secondary index support
-- Leaders: <you?>
+- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
 - Status: -
 - PRs: -
 
