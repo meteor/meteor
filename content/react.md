@@ -270,9 +270,7 @@ Sometimes changes in your data can trigger re-computations which you know won't 
 
 <h2 id="routing">Routing</h2>
 
-There are two main options for routing with Meteor and React. Either way, we recommend consulting our [Routing article](routing.html) for some general principles of routing in Meteor before writing your app.
-
-- [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) is a Meteor specific router that can be used both with React and Blaze. It is documented in detail in the [Routing article](routing.html).
+Although there are many solutions for routing with Meteor and React, react-router is one of the most popular packages right now. Before you continue, we recommend consulting our [Routing article](routing.html) for some general principles of routing in Meteor before writing your app.
 
 - [`react-router`](https://www.npmjs.com/package/react-router) is a React-specific router very popular in the React community. It can also be used with Meteor.
 
