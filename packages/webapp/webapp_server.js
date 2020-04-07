@@ -130,10 +130,63 @@ var identifyBrowser = function (userAgentString) {
 WebAppInternals.identifyBrowser = identifyBrowser;
 
 WebApp.categorizeRequest = function (req) {
-  return _.extend({
-    browser: identifyBrowser(req.headers['user-agent']),
-    url: parseUrl(req.url, true)
-  }, _.pick(req, 'dynamicHead', 'dynamicBody', 'headers', 'cookies'));
+  if (req.browser && req.arch && typeof req.modern === "boolean") {
+    // Already categorized.
+    return req;
+  }
+
+  const browser = identifyBrowser(req.headers["user-agent"]);
+  const modern = isModern(browser);
+  const path = typeof req.pathname === "string"
+   ? req.pathname
+   : parseRequest(req).pathname;
+
+  const categorized = {
+    browser,
+    modern,
+    path,
+    arch: WebApp.defaultArch,
+    url: parseUrl(req.url, true),
+    dynamicHead: req.dynamicHead,
+    dynamicBody: req.dynamicBody,
+    headers: req.headers,
+    cookies: req.cookies,
+  };
+
+  const pathParts = path.split("/");
+  const archKey = pathParts[1];
+
+  if (archKey.startsWith("__")) {
+    const archCleaned = "web." + archKey.slice(2);
+    if (hasOwn.call(WebApp.clientPrograms, archCleaned)) {
+      pathParts.splice(1, 1); // Remove the archKey part.
+      return Object.assign(categorized, {
+        arch: archCleaned,
+        path: pathParts.join("/"),
+      });
+    }
+  }
+
+  // TODO Perhaps one day we could infer Cordova clients here, so that we
+  // wouldn't have to use prefixed "/__cordova/..." URLs.
+  const preferredArchOrder = isModern(browser)
+    ? ["web.browser", "web.browser.legacy"]
+    : ["web.browser.legacy", "web.browser"];
+
+  for (const arch of preferredArchOrder) {
+    // If our preferred arch is not available, it's better to use another
+    // client arch that is available than to guarantee the site won't work
+    // by returning an unknown arch. For example, if web.browser.legacy is
+    // excluded using the --exclude-archs command-line option, legacy
+    // clients are better off receiving web.browser (which might actually
+    // work) than receiving an HTTP 404 response. If none of the archs in
+    // preferredArchOrder are defined, only then should we send a 404.
+    if (hasOwn.call(WebApp.clientPrograms, arch)) {
+      return Object.assign(categorized, { arch });
+    }
+  }
+
+  return categorized;
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -317,9 +370,11 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
-  var runtimeConfig = _.extend(
-    _.clone(__meteor_runtime_config__),
-    additionalOptions.runtimeConfigOverrides || {}
+  const meteorRuntimeConfig = JSON.stringify(
+    encodeURIComponent(JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || {})
+    }))
   );
 
   return new Boilerplate(arch, manifest, _.extend({
@@ -342,8 +397,8 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
       // end up inside a <script> tag so we need to be careful to not include
       // "</script>", but normal {{spacebars}} escaping escapes too much! See
       // https://github.com/meteor/meteor/issues/3730
-      meteorRuntimeConfig: JSON.stringify(
-        encodeURIComponent(JSON.stringify(runtimeConfig))),
+      meteorRuntimeConfig,
+      meteorRuntimeHash: sha1(meteorRuntimeConfig),
       rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
       bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
       sriMode: sriMode,
@@ -397,10 +452,13 @@ WebAppInternals.staticFilesMiddleware = async function (
     return;
   }
 
-  const { arch, path } = getArchAndPath(
-    pathname,
-    identifyBrowser(req.headers["user-agent"]),
-  );
+  const { arch, path } = WebApp.categorizeRequest(req);
+
+  if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+    // We could come here in case we run with some architectures excluded
+    next();
+    return;
+  }
 
   // If pauseClient(arch) has been called, program.paused will be a
   // Promise that will be resolved when the program is unpaused.
@@ -517,7 +575,7 @@ function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
       return finalize(originalPath);
     }
 
-    // If getArchAndPath returned an alternate path, try that instead.
+    // If categorizeRequest returned an alternate path, try that instead.
     if (path !== originalPath &&
         hasOwn.call(staticFiles, path)) {
       return finalize(path);
@@ -525,37 +583,6 @@ function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
   });
 
   return info;
-}
-
-function getArchAndPath(path, browser) {
-  const pathParts = path.split("/");
-  const archKey = pathParts[1];
-
-  if (archKey.startsWith("__")) {
-    const archCleaned = "web." + archKey.slice(2);
-    if (hasOwn.call(WebApp.clientPrograms, archCleaned)) {
-      pathParts.splice(1, 1); // Remove the archKey part.
-      return {
-        arch: archCleaned,
-        path: pathParts.join("/"),
-      };
-    }
-  }
-
-  // TODO Perhaps one day we could infer Cordova clients here, so that we
-  // wouldn't have to use prefixed "/__cordova/..." URLs.
-  const arch = isModern(browser)
-    ? "web.browser"
-    : "web.browser.legacy";
-
-  if (hasOwn.call(WebApp.clientPrograms, arch)) {
-    return { arch, path };
-  }
-
-  return {
-    arch: WebApp.defaultArch,
-    path,
-  };
 }
 
 // Parse the passed in port value. Return the port as-is if it's a String
@@ -869,7 +896,7 @@ function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname } = parseUrl(request.url);
+    const { pathname, search } = parseUrl(request.url);
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
@@ -877,6 +904,9 @@ function runWebAppServer() {
       const pathParts = getPathParts(pathname);
       if (isPrefixOf(prefixParts, pathParts)) {
         request.url = "/" + pathParts.slice(prefixParts.length).join("/");
+        if (search) {
+          request.url += search;
+        }
         return next();
       }
     }
@@ -980,10 +1010,21 @@ function runWebAppServer() {
         return;
       }
 
-      const { arch } = getArchAndPath(
-        parseRequest(req).pathname,
-        request.browser,
-      );
+      const { arch } = request;
+      assert.strictEqual(typeof arch, "string", { arch });
+
+      if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+        // We could come here in case we run with some architectures excluded
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(404, headers);
+        if (Meteor.isDevelopment) {
+          res.end(`No client program found for the ${arch} architecture.`);
+        } else {
+          // Safety net, but this branch should not be possible.
+          res.end("404 Not Found");
+        }
+        return;
+      }
 
       // If pauseClient(arch) has been called, program.paused will be a
       // Promise that will be resolved when the program is unpaused.

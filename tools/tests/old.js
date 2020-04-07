@@ -27,7 +27,7 @@ var runOldTest = function (filename, extraEnv) {
   var run = new Run(files.convertToStandardPath(process.execPath), {
     // 'args' are treated as-is, so need to be converted before passing into
     // 'Run'
-    args: [files.convertToOSPath(files.pathResolve(
+    args: ['--no-wasm-code-gc', files.convertToOSPath(files.pathResolve(
       files.convertToStandardPath(__dirname), 'old', filename))],
     env: maybeFixRelease(_.extend({
       METEOR_TOOL_PATH: s.execPath

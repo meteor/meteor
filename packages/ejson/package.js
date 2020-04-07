@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Extended and Extensible JSON library',
-  version: '1.1.0'
+  version: '1.1.1'
 });
 
 Package.onUse(function onUse(api) {
@@ -10,7 +10,7 @@ Package.onUse(function onUse(api) {
 });
 
 Package.onTest(function onTest(api) {
-  api.use(['ecmascript', 'tinytest']);
+  api.use(['ecmascript', 'tinytest', 'mongo']);
   api.use('ejson');
   api.mainModule('ejson_tests.js');
 });

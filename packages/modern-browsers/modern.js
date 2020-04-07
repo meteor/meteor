@@ -8,6 +8,7 @@ const browserAliases = {
     // chromeMobile*, per https://github.com/meteor/meteor/pull/9793,
     "chromeMobile",
     "chromeMobileIOS",
+    "chromeMobileWebView",
 
     // The major version number of Chromium and Headless Chrome track with the
     // releases of Chrome Dev, Canary and Stable, so we should be okay to

@@ -15,7 +15,6 @@ const utils = require('./utils');
  *   Old versions of Internet Explorer (not sure yet exactly which
  *   versions to distinguish -- maybe 6 and 8?)
  *
- * os.linux.x86_32
  * os.linux.x86_64
  *   Linux on Intel x86 architecture. x86_64 means a system that can
  *   run 64-bit images, furnished with 64-bit builds of shared
@@ -65,7 +64,6 @@ const utils = require('./utils');
  *   hardware is virtually extinct. Meteor has never supported it and
  *   nobody has asked for it.
  *
- * os.windows.x86_32
  * os.windows.x86_64
  *   Once, on the far side of yesterday, there was not a 64-bit
  *   build of Meteor for Windows, due to the belief that Node didn't
@@ -77,6 +75,7 @@ const utils = require('./utils');
  *   platforms show clear performance benefits over their 32-bit
  *   siblings (e.g. 7-zip, et.al), so Meteor should also try to offer
  *   that same benefit by building and offering a 64-bit version.
+ *   Meteor no longer supports Windows 32-bit.
  *
  * To be (more but far from completely) precise, the ABI for os.*
  * architectures includes a CPU type, a mode in which the code will be
@@ -131,9 +130,7 @@ const utils = require('./utils');
 export const VALID_ARCHITECTURES: Record<string, boolean> = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
-  "os.linux.x86_32": true,
   "os.windows.x86_64": true,
-  "os.windows.x86_32": true,
 };
 
 // Returns the fully qualified arch of this host -- something like
@@ -164,24 +161,16 @@ export function host() {
           run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel processors are supported on OS X");
       }
-
       _host  = "os.osx.x86_64";
     } else if (platform === "linux") {
       const machine = run('uname', '-m');
-
-      if (["i386", "i686", "x86"].includes(machine)) {
-        _host = "os.linux.x86_32";
-      } else if (["x86_64", "amd64", "ia64"].includes(machine)) {
+      if (["x86_64", "amd64", "ia64"].includes(machine)) {
         _host = "os.linux.x86_64";
       } else {
         throw new Error(`Unsupported architecture: ${machine}`);
       }
-    } else if (platform === "win32") {
-      if (process.arch === "x64") {
-        _host = "os.windows.x86_64";
-      } else {
-        _host = "os.windows.x86_32";
-      }
+    } else if (platform === "win32" && process.arch === "x64") {
+      _host = "os.windows.x86_64";
     } else {
       throw new Error(`Unsupported operating system: ${platform}`);
     }
