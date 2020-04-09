@@ -287,24 +287,24 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   const dirsToRebuild = [];
 
   function scan(dir, scoped) {
-    if (! isDirectory(dir)) {
-      return;
-    }
-
-    files.readdir(dir).forEach(item => {
-      if (item.startsWith(".")) {
+    files.readdir(dir, { withFileTypes: true }).forEach(item => {
+      if (item.name.startsWith(".")) {
         // Ignore "hidden" files, such as node_modules/.bin directories.
         return;
       }
 
-      const path = files.pathJoin(dir, item);
+      const path = files.pathJoin(dir, item.name);
 
       if (! scoped &&
-          item.startsWith("@")) {
+          item.name.startsWith("@")) {
         return scan(path, true);
       }
 
-      if (! isDirectory(path)) {
+      if (item.isSymbolicLink()) {
+        item = files.stat(path);
+      }
+
+      if (! item.isDirectory()) {
         return;
       }
 
@@ -320,7 +320,9 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
     });
   }
 
-  scan(nodeModulesDir);
+  if (isDirectory(nodeModulesDir)) {
+    scan(nodeModulesDir);
+  }
 
   if (dirsToRebuild.length === 0) {
     return false;
@@ -473,15 +475,16 @@ const portableCache = Object.create(null);
 // Increment this version to trigger the full portability check again.
 const portableVersion = 2;
 
-const isPortable = Profile("meteorNpm.isPortable", dir => {
-  const lstat = optimisticLStat(dir);
-  if (! lstat.isDirectory()) {
+const isPortable = Profile("meteorNpm.isPortable", (dir, isDirectory) => {
+  isDirectory = isDirectory || optimisticLStat(dir).isDirectory();
+  if (! isDirectory) {
     // Non-directory files are portable unless they end with .node.
     return ! dir.endsWith(".node");
   }
 
   const pkgJsonPath = files.pathJoin(dir, "package.json");
   const pkgJsonStat = optimisticStatOrNull(pkgJsonPath);
+
   const canCache = pkgJsonStat && pkgJsonStat.isFile();
   const portableFile = files.convertToOSPath(
     files.pathJoin(dir, ".meteor-portable-" + portableVersion + ".json")
@@ -528,10 +531,10 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
 
   const result = hasBuildScript
     ? false // Build scripts may not be portable.
-    : optimisticReaddir(dir).every(
+    : optimisticReaddir(dir, { withFileTypes: true }).every(
       // Ignore files that start with a ".", such as .bin directories.
-      itemName => itemName.startsWith(".") ||
-        isPortable(files.pathJoin(dir, itemName)));
+      item => item.name.startsWith(".") ||
+        isPortable(files.pathJoin(dir, item.name), item.isDirectory()));
 
   if (canCache) {
     // Write the .meteor-portable file asynchronously, and don't worry

@@ -339,7 +339,7 @@ export const sha512 = Profile("sha512", function (...args: (string | Buffer)[]) 
 function readAndStatDirectory(absPath: string) {
   // Read the directory.
   try {
-    var contents = files.readdir(absPath);
+    var contents = files.readdir(absPath, { withFileTypes: true });
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
@@ -350,10 +350,16 @@ function readAndStatDirectory(absPath: string) {
 
   // Add slashes to the end of directories.
   const contentsWithSlashes: string[] = [];
-  contents.forEach(entry => {
-    // We do stat instead of lstat here, so that we treat symlinks to
+  contents.forEach((entry: Dirent) => {
+    let name = entry.name;
+    let stat = entry as Stats | Dirent | null;
+
+    // Dirents are usually the same type as lstat.
+    // We do stat here to treat symlinks to
     // directories just like directories themselves.
-    const stat = optimisticStatOrNull(files.pathJoin(absPath, entry));
+    if (entry.isSymbolicLink()) {
+      stat = optimisticStatOrNull(files.pathJoin(absPath, name));
+    }
     if (! stat) {
       // Disappeared after the readdir (or a dangling symlink)?
       // Eh, pretend it was never there in the first place.
@@ -361,10 +367,10 @@ function readAndStatDirectory(absPath: string) {
     }
 
     if (stat.isDirectory()) {
-      entry += '/';
+      name += '/';
     }
 
-    contentsWithSlashes.push(entry);
+    contentsWithSlashes.push(name);
   });
 
   return contentsWithSlashes;

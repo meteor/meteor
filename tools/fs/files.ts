@@ -1625,8 +1625,10 @@ function wrapFsFunc<TArgs extends any[], TResult>(
         }
       }
     }
-
-    const result = fn.apply(fs, args);
+    let result;
+    Profile.time(`files.${fnName} - uncached`, () => {
+      result = fn.apply(fs, args);
+    })
 
     if (options && options.dirty) {
       options.dirty(...args);
@@ -1645,10 +1647,10 @@ function wrapFsFunc<TArgs extends any[], TResult>(
 }
 
 const withCacheSlot = new Slot<Record<string, any>>();
-export function withCache<R>(fn: () => R): R {
+export const withCache =  Profile('files.withCache', function withCache<R>(fn: () => R): R {
   const cache = withCacheSlot.getValue();
   return cache ? fn() : withCacheSlot.withValue(Object.create(null), fn);
-}
+})
 
 export const dependOnPath = dep<string>();
 
@@ -1741,10 +1743,14 @@ wrapFsFunc<[string], string>("realpath", fs.realpathSync, [0], {
 });
 
 export const readdir =
-wrapFsFunc<[string], string[]>("readdir", fs.readdirSync, [0], {
+wrapFsFunc<[string, { encoding: 'utf-8' | null, withFileTypes: true }], string[] | fs.Dirent[]>("readdir", fs.readdirSync, [0], {
   cached: true,
-  modifyReturnValue(entries: string[]) {
-    return entries.map(entry => convertToStandardPath(entry));
+  modifyReturnValue(entries: string[] | fs.Dirent[]) {
+    if (entries.length === 0 || typeof entries[0] === 'object') {
+      return entries
+    }
+
+    return (entries as string[]).map(entry => convertToStandardPath(entry));
   },
 });
 
