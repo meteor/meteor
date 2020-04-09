@@ -1628,7 +1628,7 @@ function wrapFsFunc<TArgs extends any[], TResult>(
     let result;
     Profile.time(`files.${fnName} - uncached`, () => {
       result = fn.apply(fs, args);
-    })
+    });
 
     if (options && options.dirty) {
       options.dirty(...args);
@@ -1650,7 +1650,7 @@ const withCacheSlot = new Slot<Record<string, any>>();
 export const withCache =  Profile('files.withCache', function withCache<R>(fn: () => R): R {
   const cache = withCacheSlot.getValue();
   return cache ? fn() : withCacheSlot.withValue(Object.create(null), fn);
-})
+});
 
 export const dependOnPath = dep<string>();
 
@@ -1735,7 +1735,6 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
   }).await();
 } : wrappedRename;
 
-// Warning: doesn't convert slashes in the second 'cache' arg
 export const realpath =
 wrapFsFunc<[string], string>("realpath", fs.realpathSync, [0], {
   cached: true,
@@ -1747,7 +1746,7 @@ wrapFsFunc<[string, { encoding: 'utf-8' | null, withFileTypes: true }], string[]
   cached: true,
   modifyReturnValue(entries: string[] | fs.Dirent[]) {
     if (entries.length === 0 || typeof entries[0] === 'object') {
-      return entries
+      return entries;
     }
 
     return (entries as string[]).map(entry => convertToStandardPath(entry));

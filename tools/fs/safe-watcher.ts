@@ -91,14 +91,14 @@ function acquireWatcher(absPath: string, callback: EntryCallback) {
 function startNewWatcher(absPath: string): Entry {
   const stat = !isWindows && statOrNull(absPath);
 
-  if (stat && stat.ino > 0 && entriesByIno.has(stat.ino)) {
-    const entry = entriesByIno.get(stat.ino);
-    if (entries[absPath] === entry) {
-      return entry;
-    }
-  } else if (isWindows && !stat) {
+  if (isWindows) {
     const entry = entries[absPath];
     if (entry) {
+      return entry;
+    }
+  } else if (stat && stat.ino > 0 && entriesByIno.has(stat.ino)) {
+    const entry = entriesByIno.get(stat.ino);
+    if (entries[absPath] === entry) {
       return entry;
     }
   }

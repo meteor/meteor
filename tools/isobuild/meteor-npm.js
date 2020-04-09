@@ -300,6 +300,8 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
         return scan(path, true);
       }
 
+      // We want to handle symlinks to
+      // directories as directories
       if (item.isSymbolicLink()) {
         item = files.stat(path);
       }
@@ -476,7 +478,6 @@ const portableCache = Object.create(null);
 const portableVersion = 2;
 
 const isPortable = Profile("meteorNpm.isPortable", (dir, isDirectory) => {
-  isDirectory = isDirectory || optimisticLStat(dir).isDirectory();
   if (! isDirectory) {
     // Non-directory files are portable unless they end with .node.
     return ! dir.endsWith(".node");
@@ -578,7 +579,7 @@ meteorNpm.dependenciesArePortable = function (nodeModulesDir) {
 
   // Only check/write .meteor-portable files in each of the top-level
   // package directories.
-  return isPortable(nodeModulesDir);
+  return isPortable(nodeModulesDir, optimisticLStat(nodeModulesDir).isDirectory());
 };
 
 var makeNewPackageNpmDir = function (newPackageNpmDir) {
