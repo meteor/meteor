@@ -35,6 +35,8 @@ var NO_WATCHER_POLLING_INTERVAL =
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
 
+const isWindows = process.platform === "win32";
+
 export type SafeWatcher = {
   close: () => void;
 }
@@ -50,8 +52,9 @@ interface Entry extends SafeWatcher {
 const entries: Record<string, Entry | null> = Object.create(null);
 
 // Pathwatcher complains (using console.error, ugh) if you try to watch
-// two files with the same stat.ino number but different paths, so we have
+// two files with the same stat.ino number but different paths on linux, so we have
 // to deduplicate files by ino.
+// This isn't used on Windows.
 const entriesByIno = new Map;
 
 // Set of paths for which a change event has been fired, watched with
@@ -86,10 +89,16 @@ function acquireWatcher(absPath: string, callback: EntryCallback) {
 }
 
 function startNewWatcher(absPath: string): Entry {
-  const stat = statOrNull(absPath);
+  const stat = !isWindows && statOrNull(absPath);
+
   if (stat && stat.ino > 0 && entriesByIno.has(stat.ino)) {
     const entry = entriesByIno.get(stat.ino);
     if (entries[absPath] === entry) {
+      return entry;
+    }
+  } else if (isWindows && !stat) {
+    const entry = entries[absPath];
+    if (entry) {
       return entry;
     }
   }
