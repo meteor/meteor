@@ -27,6 +27,10 @@
 
 * The `typescript` npm package has been updated to version 3.8.3.
 
+* The version of MongoDB used by Meteor in development has been updated from
+  4.2.1 to 4.2.5.
+  [PR #11020](https://github.com/meteor/meteor/pull/11020)
+
 ## v1.10.1, 2020-03-12
 
 ### Breaking changes
