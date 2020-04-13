@@ -1,6 +1,6 @@
-const terser = Npm.require("terser");
+import terser from "terser";
 
-meteorJsMinify = function (source) {  
+const meteorJsMinify = function (source) {  
   var result = {};
   const NODE_ENV = process.env.NODE_ENV || "development";
 
@@ -30,3 +30,5 @@ meteorJsMinify = function (source) {
   
   return result;
 };
+
+export { meteorJsMinify };
