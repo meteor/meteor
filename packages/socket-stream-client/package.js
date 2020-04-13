@@ -18,7 +18,7 @@ Package.onUse(function(api) {
   // Used for a conditional import of the SockJS
   api.use("disable-sockjs", "client", { weak: true });
 
-  api.addFiles("sockjs-0.3.4.js", "legacy");
+  api.addFiles("browser-legacy.js", "legacy");
   api.mainModule("browser.js", "client", { lazy: true });
 
   api.addFiles("server.js", "server");
