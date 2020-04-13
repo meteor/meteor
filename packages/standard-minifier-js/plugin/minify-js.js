@@ -47,7 +47,7 @@ class MeteorBabelMinifier {
                   let originalFilePath = lines[i - 2].substring(3).replace(/\s+\/\//, "");
 
                   throw new Error(
-                      `terser minification error (${error.message})\n` + 
+                      `terser minification error (${error.name}:${error.message})\n` + 
                       `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` + 
                       `Line content: ${lineContent}\n`);
               }
@@ -75,9 +75,9 @@ class MeteorBabelMinifier {
         }
         catch (err) {          
           maybeThrowMinifyErrorBySourceFile(err, file);
-          
-          err.message += " while minifying " + file.getPathInBundle();
-          throw err;
+
+          throw new Error(`terser minification error (${err.name}:${err.message})\n` + 
+                          `Bundled file: ${file.getPathInBundle()}  (${err.line}:${err.col})\n`);
         }
 
         const ast = extractModuleSizesTree(minified.code);
