@@ -102,30 +102,38 @@ Any assets made available via symlinks in the `/public` and `/private` directori
 
 <h2 id="recompile">Recompiling npm packages</h2>
 
-Meteor does not recompile packages installed in your `node_modules` by default. However, compilation of specific npm packages (for example, to support older browsers that the package author neglected) can now be enabled in one of two ways:
+Meteor does not recompile packages installed in your `node_modules` by default. However, compilation of specific npm packages (for example, to support older browsers that the package author neglected), can be achieved through the `meteor.nodeModules.recompile` configuration object in your `package.json` file.
 
-Option one is to clone the package repository into your application's `/imports` directory, make any modifications necessary, then use `npm install` to link the package into your `node_modules`:
+For example:
+
 ```
-meteor npm install imports/the-package
-```
-Meteor will compile the contents of the package exposed via `imports/the-package` and this compiled code will be used when you `import the-package` in any of the usual ways:
-```
-import stuff from "the-package"
-require("the-package") === require("/imports/the-package")
-import("the-package").then(...)
+{
+  "name": "your-application",
+  ...
+  "meteor": {
+    "mainModule": ...,
+    "testModule": ...,
+    "nodeModules": {
+      "recompile": {
+        "very-modern-package": ["client", "server"],
+        "alternate-notation-for-client-and-server": true,
+        "somewhat-modern-package": "legacy",
+        "another-package": ["legacy", "server"]
+      }
+    }
+  }
+}
 ```
 
-Option two is to install the package normally with `meteor npm install the-package`, then create a symbolic link to the installed package elsewhere in your application, outside of `node_modules`:
-```
-meteor npm install the-package
-cd imports
-ln -s ../node_modules/the-package .
-```
-Again, Meteor will compile the contents of the package because they are exposed outside of `node_modules` and the compiled code will be used whenever `the-package` is imported from `node_modules`.
+The keys of the `meteor.nodeModules.recompile` configuration object are npm package names, and the values specify for which bundles those packages should be recompiled using the Meteor compiler plugins system, as if the packages were part of the Meteor application.
 
-> Note: this technique also works if you create symbolic links to individual files, rather than linking the entire package directory.
+For example, if an npm package uses const/let syntax or arrow functions, that's fine for modern and server code, but you would probably want to recompile the package when building the legacy bundle. To accomplish this, specify `"legacy"` or `["legacy"]` as the value of the package's property, similar to `somewhat-modern-package` above. These strings and arrays of strings have the same meaning as the second argument to `api.addFiles(files, where)` in a `package.js` file.
 
-In both cases, Meteor will compile the exposed code as if it was part of your application, using whatever compiler plugins you have installed. You can influence this compilation using `.babelrc` files or any other techniques you would normally use to configure compilation of application code.
+This configuration serves pretty much the same purpose as symlinking an application directory into `node_modules/`, but without any symlinking: https://forums.meteor.com/t/litelement-import-litelement-html/45042/8?u=benjamn
+
+The `meteor.nodeModules.recompile` configuration currently applies to the application `node_modules/` directory only (not to `Npm.depends` dependencies in Meteor packages). Recompiled packages must be direct dependencies of the application.
+
+Meteor will compile the exposed code as if it was part of your application, using whatever compiler plugins you have installed. You can influence this compilation using `.babelrc` files or any other techniques you would normally use to configure compilation of application code.
 
 <h2 id="npm-shrinkwrap">npm Shrinkwrap</h2>
 
