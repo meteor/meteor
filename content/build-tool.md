@@ -12,19 +12,23 @@ The Meteor build tool is what compiles, runs, deploys, and publishes all of your
 
 <h3 id="reload-on-file-change">Reloads app on file change</h3>
 
-When you run `meteor`, the tool starts up, and you should leave it running continuously while developing your app. The tool automatically detects any relevant file changes and recompiles the necessary changes, restarting your client or server environment if needed.
+After executing the `meteor` command to start the build tool you should leave it running while further developing your app. The build tool automatically detects any relevant file changes using a file watching system and recompiles the necessary changes, restarting your client or server environment as needed.
 
 <h3 id="compiles-with-build-plugins">Compiles files with build plugins</h3>
 
-The main function of the Meteor build tool is to run "build plugins". These plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process, and [file load order](structure.html#load-order), is configured almost entirely through adding and removing packages to your app and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you just add the [`ecmascript` package](http://docs.meteor.com/#/full/ecmascript). This package provides support for ES2015 modules, which gives you even more fine grained control over file load order using ES2015 `import` and `export`. As new Meteor releases add new features to this package you just get them for free.
+The main function of the Meteor build tool is to run "build plugins". These plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process is configured almost entirely through adding and removing packages to your app and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you add the [`ecmascript` package](http://docs.meteor.com/#/full/ecmascript). This package provides support for ES2015 modules, which gives you even more fine grained control over file load order using ES2015 `import` and `export`. As new Meteor releases add new features to this package you get them for free.
+
+<h4 id="controlling-build-files">Controlling which files to build</h4>
+
+By default Meteor will build certain files as controlled by your application [file structure](structure.html#javascript-structure) and Meteor's [default file load order](structure.html#load-order) rules. However, you may override the default behavior using `.meteorignore` files, which cause the build system to ignore certain files and directories using the same pattern syntax as `.gitignore` files. These files may appear in any directory of your app or package, specifying rules for the directory tree below them. These `.meteorignore` files are also fully integrated with Meteor's file watching system, so they can be added, removed, or modified during development.
 
 <h3 id="concatenate-and-minify">Combines and minifies code</h3>
 
-Another important feature of the Meteor build tool is that it automatically concatenates and minifies all of your files in production mode. This is enabled by the [`standard-minifier-js`](https://atmospherejs.com/meteor/standard-minifiers-js) and [`standard-minifier-css`](https://atmospherejs.com/meteor/standard-minifiers-css) packages, which are in all Meteor apps by default. If you need different minification behavior, you can replace these packages. Below, we'll talk about how to [switch out a minifier to add PostCSS to your build process](#postcss).
+Another important feature of the Meteor build tool is that it automatically concatenates your application asset files, and in production minifies these bundles. This lets you add all of the comments and whitespace you want to your source code and split your code into as many files as necessary, all without worrying about app performance and load times. This is enabled by the [`standard-minifier-js`](https://atmospherejs.com/meteor/standard-minifiers-js) and [`standard-minifier-css`](https://atmospherejs.com/meteor/standard-minifiers-css) packages, which are included in all Meteor apps by default. If you need different minification behavior, you can replace these packages. See adding [PostCSS to your build process](#postcss) as an example.
 
 <h3 id="dev-vs-prod">Development vs. production</h3>
 
-Running an app in development is all about fast iteration time. All kinds of different parts of your app are handled differently and instrumented to enable better reloads and debugging. In production, the app is reduced to just the necessary code, and functions like a regular Node.js app. Therefore, you shouldn't run your app in production by running the `meteor` command. Instead, follow the directions in the [production deployment article](deployment.html#custom-deployment).
+Running an app in development is all about fast iteration time. All kinds of different parts of your app are handled differently and instrumented to enable better reloads and debugging. In production, the app is reduced to the necessary code and functions just like any standard Node.js app. Therefore, you shouldn't run your app in production by executing the `meteor run` command. Instead, follow the directions in [Deploying Meteor Applications](deployment.html#deploying). If you find an error in production that you suspect is related to minification, you can run the minified version of your app locally for testing with `meteor --production`.
 
 <h2 id="javascript-transpilation">JavaScript transpilation</h2>
 
@@ -61,10 +65,6 @@ meteor add barbatus:typescript
 
 It is necessary to configure the TypeScript compiler with a `tsconfig.json` file.
 
-A complete guide on installation, configuration, and usage of TypeScript, and how type definitions for libraries are installed, can be found [here](https://medium.com/@birkskyum/modern-meteor-development-with-typescript-introduction-836f2a89f79).
-
-The guide also includes sample applications created with Angular, React, Vue, and Blaze—all written in TypeScript. See the code [here](https://github.com/birkskyum/meteor-typescript-samples).
-
 <h4 id="typescript-conditional-imports">Conditional imports</h4>
 
 TypeScript does not support nested `import` statements, therefore conditionally importing modules requires you to use the `require` statement (see [Using `require`](https://guide.meteor.com/structure.html#using-require)).
@@ -97,19 +97,25 @@ If you want to use React but don't want to deal with JSX and prefer a more HTML-
 
 If you would like to write your UI in Angular, you will need to switch out Meteor's Blaze template compiler which comes by default with the Angular one. Read about how to do this in the [Angular-Meteor tutorial](https://www.meteor.com/tutorials/angular/templates).
 
-<h2 id="css">CSS and CSS pre-processors</h2>
+<h2 id="css">CSS processing</h2>
 
-All your CSS style files will processed using Meteor's default file load order rules along with any import statements and concatenated, and in a production build also minified. However, it's no secret that writing plain CSS can often be a hassle as there's no way to share common CSS code between different selectors or have a consistent color scheme between different elements. CSS compilers, or pre-processors, solve these issues by adding extra features on top of the CSS language like variables, mixins, math, and more, and in some cases also significantly change the syntax of CSS to be easier to read and write.
+All your CSS style files will be processed using Meteor's default file load order rules along with any import statements and concatenated into a single stylesheet, `merged-stylesheets.css`. In a production build this file is also minified. By default this single stylesheet is injected at the beginning of the HTML `<head />` section of your application.
 
-<h3 id="css-which-preprocessor">Sass, Less, or Stylus?</h3>
+However, this can potentially be an issue for some applications that use a third party UI framework, such as Bootstrap, which is loaded from a CDN. This could cause Bootstrap's CSS to come after your CSS and override your user-defined styles.
 
-There are three CSS pre-processors that are particularly popular right now:
+To get around this problem Meteor supports the use of a pseudo tag `<meteor-bundled-css />` that if placed anywhere in the `<head />` section your app will be replaced by a link to this concatenated CSS file. If this pseudo tag isn't used, the CSS file will be placed at the beginning of the <head /> section as before.
+
+<h3 id="css-which-preprocessor">CSS pre-processors</h3>
+
+It's no secret that writing plain CSS can often be a hassle as there's no way to share common CSS code between different selectors or have a consistent color scheme between different elements. CSS compilers, or pre-processors, solve these issues by adding extra features on top of the CSS language like variables, mixins, math, and more, and in some cases also significantly change the syntax of CSS to be easier to read and write.
+
+Here are three example CSS pre-processors supported by Meteor:
 
 1. [Sass](http://sass-lang.com/)
 2. [Less.js](http://lesscss.org/)
 3. [Stylus](https://learnboost.github.io/stylus/)
 
-They all have their pros and cons, and different people have different preferences, just like with JavaScript transpiled languages. The most popular one at the time of writing seems to be Sass with the SCSS syntax. Popular CSS frameworks like Bootstrap 4 and more are switching to Sass, and the C++ LibSass implementation appears to be faster than some of the other compilers available.
+They all have their pros and cons, and different people have different preferences, just like with JavaScript transpiled languages. Sass with the SCSS syntax is quite popular as CSS frameworks like Bootstrap 4 have switched to Sass, and the C++ LibSass implementation appears to be faster than some of the other compilers available.
 
 CSS framework compatibility should be a primary concern when picking a pre-processor, because a framework written with Less won't be compatible with one written in Sass.
 
@@ -118,7 +124,7 @@ CSS framework compatibility should be a primary concern when picking a pre-proce
 An important feature shared by all of the available CSS pre-processors is the ability to import files. This lets you split your CSS into smaller pieces, and provides a lot of the same benefits that you get from JavaScript modules:
 
 1. You can control the load order of files by encoding dependencies through imports, since the load order of CSS matters.
-2. You can create reusable CSS "modules" that just have variables and mixins and don't actually generate any CSS.
+2. You can create reusable CSS "modules" that only have variables and mixins and don't actually generate any CSS.
 
 In Meteor, each of your `.scss`, `.less`, or `.styl` source files will be one of two types: "source" or "import".
 
@@ -143,7 +149,7 @@ You can also import CSS from a JavaScript file if you have the `ecmascript` pack
 import '../stylesheets/styles.css';
 ```
 
-> When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor Build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
+> When importing CSS from a JavaScript file, that CSS is not bundled with the rest of the CSS processed with the Meteor build tool, but instead is put in your app's `<head>` tag inside `<style>...</style>` after the main concatenated CSS file.
 
 Importing styles from an Atmosphere package using the `{}` package name syntax:
 
@@ -174,17 +180,19 @@ Less is maintained as a [Meteor core package called `less`](https://atmospherejs
 
 <h3 id="stylus">Stylus</h3>
 
-Stylus is maintained as a [Meteor core package called `stylus`](https://atmospherejs.com/meteor/stylus).
+The best Stylus build plugin for Meteor is [coagmano:stylus](https://atmospherejs.com/coagmano/stylus)
 
 <h2 id="postcss">PostCSS and Autoprefixer</h2>
 
 In addition to CSS pre-processors like Sass, Less, and Stylus, there is now an ecosystem of CSS post-processors. Regardless of which CSS pre-processor you use, a post-processor can give you additional benefits like cross-browser compatibility.
 
-The most popular CSS post-processor right now is [PostCSS](https://github.com/postcss/postcss), which supports a variety of plugins. [Autoprefixer](https://github.com/postcss/autoprefixer) is perhaps the most useful plugin, since it enables you to stop worrying about browser prefixes and compatibility and write standards-compliant CSS. No more copying 5 different statements every time you want a CSS gradient - you can just write a standard gradient without any prefixes and Autoprefixer handles it for you.
+The most popular CSS post-processor right now is [PostCSS](https://github.com/postcss/postcss), which supports a variety of plugins. [Autoprefixer](https://github.com/postcss/autoprefixer) is perhaps the most useful plugin, since it enables you to stop worrying about browser prefixes and compatibility and write standards-compliant CSS. No more copying 5 different statements every time you want a CSS gradient - you can write a standard gradient without any prefixes and Autoprefixer handles it for you.
 
 Currently, Meteor doesn't have a separate build step for post-processing CSS, so the only way to integrate it is to build it into the minifier. Thankfully, there is a community package that has integrated PostCSS with plugin support into a replacement for Meteor's standard minification package.
 
 <h3 id="juliancwirko-postcss">juliancwirko:postcss</h3>
+
+>Note: This package is no longer actively maintained, therefore compatibility with newer versions of Meteor is not guaranteed. If you encouter problems with this, please let us know by [opening an issue on the Guide](https://github.com/meteor/guide/issues).
 
 Use the package [juliancwirko:postcss](https://atmospherejs.com/juliancwirko/postcss) to your app to enable PostCSS for your Meteor app. To do so, we remove the standard CSS minifier and replace it with the postcss package:
 
@@ -209,14 +217,6 @@ Then we can install any npm CSS processing packages that we'd like to use and re
 ```
 
 After doing the above, you'll need to ensure you `npm install` and restart the `meteor` process running your app to make sure the PostCSS system has had a chance to set itself up.
-
-<h2 id="minification">Minification</h2>
-
-The current best practice for deploying web production applications is to concatenate and minify all of your app assets. This lets you add all of the comments and whitespace you want to your source code, and split it into as many files as is necessary without worrying about app performance.
-
-Every Meteor app comes with production minification by default with the `standard-minifier-js` and `standard-minifier-css` packages. These minifiers go to some extra effort to do a good job - for example, Meteor automatically splits up your files if they get too big to maintain support for older versions of Internet Explorer which had a limit on the number of CSS rules per file.
-
-Minification usually happens when you `meteor deploy` or `meteor build` your app. If you have an error in production that you suspect is related to minification, you can run the minified version of your app locally with `meteor --production`.
 
 <h2 id="build-plugins">Build plugins</h2>
 

@@ -84,11 +84,13 @@ A local collection is a convenient way to use the full power of the Minimongo li
 
 Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constrain the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read data more often than you write it*, and so it's usually easier, and less buggy to use a schema when writing.
 
-In Meteor, the pre-eminent schema package is [aldeed:simple-schema](https://atmospherejs.com/aldeed/simple-schema). It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
+In Meteor, the pre-eminent schema package is the npm [simpl-schema](https://www.npmjs.com/package/simpl-schema) package. It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
 
-Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simple-schema`, you can simply create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
+Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simpl-schema`, you can create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
 
 ```js
+import SimpleSchema from 'simpl-schema';
+
 Lists.schema = new SimpleSchema({
   name: {type: String},
   incompleteCount: {type: Number, defaultValue: 0},
@@ -104,7 +106,7 @@ This example from the Todos app defines a schema with a few simple rules:
 
 We attach the schema to the namespace of `Lists` directly, which allows us to check objects against this schema directly whenever we want, such as in a form or [Method](methods.html). In the [next section](#schemas-on-write) we'll see how to use this schema automatically when writing to the collection.
 
-You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [Simple Schema docs](http://atmospherejs.com/aldeed/simple-schema).
+You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [Simple Schema docs](https://www.npmjs.com/package/simpl-schema).
 
 <h3 id="validating-schemas">Validating against a schema</h3>
 
@@ -190,7 +192,7 @@ What this means is that now every time we call `Lists.insert()`, `Lists.update()
 
 <h3 id="default-value">`defaultValue` and data cleaning</h3>
 
-One thing that Collection2 does is ["clean" the data](https://github.com/aldeed/meteor-simple-schema#cleaning-data) before sending it to the database. This includes but is not limited to:
+One thing that Collection2 does is ["clean" the data](https://www.npmjs.com/package/simpl-schema#cleaning-objects) before sending it to the database. This includes but is not limited to:
 
 1. Coercing types - converting strings to numbers
 2. Removing attributes not in the schema
@@ -245,7 +247,7 @@ This technique has a few disadvantages:
 2. Sometimes a single piece of functionality can be spread over multiple mutators.
 3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
-A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We'll see an example of that [below](#abstracting-denormalizers).
+A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and use the mutator as a point to call out to that module in a sensible way. We'll see an example of that [below](#abstracting-denormalizers).
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.
 
@@ -303,7 +305,7 @@ class TodosCollection extends Mongo.Collection {
 
 Note that we only handled the mutators we actually use in the application---we don't deal with all possible ways the todo count on a list could change. For example, if you changed the `listId` on a todo item, it would need to change the `incompleteCount` of *two* lists. However, since our application doesn't do this, we don't handle it in the denormalizer.
 
-Dealing with every possible MongoDB operator is difficult to get right, as MongoDB has a rich modifier language. Instead we focus on just dealing with the modifiers we know we'll see in our app. If this gets too tricky, then moving the hooks for the logic into the Methods that actually make the relevant modifications could be sensible (although you need to be diligent to ensure you do it in *all* the relevant places, both now and as the app changes in the future).
+Dealing with every possible MongoDB operator is difficult to get right, as MongoDB has a rich modifier language. Instead we focus on dealing with the modifiers we know we'll see in our app. If this gets too tricky, then moving the hooks for the logic into the Methods that actually make the relevant modifications could be sensible (although you need to be diligent to ensure you do it in *all* the relevant places, both now and as the app changes in the future).
 
 It could make sense for packages to exist to completely abstract some common denormalization techniques and actually attempt to deal with all possible modifications. If you write such a package, please let us know!
 
@@ -340,7 +342,7 @@ To find out more about the API of the Migrations package, refer to [its document
 
 If your migration needs to change a lot of data, and especially if you need to stop your app server while it's running, it may be a good idea to use a [MongoDB Bulk Operation](https://docs.mongodb.org/v3.0/core/bulk-write-operations/).
 
-The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that if your migration is complex (which it usually is if you can't just do an `.update(.., .., {multi: true})`), it can take a significant amount of time to prepare the bulk update.
+The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that if your migration is complex (which it usually is if you can't do an `.update(.., .., {multi: true})`), it can take a significant amount of time to prepare the bulk update.
 
 What this means is if users are accessing the site whilst the update is being prepared, it will likely go out of date! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user experience if it takes a while. For these reason, you often need to stop your server and let your users know you are performing maintenance while the update is happening.
 
@@ -423,7 +425,7 @@ Some aspects of the migration strategy outlined above are possibly not the most 
 
 1. Usually it is better to not rely on your application code in migrations (because the application will change over time, and the migrations should not). For instance, having your migrations pass through your Collection2 collections (and thus check schemas, set autovalues etc) is likely to break them over time as your schemas change over time.
 
-  One way to avoid this problem is simply to not run old migrations on your database. This is a little bit limiting but can be made to work.
+  One way to avoid this problem is to not run old migrations on your database. This is a little bit limiting but can be made to work.
 
 2. Running the migration on your local machine will probably make it take a lot longer as your machine isn't as close to the production database as it could be.
 
@@ -434,6 +436,53 @@ Deploying a special "migration application" to the same hardware as your real ap
 As we discussed earlier, it's very common in Meteor applications to have associations between documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested in (for instance all the todos that are in a single list).
 
 To make this easier, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
+
+To make things even easier, we can use the [`cultofcoders:grapher`](https://atmospherejs.com/cultofcoders/grapher) package to associate collections and fetch their relations. For example:
+
+```js
+// Configure how collections relate to each other
+Todos.addLinks({
+  list: {
+    type: 'one',
+    field: 'listId',
+    collection: Lists
+  }
+});
+
+Lists.addLinks({
+  todos: {
+    collection: Todos,
+    inversedBy: 'list' // This represents the name of the link we defined in Todos
+  }
+});
+```
+
+This allows us to properly fetch a list along with its todos:
+
+```js
+// With Grapher you must always specify the fields you want
+const listsAndTodos = Lists.createQuery({
+  name: 1,
+  todos: {
+      text: 1
+  }
+}).fetch();
+```
+
+`listsAndTodos` will look like this:
+
+```
+[
+  {
+    name: 'My List',
+    todos: [
+      {text: 'Do something'}
+    ],
+  }
+]
+```
+
+Grapher supports isomorphic queries (reactive and non-reactive), has built-in security features, works with many types of relationships, and more. Refer to the [Grapher documentation](https://github.com/cult-of-coders/grapher/blob/master/docs/index.md) for more details.
 
 <h3 id="collection-helpers">Collection helpers</h3>
 
@@ -459,7 +508,7 @@ if (list.isPrivate()) {
 
 <h3 id="association-helpers">Association helpers</h3>
 
-Now we can attach helpers to documents, it's simple to define a helper that fetches related documents
+Now we can attach helpers to documents, we can define a helper that fetches related documents
 
 ```js
 Lists.helpers({
@@ -469,7 +518,7 @@ Lists.helpers({
 });
 ```
 
-Now we can easily find all the todos for a list:
+Now we can find all the todos for a list:
 
 ```js
 const list = Lists.findOne();

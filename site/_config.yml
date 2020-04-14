@@ -1,13 +1,10 @@
-# Hexo Configuration
-## Docs: http://hexo.io/docs/configuration.html
-## Source: https://github.com/hexojs/hexo/
-
-# Site
 title: Meteor Guide
 subtitle: The Official Guide
 github_repo: meteor/guide
 content_root: content
 versions:
+  - '1.8'
+  - '1.7'
   - '1.6'
   - '1.5'
   - '1.4'
@@ -15,14 +12,12 @@ versions:
   - '1.2'
 versioned-netlify-redirects:
     netlify_site_id: meteor-guide
-
-# This setting also defines the page order used to generate the Previous/Next links at the bottom of each page
 sidebar_categories:
   null:
     - index
     - code-style
     - structure
-    - 1.6-migration
+    - 1.7-migration
   Data:
     - collections
     - data-loading
@@ -35,6 +30,7 @@ sidebar_categories:
     - blaze
     - react
     - angular
+    - vue
   Build:
     - atmosphere-vs-npm
     - using-atmosphere-packages
@@ -54,8 +50,6 @@ nav_links:
   'Guide':
     active: true
 
-# URL
-## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
 url: http://guide.meteor.com/
 
 redirects:
