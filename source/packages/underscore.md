@@ -12,14 +12,6 @@ and the server.
 
 
 {% pullquote warning %}
-Currently, underscore is included in all projects, as the Meteor
-core depends on it. _ is available in the global namespace on both the
-client and the server even if you do not include this package. However
-if you do use underscore in your application, you should still add the
-package as we will remove the default underscore in the future.
-{% endpullquote %}
-
-{% pullquote warning %}
 We have slightly modified the way Underscore differentiates between
 objects and arrays in [collection functions](http://underscorejs.org/#each).
 The original Underscore logic is to treat any object with a numeric `length`
