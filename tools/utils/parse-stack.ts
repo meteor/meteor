@@ -177,7 +177,7 @@ function parseStackFrames(frames: string[]): ParsedStackFrame[] {
       return stop = true;
     }
 
-    if (!parsedFrames.length) {
+    if (parsedFrames.length === 0) {
       // We haven't found any stack frames, so probably we have newlines in the
       // error message. Just skip this line.
       return;
