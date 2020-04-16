@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "@trusktr/meteor-base64": {
+      "version": "1.0.12",
+      "resolved": "https://registry.npmjs.org/@trusktr/meteor-base64/-/meteor-base64-1.0.12.tgz",
+      "integrity": "sha512-IW/jqEBH5x5R22Aisrvj0QLFIWVJFqHk7c2manAtFOsICejA3QP8OL5Gp0tIWuGtLuALQlhyUm1I4eKyLmWSXw=="
+    }
+  }
+}
