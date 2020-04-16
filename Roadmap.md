@@ -28,6 +28,22 @@ Implement tree shaking / dead code elimination, which involves pruning the depen
 
 A proper service worker build target. Regular Web Workers can be built from a function.toString() but service-workers require an actual server route.
 
+### Make it easy to use Meteor in external projects
+
+- Leaders: <you?>
+- Status: -
+- PRs: -
+
+Make it easy to import and use Meteor frontend and backend features in existing applications. People may have custom backends and frontends already cobbled together using custom build setups (f.e. Webpack, Rollup, TypeScript, etc). Converting these apps to the integrated Meteor system may be too difficult or undesirable.
+
+Allow developers to import Meteor APIs on both frontend and backend to allow them to create apps the same way as in Meteor, for portions of the overall application. For example, an app that is made with Express.js and using normal HTTP requests, might like to have a small Meteor-based application embedded inside of it in the same DOM; a real-time chat widget perhaps.
+
+On the backend, developers could import tooling to launch Mongo, create a Meteor DDP server on an endpoint, set up Apollo GraphQL on an endpoint, etc, while other endpoints of the existing application continue to operate as they did before.
+
+On the frontend, developers could import tools like DDP, ReactiveVar, Tracker, Blaze, etc, and begin using those APIs in the same way they do in Meteor-managed applications, but in a portion of the existing application.
+
+Or perhaps a developer wants to make a Meteor-only application but wants only control of the build process (they will be missing out on all of Meteor's features though, like legacy and modern builds!).
+
 ### Ultra-thin Meteor
 - Leaders: <you?>
 - Status: -
