@@ -1,5 +1,5 @@
 var assert = require("assert");
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var _ = require("underscore");
 
 // This class encapsulates a structured specification of files and

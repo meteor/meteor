@@ -59,7 +59,7 @@ exports.EnvironmentVariable = function (defaultValue) {
 };
 
 _.extend(exports.EnvironmentVariable.prototype, {
-  get: function () {
+  get() {
     var self = this;
     exports.nodeCodeMustBeInFiber();
 
@@ -72,23 +72,31 @@ _.extend(exports.EnvironmentVariable.prototype, {
     return Fiber.current._meteorDynamics[self.slot];
   },
 
-  withValue: function (value, func) {
-    var self = this;
+  set(value) {
     exports.nodeCodeMustBeInFiber();
 
-    if (!Fiber.current._meteorDynamics) {
-      Fiber.current._meteorDynamics = {};
-    }
-    var currentValues = Fiber.current._meteorDynamics;
+    const fiber = Fiber.current;
+    const currentValues = fiber._meteorDynamics || (
+      fiber._meteorDynamics = {}
+    );
 
-    var saved = _.has(currentValues, self.slot)
-          ? currentValues[self.slot] : self.defaultValue;
-    currentValues[self.slot] = value;
+    const saved = _.has(currentValues, this.slot)
+      ? currentValues[this.slot]
+      : this.defaultValue;
 
+    currentValues[this.slot] = value;
+
+    return () => {
+      currentValues[this.slot] = saved;
+    };
+  },
+
+  withValue(value, func) {
+    const reset = this.set(value);
     try {
       return func();
     } finally {
-      currentValues[self.slot] = saved;
+      reset();
     }
   }
 });

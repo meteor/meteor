@@ -69,7 +69,9 @@ function precacheOnLoad(event) {
       return module.prefetch(id);
     })).then(function () {
       if (modules.length > 0) {
-        prefetchInChunks(modules, amount);
+        setTimeout(function () {
+          prefetchInChunks(modules, amount);
+        }, 0);
       }
     });
   }

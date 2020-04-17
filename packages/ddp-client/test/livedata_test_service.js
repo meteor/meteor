@@ -20,13 +20,13 @@ Meteor.methods({
       })
     );
     options = options || Object.create(null);
-    var shouldThrow =
+    const shouldThrow =
       (Meteor.isServer && where === 'server') ||
       (Meteor.isClient && where === 'client') ||
       where === 'both';
 
     if (shouldThrow) {
-      var e;
+      let e;
       if (options.intended)
         e = new Meteor.Error(999, 'Client-visible test exception');
       else e = new Error('Test method throwing an exception');
@@ -35,8 +35,8 @@ Meteor.methods({
       // We used to improperly serialize errors that were thrown through a
       // future first.
       if (Meteor.isServer && options.throwThroughFuture) {
-        var Future = Npm.require('fibers/future');
-        var f = new Future();
+        const Future = Npm.require('fibers/future');
+        const f = new Future();
         f['throw'](e);
         e = f.wait();
       }
@@ -57,13 +57,13 @@ Meteor.methods({
 if (Meteor.isServer) {
   // Keys are random tokens, used to isolate multiple test invocations from each
   // other.
-  var waiters = Object.create(null);
+  const waiters = Object.create(null);
 
-  var Future = Npm.require('fibers/future');
+  const Future = Npm.require('fibers/future');
 
-  var returnThroughFuture = function(token, returnValue) {
+  const returnThroughFuture = function(token, returnValue) {
     // Make sure that when we call return, the fields are already cleared.
-    var record = waiters[token];
+    const record = waiters[token];
     if (!record) return;
     delete waiters[token];
     record.future['return'](returnValue);
@@ -72,7 +72,7 @@ if (Meteor.isServer) {
   Meteor.methods({
     delayedTrue: function(token) {
       check(token, String);
-      var record = (waiters[token] = {
+      const record = (waiters[token] = {
         future: new Future(),
         timer: Meteor.setTimeout(function() {
           returnThroughFuture(token, true);
@@ -84,7 +84,7 @@ if (Meteor.isServer) {
     },
     makeDelayedTrueImmediatelyReturnFalse: function(token) {
       check(token, String);
-      var record = waiters[token];
+      const record = waiters[token];
       if (!record) return; // since delayedTrue's timeout had already run
       clearTimeout(record.timer);
       returnThroughFuture(token, false);
@@ -125,8 +125,8 @@ Meteor.methods({
     check(to_name, String);
     check(amount, Number);
     check(cheat, Match.Optional(Boolean));
-    var from = Ledger.findOne({ name: from_name, world: world });
-    var to = Ledger.findOne({ name: to_name, world: world });
+    const from = Ledger.findOne({ name: from_name, world: world });
+    const to = Ledger.findOne({ name: to_name, world: world });
 
     if (Meteor.isServer) cheat = false;
 
@@ -179,10 +179,10 @@ if (Meteor.isServer) {
   });
 
   (function() {
-    var userIdWhenStopped = Object.create(null);
+    const userIdWhenStopped = Object.create(null);
     Meteor.publish('recordUserIdOnStop', function(key) {
       check(key, String);
-      var self = this;
+      const self = this;
       self.onStop(function() {
         userIdWhenStopped[key] = self.userId;
       });
@@ -218,8 +218,8 @@ if (Meteor.isServer) {
   Meteor.methods({
     setUserIdAfterUnblock: function() {
       this.unblock();
-      var threw = false;
-      var originalUserId = this.userId;
+      let threw = false;
+      const originalUserId = this.userId;
       try {
         // Calling setUserId after unblock should throw an error (and not mutate
         // userId).
@@ -238,12 +238,12 @@ if (Meteor.isServer) {
 
 if (Meteor.isServer) {
   (function() {
-    var collName = 'overlappingUniversalSubs';
-    var universalSubscribers = [[], []];
+    const collName = 'overlappingUniversalSubs';
+    const universalSubscribers = [[], []];
 
     _.each([0, 1], function(index) {
       Meteor.publish(null, function() {
-        var sub = this;
+        const sub = this;
         universalSubscribers[index].push(sub);
         sub.onStop(function() {
           universalSubscribers[index] = _.without(
@@ -291,7 +291,7 @@ if (Meteor.isServer) {
     check(collName, String);
     // See below to see what options are accepted.
     check(options, Object);
-    var sub = this;
+    const sub = this;
 
     // First add a random item, which should be cleaned up. We use ready/onReady
     // to make sure that the second test block is only called after the added is
@@ -304,7 +304,7 @@ if (Meteor.isServer) {
       return;
     }
 
-    var error;
+    let error;
     if (options.internalError) {
       error = new Error('Egads!');
       error._expectedByTest = true; // don't log
@@ -363,7 +363,7 @@ if (Meteor.isServer) {
 }
 
 /// Helper for "livedata - result by value"
-var resultByValueArrays = Object.create(null);
+const resultByValueArrays = Object.create(null);
 Meteor.methods({
   getArray: function(testId) {
     if (!_.has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];

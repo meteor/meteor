@@ -6,7 +6,7 @@ import {
   convertToOSPath,
   pathJoin,
   getCurrentToolsDir,
-} from '../../../fs/files.js';
+} from '../../../fs/files';
 
 const NPM_DEPENDENCIES = {
   'phantomjs-prebuilt': '2.1.14',

@@ -1,6 +1,6 @@
 const _ = require('underscore');
 
-const files = require('../fs/files.js');
+const files = require('../fs/files');
 const buildmessage = require('../utils/buildmessage.js');
 const utils = require('../utils/utils.js');
 const runLog = require('./run-log.js');
@@ -302,7 +302,6 @@ class Runner {
 exports.run = function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
-  delete runOptions.once;
 
   var promise = new Promise(function (resolve) {
     runOptions.onFailure = function () {

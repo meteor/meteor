@@ -72,11 +72,13 @@ export default class Matcher {
 
     let timer = null;
     if (timeout) {
+      const failure = new TestFailure('match-timeout', {
+        run: this.run,
+        pattern: this.matchPattern,
+      });
+
       timer = setTimeout(() => {
-        this.rejectMatch(new TestFailure('match-timeout', {
-          run: this.run,
-          pattern: this.matchPattern
-        }));
+        this.rejectMatch(failure);
       }, timeout * 1000);
     } else {
       return mp;
@@ -182,3 +184,6 @@ export default class Matcher {
     }
   }
 }
+
+import { markThrowingMethods } from "./test-utils.js";
+markThrowingMethods(Matcher.prototype);

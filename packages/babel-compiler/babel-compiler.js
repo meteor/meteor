@@ -1,5 +1,5 @@
 var semver = Npm.require("semver");
-
+var JSON5 = Npm.require("json5");
 /**
  * A compiler that can be instantiated with features and used inside
  * Plugin.registerCompiler
@@ -30,7 +30,6 @@ BCp.processFilesForTarget = function (inputFiles) {
     if (inputFile.supportsLazyCompilation) {
       inputFile.addJavaScript({
         path: inputFile.getPathInPackage(),
-        hash: inputFile.getSourceHash(),
         bare: !! inputFile.getFileOptions().bare
       }, function () {
         return compiler.processOneFileForTarget(inputFile);
@@ -68,12 +67,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     sourceMap: null,
     bare: !! fileOptions.bare
   };
-  var cacheOptions = {
-    cacheDirectory: this.cacheDirectory,
-    cacheDeps: {
-      sourceHash: toBeAdded.hash,
-    },
-  };
 
   // If you need to exclude a specific file within a package from Babel
   // compilation, pass the { transpile: false } options to api.addFiles
@@ -86,25 +79,44 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // compilation, give it the following file extension: .es5.js
       ! excludedFileExtensionPattern.test(inputFilePath)) {
 
-    var extraFeatures = Object.assign({}, this.extraFeatures);
-    var arch = inputFile.getArch();
+    const features = { ...this.extraFeatures };
+    const arch = inputFile.getArch();
 
     if (arch.startsWith("os.")) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
-      extraFeatures.nodeMajorVersion = parseInt(process.versions.node);
+      features.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
-      extraFeatures.modernBrowsers = true;
+      features.modernBrowsers = true;
     }
 
-    if (! extraFeatures.hasOwnProperty("jscript")) {
+    if (! features.hasOwnProperty("jscript")) {
       // Perform some additional transformations to improve compatibility
       // in older browsers (e.g. wrapping named function expressions, per
       // http://kiro.me/blog/nfe_dilemma.html).
-      extraFeatures.jscript = true;
+      features.jscript = true;
     }
 
-    var babelOptions = Babel.getDefaultOptions(extraFeatures);
+    if (shouldCompileModulesOnly(inputFilePath)) {
+      // Modules like @babel/runtime/helpers/esm/typeof.js need to be
+      // compiled to support ECMAScript modules syntax, but should *not*
+      // be compiled in any other way (for more explanation, see my longer
+      // comment in shouldCompileModulesOnly).
+      features.compileModulesOnly = true;
+    }
+
+    const cacheOptions = {
+      cacheDirectory: this.cacheDirectory,
+      cacheDeps: {
+        sourceHash: toBeAdded.hash,
+      },
+    };
+
+    this.inferTypeScriptConfig(
+      features, inputFile, cacheOptions.cacheDeps);
+
+    var babelOptions = Babel.getDefaultOptions(features);
+    babelOptions.caller = { name: "meteor", arch };
 
     this.inferExtraBabelOptions(
       inputFile,
@@ -124,16 +136,19 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       });
     } catch (e) {
       if (e.loc) {
+        // Error is from @babel/parser.
         inputFile.error({
           message: e.message,
           line: e.loc.line,
           column: e.loc.column,
         });
-
-        return null;
+      } else {
+        // Error is from a Babel transform, with line/column information
+        // embedded in e.message.
+        inputFile.error(e);
       }
 
-      throw e;
+      return null;
     }
 
     if (isMeteorPre144) {
@@ -162,6 +177,32 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   return toBeAdded;
 };
 
+function shouldCompileModulesOnly(path) {
+  const parts = path.split("/");
+  const nmi = parts.lastIndexOf("node_modules");
+  if (nmi >= 0) {
+    const part1 = parts[nmi + 1];
+    // We trust that any code related to @babel/runtime has already been
+    // compiled adequately. The @babel/runtime/helpers/typeof module is a
+    // good example of why double-compilation is risky for these packages,
+    // since it uses native typeof syntax to implement its polyfill for
+    // Symbol-aware typeof, so compiling it again would cause the
+    // generated code to try to require itself. In general, compiling code
+    // more than once with Babel should be safe (just unnecessary), except
+    // for code that Babel itself relies upon at runtime. Finally, if this
+    // hard-coded list of package names proves to be incomplete, we can
+    // always add to it (or even replace it completely) by releasing a new
+    // version of the babel-compiler package.
+    if (part1 === "@babel" ||
+        part1 === "core-js" ||
+        part1 === "regenerator-runtime") {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 BCp.setDiskCacheDirectory = function (cacheDir) {
   this.cacheDirectory = cacheDir;
 };
@@ -172,6 +213,20 @@ function profile(name, func) {
   } else {
     return func();
   }
+};
+
+BCp.inferTypeScriptConfig = function (features, inputFile, cacheDeps) {
+  if (features.typescript && inputFile.findControlFile) {
+    const tsconfigPath = inputFile.findControlFile("tsconfig.json");
+    if (tsconfigPath) {
+      if (typeof features.typescript !== "object") {
+        features.typescript = Object.create(null);
+      }
+      Object.assign(features.typescript, { tsconfigPath });
+      return true;
+    }
+  }
+  return false;
 };
 
 BCp.inferExtraBabelOptions = function (inputFile, babelOptions, cacheDeps) {
@@ -195,13 +250,13 @@ BCp._inferFromBabelRc = function (inputFile, babelOptions, cacheDeps) {
       try {
         this._babelrcCache[babelrcPath] = {
           controlFilePath: babelrcPath,
-          controlFileData: JSON.parse(
+          controlFileData: JSON5.parse(
             inputFile.readAndWatchFile(babelrcPath)),
           deps: Object.create(null),
         };
       } catch (e) {
         if (e instanceof SyntaxError) {
-          e.message = ".babelrc is not a valid JSON file: " + e.message;
+          e.message = ".babelrc is not a valid JSON5 file: " + e.message;
         }
         throw e;
       }
@@ -396,6 +451,21 @@ function merge(babelOptions, babelrc, name) {
   }
 }
 
+const forbiddenPresetNames = new Set([
+  // Since Meteor always includes babel-preset-meteor automatically, it's
+  // likely a mistake for that preset to appear in a custom .babelrc
+  // file. Previously we recommended that developers simply remove the
+  // preset (e.g. #9631), but we can easily just ignore it by returning
+  // null here, which seems like a better solution since it allows the
+  // same .babelrc file to be used for other purposes, such as running
+  // tests with a testing tool that needs to compile application code the
+  // same way Meteor does.
+  "babel-preset-meteor",
+  // Similar reasoning applies to these commonly misused Babel presets:
+  "@babel/preset-env",
+  "@babel/preset-react",
+]);
+
 function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
   var isTopLevel = "./".indexOf(id.charAt(0)) < 0;
   var presetOrPlugin;
@@ -430,15 +500,7 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
     });
 
     if (found) {
-      if (presetOrPluginMeta.name === "babel-preset-meteor") {
-        // Since Meteor always includes babel-preset-meteor automatically,
-        // it's likely a mistake for that preset to appear in a custom
-        // .babelrc file. Previously we recommended that developers simply
-        // remove the preset (e.g. #9631), but we can easily just ignore
-        // it by returning null here, which seems like a better solution
-        // since it allows the same .babelrc file to be used for other
-        // purposes, such as running tests with a testing tool that needs
-        // to compile application code the same way Meteor does.
+      if (forbiddenPresetNames.has(presetOrPluginMeta.name)) {
         return null;
       }
 

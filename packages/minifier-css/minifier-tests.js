@@ -92,9 +92,15 @@ Tinytest.add(
   (test) => {
     const css1 = '@import "custom.css"; body { color: "red"; }';
     const css2 = 'body { color: "blue"; }';
-    const cssAst1 = CssTools.parseCss(css1);
-    const cssAst2 = CssTools.parseCss(css2);
+    const cssAst1 = CssTools.parseCss(css1, {from: "test.css"});
+    const cssAst2 = CssTools.parseCss(css2, {from: "test2.css"});
     const mergedAst = CssTools.mergeCssAsts([cssAst1, cssAst2]);
+    const stringifiedAsts = CssTools.stringifyCss(mergedAst, {
+      sourcemap: true,
+      inputSourcemaps: false
+    });
     test.equal(mergedAst.nodes.length, 3);
+    test.equal(stringifiedAsts.map.sources.length, 2);
+    test.equal(stringifiedAsts.map.sources[0], 'test.css');
   }
 );

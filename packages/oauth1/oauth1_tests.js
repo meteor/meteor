@@ -1,7 +1,7 @@
 import http from 'http';
 import { OAuth1Binding } from './oauth1_binding';
 
-const testPendingCredential = test => {
+const testPendingCredential = (test, method) => {
   const twitterfooId = Random.id();
   const twitterfooName = `nickname${Random.id()}`;
   const twitterfooAccessToken = Random.id();
@@ -43,14 +43,22 @@ const testPendingCredential = test => {
     Oauth._storeRequestToken(credentialToken, twitterfooAccessToken);
 
     const req = {
-      method: "POST",
-      url: `/_oauth/${serviceName}`,
-      query: {
-        state: OAuth._generateState('popup', credentialToken),
-        oauth_token: twitterfooAccessToken,
-        only_credential_secret_for_test: 1
-      }
+      method,
+      url: `/_oauth/${serviceName}`
     };
+
+    const payload = {
+      state: OAuth._generateState('popup', credentialToken),
+      oauth_token: twitterfooAccessToken,
+      only_credential_secret_for_test: 1
+    };
+
+    if (method === 'GET') {
+      req.query = payload;
+    } else {
+      req.body = payload;
+    }
+
     const res = new http.ServerResponse(req);
     const write = res.write;
     const end = res.end;
@@ -88,13 +96,15 @@ const testPendingCredential = test => {
 
 Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (without oauth encryption)", test => {
   OAuthEncryption.loadKey(null);
-  testPendingCredential(test);
+  testPendingCredential(test, "GET");
+  testPendingCredential(test, "POST");
 });
 
 Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (with oauth encryption)", test => {
   try {
     OAuthEncryption.loadKey(Buffer.from([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
-    testPendingCredential(test);
+    testPendingCredential(test, "GET");
+    testPendingCredential(test, "POST");
   } finally {
     OAuthEncryption.loadKey(null);
   }
@@ -118,4 +128,61 @@ Tinytest.add("oauth1 - null, undefined key for request token", test => {
   const secret = Random.id();
   test.throws(() => OAuth._storeRequestToken(null, token, secret));
   test.throws(() => OAuth._storeRequestToken(undefined, token, secret));
+});
+
+Tinytest.add("oauth1 - signature is built correctly", test => {
+  const binding = new OAuth1Binding({ secret: "42" });
+  const method = "GET";
+  const url = "www.meteor.com";
+  const rawHeaders = {
+    normal: "normal",
+    withSpaces: "with spaces",
+    specialCharacters: "`!@#$%^&*()",
+  };
+  const accessTokenSecret = "SECRET_1234_!@#$";
+  const params = {
+    param2: 2,
+    param3: 3,
+    param1: 1,
+  };
+
+  test.equal(
+    binding._getSignature(method, url, rawHeaders, accessTokenSecret, params),
+    "fvQmrhLJqZgEAiwCKSlWHKYWqPk="
+  );
+});
+
+Tinytest.add("oauth1 - headers are encoded correctly", test => {
+  const binding = new OAuth1Binding();
+  const headers = {
+    normal: "normal",
+    withSpaces: "with spaces",
+    specialCharacters: "`!@#$%^&*()",
+  };
+
+  test.equal(
+    binding._encodeHeader(headers),
+    {
+      normal: "normal",
+      withSpaces: "with%20spaces",
+      specialCharacters: "%60%21%40%23%24%25%5E%26%2A%28%29",
+    }
+  );
+});
+
+Tinytest.add("oauth1 - auth header string is built correctly", test => {
+  const binding = new OAuth1Binding();
+  const headers = {
+    normal: "normal",
+    withSpaces: "with spaces",
+    specialCharacters: "`!@#$%^&*()",
+  };
+
+  test.equal(
+    binding._getAuthHeaderString(headers),
+    "OAuth " +
+    'normal="normal", ' +
+    'specialCharacters="%60%21%40%23%24%25%5E%26%2A%28%29", ' +
+    'withSpaces="with%20spaces"'
+  );
 });

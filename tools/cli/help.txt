@@ -83,6 +83,11 @@ Options:
                    Defaults to your local IP and the port that the Meteor
                    server binds to. Can include a URL scheme (for
                    example, --mobile-server=https://example.com:443).
+  --cordova-server-port
+                   Local port where Cordova will serve the content. It's
+                   important when multiple Cordova apps are build from the same
+                   Meteor app source code as by default the port is generated
+                   using the id inside .meteor/.id file.
   --production     Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs       Run without parsing logs from stdout and stderr.
   --settings, -s   Set optional data for Meteor.settings on the server.
@@ -98,6 +103,9 @@ Options:
                    version constraints.
   --extra-packages Run with additional packages (comma separated, for example:
                    --extra-packages "package-name1, package-name2@1.2.3")
+  --exclude-archs  Don't create bundles for certain web architectures
+                  (comma separated, for example:
+                   --exclude-archs "web.browser.legacy, web.cordova")
 
 >>> debug
 Run the project with server-side debugging enabled.
@@ -142,7 +150,7 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
@@ -151,7 +159,8 @@ Make a subdirectory named <path> if it doesn't exist and create a new Meteor app
 there. You can pass an absolute path, relative path, or '.' for the current
 directory. Use the --bare option to create an empty app, or the --minimal option
 to create an empty app with as few Meteor packages as possible. To scaffold a
-more complete app, use the --full option.
+more complete app, use the --full option. To create a basic React-based app,
+pass the --react option.
 
 With the --package option, creates a Meteor package instead of an app. If you're
 in an app, the package will go in the app's top-level 'packages' directory;
@@ -173,6 +182,7 @@ Options:
   --bare     Create an empty app.
   --minimal  Create an app with as few Meteor packages as possible.
   --full     Create a fully scaffolded app.
+  --react    Create a basic React-based app.
 
 
 >>> update
@@ -332,6 +342,12 @@ List the platforms added to your project.
 Usage: meteor list-platforms
 
 Lists all of the platforms added to your project.
+
+>>> ensure-cordova-dependencies
+Ensure that Cordova dependencies are installed.
+Usage: meteor ensure-cordova-dependencies
+
+Check if the dependencies are installed, otherwise install them.
 
 >>> configure-android
 Run the Android configuration tool from Meteor's ADK environment.
@@ -596,6 +612,11 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
+  --cordova-server-port
+                    Local port where Cordova will serve the content. It's
+                    important when multiple Cordova apps are build from the same
+                    Meteor app source code as by default the port is generated
+                    using the id inside .meteor/.id file.
   --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings, -s    Set optional data for Meteor.settings on the server
 
@@ -680,6 +701,11 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
+  --cordova-server-port
+                    Local port where Cordova will serve the content. It's
+                    important when multiple Cordova apps are build from the same
+                    Meteor app source code as by default the port is generated
+                    using the id inside .meteor/.id file.
   --raw-logs        Run without parsing logs from stdout and stderr.
   --settings, -s    Set optional data for Meteor.settings on the server
 
@@ -696,6 +722,9 @@ Options:
   --driver-package  Name of the optional test driver package to use to run
                     tests and display results. For example:
                     --driver-package practicalmeteor:mocha
+  --exclude-archs   Don't create test bundles for certain web architectures
+                    (comma separated, for example:
+                    --exclude-archs "web.browser.legacy, web.cordova")
 
 >>> self-test
 Run tests of the 'meteor' tool.

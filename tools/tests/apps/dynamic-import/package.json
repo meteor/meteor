@@ -6,16 +6,17 @@
     "test": "TEST_BROWSER_DRIVER=puppeteer meteor test --full-app --driver-package meteortesting:mocha"
   },
   "dependencies": {
-    "@babel/runtime": "7.0.0-beta.55",
-    "acorn": "^4.0.11",
-    "arson": "^0.2.3",
-    "meteor-node-stubs": "^0.4.1",
-    "moment": "^2.17.1",
-    "optimism": "^0.3.3",
-    "private": "^0.1.7",
-    "puppeteer": "^1.3.0",
-    "react": "^16.0.0",
-    "regenerator-runtime": "^0.11.1",
-    "uuid": "^3.1.0"
+    "@babel/runtime": "^7.9.2",
+    "acorn": "^7.1.1",
+    "arson": "^0.2.6",
+    "jquery": "^3.4.1",
+    "meteor-node-stubs": "^1.0.0",
+    "moment": "^2.24.0",
+    "optimism": "^0.11.5",
+    "private": "^0.1.8",
+    "puppeteer": "^2.1.1",
+    "react": "^16.13.1",
+    "regenerator-runtime": "^0.13.5",
+    "uuid": "^7.0.2"
   }
 }

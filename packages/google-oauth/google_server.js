@@ -1,6 +1,8 @@
 import Google from './namespace.js';
 import { Accounts } from 'meteor/accounts-base';
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
 // https://developers.google.com/accounts/docs/OAuth2Login#userinfocall
 Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name',
                    'family_name', 'picture', 'locale', 'timezone', 'gender'];

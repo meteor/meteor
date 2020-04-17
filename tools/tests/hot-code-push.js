@@ -14,7 +14,6 @@ selftest.define("css hot code push", function (options) {
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
 
@@ -109,7 +108,6 @@ selftest.define("versioning hot code push", function (options) {
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
     run.connectClient();
@@ -133,7 +131,6 @@ selftest.define("javascript hot code push", function (options) {
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
 
@@ -257,16 +254,11 @@ session`);
     run.match("jsVar: baz");
 
     s.unlink("client/test.js");
-
-    // Setting the autoupdateVersion to a different string should also
-    // force the client to restart.
-    s.write("server/test.js",
-            "Package.autoupdate.Autoupdate.autoupdateVersion = 'random'");
-    run.match("server restarted");
-    run.match("client connected: 0");
+    run.match("client connected: 2");
     run.match("jsVar: undefined");
 
-    s.unlink("server/test.js");
+    s.write("server/test.js", 'console.log("DONE");');
+    run.match("DONE");
     run.match("server restarted");
 
     run.stop();

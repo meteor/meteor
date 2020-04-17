@@ -1,5 +1,5 @@
 StubStream = function() {
-  var self = this;
+  const self = this;
 
   self.sent = [];
   self.callbacks = Object.create(null);
@@ -8,14 +8,14 @@ StubStream = function() {
 _.extend(StubStream.prototype, {
   // Methods from Stream
   on: function(name, callback) {
-    var self = this;
+    const self = this;
 
     if (!self.callbacks[name]) self.callbacks[name] = [callback];
     else self.callbacks[name].push(callback);
   },
 
   send: function(data) {
-    var self = this;
+    const self = this;
     self.sent.push(data);
   },
 
@@ -33,7 +33,7 @@ _.extend(StubStream.prototype, {
 
   // Methods for tests
   receive: function(data) {
-    var self = this;
+    const self = this;
 
     if (typeof data === 'object') {
       data = EJSON.stringify(data);
@@ -45,7 +45,7 @@ _.extend(StubStream.prototype, {
   },
 
   reset: function() {
-    var self = this;
+    const self = this;
     _.each(self.callbacks['reset'], function(cb) {
       cb();
     });

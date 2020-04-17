@@ -179,7 +179,7 @@ Tinytest.addAsync(
       req.method = "GET";
       req.url = "/" + additionalScriptPathname;
       let nextCalled = false;
-      WebAppInternals.staticFilesMiddleware({
+      await WebAppInternals.staticFilesMiddleware({
         "web.browser": {},
         "web.browser.legacy": {},
       }, req, res, function () {
@@ -213,7 +213,7 @@ Tinytest.addAsync(
     req.headers = {};
     req.method = "GET";
     req.url = "/" + additionalScriptPathname;
-    WebAppInternals.staticFilesMiddleware({
+    await WebAppInternals.staticFilesMiddleware({
       "web.browser": {},
       "web.browser.legacy": {},
     }, req, res, function () {});

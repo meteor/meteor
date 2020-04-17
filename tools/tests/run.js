@@ -4,9 +4,11 @@ var utils = require('../utils/utils.js');
 var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var catalog = require('../packaging/catalog/catalog.js');
 var os = require('os');
+var isReachable = require("is-reachable");
+var httpHelpers = require('../utils/http-helpers.js');
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
@@ -80,24 +82,7 @@ selftest.define("run", function () {
   s.unlink("junk.css");
   run.waitSecs(5);
   run.match("restarted");
-
-  // Crash just once, then restart successfully
-  s.write("crash_then_restart.js", `
-var fs = Npm.require('fs');
-var path = Npm.require('path');
-var crashmark = path.join(process.env.METEOR_TEST_TMP, 'crashed');
-try {
-  fs.readFileSync(crashmark);
-} catch (e) {
-  fs.writeFileSync(crashmark);
-  process.exit(137);
-}`);
-  run.waitSecs(5);
-  run.match("with code: 137");
-  run.waitSecs(5);
-  run.match("restarted");
   run.stop();
-  s.unlink("crash_then_restart.js");
 
   run = s.run('--settings', 's.json');
   run.waitSecs(5);
@@ -241,6 +226,37 @@ selftest.define("run errors", function () {
   f.wait();
 });
 
+selftest.define("handle requests with large headers", function() {
+  const sandbox = new Sandbox();
+  sandbox.env.NODE_OPTIONS = '--max-http-header-size=8192';
+
+  sandbox.createApp('myapp', 'standard-app');
+  sandbox.cd('myapp');
+  sandbox.append('.meteor/packages', 'browser-policy\n');
+
+  const browserPolicyCode = Array(1000).fill(null)
+    .map((_, index) => (
+      `BrowserPolicy.content.allowConnectOrigin('host${index}.com');`
+    ))
+    .join('\n');
+  sandbox.write('packageless.js', browserPolicyCode);
+
+  const run = sandbox.run();
+  run.waitSecs(5);
+  run.match('App running');
+
+  let errorMessage = null;
+  try {
+    httpHelpers.getUrl('http://localhost:3000');
+  } catch (error) {
+    errorMessage = error.message;
+  }
+
+  const errorMatchesExpected = /Unexpected error\./.test(errorMessage);
+  selftest.expectTrue(errorMatchesExpected);
+  run.match('due to the header size exceeding Node\'s currently');
+});
+
 selftest.define("update during run", ["checkout", 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: SIMPLE_WAREHOUSE,
@@ -377,23 +393,20 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   }
   childPid = match[1];
 
+  if (!isReachable("localhost:3000").await()) {
+    selftest.fail("Child process " + childPid + " already dead?");
+  }
+
   process.kill(run.proc.pid, "SIGKILL");
   // This sleep should be a little more time than the interval at which
   // the child checks if the parent is still alive, in
   // packages/webapp/webapp_server.js.
-  utils.sleepMs(3500);
+  utils.sleepMs(10000);
 
   // Send the child process a signal of 0. If there is no error, it
   // means that the process is still running, which is not what we
   // expect.
-  var caughtError;
-  try {
-    process.kill(childPid, 0);
-  } catch (err) {
-    caughtError = err;
-  }
-
-  if (! caughtError) {
+  if (isReachable("localhost:3000").await()) {
     selftest.fail("Child process " + childPid + " is still running");
   }
 

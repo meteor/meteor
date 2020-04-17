@@ -161,12 +161,12 @@ import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
 import { addToTree } from "./linker.js";
 
-var files = require('../fs/files.js');
-var archinfo = require('../utils/archinfo.js');
+var files = require('../fs/files');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
-var watch = require('../fs/watch.js');
+var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var release = require('../packaging/release.js');
 import { loadIsopackage } from '../tool-env/isopackets.js';
@@ -175,6 +175,9 @@ import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
+
+const MINIFY_PLAIN_FUNCTION = Buffer.from('function(', 'utf8');
+const MINIFY_RENAMED_FUNCTION = Buffer.from('function __minifyJs(', 'utf8');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -208,6 +211,7 @@ exports._mainJsContents = [
   "",
   "process.argv.splice(2, 0, 'program.json');",
   "process.chdir(require('path').join(__dirname, 'programs', 'server'));",
+  'require("./programs/server/runtime.js");',
   "require('./programs/server/boot.js');",
 ].join("\n");
 
@@ -546,6 +550,9 @@ class File {
     // disk).
     this.sourcePath = options.sourcePath;
 
+    // Allows not calculating sri when it isn't needed
+    this._skipSri = options.skipSri
+
     // info is just for help with debugging the tool; it isn't written to disk or
     // anything.
     this.info = options.info || '?';
@@ -597,6 +604,7 @@ class File {
     this.assets = null;
 
     this._contents = options.data || null; // contents, if known, as a Buffer
+    this._inputHash = options.hash;
     this._hash = null;
     this._sri = null;
   }
@@ -612,17 +620,24 @@ class File {
 
   hash() {
     if (! this._hash) {
-      this._hash = watch.sha1(
-        String(File._salt()),
-        this.sri(),
-      );
+      const hashes = [String(File._salt())];
+
+      if (typeof this._inputHash === "string") {
+        hashes.push(this._inputHash);
+      }
+
+      if (!this._skipSri) {
+        hashes.push(this.sri());
+      }
+
+      this._hash = watch.sha1(...hashes);
     }
 
     return this._hash;
   }
 
   sri() {
-    if (! this._sri) {
+    if (! this._sri && !this._skipSri) {
       this._sri = watch.sha512(this.contents());
     }
 
@@ -1063,13 +1078,20 @@ class Target {
     }
 
     const target = this;
+
+    const linkerCacheDir = this.bundlerCacheDir &&
+          files.pathJoin(this.bundlerCacheDir, "linker");
+
+    const scannerCacheDir = this.bundlerCacheDir &&
+          files.pathJoin(this.bundlerCacheDir, "scanner");
+
     const processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: this.unibuilds,
       arch: this.arch,
       sourceRoot: this.sourceRoot,
       isopackCache: this.isopackCache,
-      linkerCacheDir: this.bundlerCacheDir &&
-        files.pathJoin(this.bundlerCacheDir, 'linker'),
+      linkerCacheDir,
+      scannerCacheDir,
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
@@ -1086,14 +1108,17 @@ class Target {
           info: 'resource ' + resource.servePath,
           arch: target.arch,
           data: resource.data,
+          hash: resource.hash,
         });
 
         file.setTargetPathFromRelPath(
           stripLeadingSlash(resource.servePath));
 
-        return target.minifyCssFiles(
-          [file], minifiersByExt.css, minifyMode
-        ).map(file => file.contents("utf8")).join("\n");
+        return minifyCssFiles([file], {
+          arch: target.arch,
+          minifier: minifiersByExt.css,
+          minifyMode,
+        }).map(file => file.contents("utf8")).join("\n");
       }
     });
 
@@ -1110,6 +1135,29 @@ class Target {
 
     const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
+
+    sourceBatches.forEach(batch => {
+      const { unibuild } = batch;
+
+      // Depend on the source files that produced these resources.
+      this.watchSet.merge(unibuild.watchSet);
+
+      // Remember the versions of all of the build-time dependencies
+      // that were used in these resources. Depend on them as well.
+      // XXX assumes that this merges cleanly
+      this.watchSet.merge(unibuild.pkg.pluginWatchSet);
+
+      const entry = jsOutputFilesMap.get(unibuild.pkg.name || null);
+      if (entry && entry.importScannerWatchSet) {
+        // Populated in PackageSourceBatch._watchOutputFiles, based on the
+        // ImportScanner's knowledge of which modules are really imported.
+        this.watchSet.merge(entry.importScannerWatchSet);
+      }
+    });
+
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     const versions = {};
     const dynamicImportFiles = new Set;
@@ -1133,7 +1181,9 @@ class Target {
       const isApp = ! name;
 
       // Emit the resources
-      const resources = sourceBatch.getResources(jsOutputFilesMap.get(name));
+      const resources = sourceBatch.getResources(
+        jsOutputFilesMap.get(name).files,
+      );
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
@@ -1149,6 +1199,7 @@ class Target {
           data: resource.data,
           cacheable: false,
           hash: resource.hash,
+          skipSri: !!resource.hash
         };
 
         const file = new File(fileOptions);
@@ -1208,6 +1259,7 @@ class Target {
             info: 'resource ' + resource.servePath,
             arch: this.arch,
             data: resource.data,
+            hash: resource.hash,
             cacheable: false,
           });
 
@@ -1264,14 +1316,6 @@ class Target {
           addToTree(file.hash(), file.targetPath, versions);
         }
       });
-
-      // Depend on the source files that produced these resources.
-      this.watchSet.merge(unibuild.watchSet);
-
-      // Remember the versions of all of the build-time dependencies
-      // that were used in these resources. Depend on them as well.
-      // XXX assumes that this merges cleanly
-       this.watchSet.merge(unibuild.pkg.pluginWatchSet);
     });
 
     dynamicImportFiles.forEach(file => {
@@ -1282,6 +1326,19 @@ class Target {
         ), "utf8")
       );
     });
+
+    // Call any plugin.afterLink callbacks defined by compiler plugins,
+    // now that all compilation (including lazy compilation) is finished.
+    sourceBatches.forEach(batch => {
+      batch.resourceSlots.forEach(slot => {
+        const plugin =
+          slot.sourceProcessor &&
+          slot.sourceProcessor.userPlugin;
+        if (plugin && typeof plugin.afterLink === "function") {
+          plugin.afterLink();
+        }
+      });
+    });
   }
 
   // Minify the JS in this target
@@ -1289,39 +1346,27 @@ class Target {
     const staticFiles = [];
     const dynamicFiles = [];
     const { arch } = this;
+    const inputHashesByJsFile = new Map;
 
     this.js.forEach(file => {
       const jsf = new JsFile(file, { arch });
 
+      inputHashesByJsFile.set(jsf, file.hash());
+
       if (file.targetPath.startsWith("dynamic/")) {
-        // Make sure file._hash is cached.
-        file.hash();
-
-        // Dynamic files consist of a single anonymous function
-        // expression, which some minifiers (e.g. UglifyJS) either fail to
-        // parse or mistakenly eliminate as dead code. To avoid these
-        // problems, we temporarily name the function __minifyJs.
-        file._contents = Buffer.from(
-          file.contents()
-            .toString("utf8")
-            .replace(/^\s*function\s*\(/,
-                     "function __minifyJs("),
-          "utf8"
-        );
-
         dynamicFiles.push(jsf);
-
       } else {
         staticFiles.push(jsf);
       }
     });
 
-    var minifier = minifierDef.userPlugin.processFilesForBundle
-      .bind(minifierDef.userPlugin);
+    var markedMinifier = buildmessage.markBoundary(
+      minifierDef.userPlugin.processFilesForBundle,
+      minifierDef.userPlugin
+    );
 
     buildmessage.enterJob('minifying app code', function () {
       try {
-        var markedMinifier = buildmessage.markBoundary(minifier);
         Promise.all([
           markedMinifier(staticFiles, { minifyMode }),
           ...dynamicFiles.map(
@@ -1337,16 +1382,15 @@ class Target {
 
     function handle(source, dynamic) {
       source._minifiedFiles.forEach(file => {
-        // Remove the function name __minifyJs that was added above.
-        file.data = file.data
-          .toString("utf8")
-          .replace(/^\s*function\s+__minifyJs\s*\(/,
-                   "function(");
+        if (typeof file.data === "string") {
+          file.data = Buffer.from(file.data, "utf8");
+        }
 
         const newFile = new File({
           info: 'minified js',
           arch,
-          data: Buffer.from(file.data, 'utf8'),
+          data: file.data,
+          hash: inputHashesByJsFile.get(source),
         });
 
         if (file.sourceMap) {
@@ -1446,26 +1490,43 @@ class Target {
     }
   }
 
+  // Overrides a cordova dependency version.
+  _overrideCordovaDependencyVersion(scoped, id, name, version) {
+    if (!scoped) {
+      this.cordovaDependencies[id] = version;
+    } else {
+      if (id in this.cordovaDependencies) {
+        delete this.cordovaDependencies[id];
+      }
+      this.cordovaDependencies[name] = version;
+    }
+  }
+
   // Add a Cordova plugin dependency to the target. If the same plugin
   // has already been added at a different version and `override` is
   // false, use whichever version is newest. If `override` is true, then
   // we always add the exact version specified, overriding any other
   // version that has already been added.
+  // Additionally we need to be sure that a cordova-plugin-name gets
+  // overriden with @scope/cordova-plugin-name.
   _addCordovaDependency(name, version, override) {
     if (! this.cordovaDependencies) {
       return;
     }
+    const scoped = name[0] === '@';
+    const id = scoped ? name.split('/')[1] : name;
 
     if (override) {
-      this.cordovaDependencies[name] = version;
+      this._overrideCordovaDependencyVersion(scoped, id, name, version);
     } else {
-      if (_.has(this.cordovaDependencies, name)) {
-        var existingVersion = this.cordovaDependencies[name];
+      if (_.has(this.cordovaDependencies, id)) {
+        const existingVersion = this.cordovaDependencies[id];
 
         if (existingVersion === version) { return; }
 
-        this.cordovaDependencies[name] = packageVersionParser.
+        const versionToSet = packageVersionParser.
           lessThan(existingVersion, version) ? version : existingVersion;
+          this._overrideCordovaDependencyVersion(scoped, id, name, versionToSet);
       } else {
         this.cordovaDependencies[name] = version;
       }
@@ -1566,45 +1627,11 @@ class ClientTarget extends Target {
 
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
-    this.css = this.minifyCssFiles(this.css, minifierDef, minifyMode);
-  }
-
-  minifyCssFiles(files, minifierDef, minifyMode) {
-    const { arch } = this;
-    const sources = files.map(file => new CssFile(file, { arch }));
-    const minifier = minifierDef.userPlugin.processFilesForBundle
-      .bind(minifierDef.userPlugin);
-
-    buildmessage.enterJob('minifying app stylesheet', function () {
-      try {
-        const markedMinifier = buildmessage.markBoundary(minifier);
-        Promise.await(markedMinifier(sources, { minifyMode }));
-      } catch (e) {
-        buildmessage.exception(e);
-      }
+    this.css = minifyCssFiles(this.css, {
+      arch: this.arch,
+      minifier: minifierDef,
+      minifyMode,
     });
-
-    return _.flatten(sources.map((source) => {
-      return source._minifiedFiles.map((file) => {
-        const newFile = new File({
-          info: 'minified css',
-          arch,
-          data: Buffer.from(file.data, 'utf8')
-        });
-        if (file.sourceMap) {
-          newFile.setSourceMap(file.sourceMap, '/');
-        }
-
-        if (file.path) {
-          newFile.setUrlFromRelPath(file.path);
-          newFile.targetPath = file.path;
-        } else {
-          newFile.setUrlToHash('.css', '?meteor_css_resource=true');
-        }
-
-        return newFile;
-      });
-    }));
   }
 
   // Output the finished target to disk
@@ -1612,8 +1639,6 @@ class ClientTarget extends Target {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the target
-  // - nodePath: an array of paths required to be set in the NODE_PATH
-  // environment variable.
   write(builder, {minifyMode}) {
     builder.reserve("program.json");
 
@@ -1698,7 +1723,9 @@ class ClientTarget extends Target {
       manifestItem.sri = file.sri();
 
       if (! file.targetPath.startsWith("dynamic/")) {
-        writeFile(file, builder);
+        writeFile(file, builder, {
+          leaveSourceMapUrls: type === 'asset'
+        });
         manifest.push(manifestItem);
         return;
       }
@@ -1798,10 +1825,74 @@ class ClientTarget extends Target {
     builder.writeJson('program.json', program);
 
     return {
-      controlFile: "program.json",
-      nodePath: []
+      controlFile: "program.json"
     };
   }
+}
+
+const { wrap, defaultMakeCacheKey } = require("optimism");
+const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
+  arch,
+  minifier,
+  minifyMode,
+}) {
+  const inputHashesByCssFile = new Map;
+  const sources = files.map(file => {
+    const cssFile = new CssFile(file, { arch });
+    inputHashesByCssFile.set(cssFile, file.hash());
+    return cssFile;
+  });
+  const markedMinifier = buildmessage.markBoundary(
+    minifier.userPlugin.processFilesForBundle,
+    minifier.userPlugin,
+  );
+
+  buildmessage.enterJob('minifying app stylesheet', function () {
+    try {
+      Promise.await(markedMinifier(sources, { minifyMode }));
+    } catch (e) {
+      buildmessage.exception(e);
+    }
+  });
+
+  return _.flatten(sources.map((source) => {
+    return source._minifiedFiles.map((file) => {
+      const newFile = new File({
+        info: 'minified css',
+        arch,
+        data: Buffer.from(file.data, 'utf8'),
+        hash: inputHashesByCssFile.get(source),
+      });
+      if (file.sourceMap) {
+        newFile.setSourceMap(file.sourceMap, '/');
+      }
+
+      if (file.path) {
+        newFile.setUrlFromRelPath(file.path);
+        newFile.targetPath = file.path;
+      } else {
+        newFile.setUrlToHash('.css', '?meteor_css_resource=true');
+      }
+
+      return newFile;
+    });
+  }));
+}, {
+  makeCacheKey(files, { arch, minifier, minifyMode }) {
+    return defaultMakeCacheKey(
+      minifier,
+      arch,
+      minifyMode,
+      hashOfFiles(files),
+    );
+  }
+}));
+
+const { createHash } = require("crypto");
+function hashOfFiles(files) {
+  const hash = createHash("sha1");
+  files.forEach(file => hash.update(file.hash()).update("\0"));
+  return hash.digest("hex");
 }
 
 // mark methods for profiling
@@ -1987,6 +2078,10 @@ class JsImage {
             }
 
             function tryLookup(nodeModulesPath, name) {
+              if (typeof nodeModulesPath !== "string") {
+                return;
+              }
+
               var nodeModulesTopDir = files.pathJoin(
                 nodeModulesPath,
                 name.split("/", 1)[0]
@@ -1999,18 +2094,39 @@ class JsImage {
               }
             }
 
-            const found = _.some(item.nodeModulesDirectories, nmd => {
+            let found = _.some(item.nodeModulesDirectories, nmd => {
               // Npm.require doesn't consider local node_modules
               // directories.
               return ! nmd.local && tryLookup(nmd.sourcePath, name);
             });
 
-            if (found || tryLookup(devBundleLibNodeModulesDir, name)) {
-              return require(fullPath);
+            if (! found &&
+                bindings.Plugin &&
+                typeof bindings.Plugin.name === "string") {
+              // If this package is part of a build plugin, try looking up
+              // the requested module in any node_modules directories
+              // belonging to the plugin package, as declared by
+              //
+              //   Package.registerBuildPlugin({
+              //     name: "this-plugin-name",
+              //     ...
+              //     npmDependencies: { name: version, ... }
+              //   });
+              //
+              // in the parent package (e.g. ecmascript, coffeescript).
+              const nmdSourcePaths =
+                nodeModulesDirsByPackageName.get(bindings.Plugin.name);
+              if (Array.isArray(nmdSourcePaths)) {
+                found = _.some(nmdSourcePaths, sourcePath => {
+                  return tryLookup(sourcePath, name);
+                });
+              }
             }
 
-            if (appNodeModules &&
-                tryLookup(appNodeModules, name)) {
+            found = found || tryLookup(devBundleLibNodeModulesDir, name);
+            found = found || tryLookup(appNodeModules, name);
+
+            if (found) {
               return require(fullPath);
             }
 
@@ -2165,8 +2281,6 @@ class JsImage {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the image
-  // - nodePath: an array of paths required to be set in the NODE_PATH
-  // environment variable.
   write(builder, {
     buildMode,
     // falsy or 'symlink', documented on exports.bundle
@@ -2325,7 +2439,9 @@ class JsImage {
     _.each(nodeModulesDirectories, function (nmd) {
       assert.strictEqual(typeof nmd.preferredBundlePath, "string");
 
-      if (! nmd.isPortable()) {
+      // Skip calculating isPortable in 'meteor run' since the
+      // modules are never rebuilt
+      if (includeNodeModules !== 'symlink' && !nmd.isPortable()) {
         const parentDir = files.pathDirname(nmd.preferredBundlePath);
         rebuildDirs[parentDir] = parentDir;
       }
@@ -2384,8 +2500,7 @@ class JsImage {
     });
 
     return {
-      controlFile: "program.json",
-      nodePath: []
+      controlFile: "program.json"
     };
   }
 
@@ -2502,7 +2617,7 @@ class ServerTarget extends JsImageTarget {
   constructor (options, ...args) {
     super(options, ...args);
 
-    this.clientTargets = options.clientTargets;
+    this.clientArchs = options.clientArchs;
     this.releaseName = options.releaseName;
     this.appIdentifier = options.appIdentifier;
 
@@ -2519,36 +2634,18 @@ class ServerTarget extends JsImageTarget {
     buildMode,
     // falsy or 'symlink', documented in exports.bundle
     includeNodeModules,
-    // a function that takes {forTarget: Target, relativeTo: Target} and
-    // return the path of one target in the bundle relative to another. hack
-    // to get the path of the client target.. we'll find a better solution
-    // here eventually
-    getRelativeTargetPath,
   }) {
     var self = this;
-    var nodePath = [];
 
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
-
-    // Mapping from arch to relative path to the client program, if we have any
-    // (hack). Ex.: { 'web.browser': '../web.browser/program.json', ... }
-    var clientTargetPaths = {};
-    if (self.clientTargets) {
-      _.each(self.clientTargets, function (target) {
-        clientTargetPaths[target.arch] = files.pathJoin(getRelativeTargetPath({
-          forTarget: target,
-          relativeTo: self,
-        }), 'program.json');
-      });
-    }
 
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
       meteorRelease: self.releaseName || undefined,
       appId: self.appIdentifier || undefined,
-      clientPaths: clientTargetPaths
+      clientArchs: self.clientArchs || undefined,
     });
 
     // Write package.json and npm-shrinkwrap.json for the dependencies of
@@ -2602,29 +2699,33 @@ class ServerTarget extends JsImageTarget {
     const toolsDir = files.pathDirname(
       files.convertToStandardPath(__dirname));
 
-    builder.write("profile.js", {
-      file: files.pathJoin(toolsDir, "tool-env", "profile.js"),
+    builder.copyTranspiledModules([
+      "profile.ts"
+    ], {
+      sourceRootDir: files.pathJoin(toolsDir, "tool-env"),
     });
 
     // Server bootstrap
-    _.each([
+    builder.copyTranspiledModules([
       "boot.js",
       "boot-utils.js",
-      "debug.js",
+      "debug.ts",
       "server-json.js",
-      "mini-files.js",
+      "mini-files.ts",
       "npm-require.js",
       "npm-rebuild.js",
       "npm-rebuild-args.js",
-    ], function (filename) {
-      builder.write(filename, {
-        file: files.pathJoin(
-          toolsDir,
-          'static-assets',
-          'server',
-          filename
-        )
-      });
+      "runtime.js",
+    ], {
+      sourceRootDir: files.pathJoin(
+        toolsDir,
+        "static-assets",
+        "server",
+      ),
+      // If we're not in a checkout, then <toolsDir>/static-assets/server
+      // already contains transpiled files, so we can just copy them, without
+      // also transpiling them again.
+      needToTranspile: files.inCheckout(),
     });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
@@ -2632,7 +2733,7 @@ class ServerTarget extends JsImageTarget {
     // anything anymore
     if (archinfo.VALID_ARCHITECTURES[self.arch] !== true) {
       throw new Error(
-        `MDG does not publish dev_bundles for arch: ${self.arch}`
+        `Meteor Software does not publish dev_bundles for arch: ${self.arch}`
       );
     }
 
@@ -2642,7 +2743,6 @@ class ServerTarget extends JsImageTarget {
     var controlFilePath = 'boot.js';
     return {
       controlFile: controlFilePath,
-      nodePath: nodePath
     };
   }
 }
@@ -2667,9 +2767,13 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   let data = file.contents();
   const hash = file.hash();
 
+  if (builder.usePreviousWrite(file.targetPath, hash)) {
+    return;
+  }
+
   if (options && options.sourceMapUrl) {
     data = addSourceMappingURL(data, options.sourceMapUrl);
-  } else {
+  } else if (!options || !options.leaveSourceMapUrls) {
     // If we do not have an options.sourceMapUrl to append, then we still
     // want to remove any existing //# sourceMappingURL comments.
     // https://github.com/meteor/meteor/issues/9894
@@ -2737,19 +2841,27 @@ var writeTargetToPath = Profile(
   "bundler writeTargetToPath",
   function (name, target, outputPath, {
     includeNodeModules,
-    getRelativeTargetPath,
-    previousBuilder,
+    previousBuilder = null,
     buildMode,
     minifyMode,
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
-      previousBuilder
+      previousBuilder,
+      // We do not force an in-place build for individual targets like
+      // .meteor/local/build/programs/web.browser.legacy, because they
+      // tend to be written atomically, and it's important on Windows to
+      // avoid overwriting files that might be open currently in the build
+      // or server process.
+      // Server builds do use an in-place build since the server is always stopped
+      // during the build.
+      // If client in-place builds were safer on Windows, they
+      // would be much quicker than from-scratch rebuilds.
+      forceInPlaceBuild: name === 'server',
     });
 
     var targetBuild = target.write(builder, {
       includeNodeModules,
-      getRelativeTargetPath,
       buildMode,
       minifyMode,
     });
@@ -2760,7 +2872,6 @@ var writeTargetToPath = Profile(
       name,
       arch: target.mostCompatibleArch(),
       path: files.pathJoin('programs', name, targetBuild.controlFile),
-      nodePath: targetBuild.nodePath,
       cordovaDependencies: target.cordovaDependencies || undefined,
       builder
     };
@@ -2783,34 +2894,44 @@ var writeTargetToPath = Profile(
 //     serverWatchSet: watch.WatchSet for all files and directories that
 //                     ultimately went into all server programs
 //     starManifest: the JSON manifest of the star
-//     nodePath: an array of paths required to be set in NODE_PATH. It's
-//               up to the called to determine what they should be.
 // }
 //
 // options:
 // - includeNodeModules: string or falsy, documented on exports.bundle
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
-// - getRelativeTargetPath: see doc at ServerTarget.write
 // - previousBuilder: previous Builder object used in previous iteration
 var writeSiteArchive = Profile("bundler writeSiteArchive", function (
   targets, outputPath, {
     includeNodeModules,
     builtBy,
     releaseName,
-    getRelativeTargetPath,
-    previousBuilders,
+    previousBuilders = Object.create(null),
     buildMode,
-    minifyMode
+    minifyMode,
+    sourceRoot,
   }) {
 
   const builders = {};
-  const previousStarBuilder = previousBuilders && previousBuilders.star;
-  const builder = new Builder({outputPath,
-                               previousBuilder: previousStarBuilder});
-  builders.star = builder;
+  const builder = builders.star = new Builder({
+    outputPath,
+    previousBuilder: previousBuilders.star,
+    // If we were to build .meteor/local/build by first writing a fresh
+    // temporary directory and then renaming it over the existing output
+    // directory, we would sacrifice the ability to preserve any output
+    // directories that were not written as part of this archive, such as
+    // .meteor/local/build/programs/web.browser.legacy, which is often
+    // built/written later for performance reasons (#10055).
+    forceInPlaceBuild: true,
+  });
 
   try {
+    Object.keys(targets).forEach(key => {
+      // Both makeClientTarget and makeServerTarget get their sourceRoot
+      // from packageSource.sourceRoot, so this should always be true:
+      assert.strictEqual(targets[key].sourceRoot, sourceRoot);
+    });
+
     var json = {
       format: "site-archive-pre1",
       builtBy,
@@ -2818,8 +2939,8 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
       meteorRelease: releaseName,
       nodeVersion: process.versions.node,
       npmVersion: meteorNpm.npmVersion,
+      gitCommitHash: process.env.METEOR_GIT_COMMIT_HASH || files.findGitCommitHash(sourceRoot),
     };
-    var nodePath = [];
 
     // Tell the deploy server what version of the dependency kit we're using, so
     // it can load the right modules. (Include this even if we copied or
@@ -2874,31 +2995,23 @@ Find out more about Meteor at meteor.com.
 
     Object.keys(targets).forEach(name => {
       const target = targets[name];
-      const previousBuilder =
-              (previousBuilders && previousBuilders[name]) ?
-              previousBuilders[name] : null;
       const {
         arch, path, cordovaDependencies,
-        nodePath: targetNP,
         builder: targetBuilder
-      } =
-        writeTargetToPath(name, target, builder.buildPath, {
-          includeNodeModules,
-          builtBy,
-          releaseName,
-          getRelativeTargetPath,
-          previousBuilder,
-          buildMode,
-          minifyMode
-        });
+      } = writeTargetToPath(name, target, builder.buildPath, {
+        includeNodeModules,
+        builtBy,
+        releaseName,
+        previousBuilder: previousBuilders[name] || null,
+        buildMode,
+        minifyMode
+      });
 
       builders[name] = targetBuilder;
 
       json.programs.push({
         name, arch, path, cordovaDependencies
       });
-
-      nodePath = nodePath.concat(targetNP);
     });
 
     // Control file
@@ -2913,15 +3026,15 @@ Find out more about Meteor at meteor.com.
     // be adjusted so we can later pass them as previousBuilder's
     Object.keys(builders).forEach(name => {
       const subBuilder = builders[name];
-      subBuilder.outputPath = builder.outputPath + subBuilder.outputPath.substring(builder.buildPath.length);
+      subBuilder.outputPath = builder.outputPath +
+        subBuilder.outputPath.substring(builder.buildPath.length);
     });
 
     return {
       clientWatchSet,
       serverWatchSet,
       starManifest: json,
-      nodePath,
-      builders
+      builders,
     };
   } catch (e) {
     builder.abort();
@@ -2992,17 +3105,18 @@ Find out more about Meteor at meteor.com.
  * you are testing!
  */
 
-exports.bundle = function (options) {
+exports.bundle = Profile("bundler.bundle", function (options) {
   return files.withCache(() => bundle(options));
-};
+});
 
 function bundle({
   projectContext,
   outputPath,
   includeNodeModules,
   buildOptions,
-  previousBuilders,
+  previousBuilders = Object.create(null),
   hasCachedBundle,
+  allowDelayedClientBuilds = false,
 }) {
   buildOptions = buildOptions || {};
 
@@ -3030,10 +3144,11 @@ function bundle({
   var serverWatchSet = new watch.WatchSet();
   var clientWatchSet = new watch.WatchSet();
   var starResult = null;
-  var targets = {};
-  var nodePath = [];
   var lintingMessages = null;
-  var builders = {};
+
+  // If delayed client builds are allowed, this array will be populated
+  // with callbacks to run after the application process has started up.
+  const postStartupCallbacks = allowDelayedClientBuilds && [];
 
   const bundlerCacheDir =
       projectContext.getProjectLocalDirectory('bundler-cache');
@@ -3076,22 +3191,18 @@ function bundle({
     });
 
     var makeServerTarget = Profile(
-      "bundler.bundle..makeServerTarget", function (app, clientTargets) {
-      var targetOptions = {
+      "bundler.bundle..makeServerTarget", function (app, clientArchs) {
+      const server = new ServerTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         sourceRoot: packageSource.sourceRoot,
         arch: serverArch,
-        releaseName: releaseName,
-        appIdentifier: appIdentifier,
+        releaseName,
+        appIdentifier,
         buildMode: buildOptions.buildMode,
-      };
-      if (clientTargets) {
-        targetOptions.clientTargets = clientTargets;
-      }
-
-      var server = new ServerTarget(targetOptions);
+        clientArchs,
+      });
 
       server.make({
         packages: [app]
@@ -3151,80 +3262,99 @@ function bundle({
       return mergeAppWatchSets();
     }
 
-    var clientTargets = [];
+    const targets = Object.create(null);
+    const hasOwn = Object.prototype.hasOwnProperty;
+
+    // Write to disk
+    const writeOptions = {
+      includeNodeModules,
+      builtBy,
+      releaseName,
+      minifyMode,
+    };
+
+    function writeClientTarget(target) {
+      const { arch } = target;
+      const written = writeTargetToPath(arch, target, outputPath, {
+        buildMode: buildOptions.buildMode,
+        previousBuilder: previousBuilders[arch],
+        ...writeOptions,
+      });
+      clientWatchSet.merge(target.getWatchSet());
+      previousBuilders[arch] = written.builder;
+    }
+
     // Client
-    _.each(webArchs, function (arch) {
-      var client = makeClientTarget(app, arch, {minifiers});
-      clientTargets.push(client);
-      targets[arch] = client;
+    webArchs.forEach(arch => {
+      if (allowDelayedClientBuilds &&
+          hasOwn.call(previousBuilders, arch) &&
+          projectContext.platformList.canDelayBuildingArch(arch)) {
+        // If delayed client builds are allowed, and we have a previous
+        // builder for this arch, and it's an arch that we can safely
+        // build later (e.g. web.browser.legacy), then schedule it to be
+        // built after the server has started up.
+        postStartupCallbacks.push(async ({
+          pauseClient,
+          refreshClient,
+          runLog,
+        }) => {
+          const start = +new Date;
+
+          // Build the target first.
+          const target = makeClientTarget(app, arch, { minifiers });
+
+          // Tell the webapp package to pause responding to requests from
+          // clients that use this arch, because we're about to write a
+          // new version of this bundle to disk. If the message fails
+          // becuase the child process exited, proceed with writing the
+          // target anyway.
+          await pauseClient(arch).catch(ignoreHarmlessErrors);
+
+          // Now write the target to disk. Note that we are rewriting the
+          // bundle in place, so this work is not atomic by any means,
+          // which is why we needed to pause the client.
+          writeClientTarget(target);
+
+          // Refresh and unpause the client, now that writing is finished.
+          // If the child process exited for some reason, don't worry if
+          // this message fails.
+          await refreshClient(arch).catch(ignoreHarmlessErrors);
+
+          // Let the webapp package running in the child process know it
+          // should regenerate the client program for this arch.
+          if (Profile.enabled) {
+            runLog.log(`Finished delayed build of ${arch} in ${
+              new Date - start
+            }ms`, { arrow: true });
+          }
+        });
+
+      } else {
+        // Otherwise make the client target now, and write it below.
+        targets[arch] = makeClientTarget(app, arch, {minifiers});
+      }
     });
 
     // Server
     if (! hasCachedBundle) {
-      var server = makeServerTarget(app, clientTargets);
-      targets.server = server;
+      targets.server = makeServerTarget(app, webArchs);
     }
-
-    // Hack to let servers find relative paths to clients. Should find
-    // another solution eventually (probably some kind of mount
-    // directive that mounts the client bundle in the server at runtime)
-    var getRelativeTargetPath = function (options) {
-      var pathForTarget = function (target) {
-        var name;
-        _.each(targets, function (t, n) {
-          if (t === target) {
-            name = n;
-          }
-        });
-        if (! name) {
-          throw new Error("missing target?");
-        }
-        return files.pathJoin('programs', name);
-      };
-
-      return files.pathRelative(pathForTarget(options.relativeTo),
-                                pathForTarget(options.forTarget));
-    };
-
-    // Write to disk
-    var writeOptions = {
-      includeNodeModules,
-      builtBy,
-      releaseName,
-      getRelativeTargetPath,
-      minifyMode: minifyMode
-    };
 
     if (outputPath !== null) {
       if (hasCachedBundle) {
         // If we already have a cached bundle, just recreate the new targets.
         // XXX This might make the contents of "star.json" out of date.
-        builders = _.clone(previousBuilders);
-        _.each(targets, function (target, name) {
-          const previousBuilder = previousBuilders && previousBuilders[name];
-          var targetBuild = writeTargetToPath(
-            name, target, outputPath,
-            _.extend({
-              buildMode: buildOptions.buildMode,
-            }, writeOptions, {previousBuilder})
-         );
-          nodePath = nodePath.concat(targetBuild.nodePath);
-          clientWatchSet.merge(target.getWatchSet());
-          builders[name] = targetBuild.builder;
-        });
+        _.each(targets, writeClientTarget);
       } else {
-        starResult = writeSiteArchive(
-          targets,
-          outputPath,
-          _.extend({
-            buildMode: buildOptions.buildMode,
-          }, writeOptions, {previousBuilders})
-        );
-
-        nodePath = nodePath.concat(starResult.nodePath);
+        starResult = writeSiteArchive(targets, outputPath, {
+          buildMode: buildOptions.buildMode,
+          previousBuilders,
+          sourceRoot: packageSource.sourceRoot,
+          ...writeOptions,
+        });
         serverWatchSet.merge(starResult.serverWatchSet);
         clientWatchSet.merge(starResult.clientWatchSet);
-        builders = starResult.builders;
+        Object.assign(previousBuilders, starResult.builders);
       }
     }
 
@@ -3242,9 +3372,19 @@ function bundle({
     serverWatchSet,
     clientWatchSet,
     starManifest: starResult && starResult.starManifest,
-    nodePath,
-    builders
+    postStartupCallbacks,
   };
+}
+
+// Used as a catch handler for pauseClient and refreshClient above.
+function ignoreHarmlessErrors(error) {
+  switch (error && error.message) {
+  case "process exited":
+  case "channel closed":
+    return;
+  default:
+    throw error;
+  }
 }
 
 // Returns null if there are no lint warnings and the app has no linters

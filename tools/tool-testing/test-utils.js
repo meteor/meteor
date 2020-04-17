@@ -1,36 +1,31 @@
-var config = require('../meteor-services/config.js');
-var utils = require('../utils/utils.js');
-var auth = require('../meteor-services/auth.js');
-var selftest = require('./selftest.js');
-var httpHelpers = require('../utils/http-helpers.js');
-var _ = require('underscore');
-
+import { getAuthDDPUrl } from '../meteor-services/config.js';
+import { timeoutScaleFactor } from '../utils/utils.js';
+import { withAccountsConnection } from '../meteor-services/auth.js';
+import { fail, markStack } from './selftest.js';
+import { request } from '../utils/http-helpers.js';
+import { isEqual } from 'underscore';
 import { loadIsopackage } from '../tool-env/isopackets.js'
 
-var randomString = function (charsCount) {
+export function randomString(charsCount) {
   var chars = 'abcdefghijklmnopqrstuvwxyz';
   var str = '';
   for (var i = 0; i < charsCount; i++) {
     str = str + chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return str;
-};
+}
 
-exports.accountsCommandTimeoutSecs = 15 * utils.timeoutScaleFactor;
+export const accountsCommandTimeoutSecs = 15 * timeoutScaleFactor;
 
-exports.randomString = randomString;
-
-var randomAppName = function () {
+export function randomAppName() {
   return 'selftest-app-' + randomString(10);
-};
+}
 
-exports.randomAppName = randomAppName;
-
-exports.randomUserEmail = function () {
+export function randomUserEmail() {
   return 'selftest-user-' + randomString(15) + '@guerrillamail.com';
-};
+}
 
-exports.login = function (s, username, password) {
+export function login(s, username, password) {
   var run = s.run('login');
   run.waitSecs(15);
   run.matchErr('Username:');
@@ -40,33 +35,30 @@ exports.login = function (s, username, password) {
   run.waitSecs(15);
   run.matchErr('Logged in as ' + username + ".");
   run.expectExit(0);
-};
+}
 
-exports.logout = function (s) {
+export function logout(s) {
   var run = s.run('logout');
   run.waitSecs(15);
   run.matchErr('Logged out');
   run.expectExit(0);
-};
-
-var registrationUrlRegexp =
-      /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
-exports.registrationUrlRegexp = registrationUrlRegexp;
-
-function ddpConnect(url) {
-  return loadIsopackage('ddp-client').DDP.connect(url);
 }
 
-exports.ddpConnect = ddpConnect;
+export const registrationUrlRegexp =
+  /https:\/\/www\.meteor\.com\/setPassword\?([a-zA-Z0-9\+\/]+)/;
+
+export function ddpConnect(url) {
+  return loadIsopackage('ddp-client').DDP.connect(url);
+}
 
 // Given a registration token created by doing a deferred registration
 // with `email`, makes a DDP connection to the accounts server and
 // finishes the registration process.
-exports.registerWithToken = function (token, username, password, email) {
+export function registerWithToken(token, username, password, email) {
   // XXX It might make more sense to hard-code the DDP url to
   // https://www.meteor.com, since that's who the sandboxes are talking
   // to.
-  var accountsConn = ddpConnect(config.getAuthDDPUrl());
+  var accountsConn = ddpConnect(getAuthDDPUrl());
   var registrationTokenInfo = accountsConn.call('registrationTokenInfo',
                                                 token);
   var registrationCode = registrationTokenInfo.code;
@@ -78,57 +70,56 @@ exports.registerWithToken = function (token, username, password, email) {
     code: registrationCode
   });
   accountsConn.close();
-};
+}
 
-exports.randomOrgName = function () {
+export function randomOrgName() {
   return "selftestorg" + exports.randomString(10);
-};
+}
 
 // Logs in as the specified user and creates a randomly named
 // organization. Returns the organization name. Calls selftest.fail if
 // the organization can't be created.
-exports.createOrganization = function (username, password) {
+export function createOrganization(username, password) {
   var orgName = exports.randomOrgName();
-  auth.withAccountsConnection(function (conn) {
+  withAccountsConnection(function (conn) {
     try {
       conn.call("login", {
         meteorAccountsLoginInfo: { username: username, password: password },
         clientInfo: {}
       });
     } catch (err) {
-      selftest.fail("Failed to log in to Meteor developer accounts\n" +
+      fail("Failed to log in to Meteor developer accounts\n" +
                     "with test user: " + err);
     }
 
     try {
       conn.call("createOrganization", orgName);
     } catch (err) {
-      selftest.fail("Failed to create organization: " + err);
+      fail("Failed to create organization: " + err);
     }
   })();
 
   return orgName;
-};
+}
 
-exports.getMeteorRuntimeConfigFromHTML = function (html) {
+export function getMeteorRuntimeConfigFromHTML(html) {
   var m = html.match(/__meteor_runtime_config__ = JSON.parse\(decodeURIComponent\("([^"]+?)"\)\)/);
   if (! m) {
-    selftest.fail("Can't find __meteor_runtime_config__");
+    fail("Can't find __meteor_runtime_config__");
   }
   return JSON.parse(decodeURIComponent(m[1]));
-};
-
+}
 
 // Poll the given app looking for the correct settings. Throws an error
 // if the settings aren't found after a timeout.
-exports.checkForSettings = selftest.markStack(function (appName, settings, timeoutSecs) {
+export const checkForSettings = markStack(function (appName, settings, timeoutSecs) {
   var timeoutDate = new Date(new Date().valueOf() + timeoutSecs * 1000);
   while (true) {
     if (new Date() >= timeoutDate) {
-      selftest.fail('Expected settings not found on app ' + appName);
+      fail('Expected settings not found on app ' + appName);
     }
 
-    var result = httpHelpers.request('http://' + appName);
+    var result = request('http://' + appName);
 
     // XXX This is brittle; the test will break if we start formatting the
     // __meteor_runtime_config__ JS differently. Ideally we'd do something
@@ -146,3 +137,15 @@ exports.checkForSettings = selftest.markStack(function (appName, settings, timeo
     }
   }
 });
+
+export function markThrowingMethods(prototype) {
+  Object.keys(prototype).forEach(key => {
+    const value = prototype[key];
+    if (typeof value === "function") {
+      const code = Function.prototype.toString.call(value);
+      if (/\bnew TestFailure\b/.test(code)) {
+        prototype[name] = markStack(value);
+      }
+    }
+  });
+}

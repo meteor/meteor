@@ -5,12 +5,12 @@ var Future = require("fibers/future");
 var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
-var files = require('./mini-files.js');
+var files = require('./mini-files');
 var npmRequire = require('./npm-require.js').require;
-var Profile = require('./profile.js').Profile;
+var Profile = require('./profile').Profile;
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v8.0.0';
+var MIN_NODE_VERSION = 'v12.0.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
@@ -27,12 +27,21 @@ var serverJson = require("./server-json.js");
 var configJson =
   JSON.parse(fs.readFileSync(path.resolve(serverDir, 'config.json'), 'utf8'));
 
+var programsDir = path.dirname(serverDir);
+var buildDir = path.dirname(programsDir);
+var starJson = JSON.parse(fs.readFileSync(path.join(buildDir, "star.json")));
+
 // Set up environment
 __meteor_bootstrap__ = {
   startupHooks: [],
   serverDir: serverDir,
-  configJson: configJson };
-__meteor_runtime_config__ = { meteorRelease: configJson.meteorRelease };
+  configJson: configJson
+};
+
+__meteor_runtime_config__ = {
+  meteorRelease: configJson.meteorRelease,
+  gitCommitHash: starJson.gitCommitHash
+};
 
 if (!process.env.APP_ID) {
   process.env.APP_ID = configJson.appId;
@@ -46,7 +55,7 @@ const meteorDebugFuture =
 
 function maybeWaitForDebuggerToAttach() {
   if (meteorDebugFuture) {
-    const { pause } = require("./debug.js");
+    const { pause } = require("./debug");
     const pauseThresholdMs = 50;
     const pollIntervalMs = 500;
     const waitStartTimeMs = +new Date;
@@ -196,13 +205,12 @@ var specialArgPaths = {
 
   "packages/dynamic-import.js": function (file) {
     var dynamicImportInfo = {};
+    var clientArchs = configJson.clientArchs ||
+      Object.keys(configJson.clientPaths);
 
-    Object.keys(configJson.clientPaths).map(function (key) {
-      var programJsonPath = path.resolve(configJson.clientPaths[key]);
-      var programJson = require(programJsonPath);
-
-      dynamicImportInfo[key] = {
-        dynamicRoot: path.join(path.dirname(programJsonPath), "dynamic")
+    clientArchs.forEach(function (arch) {
+      dynamicImportInfo[arch] = {
+        dynamicRoot: path.join(programsDir, arch, "dynamic")
       };
     });
 

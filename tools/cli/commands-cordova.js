@@ -3,7 +3,6 @@ import main from './main.js';
 import { Console } from '../console/console.js';
 import catalog from '../packaging/catalog/catalog.js';
 import buildmessage from '../utils/buildmessage.js';
-import files from '../fs/files.js';
 import {
   CORDOVA_PLATFORMS,
   ensureDevBundleDependencies,
@@ -34,7 +33,7 @@ function doAddPlatform(options) {
   let installedPlatforms = projectContext.platformList.getPlatforms();
 
   main.captureAndExit('', 'adding platforms', () => {
-    for (platform of platformsToAdd) {
+    for (var platform of platformsToAdd) {
       if (_.contains(installedPlatforms, platform)) {
         buildmessage.error(`${platform}: platform is already added`);
       } else if (!_.contains(CORDOVA_PLATFORMS, platform)) {
@@ -49,7 +48,7 @@ function doAddPlatform(options) {
     const cordovaProject = new CordovaProject(projectContext);
     if (buildmessage.jobHasMessages()) return;
 
-    installedPlatforms = installedPlatforms.concat(platformsToAdd)
+    installedPlatforms = installedPlatforms.concat(platformsToAdd);
     const cordovaPlatforms = filterPlatforms(installedPlatforms);
     cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
 
@@ -60,7 +59,7 @@ function doAddPlatform(options) {
     // Only write the new platform list when we have succesfully synchronized
     projectContext.platformList.write(installedPlatforms);
 
-    for (platform of platformsToAdd) {
+    for (var platform of platformsToAdd) {
       Console.info(`${platform}: added platform`);
       if (_.contains(cordovaPlatforms, platform)) {
         cordovaProject.checkPlatformRequirements(platform);
@@ -122,7 +121,7 @@ main.registerCommand({
   notOnWindows: false
 }, function (options) {
   ensureDevBundleDependencies();
-  doAddPlatform(options);
+    doAddPlatform(options);
 });
 
 // Remove one or more Cordova platforms
@@ -189,4 +188,20 @@ Alternatively, you can launch it by running the 'android' command.
 to your PATH.)`);
 
   return 0;
+});
+
+main.registerCommand({
+  name: 'ensure-cordova-dependencies',
+  options: {
+    verbose: { type: Boolean, short: "v" }
+  },
+  minArgs: 0,
+  maxArgs: Infinity,
+  requiresApp: true,
+  catalogRefresh: new catalog.Refresh.Never(),
+}, function (options) {
+  Console.setVerbose(!!options.verbose);
+
+  ensureDevBundleDependencies();
+  Console.info("Cordova dependencies are installed.");
 });

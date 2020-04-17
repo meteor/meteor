@@ -16,11 +16,10 @@ meteorJsMinify = function (source) {
           "process.env.NODE_ENV": NODE_ENV
         }
       },
-      mangle: {
-        // Fix issue #9866, as explained in this comment:
-        // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
-        safari10: true
-      }
+      // Fix issue #9866, as explained in this comment:
+      // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
+      // And fix terser issue #117: https://github.com/terser-js/terser/issues/117
+      safari10: true,
     });
 
     if (typeof terserResult.code === "string") {

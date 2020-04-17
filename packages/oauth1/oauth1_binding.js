@@ -23,18 +23,18 @@ export class OAuth1Binding {
     const headers = this._buildHeader({
       oauth_callback: callbackUrl
     });
-  
+
     const response = this._call('POST', this._urls.requestToken, headers);
     const tokens = querystring.parse(response.content);
-  
+
     if (! tokens.oauth_callback_confirmed)
       throw Object.assign(new Error("oauth_callback_confirmed false when requesting oauth1 token"),
                                {response: response});
-  
+
     this.requestToken = tokens.oauth_token;
     this.requestTokenSecret = tokens.oauth_token_secret;
   }
-  
+
   prepareAccessToken(query, requestTokenSecret) {
     // support implementations that use request token secrets. This is
     // read by this._call.
@@ -44,15 +44,15 @@ export class OAuth1Binding {
     // arguments, but this is stored.
     if (requestTokenSecret)
       this.accessTokenSecret = requestTokenSecret;
-  
+
     const headers = this._buildHeader({
       oauth_token: query.oauth_token,
       oauth_verifier: query.oauth_verifier
     });
-  
+
     const response = this._call('POST', this._urls.accessToken, headers);
     const tokens = querystring.parse(response.content);
-  
+
     if (! tokens.oauth_token || ! tokens.oauth_token_secret) {
       const error = new Error("missing oauth token or secret");
       // We provide response only if no token is available, we do not want to leak any tokens
@@ -61,31 +61,31 @@ export class OAuth1Binding {
       }
       throw error;
     }
-  
+
     this.accessToken = tokens.oauth_token;
     this.accessTokenSecret = tokens.oauth_token_secret;
   }
-  
+
   call(method, url, params, callback) {
     const headers = this._buildHeader({
       oauth_token: this.accessToken
     });
-  
+
     if(! params) {
       params = {};
     }
-  
+
     return this._call(method, url, headers, params, callback);
   }
-  
+
   get(url, params, callback) {
     return this.call('GET', url, params, callback);
   }
-  
+
   post(url, params, callback) {
     return this.call('POST', url, params, callback);
   }
-  
+
   _buildHeader(headers) {
     return {
       oauth_consumer_key: this._config.consumerKey,
@@ -96,52 +96,52 @@ export class OAuth1Binding {
       ...headers,
     }
   }
-  
+
   _getSignature(method, url, rawHeaders, accessTokenSecret, params) {
     const headers = this._encodeHeader({ ...rawHeaders, ...params });
-  
-    const parameters = headers.map((val, key) => `${key}=${val}`)
+
+    const parameters = Object.keys(headers).map(key => `${key}=${headers[key]}`)
       .sort().join('&');
-  
+
     const signatureBase = [
       method,
       this._encodeString(url),
       this._encodeString(parameters)
     ].join('&');
-  
+
     const secret = OAuth.openSecret(this._config.secret);
-  
-    const signingKey = `${this._encodeString(secret)}&`;
+
+    let signingKey = `${this._encodeString(secret)}&`;
     if (accessTokenSecret)
       signingKey += this._encodeString(accessTokenSecret);
-  
+
     return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
   };
-  
+
   _call(method, url, headers = {}, params = {}, callback) {
     // all URLs to be functions to support parameters/customization
     if(typeof url === "function") {
       url = url(this);
     }
-  
+
     // Extract all query string parameters from the provided URL
     const parsedUrl = urlModule.parse(url, true);
     // Merge them in a way that params given to the method call have precedence
     params = { ...parsedUrl.query, ...params };
-  
+
     // Reconstruct the URL back without any query string parameters
     // (they are now in params)
     parsedUrl.query = {};
     parsedUrl.search = '';
     url = urlModule.format(parsedUrl);
-  
+
     // Get the signature
     headers.oauth_signature =
       this._getSignature(method, url, headers, this.accessTokenSecret, params);
-  
+
     // Make a authorization string according to oauth1 spec
     const authString = this._getAuthHeaderString(headers);
-  
+
     // Make signed request
     try {
       const response = HTTP.call(method, url, {
@@ -164,22 +164,22 @@ export class OAuth1Binding {
                      {response: err.response});
     }
   };
-  
+
   _encodeHeader(header) {
-    return header.reduce((memo, val, key) => {
-      memo[this._encodeString(key)] = this._encodeString(val);
+    return Object.keys(header).reduce((memo, key) => {
+      memo[this._encodeString(key)] = this._encodeString(header[key]);
       return memo;
     }, {});
   };
-  
+
   _encodeString(str) {
     return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
   };
-  
+
   _getAuthHeaderString(headers) {
-    return 'OAuth ' +  headers.map((val, key) => 
-      `${this._encodeString(key)}="${this._encodeString(val)}"`
+    return 'OAuth ' +  Object.keys(headers).map(key =>
+      `${this._encodeString(key)}="${this._encodeString(headers[key])}"`
     ).sort().join(', ');
   };
-  
+
 };

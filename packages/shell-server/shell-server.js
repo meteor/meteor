@@ -12,6 +12,9 @@ import {
 import { createServer } from "net";
 import { start as replStart } from "repl";
 
+// Enable process.sendMessage for communication with build process.
+import "meteor/inter-process-messaging";
+
 const INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
 const EXITING_MESSAGE = "Shell exiting...";
 
@@ -209,6 +212,7 @@ class Server {
     });
 
     const repl = this.repl = replStart(options);
+    const { shellDir } = this;
 
     // This is technique of setting `repl.context` is similar to how the
     // `useGlobal` option would work during a normal `repl.start()` and
@@ -233,7 +237,9 @@ class Server {
     function wrappedDefaultEval(code, context, file, callback) {
       if (Package.ecmascript) {
         try {
-          code = Package.ecmascript.ECMAScript.compileForShell(code);
+          code = Package.ecmascript.ECMAScript.compileForShell(code, {
+            cacheDirectory: getCacheDirectory(shellDir)
+          });
         } catch (err) {
           // Any Babel error here might be just fine since it's
           // possible the code was incomplete (multi-line code on the REPL).
@@ -305,34 +311,38 @@ class Server {
     repl.defineCommand("reload", {
       help: "Restart the server and the shell",
       action: function() {
-        process.exit(0);
+        if (process.sendMessage) {
+          process.sendMessage("shell-server", { command: "reload" });
+        } else {
+          process.exit(0);
+        }
       }
     });
   }
 
   // This function allows a persistent history of shell commands to be saved
-  // to and loaded from .meteor/local/shell-history.
+  // to and loaded from .meteor/local/shell/history.
   initializeHistory() {
-    const rli = this.repl.rli;
+    const repl = this.repl;
     const historyFile = getHistoryFile(this.shellDir);
     let historyFd = openSync(historyFile, "a+");
     const historyLines = readFileSync(historyFile, "utf8").split("\n");
     const seenLines = Object.create(null);
 
-    if (! rli.history) {
-      rli.history = [];
-      rli.historyIndex = -1;
+    if (! repl.history) {
+      repl.history = [];
+      repl.historyIndex = -1;
     }
 
-    while (rli.history && historyLines.length > 0) {
+    while (repl.history && historyLines.length > 0) {
       const line = historyLines.pop();
       if (line && /\S/.test(line) && ! seenLines[line]) {
-        rli.history.push(line);
+        repl.history.push(line);
         seenLines[line] = true;
       }
     }
 
-    rli.addListener("line", function(line) {
+    repl.addListener("line", function(line) {
       if (historyFd >= 0 && /\S/.test(line)) {
         writeSync(historyFd, line + "\n");
       }
@@ -404,6 +414,9 @@ function getHistoryFile(shellDir) {
   return pathJoin(shellDir, "history");
 }
 
+function getCacheDirectory(shellDir) {
+  return pathJoin(shellDir, "cache");
+}
 
 function setRequireAndModule(context) {
   if (Package.modules) {

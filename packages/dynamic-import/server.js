@@ -8,7 +8,6 @@ const {
 } = require("path");
 const { fetchURL } = require("./common.js");
 const { Meteor } = require("meteor/meteor");
-const { isModern } = require("meteor/modern-browsers");
 const hasOwn = Object.prototype.hasOwnProperty;
 
 require("./security.js");
@@ -112,27 +111,19 @@ function middleware(request, response) {
 }
 
 function getPlatform(request) {
-  const { identifyBrowser } = Package.webapp.WebAppInternals;
-  const browser = identifyBrowser(request.headers["user-agent"]);
-  let platform = isModern(browser)
-    ? "web.browser"
-    : "web.browser.legacy";
-
   // If the __dynamicImport request includes a secret key, and it matches
   // dynamicImportInfo[platform].key, use platform instead of the default
   // platform, web.browser.
   const secretKey = request.query.key;
-
   if (typeof secretKey === "string") {
-    Object.keys(dynamicImportInfo).some(p => {
+    for (const p of Object.keys(dynamicImportInfo)) {
       if (secretKey === dynamicImportInfo[p].key) {
-        platform = p;
-        return true;
+        return p;
       }
-    });
+    }
   }
 
-  return platform;
+  return Package.webapp.WebApp.categorizeRequest(request).arch;
 }
 
 function readTree(tree, platform) {
@@ -207,12 +198,15 @@ function getCache(platform) {
     : cachesByPlatform[platform] = Object.create(null);
 }
 
-process.on("message", msg => {
-  // The cache for the "web.browser" platform needs to be discarded
-  // whenever a client-only refresh occurs, so that new client code does
-  // not receive stale module data from __dynamicImport. This code handles
-  // the same message listened for by the autoupdate package.
-  if (msg && msg.refresh === "client") {
-    delete cachesByPlatform["web.browser"];
-  }
+const { onMessage } = require("meteor/inter-process-messaging");
+
+onMessage("client-refresh", () => {
+  // The caches for the web.browser[.legacy] platforms need to be
+  // discarded whenever a client-only refresh occurs, so the new client
+  // bundle does not fetch stale module data from dynamic import(). This
+  // message is sent by tools/runners/run-app.js and also consumed by the
+  // autoupdate package.
+  Object.keys(cachesByPlatform).forEach(platform => {
+    delete cachesByPlatform[platform];
+  });
 });

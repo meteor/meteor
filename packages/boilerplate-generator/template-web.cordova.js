@@ -68,7 +68,6 @@ export const headTemplate = ({
         })
     )),
     '',
-    head,
     '</head>',
     '',
     '<body>',

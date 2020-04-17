@@ -25,12 +25,6 @@ Also `files.pathJoin` instead of `path.join` and others to properly preserve the
 unixy feel of paths: `/C/Users/IEUser/AppData/Local` instead of
 `C:\Users\IEUser\AppData\Local`.
 
-### `mini-files`
-
-Some code is shared between the tool libs (this folder) and the code that gets
-copied to a built bundle (`boot.js`). The shared code is stored in
-`mini-files.js`.
-
 ## File watching
 
 Since node.js doesn't ship a stable library to watch a folder on all

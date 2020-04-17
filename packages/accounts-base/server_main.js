@@ -1,4 +1,4 @@
-import {AccountsServer} from "./accounts_server.js";
+import { AccountsServer } from "./accounts_server.js";
 
 /**
  * @namespace Accounts
