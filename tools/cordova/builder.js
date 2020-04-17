@@ -12,7 +12,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
 import XmlBuilder from 'xmlbuilder2';
 
-import { CORDOVA_ARCH } from './index.js';
+import { CORDOVA_ARCH, SWIFT_VERSION } from './index.js';
 
 // Hard-coded size constants
 
@@ -121,7 +121,9 @@ export class CordovaBuilder {
     this.additionalConfiguration = {
       global: {
         'webviewbounce': false,
-        'DisallowOverscroll': true
+        'DisallowOverscroll': true,
+        'WKWebViewOnly': true,
+        'SwiftVersion': SWIFT_VERSION
       },
       platform: {
         ios: {},
@@ -391,23 +393,23 @@ export class CordovaBuilder {
 
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
     _.each(resourceFiles, resourceFile => {
-      // Copy file in cordova project root directory
-      var filename = path.parse(resourceFile.src).base;
+      // Copy resource files in cordova project root ./resource-files directory keeping original absolute path
+      var filepath = files.pathResolve(this.projectContext.projectDir, resourceFile.src);
       files.copyFile(
-        files.pathResolve(this.projectContext.projectDir, resourceFile.src),
-        files.pathJoin(this.projectRoot, filename));
+        filepath,
+        files.pathJoin(this.projectRoot, "resource-files", filepath));
       // And entry in config.xml
       if (!resourceFile.platform ||
-        (resourceFile.platform && resourceFile.platform === "android")) {
+          (resourceFile.platform && resourceFile.platform === "android")) {
         androidElement.ele('resource-file', {
-          src: resourceFile.src,
+          src: files.pathJoin("resource-files", filepath),
           target: resourceFile.target
         });
       }
       if (!resourceFile.platform ||
-        (resourceFile.platform && resourceFile.platform === "ios")) {
+          (resourceFile.platform && resourceFile.platform === "ios")) {
         iosElement.ele('resource-file', {
-          src: resourceFile.src,
+          src: files.pathJoin("resource-files", filepath),
           target: resourceFile.target
         });
       }

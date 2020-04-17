@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.8.3'
+  version: '1.9.1'
 });
 
 Npm.depends({"basic-auth-connect": "1.0.0",
@@ -20,9 +20,9 @@ Npm.strip({
 });
 
 Cordova.depends({
-  'cordova-plugin-whitelist': '1.3.3',
-  'cordova-plugin-wkwebview-engine': '1.1.4',
-  'cordova-plugin-meteor-webapp': '1.7.0'
+  'cordova-plugin-whitelist': '1.3.4',
+  'cordova-plugin-wkwebview-engine': '1.2.1',
+  'cordova-plugin-meteor-webapp': '1.9.1'
 });
 
 Package.onUse(function (api) {

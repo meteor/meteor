@@ -402,15 +402,19 @@ describe("local node_modules", () => {
   });
 
   it("can import @babel/runtime/helpers/esm/*", () => {
-    function check(exports) {
-      assert.strictEqual(typeof exports.default, "function");
-    }
-    check(require("@babel/runtime/helpers/esm/asyncIterator.js"));
-    check(require("@babel/runtime/helpers/esm/createClass.js"));
-    check(require("@babel/runtime/helpers/esm/getPrototypeOf.js"));
-    check(require("@babel/runtime/helpers/esm/inherits.js"));
-    check(require("@babel/runtime/helpers/esm/toArray.js"));
-    check(require("@babel/runtime/helpers/esm/typeof.js"));
+    import asyncIterator from "@babel/runtime/helpers/esm/asyncIterator.js";
+    import createClass from "@babel/runtime/helpers/esm/createClass.js";
+    import getPrototypeOf from "@babel/runtime/helpers/esm/getPrototypeOf.js";
+    import inherits from "@babel/runtime/helpers/esm/inherits.js";
+    import toArray from "@babel/runtime/helpers/esm/toArray.js";
+    import _typeof from "@babel/runtime/helpers/esm/typeof.js";
+
+    assert.strictEqual(typeof asyncIterator, "function");
+    assert.strictEqual(typeof createClass, "function");
+    assert.strictEqual(typeof getPrototypeOf, "function");
+    assert.strictEqual(typeof inherits, "function");
+    assert.strictEqual(typeof toArray, "function");
+    assert.strictEqual(typeof _typeof, "function");
   });
 
   it('can import packages with broken "module" fields', () => {
@@ -568,6 +572,7 @@ describe("symlinking node_modules", () => {
     assert.strictEqual(tuple1, tuple2);
   });
 
+  Meteor.isClient &&
   it("should support application-compiled `npm link`ed packages", () => {
     assert.strictEqual(
       require.resolve("acorn"),

@@ -767,6 +767,14 @@ _.extend(AppRunner.prototype, {
     var serverWatcher;
     var clientWatcher;
 
+    appProcess.proc.onMessage("shell-server", message => {
+      if (message && message.command === "reload") {
+        self._resolvePromise("run", { outcome: "changed" });
+      } else {
+        return Promise.reject("Unsupported shell command: " + message);
+      }
+    });
+
     if (self.watchForChanges) {
       serverWatcher = new watch.Watcher({
         watchSet: serverWatchSet,

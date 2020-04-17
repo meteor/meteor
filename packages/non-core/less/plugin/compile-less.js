@@ -62,6 +62,8 @@ class LessCompiler extends MultiFileCachingCompiler {
     return less.render(inputFile.getContentsAsBuffer().toString('utf8'), {
       filename: this.getAbsoluteImportPath(inputFile),
       plugins: [importPlugin],
+      // Enabled as it was default true before less v3.0.0
+      javascriptEnabled: true,
       // Generate a source map, and include the source files in the
       // sourcesContent field. (Note that source files which don't
       // themselves produce text (eg, are entirely variable definitions)
@@ -81,11 +83,11 @@ class LessCompiler extends MultiFileCachingCompiler {
       };
 
       const referencedImportPaths = [];
-      output.imports.forEach((path) => {
+      output.imports.forEach((outputPath) => {
         // Some files that show up in output.imports are not actually files; for
         // example @import url("...");
-        if (allFiles.has(path)) {
-          referencedImportPaths.push(path);
+        if (allFiles.has(outputPath)) {
+          referencedImportPaths.push(outputPath);
         }
       });
 
@@ -109,22 +111,18 @@ class LessCompiler extends MultiFileCachingCompiler {
   addCompileResult(inputFile, compileResult) {
     inputFile.addStylesheet({
       data: compileResult.css,
-      path: inputFile.getPathInPackage() + '.css',
+      path: `${inputFile.getPathInPackage()}.css`,
       sourceMap: compileResult.sourceMap
     });
   }
 }
 
-class MeteorImportLessPlugin {
-  constructor(allFiles) {
-    this.allFiles = allFiles;
-    this.minVersion = [2, 5, 0];
-  }
+function MeteorImportLessPlugin(allFiles) {
+  this.minVersion = [3, 6, 0];
 
-  install(less, pluginManager) {
-    pluginManager.addFileManager(
-      new MeteorImportLessFileManager(this.allFiles));
-  }
+  this.install = (l, pluginManager) => {
+    pluginManager.addFileManager(new MeteorImportLessFileManager(allFiles));
+  };
 }
 
 class MeteorImportLessFileManager extends less.AbstractFileManager {
@@ -138,20 +136,17 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
     // We shouldn't process files that start with `//` or a protocol because
     // those are not relative to the app at all; they are probably native
     // CSS imports
-    if (! filename.match(/^(https?:)?\/\//)) {
-      return true;
-    }
-
-    return false;
+    return !filename.match(/^(https?:)?\/\//);
   }
 
-  loadFile(filename, currentDirectory, options, environment, cb) {
+  loadFile(filename, currentDirectory) {
     const packageMatch = currentDirectory.match(/^(\{[^}]*\})/);
-    if (! packageMatch) {
+    if (!packageMatch) {
       // shouldn't happen.  all filenames less ever sees should involve this {}
       // thing!
-      cb(new Error('file without Meteor context? ' + currentDirectory));
-      return;
+      return Promise.reject(
+        new Error(`file without Meteor context? ${currentDirectory}`)
+      );
     }
     const currentPackagePrefix = packageMatch[1];
 
@@ -164,28 +159,41 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
     } else {
       resolvedFilename = path.join(currentDirectory, filename);
     }
+    // Import rule from less:
+    // If it does not have an extension, .less will be appended and it will be included as a imported Less file.
+    if (
+      !this.allFiles.has(resolvedFilename) &&
+      this.allFiles.has(`${resolvedFilename}.less`)
+    ) {
+      resolvedFilename = `${resolvedFilename}.less`;
+    }
 
     if (!this.allFiles.has(resolvedFilename)) {
-      cb({type: 'File', message: 'Unknown import: ' + filename});
-      return;
+      return Promise.reject(new Error(`Unknown import: ${filename}`));
     }
-    cb(null, {
+
+    return Promise.resolve({
       contents: this.allFiles.get(resolvedFilename)
         .getContentsAsBuffer().toString('utf8'),
-      filename: resolvedFilename
+      filename: resolvedFilename,
     });
   }
 }
 
-function decodeFilePath (filePath) {
+function decodeFilePath(filePath) {
   const match = filePath.match(/^{(.*)}\/(.*)$/);
-  if (! match)
-    throw new Error('Failed to decode Less path: ' + filePath);
+
+  if (!match) {
+    // Sometimes a filePath may be an URL, such as when loading fonts from
+    // https://fonts.googleapis.com/css. Preserve those URLs instead of
+    // trying to rewrite them.
+    return filePath;
+  }
 
   if (match[1] === '') {
-    // app
+    // Importing from the application, not from a Meteor package.
     return match[2];
   }
 
-  return 'packages/' + match[1] + '/' + match[2];
+  return `packages/${match[1]}/${match[2]}`;
 }

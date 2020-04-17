@@ -41,7 +41,7 @@ if (Test-Path $devbundle_zip) {
 
 Write-Host "Extracting $TARBALL to the dev_bundle directory"
 
-cmd /C "7z.exe x $devbundle_zip -so | 7z.exe x -aoa -si -ttar -o$CHECKOUT_DIR\dev_bundle_XXX" | out-null
+cmd /C "7z.exe x `"$devbundle_zip`" -so | 7z.exe x -aoa -si -ttar -o`"$CHECKOUT_DIR\dev_bundle_XXX`"" | out-null
 if ($LASTEXITCODE -ne 0) {
   Exit 1
 }

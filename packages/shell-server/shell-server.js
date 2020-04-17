@@ -12,6 +12,9 @@ import {
 import { createServer } from "net";
 import { start as replStart } from "repl";
 
+// Enable process.sendMessage for communication with build process.
+import "meteor/inter-process-messaging";
+
 const INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
 const EXITING_MESSAGE = "Shell exiting...";
 
@@ -308,7 +311,11 @@ class Server {
     repl.defineCommand("reload", {
       help: "Restart the server and the shell",
       action: function() {
-        process.exit(0);
+        if (process.sendMessage) {
+          process.sendMessage("shell-server", { command: "reload" });
+        } else {
+          process.exit(0);
+        }
       }
     });
   }

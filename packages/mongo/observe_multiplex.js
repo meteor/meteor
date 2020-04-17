@@ -155,11 +155,7 @@ _.extend(ObserveMultiplexer.prototype, {
         return;
 
       // First, apply the change to the cache.
-      // XXX We could make applyChange callbacks promise not to hang on to any
-      // state from their arguments (assuming that their supplied callbacks
-      // don't) and skip this clone. Currently 'changed' hangs on to state
-      // though.
-      self._cache.applyChange[callbackName].apply(null, EJSON.clone(args));
+      self._cache.applyChange[callbackName].apply(null, args);
 
       // If we haven't finished the initial adds, then we should only be getting
       // adds.
@@ -179,7 +175,8 @@ _.extend(ObserveMultiplexer.prototype, {
           return;
         var callback = handle['_' + callbackName];
         // clone arguments so that callbacks can mutate their arguments
-        callback && callback.apply(null, EJSON.clone(args));
+        callback && callback.apply(null,
+          handle.nonMutatingCallbacks ? args : EJSON.clone(args));
       });
     });
   },
@@ -199,8 +196,8 @@ _.extend(ObserveMultiplexer.prototype, {
     self._cache.docs.forEach(function (doc, id) {
       if (!_.has(self._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
-      var fields = EJSON.clone(doc);
-      delete fields._id;
+      const { _id, ...fields } = handle.nonMutatingCallbacks ? doc
+        : EJSON.clone(doc);
       if (self._ordered)
         add(id, fields, null); // we're going in order, so add at end
       else
@@ -211,7 +208,9 @@ _.extend(ObserveMultiplexer.prototype, {
 
 
 var nextObserveHandleId = 1;
-ObserveHandle = function (multiplexer, callbacks) {
+
+// When the callbacks do not mutate the arguments, we can skip a lot of data clones
+ObserveHandle = function (multiplexer, callbacks, nonMutatingCallbacks = false) {
   var self = this;
   // The end user is only supposed to call stop().  The other fields are
   // accessible to the multiplexer, though.
@@ -231,6 +230,7 @@ ObserveHandle = function (multiplexer, callbacks) {
   });
   self._stopped = false;
   self._id = nextObserveHandleId++;
+  self.nonMutatingCallbacks = nonMutatingCallbacks;
 };
 ObserveHandle.prototype.stop = function () {
   var self = this;

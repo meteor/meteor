@@ -84,30 +84,16 @@ Explore ideas to implement HMR in Meteor.
 Migrate packages that do not depend on Meteor exclusive features to NPM and we also continue to encourage new packages to be published as NPM packages when possible.
 
 ## Cordova
-### Update Cordova to 9
-- Leaders: [Filipe Névola](https://github.com/filipenevola) / [Renan Castro](https://github.com/renanccastro)
-- Status: In Progress (1.10-beta.4)
-- PRs: https://github.com/meteor/meteor/pull/10861 / https://github.com/meteor/meteor/pull/10810
-
-Update Cordoba lib and its dependencies to latest (version 9)
-
 ### Cordova documentation
-- Leaders: <you?>
+- Leaders: [Filipe Névola](https://github.com/filipenevola)
 - Status: -
 - PRs: -
 
 Provide a skeleton with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide ([Forums post](https://forums.meteor.com/t/lets-create-the-ultimate-cordova-hot-code-push-faq-doc/50500)).
 
 ## DB
-### Update MongoDB driver
-- Leaders: [Christian Klaussner](https://github.com/klaussner)
-- Status: In Progress (1.10-beta.4)
-- PRs: https://github.com/meteor/meteor/pull/10861 / https://github.com/meteor/meteor/pull/10723
-
-Update to Mongodb driver from 3.2.7 to 3.3.5, this version is compatible with MongoDB 4.2.
-
 ### Minimongo secondary index support
-- Leaders: <you?>
+- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
 - Status: -
 - PRs: -
 
@@ -150,11 +136,14 @@ React tutorial should reflect latest best practices for using Meteor and React t
 Provide a skeleton with PWA configurations already in place such as `manifest`, service worker, Open Graph meta tags, etc. Also improve docs and guide.
 
 ### SSR documentation
-- Leaders: [Kevin Newman](https://github.com/CaptainN)
+- Leaders: [Kevin Newman](https://github.com/CaptainN) / [Eric Burel](https://github.com/eric-burel)
 - Status: -
 - PRs: -
 
 Provide a skeleton with SSR configurations already in place.
+
+Relevant issues:
+- https://github.com/meteor/meteor-feature-requests/issues/174
 
 ### Tests documentation
 - Leaders: [Simon Schick](https://github.com/SimonSimCity) / [Florian Bienefelt](https://github.com/Floriferous)
@@ -206,6 +195,19 @@ Relevant discussions:
 - https://github.com/storybookjs/storybook/issues/5975
 
 ## Recently completed
+### Update MongoDB driver
+- Leaders: [Christian Klaussner](https://github.com/klaussner)
+- Status: shipped in Meteor 1.10.1
+- PRs: https://github.com/meteor/meteor/pull/10861 / https://github.com/meteor/meteor/pull/10723
+
+Update to Mongodb driver from 3.2.7 to 3.5.4, this version is compatible with MongoDB 4.2.
+
+### Update Cordova to 9
+- Leaders: [Filipe Névola](https://github.com/filipenevola) / [Renan Castro](https://github.com/renanccastro)
+- Status: shipped in Meteor 1.10.1
+- PRs: https://github.com/meteor/meteor/pull/10861 / https://github.com/meteor/meteor/pull/10810 / https://github.com/meteor/meteor/pull/10861
+
+Update Cordoba lib and its dependencies to latest (version 9)
 
 ### Update to Node.js 12
 - Leaders: [Ben Newman](https://github.com/benjamn)

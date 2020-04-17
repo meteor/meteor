@@ -1,5 +1,4 @@
 import { Meteor } from 'meteor/meteor'
-import { isModern } from "meteor/modern-browsers";
 import { WebApp } from "meteor/webapp";
 import crypto from 'crypto';
 import fs from 'fs';
@@ -88,12 +87,12 @@ WebApp.connectHandlers.use((req, res, next) => {
   }
 
   const cacheInfo = {
-    modern: isModern(request.browser),
+    // Provided by WebApp.categorizeRequest.
+    modern: request.modern,
   };
 
-  cacheInfo.arch = cacheInfo.modern
-    ? "web.browser"
-    : "web.browser.legacy";
+  // Also provided by WebApp.categorizeRequest.
+  cacheInfo.arch = request.arch;
 
   // The true hash of the client manifest for this arch, regardless of
   // AUTOUPDATE_VERSION or Autoupdate.autoupdateVersion.
@@ -261,10 +260,12 @@ function eachResource({
 }
 
 function sizeCheck() {
-  const sizes = [ // Check size of each known architecture independently.
+  const RESOURCE_SIZE_LIMIT = 5 * 1024 * 1024; // 5MB
+  const largeSizes = [ // Check size of each known architecture independently.
     "web.browser",
     "web.browser.legacy",
-  ].reduce((filt, arch) => {
+  ].filter((arch) => !!WebApp.clientPrograms[arch])
+  .map((arch) => {
     let totalSize = 0;
 
     WebApp.clientPrograms[arch].manifest.forEach(resource => {
@@ -275,22 +276,21 @@ function sizeCheck() {
       }
     });
 
-    if (totalSize > 5 * 1024 * 1024) {
-      filt.push({
-        arch,
-        size: totalSize
-      });
+    return {
+      arch,
+      size: totalSize,
     }
-    return filt;
-  }, []);
-  if (sizes.length > 0) {
+  })
+  .filter(({ size }) => size > RESOURCE_SIZE_LIMIT);
+
+  if (largeSizes.length > 0) {
     Meteor._debug([
       "** You are using the appcache package, but the size of",
       "** one or more of your cached resources is larger than",
       "** the recommended maximum size of 5MB which may break",
       "** your app in some browsers!",
       "** ",
-      ...sizes.map(data => `** ${data.arch}: ${(data.size / 1024 / 1024).toFixed(1)}MB`),
+      ...largeSizes.map(data => `** ${data.arch}: ${(data.size / 1024 / 1024).toFixed(1)}MB`),
       "** ",
       "** See http://docs.meteor.com/#appcache for more",
       "** information and fixes."

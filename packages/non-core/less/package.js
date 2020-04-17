@@ -1,20 +1,22 @@
 Package.describe({
   name: 'less',
-  version: '2.8.0',
+  version: '3.0.1',
   summary: 'Leaner CSS language',
   documentation: 'README.md'
 });
 
 Package.registerBuildPlugin({
   name: "compileLessBatch",
-  use: ['caching-compiler', 'ecmascript', 'underscore'],
+  use: [
+    "caching-compiler@1.2.2",
+    "ecmascript@0.14.3",
+  ],
   sources: [
     'plugin/compile-less.js'
   ],
   npmDependencies: {
-    "@babel/runtime": "7.0.0",
-    // Fork of 2.5.0, deleted large unused files in dist directory.
-    "less": "https://github.com/meteor/less.js/tarball/8130849eb3d7f0ecf0ca8d0af7c4207b0442e3f6"
+    "@babel/runtime": "7.9.2",
+    "less": "3.11.1"
   }
 });
 
