@@ -24,6 +24,10 @@ Package.onUse(api => {
     'tracker'
   ]);
 
+  // Make weak use of Decimal type on client
+  api.use('mongo-decimal', 'client', {weak: true});
+  api.use('mongo-decimal', 'server');
+
   api.mainModule('minimongo_client.js', 'client');
   api.mainModule('minimongo_server.js', 'server');
 });
