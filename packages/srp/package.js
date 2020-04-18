@@ -16,12 +16,11 @@ Package.onUse(function (api) {
     'sha'
   ], ['client', 'server']);
   api.export('SRP');
-  api.addFiles(['biginteger.js', 'srp.js'],
-                ['client', 'server']);
+  api.mainModule('srp.js');
 });
 
 Package.onTest(function (api) {
-  api.use('tinytest');
+  api.use(['ecmascript', 'tinytest']);
   api.use('srp', ['client', 'server']);
   api.addFiles(['srp_tests.js'], ['client', 'server']);
 });
