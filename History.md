@@ -1,3 +1,4 @@
+
 ## v1.10.2, TBD
 
 ### Breaking changes
@@ -30,6 +31,15 @@
 * The `meteor-babel` npm package has been updated to version 7.9.0.
 
 * The `typescript` npm package has been updated to version 3.8.3.
+  
+* To pass Node command line flags to the server node instance,
+  now it is recommended to use `SERVER_NODE_OPTIONS` instead of `NODE_OPTIONS`.
+  Since Meteor 0.5.3, Meteor allowed to pass node command line flags via the  `NODE_OPTIONS`
+  environment variable.
+  However, since Node version 8 / Meteor 1.6 this has become a default node
+  envar with the same behavior. The side effect is that this now also affects
+  Meteor tool. The command line parameters could already be set separately
+  via the `TOOL_NODE_FLAGS` envar. This is now also possible (again) for the server.
 
 * The version of MongoDB used by Meteor in development has been updated from
   4.2.1 to 4.2.5.
