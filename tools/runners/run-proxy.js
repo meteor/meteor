@@ -1,3 +1,4 @@
+var Anser = require("anser");
 var _ = require('underscore');
 var runLog = require('./run-log.js');
 
@@ -95,6 +96,15 @@ _.extend(Proxy.prototype, {
     // client->proxy connection has an error, though this may change; see
     // discussion at https://github.com/nodejitsu/node-http-proxy/pull/488
     self.proxy.on('error', function (err, req, resOrSocket) {
+      if (err.code === 'HPE_HEADER_OVERFLOW') {
+        const logMessage = 'Error during proxy to server communication ' +
+          'due to the header size exceeding Node\'s currently ' +
+          'configured limit. This limit is configurable with a command ' +
+          'line option (https://nodejs.org/api/cli.html#cli_max_http_header_size_size ' +
+          'and https://docs.meteor.com/commandline.html#meteorrun).';
+        runLog.log(logMessage);
+      }
+
       if (resOrSocket instanceof http.ServerResponse) {
         if (!resOrSocket.headersSent) {
           // Return a 503, but only if we haven't already written headers (or
@@ -251,7 +261,7 @@ function showErrorPage(res) {
     <pre>`);
 
       _.each(runLog.getLog(), function (item) {
-        res.write(escapeEntities(item.message) + "\n");
+        res.write(Anser.ansiToHtml(Anser.escapeForHtml(item.message)) + "\n");
       });
 
       res.write(`</pre>
@@ -259,24 +269,6 @@ function showErrorPage(res) {
 </html>`)
 
   res.end();
-}
-
-// Copied from packages/blaze/preamble.js
-function escapeEntities(str) {
-  const escapeMap = {
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#x27;",
-    "`": "&#x60;", /* IE allows backtick-delimited attributes?? */
-    "&": "&amp;"
-  };
-
-  const escapeChar = function(c) {
-    return escapeMap[c];
-  };
-
-  return str.replace(/[&<>"'`]/g, escapeChar);
 }
 
 exports.Proxy = Proxy;

@@ -7,8 +7,8 @@
     ],
     "rules": {
         "curly": "off",
-        "eqeqeq": "off",
-        "indent": ["error", 2, { "SwitchCase": 0, "VariableDeclarator": 2, "CallExpression": { arguments: "off" } }],
+        "eqeqeq": ["error", "always", { "null": "ignore" }],
+        "indent": ["error", 2, { "SwitchCase": 0, "VariableDeclarator": 2, "CallExpression": { "arguments": "off" } }],
         "new-parens": "off",
         "no-case-declarations": "off",
         "no-cond-assign": "off",
@@ -25,7 +25,8 @@
         "space-before-function-paren": ["error", "never"]
     },
     "globals": {
-        "Packages": false
+        "Packages": false,
+        "BigInt": false
     },
     "plugins": [
         "import"

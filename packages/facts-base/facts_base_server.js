@@ -45,6 +45,12 @@ Facts.incrementServerFact = function (pkg, fact, increment) {
   });
 };
 
+Facts.resetServerFacts = function () {
+  for (let pkg in factsByPackage) {
+    delete factsByPackage[pkg];
+  }
+};
+
 // Deferred, because we have an unordered dependency on livedata.
 // XXX is this safe? could somebody try to connect before Meteor.publish is
 // called?

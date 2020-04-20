@@ -1,27 +1,80 @@
-## v1.10, TBD
+## v1.10.2, TBD
 
 ### Breaking changes
 
-* Cordova was updated from version 7 to 9 then we recommend that you test 
-your features that are taking advantage of Cordova plugins to be sure they are 
-still working as expected. 
+* The `babel-compiler` package, used by both `ecmascript` and
+  `typescript`, no longer supports stripping [Flow](https://flow.org/)
+  type annotations by default, which may be a breaking change if your
+  application (or Meteor package) relied on Flow syntax.
 
-### Migration Steps
-N/A
+### Migration steps
+
+* If you still need Babel's Flow plugins, you can install them with npm
+  and then enable them with a custom `.babelrc` file in your application's
+  (or package's) root directory:
+  ```json
+  {
+    "plugins": [
+      "@babel/plugin-syntax-flow",
+      "@babel/plugin-transform-flow-strip-types"
+    ]
+  }
+  ```
 
 ### Changes
 
-* Node.js has been updated to version
-  [12.14.1](https://nodejs.org/en/blog/release/v12.14.1/).
+* The `meteor-babel` npm package has been updated to version 7.9.0.
+
+* The `typescript` npm package has been updated to version 3.8.3.
+
+## v1.10.1, 2020-03-12
+
+### Breaking changes
+
+* Cordova has been updated from version 7 to 9. We recommend that you test
+  your features that are taking advantage of Cordova plugins to be sure
+  they are still working as expected.
+  
+  * WKWebViewOnly is set by default now as true so if you are relying on 
+  UIWebView or plugins that are using UIWebView APIs you probably want to
+  set it as false, you can do this by calling 
+  `App.setPreference('WKWebViewOnly', false);` in your mobile-config.js. But we 
+  don't recommend turning this into false because 
+  [Apple have said](https://developer.apple.com/news/?id=12232019b) they are 
+  going to reject apps using UIWebView.
+  
+* Because MongoDB since 3.4 no longer supports 32-bit Windows, Meteor 1.10 has
+  also dropped support for 32-bit Windows. In other words, Meteor 1.10 supports
+  64-bit Mac, Windows 64-bit, and Linux 64-bit.
+
+### Migration Steps
+* If you get `Unexpected mongo exit code 62. Restarting.` when starting your local
+  MongoDB, you can either reset your project (`meteor reset`)
+  (if you don't care about your local data)
+  or you will need to update the feature compatibility version of your local MongoDB:
+  
+    1. Downgrade your app to earlier version of Meteor `meteor update --release 1.9.2`
+    2. Start your application
+    3. While your application is running open a new terminal window, navigate to the
+       app directory and open `mongo` shell: `meteor mongo`
+    4. Use: `db.adminCommand({ getParameter: 1, featureCompatibilityVersion: 1 })` to
+       check the current feature compatibility.
+    5. If the returned version is less than 4.0 update like this:
+       `db.adminCommand({ setFeatureCompatibilityVersion: "4.2" })`
+    6. You can now stop your app and update to Meteor 1.10.
+    
+    For more information about this, check out [MongoDB documentation](https://docs.mongodb.com/manual/release-notes/4.2-upgrade-standalone/).
+
+### Changes
 
 * The version of MongoDB used by Meteor in development has been updated
   from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
-  from 3.2.7 to 3.4.0, thanks to [@klaussner](https://github.com/klaussner).
+  from 3.2.7 to 3.5.4, thanks to [@klaussner](https://github.com/klaussner).
   [Feature #361](https://github.com/meteor/meteor-feature-requests/issues/361)
   [PR #10723](https://github.com/meteor/meteor/pull/10723)
 
 * The `npm` command-line tool used by the `meteor npm` command (and by
-  Meteor internally) has been updated to version 6.13.6, and our
+  Meteor internally) has been updated to version 6.14.0, and our
   [fork](https://github.com/meteor/pacote/tree/v9.5.12-meteor) of its
   `pacote` dependency has been updated to version 9.5.12.
 
@@ -32,8 +85,19 @@ N/A
   * cordova-ios from 4.5.5 to 5.1.1 [release notes](https://github.com/apache/cordova-ios/blob/master/RELEASENOTES.md)
   * cordova-plugin-wkwebview-engine from 1.1.4 to 1.2.1 [release notes](https://github.com/apache/cordova-plugin-wkwebview-engine/blob/master/RELEASENOTES.md#121-jul-20-2019)
   * cordova-plugin-whitelist from 1.3.3 to 1.3.4 [release notes](https://github.com/apache/cordova-plugin-whitelist/blob/master/RELEASENOTES.md#134-jun-19-2019)
-  * cordova-plugin-splashscreen (included by mobile-experience > launch-screen) from 4.1.0 to 5.0.3 [release notes](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#503-may-09-2019)
-  * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar) from 2.3.0 to 2.4.3 [release notes](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#243-jun-19-2019)
+  * cordova-plugin-splashscreen (included by mobile-experience > launch-screen) 
+  from 4.1.0 to 5.0.3 [release notes](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#503-may-09-2019)
+  * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar) 
+  from 2.3.0 to 2.4.3 [release notes](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#243-jun-19-2019)
+  * On iOS WKWebViewOnly is set by default now as true.
+  * On iOS the Swift version is now set by default to `5` this change can make
+  your app to produce some warnings if your plugins are using old Swift code. 
+  You can override the Swift version using 
+  `App.setPreference('SwiftVersion', 4.2);` but we don't recommend that.
+  
+* New command to ensure that Cordova dependencies are installed. Usage: 
+  `meteor ensure-cordova-dependencies`. Meteor handles this automatically but in 
+  some cases, like running in a CI, is useful to install them in advance.
 
 * You can now pass an `--exclude-archs` option to the `meteor run` and
   `meteor test` commands to temporarily disable building certain web
@@ -43,11 +107,63 @@ N/A
   excluded architectures during development.
   [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
   [PR #10824](https://github.com/meteor/meteor/pull/10824)
+  
+* `meteor create --react app` and `--typescript` now use `useTracker` hook instead of 
+  `withTracker` HOC, it also uses `function` components instead of `classes`. 
 
-* The `meteor-babel` npm package has been updated to version 7.8.0,
-  corresponding to version 7.8.3 for most `@babel/*` packages.
+## v1.9.3, 2020-03-09
 
-* The `typescript` npm package has been updated to version 3.7.4.
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+* `mongodb` driver package has been updated
+  from 3.2.7 to 3.5.4 [#10961](https://github.com/meteor/meteor/pull/10961)
+  
+## v1.9.2, 2020-02-20
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  [12.16.1](https://nodejs.org/en/blog/release/v12.16.1/), fixing several unintended
+  [regressions](https://github.com/nodejs/node/blob/master/doc/changelogs/CHANGELOG_V12.md#12.16.1)
+  introduced in 12.16.0.
+
+* The `meteor-babel` npm package has been updated to version 7.8.2.
+
+* The `typescript` npm package has been updated to version 3.7.5.
+
+## v1.9.1, 2020-02-18
+
+### Breaking changes
+
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  12.16.0 from 12.14.0, which includes
+  security updates and small changes:
+  * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
+    * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
+  * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
+
+* `cursor.observeChanges` now accepts a second options argument.
+  If your observer functions do not mutate the passed arguments, you can specify
+  `{ nonMutatingCallbacks: true }`, which improves performance by reducing
+  the amount of data copies.
 
 ## v1.9, 2020-01-09
 
@@ -88,6 +204,27 @@ N/A
   on startup has been removed.
   [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
   [PR #10345](https://github.com/meteor/meteor/pull/10345)
+
+* Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
+
+### Changes
+
+* `Meteor.user()`, `Meteor.findUserByEmail()` and `Meteor.findUserByUserName()` can take a new
+  `options` parameter which can be used to limit the returned fields. Useful for minimizing
+  DB bandwidth on the server and avoiding unnecessary reactive UI updates on the client.
+  [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+
+* `Accounts.config()` has a new option `defaultFieldSelector` which will apply to all
+  `Meteor.user()` and `Meteor.findUserBy...()` functions without explicit field selectors, and
+  also to all `onLogin`, `onLogout` and `onLoginFailure` callbacks.  This is useful if you store
+  large data on the user document (e.g. a growing list of transactions) which do no need to be
+  retrieved from the DB whenever you or a package author call `Meteor.user()` without limiting the
+  fields. [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+
+* Lots of internal calls to `Meteor.user()` without field specifiers in `accounts-base` and
+  `accounts-password` packages have been optimized with explicit field selectors to only fetch
+  the fields needed by the functions they are in.
+  [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 
 ## v1.8.3, 2019-12-19
 
@@ -141,6 +278,8 @@ N/A
   `Uncaught SyntaxError: Identifier 'exports' has already been declared`.
   See [this comment](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056)
   by [@SimonSimCity](https://github.com/SimonSimCity).
+
+* `Plugin.fs` methods are now always sync and no longer accept a callback.
 
 ### Migration Steps
 
@@ -259,7 +398,7 @@ N/A
   compiler plugin now automatically handles JavaScript modules with the
   `.mjs` file extension.
 
-* Add `--cordova-server-port` option to override local port where Cordova will 
+* Add `--cordova-server-port` option to override local port where Cordova will
   serve static resources, which is useful when multiple Cordova apps are built
   from the same application source code, since by default the port is generated
   using the ID from the application's `.meteor/.id` file.
@@ -315,12 +454,12 @@ N/A
 * The `meteor-babel` npm package has been updated to version 7.3.4.
 
 * Cordova Hot Code Push mechanism is now switching versions explicitly with
-  call to `WebAppLocalServer.switchToPendingVersion` instead of trying to 
-  switch every time a browser reload is detected. If you use any third 
+  call to `WebAppLocalServer.switchToPendingVersion` instead of trying to
+  switch every time a browser reload is detected. If you use any third
   party package or have your own HCP routines implemented be sure to call
   it before forcing a browser reload. If you use the automatic reload from
   the `Reload` meteor package you do not need to do anything.
-  [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62) 
+  [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62)
 
 * Multiple Cordova-related bugs have been fixed, including Xcode 10 build
   incompatibilities and hot code push errors due to duplicated
@@ -811,7 +950,7 @@ N/A
 
 ### Migration Steps
 
-* Update `@babel/runtime` (as well as other Babel-related packages) and 
+* Update `@babel/runtime` (as well as other Babel-related packages) and
   `meteor-node-stubs` to their latest versions:
   ```sh
   meteor npm install @babel/runtime@latest meteor-node-stubs@latest
@@ -1210,7 +1349,7 @@ N/A
 N/A
 
 ### Migration Steps
-* Update `@babel/runtime` npm package and any custom Babel plugin enabled in 
+* Update `@babel/runtime` npm package and any custom Babel plugin enabled in
 `.babelrc`
   ```sh
   meteor npm install @babel/runtime@latest
@@ -1245,7 +1384,7 @@ N/A
   values are not first converted to `null`, when inserted/updated. `undefined`
   values are now removed from all Mongo queries and insert/update documents.
 
-  This is a potentially breaking change if you are upgrading an existing app 
+  This is a potentially breaking change if you are upgrading an existing app
   from an earlier version of Meteor.
 
   For example:
@@ -1255,11 +1394,11 @@ N/A
       userId: currentUser._id // undefined
   });
   ```
-  Assuming there are no documents in the `privateUserData` collection with 
-  `userId: null`, in Meteor versions prior to 1.6.1 this query will return 
-  zero documents. From Meteor 1.6.1 onwards, this query will now return 
-  _every_ document in the collection. It is highly recommend you review all 
-  your existing queries to ensure that any potential usage of `undefined` in 
+  Assuming there are no documents in the `privateUserData` collection with
+  `userId: null`, in Meteor versions prior to 1.6.1 this query will return
+  zero documents. From Meteor 1.6.1 onwards, this query will now return
+  _every_ document in the collection. It is highly recommend you review all
+  your existing queries to ensure that any potential usage of `undefined` in
   query objects won't lead to problems.
 
 ### Migration Steps
