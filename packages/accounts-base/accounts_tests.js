@@ -57,6 +57,15 @@ Tinytest.add('accounts - config - default token lifetime', test => {
   Accounts._options = options;
 });
 
+Tinytest.add('accounts - config - defaultFieldSelector', test => {
+  const options = Accounts._options;
+  Accounts._options = {};
+  const setValue = {bigArray: 0};
+  Accounts.config({defaultFieldSelector: setValue});
+  test.equal(Accounts._options.defaultFieldSelector, setValue);
+  Accounts._options = options;
+});
+
 const idsInValidateNewUser = {};
 Accounts.validateNewUser(user => {
   idsInValidateNewUser[user._id] = true;
@@ -452,6 +461,109 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  'accounts - hook callbacks obey options.defaultFieldSelector',
+  test => {
+    const ignoreFieldName = "bigArray";
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const stampedToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedToken);
+    const options = Accounts._options;
+    Accounts._options = {};
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    test.equal(Accounts._options.defaultFieldSelector, {[ignoreFieldName]: 0}, 'defaultFieldSelector');
+
+    const validateStopper = Accounts.validateLoginAttempt(attempt => {
+      test.isUndefined(allowLogin != 'bogus' ? attempt.user[ignoreFieldName] : attempt.user, "validateLoginAttempt")
+      return allowLogin;
+    });
+    const onLoginStopper = Accounts.onLogin(attempt =>
+      test.isUndefined(attempt.user[ignoreFieldName], "onLogin")
+    );
+    const onLogoutStopper = Accounts.onLogout(logoutContext =>
+      test.isUndefined(logoutContext.user[ignoreFieldName], "onLogout")
+    );
+    const onLoginFailureStopper = Accounts.onLoginFailure(attempt =>
+      test.isUndefined(allowLogin != 'bogus' ? attempt.user[ignoreFieldName] : attempt.user, "onLoginFailure")
+    );
+
+    const conn = DDP.connect(Meteor.absoluteUrl());
+
+    // test a new connection
+    let allowLogin = true;
+    conn.call('login', { resume: stampedToken.token });
+
+    // Now that the user is logged in on the connection, Meteor.userId() should
+    // return that user.
+    conn.call('login', { resume: stampedToken.token });
+
+    // Trigger onLoginFailure callbacks, this will not include the user object
+    allowLogin = 'bogus';
+    test.throws(() => conn.call('login', { resume: "bogus" }), '403');
+
+    // test a forced login fail which WILL include the user object
+    allowLogin = false;
+    test.throws(() => conn.call('login', { resume: stampedToken.token }), '403');
+
+    // Trigger onLogout callbacks
+    const onLogoutExpectedUserId = userId;
+    conn.call('logout');
+
+    Accounts._options = options;
+    conn.disconnect();
+    validateStopper.stop();
+    onLoginStopper.stop();
+    onLogoutStopper.stop();
+    onLoginFailureStopper.stop();
+  }
+);
+
+Tinytest.add(
+  'accounts - Meteor.user() obeys options.defaultFieldSelector',
+  test => {
+    const ignoreFieldName = "bigArray";
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const stampedToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedToken);
+    const options = Accounts._options;
+
+    // stub Meteor.userId() so it works outside methods and returns the correct user:
+    const origAccountsUserId = Accounts.userId;
+    Accounts.userId = () => userId;
+
+    Accounts._options = {};
+
+    // test the field is included by default
+    let user = Meteor.user();
+    test.isNotUndefined(user[ignoreFieldName], 'included by default');
+
+    // test the field is excluded
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    user = Meteor.user();
+    test.isUndefined(user[ignoreFieldName], 'excluded');
+    user = Meteor.user({});
+    test.isUndefined(user[ignoreFieldName], 'excluded {}');
+
+    // test the field can still be retrieved if required
+    user = Meteor.user({fields: {[ignoreFieldName]: 1}});
+    test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
+    test.isUndefined(user.username, 'field can be retrieved username');
+
+    // test a combined negative field specifier
+    user = Meteor.user({fields: {username: 0}});
+    test.isUndefined(user[ignoreFieldName], 'combined field selector');
+    test.isUndefined(user.username, 'combined field selector username');
+
+    // test an explicit request for the full user object
+    user = Meteor.user({fields: {}});
+    test.isNotUndefined(user[ignoreFieldName], 'full selector');
+    test.isNotUndefined(user.username, 'full selector username');
+
+    Accounts._options = options;
+    Accounts.userId = origAccountsUserId;
+  }
+);
+
+Tinytest.add(
   'accounts - verify onExternalLogin hook can update oauth user profiles',
   test => {
     // Verify user profile data is saved properly when not using the
@@ -461,16 +573,24 @@ Tinytest.add(
       'facebook',
       { id: facebookId },
       { profile: { foo: 1 } },
-    ).id;
+    ).userId;
+    const ignoreFieldName = "bigArray";
+    const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
     let users =
       Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 1);
+    test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
 
     // Verify user profile data can be modified using the onExternalLogin
     // hook, for existing users.
-    Accounts.onExternalLogin((options) => {
+    // Also verify that the user object is filtered by _options.defaultFieldSelector
+    const accountsOptions = Accounts._options;
+    Accounts._options = {};
+    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    Accounts.onExternalLogin((options, user) => {
       options.profile.foo = 2;
+      test.isUndefined(users[ignoreFieldName], 'ignoreField - after limit fields');
       return options;
     });
     Accounts.updateOrCreateUserFromExternalService(
@@ -478,9 +598,11 @@ Tinytest.add(
       { id: facebookId },
       { profile: { foo: 1 } },
     );
+    // test.isUndefined(users[0][ignoreFieldName], 'ignoreField - fields limited');
     users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 2);
+    test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - still there');
 
     // Verify user profile data can be modified using the onExternalLogin
     // hook, for new users.
@@ -489,7 +611,7 @@ Tinytest.add(
       'facebook',
       { id: facebookId },
       { profile: { foo: 3 } },
-    ).id;
+    ).userId;
     users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 2);
@@ -498,5 +620,6 @@ Tinytest.add(
     Meteor.users.remove(uid1);
     Meteor.users.remove(uid2);
     Accounts._onExternalLoginHook = null;
+    Accounts._options = accountsOptions;
   }
 );

@@ -46,8 +46,16 @@ Object.assign(exports, {
     const promisesByTopic = new Map;
     const handlersByType = Object.create(null);
 
+    function gracefulErrorHandler(error) {
+      // EPIPE occurs when sending fails because the other process has
+      // exited already, which can be safely ignored in most cases.
+      if (error && error.code !== "EPIPE") {
+        console.error("Error sending message:", error);
+      }
+    }
+
     handlersByType[PING] = function ({ id }) {
-      otherProcess.send({ type: PONG, id });
+      otherProcess.send({ type: PONG, id }, gracefulErrorHandler);
     };
 
     handlersByType[PONG] = function ({ id }) {
@@ -83,7 +91,7 @@ Object.assign(exports, {
             type: RESPONSE,
             responseId,
             encodedResults: encode(results),
-          });
+          }, gracefulErrorHandler);
         }
       }, error => {
         const serializable = {};
@@ -99,7 +107,7 @@ Object.assign(exports, {
           type: RESPONSE,
           responseId,
           encodedError: encode(serializable),
-        });
+        }, gracefulErrorHandler);
       });
 
       // Immediately update the latest promise for this topic to the

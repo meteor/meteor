@@ -66,7 +66,6 @@ export const ISOPACKETS = {
     // cordova-support
     'boilerplate-generator',
     'webapp-hashing',
-    'xmlbuilder',
     // cordova-support, logging
     'logging',
     // support for childProcess.sendMessage(topic, payload)
@@ -116,13 +115,13 @@ export function loadIsopackage(packageName, isopacketName = "combined") {
 
     if (_.has(ISOPACKETS, isopacketName)) {
       throw Error("Can't load isopacket before it has been verified: "
-                  + isopacketName);
+        + isopacketName);
     }
 
     throw Error("Unknown isopacket: " + isopacketName);
   }();
 
-  if (! _.has(isopacket, packageName)) {
+  if (!_.has(isopacket, packageName)) {
     throw new Error("Unknown isopacket dependency: " + packageName);
   }
 
@@ -144,7 +143,7 @@ export function ensureIsopacketsLoadable() {
 
   // If we're not running from checkout, then there's nothing to build and we
   // can declare that all isopackets are loadable.
-  if (! files.inCheckout()) {
+  if (!files.inCheckout()) {
     _.each(ISOPACKETS, function (packages, name) {
       loadedIsopackets[name] = null;
     });
@@ -167,17 +166,17 @@ export function ensureIsopacketsLoadable() {
         var isopacketRoot = isopacketPath(isopacketName);
         var existingBuildinfo = files.readJSONOrNull(
           files.pathJoin(isopacketRoot, 'isopacket-buildinfo.json'));
-        var needRebuild = ! existingBuildinfo;
-        if (! needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
+        var needRebuild = !existingBuildinfo;
+        if (!needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
           needRebuild = true;
         }
-        if (! needRebuild) {
+        if (!needRebuild) {
           var watchSet = watch.WatchSet.fromJSON(existingBuildinfo.watchSet);
-          if (! watch.isUpToDate(watchSet)) {
+          if (!watch.isUpToDate(watchSet)) {
             needRebuild = true;
           }
         }
-        if (! needRebuild) {
+        if (!needRebuild) {
           // Great, it's loadable without a rebuild.
           loadedIsopackets[isopacketName] = null;
           return;
@@ -185,7 +184,7 @@ export function ensureIsopacketsLoadable() {
 
         // We're going to need to build! Make a catalog and loader if we haven't
         // yet.
-        if (! isopacketBuildContext) {
+        if (!isopacketBuildContext) {
           isopacketBuildContext = makeIsopacketBuildContext();
         }
 
@@ -209,7 +208,7 @@ export function ensureIsopacketsLoadable() {
             return;
           }
 
-          var builder = new Builder({outputPath: isopacketRoot});
+          var builder = new Builder({ outputPath: isopacketRoot });
           builder.writeJson('isopacket-buildinfo.json', {
             builtBy: compiler.BUILT_BY,
             watchSet: built.watchSet.toJSON()
@@ -234,7 +233,7 @@ export function ensureIsopacketsLoadable() {
 
 // Returns a new all-local-packages catalog to be used for building isopackets.
 var newIsopacketBuildingCatalog = function () {
-  if (! files.inCheckout()) {
+  if (!files.inCheckout()) {
     throw Error("No need to build isopackets unless in checkout!");
   }
 

@@ -1,4 +1,4 @@
-import url from 'url';
+import bodyParser from 'body-parser';
 
 OAuth = {};
 OAuthTest = {};
@@ -136,6 +136,8 @@ OAuth._checkRedirectUrlOrigin = redirectUrl => {
 };
 
 const middleware = (req, res, next) => {
+  let requestData;
+
   // Make sure to catch any exceptions because otherwise we'd crash
   // the runner
   try {
@@ -158,7 +160,14 @@ const middleware = (req, res, next) => {
     const handler = OAuth._requestHandlers[service.version];
     if (!handler)
       throw new Error(`Unexpected OAuth version ${service.version}`);
-    handler(service, req.query, res);
+
+    if (req.method === 'GET') {
+      requestData = req.query;
+    } else {
+      requestData = req.body;
+    }
+
+    handler(service, requestData, res);
   } catch (err) {
     // if we got thrown an error, save it off, it will get passed to
     // the appropriate login call (if any) and reported there.
@@ -167,9 +176,9 @@ const middleware = (req, res, next) => {
     // is still open at this point, ignoring the 'close' or 'redirect'
     // we were passed. But then the developer wouldn't be able to
     // style the error or react to it in any way.
-    if (req.query.state && err instanceof Error) {
+    if (requestData?.state && err instanceof Error) {
       try { // catch any exceptions to avoid crashing runner
-        OAuth._storePendingCredential(OAuth._credentialTokenFromQuery(req.query), err);
+        OAuth._storePendingCredential(OAuth._credentialTokenFromQuery(requestData), err);
       } catch (err) {
         // Ignore the error and just give up. If we failed to store the
         // error, then the login will just fail with a generic error.
@@ -184,8 +193,8 @@ const middleware = (req, res, next) => {
     // Catch errors because any exception here will crash the runner.
     try {
       OAuth._endOfLoginResponse(res, {
-        query: req.query,
-        loginStyle: OAuth._loginStyleFromQuery(req.query),
+        query: requestData,
+        loginStyle: OAuth._loginStyleFromQuery(requestData),
         error: err
       });
     } catch (err) {
@@ -196,6 +205,8 @@ const middleware = (req, res, next) => {
 };
 
 // Listen to incoming OAuth http requests
+WebApp.connectHandlers.use('/_oauth', bodyParser.json());
+WebApp.connectHandlers.use('/_oauth', bodyParser.urlencoded({ extended: false }));
 WebApp.connectHandlers.use(middleware);
 
 OAuthTest.middleware = middleware;
