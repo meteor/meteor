@@ -3,16 +3,10 @@
 
 name: PR
 
-on:
-  push:
-    paths-ignore:
-      - 'master'
-  pull_request:
-    paths-ignore:
-      - 'master'
+on: [push, pull_request]
 
 jobs:
-  test:
+  release:
     name: Release
     runs-on: ubuntu-18.04
     steps:
@@ -30,3 +24,11 @@ jobs:
         run: npm run coveralls
         env:
           COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+      - name: Release
+        if: github.ref == 'refs/heads/master'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_ENV: production
+          CI: true
+        run: npx semantic-release
