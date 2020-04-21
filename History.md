@@ -1,5 +1,5 @@
 
-## v1.10.2, TBD
+## v1.10.2, 2020-04-21
 
 ### Breaking changes
 
