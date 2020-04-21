@@ -782,9 +782,9 @@ export function changeAuthorized(site, action, username) {
   }
 
   const verbs = {
-    add: "added",
-    remove: "removed",
-    transfer: "transferred"
+    add: "added to",
+    remove: "removed from",
+    transfer: "transferred to"
   };
   Console.info(`${site}: ${verbs[action]} ${username}`);
   return 0;

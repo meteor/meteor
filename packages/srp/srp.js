@@ -1,3 +1,6 @@
+import { Random } from 'meteor/random';
+import BigInteger from './biginteger';
+
 // This package contains just enough of the original SRP code to
 // support the backwards-compatibility upgrade path.
 //
@@ -5,7 +8,7 @@
 // available in Atmosphere so that users can continue to use SRP if they
 // want to.
 
-SRP = {};
+export const SRP = {};
 
 /**
  * Generate a new SRP verifier. Password is the plaintext password.
@@ -19,24 +22,24 @@ SRP = {};
  * - SRP parameters (see _defaults and paramsFromOptions below)
  */
 SRP.generateVerifier = function (password, options) {
-  var params = paramsFromOptions(options);
+  const params = paramsFromOptions(options);
 
-  var salt = (options && options.salt) || Random.secret();
+  const salt = (options && options.salt) || Random.secret();
 
-  var identity;
-  var hashedIdentityAndPassword = options && options.hashedIdentityAndPassword;
+  let identity;
+  let hashedIdentityAndPassword = options && options.hashedIdentityAndPassword;
   if (!hashedIdentityAndPassword) {
     identity = (options && options.identity) || Random.secret();
     hashedIdentityAndPassword = params.hash(identity + ":" + password);
   }
 
-  var x = params.hash(salt + hashedIdentityAndPassword);
-  var xi = new BigInteger(x, 16);
-  var v = params.g.modPow(xi, params.N);
+  const x = params.hash(salt + hashedIdentityAndPassword);
+  const xi = new BigInteger(x, 16);
+  const v = params.g.modPow(xi, params.N);
 
   return {
-    identity: identity,
-    salt: salt,
+    identity,
+    salt,
     verifier: v.toString(16)
   };
 };
@@ -53,11 +56,12 @@ SRP.matchVerifier = {
  * Default parameter values for SRP.
  *
  */
-var _defaults = {
-  hash: function (x) { return SHA256(x).toLowerCase(); },
+const _defaults = {
+  hash: x => SHA256(x).toLowerCase(),
   N: new BigInteger("EEAF0AB9ADB38DD69C33F80AFA8FC5E86072618775FF3C0B9EA2314C9C256576D674DF7496EA81D3383B4813D692C6E0E0D5D8E250B98BE48E495C1D6089DAD15DC7D7B46154D6B6CE8EF4AD69B15D4982559B297BCF1885C529F566660E57EC68EDBC3C05726CC02FD4CBF4976EAA9AFD5138FE8376435B9FC61D2FC0EB06E3", 16),
   g: new BigInteger("2")
 };
+
 _defaults.k = new BigInteger(
   _defaults.hash(
     _defaults.N.toString(16) +
@@ -73,13 +77,13 @@ _defaults.k = new BigInteger(
  * - g: String or BigInteger. Defaults to 2.
  * - k: String or BigInteger. Defaults to hash(N, g)
  */
-var paramsFromOptions = function (options) {
+const paramsFromOptions = function (options) {
   if (!options) // fast path
     return _defaults;
 
   var ret = { ..._defaults };
 
-  ['N', 'g', 'k'].forEach(function (p) {
+  ['N', 'g', 'k'].forEach(p => {
     if (options[p]) {
       if (typeof options[p] === "string")
         ret[p] = new BigInteger(options[p], 16);
@@ -91,7 +95,7 @@ var paramsFromOptions = function (options) {
   });
 
   if (options.hash)
-    ret.hash = function (x) { return options.hash(x).toLowerCase(); };
+    ret.hash = x => options.hash(x).toLowerCase();
 
   if (!options.k && (options.N || options.g || options.hash)) {
     ret.k = ret.hash(ret.N.toString(16) + ret.g.toString(16));

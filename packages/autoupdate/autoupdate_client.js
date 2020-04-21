@@ -15,7 +15,7 @@
 // version available on the server.
 //
 // `Autoupdate.newClientAvailable` is a reactive data source which
-// becomes `true` if there is a new version of the client is available on
+// becomes `true` if a new version of the client is available on
 // the server.
 //
 // This package doesn't implement a soft code reload process itself,

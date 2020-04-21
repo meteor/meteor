@@ -5,18 +5,19 @@ import {SourceLocation} from "./locutil"
 // the parser process. These options are recognized:
 
 export const defaultOptions = {
-  // `ecmaVersion` indicates the ECMAScript version to parse. Must
-  // be either 3, 5, 6 (2015), 7 (2016), or 8 (2017). This influences support
-  // for strict mode, the set of reserved words, and support for
-  // new syntax features. The default is 7.
-  ecmaVersion: 7,
+  // `ecmaVersion` indicates the ECMAScript version to parse. Must be
+  // either 3, 5, 6 (2015), 7 (2016), 8 (2017), 9 (2018), or 10
+  // (2019). This influences support for strict mode, the set of
+  // reserved words, and support for new syntax features. The default
+  // is 10.
+  ecmaVersion: 10,
   // `sourceType` indicates the mode the code should be parsed in.
   // Can be either `"script"` or `"module"`. This influences global
   // strict mode and parsing of `import` and `export` declarations.
   sourceType: "script",
   // `onInsertedSemicolon` can be a callback that will be called
   // when a semicolon is automatically inserted. It will be passed
-  // th position of the comma as an offset, and if `locations` is
+  // the position of the comma as an offset, and if `locations` is
   // enabled, it is given the location as a `{line, column}` object
   // as second argument.
   onInsertedSemicolon: null,
@@ -34,6 +35,9 @@ export const defaultOptions = {
   // When enabled, import/export statements are not constrained to
   // appearing at the top of the program.
   allowImportExportEverywhere: false,
+  // When enabled, await identifiers are allowed to appear at the top-level scope,
+  // but they are still not allowed in non-async functions.
+  allowAwaitOutsideFunction: false,
   // When enabled, hashbang directive in the beginning of file
   // is allowed and treated as a line comment.
   allowHashBang: false,
@@ -82,8 +86,7 @@ export const defaultOptions = {
   directSourceFile: null,
   // When enabled, parenthesized expressions are represented by
   // (non-standard) ParenthesizedExpression nodes
-  preserveParens: false,
-  plugins: {}
+  preserveParens: false
 }
 
 // Interpret and default an options object
