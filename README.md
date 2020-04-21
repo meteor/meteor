@@ -2,7 +2,7 @@
 
 Meteor specific linting rules for ESLint
 
-[![Build Status][travis-image]][travis-url]
+[![Build Status][actions-image]][actions-url]
 [![Coverage Status][coverage-image]][coverage-url]
 [![Dependency Status][deps-image]][deps-url]
 
@@ -134,8 +134,8 @@ ESLint-plugin-Meteor is licensed under the [MIT License](http://www.opensource.o
 [npm-downloads-url]: https://npm-stat.com/charts.html?package=eslint-plugin-meteor
 [npm-downloads-image]: https://img.shields.io/npm/dm/eslint-plugin-meteor.svg?style=flat-square
 
-[travis-url]: https://travis-ci.org/dferber90/eslint-plugin-meteor
-[travis-image]: http://img.shields.io/travis/dferber90/eslint-plugin-meteor/master.svg?style=flat-square
+[actions-url]: https://github.com/dferber90/eslint-plugin-meteor/actions?query=workflow%3APR
+[actions-image]: https://img.shields.io/github/workflow/status/dferber90/eslint-plugin-meteor/PR?style=flat-square
 
 [deps-url]: https://david-dm.org/dferber90/eslint-plugin-meteor
 [deps-image]: https://img.shields.io/david/dev/dferber90/eslint-plugin-meteor.svg?style=flat-square
