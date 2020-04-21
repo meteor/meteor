@@ -923,3 +923,73 @@ the detail can differ depending on how you host your MongoDB. Read more [here](h
 
 > As of Meteor 1.4, you must ensure you set the `replicaSet` parameter on your
 `METEOR_OPLOG_URL`
+
+<h2 id="mongo_connection_options">Mongo Connection Options</h2>
+
+MongoDB provides many connection options, usually the default works but in some 
+cases you may want to pass additional options. You can do it in two ways:
+
+<h3 id="mongo_connection_options_settings">Meteor settings</h3>
+
+You can use your Meteor settings file to set the options in a property called 
+`options` inside `packages` > `mongo`, these values will be provided as options for MongoDB in
+the connect method. 
+
+> this option was introduced in Meteor 1.10.2
+
+For example, you may want to specify a certificate for your
+TLS connection ([see the options here](https://mongodb.github.io/node-mongodb-native/3.5/tutorials/connect/tls/)) then you could use these options:
+```json
+  "packages": {
+    "mongo": {
+      "options": {
+        "tls": true,
+        "tlsCAFileAsset": "certificate.pem"
+      }
+    }
+  }
+```
+Meteor will convert relative paths to absolute paths if the option name (key) 
+ends with `Asset`, for this to work properly you need to place the files in the
+ `private` in the root of your project. In the example Mongo connection would  
+ receive this:
+```json
+  "packages": {
+    "mongo": {
+      "options": {
+        "tls": true,
+        "tlsCAFile": "/absolute/path/certificate.pem"
+      }
+    }
+  }
+```
+See that the final option name (key) does not contain `Asset` in the end as
+expected by MongoDB.
+
+This configuration is necessary in some MongoDB host providers to avoid this 
+error `MongoNetworkError: failed to connect to server [sg-meteorappdb-32194.servers.mongodirector.com:27017] on first connect [Error: self signed certificate
+`. 
+
+Another way to avoid this error is to allow invalid certificates with this 
+option:
+```json
+  "packages": {
+    "mongo": {
+      "options": {
+        "tlsAllowInvalidCertificates": true
+      }
+    }
+  }
+```
+
+You can pass any MongoDB valid option, these are just examples using 
+certificates configurations.
+
+<h3 id="mongo_connection_options_settings">Mongo.setConnectionOptions</h3>
+
+You can also call `Mongo.setConnectionOptions` to set the connection options but 
+you need to call it before any other package using Mongo connections is 
+initialized so you need to add this code in a package and add it above the other
+packages, like accounts-base in your `.meteor/packages` file.
+
+> this option was introduced in Meteor 1.4
