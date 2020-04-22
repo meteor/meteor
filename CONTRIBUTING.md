@@ -8,7 +8,7 @@ Please submit clarifications and improvements to the Guide! If it's just a small
 
 ### Using the change log
 
-If you are adding significant new content, please take a moment to include an update to the [changelog](CHANGELOG.md) in your PR.
+If you are adding significant new content, please take a moment to include an update to the [changelog](changelog.html) in your PR.
 
 ### Writing tips
 
