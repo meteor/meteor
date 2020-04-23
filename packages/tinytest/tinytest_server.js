@@ -78,15 +78,13 @@ Meteor.methods({
   'tinytest/clearResults'(runId) {
     check(runId, String);
 
-    const handles = handlesForRun.get(runId);
-    // Fix: Exception while invoking method 'tinytest/clearResults' TypeError: Cannot read property 'forEach' of undefined
-    // Second call of the method will always run without exception
-    if (typeof handles !== 'undefined') {
-      handles.forEach(handle => {
-        // XXX this doesn't actually notify the client that it has been
-        // unsubscribed.
-        handle.stop();
-      });
+    if (handlesForRun.has(runId)) {
+      handlesForRun.get(runId).forEach(handle => {
+          // XXX this doesn't actually notify the client that it has been
+          // unsubscribed.
+          handle.stop();
+        });
+      }
     }
 
     handlesForRun.delete(runId);
