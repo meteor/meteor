@@ -37,7 +37,8 @@ sidebar_categories:
     - writing-atmosphere-packages
     - using-npm-packages
     - writing-npm-packages
-    - mobile
+    - cordova
+    - react-native    
     - build-tool
   Production:
     - security
