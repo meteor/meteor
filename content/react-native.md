@@ -32,15 +32,15 @@ Meteor.connect("wss://myapp.meteor.com");
 Define your collections:
 
 ````
-let Todos = new Mongo.Collection("todos");
+const Todos = new Mongo.Collection("todos");
 ````
 
 Pass data to your component using withTracker:
 
 ````
-let MyAppContainer = withTracker(() = {
+const MyAppContainer = withTracker(() = {
     
-    let myTodoTasks = Todos.find({completed:false}).fetch();
+    const myTodoTasks = Todos.find({completed:false}).fetch();
     
     return {
         myTodoTasks
