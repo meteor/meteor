@@ -142,9 +142,14 @@ Meteor.startup(function () {
   if (Meteor.isDevelopment) {
     WebApp.connectHandlers.use(
       '/meteor_autoupdate_polling_clientVersions',
-      function(request, response, next) {
-        const clientArch = request.query['arch'];
-        response.end(JSON.stringify(clientVersions.get(clientArch)));
+      function(req, res, next) {
+        const clientArch = req.query['arch'];
+
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Content-Type", "application/json");
+        res.writeHead(200);
+
+        res.end(JSON.stringify(clientVersions.get(clientArch)));
       }
     );
   }
