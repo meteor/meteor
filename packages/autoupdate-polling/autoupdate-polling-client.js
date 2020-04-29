@@ -1,6 +1,3 @@
-// Subscribe to the `meteor_autoupdate_clientVersions` collection,
-// which contains the set of acceptable client versions.
-//
 // A "hard code push" occurs when the running client version is not in
 // the set of acceptable client versions (or the server updates the
 // collection, there is a published client version marked `current` and
@@ -13,18 +10,9 @@
 // A "soft code push" represents the situation when the running client
 // version is in the set of acceptable versions, but there is a newer
 // version available on the server.
-//
-// `Autoupdate.newClientAvailable` is a reactive data source which
-// becomes `true` if a new version of the client is available on
-// the server.
-//
-// This package doesn't implement a soft code reload process itself,
-// but `newClientAvailable` could be used for example to display a
-// "click to reload" link to the user.
 
 // The client version of the client code currently running in the
 // browser.
-
 import { ClientVersions } from "./client-versions.js";
 
 const clientArch = Meteor.isCordova ? "web.cordova" :
@@ -95,12 +83,7 @@ function checkNewVersionDocument(doc) {
     // Non-refreshable assets have changed, so we have to reload the
     // whole page rather than just replacing <link> tags.
     if (stop) stop();
-    // if (Package.reload) {
-    // deprecated comments \/
-    // The reload package should be provided by ddp-client, which
-    // is provided by the ddp package that autoupdate depends on.
     Package.reload.Reload._reload();
-    // }
     return;
   }
 

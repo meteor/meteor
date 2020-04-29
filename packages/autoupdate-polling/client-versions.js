@@ -1,5 +1,3 @@
-// import { Tracker } from "meteor/tracker";
-
 import {Tracker} from "meteor/tracker";
 
 export class ClientVersions {

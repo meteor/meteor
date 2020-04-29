@@ -18,7 +18,6 @@
 // reload only after major changes, use a custom AUTOUPDATE_VERSION and
 // change it only when something worth pushing to clients happens.
 //
-// The server publishes a `meteor_autoupdate_clientVersions` collection.
 // The ID of each document is the client architecture, and the fields of
 // the document are the versions described above.
 
