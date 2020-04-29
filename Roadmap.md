@@ -29,7 +29,7 @@ Implement tree shaking / dead code elimination, which involves pruning the depen
 A proper service worker build target. Regular Web Workers can be built from a function.toString() but service-workers require an actual server route.
 
 ### Ultra-thin Meteor
-- Leaders: <you?>
+- Leaders: [Ruither Borba](https://github.com/delki8)
 - Status: -
 - PRs: -
 
