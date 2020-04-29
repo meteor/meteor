@@ -38,6 +38,11 @@ When running `meteor build` or `meteor deploy` you can set `METEOR_DISABLE_OPTIM
 
 Since optimistic in-memory caching is one of the more memory-intensive parts of the build system, setting the environment variable `METEOR_DISABLE_OPTIMISTIC_CACHING=1` can help improve memory usage during meteor build, which seems to improve the total build times. This configuration is perfectly safe because the whole point of optimistic caching is to keep track of previous results for future rebuilds, but in the case of meteor `build` or `deploy` there's only ever one initial build, so the extra bookkeeping is unnecessary.
 
+## METEOR_PACKAGE_DIRS
+(_development, production_)
+
+Colon-delimited list of local package directories to look in, outside your normal application structure, for example: `METEOR_PACKAGE_DIRS="/usr/local/my_packages/"`. Note that this used to be `PACKAGE_DIRS` but was changed in Meteor 1.4.2.
+
 ## METEOR_SETTINGS
 (_production_)
 
@@ -54,11 +59,6 @@ MongoDB server oplog URL. If you're using a replica set (which you should), cons
 (_development, production_)
 
 MongoDB server URL. Give a fully qualified URL (or comma-separated list of URLs) like `MONGO_URL="mongodb://user:password@myserver.com:10139"`. For more information see the [MongoDB docs](https://docs.mongodb.com/manual/reference/connection-string/).
-
-## METEOR_PACKAGE_DIRS
-(_development, production_)
-
-Colon-delimited list of local package directories to look in, outside your normal application structure, for example: `METEOR_PACKAGE_DIRS="/usr/local/my_packages/"`. Note that this used to be `PACKAGE_DIRS` but was changed in Meteor 1.4.2.
 
 ## PORT
 (_production_)
