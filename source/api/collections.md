@@ -951,7 +951,7 @@ TLS connection ([see the options here](https://mongodb.github.io/node-mongodb-na
 ```
 Meteor will convert relative paths to absolute paths if the option name (key) 
 ends with `Asset`, for this to work properly you need to place the files in the
- `private` in the root of your project. In the example Mongo connection would  
+ `private` folder in the root of your project. In the example Mongo connection would  
  receive this:
 ```json
   "packages": {
