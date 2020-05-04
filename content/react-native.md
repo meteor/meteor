@@ -85,7 +85,7 @@ import { View, ScrollView, Text } from 'react-native';
 
 class MyApp extends React.Component {
     render() {
-        let { loading, myTodoTasks } = this.props;
+        const { loading, myTodoTasks } = this.props;
         
         if(loading) {
             return <View><Text>Loading your tasks...</Text></View>
