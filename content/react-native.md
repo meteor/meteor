@@ -3,7 +3,7 @@ title: React Native
 description: How to integrate your React Native apps with Meteor
 ---
 
-React Native has grown to be one of the most popular platforms for building native apps. React Native allows you to write apps in JavaScript that are rendered with native code. It has many of the features that you value when working with Meteor, like instant refresh on save. 
+React Native has grown to be one of the most popular platforms for building native apps, being used by [companies like Tesla, Instagram, and Facebook](https://reactnative.dev/showcase) in production. React Native allows you to write apps in JavaScript that are rendered with native code. It has many of the features that you value when working with Meteor, like instant refresh on save. 
 
 You can easily integrate your React Native app with Meteor, using the same methods you would on a Meteor + React Web app. The integration supports most Meteor features, including Methods, Pub/Sub, and Password Accounts, and has the same usage as `react-meteor-data`.
 
@@ -109,4 +109,16 @@ class MyApp extends React.Component {
 
 If you are rendering a large amounts of data, you should use the [FlatList](https://reactnative.dev/docs/flatlist) component.
 
-You can view the full API docs on the [meteor-react-native repo](https://github.com/TheRealNate/meteor-react-native/blob/master/docs/api.md)
+<h2 id="conclusion">Conclusion</h2>
+
+**Here are some useful links for futher reading:**
+
+You can see a list of example components built with `meteor-react-native` [here](https://github.com/TheRealNate/meteor-react-native/tree/master/examples).
+
+You can view the full API docs for `meteor-react-native` on the [meteor-react-native repo](https://github.com/TheRealNate/meteor-react-native/blob/master/docs/api.md)
+
+You can see the official React Native API docs [here](https://reactnative.dev/docs/components-and-apis)
+
+["How to setup your first app" from HackerNoon](https://hackernoon.com/react-native-how-to-setup-your-first-app-a36c450a8a2f)
+
+["The Full React Native Layout Cheat Sheet" from WixEngineering](https://medium.com/wix-engineering/the-full-react-native-layout-cheat-sheet-a4147802405c)
