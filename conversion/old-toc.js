@@ -341,7 +341,6 @@ module.exports = [
     "browser-policy",
     "coffeescript",
     "ecmascript",
-    "jquery",
     "less",
     "markdown",
     "modules",
