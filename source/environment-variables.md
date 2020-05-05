@@ -73,3 +73,11 @@ See also: [`BIND_IP`](#BIND-IP).
 (_development, production_)
 
 Used to generate URLs to your application by, among others, the accounts package. Provide a full URL to your application like this: `ROOT_URL="https://www.myapp.com"`. 
+
+## TOOL_NODE_FLAGS
+(_development, production_)
+
+Used to pass flags/variables to Node inside Meteor build. For example you can use this to pass a link to icu data: `TOOL_NODE_FLAGS="--icu-data-dir=node_modules/full-icu"`
+For full list of available flags see the [Node documentation](https://nodejs.org/dist/latest-v12.x/docs/api/cli.html).
+
+
