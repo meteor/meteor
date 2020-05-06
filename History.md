@@ -1,3 +1,9 @@
+## vNEXT, unreleased
+
+### Changes
+
+* `email` package dependencies have been update and package version has been bumped to 1.3.0
+
 
 ## v1.10.2, 2020-04-21
 

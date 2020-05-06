@@ -1,6 +1,6 @@
 var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
-var nodemailer = Npm.require('node4mailer');
+var nodemailer = Npm.require('nodemailer');
 
 Email = {};
 EmailTest = {};
@@ -8,12 +8,12 @@ EmailTest = {};
 EmailInternals = {
   NpmModules: {
     mailcomposer: {
-      version: Npm.require('node4mailer/package.json').version,
-      module: Npm.require('node4mailer/lib/mail-composer')
+      version: Npm.require('nodemailer/package.json').version,
+      module: Npm.require('nodemailer/lib/mail-composer')
     },
     nodemailer: {
-      version: Npm.require('node4mailer/package.json').version,
-      module: Npm.require('node4mailer')
+      version: Npm.require('nodemailer/package.json').version,
+      module: Npm.require('nodemailer')
     }
   }
 };
