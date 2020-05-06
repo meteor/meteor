@@ -9,6 +9,12 @@ You can easily integrate your React Native app with Meteor, using the same metho
 
 <h2 id="getting-started">Getting started with React Native</h2>
 
+React Native projects are coded using the same React principles, but have a completely separate codebase from your Meteor project. In order to use React Native with Meteor, you create a React Native app and use the `meteor-react-native` package to connect your app to your Meteor server.
+
+For most projects, since your native app will display the same data and call the same methods as your Meteor web app, creating a React Native app that connects to your Meteor server does not require any changes to your Meteor codebase.
+
+The only time you will need to make changes to your Meteor codebase is to enable certain features that are unique to your native app. For example, if you want to add push notifications to your native app, you will need to create a method on your Meteor app to store the native push tokens for a user.
+
 There are two routes for getting started with React Native. You can use "Vanilla" React Native, or you can use [Expo](https://expo.io/). Expo is a set of tools built around React Native. You can even try out React Native from your web browser using [Expo Snack](https://snack.expo.io/). You don't even need to install XCode or Android Studio to start using Expo.
 
 Here are the downsides to using Expo:
@@ -28,11 +34,13 @@ Once you have your environment setup and have your app running on your device or
 
 <h2 id="installation">Meteor React Native Installation</h2>
 
-Once you have your React Native environment setup, you can install the meteor-react-native package:
+To install the meteor-react-native package, run the following command in your React Native project:
 
 ````
 npm install --save meteor-react-native
 ````
+
+The `meteor-react-native` package enables your React Native app to establish a DDP connection with your Meteor server so it can receive data from publications and call server methods. It also provides access to core Meteor client methods like `Accounts.createUser` and `Meteor.loginWithPasword`, and allows you to display data in your app with the `withTracker` method.
 
 **Note: If your React Native app uses version 0.59 or lower, the meteor-react-native package contains breaking changes. Use [react-native-meteor](https://www.npmjs.com/package/react-native-meteor) instead.**
 
