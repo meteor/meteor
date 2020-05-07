@@ -549,7 +549,7 @@ from Cordova project`, async () => {
     buildmessage.assertInJob();
 
     if (utils.isUrlWithSha(version)) {
-      return convertToGitUrl(version);
+      return `${id}@${convertToGitUrl(version)}`;
     } else if (utils.isUrlWithFileScheme(version)) {
       // Strip file:// and resolve the path relative to the cordova-build
       // directory
