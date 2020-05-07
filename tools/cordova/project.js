@@ -773,7 +773,7 @@ perform cordova plugins reinstall`);
     // cordova-plugin-whitelist@1.3.2 => { 'cordova-plugin-whitelist': '1.3.2' }
     // com.cordova.plugin@file://.cordova-plugins/plugin => { 'com.cordova.plugin': 'file://.cordova-plugins/plugin' }
     // @scope/plugin@1.0.0 => { 'com.cordova.plugin': 'scope/plugin' }
-    const installed = this.listInstalledPluginVersions(true);
+    const installed = this.listInstalledPluginVersions();
     const installedPluginsNames = Object.keys(installed);
     const installedPluginsVersions = Object.values(installed);
     const missingPlugins = {};
