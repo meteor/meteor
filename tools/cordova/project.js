@@ -74,6 +74,34 @@ const pinnedPluginVersions = {
   "cordova-plugin-wkwebview-engine": "1.1.3"
 }
 
+/**
+ * To fix Cordova error: Variable(s) missing we convert the cli_variables
+ * when removing plugins we want to convert for each plugin, for instance,
+ * cordova-plugin-facebook4:
+ * commandOptions {
+ *   ...
+ *   cli_variables: {
+ *     'cordova-plugin-googleplus': {
+ *       REVERSED_CLIENT_ID: 'com.googleusercontent.apps.11111111-xxkodsuusaiusixuaix'
+ *     },
+ *     'cordova-plugin-facebook4': { APP_ID: '1111111111111111', APP_NAME: 'appname' }
+ *   }
+ * }
+ * into this
+ * commandOptions {
+ *   ...
+ *   cli_variables: { APP_ID: '1111111111111111', APP_NAME: 'appname' }
+ * }
+ *
+ * @param plugin
+ * @param commandOptions
+ */
+const getCommandOptionsForPlugin = (plugin, commandOptions = {}) => {
+  const cli_variables = commandOptions && commandOptions.cli_variables
+    && commandOptions.cli_variables[plugin] || {};
+  return {...commandOptions, cli_variables};
+}
+
 export class CordovaProject {
   constructor(projectContext, options = {}) {
 
@@ -560,18 +588,28 @@ from Cordova project`, async () => {
         { cli_variables: config, link: utils.isUrlWithFileScheme(version) });
 
       this.runCommands(`adding plugin ${target} \
-to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target], commandOptions));
+to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
+        commandOptions));
     }
   }
 
   // plugins is an array of plugin IDs.
-  removePlugins(plugins) {
+  removePlugins(plugins,  config = {}) {
     if (_.isEmpty(plugins)) {
       return;
     }
 
-    this.runCommands(`removing plugins ${plugins} \
-from Cordova project`, cordova_lib.plugin.bind(undefined, 'rm', plugins, this.defaultOptions));
+    const commandOptions = _.extend(this.defaultOptions,
+      { cli_variables: config });
+
+    plugins.forEach(plugin => {
+      const commandOptionsPlugin = getCommandOptionsForPlugin(plugin,
+        commandOptions);
+
+      this.runCommands(`removing plugin ${plugin} \
+  from Cordova project`, cordova_lib.plugin.bind(undefined, 'rm', [plugin],
+        commandOptionsPlugin));
+    });
   }
 
   // Ensures that the Cordova plugins are synchronized with the app-level
@@ -699,7 +737,7 @@ perform cordova plugins reinstall`);
             Object.keys(installedPluginVersions));
         }
 
-        this.removePlugins(pluginsToRemove);
+        this.removePlugins(pluginsToRemove, pluginsConfiguration);
 
         let pluginVersionsToInstall;
 
