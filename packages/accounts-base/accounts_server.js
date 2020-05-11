@@ -525,7 +525,7 @@ export class AccountsServer extends AccountsCommon {
     methods.logout = function () {
       const token = accounts._getLoginToken(this.connection.id);
       accounts._setLoginToken(this.userId, this.connection, null);
-      if (token && this.userId) {
+      if (!this._options.keepTokenWhenLogout && token && this.userId) {
         accounts.destroyToken(this.userId, token);
       }
       accounts._successfulLogout(this.connection, this.userId);

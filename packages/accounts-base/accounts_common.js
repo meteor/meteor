@@ -152,6 +152,8 @@ export class AccountsCommon {
   // - bcryptRounds {Number}
   //     Allows override of number of bcrypt rounds (aka work factor) used
   //     to store passwords.
+  // - keepTokenWhenLogout {Boolean}
+  //     Keep the stamped token whenever the user log out.
 
   /**
    * @summary Set global accounts options.
@@ -166,6 +168,7 @@ export class AccountsCommon {
    * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set inital password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`.
+   * @param {Boolean} options.keepTokenWhenLogout Keep the stamped token whenever the user log out.
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
@@ -200,7 +203,7 @@ export class AccountsCommon {
     // validate option keys
     const VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
                       "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays",
-                      "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector"];
+                      "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector", "keepTokenWhenLogout"];
 
     Object.keys(options).forEach(key => {
       if (!VALID_KEYS.includes(key)) {
