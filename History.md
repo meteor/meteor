@@ -1,4 +1,18 @@
 
+## v1.10.3, TBD
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* Fixes error when removing cordova plugin that depends on cli variables. PR [#10976](https://github.com/meteor/meteor/pull/11052)
+
 ## v1.10.2, 2020-04-21
 
 ### Breaking changes
