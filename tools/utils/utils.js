@@ -45,6 +45,7 @@ exports.parseUrl = function (str, defaults) {
   parsed.protocol = parsed.protocol.replace(/\:$/, '');
 
   return {
+    pathname: parsed.pathname,
     protocol: hasScheme ? parsed.protocol : defaultProtocol,
     hostname: parsed.hostname || defaultHostname,
     port: parsed.port || defaultPort
