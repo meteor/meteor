@@ -49,7 +49,6 @@ var oldRedirects = function() {
     'accountsui': 'accountsui',
     'coffeescript': 'coffeescript',
     'email': 'email',
-    'jquery': 'jquery',
     'http': 'http',
     'less': 'less',
     'markdown': 'markdown',

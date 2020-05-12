@@ -24,7 +24,7 @@ Read more about customizing user accounts in the [Accounts](http://guide.meteor.
 Retrieves the user record for the current user from
 the [`Meteor.users`](#meteor_users) collection.
 
-On the client, this will be the subset of the fields in the document that
+On the client, the available fields will be those that
 are published from the server (other fields won't be available on the
 client). By default the server publishes `username`, `emails`, and
 `profile` (writable by user). See [`Meteor.users`](#meteor_users) for more on
@@ -33,6 +33,15 @@ the fields used in user documents.
 On the server, this will fetch the record from the database. To improve the
 latency of a method that uses the user document multiple times, save the
 returned record to a variable instead of re-calling `Meteor.user()`.
+
+Fetching the full user document can cause unnecessary database usage on the
+server and over-reactivity on the client, particularly if you store lots of
+custom data on it. Therefore it is recommended to use the `options`
+parameter to only fetch the fields you need:
+
+```js
+const userName = Meteor.user({fields: {'profile.name': 1}}).profile.name;
+```
 
 {% apibox "Meteor.userId" %}
 

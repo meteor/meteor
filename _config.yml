@@ -48,7 +48,6 @@ sidebar_categories:
     - packages/coffeescript
     - packages/dynamic-import
     - packages/ecmascript
-    - packages/jquery
     - packages/less
     - packages/markdown
     - packages/modules
@@ -346,7 +345,6 @@ redirects:
   /#/full/audit-argument-checks: 'packages/audit-argument-checks.html'
   /#/full/coffeescript: 'packages/coffeescript.html'
   /#/full/ecmascript: 'packages/ecmascript.html'
-  /#/full/jquery: 'packages/jquery.html'
   /#/full/less: 'packages/less.html'
   /#/full/markdown: 'packages/markdown.html'
   /#/full/modules: 'packages/modules.html'
@@ -623,7 +621,6 @@ redirects:
   '#audit-argument-checks': 'packages/audit-argument-checks.html'
   '#coffeescript': 'packages/coffeescript.html'
   '#ecmascript': 'packages/ecmascript.html'
-  '#jquery': 'packages/jquery.html'
   '#less': 'packages/less.html'
   '#markdown': 'packages/markdown.html'
   '#modules': 'packages/modules.html'
