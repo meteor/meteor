@@ -1,8 +1,11 @@
 ## vNEXT, unreleased
 
-### Changes
+### Breaking changes
 
-* `email` package dependencies have been update and package version has been bumped to 1.3.0
+* `email` package dependencies have been update and package version has been bumped to 2.0.0
+    There is a potential breaking change as the underlying package started to use `dns.resolve()`
+    instead of `dns.lookup()` which might be breaking on some environments.
+    See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
 
 
 ## v1.10.2, 2020-04-21
