@@ -118,9 +118,9 @@ EmailTest.hookSend = function (f) {
  * If the `MAIL_URL` environment variable is set, actually sends the email.
  * Otherwise, prints the contents of the email to standard out.
  *
- * Note that this package is based on **mailcomposer 4**, so make sure to refer to
- * [the documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md)
- * for that version when using the `attachments` or `mailComposer` options.
+ * Note that this package is based on **nodemailer**, so make sure to refer to
+ * [the documentation](http://nodemailer.com/)
+ * when using the `attachments` or `mailComposer` options.
  *
  * @locus Server
  * @param {Object} options
@@ -136,7 +136,7 @@ EmailTest.hookSend = function (f) {
  * @param {String} [options.icalEvent] iCalendar event attachment
  * @param {Object} [options.headers] Dictionary of custom headers - e.g. `{ "header name": "header value" }`. To set an object under a header name, use `JSON.stringify` - e.g. `{ "header name": JSON.stringify({ tracking: { level: 'full' } }) }`.
  * @param {Object[]} [options.attachments] Array of attachment objects, as
- * described in the [mailcomposer documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md#attachments).
+ * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
