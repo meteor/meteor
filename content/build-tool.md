@@ -201,6 +201,13 @@ meteor remove standard-minifier-css
 meteor add juliancwirko:postcss
 ```
 
+As well as installing the postcss NPM package:
+
+```
+meteor npm install postcss@6  --save-dev
+meteor npm install postcss-load-config@1 --save-dev
+```
+
 Then we can install any npm CSS processing packages that we'd like to use and reference them from a `postcss` section of our `package.json`. In the Todos example app, we use `autoprefixer` package to increase browser support:
 
 ```
