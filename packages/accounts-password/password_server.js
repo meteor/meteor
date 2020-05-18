@@ -186,7 +186,7 @@ Accounts.findUserByUsername =
  * @returns {Object} A user if found, else null
  * @importFromPackage accounts-base
  */
-Accounts.findUserByEmail = 
+Accounts.findUserByEmail =
   (email, options) => Accounts._findUserByQuery({ email }, options);
 
 // Generates a MongoDB selector that can be used to perform a fast case
@@ -909,6 +909,9 @@ Accounts.sendVerificationEmail = (userId, email, extraTokenData) => {
   const url = Accounts.urls.verifyEmail(token);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
   Email.send(options);
+  if (Meteor.isDevelopment) {
+    console.log(`\nVerification email URL (without MIME): ${url}`);
+  }
   return {email: realEmail, user, token, url, options};
 };
 
