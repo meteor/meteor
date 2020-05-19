@@ -49,7 +49,7 @@ Now to setup your app.
 First, import `Meteor`, `withTracker`, and `Mongo`:
 
 ````
-import { Meteor, Mongo, withTracker } from 'meteor-react-native';
+import Meteor, { Mongo, withTracker } from 'meteor-react-native';
 ````
 
 Next, you need to connect to your Meteor server. This should typically be at the start of your App.jsx.
