@@ -58,7 +58,6 @@ export class AccountsServer extends AccountsCommon {
     setExpireTokensInterval(this);
 
     this._validateLoginHook = new Hook({ bindEnvironment: false });
-    this._beforeExternalLoginHook = new Hook({ bindEnvironment: false });
     this._validateNewUserHooks = [
       defaultValidateNewUserHook.bind(this)
     ];
@@ -72,9 +71,9 @@ export class AccountsServer extends AccountsCommon {
       resetPassword: token => Meteor.absoluteUrl(`#/reset-password/${token}`),
       verifyEmail: token => Meteor.absoluteUrl(`#/verify-email/${token}`),
       enrollAccount: token => Meteor.absoluteUrl(`#/enroll-account/${token}`),
-    }
+    };
 
-    this.addDefaultRateLimit()
+    this.addDefaultRateLimit();
   }
 
   ///
@@ -123,8 +122,12 @@ export class AccountsServer extends AccountsCommon {
    * @locus Server
    * @param {Function} func Called whenever login/user creation from external service is attempted. Login or user creation based on this login can be aborted by by passing a falsy value or throwing an exception.
    */
-  beforeExternalLoginHook(func) {
-    this._beforeExternalLoginHook.register(func);
+  beforeExternalLogin(func) {
+    if (this._beforeExternalLoginHook) {
+      throw new Error("Can only call beforeExternalLogin once");
+    }
+
+    this._beforeExternalLoginHook = func;
   }
 
   ///
@@ -1222,11 +1225,9 @@ export class AccountsServer extends AccountsCommon {
     let user = this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
 
     // Before continuing, run user hook to see if we should continue
-    this._beforeExternalLoginHook.forEach(hook => {
-      if (!hook(serviceName, serviceData, user)) {
-        throw new Meteor.Error(403, "Login forbidden");
-      }
-    });
+    if (this._beforeExternalLoginHook && !this._beforeExternalLoginHook(serviceName, serviceData, user)) {
+      throw new Meteor.Error(403, "Login forbidden");
+    }
 
     // When creating a new user we pass through all options. When updating an
     // existing user, by default we only process/pass through the serviceData
