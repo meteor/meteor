@@ -176,11 +176,6 @@ Log._getCallerDetails = () => {
   obj.time = new Date();
   obj.level = level;
 
-  // XXX allow you to enable 'debug', probably per-package
-  if (level === 'debug') {
-    return;
-  }
-
   if (intercepted) {
     interceptedLines.push(EJSON.stringify(obj));
   } else if (Meteor.isServer) {
