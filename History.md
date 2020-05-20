@@ -1,6 +1,8 @@
 ## v3.2.3
 
 * Update dependencies
+* Update roles_common.js jsdoc documentation [#321](https://github.com/Meteor-Community-Packages/meteor-roles/pull/321)([@kulttuuri](https://github.com/kulttuuri))
+* Function `userIsInRole` should return false if a function is given as user [#324](https://github.com/Meteor-Community-Packages/meteor-roles/pull/324)([@Floriferous](https://github.com/Floriferous))
 
 ## v3.2.2
 
