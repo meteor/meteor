@@ -2233,6 +2233,13 @@ describe('roles', function () {
     assert.isFalse(Roles.userIsInRole(users.eve, ['Role1', 'Role2', undefined], 'GroupName'))
   })
 
+  it('userIsInRole returns false if user is a function', function () {
+    Roles.createRole('admin')
+    Roles.addUsersToRoles(users.eve, ['admin'])
+
+    assert.isFalse(Roles.userIsInRole(() => {}, 'admin'))
+  })
+
   describe('isParentOf', function () {
     it('returns false for unknown roles', function () {
       Roles.createRole('admin')

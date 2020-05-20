@@ -687,6 +687,7 @@ Object.assign(Roles, {
     }
 
     if (!id) return false
+    if (typeof id !== 'string') return false
 
     selector = {
       'user._id': id
