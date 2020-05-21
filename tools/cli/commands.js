@@ -1172,7 +1172,7 @@ ${displayNameForPlatform(platform)}` }, () => {
 `This is an auto-generated XCode project for your iOS application.
 
 Instructions for publishing your iOS app to App Store can be found at:
-https://guide.meteor.com/mobile.html#submitting-ios
+https://guide.meteor.com/cordova.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
@@ -1188,7 +1188,7 @@ https://guide.meteor.com/mobile.html#submitting-ios
 `This is an auto-generated Gradle project for your Android application.
 
 Instructions for publishing your Android app to Play Store can be found at:
-https://guide.meteor.com/mobile.html#submitting-android
+https://guide.meteor.com/cordova.html#submitting-android
 `, "utf8");
             }
         });
