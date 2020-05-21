@@ -138,10 +138,10 @@
 ## v1.9.3, 2020-03-09
 
 ### Breaking changes
-N/A
+* The MongoDB `retryWrites` option now defaults to `true` (it previously defaulted to false). Users of database services that don't support retryWrites will experience a fatal error due to this.
 
 ### Migration Steps
-N/A
+* If you get the error `MongoError: This MongoDB deployment does not support retryable writes. Please add retryWrites=false to your connection string.`, append `retryWrites=false` to your MongoDB connection string.
 
 ### Changes
 * `mongodb` driver package has been updated
