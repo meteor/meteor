@@ -55,8 +55,11 @@ import Meteor, { Mongo, withTracker } from 'meteor-react-native';
 Next, you need to connect to your Meteor server. This should typically be at the start of your App.jsx.
 
 ````
-Meteor.connect("wss://myapp.meteor.com");
+Meteor.connect("wss://myapp.meteor.com/websocket");
 ````
+
+**Note: If you are using Expo, please see [these instructions](https://github.com/TheRealNate/meteor-react-native#custom-storage-adapter) for an extra step when connecting to your Meteor server**
+
 
 Define your collections:
 
