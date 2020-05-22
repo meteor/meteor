@@ -1,0 +1,25 @@
+{
+  "name": "cordova",
+  "private": true,
+  "scripts": {
+    "start": "meteor run --settings private/env/dev/settings.json",
+    "start-production": "meteor run --settings private/env/production/settings.json",
+    "visualize": "meteor --production --extra-packages bundle-visualizer"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.8.4",
+    "bcrypt": "^4.0.1",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "meteor-node-stubs": "^1.0.0",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "request": "^2.88.2"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main",
+      "server": "server/main.js"
+    }
+  }
+}

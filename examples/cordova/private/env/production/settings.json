@@ -1,0 +1,12 @@
+{
+  "public": {
+    "native": {
+      "appleItunesAppId": "2441947344",
+      "appleTeamId": "XR7QCJTCL9",
+      "appleBundleId": "com.meteorapp.mobile",
+      "googlePlayAppId": "com.meteorapp.mobile",
+      "oneSignalAppId": "a4a5axxx-59f2-493f-abdb-efce7b0c8ef6",
+      "oneSignalRestApiKey": "XXXwMDI5MWEtNzE3MC00ZGEzLWIyNzAtNzgzYzg5NmU5ZWVj"
+    }
+  }
+}
