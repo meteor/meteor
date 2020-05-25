@@ -170,8 +170,6 @@ App.appendToConfig(`
   </platform>
   <platform name="android">
     <preference name="android-targetSdkVersion" value="29" />
-  </platform>
-  <platform name="android">
     <preference name="android-minSdkVersion" value="20" />
   </platform>
   <universal-links>

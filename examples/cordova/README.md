@@ -181,6 +181,14 @@ You need to have a Google developer account to execute the steps below.
   - Copy the `res` folder to your `private/assets/` (create `private/assets` if you don't have them yet)
   - Add your original icon file used to generate the assets to `private/assets/` as `icon.png`.
   - Rename /screen/ios/Default@2x~ipad~anyany.png to /screen/ios/Default@2x~universal~anyany.png and delete all the other files in this folder
+- You also need to convert your App Icon to Notification Icon, you can use [Android Asset Studio](http://romannurik.github.io/AndroidAssetStudio/icons-notification.html#source.type=clipart&source.clipart=ac_unit&source.space.trim=1&source.space.pad=0&name=ic_stat_onesignal_default)
+  - Click on Image
+  - Select your App Icon
+  - Check if it is being rendered correctly, if not try another image in a different format, check more details [here](https://documentation.onesignal.com/docs/customize-notification-icons)
+  - Download the zip and extract
+  - Create the folder `cordova-build-override` in the root of your project, this folder will be copied to your Cordova project in the build process
+  - Inside this folder create the following directory structure: `platforms/android/app/src/main/` and then copy the content of the zip with the folder (`res`) to `main`. Also name all the images as `ic_stat_onesignal_default.png`. See below how this should look like:
+  ![Android Notification Icons directory structure](https://meteor-examples.s3.amazonaws.com/cordova/android-notification-icons.png)
 - Commit and push your changes.
 
 ## Build your app
