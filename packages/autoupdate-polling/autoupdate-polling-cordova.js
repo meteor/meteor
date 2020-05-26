@@ -43,8 +43,8 @@ AutoupdatePolling._pollingSubscribe = function pollingSubscribe(delay) {
   }, delay);
 };
 
-if (Meteor.isDevelopment)
-  AutoupdatePolling._pollingSubscribe(3000);
+if (!Meteor.isProduction || Meteor.settings.public.autoupdate_polling_time)
+  AutoupdatePolling._pollingSubscribe(Meteor.settings.public.autoupdate_polling_time || 3000);
 
 function checkNewVersionDocument(doc) {
   if (doc.version !== autoupdateVersionsCordova.version) {

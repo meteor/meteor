@@ -138,7 +138,7 @@ Meteor.startup(function () {
     });
   });
 
-  if (Meteor.isDevelopment) {
+  if (!Meteor.isProduction || Meteor.settings.public.autoupdate_polling_time) {
     WebApp.connectHandlers.use(
       '/meteor_autoupdate_polling_clientVersions',
       function(req, res, next) {
