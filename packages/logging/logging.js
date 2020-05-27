@@ -176,6 +176,11 @@ Log._getCallerDetails = () => {
   obj.time = new Date();
   obj.level = level;
 
+  // If we are in production don't write out debug logs.
+  if (level === 'debug' && Meteor.isProduction) {
+    return;
+  }
+
   if (intercepted) {
     interceptedLines.push(EJSON.stringify(obj));
   } else if (Meteor.isServer) {
