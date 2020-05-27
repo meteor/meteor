@@ -98,15 +98,15 @@ var smtpSend = function (transport, mail) {
   transport._syncSendMail(mail);
 };
 
+var sendHooks = [];
 /**
- * Mock out email sending (eg, during a test.) This is private for now.
+ * Mock out email sending (eg, during a test.)
  *
- * f receives the arguments to Email.send and should return true to go
+ * @param f {function} receives the arguments to Email.send and should return true to go
  * ahead and send the email (or at least, try subsequent hooks), or
  * false to skip sending.
  */
-var sendHooks = [];
-EmailTest.hookSend = function (f) {
+Email.hookSend = function (f) {
   sendHooks.push(f);
 };
 
