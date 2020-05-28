@@ -1,6 +1,6 @@
 # Meteor Roadmap
 
-**Up to date as of January 31, 2020**
+**Up to date as of May 21, 2020**
 
 This document describes the high-level features and actions for the Meteor project in the near- to medium-term future. This roadmap was built based on community feedback and to improve areas where Meteor is already strong. The description of many items include sentences and ideas from Meteor community members.
 
@@ -15,7 +15,7 @@ Ideally, every item in this roadmap should have at least two leaders, leaders ar
 ## Core
 
 ### Tree Shaking
-- Leaders: [Ben Newman](https://github.com/benjamn)
+- Leaders: [Ben Newman](https://github.com/benjamn) / [Renan Castro](https://github.com/renanccastro)
 - Status: -
 - PRs: -
 
@@ -29,9 +29,10 @@ Implement tree shaking / dead code elimination, which involves pruning the depen
 A proper service worker build target. Regular Web Workers can be built from a function.toString() but service-workers require an actual server route.
 
 ### Ultra-thin Meteor
-- Leaders: <you?>
-- Status: -
-- PRs: -
+- Leaders: [Ruither Borba](https://github.com/delki8)
+- Status: In Progress
+- PRs:
+Autoupdate package without ddp [#11034](https://github.com/meteor/meteor/pull/11034)
 
 [Meteor 1.7](https://github.com/meteor/meteor/blob/devel/History.md#v17-2018-05-28) introduced the `meteor create --minimal` command, which generates a new application without any unnecessary Meteor packages, like `mongo` and `ddp`.
 
@@ -64,14 +65,14 @@ Explore ideas to improve rebuild time such as split main client bundle into seve
 
 ### Performance improvements on Windows
 - Leaders: [zodern](https://github.com/zodern)
-- Status: -
+- Status: In Progress
 - PRs: -
 
 Explore ideas to improve performance on Windows such as build in place.
 
 ### Hot Module Replacement
-- Leaders: <you?>
-- Status: -
+- Leaders: [zodern](https://github.com/zodern)
+- Status: In Progress
 - PRs: -
 
 Explore ideas to implement HMR in Meteor.
@@ -79,17 +80,18 @@ Explore ideas to implement HMR in Meteor.
 ### Transition as much as possible to NPM
 - Leaders: <you?>
 - Status: -
-- PRs: -
+- PRs: 
+  - PoC using base64 package as example [#10996](https://github.com/meteor/meteor/pull/10996)
 
 Migrate packages that do not depend on Meteor exclusive features to NPM and we also continue to encourage new packages to be published as NPM packages when possible.
 
 ## Cordova
 ### Cordova documentation
 - Leaders: [Filipe Névola](https://github.com/filipenevola)
-- Status: -
+- Status: In Progress
 - PRs: -
 
-Provide a skeleton with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide ([Forums post](https://forums.meteor.com/t/lets-create-the-ultimate-cordova-hot-code-push-faq-doc/50500)).
+Provide a skeleton or example with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide ([Forums post](https://forums.meteor.com/t/lets-create-the-ultimate-cordova-hot-code-push-faq-doc/50500)).
 
 ## DB
 ### Minimongo secondary index support
@@ -107,20 +109,6 @@ Improve index support for Minimongo to enable better performance in the client f
 
 Provide a nice and friendly introduction for people that are learning Meteor.
 
-### Update Blaze Tutorial
-- Leaders: [Jan Küster](https://github.com/jankapunkt), [Harry Adel](https://github.com/harryadelb)
-- Status: In Progress
-- PRs: -
-
-Blaze tutorial should reflect latest best practices.
-
-### Update Angular Tutorial
-- Leaders: <you?>
-- Status: -
-- PRs: -
-
-Angular tutorial should reflect latest best practices for using Meteor and Angular together.
-
 ### Update React Tutorial
 - Leaders: [Leonardo Venturini](https://github.com/leonardoventurini)
 - Status: In Progress
@@ -129,11 +117,11 @@ Angular tutorial should reflect latest best practices for using Meteor and Angul
 React tutorial should reflect latest best practices for using Meteor and React together.
 
 ### PWA documentation
-- Leaders: <you?>
-- Status: -
+- Leaders: [Filipe Névola](https://github.com/filipenevola)
+- Status: In Progress
 - PRs: -
 
-Provide a skeleton with PWA configurations already in place such as `manifest`, service worker, Open Graph meta tags, etc. Also improve docs and guide.
+Provide a skeleton or an example with PWA configurations already in place such as `manifest`, service worker, Open Graph meta tags, etc. Also improve docs and guide.
 
 ### SSR documentation
 - Leaders: [Kevin Newman](https://github.com/CaptainN) / [Eric Burel](https://github.com/eric-burel)
@@ -163,19 +151,25 @@ each technology we would like to have:
 as we already have for Blaze, React and Angular.
 
 ### Vue.js
-- Leaders: [Tsega](https://github.com/tsega)
-- Status: -
-- PRs: -
+- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
+- Status: In Progress
+- PRs: https://github.com/meteor/simple-todos-vue
+
+Tutorial is ready. We want a create command (--vue) yet and more docs.
 
 ### Svelte
-- Leaders: [Kevin Newman](https://github.com/CaptainN)
-- Status: -
-- PRs: -
+- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
+- Status: In Progress
+- PRs: https://github.com/meteor/simple-todos-svelte
+
+Tutorial is ready. We want a create command (--svelte) yet and more docs.
 
 ### React Native
-- Leaders: [Kevin Newman](https://github.com/CaptainN)
-- Status: -
-- PRs: -
+- Leaders: [Nathaniel Dsouza](https://github.com/TheRealNate)
+- Status: In Progress
+- PRs: https://github.com/meteor/guide/pull/1041 https://github.com/meteor/guide/pull/1039 https://github.com/meteor/guide/pull/1035
+
+We have some docs already maybe we could have an example in the examples folder.
 
 ### Apollo
 - Leaders: <you?>
@@ -195,6 +189,20 @@ Relevant discussions:
 - https://github.com/storybookjs/storybook/issues/5975
 
 ## Recently completed
+### Update Angular Tutorial
+- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
+- Status: shipped in April 2020
+- PRs: https://github.com/meteor/tutorials/pull/200 https://github.com/meteor/tutorials/pull/199
+
+Angular tutorial should reflect latest best practices for using Meteor and Angular together.
+
+### Update Blaze Tutorial
+- Leaders: [Jan Küster](https://github.com/jankapunkt), [Harry Adel](https://github.com/harryadelb), [Brian Mulhall](https://github.com/BrianMulhall)
+- Status: shipped in April 2020
+- PRs: https://github.com/meteor/tutorials/pull/200 https://github.com/meteor/tutorials/pull/199
+
+Blaze tutorial should reflect latest best practices.
+
 ### Update MongoDB driver
 - Leaders: [Christian Klaussner](https://github.com/klaussner)
 - Status: shipped in Meteor 1.10.1

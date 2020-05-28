@@ -23,6 +23,8 @@ If you can think of any changes to the project, [documentation](https://github.c
 
 ### Finding work
 
+Are you new here? Please check our issues `good-for-first-contribution`: [core](https://github.com/meteor/meteor/labels/good-for-first-contribution), [docs](https://github.com/meteor/docs/labels/good-for-first-contribution), [guide](https://github.com/meteor/guide/labels/good-for-first-contribution).
+
 We curate specific issues that would make great pull requests for community contributors by applying the `pull-requests-encouraged` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged)).
 
 Issues which *also* have the `confirmed` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed)) are considered to have their details clear enough to begin working on.

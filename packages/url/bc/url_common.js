@@ -1,12 +1,10 @@
-var URL = exports.URL = {};
-
 function encodeString(str) {
   return encodeURIComponent(str).replace(/\*/g, '%2A');
 }
 
 // Encode URL parameters into a query string, handling nested objects and
 // arrays properly.
-URL._encodeParams = function (params, prefix) {
+var _encodeParams = function (params, prefix) {
   var str = [];
   var isParamsArray = Array.isArray(params);
   for (var p in params) {
@@ -25,6 +23,8 @@ URL._encodeParams = function (params, prefix) {
   return str.join('&').replace(/%20/g, '+');
 };
 
+exports._encodeParams = _encodeParams;
+
 exports.buildUrl = function(before_qmark, from_qmark, opt_query, opt_params) {
   var url_without_query = before_qmark;
   var query = from_qmark ? from_qmark.slice(1) : null;
@@ -34,7 +34,7 @@ exports.buildUrl = function(before_qmark, from_qmark, opt_query, opt_params) {
 
   if (opt_params) {
     query = query || "";
-    var prms = URL._encodeParams(opt_params);
+    var prms = _encodeParams(opt_params);
     if (query && prms)
       query += '&';
     query += prms;

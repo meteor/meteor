@@ -1,20 +1,40 @@
-const _ = require('underscore');
+type ParsedStackFrame = {
+  /**
+   * filename as it appears in the stack
+   */
+  file: string;
 
-// Given an Error (eg, 'new Error'), return the stack associated with
-// that error as an array. More recently called functions appear first
-// and each element is an object with keys:
-// - file: filename as it appears in the stack
-// - line: 1-indexed line number in file, as a Number
-// - column: 1-indexed column in line, as a Number
-// - func: name of the function in the frame (maybe null)
-//
-// Accomplishes this by parsing the text representation of the stack
-// with regular expressions. Unlikely to work anywhere but v8.
-//
-// If a function on the stack has been marked with mark(), don't
-// return anything past that function. We call this the "user portion"
-// of the stack.
-export function parse(err) {
+  /**
+   * 1-indexed line in the file
+   */
+  line: number | null;
+
+  /**
+   * 1-indexed column in the line
+   */
+  column: number | null;
+
+  /**
+   * name of the function in the frame
+   */
+  func: string | null;
+};
+
+/**
+ * Returns the stack associated with an error as an array.
+ * More recently called functions appear first.
+ * 
+ * Accomplishes this by parsing the text representation of the stack
+ * with regular expressions. Unlikey to work anywhere but v8.
+ * 
+ * If a function on the stack has been marked with mark(), will not
+ * return anything past that function. We call this the "user portion"
+ * of the stack.
+ */
+export function parse(err: Error): {
+  insideFiber?: ParsedStackFrame[],
+  outsideFiber?: ParsedStackFrame[],
+} {
   const stack = err.stack;
   if (typeof stack !== "string") {
     return {};
@@ -56,38 +76,45 @@ export function parse(err) {
   };
 }
 
-// Decorator. Mark the point at which a stack trace returned by
-// parse() should stop: no frames earlier than this point will be
-// included in the parsed stack. Confusingly, in the argot of the
-// times, you'd say that frames "higher up" than this or "above" this
-// will not be returned, but you'd also say that those frames are "at
-// the bottom of the stack". Frames below the bottom are the outer
-// context of the framework running the user's code.
-export function markBottom(f, context) {
+/**
+ * Decorator. Mark the point at which a stack trace returned by
+ * parse() should stop: no frames earlier than this point will be
+ * included in the parsed stack. Confusingly, in the argot of the
+ * times, you'd say that frames "higher up" than this or "above" this
+ * will not be returned, but you'd also say that those frames are "at
+ * the bottom of the stack". Frames below the bottom are the outer
+ * context of the framework running the user's code.
+ */
+export function markBottom(f: Function, context: any) {
   /* eslint-disable camelcase */
   return function __bottom_mark__() {
+    // @ts-ignore: Implicit this
     return f.apply(context || this, arguments);
   };
   /* eslint-enable camelcase */
 }
 
-// Decorator. Mark the point at which a stack trace returned by
-// parse() should begin: no frames later than this point will be
-// included in the parsed stack. The opposite of markBottom().
-// Frames above the top are helper functions defined by the
-// framework and executed by user code whose internal behavior
-// should not be exposed.
-export function markTop(f) {
+/**
+ * Decorator. Mark the point at which a stack trace returned by
+ * parse() should begin: no frames later than this point will be
+ * included in the parsed stack. The opposite of markBottom().
+ * Frames above the top are helper functions defined by the
+ * framework and executed by user code whose internal behavior
+ * should not be exposed.
+ */
+export function markTop(f: Function, context: any) {
   /* eslint-disable camelcase */
   return function __top_mark__() {
-    return f.apply(this, arguments);
+    // @ts-ignore: Implicit this
+    return f.apply(context || this, arguments);
   };
   /* eslint-enable camelcase */
 }
 
-function parseStackFrames(frames) {
+function parseStackFrames(frames: string[]): ParsedStackFrame[] {
   let stop = false;
-  let ret = [];
+  let parsedFrames: ParsedStackFrame[] = [];
+
   frames.some(frame => {
     if (stop) {
       return true;
@@ -110,17 +137,19 @@ function parseStackFrames(frames) {
         // m[1] could be Object.__top_mark__ or something like that
         // depending on where exactly you put the function returned by
         // markTop
-        ret = [];
+        parsedFrames = [];
         return;
       }
+
       if (m[1].match(/(?:^|\.)__bottom_mark__$/)) {
         return stop = true;
       }
-      ret.push({
+
+      parsedFrames.push({
         func: m[1],
         file: m[5],
-        line: m[7] ? +m[7] : undefined,
-        column: m[9] ? +m[9] : undefined
+        line: m[7] ? +m[7] : null,
+        column: m[9] ? +m[9] : null
       });
       return;
     }
@@ -128,10 +157,11 @@ function parseStackFrames(frames) {
 
     if (m = frame.match(/^\s*at\s+(.+?)(:(\d+))?(:(\d+))?\s*$/)) {
       // "    at /path/to/myfile.js:532:39"
-      ret.push({
+      parsedFrames.push({
         file: m[1],
-        line: m[3] ? +m[3] : undefined,
-        column: m[5] ? +m[5] : undefined
+        line: m[3] ? +m[3] : null,
+        column: m[5] ? +m[5] : null,
+        func: null,
       });
       return;
     }
@@ -147,14 +177,14 @@ function parseStackFrames(frames) {
       return stop = true;
     }
 
-    if (_.isEmpty(ret)) {
+    if (parsedFrames.length === 0) {
       // We haven't found any stack frames, so probably we have newlines in the
       // error message. Just skip this line.
       return;
     }
 
-    throw new Error("Couldn't parse stack frame: '" + frame + "'");
+    throw new Error(`Couldn't parse stack frame: '${frame}'`);
   });
 
-  return ret;
+  return parsedFrames;
 }
