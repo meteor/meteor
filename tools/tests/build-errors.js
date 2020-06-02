@@ -1,7 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-// This test was originally written to test the behavior of parse-stack.js when
+// This test was originally written to test the behavior of parse-stack.ts when
 // there's a colon in a filename. We now try a lot harder to avoid putting
 // colons in filenames. But it's still a decent test that errors in legacy
 // source handlers work.

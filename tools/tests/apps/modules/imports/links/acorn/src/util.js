@@ -9,3 +9,7 @@ export function has(obj, propName) {
 export const isArray = Array.isArray || ((obj) => (
   toString.call(obj) === "[object Array]"
 ))
+
+export function wordsRegexp(words) {
+  return new RegExp("^(?:" + words.replace(/ /g, "|") + ")$")
+}

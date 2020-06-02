@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  version: '1.5.0'
+  version: '1.6.0'
 });
 
 Package.onUse(api => {
@@ -23,6 +23,10 @@ Package.onUse(api => {
     'random',
     'tracker'
   ]);
+
+  // Make weak use of Decimal type on client
+  api.use('mongo-decimal', 'client', {weak: true});
+  api.use('mongo-decimal', 'server');
 
   api.mainModule('minimongo_client.js', 'client');
   api.mainModule('minimongo_server.js', 'server');

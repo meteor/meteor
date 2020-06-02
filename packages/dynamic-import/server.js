@@ -8,7 +8,6 @@ const {
 } = require("path");
 const { fetchURL } = require("./common.js");
 const { Meteor } = require("meteor/meteor");
-const { isModern } = require("meteor/modern-browsers");
 const hasOwn = Object.prototype.hasOwnProperty;
 
 require("./security.js");
@@ -112,27 +111,19 @@ function middleware(request, response) {
 }
 
 function getPlatform(request) {
-  const { identifyBrowser } = Package.webapp.WebAppInternals;
-  const browser = identifyBrowser(request.headers["user-agent"]);
-  let platform = isModern(browser)
-    ? "web.browser"
-    : "web.browser.legacy";
-
   // If the __dynamicImport request includes a secret key, and it matches
   // dynamicImportInfo[platform].key, use platform instead of the default
   // platform, web.browser.
   const secretKey = request.query.key;
-
   if (typeof secretKey === "string") {
-    Object.keys(dynamicImportInfo).some(p => {
+    for (const p of Object.keys(dynamicImportInfo)) {
       if (secretKey === dynamicImportInfo[p].key) {
-        platform = p;
-        return true;
+        return p;
       }
-    });
+    }
   }
 
-  return platform;
+  return Package.webapp.WebApp.categorizeRequest(request).arch;
 }
 
 function readTree(tree, platform) {

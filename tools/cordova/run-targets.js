@@ -69,7 +69,7 @@ function openXcodeProject(projectDir) {
         "app on an iOS device. For further instructions, visit this " +
         "wiki page: ") +
       Console.url(
-        "https://guide.meteor.com/mobile.html#running-on-ios"
+        "https://guide.meteor.com/cordova.html#running-on-ios"
     ));
     Console.info();
   } catch (error) {
@@ -82,7 +82,7 @@ ${error.message}`);
     Console.error(message);
     Console.error(
       chalk.green("Instructions for running your app on an iOS device: ") +
-      Console.url("https://guide.meteor.com/mobile.html#running-on-ios")
+      Console.url("https://guide.meteor.com/cordova.html#running-on-ios")
     );
     Console.error();
   }

@@ -96,6 +96,15 @@ _.extend(Proxy.prototype, {
     // client->proxy connection has an error, though this may change; see
     // discussion at https://github.com/nodejitsu/node-http-proxy/pull/488
     self.proxy.on('error', function (err, req, resOrSocket) {
+      if (err.code === 'HPE_HEADER_OVERFLOW') {
+        const logMessage = 'Error during proxy to server communication ' +
+          'due to the header size exceeding Node\'s currently ' +
+          'configured limit. This limit is configurable with a command ' +
+          'line option (https://nodejs.org/api/cli.html#cli_max_http_header_size_size ' +
+          'and https://docs.meteor.com/commandline.html#meteorrun).';
+        runLog.log(logMessage);
+      }
+
       if (resOrSocket instanceof http.ServerResponse) {
         if (!resOrSocket.headersSent) {
           // Return a 503, but only if we haven't already written headers (or

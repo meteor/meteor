@@ -1,18 +1,29 @@
 Package.describe({
-  summary: "Utility code for constructing URLs",
-  version: "1.2.0"
+  name: "url",
+  version: "1.3.0",
+  summary: "Isomorphic modern/legacy/Node polyfill for WHATWG URL/URLSearchParams",
+  documentation: "README.md"
+});
+
+Npm.depends({
+  "core-js": "3.5.0"
 });
 
 Package.onUse(function(api) {
-  api.use('modules');
-  api.mainModule('url_client.js', 'client');
-  api.mainModule('url_server.js', 'server');
-  api.export('URL');
+  api.use("modules");
+  api.use("modern-browsers");
+
+  api.mainModule("modern.js", "web.browser");
+  api.mainModule("legacy.js", "legacy");
+  api.mainModule("server.js", "server");
+
+  api.export("URL");
+  api.export("URLSearchParams");
 });
 
-Package.onTest(function (api) {
-  api.use(['tinytest', 'url']);
-  api.addFiles('url_tests.js');
+Package.onTest(function(api) {
+  api.use("ecmascript");
+  api.use("tinytest");
+  api.use("url");
+  api.mainModule("tests/main.js");
 });
-
-// More tests can be found in the http package
