@@ -1,4 +1,57 @@
-## v1.10, 2020-03-12
+
+## v1.10.2, 2020-04-21
+
+### Breaking changes
+
+* The `babel-compiler` package, used by both `ecmascript` and
+  `typescript`, no longer supports stripping [Flow](https://flow.org/)
+  type annotations by default, which may be a breaking change if your
+  application (or Meteor package) relied on Flow syntax.
+
+### Migration steps
+
+* If you still need Babel's Flow plugins, you can install them with npm
+  and then enable them with a custom `.babelrc` file in your application's
+  (or package's) root directory:
+  ```json
+  {
+    "plugins": [
+      "@babel/plugin-syntax-flow",
+      "@babel/plugin-transform-flow-strip-types"
+    ]
+  }
+  ```
+
+### Changes
+
+* Adds support to override MongoDB options via Meteor settings. Code PR 
+[#10976](https://github.com/meteor/meteor/pull/10976), Docs PR 
+[#662](https://github.com/meteor/docs/pull/662)
+
+* The `meteor-babel` npm package has been updated to version 7.9.0.
+
+* The `typescript` npm package has been updated to version 3.8.3.
+  
+* To pass Node command line flags to the server node instance,
+  now it is recommended to use `SERVER_NODE_OPTIONS` instead of `NODE_OPTIONS`.
+  Since Meteor 0.5.3, Meteor allowed to pass node command line flags via the  `NODE_OPTIONS`
+  environment variable.
+  However, since Node version 8 / Meteor 1.6 this has become a default node
+  envar with the same behavior. The side effect is that this now also affects
+  Meteor tool. The command line parameters could already be set separately
+  via the `TOOL_NODE_FLAGS` envar. This is now also possible (again) for the server.
+
+* The version of MongoDB used by Meteor in development has been updated from
+  4.2.1 to 4.2.5.
+  [PR #11020](https://github.com/meteor/meteor/pull/11020)
+  
+* The `url` package now provides an isomorphic implentation of the [WHATWG `url()`
+  API](https://url.spec.whatwg.org/).
+  While remaining backwards compatible, you can now also import `URL` and `URLSearchParams` from `meteor/url`.
+  These will work for both modern and legacy browsers as well as node.
+  
+
+## v1.10.1, 2020-03-12
 
 ### Breaking changes
 
@@ -85,10 +138,10 @@
 ## v1.9.3, 2020-03-09
 
 ### Breaking changes
-N/A
+* The MongoDB `retryWrites` option now defaults to `true` (it previously defaulted to false). Users of database services that don't support retryWrites will experience a fatal error due to this.
 
 ### Migration Steps
-N/A
+* If you get the error `MongoError: This MongoDB deployment does not support retryable writes. Please add retryWrites=false to your connection string.`, append `retryWrites=false` to your MongoDB connection string.
 
 ### Changes
 * `mongodb` driver package has been updated
@@ -193,7 +246,7 @@ N/A
   fields. [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 
 * Lots of internal calls to `Meteor.user()` without field specifiers in `accounts-base` and
-  `accounts-password` packages have been optimized with explicit field selectors to only fetch
+  `accounts-password` packages have been optimized with explicit field selectors to only 
   the fields needed by the functions they are in.
   [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 
@@ -249,6 +302,8 @@ N/A
   `Uncaught SyntaxError: Identifier 'exports' has already been declared`.
   See [this comment](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056)
   by [@SimonSimCity](https://github.com/SimonSimCity).
+
+* `Plugin.fs` methods are now always sync and no longer accept a callback.
 
 ### Migration Steps
 

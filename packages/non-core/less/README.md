@@ -1,9 +1,17 @@
 # Less
-[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/less) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/less)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/non-core/less) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/non-core/less)
 ***
 
 The Less package provides a compiler build plugin for the Meteor build tool. It
 handles the compilation of `*.less` files to CSS.
+
+## Changelog
+
+### 3.0.0
+
+- Updated less to 3.11.1.
+- Import files without ending as less files, according to less import rules.
+- Add `javascriptEnabled` option to less, to be backwards compatible to previous version of this package.
 
 ## Usage
 
