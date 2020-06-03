@@ -1171,8 +1171,13 @@ Accounts.createUserVerifyingEmail = (options) => {
   // If `Accounts._options.sendVerificationEmail` is set, register
   // a token to verify the user's primary email, and send it to
   // that address.
-  if (options.email && Accounts._options.sendVerificationEmail)
-    Accounts.sendVerificationEmail(userId, options.email);
+  if (options.email && Accounts._options.sendVerificationEmail) {
+    if (options.password) {
+      Accounts.sendVerificationEmail(userId, options.email);
+    } else {
+      Accounts.sendEnrollmentEmail(userId, options.email);
+    }
+  }
 
   return userId;
 };
