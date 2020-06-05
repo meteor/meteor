@@ -265,7 +265,7 @@ on it, as in this example:
 
 ```js
 let weather = 'sunny';
-const weatherDep = new Tracker.Dependency;
+const weatherDep = new Tracker.Dependency();
 
 function getWeather() {
   weatherDep.depend();
