@@ -517,6 +517,7 @@ main.registerCommand({
     minimal: { type: Boolean },
     full: { type: Boolean },
     react: { type: Boolean },
+    vue: { type: Boolean },
     typescript: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
@@ -770,6 +771,8 @@ main.registerCommand({
     skelName += "-full";
   } else if (options.react) {
     skelName += "-react";
+  } else if (options.vue) {
+    skelName += "-vue";
   } else if (options.typescript) {
     skelName += "-typescript";
   }
@@ -886,8 +889,9 @@ main.registerCommand({
       ! options.minimal &&
       ! options.full &&
       ! options.react &&
+      ! options.vue &&
       ! options.typescript) {
-    // Notify people about --bare, --minimal, --full, --react, and --typescript.
+    // Notify people about --bare, --minimal, --full, --react, --vue, and --typescript.
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
@@ -898,6 +902,7 @@ main.registerCommand({
     cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
     cmd("meteor create --full       # to create a more complete scaffolded app");
     cmd("meteor create --react      # to create a basic React-based app");
+    cmd("meteor create --vue        # to create a basic Vue-based app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
   }
 
