@@ -15,8 +15,8 @@ Ideally, every item in this roadmap should have at least two leaders, leaders ar
 ## Core
 
 ### Tree Shaking
-- Leaders: [Ben Newman](https://github.com/benjamn) / [Renan Castro](https://github.com/renanccastro)
-- Status: -
+- Leaders: [Filipe Névola](https://github.com/filipenevola) / [Renan Castro](https://github.com/renanccastro)
+- Status: In Progress
 - PRs: -
 
 Implement tree shaking / dead code elimination, which involves pruning the dependency tree while scanning imports in the `ImportScanner`. We believe it should be possible to treat values like `Meteor.isProduction` and `Meteor.isServer` as constants during this process, and eliminate those branches if their conditions are false (as in https://github.com/meteor/meteor/pull/10056).
@@ -66,7 +66,7 @@ Explore ideas to improve rebuild time such as split main client bundle into seve
 ### Performance improvements on Windows
 - Leaders: [zodern](https://github.com/zodern)
 - Status: In Progress
-- PRs: -
+- PRs: https://github.com/meteor/meteor/pull/10838
 
 Explore ideas to improve performance on Windows such as build in place.
 
@@ -89,9 +89,9 @@ Migrate packages that do not depend on Meteor exclusive features to NPM and we a
 ### Cordova documentation
 - Leaders: [Filipe Névola](https://github.com/filipenevola)
 - Status: In Progress
-- PRs: -
+- PRs: https://github.com/meteor/meteor/pull/11072
 
-Provide a skeleton or example with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide ([Forums post](https://forums.meteor.com/t/lets-create-the-ultimate-cordova-hot-code-push-faq-doc/50500)).
+Provide an example with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide ([Forums post](https://forums.meteor.com/t/lets-create-the-ultimate-cordova-hot-code-push-faq-doc/50500)).
 
 ## DB
 ### Minimongo secondary index support
@@ -109,6 +109,13 @@ Improve index support for Minimongo to enable better performance in the client f
 
 Provide a nice and friendly introduction for people that are learning Meteor.
 
+### Update Angular Tutorial
+- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
+- Status: -
+- PRs: -
+
+Angular tutorial should reflect latest best practices for using Meteor and Angular together.
+
 ### Update React Tutorial
 - Leaders: [Leonardo Venturini](https://github.com/leonardoventurini)
 - Status: In Progress
@@ -121,7 +128,7 @@ React tutorial should reflect latest best practices for using Meteor and React t
 - Status: In Progress
 - PRs: -
 
-Provide a skeleton or an example with PWA configurations already in place such as `manifest`, service worker, Open Graph meta tags, etc. Also improve docs and guide.
+Provide an example with PWA configurations already in place such as `manifest`, service worker, Open Graph meta tags, etc. Also improve docs and guide.
 
 ### SSR documentation
 - Leaders: [Kevin Newman](https://github.com/CaptainN) / [Eric Burel](https://github.com/eric-burel)
@@ -189,13 +196,6 @@ Relevant discussions:
 - https://github.com/storybookjs/storybook/issues/5975
 
 ## Recently completed
-### Update Angular Tutorial
-- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
-- Status: shipped in April 2020
-- PRs: https://github.com/meteor/tutorials/pull/200 https://github.com/meteor/tutorials/pull/199
-
-Angular tutorial should reflect latest best practices for using Meteor and Angular together.
-
 ### Update Blaze Tutorial
 - Leaders: [Jan Küster](https://github.com/jankapunkt), [Harry Adel](https://github.com/harryadelb), [Brian Mulhall](https://github.com/BrianMulhall)
 - Status: shipped in April 2020
