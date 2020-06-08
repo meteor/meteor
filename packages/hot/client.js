@@ -168,7 +168,7 @@ module.constructor.prototype.replaceModule = function (id, contents) {
   // Clear cached exports
   // TODO: check how this affects live bindings for ecmascript modules
   delete file.module.exports;
-  const entry = ReifyEntry.getOrCreate(id);
+  const entry = ReifyEntry.getOrCreate(moduleId);
   entry.getters = {};
   entry.setters = {};
   entry.module = null;
