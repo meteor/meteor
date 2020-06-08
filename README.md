@@ -32,10 +32,11 @@ The client uses a modified version of [install](https://www.npmjs.com/package/in
 
 #### Remaining tasks
 
-This is still an early version, and there is still a long list of items to implement.
+This is an early version, and there is still a long list of items to implement.
 
-- HMR is enabled for the second build after Meteor is started so there is two builds to compare. This should be fixed by storing the necessary information in the linker cache.
-- Support full webpack API
+- HMR is unavailable until the second time the architecture was linked, usually the second rebuild. This should be fixed by storing the necessary information in the linker cache.
+- If the files were modified to be the same as a previous build, Meteor will use a cache entry in the linker cache, and HMR will not be able to apply the changes.
+- Support full webpack HMR API
 - Look into allowing packages to replace the HMR api to allow experimentation
 - Look into an api to allow packages to run code before and after each module is run. This could be used to implement react fast reload and for packages to automatically clean up after a file is modified. For example, this could be used to remove methods and publications previously added by a modified file.
 - Better integration with the autoupdate and reload packages
