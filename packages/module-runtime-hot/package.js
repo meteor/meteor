@@ -25,5 +25,4 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use("tinytest");
   api.use("modules"); // Test modules-runtime via modules.
-  api.addFiles("modules-runtime-tests.js");
 });
