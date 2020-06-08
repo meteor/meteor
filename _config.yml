@@ -60,6 +60,8 @@ sidebar_categories:
   Command Line:
     - commandline
     - environment-variables
+  Troubleshooting:
+    - windows
 github_repo: 'meteor/docs'
 
 nav_links:
