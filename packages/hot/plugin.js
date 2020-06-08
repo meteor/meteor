@@ -107,9 +107,13 @@ function init() {
     });
   });
 
-  Plugin._onPreLinked(function (prelinkResult) {
-    sharedState.prelinkResultHandler(prelinkResult);
-  });
+  if (Plugin._onPreLinked) {
+    Plugin._onPreLinked(function (prelinkResult) {
+      sharedState.prelinkResultHandler(prelinkResult);
+    });
+  } else {
+    console.log('zodern:COMET is required for HMR: https://github.com/zodern/comet');
+  }
 }
 
 if (!sharedState.initialized) {
