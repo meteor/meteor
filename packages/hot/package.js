@@ -15,8 +15,6 @@ Package.registerBuildPlugin({
 });
 
 Package.onUse(function (api) {
-  api.versionsFrom('1.10');
-
   api.use('isobuild:compiler-plugin@1.0.0');
   api.use('babel-compiler');
   api.use('modules');
