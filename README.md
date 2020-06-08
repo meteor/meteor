@@ -38,6 +38,9 @@ This is still an early version, and there is still a long list of items to imple
 - Support full webpack API
 - Look into allowing packages to replace the HMR api to allow experimentation
 - Look into an api to allow packages to run code before and after each module is run. This could be used to implement react fast reload and for packages to automatically clean up after a file is modified. For example, this could be used to remove methods and publications previously added by a modified file.
+- Better integration with the autoupdate and reload packages
+- Require secret from client before sending changes over websocket
+- Submit PRs for reify and install to add necessary apis and functionality for HMR
 
 HMR is only enabled for the `web.browser` architectures. These architectures are remaining:
 - web.browser.legacy
