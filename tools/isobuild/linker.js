@@ -9,6 +9,7 @@ import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
+import buildEvents from './build-events.js';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
@@ -1102,6 +1103,17 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   _.each(inputFiles, file => module.addFile(file));
 
   var prelinkedFiles = module.getPrelinkedFiles();
+
+  Profile.time('prelinkedEvent', () => {
+    buildEvents.emit('prelinked', {
+      isApp,
+      bundleArch,
+      name,
+      imports,
+      module,
+      prelinkedFiles
+    });
+  });
 
   // If we're in the app, then we just add the import code as its own file in
   // the front.

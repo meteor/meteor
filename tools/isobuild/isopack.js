@@ -20,6 +20,7 @@ var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 import { Unibuild } from "./unibuild.js";
+import buildEvents from './build-events.js';
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
@@ -788,6 +789,10 @@ _.extend(Isopack.prototype, {
           methodName: "registerMinifier",
           featurePackage: "isobuild:minifier-plugin"
         });
+      },
+
+      _onPreLinked: function (handler) {
+        buildEvents.on('prelinked', handler);
       },
 
       nudge: function () {

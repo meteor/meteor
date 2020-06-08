@@ -1026,8 +1026,14 @@ class Target {
           add(usedUnibuild);
           delete onStack[usedUnibuild.id];
         };
+        let uses = [...unibuild.uses]
+        if (unibuild.id.startsWith('modules.main')) {
+          uses.push({
+            package: 'zodern:modules-runtime-hot'
+          });
+        }
         compiler.eachUsedUnibuild({
-          dependencies: unibuild.uses,
+          dependencies: uses,
           arch: this.arch,
           isopackCache: isopackCache,
           skipUnordered: true,

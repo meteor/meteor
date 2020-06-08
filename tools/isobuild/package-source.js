@@ -665,6 +665,17 @@ _.extend(PackageSource.prototype, {
       _.each(api.implies[label], doNotDepOnSelf);
     });
 
+    if (self.name === 'modules') {
+      // Since we can't use a forked version of modules
+      // we add a dependency to patch it
+      api.uses['web.browser'].push({
+        package: 'zodern:modules-runtime-hot',
+        constraint: '',
+        unordered: false,
+        weak: false
+      });
+    }
+
     // Cause packages that use `prodOnly` to automatically depend on the
     // `isobuild:prod-only` feature package, which will cause an error
     // when a package using `prodOnly` is run by a version of the tool

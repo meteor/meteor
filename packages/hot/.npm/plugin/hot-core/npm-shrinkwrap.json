@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "ws": {
+      "version": "7.2.5",
+      "resolved": "https://registry.npmjs.org/ws/-/ws-7.2.5.tgz",
+      "integrity": "sha512-C34cIU4+DB2vMyAbmEKossWq2ZQDr6QEyuuCzWrM9zfw1sGc0mYiJ0UnG9zzNykt49C2Fi34hvr2vssFQRS6EA=="
+    }
+  }
+}
