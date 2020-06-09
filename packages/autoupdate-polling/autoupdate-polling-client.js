@@ -56,9 +56,9 @@ AutoupdatePolling._pollingSubscribe = (delay) => {
     xhr.send();
   }, delay);
 };
-
-if (!Meteor.isProduction || Meteor.settings.public.autoupdate_polling_time)
-  AutoupdatePolling._pollingSubscribe(Meteor.settings.public.autoupdate_polling_time || 3000);
+const pollingInterval = Meteor.settings.public.packages?.['autoupdate-polling']?.options?.pollingInterval
+if (!Meteor.isProduction || pollingInterval)
+  AutoupdatePolling._pollingSubscribe(pollingInterval || 3000);
 
 // Set to true if the link.onload callback ever fires for any <link> node.
 let knownToSupportCssOnLoad = false;

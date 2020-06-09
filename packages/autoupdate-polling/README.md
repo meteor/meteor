@@ -19,13 +19,19 @@ the client's archetype and returns the most recent build of the app's client.
 
 <sup>1</sup>
 <sub>To change how frequently the client should poll the server for a new 
-version set a public [setting](https://docs.meteor.com/api/core.html#Meteor-settings) `autoupdate_polling_time` in milliseconds. 
+version set a public [setting](https://docs.meteor.com/api/core.html#Meteor-settings) `pollingInterval` in milliseconds. 
 The polling will not work in production without this setting explicitly 
 informed.</sub>
 ```json
 {
   "public": {
-    "autoupdate_polling_time": 1000
+    "packages": {
+      "autoupdate-polling": {
+        "options": {
+          "pollingInterval": 3000
+        }
+      }
+    }
   }
 }
 ```
