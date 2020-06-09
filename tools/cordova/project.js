@@ -607,7 +607,7 @@ to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
         commandOptions);
 
       this.runCommands(`removing plugin ${plugin} \
-  from Cordova project`, cordova_lib.plugin.bind(undefined, 'rm', [plugin],
+  from Cordova project`, cordova_lib.plugin.bind(undefined, 'rm --force', [plugin],
         commandOptionsPlugin));
     });
   }
