@@ -44,19 +44,19 @@ If your app targets Android 9 or greater, it will be necessary to create a
 `mobile-config.js` file enabling the use of cleartext in order to have HCP working:    
 
 ```js
-App.appendToConfig('<edit-config file="app/src/main/AndroidManifest.xml"
+App.appendToConfig(`<edit-config file="app/src/main/AndroidManifest.xml"
                      mode="merge"
                      target="/manifest/application"
                      xmlns:android="http://schemas.android.com/apk/res/android">
         <application android:usesCleartextTraffic="true"></application>
     </edit-config>
-');
+`);
 ```
 
 ### `--mobile-server`
 Additionally, for the HCP functionality to work it is also mandatory to provide 
 the address for the application server with `--mobile-server` option. If you're 
-testing your app on an emulator you should run it with `meteor run android --mobile-server 10.0.2.2`. 
+testing your app on an emulator you should run it with `meteor run android --mobile-server 10.0.2.2:3000`. 
 If you're running it on a real device, the application server and the device 
 should be on the same network, and you should run your app with `meteor run android --mobile-server XXX.XXX.XXX.XXX`
 where *XXX.XXX.XXX.XXX* is your local development address, _e.g. 192.168.1.4_.
