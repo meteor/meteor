@@ -20,7 +20,7 @@ Accounts.emailTemplates.headers = {
   'My-Custom-Header' : 'Cool'
 };
 
-EmailTest.hookSend(options => {
+Email.hookSend(options => {
   const { to } = options;
   if (!to || !to.toUpperCase().includes('INTERCEPT')) {
     return true; // go ahead and send
