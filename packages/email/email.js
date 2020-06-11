@@ -100,7 +100,7 @@ var smtpSend = function (transport, mail) {
 
 var sendHooks = [];
 /**
- * Mock out email sending (eg, during a test.)
+ * Hook that runs before email is send.
  *
  * @param f {function} receives the arguments to Email.send and should return true to go
  * ahead and send the email (or at least, try subsequent hooks), or

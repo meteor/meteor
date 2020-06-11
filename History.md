@@ -7,6 +7,9 @@
     instead of `dns.lookup()` which might be breaking on some environments.
     See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
 
+### Changes
+
+* `email` package now exposes `hookSend` that runs before emails are send.
 
 ## v1.10.2, 2020-04-21
 
