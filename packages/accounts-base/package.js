@@ -13,6 +13,7 @@ Package.onUse(api => {
   api.use('ejson', 'server');
   api.use('callback-hook', ['client', 'server']);
   api.use('reactive-var', 'client');
+  api.use('url', ['client', 'server']);
 
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)
