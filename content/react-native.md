@@ -9,7 +9,9 @@ You can easily integrate your React Native app with Meteor, using the same metho
 
 <h2 id="getting-started">Getting started with React Native</h2>
 
-React Native projects are coded using the same React principles, but have a completely separate codebase from your Meteor project. In order to use React Native with Meteor, you create a React Native app and use the `meteor-react-native` package to connect your app to your Meteor server.
+React Native projects are coded using the same React principles, but have a completely separate codebase from your Meteor project.
+
+A collection of NPM packages are being developed to make it easy for you to integrate React Native with Meteor. In order to use React Native with Meteor, you create a React Native app and use the `@meteorrn/core` package to connect your app to your Meteor server. The `@meteorrn/core` package contains Meteor, MongoDB, `withTracker`, Accounts, and more.
 
 For most projects, since your native app will display the same data and call the same methods as your Meteor web app, creating a React Native app that connects to your Meteor server does not require any changes to your Meteor codebase.
 
@@ -34,22 +36,22 @@ Once you have your environment setup and have your app running on your device or
 
 <h2 id="installation">Meteor React Native Installation</h2>
 
-To install the meteor-react-native package, run the following command in your React Native project:
+To install the `@meteorrn/core` package, run the following command in your React Native project:
 
 ````
-npm install --save meteor-react-native
+npm install --save @meteorrn/core
 ````
 
-The `meteor-react-native` package enables your React Native app to establish a DDP connection with your Meteor server so it can receive data from publications and call server methods. It also provides access to core Meteor client methods like `Accounts.createUser` and `Meteor.loginWithPasword`, and allows you to display data in your app with the `withTracker` method.
+The `@meteorrn/core` package enables your React Native app to establish a DDP connection with your Meteor server so it can receive data from publications and call server methods. It also provides access to core Meteor client methods like `Accounts.createUser` and `Meteor.loginWithPasword`, and allows you to display data in your app with the `withTracker` method.
 
-**Note: If your React Native app uses version 0.59 or lower, the meteor-react-native package contains breaking changes. Use [react-native-meteor](https://www.npmjs.com/package/react-native-meteor) instead.**
+**Note: If your React Native app uses version 0.59 or lower, the @meteorrn/core package contains breaking changes. Use [react-native-meteor](https://www.npmjs.com/package/react-native-meteor) instead.**
 
 Now to setup your app.
 
 First, import `Meteor`, `withTracker`, and `Mongo`:
 
 ````
-import Meteor, { Mongo, withTracker } from 'meteor-react-native';
+import Meteor, { Mongo, withTracker } from '@meteorrn/core';
 ````
 
 Next, you need to connect to your Meteor server. This should typically be at the start of your App.jsx.
@@ -124,9 +126,9 @@ If you are rendering a large amounts of data, you should use the [FlatList](http
 
 **Here are some useful links for futher reading:**
 
-You can see a list of example components built with `meteor-react-native` [here](https://github.com/TheRealNate/meteor-react-native/tree/master/examples).
+You can see a list of example components built with `MeteorRN` [here](https://github.com/TheRealNate/meteor-react-native/tree/master/examples).
 
-You can view the full API docs for `meteor-react-native` on the [meteor-react-native repo](https://github.com/TheRealNate/meteor-react-native/blob/master/docs/api.md)
+You can view the full API docs for `MeteorRN` on the [meteor-react-native repo](https://github.com/TheRealNate/meteor-react-native/blob/master/docs/api.md)
 
 You can see the official React Native API docs [here](https://reactnative.dev/docs/components-and-apis)
 
