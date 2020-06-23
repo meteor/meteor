@@ -1368,9 +1368,9 @@ class Target {
     buildmessage.enterJob('minifying app code', function () {
       try {
         Promise.all([
-          markedMinifier(staticFiles, { minifyMode }),
+          markedMinifier(staticFiles, { minifyMode, arch }),
           ...dynamicFiles.map(
-            file => markedMinifier([file], { minifyMode })
+            file => markedMinifier([file], { minifyMode, arch })
           ),
         ]).await();
       } catch (e) {

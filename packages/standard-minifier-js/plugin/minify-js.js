@@ -1,4 +1,4 @@
-import { extractModuleSizesTree } from "./stats.js";
+import {extractModuleSizesTree} from "./stats.js";
 
 Plugin.registerMinifier({
   extensions: ['js'],
@@ -8,10 +8,13 @@ Plugin.registerMinifier({
   return minifier;
 });
 
-function MeteorBabelMinifier () {};
+function MeteorBabelMinifier() {
+};
 
-MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
+MeteorBabelMinifier.prototype.processFilesForBundle = function (files, options) {
   var mode = options.minifyMode;
+  console.log(`filipe:options`, JSON.stringify(options));
+  console.log(`filipe:mode`, mode);
 
   // don't minify anything for development
   if (mode === 'development') {
@@ -114,36 +117,48 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
     data: "",
     stats: Object.create(null)
   };
+  const FILES_TO_LOG = [];
+  console.log(`filipe:FILES_TO_LOG`, FILES_TO_LOG);
 
   files.forEach(file => {
     // Don't reminify *.min.js.
-    if (/\.min\.js$/.test(file.getPathInBundle())) {
-      toBeAdded.data += file.getContentsAsString();
+    const content = file.getContentsAsString();
+    const filePath = file.getPathInBundle();
+    if (/\.min\.js$/.test(filePath)) {
+      toBeAdded.data += content;
     } else {
       var minified;
 
       try {
-        minified = meteorJsMinify(file.getContentsAsString());
+        console.log(`filipe:file.getPathInBundle()`, filePath);
+        if (FILES_TO_LOG.some(fileName => filePath.includes(fileName))) {
+          console.log('filipe:ORIGINAL', filePath);
+          console.log(content);
+        }
+
+        minified = meteorJsMinify(content, options);
 
         if (!(minified && typeof minified.code === "string")) {
           throw new Error();
         }
 
       } catch (err) {
-        var filePath = file.getPathInBundle();
-
         maybeThrowMinifyErrorBySourceFile(err, file);
 
         err.message += " while minifying " + filePath;
         throw err;
       }
 
+      if (FILES_TO_LOG.some(fileName => filePath.includes(fileName))) {
+        console.log('filipe:MINIFIED', filePath);
+        console.log(minified.code);
+      }
       const tree = extractModuleSizesTree(minified.code);
       if (tree) {
-        toBeAdded.stats[file.getPathInBundle()] =
+        toBeAdded.stats[filePath] =
           [Buffer.byteLength(minified.code), tree];
       } else {
-        toBeAdded.stats[file.getPathInBundle()] =
+        toBeAdded.stats[filePath] =
           Buffer.byteLength(minified.code);
       }
 
