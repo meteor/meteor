@@ -5,6 +5,7 @@ const ReifyEntry = require('/node_modules/meteor/modules/node_modules/reify/lib/
 // this could possibly be ran after the next build finished
 // TODO: the builder should inject the build time in the bundle
 let lastUpdated = Date.now();
+let reloadId = 0;
 
 let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
 let enabled = arch === 'web.browser';
@@ -161,6 +162,18 @@ module.constructor.prototype.replaceModule = function (id, contents) {
     return null;
   }
 
+  const hotState = file.module._hotState;
+  if (file._reloadedAt !== reloadId && hotState) {
+    file._reloadedAt = reloadId;
+
+    const hotData = {};
+    hotState._disposeHandlers.forEach(cb => {
+      cb(hotData);
+    });
+    hotState._disposeHandlers = [];
+    hotState.data = hotData;
+  }
+
   if (contents) {
     replaceFileContent(file, contents);
   }
@@ -215,6 +228,8 @@ function applyChangeset({
       return pendingReload();
     }
   }
+
+  reloadId += 1;
 
   // TODO: deduplicate
   reloadableParents.forEach(parent => {

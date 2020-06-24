@@ -26,7 +26,9 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
       this._hotState = {
         // if null, whether it accepts depends on all of the modules that
         // required it
-        _hotAccepts: null
+        _hotAccepts: null,
+        _disposeHandlers: [],
+        data: null
       };
     }
 
@@ -36,7 +38,7 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
       accept() {
         if (arguments.length > 0) {
           // TODO: support same options as webpack
-          throw new Error('hot.accept does not support any arguments.');
+          console.warn('hot.accept does not support any arguments.');
         }
         hotState._hotAccepts = true;
       },
@@ -47,9 +49,13 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
 
         hotState._hotAccepts = false;
       },
+      dispose(cb) {
+        hotState._disposeHandlers.push(cb);
+      },
       _canAcceptUpdate() {
         return hotState._hotAccepts;
-      }
+      },
+      data: hotState.data
     }
   },
   set() {}
