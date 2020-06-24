@@ -242,7 +242,9 @@ makeInstaller = function (options) {
 
   Module.prototype._recordImport = function (id) {
     var result = fileResolve(filesByModuleId[this.id], id);
-    result.importedBy[this.id] = filesByModuleId[this.id];
+    if (result) {
+      result.importedBy[this.id] = filesByModuleId[this.id];
+    }
   }
 
   function makeRequire(file) {
