@@ -1,6 +1,6 @@
 Package.describe({
   name: "url",
-  version: "1.3.0",
+  version: "1.3.1",
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG URL/URLSearchParams",
   documentation: "README.md"
 });
@@ -10,6 +10,7 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
+  api.versionsFrom('1.10.2');
   api.use("modules");
   api.use("modern-browsers");
 
