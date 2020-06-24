@@ -88,7 +88,7 @@ function compareFiles(previousHashes = new Map(), previousUnreloadable = [], cur
     unseenModules.delete(file.absModuleId);
   });
 
-  const removedFilePaths = unseenModules.keys();
+  const removedFilePaths = Array.from(unseenModules.keys());
   const unreloadableChanged = unreloadable.length !== previousUnreloadable.length ||
     unreloadable.some((hash, i) => hash !== previousUnreloadable[i]);
 
