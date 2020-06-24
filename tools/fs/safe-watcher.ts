@@ -89,7 +89,7 @@ function acquireWatcher(absPath: string, callback: EntryCallback) {
 }
 
 function startNewWatcher(absPath: string): Entry {
-  let stat: Stats | null;
+  let stat: Stats | null = null;
 
   if (DEDUPLICATE_BY_INO) {
     stat = statOrNull(absPath);
