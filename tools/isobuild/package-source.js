@@ -834,10 +834,21 @@ _.extend(PackageSource.prototype, {
   }),
 
   _readAndWatchDirectory(relDir, watchSet, {include, exclude, names}) {
-    return watch.readAndWatchDirectory(watchSet, {
+    const options = {
       absPath: files.pathJoin(this.sourceRoot, relDir),
       include, exclude, names
-    }).map(name => files.pathJoin(relDir, name));
+    };
+
+    const contents = watch.readDirectory(options);
+
+    if (watchSet) {
+      watchSet.addDirectory({
+        contents,
+        ...options
+      });
+    }
+
+    return contents.map(name => files.pathJoin(relDir, name));
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
@@ -1099,7 +1110,7 @@ _.extend(PackageSource.prototype, {
   // complete list of source files for directories within node_modules.
   _findSourcesCache: Object.create(null),
 
-  _findSources: Profile("PackageSource#_findSources", function ({
+  _findSources: Profile(({ sourceArch }) => `PackageSource#_findSources for ${sourceArch.arch}`, function ({
     sourceProcessorSet,
     watchSet,
     isApp,
@@ -1216,9 +1227,10 @@ _.extend(PackageSource.prototype, {
 
     const baseCacheKey = JSON.stringify({
       isApp,
-      arch,
       sourceRoot: self.sourceRoot,
       excludes: anyLevelExcludes,
+      names: sourceReadOptions.names,
+      include: sourceReadOptions.include
     }, (key, value) => {
       if (_.isRegExp(value)) {
         return [value.source, value.flags];
@@ -1260,13 +1272,13 @@ _.extend(PackageSource.prototype, {
       return array;
     }
 
-    function find(dir, depth, inNodeModules) {
+    function find(dir, depth, { inNodeModules = false, cache = false } = {}) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
 
       // If we're in a node_modules directory, cache the results of the
       // find function for the duration of the process.
-      let cacheKey = inNodeModules && makeCacheKey(dir);
+      let cacheKey = inNodeModules && cache && makeCacheKey(dir);
       if (cacheKey &&
           cacheKey in self._findSourcesCache) {
         return self._findSourcesCache[cacheKey];
@@ -1305,13 +1317,16 @@ _.extend(PackageSource.prototype, {
       }
 
       const sources = _.difference(
-        self._readAndWatchDirectory(dir, watchSet, readOptions),
+        self._readAndWatchDirectory(dir, inNodeModules ? null : watchSet, readOptions),
         depth > 0 ? [] : controlFiles
       );
 
-      const subdirectories = self._readAndWatchDirectory(dir, watchSet, {
-        include: [/\/$/],
-        exclude: depth > 0
+      const subdirectories = self._readAndWatchDirectory(
+        dir,
+        inNodeModules ? null : watchSet,
+        {
+          include: [/\/$/],
+          exclude: depth > 0
           ? anyLevelExcludes
           : topLevelExcludes
       });
@@ -1342,7 +1357,7 @@ _.extend(PackageSource.prototype, {
           }
 
         } else {
-          sources.push(...find(subdir, depth + 1, inNodeModules));
+          sources.push(...find(subdir, depth + 1, { inNodeModules, cache: !inNodeModules }));
         }
       });
 
@@ -1353,7 +1368,7 @@ _.extend(PackageSource.prototype, {
         // subdirectories, continue searching this node_modules directory,
         // so that any non-.js(on) files it contains can be imported by
         // the app (#6037).
-        sources.push(...find(nodeModulesDir, depth + 1, true));
+        sources.push(...find(nodeModulesDir, depth + 1, { inNodeModules: true, cache: !inNodeModules}));
       }
 
       delete dotMeteorIgnoreFiles[dir];
