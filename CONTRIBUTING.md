@@ -112,13 +112,15 @@ isn't a security risk, please file a report in
 
 A Meteor app has many moving parts, and it's often difficult to
 reproduce a bug based on just a few lines of code.  So your report
-should include a reproduction recipe.  By making it as easy as possible
+should include a link to a repository with a reproduction.  By making it as easy as possible
 for others to reproduce your bug, you make it easier for your bug to be
-fixed. **It's likely that without a reproduction, contributors won't look into fixing your issue and it will end up being closed.**
+fixed. 
 
-**A single code snippet is _not_ a reproduction recipe and neither is an entire application.**
+**It's likely that without a reproduction, contributors won't look into fixing your issue and it will end up being closed.**
 
-A reproduction recipe works like this:
+**A single code snippet is _not_ a reproduction and neither is an entire application.**
+
+A reproduction works like this:
 
  * Create a new Meteor app that displays the bug with as little code as
    possible. Try to delete any code that is unrelated to the precise bug
@@ -143,6 +145,8 @@ A reproduction recipe works like this:
    specify what commit in the Meteor repository was checked out.
 
  * Mention what operating system you're using and what browser (if any).
+
+If you can't provide a reproduction make this very clear in the issue and explain why that is the case.
 
 If you want to submit a pull request that fixes your bug, that's even
 better.  We love getting bugfix pull requests.  Just make sure they're
