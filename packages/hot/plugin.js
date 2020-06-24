@@ -12,6 +12,7 @@ const sharedState = global.__hotState || {
   wsMessageHandler: null,
   prelinkResultHandler: null,
   previousPrelinkResults: {},
+  wsByArch: {}
 };
 global.__hotState = sharedState;
 
@@ -57,6 +58,19 @@ function prelinkResultHandler(prelinkResult) {
 
   const changeset = comparePrelinkResult(previousChangeset, prelinkResult);
   sharedState.previousPrelinkResults[bundleArch].push(changeset);
+
+  // Try to do HMR without waiting for the build to finish
+  // This might not work once we support HMR for packages
+  const conns = sharedState.wsByArch[bundleArch]
+  if (conns) {
+    conns.forEach(conn => {
+      conn.send(JSON.stringify({
+        type: 'changes',
+        changeSets: [changeset],
+        eager: true
+      }))
+    })
+  }
 }
 
 function wsMessageHandler(conn, _message) {
@@ -78,6 +92,16 @@ function wsMessageHandler(conn, _message) {
         type: 'changes',
         changeSets: newChanges
       }));
+      break;
+    }
+
+    case 'register': {
+      const {
+        arch
+      } = message;
+
+      sharedState.wsByArch[arch] = sharedState.wsByArch[arch] || [];
+      sharedState.wsByArch[arch].push(conn);
       break;
     }
 

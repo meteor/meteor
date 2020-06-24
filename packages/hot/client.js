@@ -5,6 +5,7 @@ const ReifyEntry = require('/node_modules/meteor/modules/node_modules/reify/lib/
 // this could possibly be ran after the next build finished
 // TODO: the builder should inject the build time in the bundle
 let lastUpdated = Date.now();
+let appliedChangeSets = [];
 let reloadId = 0;
 
 let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
@@ -30,6 +31,10 @@ function requestChanges() {
 
 socket.addEventListener('open', function () {
   console.log('HMR: connected');
+  socket.send(JSON.stringify({
+    type: 'register',
+    arch
+  }));
 });
 
 socket.addEventListener('message', function (event) {
@@ -48,6 +53,12 @@ socket.addEventListener('message', function (event) {
         hasUnreloadable ||
         message.changeSets.length === 0
       ) {
+        // This was an attempt to reload before the build finishes
+        // If we can't, we will wait until the build finishes to properly handle it
+        if (message.eager) {
+          return
+        }
+
         console.log('HMR: Unable to do HMR. Falling back to hot code push.')
         // Complete hot code push if we can not do hot module reload
         mustReload = true;
@@ -57,11 +68,14 @@ socket.addEventListener('message', function (event) {
       // In case the user changed how a module works with HMR
       // in one of the earlier change sets, we want to apply each
       // change set one at a time.
-      message.changeSets.forEach(changeSet => {
+      message.changeSets.filter(changeSet => {
+        return !appliedChangeSets.includes(changeSet.id)
+      }).forEach(changeSet => {
+        appliedChangeSets.push(changeSet.id);
         applyChangeset(changeSet);
       });
 
-      if (message.changeSets.length > 0) {
+      if (!message.eager && message.changeSets.length > 0) {
         lastUpdated = message.changeSets[message.changeSets.length - 1].linkedAt;
       }
   }

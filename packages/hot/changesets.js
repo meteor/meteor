@@ -1,3 +1,7 @@
+function createId () {
+  return `${Date.now()}-${Math.random()}`
+}
+
 function comparePrelinkResult(previousResult, {
   name,
   module,
@@ -38,6 +42,7 @@ function comparePrelinkResult(previousResult, {
     addedFiles: reloadable ? addedFiles.map(fileDetailsToSave) : [],
     changedFiles: reloadable ? changedFiles.map(fileDetailsToSave) : [],
     linkedAt: Date.now(),
+    id: createId(),
     name
   };
 
