@@ -4,7 +4,7 @@ As an alternative to Hot Code Push in development, Hot Module Reload replaces  m
 
 Use:
 ```
-  meteor run --release zodern:COMET --include-packages zodern:hot
+  ../path/to/meteor --include-packages zodern:hot
 ```
 
 #### API
@@ -12,6 +12,10 @@ Use:
 `module.hot.accept()` - The module will be rerun whenever it or any of its dependencies are modified
 
 `module.hot.decline()` - If the module or any of its dependencies are modified, hot code push will be used instead of HMR.
+
+`module.hot.dispose((data) => {})` - Adds a callback to run before the module is replaced. Any state that should be preserved can be stored in `data`. It will be available when the module is rerun at `module.hot.data`.
+
+`module.hot.data` - If the module was reloaded, will have any data set by dispose handlers. If the file was not reloaded, or there were no dispose handlers, it will be `null`.
 
 These should be wrapped by
 ```
@@ -26,31 +30,32 @@ Minifiers are able to remove the if statement for production, though none of the
 
 For now, the linker emits an event that packages, such as zodern:hot, can listen to for an up to date list of files in an unibuild. Eventually this will be replaced with moving the HMR code from a build plugin into the meteor-tool.
 
-The zodern:hot package compares the list of files between builds to identify what has changed. When a client tries to do a hot code push, the client will request changes over a websocket from the build plugin. If possible, it will use HMR to update the modules. Otherwise, it will let the page to be reloaded by hot code push.
+The zodern:hot package compares the list of files between builds to identify what has changed. When a client tries to do a hot code push, the client will request changes over a websocket from the build plugin. If possible, it will use HMR to update the modules. Otherwise, it will let the page be reloaded using hot code push.
 
 The client uses a modified version of [install](https://www.npmjs.com/package/install) to allow replacing modules. To force it to be loaded at the correct time, the meteor-tool adds the `zodern:modules-runtime-hot` dependency to `modules`.
 
 #### Remaining tasks
 
-This is an early version, and there is still a long list of items to implement.
+This is an early version, and there is still a long list of items to implement. A partial list is:
 
-- HMR is unavailable until the second time the architecture was linked, usually the second rebuild. This should be fixed by storing the necessary information in the linker cache.
-- If the files were modified to be the same as a previous build, Meteor will use a cache entry in the linker cache, and HMR will not be able to apply the changes.
+- The linker cache is disabled in some situations for the web.browser architecture since bundles are compared as part of the linking process. We will need to instead store the necessary information in the linker cache, and allow prelinking only the parts that were modified.
 - Support full webpack HMR API
 - Look into allowing packages to replace the HMR api to allow experimentation
 - Look into an api to allow packages to run code before and after each module is run. This could be used to implement react fast reload and for packages to automatically clean up after a file is modified. For example, this could be used to remove methods and publications previously added by a modified file.
 - Better integration with the autoupdate and reload packages
 - Require secret from client before sending changes over websocket
 - Submit PRs for reify and install to add necessary apis and functionality for HMR
+- Many other items are documented in the code with TODO comments
 
 HMR is only enabled for the `web.browser` architectures. These architectures are remaining:
+
 - web.browser.legacy
 - web.cordova
 - server architectures
 
 HMR is not supported in these situations. Hot code push will be used instead:
+
 - A package is modified
-- A file is added
 - A file is removed
 - Files were modified that do not have a module id, are bare, are json data, or do not have meteorInstallOptions
 
