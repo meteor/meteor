@@ -30,7 +30,8 @@ function comparePrelinkResult(previousResult, {
   function fileDetailsToSave (file) {
     return {
       content: file.getPrelinkedOutput({}).toStringWithSourceMap({}),
-      path: file.absModuleId
+      path: file.absModuleId,
+      meteorInstallOptions: file.meteorInstallOptions
     }
   }
 

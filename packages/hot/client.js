@@ -42,12 +42,12 @@ socket.addEventListener('message', function (event) {
 
   switch (message.type) {
     case 'changes':
-      // TODO: support removed or added files
+      // TODO: support removed
       const hasUnreloadable = message.changeSets.find(changeSet => {
         return !changeSet.reloadable ||
-          changeSet.removedFilePaths.length > 0 ||
-          changeSet.addedFiles.length > 0
+          changeSet.removedFilePaths.length > 0
       })
+
       if (
         pendingReload &&
         hasUnreloadable ||
@@ -101,20 +101,25 @@ function createInlineSourceMap(map) {
   return "//# sourceMappingURL=data:application/json;base64," + btoa(JSON.stringify(map));
 }
 
+function createModuleContent (code, map, id) {
+  return function () {
+    // TODO: Use same sourceURL as the sourcemap for the main bundle does
+    return eval(
+      // Wrap the function(require,exports,module){...} expression in
+      // parentheses to force it to be parsed as an expression.
+      "(" + code + ")\n//# sourceURL=" + id +
+      "\n" + createInlineSourceMap(map)
+    ).apply(this, arguments);
+  }
+
+}
+
 function replaceFileContent(file, contents) {
   console.log('HMR: replacing module:', file.module.id);
 
   // TODO: to replace content in packages, we need an eval function that runs
   // within the package scope, like dynamic imports does.
-  const moduleFunction = function () {
-    // TODO: Use same sourceURL as the sourcemap for the main bundle does
-    return eval(
-      // Wrap the function(require,exports,module){...} expression in
-      // parentheses to force it to be parsed as an expression.
-      "(" + contents.code + ")\n//# sourceURL=" + file.module.id +
-      "\n" + createInlineSourceMap(contents.map)
-    ).apply(this, arguments);
-  }
+  const moduleFunction = createModuleContent(contents.code, contents.map, file.module.id);
 
   file.contents = moduleFunction;
 }
@@ -154,6 +159,25 @@ function findReloadableParents(importedBy) {
       return false;
     }
   }).flat(Infinity);
+}
+
+function addFiles(files) {
+  const tree = {};
+
+  console.log('HMR: Added files', files.map(file => file.path));
+
+  files.forEach(file => {
+    const segments = file.path.split('/').slice(1);
+    let previous = tree;
+    segments.splice(0, segments.length - 1).forEach(segment => {
+      previous[segment] = previous[segment] || {}
+      previous = previous[segment]
+    })
+    previous[segments[0]] = createModuleContent(file.content.code, file.content.map, file.path);
+  })
+
+  // TODO: group the files by meteorInstallOptions
+  meteorInstall(tree, files[0].meteorInstallOptions);
 }
 
 module.constructor.prototype.replaceModule = function (id, contents) {
@@ -209,11 +233,10 @@ module.constructor.prototype.replaceModule = function (id, contents) {
 }
 
 function applyChangeset({
-  changedFiles
+  changedFiles,
+  addedFiles
 }) {
   // TODO: prevent requiring removed files
-  // TODO: install added files
-
   const reloadableParents = [];
   let hasImportedModules = false;
 
@@ -229,6 +252,10 @@ function applyChangeset({
       console.log(`Unable to replace module ${path}. It is probably a dynamic file that hasn't been imported`);
     }
   });
+
+  if (addedFiles.length > 0) {
+    addFiles(addedFiles);
+  }
 
   // Check if some of the module's parents are not reloadable
   // In that case, we have to do a full reload
@@ -246,6 +273,7 @@ function applyChangeset({
   reloadId += 1;
 
   // TODO: deduplicate
+  // TODO: handle errors
   reloadableParents.forEach(parent => {
     rerunFile(parent);
   });
@@ -266,6 +294,8 @@ Meteor.startup(() => {
     // We can't do anything here until Reload._onMigrate
     // has been called
     if (!pendingReload) {
+      nonRefreshableVersion = doc.versionNonRefreshable;
+
       return;
     }
 
