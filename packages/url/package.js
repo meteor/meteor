@@ -10,7 +10,6 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  api.versionsFrom('1.10.2');
   api.use("modules");
   api.use("modern-browsers");
 
