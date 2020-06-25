@@ -116,7 +116,15 @@ exports.setSecretKey = function (key) {
   secretKey = key;
 };
 
-var fetchURL = require("./common.js").fetchURL;
+const fetchURL = require("./common.js").fetchURL;
+
+function inIframe() {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+}
 
 function fetchMissing(missingTree) {
   // If the hostname of the URL returned by Meteor.absoluteUrl differs
@@ -127,7 +135,21 @@ function fetchMissing(missingTree) {
   // preflight OPTIONS request, which may add latency to the first dynamic
   // import() request, so it's a good idea for ROOT_URL to match
   // location.host if possible, though not strictly necessary.
-  var url = Meteor.absoluteUrl(fetchURL);
+
+  let url = fetchURL;
+
+  // Lo and behold!
+  const useDynamicOrigin = Meteor.settings
+      && Meteor.settings.public
+      && Meteor.settings.public.packages
+      && Meteor.settings.public.packages.dynamicImport
+      && Meteor.settings.public.packages.dynamicImport.useDynamicOrigin;
+
+  if (useDynamicOrigin && location && !inIframe()) {
+    url = location.origin.concat(url);
+  } else {
+    url = Meteor.absoluteUrl(url);
+  }
 
   if (secretKey) {
     url += "key=" + secretKey;
