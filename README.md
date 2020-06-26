@@ -4,7 +4,7 @@ As an alternative to Hot Code Push in development, Hot Module Reload replaces  m
 
 Use:
 ```
-  ../path/to/meteor --include-packages zodern:hot
+  ../path/to/meteor --extra-packages zodern:hot
 ```
 
 #### API
