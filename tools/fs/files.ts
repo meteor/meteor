@@ -5,7 +5,7 @@
 ///
 
 import assert from "assert";
-import fs, { PathLike, Stats } from "fs";
+import fs, { PathLike, Stats, Dirent } from "fs";
 import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
@@ -1746,6 +1746,14 @@ wrapFsFunc<[string], string[]>("readdir", fs.readdirSync, [0], {
   modifyReturnValue(entries: string[]) {
     return entries.map(entry => convertToStandardPath(entry));
   },
+});
+
+export const readdirWithTypes = wrapFsFunc<[string], Dirent[]>("readdirWithTypes", (dir) => {
+    return fs.readdirSync(dir, {
+      withFileTypes: true
+    });
+  }, [0], {
+  cached: true
 });
 
 export const appendFile = wrapDestructiveFsFunc("appendFile", fs.appendFileSync);
