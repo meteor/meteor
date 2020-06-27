@@ -641,9 +641,11 @@ _.extend(AppRunner.prototype, {
     serverWatchSet.merge(settingsWatchSet);
 
     // We only can refresh the client without restarting the server if the
-    // client contains the 'autoupdate' package.
-    var canRefreshClient = self.projectContext.packageMap &&
-          self.projectContext.packageMap.getInfo('autoupdate');
+    // client contains the 'autoupdate' or 'autoupdate-development' package.
+    var canRefreshClient =
+      self.projectContext.packageMap &&
+      (self.projectContext.packageMap.getInfo('autoupdate') ||
+        self.projectContext.packageMap.getInfo('autoupdate-development'));
 
     if (! canRefreshClient) {
       // Restart server on client changes if we can't refresh the client.
