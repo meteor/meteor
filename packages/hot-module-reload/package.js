@@ -1,7 +1,7 @@
 Package.describe({
-  name: 'zodern:hot',
+  name: 'hot-module-reload',
   version: '0.1.0',
-  summary: 'Adds Hot Module Reloading to Meteor',
+  summary: 'Update code in development without reloading the page',
   documentation: 'README.md'
 });
 

@@ -4,7 +4,7 @@ As an alternative to Hot Code Push in development, Hot Module Reload replaces  m
 
 Use:
 ```
-  ../path/to/meteor --extra-packages zodern:hot
+  ../path/to/meteor --extra-packages hot-module-reload
 ```
 
 #### API
@@ -28,9 +28,9 @@ Minifiers are able to remove the if statement for production, though none of the
 
 #### Implementation details
 
-For now, the linker emits an event that packages, such as zodern:hot, can listen to for an up to date list of files in an unibuild. Eventually this will be replaced with moving the HMR code from a build plugin into the meteor-tool.
+For now, the linker emits an event that packages, such as `hot-module-reload`, can listen to for an up to date list of files in an unibuild. Eventually this will be replaced with moving the HMR code from a build plugin into the meteor-tool.
 
-The zodern:hot package compares the list of files between builds to identify what has changed. When a client tries to do a hot code push, the client will request changes over a websocket from the build plugin. If possible, it will use HMR to update the modules. Otherwise, it will let the page be reloaded using hot code push.
+The `hot-module-reload` package compares the list of files between builds to identify what has changed. When a client tries to do a hot code push, the client will request changes over a websocket from the build plugin. If possible, it will use HMR to update the modules. Otherwise, it will let the page be reloaded using hot code push.
 
 The client uses a modified version of [install](https://www.npmjs.com/package/install) to allow replacing modules. To force it to be loaded at the correct time, the meteor-tool adds the `zodern:modules-runtime-hot` dependency to `modules`.
 
