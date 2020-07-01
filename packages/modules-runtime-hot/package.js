@@ -1,7 +1,7 @@
 Package.describe({
-  name: "zodern:modules-runtime-hot",
+  name: "modules-runtime-hot",
   version: "0.12.0",
-  summary: "CommonJS module system with modifications to support HMR",
+  summary: "Patches modules-runtime to support Hot Module Reload",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"
 });

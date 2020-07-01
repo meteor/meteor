@@ -136,7 +136,7 @@ function init() {
       sharedState.prelinkResultHandler(prelinkResult);
     });
   } else {
-    console.log('zodern:COMET is required for HMR: https://github.com/zodern/comet');
+    console.log('This version of Meteor doesn\'t support hot module reloading');
   }
 }
 

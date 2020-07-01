@@ -32,7 +32,7 @@ For now, the linker emits an event that packages, such as `hot-module-reload`, c
 
 The `hot-module-reload` package compares the list of files between builds to identify what has changed. When a client tries to do a hot code push, the client will request changes over a websocket from the build plugin. If possible, it will use HMR to update the modules. Otherwise, it will let the page be reloaded using hot code push.
 
-The client uses a modified version of [install](https://www.npmjs.com/package/install) to allow replacing modules. To force it to be loaded at the correct time, the meteor-tool adds the `zodern:modules-runtime-hot` dependency to `modules`.
+The client uses a modified version of [install](https://www.npmjs.com/package/install) to allow replacing modules.
 
 #### Remaining tasks
 

@@ -18,7 +18,7 @@ Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
   api.use('babel-compiler');
   api.use('modules');
-  api.imply('zodern:modules-runtime-hot@0.12.0');
+  api.imply('modules-runtime-hot@0.12.0');
   api.addFiles('./client.js', 'client');
 });
 
