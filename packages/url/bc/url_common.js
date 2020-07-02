@@ -12,7 +12,7 @@ var _encodeParams = function (params, prefix) {
       var k = prefix ? prefix + '[' + (isParamsArray ? '' : p) + ']' : p;
       var v = params[p];
       if (typeof v === 'object') {
-        str.push(this._encodeParams(v, k));
+        str.push(_encodeParams(v, k));
       } else {
         var encodedKey =
           encodeString(k).replace('%5B', '[').replace('%5D', ']');

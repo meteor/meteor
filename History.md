@@ -10,7 +10,7 @@ N/A
 
 ### Changes
 
-N/A
+* `email` package now exposes `hookSend` that runs before emails are sent.
 
 ## v1.10.3, TBD
 

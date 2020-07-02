@@ -120,7 +120,7 @@ export class AccountsServer extends AccountsCommon {
   /**
    * @summary Validate login from external service
    * @locus Server
-   * @param {Function} func Called whenever login/user creation from external service is attempted. Login or user creation based on this login can be aborted by by passing a falsy value or throwing an exception.
+   * @param {Function} func Called whenever login/user creation from external service is attempted. Login or user creation based on this login can be aborted by passing a falsy value or throwing an exception.
    */
   beforeExternalLogin(func) {
     if (this._beforeExternalLoginHook) {
