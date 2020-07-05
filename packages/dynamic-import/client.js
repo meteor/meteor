@@ -2,6 +2,11 @@ var Module = module.constructor;
 var cache = require("./cache.js");
 var meteorInstall = require("meteor/modules").meteorInstall;
 
+var dynamicImportSettings = Meteor.settings
+    && Meteor.settings.public
+    && Meteor.settings.public.packages
+    && Meteor.settings.public.packages.dynamicImport;
+
 // Call module.dynamicImport(id) to fetch a module and any/all of its
 // dependencies that have not already been fetched, and evaluate them as
 // soon as they arrive. This runtime API makes it very easy to implement
@@ -116,7 +121,7 @@ exports.setSecretKey = function (key) {
   secretKey = key;
 };
 
-const fetchURL = require("./common.js").fetchURL;
+var fetchURL = require("./common.js").fetchURL;
 
 function inIframe() {
   try {
@@ -136,16 +141,15 @@ function fetchMissing(missingTree) {
   // import() request, so it's a good idea for ROOT_URL to match
   // location.host if possible, though not strictly necessary.
 
-  let url = fetchURL;
+  var url = fetchURL;
 
-  // Lo and behold!
-  const useDynamicOrigin = Meteor.settings
-      && Meteor.settings.public
-      && Meteor.settings.public.packages
-      && Meteor.settings.public.packages.dynamicImport
-      && Meteor.settings.public.packages.dynamicImport.useDynamicOrigin;
+  var useLocationOrigin = dynamicImportSettings
+      && dynamicImportSettings.useLocationOrigin;
 
-  if (useDynamicOrigin && location && !inIframe()) {
+  var disableLocationOriginIframe = dynamicImportSettings
+      && dynamicImportSettings.disableLocationOriginIframe;
+
+  if (useLocationOrigin && location && !(disableLocationOriginIframe && inIframe())) {
     url = location.origin.concat(url);
   } else {
     url = Meteor.absoluteUrl(url);
