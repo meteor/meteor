@@ -1026,10 +1026,8 @@ class Target {
           add(usedUnibuild);
           delete onStack[usedUnibuild.id];
         };
-        let uses = [...unibuild.uses]
-
         compiler.eachUsedUnibuild({
-          dependencies: uses,
+          dependencies: unibuild.uses,
           arch: this.arch,
           isopackCache: isopackCache,
           skipUnordered: true,

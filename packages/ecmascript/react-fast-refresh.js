@@ -69,7 +69,6 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
   
       window.RefreshRuntime = runtime;
       window.$RefreshReg$ = (type, _id) => {
-        // Note module.id is webpack-specific, this may vary in other bundlers
         const fullId = module.id + ' ' + _id;
         RefreshRuntime.register(type, fullId);
       }

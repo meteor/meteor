@@ -61,7 +61,6 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
   set() {}
 });
 
-// Due to changes in the comet meteor-tool, this package should be running
-// after modules-runtime but before modules. We want modules to use
-// our patched meteorInstall
+// This package should be running after modules-runtime but before modules.
+// We want modules to use our patched meteorInstall
 Package['modules-runtime'].meteorInstall = meteorInstall;

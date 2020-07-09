@@ -1,3 +1,3 @@
-# zodern:modules-runtime-hot
+# modules-runtime-hot
 
 Patches modules-runtime to support HMR.
