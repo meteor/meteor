@@ -173,6 +173,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
+import { optimisticLStatOrNull } from '../fs/optimistic';
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -486,12 +487,11 @@ export class NodeModulesDirectory {
           return true;
         }
 
-        const real = files.realpathOrNull(path);
-        if (typeof real === "string" &&
-            real !== path) {
+        const fileStatus = optimisticLStatOrNull(path);
+        if (fileStatus && fileStatus.isSymbolicLink()) {
           // If node_modules/.bin/command is a symlink, determine the
           // answer by calling isWithinProdPackage(real).
-          return isWithinProdPackage(real);
+          return isWithinProdPackage(files.realpathOrNull(path));
         }
 
         // If node_modules/.bin/command is not a symlink, then it's hard
