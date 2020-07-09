@@ -1,4 +1,4 @@
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && module.hot) {
   const runtime = require('react-refresh/runtime');
 
   // The react refresh babel plugin only registers functions. For react
@@ -56,8 +56,6 @@ if (process.env.NODE_ENV !== 'production') {
   };
 
   runtime.injectIntoGlobalHook(window);
-  // window.$RefreshReg$ = () => { };
-  // window.$RefreshSig$ = () => type => type;
 
   module.onRequire({
     before(module) {
