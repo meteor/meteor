@@ -73,6 +73,8 @@ makeInstaller = function (options) {
     this.childrenById = {};
   }
 
+  var requireHooks = [];
+
   // Used to keep module.prefetch promise resolutions well-ordered.
   var lastPrefetchPromise;
 
@@ -205,6 +207,10 @@ makeInstaller = function (options) {
     return new Error("Cannot find module '" + id + "'");
   }
 
+  Module.prototype.onRequire = function (callbacks) {
+    requireHooks.push(callbacks);
+  }
+
   Module.prototype.resolve = function (id) {
     var file = fileResolve(filesByModuleId[this.id], id);
     if (file) return file.module.id;
@@ -217,10 +223,28 @@ makeInstaller = function (options) {
 
   Module.prototype.require = function require(id) {
     var result = fileResolve(filesByModuleId[this.id], id);
+
     if (result) {
       result.importedBy[this.id] = filesByModuleId[this.id];
+      // Skip any hooks added while requiring this module
+      var hookCount = requireHooks.length;
+      var hookData = []
 
-      return fileEvaluate(result, this);
+      for (var i = 0; i < hookCount; i++) {
+        if (requireHooks[i].before) {
+          hookData.push(requireHooks[i].before(result.module));
+        }
+      }
+
+      var moduleExports = fileEvaluate(result, this);
+
+      for (var i = 0; i < hookCount; i++) {
+        if (requireHooks[i].after) {
+          requireHooks[i].after(result.module, hookData[i]);
+        }
+      }
+
+      return moduleExports;
     }
 
     var error = makeMissingError(id);
@@ -238,6 +262,14 @@ makeInstaller = function (options) {
 
   Module.prototype._getRoot = function () {
     return root;
+  }
+
+  Module.prototype._getModuleById = function (id) {
+    var result = fileResolve(filesByModuleId[this.id], id);
+    if (result) {
+      return result.module;
+    }
+    return null;
   }
 
   Module.prototype._recordImport = function (id) {

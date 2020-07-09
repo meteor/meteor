@@ -8,7 +8,7 @@ Package.describe({
 Package.registerBuildPlugin({
   name: 'hot-core',
   sources: ['plugin.js'],
-  use: ['ecmascript@0.14.3'],
+  use: ['modules'],
   npmDependencies: {
     ws: '7.2.5'
   },
@@ -16,7 +16,6 @@ Package.registerBuildPlugin({
 
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
-  api.use('babel-compiler');
   api.use('modules');
   api.imply('modules-runtime-hot@0.12.0');
   api.addFiles('./client.js', 'client');
