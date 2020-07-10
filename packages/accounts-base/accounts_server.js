@@ -37,6 +37,14 @@ export class AccountsServer extends AccountsCommon {
       loggedInUser: ['profile', 'username', 'emails'],
       otherUsers: ['profile', 'username']
     };
+
+    // use object to keep the reference when used in functions
+    // where _defaultPublishFields is destructured into lexical scope
+    // for publish callbacks that need `this`
+    this._defaultPublishFields = {
+      loggedInUser: ['profile', 'username', 'emails'],
+    };
+
     this._initServerPublications();
 
     // connectionId -> {connection, loginToken}
@@ -678,7 +686,7 @@ export class AccountsServer extends AccountsCommon {
 
   _initServerPublications() {
     // Bring into lexical scope for publish callbacks that need `this`
-    const { users, _autopublishFields } = this;
+    const { users, _autopublishFields, _defaultPublishFields } = this;
 
     // Publish all login service configuration fields other than secret.
     this._server.publish("meteor.loginServiceConfiguration", () => {
@@ -686,31 +694,32 @@ export class AccountsServer extends AccountsCommon {
       return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
     }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
-    // Publish the current user's record to the client.
-    this._server.publish(null, function () {
-      if (this.userId) {
-        return users.find({
-          _id: this.userId
-        }, {
-          fields: {
-            profile: 1,
-            username: 1,
-            emails: 1
-          }
-        });
-      } else {
-        return null;
-      }
-    }, /*suppress autopublish warning*/{is_auto: true});
+    // ['profile', 'username'] -> {profile: 1, username: 1}
+    const toFieldSelector = fields => fields.reduce((prev, field) => (
+            { ...prev, [field]: 1 }),
+        {}
+    );
+
+    // Use Meteor.startup to give other packages a chance to call
+    // addDefaultPublishFields.
+    Meteor.startup(() => {
+      // Publish the current user's record to the client.
+      this._server.publish(null, function () {
+        if (this.userId) {
+          return users.find({
+            _id: this.userId
+          }, {
+            fields: toFieldSelector(_defaultPublishFields.loggedInUser),
+          });
+        } else {
+          return null;
+        }
+      }, /*suppress autopublish warning*/{is_auto: true});
+    });
 
     // Use Meteor.startup to give other packages a chance to call
     // addAutopublishFields.
     Package.autopublish && Meteor.startup(() => {
-      // ['profile', 'username'] -> {profile: 1, username: 1}
-      const toFieldSelector = fields => fields.reduce((prev, field) => (
-          { ...prev, [field]: 1 }),
-        {}
-      );
       this._server.publish(null, function () {
         if (this.userId) {
           return users.find({ _id: this.userId }, {
@@ -747,6 +756,14 @@ export class AccountsServer extends AccountsCommon {
       this._autopublishFields.loggedInUser, opts.forLoggedInUser);
     this._autopublishFields.otherUsers.push.apply(
       this._autopublishFields.otherUsers, opts.forOtherUsers);
+  };
+
+  // Add to the list of fields or subfields to be automatically
+  // published when the user logs in
+  //
+  // @param fields {Array.<string>} fields
+  addDefaultPublishFields(fields) {
+    this._defaultPublishFields.loggedInUser = [...new Set([...this._defaultPublishFields.loggedInUser, ...fields])];
   };
 
   ///
