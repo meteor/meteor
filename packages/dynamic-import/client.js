@@ -5,7 +5,7 @@ var meteorInstall = require("meteor/modules").meteorInstall;
 var dynamicImportSettings = Meteor.settings
     && Meteor.settings.public
     && Meteor.settings.public.packages
-    && Meteor.settings.public.packages.dynamicImport;
+    && Meteor.settings.public.packages['dynamic-import'] || {};
 
 // Call module.dynamicImport(id) to fetch a module and any/all of its
 // dependencies that have not already been fetched, and evaluate them as
@@ -143,11 +143,9 @@ function fetchMissing(missingTree) {
 
   var url = fetchURL;
 
-  var useLocationOrigin = dynamicImportSettings
-      && dynamicImportSettings.useLocationOrigin;
+  var useLocationOrigin = dynamicImportSettings.useLocationOrigin;
 
-  var disableLocationOriginIframe = dynamicImportSettings
-      && dynamicImportSettings.disableLocationOriginIframe;
+  var disableLocationOriginIframe = dynamicImportSettings.disableLocationOriginIframe;
 
   if (useLocationOrigin && location && !(disableLocationOriginIframe && inIframe())) {
     url = location.origin.concat(url);
