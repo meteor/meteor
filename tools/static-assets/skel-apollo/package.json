@@ -8,23 +8,20 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
+    "@apollo/react-hooks": "^3.1.5",
     "@babel/runtime": "^7.10.4",
+    "apollo-boost": "^0.4.9",
+    "apollo-server-express": "^2.15.1",
+    "graphql": "^15.3.0",
     "meteor-node-stubs": "^1.0.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
   },
-  "devDependencies": {
-    "@types/meteor": "^1.4.47",
-    "@types/mocha": "^7.0.2",
-    "@types/react": "^16.9.43",
-    "@types/react-dom": "^16.9.8",
-    "typescript": "^3.9.6"
-  },
   "meteor": {
     "mainModule": {
-      "client": "client/main.tsx",
-      "server": "server/main.ts"
+      "client": "client/main.jsx",
+      "server": "server/main.js"
     },
-    "testModule": "tests/main.ts"
+    "testModule": "tests/main.js"
   }
 }
