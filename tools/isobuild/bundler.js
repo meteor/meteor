@@ -2855,7 +2855,7 @@ var writeTargetToPath = Profile(
       // overwriting files that might be open currently in the server
       // process. There are some exceptions when we know the server process
       // is not using the files, such as during a full build when it is stopped.
-      forceInPlaceBuild: forceInPlaceBuild,
+      forceInPlaceBuild
     });
 
     var targetBuild = target.write(builder, {
