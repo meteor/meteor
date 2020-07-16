@@ -1,6 +1,5 @@
 import React from 'react';
-import ApolloClient from 'apollo-boost';
-import { ApolloProvider } from '@apollo/react-hooks';
+import { ApolloProvider, ApolloClient } from '@apollo/client';
 import { Hello } from './Hello.jsx';
 import { Info } from './Info.jsx';
 
