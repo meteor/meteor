@@ -32,10 +32,10 @@ N/A
 * `email` package now exposes `hookSend` that runs before emails are send.
 
 * The version of MongoDB used by Meteor in development has been updated
-    from 4.2.5 to 4.2.7
+    from 4.2.5 to 4.2.8
 
 * Node.js has been updated to version
-    [12.18.1](https://nodejs.org/en/blog/release/v12.18.1/)
+    [12.18.2](https://nodejs.org/en/blog/release/v12.18.2/)
     
 * Updated npm to version 6.14.5
 
