@@ -579,6 +579,10 @@ _.extend(AppRunner.prototype, {
           // Permit delayed bundling of client architectures if the
           // console is interactive.
           allowDelayedClientBuilds: ! Console.isHeadless(),
+
+          // None of the targets are used during full rebuilds
+          // so we can safely build in place on Windows
+          forceInPlaceBuild: !cachedServerWatchSet
         });
       });
 

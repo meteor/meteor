@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "core-js": {
-      "version": "3.2.1",
-      "resolved": "https://registry.npmjs.org/core-js/-/core-js-3.2.1.tgz",
-      "integrity": "sha512-Qa5XSVefSVPRxy2XfUC13WbvqkxhkwB3ve+pgCQveNgYzbM/UxZeu1dcOX/xr4UmfUd+muuvsaxilQzCyUurMw=="
+      "version": "3.6.5",
+      "resolved": "https://registry.npmjs.org/core-js/-/core-js-3.6.5.tgz",
+      "integrity": "sha512-vZVEEwZoIsI+vPEuoF9Iqf5H7/M3eeQqWlQnYa8FSKKePuYTf5MWnxb5SDAzCa60b3JBRS5g9b+Dq7b1y/RCrA=="
     }
   }
 }
