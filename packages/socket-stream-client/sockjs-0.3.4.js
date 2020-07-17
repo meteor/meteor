@@ -298,6 +298,12 @@ utils.log = function() {
     }
 };
 
+utils.debug = function() {
+    if (_window.console && console.debug && console.debug.apply) {
+        console.debug.apply(console, arguments);
+    }
+};
+
 utils.bind = function(fun, that) {
     if (fun.bind) {
         return fun.bind(that);
@@ -1083,8 +1089,10 @@ SockJS.prototype._didClose = function(code, reason, force) {
     var that = this;
     if (that.readyState !== SockJS.CONNECTING &&
         that.readyState !== SockJS.OPEN &&
-        that.readyState !== SockJS.CLOSING)
-            throw new Error('INVALID_STATE_ERR');
+        that.readyState !== SockJS.CLOSING) {
+        utils.debug('INVALID_STATE_ERR', that.readyState);
+        return;
+    }
     if (that._ir) {
         that._ir.nuke();
         that._ir = null;
