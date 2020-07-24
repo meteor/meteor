@@ -2,10 +2,11 @@
 
 ### Breaking changes
 
-* `email` package dependencies have been update and package version has been bumped to 2.0.0
-    There is a potential breaking change as the underlying package started to use `dns.resolve()`
-    instead of `dns.lookup()` which might be breaking on some environments.
-    See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
+N/A
+
+### Migration steps
+
+N/A
 
 ### Changes
 
@@ -15,7 +16,10 @@
 
 ### Breaking changes
 
-N/A
+* `email` package dependencies have been update and package version has been bumped to 2.0.0
+    There is a potential breaking change as the underlying package started to use `dns.resolve()`
+    instead of `dns.lookup()` which might be breaking on some environments.
+    See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
 
 ### Migration steps
 
@@ -24,6 +28,16 @@ N/A
 ### Changes
 
 * Fixes error when removing cordova plugin that depends on cli variables. PR [#10976](https://github.com/meteor/meteor/pull/11052)
+
+* `email` package now exposes `hookSend` that runs before emails are send.
+
+* The version of MongoDB used by Meteor in development has been updated
+    from 4.2.5 to 4.2.8
+
+* Node.js has been updated to version
+    [12.18.2](https://nodejs.org/en/blog/release/v12.18.2/)
+    
+* Updated npm to version 6.14.5
 
 ## v1.10.2, 2020-04-21
 
