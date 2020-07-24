@@ -1538,12 +1538,12 @@ export function readBufferWithLengthAndOffset(
   if (length > 0) {
     const fd = open(filename, "r");
     try {
-      var count = read(fd, data, 0, length, offset);
+      const count = read(fd, data, { position: 0, length, offset });
+      if (count !== length) {
+        throw new Error("couldn't read entire resource");
+      }
     } finally {
       close(fd);
-    }
-    if (count !== length) {
-      throw new Error("couldn't read entire resource");
     }
   }
   return data;
