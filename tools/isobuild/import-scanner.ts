@@ -25,6 +25,7 @@ import {
   convertToPosixPath,
   realpathOrNull,
   writeFileAtomically,
+  readFile,
 } from "../fs/files";
 
 const { SourceNode, SourceMapConsumer } = require("source-map");
@@ -74,9 +75,18 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
   source,
   _hash,
   bundleArch,
+  cacheFilePath,
 ) {
+  if (cacheFilePath) {
+    try {
+      return readFile(cacheFilePath, "utf8");
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e;
+    }
+  }
+
   const isLegacy = isLegacyArch(bundleArch);
-  return reifyCompile(stripHashBang(source), {
+  let result = reifyCompile(stripHashBang(source), {
     parse: reifyBabelParse,
     generateLetDeclarations: !isLegacy,
     avoidModernSyntax: isLegacy,
@@ -84,6 +94,14 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
     dynamicImport: true,
     ast: false,
   }).code;
+
+  if (cacheFilePath) {
+    Promise.resolve().then(
+      () => writeFileAtomically(cacheFilePath, result),
+    );
+  }
+
+  return result;
 }, {
   makeCacheKey(_source, hash, bundleArch) {
     return JSON.stringify([hash, bundleArch]);
@@ -132,29 +150,16 @@ class DefaultHandlers {
       }
     }
 
-    if (this.cacheDir) {
-      const cacheFileName = this.getCacheFileName(file)!;
-      try {
-        return optimisticReadFile(cacheFileName, "utf8");
-      } catch (e) {
-        if (e.code !== "ENOENT") throw e;
-        const code = reifyCompileWithCache(
-          file.dataString,
-          file.hash,
-          this.bundleArch,
-        );
-        Promise.resolve().then(
-          () => writeFileAtomically(cacheFileName, code),
-        );
-        return code;
-      }
-    } else {
-      return reifyCompileWithCache(
-        file.dataString,
-        file.hash,
-        this.bundleArch,
-      );
-    }
+    const cacheFileName = this.cacheDir ? 
+      this.getCacheFileName(file) :
+      null;
+
+    return reifyCompileWithCache(
+      file.dataString,
+      file.hash,
+      this.bundleArch,
+      cacheFileName
+    )
   }
 
   // Files with an .mjs extension are just JavaScript plus module syntax.
