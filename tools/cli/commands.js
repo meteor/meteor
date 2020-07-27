@@ -1264,7 +1264,6 @@ main.registerCommand({
     projectContext.prepareProjectForBuild();
   });
 
-  const bundlePath = projectContext.getProjectLocalDirectory('build');
   const bundler = require('../isobuild/bundler.js');
   const bundle = bundler.bundle({
     projectContext: projectContext,
@@ -1433,6 +1432,7 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean },
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
+    'cache-build': { type: Boolean },
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1506,6 +1506,7 @@ function deployCommand(options, { rawOptions }) {
     deployPollingTimeoutMs = options['deploy-polling-timeout'];
   }
 
+  const isCacheBuildEnabled = !!options['cache-build'];
   const waitForDeploy = !options['no-wait'];
 
   var deployResult = deploy.bundleAndDeploy({
@@ -1516,6 +1517,7 @@ function deployCommand(options, { rawOptions }) {
     rawOptions,
     deployPollingTimeoutMs,
     waitForDeploy,
+    isCacheBuildEnabled,
   });
 
   if (deployResult === 0) {

@@ -727,9 +727,18 @@ export function freeTempDir(dir: string) {
   });
 }
 
+// Change the status of a dir
+export function changeTempDirStatus(dir: string, status: boolean) {
+  if (! tempDirs[dir]) {
+    throw Error("not a tracked temp dir: " + dir);
+  }
+
+  tempDirs[dir] = status;
+}
+
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function () {
-    Object.keys(tempDirs).forEach(dir => {
+    Object.entries(tempDirs).filter(([_, isTmp]) => !!isTmp).map(([dir]) => dir).forEach(dir => {
       delete tempDirs[dir];
       try {
         rm_recursive(dir);
