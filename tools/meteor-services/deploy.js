@@ -534,7 +534,7 @@ export async function bundleAndDeploy(options) {
       !buildCache.gitCommitHash ||
       !gitCommitHash ||
       buildCache.gitCommitHash !== gitCommitHash) {
-      Console.warn(`We don't have a valid build cache so --cache-build flag will be ignored.`);
+      Console.warn(`We don't have a valid build cache so a new build will be performed.`);
       isCacheBuildValid = false;
     }
   }
