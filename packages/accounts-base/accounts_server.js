@@ -42,7 +42,11 @@ export class AccountsServer extends AccountsCommon {
     // where _defaultPublishFields is destructured into lexical scope
     // for publish callbacks that need `this`
     this._defaultPublishFields = {
-      loggedInUser: ['profile', 'username', 'emails'],
+      projection: {
+        profile: 1,
+        username: 1,
+        emails: 1,
+      }
     };
 
     this._initServerPublications();
@@ -707,14 +711,8 @@ export class AccountsServer extends AccountsCommon {
       return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
     }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
-    // ['profile', 'username'] -> {profile: 1, username: 1}
-    const toFieldSelector = fields => fields.reduce((prev, field) => (
-            { ...prev, [field]: 1 }),
-        {}
-    );
-
     // Use Meteor.startup to give other packages a chance to call
-    // addDefaultPublishFields.
+    // setDefaultPublishFields.
     Meteor.startup(() => {
       // Publish the current user's record to the client.
       this._server.publish(null, function () {
@@ -722,7 +720,7 @@ export class AccountsServer extends AccountsCommon {
           return users.find({
             _id: this.userId
           }, {
-            fields: toFieldSelector(_defaultPublishFields.loggedInUser),
+            fields: _defaultPublishFields.projection,
           });
         } else {
           return null;
@@ -733,6 +731,11 @@ export class AccountsServer extends AccountsCommon {
     // Use Meteor.startup to give other packages a chance to call
     // addAutopublishFields.
     Package.autopublish && Meteor.startup(() => {
+      // ['profile', 'username'] -> {profile: 1, username: 1}
+      const toFieldSelector = fields => fields.reduce((prev, field) => (
+          { ...prev, [field]: 1 }),
+        {}
+      );
       this._server.publish(null, function () {
         if (this.userId) {
           return users.find({ _id: this.userId }, {
@@ -771,12 +774,12 @@ export class AccountsServer extends AccountsCommon {
       this._autopublishFields.otherUsers, opts.forOtherUsers);
   };
 
-  // Add to the list of fields or subfields to be automatically
+  // Replaces the fields to be automatically
   // published when the user logs in
   //
-  // @param fields {Array.<string>} fields
-  addDefaultPublishFields(fields) {
-    this._defaultPublishFields.loggedInUser = [...new Set([...this._defaultPublishFields.loggedInUser, ...fields])];
+  // @param {MongoFieldSpecifier} fields Dictionary of fields to return or exclude.
+  setDefaultPublishFields(fields) {
+    this._defaultPublishFields.projection = fields;
   };
 
   ///
