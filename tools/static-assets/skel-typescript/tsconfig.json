@@ -8,7 +8,6 @@
     "checkJs": false,
     "jsx": "preserve",
     "incremental": true,
-    "noEmit": true,
 
     /* Strict Type-Checking Options */
     "strict": true,
