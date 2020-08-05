@@ -2,11 +2,11 @@
   "name": "meteor-node-stubs",
   "author": "Ben Newman <ben@meteor.com>",
   "description": "Stub implementations of Node built-in modules, a la Browserify",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "prepublish": "node scripts/build-deps.js"
+    "prepare": "node scripts/build-deps.js"
   },
   "dependencies": {
     "assert": "^1.4.1",
