@@ -36,6 +36,7 @@ sidebar_categories:
   Mobile:
     - cordova
     - react-native
+    - hot-code-push
   Build:
     - atmosphere-vs-npm
     - using-atmosphere-packages
