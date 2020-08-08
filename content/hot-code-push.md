@@ -3,20 +3,28 @@ title: Hot Code Push
 description: How to diagnose issues with Hot Code Push in a Meteor Cordova app
 ---
 
-Meteor’s [Hot Code Push](https://guide.meteor.com/cordova#hot-code-push) is a [great power](https://blog.meteor.com/meteor-hot-code-push-with-great-power-comes-great-responsibility-7e9e8f7312d5), but it doesn’t always work seamlessly.
+Meteor’s [Hot Code Push](/cordova#hot-code-push) is a [great power](https://blog.meteor.com/meteor-hot-code-push-with-great-power-comes-great-responsibility-7e9e8f7312d5), but it doesn’t always work seamlessly.
 
-Is your Meteor Cordova app not getting the updates you’re deploying? Here’s some things you can try.
+Is your Meteor Cordova app not getting the updates you’re deploying?
+
+After reading this article, you'll know:
+
+1. The prerequisites to using Hot Code Push
+2. Some techniques to diagnose and solve common issues
+3. How to dig deeper if that doesn't solve your issue
 
 <h2 id="prerequisites">Prerequisites</h2>
 
 Make sure that you have:
 
-- an Android and/or iOS mobile app based on Meteor's [Cordova integration](https://guide.meteor.com/cordova#cordova-integration-in-meteor)
+- an Android and/or iOS mobile app based on Meteor's [Cordova integration](/cordova#cordova-integration-in-meteor)
 - the package `hot-code-push` listed in your `.meteor/versions` file
-- locally: make sure your test device and development device are [on the same network](https://guide.meteor.com/cordova#connecting-to-the-server)
-- in production: make sure the `--server` flag of your `meteor build` command points to the same place as your `ROOT_URL` environment variable (or, on Galaxy, the *site* in `meteor deploy *site*`). [See details](https://guide.meteor.com/cordova#configuring-server-for-hot-code-push)
+- locally: make sure your test device and development device are [on the same network](/cordova#connecting-to-the-server)
+- in production: make sure the `--server` flag of your `meteor build` command points to the same place as your `ROOT_URL` environment variable (or, on Galaxy, the *site* in `meteor deploy site`). [See details](/cordova#configuring-server-for-hot-code-push)
 
-<h2 id="override-compatability-versions">Override compatability versions</h2>
+<h2 id="known-issues">Known issues</h2>
+
+<h3 id="override-compatability-versions">Override compatability versions</h3>
 
 Did the app suddenly stop getting new code after you updated meteor, or you changed plugins?
 
@@ -24,11 +32,11 @@ The client probably logs: `Skipping downloading new version because the Cordova 
 
 Meteor, Cordova and plugins cannot be updated through Hot Code Push. So Meteor by default disables Hot Code Push to app versions that have different versions than the server. This avoids crashing a user’s app, for example, when new JS calls a plugin that his app version doesn’t yet have.
 
-You can [override this behavior](https://guide.meteor.com/cordova#controlling-compatibility-version). Just make sure you deal with potentially incompatible versions in your JS instead.
+You can [override this behavior](/cordova#controlling-compatibility-version). Just make sure you deal with potentially incompatible versions in your JS instead.
 
-<h2 id="set-autoupdate-version">Set an AUTOUPDATE_VERSION</h2>
+<h3 id="set-autoupdate-version">Set an AUTOUPDATE_VERSION</h3>
 
-`AUTOUPDATE_VERSION` is an environment variable you can add to your [`run` and `deploy` commands](https://docs.meteor.com/commandline.html):
+`AUTOUPDATE_VERSION` is an environment variable you can add to your `run` and `deploy` [commands](https://docs.meteor.com/commandline.html):
 
 ```sh
 $ AUTOUPDATE_VERSION=abc meteor deploy example.com
@@ -38,7 +46,7 @@ You can set a new one for every deploy to update all your mobile and web clients
 
 If adding this variable this fixes your HCP issue, it means your server thinks the client code and assets didn’t actually change. You'll want to figure out why [WebApp.calculateClientHash](https://github.com/meteor/meteor/blob/devel/packages/webapp/webapp_server.js#L267) isn’t generating new hashes for your new code.
 
-<h2 id="no-soft-update-in-cordova">Cordova doesn’t hot reload CSS separately</h2>
+<h3 id="no-soft-update-in-cordova">Cordova doesn’t hot reload CSS separately</h3>
 
 Are you seeing your web app incorporate changes without reload, yet your cordova app reloads each time?
 
@@ -46,7 +54,7 @@ For CSS-only changes, this is the expected behaviour. Browsers update the layout
 
 In case you want to implement soft CSS update for Cordova, see below [how to edit the source](#how-to-edit-the-source).
 
-<h2 id="custom-code-and-packages">Outdated custom reload code and packages</h2>
+<h3 id="custom-code-and-packages">Outdated custom reload code and packages</h3>
 
 There are [several reload packages](https://atmospherejs.com/?q=reload), and maybe your app includes some custom reload code. Of course, these may have bugs or be outdated.
 
@@ -67,15 +75,15 @@ Reload._onMigrate((retry) => {
 
 If you use a package that is no longer compatible, consider forking it or opening a PR with the above changes. Alternatively, you can switch to a compatible one such as [`quave:reloader`](https://github.com/quavedev/reloader)
 
-<h2 id="avoid-hash-fragments">Avoid hash fragments</h2>
+<h3 id="avoid-hash-fragments">Avoid hash fragments</h3>
 
 Cordova doesn’t show the URL bar, but the user is still on some URL or other, which may have a hash (`#`). HCP [works better if it doesn't](https://github.com/meteor/meteor/blob/devel/packages/reload/reload.js#L224).
 
 If you can, remove the hash fragment before the reload.
 
-<h2 id="avoid-big-files">Avoid making it download big files</h2>
+<h3 id="avoid-big-files">Avoid making it download big files</h3>
 
-In the [client side logs](https://guide.meteor.com/cordova#logging-and-remote-debugging), you may see HCP fail with errors like:
+In the [client side logs](/cordova#logging-and-remote-debugging), you may see HCP fail with errors like:
 
 ```
 Error: Error downloading asset: /
@@ -88,7 +96,7 @@ This error from [cordova-plugin-meteor-webapp](https://github.com/meteor/cordova
 
 You could run `$ du -a public | sort -n -r | head -n 20` to find the 20 biggest files and their sizes. Consider serving them from an external storage service or CDN instead. In this case, they are only downloaded when really needed, and can fail downloading without blocking HCP.
 
-<h2 id="locally">If it is only broken locally</h2>
+<h3 id="locally">If it is only broken locally</h3>
 
 If you notice HCP works in production but not when you test locally, you may need to enable clear text or set a correct `--mobile-server`. Both are [explained in the docs](https://docs.meteor.com/packages/autoupdate.html#Cordova-Client).
 
@@ -98,7 +106,7 @@ If none of that solved your issues and you’d like to dive deeper, here’s som
 
 If you end up finding a bug in one of Meteor's packages or plugins, don't hesitate to open an [issue](https://github.com/meteor/meteor/issues) and/or a [pull request](https://github.com/meteor/meteor/pulls).
 
-<h2 id="where-does-it-live">Where does hot code push live?</h2>
+<h3 id="where-does-it-live">Where does hot code push live?</h3>
 
 Hot code push is included in `meteor-base` through a web of [official meteor packages](https://github.com/meteor/meteor/tree/devel/packages), most importantly [`reload`](https://github.com/meteor/meteor/tree/devel/packages/reload) and [`autoupdate`](https://github.com/meteor/meteor/tree/devel/packages/autoupdate).
 
@@ -106,7 +114,7 @@ In the case of cordova, a lot of the heavy lifting is done by [`cordova-plugin-m
 
 To oversimplify, `autoupdate` decides *when* to refresh the client, the plugin then downloads the new client code and assets, and `reload` then refreshes the page to start using them.
 
-<h2 id="what-are-the-steps">What are the steps it takes?</h2>
+<h3 id="what-are-the-steps">What are the steps it takes?</h3>
 
 We can break it down a bit more:
 
@@ -119,11 +127,11 @@ We can break it down a bit more:
 - the app and packages get a chance to [save their data or to deny the reload](https://forums.meteor.com/t/is-there-an-official-documentation-of-reload--onmigrate/16974/2)
 - if/when allowed, it reloads
 
-<h2 id="how-to-inspect">How to spy on it?</h2>
+<h3 id="how-to-inspect">How to spy on it?</h3>
 
 To figure out where the issue is, we can log the various steps HCP takes.
 
-First, make sure you can [see client-side logs](https://guide.meteor.com/cordova#logging-and-remote-debugging) (or print them on some screen of your app). You may start seeing some default logs already.
+First, make sure you can [see client-side logs](/cordova#logging-and-remote-debugging) (or print them on some screen of your app). You may start seeing some default logs already.
 
 A few more useful values to print, and events to listen to, might be:
 
