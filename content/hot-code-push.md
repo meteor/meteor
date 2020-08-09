@@ -3,7 +3,7 @@ title: Hot Code Push
 description: How to diagnose issues with Hot Code Push in a Meteor Cordova app
 ---
 
-Meteor’s [Hot Code Push](/cordova#hot-code-push) is a [great power](https://blog.meteor.com/meteor-hot-code-push-with-great-power-comes-great-responsibility-7e9e8f7312d5), but it doesn’t always work seamlessly.
+Meteor’s [Hot Code Push](/cordova.html#hot-code-push) is a [great power](https://blog.meteor.com/meteor-hot-code-push-with-great-power-comes-great-responsibility-7e9e8f7312d5), but it doesn’t always work seamlessly.
 
 Is your Meteor Cordova app not getting the updates you’re deploying?
 
@@ -17,10 +17,10 @@ After reading this article, you'll know:
 
 Make sure that you have:
 
-- an Android and/or iOS mobile app based on Meteor's [Cordova integration](/cordova#cordova-integration-in-meteor)
+- an Android and/or iOS mobile app based on Meteor's [Cordova integration](/cordova.html#cordova-integration-in-meteor)
 - the package `hot-code-push` listed in your `.meteor/versions` file
-- locally: make sure your test device and development device are [on the same network](/cordova#connecting-to-the-server)
-- in production: make sure the `--server` flag of your `meteor build` command points to the same place as your `ROOT_URL` environment variable (or, on Galaxy, the *site* in `meteor deploy site`). [See details](/cordova#configuring-server-for-hot-code-push)
+- locally: make sure your test device and development device are [on the same network](/cordova.html#connecting-to-the-server)
+- in production: make sure the `--server` flag of your `meteor build` command points to the same place as your `ROOT_URL` environment variable (or, on Galaxy, the *site* in `meteor deploy site`). [See details](/cordova.html#configuring-server-for-hot-code-push)
 
 <h2 id="known-issues">Known issues</h2>
 
@@ -32,7 +32,7 @@ The client probably logs: `Skipping downloading new version because the Cordova 
 
 Meteor, Cordova and plugins cannot be updated through Hot Code Push. So Meteor by default disables Hot Code Push to app versions that have different versions than the server. This avoids crashing a user’s app, for example, when new JS calls a plugin that his app version doesn’t yet have.
 
-You can [override this behavior](/cordova#controlling-compatibility-version). Just make sure you deal with potentially incompatible versions in your JS instead.
+You can [override this behavior](/cordova.html#controlling-compatibility-version). Just make sure you deal with potentially incompatible versions in your JS instead.
 
 <h3 id="set-autoupdate-version">Set an AUTOUPDATE_VERSION</h3>
 
@@ -83,7 +83,7 @@ If you can, remove the hash fragment before the reload.
 
 <h3 id="avoid-big-files">Avoid making it download big files</h3>
 
-In the [client side logs](/cordova#logging-and-remote-debugging), you may see HCP fail with errors like:
+In the [client side logs](/cordova.html#logging-and-remote-debugging), you may see HCP fail with errors like:
 
 ```
 Error: Error downloading asset: /
@@ -131,7 +131,7 @@ We can break it down a bit more:
 
 To figure out where the issue is, we can log the various steps HCP takes.
 
-First, make sure you can [see client-side logs](/cordova#logging-and-remote-debugging) (or print them on some screen of your app). You may start seeing some default logs already.
+First, make sure you can [see client-side logs](/cordova.html#logging-and-remote-debugging) (or print them on some screen of your app).
 
 A few more useful values to print, and events to listen to, might be:
 
