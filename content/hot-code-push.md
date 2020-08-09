@@ -3,8 +3,6 @@ title: Hot Code Push
 description: How to diagnose issues with Hot Code Push in a Meteor Cordova app
 ---
 
-Meteor’s [Hot Code Push](/cordova.html#hot-code-push) is a [great power](https://blog.meteor.com/meteor-hot-code-push-with-great-power-comes-great-responsibility-7e9e8f7312d5), but it doesn’t always work seamlessly.
-
 Is your Meteor Cordova app not getting the updates you’re deploying?
 
 After reading this article, you'll know:
@@ -12,6 +10,8 @@ After reading this article, you'll know:
 1. The prerequisites to using Hot Code Push
 2. Some techniques to diagnose and solve common issues
 3. How to dig deeper if that doesn't solve your issue
+
+This article builds on the [Cordova](/cordova.html) article. We recommend reading that first, though we've tried to link back to its relevant sections.
 
 <h2 id="prerequisites">Prerequisites</h2>
 
