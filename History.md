@@ -35,7 +35,7 @@ N/A
     from 4.2.5 to 4.2.8
 
 * Node.js has been updated to version
-    [12.18.2](https://nodejs.org/en/blog/release/v12.18.2/)
+    [12.18.3](https://nodejs.org/en/blog/release/v12.18.3/)
     
 * Updated npm to version 6.14.5
 
