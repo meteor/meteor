@@ -118,7 +118,7 @@ var g_output_modifiers = [];
 // Automatic Extension Loading (node only):
 //
 
-if (typeof module !== 'undefined' && typeof exports !== 'undefined' && typeof require !== 'undefind') {
+if (typeof module !== 'undefined' && typeof exports !== 'undefined' && typeof require !== 'undefined') {
 	var fs = require('fs');
 
 	if (fs) {
