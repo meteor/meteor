@@ -19,9 +19,8 @@ ecmascript              # Enable ECMAScript2015+ syntax in app code
 typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 
-kadira:flow-router      # FlowRouter is a very simple router for Meteor
-kadira:blaze-layout     # Layout manager for blaze (works well with FlowRouter)
-less                    # Leaner CSS language
+ostrio:flow-router-extra # FlowRouter is a very simple router for Meteor
+less                     # Leaner CSS language
 
 meteortesting:mocha               # A package for writing and running your meteor app and package tests with mocha
 johanbrook:publication-collector  # Test a Meteor publication by collecting its output
