@@ -47,7 +47,7 @@
     "lodash": "^4.17.15",
     "meteor-babel-helpers": "0.0.3",
     "reify": "^0.20.12",
-    "typescript": "^3.7.2"
+    "typescript": "^3.9.7"
   },
   "devDependencies": {
     "@babel/plugin-proposal-decorators": "7.8.3",
