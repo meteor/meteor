@@ -76,7 +76,7 @@ Babel = {
         ],
       }).code;
       return replacedCode;
-    } catch(){
+    } catch(e){
       return source;
     }
   }
