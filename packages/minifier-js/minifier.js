@@ -30,29 +30,8 @@ meteorJsMinify = function (source, options) {
     });
   }, {});
   try {
-    var ast = terser.minify(source, {
-      compress: false,
-      mangle: false,
-      output: {
-        ast: true,
-        code: false
-      },
-      safari10: true,
-    }).ast
-    const transformer = new terser.TreeTransformer(node => {
-      if (node instanceof terser.AST_Dot) {
-        const globalDefsForStart = globalDefsMapping[node.start.value];
-        const mappingForEnds = globalDefsForStart && globalDefsForStart[node.end.value];
-
-        if (mappingForEnds != null) {
-          console.log(`node`, node);
-
-          return mappingForEnds ? new terser.AST_True(node) : new terser.AST_False(node);
-        }
-      }
-    })
-    var optimizedAst = ast.transform(transformer)
-    var terserResult = terser.minify(optimizedAst, {
+    var optimizedCode = Babel.replaceMeteorInternalState(source, globalDefsMapping)
+    var terserResult = terser.minify(optimizedCode, {
       compress: {
         drop_debugger: false,
         unused: false,
