@@ -205,7 +205,6 @@ When you deploy your Meteor server, you need a `MONGO_URL` that points to your M
 
 There are a variety of services out there, and we recommend that you select one of the below services depending on your requirements:
 
-* [mLab](https://www.mlab.com)
 * [Compose](https://www.compose.io)
 * [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 
