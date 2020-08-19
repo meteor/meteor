@@ -1,7 +1,7 @@
 import assert from "assert";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
-  symlinkWithOverwrite,
+  symlinkWithOverwrite, realpath,
 } from '../fs/files';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../tool-env/profile';
@@ -540,7 +540,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       // as well as node_modules/meteor and the parent directories of any
       // scoped npm packages.
       this._ensureAllNonPackageDirectories(
-        files.realpath(options.from),
+        realpath(options.from),
         options.to
       );
     }
@@ -637,7 +637,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     }
 
-    const rootDir = files.realpath(from);
+    const rootDir = realpath(from);
 
     const walk = (absFrom, relTo) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
@@ -661,7 +661,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           return;
         }
 
-        // Returns files.realpath(thisAbsFrom), iff it is external to
+        // Returns files.realpath(thisAbsFrom), if it is external to
         // rootDir, using caching because this function might be called
         // more than once.
         let cachedExternalPath;
@@ -671,7 +671,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           try {
-            var real = files.realpath(thisAbsFrom);
+            var real = realpath(thisAbsFrom);
           } catch (e) {
             if (e.code !== "ENOENT" &&
                 e.code !== "ELOOP") {
