@@ -12,7 +12,7 @@ N/A
 
 N/A
 
-## v1.11    , TBD
+## v1.11, 2020-08-18
 
 ### Breaking changes
 
