@@ -240,6 +240,31 @@ if (!attempt.allowed) {
 }
 ```
 
+{% apibox "AccountsServer#beforeExternalLogin" %}
+
+Use this hook if you need to validate that user from an external service should
+be allowed to login or create account.
+
+<dl class="objdesc">
+{% dtdd name:"type" type:"String" %}
+  The service name, such as "google" or "twitter".
+{% enddtdd %}
+
+{% dtdd name:"data" type:"Object" %}
+  Data retrieved from the service
+{% enddtdd %}
+
+{% dtdd name:"user" type:"Object" %}
+  If user was found in the database that matches the criteria from the service,
+  their data will be provided here. 
+{% enddtdd %}
+</dl>
+
+You should return a `Boolean` value, `true` if the login/registration should
+proceed or `false` if it should terminate. In case of termination
+the login attempt will throw an error `403`, with the message: `Login forbidden`.
+
+
 <h2 id="accounts_rate_limit">Rate Limiting</h2>
 
 By default, there are rules added to the [`DDPRateLimiter`](#ddpratelimiter)
