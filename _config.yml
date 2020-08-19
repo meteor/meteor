@@ -42,6 +42,7 @@ sidebar_categories:
     - packages/accounts-ui
     - packages/appcache
     - packages/audit-argument-checks
+    - packages/autoupdate
     - packages/browser-policy
     - packages/bundle-visualizer
     - packages/coffeescript
@@ -59,6 +60,8 @@ sidebar_categories:
   Command Line:
     - commandline
     - environment-variables
+  Troubleshooting:
+    - windows
 github_repo: 'meteor/docs'
 
 nav_links:

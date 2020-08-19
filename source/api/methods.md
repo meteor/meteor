@@ -190,7 +190,9 @@ options about how the client executes the method.
 
 <h2 id="ddpratelimiter"><span>DDPRateLimiter</span></h2>
 
-Customize rate limiting for methods and subscriptions.
+Customize rate limiting for methods and subscriptions to avoid a high load of WebSocket messages in your app.
+
+> Galaxy (Meteor hosting) offers additional App Protection, [read more](https://galaxy-guide.meteor.com/protection.html) and try it with our [free 30-day trial](https://www.meteor.com/hosting).
 
 By default, `DDPRateLimiter` is configured with a single rule. This rule
 limits login attempts, new user creation, and password resets to 5 attempts
