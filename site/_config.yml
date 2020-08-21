@@ -3,6 +3,7 @@ subtitle: The Official Guide
 github_repo: meteor/guide
 content_root: content
 versions:
+  - '1.11'
   - '1.10'
   - '1.9'
   - '1.8'
