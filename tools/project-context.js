@@ -625,6 +625,27 @@ _.extend(ProjectContext.prototype, {
     );
   },
 
+  getBuildCache() {
+    try {
+      return JSON.parse(files.readFile(files.pathJoin(
+        this.projectLocalDir,
+        "build-cache.json"
+      )));
+    } catch (e) {
+      return null;
+    }
+  },
+
+  saveBuildCache(buildCache) {
+    files.writeFileAtomically(
+      files.pathJoin(
+        this.projectLocalDir,
+        "build-cache.json"
+      ),
+      JSON.stringify(buildCache) + "\n"
+    );
+  },
+
   // When running test-packages for an app with local packages, this
   // method will return the original app dir, as opposed to the temporary
   // testRunnerAppDir created for the tests.
