@@ -10,7 +10,7 @@ N/A
 
 ### Changes
 
-N/A
+* `--apollo` skeleton was missing client cache setup [PR #11146](https://github.com/meteor/meteor/pull/11146)
 
 ## v1.11, 2020-08-18
 
