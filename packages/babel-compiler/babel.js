@@ -51,31 +51,35 @@ Babel = {
   replaceMeteorInternalState: function(source, globalDefsMapping) {
     try {
       const globalDefsKeys = Object.keys(globalDefsMapping);
-      const replacedCode = Npm.require("@babel/core").transformSync(source, {
+      return Npm.require("@babel/core").transformSync(source, {
+        ast: false,
+        compact: false,
         plugins: [
           function replaceStateVars({types: t}) {
             return {
               visitor: {
-                MemberExpression(path) {
-                  const object = path.node.object.name;
-                  const property = path.node.property.name;
-                  const globalDefsForStart = object && globalDefsKeys.indexOf(object) > -1 && globalDefsMapping[object];
-                  const mappingForEnds = property && globalDefsForStart
-                  && Object.keys(globalDefsForStart).indexOf(property) > -1
-                      ? globalDefsForStart[property] : null;
+                MemberExpression: {
+                  exit(path) {
+                    const object = path.node.object.name;
+                    const property = path.node.property.name;
+                    const globalDefsForStart = object && globalDefsKeys.indexOf(object) > -1 && globalDefsMapping[object];
+                    const mappingForEnds = property && globalDefsForStart
+                    && Object.keys(globalDefsForStart).indexOf(property) > -1
+                        ? globalDefsForStart[property] : null;
 
-                  if (mappingForEnds !== null && path.parentPath.node.type !== "AssignmentExpression") {
-                    path.replaceWith(
-                        t.booleanLiteral(!!mappingForEnds)
-                    );
-                  }
-                },
+                    if (mappingForEnds !== null && path.parentPath.node.type !== "AssignmentExpression") {
+                      path.replaceWith(
+                          t.booleanLiteral(mappingForEnds === 'true' || mappingForEnds === true)
+                      );
+                      path.skip();
+                    }
+                  },
+                }
               },
             };
           },
         ],
       }).code;
-      return replacedCode;
     } catch(e){
       return source;
     }

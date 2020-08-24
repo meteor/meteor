@@ -13,8 +13,6 @@ function MeteorBabelMinifier() {
 
 MeteorBabelMinifier.prototype.processFilesForBundle = function (files, options) {
   var mode = options.minifyMode;
-  console.log(`filipe:options`, JSON.stringify(options));
-  console.log(`filipe:mode`, mode);
 
   // don't minify anything for development
   if (mode === 'development') {
@@ -117,8 +115,6 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function (files, options) 
     data: "",
     stats: Object.create(null)
   };
-  const FILES_TO_LOG = [];
-  console.log(`filipe:FILES_TO_LOG`, FILES_TO_LOG);
 
   files.forEach(file => {
     // Don't reminify *.min.js.
@@ -130,11 +126,6 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function (files, options) 
       var minified;
 
       try {
-        console.log(`filipe:file.getPathInBundle()`, filePath);
-        if (FILES_TO_LOG.some(fileName => filePath.includes(fileName))) {
-          console.log('filipe:ORIGINAL', filePath);
-          console.log(content);
-        }
 
         minified = meteorJsMinify(content, options);
 
@@ -149,10 +140,6 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function (files, options) 
         throw err;
       }
 
-      if (FILES_TO_LOG.some(fileName => filePath.includes(fileName))) {
-        console.log('filipe:MINIFIED', filePath);
-        console.log(minified.code);
-      }
       const tree = extractModuleSizesTree(minified.code);
       if (tree) {
         toBeAdded.stats[filePath] =

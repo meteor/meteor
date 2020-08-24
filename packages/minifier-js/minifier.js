@@ -15,7 +15,26 @@ meteorJsMinify = function (source, options) {
   terser = terser || Npm.require("terser");
   const globalDefs = getGlobalDefsOptions(options);
 
-  const globalDefsMapping = Object.entries(globalDefs).reduce((acc, [from, to]) => {
+  let customSettings = {};
+
+  /*
+    MINIFIER_SETTINGS_FILE=settings.json
+    settings.json:
+    {
+      globalDefinitions: {
+        isAdmin: true
+      }
+    }
+    will replace Meteor.isAdmin with true
+ */
+  if(process.env.MINIFIER_SETTINGS_FILE) {
+    const settings = Npm.require("fs").readFileSync(process.env.MINIFIER_SETTINGS_FILE);
+    const minifierSettings = JSON.parse(settings.toString());
+    customSettings = minifierSettings && minifierSettings.globalDefinitions || {};
+  }
+
+
+  var globalDefsMapping = Object.entries(globalDefs).reduce((acc, [from, to]) => {
     const parts = from.split('.');
     if (parts.length < 2) {
       return acc;
@@ -29,12 +48,13 @@ meteorJsMinify = function (source, options) {
       }
     });
   }, {});
+  globalDefsMapping.Meteor = {...globalDefsMapping.Meteor, ...customSettings};
   try {
     var optimizedCode = Babel.replaceMeteorInternalState(source, globalDefsMapping)
     var terserResult = terser.minify(optimizedCode, {
       compress: {
         drop_debugger: false,
-        unused: false,
+        unused: true,
         dead_code: true,
         global_defs: {
           "process.env.NODE_ENV": NODE_ENV,
