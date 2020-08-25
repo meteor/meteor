@@ -927,6 +927,7 @@ var buildCommands = {
     architecture: { type: String },
     "server-only": { type: Boolean },
     'mobile-settings': { type: String },
+    'settings': { type: String },
     server: { type: String },
     "cordova-server-port": { type: String },
     // XXX COMPAT WITH 0.9.2.2
@@ -1017,10 +1018,9 @@ var buildCommand = function (options) {
   const serverOnly = options._bundleOnly || !!options['server-only'];
 
   // options['mobile-settings'] is used to set the initial value of
-  // `Meteor.settings` on mobile apps. Pass it on to options.settings,
-  // which is used in this command.
-  if (options['mobile-settings']) {
-    options.settings = options['mobile-settings'];
+  // `Meteor.settings` on mobile apps.
+  if (options.settings) {
+    process.env.METEOR_SETTINGS = files.readFile(options.settings, 'utf8');
   }
 
   const appName = files.pathBasename(options.appDir);
@@ -1138,7 +1138,7 @@ ${Console.command("meteor build ../output")}`,
         import { CordovaProject } from '../cordova/project.js';
 
         cordovaProject = new CordovaProject(projectContext, {
-          settingsFile: options.settings,
+          settingsFile: options['mobile-settings'],
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
           cordovaServerPort: parsedCordovaServerPort });
         if (buildmessage.jobHasMessages()) return;

@@ -18,7 +18,6 @@ meteorJsMinify = function (source, options) {
   let customSettings = {};
 
   /*
-    MINIFIER_SETTINGS_FILE=settings.json
     settings.json:
     {
       globalDefinitions: {
@@ -27,10 +26,9 @@ meteorJsMinify = function (source, options) {
     }
     will replace Meteor.isAdmin with true
  */
-  if(process.env.MINIFIER_SETTINGS_FILE) {
-    const settings = Npm.require("fs").readFileSync(process.env.MINIFIER_SETTINGS_FILE);
-    const minifierSettings = JSON.parse(settings.toString());
-    customSettings = minifierSettings && minifierSettings.globalDefinitions || {};
+  if(process.env.METEOR_SETTINGS) {
+    const settings = JSON.parse(process.env.METEOR_SETTINGS);
+    customSettings = settings && settings.globalDefinitions || {};
   }
 
 
