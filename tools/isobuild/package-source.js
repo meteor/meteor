@@ -79,6 +79,9 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
   });
 
   return function (a, b) {
+    const aBasename = files.pathBasename(a);
+    const bBasename = files.pathBasename(b);
+
     // XXX MODERATELY SIZED HACK --
     // push template files ahead of everything else. this is
     // important because the user wants to be able to say
@@ -87,15 +90,15 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
     // before the corresponding .html file.
     //
     // maybe all of the templates should go in one file?
-    var isTemplate_a = isTemplate(files.pathBasename(a));
-    var isTemplate_b = isTemplate(files.pathBasename(b));
+    var isTemplate_a = isTemplate(aBasename);
+    var isTemplate_b = isTemplate(bBasename);
     if (isTemplate_a !== isTemplate_b) {
       return (isTemplate_a ? -1 : 1);
     }
 
     // main.* loaded last
-    var ismain_a = (files.pathBasename(a).indexOf('main.') === 0);
-    var ismain_b = (files.pathBasename(b).indexOf('main.') === 0);
+    var ismain_a = (aBasename.indexOf('main.') === 0);
+    var ismain_b = (bBasename.indexOf('main.') === 0);
     if (ismain_a !== ismain_b) {
       return (ismain_a ? 1 : -1);
     }
@@ -213,14 +216,44 @@ var getExcerptFromReadme = function (text) {
 class SymlinkLoopChecker {
   constructor(sourceRoot) {
     this.sourceRoot = sourceRoot;
+    this._realSourceRoot = files.realpath(sourceRoot);
     this._seenPaths = {};
+    this._cache = new Map();
   }
 
+  // Avoids running realpath unless necessary
+  // since it is relatively slow on windows
+  _realpath = Profile('_realpath', function (relDir) {
+    const absPath = files.pathJoin(this._realSourceRoot, relDir);
+
+    if (files.lstat(absPath).isSymbolicLink()) {
+      const result = files.realpath(absPath);
+      this._cache.set(relDir, result);
+
+      return result;
+  }
+
+    let result;
+    const parentDir = files.pathDirname(relDir);
+    const parentEntry = this._cache.get(parentDir);
+    if (parentDir === '.') {
+      result = absPath;
+    } else if (parentEntry) {
+      result = files.pathJoin(parentEntry, files.pathBasename(relDir));
+    } else {
+      // The parent dir was never checked, which prevents us from
+      // skipping realpath
+      result = files.realpath(absPath);
+    }
+
+    this._cache.set(relDir, result);
+    return result;
+  })
+
   check(relDir, quietly = true) {
-    const absPath = files.pathJoin(this.sourceRoot, relDir);
 
     try {
-      var realPath = files.realpath(absPath);
+      var realPath = this._realpath(relDir);
     } catch (e) {
       if (!e || e.code !== 'ELOOP') {
         throw e;
@@ -834,10 +867,21 @@ _.extend(PackageSource.prototype, {
   }),
 
   _readAndWatchDirectory(relDir, watchSet, {include, exclude, names}) {
-    return watch.readAndWatchDirectory(watchSet, {
+    const options = {
       absPath: files.pathJoin(this.sourceRoot, relDir),
       include, exclude, names
-    }).map(name => files.pathJoin(relDir, name));
+    };
+
+    const contents = watch.readDirectory(options);
+
+    if (watchSet) {
+      watchSet.addDirectory({
+        contents,
+        ...options
+      });
+    }
+
+    return contents.map(name => files.pathJoin(relDir, name));
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
@@ -1099,7 +1143,7 @@ _.extend(PackageSource.prototype, {
   // complete list of source files for directories within node_modules.
   _findSourcesCache: Object.create(null),
 
-  _findSources: Profile("PackageSource#_findSources", function ({
+  _findSources: Profile(({ sourceArch }) => `PackageSource#_findSources for ${sourceArch.arch}`, function ({
     sourceProcessorSet,
     watchSet,
     isApp,
@@ -1216,9 +1260,10 @@ _.extend(PackageSource.prototype, {
 
     const baseCacheKey = JSON.stringify({
       isApp,
-      arch,
       sourceRoot: self.sourceRoot,
       excludes: anyLevelExcludes,
+      names: sourceReadOptions.names,
+      include: sourceReadOptions.include
     }, (key, value) => {
       if (_.isRegExp(value)) {
         return [value.source, value.flags];
@@ -1260,13 +1305,13 @@ _.extend(PackageSource.prototype, {
       return array;
     }
 
-    function find(dir, depth, inNodeModules) {
+    function find(dir, depth, { inNodeModules = false, cache = false } = {}) {
       // Remove trailing slash.
       dir = dir.replace(/\/$/, "");
 
       // If we're in a node_modules directory, cache the results of the
       // find function for the duration of the process.
-      let cacheKey = inNodeModules && makeCacheKey(dir);
+      let cacheKey = inNodeModules && cache && makeCacheKey(dir);
       if (cacheKey &&
           cacheKey in self._findSourcesCache) {
         return self._findSourcesCache[cacheKey];
@@ -1305,13 +1350,16 @@ _.extend(PackageSource.prototype, {
       }
 
       const sources = _.difference(
-        self._readAndWatchDirectory(dir, watchSet, readOptions),
+        self._readAndWatchDirectory(dir, inNodeModules ? null : watchSet, readOptions),
         depth > 0 ? [] : controlFiles
       );
 
-      const subdirectories = self._readAndWatchDirectory(dir, watchSet, {
-        include: [/\/$/],
-        exclude: depth > 0
+      const subdirectories = self._readAndWatchDirectory(
+        dir,
+        inNodeModules ? null : watchSet,
+        {
+          include: [/\/$/],
+          exclude: depth > 0
           ? anyLevelExcludes
           : topLevelExcludes
       });
@@ -1342,7 +1390,7 @@ _.extend(PackageSource.prototype, {
           }
 
         } else {
-          sources.push(...find(subdir, depth + 1, inNodeModules));
+          sources.push(...find(subdir, depth + 1, { inNodeModules, cache: !inNodeModules }));
         }
       });
 
@@ -1353,7 +1401,7 @@ _.extend(PackageSource.prototype, {
         // subdirectories, continue searching this node_modules directory,
         // so that any non-.js(on) files it contains can be imported by
         // the app (#6037).
-        sources.push(...find(nodeModulesDir, depth + 1, true));
+        sources.push(...find(nodeModulesDir, depth + 1, { inNodeModules: true, cache: !inNodeModules}));
       }
 
       delete dotMeteorIgnoreFiles[dir];

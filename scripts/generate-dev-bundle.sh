@@ -66,7 +66,7 @@ case $OS in
     linux)
         [ $ARCH = "i686" ] &&
             MONGO_BASE_URL="https://fastdl.mongodb.org/linux" ||
-            MONGO_BASE_URL="https://github.com/meteor/mongodb-builder/releases/download/${MONGO_VERSION}"
+            MONGO_BASE_URL="https://github.com/meteor/mongodb-builder/releases/download/v${MONGO_VERSION}"
         ;;
 esac
 

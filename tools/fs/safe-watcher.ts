@@ -35,6 +35,14 @@ var NO_WATCHER_POLLING_INTERVAL =
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
 
+// Pathwatcher complains (using console.error, ugh) if you try to watch
+// two files with the same stat.ino number but different paths on linux, so we have
+// to deduplicate files by ino.
+const DEDUPLICATE_BY_INO = process.platform !== "win32";
+
+const entriesByIno = new Map;
+
+
 export type SafeWatcher = {
   close: () => void;
 }
@@ -48,11 +56,6 @@ interface Entry extends SafeWatcher {
 }
 
 const entries: Record<string, Entry | null> = Object.create(null);
-
-// Pathwatcher complains (using console.error, ugh) if you try to watch
-// two files with the same stat.ino number but different paths, so we have
-// to deduplicate files by ino.
-const entriesByIno = new Map;
 
 // Set of paths for which a change event has been fired, watched with
 // watchLibrary.watch if available. This could be an LRU cache, but in
@@ -86,10 +89,19 @@ function acquireWatcher(absPath: string, callback: EntryCallback) {
 }
 
 function startNewWatcher(absPath: string): Entry {
-  const stat = statOrNull(absPath);
-  if (stat && stat.ino > 0 && entriesByIno.has(stat.ino)) {
-    const entry = entriesByIno.get(stat.ino);
-    if (entries[absPath] === entry) {
+  let stat: Stats | null = null;
+
+  if (DEDUPLICATE_BY_INO) {
+    stat = statOrNull(absPath);
+    if (stat && stat.ino > 0 && entriesByIno.has(stat.ino)) {
+      const entry = entriesByIno.get(stat.ino);
+      if (entries[absPath] === entry) {
+        return entry;
+      }
+    }
+  } else {
+    let entry = entries[absPath];
+    if (entry) {
       return entry;
     }
   }
