@@ -129,6 +129,19 @@ export class AccountsServer extends AccountsCommon {
     this._validateNewUserHooks.push(func);
   }
 
+  /**
+   * @summary Validate login from external service
+   * @locus Server
+   * @param {Function} func Called whenever login/user creation from external service is attempted. Login or user creation based on this login can be aborted by passing a falsy value or throwing an exception.
+   */
+  beforeExternalLogin(func) {
+    if (this._beforeExternalLoginHook) {
+      throw new Error("Can only call beforeExternalLogin once");
+    }
+
+    this._beforeExternalLoginHook = func;
+  }
+
   ///
   /// CREATE USER HOOKS
   ///
@@ -1222,6 +1235,11 @@ export class AccountsServer extends AccountsCommon {
     }
 
     let user = this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
+
+    // Before continuing, run user hook to see if we should continue
+    if (this._beforeExternalLoginHook && !this._beforeExternalLoginHook(serviceName, serviceData, user)) {
+      throw new Meteor.Error(403, "Login forbidden");
+    }
 
     // When creating a new user we pass through all options. When updating an
     // existing user, by default we only process/pass through the serviceData
