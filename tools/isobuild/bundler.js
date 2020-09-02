@@ -173,6 +173,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
+import { optimisticLStatOrNull } from '../fs/optimistic';
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -486,12 +487,11 @@ export class NodeModulesDirectory {
           return true;
         }
 
-        const real = files.realpathOrNull(path);
-        if (typeof real === "string" &&
-            real !== path) {
+        const fileStatus = optimisticLStatOrNull(path);
+        if (fileStatus && fileStatus.isSymbolicLink()) {
           // If node_modules/.bin/command is a symlink, determine the
           // answer by calling isWithinProdPackage(real).
-          return isWithinProdPackage(real);
+          return isWithinProdPackage(files.realpathOrNull(path));
         }
 
         // If node_modules/.bin/command is not a symlink, then it's hard
@@ -2844,20 +2844,18 @@ var writeTargetToPath = Profile(
     previousBuilder = null,
     buildMode,
     minifyMode,
+    forceInPlaceBuild
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
       previousBuilder,
-      // We do not force an in-place build for individual targets like
-      // .meteor/local/build/programs/web.browser.legacy, because they
-      // tend to be written atomically, and it's important on Windows to
-      // avoid overwriting files that might be open currently in the build
-      // or server process.
-      // Server builds do use an in-place build since the server is always stopped
-      // during the build.
-      // If client in-place builds were safer on Windows, they
-      // would be much quicker than from-scratch rebuilds.
-      forceInPlaceBuild: name === 'server',
+      // We do not force an in-place build for individual targets
+      // like .meteor/local/build/programs/web.browser.legacy, because they tend
+      // to be written atomically, and it's important on Windows to avoid
+      // overwriting files that might be open currently in the server
+      // process. There are some exceptions when we know the server process
+      // is not using the files, such as during a full build when it is stopped.
+      forceInPlaceBuild
     });
 
     var targetBuild = target.write(builder, {
@@ -2910,6 +2908,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     buildMode,
     minifyMode,
     sourceRoot,
+    forceInPlaceBuild,
   }) {
 
   const builders = {};
@@ -3004,7 +3003,8 @@ Find out more about Meteor at meteor.com.
         releaseName,
         previousBuilder: previousBuilders[name] || null,
         buildMode,
-        minifyMode
+        minifyMode,
+        forceInPlaceBuild
       });
 
       builders[name] = targetBuilder;
@@ -3083,6 +3083,10 @@ Find out more about Meteor at meteor.com.
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
  *
+ *  - forceInPlaceBuild On Windows, in place builds are disabled by default
+ *    since they are only safe when the output files from the previous build
+ *    are not being used. This can be set to true when it is safe.
+ *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - serverWatchSet: Information about server files and paths that were
@@ -3117,6 +3121,7 @@ function bundle({
   previousBuilders = Object.create(null),
   hasCachedBundle,
   allowDelayedClientBuilds = false,
+  forceInPlaceBuild,
 }) {
   buildOptions = buildOptions || {};
 
@@ -3271,6 +3276,7 @@ function bundle({
       builtBy,
       releaseName,
       minifyMode,
+      forceInPlaceBuild,
     };
 
     function writeClientTarget(target) {

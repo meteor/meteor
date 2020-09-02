@@ -1724,7 +1724,7 @@ export class PackageSourceBatch {
     if (canUseCache && cacheFilename) {
       let diskCached = null;
       try {
-        diskCached = optimisticReadJsonOrNull(cacheFilename);
+        diskCached = files.readJSONOrNull(cacheFilename);
       } catch (e) {
         // Ignore JSON parse errors; pretend there was no cache.
         if (!(e instanceof SyntaxError)) {

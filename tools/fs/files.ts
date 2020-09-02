@@ -5,7 +5,7 @@
 ///
 
 import assert from "assert";
-import fs, { PathLike, Stats } from "fs";
+import fs, { PathLike, Stats, Dirent } from "fs";
 import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
@@ -727,9 +727,18 @@ export function freeTempDir(dir: string) {
   });
 }
 
+// Change the status of a dir
+export function changeTempDirStatus(dir: string, status: boolean) {
+  if (! tempDirs[dir]) {
+    throw Error("not a tracked temp dir: " + dir);
+  }
+
+  tempDirs[dir] = status;
+}
+
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function () {
-    Object.keys(tempDirs).forEach(dir => {
+    Object.entries(tempDirs).filter(([_, isTmp]) => !!isTmp).map(([dir]) => dir).forEach(dir => {
       delete tempDirs[dir];
       try {
         rm_recursive(dir);
@@ -1538,12 +1547,12 @@ export function readBufferWithLengthAndOffset(
   if (length > 0) {
     const fd = open(filename, "r");
     try {
-      var count = read(fd, data, 0, length, offset);
+      const count = read(fd, data, { position: 0, length, offset });
+      if (count !== length) {
+        throw new Error("couldn't read entire resource");
+      }
     } finally {
       close(fd);
-    }
-    if (count !== length) {
-      throw new Error("couldn't read entire resource");
     }
   }
   return data;
@@ -1746,6 +1755,14 @@ wrapFsFunc<[string], string[]>("readdir", fs.readdirSync, [0], {
   modifyReturnValue(entries: string[]) {
     return entries.map(entry => convertToStandardPath(entry));
   },
+});
+
+export const readdirWithTypes = wrapFsFunc<[string], Dirent[]>("readdirWithTypes", (dir) => {
+    return fs.readdirSync(dir, {
+      withFileTypes: true
+    });
+  }, [0], {
+  cached: true
 });
 
 export const appendFile = wrapDestructiveFsFunc("appendFile", fs.appendFileSync);

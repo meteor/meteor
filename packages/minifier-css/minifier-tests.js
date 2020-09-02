@@ -104,3 +104,48 @@ Tinytest.add(
     test.equal(stringifiedAsts.map.sources[0], 'test.css');
   }
 );
+
+Tinytest.add(
+  "minifier-css - hoist imports from merged CSS AST's",
+  (test) => {
+    const css1 = '@import "custom.css"; body { color: "red"; }';
+    const css2 = '@import "other.css"; body { color: "blue"; }';
+    const cssAst1 = CssTools.parseCss(css1, {from: "test.css"});
+    const cssAst2 = CssTools.parseCss(css2, {from: "test2.css"});
+    const mergedAst = CssTools.mergeCssAsts([cssAst1, cssAst2]);
+    const stringifiedAsts = CssTools.stringifyCss(mergedAst, {
+      sourcemap: true,
+      inputSourcemaps: false
+    });
+    test.equal(mergedAst.nodes.length, 4);
+    test.equal(mergedAst.nodes[0].name, 'import');
+    test.equal(mergedAst.nodes[1].name, 'import');
+    test.equal(mergedAst.nodes[2].type, 'rule');
+    test.equal(mergedAst.nodes[3].type, 'rule');
+    test.equal(stringifiedAsts.map.sources.length, 2);
+    test.equal(stringifiedAsts.map.sources[0], 'test.css');
+  }
+);
+
+Tinytest.add(
+  "minifier-css - hoist imports after comments from merged CSS AST's",
+  (test) => {
+    const css1 = '@import "custom.css"; body { color: "red"; }';
+    const css2 = '/* comment */ @import "other.css"; body { color: "blue"; }';
+    const cssAst1 = CssTools.parseCss(css1, {from: "test.css"});
+    const cssAst2 = CssTools.parseCss(css2, {from: "test2.css"});
+    const mergedAst = CssTools.mergeCssAsts([cssAst1, cssAst2]);
+    const stringifiedAsts = CssTools.stringifyCss(mergedAst, {
+      sourcemap: true,
+      inputSourcemaps: false
+    });
+    test.equal(mergedAst.nodes.length, 5);
+    test.equal(mergedAst.nodes[0].name, 'import');
+    test.equal(mergedAst.nodes[1].type, 'comment');
+    test.equal(mergedAst.nodes[2].name, 'import');
+    test.equal(mergedAst.nodes[3].type, 'rule');
+    test.equal(mergedAst.nodes[4].type, 'rule');
+    test.equal(stringifiedAsts.map.sources.length, 2);
+    test.equal(stringifiedAsts.map.sources[0], 'test.css');
+  }
+);

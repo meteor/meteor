@@ -518,6 +518,8 @@ Options:
                   minified code; defaults to 15 minutes.
   --no-wait       Exits when Meteor has uploaded the app's code instead of
                   waiting for the deploy to conclude.
+  --cache-build   Reuses the build already created if the git commit hash is the
+                  same
 
 >>> authorized
 View or change authorized users and organizations for a site.
@@ -809,7 +811,7 @@ Usage: meteor list-sites
 List the sites that you have deployed with 'meteor deploy', and sites
 for which other users have authorized you with the 'meteor authorized'
 command. To see sites in a region other than us-east-1, set the DEPLOY_HOSTNAME
-environment variable. For example, 
+environment variable. For example,
 `DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor list-sites`
 
 

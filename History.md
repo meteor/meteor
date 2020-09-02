@@ -1,3 +1,53 @@
+## vNEXT, unreleased
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* `--apollo` skeleton was missing client cache setup [PR #11146](https://github.com/meteor/meteor/pull/11146)
+
+## v1.11, 2020-08-18
+
+### Breaking changes
+
+* `email` package dependencies have been update and package version has been bumped to 2.0.0
+    There is a potential breaking change as the underlying package started to use `dns.resolve()`
+    instead of `dns.lookup()` which might be breaking on some environments.
+    See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* `meteor create --apollo` is now available thanks to [@StorytellerCZ](https://github.com/StorytellerCZ). PR [#11119](https://github.com/meteor/meteor/pull/11119)
+
+* `meteor create --vue` is now available thanks to [@chris-visser](https://github.com/chris-visser). PR [#11086](https://github.com/meteor/meteor/pull/11086)
+
+* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://galaxy-guide.meteor.com/deploy-guide.html#cache-build).
+
+* Multiple optimizations in build performance, many of them for Windows thanks to [@zodern](https://github.com/zodern). PRs [#10838](https://github.com/meteor/meteor/pull/10838), [#11114](https://github.com/meteor/meteor/pull/11114), [#11115](https://github.com/meteor/meteor/pull/11115), [#11102](https://github.com/meteor/meteor/pull/11102), [#10839](https://github.com/meteor/meteor/pull/10839)
+
+* Fixes error when removing cordova plugin that depends on cli variables. PR [#10976](https://github.com/meteor/meteor/pull/11052)
+
+* `email` package now exposes `hookSend` that runs before emails are send.
+
+* Node.js has been updated to version
+    [12.18.3](https://nodejs.org/en/blog/release/v12.18.3/)
+    
+* Updated npm to version 6.14.5
+
+* `mongodb` driver npm dependency has been updated to 3.6.0
+
+* The version of MongoDB used by Meteor in development has been updated
+    from 4.2.5 to 4.2.8
 
 ## v1.10.2, 2020-04-21
 
@@ -44,6 +94,12 @@
 * The version of MongoDB used by Meteor in development has been updated from
   4.2.1 to 4.2.5.
   [PR #11020](https://github.com/meteor/meteor/pull/11020)
+  
+* The `url` package now provides an isomorphic implentation of the [WHATWG `url()`
+  API](https://url.spec.whatwg.org/).
+  While remaining backwards compatible, you can now also import `URL` and `URLSearchParams` from `meteor/url`.
+  These will work for both modern and legacy browsers as well as node.
+  
 
 ## v1.10.1, 2020-03-12
 
@@ -132,10 +188,10 @@
 ## v1.9.3, 2020-03-09
 
 ### Breaking changes
-N/A
+* The MongoDB `retryWrites` option now defaults to `true` (it previously defaulted to false). Users of database services that don't support retryWrites will experience a fatal error due to this.
 
 ### Migration Steps
-N/A
+* If you get the error `MongoError: This MongoDB deployment does not support retryable writes. Please add retryWrites=false to your connection string.`, append `retryWrites=false` to your MongoDB connection string.
 
 ### Changes
 * `mongodb` driver package has been updated
@@ -240,7 +296,7 @@ N/A
   fields. [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 
 * Lots of internal calls to `Meteor.user()` without field specifiers in `accounts-base` and
-  `accounts-password` packages have been optimized with explicit field selectors to only fetch
+  `accounts-password` packages have been optimized with explicit field selectors to only 
   the fields needed by the functions they are in.
   [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 
