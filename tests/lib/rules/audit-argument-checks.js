@@ -71,6 +71,27 @@ ruleTester.run('audit-argument-checks', rule, {
       `,
       parserOptions: { ecmaVersion: 6 },
     },
+    {
+      code: `
+        Meteor.methods({
+            barWellChecked (bar = null) {
+                check(bar, Match.OneOf(Object, null));
+            }
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+    },
+    {
+      code: `
+        Meteor.methods({
+            barWellChecked (foo, bar = null) {
+                check(foo, String);
+                check(bar, Match.OneOf(Object, null));
+            }
+        })
+      `,
+      parserOptions: { ecmaVersion: 6 },
+    },
   ],
 
   invalid: [
@@ -208,6 +229,22 @@ ruleTester.run('audit-argument-checks', rule, {
         Meteor.methods({
           sendEmail (to, from, subject, bar) {
             check([to, from, subject, 'bar'], [String]);
+          }
+        })
+      `,
+      errors: [
+        {
+          message: '"bar" is not checked',
+          type: 'Identifier',
+        },
+      ],
+      parserOptions: { ecmaVersion: 6 },
+    },
+    {
+      code: `
+        Meteor.methods({
+          barBadlyChecked (bar = null) {
+              check(foo, Match.OneOf(Object, null));
           }
         })
       `,
