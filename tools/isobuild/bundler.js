@@ -1162,6 +1162,22 @@ class Target {
     const versions = {};
     const dynamicImportFiles = new Set;
 
+    // importMap has all the import { x } from '...'
+    // info from every target/bundle in the build system
+    const importMap = new Map;
+    sourceBatches.forEach((sourceBatch) => {
+      const unibuild = sourceBatch.unibuild;
+      const name = unibuild.pkg.name || null;
+      jsOutputFilesMap.get(name).files.forEach((file) => {
+        file.imports.forEach(([key,object]) => {
+          importMap.set(key, [...importMap.get(key), ...object])
+        })
+      })
+    })
+
+    // now we need to remove the exports, and let the minifier do it's job later
+
+
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;

@@ -340,6 +340,7 @@ interface File extends RawFile {
   servePath?: string;
   absModuleId?: string;
   deps?: Record<string, ImportInfo>;
+  imports?: Record<string, [string]>;
   lazy: boolean;
   bare?: boolean;
   // TODO Improve the sourceMap type.
@@ -368,6 +369,10 @@ type ImportInfo = {
   packageName?: string;
   parentWasDynamic?: boolean;
   helpers?: Record<string, boolean>;
+}
+type JSAnalyzeInfo = {
+  dependencies?: Record<string, [string]>;
+  identifiers?: Record<string, ImportInfo>;
 }
 
 export default class ImportScanner {
@@ -927,12 +932,13 @@ export default class ImportScanner {
 
     // Return all installable output files that are either eager or
     // imported (statically or dynamically).
-    return this.outputFiles.filter(file => {
+    const files = this.outputFiles.filter(file => {
       return file.absModuleId &&
-        ! file[fakeSymbol] &&
-        ! file.hasErrors &&
-        (! file.lazy || file.imported);
+          ! file[fakeSymbol] &&
+          ! file.hasErrors &&
+          (! file.lazy || file.imported);
     });
+    return files;
   }
 
   private getSourcePath(file: File) {
@@ -975,7 +981,7 @@ export default class ImportScanner {
 
   private findImportedModuleIdentifiers(
     file: File,
-  ): Record<string, ImportInfo> {
+  ): JSAnalyzeInfo {
     if (IMPORT_SCANNER_CACHE.has(file.hash)) {
       return IMPORT_SCANNER_CACHE.get(file.hash);
     }
@@ -1089,7 +1095,12 @@ export default class ImportScanner {
     }
 
     try {
-      file.deps = file.deps || this.findImportedModuleIdentifiers(file);
+      let importInfo;
+      if(!file.deps){
+        importInfo = this.findImportedModuleIdentifiers(file);
+      }
+      file.deps = file.deps || importInfo?.identifiers;
+      file.imports = file.imports || importInfo?.dependencies;
     } catch (e) {
       if (e.$ParseError) {
         (buildmessage as any).error(e.message, {
@@ -1118,6 +1129,7 @@ export default class ImportScanner {
       }
 
       let depFile = this.getFile(absImportedPath);
+
       if (depFile) {
         // We should never have stored a fake file in this.outputFiles, so
         // it's surprising if depFile[fakeSymbol] is true.

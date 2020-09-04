@@ -72,13 +72,14 @@ export function findImportedModuleIdentifiers(source, hash) {
 
   const ast = tryToParse(source, hash);
   importedIdentifierVisitor.visit(ast, source, possibleIndexes);
-  return importedIdentifierVisitor.identifiers;
+  return { identifiers:importedIdentifierVisitor.identifiers, dependencies:importedIdentifierVisitor.dependencies };
 }
 
 const importedIdentifierVisitor = new (class extends Visitor {
   reset(rootPath, code, possibleIndexes) {
     this.requireIsBound = false;
     this.identifiers = Object.create(null);
+    this.dependencies = Object.create(null);
 
     // Defining this.possibleIndexes causes the Visitor to ignore any
     // subtrees of the AST that do not contain any indexes of identifiers
@@ -112,6 +113,18 @@ const importedIdentifierVisitor = new (class extends Visitor {
     }
   }
 
+  addDependency(id, importIdentifiers, sideEffects) {
+    this.dependencies[id] = this.dependencies[id] ?
+        {
+          deps: new Set([...this.dependencies[id].deps, ...importIdentifiers]),
+          sideEffects: this.dependencies[id].sideEffects || sideEffects,
+        } :
+        {
+          deps: importIdentifiers,
+          sideEffects
+        };
+  }
+
   visitFunctionExpression(path) {
     return this._functionParamRequireHelper(path);
   }
@@ -139,7 +152,6 @@ const importedIdentifierVisitor = new (class extends Visitor {
   visitCallExpression(path) {
     const node = path.getValue();
     const args = node.arguments;
-    const argc = args.length;
     const firstArg = args[0];
 
     this.visitChildren(path);
@@ -150,11 +162,9 @@ const importedIdentifierVisitor = new (class extends Visitor {
 
     if (isIdWithName(node.callee, "require")) {
       this.addIdentifier(firstArg.value, "require");
-
     } else if (node.callee.type === "Import" ||
                isIdWithName(node.callee, "import")) {
       this.addIdentifier(firstArg.value, "import", true);
-
     } else if (node.callee.type === "MemberExpression" &&
                // The Reify compiler sometimes renames references to the
                // CommonJS module object for hygienic purposes, but it
@@ -165,6 +175,13 @@ const importedIdentifierVisitor = new (class extends Visitor {
         isPropertyWithName(node.callee.property, "dynamicImport");
 
       if (propertyName) {
+        // if we have an object definition on module.link(), we are importing with ES6 possible without side effects
+        // otherwise we are considering it as a side effect import
+        if(args[1]) {
+          this.addDependency(firstArg.value, args[1].properties.map(({key}) => key.name), false);
+        }else{
+          this.addDependency(firstArg.value, [], true);
+        }
         this.addIdentifier(
           firstArg.value,
           "import",
