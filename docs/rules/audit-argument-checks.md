@@ -43,6 +43,26 @@ Meteor.methods({
 
 ```
 
+### Options
+
+If you define your own functions that call `check`, you can provide a list of
+such functions via the configuration `checkEquivalents`.  This rule assumes
+that these functions effectively check their first argument (an identifier or
+a list of identifiers).
+
+For example, in `.eslintrc.json`, you can specify the following configuration:
+
+```json
+  "meteor/audit-argument-checks": [
+    "error",
+    {
+      "checkEquivalents": [
+        "checkId",
+        "checkName"
+      ]
+    }
+  ]
+```
 
 ## When Not To Use It
 

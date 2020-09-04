@@ -38,6 +38,10 @@ ruleTester.run('audit-argument-checks', rule, {
       parserOptions: { ecmaVersion: 6 },
     },
     'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); check(baz, Match.Any); })',
+    {
+      code: 'Meteor.publish("foo", function (bar) { checkId(bar); })',
+      options: [{ checkEquivalents: ['checkId'] }],
+    },
 
     'Meteor.methods()',
     'Meteor.methods({ x: function () {} })',
@@ -45,6 +49,10 @@ ruleTester.run('audit-argument-checks', rule, {
     'Meteor.methods({ x: true })',
     { code: 'Meteor.methods({ x () {} })', parserOptions: { ecmaVersion: 6 } },
     'Meteor.methods({ x: function (bar) { check(bar, Match.Any); } })',
+    {
+      code: 'Meteor.methods({ x: function (bar) { checkId(bar); } })',
+      options: [{ checkEquivalents: ['checkId'] }],
+    },
     'Meteor.methods({ x: function (bar, baz) { check(bar, Match.Any); check(baz, Match.Any); } })',
     `
       Meteor.methods({

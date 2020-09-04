@@ -49,7 +49,7 @@ Template.foo.events({
 #### Parameter names
 
 You can optionally set the names of the parameters.  
-You can set the name of the event parameter using `eventParamName` and the name of the template-instance parameterusing `templateInstanceParamName`.  
+You can set the name of the event parameter using `eventParamName` and the name of the template-instance parameter using `templateInstanceParamName`.  
 Here are examples of how to do this:
 
 ```js
