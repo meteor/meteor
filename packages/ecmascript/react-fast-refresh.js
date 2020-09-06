@@ -57,6 +57,9 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
 
   runtime.injectIntoGlobalHook(window);
 
+  window.$RefreshReg$ = () => {};
+  window.$RefreshSig$ = () => type => type;
+
   module.onRequire({
     before(module) {
       if (module.loaded) {
