@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  request: "2.88.2"
+  request: "2.88.0"
 });
 
 Package.onUse(function (api) {
