@@ -288,6 +288,9 @@ var PackageSource = function () {
   // a package.
   self.name = null;
 
+
+  self.sideEffects = true;
+
   // The path relative to which all source file paths are interpreted
   // in this package. Also used to compute the location of the
   // package's .npm directory (npm shrinkwrap state).
@@ -456,6 +459,7 @@ _.extend(PackageSource.prototype, {
     const sourceArch = new SourceArch(self, {
       kind: options.kind,
       arch: "os",
+      sideEffects: self.sideEffects,
       sourceRoot: self.sourceRoot,
       uses: _.map(options.use, splitConstraint),
       getFiles() {
@@ -853,10 +857,12 @@ _.extend(PackageSource.prototype, {
           return result;
         },
         declaredExports: api.exports[arch],
+        sideEffects: api.sideEffects,
         watchSet: watchSet
       }));
     });
 
+    self.sideEffects = api.sideEffects;
     // Serve root of the package.
     self.serveRoot = files.pathJoin('/packages/', self.name);
 
@@ -930,6 +936,8 @@ _.extend(PackageSource.prototype, {
       const nodeModulesToRecompile = projectContext.meteorConfig
         .getNodeModulesToRecompile(arch, nodeModulesToRecompileByArch);
 
+      const sideEffects = JSON.parse(files.readFile(projectContext.meteorConfig.packageJsonPath)).sideEffects || false;
+      console.log(`Reading side effects: ${sideEffects}`);
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
 
@@ -939,6 +947,7 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         sourceRoot: self.sourceRoot,
         uses: uses,
+        sideEffects,
         getFiles(sourceProcessorSet, watchSet) {
           sourceProcessorSet.watchSet = watchSet;
 

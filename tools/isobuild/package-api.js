@@ -85,6 +85,8 @@ export class PackageAPI {
     // symbols exported
     this.exports = {};
 
+    this.sideEffects = true;
+
     // packages used and implied (keys are 'package', 'unordered', and
     // 'weak').  an "implied" package is a package that will be used by a unibuild
     // which uses us.
@@ -418,6 +420,10 @@ export class PackageAPI {
     // Watch out - we rely on the levels of stack traces inside this
     // function so don't wrap it in another function without changing that logic
     this._addFiles("assets", paths, arch);
+  }
+
+  setSideEffects(sideEffects){
+    this.sideEffects = sideEffects;
   }
 
   /**

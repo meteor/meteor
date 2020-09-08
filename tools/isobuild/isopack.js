@@ -49,6 +49,7 @@ var Isopack = function () {
 
   // These have the same meaning as in PackageSource.
   self.name = null;
+  self.sideEffects = true;
   self.metadata = {};
   self.version = null;
   self.isTest = false;
@@ -256,6 +257,7 @@ _.extend(Isopack.prototype, {
     var self = this;
     self.name = options.name;
     self.metadata = options.metadata;
+    self.sideEffects = options.sideEffects;
     self.version = options.version;
     self.isTest = options.isTest;
     self.plugins = options.plugins;

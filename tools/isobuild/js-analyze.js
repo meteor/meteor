@@ -217,6 +217,79 @@ const importedIdentifierVisitor = new (class extends Visitor {
   }
 });
 
+export function removeUnusedExports(source, hash, exportInfo) {
+  const possibleIndexes = findPossibleIndexes(source, [
+    "export",
+  ]);
+
+  if (possibleIndexes.length === 0) {
+    return {};
+  }
+
+  const ast = tryToParse(source, hash);
+  const removeUnusedExportsVisitor = new RemoveUnusedExportsVisitor(exportInfo);
+  removeUnusedExportsVisitor.visit(ast, source, possibleIndexes);
+  const newSource = require('@babel/generator').default(ast).code;
+  return { source:newSource, madeChanges: removeUnusedExportsVisitor.madeChanges };
+}
+
+class RemoveUnusedExportsVisitor extends Visitor {
+  constructor(exportInfo) {
+    super();
+    this.exportInfo = exportInfo;
+    this.madeChanges = false;
+  }
+  reset(rootPath, code, possibleIndexes) {
+
+    // Defining this.possibleIndexes causes the Visitor to ignore any
+    // subtrees of the AST that do not contain any indexes of identifiers
+    // that we care about. Note that findPossibleIndexes uses a RegExp to
+    // scan for the given identifiers, so there may be false positives,
+    // but that's fine because it just means scanning more of the AST.
+    this.possibleIndexes = possibleIndexes;
+  }
+
+  removeIdentifiers(node) {
+    node.properties = node.properties.map((property) => {
+      if(this.exportInfo && this.exportInfo.sideEffects){
+        return property;
+      }
+
+      const exportKey = property.key.value || property.key.name;
+      let returnValue = (this.exportInfo?.deps || []).includes(exportKey) ? property : null;
+      if(!returnValue){
+        console.log(`Removing ${exportKey}`)
+      }
+      return returnValue;
+    }).filter(Boolean)
+    this.madeChanges = true;
+  }
+
+  visitCallExpression(path) {
+    const node = path.getValue();
+    const args = node.arguments;
+
+    this.visitChildren(path);
+
+    if (node.callee.type === "MemberExpression" &&
+               // The Reify compiler sometimes renames references to the
+               // CommonJS module object for hygienic purposes, but it
+               // always does so by appending additional numbers.
+               isIdWithName(node.callee.object, /^module\d*$/)) {
+      const propertyName =
+        isPropertyWithName(node.callee.property, "export");
+
+      if (propertyName) {
+        const firstArg = args[0];
+        // if we have an object definition on module.export()
+        if(firstArg) {
+          this.removeIdentifiers(firstArg);
+        }
+      }
+    }
+  }
+}
+
 function isIdWithName(node, name) {
   if (! node ||
       node.type !== "Identifier") {

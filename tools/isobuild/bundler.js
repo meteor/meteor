@@ -148,6 +148,8 @@
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
+import { removeUnusedExports } from "./js-analyze";
+
 var assert = require('assert');
 var util = require('util');
 var Fiber = require('fibers');
@@ -174,6 +176,7 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
+import { sha1 } from "../fs/watch";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -1164,18 +1167,42 @@ class Target {
 
     // importMap has all the import { x } from '...'
     // info from every target/bundle in the build system
-    const importMap = new Map;
+    const importMap = new Map();
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
       const name = unibuild.pkg.name || null;
       jsOutputFilesMap.get(name).files.forEach((file) => {
-        file.imports.forEach(([key,object]) => {
-          importMap.set(key, [...importMap.get(key), ...object])
+        if (!file.imports) return;
+        Object.entries(file.imports).forEach(([key, object]) => {
+          importMap.set(key, {
+            deps: [...new Set([...(importMap.get(key)?.deps || []), ...object.deps])],
+            sideEffects: object.sideEffects
+          })
         })
       })
     })
 
     // now we need to remove the exports, and let the minifier do it's job later
+    sourceBatches.forEach((sourceBatch) => {
+      const unibuild = sourceBatch.unibuild;
+
+      console.log(unibuild.pkg.sideEffects);
+      const name = unibuild.pkg.name || null;
+      // we will assume that every meteor package that exports something is a
+      // side effect true package
+      if(unibuild.declaredExports.length){
+        return;
+      }
+      jsOutputFilesMap.get(name).files.forEach((file) => {
+        const newVar = importMap.get(file.absPath)
+        const { source:newSource, madeChanges } = removeUnusedExports(file.dataString, file.hash, newVar);
+        if(newSource) {
+          file.dataString = newSource;
+          file.data = Buffer.from(newSource, "utf8");
+          file.hash = sha1(file.data);
+        }
+      })
+    })
 
 
     // Copy their resources into the bundle in order

@@ -1127,6 +1127,10 @@ export default class ImportScanner {
       if (! absImportedPath) {
         return;
       }
+      if(file.imports && file.imports[id]){
+        file.imports[absImportedPath] = file.imports[id];
+        delete file.imports[id]
+      }
 
       let depFile = this.getFile(absImportedPath);
 
