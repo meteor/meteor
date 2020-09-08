@@ -1234,8 +1234,11 @@ main.registerCommand({
           const entry = {};
           parent[packageName] = entry;
 
+          const mapInfo = projectContext.packageMap.getInfo(packageName);
+
           Object.entries({
             version: packageToPrint.version,
+            local: mapInfo && mapInfo.kind === 'local',
             weak: isWeak,
             newerVersion: getNewerVersion(packageName, packageToPrint.version, catalog.official),
             earliestCompatibleVersion: showDetails && packageToPrint.earliestCompatibleVersion,
