@@ -8,17 +8,17 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.10.5",
+    "@babel/runtime": "^7.11.2",
     "meteor-node-stubs": "^1.0.1",
     "react": "^16.13.1",
     "react-dom": "^16.13.1"
   },
   "devDependencies": {
-    "@types/meteor": "^1.4.48",
-    "@types/mocha": "^8.0.0",
-    "@types/react": "^16.9.43",
+    "@types/meteor": "^1.4.49",
+    "@types/mocha": "^8.0.3",
+    "@types/react": "^16.9.49",
     "@types/react-dom": "^16.9.8",
-    "typescript": "^3.9.7"
+    "typescript": "^4.0.2"
   },
   "meteor": {
     "mainModule": {

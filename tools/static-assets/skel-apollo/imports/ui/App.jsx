@@ -1,19 +1,23 @@
 import React from 'react';
-import { ApolloProvider, ApolloClient, InMemoryCache } from '@apollo/client';
+import { InMemoryCache, ApolloProvider, ApolloClient, ApolloLink } from '@apollo/client';
+import { BatchHttpLink } from '@apollo/client/link/batch-http'
+// import { MeteorAccountsLink } from 'meteor/apollo'
 import { Hello } from './Hello.jsx';
 import { Info } from './Info.jsx';
 
+const cache = new InMemoryCache().restore(window.__APOLLO_STATE__);
+
+const link = ApolloLink.from([
+  // MeteorAccountsLink(),
+  new BatchHttpLink({
+    uri: '/graphql'
+  })
+]);
+
 const client = new ApolloClient({
   uri: '/graphql',
-  cache: new InMemoryCache(),
-  /* Uncomment this for accounts use
-  request: operation =>
-    operation.setContext(() => ({
-      headers: {
-        authorization: Accounts._storedLoginToken()
-      }
-    }))
-   */
+  cache,
+  link,
 });
 
 export const App = () => (
