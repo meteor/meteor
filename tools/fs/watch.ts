@@ -1,4 +1,4 @@
-import { Stats, FSWatcher } from "fs";
+import { Stats, FSWatcher, Dirent } from "fs";
 import * as files from "./files";
 import * as safeWatcher from "./safe-watcher";
 import { createHash } from "crypto";
@@ -339,7 +339,7 @@ export const sha512 = Profile("sha512", function (...args: (string | Buffer)[]) 
 function readAndStatDirectory(absPath: string) {
   // Read the directory.
   try {
-    var contents = files.readdir(absPath);
+    var contents = files.readdirWithTypes(absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
@@ -351,9 +351,14 @@ function readAndStatDirectory(absPath: string) {
   // Add slashes to the end of directories.
   const contentsWithSlashes: string[] = [];
   contents.forEach(entry => {
-    // We do stat instead of lstat here, so that we treat symlinks to
-    // directories just like directories themselves.
-    const stat = optimisticStatOrNull(files.pathJoin(absPath, entry));
+    let stat: Dirent | Stats | null = entry;
+    let name = entry.name;
+
+    if (entry.isSymbolicLink()) {
+      // We do stat instead of lstat here, so that we treat symlinks to
+      // directories just like directories themselves.
+      stat = optimisticStatOrNull(files.pathJoin(absPath, entry.name));
+    }
     if (! stat) {
       // Disappeared after the readdir (or a dangling symlink)?
       // Eh, pretend it was never there in the first place.
@@ -361,10 +366,10 @@ function readAndStatDirectory(absPath: string) {
     }
 
     if (stat.isDirectory()) {
-      entry += '/';
+      name += '/';
     }
 
-    contentsWithSlashes.push(entry);
+    contentsWithSlashes.push(name);
   });
 
   return contentsWithSlashes;

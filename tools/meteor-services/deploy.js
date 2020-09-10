@@ -9,6 +9,9 @@ import {
   createTarGzStream,
   getSettings,
   mkdtemp,
+  changeTempDirStatus,
+  exists,
+  findGitCommitHash,
 } from '../fs/files';
 import { request } from '../utils/http-helpers.js';
 import buildmessage from '../utils/buildmessage.js';
@@ -469,6 +472,8 @@ async function pollForDeploy(pollingState, versionId, site) {
 // - buildOptions: the 'buildOptions' argument to the bundler
 // - rawOptions: any unknown options that were passed to the command line tool
 // - waitForDeploy: whether to poll Galaxy after upload for deploy status
+// - isCacheBuildEnabled: Reuses the build already created if the git commit
+//   hash is the same
 // - deployPollingTimeoutMs: user overridden timeout for polling Galaxy
 //   for deploy status
 export async function bundleAndDeploy(options) {
@@ -517,10 +522,49 @@ export async function bundleAndDeploy(options) {
     return 1;
   }
 
-  var buildDir = mkdtemp('build_tar');
-  var bundlePath = pathJoin(buildDir, 'bundle');
+  const projectDir = options.projectContext.getProjectLocalDirectory('');
+  const gitCommitHash = process.env.METEOR_GIT_COMMIT_HASH || findGitCommitHash(projectDir);
 
-  Console.info('Preparing to deploy your app...');
+  const buildCache = options.projectContext.getBuildCache();
+  let isCacheBuildValid = options.isCacheBuildEnabled;
+  if (options.isCacheBuildEnabled) {
+    if (!buildCache ||
+      !exists(buildCache.buildDir) ||
+      !exists(buildCache.bundlePath) ||
+      !buildCache.gitCommitHash ||
+      !gitCommitHash ||
+      buildCache.gitCommitHash !== gitCommitHash) {
+      Console.warn(`We don't have a valid build cache so a new build will be performed.`);
+      isCacheBuildValid = false;
+    }
+  }
+
+  function getBuildDirAndBundlePath() {
+    if (isCacheBuildValid) {
+      return buildCache;
+    }
+
+    const buildDir = mkdtemp('build_tar');
+    if (options.isCacheBuildEnabled) {
+      changeTempDirStatus(buildDir, false);
+      Console.info(`The --cache-build was used so the build folder (${buildDir}) will not be deleted on exit...`);
+    }
+    const bundlePath = pathJoin(buildDir, 'bundle');
+    return { buildDir, bundlePath };
+  }
+
+  const {buildDir, bundlePath} = getBuildDirAndBundlePath();
+
+  if (options.isCacheBuildEnabled) {
+    Console.info('Saving build in cache (--cache-build)...');
+    options.projectContext.saveBuildCache({
+      buildDir,
+      bundlePath,
+      gitCommitHash
+    });
+  }
+
+  Console.info('Preparing to build your app...');
 
   var settings = null;
   var messages = buildmessage.capture({
@@ -533,16 +577,21 @@ export async function bundleAndDeploy(options) {
   });
 
   if (! messages.hasMessages()) {
-    var bundler = require('../isobuild/bundler.js');
 
-    var bundleResult = bundler.bundle({
-      projectContext: options.projectContext,
-      outputPath: bundlePath,
-      buildOptions: options.buildOptions,
-    });
+    if(isCacheBuildValid) {
+      Console.info('Skipping build (--cache-build)...');
+    } else {
+      const bundler = require('../isobuild/bundler.js');
 
-    if (bundleResult.errors) {
-      messages = bundleResult.errors;
+      const bundleResult = bundler.bundle({
+        projectContext: options.projectContext,
+        outputPath: bundlePath,
+        buildOptions: options.buildOptions,
+      });
+
+      if (bundleResult.errors) {
+        messages = bundleResult.errors;
+      }
     }
   }
 
@@ -560,6 +609,7 @@ export async function bundleAndDeploy(options) {
     });
   }
 
+  Console.info('Preparing to upload your app...');
   const result = buildmessage.enterJob({
     title: "uploading"
   }, Profile("upload bundle", function () {
@@ -593,6 +643,7 @@ export async function bundleAndDeploy(options) {
   // build / deploy succeed. We indicate that Meteor should poll for version
   // status by including a newVersionId in the payload.
   if (options.waitForDeploy && result.payload.newVersionId) {
+    Console.info('Waiting for deployment updates from Galaxy...');
     return await pollForDeploymentSuccess(
       result.payload.newVersionId,
       options.deployPollingTimeoutMs,
