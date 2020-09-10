@@ -1185,15 +1185,23 @@ class Target {
     // now we need to remove the exports, and let the minifier do it's job later
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
-
-      console.log(unibuild.pkg.sideEffects);
       const name = unibuild.pkg.name || null;
+
+      if(name === 'modules') {
+        debugger;
+        console.log(`sideEffects for: ${name} ${unibuild.pkg.sideEffects}`);
+      }
       // we will assume that every meteor package that exports something is a
       // side effect true package
-      if(unibuild.declaredExports.length){
+      if(unibuild.pkg.sideEffects){
         return;
       }
+      if(name === 'modules'){
+        // console.log(importMap);
+      }
+
       jsOutputFilesMap.get(name).files.forEach((file) => {
+
         const newVar = importMap.get(file.absPath)
         const { source:newSource, madeChanges } = removeUnusedExports(file.dataString, file.hash, newVar);
         if(newSource) {
@@ -3528,6 +3536,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir,
     localNodeModulesDirs: options.localNodeModulesDirs,
+    sideEffects: options.sideEffects,
   });
 
   var isopack = compiler.compile(packageSource, {

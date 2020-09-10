@@ -688,7 +688,6 @@ _.extend(PackageSource.prototype, {
         Cordova._dependencies = null;
       }
     }
-
     // By the way, you can't depend on yourself.
     var doNotDepOnSelf = function (dep) {
       if (dep.package === self.name) {
@@ -862,7 +861,6 @@ _.extend(PackageSource.prototype, {
       }));
     });
 
-    self.sideEffects = api.sideEffects;
     // Serve root of the package.
     self.serveRoot = files.pathJoin('/packages/', self.name);
 
@@ -870,6 +868,8 @@ _.extend(PackageSource.prototype, {
     if (Package._hasTests) {
       self.testName = genTestName(self.name);
     }
+    self.sideEffects = api.sideEffects;
+
   }),
 
   _readAndWatchDirectory(relDir, watchSet, {include, exclude, names}) {

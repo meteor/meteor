@@ -145,6 +145,10 @@ export class CompilerPluginProcessor {
     var sourceProcessorsWithSlots = {};
 
     var sourceBatches = _.map(self.unibuilds, function (unibuild) {
+      if(unibuild.pkg.name === 'base64') {
+        console.log(`runCompilerPlugins -> ${unibuild.pkg.name} ${unibuild.pkg.sideEffects}`);
+      }
+
       const { pkg: { name }, arch } = unibuild;
       const sourceRoot = name
         && self.isopackCache.getSourceRoot(name, arch)

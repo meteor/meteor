@@ -1123,6 +1123,7 @@ export default class ImportScanner {
          info.dynamic);
 
       const resolved = this.resolve(file, id, dynamic);
+      console.log(resolved && resolved.path);
       const absImportedPath = resolved && resolved !== "missing" && resolved.path;
       if (! absImportedPath) {
         return;

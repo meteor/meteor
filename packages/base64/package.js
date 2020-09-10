@@ -6,10 +6,12 @@ Package.describe({
 Package.onUse(api => {
   api.export('Base64');
   api.use('ecmascript');
+  api.setSideEffects(false);
   api.mainModule('base64.js');
 });
 
 Package.onTest(api => {
   api.use(['ecmascript', 'tinytest', 'ejson']);
+  api.setSideEffects(false);
   api.addFiles('base64_test.js', ['client', 'server']);
 });

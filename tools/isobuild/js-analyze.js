@@ -220,6 +220,7 @@ const importedIdentifierVisitor = new (class extends Visitor {
 export function removeUnusedExports(source, hash, exportInfo) {
   const possibleIndexes = findPossibleIndexes(source, [
     "export",
+    "exportDefault",
   ]);
 
   if (possibleIndexes.length === 0) {
@@ -249,7 +250,20 @@ class RemoveUnusedExportsVisitor extends Visitor {
     this.possibleIndexes = possibleIndexes;
   }
 
-  removeIdentifiers(node) {
+  removeIdentifiers(exportPath, node, defaultExport = false) {
+    if(defaultExport &&
+        !this.exportInfo?.deps.includes('default') &&
+        !this.exportInfo.sideEffects){
+      exportPath.replace({
+        type: "BooleanLiteral",
+        value: false,
+      })
+      console.log(`Removing Default export`)
+      this.madeChanges = true;
+      return;
+    }else if(defaultExport){
+      return;
+    }
     node.properties = node.properties.map((property) => {
       if(this.exportInfo && this.exportInfo.sideEffects){
         return property;
@@ -277,13 +291,14 @@ class RemoveUnusedExportsVisitor extends Visitor {
                // always does so by appending additional numbers.
                isIdWithName(node.callee.object, /^module\d*$/)) {
       const propertyName =
-        isPropertyWithName(node.callee.property, "export");
+        isPropertyWithName(node.callee.property, "export") ||
+        isPropertyWithName(node.callee.property, "exportDefault");
 
       if (propertyName) {
         const firstArg = args[0];
         // if we have an object definition on module.export()
         if(firstArg) {
-          this.removeIdentifiers(firstArg);
+          this.removeIdentifiers(path, firstArg, isPropertyWithName(node.callee.property, "exportDefault"));
         }
       }
     }

@@ -15,6 +15,7 @@ Package.onUse(function(api) {
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.export("meteorInstall");
+  api.setSideEffects(false);
 
   // When compiling legacy code, the babel-compiler and meteor-babel
   // packages assume meteorBabelHelpers.sanitizeForInObject is defined.

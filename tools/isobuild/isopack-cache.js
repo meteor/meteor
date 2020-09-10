@@ -209,6 +209,10 @@ export class IsopackCache {
     };
 
     var packageInfo = self._packageMap.getInfo(name);
+    if(name === 'base64') {
+      console.log(`ensurePackageLoaded - isopackCache -> ${packageInfo}`);
+    }
+
     if (! packageInfo) {
       throw Error("Depend on unknown package " + name + "?");
     }

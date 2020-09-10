@@ -890,6 +890,7 @@ _.extend(Isopack.prototype, {
       };
       self.version = mainJson.version;
       self.isTest = mainJson.isTest;
+      self.sideEffects = mainJson.sideEffects;
       self.debugOnly = !!mainJson.debugOnly;
       self.prodOnly = !!mainJson.prodOnly;
       self.testOnly = !!mainJson.testOnly;
@@ -946,6 +947,7 @@ _.extend(Isopack.prototype, {
     });
 
     self.cordovaDependencies = mainJson.cordovaDependencies || null;
+    self.sideEffects = mainJson.sideEffects !== false;
 
     _.each(mainJson.tools, function (toolMeta) {
       toolMeta.rootDir = dir;
@@ -1021,12 +1023,16 @@ _.extend(Isopack.prototype, {
     var outputPath = outputDir;
 
     var builder = new Builder({ outputPath: outputPath });
+    if(self.name === 'base64') {
+      console.log(`saveToPath - isopack -> ${self.sideEffects}`);
+    }
     try {
       var mainJson = {
         name: self.name,
         summary: self.metadata.summary,
         version: self.version,
         isTest: self.isTest,
+        sideEffects: self.sideEffects,
         builds: [],
         plugins: []
       };
