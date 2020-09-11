@@ -938,6 +938,10 @@ _.extend(MRp, {
         "Looks like you are out of free disk space under .meteor/local.";
     } else if (explanation) {
       message += "\n" + explanation.longText;
+    } else if (process.platform === 'win32') {
+      message += "\n\n" +
+        "Check how to troubleshoot here " +
+        "https://docs.meteor.com/windows.html#cant-start-mongo-server";
     }
 
     if (explanation && explanation.symbol === 'EXIT_NET_ERROR') {

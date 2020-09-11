@@ -517,7 +517,9 @@ main.registerCommand({
     minimal: { type: Boolean },
     full: { type: Boolean },
     react: { type: Boolean },
+    vue: { type: Boolean },
     typescript: { type: Boolean },
+    apollo: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -770,8 +772,12 @@ main.registerCommand({
     skelName += "-full";
   } else if (options.react) {
     skelName += "-react";
+  } else if (options.vue) {
+    skelName += "-vue";
   } else if (options.typescript) {
     skelName += "-typescript";
+  } else if (options.apollo) {
+    skelName += "-apollo";
   }
 
   files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
@@ -886,8 +892,9 @@ main.registerCommand({
       ! options.minimal &&
       ! options.full &&
       ! options.react &&
+      ! options.vue &&
       ! options.typescript) {
-    // Notify people about --bare, --minimal, --full, --react, and --typescript.
+    // Notify people about --bare, --minimal, --full, --react, --vue, --apollo and --typescript.
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
@@ -898,6 +905,8 @@ main.registerCommand({
     cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
     cmd("meteor create --full       # to create a more complete scaffolded app");
     cmd("meteor create --react      # to create a basic React-based app");
+    cmd("meteor create --vue        # to create a basic Vue-based app");
+    cmd("meteor create --apollo     # to create a basic Apollo + React app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
   }
 
@@ -1259,7 +1268,6 @@ main.registerCommand({
     projectContext.prepareProjectForBuild();
   });
 
-  const bundlePath = projectContext.getProjectLocalDirectory('build');
   const bundler = require('../isobuild/bundler.js');
   const bundle = bundler.bundle({
     projectContext: projectContext,
@@ -1428,6 +1436,7 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean },
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
+    'cache-build': { type: Boolean },
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1501,6 +1510,7 @@ function deployCommand(options, { rawOptions }) {
     deployPollingTimeoutMs = options['deploy-polling-timeout'];
   }
 
+  const isCacheBuildEnabled = !!options['cache-build'];
   const waitForDeploy = !options['no-wait'];
 
   var deployResult = deploy.bundleAndDeploy({
@@ -1511,6 +1521,7 @@ function deployCommand(options, { rawOptions }) {
     rawOptions,
     deployPollingTimeoutMs,
     waitForDeploy,
+    isCacheBuildEnabled,
   });
 
   if (deployResult === 0) {
