@@ -34,7 +34,7 @@ Meteor, Cordova and plugins cannot be updated through Hot Code Push. So Meteor b
 
 You can [override this behavior](/cordova.html#controlling-compatibility-version). Just make sure you deal with potentially incompatible versions in your JS instead.
 
-<h3 id="set-autoupdate-version">Set an AUTOUPDATE_VERSION</h3>
+<h3 id="set-autoupdate-version">Update your AUTOUPDATE_VERSION</h3>
 
 `AUTOUPDATE_VERSION` is an environment variable you can add to your `run` and `deploy` [commands](https://docs.meteor.com/commandline.html):
 
@@ -42,9 +42,7 @@ You can [override this behavior](/cordova.html#controlling-compatibility-version
 $ AUTOUPDATE_VERSION=abc meteor deploy example.com
 ```
 
-You can set a new one for every deploy to update all your mobile and web clients. Or keep the same one, when you want them to not update.
-
-If adding this variable this fixes your HCP issue, it means your server thinks the client code and assets didn’t actually change. You'll want to figure out why [WebApp.calculateClientHash](https://github.com/meteor/meteor/blob/devel/packages/webapp/webapp_server.js#L267) isn’t generating new hashes for your new code.
+If your app has an `AUTOUPDATE_VERSION` set, make sure you change its value when you want a deploy to update your clients.
 
 <h3 id="no-soft-update-in-cordova">Cordova doesn’t hot reload CSS separately</h3>
 
@@ -92,9 +90,9 @@ Error: Error downloading asset: /
   at <anonymous>:1:9
 ```
 
-This error from [cordova-plugin-meteor-webapp](https://github.com/meteor/cordova-plugin-meteor-webapp) may be caused by big files in the `public` folder. Downloading these can fail depending on connection speed, and available space on the device.
+This error from [cordova-plugin-meteor-webapp](https://github.com/meteor/cordova-plugin-meteor-webapp) may be caused by big files, often in the `public` folder. Downloading these can fail depending on connection speed, and available space on the device.
 
-You could run `$ du -a public | sort -n -r | head -n 20` to find the 20 biggest files and their sizes. Consider serving them from an external storage service or CDN instead. In this case, they are only downloaded when really needed, and can fail downloading without blocking HCP.
+You could run `$ du -a public | sort -n -r | head -n 20` to find the 20 biggest files and their sizes. Consider serving them from an external storage service or CDN instead. Then they are only downloaded when really needed, and can fail downloading without blocking HCP.
 
 <h3 id="locally">If it is only broken locally</h3>
 
@@ -150,7 +148,7 @@ Tracker.autorun(() => {
 ```js
 const { ready, inactive } = _.chain(Meteor)
   .get('default_connection._subscriptions', {})
-  .toPairs() // Reshape the thing
+  .toPairs()
   .map(1)
   .find({ name: 'meteor_autoupdate_clientVersions' })
   .pick(['inactive', 'ready']) // comment this to see all options

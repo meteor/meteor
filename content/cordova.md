@@ -284,6 +284,8 @@ An important benefit of this is that while downloading may be slow over mobile c
 
 Downloading updates is done incrementally, so we only download assets that have actually changed (based on a content hash). In addition, if we haven't been able to download all changed assets in one go, because of a network failure or because the app was closed before we finished, we will reuse the ones that have already completed downloading the next time the app starts up or the network connection is restored.
 
+If Hot Code Push is not working reliably in your app, and this section doesn't help, see our [guide on diagnosing Hot Code Push issues](/hot-code-push).
+
 <h3 id="updating-production-apps">In production</h3>
 
 Hot code push greatly improves the development experience, but on mobile, it is also a really useful feature for production apps, because it allows you to quickly push updates to devices without having users update the app through the store and without going through a possibly lengthy review process to get your update accepted.
@@ -313,8 +315,8 @@ Now your users' apps will continue receiving hot code pushes. However, they won'
 Another option is using the `METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE` environment variable. If you were to do this:
 
 ```sh
-meteor add cordova-plugin-camera
-meteor add cordova-plugin-gyroscope
+meteor add cordova:cordova-plugin-camera@4.1.0
+meteor add cordova:cordova-plugin-gyroscope@0.1.4
 METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE='cordova-plugin-camera,cordova-plugin-gyroscope' meteor run ios-device
 ```
 
