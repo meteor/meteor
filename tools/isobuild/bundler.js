@@ -1182,6 +1182,9 @@ class Target {
       })
     })
 
+    const allFilesOnBundle = new Set(Array.from(jsOutputFilesMap).flatMap(([, value]) => {
+      return value.files.map(({absPath}) => absPath);
+    }));
     // now we need to remove the exports, and let the minifier do it's job later
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
@@ -1199,11 +1202,14 @@ class Target {
       if(name === 'modules'){
         // console.log(importMap);
       }
-
       jsOutputFilesMap.get(name).files.forEach((file) => {
+        const importedSymbolsFromFile = importMap.get(file.absPath)
 
-        const newVar = importMap.get(file.absPath)
-        const { source:newSource, madeChanges } = removeUnusedExports(file.dataString, file.hash, newVar);
+        const { source:newSource, madeChanges } = removeUnusedExports(file.dataString,
+            file.hash,
+            importedSymbolsFromFile,
+            allFilesOnBundle,
+            file.resolveMap || new Map());
         if(newSource) {
           file.dataString = newSource;
           file.data = Buffer.from(newSource, "utf8");

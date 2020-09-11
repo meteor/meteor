@@ -597,6 +597,10 @@ export class PackageAPI {
    */
   "export"(symbols, arch, options) {
     var self = this;
+    if(this.sideEffects === false) {
+      this.setSideEffects(true);
+      Object.defineProperty(this, "sideEffects", { configurable: false, writable: false });
+    }
 
     // Support `api.export("FooTest", {testOnly: true})` without
     // arch.

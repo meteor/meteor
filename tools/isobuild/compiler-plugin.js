@@ -1266,7 +1266,10 @@ export class PackageSourceBatch {
       });
 
       map.set(name, {
-        files: inputFiles,
+        files: inputFiles.map(file => {
+          file.sideEffects = batch.unibuild.pkg.sideEffects;
+          return file;
+        }),
         mainModule: _.find(inputFiles, file => file.mainModule) || null,
         batch,
         importScannerWatchSet: new WatchSet(),

@@ -333,14 +333,21 @@ interface RawFile {
   jsonData?: Record<string, any>;
 }
 
+interface ImportIdentifiersEntry {
+  deps: [string];
+  sideEffects: boolean;
+}
+
 interface File extends RawFile {
   type: string;
+  sideEffects: boolean;
   sourcePath: string;
   targetPath?: string;
   servePath?: string;
   absModuleId?: string;
   deps?: Record<string, ImportInfo>;
-  imports?: Record<string, [string]>;
+  resolveMap?: Map<string, string>;
+  imports?: Record<string, ImportIdentifiersEntry>;
   lazy: boolean;
   bare?: boolean;
   // TODO Improve the sourceMap type.
@@ -371,7 +378,7 @@ type ImportInfo = {
   helpers?: Record<string, boolean>;
 }
 type JSAnalyzeInfo = {
-  dependencies?: Record<string, [string]>;
+  dependencies?: Record<string, ImportIdentifiersEntry>;
   identifiers?: Record<string, ImportInfo>;
 }
 
@@ -981,6 +988,7 @@ export default class ImportScanner {
 
   private findImportedModuleIdentifiers(
     file: File,
+    parentImportSymbols?: ImportIdentifiersEntry
   ): JSAnalyzeInfo {
     if (IMPORT_SCANNER_CACHE.has(file.hash)) {
       return IMPORT_SCANNER_CACHE.get(file.hash);
@@ -989,6 +997,8 @@ export default class ImportScanner {
     const result = findImportedModuleIdentifiers(
       this.getDataString(file),
       file.hash,
+      parentImportSymbols,
+      file.sideEffects
     );
 
     // there should always be file.hash, but better safe than sorry
@@ -1048,7 +1058,14 @@ export default class ImportScanner {
         return file.alias;
       }
     }
-
+    if(resolved) {
+      const file = this.getFile(resolved.path);
+      if(!file) return resolved;
+      if (!file.resolveMap) {
+        file.resolveMap = new Map();
+      }
+      file.resolveMap.set(id, resolved.path);
+    }
     return resolved;
   }
 
@@ -1068,7 +1085,7 @@ export default class ImportScanner {
     return relativeId;
   }
 
-  private scanFile(file: File, forDynamicImport = false) {
+  private scanFile(file: File, forDynamicImport = false, parentImportSymbols?: ImportIdentifiersEntry) {
     if (file.imported === "static") {
       // If we've already scanned this file non-dynamically, then we don't
       // need to scan it again.
@@ -1097,7 +1114,7 @@ export default class ImportScanner {
     try {
       let importInfo;
       if(!file.deps){
-        importInfo = this.findImportedModuleIdentifiers(file);
+        importInfo = this.findImportedModuleIdentifiers(file, parentImportSymbols);
       }
       file.deps = file.deps || importInfo?.identifiers;
       file.imports = file.imports || importInfo?.dependencies;
@@ -1123,7 +1140,6 @@ export default class ImportScanner {
          info.dynamic);
 
       const resolved = this.resolve(file, id, dynamic);
-      console.log(resolved && resolved.path);
       const absImportedPath = resolved && resolved !== "missing" && resolved.path;
       if (! absImportedPath) {
         return;
@@ -1132,6 +1148,11 @@ export default class ImportScanner {
         file.imports[absImportedPath] = file.imports[id];
         delete file.imports[id]
       }
+
+      if(!file.resolveMap){
+        file.resolveMap = new Map();
+      }
+      file.resolveMap.set(id, absImportedPath);
 
       let depFile = this.getFile(absImportedPath);
 
@@ -1156,7 +1177,11 @@ export default class ImportScanner {
         // If depFile has already been scanned, this._scanFile will return
         // immediately thanks to the depFile.imported-checking logic at
         // the top of the method.
-        this.scanFile(depFile, dynamic);
+        if(file.imports && file.imports[depFile.absPath]){
+          this.scanFile(depFile, dynamic, file.imports[depFile.absPath]);
+        }else{
+          this.scanFile(depFile, dynamic);
+        }
 
         return;
       }
@@ -1169,8 +1194,11 @@ export default class ImportScanner {
       // Append this file to the output array and record its index.
       this.addFile(absImportedPath, depFile);
 
-      // Recursively scan the module's imported dependencies.
-      this.scanFile(depFile, dynamic);
+      if(file.imports && file.imports[depFile.absPath]){
+        this.scanFile(depFile, dynamic, file.imports[depFile.absPath]);
+      }else{
+        this.scanFile(depFile, dynamic);
+      }
     });
   }
 
