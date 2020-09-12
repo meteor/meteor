@@ -335,10 +335,6 @@ Template._loginButtonsLoggedOutDropdown.events({
     if (password !== null)
       document.getElementById('login-password').value = password;
   },
-  'keypress #login-username, keypress #login-email, keypress #login-username-or-email, keypress #login-password, keypress #login-password-again': event => {
-    if (event.keyCode === 13)
-      loginOrSignup();
-  }
 });
 
 Template._loginButtonsLoggedOutDropdown.helpers({
