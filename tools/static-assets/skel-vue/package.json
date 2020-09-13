@@ -1,5 +1,5 @@
 {
-  "name": "skel",
+  "name": "~name~",
   "private": true,
   "scripts": {
     "start": "meteor run",
@@ -15,8 +15,8 @@
   },
   "meteor": {
     "mainModule": {
-      "client": "src/client.js",
-      "server": "src/server.js"
+      "client": "client/main.js",
+      "server": "server/main.js"
     },
     "testModule": "tests/main.js"
   }
