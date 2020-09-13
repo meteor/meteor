@@ -238,8 +238,10 @@ Template._loginButtonsLoggedOutDropdown.events({
   },
 
   'keypress #forgot-password-email': event => {
-    if (event.keyCode === 13)
+    if (event.keyCode === 13) {
+      event.preventDefault();
       forgotPassword();
+    }
   },
 
   'click #login-buttons-forgot-password': forgotPassword,
