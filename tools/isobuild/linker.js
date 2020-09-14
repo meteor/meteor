@@ -685,7 +685,7 @@ _.extend(File.prototype, {
 
   _getClosureHeader() {
     if (this.meteorInstallOptions) {
-      const headerParts = ["function module("];
+      const headerParts = ["function("];
 
       if (this.source.match(/\b__dirname\b/)) {
         headerParts.push("require,exports,module,__filename,__dirname");
