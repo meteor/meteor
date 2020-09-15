@@ -671,7 +671,7 @@ jobs:
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit ./tmp/results/junit/10.xml \
-              --without-tag "custom-warehouse"
+              --without-tag "custom-warehouse" \
               --browserstack
           no_output_timeout: 20m
       - run:
