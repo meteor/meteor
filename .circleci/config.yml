@@ -93,8 +93,8 @@ build_machine_environment: &build_machine_environment
     SELF_TEST_TOOL_NODE_FLAGS: " "
 
     # Variables for load-balancing
-    NUM_GROUPS: 11
-    RUNNING_AVG_LENGTH: 5
+    NUM_GROUPS: 12
+    RUNNING_AVG_LENGTH: 6
 
 jobs:
   Get Ready:
