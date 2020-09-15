@@ -288,6 +288,8 @@ class Server {
     addHelp("break", "Terminate current command input and display new prompt");
     addHelp("exit", "Disconnect from server and leave shell");
     addHelp("help", "Show this help information");
+    // Global project variable __ such as underscore still could be override but there's no information on help.
+    addHelp("__", "Show the last REPL result (Global project variable could be override)");
 
     // When the REPL exits, signal the attached client to exit by sending it
     // the special EXITING_MESSAGE.
