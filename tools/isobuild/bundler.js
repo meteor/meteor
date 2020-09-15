@@ -1382,7 +1382,6 @@ class Target {
 
     function handle(source, dynamic) {
       source._minifiedFiles.forEach(file => {
-        // Remove the function name __minifyJs that was added above.
         if (typeof file.data === 'string') {
           file.data = Buffer.from(file.data, "utf8");
         }
