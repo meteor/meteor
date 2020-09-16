@@ -62,6 +62,7 @@ export function findImportedModuleIdentifiers(source, hash, parentImportSymbols,
         "require",
         "import",
         "export",
+        "exportDefault",
         "dynamicImport",
         "link",
     ]);
@@ -72,7 +73,12 @@ export function findImportedModuleIdentifiers(source, hash, parentImportSymbols,
 
     const ast = tryToParse(source, hash);
     importedIdentifierVisitor.visit(ast, source, possibleIndexes, parentImportSymbols, hasSideEffects);
-    return {identifiers: importedIdentifierVisitor.identifiers, dependencies: importedIdentifierVisitor.dependencies};
+    return {
+        identifiers: importedIdentifierVisitor.identifiers,
+        dependencies: importedIdentifierVisitor.dependencies,
+        proxyDependencies: importedIdentifierVisitor.proxyDependencies,
+        exports: importedIdentifierVisitor.exports
+    };
 }
 
 const importedIdentifierVisitor = new (class extends Visitor {
@@ -82,6 +88,8 @@ const importedIdentifierVisitor = new (class extends Visitor {
         this.requireIsBound = false;
         this.identifiers = Object.create(null);
         this.dependencies = Object.create(null);
+        this.proxyDependencies = Object.create(null);
+        this.exports = [];
 
         // Defining this.possibleIndexes causes the Visitor to ignore any
         // subtrees of the AST that do not contain any indexes of identifiers
@@ -121,10 +129,20 @@ const importedIdentifierVisitor = new (class extends Visitor {
                 deps: [...new Set([...this.dependencies[id].deps, ...importIdentifiers])],
                 sideEffects: this.dependencies[id].sideEffects || sideEffects,
             } :
+            {deps: importIdentifiers, sideEffects};
+    }
+
+    addProxyDependency(id, importIdentifiers, sideEffects) {
+        this.proxyDependencies[id] = this.proxyDependencies[id] ?
             {
-                deps: importIdentifiers,
-                sideEffects
-            };
+                deps: [...new Set([...this.proxyDependencies[id].deps, ...importIdentifiers])],
+                sideEffects: this.proxyDependencies[id].sideEffects || sideEffects,
+            } :
+            {deps: importIdentifiers, sideEffects};
+    }
+
+    addExport(identifier) {
+        this.exports = this.exports.concat([identifier]);
     }
 
     visitFunctionExpression(path) {
@@ -157,8 +175,31 @@ const importedIdentifierVisitor = new (class extends Visitor {
         const firstArg = args[0];
 
         this.visitChildren(path);
+        const isModuleUsage = node.callee.type === "MemberExpression" &&
+            // The Reify compiler sometimes renames references to the
+            // CommonJS module object for hygienic purposes, but it
+            // always does so by appending additional numbers.
+            isIdWithName(node.callee.object, /^module\d*$/);
 
         if (!isStringLiteral(firstArg)) {
+            // it can also be an export
+            if (isModuleUsage) {
+                const isDefaultExport =
+                    isPropertyWithName(node.callee.property, "exportDefault");
+                const isExport =
+                    isPropertyWithName(node.callee.property, "export");
+
+                if (isDefaultExport) {
+                    this.addExport('default');
+                    return;
+                }
+                if (isExport) {
+                    firstArg.properties.forEach(({key}) => {
+                        this.addExport(key.name);
+                    })
+                    return;
+                }
+            }
             return;
         }
 
@@ -169,63 +210,67 @@ const importedIdentifierVisitor = new (class extends Visitor {
             isIdWithName(node.callee, "import")) {
             this.addIdentifier(firstArg.value, "import", true);
             this.addDependency(firstArg.value, [], true);
-        } else if (node.callee.type === "MemberExpression" &&
-            // The Reify compiler sometimes renames references to the
-            // CommonJS module object for hygienic purposes, but it
-            // always does so by appending additional numbers.
-            isIdWithName(node.callee.object, /^module\d*$/)) {
-            const propertyName =
-                isPropertyWithName(node.callee.property, "link") ||
-                isPropertyWithName(node.callee.property, "dynamicImport");
+        } else {
+            if (isModuleUsage) {
+                const isImport =
+                    isPropertyWithName(node.callee.property, "link") ||
+                    isPropertyWithName(node.callee.property, "dynamicImport");
 
-            if (propertyName) {
-                // if we have an object definition on module.link(), we are importing with ES6 possible without side effects
-                // otherwise we are considering it as a side effect import
-                if (args.length <= 1) {
-                    this.addDependency(firstArg.value, [], true);
-                    this.addIdentifier(
-                        firstArg.value,
-                        "import",
-                        propertyName === "dynamicImport"
-                    );
-                    return;
-                }
-                const secondArg = args[1];
-                // if every prop is an string literal, we have something like: export { a, b, c } from './teste';
-                if (secondArg.properties.every(({value}) => isStringLiteral(value)) && !this.hasSideEffects) {
-                    // in this case, we need to verify the parent imports to make sure we follow the right tree path
-                    const isImportedByParent = secondArg.properties.some(({value}) => {
-                        if(this.parentImportSymbols){
-                            // console.log(this.parentImportSymbols);
-                            // console.log(value.value);
-                        }
-                        return this.parentImportSymbols.deps.includes(value.value) || this.parentImportSymbols.deps.includes("*");
-                    });
-                    const isSomeSymbolImported = this.parentImportSymbols ?
-                        this.parentImportSymbols.sideEffects || isImportedByParent
-                        : true;
-                    // console.log(isImportedByParent);
-                    // console.log(this.parentImportSymbols);
+                if (isImport) {
+                    // if we have an object definition on module.link(), we are importing with ES6 possible without side effects
+                    // otherwise we are considering it as a side effect import
+                    if (args.length <= 1) {
+                        this.addDependency(firstArg.value, ['*'], true);
+                        this.addIdentifier(
+                            firstArg.value,
+                            "import",
+                            isImport === "dynamicImport"
+                        );
+                        return;
+                    }
+                    const secondArg = args[1];
+                    // if every prop is an string literal, we have something like: export { a, b, c } from './teste';
+                    if (secondArg.properties.every(({value}) => isStringLiteral(value)) && !this.hasSideEffects) {
+                        // in this case, we need to verify the parent imports to make sure we follow the right tree path
+                        const isImportedByParent = secondArg.properties.some(({value}) => {
+                            if (this.parentImportSymbols) {
+                                // console.log(this.parentImportSymbols);
+                                // console.log(value.value);
+                            }
+                            // if we are doing an wildcard export, export * from x.js, we will include this file to be analyzed later
+                            // remember that this is actually temporary and this dependency can be dropped later in our analysis
+                            if (value.value === "*") return true;
+                            return this.parentImportSymbols.deps.includes(value.value) || this.parentImportSymbols.deps.includes("*");
+                        });
+                        const isSomeSymbolImported = this.parentImportSymbols ?
+                            this.parentImportSymbols.sideEffects || isImportedByParent
+                            : true;
 
 
                     if (isSomeSymbolImported) {
                         this.addIdentifier(
                             firstArg.value,
                             "import",
-                            propertyName === "dynamicImport"
+                            isImport === "dynamicImport"
                         );
                     }
-                    this.addDependency(firstArg.value, secondArg.properties.map(({key, value}) => this.parentImportSymbols.deps.includes(value.value) && key.name).filter(Boolean), false);
-                    console.log(firstArg.value);
-                    return;
-                }
-                this.addIdentifier(
-                    firstArg.value,
-                    "import",
-                    propertyName === "dynamicImport"
-                );
-                this.addDependency(firstArg.value, secondArg.properties.map(({key}) => key.name), false);
+                        this.addDependency(firstArg.value, secondArg.properties.map(({key, value}) => {
+                            const isImportedByParent = this.parentImportSymbols.deps.includes(value.value) || value.value === "*";
+                            return isImportedByParent && key.name;
+                        }).filter(Boolean), false);
+                        this.addProxyDependency(firstArg.value, secondArg.properties.map(({key}) => key.name || "*", false));
+                        return;
+                    }
+                    this.addIdentifier(
+                        firstArg.value,
+                        "import",
+                        isImport === "dynamicImport"
+                    );
+                    const importIdentifiers = secondArg.properties.map(({key}) => key.name || "*");
+                    // console.log(importIdentifiers);
+                    this.addDependency(firstArg.value, importIdentifiers, false);
 
+                }
             }
         }
     }
@@ -262,7 +307,7 @@ export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle =
         "export",
         "exportDefault",
         "link",
-        "importDynamic"
+        "dynamicImport"
     ]);
 
     if (possibleIndexes.length === 0) {
@@ -322,7 +367,6 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
 
     visitCallExpression(path) {
         const node = path.getValue();
-        const args = node.arguments;
         const firstArg = node.arguments[0];
 
         this.visitChildren(path);
@@ -332,25 +376,26 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
             // CommonJS module object for hygienic purposes, but it
             // always does so by appending additional numbers.
             isIdWithName(node.callee.object, /^module\d*$/)) {
+            const isDefaultExport =
+                isPropertyWithName(node.callee.property, "defaultExport");
             const isExport =
-                isPropertyWithName(node.callee.property, "export") ||
-                isPropertyWithName(node.callee.property, "exportDefault");
+                isPropertyWithName(node.callee.property, "export");
 
             const isImport =
                 isPropertyWithName(node.callee.property, "link") ||
                 isPropertyWithName(node.callee.property, "dynamicImport");
 
-            if (isExport) {
+            if (isExport || isDefaultExport) {
                 // if we have an object definition on module.export()
                 if (firstArg) {
-                    this.removeIdentifiers(path, firstArg, isPropertyWithName(node.callee.property, "exportDefault"));
+                    this.removeIdentifiers(path, firstArg, isDefaultExport);
                 }
             }
-            if(isImport){
+            if (isImport) {
                 const absPath = this.resolveMap.get(firstArg.value);
                 const fileIsInBundle = absPath && this.allFilesOnBundle.has(absPath) || false;
-
-                if(!fileIsInBundle) {
+                if (!fileIsInBundle) {
+                    console.log(`removing file ${absPath}`)
                     path.replace({
                         type: "BooleanLiteral",
                         value: false,

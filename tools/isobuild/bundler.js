@@ -1190,29 +1190,28 @@ class Target {
       const unibuild = sourceBatch.unibuild;
       const name = unibuild.pkg.name || null;
 
-      if(name === 'modules') {
-        debugger;
-        console.log(`sideEffects for: ${name} ${unibuild.pkg.sideEffects}`);
-      }
       // we will assume that every meteor package that exports something is a
-      // side effect true package
-      if(unibuild.pkg.sideEffects){
+      // side effect true package, this is set on the package-api file when api.export is called
+      // console.log(`${unibuild.pkg.name} sideEffects: ${unibuild.pkg.sideEffects}`)
+      if(unibuild.pkg.sideEffects && name !== 'modules' || unibuild.arch.includes("legacy")){
         return;
-      }
-      if(name === 'modules'){
-        // console.log(importMap);
       }
       jsOutputFilesMap.get(name).files.forEach((file) => {
         const importedSymbolsFromFile = importMap.get(file.absPath)
 
+        if(file.absPath.includes("material-ui/styles/esm/jssPreset/jssPreset.js")){
+          debugger;
+        }
         const { source:newSource, madeChanges } = removeUnusedExports(file.dataString,
             file.hash,
             importedSymbolsFromFile,
             allFilesOnBundle,
             file.resolveMap || new Map());
+
         if(newSource) {
           file.dataString = newSource;
           file.data = Buffer.from(newSource, "utf8");
+          file.source = Buffer.from(newSource, "utf8");
           file.hash = sha1(file.data);
         }
       })

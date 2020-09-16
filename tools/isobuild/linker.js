@@ -267,10 +267,10 @@ _.extend(Module.prototype, {
 
       const tree = getTree(file);
 
-      if (file.aliasId) {
-        addToTree(file.aliasId, file.absModuleId, tree);
-        return;
-      }
+      // if (file.aliasId) {
+      //   addToTree(file.aliasId, file.absModuleId, tree);
+      //   return;
+      // }
 
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);
@@ -363,6 +363,9 @@ _.extend(Module.prototype, {
         chunks.push("{");
         const keys = _.keys(t);
         _.each(keys, (key, i) => {
+          if(key === 'index.js'){
+            console.log("indexxxx");
+          }
           chunks.push(JSON.stringify(key), ":");
           walk(t[key]);
           if (i < keys.length - 1) {
@@ -746,6 +749,9 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       map: file.sourceMap || null,
     };
 
+    if(file.servePath.includes("createGenerateClassName/index.js")){
+      console.log(file.source);
+    }
     var chunks = [];
     var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
 
@@ -1191,6 +1197,10 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     }
 
     if (file.sourceMap) {
+      if(file.absModuleId && file.absModuleId.includes("createGenerateClassName")){
+        console.log("INCLUDE");
+      }
+
       var sourceMap = file.sourceMap;
       sourceMap.mappings = headerContent + sourceMap.mappings;
       return {
@@ -1200,6 +1210,9 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
         sourceMap: sourceMap
       };
     } else {
+      if(file.absModuleId && file.absModuleId.includes("createGenerateClassName")){
+        console.log("INCLUDE");
+      }
       return {
         source: header + file.source + footer,
         sourcePath: file.sourcePath,
