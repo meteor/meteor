@@ -660,9 +660,9 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (Test Group 11)"
+          name: "Running self-test (Browserstack Test)"
           command: |
-            if [ -f ./tmp/test-groups/11.txt ]; then TEST_GROUP=$(<./tmp/test-groups/11.txt); elif [ -f ./tmp/test-groups/0.txt ]; then TEST_GROUP=XXXXX; else TEST_GROUP='css hot code push|custom minifier - devel vs prod|versioning hot code push|javascript hot code push|add packages client archs'; fi
+            TEST_GROUP='css hot code push|custom minifier - devel vs prod|versioning hot code push|javascript hot code push|add packages client archs';
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
