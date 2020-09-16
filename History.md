@@ -12,6 +12,10 @@ N/A
 
 * `--apollo` skeleton was missing client cache setup [PR #11146](https://github.com/meteor/meteor/pull/11146)
 
+* Node.js has been updated to version [12.18.4](https://nodejs.org/en/blog/release/v12.18.4/), this is a [security release](https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/)
+
+* Updated npm to version 6.14.8
+
 ## v1.11, 2020-08-18
 
 ### Breaking changes
