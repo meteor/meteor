@@ -1,8 +1,8 @@
 import Vue from 'vue'
 
-import './plugins'
+import '../imports/ui/plugins'
 
-import App from './App.vue'
+import App from '../imports/ui/App.vue'
 
 Meteor.startup(() => {
   new Vue({
