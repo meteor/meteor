@@ -659,7 +659,19 @@ jobs:
       - run:
           name: "Print environment"
           command: printenv
-      - run: ./gradlew assembleDebug
+      - checkout
+      - restore_cache:
+          key: jars-{{ checksum "build.gradle" }}-{{ checksum "app/build.gradle" }}
+      - run:
+          name: Download Dependencies
+          command: ./gradlew androidDependencies
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
+      - run:
+          name: Build Debug
+          command: ./gradlew assembleDebug
       - run:
           name: "Running self-test (Browserstack Test)"
           command: |
