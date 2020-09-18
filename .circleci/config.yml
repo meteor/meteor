@@ -619,6 +619,7 @@ jobs:
       - run:
           name: "Print environment"
           command: printenv
+      - run: ./gradlew assembleDebug
       - run:
           name: "Running self-test (Test Group 10)"
           command: |
