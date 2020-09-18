@@ -650,8 +650,6 @@ jobs:
   Test Group 11:
     <<: *build_machine_environment
     steps:
-        - run:
-            <<: ./gradlew assembleDebug
       - run:
           <<: *run_log_mem_use
       - run:
