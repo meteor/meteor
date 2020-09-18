@@ -650,7 +650,8 @@ jobs:
   Test Group 11:
     <<: *build_machine_environment
     steps:
-        - run: ./gradlew assembleDebug
+        - run:
+            <<: ./gradlew assembleDebug
         - run:
             name: App upload and Set app id in environment variable.
             command: |
