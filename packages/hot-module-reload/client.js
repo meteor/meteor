@@ -67,15 +67,38 @@ socket.addEventListener('message', function (event) {
 
       // In case the user changed how a module works with HMR
       // in one of the earlier change sets, we want to apply each
-      // change set one at a time.
-      message.changeSets.filter(changeSet => {
+      // change set one at a time in order.
+      const succeeded = message.changeSets.filter(changeSet => {
         return !appliedChangeSets.includes(changeSet.id)
-      }).forEach(changeSet => {
-        appliedChangeSets.push(changeSet.id);
-        applyChangeset(changeSet);
+      }).every(changeSet => {
+        const applied = applyChangeset(changeSet, message.eager);
+
+        // We don't record if a module is unreplaceable
+        // during an eager update so we can retry and
+        // handle the failure later
+        if (applied || !message.eager) {
+          appliedChangeSets.push(changeSet.id);
+        }
+
+        return applied;
       });
 
-      if (!message.eager && message.changeSets.length > 0) {
+      if (message.eager) {
+        // We will ignore any failures at this time
+        // and wait to handle them until the build finishes
+        return;
+      }
+
+      if (!succeeded) {
+        if (pendingReload) {
+          mustReload = true;
+          return pendingReload();
+        }
+
+        throw new Error('HMR failed and unable to fallback to hot code push?');
+      }
+
+      if (message.changeSets.length > 0) {
         lastUpdated = message.changeSets[message.changeSets.length - 1].linkedAt;
       }
   }
@@ -270,9 +293,7 @@ function applyChangeset({
     reloadableParents.length === 0 ||
     reloadableParents.some(parent => !parent)
   ) {
-    if (pendingReload) {
-      return pendingReload();
-    }
+    return false;
   }
 
   reloadId += 1;
@@ -283,6 +304,7 @@ function applyChangeset({
     rerunFile(parent);
   });
   console.log('HMR: finished updating');
+  return true;
 }
 
 let nonRefreshableVersion = (__meteor_runtime_config__.autoupdate.versions || {})['web.browser'].versionNonRefreshable;
