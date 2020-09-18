@@ -143,6 +143,11 @@ module.constructor.prototype.link = function (path) {
 
 function findReloadableParents(importedBy) {
   return Object.values(importedBy).map(parentFile => {
+    if (parentFile.module.id === '/') {
+      // Have reached the install tree's root. None of the modules have accepted this change
+      return false;
+    }
+
     // Force module to be rerun when we complete applying the changeset
     parentFile.module.replaceModule();
 
@@ -277,6 +282,7 @@ function applyChangeset({
   reloadableParents.forEach(parent => {
     rerunFile(parent);
   });
+  console.log('HMR: finished updating');
 }
 
 let nonRefreshableVersion = (__meteor_runtime_config__.autoupdate.versions || {})['web.browser'].versionNonRefreshable;
