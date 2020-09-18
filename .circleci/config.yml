@@ -1,4 +1,7 @@
-version: 2
+version: 2.1
+
+orbs:
+  gradle: circleci/gradle@2.2.0
 
 # A reusable "run" snippet which is ran before each test to setup the
 # environment for user-limits, core-dumps, etc.
