@@ -122,6 +122,7 @@ export default class BrowserStackClient extends Client {
     }
 
     if (process.env.BROWSERSTACK_ACCESS_KEY) {
+      console.log('process.env.BROWSERSTACK_ACCESS_KEY');
       return (browserStackKey = process.env.BROWSERSTACK_ACCESS_KEY);
     }
 
