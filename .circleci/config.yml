@@ -119,9 +119,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - run:
-          name: Test Prereqs
-          command: ./meteor npm install -g browserstack-webdriver
       - checkout
       - run:
           # https://discuss.circleci.com/t/git-submodule-url-isnt-playing-nice-with-the-cache/549/3
@@ -162,6 +159,9 @@ jobs:
       - run:
           name: Clear npm cache
           command: ./meteor npm cache clear --force
+      - run:
+          name: Test Prereqs
+          command: ./meteor npm install -g browserstack-webdriver
       - run:
           name: Get Ready
           command: |
