@@ -70,7 +70,7 @@ export default class BrowserStackClient extends Client {
 
     const capabilities = {
       // Authentication
-      'browserstack.user': USER,
+      'browserstack.user': "denilsonsilva1",
       'browserstack.key': key,
 
       // Use the BrowserStackLocal tunnel, to allow BrowserStack to
