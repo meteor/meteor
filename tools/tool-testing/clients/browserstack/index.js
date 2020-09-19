@@ -116,7 +116,7 @@ export default class BrowserStackClient extends Client {
 
   static _getBrowserStackKey() {
     console.log('_getBrowserStackKey');
-    return "xxxxg7q5"
+    return (browserStackKey = "nDYNkqHHwAnLVDACdzKq")
     // Use the memoized version, first and foremost.
     if (typeof browserStackKey !== "undefined") {
       return browserStackKey;
