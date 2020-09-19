@@ -662,8 +662,8 @@ jobs:
       - restore_cache:
           key: jars-{{ checksum "build.gradle" }}-{{ checksum "browserstack_android_sample/build.gradle" }}
       - run:
-        name: Chmod permissions
-        command: sudo chmod +x ./gradlew
+          name: Chmod permissions
+          command: sudo chmod +x ./gradlew
       - run:
           name: Download Dependencies
           command: ./gradlew androidDependencies
