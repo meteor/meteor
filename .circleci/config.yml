@@ -673,17 +673,13 @@ jobs:
       - checkout
       - run:
           name: Chmod permissions
-          command: sudo chmod +x ./gradle
+          command: sudo chmod +x gradle
       - run:
           name: Download Dependencies
-          command: ./gradle androidDependencies
-      - save_cache:
-          paths:
-            - ~/.gradle
-          key: jars-{{ checksum "build.gradle" }}-{{ checksum  "browserstack_android_sample/build.gradle" }}
+          command: gradle androidDependencies
 
       # Generate apk
-      - run: ./gradle assembleDebug
+      - run: gradle assembleDebug
 
       - run:
           name: "Running self-test (Browserstack Test)"
