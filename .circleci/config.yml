@@ -1,20 +1,5 @@
 version: 2
 
-run_browserstack: &run_browserstack
-  background: true
-  name: BrowserStack Setup
-  command: |
-    cd /tmp
-
-    # Download the browserstack binary file
-    wget -O bs_local.zip "https://www.browserstack.com/browserstack-local/BrowserStackLocal-linux-x64.zip"
-
-    # Unzip the browserstack binary file
-    unzip bs_local.zip
-
-    # Run the file with your access key
-    ./BrowserStackLocal nDYNkqHHwAnLVDACdzKq
-
 # A reusable "run" snippet which is ran before each test to setup the
 # environment for user-limits, core-dumps, etc.
 run_env_change: &run_env_change
@@ -666,19 +651,30 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 11:
-    <<: *build_machine_environment
+    docker:
+      - image: circleci/android:api-25-alpha
+      environment:
+        JVM_OPTS: -Xmx3200m
+        METEOR_SELF_TEST_RETRIES: 2
+        SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
     steps:
+      - checkout
+      - restore_cache:
+          key: jars-{{ checksum "build.gradle" }}-{{ checksum "browserstack_android_sample/build.gradle" }}
+      #      - run:
+      #         name: Chmod permissions #if permission for Gradlew Dependencies fail, use this.
+      #         command: sudo chmod +x ./gradlew
       - run:
-          <<: *run_browserstack
-      - run:
-          <<: *run_log_mem_use
-      - run:
-          <<: *run_env_change
-      - attach_workspace:
-          at: .
-      - run:
-          name: "Print environment"
-          command: printenv
+          name: Download Dependencies
+          command: ./gradlew androidDependencies
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: jars-{{ checksum "build.gradle" }}-{{ checksum  "browserstack_android_sample/build.gradle" }}
+
+      # Generate apk
+      - run: ./gradlew assembleDebug
+
       - run:
           name: "Running self-test (Browserstack Test)"
           command: |
