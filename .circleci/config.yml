@@ -178,6 +178,8 @@ jobs:
             sudo touch /etc/profile.d/gradle.sh
             sudo echo "export PATH=/opt/gradle/gradle-5.4.1/bin:$PATH" | sudo tee /etc/profile.d/gradle.sh
             sudo chmod +x /etc/profile.d/gradle.sh
+            sudo -s
+            source .bashrc
             sudo source /etc/profile.d/gradle.sh
             gradle -v
   Isolated Tests:
