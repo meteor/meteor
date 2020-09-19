@@ -653,10 +653,10 @@ jobs:
   Test Group 11:
     docker:
       - image: circleci/android:api-25-alpha
-      environment:
-        JVM_OPTS: -Xmx3200m
-        METEOR_SELF_TEST_RETRIES: 2
-        SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
+    environment:
+      JVM_OPTS: -Xmx3200m
+      METEOR_SELF_TEST_RETRIES: 2
+      SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
     steps:
       - checkout
       - restore_cache:
