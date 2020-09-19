@@ -663,17 +663,9 @@ jobs:
           path: /tmp/memuse.txt
 
   Test Group 11:
-    docker:
-      - image: circleci/android:api-25-alpha
-    environment:
-      JVM_OPTS: -Xmx3200m
-      METEOR_SELF_TEST_RETRIES: 2
-      SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
+    <<: *build_machine_environment
     steps:
       - checkout
-      - run:
-          name: Chmod permissions
-          command: sudo chmod +x gradle
       - run:
           name: Download Dependencies
           command: gradle androidDependencies
