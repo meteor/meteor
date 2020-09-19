@@ -62,7 +62,6 @@ export default class BrowserStackClient extends Client {
 
   connect() {
     const key = BrowserStackClient._getBrowserStackKey();
-    console.log('connect KEY', key);
     if (! key) {
       throw new Error(
         "BrowserStack key not found. Ensure that s3cmd is setup with " +
@@ -122,7 +121,6 @@ export default class BrowserStackClient extends Client {
     }
 
     if (process.env.BROWSERSTACK_ACCESS_KEY) {
-      console.log('process.env.BROWSERSTACK_ACCESS_KEY');
       return (browserStackKey = process.env.BROWSERSTACK_ACCESS_KEY);
     }
 
