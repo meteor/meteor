@@ -20,7 +20,7 @@ const NPM_DEPENDENCIES = {
   'browserstack-local': '1.3.0',
 };
 
-const USER = 'meteor6QydZD';
+const USER = 'dev1141';
 
 // A memoized key from BrowserStackClient._getBrowserStackKey.
 let browserStackKey;
@@ -70,7 +70,7 @@ export default class BrowserStackClient extends Client {
 
     const capabilities = {
       // Authentication
-      'browserstack.user': "denilsonsilva1",
+      'browserstack.user': USER,
       'browserstack.key': key,
 
       // Use the BrowserStackLocal tunnel, to allow BrowserStack to
@@ -115,8 +115,6 @@ export default class BrowserStackClient extends Client {
   }
 
   static _getBrowserStackKey() {
-    console.log('_getBrowserStackKey');
-    return (browserStackKey = "nDYNkqHHwAnLVDACdzKq")
     // Use the memoized version, first and foremost.
     if (typeof browserStackKey !== "undefined") {
       return browserStackKey;
