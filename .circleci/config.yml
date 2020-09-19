@@ -176,9 +176,9 @@ jobs:
             sudo mkdir /opt/gradle
             sudo unzip -d /opt/gradle ~/gradle-5.4.1-bin.zip
             sudo touch /etc/profile.d/gradle.sh
-            sudo chmod +x /etc/profile.d/gradle.sh
             sudo echo "export GRADLE_HOME=/opt/gradle/gradle-5.4.1" | sudo tee /etc/profile.d/gradle.sh
-            sudo echo "PATH={GRADLE_HOME}/bin:{PATH}" >> /etc/profile.d/gradle.sh
+            sudo echo "PATH={GRADLE_HOME}/bin:{PATH}" | sudo tee /etc/profile.d/gradle.sh
+            sudo chmod +x /etc/profile.d/gradle.sh
             sudo source /etc/profile.d/gradle.sh
             gradle -v
   Isolated Tests:
