@@ -666,6 +666,15 @@ jobs:
     <<: *build_machine_environment
     steps:
       - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
           name: "Running self-test (Browserstack Test)"
           command: |
             TEST_GROUP='css hot code push|custom minifier - devel vs prod|versioning hot code push|javascript hot code push|add packages client archs';
@@ -673,12 +682,12 @@ jobs:
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
               "$TEST_GROUP" \
+              --browserstack \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
               --junit ./tmp/results/junit/11.xml \
-              --without-tag "custom-warehouse" \
-              --browserstack
+              --without-tag "custom-warehouse"
           no_output_timeout: 20m
       - run:
           <<: *run_save_node_bin
