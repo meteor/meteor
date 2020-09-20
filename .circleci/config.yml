@@ -145,9 +145,6 @@ jobs:
           name: Clear npm cache
           command: ./meteor npm cache clear --force
       - run:
-          name: Test Prereqs
-          command: ./meteor npm install -g browserstack-webdriver
-      - run:
           name: Get Ready
           command: |
             eval $PRE_TEST_COMMANDS;
@@ -168,18 +165,6 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
-      - run:
-          name: Install Gradle
-          command: |
-            wget -O ~/gradle-5.4.1-bin.zip https://services.gradle.org/distributions/gradle-5.4.1-bin.zip
-            sudo apt-get install unzip
-            sudo mkdir /opt/gradle
-            sudo unzip -d /opt/gradle ~/gradle-5.4.1-bin.zip
-            sudo touch /etc/profile.d/gradle.sh
-            sudo echo "export PATH=/opt/gradle/gradle-5.4.1/bin:$PATH" | sudo tee /etc/profile.d/gradle.sh
-            sudo chmod +x /etc/profile.d/gradle.sh
-            . /etc/profile.d/gradle.sh
-            gradle -v
   Isolated Tests:
     <<: *build_machine_environment
     steps:
