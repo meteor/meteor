@@ -2,6 +2,33 @@ DDPServer = {};
 
 var Fiber = Npm.require('fibers');
 
+// Publication strategies define how we threat data from published cursors on collection-level
+// This allows someone to:
+// - Make a trade-off between bandwidth and memory use
+// - Have special (non-mongo) collections like volatile message queues
+const publicationStrategies = {
+  // The 'no merge no history' strategy means we send all publication data 
+  // directly to the client. It does not remember what it has send
+  // So it will also not trigger removed messages when a subscription stops
+  // This should only be chosen for special use cases like send-and-forget queues
+  NO_MERGE_NO_HISTORY: 'no_merge_no_history',
+  // No merge is similar to 'no merge no history'
+  // But it will remember the id's it has send to the client
+  // so it can remove them when a subscription stops
+  // It can be used when a collection is only used in a single publication
+  NO_MERGE: 'no_merge',
+  // XXX: We could implement client side merge
+  // By moving the session collection view to the client
+  // And sending subscription id's along the added/changed/removed messages
+  // It can be used when we want to save server memory but still have the same
+  // semantics over multiple publications of one collection
+  // CLIENT_MERGE: 'client_merge',
+  // The server merge strategy is the default strategy
+  // Here we maintain a copy of all data a connection is subscribed to
+  // This allows us to only send deltas over multiple publications
+  SERVER_MERGE: 'server_merge',
+};
+
 // This file contains classes:
 // * Session - The server's connection to a single DDP client
 // * Subscription - A single subscription for a single client
@@ -335,31 +362,37 @@ _.extend(Session.prototype, {
     }
   },
 
-  sendAdded: function (collectionName, id, fields) {
-    var self = this;
-    if (self._isSending)
-      self.send({msg: "added", collection: collectionName, id: id, fields: fields});
+  _useCollectionView(collectionName) {
+    return this.server.getPublicationStrategy(collectionName) === publicationStrategies.SERVER_MERGE;
   },
 
-  sendChanged: function (collectionName, id, fields) {
-    var self = this;
+  _canSend(collectionName) {
+    return this._isSending || !this._useCollectionView(collectionName);
+  },
+
+
+  sendAdded(collectionName, id, fields) {
+    if (this._canSend(collectionName))
+      this.send({msg: "added", collection: collectionName, id, fields});
+  },
+
+  sendChanged(collectionName, id, fields) {
     if (_.isEmpty(fields))
       return;
 
-    if (self._isSending) {
-      self.send({
+    if (this._canSend(collectionName)) {
+      this.send({
         msg: "changed",
         collection: collectionName,
-        id: id,
-        fields: fields
+        id,
+        fields
       });
     }
   },
 
-  sendRemoved: function (collectionName, id) {
-    var self = this;
-    if (self._isSending)
-      self.send({msg: "removed", collection: collectionName, id: id});
+  sendRemoved(collectionName, id) {
+    if (this._canSend(collectionName))
+      this.send({msg: "removed", collection: collectionName, id});
   },
 
   getSendCallbacks: function () {
@@ -382,25 +415,34 @@ _.extend(Session.prototype, {
     return ret;
   },
 
-  added: function (subscriptionHandle, collectionName, id, fields) {
-    var self = this;
-    var view = self.getCollectionView(collectionName);
-    view.added(subscriptionHandle, id, fields);
-  },
-
-  removed: function (subscriptionHandle, collectionName, id) {
-    var self = this;
-    var view = self.getCollectionView(collectionName);
-    view.removed(subscriptionHandle, id);
-    if (view.isEmpty()) {
-       self.collectionViews.delete(collectionName);
+  added(subscriptionHandle, collectionName, id, fields) {
+    if (this._useCollectionView(collectionName)) {
+      const view = this.getCollectionView(collectionName);
+      view.added(subscriptionHandle, id, fields);
+    } else {
+      this.sendAdded(collectionName, id, fields);
     }
   },
 
-  changed: function (subscriptionHandle, collectionName, id, fields) {
-    var self = this;
-    var view = self.getCollectionView(collectionName);
-    view.changed(subscriptionHandle, id, fields);
+  removed(subscriptionHandle, collectionName, id) {
+    if (this._useCollectionView(collectionName)) {
+      const view = this.getCollectionView(collectionName);
+      view.removed(subscriptionHandle, id);
+      if (view.isEmpty()) {
+         this.collectionViews.delete(collectionName);
+      }
+    } else {
+      this.sendRemoved(collectionName, id);
+    }
+  },
+
+  changed(subscriptionHandle, collectionName, id, fields) {
+    if (this._useCollectionView(collectionName)) {
+      const view = this.getCollectionView(collectionName);
+      view.changed(subscriptionHandle, id, fields);
+    } else {
+      this.sendChanged(collectionName, id, fields);
+    }
   },
 
   startUniversalSubs: function () {
@@ -1239,6 +1281,10 @@ _.extend(Subscription.prototype, {
     return self._deactivated || self._session.inQueue === null;
   },
 
+  _doAccountingForCollection(collectionName) {
+    return this._session.server.getPublicationStrategy(collectionName) !== publicationStrategies.NO_MERGE_NO_HISTORY;
+  },
+
   /**
    * @summary Call inside the publish function.  Informs the subscriber that a document has been added to the record set.
    * @locus Server
@@ -1248,18 +1294,21 @@ _.extend(Subscription.prototype, {
    * @param {String} id The new document's ID.
    * @param {Object} fields The fields in the new document.  If `_id` is present it is ignored.
    */
-  added: function (collectionName, id, fields) {
-    var self = this;
-    if (self._isDeactivated())
+  added (collectionName, id, fields) {
+    if (this._isDeactivated())
       return;
-    id = self._idFilter.idStringify(id);
-    let ids = self._documents.get(collectionName);
-    if (ids == null) {
-      ids = new Set();
-      self._documents.set(collectionName, ids);
+    id = this._idFilter.idStringify(id);
+
+    if (this._doAccountingForCollection(collectionName)) {
+      let ids = this._documents.get(collectionName);
+      if (ids == null) {
+        ids = new Set();
+        this._documents.set(collectionName, ids);
+      }
+      ids.add(id);
     }
-    ids.add(id);
-    self._session.added(self._subscriptionHandle, collectionName, id, fields);
+ 
+    this._session.added(this._subscriptionHandle, collectionName, id, fields);
   },
 
   /**
@@ -1271,12 +1320,11 @@ _.extend(Subscription.prototype, {
    * @param {String} id The changed document's ID.
    * @param {Object} fields The fields in the document that have changed, together with their new values.  If a field is not present in `fields` it was left unchanged; if it is present in `fields` and has a value of `undefined` it was removed from the document.  If `_id` is present it is ignored.
    */
-  changed: function (collectionName, id, fields) {
-    var self = this;
-    if (self._isDeactivated())
+  changed (collectionName, id, fields) {
+    if (this._isDeactivated())
       return;
-    id = self._idFilter.idStringify(id);
-    self._session.changed(self._subscriptionHandle, collectionName, id, fields);
+    id = this._idFilter.idStringify(id);
+    this._session.changed(this._subscriptionHandle, collectionName, id, fields);
   },
 
   /**
@@ -1287,15 +1335,18 @@ _.extend(Subscription.prototype, {
    * @param {String} collection The name of the collection that the document has been removed from.
    * @param {String} id The ID of the document that has been removed.
    */
-  removed: function (collectionName, id) {
-    var self = this;
-    if (self._isDeactivated())
+  removed (collectionName, id) {
+    if (this._isDeactivated())
       return;
-    id = self._idFilter.idStringify(id);
-    // We don't bother to delete sets of things in a collection if the
-    // collection is empty.  It could break _removeAllDocuments.
-    self._documents.get(collectionName).delete(id);
-    self._session.removed(self._subscriptionHandle, collectionName, id);
+    id = this._idFilter.idStringify(id);
+
+    if (this._doAccountingForCollection(collectionName)) {
+      // We don't bother to delete sets of things in a collection if the
+      // collection is empty.  It could break _removeAllDocuments.
+      this._documents.get(collectionName).delete(id);
+    }
+
+    this._session.removed(this._subscriptionHandle, collectionName, id);
   },
 
   /**
@@ -1321,7 +1372,7 @@ _.extend(Subscription.prototype, {
 /* Server                                                                     */
 /******************************************************************************/
 
-Server = function (options) {
+Server = function (options = {}) {
   var self = this;
 
   // The default heartbeat interval is 30 seconds on the server and 35
@@ -1331,12 +1382,14 @@ Server = function (options) {
   //
   // Note: Troposphere depends on the ability to mutate
   // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
-  self.options = _.defaults(options || {}, {
+  self.options = {
     heartbeatInterval: 15000,
     heartbeatTimeout: 15000,
     // For testing, allow responding to pings to be disabled.
-    respondToPings: true
-  });
+    respondToPings: true,
+    defaultPublicationStrategy: publicationStrategies.SERVER_MERGE,
+    ...options,
+  };
 
   // Map of callbacks to call when a new connection comes in to the
   // server and completes DDP version negotiation. Use an object instead
@@ -1355,6 +1408,8 @@ Server = function (options) {
   self.universal_publish_handlers = [];
 
   self.method_handlers = {};
+
+  self._publicationStrategies = {};
 
   self.sessions = new Map(); // map from id to session
 
@@ -1431,6 +1486,19 @@ _.extend(Server.prototype, {
   onConnection: function (fn) {
     var self = this;
     return self.onConnectionHook.register(fn);
+  },
+
+  setPublicationStrategy(collectionName, strategy) {
+    if (!Object.values(publicationStrategies).includes(strategy)) {
+      throw new Error(`Invalid merge strategy: ${strategy} 
+        for collection ${collectionName}`);
+    }
+    this._publicationStrategies[collectionName] = strategy;
+  },
+
+  getPublicationStrategy(collectionName) {
+    return this._publicationStrategies[collectionName]
+      || this.options.defaultPublicationStrategy;
   },
 
   /**
