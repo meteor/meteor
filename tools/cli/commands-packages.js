@@ -1235,20 +1235,14 @@ main.registerCommand({
           parent[packageName] = entry;
 
           const mapInfo = projectContext.packageMap.getInfo(packageName);
-
-          Object.entries({
+          const infoSource = Object.assign({}, showDetails ? packageToPrint : {}, {
             version: packageToPrint.version,
             local: mapInfo && mapInfo.kind === 'local',
             weak: isWeak,
-            newerVersion: getNewerVersion(packageName, packageToPrint.version, catalog.official),
-            earliestCompatibleVersion: showDetails && packageToPrint.earliestCompatibleVersion,
-            debugOnly: showDetails && packageToPrint.debugOnly,
-            prodOnly: showDetails && packageToPrint.prodOnly,
-            testOnly: showDetails && packageToPrint.testOnly,
-            containsPlugins: showDetails && packageToPrint.containsPlugins,
-            lastUpdated: showDetails && packageToPrint.lastUpdated,
-            published: showDetails && packageToPrint.published,
-          }).forEach(([key, value]) => {
+            newerVersion: getNewerVersion(packageName, packageToPrint.version, catalog.official)
+          });
+
+          Object.entries(infoSource).forEach(([key, value]) => {
             if (value) {
               entry[key] = value;
             }
