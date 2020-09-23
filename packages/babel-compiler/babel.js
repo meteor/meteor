@@ -52,8 +52,7 @@ Babel = {
     try {
       const globalDefsKeys = Object.keys(globalDefsMapping);
       return Npm.require("@babel/core").transformSync(source, {
-        ast: false,
-        compact: false,
+        ...getMeteorBabel().getMinifierOptions(),
         plugins: [
           function replaceStateVars({types: t}) {
             return {

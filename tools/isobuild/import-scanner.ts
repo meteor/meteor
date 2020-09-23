@@ -318,6 +318,7 @@ const useNodeStub: Omit<RawFile, "absPath"> = function () {
 
 export type ImportScannerOptions = {
   name: string;
+  sideEffects: boolean;
   bundleArch: string;
   extensions: string[];
   sourceRoot: string;
@@ -340,17 +341,15 @@ interface ImportIdentifiersEntry {
 
 interface File extends RawFile {
   type: string;
-  visitedFromRoots: [string];
   sideEffects: boolean;
   sourcePath: string;
   targetPath?: string;
   servePath?: string;
   absModuleId?: string;
   deps?: Record<string, ImportInfo>;
-  resolveMap?: Map<string, string>;
   imports?: Record<string, ImportIdentifiersEntry>;
   proxyImports?: Record<string, ImportIdentifiersEntry>;
-  exports?: [string];
+  exports: [string];
   lazy: boolean;
   bare?: boolean;
   // TODO Improve the sourceMap type.
@@ -374,6 +373,8 @@ type MissingMap = Record<string, ImportInfo[]>;
 type ImportInfo = {
   dynamic: boolean;
   possiblySpurious: boolean;
+  commonJsImported: boolean;
+  sideEffects: boolean;
   parentPath: string;
   bundleArch?: string;
   packageName?: string;
@@ -382,9 +383,14 @@ type ImportInfo = {
 }
 type JSAnalyzeInfo = {
   dependencies?: Record<string, ImportIdentifiersEntry>;
-  proxyDependencies?: Record<string, ImportIdentifiersEntry>;
+  proxyDependencies?: Record<string, Record<string, string>>;
   identifiers?: Record<string, ImportInfo>;
   exports?: [string];
+}
+type ImportTreeNode = {
+  children?: [ImportTreeNode?];
+  absImportedPath?: string;
+  depFile?: File;
 }
 
 export default class ImportScanner {
@@ -392,7 +398,11 @@ export default class ImportScanner {
 
   private bundleArch: string;
   private sourceRoot: string;
+  private sideEffects: boolean;
   private nodeModulesPaths: string[];
+  private visitedFromRoots: Record<string, [string?]>
+  private visitedFromRootsCache: Record<string, ImportTreeNode>
+  private resolveMap: Map<string, Map<string,string>>
   private defaultHandlers: DefaultHandlers;
   private resolver: Resolver;
 
@@ -401,19 +411,76 @@ export default class ImportScanner {
   private realPathCache: Record<string, string> = Object.create(null);
   private allMissingModules: MissingMap = Object.create(null);
   private outputFiles: File[] = [];
+  private filesInfo: Map<string, JSAnalyzeInfo>;
+
+
+  private mergeImportInfo(file: any, importInfo: JSAnalyzeInfo): any {
+    /*
+      dependencies?: Record<string, ImportIdentifiersEntry>;
+      proxyDependencies?: Record<string, ImportIdentifiersEntry>;
+      identifiers?: Record<string, ImportInfo>;
+      exports?: [string]
+     */
+    file.deps = file.deps || {};
+    Object.entries(importInfo.identifiers || {}).forEach(([key, value]) => {
+      if(!file.deps[key]) {
+        file.deps[key] = value;
+        return;
+      }
+      file.deps[key] = {
+        ...file.deps[key],
+        commonJsImported: value.commonJsImported || file.deps[key].commonJsImported,
+        sideEffects: value.sideEffects || file.deps[key].sideEffects
+      };
+    });
+
+    file.imports = file.imports || {};
+    Object.entries(importInfo.dependencies || {}).forEach(([key, value]) => {
+      if(file.imports && file.imports[key]){
+        file.imports[key].deps = Array.from(new Set([...(file.imports[key].deps || []), ...(value.deps || [])]));
+      }else{
+        file.imports[key] = value;
+      }
+    });
+
+    file.proxyImports = file.proxyImports || {};
+    Object.entries(importInfo.proxyDependencies || {}).forEach(([key, value]) => {
+      if(file.proxyImports && file.proxyImports[key]){
+        Object.entries(value).forEach(([importKey, importValue]) => {
+          if(!file.proxyImports[key][importKey]) {
+            file.proxyImports[key][importKey] = importValue;
+          }
+        })
+      }else{
+        file.proxyImports[key] = value;
+      }
+    });
+
+    file.exports = file.exports || [];
+    file.exports = file.exports.concat(importInfo.exports || []);
+
+    return file;
+  }
+
 
   constructor({
     name,
     bundleArch,
+    sideEffects,
     extensions,
     sourceRoot,
     nodeModulesPaths = [],
     cacheDir,
   }: ImportScannerOptions) {
     this.name = name;
+    this.resolveMap = new Map();
+    this.filesInfo = new Map();
+    this.visitedFromRootsCache = {};
     this.bundleArch = bundleArch;
+    this.sideEffects = sideEffects;
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
+    this.visitedFromRoots = {};
 
     this.defaultHandlers = new DefaultHandlers({
       cacheDir,
@@ -751,10 +818,21 @@ export default class ImportScanner {
     }
   }
 
+  addImportTree(root : ImportTreeNode){
+    if(root == null) return;
+    const importInfo = root.absImportedPath && this.filesInfo.get(root.absImportedPath) || {}
+
+    this.addFile(root.absImportedPath, {...root.depFile, lazy:false, imported: true, ...importInfo});
+
+    for(let child of root.children || []){
+      this.addImportTree(child);
+    }
+  }
   scanImports() {
     this.outputFiles.forEach(file => {
       if (! file.lazy) {
-        this.scanFile(file);
+        const importTree = this.scanFile(file, false, {deps:["*"]});
+        this.addImportTree(importTree);
       }
     });
 
@@ -808,7 +886,7 @@ export default class ImportScanner {
         }
 
         if (staticImportInfo) {
-          this.scanFile({
+          const tree = this.scanFile({
             ...fakeStub,
             // By specifying the .deps property of this fake file ahead of
             // time, we can avoid calling findImportedModuleIdentifiers in
@@ -816,13 +894,15 @@ export default class ImportScanner {
             // doesn't have a .data or .dataString property.
             deps: { [id]: staticImportInfo },
           }, false); // !forDynamicImport
+          this.addImportTree(tree);
         }
 
         if (dynamicImportInfo) {
-          this.scanFile({
+          const tree = this.scanFile({
             ...fakeStub,
             deps: { [id]: dynamicImportInfo },
           }, true); // forDynamicImport
+          this.addImportTree(tree);
         }
       });
 
@@ -993,22 +1073,23 @@ export default class ImportScanner {
 
   private findImportedModuleIdentifiers(
     file: File,
-    parentImportSymbols?: ImportIdentifiersEntry
+    parentImportSymbols?: ImportIdentifiersEntry,
+    isCommonJsImported: boolean = false,
+    hasSideEffects: boolean = false
   ): JSAnalyzeInfo {
-    if (IMPORT_SCANNER_CACHE.has(file.hash)) {
-      return IMPORT_SCANNER_CACHE.get(file.hash);
-    }
+    // if (IMPORT_SCANNER_CACHE.has(file.hash)) {
+    //   return IMPORT_SCANNER_CACHE.get(file.hash);
+    // }
 
-    if (file.absPath.includes("material-ui/styles/esm/jssPreset/index.js")) {
-      debugger;
-    }
 
     const result = findImportedModuleIdentifiers(
       this.getDataString(file),
       file.hash,
       parentImportSymbols,
-      file.sideEffects
+      hasSideEffects,
+      isCommonJsImported
     );
+
 
     // there should always be file.hash, but better safe than sorry
     if (file.hash) {
@@ -1067,14 +1148,6 @@ export default class ImportScanner {
         return file.alias;
       }
     }
-    if(resolved) {
-      const file = this.getFile(resolved.path);
-      if(!file) return resolved;
-      if (!file.resolveMap) {
-        file.resolveMap = new Map();
-      }
-      file.resolveMap.set(id, resolved.path);
-    }
     return resolved;
   }
 
@@ -1094,13 +1167,15 @@ export default class ImportScanner {
     return relativeId;
   }
 
-  private scanFile(file: File, forDynamicImport = false, parentImportSymbols?: ImportIdentifiersEntry) {
-    if (forDynamicImport &&
-        file.imported === Status.DYNAMIC) {
-      // If we've already scanned this file dynamically, then we don't
-      // need to scan it dynamically again.
-      return;
-    }
+  private scanFile(file: File,
+                   forDynamicImport: boolean = false,
+                   parentImportSymbols?: ImportIdentifiersEntry,
+                   isCommonJsImported: boolean = false,
+                   treeHasSideEffects: boolean = false) : ImportTreeNode {
+
+    if(file.absPath.includes("runtime/helpers/esm/arrayWithoutHoles.js")) debugger;
+
+    const hasSideEffects = treeHasSideEffects || this.sideEffects || file.sideEffects;
 
     // Set file.imported to a truthy value (either "dynamic" or true).
     //TODO: we need a better logic to stop scanning a file.
@@ -1113,17 +1188,30 @@ export default class ImportScanner {
       // Any errors reported to InputFile#error were saved but not
       // reported at compilation time. Now that we know the file has been
       // imported, it's time to report those errors.
-      return;
+      return {
+        children: [],
+        absImportedPath: file.absPath,
+        depFile: file,
+      };
     }
 
+    let importInfo;
+    let mergedInfo;
     try {
-      const importInfo = this.findImportedModuleIdentifiers(file, parentImportSymbols);
+      importInfo = this.findImportedModuleIdentifiers(
+          file,
+          parentImportSymbols,
+          isCommonJsImported,
+          hasSideEffects,
+      );
       // this is actually an temporary dependency tree, we will need to analyze the
       // children to see what they are exporting
-      file.deps = file.deps || importInfo?.identifiers;
-      file.imports = file.imports || importInfo?.dependencies;
-      file.proxyImports = file.proxyImports || importInfo?.proxyDependencies;
-      file.exports = file.exports || importInfo?.exports;
+      const cachedFileInfo = this.filesInfo.get(file.absPath) || {};
+      mergedInfo = this.mergeImportInfo(cachedFileInfo, importInfo);
+      // we only need the local view here, later we will need the global, merged one
+      this.filesInfo.set(file.absPath, mergedInfo);
+      this.mergeImportInfo(file, importInfo)
+
     } catch (e) {
       if (e.$ParseError) {
         (buildmessage as any).error(e.message, {
@@ -1131,13 +1219,20 @@ export default class ImportScanner {
           line: e.loc.line,
           column: e.loc.column,
         });
-        return;
+        return {};
       }
       throw e;
     }
 
+    const rootChildren : ImportTreeNode = {
+      children: [],
+      absImportedPath: file.absPath,
+      depFile: file,
+    };
 
     each(file.deps, (info: ImportInfo, id: string) => {
+
+      let childrenDep : ImportTreeNode;
       // Asynchronous module fetching only really makes sense in the
       // browser (even though it works equally well on the server), so
       // it's better if forDynamicImport never becomes true on the server.
@@ -1153,17 +1248,26 @@ export default class ImportScanner {
       }
       if(file.imports && file.imports[id]){
         file.imports[absImportedPath] = file.imports[id];
-        delete file.imports[id]
+        if(mergedInfo){
+          mergedInfo.imports[absImportedPath] = mergedInfo.imports[id];
+          this.filesInfo.set(file.absPath, mergedInfo)
+        }
       }
 
-      if(!file.resolveMap){
-        file.resolveMap = new Map();
+      if(absImportedPath) {
+        if (!this.resolveMap.get(file.absPath)) {
+          this.resolveMap.set(file.absPath, new Map());
+        }
+        this.resolveMap.get(file.absPath)?.set(id, absImportedPath);
       }
-      file.resolveMap.set(id, absImportedPath);
 
       let depFile = this.getFile(absImportedPath);
 
+      const visitFrom = `${file.absPath}->${absImportedPath}`
+
+      const depHasSideEffects = info.sideEffects || hasSideEffects;
       if (depFile) {
+
         // We should never have stored a fake file in this.outputFiles, so
         // it's surprising if depFile[fakeSymbol] is true.
         assert.notStrictEqual(depFile[fakeSymbol], true);
@@ -1181,14 +1285,22 @@ export default class ImportScanner {
           }
         }
 
-        // If depFile has already been scanned, this._scanFile will return
-        // immediately thanks to the depFile.imported-checking logic at
-        // the top of the method.
-        const parentImports = file.imports && file.imports[depFile.absPath];
+        const parentImports = file.imports && file.imports[absImportedPath];
 
-        if(!(depFile.visitedFromRoots || []).includes(file.absPath)) {
-          depFile.visitedFromRoots = (depFile.visitedFromRoots || []).concat([file.absPath]);
-          this.scanFile(depFile, dynamic, parentImports);
+        if(!(this.visitedFromRoots[absImportedPath] || []).includes(file.absPath)) {
+          if(!this.visitedFromRoots[absImportedPath]) this.visitedFromRoots[absImportedPath] = [];
+          this.visitedFromRoots[absImportedPath].push(file.absPath);
+          const importTreeNode = this.scanFile(
+              depFile,
+              dynamic,
+              parentImports,
+              isCommonJsImported || info.commonJsImported,
+              depHasSideEffects
+          );
+          this.visitedFromRootsCache[visitFrom] = importTreeNode;
+          rootChildren.children?.push(importTreeNode);
+        }else{
+          rootChildren.children?.push(this.visitedFromRootsCache[visitFrom]);
         }
         return;
       }
@@ -1198,37 +1310,56 @@ export default class ImportScanner {
         return;
       }
 
-      const parentImports = file.imports && file.imports[depFile.absPath];
-
-      if(!(depFile.visitedFromRoots || []).includes(file.absPath)) {
-        depFile.visitedFromRoots = (depFile.visitedFromRoots || []).concat([file.absPath]);
-        this.scanFile(depFile, dynamic, parentImports);
+      const parentImports = file.imports && file.imports[absImportedPath];
+      if(!(this.visitedFromRoots[absImportedPath] || []).includes(file.absPath)) {
+        if(!this.visitedFromRoots[absImportedPath]) this.visitedFromRoots[absImportedPath] = [];
+        this.visitedFromRoots[absImportedPath].push(file.absPath);
+        childrenDep = this.scanFile(
+            depFile,
+            dynamic,
+            parentImports,
+            isCommonJsImported || info.commonJsImported,
+            depHasSideEffects
+        );
+        this.visitedFromRootsCache[visitFrom] = childrenDep;
+      }else{
+        childrenDep = this.visitedFromRootsCache[visitFrom];
       }
 
 
-      // console.log(file.proxyImports);
-
+      const depRoot: ImportTreeNode = {
+        children: childrenDep?.children,
+        absImportedPath,
+        depFile,
+      };
 
       if(file.proxyImports &&
           file.proxyImports[id] &&
-          parentImportSymbols ){
-          // if we are doing an wildcard export, it's time to make sure the file we included in the bundle
+          parentImportSymbols &&
+          !isCommonJsImported &&
+          !info.commonJsImported &&
+          !this.sideEffects &&
+          !depHasSideEffects){
+        // if we are doing an wildcard export, it's time to make sure the file we included in the bundle
         // should really be here
-        const isSomeSymbolImported = parentImportSymbols.deps.some((symbol) => depFile?.exports?.includes(symbol)) || parentImportSymbols.deps.includes("*");
-        if(!isSomeSymbolImported){
-          // console.log(parentImportSymbols)
-          // console.log(file.proxyImports)
-          // console.log("dropping file");
-          return;
+
+        const depFileImportInfo = depFile.exports || this.filesInfo.get(absImportedPath)?.exports;
+        // @ts-ignore
+        const isSomeSymbolImported = parentImportSymbols.deps.some((symbol) => {
+          // @ts-ignore
+          return depFileImportInfo?.includes(file.proxyImports[id][symbol]) || depFileImportInfo?.includes(symbol);
+        }) || parentImportSymbols.deps.includes("*");
+        if(isSomeSymbolImported){
+          rootChildren.children?.push(depRoot);
         }
+      }else {
+        // Append this file to the output array and record its index.
+        rootChildren.children?.push(depRoot);
       }
-
-      // Append this file to the output array and record its index.
-      this.addFile(absImportedPath, depFile);
-
-
     });
 
+    this.visitedFromRootsCache[file.absPath] = rootChildren;
+    return rootChildren;
   }
 
   isWeb() {

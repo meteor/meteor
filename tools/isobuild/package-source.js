@@ -897,6 +897,8 @@ _.extend(PackageSource.prototype, {
     self.name = null;
     self.sourceRoot = appDir;
     self.serveRoot = '/';
+    const sideEffects = JSON.parse(files.readFile(projectContext.meteorConfig.packageJsonPath)).sideEffects || false;
+    self.sideEffects = sideEffects;
 
     // Determine used packages. Note that these are the same for all arches,
     // because there's no way to specify otherwise in .meteor/packages.
@@ -936,8 +938,6 @@ _.extend(PackageSource.prototype, {
       const nodeModulesToRecompile = projectContext.meteorConfig
         .getNodeModulesToRecompile(arch, nodeModulesToRecompileByArch);
 
-      const sideEffects = JSON.parse(files.readFile(projectContext.meteorConfig.packageJsonPath)).sideEffects || false;
-      console.log(`Reading side effects: ${sideEffects}`);
       // XXX what about /web.browser/* etc, these directories could also
       // be for specific client targets.
 

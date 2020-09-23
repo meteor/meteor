@@ -363,9 +363,6 @@ _.extend(Module.prototype, {
         chunks.push("{");
         const keys = _.keys(t);
         _.each(keys, (key, i) => {
-          if(key === 'index.js'){
-            console.log("indexxxx");
-          }
           chunks.push(JSON.stringify(key), ":");
           walk(t[key]);
           if (i < keys.length - 1) {

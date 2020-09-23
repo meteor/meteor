@@ -22,5 +22,6 @@ Package.onUse(function(api) {
     'webapp',
   ]);
   api.mainModule('server.js', 'server');
+  api.setSideEffects(true);
   api.mainModule('client.js', 'client');
 });

@@ -1136,7 +1136,7 @@ class Target {
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
-    const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
+    const { jsOutputFilesMap, resolveMap } = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
@@ -1199,14 +1199,17 @@ class Target {
       jsOutputFilesMap.get(name).files.forEach((file) => {
         const importedSymbolsFromFile = importMap.get(file.absPath)
 
-        if(file.absPath.includes("material-ui/styles/esm/jssPreset/jssPreset.js")){
-          debugger;
+
+        // if it was commonjsImported we have nothing to do here
+        if(file.deps?.commonJsImported){
+          return;
         }
+        if(file.absPath.includes("runtime/helpers/esm/arrayWithoutHoles.js")) debugger;
         const { source:newSource, madeChanges } = removeUnusedExports(file.dataString,
             file.hash,
             importedSymbolsFromFile,
             allFilesOnBundle,
-            file.resolveMap || new Map());
+            resolveMap.get(file.absPath) || new Map());
 
         if(newSource) {
           file.dataString = newSource;
@@ -3227,7 +3230,6 @@ function bundle({
   }, function () {
     var packageSource = new PackageSource;
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
-
     var makeClientTarget = Profile(
       "bundler.bundle..makeClientTarget", function (app, webArch, options) {
       var client = new ClientTarget({
@@ -3280,6 +3282,7 @@ function bundle({
       isopackCache: projectContext.isopackCache,
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
     });
+    console.log(app);
 
     const mergeAppWatchSets = () => {
       var projectAndLocalPackagesWatchSet =

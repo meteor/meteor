@@ -1,4 +1,5 @@
-import {parse} from 'meteor-babel';
+import {parse, getDefaultOptions} from 'meteor-babel';
+import generate from '@babel/generator';
 import {analyze as analyzeScope} from 'escope';
 import LRU from "lru-cache";
 
@@ -57,7 +58,7 @@ function tryToParse(source, hash) {
  * if the tokens were actually what we thought they were (a `require`
  * function call, or an `import` or `export` statement).
  */
-export function findImportedModuleIdentifiers(source, hash, parentImportSymbols, hasSideEffects) {
+export function findImportedModuleIdentifiers(source, hash, parentImportSymbols, hasSideEffects, isCommonJsImported) {
     const possibleIndexes = findPossibleIndexes(source, [
         "require",
         "import",
@@ -72,7 +73,7 @@ export function findImportedModuleIdentifiers(source, hash, parentImportSymbols,
     }
 
     const ast = tryToParse(source, hash);
-    importedIdentifierVisitor.visit(ast, source, possibleIndexes, parentImportSymbols, hasSideEffects);
+    importedIdentifierVisitor.visit(ast, source, possibleIndexes, parentImportSymbols, hasSideEffects, isCommonJsImported);
     return {
         identifiers: importedIdentifierVisitor.identifiers,
         dependencies: importedIdentifierVisitor.dependencies,
@@ -82,10 +83,11 @@ export function findImportedModuleIdentifiers(source, hash, parentImportSymbols,
 }
 
 const importedIdentifierVisitor = new (class extends Visitor {
-    reset(rootPath, code, possibleIndexes, parentImportSymbols, hasSideEffects = false) {
+    reset(rootPath, code, possibleIndexes, parentImportSymbols, hasSideEffects = false, isCommonJsImported = false) {
         this.parentImportSymbols = parentImportSymbols || [];
         this.hasSideEffects = hasSideEffects;
         this.requireIsBound = false;
+        this.isCommonJsImported = false;
         this.identifiers = Object.create(null);
         this.dependencies = Object.create(null);
         this.proxyDependencies = Object.create(null);
@@ -99,7 +101,7 @@ const importedIdentifierVisitor = new (class extends Visitor {
         this.possibleIndexes = possibleIndexes;
     }
 
-    addIdentifier(id, type, dynamic) {
+    addIdentifier(id, type, dynamic, commonJsImported = false, sideEffects = false) {
         const entry = hasOwn.call(this.identifiers, id)
             ? this.identifiers[id]
             : this.identifiers[id] = {
@@ -121,6 +123,8 @@ const importedIdentifierVisitor = new (class extends Visitor {
             // registered by import statements should be trusted absolutely.
             entry.possiblySpurious = false;
         }
+        entry.commonJsImported = entry.commonJsImported || commonJsImported;
+        entry.sideEffects = entry.sideEffects || sideEffects;
     }
 
     addDependency(id, importIdentifiers, sideEffects) {
@@ -132,13 +136,15 @@ const importedIdentifierVisitor = new (class extends Visitor {
             {deps: importIdentifiers, sideEffects};
     }
 
-    addProxyDependency(id, importIdentifiers, sideEffects) {
-        this.proxyDependencies[id] = this.proxyDependencies[id] ?
-            {
-                deps: [...new Set([...this.proxyDependencies[id].deps, ...importIdentifiers])],
-                sideEffects: this.proxyDependencies[id].sideEffects || sideEffects,
-            } :
-            {deps: importIdentifiers, sideEffects};
+    addProxyDependency(id, map) {
+        if (this.proxyDependencies[id]) {
+            const oldDeps = this.proxyDependencies[id];
+            map.forEach(([key, value]) => {
+                oldDeps[key] = value;
+            })
+        } else {
+            this.proxyDependencies[id] = Object.fromEntries(map);
+        }
     }
 
     addExport(identifier) {
@@ -204,12 +210,12 @@ const importedIdentifierVisitor = new (class extends Visitor {
         }
 
         if (isIdWithName(node.callee, "require")) {
-            this.addIdentifier(firstArg.value, "require");
-            this.addDependency(firstArg.value, [], true);
+            this.addIdentifier(firstArg.value, "require", false, true, true);
+            this.addDependency(firstArg.value, ['*'], true);
         } else if (node.callee.type === "Import" ||
             isIdWithName(node.callee, "import")) {
-            this.addIdentifier(firstArg.value, "import", true);
-            this.addDependency(firstArg.value, [], true);
+            this.addIdentifier(firstArg.value, "import", true, false, true);
+            this.addDependency(firstArg.value, ['*'], true);
         } else {
             if (isModuleUsage) {
                 const isImport =
@@ -231,6 +237,9 @@ const importedIdentifierVisitor = new (class extends Visitor {
                     const secondArg = args[1];
                     // if every prop is an string literal, we have something like: export { a, b, c } from './teste';
                     if (secondArg.properties.every(({value}) => isStringLiteral(value)) && !this.hasSideEffects) {
+                        if((this.parentImportSymbols.deps || []).includes("createUnarySpacing")){
+                            // debugger;
+                        }
                         // in this case, we need to verify the parent imports to make sure we follow the right tree path
                         const isImportedByParent = secondArg.properties.some(({value}) => {
                             if (this.parentImportSymbols) {
@@ -240,6 +249,9 @@ const importedIdentifierVisitor = new (class extends Visitor {
                             // if we are doing an wildcard export, export * from x.js, we will include this file to be analyzed later
                             // remember that this is actually temporary and this dependency can be dropped later in our analysis
                             if (value.value === "*") return true;
+                            if(!this.parentImportSymbols.deps){
+                                debugger;
+                            }
                             return this.parentImportSymbols.deps.includes(value.value) || this.parentImportSymbols.deps.includes("*");
                         });
                         const isSomeSymbolImported = this.parentImportSymbols ?
@@ -247,18 +259,21 @@ const importedIdentifierVisitor = new (class extends Visitor {
                             : true;
 
 
-                    if (isSomeSymbolImported) {
-                        this.addIdentifier(
-                            firstArg.value,
-                            "import",
-                            isImport === "dynamicImport"
-                        );
-                    }
+                        if (isSomeSymbolImported || this.isCommonJsImported) {
+                            this.addIdentifier(
+                                firstArg.value,
+                                "import",
+                                isImport === "dynamicImport"
+                            );
+                        }
                         this.addDependency(firstArg.value, secondArg.properties.map(({key, value}) => {
-                            const isImportedByParent = this.parentImportSymbols.deps.includes(value.value) || value.value === "*";
-                            return isImportedByParent && key.name;
+                            const isImportedByParent = this.parentImportSymbols.deps.includes(value.value) || this.parentImportSymbols.deps.includes("*") || value.value === "*";
+                            return isImportedByParent && (key.name || value.value);
                         }).filter(Boolean), false);
-                        this.addProxyDependency(firstArg.value, secondArg.properties.map(({key}) => key.name || "*", false));
+
+                        // key and value are inverted by purpose
+                        this.addProxyDependency(firstArg.value, secondArg.properties.map(({key, value}) => [value.value, key.name] || ["*", "*"]));
+                        secondArg.properties.forEach(({key, value}) => this.addExport(value.value || key.name || "*"));
                         return;
                     }
                     this.addIdentifier(
@@ -316,7 +331,7 @@ export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle =
 
     const ast = tryToParse(source, hash);
     removeUnusedExportsVisitor.visit(ast, source, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap);
-    const newSource = require('@babel/generator').default(ast).code;
+    const newSource = generate(ast, getDefaultOptions()).code;
     return {source: newSource, madeChanges: removeUnusedExportsVisitor.madeChanges};
 }
 
@@ -356,7 +371,8 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
             }
 
             const exportKey = property.key.value || property.key.name;
-            let returnValue = (this.exportInfo?.deps || []).includes(exportKey) ? property : null;
+            const exportInfoSafe = this.exportInfo?.deps || [];
+            let returnValue = exportInfoSafe.includes(exportKey) || exportInfoSafe.includes("*") ? property : null;
             if (!returnValue) {
                 console.log(`Removing ${exportKey}`)
             }
@@ -392,10 +408,11 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
                 }
             }
             if (isImport) {
+                if(firstArg.value && firstArg.value.startsWith("meteor/")) return;
+                if(node.arguments.length <= 1) return;
                 const absPath = this.resolveMap.get(firstArg.value);
                 const fileIsInBundle = absPath && this.allFilesOnBundle.has(absPath) || false;
                 if (!fileIsInBundle) {
-                    console.log(`removing file ${absPath}`)
                     path.replace({
                         type: "BooleanLiteral",
                         value: false,

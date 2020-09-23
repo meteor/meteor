@@ -1256,6 +1256,7 @@ export class PackageSourceBatch {
   // Returns a map from package names to arrays of JS output files.
   static computeJsOutputFilesMap(sourceBatches) {
     const map = new Map;
+    const resolveMap = new Map();
 
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
@@ -1354,6 +1355,7 @@ export class PackageSourceBatch {
       const scanner = new ImportScanner({
         name,
         bundleArch: batch.processor.arch,
+        sideEffects: batch.unibuild.pkg.sideEffects,
         extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
@@ -1443,6 +1445,8 @@ export class PackageSourceBatch {
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
       const outputFiles = scanner.getOutputFiles();
+      console.log(outputFiles.map(({absPath}) => absPath).includes("/Users/renancamargodecastro/meteor-projects/material-ui-teste/node_modules/react-is/index.js"));
+
       const entry = map.get(name);
 
       if (entry.batch.useMeteorInstall) {
@@ -1493,14 +1497,17 @@ export class PackageSourceBatch {
         entry.files = appFilesWithoutNodeModules;
 
       } else {
+
         entry.files = outputFiles;
       }
+      scanner.resolveMap.forEach(function(value, key) {
+        resolveMap.set(key, value);
+      });
     });
-
-    return this._watchOutputFiles(map);
+    return this._watchOutputFiles(map, resolveMap);
   }
 
-  static _watchOutputFiles(jsOutputFilesMap) {
+  static _watchOutputFiles(jsOutputFilesMap, resolveMap) {
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
@@ -1527,7 +1534,7 @@ export class PackageSourceBatch {
         }
       });
     });
-    return jsOutputFilesMap;
+    return { jsOutputFilesMap, resolveMap };
   }
 
   static _warnAboutMissingModules(missingModules) {
