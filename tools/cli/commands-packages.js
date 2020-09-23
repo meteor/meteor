@@ -1314,7 +1314,10 @@ main.registerCommand({
     });
 
     if (showJson) {
-      Console.info(JSON.stringify(jsonOut))
+      // we can't use Console here, because it pretty prints the output with
+      // a wrap at 80 chars per line, which causes the json to break if details
+      // options is active and the package descriptions exceed the limit
+      console.info(JSON.stringify(jsonOut));
     }
 
     return 0;
