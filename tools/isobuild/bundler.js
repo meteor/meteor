@@ -1204,7 +1204,6 @@ class Target {
         if(file.deps?.commonJsImported){
           return;
         }
-        if(file.absPath.includes("runtime/helpers/esm/arrayWithoutHoles.js")) debugger;
         const { source:newSource, madeChanges } = removeUnusedExports(file.dataString,
             file.hash,
             importedSymbolsFromFile,

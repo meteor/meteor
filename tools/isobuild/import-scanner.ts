@@ -387,10 +387,16 @@ type JSAnalyzeInfo = {
   identifiers?: Record<string, ImportInfo>;
   exports?: [string];
 }
+enum ImportTreeNodeStatus {
+  WHITE,
+  GRAY,
+  BLACK
+}
 type ImportTreeNode = {
   children?: [ImportTreeNode?];
   absImportedPath?: string;
   depFile?: File;
+  status?: ImportTreeNodeStatus;
 }
 
 export default class ImportScanner {
@@ -818,15 +824,21 @@ export default class ImportScanner {
     }
   }
 
-  addImportTree(root : ImportTreeNode){
-    if(root == null) return;
+  addImportTree(root? : ImportTreeNode){
+    if(!root) return;
+    if(!root.status) root.status = ImportTreeNodeStatus.WHITE;
     const importInfo = root.absImportedPath && this.filesInfo.get(root.absImportedPath) || {}
-
-    this.addFile(root.absImportedPath, {...root.depFile, lazy:false, imported: true, ...importInfo});
+    if(root.absImportedPath) {
+      this.addFile(root.absImportedPath, { ...root.depFile, lazy: false, imported: true, ...importInfo });
+    }
+    root.status = ImportTreeNodeStatus.GRAY;
 
     for(let child of root.children || []){
-      this.addImportTree(child);
+      if(!child?.status) {
+        this.addImportTree(child);
+      }
     }
+    root.status = ImportTreeNodeStatus.BLACK;
   }
   scanImports() {
     this.outputFiles.forEach(file => {
@@ -1173,7 +1185,6 @@ export default class ImportScanner {
                    isCommonJsImported: boolean = false,
                    treeHasSideEffects: boolean = false) : ImportTreeNode {
 
-    if(file.absPath.includes("runtime/helpers/esm/arrayWithoutHoles.js")) debugger;
 
     const hasSideEffects = treeHasSideEffects || this.sideEffects || file.sideEffects;
 
