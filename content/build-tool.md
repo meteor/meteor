@@ -65,6 +65,12 @@ meteor add barbatus:typescript
 
 It is necessary to configure the TypeScript compiler with a `tsconfig.json` file.
 
+If you want to add TypeScript from the point of project creation, as of Meteor 1.8.2, you can run the create command with the --typescript flag:
+
+```
+meteor create --typescript name-of-my-new-typescript-app
+```
+
 <h4 id="typescript-conditional-imports">Conditional imports</h4>
 
 TypeScript does not support nested `import` statements, therefore conditionally importing modules requires you to use the `require` statement (see [Using `require`](https://guide.meteor.com/structure.html#using-require)).
