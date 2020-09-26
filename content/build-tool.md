@@ -60,7 +60,7 @@ TypeScript can be installed with:
 
 ```sh
 meteor remove ecmascript
-meteor add barbatus:typescript
+meteor add adornis:typescript
 ```
 
 It is necessary to configure the TypeScript compiler with a `tsconfig.json` file.
