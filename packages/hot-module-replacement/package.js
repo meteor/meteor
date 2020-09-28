@@ -1,8 +1,8 @@
 Package.describe({
-  name: 'hot-module-reload',
+  name: 'hot-module-replacement',
   version: '0.1.0',
   summary: 'Update code in development without reloading the page',
-  documentation: 'README.md'
+  documentation: 'README.md',
 });
 
 Package.registerBuildPlugin({

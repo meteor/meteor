@@ -6,10 +6,10 @@ Plugin.registerCompiler({
   return new BabelCompiler({
     react: true
   }, (babelOptions, file) => {
-    // __hotState is set by the hot-module-reload package
+    // __hotState is set by the hot-module-replacement package
     const hotReloadingAvailable = !!global.__hotState
 
-    // TODO: this should also use the reloadable checks done by hot-module-reload
+    // TODO: this should also use the reloadable checks done by hot-module-replacement
     const canReload = process.env.NODE_ENV !== 'production' &&
       file.getArch() === 'web.browser' &&
       !file.getPackageName()
