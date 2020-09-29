@@ -1,9 +1,11 @@
 Package.describe({
   summary: "Facebook OAuth flow",
-  version: "1.7.0"
+  version: "1.7.1"
 });
 
 Package.onUse(api => {
+  api.versionsFrom('1.11.1');
+
   api.use('ecmascript', ['client', 'server']);
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
