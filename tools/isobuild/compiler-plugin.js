@@ -1501,7 +1501,11 @@ export class PackageSourceBatch {
         entry.files = outputFiles;
       }
       scanner.resolveMap.forEach(function(value, key) {
-        resolveMap.set(key, value);
+        const current = resolveMap.get(key) || new Map();
+        for(const [newKey, newValue] of value.entries()){
+          current.set(newKey, newValue);
+        }
+        resolveMap.set(key, current);
       });
     });
     return this._watchOutputFiles(map, resolveMap);
@@ -1766,6 +1770,7 @@ export class PackageSourceBatch {
     const ret = linkedFiles.map((file) => {
       const sm = (typeof file.sourceMap === 'string')
         ? JSON.parse(file.sourceMap) : file.sourceMap;
+
       return {
         type: "js",
         // This is a string... but we will convert it to a Buffer

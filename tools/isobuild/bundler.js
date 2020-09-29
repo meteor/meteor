@@ -1204,11 +1204,14 @@ class Target {
         if(file.deps?.commonJsImported){
           return;
         }
-        const { source:newSource, madeChanges } = removeUnusedExports(file.dataString,
+        const { source:newSource, madeChanges } = removeUnusedExports(
+            file.dataString,
             file.hash,
             importedSymbolsFromFile,
             allFilesOnBundle,
-            resolveMap.get(file.absPath) || new Map());
+            resolveMap.get(file.absPath) || new Map(),
+            unibuild.arch
+        );
 
         if(newSource) {
           file.dataString = newSource;

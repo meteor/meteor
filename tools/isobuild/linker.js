@@ -1189,6 +1189,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   var headerContent = (new Array(headerLines + 1).join(';'));
 
   return _.map(prelinkedFiles, function (file) {
+
     if (file.dynamic) {
       return file;
     }
@@ -1200,6 +1201,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
       var sourceMap = file.sourceMap;
       sourceMap.mappings = headerContent + sourceMap.mappings;
+
       return {
         source: header + file.source + footer,
         sourcePath: file.sourcePath,

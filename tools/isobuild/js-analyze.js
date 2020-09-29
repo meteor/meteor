@@ -5,6 +5,8 @@ import LRU from "lru-cache";
 
 import Visitor from "reify/lib/visitor.js";
 import {findPossibleIndexes} from "reify/lib/utils.js";
+import {matches as archMatches} from "../utils/archinfo";
+import Resolver from "./resolver";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 const objToStr = Object.prototype.toString
@@ -84,7 +86,7 @@ export function findImportedModuleIdentifiers(source, hash, parentImportSymbols,
 
 const importedIdentifierVisitor = new (class extends Visitor {
     reset(rootPath, code, possibleIndexes, parentImportSymbols, hasSideEffects = false, isCommonJsImported = false) {
-        this.parentImportSymbols = parentImportSymbols || [];
+        this.parentImportSymbols = parentImportSymbols || {};
         this.hasSideEffects = hasSideEffects;
         this.requireIsBound = false;
         this.isCommonJsImported = false;
@@ -237,7 +239,8 @@ const importedIdentifierVisitor = new (class extends Visitor {
                     const secondArg = args[1];
                     // if every prop is an string literal, we have something like: export { a, b, c } from './teste';
                     if (secondArg.properties.every(({value}) => isStringLiteral(value)) && !this.hasSideEffects) {
-                        if((this.parentImportSymbols.deps || []).includes("createUnarySpacing")){
+                        const parentDeps = this.parentImportSymbols.deps || [];
+                        if(parentDeps.includes("createUnarySpacing")){
                             // debugger;
                         }
                         // in this case, we need to verify the parent imports to make sure we follow the right tree path
@@ -252,7 +255,7 @@ const importedIdentifierVisitor = new (class extends Visitor {
                             if(!this.parentImportSymbols.deps){
                                 debugger;
                             }
-                            return this.parentImportSymbols.deps.includes(value.value) || this.parentImportSymbols.deps.includes("*");
+                            return parentDeps.includes(value.value) || parentDeps.includes("*");
                         });
                         const isSomeSymbolImported = this.parentImportSymbols ?
                             this.parentImportSymbols.sideEffects || isImportedByParent
@@ -317,7 +320,7 @@ const importedIdentifierVisitor = new (class extends Visitor {
     }
 });
 
-export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle = new Set(), resolveMap) {
+export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle = new Set(), resolveMap, arch) {
     const possibleIndexes = findPossibleIndexes(source, [
         "export",
         "exportDefault",
@@ -330,18 +333,19 @@ export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle =
     }
 
     const ast = tryToParse(source, hash);
-    removeUnusedExportsVisitor.visit(ast, source, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap);
+    removeUnusedExportsVisitor.visit(ast, source, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap, arch);
     const newSource = generate(ast, getDefaultOptions()).code;
     return {source: newSource, madeChanges: removeUnusedExportsVisitor.madeChanges};
 }
 
 const removeUnusedExportsVisitor = new (class extends Visitor {
 
-    reset(rootPath, code, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap) {
+    reset(rootPath, code, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap, arch) {
         this.madeChanges = false;
         this.exportInfo = exportInfo;
         this.allFilesOnBundle = allFilesOnBundle;
-        this.resolveMap = resolveMap;
+        this.resolveMap = resolveMap || new Map();
+        this.arch = arch;
 
         // Defining this.possibleIndexes causes the Visitor to ignore any
         // subtrees of the AST that do not contain any indexes of identifiers
@@ -413,6 +417,10 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
                 const absPath = this.resolveMap.get(firstArg.value);
                 const fileIsInBundle = absPath && this.allFilesOnBundle.has(absPath) || false;
                 if (!fileIsInBundle) {
+                    // we don't want to remove any native node module import, as they are not bundled in the server bundle
+                    if(Resolver.isNative(firstArg.value) && archMatches(this.arch, "os")){
+                        return;
+                    }
                     path.replace({
                         type: "BooleanLiteral",
                         value: false,

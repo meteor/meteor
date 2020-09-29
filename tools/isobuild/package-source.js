@@ -897,7 +897,11 @@ _.extend(PackageSource.prototype, {
     self.name = null;
     self.sourceRoot = appDir;
     self.serveRoot = '/';
-    const sideEffects = JSON.parse(files.readFile(projectContext.meteorConfig.packageJsonPath)).sideEffects || false;
+    let sideEffects = true;
+
+    try {
+      sideEffects = JSON.parse(files.readFile(projectContext.meteorConfig.packageJsonPath)).sideEffects || false;
+    }catch(e){}
     self.sideEffects = sideEffects;
 
     // Determine used packages. Note that these are the same for all arches,
