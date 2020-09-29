@@ -1023,9 +1023,6 @@ _.extend(Isopack.prototype, {
     var outputPath = outputDir;
 
     var builder = new Builder({ outputPath: outputPath });
-    if(self.name === 'base64') {
-      console.log(`saveToPath - isopack -> ${self.sideEffects}`);
-    }
     try {
       var mainJson = {
         name: self.name,
