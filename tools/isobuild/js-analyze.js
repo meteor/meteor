@@ -363,7 +363,6 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
                 type: "BooleanLiteral",
                 value: false,
             })
-            console.log(`Removing Default export`)
             this.madeChanges = true;
             return;
         } else if (defaultExport) {
@@ -377,9 +376,6 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
             const exportKey = property.key.value || property.key.name;
             const exportInfoSafe = this.exportInfo?.deps || [];
             let returnValue = exportInfoSafe.includes(exportKey) || exportInfoSafe.includes("*") ? property : null;
-            if (!returnValue) {
-                console.log(`Removing ${exportKey}`)
-            }
             return returnValue;
         }).filter(Boolean)
         this.madeChanges = true;
