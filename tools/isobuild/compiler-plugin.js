@@ -145,9 +145,6 @@ export class CompilerPluginProcessor {
     var sourceProcessorsWithSlots = {};
 
     var sourceBatches = _.map(self.unibuilds, function (unibuild) {
-      if(unibuild.pkg.name === 'base64') {
-        console.log(`runCompilerPlugins -> ${unibuild.pkg.name} ${unibuild.pkg.sideEffects}`);
-      }
 
       const { pkg: { name }, arch } = unibuild;
       const sourceRoot = name
@@ -1445,7 +1442,6 @@ export class PackageSourceBatch {
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
       const outputFiles = scanner.getOutputFiles();
-      console.log(outputFiles.map(({absPath}) => absPath).includes("/Users/renancamargodecastro/meteor-projects/material-ui-teste/node_modules/react-is/index.js"));
 
       const entry = map.get(name);
 

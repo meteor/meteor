@@ -424,7 +424,6 @@ export class PackageAPI {
 
   setSideEffects(sideEffects){
     this.sideEffects = sideEffects;
-    console.log(`Setting side effects ${this.sideEffects}`);
   }
 
   /**

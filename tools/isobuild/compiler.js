@@ -958,9 +958,6 @@ compiler.eachUsedUnibuild = function (
     }
 
     var usedPackage = isopackCache.getIsopack(use.package);
-    if(usedPackage.name === 'base64') {
-      console.log(`eachUsedUnibuild - isopack -> ${usedPackage.sideEffects}`);
-    }
 
     // Ignore this package if we were told to skip debug-only packages and it is
     // debug-only.

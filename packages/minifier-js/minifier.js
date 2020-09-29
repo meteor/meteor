@@ -50,7 +50,6 @@ meteorJsMinify = function (source, options) {
   try {
     //TODO: uncomment this code
     // var optimizedCode = Babel.replaceMeteorInternalState(source, globalDefsMapping)
-    console.log("Starting minify proccess");
     var terserResult = Meteor.wrapAsync(callback => terser.minify(source, {
       compress: {
         drop_debugger: false,
@@ -75,11 +74,6 @@ meteorJsMinify = function (source, options) {
       new Error("unknown terser.minify failure");
     }
   } catch (e) {
-    console.log(e);
-    Npm.require("fs").writeFile('helloworld.js', source, function (err) {
-      if (err) return console.log(err);
-      console.log('Hello World > helloworld.txt');
-    });
     // Although Babel.minify can handle a wider variety of ECMAScript
     // 2015+ syntax, it is substantially slower than UglifyJS/terser, so
     // we use it only as a fallback.

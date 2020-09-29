@@ -352,9 +352,6 @@ _.extend(LocalCatalog.prototype, {
           initFromPackageDirOptions.name = definiteName;
         }
         packageSource.initFromPackageDir(packageDir, initFromPackageDirOptions);
-        if(packageSource.name === 'base64'){
-          console.log(`initSourceFromDir -> ${packageSource.sideEffects}`);
-        }
         if (buildmessage.jobHasMessages())
           return;  // recover by ignoring
 
@@ -418,9 +415,6 @@ _.extend(LocalCatalog.prototype, {
     var self = this;
     if (! _.has(self.packages, name))
       return null;
-    if(!name){
-      console.log(`getPackageSource -> ${self.packages[name].packageSource.sideEffects}`);
-    }
     return self.packages[name].packageSource;
   }
 });

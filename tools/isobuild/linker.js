@@ -746,9 +746,6 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       map: file.sourceMap || null,
     };
 
-    if(file.servePath.includes("createGenerateClassName/index.js")){
-      console.log(file.source);
-    }
     var chunks = [];
     var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
 
@@ -1195,9 +1192,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     }
 
     if (file.sourceMap) {
-      if(file.absModuleId && file.absModuleId.includes("createGenerateClassName")){
-        console.log("INCLUDE");
-      }
 
       var sourceMap = file.sourceMap;
       sourceMap.mappings = headerContent + sourceMap.mappings;
@@ -1209,9 +1203,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
         sourceMap: sourceMap
       };
     } else {
-      if(file.absModuleId && file.absModuleId.includes("createGenerateClassName")){
-        console.log("INCLUDE");
-      }
       return {
         source: header + file.source + footer,
         sourcePath: file.sourcePath,

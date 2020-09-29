@@ -3284,7 +3284,6 @@ function bundle({
       isopackCache: projectContext.isopackCache,
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
     });
-    console.log(app);
 
     const mergeAppWatchSets = () => {
       var projectAndLocalPackagesWatchSet =
