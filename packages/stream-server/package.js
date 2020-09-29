@@ -1,12 +1,12 @@
 Package.describe({
   summary: "Meteor's DDP stream server based on SockJS",
-  version: '2.2.0',
+  version: '2.3.2',
   documentation: 'README.md'
 });
 
 Npm.depends({
-  "permessage-deflate": "0.1.6",
-  sockjs: "0.3.19"
+  "permessage-deflate": "0.1.7",
+  sockjs: "0.3.20"
 });
 
 Package.onUse(function (api) {
