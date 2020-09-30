@@ -59,11 +59,53 @@ Adding types will make your code more readable and less prone to runtime errors.
 TypeScript can be installed with:
 
 ```sh
-meteor remove ecmascript
-meteor add adornis:typescript
+meteor add typescript
 ```
 
-It is necessary to configure the TypeScript compiler with a `tsconfig.json` file.
+It is necessary to configure the TypeScript compiler with a `tsconfig.json` file:
+
+```
+{
+  "compilerOptions": {
+    /* Basic Options */
+    "target": "es2018",
+    "module": "esNext",
+    "lib": ["esnext", "dom"],
+    "allowJs": true,
+    "checkJs": false,
+    "jsx": "preserve",
+    "incremental": true,
+    "noEmit": true,
+
+    /* Strict Type-Checking Options */
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+
+    /* Additional Checks */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": false,
+    "noFallthroughCasesInSwitch": false,
+
+    /* Module Resolution Options */
+    "baseUrl": ".",
+    "paths": {
+      /* Support absolute /imports/* with a leading '/' */
+      "/*": ["*"]
+    },
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "types": ["node", "mocha"],
+    "esModuleInterop": true,
+    "preserveSymlinks": true
+  },
+  "exclude": [
+    "./.meteor/**",
+    "./packages/**"
+  ]
+}
+```
 
 If you want to add TypeScript from the point of project creation, as of Meteor 1.8.2, you can run the create command with the --typescript flag:
 
