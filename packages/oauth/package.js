@@ -4,7 +4,6 @@ Package.describe({
 });
 
 Package.onUse(api => {
-  api.versionsFrom('1.11.1');
   api.use('check');
   api.use('ecmascript');
 
