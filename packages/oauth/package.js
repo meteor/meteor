@@ -1,9 +1,10 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.3.1"
+  version: "1.3.2"
 });
 
 Package.onUse(api => {
+  api.versionsFrom('1.11.1');
   api.use('check');
   api.use('ecmascript');
 
