@@ -12,7 +12,7 @@ With Meteor you write apps:
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
-Try a getting started tutorial:
+Try our getting started tutorials:
  * [React](https://react-tutorial.meteor.com) - new
  * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
  * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
