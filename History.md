@@ -2,7 +2,7 @@
 
 ### Breaking changes
 
-N/A
+* `node` has been updated to v14.13.0, this means among other things that Meteor is now build with [full-icu](https://nodejs.org/api/intl.html) support.
 
 ### Migration steps
 
