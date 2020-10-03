@@ -12,43 +12,44 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "6.14.8",
     pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
-    "node-gyp": "6.0.1",
-    "node-pre-gyp": "0.14.0",
-    typescript: "3.8.3",
+    "node-gyp": "6.1.0",
+    "node-pre-gyp": "0.15.0",
+    typescript: "3.9.5",
     "meteor-babel": "7.9.0",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.8.7",
-    fibers: "4.0.3",
+    fibers: "5.0.0",
     reify: "0.20.12",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.9.2",
+    "@babel/runtime": "7.11.2",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
-    "@types/underscore": "1.9.2",
-    underscore: "1.9.1",
+    "@types/underscore": "1.10.24",
+    underscore: "1.11.0",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     "@types/semver": "5.4.0",
-    semver: "5.4.1",
+    semver: "5.7.0",
     request: "2.88.0",
-    uuid: "3.3.2",
+    uuid: "3.4.0",
     "graceful-fs": "4.2.2",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
-    tar: "2.2.1",
+    tar: "2.2.2",
     // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
+    // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.7.3",
-    chalk: "0.5.1",
-    sqlite3: "4.1.0",
-    "http-proxy": "1.16.2",
+    chalk: "4.1.0",
+    sqlite3: "5.0.0",
+    "http-proxy": "1.18.1",
     "is-reachable": "3.1.0",
-    "wordwrap": "0.0.2",
-    "moment": "2.20.1",
-    "rimraf": "2.6.2",
-    "glob": "7.1.2",
-    ignore: "3.3.7",
+    "wordwrap": "1.0.0",
+    "moment": "2.29.0",
+    "rimraf": "3.0.2",
+    "glob": "7.1.6",
+    ignore: "4.0.6",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
@@ -59,11 +60,11 @@ var packageJson = {
     pathwatcher: "8.1.0",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
-    optimism: "0.11.3",
-    "@wry/context": "0.4.4",
-    'lru-cache': '4.1.3',
+    optimism: "0.12.2",
+    "@wry/context": "0.5.2",
+    'lru-cache': '4.1.5',
     "anser": "1.4.8",
-    'xmlbuilder2': '1.3.0'
+    'xmlbuilder2': '1.8.1'
   }
 };
 
