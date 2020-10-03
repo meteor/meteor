@@ -6,7 +6,6 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.versionsFrom('1.11.1');
   // Do not allow this package to be used in pre-Meteor 1.5 apps.
   api.use("isobuild:dynamic-import@1.5.0");
 
