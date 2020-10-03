@@ -158,6 +158,8 @@ function precompileTypeScript(result, options) {
         esModuleInterop: false,
         sourceMap: true,
         inlineSources: true,
+        experimentalDecorators: true,
+        emitDecoratorMetadata: true,
       }
     });
   } catch (e) {
