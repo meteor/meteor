@@ -93,6 +93,7 @@ describe("meteor-babel", () => {
     babelOptions.plugins = [
       require("@babel/plugin-transform-arrow-functions"),
     ];
+    babelOptions.sourceMaps = true;
 
     const result = meteorBabel.compile(source, babelOptions);
 
