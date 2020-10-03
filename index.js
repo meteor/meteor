@@ -103,8 +103,8 @@ function compile(source, options) {
     }];
 
     optionsCopy.presets = presets;
-    optionsCopy.sourceMaps = true;
-    if (result.map) {
+    optionsCopy.sourceMaps = options.sourceMaps !== false;
+    if (optionsCopy.sourceMaps && result.map) {
       optionsCopy.inputSourceMap = result.map;
     }
 
