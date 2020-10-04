@@ -1,7 +1,7 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 
 selftest.define("boot utils", function (options) {
-  var bootUtils = require('../server/boot-utils.js');
+  var bootUtils = require('../static-assets/server/boot-utils.js');
   selftest.expectTrue(bootUtils.validPid(123));
   selftest.expectTrue(bootUtils.validPid("123"));
   selftest.expectTrue(bootUtils.validPid(0x123));

@@ -31,7 +31,7 @@
 // useful for apps using `window.onbeforeunload`. See
 // https://github.com/meteor/meteor/pull/657
 
-Reload = {};
+export const Reload = {};
 
 var KEY_NAME = 'Meteor_Reload';
 
@@ -60,7 +60,7 @@ try {
     // Be consistently null, for safety
     safeSessionStorage = null;
   }
-} catch(e) {
+} catch (e) {
   // Expected on chrome with strict security, or if sessionStorage not supported
   safeSessionStorage = null;
 }
@@ -125,7 +125,7 @@ Reload._onMigrate = function (name, callback) {
     callback = name;
     name = undefined;
   }
-  providers.push({name: name, callback: callback});
+  providers.push({ name: name, callback: callback });
 };
 
 // Called by packages when they start up.
@@ -141,7 +141,7 @@ var pollProviders = function (tryReload, options) {
   options = options || {};
 
   var migrationData = {};
-  var remaining = _.clone(providers);
+  var remaining = providers.slice(0);
   var allReady = true;
   while (remaining.length) {
     var p = remaining.shift();
@@ -193,7 +193,7 @@ Reload._migrate = function (tryReload, options) {
 
 // Allows tests to isolate the list of providers.
 Reload._withFreshProvidersForTest = function (f) {
-  var originalProviders = _.clone(providers);
+  var originalProviders = providers.slice(0);
   providers = [];
   try {
     f();
@@ -216,12 +216,34 @@ Reload._reload = function (options) {
     return;
   reloading = true;
 
-  var tryReload = function () { _.defer(function () {
-    if (Reload._migrate(tryReload, options)) {
-      // Tell the browser to shut down this VM and make a new one
+  function tryReload() {
+    setTimeout(reload, 1);
+  }
+
+  function forceBrowserReload() {
+    // We'd like to make the browser reload the page using location.replace()
+    // instead of location.reload(), because this avoids validating assets
+    // with the server if we still have a valid cached copy. This doesn't work
+    // when the location contains a hash however, because that wouldn't reload
+    // the page and just scroll to the hash location instead.
+    if (window.location.hash || window.location.href.endsWith("#")) {
       window.location.reload();
+    } else {
+      window.location.replace(window.location.href);
     }
-  }); };
+  }
+
+  function reload() {
+    if (Reload._migrate(tryReload, options)) {
+      if (Meteor.isCordova) {
+        WebAppLocalServer.switchToPendingVersion(() => {
+          forceBrowserReload();
+        });
+      } else {
+        forceBrowserReload();
+      }
+    }
+  }
 
   tryReload();
 };

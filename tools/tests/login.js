@@ -1,8 +1,8 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var testUtils = require('../test-utils.js');
+var testUtils = require('../tool-testing/test-utils.js');
 
-var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
+var commandTimeoutSecs = 10;
 var loginTimeoutSecs = 2;
 
 selftest.define("login", ['net'], function () {
@@ -123,25 +123,33 @@ selftest.define("login", ['net'], function () {
   run.expectExit(1);
 });
 
-selftest.define('whoami - no username', ['net', 'slow'], function () {
-  var s = new Sandbox;
-  var email = testUtils.randomUserEmail();
-  var username = testUtils.randomString(10);
-  var appName = testUtils.randomAppName();
-  var token = testUtils.deployWithNewEmail(s, email, appName);
+// This is a Galaxy-related command (deploy), but still pretty auth-y.
+selftest.define("login on deploy", ['net'], function () {
+  const s = new Sandbox;
 
-  var run = s.run('whoami');
+  const appName = testUtils.randomAppName();
+
+  s.createApp(appName, "standard-app");
+  s.cd(appName);
+
+  let run = s.run("deploy", appName);
+  run.matchErr(/You must be logged in to deploy/);
+
+  run.matchErr("Email:");
+  run.write("test@test.com\n");
+
+  run.matchErr("Logging in as test.");
+
+  run.matchErr("Password:");
+  run.write("SoVeryWrong\n");
   run.waitSecs(commandTimeoutSecs);
-  run.matchErr('You haven\'t chosen your username yet');
-  run.matchErr(testUtils.registrationUrlRegexp);
+  run.matchErr("Login failed");
+
+  run.matchErr("Password:");
+  run.write("testtest\n");
+  run.waitSecs(commandTimeoutSecs);
+  run.match("Talking to Galaxy servers");
+
+  // "test" user can't actually deploy, so it will still fail.
   run.expectExit(1);
-  testUtils.registerWithToken(token, username, 'test', email);
-
-  run = s.run('whoami');
-  run.waitSecs(commandTimeoutSecs);
-  run.read(username);
-  run.expectExit(0);
-
-  testUtils.cleanUpApp(s, appName);
-  testUtils.logout(s);
 });

@@ -1,7 +1,7 @@
-var selftest = require('../selftest.js');
-var config = require("../config.js");
-var catalogRemote = require("../catalog-remote.js");
-var buildmessage = require("../buildmessage.js");
+var selftest = require('../tool-testing/selftest.js');
+var config = require('../meteor-services/config.js');
+var catalogRemote = require('../packaging/catalog/catalog-remote.js');
+var buildmessage = require('../utils/buildmessage.js');
 var Sandbox = selftest.Sandbox;
 
 var DEFAULT_RELEASE_TRACK = catalogRemote.DEFAULT_TRACK;
@@ -31,10 +31,10 @@ var recommend = function (sandbox, version) {
   });
 };
 
-selftest.define("autoupdate", ['checkout'], function () {
+selftest.define("autoupdate", ['checkout', 'custom-warehouse'], function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { recommended: true},
+      v1: { recommended: true },
       v2: { recommended: true },
       v3: { },
       v4: { }
@@ -52,13 +52,18 @@ selftest.define("autoupdate", ['checkout'], function () {
     setBanner(s, "v2", "=> New hotness v2 being downloaded.\n");
 
     // console.log("WE ARE READY NOW", s.warehouse, s.cwd)
-    // require('../utils.js').sleepMs(1000*10000)
+    // require('../utils/utils.js').sleepMs(1000*10000)
 
     // Run it and see the banner for the current version.
     run = s.run("--port", "21000");
-    run.waitSecs(30);
-    run.match("New hotness v2 being downloaded");
-    run.match("running at");
+    run.waitSecs(60);
+    var runningHotnessPattern = /running at|New hotness v2 being downloaded/;
+    // We're not sure in which order these messages will arrive, but we
+    // expect to see them both (and we're not worried about either message
+    // being printed more than once).
+    run.match(runningHotnessPattern);
+    run.match(runningHotnessPattern);
+    require('../utils/utils.js').sleepMs(500);
     run.stop();
 
     // We won't see the banner a second time, or any other message about
@@ -138,8 +143,9 @@ selftest.define("autoupdate", ['checkout'], function () {
     run.stop();
 
     run = s.run("update");
-    run.read("myapp: updated to Meteor v3.");
-    run.match("Your packages are at their latest compatible versions.\n");
+    run.match("myapp: updated to Meteor v3.\n");
+    run.match("Your top-level dependencies are at their latest compatible " +
+              "versions.\n");
     run.expectExit(0);
 
     run = s.run("--version");

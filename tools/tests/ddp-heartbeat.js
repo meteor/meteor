@@ -1,10 +1,10 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
-selftest.define("ddp-heartbeat", ["slow"], function () {
+selftest.define("ddp-heartbeat", function () {
   var s = new Sandbox({ fakeMongo: true });
   var run;
 

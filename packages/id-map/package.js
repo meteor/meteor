@@ -1,10 +1,11 @@
 Package.describe({
   summary: "Dictionary data structure allowing non-string keys",
-  version: '1.0.3-winr.2'
+  version: '1.1.0'
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
+  api.use('ejson');
+  api.mainModule('id-map.js');
   api.export('IdMap');
-  api.use(['underscore', 'json', 'ejson']);
-  api.addFiles([ 'id-map.js' ]);
 });

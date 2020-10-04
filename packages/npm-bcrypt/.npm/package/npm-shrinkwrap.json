@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "bcryptjs": {
+      "version": "2.3.0",
+      "resolved": "https://registry.npmjs.org/bcryptjs/-/bcryptjs-2.3.0.tgz",
+      "integrity": "sha1-WCaQDP73q680JccuTUZN5Qm4wuw="
+    }
+  }
+}

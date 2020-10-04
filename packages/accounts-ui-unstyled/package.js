@@ -1,11 +1,18 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.1.6-winr.4"
+  version: "1.4.2"
 });
 
 Package.onUse(function (api) {
-  api.use(['tracker', 'service-configuration', 'accounts-base',
-           'underscore', 'templating', 'session'], 'client');
+  api.use([
+    'tracker',
+    'service-configuration',
+    'accounts-base',
+    'ecmascript',
+    'templating@1.2.13',
+    'session',
+  ], 'client');
+
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
 
@@ -30,9 +37,16 @@ Package.onUse(function (api) {
     'login_buttons_single.js',
     'login_buttons_dropdown.js',
     'login_buttons_dialogs.js'], 'client');
+
+  // The less source defining the default style for accounts-ui. Just adding
+  // this package doesn't actually apply these styles; they need to be
+  // `@import`ed from some non-import less file.  The accounts-ui package does
+  // that for you, or you can do it in your app.
+  api.use('less');
+  api.addFiles('login_buttons.import.less');
 });
 
-Package.onTest(function (api) {
+Package.onTest(api => {
   api.use('accounts-ui-unstyled');
   api.use('tinytest');
   api.addFiles('accounts_ui_tests.js', 'client');

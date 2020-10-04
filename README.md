@@ -1,92 +1,75 @@
-# Meteor
+# <a href='https://www.meteor.com'><img src='https://user-images.githubusercontent.com/841294/26841702-0902bbee-4af3-11e7-9805-0618da66a246.png' height='60' alt='Meteor'></a>
+
+[![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
+[![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
 
 Meteor is an ultra-simple environment for building modern web
 applications.
 
 With Meteor you write apps:
 
-* in pure JavaScript
+* in modern JavaScript
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
-Documentation is available at http://docs.meteor.com/
+Try a getting started tutorial:
+ * [React](https://react-tutorial.meteor.com) - new
+ * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
+ * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
+ * [Vue](https://www.meteor.com/tutorials/vue/creating-an-app)
+ * [Svelte](https://www.meteor.com/tutorials/svelte/creating-an-app)
+
+Next, read the [guide](https://guide.meteor.com) and the [documentation](https://docs.meteor.com/).
 
 ## Quick Start
 
-Install Meteor:
+On Windows, the installer can be found at https://www.meteor.com/install.
 
-    curl https://install.meteor.com | /bin/sh
+On Linux/macOS, use this line:
+
+```bash
+curl https://install.meteor.com/ | sh
+```
 
 Create a project:
 
-    meteor create try-meteor
+```bash
+meteor create try-meteor
+```
 
 Run it:
 
-    cd try-meteor
-    meteor
+```bash
+cd try-meteor
+meteor
+```
 
-Deploy it to the world, for free:
+## Developer Resources
 
-    meteor deploy try-meteor.meteor.com
+Building an application with Meteor?
 
-## Slow Start (for developers)
+* Deploy on Galaxy hosting: https://www.meteor.com/hosting
+* Announcement list: sign up at https://www.meteor.com/
+* Having problems? Ask for help at: https://stackoverflow.com/questions/tagged/meteor
+* Discussion forums: https://forums.meteor.com/
+* Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
+ 
 
-If you want to run on the bleeding edge, or help develop Meteor, you
-can run Meteor directly from a git checkout.
+Interested in helping or contributing to Meteor?  These resources will help:
 
-    git clone git://github.com/meteor/meteor.git
-    cd meteor
-
-If you're the sort of person who likes to build everything from scratch,
-you can build all the Meteor dependencies (node.js, npm, mongodb, etc)
-with the provided script. This requires git, a C and C++ compiler,
-autotools, and scons. If you do not run this script, Meteor will
-automatically download pre-compiled binaries when you first run it.
-
-    # OPTIONAL
-    ./scripts/generate-dev-bundle.sh
-
-Now you can run meteor directly from the checkout (if you did not
-build the dependency bundle above, this will take a few moments to
-download a pre-build version).
-
-    ./meteor --help
-
-From your checkout, you can read the docs locally. The `/docs` directory is a
-meteor application, so simply change into the `/docs` directory and launch
-the app:
-
-    cd docs/
-    ../meteor
-
-You'll then be able to read the docs locally in your browser at
-`http://localhost:3000/`.
-
-Note that if you run Meteor from a git checkout, you cannot pin apps to specific
-Meteor releases or run using different Meteor releases using `--release`.
+* [Core development guide](DEVELOPMENT.md)
+* [Contribution guidelines](CONTRIBUTING.md)
+* [Feature requests](https://github.com/meteor/meteor-feature-requests/)
+* [Issue tracker](https://github.com/meteor/meteor/issues)
 
 ## Uninstalling Meteor
 
 Aside from a short launcher shell script, Meteor installs itself inside your
 home directory. To uninstall Meteor, run:
 
-    rm -rf ~/.meteor/
-    sudo rm /usr/local/bin/meteor
+```bash
+rm -rf ~/.meteor/
+sudo rm /usr/local/bin/meteor
+```
 
-## Developer Resources
-
-Building an application with Meteor?
-
-* Announcement list: sign up at http://www.meteor.com/
-* Ask a question: http://stackoverflow.com/questions/tagged/meteor
-* Meteor help and discussion mailing list: https://groups.google.com/group/meteor-talk
-* IRC: `#meteor` on `irc.freenode.net`
-
-Interested in contributing to Meteor?
-
-* Core framework design mailing list: https://groups.google.com/group/meteor-core
-* Contribution guidelines: https://github.com/meteor/meteor/tree/devel/Contributing.md
-
-We are hiring!  Visit https://www.meteor.com/jobs to
-learn more about working full-time on the Meteor project.
+On Windows, just run the uninstaller from your Control Panel.

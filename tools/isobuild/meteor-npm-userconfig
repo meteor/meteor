@@ -1,0 +1,15 @@
+# These configuration options govern `npm` commands run on behalf of
+# Meteor packages that have `Npm.depends` calls in their package.js files,
+# not `meteor npm ...` commands. Because the developer is not running
+# these commands herself, we don't care as much about helpful warnings,
+# and we certainly don't want them to obscure actual errors.
+
+loglevel = error
+progress = false
+
+# By default if the NPM registry is unavailable, it will timeout after more than 60s.
+# These settings make sure we throw an error faster
+fetch-retries = 1
+fetch-retry-factor = 4
+fetch-retry-mintimeout = 1000
+fetch-retry-maxtimeout = 10000

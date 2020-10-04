@@ -1,9 +1,9 @@
 var _ = require('underscore');
-var selftest = require('../selftest.js');
-var httpHelpers = require('../http-helpers.js');
+var selftest = require('../tool-testing/selftest.js');
+var httpHelpers = require('../utils/http-helpers.js');
 var Sandbox = selftest.Sandbox;
-var testUtils = require("../test-utils.js");
-var config = require("../config.js");
+var testUtils = require('../tool-testing/test-utils.js');
+var config = require('../meteor-services/config.js');
 
 // This is not an end-to-end test for Cordova hot code push, but this test
 // is for the issue that we observed where the value of the
@@ -13,7 +13,7 @@ var config = require("../config.js");
 // it receives a hot code push, it would be connected to whatever
 // ROOT_URL is on the server.
 selftest.define(
-  "cordova --mobile-server argument persists across hot code pushes", ["cordova"], function () {
+  "cordova --mobile-server argument persists across hot code pushes", ["cordova", "slow"], function () {
     var s = new Sandbox();
     var run;
 
@@ -26,66 +26,63 @@ selftest.define(
     var platforms = s.read(".meteor/platforms");
     s.write(".meteor/platforms", platforms + "\nandroid\n");
 
-    run = s.run("--mobile-server", "example.com");
+    run = s.run("run", "android", "--mobile-server", "example.com");
     run.waitSecs(30);
     run.match("Started your app");
 
     var result = httpHelpers.getUrl(
       "http://localhost:3000/__cordova/index.html");
 
-    var ddpRegExp = /"DDP_DEFAULT_CONNECTION_URL":"http:\/\/example.com"/;
-    var rootUrlRegExp = /"ROOT_URL":"http:\/\/example.com"/;
-    if (! result.match(ddpRegExp)) {
-      selftest.fail("Incorrect DDP_DEFAULT_CONNECTION_URL");
-    }
-    if (! result.match(rootUrlRegExp)) {
-      selftest.fail("Incorrect ROOT_URL");
-    }
+    var mrc = testUtils.getMeteorRuntimeConfigFromHTML(result);
+    selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, "http://example.com/");
+    selftest.expectEqual(mrc.ROOT_URL, "http://example.com/");
 
     run.stop();
 });
 
-selftest.define("cordova app gets https:// URLs when force-ssl is used", ["cordova", "net", "slow"], function () {
-  var s = new Sandbox();
-  var run;
+selftest.define(
+  "cordova METEOR_CORDOVA_COMPAT_VERSION_* works", ["cordova", "slow"], function () {
+    var s = new Sandbox();
+    var run;
 
-  s.createApp("myapp", "standard-app");
-  s.cd("myapp");
+    var androidCompatibilityVersion = '2.0';
 
-  // Add 'android' to the .meteor/platforms file, just so that the
-  // Cordova boilerplate will be generated and served, without having
-  // to download the whole Android sdk.
-  var platforms = s.read(".meteor/platforms");
-  s.write(".meteor/platforms", platforms + "\nandroid\n");
+    // Override the compatibility version for android with METEOR_CORDOVA_COMPAT_VERSION_ANDROID.
+    s.env.METEOR_CORDOVA_COMPAT_VERSION_ANDROID = androidCompatibilityVersion;
 
-  run = s.run("add", "force-ssl");
-  run.waitSecs(15);
-  run.expectExit(0);
+    s.createApp("myapp", "standard-app");
+    s.cd("myapp");
 
-  testUtils.login(s, "test", "testtest");
+    var platforms = s.read(".meteor/platforms");
+    s.write(".meteor/platforms", platforms + "\nandroid\n");
 
-  var appName = testUtils.randomAppName() + "." + config.getDeployHostname();
-  run = s.run("deploy", appName);
-  run.waitSecs(90);
-  run.expectExit(0);
+    run = s.run("run", "android", "--mobile-server", "example.com");
+    run.waitSecs(30);
+    run.match("Started your app");
 
-  var url = "https://" + appName;
+    var result = JSON.parse(httpHelpers.getUrl(
+        "http://localhost:3000/__cordova/manifest.json"));
 
-  var result = httpHelpers.getUrl(url + "/__cordova/index.html");
+    // Check in the manifest if the overridden version was used.
+    selftest.expectEqual(result.cordovaCompatibilityVersions.android, androidCompatibilityVersion);
 
-  run = s.run("deploy", "-D", appName);
-  run.waitSecs(30);
-  run.expectExit(0);
+    run.stop();
+    // Save the iOS compatibility version.
+    var iosCompatibilityVersion = result.cordovaCompatibilityVersions.ios;
 
-  testUtils.logout(s);
+    // Now exclude one of the plugins from compatibility version calculation.
+    s.env.METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE = 'cordova-plugin-meteor-webapp,any-other-plugin';
 
-  var ddpRegExp = new RegExp('"DDP_DEFAULT_CONNECTION_URL":"' + url + '/"');
-  var rootUrlRegExp = new RegExp('"ROOT_URL":"' + url + '/"');
+    run = s.run("run", "android", "--mobile-server", "example.com");
+    run.waitSecs(30);
+    run.match("Started your app");
 
-  if (! result.match(ddpRegExp)) {
-    selftest.fail("Incorrect DDP_DEFAULT_CONNECTION_URL");
-  }
-  if (! result.match(rootUrlRegExp)) {
-    selftest.fail("Incorrect ROOT_URL");
-  }
+    result = JSON.parse(httpHelpers.getUrl(
+        "http://localhost:3000/__cordova/manifest.json"));
+
+    // Version should be different. There is no need to check if the particular plugin was not taken into account,
+    // if the version has changed it's proof enough.
+    selftest.expectFalse(result.cordovaCompatibilityVersions.ios === iosCompatibilityVersion);
+
+    run.stop();
 });

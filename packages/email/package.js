@@ -1,18 +1,15 @@
 Package.describe({
   summary: "Send email messages",
-  version: "1.0.6-winr.4"
+  version: "2.0.0"
 });
 
 Npm.depends({
-  // Pinned at older version. 0.1.16+ uses mimelib, not mimelib-noiconv which is
-  // much bigger. We need a better solution.
-  mailcomposer: "0.1.15",
-  simplesmtp: "0.3.10",
-  "stream-buffers": "0.2.5"});
+  nodemailer: "6.4.6",
+  "stream-buffers": "3.0.2"
+});
 
 Package.onUse(function (api) {
-  api.use('underscore', 'server');
-  api.export('Email', 'server');
+  api.export(['Email', 'EmailInternals'], 'server');
   api.export('EmailTest', 'server', {testOnly: true});
   api.addFiles('email.js', 'server');
 });

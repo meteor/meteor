@@ -1,14 +1,9 @@
-// This file is in tools/package-version-parser.js and is symlinked into
-// packages/package-version-parser/package-version-parser.js. It's part of both
-// the tool and the package!  We don't use an isopacket for it because it used
-// to be required as part of building isopackets (though that may no longer be
-// true).
-var inTool = typeof Package === 'undefined';
+var inTool = typeof Package === "undefined";
 
-
-var semver = inTool ?
-  require ('../../dev_bundle/lib/node_modules/semver') : SemVer410;
-var __ = inTool ? require('../../dev_bundle/lib/node_modules/underscore') : _;
+// Provided by dev_bundle/server-lib/node_modules/semver.
+var semver = inTool
+  ? module.parent.require("semver")
+  : require("semver");
 
 // Takes in a meteor version string, for example 1.2.3-rc.5_1+12345.
 //
@@ -104,17 +99,17 @@ var PV = function (versionString) {
   // everything but the wrapnum ("_123")
   this.semver = semverParse.version + (
     semverParse.build.length ? '+' + semverParse.build.join('.') : '');
+
+  this._semverParsed = null; // populate lazily
 };
+
+// Set module.exports for tools/packaging/package-version-parser.js and
+// module.exports.PackageVersion for api.export("PackageVersion").
+PV.PackageVersion = module.exports = PV;
 
 PV.parse = function (versionString) {
   return new PV(versionString);
 };
-
-if (inTool) {
-  module.exports = PV;
-} else {
-  PackageVersion = PV;
-}
 
 // Converts a meteor version into a large floating point number, which
 // is (more or less [*]) unique to that version. Satisfies the
@@ -154,7 +149,7 @@ var prereleaseIdentifierToFraction = function (prerelease) {
   if (prerelease.length === 0)
     return 0;
 
-  return __.reduce(prerelease, function (memo, part, index) {
+  return prerelease.reduce(function (memo, part, index) {
     var digit;
     if (typeof part === 'number') {
       digit = part+1;
@@ -185,6 +180,7 @@ var prereleaseIdentifierToFraction = function (prerelease) {
 };
 
 // Takes in two meteor versions. Returns true if the first one is less than the second.
+// Versions are strings or PackageVersion objects.
 PV.lessThan = function (versionOne, versionTwo) {
   return PV.compare(versionOne, versionTwo) < 0;
 };
@@ -200,15 +196,28 @@ PV.majorVersion = function (versionString) {
 
 // Takes in two meteor versions. Returns 0 if equal, a positive number if v1
 // is greater, a negative number if v2 is greater.
+// Versions are strings or PackageVersion objects.
 PV.compare = function (versionOne, versionTwo) {
-  var v1 = PV.parse(versionOne);
-  var v2 = PV.parse(versionTwo);
+  var v1 = versionOne;
+  if (typeof v1 === 'string') {
+    v1 = PV.parse(v1);
+  }
+  var v2 = versionTwo;
+  if (typeof v2 === 'string') {
+    v2 = PV.parse(v2);
+  }
 
   // If the semver parts are different, use the semver library to compare,
   // ignoring wrap numbers.  (The semver library will ignore the build ID
   // per the semver spec.)
   if (v1.semver !== v2.semver) {
-    return semver.compare(v1.semver, v2.semver);
+    if (! v1._semverParsed) {
+      v1._semverParsed = new semver(v1.semver);
+    }
+    if (! v2._semverParsed) {
+      v2._semverParsed = new semver(v2.semver);
+    }
+    return semver.compare(v1._semverParsed, v2._semverParsed);
   } else {
     // If the semver components are equal, then the one with the smaller wrap
     // numbers is smaller.
@@ -216,41 +225,70 @@ PV.compare = function (versionOne, versionTwo) {
   }
 };
 
-// Conceptually we have three types of constraints:
-// 1. "compatible-with" - A@x.y.z - constraints package A to version x.y.z or
-//    higher, as long as the version is backwards compatible with x.y.z.
-//    "pick A compatible with x.y.z"
-//    It is the default type.
-// 2. "exactly" - A@=x.y.z - constraints package A only to version x.y.z and
+// Conceptually we have four types of simple constraints:
+//
+// 1. "any-reasonable" - "A" - any version of A is allowed (other than
+//    prerelease versions that contain dashes, unless a prerelease version
+//    has been explicitly selected elsewhere).
+//
+// 2. "compatible-with" (major) - "A@x.y.z" - constrains package A to
+//    version x.y.z or higher, and requires the major version of package A
+//    to match x. This is the most common kind of version constraint.
+//
+// 3. "compatible-with" (minor) - "A@~x.y.z" - constrains package A to
+//    version x.y.z or higher, and requires the major and minor versions
+//    of package A to match x and y, respectively. This style is allowed
+//    anywhere, but is used most often to constrain the minor versions of
+//    Meteor core packages, according to the current Meteor release.
+//
+// 4. "exactly" - A@=x.y.z - constrains package A to version x.y.z and
 //    nothing else.
-//    "pick A exactly at x.y.z"
-// 3. "any-reasonable" - "A"
-//    Basically, this means any version of A ... other than ones that have
-//    dashes in the version (ie, are prerelease) ... unless the prerelease
-//    version has been explicitly selected (which at this stage in the game
-//    means they are mentioned in a top-level constraint in the top-level
-//    call to the resolver).
-var parseSimpleConstraint = function (constraintString) {
+//
+// If a top-level constraint (e.g. in .meteor/packages) ends with a '!'
+// character, any other constraints on that package will be weakened to
+// accept any version of the package that is not less than the constraint,
+// regardless of whether the major/minor versions match.
+function parseSimpleConstraint(constraintString) {
   if (! constraintString) {
     throw new Error("Non-empty string required");
   }
 
-  var type, versionString;
+  var result = {};
+  var needToCheckValidity = true;
 
   if (constraintString.charAt(0) === '=') {
-    type = "exactly";
-    versionString = constraintString.substr(1);
+    result.type = "exactly";
+    result.versionString = constraintString.slice(1);
+
   } else {
-    type = "compatible-with";
-    versionString = constraintString;
+    result.type = "compatible-with";
+
+    if (constraintString.charAt(0) === "~") {
+      var semversion = PV.parse(
+        result.versionString = constraintString.slice(1)
+      ).semver;
+
+      var range = new semver.Range("~" + semversion);
+
+      result.test = function (version) {
+        return range.test(PV.parse(version).semver);
+      };
+
+      // Already checked by calling PV.parse above.
+      needToCheckValidity = false;
+
+    } else {
+      result.versionString = constraintString;
+    }
   }
 
-  // This will throw if the version string is invalid.
-  PV.getValidServerVersion(versionString);
+  if (needToCheckValidity) {
+    // This will throw if the version string is invalid.
+    PV.getValidServerVersion(result.versionString);
+  }
 
-  return { type: type, versionString: versionString };
-};
-
+  return result;
+}
 
 // Check to see if the versionString that we pass in is a valid meteor version.
 //
@@ -271,9 +309,21 @@ PV.VersionConstraint = function (vConstraintString) {
       [ { type: "any-reasonable", versionString: null } ];
     vConstraintString = "";
   } else {
+    if (vConstraintString.endsWith("!")) {
+      // If a top-level constraint (e.g. from .meteor/packages) ends with
+      // a '!' character, any other constraints on that package will be
+      // weakened to accept any version of the package that is not less
+      // than the constraint, regardless of whether the major/minor
+      // versions actually match. See packages/constraint-solver/solver.js
+      // for implementation details.
+      this.override = true;
+      vConstraintString =
+        vConstraintString.slice(0, vConstraintString.length - 1);
+    }
+
     // Parse out the versionString.
     var parts = vConstraintString.split(/ *\|\| */);
-    alternatives = __.map(parts, function (alt) {
+    alternatives = parts.map(function (alt) {
       if (! alt) {
         throwVersionParserError("Invalid constraint string: " +
                                 vConstraintString);
@@ -377,10 +427,37 @@ PV.validatePackageName = function (packageName, options) {
         "dot, or colon, not " + JSON.stringify(badChar[0]) + ".");
   }
   if (!/[a-z]/.test(packageName)) {
-    throwVersionParserError("Package names must contain a lowercase ASCII letter.");
+    throwVersionParserError("Package name must contain a lowercase ASCII letter: "
+                            + JSON.stringify(packageName));
   }
   if (packageName[0] === '.') {
-    throwVersionParserError("Package names may not begin with a dot.");
+    throwVersionParserError("Package name may not begin with a dot: "
+                            + JSON.stringify(packageName));
+  }
+  if (packageName.slice(-1) === '.') {
+    throwVersionParserError("Package name may not end with a dot: "
+                            + JSON.stringify(packageName));
+  }
+
+  if (packageName.slice(-1) === '.') {
+    throwVersionParserError("Package names may not end with a dot: " +
+                            JSON.stringify(packageName));
+  }
+  if (packageName.indexOf('..') >= 0) {
+    throwVersionParserError("Package names may not contain two consecutive dots: " +
+                            JSON.stringify(packageName));
+  }
+  if (packageName[0] === '-') {
+    throwVersionParserError("Package names may not begin with a hyphen: " +
+                            JSON.stringify(packageName));
+  }
+  // (There is already a package ending with a `-` and one with two consecutive `-`
+  // in troposphere, though they both look like typos.)
+
+  if (packageName.startsWith(":") ||
+      packageName.endsWith(":")) {
+    throwVersionParserError("Package names may not start or end with a colon: " +
+                            JSON.stringify(packageName));
   }
 };
 

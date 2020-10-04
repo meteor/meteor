@@ -6,7 +6,8 @@ if (! /Android/i.test(navigator.userAgent)) {
     // Cut off the url prefix, the meaningful part always starts at 'www/' in
     // Cordova apps.
     url = url.replace(/^.*?\/www\//, '');
-    console.log('Uncaught Error: ' + msg + ':' + line + ':' + url);
+    console.log(`Uncaught Error: ${msg}:${line}:${url}`);
   };
 }
 
+export * from './logging.js';

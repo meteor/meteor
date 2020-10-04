@@ -60,3 +60,8 @@ Meteor._debug = function (/* arguments */) {
 Meteor._suppress_log = function (count) {
   suppress += count;
 };
+
+Meteor._suppressed_log_expected = function () {
+  return suppress !== 0;
+};
+

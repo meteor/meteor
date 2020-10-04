@@ -1,11 +1,18 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.0.4-winr.3'
+  version: '1.2.0'
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'tracker', 'ejson', 'tinytest', 'random']);
-  api.use(['jquery'], 'client');
+  api.use([
+    'ecmascript',
+    'underscore',
+    'tracker',
+    'ejson',
+    'tinytest',
+    'random',
+    'blaze',
+  ]);
 
   // XXX for connection.js. Not sure this really belongs in
   // test-helpers. It probably would be better off in livedata. But it's
@@ -20,7 +27,7 @@ Package.onUse(function (api) {
     'pollUntil', 'try_all_permutations',
     'SeededRandom', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
-    'renderToDiv',
+    'renderToDiv', 'clickIt',
     'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
     'makeTestConnection', 'DomUtils']);
 

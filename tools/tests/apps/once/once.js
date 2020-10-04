@@ -14,6 +14,23 @@ if (process.env.RUN_ONCE_OUTCOME === "hang") {
 
 if (process.env.RUN_ONCE_OUTCOME === "mongo") {
   var test = new Mongo.Collection('test');
-  test.insert({ value: 86 });
-  process.exit(test.findOne().value);
+  var triesLeft = 10;
+
+  function tryInsert() {
+    try {
+      test.insert({ value: 86 });
+    } catch (e) {
+      if (--triesLeft <= 0) {
+        throw e;
+      }
+
+      console.log("insert failed; retrying:", String(e.stack || e));
+      Meteor.setTimeout(tryInsert, 1000);
+      return;
+    }
+
+    process.exit(test.findOne().value);
+  }
+
+  Meteor.startup(tryInsert);
 }

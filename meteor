@@ -1,6 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-BUNDLE_VERSION=0.4.15
+BUNDLE_VERSION=12.18.4.0
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -21,9 +21,9 @@ if [ "$UNAME" = "Darwin" ] ; then
     ARCH="x86_64"
 elif [ "$UNAME" = "Linux" ] ; then
     ARCH="$(uname -m)"
-    if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+    if [ "$ARCH" != "x86_64" ] ; then
         echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports i686 and x86_64 for now."
+        echo "Meteor only supports x86_64"
         exit 1
     fi
 fi
@@ -60,6 +60,7 @@ function install_dev_bundle {
     rm -rf "$BUNDLE_TMPDIR"
     mkdir "$BUNDLE_TMPDIR"
 
+    # duplicated in scripts/windows/download-dev-bundle.ps1:
     DEV_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
     # If you set $USE_TEST_DEV_BUNDLE_SERVER then we will download
     # dev bundles copied by copy-dev-bundle-from-jenkins.sh without --prod.
@@ -105,22 +106,24 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
         echo "Your dependency kit is out of date. I will download the new one." >&2
         install_dev_bundle
     fi
+
+    export BABEL_CACHE_DIR="$SCRIPT_DIR/.babel-cache"
 fi
 
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-METEOR="$SCRIPT_DIR/tools/main.js"
+METEOR="$SCRIPT_DIR/tools/index.js"
 
+# Set the nofile ulimit as high as permitted by the hard-limit/kernel
+if [ "$(ulimit -Sn)" != "unlimited" ]; then
+    if [ "$(uname -s)" = "Darwin" ]; then
+        maxfilesuse="$(sysctl -n kern.maxfilesperproc)"
+    else
+        maxfilesuse="$(ulimit -Hn)"
+    fi
 
-# Bump our file descriptor ulimit as high as it will go. This is a
-# temporary workaround for dependancy watching holding open too many
-# files: https://app.asana.com/0/364581412985/472479912325
-if [ "$(ulimit -n)" != "unlimited" ] ; then
-    ulimit -n 16384 > /dev/null 2>&1 || \
-    ulimit -n 8192 > /dev/null 2>&1 || \
-    ulimit -n 4096 > /dev/null 2>&1 || \
-    ulimit -n 2048 > /dev/null 2>&1 || \
-    ulimit -n 1024 > /dev/null 2>&1 || \
-    ulimit -n 512 > /dev/null 2>&1
+    if [ -n "${maxfilesuse}" ] && [ "${maxfilesuse}" != "unlimited" ]; then
+        ulimit -Sn ${maxfilesuse} > /dev/null 2>&1
+    fi
 fi
 
 # We used to set $NODE_PATH here to include the node_modules from the dev
@@ -129,4 +132,10 @@ fi
 # the script take precedence over $NODE_PATH; it used to be that users would
 # screw up their meteor installs by have a ~/node_modules
 
-exec "$DEV_BUNDLE/bin/node" "$METEOR" "$@"
+# --no-wasm-code-gc is currently necessary as a workaround for
+# https://github.com/nodejs/node/issues/29767
+exec "$DEV_BUNDLE/bin/node" \
+     --max-old-space-size=4096 \
+     --no-wasm-code-gc \
+     ${TOOL_NODE_FLAGS} \
+     "$METEOR" "$@"

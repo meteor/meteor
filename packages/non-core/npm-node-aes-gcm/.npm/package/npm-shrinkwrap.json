@@ -1,7 +1,0 @@
-{
-  "dependencies": {
-    "node-aes-gcm": {
-      "version": "0.1.3"
-    }
-  }
-}

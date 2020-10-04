@@ -1,18 +1,19 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 
 selftest.define("css hot code push", function (options) {
   var s = new Sandbox({
     clients: options.clients
   });
 
+  s.set("METEOR_WATCH_PRIORITIZE_CHANGED", "false");
+
   s.createApp("myapp", "css-injection-test");
   s.cd("myapp");
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
 
@@ -50,9 +51,12 @@ selftest.define("css hot code push", function (options) {
     run.match("numCssChanges: 3");
     run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
 
-    s.write(".meteor/packages", "standard-app-packages \n my-package");
+    s.write(".meteor/packages", `meteor-base
+jquery
+my-package`);
     run.match(/my-package.*added,/);
     run.match("client connected");
+    run.waitSecs(45);
     run.match("numCssChanges: 0");
 
     s.write("packages/my-package/foo.css", "body { background-color: blue; }");
@@ -60,47 +64,54 @@ selftest.define("css hot code push", function (options) {
     run.match(/background-color: (blue|rgb\(0, 0, 255\))/);
 
     // Add appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "standard-app-packages \n my-package \n appcache");
+    s.write(".meteor/packages", `meteor-base
+jquery
+my-package
+appcache`);
     run.match(/appcache.*added,/);
     run.match("server restarted");
     run.match("numCssChanges: 0");
     run.match(/background-color: (blue|rgb\(0, 0, 255\))/);
+    run.waitSecs(30);
 
     s.write("packages/my-package/foo.css", "body { background-color: red; }");
     run.match("Client modified -- refreshing");
     run.match("numCssChanges: 1");
     run.match(/background-color: (red|rgb\(255, 0, 0\))/);
+    run.waitSecs(20);
 
     // XXX: Remove me.  This shouldn't be needed, but sometimes
     // if we run too quickly on fast (or Linux?) machines, it looks
     // like there's a race and we see a weird state
     utils.sleepMs(10000);
 
-    s.write(".meteor/packages", "standard-app-packages");
+    s.write(".meteor/packages", `meteor-base
+jquery`);
     run.match(/my-package.*removed from your project/);
     run.match("numCssChanges: 0");
     run.match(/background-color: (transparent|rgba\(0, 0, 0, 0\))/);
+    run.waitSecs(30);
 
     run.stop();
   });
 });
 
 selftest.define("versioning hot code push", function (options) {
-  var s = new Sandbox();
+  var s = new Sandbox({
+    clients: options.clients,
+  });
 
   s.set("AUTOUPDATE_VERSION", "1.0");
   s.createApp("myapp", "hot-code-push-test");
   s.cd("myapp");
 
   s.testWithAllClients(function (run) {
-    run.baseTimeout = 20;
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
     run.connectClient();
-    run.waitSecs(20);
+    run.waitSecs(40);
 
     run.match("client connected: 0");
 
@@ -120,7 +131,6 @@ selftest.define("javascript hot code push", function (options) {
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
 
@@ -182,7 +192,7 @@ selftest.define("javascript hot code push", function (options) {
     // important part of this test.)
     s.write("hot-code-push-test.html", ">");
     run.match("Errors prevented startup");
-    run.match("bad formatting in HTML template");
+    run.match("Expected one of: <body>, <head>, <template>");
     // Fix it. It should notice, and restart. The client will restart too.
     s.write("hot-code-push-test.html", "");
     run.match("server restarted");
@@ -193,7 +203,9 @@ selftest.define("javascript hot code push", function (options) {
     run.match("client connected: 1");
     run.match("jsVar: undefined");
 
-    s.write(".meteor/packages", "standard-app-packages \n my-package");
+    s.write(".meteor/packages", `meteor-base
+session
+my-package`);
     run.match(/my-package.*added,/);
     run.match("server restarted");
     run.match("client connected: 0");
@@ -201,28 +213,38 @@ selftest.define("javascript hot code push", function (options) {
     run.match("packageVar: foo");
 
     s.write("packages/my-package/foo.js", "packageVar = 'bar'");
-    run.match("client connected: 1");
+    run.match("client connected: 0");
     run.match("jsVar: undefined");
     run.match("packageVar: bar");
 
+    // Ensure we set back to foo for subsequent runs
+    s.write("packages/my-package/foo.js", "packageVar = 'foo'");
+
     // Add appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "standard-app-packages \n appcache");
+    s.write(".meteor/packages", `meteor-base
+session
+appcache`);
     run.match(/appcache.*added,/);
     run.match("server restarted");
     run.match("client connected: 0");
     run.match("jsVar: undefined");
 
-    // XXX: Remove me.  This shouldn't be needed, but sometimes
-    // if we run too quickly on fast (or Linux?) machines, it looks
-    // like there's a race and we see a weird state
+    // XXX: Remove me.  This shouldn't be needed, but sometimes if we run too 
+    // quickly on fast (or Linux?) machines, it looks like there's a race and we 
+    // see a weird state. Without this line this test was failing one time on
+    // every build in CircleCI, but oddly enough would succeed on the second
+    // try.
     utils.sleepMs(10000);
 
     s.write("client/test.js", "jsVar = 'bar'");
+    run.waitSecs(20);
     run.match("client connected: 1");
     run.match("jsVar: bar");
 
     // Remove appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "standard-app-packages");
+    s.write(".meteor/packages", `meteor-base
+    static-html
+session`);
     run.match(/appcache.*removed from your project/);
     run.match("server restarted");
     run.match("client connected: 0");
@@ -232,16 +254,11 @@ selftest.define("javascript hot code push", function (options) {
     run.match("jsVar: baz");
 
     s.unlink("client/test.js");
-
-    // Setting the autoupdateVersion to a different string should also
-    // force the client to restart.
-    s.write("server/test.js",
-            "Package.autoupdate.Autoupdate.autoupdateVersion = 'random'");
-    run.match("server restarted");
-    run.match("client connected: 0");
+    run.match("client connected: 2");
     run.match("jsVar: undefined");
 
-    s.unlink("server/test.js");
+    s.write("server/test.js", 'console.log("DONE");');
+    run.match("DONE");
     run.match("server restarted");
 
     run.stop();

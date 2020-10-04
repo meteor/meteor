@@ -6,11 +6,11 @@ var CS = ConstraintSolver;
 ////////// PackageAndVersion
 
 // An ordered pair of (package, version).
-CS.PackageAndVersion = function (package, version) {
-  check(package, String);
+CS.PackageAndVersion = function (pkg, version) {
+  check(pkg, String);
   check(version, String);
 
-  this.package = package;
+  this.package = pkg;
   this.version = version;
 };
 
@@ -36,7 +36,10 @@ CS.PackageAndVersion.fromString = function (str) {
 // and flags, like "isWeak".
 
 CS.Dependency = function (packageConstraint, flags) {
-  check(packageConstraint, Match.OneOf(PV.PackageConstraint, String));
+  if (typeof packageConstraint !== 'string') {
+    // this `if` is because Match.OneOf is really, really slow when it fails
+    check(packageConstraint, Match.OneOf(PV.PackageConstraint, String));
+  }
   if (typeof packageConstraint === 'string') {
     packageConstraint = PV.parsePackageConstraint(packageConstraint);
   }

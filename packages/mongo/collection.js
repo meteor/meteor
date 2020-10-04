@@ -22,12 +22,9 @@ Mongo = {};
 
 The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
+ * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
  */
-Mongo.Collection = function (name, options) {
-  var self = this;
-  if (! (self instanceof Mongo.Collection))
-    throw new Error('use "new" to construct a Mongo.Collection');
-
+Mongo.Collection = function Collection(name, options) {
   if (!name && (name !== null)) {
     Meteor._debug("Warning: creating anonymous collection. It will not be " +
                   "saved or synchronized over the network. (Pass null for " +
@@ -51,64 +48,107 @@ Mongo.Collection = function (name, options) {
   if (options && options.manager && !options.connection) {
     options.connection = options.manager;
   }
-  options = _.extend({
+
+  options = {
     connection: undefined,
     idGeneration: 'STRING',
     transform: null,
     _driver: undefined,
-    _preventAutopublish: false
-  }, options);
+    _preventAutopublish: false,
+      ...options,
+  };
 
   switch (options.idGeneration) {
   case 'MONGO':
-    self._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+    this._makeNewID = function () {
+      var src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
       return new Mongo.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
   default:
-    self._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+    this._makeNewID = function () {
+      var src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
       return src.id();
     };
     break;
   }
 
-  self._transform = LocalCollection.wrapTransform(options.transform);
+  this._transform = LocalCollection.wrapTransform(options.transform);
 
   if (! name || options.connection === null)
     // note: nameless collections never have a connection
-    self._connection = null;
+    this._connection = null;
   else if (options.connection)
-    self._connection = options.connection;
+    this._connection = options.connection;
   else if (Meteor.isClient)
-    self._connection = Meteor.connection;
+    this._connection = Meteor.connection;
   else
-    self._connection = Meteor.server;
+    this._connection = Meteor.server;
 
   if (!options._driver) {
     // XXX This check assumes that webapp is loaded so that Meteor.server !==
     // null. We should fully support the case of "want to use a Mongo-backed
     // collection from Node code without webapp", but we don't yet.
     // #MeteorServerNull
-    if (name && self._connection === Meteor.server &&
+    if (name && this._connection === Meteor.server &&
         typeof MongoInternals !== "undefined" &&
         MongoInternals.defaultRemoteCollectionDriver) {
       options._driver = MongoInternals.defaultRemoteCollectionDriver();
     } else {
+      const { LocalCollectionDriver } =
+        require("./local_collection_driver.js");
       options._driver = LocalCollectionDriver;
     }
   }
 
-  self._collection = options._driver.open(name, self._connection);
-  self._name = name;
+  this._collection = options._driver.open(name, this._connection);
+  this._name = name;
+  this._driver = options._driver;
 
-  if (self._connection && self._connection.registerStore) {
+  this._maybeSetUpReplication(name, options);
+
+  // XXX don't define these until allow or deny is actually used for this
+  // collection. Could be hard if the security rules are only defined on the
+  // server.
+  if (options.defineMutationMethods !== false) {
+    try {
+      this._defineMutationMethods({
+        useExisting: options._suppressSameNameError === true
+      });
+    } catch (error) {
+      // Throw a more understandable error on the server for same collection name
+      if (error.message === `A method named '/${name}/insert' is already defined`)
+        throw new Error(`There is already a collection named "${name}"`);
+      throw error;
+    }
+  }
+
+  // autopublish
+  if (Package.autopublish &&
+      ! options._preventAutopublish &&
+      this._connection &&
+      this._connection.publish) {
+    this._connection.publish(null, () => this.find(), {
+      is_auto: true,
+    });
+  }
+};
+
+Object.assign(Mongo.Collection.prototype, {
+  _maybeSetUpReplication(name, {
+    _suppressSameNameError = false
+  }) {
+    const self = this;
+    if (! (self._connection &&
+           self._connection.registerStore)) {
+      return;
+    }
+
     // OK, we're going to be a slave, replicating some remote
     // database, except possibly with some temporary divergence while
     // we have unacknowledged RPC's.
-    var ok = self._connection.registerStore(name, {
+    const ok = self._connection.registerStore(name, {
       // Called at the beginning of a batch of updates. batchSize is the number
       // of update calls to expect.
       //
@@ -119,7 +159,7 @@ Mongo.Collection = function (name, options) {
       // message, and then we can either directly apply it at endUpdate time if
       // it was the only update, or do pauseObservers/apply/apply at the next
       // update() if there's another one.
-      beginUpdate: function (batchSize, reset) {
+      beginUpdate(batchSize, reset) {
         // pause observers so users don't see flicker when updating several
         // objects at once (including the post-reconnect reset-and-reapply
         // stage), and so that a re-sorting of a query can take advantage of the
@@ -134,9 +174,9 @@ Mongo.Collection = function (name, options) {
 
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
-      update: function (msg) {
-        var mongoId = LocalCollection._idParse(msg.id);
-        var doc = self._collection.findOne(mongoId);
+      update(msg) {
+        var mongoId = MongoID.idParse(msg.id);
+        var doc = self._collection._docs.get(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
@@ -157,7 +197,7 @@ Mongo.Collection = function (name, options) {
           if (doc) {
             throw new Error("Expected not to find a document already present for an add");
           }
-          self._collection.insert(_.extend({_id: mongoId}, msg.fields));
+          self._collection.insert({ _id: mongoId, ...msg.fields });
         } else if (msg.msg === 'removed') {
           if (!doc)
             throw new Error("Expected to find a document already present for removed");
@@ -165,116 +205,104 @@ Mongo.Collection = function (name, options) {
         } else if (msg.msg === 'changed') {
           if (!doc)
             throw new Error("Expected to find a document to change");
-          if (!_.isEmpty(msg.fields)) {
+          const keys = Object.keys(msg.fields);
+          if (keys.length > 0) {
             var modifier = {};
-            _.each(msg.fields, function (value, key) {
-              if (value === undefined) {
-                if (!modifier.$unset)
+            keys.forEach(key => {
+              const value = msg.fields[key];
+              if (EJSON.equals(doc[key], value)) {
+                return;
+              }
+              if (typeof value === "undefined") {
+                if (!modifier.$unset) {
                   modifier.$unset = {};
+                }
                 modifier.$unset[key] = 1;
               } else {
-                if (!modifier.$set)
+                if (!modifier.$set) {
                   modifier.$set = {};
+                }
                 modifier.$set[key] = value;
               }
             });
-            self._collection.update(mongoId, modifier);
+            if (Object.keys(modifier).length > 0) {
+              self._collection.update(mongoId, modifier);
+            }
           }
         } else {
           throw new Error("I don't know how to deal with this message");
         }
-
       },
 
       // Called at the end of a batch of updates.
-      endUpdate: function () {
+      endUpdate() {
         self._collection.resumeObservers();
       },
 
       // Called around method stub invocations to capture the original versions
       // of modified documents.
-      saveOriginals: function () {
+      saveOriginals() {
         self._collection.saveOriginals();
       },
-      retrieveOriginals: function () {
+      retrieveOriginals() {
         return self._collection.retrieveOriginals();
+      },
+
+      // Used to preserve current versions of documents across a store reset.
+      getDoc(id) {
+        return self.findOne(id);
+      },
+
+      // To be able to get back to the collection from the store.
+      _getCollection() {
+        return self;
       }
     });
 
-    if (!ok)
-      throw new Error("There is already a collection named '" + name + "'");
-  }
-
-  // set to true once we call any allow or deny methods. If true, use
-  // allow/deny semantics. If false, use insecure mode semantics.
-  self._restricted = false;
-
-  // Insecure mode (default to allowing writes). Defaults to 'undefined' which
-  // means insecure iff the insecure package is loaded. This property can be
-  // overriden by tests or packages wishing to change insecure mode behavior of
-  // their collections.
-  self._insecure = undefined;
-
-  self._validators = {
-    insert: {allow: [], deny: []},
-    update: {allow: [], deny: []},
-    remove: {allow: [], deny: []},
-    fetch: [],
-    fetchAllFields: false
-  };
-
-  if (self._name) {
-    // XXX Think about method namespacing. Maybe methods should be
-    // "Meteor:Mongo:insert/NAME"?
-    self._prefix = '/' + self._name + '/';
-
-  // Minimongo on the server gets no stubs; instead, by default
-  // it wait()s until its result is ready, yielding.
-  // This matches the behavior of macromongo on the server better.
-  // XXX see #MeteorServerNull
-    if (self._connection && (Meteor.isClient || self._connection === Meteor.server)) {
-      self._defineMutationMethods();
+    if (! ok) {
+      const message = `There is already a collection named "${name}"`;
+      if (_suppressSameNameError === true) {
+        // XXX In theory we do not have to throw when `ok` is falsy. The
+        // store is already defined for this collection name, but this
+        // will simply be another reference to it and everything should
+        // work. However, we have historically thrown an error here, so
+        // for now we will skip the error only when _suppressSameNameError
+        // is `true`, allowing people to opt in and give this some real
+        // world testing.
+        console.warn ? console.warn(message) : console.log(message);
+      } else {
+        throw new Error(message);
+      }
     }
-  }
+  },
 
-  // autopublish
-  if (Package.autopublish && !options._preventAutopublish && self._connection
-      && self._connection.publish) {
-    self._connection.publish(null, function () {
-      return self.find();
-    }, {is_auto: true});
-  }
-};
+  ///
+  /// Main collection API
+  ///
 
-///
-/// Main collection API
-///
-
-
-_.extend(Mongo.Collection.prototype, {
-
-  _getFindSelector: function (args) {
+  _getFindSelector(args) {
     if (args.length == 0)
       return {};
     else
       return args[0];
   },
 
-  _getFindOptions: function (args) {
+  _getFindOptions(args) {
     var self = this;
     if (args.length < 2) {
       return { transform: self._transform };
     } else {
       check(args[1], Match.Optional(Match.ObjectIncluding({
         fields: Match.Optional(Match.OneOf(Object, undefined)),
-        sort: Match.Optional(Match.OneOf(Object, Array, undefined)),
+        sort: Match.Optional(Match.OneOf(Object, Array, Function, undefined)),
         limit: Match.Optional(Match.OneOf(Number, undefined)),
         skip: Match.Optional(Match.OneOf(Number, undefined))
-     })));
+      })));
 
-      return _.extend({
-        transform: self._transform
-      }, args[1]);
+      return {
+        transform: self._transform,
+        ...args[1],
+      };
     }
   },
 
@@ -282,7 +310,7 @@ _.extend(Mongo.Collection.prototype, {
    * @summary Find the documents in a collection that match the selector.
    * @locus Anywhere
    * @method find
-   * @memberOf Mongo.Collection
+   * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
@@ -292,23 +320,28 @@ _.extend(Mongo.Collection.prototype, {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @param {Boolean} options.disableOplog (Server only) Pass true to disable oplog-tailing on this query. This affects the way server processes calls to `observe` on this query. Disabling the oplog can be useful when working with data that updates in large batches.
+   * @param {Number} options.pollingIntervalMs (Server only) When oplog is disabled (through the use of `disableOplog` or when otherwise not available), the frequency (in milliseconds) of how often to poll this query when observing on the server. Defaults to 10000ms (10 seconds).
+   * @param {Number} options.pollingThrottleMs (Server only) When oplog is disabled (through the use of `disableOplog` or when otherwise not available), the minimum time (in milliseconds) to allow between re-polling when observing on the server. Increasing this will save CPU and mongo load at the expense of slower updates to users. Decreasing this is not recommended. Defaults to 50ms.
+   * @param {Number} options.maxTimeMs (Server only) If set, instructs MongoDB to set a time limit for this cursor's operations. If the operation reaches the specified time limit (in milliseconds) without the having been completed, an exception will be thrown. Useful to prevent an (accidental or malicious) unoptimized query from causing a full collection scan that would disrupt other database users, at the expense of needing to handle the resulting error.
+   * @param {String|Object} options.hint (Server only) Overrides MongoDB's default index selection and query optimization process. Specify an index to force its use, either by its name or index specification. You can also specify `{ $natural : 1 }` to force a forwards collection scan, or `{ $natural : -1 }` for a reverse collection scan. Setting this is only recommended for advanced users.
    * @returns {Mongo.Cursor}
    */
-  find: function (/* selector, options */) {
+  find(...args) {
     // Collection.find() (return all docs) behaves differently
     // from Collection.find(undefined) (return 0 docs).  so be
     // careful about the length of arguments.
-    var self = this;
-    var argArray = _.toArray(arguments);
-    return self._collection.find(self._getFindSelector(argArray),
-                                 self._getFindOptions(argArray));
+    return this._collection.find(
+      this._getFindSelector(args),
+      this._getFindOptions(args)
+    );
   },
 
   /**
-   * @summary Finds the first document that matches the selector, as ordered by sort and skip options.
+   * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
    * @locus Anywhere
    * @method findOne
-   * @memberOf Mongo.Collection
+   * @memberof Mongo.Collection
    * @instance
    * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
@@ -319,208 +352,176 @@ _.extend(Mongo.Collection.prototype, {
    * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
    * @returns {Object}
    */
-  findOne: function (/* selector, options */) {
-    var self = this;
-    var argArray = _.toArray(arguments);
-    return self._collection.findOne(self._getFindSelector(argArray),
-                                    self._getFindOptions(argArray));
+  findOne(...args) {
+    return this._collection.findOne(
+      this._getFindSelector(args),
+      this._getFindOptions(args)
+    );
   }
-
 });
 
-Mongo.Collection._publishCursor = function (cursor, sub, collection) {
-  var observeHandle = cursor.observeChanges({
-    added: function (id, fields) {
-      sub.added(collection, id, fields);
+Object.assign(Mongo.Collection, {
+  _publishCursor(cursor, sub, collection) {
+    var observeHandle = cursor.observeChanges({
+      added: function (id, fields) {
+        sub.added(collection, id, fields);
+      },
+      changed: function (id, fields) {
+        sub.changed(collection, id, fields);
+      },
+      removed: function (id) {
+        sub.removed(collection, id);
+      }
     },
-    changed: function (id, fields) {
-      sub.changed(collection, id, fields);
-    },
-    removed: function (id) {
-      sub.removed(collection, id);
+    // Publications don't mutate the documents
+    // This is tested by the `livedata - publish callbacks clone` test
+    { nonMutatingCallbacks: true });
+
+    // We don't call sub.ready() here: it gets called in livedata_server, after
+    // possibly calling _publishCursor on multiple returned cursors.
+
+    // register stop callback (expects lambda w/ no args).
+    sub.onStop(function () {
+      observeHandle.stop();
+    });
+
+    // return the observeHandle in case it needs to be stopped early
+    return observeHandle;
+  },
+
+  // protect against dangerous selectors.  falsey and {_id: falsey} are both
+  // likely programmer error, and not what you want, particularly for destructive
+  // operations. If a falsey _id is sent in, a new string _id will be
+  // generated and returned; if a fallbackId is provided, it will be returned
+  // instead.
+  _rewriteSelector(selector, { fallbackId } = {}) {
+    // shorthand -- scalars match _id
+    if (LocalCollection._selectorIsId(selector))
+      selector = {_id: selector};
+
+    if (Array.isArray(selector)) {
+      // This is consistent with the Mongo console itself; if we don't do this
+      // check passing an empty array ends up selecting all items
+      throw new Error("Mongo selector can't be an array.");
     }
-  });
 
-  // We don't call sub.ready() here: it gets called in livedata_server, after
-  // possibly calling _publishCursor on multiple returned cursors.
-
-  // register stop callback (expects lambda w/ no args).
-  sub.onStop(function () {observeHandle.stop();});
-};
-
-// protect against dangerous selectors.  falsey and {_id: falsey} are both
-// likely programmer error, and not what you want, particularly for destructive
-// operations.  JS regexps don't serialize over DDP but can be trivially
-// replaced by $regex.
-Mongo.Collection._rewriteSelector = function (selector) {
-  // shorthand -- scalars match _id
-  if (LocalCollection._selectorIsId(selector))
-    selector = {_id: selector};
-
-  if (!selector || (('_id' in selector) && !selector._id))
-    // can't match anything
-    return {_id: Random.id()};
-
-  var ret = {};
-  _.each(selector, function (value, key) {
-    // Mongo supports both {field: /foo/} and {field: {$regex: /foo/}}
-    if (value instanceof RegExp) {
-      ret[key] = convertRegexpToMongoSelector(value);
-    } else if (value && value.$regex instanceof RegExp) {
-      ret[key] = convertRegexpToMongoSelector(value.$regex);
-      // if value is {$regex: /foo/, $options: ...} then $options
-      // override the ones set on $regex.
-      if (value.$options !== undefined)
-        ret[key].$options = value.$options;
+    if (!selector || (('_id' in selector) && !selector._id)) {
+      // can't match anything
+      return { _id: fallbackId || Random.id() };
     }
-    else if (_.contains(['$or','$and','$nor'], key)) {
-      // Translate lower levels of $and/$or/$nor
-      ret[key] = _.map(value, function (v) {
-        return Mongo.Collection._rewriteSelector(v);
-      });
-    } else {
-      ret[key] = value;
-    }
-  });
-  return ret;
-};
 
-// convert a JS RegExp object to a Mongo {$regex: ..., $options: ...}
-// selector
-var convertRegexpToMongoSelector = function (regexp) {
-  check(regexp, RegExp); // safety belt
-
-  var selector = {$regex: regexp.source};
-  var regexOptions = '';
-  // JS RegExp objects support 'i', 'm', and 'g'. Mongo regex $options
-  // support 'i', 'm', 'x', and 's'. So we support 'i' and 'm' here.
-  if (regexp.ignoreCase)
-    regexOptions += 'i';
-  if (regexp.multiline)
-    regexOptions += 'm';
-  if (regexOptions)
-    selector.$options = regexOptions;
-
-  return selector;
-};
-
-var throwIfSelectorIsNotId = function (selector, methodName) {
-  if (!LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
-    throw new Meteor.Error(
-      403, "Not permitted. Untrusted code may only " + methodName +
-        " documents by ID.");
+    return selector;
   }
-};
+});
 
-// 'insert' immediately returns the inserted document's new _id.
-// The others return values immediately if you are in a stub, an in-memory
-// unmanaged collection, or a mongo-backed collection and you don't pass a
-// callback. 'update' and 'remove' return the number of affected
-// documents. 'upsert' returns an object with keys 'numberAffected' and, if an
-// insert happened, 'insertedId'.
-//
-// Otherwise, the semantics are exactly like other methods: they take
-// a callback as an optional last argument; if no callback is
-// provided, they block until the operation is complete, and throw an
-// exception if it fails; if a callback is provided, then they don't
-// necessarily block, and they call the callback when they finish with error and
-// result arguments.  (The insert method provides the document ID as its result;
-// update and remove provide the number of affected docs as the result; upsert
-// provides an object with numberAffected and maybe insertedId.)
-//
-// On the client, blocking is impossible, so if a callback
-// isn't provided, they just return immediately and any error
-// information is lost.
-//
-// There's one more tweak. On the client, if you don't provide a
-// callback, then if there is an error, a message will be logged with
-// Meteor._debug.
-//
-// The intent (though this is actually determined by the underlying
-// drivers) is that the operations should be done synchronously, not
-// generating their result until the database has acknowledged
-// them. In the future maybe we should provide a flag to turn this
-// off.
+Object.assign(Mongo.Collection.prototype, {
+  // 'insert' immediately returns the inserted document's new _id.
+  // The others return values immediately if you are in a stub, an in-memory
+  // unmanaged collection, or a mongo-backed collection and you don't pass a
+  // callback. 'update' and 'remove' return the number of affected
+  // documents. 'upsert' returns an object with keys 'numberAffected' and, if an
+  // insert happened, 'insertedId'.
+  //
+  // Otherwise, the semantics are exactly like other methods: they take
+  // a callback as an optional last argument; if no callback is
+  // provided, they block until the operation is complete, and throw an
+  // exception if it fails; if a callback is provided, then they don't
+  // necessarily block, and they call the callback when they finish with error and
+  // result arguments.  (The insert method provides the document ID as its result;
+  // update and remove provide the number of affected docs as the result; upsert
+  // provides an object with numberAffected and maybe insertedId.)
+  //
+  // On the client, blocking is impossible, so if a callback
+  // isn't provided, they just return immediately and any error
+  // information is lost.
+  //
+  // There's one more tweak. On the client, if you don't provide a
+  // callback, then if there is an error, a message will be logged with
+  // Meteor._debug.
+  //
+  // The intent (though this is actually determined by the underlying
+  // drivers) is that the operations should be done synchronously, not
+  // generating their result until the database has acknowledged
+  // them. In the future maybe we should provide a flag to turn this
+  // off.
 
-
-// Helper function that actually performs a given operation in Mongo. Takes in
-// the following options:
-//
-//  - operation: one of "insert", "update", "remove"
-//  - args: an array of arguments
-//  - callback: an optional callback function (or undefined)
-//  - chooseReturnValueFromCollectionResult: an optional function that does what
-//    it says.
-//  - requireId: optional boolean to throw if the selector is not id.
-Mongo.Collection.prototype._callToMongo = function(options) {
-  check(options, {
-    operation: Match.OneOf("insert", "update", "remove"),
-    args: [Match.Any],
-    callback: Match.OneOf(Function, undefined),
-    chooseReturnValueFromCollectionResult: Match.Optional(Function),
-    requireId: Match.Optional(Boolean)
-  });
-
-  var operation = options.operation;
-  var args = options.args;
-  var callback = options.callback;
-
-  // In case of 'insert', we have a special function that we use to figure out
-  // the return value. Otherwise, we just return whatever value was given to us.
-  var chooseReturnValueFromCollectionResult =
-        options.chooseReturnValueFromCollectionResult || function (x) { return x; };
-  var self = this;
-  var wrappedCallback;
-  if (callback) {
-    wrappedCallback = function (error, result) {
-      callback(error, ! error && chooseReturnValueFromCollectionResult(result));
-    };
-  }
-
-  var ret;
-  // XXX see #MeteorServerNull
-  if (self._connection && self._connection !== Meteor.server) {
-    // just remote to another endpoint, propagate return value or
-    // exception.
-    var enclosing = DDP._CurrentInvocation.get();
-    var alreadyInSimulation = enclosing && enclosing.isSimulation;
-
-    if (Meteor.isClient && !wrappedCallback && ! alreadyInSimulation) {
-      // Client can't block, so it can't report errors by exception,
-      // only by callback. If they forget the callback, give them a
-      // default one that logs the error, so they aren't totally
-      // baffled if their writes don't work because their database is
-      // down.
-      // Don't give a default callback in simulation, because inside stubs we
-      // want to return the results from the local collection immediately and
-      // not force a callback.
-      wrappedCallback = function (err) {
-        if (err)
-          Meteor._debug(operation + " failed: " + (err.reason || err.stack));
-      };
+  /**
+   * @summary Insert a document in the collection.  Returns its unique _id.
+   * @locus Anywhere
+   * @method  insert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
+   */
+  insert(doc, callback) {
+    // Make sure we were passed a document to insert
+    if (!doc) {
+      throw new Error("insert requires an argument");
     }
 
-    if (!alreadyInSimulation && options.requireId) {
-      // If we're about to actually send an RPC, we should throw an error if
-      // this is a non-ID selector, because the mutation methods only allow
-      // single-ID selectors. (If we don't throw here, we'll see flicker.)
-      throwIfSelectorIsNotId(args[0], operation);
-    }
-
-    ret = chooseReturnValueFromCollectionResult(
-      self._connection.apply(self._prefix + operation, args, {returnStubValue: true}, wrappedCallback)
+    // Make a shallow clone of the document, preserving its prototype.
+    doc = Object.create(
+      Object.getPrototypeOf(doc),
+      Object.getOwnPropertyDescriptors(doc)
     );
 
-  } else {
+    if ('_id' in doc) {
+      if (! doc._id ||
+          ! (typeof doc._id === 'string' ||
+             doc._id instanceof Mongo.ObjectID)) {
+        throw new Error(
+          "Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+      }
+    } else {
+      let generateId = true;
+
+      // Don't generate the id if we're the client and the 'outermost' call
+      // This optimization saves us passing both the randomSeed and the id
+      // Passing both is redundant.
+      if (this._isRemoteCollection()) {
+        const enclosing = DDP._CurrentMethodInvocation.get();
+        if (!enclosing) {
+          generateId = false;
+        }
+      }
+
+      if (generateId) {
+        doc._id = this._makeNewID();
+      }
+    }
+
+    // On inserts, always return the id that we generated; on all other
+    // operations, just return the result from the collection.
+    var chooseReturnValueFromCollectionResult = function (result) {
+      if (doc._id) {
+        return doc._id;
+      }
+
+      // XXX what is this for??
+      // It's some iteraction between the callback to _callMutatorMethod and
+      // the return value conversion
+      doc._id = result;
+
+      return result;
+    };
+
+    const wrappedCallback = wrapCallback(
+      callback, chooseReturnValueFromCollectionResult);
+
+    if (this._isRemoteCollection()) {
+      const result = this._callMutatorMethod("insert", [doc], wrappedCallback);
+      return chooseReturnValueFromCollectionResult(result);
+    }
+
     // it's my collection.  descend into the collection object
     // and propagate any exception.
-    args.push(wrappedCallback);
     try {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-      var queryRet = self._collection[operation].apply(self._collection, args);
-      ret = chooseReturnValueFromCollectionResult(queryRet);
+      const result = this._collection.insert(doc, wrappedCallback);
+      return chooseReturnValueFromCollectionResult(result);
     } catch (e) {
       if (callback) {
         callback(e);
@@ -528,193 +529,218 @@ Mongo.Collection.prototype._callToMongo = function(options) {
       }
       throw e;
     }
-  }
+  },
 
-  // both sync and async, unless we threw an exception, return ret
-  // (new document ID for insert, num affected for update/remove, object with
-  // numberAffected and maybe insertedId for upsert).
-  return ret;
-};
+  /**
+   * @summary Modify one or more documents in the collection. Returns the number of matched documents.
+   * @locus Anywhere
+   * @method update
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to modify
+   * @param {MongoModifier} modifier Specifies how to modify the documents
+   * @param {Object} [options]
+   * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
+   */
+  update(selector, modifier, ...optionsAndCallback) {
+    const callback = popCallbackFromArgs(optionsAndCallback);
 
-/**
- * @summary Insert a document in the collection.  Returns its unique _id.
- * @locus Anywhere
- * @method  insert
- * @memberOf Mongo.Collection
- * @instance
- * @param {Object} docs The documents to insert. May be an array of documents, or a single document. Documents may not yet have an _id attribute, in which case Meteor will generate one for you.
- * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
- */
-Mongo.Collection.prototype.insert = function (docs, callback) {
-  var self = this;
-  var isBulkInsert = (docs instanceof Array);
-  var insertId;
-
-  var formattedDocs = _.map(isBulkInsert ? docs : [docs], function (doc) {
-    // shallow-copy the document and generate an ID
-    doc = _.extend({}, doc);
-    if ('_id' in doc) {
-      insertId = doc._id;
-      if (!insertId ||
-          !(typeof insertId === 'string' || insertId instanceof Mongo.ObjectID)) {
-        throw new Error("Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+    // We've already popped off the callback, so we are left with an array
+    // of one or zero items
+    const options = { ...(optionsAndCallback[0] || null) };
+    let insertedId;
+    if (options && options.upsert) {
+      // set `insertedId` if absent.  `insertedId` is a Meteor extension.
+      if (options.insertedId) {
+        if (!(typeof options.insertedId === 'string' || options.insertedId instanceof Mongo.ObjectID))
+          throw new Error("insertedId must be string or ObjectID");
+        insertedId = options.insertedId;
+      } else if (!selector || !selector._id) {
+        insertedId = this._makeNewID();
+        options.generatedId = true;
+        options.insertedId = insertedId;
       }
+    }
+
+    selector =
+      Mongo.Collection._rewriteSelector(selector, { fallbackId: insertedId });
+
+    const wrappedCallback = wrapCallback(callback);
+
+    if (this._isRemoteCollection()) {
+      const args = [
+        selector,
+        modifier,
+        options
+      ];
+
+      return this._callMutatorMethod("update", args, wrappedCallback);
+    }
+
+    // it's my collection.  descend into the collection object
+    // and propagate any exception.
+    try {
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      return this._collection.update(
+        selector, modifier, options, wrappedCallback);
+    } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
+      throw e;
+    }
+  },
+
+  /**
+   * @summary Remove documents from the collection
+   * @locus Anywhere
+   * @method remove
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to remove
+   * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
+   */
+  remove(selector, callback) {
+    selector = Mongo.Collection._rewriteSelector(selector);
+
+    const wrappedCallback = wrapCallback(callback);
+
+    if (this._isRemoteCollection()) {
+      return this._callMutatorMethod("remove", [selector], wrappedCallback);
+    }
+
+    // it's my collection.  descend into the collection object
+    // and propagate any exception.
+    try {
+      // If the user provided a callback and the collection implements this
+      // operation asynchronously, then queryRet will be undefined, and the
+      // result will be returned through the callback instead.
+      return this._collection.remove(selector, wrappedCallback);
+    } catch (e) {
+      if (callback) {
+        callback(e);
+        return null;
+      }
+      throw e;
+    }
+  },
+
+  // Determine if this collection is simply a minimongo representation of a real
+  // database on another server
+  _isRemoteCollection() {
+    // XXX see #MeteorServerNull
+    return this._connection && this._connection !== Meteor.server;
+  },
+
+  /**
+   * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
+   * @locus Anywhere
+   * @method upsert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} selector Specifies which documents to modify
+   * @param {MongoModifier} modifier Specifies how to modify the documents
+   * @param {Object} [options]
+   * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
+   */
+  upsert(selector, modifier, options, callback) {
+    if (! callback && typeof options === "function") {
+      callback = options;
+      options = {};
+    }
+
+    return this.update(selector, modifier, {
+      ...options,
+      _returnObject: true,
+      upsert: true,
+    }, callback);
+  },
+
+  // We'll actually design an index API later. For now, we just pass through to
+  // Mongo's, but make it synchronous.
+  _ensureIndex(index, options) {
+    var self = this;
+    if (!self._collection._ensureIndex)
+      throw new Error("Can only call _ensureIndex on server collections");
+    self._collection._ensureIndex(index, options);
+  },
+
+  _dropIndex(index) {
+    var self = this;
+    if (!self._collection._dropIndex)
+      throw new Error("Can only call _dropIndex on server collections");
+    self._collection._dropIndex(index);
+  },
+
+  _dropCollection() {
+    var self = this;
+    if (!self._collection.dropCollection)
+      throw new Error("Can only call _dropCollection on server collections");
+    self._collection.dropCollection();
+  },
+
+  _createCappedCollection(byteSize, maxDocuments) {
+    var self = this;
+    if (!self._collection._createCappedCollection)
+      throw new Error("Can only call _createCappedCollection on server collections");
+    self._collection._createCappedCollection(byteSize, maxDocuments);
+  },
+
+  /**
+   * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+   * @locus Server
+   * @memberof Mongo.Collection
+   * @instance
+   */
+  rawCollection() {
+    var self = this;
+    if (! self._collection.rawCollection) {
+      throw new Error("Can only call rawCollection on server collections");
+    }
+    return self._collection.rawCollection();
+  },
+
+  /**
+   * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.0/api/Db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+   * @locus Server
+   * @memberof Mongo.Collection
+   * @instance
+   */
+  rawDatabase() {
+    var self = this;
+    if (! (self._driver.mongo && self._driver.mongo.db)) {
+      throw new Error("Can only call rawDatabase on server collections");
+    }
+    return self._driver.mongo.db;
+  }
+});
+
+// Convert the callback to not return a result if there is an error
+function wrapCallback(callback, convertResult) {
+  return callback && function (error, result) {
+    if (error) {
+      callback(error);
+    } else if (typeof convertResult === "function") {
+      callback(error, convertResult(result));
     } else {
-      var generateId = true;
-      // Don't generate the id if we're the client and the 'outermost' call
-      // This optimization saves us passing both the randomSeed and the id
-      // Passing both is redundant.
-      if (self._connection && self._connection !== Meteor.server) {
-        var enclosing = DDP._CurrentInvocation.get();
-        if (!enclosing) {
-          generateId = false;
-        }
-      }
-      if (generateId) {
-        insertId = doc._id = self._makeNewID();
-      }
-    }
-    return doc;
-  });
-
-  // On inserts, always return the id that we generated; on all other
-  // operations, just return the result from the collection.
-  var chooseReturnValueFromCollectionResult = function (result) {
-    if (! insertId && result) {
-      insertId = result;
-    }
-    return insertId;
-  };
-
-  var args = isBulkInsert ? [formattedDocs] : [formattedDocs[0]];
-  return self._callToMongo({
-    operation: "insert",
-    args: args,
-    callback: callback,
-    chooseReturnValueFromCollectionResult: chooseReturnValueFromCollectionResult
-  });
-
-};
-
-/**
- * @summary Modify one or more documents in the collection. Returns the number of affected documents.
- * @locus Anywhere
- * @method update
- * @memberOf Mongo.Collection
- * @instance
- * @param {MongoSelector} selector Specifies which documents to modify
- * @param {MongoModifier} modifier Specifies how to modify the documents
- * @param {Object} [options]
- * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
- * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
- * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
- */
-Mongo.Collection.prototype.update = function (selector, modifier, options, callback) {
-  var self = this;
-  if (! callback && options instanceof Function) {
-    callback = options;
-    options = {};
-  }
-
-  selector = Mongo.Collection._rewriteSelector(selector);
-
-  if (options && options.upsert) {
-    options = _.clone(options) || {};
-    if (options.insertedId) {
-      if (!(typeof options.insertedId === 'string'
-            || options.insertedId instanceof Mongo.ObjectID))
-        throw new Error("insertedId must be string or ObjectID");
-    } else if (! selector._id) {
-      options.insertedId = self._makeNewID();
+      callback(error, result);
     }
   };
-
-  var args =  options ? [selector, modifier, options] : [selector, modifier];
-  return self._callToMongo({
-    operation: "update",
-    args: args,
-    callback: callback,
-    requireId: true,
-  });
-};
-
-
-/**
- * @summary Remove documents from the collection
- * @locus Anywhere
- * @method remove
- * @memberOf Mongo.Collection
- * @instance
- * @param {MongoSelector} selector Specifies which documents to remove
- * @param {Function} [callback] Optional.  If present, called with an error object as its argument.
- */
-Mongo.Collection.prototype.remove = function (selector, callback) {
-  var self = this;
-  var mongoSelector = Mongo.Collection._rewriteSelector(selector);
-
-  return self._callToMongo({
-    operation: "remove",
-    args: [mongoSelector],
-    callback: callback,
-    requireId: true,
-  });
-};
-
-/**
- * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
- * @locus Anywhere
- * @param {MongoSelector} selector Specifies which documents to modify
- * @param {MongoModifier} modifier Specifies how to modify the documents
- * @param {Object} [options]
- * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
- * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
- */
-Mongo.Collection.prototype.upsert = function (selector, modifier,
-                                               options, callback) {
-  var self = this;
-  if (! callback && typeof options === "function") {
-    callback = options;
-    options = {};
-  }
-  return self.update(selector, modifier,
-              _.extend({}, options, { _returnObject: true, upsert: true }),
-              callback);
-};
-
-// We'll actually design an index API later. For now, we just pass through to
-// Mongo's, but make it synchronous.
-Mongo.Collection.prototype._ensureIndex = function (index, options) {
-  var self = this;
-  if (!self._collection._ensureIndex)
-    throw new Error("Can only call _ensureIndex on server collections");
-  self._collection._ensureIndex(index, options);
-};
-Mongo.Collection.prototype._dropIndex = function (index) {
-  var self = this;
-  if (!self._collection._dropIndex)
-    throw new Error("Can only call _dropIndex on server collections");
-  self._collection._dropIndex(index);
-};
-Mongo.Collection.prototype._dropCollection = function () {
-  var self = this;
-  if (!self._collection.dropCollection)
-    throw new Error("Can only call _dropCollection on server collections");
-  self._collection.dropCollection();
-};
-Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocuments) {
-  var self = this;
-  if (!self._collection._createCappedCollection)
-    throw new Error("Can only call _createCappedCollection on server collections");
-  self._collection._createCappedCollection(byteSize, maxDocuments);
-};
+}
 
 /**
  * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
  * @locus Anywhere
  * @class
- * @param {String} hexString Optional.  The 24-character hexadecimal contents of the ObjectID to create
+ * @param {String} [hexString] Optional.  The 24-character hexadecimal contents of the ObjectID to create
  */
-Mongo.ObjectID = LocalCollection._ObjectID;
+Mongo.ObjectID = MongoID.ObjectID;
 
 /**
  * @summary To create a cursor, use find. To access the documents in a cursor, use forEach, map, or fetch.
@@ -733,475 +759,23 @@ Mongo.Collection.Cursor = Mongo.Cursor;
  */
 Mongo.Collection.ObjectID = Mongo.ObjectID;
 
-///
-/// Remote methods and access control.
-///
-
-// Restrict default mutators on collection. allow() and deny() take the
-// same options:
-//
-// options.insert {Function(userId, doc)}
-//   return true to allow/deny adding this document
-//
-// options.update {Function(userId, docs, fields, modifier)}
-//   return true to allow/deny updating these documents.
-//   `fields` is passed as an array of fields that are to be modified
-//
-// options.remove {Function(userId, docs)}
-//   return true to allow/deny removing these documents
-//
-// options.fetch {Array}
-//   Fields to fetch for these validators. If any call to allow or deny
-//   does not have this option then all fields are loaded.
-//
-// allow and deny can be called multiple times. The validators are
-// evaluated as follows:
-// - If neither deny() nor allow() has been called on the collection,
-//   then the request is allowed if and only if the "insecure" smart
-//   package is in use.
-// - Otherwise, if any deny() function returns true, the request is denied.
-// - Otherwise, if any allow() function returns true, the request is allowed.
-// - Otherwise, the request is denied.
-//
-// Meteor may call your deny() and allow() functions in any order, and may not
-// call all of them if it is able to make a decision without calling them all
-// (so don't include side effects).
-
-(function () {
-  var addValidator = function(allowOrDeny, options) {
-    // validate keys
-    var VALID_KEYS = ['insert', 'update', 'remove', 'fetch', 'transform'];
-    _.each(_.keys(options), function (key) {
-      if (!_.contains(VALID_KEYS, key))
-        throw new Error(allowOrDeny + ": Invalid key: " + key);
-    });
-
-    var self = this;
-    self._restricted = true;
-
-    _.each(['insert', 'update', 'remove'], function (name) {
-      if (options[name]) {
-        if (!(options[name] instanceof Function)) {
-          throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
-        }
-
-        // If the transform is specified at all (including as 'null') in this
-        // call, then take that; otherwise, take the transform from the
-        // collection.
-        if (options.transform === undefined) {
-          options[name].transform = self._transform;  // already wrapped
-        } else {
-          options[name].transform = LocalCollection.wrapTransform(
-            options.transform);
-        }
-
-        self._validators[name][allowOrDeny].push(options[name]);
-      }
-    });
-
-    // Only update the fetch fields if we're passed things that affect
-    // fetching. This way allow({}) and allow({insert: f}) don't result in
-    // setting fetchAllFields
-    if (options.update || options.remove || options.fetch) {
-      if (options.fetch && !(options.fetch instanceof Array)) {
-        throw new Error(allowOrDeny + ": Value for `fetch` must be an array");
-      }
-      self._updateFetch(options.fetch);
-    }
-  };
-
-  /**
-   * @summary Allow users to write directly to this collection from client code, subject to limitations you define.
-   * @locus Server
-   * @param {Object} options
-   * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be allowed.
-   * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
-   * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
-   */
-  Mongo.Collection.prototype.allow = function(options) {
-    addValidator.call(this, 'allow', options);
-  };
-
-  /**
-   * @summary Override `allow` rules.
-   * @locus Server
-   * @param {Object} options
-   * @param {Function} options.insert,update,remove Functions that look at a proposed modification to the database and return true if it should be denied, even if an [allow](#allow) rule says otherwise.
-   * @param {String[]} options.fetch Optional performance enhancement. Limits the fields that will be fetched from the database for inspection by your `update` and `remove` functions.
-   * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections).  Pass `null` to disable transformation.
-   */
-  Mongo.Collection.prototype.deny = function(options) {
-    addValidator.call(this, 'deny', options);
-  };
-})();
-
-
-Mongo.Collection.prototype._defineMutationMethods = function() {
-  var self = this;
-
-  var m = {};
-
-  // Process error, by throwing a 409 on mongo errors, and a normal error
-  // otherwise.
-  var dealWithError = function (e) {
-    if (e.name === 'MongoError' || e.name === 'MinimongoError') {
-      throw new Meteor.Error(409, e.toString());
-    } else {
-      throw e;
-    }
-  };
-
-  // If we are using validators, check that we are even allowed to use this
-  // method. If we are not, throw right there.
-  var checkValidation = function (method) {
-    if (self._validators[method].allow.length === 0) {
-      throw new Meteor.Error(
-        403, "Access denied. No allow validators set on restricted " +
-          "collection for method '" + method + "'.");
-    }
-  };
-
-  // Insert -- perform an insert operation into Mongo, either validated or not.
-  // Takes in the document to insert.
-  m[self._prefix + "insert"] = function (doc) {
-    check(doc, Match.OneOf(Object, [Object]));
-    try {
-      // For an insert, if the client didn't specify an _id, generate one
-      // now; because this uses DDP.randomStream, it will be consistent with
-      // what the client generated. We generate it now rather than later so
-      // that if (eg) an allow/deny rule does an insert to the same
-      // collection (not that it really should), the generated _id will
-      // still be the first use of the stream and will be consistent.
-      //
-      // However, we don't actually stick the _id onto the document yet,
-      // because we want allow/deny rules to be able to differentiate
-      // between arbitrary client-specified _id fields and merely
-      // client-controlled-via-randomSeed fields.
-      var generatedId = null;
-      if (!_.has(doc, '_id')) {
-        generatedId = self._makeNewID();
-      }
-
-      if (this.isSimulation) {
-        // In a client simulation, you can do any mutation (even with a
-        // complex selector).
-        if (generatedId !== null)
-          doc._id = generatedId;
-        return self._collection.insert(doc);
-      }
-
-      if (self._restricted) {
-        checkValidation("insert");
-        return self._validatedInsert(this.userId, doc, generatedId);
-      } else if (self._isInsecure()) {
-        if (generatedId !== null)
-          doc._id = generatedId;
-        // In insecure mode, allow any mutation (with a simple selector).
-        return self._collection.insert(doc);
-      } else {
-        // In secure mode, if we haven't called allow or deny, then nothing
-        // is permitted.
-        throw new Meteor.Error(403, "Access denied");
-      }
-    } catch (e) {
-      dealWithError(e);
-    }
-  };
-
-  // Remove document(s) from the collection. Takes in a selector specifying
-  // documents to remove.
-  m[self._prefix + "remove"] = function (selector) {
-    check(selector, Match.OneOf(Object, String, Mongo.ObjectID));
-    try {
-      if (this.isSimulation) {
-        // In a client simulation, you can do any mutation (even with a
-        // complex selector).
-        return self._collection.remove(selector);
-      }
-
-      // We don't allow arbitrary selectors in removes from the client: only
-      // single-ID selectors.
-      throwIfSelectorIsNotId(selector, "remove");
-
-      if (self._restricted) {
-        checkValidation("remove");
-        return self._validatedRemove(this.userId, selector);
-      } else if (self._isInsecure()) {
-        // In insecure mode, allow any mutation (with a simple selector).
-        return self.remove(selector);
-      } else {
-        // In secure mode, if we haven't called allow or deny, then nothing
-        // is permitted.
-        throw new Meteor.Error(403, "Access denied");
-      }
-    } catch (e) {
-      dealWithError(e);
-    }
-  };
-
-  // Update document(s) in the collection. Takes in a selector, modifier and
-  // some options.
-  m[self._prefix + "update"] = function (selector, modifier, options) {
-    // XXX: validation in individual methods called from here.
-    check(selector, Match.OneOf(Object, String, Mongo.ObjectID));
-    check(modifier, Match.ObjectIncluding({}));
-    check(options, Match.OneOf(Object, undefined));
-    try {
-      if (this.isSimulation) {
-        // In a client simulation, you can do any mutation (even with a
-        // complex selector).
-        return self._collection.update(selector, modifier, options);
-      }
-
-      // We don't allow arbitrary selectors in removes from the client: only
-      // single-ID selectors.
-      throwIfSelectorIsNotId(selector, "update");
-
-      if (self._restricted) {
-        checkValidation("update");
-        return self._validatedUpdate(this.userId, selector, modifier, options);
-      } else if (self._isInsecure()) {
-        // In insecure mode, allow any mutation (with a simple selector).
-        return self.update(selector, modifier, options);
-      } else {
-        // In secure mode, if we haven't called allow or deny, then nothing
-        // is permitted.
-        throw new Meteor.Error(403, "Access denied");
-      }
-    } catch (e) {
-      dealWithError(e);
-    }
-  };
-  self._connection.methods(m);
-};
-
-
-Mongo.Collection.prototype._updateFetch = function (fields) {
-  var self = this;
-
-  if (!self._validators.fetchAllFields) {
-    if (fields) {
-      self._validators.fetch = _.union(self._validators.fetch, fields);
-    } else {
-      self._validators.fetchAllFields = true;
-      // clear fetch just to make sure we don't accidentally read it
-      self._validators.fetch = null;
-    }
-  }
-};
-
-Mongo.Collection.prototype._isInsecure = function () {
-  var self = this;
-  if (self._insecure === undefined)
-    return !!Package.insecure;
-  return self._insecure;
-};
-
-var docToValidate = function (validator, doc, generatedId) {
-  var ret = doc;
-  if (validator.transform) {
-    ret = EJSON.clone(doc);
-    // If you set a server-side transform on your collection, then you don't get
-    // to tell the difference between "client specified the ID" and "server
-    // generated the ID", because transforms expect to get _id.  If you want to
-    // do that check, you can do it with a specific
-    // `C.allow({insert: f, transform: null})` validator.
-    if (generatedId !== null) {
-      ret._id = generatedId;
-    }
-    ret = validator.transform(ret);
-  }
-  return ret;
-};
-
-Mongo.Collection.prototype._validatedInsert = function (userId, docs,
-                                                         generatedId) {
-  var self = this;
-
-  var isBulkInsert = (docs instanceof Array);
-  docs = isBulkInsert ? docs : [docs];
-
-  _.each(docs, function (doc) {
-    // call user validators.
-    // Any deny returns true means denied.
-    if (_.any(self._validators.insert.deny, function(validator) {
-      return validator(userId, docToValidate(validator, doc, generatedId));
-    })) {
-      throw new Meteor.Error(403, "Access denied");
-    }
-    // Any allow returns true means proceed. Throw error if they all fail.
-    if (_.all(self._validators.insert.allow, function(validator) {
-      return !validator(userId, docToValidate(validator, doc, generatedId));
-    })) {
-      throw new Meteor.Error(403, "Access denied");
-    }
-
-    // If we generated an ID above, insert it now: after the validation, but
-    // before actually inserting.
-    if (generatedId !== null) {
-      doc._id = generatedId;
-    }
-  });
-
-  self._collection.insert.call(self._collection, docs);
-};
-
-var transformDoc = function (validator, doc) {
-  if (validator.transform)
-    return validator.transform(doc);
-  return doc;
-};
-
-// Simulate a mongo `update` operation while validating that the access
-// control rules set by calls to `allow/deny` are satisfied. If all
-// pass, rewrite the mongo operation to use $in to set the list of
-// document ids to change ##ValidatedChange
-Mongo.Collection.prototype._validatedUpdate = function(
-    userId, selector, mutator, options) {
-  var self = this;
-
-  check(mutator, Object);
-
-  options = _.clone(options) || {};
-
-  if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
-    throw new Error("validated update should be of a single ID");
-
-  // We don't support upserts because they don't fit nicely into allow/deny
-  // rules.
-  if (options.upsert)
-    throw new Meteor.Error(403, "Access denied. Upserts not " +
-                           "allowed in a restricted collection.");
-
-  var noReplaceError = "Access denied. In a restricted collection you can only" +
-        " update documents, not replace them. Use a Mongo update operator, such " +
-        "as '$set'.";
-
-  // compute modified fields
-  var fields = [];
-  if (_.isEmpty(mutator)) {
-    throw new Meteor.Error(403, noReplaceError);
-  }
-  _.each(mutator, function (params, op) {
-    if (op.charAt(0) !== '$') {
-      throw new Meteor.Error(403, noReplaceError);
-    } else if (!_.has(ALLOWED_UPDATE_OPERATIONS, op)) {
-      throw new Meteor.Error(
-        403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
-    } else {
-      _.each(_.keys(params), function (field) {
-        // treat dotted fields as if they are replacing their
-        // top-level part
-        if (field.indexOf('.') !== -1)
-          field = field.substring(0, field.indexOf('.'));
-
-        // record the field we are trying to change
-        if (!_.contains(fields, field))
-          fields.push(field);
-      });
-    }
-  });
-
-  var findOptions = {transform: null};
-  if (!self._validators.fetchAllFields) {
-    findOptions.fields = {};
-    _.each(self._validators.fetch, function(fieldName) {
-      findOptions.fields[fieldName] = 1;
-    });
-  }
-
-  var doc = self._collection.findOne(selector, findOptions);
-  if (!doc)  // none satisfied!
-    return 0;
-
-  var factoriedDoc;
-
-  // call user validators.
-  // Any deny returns true means denied.
-  if (_.any(self._validators.update.deny, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
-    return validator(userId,
-                     factoriedDoc,
-                     fields,
-                     mutator);
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-  // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.update.allow, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
-    return !validator(userId,
-                      factoriedDoc,
-                      fields,
-                      mutator);
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-
-  options._forbidReplace = true;
-
-  // Back when we supported arbitrary client-provided selectors, we actually
-  // rewrote the selector to include an _id clause before passing to Mongo to
-  // avoid races, but since selector is guaranteed to already just be an ID, we
-  // don't have to any more.
-
-  return self._collection.update.call(
-    self._collection, selector, mutator, options);
-};
-
-// Only allow these operations in validated updates. Specifically
-// whitelist operations, rather than blacklist, so new complex
-// operations that are added aren't automatically allowed. A complex
-// operation is one that does more than just modify its target
-// field. For now this contains all update operations except '$rename'.
-// http://docs.mongodb.org/manual/reference/operators/#update
-var ALLOWED_UPDATE_OPERATIONS = {
-  $inc:1, $set:1, $unset:1, $addToSet:1, $pop:1, $pullAll:1, $pull:1,
-  $pushAll:1, $push:1, $bit:1
-};
-
-// Simulate a mongo `remove` operation while validating access control
-// rules. See #ValidatedChange
-Mongo.Collection.prototype._validatedRemove = function(userId, selector) {
-  var self = this;
-
-  var findOptions = {transform: null};
-  if (!self._validators.fetchAllFields) {
-    findOptions.fields = {};
-    _.each(self._validators.fetch, function(fieldName) {
-      findOptions.fields[fieldName] = 1;
-    });
-  }
-
-  var doc = self._collection.findOne(selector, findOptions);
-  if (!doc)
-    return 0;
-
-  // call user validators.
-  // Any deny returns true means denied.
-  if (_.any(self._validators.remove.deny, function(validator) {
-    return validator(userId, transformDoc(validator, doc));
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-  // Any allow returns true means proceed. Throw error if they all fail.
-  if (_.all(self._validators.remove.allow, function(validator) {
-    return !validator(userId, transformDoc(validator, doc));
-  })) {
-    throw new Meteor.Error(403, "Access denied");
-  }
-
-  // Back when we supported arbitrary client-provided selectors, we actually
-  // rewrote the selector to {_id: {$in: [ids that we found]}} before passing to
-  // Mongo to avoid races, but since selector is guaranteed to already just be
-  // an ID, we don't have to any more.
-
-  return self._collection.remove.call(self._collection, selector);
-};
-
 /**
  * @deprecated in 0.9.1
  */
 Meteor.Collection = Mongo.Collection;
+
+// Allow deny stuff is now in the allow-deny package
+Object.assign(
+  Meteor.Collection.prototype,
+  AllowDeny.CollectionPrototype
+);
+
+function popCallbackFromArgs(args) {
+  // Pull off any callback (or perhaps a 'callback' variable that was passed
+  // in undefined, like how 'upsert' does it).
+  if (args.length &&
+      (args[args.length - 1] === undefined ||
+       args[args.length - 1] instanceof Function)) {
+    return args.pop();
+  }
+}

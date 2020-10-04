@@ -11,7 +11,7 @@ _.extend(MongoInternals.RemoteCollectionDriver.prototype, {
     _.each(
       ['find', 'findOne', 'insert', 'update', 'upsert',
        'remove', '_ensureIndex', '_dropIndex', '_createCappedCollection',
-       'dropCollection'],
+       'dropCollection', 'rawCollection'],
       function (m) {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });

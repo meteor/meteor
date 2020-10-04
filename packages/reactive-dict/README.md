@@ -1,4 +1,6 @@
 # reactive-dict
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/reactive-dict) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/reactive-dict)
+***
 
 This package provide `ReactiveDict`, a general-purpose reactive
 datatype for use with
@@ -22,7 +24,7 @@ dict.set("weather", "sunny");
 ```
 
 For more information, see the [Tracker project
-page](https://www.meteor.com/tracker).
+page](http://docs.meteor.com/api/tracker.html).
 
 ## Future work
 

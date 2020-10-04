@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 PORT=9000
 if [ -z "$NUM_CLIENTS" ]; then

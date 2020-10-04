@@ -1,131 +1,458 @@
-# determine the platform
-# use 32bit by default
-$PLATFORM = "windows_x86"
-$MONGO_VERSION = "2.6.7"
-$NODE_VERSION = "0.10.36"
+$ErrorActionPreference = "Stop"
+$DebugPreference = "Continue"
 
-# take it form the environment if exists
-if (Test-Path variable:global:PLATFORM) {
-  $PLATFORM = (Get-Item env:PLATFORM).Value
-}
+Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
+$PLATFORM = Get-MeteorPlatform
 
-$script_path = Split-Path -parent $MyInvocation.MyCommand.Definition
-$CHECKOUT_DIR = Split-Path -parent $script_path
+$PYTHON_VERSION = "2.7.14" # For node-gyp
+
+$dirCheckout = (Get-Item $PSScriptRoot).parent.FullName
+$shCommon = Join-Path $PSScriptRoot 'build-dev-bundle-common.sh'
+
+$tempSrcNode = Join-Path $(Join-Path $dirCheckout 'temp_build_src') 'node.7z'
+
+# This will be the temporary directory we build the dev bundle in.
+$DIR = Join-Path $dirCheckout 'gdbXXX'
 
 # extract the bundle version from the meteor bash script
-$BUNDLE_VERSION = Select-String -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUNDLE_VERSION=(\S+)'  | % { $_.Matches[0].Groups[1].Value } | Select-Object -First 1
-$BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
+$BUNDLE_VERSION = Read-VariableFromShellScript "${dirCheckout}\meteor" 'BUNDLE_VERSION'
 
-# generate-dev-bundle-xxxxxxxx shortly
-$DIR = $script_path + "\gdbXXX"
-echo $DIR
+# extract the major package versions from the build-dev-bundle-common script.
+$MONGO_VERSION_64BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_64BIT'
+$MONGO_VERSION_32BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_32BIT'
 
-# removing folders isn't easy on Windows, try both commands
-rm -Recurse -Force "${DIR}"
-cmd /C "rmdir /S /Q ${DIR}"
+$NPM_VERSION = Read-VariableFromShellScript $shCommon 'NPM_VERSION'
 
-mkdir "$DIR"
-cd "$DIR"
+$NODE_VERSION = Read-VariableFromShellScript $shCommon 'NODE_VERSION'
 
-# install dev-bundle-package.json
-# use short folder names
-mkdir b # for build
-cd b
-mkdir t
-cd t
+# 7-zip path.
+$system7zip = "C:\Program Files\7-zip\7z.exe"
 
-npm config set loglevel error
-node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | Out-File -FilePath package.json -Encoding ascii
-npm install
-npm shrinkwrap
+# Required for downloading MongoDB via HTTPS
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-mkdir -Force "${DIR}\server-lib\node_modules"
-cp -R "${DIR}\b\t\node_modules\*" "${DIR}\server-lib\node_modules\"
+# Since we reuse the same temp directory, cleanup from previous failed runs.
+Remove-DirectoryRecursively $DIR
 
-mkdir -Force "${DIR}\etc"
-Move-Item package.json "${DIR}\etc\"
-Move-Item npm-shrinkwrap.json "${DIR}\etc\"
+# Some commonly used paths in this script.
+$dirBin = Join-Path $DIR 'bin'
+$dirLib = Join-Path $DIR 'lib'
+$dirServerLib = Join-Path $DIR 'server-lib'
+$dirTemp = Join-Path $DIR 'temp'
 
-mkdir -Force "${DIR}\b\p"
-cd "${DIR}\b\p"
-node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | Out-File -FilePath package.json -Encoding ascii
-npm install
-npm dedupe
-# install the latest flatten-packages
-npm install -g flatten-packages
-flatten-packages .
-cp -R "${DIR}\b\p\node_modules\" "${DIR}\lib\node_modules\"
-cd "$DIR"
+# Use a cache just for this build.
+$dirNpmCache = Join-Path $dirTemp 'npm-cache'
 
-# deleting folders is hard so we try twice
-rm -Recurse -Force "${DIR}\b"
-cmd /C "rmdir /s /q $DIR\b"
-
-cd "$DIR"
-mkdir "$DIR\mongodb"
-mkdir "$DIR\mongodb\bin"
+# Build our directory framework.
+New-Item -ItemType Directory -Force -Path $DIR | Out-Null
+New-Item -ItemType Directory -Force -Path $dirTemp | Out-Null
+New-Item -ItemType Directory -Force -Path $dirBin | Out-Null
+New-Item -ItemType Directory -Force -Path $dirLib | Out-Null
+New-Item -ItemType Directory -Force -Path $dirServerLib | Out-Null
 
 $webclient = New-Object System.Net.WebClient
-
-# download Mongo
-$mongo_name = "mongodb-win32-i386-${MONGO_VERSION}"
-If ($PLATFORM -eq 'windows_x86_64') {
-  # 64-bit would be mongodb-win32-x86_64-2008plus-${MONGO_VERSION}.zip
-  $mongo_name = "mongodb-win32-x86_64-2008plus-${MONGO_VERSION}"
-}
-$mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
-$mongo_zip = "$DIR\mongodb\mongo.zip"
-
-$webclient.DownloadFile($mongo_link, $mongo_zip)
-
 $shell = New-Object -com shell.application
-$zip = $shell.NameSpace($mongo_zip)
-foreach($item in $zip.items()) {
-  $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
+
+Function Invoke-Install7ZipApplication {
+  Write-Host "Downloading 7-zip..." -ForegroundColor Magenta
+  $7zMsiPath = Join-Path $dirTemp '7z.msi'
+  # 32-bit, right now.  But this does not go in the bundle.
+  $webclient.DownloadFile("http://www.7-zip.org/a/7z1604.msi", $7zMsiPath)
+
+  Write-Host "Installing 7-zip system-wide..." -ForegroundColor Magenta
+  & "msiexec.exe" /i $7zMsiPath /quiet /qn /norestart | Out-Null
+
+  # Cleanup.
+  Remove-Item $7zMsiPath
 }
 
-cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
-cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
+Function Add-7ZipTool {
+  Write-Host "Downloading 7-zip 'extra'..." -ForegroundColor Magenta
+  $extraArchive = Join-Path $dirTemp 'extra.7z'
+  $webclient.DownloadFile("http://www.7-zip.org/a/7z1604-extra.7z", $extraArchive)
 
-rm -Recurse -Force $mongo_zip
-rm -Recurse -Force "$DIR\mongodb\$mongo_name"
+  $pathToExtract = 'x64/7za.exe'
 
-mkdir bin
-cd bin
+  Write-Host 'Placing 7za.exe from extra.7z in \bin...' -ForegroundColor Magenta
+  & "$system7zip" e $extraArchive -o"$dirTemp" $pathToExtract | Out-Null
+  Move-Item $(Join-Path $dirTemp '7za.exe') $(Join-Path $dirBin "7z.exe")
 
-# download node
-# same node on 32bit vs 64bit?
-$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/node.exe"
-$webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
-# install npm
-echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
-npm install npm --save
-flatten-packages .
+  # Cleanup
+  Remove-Item $extraArchive
+}
 
-# npm depends on a hardcoded file path to node-gyp, so we need this to be
-# un-flattened
-cd node_modules\npm
-npm install node-gyp
-cd ..\..
+Function Add-Python {
+  # On Windows we provide a reliable version of python.exe for use by
+  # node-gyp (the tool that rebuilds binary node modules).
+  # This self-hosted 7z is created by archiving the result of running the
+  # Python MSI installer (from python.org), targeted at a temp directory, and
+  # only including: "Python" and "Utility Scripts". Then, 7z the temp directory.
+  $pythonUrl = "https://s3.amazonaws.com/com.meteor.static/windows-python/",
+    "$PLATFORM/python-${PYTHON_VERSION}.7z" -Join ''
+  $pythonArchive = Join-Path $dirTemp 'python.7z'
 
-cp node_modules\npm\bin\npm.cmd .
+  $webclient.DownloadFile($pythonUrl, $pythonArchive)
 
-cd $DIR
+  Expand-7zToDirectory $pythonArchive $DIR
+
+  $pythonDir = Join-Path $DIR 'python'
+  $pythonExe = Join-Path $pythonDir 'python.exe'
+
+  # Make sure the version is right, when python is called.
+  if (!(cmd /c python.exe --version '2>&1' -Eq "Python ${PYTHON_VERSION}")) {
+    throw "Python was not the version we expected it to be ($PYTHON_VERSION)"
+  }
+
+  Remove-Item $pythonArchive
+
+  "$pythonExe"
+}
+
+Function Add-NodeAndNpm {
+  if ("${NODE_VERSION}" -match "-rc\.\d+$") {
+    $nodeUrlBase = 'https://nodejs.org/download/rc'
+  } else {
+    $nodeUrlBase = 'https://nodejs.org/dist'
+  }
+
+  $nodeArchitecture = 'win-x64'
+
+  # Various variables which are used as part of directory paths and
+  # inside Node release and header archives.
+  $nodeVersionSegment = "v${NODE_VERSION}"
+  $nodeNameVersionSegment = "node-${nodeVersionSegment}"
+  $nodeNameSegment = "${nodeNameVersionSegment}-${nodeArchitecture}"
+
+  # The URL for the Node 7z archive, which includes its shipped version of npm.
+  $nodeUrl = $nodeUrlBase, $nodeVersionSegment,
+    "${nodeNameSegment}.7z" -Join '/'
+
+  $archiveNode = Join-Path $dirTemp 'node.7z'
+  Write-Host "Downloading Node.js from ${nodeUrl}" -ForegroundColor Magenta
+  $webclient.DownloadFile($nodeUrl, $archiveNode)
+
+  Write-Host "Extracting Node 7z file..." -ForegroundColor Magenta
+  & "$system7zip" x $archiveNode -o"$dirTemp" | Out-Null
+
+  # This will be the location of the extracted Node tarball.
+  $dirTempNode = Join-Path $dirTemp $nodeNameSegment
+
+  # Delete the no longer necessary Node archive.
+  Remove-Item $archiveNode
+
+  $tempNodeExe = Join-Path $dirTempNode 'node.exe'
+  $tempNpmCmd = Join-Path $dirTempNode 'npm.cmd'
+
+  # Get additional values we'll need to fetch to complete this release.
+  $nodeProcessRelease = @{
+    headersUrl = & "$tempNodeExe" -p 'process.release.headersUrl'
+    libUrl = & "$tempNodeExe" -p 'process.release.libUrl'
+  }
+
+  if (!($nodeProcessRelease.headersUrl -And $nodeProcessRelease.libUrl)) {
+    throw "No 'headersUrl' or 'libUrl' in Node.js's 'process.release' output."
+  }
+
+  $nodeHeadersTarGz = Join-Path $dirTemp 'node-headers.tar.gz'
+  Write-Host "Downloading Node headers from $($nodeProcessRelease.headersUrl)" `
+    -ForegroundColor Magenta
+  $webclient.DownloadFile($nodeProcessRelease.headersUrl, $nodeHeadersTarGz)
+
+  $dirTempNodeHeaders = Join-Path $dirTemp 'node-headers'
+  if (!(Expand-TarGzToDirectory $nodeHeadersTarGz $dirTempNodeHeaders)) {
+    throw "Couldn't extract Node headers."
+  }
+
+  # Move the extracted include directory to the Node dir.
+  $dirTempNodeHeadersInclude = `
+    Join-Path $dirTempNodeHeaders $nodeNameVersionSegment |
+    Join-Path -ChildPath 'include'
+  Move-Item $dirTempNodeHeadersInclude $dirTempNode
+  $dirTempNodeHeadersInclude = Join-Path $dirTempNode 'include'
+
+  # The node.lib goes into a \Release directory.
+  $dirNodeRelease = Join-Path $dirTempNode 'Release'
+  New-Item -ItemType Directory -Force -Path $dirNodeRelease | Out-Null
+
+  Write-Host "Downloading node.lib from $($nodeProcessRelease.libUrl)" `
+    -ForegroundColor Magenta
+  $nodeLibTarget = Join-Path $dirNodeRelease 'node.lib'
+  $webclient.DownloadFile($nodeProcessRelease.libUrl, $nodeLibTarget)
+
+  #
+  # We should now have a fully functionaly local Node with headers to use.
+  #
+
+  # Let's install the npm version we really want.
+  Write-Host "Installing npm@${NPM_VERSION}..." -ForegroundColor Magenta
+  & "$tempNpmCmd" install --prefix="$dirLib" --no-bin-links --save `
+    --cache="$dirNpmCache" --nodedir="$dirTempNode" npm@${NPM_VERSION} |
+      Write-Debug
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "Couldn't install npm@${NPM_VERSION}."
+  }
+
+  # After finishing up with our Node, let's put it in its final home
+  # and abandon this local npm directory.
+
+  # Move exe and cmd files to the \bin directory.
+  Move-Item $(Join-Path $dirTempNode '*.exe') $dirBin
+  # Move-Item $(Join-Path $dirTempNode '*.cmd') $dirBin
+  Move-Item $dirTempNodeHeadersInclude $DIR
+  Move-Item $dirNodeRelease $DIR
+
+  $finalNodeExe = Join-Path $dirBin 'node.exe'
+  $finalNpmCmd = Join-Path $dirBin 'npm.cmd'
+
+  # Uses process.execPath to infer dev_bundle\bin, npm location, &c.
+  & "$finalNodeExe" "${dirCheckout}\scripts\windows\link-npm-bin-commands.js"
+
+  # We use our own npm.cmd.
+  Copy-Item "${dirCheckout}\scripts\npm.cmd" $finalNpmCmd
+
+  Remove-DirectoryRecursively $dirTempNodeHeaders
+  Remove-DirectoryRecursively $dirTempNode
+
+  return New-Object -Type PSObject -Prop $(@{
+    node = $finalNodeExe
+    npm = $finalNpmCmd
+  })
+}
+
+Function Add-Mongo {
+  # Mongo >= 3.4 no longer supports 32-bit (x86) architectures, so we package
+  # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
+  $mongo_filenames = @{
+    windows_x64 = "mongodb-win32-x86_64-2012plus-${MONGO_VERSION_64BIT}"
+  }
+
+  $previousCwd = $PWD
+
+  cd "$DIR"
+  mkdir "$DIR\mongodb"
+  mkdir "$DIR\mongodb\bin"
+
+  $mongo_name = $mongo_filenames.Item($PLATFORM)
+  $mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
+  $mongo_zip = "$DIR\mongodb\mongo.zip"
+
+  Write-Host "Downloading Mongo from ${mongo_link}..." -ForegroundColor Magenta
+  $webclient.DownloadFile($mongo_link, $mongo_zip)
+
+  Write-Host "Extracting Mongo ${mongo_zip}..." -ForegroundColor Magenta
+  $zip = $shell.NameSpace($mongo_zip)
+  foreach($item in $zip.items()) {
+    $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
+  }
+
+  Write-Host "Putting MongoDB mongod.exe in mongodb\bin" -ForegroundColor Magenta
+  cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
+  Write-Host "Putting MongoDB mongo.exe in mongodb\bin" -ForegroundColor Magenta
+  cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
+
+  # https://jira.mongodb.org/browse/SERVER-19086
+  $libeay32dll = "$DIR\mongodb\$mongo_name\bin\libeay32.dll"
+  if (Test-Path $libeay32dll) {
+    Write-Host "Putting MongoDB libeay32.dll in mongodb\bin" -ForegroundColor Magenta
+    cp $libeay32dll $DIR\mongodb\bin
+  }
+  $ssleay32dll = "$DIR\mongodb\$mongo_name\bin\ssleay32.dll"
+  if (Test-Path $ssleay32dll) {
+    Write-Host "Putting MongoDB ssleay32.dll in mongodb\bin" -ForegroundColor Magenta
+    cp $ssleay32dll $DIR\mongodb\bin
+  }
+
+  Write-Host "Removing the old Mongo zip..." -ForegroundColor Magenta
+  rm -Recurse -Force $mongo_zip
+  Write-Host "Removing the old Mongo directory..." -ForegroundColor Magenta
+  rm -Recurse -Force "$DIR\mongodb\$mongo_name"
+
+  cd "$previousCwd"
+}
+
+Function Add-NpmModulesFromJsBundleFile {
+  Param (
+    [Parameter(Mandatory=$True, Position=0)]
+    [string]$SourceJs,
+    [Parameter(Mandatory=$True, Position=1)]
+    [string]$Destination,
+    [Parameter(Mandatory=$True)]
+    $Commands,
+    [bool]$Shrinkwrap = $False
+  )
+
+  $previousCwd = $PWD
+
+  If (!(Test-Path $SourceJs)) {
+    throw "Couldn't find the source: $SourceJs"
+  }
+
+  New-Item -ItemType Directory -Force -Path $Destination | Out-Null
+
+  cd "$Destination"
+
+  Write-Host "Writing 'package.json' from ${SourceJs} to ${Destination}" `
+    -ForegroundColor Magenta
+  & "$($Commands.node)" $SourceJs |
+    Out-File -FilePath $(Join-Path $Destination 'package.json') -Encoding ascii
+
+  # No bin-links because historically, they weren't used anyway.
+  & "$($Commands.npm)" install
+  if ($LASTEXITCODE -ne 0) {
+    throw "Couldn't install npm packages."
+  }
+
+  # As of npm@5, this just renames `package-lock.json` to `npm-shrinkwrap.json`.
+  if ($Shrinkwrap -eq $True) {
+    & "$($Commands.npm)" shrinkwrap
+    if ($LASTEXITCODE -ne 0) {
+      throw "Couldn't make shrinkwrap."
+    }
+  }
+
+  cd node_modules
+
+  # Since we install a patched version of pacote in $Destination\lib\node_modules,
+  # we need to remove npm's bundled version to make it use the new one.
+  if (Test-Path "pacote") {
+    Remove-DirectoryRecursively "npm\node_modules\pacote"
+    & "$($Commands.node)" -e "require('fs').renameSync('pacote', 'npm\\node_modules\\pacote')"
+  }
+
+  cd "$previousCwd"
+}
+
+# Install the global 7zip application, if necessary.
+if (!(Test-Path "$system7zip")) {
+  Write-Host "Installing 7-zip since not found at ${system7zip}" `
+    -ForegroundColor Magenta
+  Invoke-Install7ZipApplication
+}
+
+# Download and install 7zip command-line tool into \bin
+Add-7ZipTool
+
+# Download and install Mongo binaries into \bin
+Add-Mongo
+
+# Add Python to \bin, and use it for Node Gyp.
+$env:PYTHON = Add-Python
+
+# Set additional options for node-gyp
+$env:GYP_MSVS_VERSION = "2015"
+$env:npm_config_nodedir = "$DIR"
+$env:npm_config_cache = "$dirNpmCache"
+
+# Allow running $dirBin commands like node and npm.
+$env:PATH = "$env:PATH;$dirBin"
+
+# Install Node.js and npm and get their paths to use from here on.
+$toolCmds = Add-NodeAndNpm
+
+"Location of node.exe:"
+& Get-Command node | Select-Object -ExpandProperty Definition
+
+"Node process.versions:"
+& node -p 'process.versions'
+
+"Location of npm.cmd:"
+& Get-Command npm | Select-Object -ExpandProperty Definition
+
+"Npm 'version':"
+& npm version
+
+npm config set loglevel error
+
+#
+# Install the npms for the 'server'.
+#
+$npmServerArgs = @{
+  sourceJs = "${dirCheckout}\scripts\dev-bundle-server-package.js"
+  destination = $dirServerLib
+  commands = $toolCmds
+  shrinkwrap = $True
+}
+Add-NpmModulesFromJsBundleFile @npmServerArgs
+
+# These are used by the Meteor tool bundler and written to the Meteor build.
+# For information, see the 'ServerTarget' class in tools/isobuild/bundler.js,
+# and look for 'serverPkgJson' and 'npm-shrinkwrap.json'
+mkdir -Force "${DIR}\etc"
+Move-Item $(Join-Path $dirServerLib 'package.json') "${DIR}\etc\"
+Move-Item $(Join-Path $dirServerLib 'npm-shrinkwrap.json') "${DIR}\etc\"
+
+#
+# Install the npms for the 'tool'.
+#
+$npmToolArgs = @{
+  sourceJs = "${dirCheckout}\scripts\dev-bundle-tool-package.js"
+  destination = $dirLib
+  commands = $toolCmds
+}
+Add-NpmModulesFromJsBundleFile @npmToolArgs
+
+# Leaving these probably doesn't hurt, but are removed for consistency w/ Unix.
+Remove-Item $(Join-Path $dirLib 'package.json')
+Remove-Item $(Join-Path $dirLib 'package-lock.json')
+
+Write-Host "Done writing node_modules build(s)..." -ForegroundColor Magenta
+
+Write-Host "Removing temp scratch $dirTemp" -ForegroundColor Magenta
+Remove-DirectoryRecursively $dirTemp
 
 # mark the version
-echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii
+Write-Host "Writing out the bundle version..." -ForegroundColor Magenta
+echo "${BUNDLE_VERSION}" | Out-File $(Join-Path $DIR '.bundle_version.txt') -Encoding ascii
 
+$devBundleName = "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+$dirBundlePreArchive = Join-Path $dirCheckout $devBundleName
+$devBundleTmpTar = Join-Path $dirCheckout "dev_bundle.tar"
+$devBundleTarGz = Join-Path $dirCheckout "${devBundleName}.tar.gz"
+
+# Cleanup from previous builds, if there are things in our way.
+Remove-DirectoryRecursively $dirBundlePreArchive
+If (Test-Path $devBundleTmpTar) {
+  Remove-Item -Force $devBundleTmpTar
+}
+If (Test-Path $devBundleTarGz) {
+  Remove-Item -Force $devBundleTarGz
+}
+
+# Get out of this directory, before we rename it.
 cd "$DIR\.."
 
-# rename and move the folder with the devbundle
-# XXX this can generate a path that is too long
-Move-Item "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+# rename the folder with the devbundle
+Write-Host "Renaming to $dirBundlePreArchive" -ForegroundColor Magenta
+Rename-Item "$DIR" $dirBundlePreArchive
 
-cmd /c 7z.exe a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
-cmd /c 7z.exe a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
-del dev_bundle.tar
-rm -Recurse -Force "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
-cmd /C "rmdir /s /q dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+Write-Host "Compressing $dirBundlePreArchive to $devBundleTmpTar"
+& "$system7zip" a -ttar $devBundleTmpTar $dirBundlePreArchive
+if ($LASTEXITCODE -ne 0) {
+  throw "Failure while building $devBundleTmpTar"
+}
 
-echo "Done building Dev Bundle!"
+if ((Get-Item $devBundleTmpTar).length -lt 50mb) {
+  throw "Dev bundle .tar is <50mb. If this is correct, update this message!"
+}
 
+Write-Host "Compressing $devBundleTmpTar into $devBundleTarGz" `
+  -ForegroundColor Magenta
+& "$system7zip" a -tgzip $devBundleTarGz $devBundleTmpTar
+if ($LASTEXITCODE -ne 0) {
+  throw "Failure while building $devBundleTarGz"
+}
+
+if ((Get-Item $devBundleTarGz).length -lt 30mb) {
+  throw "Dev bundle .tar.gz is <30mb. If this is correct, update this message!"
+}
+
+Write-Host "Removing $devBundleTmpTar" -ForegroundColor Magenta
+Remove-Item -Force $devBundleTmpTar
+
+Write-Host "Removing the '$devBundleName' temp directory." `
+  -ForegroundColor Magenta
+Remove-DirectoryRecursively $dirBundlePreArchive
+
+Write-Host "Done building Dev Bundle!" -ForegroundColor Green
+Exit 0

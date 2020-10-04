@@ -2,7 +2,7 @@ TestAsset = {};
 
 if (Meteor.isServer) {
   TestAsset.convert = function (b) {
-    return (new Buffer(b)).toString();
+    return Buffer.from(b).toString();
   };
 
   TestAsset.go = function (exit) {

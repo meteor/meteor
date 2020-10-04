@@ -1,15 +1,12 @@
 var Future = Npm.require('fibers/future');
 
+import { NpmModuleMongodb } from "meteor/npm-mongo";
+const { Timestamp } = NpmModuleMongodb;
+
 OPLOG_COLLECTION = 'oplog.rs';
 
 var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
-
-// Like Perl's quotemeta: quotes all regexp metacharacters. See
-//   https://github.com/substack/quotemeta/blob/master/index.js
-// XXX this is duplicated with accounts_server.js
-var quotemeta = function (str) {
-    return String(str).replace(/(\W)/g, '\\$1');
-};
+var TAIL_TIMEOUT = +process.env.METEOR_OPLOG_TAIL_TIMEOUT || 30000;
 
 var showTS = function (ts) {
   return "Timestamp(" + ts.getHighBits() + ", " + ts.getLowBits() + ")";
@@ -43,11 +40,18 @@ OplogHandle = function (oplogUrl, dbName) {
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
   self._baseOplogSelector = {
-    ns: new RegExp('^' + quotemeta(self._dbName) + '\\.'),
+    ns: new RegExp("^(?:" + [
+      Meteor._escapeRegExp(self._dbName + "."),
+      Meteor._escapeRegExp("admin.$cmd"),
+    ].join("|") + ")"),
+
     $or: [
-      { op: {$in: ['i', 'u', 'd']} },
-      // If it is not db.collection.drop(), ignore it
-      { op: 'c', 'o.drop': { $exists: true } }]
+      { op: { $in: ['i', 'u', 'd'] } },
+      // drop collection
+      { op: 'c', 'o.drop': { $exists: true } },
+      { op: 'c', 'o.dropDatabase': 1 },
+      { op: 'c', 'o.applyOps': { $exists: true } },
+    ]
   };
 
   // Data structures to support waitUntilCaughtUp(). Each oplog entry has a
@@ -101,10 +105,9 @@ _.extend(OplogHandle.prototype, {
 
     var originalCallback = callback;
     callback = Meteor.bindEnvironment(function (notification) {
-      // XXX can we avoid this clone by making oplog.js careful?
-      originalCallback(EJSON.clone(notification));
+      originalCallback(notification);
     }, function (err) {
-      Meteor._debug("Error in oplog callback", err.stack);
+      Meteor._debug("Error in oplog callback", err);
     });
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
@@ -134,20 +137,21 @@ _.extend(OplogHandle.prototype, {
     // Calling waitUntilCaughtUp requries us to wait for the oplog connection to
     // be ready.
     self._readyFuture.wait();
+    var lastEntry;
 
     while (!self._stopped) {
       // We need to make the selector at least as restrictive as the actual
       // tailing selector (ie, we need to specify the DB name) or else we might
       // find a TS that won't show up in the actual tail stream.
       try {
-        var lastEntry = self._oplogLastEntryConnection.findOne(
+        lastEntry = self._oplogLastEntryConnection.findOne(
           OPLOG_COLLECTION, self._baseOplogSelector,
           {fields: {ts: 1}, sort: {$natural: -1}});
         break;
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while reading last entry: " + e);
+        Meteor._debug("Got exception while reading last entry", e);
         Meteor._sleepForMs(100);
       }
     }
@@ -174,8 +178,7 @@ _.extend(OplogHandle.prototype, {
     // but it's conceivable that if we fail over from one primary to another,
     // the oplog entries we see will go backwards.
     var insertAfter = self._catchingUpFutures.length;
-    while (insertAfter - 1 > 0
-           && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
+    while (insertAfter - 1 > 0 && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
       insertAfter--;
     }
     var f = new Future;
@@ -212,12 +215,14 @@ _.extend(OplogHandle.prototype, {
 
     // Now, make sure that there actually is a repl set here. If not, oplog
     // tailing won't ever find anything!
+    // More on the isMasterDoc
+    // https://docs.mongodb.com/manual/reference/command/isMaster/
     var f = new Future;
     self._oplogLastEntryConnection.db.admin().command(
       { ismaster: 1 }, f.resolver());
     var isMasterDoc = f.wait();
-    if (!(isMasterDoc && isMasterDoc.documents && isMasterDoc.documents[0] &&
-          isMasterDoc.documents[0].setName)) {
+
+    if (!(isMasterDoc && isMasterDoc.setName)) {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
                   "a Mongo replica set");
     }
@@ -239,23 +244,85 @@ _.extend(OplogHandle.prototype, {
     var cursorDescription = new CursorDescription(
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
+    // Start tailing the oplog.
+    //
+    // We restart the low-level oplog query every 30 seconds if we didn't get a
+    // doc. This is a workaround for #8598: the Node Mongo driver has at least
+    // one bug that can lead to query callbacks never getting called (even with
+    // an error) when leadership failover occur.
     self._tailHandle = self._oplogTailConnection.tail(
-      cursorDescription, function (doc) {
+      cursorDescription,
+      function (doc) {
         self._entryQueue.push(doc);
         self._maybeStartWorker();
-      }
+      },
+      TAIL_TIMEOUT
     );
     self._readyFuture.return();
   },
 
   _maybeStartWorker: function () {
     var self = this;
-    if (self._workerActive)
-      return;
+    if (self._workerActive) return;
     self._workerActive = true;
+
     Meteor.defer(function () {
+      // May be called recursively in case of transactions.
+      function handleDoc(doc) {
+        if (doc.ns === "admin.$cmd") {
+          if (doc.o.applyOps) {
+            // This was a successful transaction, so we need to apply the
+            // operations that were involved.
+            let nextTimestamp = doc.ts;
+            doc.o.applyOps.forEach(op => {
+              // See https://github.com/meteor/meteor/issues/10420.
+              if (!op.ts) {
+                op.ts = nextTimestamp;
+                nextTimestamp = nextTimestamp.add(Timestamp.ONE);
+              }
+              handleDoc(op);
+            });
+            return;
+          }
+          throw new Error("Unknown command " + EJSON.stringify(doc));
+        }
+
+        const trigger = {
+          dropCollection: false,
+          dropDatabase: false,
+          op: doc,
+        };
+
+        if (typeof doc.ns === "string" &&
+            doc.ns.startsWith(self._dbName + ".")) {
+          trigger.collection = doc.ns.slice(self._dbName.length + 1);
+        }
+
+        // Is it a special command and the collection name is hidden
+        // somewhere in operator?
+        if (trigger.collection === "$cmd") {
+          if (doc.o.dropDatabase) {
+            delete trigger.collection;
+            trigger.dropDatabase = true;
+          } else if (_.has(doc.o, "drop")) {
+            trigger.collection = doc.o.drop;
+            trigger.dropCollection = true;
+            trigger.id = null;
+          } else {
+            throw Error("Unknown command " + EJSON.stringify(doc));
+          }
+
+        } else {
+          // All other ops have an id.
+          trigger.id = idForOp(doc);
+        }
+
+        self._crossbar.fire(trigger);
+      }
+
       try {
-        while (! self._stopped && ! self._entryQueue.isEmpty()) {
+        while (! self._stopped &&
+               ! self._entryQueue.isEmpty()) {
           // Are we too far behind? Just tell our observers that they need to
           // repoll, and drop our queue.
           if (self._entryQueue.length > TOO_FAR_BEHIND) {
@@ -273,50 +340,39 @@ _.extend(OplogHandle.prototype, {
             continue;
           }
 
-          var doc = self._entryQueue.shift();
+          const doc = self._entryQueue.shift();
 
-          if (!(doc.ns && doc.ns.length > self._dbName.length + 1 &&
-                doc.ns.substr(0, self._dbName.length + 1) ===
-                (self._dbName + '.'))) {
-            throw new Error("Unexpected ns");
-          }
-
-          var trigger = {collection: doc.ns.substr(self._dbName.length + 1),
-                         dropCollection: false,
-                         op: doc};
-
-          // Is it a special command and the collection name is hidden somewhere
-          // in operator?
-          if (trigger.collection === "$cmd") {
-            trigger.collection = doc.o.drop;
-            trigger.dropCollection = true;
-            trigger.id = null;
-          } else {
-            // All other ops have an id.
-            trigger.id = idForOp(doc);
-          }
-
-          self._crossbar.fire(trigger);
+          // Fire trigger(s) for this doc.
+          handleDoc(doc);
 
           // Now that we've processed this operation, process pending
           // sequencers.
-          if (!doc.ts)
+          if (doc.ts) {
+            self._setLastProcessedTS(doc.ts);
+          } else {
             throw Error("oplog entry without ts: " + EJSON.stringify(doc));
-          self._setLastProcessedTS(doc.ts);
+          }
         }
       } finally {
         self._workerActive = false;
       }
     });
   },
+
   _setLastProcessedTS: function (ts) {
     var self = this;
     self._lastProcessedTS = ts;
-    while (!_.isEmpty(self._catchingUpFutures)
-           && self._catchingUpFutures[0].ts.lessThanOrEqual(
-             self._lastProcessedTS)) {
+    while (!_.isEmpty(self._catchingUpFutures) && self._catchingUpFutures[0].ts.lessThanOrEqual(self._lastProcessedTS)) {
       var sequencer = self._catchingUpFutures.shift();
       sequencer.future.return();
     }
+  },
+
+  //Methods used on tests to dinamically change TOO_FAR_BEHIND
+  _defineTooFarBehind: function(value) {
+    TOO_FAR_BEHIND = value;
+  },
+  _resetTooFarBehind: function() {
+    TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
   }
 });

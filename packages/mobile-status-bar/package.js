@@ -1,12 +1,9 @@
 Package.describe({
+  name: 'mobile-status-bar',
   summary: "Good defaults for the mobile status bar",
-  version: "1.0.3-winr.3"
-});
-
-Package.onUse(function(api) {
-  api.addFiles('mobile-status-bar.js', 'web.cordova');
+  version: "1.1.0"
 });
 
 Cordova.depends({
-  'org.apache.cordova.statusbar': '0.1.10'
+  'cordova-plugin-statusbar': '2.4.3'
 });

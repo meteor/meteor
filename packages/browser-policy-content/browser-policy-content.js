@@ -17,7 +17,7 @@
 // disallowEval()
 //
 // For each type of content (script, object, image, media, font, connect,
-// style), there are the following functions:
+// style, frame, frame-ancestors), there are the following functions:
 // allow<content type>Origin(origin): allows the type of content to be loaded
 // from the given origin
 // allow<content type>DataUrl(): allows the content to be loaded from data: URLs
@@ -50,6 +50,7 @@ var keywords = {
 // If false, we set the X-Content-Type-Options header to 'nosniff'.
 var contentSniffingAllowed = false;
 
+const BrowserPolicy = require("meteor/browser-policy-common").BrowserPolicy;
 BrowserPolicy.content = {};
 
 var parseCsp = function (csp) {
@@ -102,19 +103,26 @@ var addSourceForDirective = function (directive, src) {
   if (_.contains(_.values(keywords), src)) {
     cspSrcs[directive].push(src);
   } else {
-    src = src.toLowerCase();
-
-    // Trim trailing slashes.
-    src = src.replace(/\/+$/, '');
-
     var toAdd = [];
-    // If there is no protocol, add both http:// and https://.
-    if (! /^([a-z0-9.+-]+:)/.test(src)) {
-      toAdd.push("http://" + src);
-      toAdd.push("https://" + src);
+
+    //Only add single quotes to CSP2 script digests
+    if (/^(sha(256|384|512)-)/i.test(src)) {
+      toAdd.push("'" + src + "'");
     } else {
-      toAdd.push(src);
+      src = src.toLowerCase();
+
+      // Trim trailing slashes.
+      src = src.replace(/\/+$/, '');
+
+      // If there is no protocol, add both http:// and https://.
+      if (! /^([a-z0-9.+-]+:)/.test(src)) {
+        toAdd.push("http://" + src);
+        toAdd.push("https://" + src);
+      } else {
+        toAdd.push(src);
+      }
     }
+
     _.each(toAdd, function (s) {
       cspSrcs[directive].push(s);
     });
@@ -241,48 +249,57 @@ _.extend(BrowserPolicy.content, {
 
 // allow<Resource>Origin, allow<Resource>Data, allow<Resource>self, and
 // disallow<Resource> methods for each type of resource.
-_.each(["script", "object", "img", "media",
-        "font", "connect", "style", "frame"],
-       function (resource) {
-         var directive = resource + "-src";
-         var methodResource;
-         if (resource !== "img") {
-           methodResource = resource.charAt(0).toUpperCase() +
-             resource.slice(1);
-         } else {
-           methodResource = "Image";
-         }
-         var allowMethodName = "allow" + methodResource + "Origin";
-         var disallowMethodName = "disallow" + methodResource;
-         var allowDataMethodName = "allow" + methodResource + "DataUrl";
-         var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
+var resources = [
+  { methodResource: "Script", directive: "script-src" },
+  { methodResource: "Object", directive: "object-src" },
+  { methodResource: "Image", directive: "img-src" },
+  { methodResource: "Media", directive: "media-src" },
+  { methodResource: "Font", directive: "font-src" },
+  { methodResource: "Connect", directive: "connect-src" },
+  { methodResource: "Style", directive: "style-src" },
+  { methodResource: "Frame", directive: "frame-src" },
+  { methodResource: "FrameAncestors", directive: "frame-ancestors" }
+];
+_.each(resources,  function (resource) {
+  var directive = resource.directive; 
+  var methodResource = resource.methodResource; 
+  var allowMethodName = "allow" + methodResource + "Origin";
+  var disallowMethodName = "disallow" + methodResource;
+  var allowDataMethodName = "allow" + methodResource + "DataUrl"; 
+  var allowBlobMethodName = "allow" + methodResource + "BlobUrl";
+  var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
 
-         var disallow = function () {
-           cachedCsp = null;
-           cspSrcs[directive] = [];
-         };
+  var disallow = function () {
+    cachedCsp = null;
+    cspSrcs[directive] = [];
+  };
 
-         BrowserPolicy.content[allowMethodName] = function (src) {
-           prepareForCspDirective(directive);
-           addSourceForDirective(directive, src);
-         };
-         if (resource === "script") {
-           BrowserPolicy.content[disallowMethodName] = function () {
-             disallow();
-             setWebAppInlineScripts(false);
-           };
-         } else {
-           BrowserPolicy.content[disallowMethodName] = disallow;
-         }
-         BrowserPolicy.content[allowDataMethodName] = function () {
-           prepareForCspDirective(directive);
-           cspSrcs[directive].push("data:");
-         };
-         BrowserPolicy.content[allowSelfMethodName] = function () {
-           prepareForCspDirective(directive);
-           cspSrcs[directive].push(keywords.self);
-         };
-       });
-
+  BrowserPolicy.content[allowMethodName] = function (src) {
+    prepareForCspDirective(directive);
+    addSourceForDirective(directive, src);
+  };
+  if (resource === "script") {
+    BrowserPolicy.content[disallowMethodName] = function () {
+      disallow();
+      setWebAppInlineScripts(false);
+    };
+  } else {
+    BrowserPolicy.content[disallowMethodName] = disallow;
+  }
+  BrowserPolicy.content[allowDataMethodName] = function () {
+    prepareForCspDirective(directive);
+    cspSrcs[directive].push("data:");
+  };
+  BrowserPolicy.content[allowBlobMethodName] = function () {
+    prepareForCspDirective(directive);
+    cspSrcs[directive].push("blob:");
+  };
+  BrowserPolicy.content[allowSelfMethodName] = function () {
+    prepareForCspDirective(directive);
+    cspSrcs[directive].push(keywords.self);
+  };
+});
 
 setDefaultPolicy();
+
+exports.BrowserPolicy = BrowserPolicy;

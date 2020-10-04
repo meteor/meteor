@@ -1,0 +1,51 @@
+====================================================================
+For the license for Meteor itself, see LICENSE.txt in the root of
+the repository.  This file contains the licenses for externally
+maintained libraries.
+====================================================================
+
+
+
+The following librararies are licensed under the DO WHAT THE FUCK YOU WANT TO
+PUBLIC LICENSE, Version 2:
+
+
+"""
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+                    Version 2, December 2004
+
+ Copyright (C) 2004 Sam Hocevar <sam@hocevar.net>
+
+ Everyone is permitted to copy and distribute verbatim or modified
+ copies of this license document, and changing it is allowed as long
+ as the name is changed.
+
+            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. You just DO WHAT THE FUCK YOU WANT TO.
+"""
+
+
+----------
+inherits: https://github.com/isaacs/inherits
+----------
+
+By Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)
+
+
+
+----------
+Base64: https://github.com/davidchambers/Base64.js
+----------
+
+ Copyright (c) 2011..2012 David Chambers <dc@hashify.me>
+
+
+----------
+opener: https://github.com/domenic/opener
+path-is-inside: https://github.com/domenic/path-is-inside
+sorted-object: https://github.com/domenic/sorted-object
+----------
+
+ Copyright (C) 2012 Domenic Denicola <domenic@domenicdenicola.com>

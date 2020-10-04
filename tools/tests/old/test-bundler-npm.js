@@ -1,13 +1,15 @@
+require('../../tool-env/install-babel.js');
+
 var _ = require('underscore');
 var assert = require('assert');
 var Fiber = require('fibers');
-var files = require('../../files.js');
-var bundler = require('../../bundler.js');
-var release = require('../../release.js');
-var catalog = require('../../catalog.js');
-var buildmessage = require('../../buildmessage.js');
-var meteorNpm = require('../../meteor-npm.js');
-var isopackets = require("../../isopackets.js");
+var files = require('../../fs/files');
+var bundler = require('../../isobuild/bundler.js');
+var release = require('../../packaging/release.js');
+var catalog = require('../../packaging/catalog/catalog.js');
+var buildmessage = require('../../utils/buildmessage.js');
+var meteorNpm = require('../../isobuild/meteor-npm.js');
+var isopackets = require('../../tool-env/isopackets.js');
 var projectContextModule = require('../../project-context.js');
 
 var lastTmpDir = null;
@@ -17,8 +19,11 @@ var tmpDir = function () {
 
 var makeProjectContext = function (appName) {
   var projectDir = files.mkdtemp("test-bundler-assets");
-  files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), appName),
-    projectDir);
+  files.cp_r(
+    files.pathJoin(files.convertToStandardPath(__dirname), appName),
+    projectDir,
+    { preserveSymlinks: true },
+  );
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: projectDir
   });

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This scripts automates the release process of Meteor Tool.
 
@@ -52,13 +52,13 @@ set -u
 if [ -d meteor ]; then
   rm -rf meteor
 fi
-git clone https://github.com/meteor/meteor.git
+git clone --recursive https://github.com/meteor/meteor.git
 cd meteor
 git fetch --tags
 END
 
     # checkout the SHA1 we want to publish
-    echo "cd meteor; git checkout $GITSHA" | METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine "$PLATFORM"
+    echo "cd meteor; git checkout $GITSHA; git submodule update --init --recursive" | METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine "$PLATFORM"
     # publish the release
     echo "cd meteor/packages/meteor-tool && env METEOR_SESSION_FILE=~/session ../../meteor publish --existing-version" | METEOR_SESSION_FILE=$SESSION_FILE $METEOR admin get-machine $PLATFORM
 
@@ -78,7 +78,12 @@ END
     # delete existing batch script if it exists
     ssh $USERNAME@$HOST -oUserKnownHostsFile="$TEMP_KEY" -p "$PORT" -i "$TEMP_PRIV_KEY" "cmd /c del C:\\publish-tool.bat || exit 0" 2>/dev/null
 
-    # copy batch script to windows machine
+    # copy batch script to windows machine, in a funky way, by splicing each
+    # line of publish-meteor-tool.bat into a Windows `echo` command, with no
+    # escaping.
+    # therefore, the lines of publish-meteor-tool.bat must already be
+    # escaped, for example `>` as `^>` and `%` as `^%`.
+
     BAT_FILENAME="$ADMIN_DIR/publish-meteor-tool.bat"
 
     # we need to use file descriptor 10 because otherwise SSH will conflict with
@@ -105,6 +110,8 @@ END
 }
 
 # get keys from "meteor admin get-machine" command
+# inputs: SESSION_FILE, METEOR, PLATFORM, CHECKOUT_DIR
+# outputs: USERNAME, HOST, PORT, TEMP_KEY, TEMP_PRIV_KEY
 parse_keys () {
   trap 'echo "${red}Failed to parse the machine credentials${NC}";clean_up' EXIT
   CREDS=$(METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine $PLATFORM --json)

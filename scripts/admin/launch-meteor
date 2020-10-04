@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This is the script that we install somewhere in your $PATH (as "meteor")
 # when you run
@@ -69,25 +69,78 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
 
   # This returns something like:
   #   https://asdfasdfasdf.cloudfront.net/packages-bootstrap/1.2.3
-  ROOT_URL="$(curl -s --fail $BOOTSTRAP_URL)"
-  TARBALL_URL="${ROOT_URL}/meteor-bootstrap-${PLATFORM}.tar.gz"
+  TMP_ROOT_URL="$(curl -s --fail $BOOTSTRAP_URL)"
+  TARBALL_URL="${TMP_ROOT_URL}/meteor-bootstrap-${PLATFORM}.tar.gz"
 
   INSTALL_TMPDIR="$(dirname "$METEOR_WAREHOUSE_DIR")/.meteor-install-tmp"
-  rm -rf "$INSTALL_TMPDIR"
+
+  # Generate the $TARBALL_FILE path based on $TARBALL_URL, but with unsafe
+  # characters replaced by underscores.
+  PART_FILE=".meteor-${TARBALL_URL//[^A-Za-z0-9_.-]/_}.part"
+  TARBALL_FILE="$(dirname "$METEOR_WAREHOUSE_DIR")/${PART_FILE}"
+
+  cleanUp() {
+    rm -rf "$TARBALL_FILE"
+    rm -rf "$INSTALL_TMPDIR"
+  }
+
+  # Remove temporary files now in case they exist.
+  cleanUp
+
+  # Make sure cleanUp gets called if we exit abnormally.
+  trap cleanUp EXIT
+
   mkdir "$INSTALL_TMPDIR"
-  if [ -n "$USER" ]; then
+  if [ -n "${USER-}" ]; then
     echo "$USER, this is your first time using Meteor!" 1>&2
   else
     echo "This is your first time using Meteor!" 1>&2
   fi
   echo "Installing a Meteor distribution in your home directory." 1>&2
-  curl --progress-bar --fail "$TARBALL_URL" | tar -xzf - -C "$INSTALL_TMPDIR"
+
+
+  # Only show progress bar animations if we have a tty
+  # (Prevents tons of console junk when installing within a pipe)
+  VERBOSITY="--silent";
+  if [ -t 1 ]; then
+    VERBOSITY="--progress-bar"
+  fi
+
+  echo "Downloading Meteor distribution"
+  # keep trying to curl the file until it works (resuming where possible)
+  MAX_ATTEMPTS=10
+  RETRY_DELAY_SECS=5
+  set +e
+  ATTEMPTS=0
+  while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]
+  do
+    ATTEMPTS=$((ATTEMPTS + 1))
+
+    curl $VERBOSITY --fail --continue-at - \
+      "$TARBALL_URL" --output "$TARBALL_FILE"
+
+    if [ $? -eq 0 ]
+    then
+        break
+    fi
+
+    echo "Retrying download in $RETRY_DELAY_SECS seconds..."
+    sleep $RETRY_DELAY_SECS
+  done
+  set -e
+
   # bomb out if it didn't work, eg no net
+  test -e "${TARBALL_FILE}"
+  tar -xzf "$TARBALL_FILE" -C "$INSTALL_TMPDIR" -o
+
   test -x "${INSTALL_TMPDIR}/.meteor/meteor"
   mv "${INSTALL_TMPDIR}/.meteor" "$METEOR_WAREHOUSE_DIR"
-  rmdir "${INSTALL_TMPDIR}"
   # just double-checking :)
   test -x "$METEOR_WAREHOUSE_DIR/meteor"
+
+  # The `trap cleanUp EXIT` line above won't actually fire after the exec
+  # call below, so call cleanUp manually.
+  cleanUp
 fi
 
 exec "$METEOR_WAREHOUSE_DIR/meteor" "$@"

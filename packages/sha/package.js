@@ -1,9 +1,10 @@
 Package.describe({
-  summary: "SHA256 implementation",
-  version: "1.0.3-winr.2"
+  version: '1.0.9',
+  summary: 'SHA256 implementation',
+  git: 'https://github.com/meteor/meteor'
 });
 
 Package.onUse(function (api) {
   api.export('SHA256');
-  api.addFiles(['sha256.js'], ['client', 'server']);
+  api.addFiles('sha256.js');
 });

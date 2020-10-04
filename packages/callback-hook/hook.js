@@ -9,9 +9,10 @@
 // conditionally decide not to call the callback (if, for example, the
 // observed object has been closed or terminated).
 //
-// Callbacks are bound with `Meteor.bindEnvironment`, so they will be
+// By default, callbacks are bound with `Meteor.bindEnvironment`, so they will be
 // called with the Meteor environment of the calling code that
-// registered the callback.
+// registered the callback. Override by passing { bindEnvironment: false }
+// to the constructor.
 //
 // Registering a callback returns an object with a single `stop`
 // method which unregisters the callback.
@@ -35,44 +36,53 @@
 // callback will propagate up to the iterator function, and will
 // terminate calling the remaining callbacks if not caught.
 
-Hook = function (options) {
-  var self = this;
-  options = options || {};
-  self.nextCallbackId = 0;
-  self.callbacks = {};
+const hasOwn = Object.prototype.hasOwnProperty;
 
-  if (options.exceptionHandler)
-    self.exceptionHandler = options.exceptionHandler;
-  else if (options.debugPrintExceptions) {
-    if (! _.isString(options.debugPrintExceptions))
-      throw new Error("Hook option debugPrintExceptions should be a string");
-    self.exceptionHandler = options.debugPrintExceptions;
-  }
-};
+export class Hook {
+  constructor(options) {
+    options = options || {};
+    this.nextCallbackId = 0;
+    this.callbacks = Object.create(null);
+    // Whether to wrap callbacks with Meteor.bindEnvironment
+    this.bindEnvironment = true;
+    if (options.bindEnvironment === false) {
+      this.bindEnvironment = false;
+    }
 
-_.extend(Hook.prototype, {
-  register: function (callback) {
-    var self = this;
-
-    callback = Meteor.bindEnvironment(
-      callback,
-      self.exceptionHandler || function (exception) {
-        // Note: this relies on the undocumented fact that if bindEnvironment's
-        // onException throws, and you are invoking the callback either in the
-        // browser or from within a Fiber in Node, the exception is propagated.
-        throw exception;
+    if (options.exceptionHandler) {
+      this.exceptionHandler = options.exceptionHandler;
+    } else if (options.debugPrintExceptions) {
+      if (typeof options.debugPrintExceptions !== "string") {
+        throw new Error("Hook option debugPrintExceptions should be a string");
       }
-    );
+      this.exceptionHandler = options.debugPrintExceptions;
+    }
+  }
 
-    var id = self.nextCallbackId++;
-    self.callbacks[id] = callback;
+  register(callback) {
+    var exceptionHandler = this.exceptionHandler || function (exception) {
+      // Note: this relies on the undocumented fact that if bindEnvironment's
+      // onException throws, and you are invoking the callback either in the
+      // browser or from within a Fiber in Node, the exception is propagated.
+      throw exception;
+    };
+
+    if (this.bindEnvironment) {
+      callback = Meteor.bindEnvironment(callback, exceptionHandler);
+    } else {
+      callback = dontBindEnvironment(callback, exceptionHandler);
+    }
+
+    var id = this.nextCallbackId++;
+    this.callbacks[id] = callback;
 
     return {
-      stop: function () {
-        delete self.callbacks[id];
+      callback,
+      stop: () => {
+        delete this.callbacks[id];
       }
     };
-  },
+  }
 
   // For each registered callback, call the passed iterator function
   // with the callback.
@@ -84,24 +94,44 @@ _.extend(Hook.prototype, {
   // The iteration is stopped if the iterator function returns a falsy
   // value or throws an exception.
   //
-  each: function (iterator) {
-    var self = this;
-
+  each(iterator) {
     // Invoking bindEnvironment'd callbacks outside of a Fiber in Node doesn't
     // run them to completion (and exceptions thrown from onException are not
     // propagated), so we need to be in a Fiber.
     Meteor._nodeCodeMustBeInFiber();
 
-    var ids = _.keys(self.callbacks);
+    var ids = Object.keys(this.callbacks);
     for (var i = 0;  i < ids.length;  ++i) {
       var id = ids[i];
       // check to see if the callback was removed during iteration
-      if (_.has(self.callbacks, id)) {
-        var callback = self.callbacks[id];
-
-        if (! iterator(callback))
+      if (hasOwn.call(this.callbacks, id)) {
+        var callback = this.callbacks[id];
+        if (! iterator(callback)) {
           break;
+        }
       }
     }
   }
-});
+}
+
+// Copied from Meteor.bindEnvironment and removed all the env stuff.
+function dontBindEnvironment(func, onException, _this) {
+  if (!onException || typeof(onException) === 'string') {
+    var description = onException || "callback of async function";
+    onException = function (error) {
+      Meteor._debug(
+        "Exception in " + description,
+        error
+      );
+    };
+  }
+
+  return function (...args) {
+    try {
+      var ret = func.apply(_this, args);
+    } catch (e) {
+      onException(e);
+    }
+    return ret;
+  };
+}

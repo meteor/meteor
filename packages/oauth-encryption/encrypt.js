@@ -1,12 +1,9 @@
-var crypto = Npm.require("crypto");
-// XXX We hope to be able to use the `crypto` module exclusively when
-// Node supports GCM in version 0.11.
-var gcm = NpmModuleNodeAesGcm;
+import crypto from 'crypto';
+let gcmKey = null;
+const OAuthEncryption = exports.OAuthEncryption = {};
+const objToStr = Object.prototype.toString;
 
-OAuthEncryption = {};
-
-var gcmKey = null;
-
+const isString = value => objToStr.call(value) === "[object String]";
 
 // Node leniently ignores non-base64 characters when parsing a base64
 // string, but we want to provide a more informative error message if
@@ -16,9 +13,8 @@ var gcmKey = null;
 //
 // Exported for the convenience of tests.
 //
-OAuthEncryption._isBase64 = function (str) {
-  return _.isString(str) && /^[A-Za-z0-9\+\/]*\={0,2}$/.test(str);
-};
+OAuthEncryption._isBase64 = str =>
+  isString(str) && /^[A-Za-z0-9\+\/]*\={0,2}$/.test(str);
 
 
 // Loads the OAuth secret key, which must be 16 bytes in length
@@ -27,7 +23,7 @@ OAuthEncryption._isBase64 = function (str) {
 // The key may be `null` which reverts to having no key (mainly used
 // by tests).
 //
-OAuthEncryption.loadKey = function (key) {
+OAuthEncryption.loadKey = key => {
   if (key === null) {
     gcmKey = null;
     return;
@@ -36,7 +32,7 @@ OAuthEncryption.loadKey = function (key) {
   if (! OAuthEncryption._isBase64(key))
     throw new Error("The OAuth encryption key must be encoded in base64");
 
-  var buf = new Buffer(key, "base64");
+  const buf = Buffer.from(key, "base64");
 
   if (buf.length !== 16)
     throw new Error("The OAuth encryption AES-128-GCM key must be 16 bytes in length");
@@ -54,26 +50,33 @@ OAuthEncryption.loadKey = function (key) {
 // credentials such as access tokens from being used by a different
 // user.
 //
-// We would actually like the user id to be AAD (additional
-// authenticated data), but the node crypto API does not currently have
-// support for specifying AAD.
+// We might someday like the user id to be AAD (additional authenticated
+// data), but the Node 0.10.x crypto API did not support specifying AAD,
+// and it's not clear that we want to incur the compatibility issues of
+// relying on that feature, even though it's now supported by Node 4.
 //
-OAuthEncryption.seal = function (data, userId) {
+OAuthEncryption.seal = (data, userId) => {
   if (! gcmKey) {
     throw new Error("No OAuth encryption key loaded");
   }
 
-  var plaintext = new Buffer(EJSON.stringify({
-    data: data,
-    userId: userId
+  const plaintext = Buffer.from(EJSON.stringify({
+    data,
+    userId,
   }));
-  var iv = crypto.randomBytes(12);
-  var result = gcm.encrypt(gcmKey, iv, plaintext, new Buffer([]) /* aad */);
+
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-128-gcm", gcmKey, iv);
+  cipher.setAAD(Buffer.from([]));
+  const chunks = [cipher.update(plaintext)];
+  chunks.push(cipher.final());
+  const encrypted = Buffer.concat(chunks);
+
   return {
     iv: iv.toString("base64"),
-    ciphertext: result.ciphertext.toString("base64"),
+    ciphertext: encrypted.toString("base64"),
     algorithm: "aes-128-gcm",
-    authTag: result.auth_tag.toString("base64")
+    authTag: cipher.getAuthTag().toString("base64")
   };
 };
 
@@ -87,7 +90,7 @@ OAuthEncryption.seal = function (data, userId) {
 // To prevent an attacker from breaking the encryption key by
 // observing the result of sending manipulated ciphertexts, `open`
 // throws "decryption unsuccessful" on any error.
-OAuthEncryption.open = function (ciphertext, userId) {
+OAuthEncryption.open = (ciphertext, userId) => {
   if (! gcmKey)
     throw new Error("No OAuth encryption key loaded");
 
@@ -96,23 +99,24 @@ OAuthEncryption.open = function (ciphertext, userId) {
       throw new Error();
     }
 
-    var result = gcm.decrypt(
+    const decipher = crypto.createDecipheriv(
+      "aes-128-gcm",
       gcmKey,
-      new Buffer(ciphertext.iv, "base64"),
-      new Buffer(ciphertext.ciphertext, "base64"),
-      new Buffer([]), /* aad */
-      new Buffer(ciphertext.authTag, "base64")
+      Buffer.from(ciphertext.iv, "base64")
     );
 
-    if (! result.auth_ok) {
-      throw new Error();
-    }
+    decipher.setAAD(Buffer.from([]));
+    decipher.setAuthTag(Buffer.from(ciphertext.authTag, "base64"));
+    const chunks = [decipher.update(
+      Buffer.from(ciphertext.ciphertext, "base64"))];
+    chunks.push(decipher.final());
+    const plaintext = Buffer.concat(chunks).toString("utf8");
 
-    var err;
-    var data;
+    let err;
+    let data;
 
     try {
-      data = EJSON.parse(result.plaintext.toString());
+      data = EJSON.parse(plaintext);
     } catch (e) {
       err = new Error();
     }
@@ -132,15 +136,12 @@ OAuthEncryption.open = function (ciphertext, userId) {
 };
 
 
-OAuthEncryption.isSealed = function (maybeCipherText) {
-  return maybeCipherText &&
+OAuthEncryption.isSealed = maybeCipherText =>
+  maybeCipherText &&
     OAuthEncryption._isBase64(maybeCipherText.iv) &&
     OAuthEncryption._isBase64(maybeCipherText.ciphertext) &&
     OAuthEncryption._isBase64(maybeCipherText.authTag) &&
-    _.isString(maybeCipherText.algorithm);
-};
+    isString(maybeCipherText.algorithm);
 
 
-OAuthEncryption.keyIsLoaded = function () {
-  return !! gcmKey;
-};
+OAuthEncryption.keyIsLoaded = () => !! gcmKey;

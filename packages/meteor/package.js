@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.5-winr.6'
+  version: '1.9.3'
 });
 
 Package.registerBuildPlugin({
@@ -11,17 +11,24 @@ Package.registerBuildPlugin({
 });
 
 Npm.depends({
-  "double-ended-queue": "2.1.0-0"
+  "meteor-deque": "2.1.0"
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
+  api.use('isobuild:compiler-plugin@1.0.0');
 
   api.export('Meteor');
 
+  api.addFiles('global.js', ['client', 'server']);
+  api.export('global');
+
   api.addFiles('client_environment.js', 'client');
-  api.addFiles('cordova_environment.js', 'web.cordova');
   api.addFiles('server_environment.js', 'server');
+  // Defined by client_environment.js and server_environment.js.
+  api.export("meteorEnv");
+
+  api.addFiles('cordova_environment.js', 'web.cordova');
+  api.addFiles('define-package.js', ['client', 'server']);
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
@@ -31,7 +38,9 @@ Package.onUse(function (api) {
   api.addFiles('startup_client.js', ['client']);
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);
-
+  api.addFiles('string_utils.js', ['client', 'server']);
+  api.addFiles('test_environment.js', ['client', 'server']);
+  
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
   api.addFiles('dynamics_browser.js', 'client');
@@ -41,6 +50,10 @@ Package.onUse(function (api) {
   // in this case server must load first.
   api.addFiles('url_server.js', 'server');
   api.addFiles('url_common.js', ['client', 'server']);
+
+  // People expect process.exit() to not swallow console output.
+  // On Windows, it sometimes does, so we fix it for all apps and packages
+  api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');
 });
 
 Package.onTest(function (api) {

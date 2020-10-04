@@ -2,11 +2,15 @@
   <div class="login-text-and-button">
     <div class="login-button single-login-button {{#unless configured}}configure-button{{/unless}}"
          id="login-buttons-{{name}}">
-      <div class="login-image" id="login-buttons-image-{{name}}"></div>
-      {{#if configured}}
-        <span class="text-besides-image sign-in-text-{{name}}">Sign in with {{capitalizedName}}</span>
+      {{#if cannotConfigure}}
+        <span class="">{{capitalizedName}} not configured</span>
       {{else}}
-        <span class="text-besides-image configure-text-{{name}}">Configure {{capitalizedName}} Login</span>
+        <div class="login-image" id="login-buttons-image-{{name}}"></div>
+        {{#if configured}}
+          <span class="text-besides-image sign-in-text-{{name}}">Sign in with {{capitalizedName}}</span>
+        {{else}}
+            <span class="text-besides-image configure-text-{{name}}">Configure {{capitalizedName}} Login</span>
+        {{/if}}
       {{/if}}
     </div>
   </div>
@@ -26,4 +30,3 @@
     <div class="login-button single-login-button" id="login-buttons-logout">Sign Out</div>
   </div>
 </template>
-

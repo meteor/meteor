@@ -1,4 +1,3 @@
-var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
 
 var PHASE = {
@@ -21,6 +20,8 @@ var finishIfNeedToPollQuery = function (f) {
   };
 };
 
+var currentId = 0;
+
 // OplogObserveDriver is an alternative to PollingObserveDriver which follows
 // the Mongo operation log instead of just re-polling the query. It obeys the
 // same simple interface: constructing it starts sending observeChanges
@@ -29,6 +30,9 @@ var finishIfNeedToPollQuery = function (f) {
 OplogObserveDriver = function (options) {
   var self = this;
   self._usesOplog = true;  // tests look at this
+
+  self._id = currentId;
+  currentId++;
 
   self._cursorDescription = options.cursorDescription;
   self._mongoHandle = options.mongoHandle;
@@ -51,7 +55,7 @@ OplogObserveDriver = function (options) {
     //                      the empty buffer in STEADY phase implies that the
     //                      everything that matches the queries selector fits
     //                      into published set.
-    // - _published - Min Heap (also implements IdMap methods)
+    // - _published - Max Heap (also implements IdMap methods)
 
     var heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;
@@ -76,12 +80,11 @@ OplogObserveDriver = function (options) {
   self._stopped = false;
   self._stopHandles = [];
 
-  Package.facts && Package.facts.Facts.incrementServerFact(
+  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-oplog", 1);
 
   self._registerPhaseChange(PHASE.QUERYING);
 
-  var selector = self._cursorDescription.selector;
   self._matcher = options.matcher;
   var projection = self._cursorDescription.options.fields || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
@@ -113,17 +116,18 @@ OplogObserveDriver = function (options) {
       trigger, function (notification) {
         Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
           var op = notification.op;
-          if (notification.dropCollection) {
+          if (notification.dropCollection || notification.dropDatabase) {
             // Note: this call is not allowed to block on anything (especially
             // on waiting for oplog entries to catch up) because that will block
             // onOplogEntry!
             self._needToPollQuery();
           } else {
             // All other operators should be handled depending on phase
-            if (self._phase === PHASE.QUERYING)
+            if (self._phase === PHASE.QUERYING) {
               self._handleOplogEntryQuerying(op);
-            else
+            } else {
               self._handleOplogEntrySteadyOrFetching(op);
+            }
           }
         }));
       }
@@ -133,28 +137,43 @@ OplogObserveDriver = function (options) {
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
     self._cursorDescription, function (notification) {
-      // If we're not in a write fence, we don't have to do anything.
+      // If we're not in a pre-fire write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
-      if (!fence)
+      if (!fence || fence.fired)
         return;
-      var write = fence.beginWrite();
-      // This write cannot complete until we've caught up to "this point" in the
-      // oplog, and then made it back to the steady state.
-      Meteor.defer(function () {
+
+      if (fence._oplogObserveDrivers) {
+        fence._oplogObserveDrivers[self._id] = self;
+        return;
+      }
+
+      fence._oplogObserveDrivers = {};
+      fence._oplogObserveDrivers[self._id] = self;
+
+      fence.onBeforeFire(function () {
+        var drivers = fence._oplogObserveDrivers;
+        delete fence._oplogObserveDrivers;
+
+        // This fence cannot fire until we've caught up to "this point" in the
+        // oplog, and all observers made it back to the steady state.
         self._mongoHandle._oplogHandle.waitUntilCaughtUp();
-        if (self._stopped) {
-          // We're stopped, so just immediately commit.
-          write.committed();
-        } else if (self._phase === PHASE.STEADY) {
-          // Make sure that all of the callbacks have made it through the
-          // multiplexer and been delivered to ObserveHandles before committing
-          // writes.
-          self._multiplexer.onFlush(function () {
-            write.committed();
-          });
-        } else {
-          self._writesToCommitWhenWeReachSteady.push(write);
-        }
+
+        _.each(drivers, function (driver) {
+          if (driver._stopped)
+            return;
+
+          var write = fence.beginWrite();
+          if (driver._phase === PHASE.STEADY) {
+            // Make sure that all of the callbacks have made it through the
+            // multiplexer and been delivered to ObserveHandles before committing
+            // writes.
+            driver._multiplexer.onFlush(function () {
+              write.committed();
+            });
+          } else {
+            driver._writesToCommitWhenWeReachSteady.push(write);
+          }
+        });
       });
     }
   ));
@@ -262,8 +281,10 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     Meteor._noYieldsAllowed(function () {
       self._published.set(id, self._sharedProjectionFn(newDoc));
-      var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
-      changed = self._projectionFn(changed);
+      var projectedNew = self._projectionFn(newDoc);
+      var projectedOld = self._projectionFn(oldDoc);
+      var changed = DiffSequence.makeChangedFields(
+        projectedNew, projectedOld);
       if (!_.isEmpty(changed))
         self._multiplexer.changed(id, changed);
     });
@@ -380,6 +401,7 @@ _.extend(OplogObserveDriver.prototype, {
         var comparator = self._comparator;
         var minBuffered = self._limit && self._unpublishedBuffer.size() &&
           self._unpublishedBuffer.get(self._unpublishedBuffer.minElementId());
+        var maxBuffered;
 
         if (publishedBefore) {
           // Unlimited case where the document stays in published once it
@@ -401,7 +423,7 @@ _.extend(OplogObserveDriver.prototype, {
             // after the change doc doesn't stay in the published, remove it
             self._removePublished(id);
             // but it can move into buffered now, check it
-            var maxBuffered = self._unpublishedBuffer.get(
+            maxBuffered = self._unpublishedBuffer.get(
               self._unpublishedBuffer.maxElementId());
 
             var toBuffer = self._safeAppendToBuffer ||
@@ -424,7 +446,7 @@ _.extend(OplogObserveDriver.prototype, {
 
           var maxPublished = self._published.get(
             self._published.maxElementId());
-          var maxBuffered = self._unpublishedBuffer.size() &&
+          maxBuffered = self._unpublishedBuffer.size() &&
                 self._unpublishedBuffer.get(
                   self._unpublishedBuffer.maxElementId());
 
@@ -482,14 +504,14 @@ _.extend(OplogObserveDriver.prototype, {
           var fut = new Future;
           // This loop is safe, because _currentlyFetching will not be updated
           // during this loop (in fact, it is never mutated).
-          self._currentlyFetching.forEach(function (cacheKey, id) {
+          self._currentlyFetching.forEach(function (op, id) {
             waiting++;
             self._mongoHandle._docFetcher.fetch(
-              self._cursorDescription.collectionName, id, cacheKey,
+              self._cursorDescription.collectionName, id, op,
               finishIfNeedToPollQuery(function (err, doc) {
                 try {
                   if (err) {
-                    Meteor._debug("Got exception while fetching documents: " +
+                    Meteor._debug("Got exception while fetching documents",
                                   err);
                     // If we get an error from the fetcher (eg, trouble
                     // connecting to Mongo), let's just abandon the fetch phase
@@ -545,7 +567,7 @@ _.extend(OplogObserveDriver.prototype, {
   _handleOplogEntryQuerying: function (op) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
-      self._needToFetch.set(idForOp(op), op.ts.toString());
+      self._needToFetch.set(idForOp(op), op);
     });
   },
   _handleOplogEntrySteadyOrFetching: function (op) {
@@ -557,7 +579,7 @@ _.extend(OplogObserveDriver.prototype, {
       if (self._phase === PHASE.FETCHING &&
           ((self._currentlyFetching && self._currentlyFetching.has(id)) ||
            self._needToFetch.has(id))) {
-        self._needToFetch.set(id, op.ts.toString());
+        self._needToFetch.set(id, op);
         return;
       }
 
@@ -602,12 +624,23 @@ _.extend(OplogObserveDriver.prototype, {
           newDoc = EJSON.clone(newDoc);
 
           newDoc._id = id;
-          LocalCollection._modify(newDoc, op.o);
+          try {
+            LocalCollection._modify(newDoc, op.o);
+          } catch (e) {
+            if (e.name !== "MinimongoError")
+              throw e;
+            // We didn't understand the modifier.  Re-fetch.
+            self._needToFetch.set(id, op);
+            if (self._phase === PHASE.STEADY) {
+              self._fetchModifiedDocuments();
+            }
+            return;
+          }
           self._handleDoc(id, self._sharedProjectionFn(newDoc));
         } else if (!canDirectlyModifyDoc ||
                    self._matcher.canBecomeTrueByModifier(op.o) ||
                    (self._sorter && self._sorter.affectedByModifier(op.o))) {
-          self._needToFetch.set(id, op.ts.toString());
+          self._needToFetch.set(id, op);
           if (self._phase === PHASE.STEADY)
             self._fetchModifiedDocuments();
         }
@@ -694,10 +727,11 @@ _.extend(OplogObserveDriver.prototype, {
       var cursor = self._cursorForQuery({ limit: self._limit * 2 });
       try {
         cursor.forEach(function (doc, i) {  // yields
-          if (!self._limit || i < self._limit)
+          if (!self._limit || i < self._limit) {
             newResults.set(doc._id, doc);
-          else
+          } else {
             newBuffer.set(doc._id, doc);
+          }
         });
         break;
       } catch (e) {
@@ -713,7 +747,7 @@ _.extend(OplogObserveDriver.prototype, {
 
         // During failover (eg) if we get an exception we should log and retry
         // instead of crashing.
-        Meteor._debug("Got exception while polling query: " + e);
+        Meteor._debug("Got exception while polling query", e);
         Meteor._sleepForMs(100);
       }
     }
@@ -844,6 +878,9 @@ _.extend(OplogObserveDriver.prototype, {
       // there.
       // XXX if this is slow, remove it later
       if (self._published.size() !== newResults.size()) {
+        console.error('The Mongo server and the Meteor query disagree on how ' +
+          'many documents match your query. Cursor description: ',
+          self._cursorDescription);
         throw Error(
           "The Mongo server and the Meteor query disagree on how " +
             "many documents match your query. Maybe it is hitting a Mongo " +
@@ -897,7 +934,7 @@ _.extend(OplogObserveDriver.prototype, {
     self._oplogEntryHandle = null;
     self._listenersHandle = null;
 
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-oplog", -1);
   },
 
@@ -908,7 +945,7 @@ _.extend(OplogObserveDriver.prototype, {
 
       if (self._phase) {
         var timeDiff = now - self._phaseStartTime;
-        Package.facts && Package.facts.Facts.incrementServerFact(
+        Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
           "mongo-livedata", "time-spent-in-" + self._phase + "-phase", timeDiff);
       }
 
@@ -926,7 +963,8 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
   var options = cursorDescription.options;
 
   // Did the user say no explicitly?
-  if (options._disableOplog)
+  // underscored version of the option is COMPAT with 1.2
+  if (options.disableOplog || options._disableOplog)
     return false;
 
   // skip is not supported: to support it we would need to keep track of all
@@ -941,10 +979,11 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
     try {
       LocalCollection._checkSupportedProjection(options.fields);
     } catch (e) {
-      if (e.name === "MinimongoError")
+      if (e.name === "MinimongoError") {
         return false;
-      else
+      } else {
         throw e;
+      }
     }
   }
 

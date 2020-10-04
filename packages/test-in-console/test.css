@@ -1,0 +1,8 @@
+/*
+ * Some of Meteor's package tests require at least one `.css` file to be
+ * available in the tested application bundle (e.g. "appcache - sections
+ * validity" and "webapp - content-type header"). The inclusion of this file
+ * makes sure that at least one `.css` file can always be found, when the
+ * tests are run.
+ */
+.test { }

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Get the path to this script in SCRIPT_DIR, preserving cwd
 ORIG_DIR=$(pwd)

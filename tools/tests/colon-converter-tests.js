@@ -1,10 +1,10 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
-var testUtils = require('../test-utils.js');
-var utils = require('../utils.js');
+var files = require('../fs/files');
+var testUtils = require('../tool-testing/test-utils.js');
+var utils = require('../utils/utils.js');
 var _ = require('underscore');
-var tropohouse = require('../tropohouse.js');
+var tropohouse = require('../packaging/tropohouse.js');
 
 var username = "test";
 var password = "testtest";
@@ -59,24 +59,6 @@ var randomizedPackageName = function (username, start) {
 // on a module that has filenames with colons -- the module gets added, but
 // without the colon filenames.
 if (process.platform !== "win32") {
-  selftest.define("can't publish package with colons", ["net", "test-package-server"], function () {
-    var s = new Sandbox();
-
-    testUtils.login(s, username, password);
-    var packageName = randomizedPackageName(username, "package-with-colons");
-    var packageDirName = "package-with-colons";
-    s.createPackage(packageDirName, packageName, "package-with-colons");
-
-    s.cd(packageDirName, function () {
-      var run = s.run("publish", "--create");
-
-      run.matchErr("invalid characters");
-
-      // This error can basically only occur on files from npm
-      run.matchErr("NPM module");
-    });
-  });
-
   selftest.define("can't build local packages with colons", function () {
     var s = new Sandbox();
 
@@ -92,7 +74,7 @@ if (process.platform !== "win32") {
       });
 
       var run = s.run("add", packageName);
-      run.matchErr("colons");
+      run.matchErrBeforeExit("colons");
     });
   });
 }
@@ -143,7 +125,13 @@ selftest.define("package with colons is converted on Windows", function () {
   //   cwd: targetDirectory
   // }));
 
+  var expectedHash;
+  if (process.platform === "win32") {
+    expectedHash = "Ayya11T8Zef16+F7C/sZSwRxIiGiBbBFIwUC88Weaqs=";
+  } else {
+    expectedHash = "AQX/7h0fXwHT9rNQvlBTvIZAE2g8krlnkEQMc9lTuMI=";
+  }
+
   // Saved tree hash of the correct result
-  selftest.expectEqual(files.treeHash(targetDirectory),
-    "Ayya11T8Zef16+F7C/sZSwRxIiGiBbBFIwUC88Weaqs=");
+  selftest.expectEqual(files.treeHash(targetDirectory), expectedHash);
 });

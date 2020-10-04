@@ -93,6 +93,57 @@ runOneObserveSequenceTestCase = function (test, sequenceFunc,
              compress(EJSON.stringify(expectedCallbacks, {canonical: true, indent: true})));
 };
 
+// ArraySubClass return an array that is a sub-class
+// of Array
+const extend = function(child, parent) {
+  function ctor() {
+    this.constructor = child;
+  }
+  ctor.prototype = parent.prototype;
+  child.prototype = new ctor();
+  child.__super__ = parent.prototype;
+  return child;
+};
+const ArraySubclass = (function (superClass) {
+  extend(ArraySubclass, superClass);
+
+  function ArraySubclass() {
+    if (arguments.length > 0) {
+      const items = this.slice.call(arguments, 0);
+      this.splice.apply(this, [0, 0].concat(this.slice.call(items)));
+    }
+  }
+
+  return ArraySubclass;
+
+})(Array);
+
+// runInVM creates returns the result of an eval in another
+// context (iframe).  Used to return a 'new Array(1,2,3)' that
+// is not an instanceof Array in the global context.
+function runInVM(code) {
+    var iframe = document.createElement('iframe');
+    if (!iframe.style) iframe.style = {};
+    iframe.style.display = 'none';
+
+    document.body.appendChild(iframe);
+
+    var win = iframe.contentWindow;
+    var wEval = win.eval, wExecScript = win.execScript;
+
+    if (!wEval && wExecScript) {
+        // win.eval() magically appears when this is called in IE:
+        wExecScript.call(win, 'null');
+        wEval = win.eval;
+    }
+
+    var res = wEval.call(win, code);
+
+    document.body.removeChild(iframe);
+
+    return res;
+}
+
 Tinytest.add('observe-sequence - initial data for all sequence types', function (test) {
   runOneObserveSequenceTestCase(test, function () {
     return null;
@@ -111,6 +162,22 @@ Tinytest.add('observe-sequence - initial data for all sequence types', function 
 
   runOneObserveSequenceTestCase(test, function () {
     return [{_id: "13", foo: 1}, {_id: "37", bar: 2}];
+  }, function () {}, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
+  ]);
+
+  // sub-classed arrays
+  runOneObserveSequenceTestCase(test, function () {
+    return new ArraySubclass({_id: "13", foo: 1}, {_id: "37", bar: 2});
+  }, function () {}, [
+    {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
+    {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
+  ]);
+
+  // Execute in VM
+  runOneObserveSequenceTestCase(test, function () {
+    return new runInVM('new Array({_id: "13", foo: 1}, {_id: "37", bar: 2})');
   }, function () {}, [
     {addedAt: ["13", {_id: "13", foo: 1}, 0, null]},
     {addedAt: ["37", {_id: "37", bar: 2}, 1, null]}
@@ -174,6 +241,15 @@ Tinytest.add('observe-sequence - array to other array, strings', function (test)
     {addedAt: ["-B", "B", 1, null]},
     {removedAt: ["-A", "A", 0]},
     {addedAt: ["-C", "C", 1, null]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - bug #7850 array with null values', function (test) {
+  runOneObserveSequenceTestCase(test, function () {
+    return [1, null];
+  }, function () {}, [
+    {addedAt: [1, 1, 0, null]},
+    {addedAt: [null, null, 1, null]}
   ]);
 });
 
@@ -241,6 +317,82 @@ Tinytest.add('observe-sequence - array to other array, movedTo', function (test)
     {changedAt: ["37", {_id: "37", bar: 2}, {_id: "37", bar: 2}, 1]},
     {changedAt: ["42", {_id: "42", baz: 42}, {_id: "42", baz: 42}, 2]},
     {changedAt: ["43", {_id: "43", baz: 43}, {_id: "43", baz: 43}, 0]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - array to other array, movedTo the end', function (test) {
+  var dep = new Tracker.Dependency;
+  var seq = [{_id: "0"}, {_id: "1"}, {_id: "2"}, {_id: "3"}];
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "0"}, {_id: "2"}, {_id: "3"}, {_id: "1"}];
+    dep.changed();
+  }, [
+    {addedAt: ["0", {_id: "0"}, 0, null]},
+    {addedAt: ["1", {_id: "1"}, 1, null]},
+    {addedAt: ["2", {_id: "2"}, 2, null]},
+    {addedAt: ["3", {_id: "3"}, 3, null]},
+
+    {movedTo: ["1", {_id: "1"}, 1, 3, null]},
+    {changedAt: ["0", {_id: "0"}, {_id: "0"}, 0]},
+    {changedAt: ["1", {_id: "1"}, {_id: "1"}, 3]},
+    {changedAt: ["2", {_id: "2"}, {_id: "2"}, 1]},
+    {changedAt: ["3", {_id: "3"}, {_id: "3"}, 2]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - array to other array, movedTo later position but not the latest #2845', function (test) {
+  var dep = new Tracker.Dependency;
+  var seq = [{_id: "0"}, {_id: "1"}, {_id: "2"}, {_id: "3"}];
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "1"}, {_id: "2"}, {_id: "0"}, {_id: "3"}];
+    dep.changed();
+  }, [
+    {addedAt: ["0", {_id: "0"}, 0, null]},
+    {addedAt: ["1", {_id: "1"}, 1, null]},
+    {addedAt: ["2", {_id: "2"}, 2, null]},
+    {addedAt: ["3", {_id: "3"}, 3, null]},
+
+    {movedTo: ["0", {_id: "0"}, 0, 2, "3"]},
+
+    {changedAt: ["0", {_id: "0"}, {_id: "0"}, 2]},
+    {changedAt: ["1", {_id: "1"}, {_id: "1"}, 0]},
+    {changedAt: ["2", {_id: "2"}, {_id: "2"}, 1]},
+    {changedAt: ["3", {_id: "3"}, {_id: "3"}, 3]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - array to other array, movedTo earlier position but not the first', function (test) {
+  var dep = new Tracker.Dependency;
+  var seq = [{_id: "0"}, {_id: "1"}, {_id: "2"}, {_id: "3"}, {_id: "4"}];
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "0"}, {_id: "4"}, {_id: "1"}, {_id: "2"}, {_id: "3"}];
+    dep.changed();
+  }, [
+    {addedAt: ["0", {_id: "0"}, 0, null]},
+    {addedAt: ["1", {_id: "1"}, 1, null]},
+    {addedAt: ["2", {_id: "2"}, 2, null]},
+    {addedAt: ["3", {_id: "3"}, 3, null]},
+    {addedAt: ["4", {_id: "4"}, 4, null]},
+
+    {movedTo: ["4", {_id: "4"}, 4, 1, "1"]},
+
+    {changedAt: ["0", {_id: "0"}, {_id: "0"}, 0]},
+    {changedAt: ["1", {_id: "1"}, {_id: "1"}, 2]},
+    {changedAt: ["2", {_id: "2"}, {_id: "2"}, 3]},
+    {changedAt: ["3", {_id: "3"}, {_id: "3"}, 4]},
+    {changedAt: ["4", {_id: "4"}, {_id: "4"}, 1]}
   ]);
 });
 
@@ -485,6 +637,71 @@ Tinytest.add('observe-sequence - number arrays', function (test) {
   ]);
 });
 
+Tinytest.add('observe-sequence - subclassed number arrays', function (test) {
+  var seq = new ArraySubclass(1, 1, 2);
+  var dep = new Tracker.Dependency;
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = new ArraySubclass(1, 3, 2, 3);
+    dep.changed();
+  }, [
+    {addedAt: [1, 1, 0, null]},
+    {addedAt: [{NOT: 1}, 1, 1, null]},
+    {addedAt: [2, 2, 2, null]},
+    {removedAt: [{NOT: 1}, 1, 1]},
+    {addedAt: [3, 3, 1, 2]},
+    {addedAt: [{NOT: 3}, 3, 3, null]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - vm generated number arrays', function (test) {
+  var seq = runInVM('new Array(1, 1, 2)');
+  var dep = new Tracker.Dependency;
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = runInVM('new Array(1, 3, 2, 3)');
+    dep.changed();
+  }, [
+    {addedAt: [1, 1, 0, null]},
+    {addedAt: [{NOT: 1}, 1, 1, null]},
+    {addedAt: [2, 2, 2, null]},
+    {removedAt: [{NOT: 1}, 1, 1]},
+    {addedAt: [3, 3, 1, 2]},
+    {addedAt: [{NOT: 3}, 3, 3, null]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - number arrays, _id:0 correctly handled, no duplicate ids warning #4049', function (test) {
+  var seq = _.map(_.range(3), function (i) { return { _id: i}; });
+  var dep = new Tracker.Dependency;
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    // There was a bug before fixing #4049 that 0 wouldn't be handled well as an
+    // _id. An expression like `(item && item._id) || index` would incorrectly
+    // return '2' for the last item because the _id is falsy (although it is not
+    // undefined, but 0!).
+    seq = _.map([1, 2, 0], function (i) { return { _id: i}; });
+    dep.changed();
+  }, [
+    {addedAt: [0, {_id: 0}, 0, null]},
+    {addedAt: [1, {_id: 1}, 1, null]},
+    {addedAt: [2, {_id: 2}, 2, null]},
+    {movedTo: [0, {_id: 0}, 0, 2, null]},
+    {changedAt: [0, {_id: 0}, {_id: 0}, 2]},
+    {changedAt: [1, {_id: 1}, {_id: 1}, 0]},
+    {changedAt: [2, {_id: 2}, {_id: 2}, 1]}
+  ]);
+});
+
 Tinytest.add('observe-sequence - cursor to other cursor, same collection', function (test) {
   var dep = new Tracker.Dependency;
   var coll = new Mongo.Collection(null);
@@ -510,3 +727,4 @@ Tinytest.add('observe-sequence - cursor to other cursor, same collection', funct
     {addedAt: ["39", {_id: "39", foo: 2}, 1, null]}
   ]);
 });
+

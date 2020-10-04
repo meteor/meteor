@@ -310,6 +310,16 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 1}).x, 1);
 
 
+  // Regression test for https://github.com/meteor/meteor/issues/7436
+  //  - ensure applySkipLimit defaults to false for count()
+  // Note that the current behavior is inconsistent on the client.
+  //  (https://github.com/meteor/meteor/issues/1201)
+  if (Meteor.isServer) {
+    test.equal(coll.find({run: run}, {limit: 1}).count(), 2);
+    test.equal(coll.find({run: run}, {limit: 1}).count(true), 1);
+    test.equal(coll.find({run: run}, {limit: 1}).count(false), 2);
+  }
+
   var cur = coll.find({run: run}, {sort: ["x"]});
   var total = 0;
   var index = 0;
@@ -468,22 +478,25 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
       var batch_count = rnd(10) + 1;
       for (var i = 0; i < batch_count; i++) {
         // 25% add, 25% remove, 25% change in place, 25% change and move
+        var x;
         var op = rnd(4);
         var which = rnd(correct.length);
         if (op === 0 || step < 2 || !correct.length) {
           // Add
-          var x = rnd(1000000);
+          x = rnd(1000000);
           coll.insert({run: run, x: x});
           correct.push(x);
           max_counters.add++;
         } else if (op === 1 || op === 2) {
-          var x = correct[which];
-          if (op === 1)
+          var val;
+          x = correct[which];
+          if (op === 1) {
             // Small change, not likely to cause a move
-            var val = x + (rnd(2) ? -1 : 1);
-          else
+            val = x + (rnd(2) ? -1 : 1);
+          } else {
             // Large change, likely to cause a move
-            var val = rnd(1000000);
+            val = rnd(1000000);
+          }
           coll.update({run: run, x: x}, {$set: {x: val}});
           correct[which] = val;
           max_counters.change++;
@@ -554,6 +567,80 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
 
   onComplete();
 });
+
+if (Meteor.isServer) {
+  Tinytest.addAsync("mongo-livedata - extended scribbling, " + idGeneration, function (test, onComplete) {
+    function error() {
+      throw new Meteor.Error('unsafe object mutation');
+    }
+    
+    const denyModifications = {
+      get(target, key) {
+        const type = Object.prototype.toString.call(target[key]);
+        if (type === '[object Object]' || type === '[object Array]') {
+          return freeze(target[key]);
+        } else {
+          return target[key];
+        }
+      },
+      set: error,
+      deleteProperty: error,
+      defineProperty: error,
+    };
+    
+    // Object.freeze only throws in silent mode
+    // So we make our own version that always throws.
+    function freeze(obj) {
+      return new Proxy(obj, denyModifications);
+    }
+
+    const origApplyCallback = ObserveMultiplexer.prototype._applyCallback;
+    ObserveMultiplexer.prototype._applyCallback = function(callback, args) {
+      // Make sure that if anything touches the original object, this will throw
+      return origApplyCallback.call(this, callback, freeze(args));
+    }
+    
+    const run = test.runId();
+    const coll = new Mongo.Collection(`livedata_test_scribble_collection_${run}`, collectionOptions);
+    const expectMutatable = (o) => {
+      try {
+        o.a[0].c = 3;
+      } catch (error) {
+        test.fail();
+      }
+    }
+    const expectNotMutatable = (o) => {
+      try {
+        o.a[0].c = 3;
+        test.fail();
+      } catch (error) {}
+    }
+    const handle = coll.find({run}).observe({
+      addedAt: expectMutatable,
+      changedAt: function(id, o) {
+        expectMutatable(o);
+      }
+    });
+
+    const handle2 = coll.find({run}).observeChanges({
+      added: expectNotMutatable,
+      changed: function(id, o) {
+        expectNotMutatable(o);
+      }
+    }, { nonMutatingCallbacks: true });
+
+    runInFence(function () {
+      coll.insert({run, a: [ {c: 1} ]});
+      coll.update({run}, { $set: { 'a.0.c': 2 } });
+    });
+ 
+    handle.stop();
+    handle2.stop();
+
+    ObserveMultiplexer.prototype._applyCallback = origApplyCallback;
+    onComplete();
+  });
+}
 
 Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
   var run = Random.id();
@@ -966,16 +1053,16 @@ if (Meteor.isServer) {
     // another. Poll-n-diff code, on the other side, analyzes the batch action
     // of multiple remove. Because of that difference, expected outputs differ.
     if (usesOplog) {
-      var expectedRemoves = [{removed: docId3}, {removed: docId1},
+      expectedRemoves = [{removed: docId3}, {removed: docId1},
                              {removed: docId2}, {removed: docId4}];
-      var expectedAdds = [{added: docId4}, {added: docId8},
+      expectedAdds = [{added: docId4}, {added: docId8},
                           {added: docId7}, {added: docId6}];
 
       test.length(o.output, 8);
     } else {
-      var expectedRemoves = [{removed: docId3}, {removed: docId1},
+      expectedRemoves = [{removed: docId3}, {removed: docId1},
                              {removed: docId2}];
-      var expectedAdds = [{added: docId8}, {added: docId7}, {added: docId6}];
+      expectedAdds = [{added: docId8}, {added: docId7}, {added: docId6}];
 
       test.length(o.output, 6);
     }
@@ -1187,10 +1274,11 @@ if (Meteor.isServer) {
       test.isTrue(setsEqual(ids, bufferIds), "expected: " + ids + "; got: " + bufferIds);
     };
     var testSafeAppendToBufferFlag = function (expected) {
-      if (expected)
+      if (expected) {
         test.isTrue(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
-      else
+      } else {
         test.isFalse(o.handle._multiplexer._observeDriver._safeAppendToBuffer);
+      }
     };
 
     var ids = {};
@@ -1292,6 +1380,29 @@ testAsyncMulti('mongo-livedata - upsert without callback, ' + idGeneration, [
     // Do something else on the same method and expect it to actually work.
     // (If the bug comes back, this will 'async batch timeout'.)
     coll.insert({}, expect(function(){}));
+  }
+]);
+
+// Regression test for https://github.com/meteor/meteor/issues/8666.
+testAsyncMulti('mongo-livedata - upsert with an undefined selector, ' + idGeneration, [
+  function (test, expect) {
+    this.collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', this.collectionName);
+      Meteor.subscribe('c-' + this.collectionName, expect());
+    }
+  }, function (test, expect) {
+    var coll = new Mongo.Collection(this.collectionName, collectionOptions);
+    var testWidget = {
+      name: 'Widget name'
+    };
+    coll.upsert(testWidget._id, testWidget, expect(function (error, insertDetails) {
+      test.isFalse(error);
+      test.equal(
+        coll.findOne(insertDetails.insertedId),
+        Object.assign({ _id: insertDetails.insertedId }, testWidget)
+      );
+    }));
   }
 ]);
 
@@ -1478,13 +1589,15 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
     var docId;
     // Dog is implemented at the top of the file, outside of the idGeneration
     // loop (so that we only call EJSON.addType once).
-    var d = new Dog("reginald", "purple");
+    var d = new Dog("reginald", null);
     self.coll.insert({d: d}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
@@ -1495,14 +1608,19 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       var inColl = self.coll.findOne();
       test.isTrue(inColl);
       inColl && test.equal(inColl.d.speak(), "woof");
+      inColl && test.isNull(inColl.d.color);
     }));
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll.insert(new Dog("rover", "orange"), expect(function (err, id) {
       test.isTrue(err);
       test.isFalse(id);
     }));
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll.update(
       self.docId, new Dog("rover", "orange"), expect(function (err) {
@@ -1617,10 +1735,10 @@ if (Meteor.isServer) {
     var run = test.runId();
     var coll = new Mongo.Collection("livedata_upsert_errorparse_collection_"+run, collectionOptions);
 
-    coll.insert({_id: 'foobar'});
+    coll.insert({_id:'foobar', foo: 'bar'});
     var err;
     try {
-      coll.update({_id: 'foobar'}, {_id: 'cowbar'});
+      coll.update({foo: 'bar'}, {_id: 'cowbar'});
     } catch (e) {
       err = e;
     }
@@ -2123,75 +2241,27 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 });  // end idGeneration parametrization
 
 Tinytest.add('mongo-livedata - rewrite selector', function (test) {
-  test.equal(Mongo.Collection._rewriteSelector({x: /^o+B/im}),
-             {x: {$regex: '^o+B', $options: 'im'}});
-  test.equal(Mongo.Collection._rewriteSelector({x: {$regex: /^o+B/im}}),
-             {x: {$regex: '^o+B', $options: 'im'}});
-  test.equal(Mongo.Collection._rewriteSelector({x: /^o+B/}),
-             {x: {$regex: '^o+B'}});
-  test.equal(Mongo.Collection._rewriteSelector({x: {$regex: /^o+B/}}),
-             {x: {$regex: '^o+B'}});
+ 
   test.equal(Mongo.Collection._rewriteSelector('foo'),
              {_id: 'foo'});
 
-  test.equal(
-    Mongo.Collection._rewriteSelector(
-      {'$or': [
-        {x: /^o/},
-        {y: /^p/},
-        {z: 'q'},
-        {w: {$regex: /^r/}}
-      ]}
-    ),
-    {'$or': [
-      {x: {$regex: '^o'}},
-      {y: {$regex: '^p'}},
-      {z: 'q'},
-      {w: {$regex: '^r'}}
-    ]}
-  );
-
-  test.equal(
-    Mongo.Collection._rewriteSelector(
-      {'$or': [
-        {'$and': [
-          {x: /^a/i},
-          {y: /^b/},
-          {z: {$regex: /^c/i}},
-          {w: {$regex: '^[abc]', $options: 'i'}}, // make sure we don't break vanilla selectors
-          {v: {$regex: /O/, $options: 'i'}}, // $options should override the ones on the RegExp object
-          {u: {$regex: /O/m, $options: 'i'}} // $options should override the ones on the RegExp object
-        ]},
-        {'$nor': [
-          {s: /^d/},
-          {t: /^e/i},
-          {u: {$regex: /^f/i}},
-          // even empty string overrides built-in flags
-          {v: {$regex: /^g/i, $options: ''}}
-        ]}
-      ]}
-    ),
-    {'$or': [
-      {'$and': [
-        {x: {$regex: '^a', $options: 'i'}},
-        {y: {$regex: '^b'}},
-        {z: {$regex: '^c', $options: 'i'}},
-        {w: {$regex: '^[abc]', $options: 'i'}},
-        {v: {$regex: 'O', $options: 'i'}},
-        {u: {$regex: 'O', $options: 'i'}}
-      ]},
-      {'$nor': [
-        {s: {$regex: '^d'}},
-        {t: {$regex: '^e', $options: 'i'}},
-        {u: {$regex: '^f', $options: 'i'}},
-        {v: {$regex: '^g', $options: ''}}
-      ]}
-    ]}
-  );
 
   var oid = new Mongo.ObjectID();
   test.equal(Mongo.Collection._rewriteSelector(oid),
              {_id: oid});
+
+  test.matches(
+    Mongo.Collection._rewriteSelector({ _id: null })._id,
+    /^\S+$/,
+    'Passing in a falsey selector _id should return a selector with a new '
+    + 'auto-generated _id string'
+  );
+  test.equal(
+    Mongo.Collection._rewriteSelector({ _id: null }, { fallbackId: oid }),
+    { _id: oid },
+    'Passing in a falsey selector _id and a fallback ID should return a '
+    + 'selector with an _id using the fallback ID'
+  );
 });
 
 testAsyncMulti('mongo-livedata - specified _id', [
@@ -2227,7 +2297,7 @@ function collectionInsert (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
   }));
-};
+}
 
 function collectionUpsert (test, expect, coll, index) {
   var upsertId = '123456' + index;
@@ -2240,7 +2310,7 @@ function collectionUpsert (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
   }));
-};
+}
 
 function collectionUpsertExisting (test, expect, coll, index) {
   var clientSideId = coll.insert({name: "foo"}, expect(function (err1, id) {
@@ -2260,7 +2330,7 @@ function collectionUpsertExisting (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'bar');
   }));
-};
+}
 
 function functionCallsInsert (test, expect, coll, index) {
   Meteor.call("insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
@@ -2274,7 +2344,7 @@ function functionCallsInsert (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
   }));
-};
+}
 
 function functionCallsUpsert (test, expect, coll, index) {
   var upsertId = '123456' + index;
@@ -2286,7 +2356,7 @@ function functionCallsUpsert (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
   }));
-};
+}
 
 function functionCallsUpsertExisting (test, expect, coll, index) {
   var id = coll.insert({name: "foo"});
@@ -2303,7 +2373,7 @@ function functionCallsUpsertExisting (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'bar');
   }));
-};
+}
 
 function functionCalls3Inserts (test, expect, coll, index) {
   Meteor.call("insertObjects", coll._name, {name: "foo"}, 3, expect(function (err1, ids) {
@@ -2319,7 +2389,7 @@ function functionCalls3Inserts (test, expect, coll, index) {
       test.equal(o.name, 'foo');
     }
   }));
-};
+}
 
 function functionChainInsert (test, expect, coll, index) {
   Meteor.call("doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
@@ -2333,7 +2403,7 @@ function functionChainInsert (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
   }));
-};
+}
 
 function functionChain2Insert (test, expect, coll, index) {
   Meteor.call("doMeteorCall", "doMeteorCall", "insertObjects", coll._name, {name: "foo"}, 1, expect(function (err1, ids) {
@@ -2347,7 +2417,7 @@ function functionChain2Insert (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
   }));
-};
+}
 
 function functionChain2Upsert (test, expect, coll, index) {
   var upsertId = '123456' + index;
@@ -2359,7 +2429,7 @@ function functionChain2Upsert (test, expect, coll, index) {
     test.isTrue(_.isObject(o));
     test.equal(o.name, 'foo');
   }));
-};
+}
 
 _.each( {collectionInsert: collectionInsert,
          collectionUpsert: collectionUpsert,
@@ -2551,10 +2621,12 @@ if (Meteor.isServer) {
             self.events.push({evt: "a", id: id});
             Meteor._sleepForMs(200);
             self.events.push({evt: "b", id: id});
+            if (! self.two) {
+              self.two = self.C.insert({});
+            }
           }
         });
         self.one = self.C.insert({});
-        self.two = self.C.insert({});
         pollUntil(expect, function () {
           return self.events.length === 4;
         }, 10000);
@@ -2673,6 +2745,136 @@ if (Meteor.isServer) {
                 name: 'david',
                 elements: ['Y', 'A', 'B', 'C']});
   });
+
+  Tinytest.add("mongo-livedata - upsert handles dotted selectors corrrectly", function (test) {
+    var collection = new Mongo.Collection(Random.id());
+
+    var result1 = collection.upsert({
+      "subdocument.a": 1
+    }, {
+      $set: {message: "upsert 1"}
+    });
+
+    test.equal(collection.findOne(result1.insertedId),{
+      _id: result1.insertedId,
+      subdocument: {a: 1},
+      message: "upsert 1"
+    });
+
+    var result2 = collection.upsert({
+      "subdocument.a": 1
+    }, {
+      $set: {message: "upsert 2"}
+    });
+
+    test.equal(result2, {numberAffected: 1});
+
+    test.equal(collection.findOne(result1.insertedId),{
+      _id: result1.insertedId,
+      subdocument: {a: 1},
+      message: "upsert 2"
+    });
+
+    var result3 = collection.upsert({
+      "subdocument.a.b": 1,
+      "subdocument.c": 2
+    }, {
+      $set: {message: "upsert3"}
+    });
+
+    test.equal(collection.findOne(result3.insertedId),{
+      _id: result3.insertedId,
+      subdocument: {a: {b: 1}, c: 2},
+      message: "upsert3"
+    });
+
+    var result4 = collection.upsert({
+      "subdocument.a": 4
+    }, {
+      $set: {"subdocument.a": "upsert 4"}
+    });
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: {a: "upsert 4"}
+    });
+
+    var result5 = collection.upsert({
+      "subdocument.a": "upsert 4"
+    }, {
+      $set: {"subdocument.a": "upsert 5"}
+    });
+
+    test.equal(result5, {numberAffected: 1});
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: {a: "upsert 5"}
+    });
+
+    var result6 = collection.upsert({
+      "subdocument.a": "upsert 5"
+    }, {
+      $set: {"subdocument": "upsert 6"}
+    });
+
+    test.equal(result6, {numberAffected: 1});
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: "upsert 6"
+    });
+
+    var result7 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.c": "upsert7"
+      }
+    });
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: 7, c: "upsert7"}
+      }
+    });
+
+    var result8 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.c": "upsert8"
+      }
+    });
+
+    test.equal(result8, {numberAffected: 1});
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: 7, c: "upsert8"}
+      }
+    });
+
+    var result9 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.b": "upsert9"
+      }
+    });
+
+    test.equal(result9, {numberAffected: 1});
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: "upsert9", c: "upsert8"}
+      }
+    });
+
+  });
 }
 
 // This is a VERY white-box test.
@@ -2773,9 +2975,20 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
 });
 
 
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", function (test) {
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", function (test) {
+  // This test uses a random database, so it can be dropped without affecting
+  // anything else.
+  var mongodbUri = Npm.require('mongodb-uri');
+  var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
+  parsedUri.database = 'dropDB' + Random.id();
+  var driver = new MongoInternals.RemoteCollectionDriver(
+    mongodbUri.format(parsedUri), {
+      oplogUrl: process.env.MONGO_OPLOG_URL
+    }
+  );
+
   var collName = "dropCollection" + Random.id();
-  var coll = new Mongo.Collection(collName);
+  var coll = new Mongo.Collection(collName, { _driver: driver });
 
   var doc1Id = coll.insert({a: 'foo', c: 1});
   var doc2Id = coll.insert({b: 'bar'});
@@ -2832,7 +3045,17 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", func
   test.length(output, 1);
   test.equal(output.shift(), ['added', doc4Id, {a: 'foo', c: 3}]);
 
+  // XXX: this was intermittently failing for unknown reasons.
+  // Now drop the database. Should remove all docs again.
+  // runInFence(function () {
+  //   driver.mongo.dropDatabase();
+  // });
+  //
+  // test.length(output, 1);
+  // test.equal(output.shift(), ['removed', doc4Id]);
+
   handle.stop();
+  driver.mongo.close();
 });
 
 var TestCustomType = function (head, tail) {
@@ -3090,3 +3313,258 @@ Meteor.isServer && Tinytest.add(
     });
   }
 );
+
+Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
+  // Make sure the version number looks like a version number.
+  test.matches(MongoInternals.NpmModules.mongodb.version, /^3\.(\d+)\.(\d+)/);
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'function');
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.connect),
+             'function');
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.ObjectID),
+             'function');
+
+  var c = new Mongo.Collection(Random.id());
+  var rawCollection = c.rawCollection();
+  test.isTrue(rawCollection);
+  test.isTrue(rawCollection.findAndModify);
+  var rawDb = c.rawDatabase();
+  test.isTrue(rawDb);
+  test.isTrue(rawDb.admin);
+});
+
+if (Meteor.isServer) {
+  Tinytest.add("mongo-livedata - update/remove don't accept an array as a selector #4804", function (test) {
+    var collection = new Mongo.Collection(Random.id());
+
+    _.times(10, function () {
+      collection.insert({ data: "Hello" });
+    });
+
+    test.equal(collection.find().count(), 10);
+
+    // Test several array-related selectors
+    _.each([[], [1, 2, 3], [{}]], function (selector) {
+      test.throws(function () {
+        collection.remove(selector);
+      });
+
+      test.throws(function () {
+        collection.update(selector, {$set: 5});
+      });
+    });
+
+    test.equal(collection.find().count(), 10);
+  });
+}
+
+// This is a regression test for https://github.com/meteor/meteor/issues/4839.
+// Prior to fixing the issue (but after applying
+// https://github.com/meteor/meteor/pull/4694), doing a Mongo write from a
+// timeout that ran after a method body (invoked via the client) would throw an
+// error "fence has already activated -- too late to add a callback" and not
+// properly call the Mongo write's callback.  In this test:
+//  - The client invokes a method (fenceOnBeforeFireError1) which
+//    - Starts an observe on a query
+//    - Creates a timeout (which shares a write fence with the method)
+//    - Lets the method return (firing the write fence)
+//  - The timeout runs and does a Mongo write. This write is inside a write
+//    fence (because timeouts preserve the fence, see dcd26415) but the write
+//    fence already fired.
+//  - The Mongo write's callback confirms that there is no error. This was
+//    not the case before fixing the bug!  (Note that the observe was necessary
+//    for the error to occur, because the error was thrown from the observe's
+//    crossbar listener callback).  It puts the confirmation into a Future.
+//  - The client invokes another method which reads the confirmation from
+//    the future. (Well, the invocation happened earlier but the use of the
+//    Future sequences it so that the confirmation only gets read at this point.)
+if (Meteor.isClient) {
+  testAsyncMulti("mongo-livedata - fence onBeforeFire error", [
+    function (test, expect) {
+      var self = this;
+      self.nonce = Random.id();
+      Meteor.call('fenceOnBeforeFireError1', self.nonce, expect(function (err) {
+        test.isFalse(err);
+      }));
+    },
+    function (test, expect) {
+      var self = this;
+      Meteor.call('fenceOnBeforeFireError2', self.nonce, expect(
+        function (err, success) {
+          test.isFalse(err);
+          test.isTrue(success);
+        }
+      ));
+    }
+  ]);
+} else {
+  var fenceOnBeforeFireErrorCollection = new Mongo.Collection("FOBFE");
+  var Future = Npm.require('fibers/future');
+  var futuresByNonce = {};
+  Meteor.methods({
+    fenceOnBeforeFireError1: function (nonce) {
+      futuresByNonce[nonce] = new Future;
+      var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
+            .observeChanges({added: function (){}});
+      Meteor.setTimeout(function () {
+        fenceOnBeforeFireErrorCollection.insert(
+          {nonce: nonce},
+          function (err, result) {
+            var success = !err && result;
+            futuresByNonce[nonce].return(success);
+            observe.stop();
+          }
+        );
+      }, 10);
+    },
+    fenceOnBeforeFireError2: function (nonce) {
+      try {
+        return futuresByNonce[nonce].wait();
+      } finally {
+        delete futuresByNonce[nonce];
+      }
+    }
+  });
+}
+
+if (Meteor.isServer) {
+  Tinytest.add('mongo update/upsert - returns nMatched as numberAffected', function (test, onComplete) {
+    var collName = Random.id();
+    var coll = new Mongo.Collection('update_nmatched'+collName);
+
+    coll.insert({animal: 'cat', legs: 4});
+    coll.insert({animal: 'dog', legs: 4});
+    coll.insert({animal: 'echidna', legs: 4});
+    coll.insert({animal: 'platypus', legs: 4});
+    coll.insert({animal: 'starfish', legs: 5});
+
+    var affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}});
+    test.equal(affected, 1);
+
+    //Changes only 3 but matched 4 documents
+    affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true});
+    test.equal(affected, 4);
+
+    //Again, changes nothing but returns nModified
+    affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true});
+    test.equal(affected, 4);
+
+    //upsert:true changes nothing, 4 modified
+    affected = coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true, upsert:true});
+    test.equal(affected, 4);
+
+    //upsert method works as upsert:true
+    var result = coll.upsert({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true});
+    test.equal(result.numberAffected, 4);
+  });
+
+  Tinytest.addAsync('mongo livedata - update/upsert callback returns nMatched as numberAffected', function (test, onComplete) {
+    var collName = Random.id();
+    var coll = new Mongo.Collection('update_nmatched'+collName);
+
+    coll.insert({animal: 'cat', legs: 4});
+    coll.insert({animal: 'dog', legs: 4});
+    coll.insert({animal: 'echidna', legs: 4});
+    coll.insert({animal: 'platypus', legs: 4});
+    coll.insert({animal: 'starfish', legs: 5});
+
+    var test1 = function () {
+      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, function (err, result) {
+        test.equal(result, 1);
+        test2();
+      });
+    };
+
+    var test2 = function () {
+      //Changes only 3 but matched 4 documents
+      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
+        test.equal(result, 4);
+        test3();
+      });
+    };
+
+    var test3 = function () {
+      //Again, changes nothing but returns nModified
+      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
+        test.equal(result, 4);
+        test4();
+      });
+    };
+
+    var test4 = function () {
+      //upsert:true changes nothing, 4 modified
+      coll.update({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true, upsert:true}, function (err, result) {
+        test.equal(result, 4);
+        test5();
+      });
+    };
+
+    var test5 = function () {
+      //upsert method works as upsert:true
+      coll.upsert({legs: 4}, {$set: {category: 'quadruped'}}, {multi: true}, function (err, result) {
+        test.equal(result.numberAffected, 4);
+        onComplete();
+      });
+    };
+
+    test1();
+  });
+}
+
+if (Meteor.isServer) {
+  Tinytest.addAsync("mongo-livedata - transaction", function (test, onComplete) {
+    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
+
+    const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
+    const rawCollection = Collection.rawCollection();
+
+    Collection.insert({ _id: "a" });
+    Collection.insert({ _id: "b" });
+
+    let changeCount = 0;
+
+    function finalize() {
+      observeHandle.stop();
+      Meteor.clearTimeout(timeout);
+      onComplete();
+    }
+
+    const observeHandle = Collection.find().observeChanges({
+      changed(id, fields) {
+        let expectedValue;
+
+        if (id === "a") {
+          expectedValue = "updated1";
+        } else if (id === "b") {
+          expectedValue = "updated2";
+        }
+
+        test.equal(fields.field, expectedValue);
+        changeCount += 1;
+
+        if (changeCount === 2) {
+          finalize();
+        }
+      }
+    });
+
+    const timeout = Meteor.setTimeout(() => {
+      test.fail("Didn't receive all transaction operations in two seconds.");
+      finalize();
+    }, 2000);
+
+    const session = client.startSession();
+    session.withTransaction(session => {
+      let promise = Promise.resolve();
+      ["a", "b"].forEach((id, index) => {
+        promise = promise.then(() => rawCollection.update(
+          { _id: id },
+          { $set: { field: `updated${index + 1}` } },
+          { session }
+        ));
+      });
+      return promise;
+    }).finally(() => {
+      session.endSession();
+    });
+  });
+}

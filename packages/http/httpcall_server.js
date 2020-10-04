@@ -1,11 +1,23 @@
-var path = Npm.require('path');
-var request = Npm.require('request');
-var url_util = Npm.require('url');
+var path = require('path');
+var request = require('request');
+var url_util = require('url');
+var URL = require("meteor/url").URL;
+var common = require("./httpcall_common.js");
+var HTTP = exports.HTTP = common.HTTP;
+var hasOwn = Object.prototype.hasOwnProperty;
+
+exports.HTTPInternals = {
+  NpmModules: {
+    request: {
+      version: Npm.require('request/package.json').version,
+      module: request
+    }
+  }
+};
 
 // _call always runs asynchronously; HTTP.call, defined below,
 // wraps _call and runs synchronously when no callback is provided.
-var _call = function(method, url, options, callback) {
-
+function _call(method, url, options, callback) {
   ////////// Process arguments //////////
 
   if (! callback && typeof options === "function") {
@@ -15,6 +27,10 @@ var _call = function(method, url, options, callback) {
   }
 
   options = options || {};
+
+  if (hasOwn.call(options, 'beforeSend')) {
+    throw new Error("Option beforeSend not supported on server.");
+  }
 
   method = (method || "").toUpperCase();
 
@@ -30,46 +46,53 @@ var _call = function(method, url, options, callback) {
   }
 
 
-  var params_for_url, params_for_body;
+  var paramsForUrl, paramsForBody;
   if (content || method === "GET" || method === "HEAD")
-    params_for_url = options.params;
+    paramsForUrl = options.params;
   else
-    params_for_body = options.params;
+    paramsForBody = options.params;
 
-  var new_url = URL._constructUrl(url, options.query, params_for_url);
+  var newUrl = URL._constructUrl(url, options.query, paramsForUrl);
 
   if (options.auth) {
     if (options.auth.indexOf(':') < 0)
       throw new Error('auth option should be of the form "username:password"');
     headers['Authorization'] = "Basic "+
-      (new Buffer(options.auth, "ascii")).toString("base64");
+      Buffer.from(options.auth, "ascii").toString("base64");
   }
 
-  if (params_for_body) {
-    content = URL._encodeParams(params_for_body);
+  if (paramsForBody) {
+    content = URL._encodeParams(paramsForBody);
     headers['Content-Type'] = "application/x-www-form-urlencoded";
   }
 
-  _.extend(headers, options.headers || {});
+  if (options.headers) {
+    Object.keys(options.headers).forEach(function (key) {
+      headers[key] = options.headers[key];
+    });
+  }
 
   // wrap callback to add a 'response' property on an error, in case
   // we have both (http 4xx/5xx error, which has a response payload)
   callback = (function(callback) {
+    var called = false;
     return function(error, response) {
-      if (error && response)
-        error.response = response;
-      callback(error, response);
+      if (! called) {
+        called = true;
+        if (error && response) {
+          error.response = response;
+        }
+        callback(error, response);
+      }
     };
   })(callback);
 
-  // safety belt: only call the callback once.
-  callback = _.once(callback);
-
-
   ////////// Kickoff! //////////
 
-  var req_options = {
-    url: new_url,
+  // Allow users to override any request option with the npmRequestOptions
+  // option.
+  var reqOptions = Object.assign({
+    url: newUrl,
     method: method,
     encoding: "utf8",
     jar: false,
@@ -80,27 +103,29 @@ var _call = function(method, url, options, callback) {
     // also. (https://github.com/meteor/meteor/issues/2808)
     followAllRedirects: options.followRedirects,
     headers: headers
-  };
+  }, options.npmRequestOptions || null);
 
-  request(req_options, function(error, res, body) {
+  request(reqOptions, function(error, res, body) {
     var response = null;
 
     if (! error) {
-
       response = {};
       response.statusCode = res.statusCode;
       response.content = body;
       response.headers = res.headers;
 
-      populateData(response);
+      common.populateData(response);
 
-      if (response.statusCode >= 400)
-        error = makeErrorByStatus(response.statusCode, response.content);
+      if (response.statusCode >= 400) {
+        error = common.makeErrorByStatus(
+          response.statusCode,
+          response.content
+        );
+      }
     }
 
     callback(error, response);
-
   });
-};
+}
 
 HTTP.call = Meteor.wrapAsync(_call);

@@ -136,6 +136,13 @@ Tinytest.add("browser-policy - csp", function (test) {
   test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
                         "default-src 'none'; frame-src https://foo.com; " +
                         "object-src http://foo.com https://foo.com;"));
+
+  // Check that frame-ancestors property is set correctly. 
+  BrowserPolicy.content.allowFrameAncestorsOrigin("https://foo.com/"); 
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(), 
+                        "default-src 'none'; frame-src https://foo.com; " + 
+                        "object-src http://foo.com https://foo.com; " + 
+                        "frame-ancestors https://foo.com;"));
 });
 
 Tinytest.add("browser-policy - x-frame-options", function (test) {

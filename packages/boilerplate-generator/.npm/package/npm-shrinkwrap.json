@@ -1,0 +1,30 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "bluebird": {
+      "version": "2.11.0",
+      "resolved": "https://registry.npmjs.org/bluebird/-/bluebird-2.11.0.tgz",
+      "integrity": "sha1-U0uQM8AiyVecVro7Plpcqvu2UOE="
+    },
+    "combined-stream2": {
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/combined-stream2/-/combined-stream2-1.1.2.tgz",
+      "integrity": "sha1-9uFLegFWZvjHsKH6xQYkAWSsNXA="
+    },
+    "debug": {
+      "version": "2.6.9",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz",
+      "integrity": "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA=="
+    },
+    "ms": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
+      "integrity": "sha1-VgiurfwAvmwpAd9fmGF4jeDVl8g="
+    },
+    "stream-length": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/stream-length/-/stream-length-1.0.2.tgz",
+      "integrity": "sha1-gnfzy+5JpNqrz9tOL0qbXp8snwA="
+    }
+  }
+}

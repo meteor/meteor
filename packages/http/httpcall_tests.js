@@ -90,15 +90,16 @@ testAsyncMulti("httpcall - errors", [
       test.isFalse(error.response);
     };
 
-    // 0.0.0.0 is an illegal IP address, and thus should always give an error.
+    const invalidIp = "0.0.0.199";
+    // This is an invalid destination IP address, and thus should always give an error.
     // If your ISP is intercepting DNS misses and serving ads, an obviously
     // invalid URL (http://asdf.asdf) might produce an HTTP response.
-    HTTP.call("GET", "http://0.0.0.0/", expect(unknownServerCallback));
+    HTTP.call("GET", `http://${invalidIp}/`, expect(unknownServerCallback));
 
     if (Meteor.isServer) {
       // test sync version
       try {
-        var unknownServerResult = HTTP.call("GET", "http://0.0.0.0/");
+        var unknownServerResult = HTTP.call("GET", `http://${invalidIp}/`);
         unknownServerCallback(undefined, unknownServerResult);
       } catch (e) {
         unknownServerCallback(e, e.response);
@@ -258,16 +259,6 @@ testAsyncMulti("httpcall - methods", [
           test.equal(result.statusCode, 200);
           var data = result.data;
           test.equal(data.url, "/foo");
-
-          // IE <= 8 turns seems to turn POSTs with no body into
-          // GETs, inexplicably.
-          //
-          // XXX Except now it doesn't!? Not sure what changed, but
-          // these lines now break the test...
-          // if (Meteor.isClient && $.browser.msie && $.browser.version <= 8
-          //     && meth === "POST")
-          //   meth = "GET";
-
           test.equal(data.method, meth);
         }));
     };
@@ -276,6 +267,7 @@ testAsyncMulti("httpcall - methods", [
     test_method("POST");
     test_method("PUT");
     test_method("DELETE", 'del');
+    test_method("PATCH");
   },
 
   function(test, expect) {
@@ -417,8 +409,8 @@ testAsyncMulti("httpcall - params", [
     do_test("GET", "/", {foo:"bar", fruit:"apple"}, "/?foo=bar&fruit=apple", "");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
-    do_test("GET", "/", {'foo!':"bang!"}, {}, "/?foo%21=bang%21", "");
-    do_test("POST", "/", {'foo!':"bang!"}, {}, "/", "foo%21=bang%21");
+    do_test("GET", "/", {'foo?':"bang?"}, {}, "/?foo%3F=bang%3F", "");
+    do_test("POST", "/", {'foo?':"bang?"}, {}, "/", "foo%3F=bang%3F");
     do_test("POST", "/", {foo:"bar", fruit:"apple"}, {
       content: "stuff!"}, "/?foo=bar&fruit=apple", "stuff!");
     do_test("POST", "/", {foo:"bar", greeting:"Hello World"}, {
@@ -427,6 +419,45 @@ testAsyncMulti("httpcall - params", [
             "/foo", "foo=bar&greeting=Hello+World");
     do_test("HEAD", "/head", {foo:"bar"}, "/head?foo=bar", "");
     do_test("PUT", "/put", {foo:"bar"}, "/put", "foo=bar");
+  }
+]);
+
+testAsyncMulti("httpcall - npmRequestOptions", [
+  function (test, expect) {
+    if (Meteor.isClient) {
+      test.throws(function () {
+        HTTP.get(url_prefix() + "/",
+                 { npmRequestOptions: { encoding: null } },
+                 function () {});
+      });
+      return;
+    }
+
+    HTTP.get(
+      url_prefix() + "/",
+      { npmRequestOptions: { encoding: null } },
+      expect(function (error, result) {
+        test.isFalse(error);
+        test.isTrue(result);
+        test.equal(result.statusCode, 200);
+        test.instanceOf(result.content, Buffer);
+      })
+    );
+  }
+]);
+
+Meteor.isClient && testAsyncMulti("httpcall - beforeSend", [
+  function (test, expect) {
+    var fired = false;
+    var bSend = function(xhr){
+      test.isFalse(fired);
+      fired = true;
+      test.isTrue(xhr instanceof XMLHttpRequest);
+    };
+
+    HTTP.get(url_prefix() + "/", {beforeSend: bSend}, expect(function () {
+      test.isTrue(fired);
+    }));
   }
 ]);
 
@@ -444,16 +475,22 @@ if (Meteor.isServer) {
       // the x-suppress-error header).
       WebApp.suppressConnectErrors();
 
-      var do_test = function (path, code, match) {
-        HTTP.get(
-          url_base() + path,
-          {headers: {'x-suppress-error': 'true'}},
-          expect(function(error, result) {
-            test.equal(result.statusCode, code);
-            if (match)
-              test.matches(result.content, match);
-          }));
-      };
+      function do_test(path, code, match) {
+        const prefix = Meteor.isModern
+          ? "" // No prefix for web.browser (modern).
+          : "/__browser.legacy";
+
+        HTTP.get(url_base() + prefix + path, {
+          headers: {
+            "x-suppress-error": "true"
+          }
+        }, expect(function(error, result) {
+          test.equal(result.statusCode, code);
+          if (match) {
+            test.matches(result.content, match);
+          }
+        }));
+      }
 
       // existing static file
       do_test("/packages/local-test_http/test_static.serveme", 200, /static file serving/);
@@ -490,6 +527,13 @@ if (Meteor.isServer) {
   ]);
 }
 
+Meteor.isServer && Tinytest.add("httpcall - npm modules", function (test) {
+  // Make sure the version number looks like a version number. (All published
+  // request version numbers end in ".0".)
+  test.matches(HTTPInternals.NpmModules.request.version, /^2\.(\d+)\.0/);
+  test.equal(typeof(HTTPInternals.NpmModules.request.module), 'function');
+  test.isTrue(HTTPInternals.NpmModules.request.module.get);
+});
 
 // TO TEST/ADD:
 // - https

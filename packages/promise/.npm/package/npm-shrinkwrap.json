@@ -1,0 +1,20 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "asap": {
+      "version": "2.0.6",
+      "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.6.tgz",
+      "integrity": "sha1-5QNHYR1+aQlDIIu9r+vLwvuGbUY="
+    },
+    "meteor-promise": {
+      "version": "0.8.7",
+      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.8.7.tgz",
+      "integrity": "sha512-wAu9XI3+35H1YyhTnnk5QXCfdrho5n/0Ltj65DhsUwtFCuktV7hre92FjtJgBbs+RHj5/iZ8Zcbml40EGLcFTQ=="
+    },
+    "promise": {
+      "version": "8.0.2",
+      "resolved": "https://registry.npmjs.org/promise/-/promise-8.0.2.tgz",
+      "integrity": "sha512-EIyzM39FpVOMbqgzEHhxdrEhtOSDOtjMZQ0M6iVfCE+kWNgCkAyOdnuCWqfmflylftfadU6FkiMgHZA2kUzwRw=="
+    }
+  }
+}

@@ -23,20 +23,18 @@ var originalMasterName = null;
 steps.initialized = function () {
   // Great, we got the first thing. Let's get another thing.
   C.insert({step: 'next'});
-  var db = MongoInternals.defaultRemoteCollectionDriver().mongo.db;
-  var master = db.serverConfig._state.master;
+  var master = C.rawDatabase().serverConfig.isMasterDoc;
   if (!master) {
     console.log("No master in initialized?");
     process.exit(1);
   }
-  originalMasterName = master.name;
+  originalMasterName = master.primary;
   console.log("Master starts as", originalMasterName);
 };
 
 steps.next = function () {
   // Great, we can continue to add things. Now trigger a failover.
-  var db = MongoInternals.defaultRemoteCollectionDriver().mongo.db;
-  db.admin().command({replSetStepDown: 60, force: true});
+  C.rawDatabase().admin().command({replSetStepDown: 60, force: true});
   while (true) {
     try {
       console.log("trying to insert");
@@ -51,17 +49,16 @@ steps.next = function () {
 
 steps.steppedDown = function () {
   console.log("Write succeeded after stepdown.");
-  var db = MongoInternals.defaultRemoteCollectionDriver().mongo.db;
-  var master = db.serverConfig._state.master;
+  var master = C.rawDatabase().serverConfig.isMasterDoc;
   if (!master) {
     console.log("No master in steppedDown?");
     process.exit(1);
   }
-  if (master.name === originalMasterName) {
+  if (master.primary === originalMasterName) {
     console.log("Master didn't change?");
     process.exit(1);
   }
-  console.log("Master ended as", master.name);
+  console.log("Master ended as", master.primary);
   console.log("SUCCESS");
   process.exit(0);
 };
@@ -72,7 +69,7 @@ C.find().observeChanges({
       Meteor.clearTimeout(nextStepTimeout);
       nextStepTimeout = null;
     }
-    if (!fields.step && _.has(steps, fields.step)) {
+    if (!fields.step && Object.prototoype.hasOwnProperty.call(steps, fields.step)) {
       console.log('Unexpected step:', fields.step);
       process.exit(1);
     }
@@ -85,7 +82,3 @@ C.find().observeChanges({
 setNextStepTimeout();
 
 C.insert({step: 'initialized'});
-
-main = function (argv) {
-  return 'DAEMON';
-};

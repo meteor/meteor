@@ -63,6 +63,14 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
 
       // Fill collection with lots of irrelevant objects (red cats) and some
       // relevant ones (blue dogs).
+
+      // After updating to mongo 3.2 with the 2.1.18 driver it was no longer
+      // possible to make this test fail with TOO_FAR_BEHIND = 2000.
+      // The documents waiting to be processed would hardly go beyond 1000
+      // using mongo 3.2 with WiredTiger
+      MongoInternals.defaultRemoteCollectionDriver()
+        .mongo._oplogHandle._defineTooFarBehind(500);
+
       self.IRRELEVANT_SIZE = 15000;
       self.RELEVANT_SIZE = 10;
       var docs = [];
@@ -82,13 +90,12 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
         });
       }
       // XXX implement bulk insert #1255
-      var nativeCollection =
-            MongoInternals.defaultRemoteCollectionDriver().mongo._getCollection(
-              self.collectionName);
-      nativeCollection.insert(docs, Meteor.bindEnvironment(expect(function (err) {
+      var rawCollection = self.collection.rawCollection();
+      rawCollection.insert(docs, Meteor.bindEnvironment(expect(function (err) {
         test.isFalse(err);
       })));
     },
+
     function (test, expect) {
       var self = this;
 
@@ -99,25 +106,33 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       var gotSpot = false;
 
       // Watch for blue dogs.
-      self.subHandle =
-        self.collection.find({species: 'dog', color: 'blue'}).observeChanges({
-          added: function (id, fields) {
-            if (fields.name === 'dog 5')
+      const gotSpotPromise = new Promise(resolve => {
+        self.subHandle = self.collection.find({
+          species: 'dog',
+          color: 'blue',
+        }).observeChanges({
+          added(id, fields) {
+            if (fields.name === 'dog 5') {
               blueDog5Id = id;
+            }
           },
-          changed: function (id, fields) {
-            if (EJSON.equals(id, blueDog5Id) && fields.name === 'spot')
+          changed(id, fields) {
+            if (EJSON.equals(id, blueDog5Id) &&
+                fields.name === 'spot') {
               gotSpot = true;
-          }
+              resolve();
+            }
+          },
         });
+      });
+
       test.isTrue(self.subHandle._multiplexer._observeDriver._usesOplog);
       test.isTrue(blueDog5Id);
       test.isFalse(gotSpot);
 
       self.skipped = false;
-      self.skipHandle =
-        MongoInternals.defaultRemoteCollectionDriver().mongo
-        ._oplogHandle.onSkippedEntries(function () {
+      self.skipHandle = MongoInternals.defaultRemoteCollectionDriver()
+        .mongo._oplogHandle.onSkippedEntries(function () {
           self.skipped = true;
         });
 
@@ -130,17 +145,17 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
                              {multi: true});
       self.collection.update(blueDog5Id, {$set: {name: 'spot'}});
 
-      // We ought to see the spot change soon!  It's important to keep this
-      // timeout relatively small (ie, small enough that if we set
-      // $METEOR_OPLOG_TOO_FAR_BEHIND to something enormous, say 200000, that
-      // the test fails).
-      pollUntil(expect, function () {
-        return gotSpot;
-      }, 2000);
+      // We ought to see the spot change soon!
+      return gotSpotPromise;
     },
+
     function (test, expect) {
       var self = this;
       test.isTrue(self.skipped);
+
+      //This gets the TOO_FAR_BEHIND back to its initial value
+      MongoInternals.defaultRemoteCollectionDriver()
+        .mongo._oplogHandle._resetTooFarBehind();
 
       self.skipHandle.stop();
       self.subHandle.stop();

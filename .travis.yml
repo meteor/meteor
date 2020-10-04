@@ -1,0 +1,20 @@
+language: node_js
+node_js:
+  - "12.16.1"
+cache:
+  directories:
+    - ".meteor"
+    - ".babel-cache"
+script:
+  - export TEST_PACKAGES_EXCLUDE="less"
+  - export phantom=false
+  - travis_retry ./packages/test-in-console/run.sh
+sudo: false
+env:
+  - CXX=g++-4.8
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - g++-4.8

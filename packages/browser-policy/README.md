@@ -1,7 +1,9 @@
 # browser-policy
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/browser-policy) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/browser-policy)
+***
 
 The `browser-policy` family of packages, part of
-[Webapp](https://www.meteor.com/webapp), lets you set security-related
+[Webapp](https://github.com/meteor/meteor/tree/master/packages/webapp), lets you set security-related
 policies that will be enforced by newer browsers. These policies help
 you prevent and mitigate common attacks like cross-site scripting and
 clickjacking.
@@ -29,10 +31,12 @@ For most apps, we recommend that you take the following steps:
 * Add `browser-policy` to your app to enable a starter policy. With this starter
 policy, your app's client code will be able to load content (images, scripts,
 fonts, etc.) only from its own origin, except that XMLHttpRequests and WebSocket
-connections can go to any origin. Further, your app's client code will not be
-able to use functions such as `eval()` that convert strings to code. Users'
+connections can go to any origin. Users'
 browsers will only let your app be framed by web pages on the same origin as
-your app.
+your app. Further, your app's client code will not be
+able to use functions such as `eval()` that convert strings to code. 
+However, note that if you also use the `dynamic-imports` package, this limitation 
+on `eval()` is lifted.
 * You can use the functions described below to customize the policies. If your
 app does not need any inline Javascript such as inline `<script>` tags, we
 recommend that you modify the policy by calling
@@ -64,7 +68,10 @@ that are allowed to frame your app. (This is a limitation of the
 X-Frame-Options header.) Example values of <code>origin</code> include
 "http://example.com" and "https://foo.example.com". <b>This value of
 the X-Frame-Options header is not yet supported in Chrome or Safari
-and will be ignored in those browsers.</b>
+and will be ignored in those browsers. If you need Chrome and/or Safari
+support, or need to allow multiple domains to frame your application,
+you can use the frame-ancestors CSP option via the
+BrowserPolicy.content.allowFrameAncestorsOrigin() function </b>
 </dd>
 
 
@@ -124,7 +131,7 @@ Disallows inline CSS.
 
 Finally, you can configure a whitelist of allowed requests that various types of
 content can make. The following functions are defined for the content types
-script, object, image, media, font, frame, and connect.
+script, object, image, media, font, frame, frame-ancestors, style, and connect.
 
 <dl>
 

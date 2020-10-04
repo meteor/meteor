@@ -1,4 +1,6 @@
 # service-configuration
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/service-configuration) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/service-configuration)
+***
 
 Configure login services. Example:
 

@@ -6,7 +6,7 @@ ObserveMultiplexer = function (options) {
   if (!options || !_.has(options, 'ordered'))
     throw Error("must specified ordered");
 
-  Package.facts && Package.facts.Facts.incrementServerFact(
+  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-multiplexers", 1);
 
   self._ordered = options.ordered;
@@ -37,11 +37,10 @@ _.extend(ObserveMultiplexer.prototype, {
     // incrementing _addHandleTasksScheduledButNotPerformed and never
     // decrementing it.
     if (!self._queue.safeToRunTask())
-      throw new Error(
-        "Can't call observeChanges from an observe callback on the same query");
+      throw new Error("Can't call observeChanges from an observe callback on the same query");
     ++self._addHandleTasksScheduledButNotPerformed;
 
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-handles", 1);
 
     self._queue.runTask(function () {
@@ -72,7 +71,7 @@ _.extend(ObserveMultiplexer.prototype, {
 
     delete self._handles[id];
 
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-handles", -1);
 
     if (_.isEmpty(self._handles) &&
@@ -92,7 +91,7 @@ _.extend(ObserveMultiplexer.prototype, {
     // Call stop callback (which kills the underlying process which sends us
     // callbacks and removes us from the connection's dictionary).
     self._onStop();
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-multiplexers", -1);
 
     // Cause future addHandleAndSendInitialAdds calls to throw (but the onStop
@@ -156,11 +155,7 @@ _.extend(ObserveMultiplexer.prototype, {
         return;
 
       // First, apply the change to the cache.
-      // XXX We could make applyChange callbacks promise not to hang on to any
-      // state from their arguments (assuming that their supplied callbacks
-      // don't) and skip this clone. Currently 'changed' hangs on to state
-      // though.
-      self._cache.applyChange[callbackName].apply(null, EJSON.clone(args));
+      self._cache.applyChange[callbackName].apply(null, args);
 
       // If we haven't finished the initial adds, then we should only be getting
       // adds.
@@ -180,7 +175,8 @@ _.extend(ObserveMultiplexer.prototype, {
           return;
         var callback = handle['_' + callbackName];
         // clone arguments so that callbacks can mutate their arguments
-        callback && callback.apply(null, EJSON.clone(args));
+        callback && callback.apply(null,
+          handle.nonMutatingCallbacks ? args : EJSON.clone(args));
       });
     });
   },
@@ -200,8 +196,8 @@ _.extend(ObserveMultiplexer.prototype, {
     self._cache.docs.forEach(function (doc, id) {
       if (!_.has(self._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
-      var fields = EJSON.clone(doc);
-      delete fields._id;
+      const { _id, ...fields } = handle.nonMutatingCallbacks ? doc
+        : EJSON.clone(doc);
       if (self._ordered)
         add(id, fields, null); // we're going in order, so add at end
       else
@@ -212,7 +208,9 @@ _.extend(ObserveMultiplexer.prototype, {
 
 
 var nextObserveHandleId = 1;
-ObserveHandle = function (multiplexer, callbacks) {
+
+// When the callbacks do not mutate the arguments, we can skip a lot of data clones
+ObserveHandle = function (multiplexer, callbacks, nonMutatingCallbacks = false) {
   var self = this;
   // The end user is only supposed to call stop().  The other fields are
   // accessible to the multiplexer, though.
@@ -232,6 +230,7 @@ ObserveHandle = function (multiplexer, callbacks) {
   });
   self._stopped = false;
   self._id = nextObserveHandleId++;
+  self.nonMutatingCallbacks = nonMutatingCallbacks;
 };
 ObserveHandle.prototype.stop = function () {
   var self = this;

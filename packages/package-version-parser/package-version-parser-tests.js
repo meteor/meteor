@@ -1,5 +1,43 @@
 var currentTest = null;
 
+Tinytest.add("package-version-parser - validatePackageName", function (test) {
+  var badName = function (packageName, messageExpect) {
+    test.throws(function () {
+      try {
+        PackageVersion.validatePackageName(packageName);
+      } catch (e) {
+        if (! e.versionParserError) {
+          test.fail(e.message);
+        }
+        throw e;
+      }
+    }, messageExpect);
+  };
+
+  PackageVersion.validatePackageName('a');
+  PackageVersion.validatePackageName('a-b');
+  PackageVersion.validatePackageName('a.b');
+
+  badName("$foo", /can only contain/);
+  badName("", /must contain a lowercase/);
+  badName("foo$bar", /can only contain/);
+  badName("Foo", /can only contain/);
+  badName("a b", /can only contain/);
+  badName(".foo", /may not begin with a dot/);
+  badName("foo.", /may not end with a dot/);
+  badName("foo..bar", /not contain two consecutive dots/);
+  badName("-x", /not begin with a hyphen/);
+  badName("--x", /not begin with a hyphen/);
+  badName("0.0", /must contain/);
+  badName(":a", /start or end with a colon/);
+  badName("a:", /start or end with a colon/);
+
+  // these are ok
+  PackageVersion.validatePackageName('x-');
+  PackageVersion.validatePackageName('x--y');
+  PackageVersion.validatePackageName('x--');
+});
+
 Tinytest.add("package-version-parser - parse", function (test) {
   test.isTrue(new PackageVersion("1.2.3") instanceof PackageVersion);
 
@@ -9,6 +47,8 @@ Tinytest.add("package-version-parser - parse", function (test) {
     }, re);
   };
   var formatPV = function (pv) {
+    pv = JSON.parse(JSON.stringify(pv));
+    delete pv._semverParsed;
     return (JSON.stringify(pv)
             .replace(/,(?="prerelease"|"raw")/g, ',\n')
             .replace(/,/g, ', ')

@@ -1,22 +1,24 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.1.4-winr.3"
+  version: "1.7.0",
 });
 
-Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
+Package.onUse(api => {
+  api.use('ecmascript', ['client', 'server']);
+  api.use('ddp-rate-limiter');
   api.use('localstorage', 'client');
   api.use('tracker', 'client');
   api.use('check', 'server');
   api.use('random', ['client', 'server']);
   api.use('ejson', 'server');
   api.use('callback-hook', ['client', 'server']);
+  api.use('reactive-var', 'client');
 
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)
   api.use('service-configuration', ['client', 'server'], { unordered: true });
 
-  // needed for getting the currently logged-in user
+  // needed for getting the currently logged-in user and handling reconnects
   api.use('ddp', ['client', 'server']);
 
   // need this because of the Meteor.users collection but in the future
@@ -33,28 +35,33 @@ Package.onUse(function (api) {
 
   api.use('oauth-encryption', 'server', {weak: true});
 
+  // Though this "Accounts" symbol is the only official Package export for
+  // the accounts-base package, modules that import accounts-base will
+  // have access to anything added to the exports object of the main
+  // module, including AccountsClient and AccountsServer (those symbols
+  // just won't be automatically imported as "global" variables).
   api.export('Accounts');
-  api.export('AccountsTest', {testOnly: true});
 
-  api.addFiles('accounts_common.js', ['client', 'server']);
-  api.addFiles('accounts_server.js', 'server');
-  api.addFiles('url_client.js', 'client');
-  api.addFiles('url_server.js', 'server');
-
-  // accounts_client must be before localstorage_token, because
-  // localstorage_token attempts to call functions in accounts_client (eg
-  // Accounts.callLoginMethod) on startup. And localstorage_token must be after
-  // url_client, which sets autoLoginEnabled.
-  api.addFiles('accounts_client.js', 'client');
-  api.addFiles('localstorage_token.js', 'client');
+  // These main modules import all the other modules that comprise the
+  // accounts-base package, and define exports that will be accessible to
+  // modules that import the accounts-base package.
+  api.mainModule('server_main.js', 'server');
+  api.mainModule('client_main.js', 'client');
 });
 
-Package.onTest(function (api) {
-  api.use('accounts-base');
-  api.use('tinytest');
-  api.use('random');
-  api.use('test-helpers');
-  api.use('oauth-encryption');
-  api.addFiles('accounts_tests.js', 'server');
-  api.addFiles("accounts_url_tests.js", "client");
+Package.onTest(api => {
+  api.use([
+    'accounts-base',
+    'ecmascript',
+    'tinytest',
+    'random',
+    'test-helpers',
+    'oauth-encryption',
+    'ddp',
+    'accounts-password'
+  ]);
+
+  api.addFiles('accounts_tests_setup.js', 'server');
+  api.mainModule('server_tests.js', 'server');
+  api.mainModule('client_tests.js', 'client');
 });

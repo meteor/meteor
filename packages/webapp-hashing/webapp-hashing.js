@@ -37,3 +37,19 @@ WebAppHashing.calculateClientHash =
   return hash.digest('hex');
 };
 
+WebAppHashing.calculateCordovaCompatibilityHash =
+  function(platformVersion, pluginVersions) {
+  const hash = crypto.createHash('sha1');
+
+  hash.update(platformVersion);
+
+  // Sort plugins first so iteration order doesn't affect the hash
+  const plugins = Object.keys(pluginVersions).sort();
+  for (let plugin of plugins) {
+    const version = pluginVersions[plugin];
+    hash.update(plugin);
+    hash.update(version);
+  }
+
+  return hash.digest('hex');
+};

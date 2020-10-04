@@ -1,4 +1,4 @@
-Npm.depends({"meteor-test-executable": "0.0.1"});
+Npm.depends({"meteor-test-executable": "0.0.3"});
 
 Package.describe({
   version: "1.0.0",
