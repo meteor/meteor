@@ -10,6 +10,8 @@ N/A
 
 ### Changes
 
+* `mongo-decimal` package npm dependency `decimal.js` has been updated to v10.2.1 
+
 ## v1.11.1, 2020-09-16
 
 ### Breaking changes
