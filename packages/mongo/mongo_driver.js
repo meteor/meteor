@@ -370,42 +370,42 @@ var bindEnvironmentForWrite = function (callback) {
 
 MongoConnection.prototype._insert = function (collection_name, documents,
                                               callback) {
-  var self = this;
-  var isBulkInsert = (documents instanceof Array);
+  const self = this;
+  const isBulkInsert = Array.isArray(documents);
   documents = isBulkInsert ? documents : [ documents ];
 
-  var sendError = function (e) {
+  const sendError = function (e) {
     if (callback)
       return callback(e);
     throw e;
   };
 
   if (collection_name === "___meteor_failure_test_collection") {
-    var e = new Error("Failure test");
+    const e = new Error("Failure test");
     e._expectedByTest = true;
     sendError(e);
     return;
   }
 
-  var complexDoc = function (document) {
+  const complexDoc = function (document) {
     return !LocalCollection._isPlainObject(document) ||
       EJSON._isCustomType(document);
   };
-  if (_.any(documents, complexDoc)) {
+  if (documents.some(complexDoc)) {
     sendError(new Error(
       "Only plain objects may be inserted into MongoDB"));
     return;
   }
 
-  var write = self._maybeBeginWrite();
-  var refresh = function () {
-    _.each(documents, function (document) {
+  const write = self._maybeBeginWrite();
+  const refresh = function () {
+    documents.forEach(function (document) {
       Meteor.refresh({collection: collection_name, id: document._id });
     });
   };
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
-    var collection = self.rawCollection(collection_name);
+    const collection = self.rawCollection(collection_name);
     collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
                       {safe: true}, callback);
   } catch (err) {

@@ -61,14 +61,14 @@ Mongo.Collection = function Collection(name, options) {
   switch (options.idGeneration) {
   case 'MONGO':
     this._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
+      const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
       return new Mongo.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
   default:
     this._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
+      const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
       return src.id();
     };
     break;
@@ -175,8 +175,8 @@ Object.assign(Mongo.Collection.prototype, {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update(msg) {
-        var mongoId = MongoID.idParse(msg.id);
-        var doc = self._collection._docs.get(mongoId);
+        const mongoId = MongoID.idParse(msg.id);
+        const doc = self._collection._docs.get(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
@@ -207,7 +207,7 @@ Object.assign(Mongo.Collection.prototype, {
             throw new Error("Expected to find a document to change");
           const keys = Object.keys(msg.fields);
           if (keys.length > 0) {
-            var modifier = {};
+            const modifier = {};
             keys.forEach(key => {
               const value = msg.fields[key];
               if (EJSON.equals(doc[key], value)) {
@@ -288,7 +288,7 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   _getFindOptions(args) {
-    var self = this;
+    const self = this;
     if (args.length < 2) {
       return { transform: self._transform };
     } else {
@@ -362,7 +362,7 @@ Object.assign(Mongo.Collection.prototype, {
 
 Object.assign(Mongo.Collection, {
   _publishCursor(cursor, sub, collection) {
-    var observeHandle = cursor.observeChanges({
+    const observeHandle = cursor.observeChanges({
       added: function (id, fields) {
         sub.added(collection, id, fields);
       },
@@ -493,13 +493,13 @@ Object.assign(Mongo.Collection.prototype, {
 
     // On inserts, always return the id that we generated; on all other
     // operations, just return the result from the collection.
-    var chooseReturnValueFromCollectionResult = function (result) {
+    const chooseReturnValueFromCollectionResult = function (result) {
       if (doc._id) {
         return doc._id;
       }
 
       // XXX what is this for??
-      // It's some iteraction between the callback to _callMutatorMethod and
+      // It's some interaction between the callback to _callMutatorMethod and
       // the return value conversion
       doc._id = result;
 
@@ -665,41 +665,41 @@ Object.assign(Mongo.Collection.prototype, {
   // We'll actually design an index API later. For now, we just pass through to
   // Mongo's, but make it synchronous.
   _ensureIndex(index, options) {
-    var self = this;
+    const self = this;
     if (!self._collection._ensureIndex)
       throw new Error("Can only call _ensureIndex on server collections");
     self._collection._ensureIndex(index, options);
   },
 
   _dropIndex(index) {
-    var self = this;
+    const self = this;
     if (!self._collection._dropIndex)
       throw new Error("Can only call _dropIndex on server collections");
     self._collection._dropIndex(index);
   },
 
   _dropCollection() {
-    var self = this;
+    const self = this;
     if (!self._collection.dropCollection)
       throw new Error("Can only call _dropCollection on server collections");
     self._collection.dropCollection();
   },
 
   _createCappedCollection(byteSize, maxDocuments) {
-    var self = this;
+    const self = this;
     if (!self._collection._createCappedCollection)
       throw new Error("Can only call _createCappedCollection on server collections");
     self._collection._createCappedCollection(byteSize, maxDocuments);
   },
 
   /**
-   * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+   * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.6/api/Collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
    * @locus Server
    * @memberof Mongo.Collection
    * @instance
    */
   rawCollection() {
-    var self = this;
+    const self = this;
     if (! self._collection.rawCollection) {
       throw new Error("Can only call rawCollection on server collections");
     }
