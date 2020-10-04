@@ -1,9 +1,7 @@
 Tinytest.add("reload - migrate", function (test) {
   Reload._withFreshProvidersForTest(function () {
-    var ready = false;
-
     Reload._onMigrate("reload test data 1", function (tryReload, options) {
-      return [ready, { foo: "bar" }];
+      return [false, { foo: "bar" }];
     });
 
     Reload._onMigrate("reload test data 2", function (tryReload, options) {
@@ -23,7 +21,6 @@ Tinytest.add("reload - migrate", function (test) {
     test.equal(data.reload, true);
 
     // Now all providers are ready.
-    ready = true;
     test.isTrue(Reload._migrate(function () { }));
 
     data = JSON.parse(Reload._getData());
