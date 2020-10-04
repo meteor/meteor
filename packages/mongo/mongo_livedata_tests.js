@@ -62,7 +62,7 @@ var runInFence = function (f) {
   if (Meteor.isClient) {
     f();
   } else {
-    var fence = new DDPServer._WriteFence;
+    const fence = new DDPServer._WriteFence;
     DDPServer._CurrentWriteFence.withValue(fence, f);
     fence.armAndWait();
   }
@@ -531,16 +531,16 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
 });
 
 Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test, onComplete) {
-  var run = test.runId();
-  var coll;
+  const run = test.runId();
+  let coll;
   if (Meteor.isClient) {
     coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
   } else {
     coll = new Mongo.Collection("livedata_test_collection_"+run, collectionOptions);
   }
 
-  var numAddeds = 0;
-  var handle = coll.find({run: run}).observe({
+  let numAddeds = 0;
+  const handle = coll.find({ run }).observe({
     addedAt: function (o) {
       // test that we can scribble on the object we get back from Mongo without
       // breaking anything.  The worst possible scribble is messing with _id.
@@ -548,17 +548,17 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
       numAddeds++;
     }
   });
-  _.each([123, 456, 789], function (abc) {
+  [123, 456, 789].forEach(function (abc) {
     runInFence(function () {
-      coll.insert({run: run, abc: abc});
+      coll.insert({ run, abc });
     });
   });
 
   // Bulk inserts and observe handles.
   runInFence(function () {
     coll.insert([
-      { run: run, abc: 012 },
-      { run: run, abc: 345 }]);
+      { run, abc: 012 },
+      { run, abc: 345 }]);
   });
 
   handle.stop();
@@ -3568,3 +3568,31 @@ if (Meteor.isServer) {
     });
   });
 }
+
+Tinytest.addAsync("mongo-livedata - bulk insertion of models", function (test, onComplete) {
+  const coll1 = new Mongo.Collection(`bulk_insert_test_${test.runId()}`);
+  const doc = { score: 5 };
+  const docTwo = { score: 10 };
+
+  // Test that passing an array of documents performs a bulk insertion
+  const docIds = coll1.insert([ doc, docTwo ]);
+  test.equal(coll1.find().count(), 2);
+  test.equal(coll1.find({ score: 5 }).count(), 1);
+  test.equal(coll1.find({ score: 10 }).count(), 1);
+
+  // Check that a bulk insertion returns a list of ids for the inserted documents
+  test.equal(docIds.length, 2);
+  test.equal(coll1.findOne(doc)._id, docIds[0]);
+  test.equal(coll1.findOne(docTwo)._id, docIds[1]);
+
+  onComplete();
+});
+
+Tinytest.addAsync("mongo-livedata - bulk insertion with null entries", function (test, onComplete) {
+  const coll2 = new Mongo.Collection(`bulk_insert_test2_${test.runId()}`);
+  const docsIds = coll2.insert([ { abc: 1 }, null, { abc: 2 } ]);
+  test.equal(docsIds.length, 2);
+  test.equal(coll2.find().count(), 2);
+
+  onComplete();
+});

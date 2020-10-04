@@ -446,7 +446,7 @@ Object.assign(Mongo.Collection.prototype, {
   // off.
 
   /**
-   * @summary Insert a document in the collection.  Returns its unique _id.
+   * @summary Insert a document into the collection.  Returns its unique _id.
    * @locus Anywhere
    * @method  insert
    * @memberof Mongo.Collection
@@ -455,45 +455,93 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
    */
   insert(doc, callback) {
+    const isBulkInsert = Array.isArray(doc)
+
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error("insert requires an argument");
     }
 
-    // Make a shallow clone of the document, preserving its prototype.
-    doc = Object.create(
-      Object.getPrototypeOf(doc),
-      Object.getOwnPropertyDescriptors(doc)
-    );
+    if (isBulkInsert) {
+      // Clone the array
+      const insertDocs = doc.filter(Boolean);
 
-    if ('_id' in doc) {
-      if (! doc._id ||
-          ! (typeof doc._id === 'string' ||
-             doc._id instanceof Mongo.ObjectID)) {
-        throw new Error(
-          "Meteor requires document _id fields to be non-empty strings or ObjectIDs");
-      }
+      // Prepare documents for insert
+      insertDocs.forEach(doc => {
+        if (doc._id) {
+          // If _id is present in the doc check that it is in the correct format.
+          if (! doc._id ||
+            ! (typeof doc._id === 'string' ||
+              doc._id instanceof Mongo.ObjectID)) {
+            throw new Error(
+              "Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+          }
+        } else {
+          // We need to generate the _id for the document
+          let generateId = true;
+
+          // Don't generate the id if we're the client and the 'outermost' call
+          // This optimization saves us passing both the randomSeed and the id
+          // Passing both is redundant.
+          if (this._isRemoteCollection()) {
+            const enclosing = DDP._CurrentMethodInvocation.get();
+            if (!enclosing) {
+              generateId = false;
+            }
+          }
+
+          if (generateId) {
+            doc._id = this._makeNewID();
+          }
+        }
+      });
+      doc = insertDocs;
     } else {
-      let generateId = true;
+      // Make a shallow clone of the document, preserving its prototype.
+      doc = Object.create(
+        Object.getPrototypeOf(doc),
+        Object.getOwnPropertyDescriptors(doc)
+      );
 
-      // Don't generate the id if we're the client and the 'outermost' call
-      // This optimization saves us passing both the randomSeed and the id
-      // Passing both is redundant.
-      if (this._isRemoteCollection()) {
-        const enclosing = DDP._CurrentMethodInvocation.get();
-        if (!enclosing) {
-          generateId = false;
+      if ('_id' in doc) {
+        if (! doc._id ||
+          ! (typeof doc._id === 'string' ||
+            doc._id instanceof Mongo.ObjectID)) {
+          throw new Error(
+            "Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+        }
+      } else {
+        let generateId = true;
+
+        // Don't generate the id if we're the client and the 'outermost' call
+        // This optimization saves us passing both the randomSeed and the id
+        // Passing both is redundant.
+        if (this._isRemoteCollection()) {
+          const enclosing = DDP._CurrentMethodInvocation.get();
+          if (!enclosing) {
+            generateId = false;
+          }
+        }
+
+        if (generateId) {
+          doc._id = this._makeNewID();
         }
       }
-
-      if (generateId) {
-        doc._id = this._makeNewID();
-      }
     }
+
+
 
     // On inserts, always return the id that we generated; on all other
     // operations, just return the result from the collection.
     const chooseReturnValueFromCollectionResult = function (result) {
+      if (isBulkInsert) {
+        console.dir(result)
+        if (result.insertedIds) {
+          return Object.values(result.insertedIds);
+        }
+        return [];
+      }
+
       if (doc._id) {
         return doc._id;
       }
@@ -707,7 +755,7 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   /**
-   * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.0/api/Db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+   * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.6/api/Db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
    * @locus Server
    * @memberof Mongo.Collection
    * @instance

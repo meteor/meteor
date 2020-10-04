@@ -406,8 +406,13 @@ MongoConnection.prototype._insert = function (collection_name, documents,
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     const collection = self.rawCollection(collection_name);
-    collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
-                      {safe: true}, callback);
+    if (isBulkInsert) {
+      collection.insertMany(replaceTypes(documents, replaceMeteorAtomWithMongo),
+        {safe: true}, callback);
+    } else {
+      collection.insertOne(replaceTypes(documents[0], replaceMeteorAtomWithMongo),
+        {safe: true}, callback);
+    }
   } catch (err) {
     write.committed();
     throw err;
@@ -417,14 +422,14 @@ MongoConnection.prototype._insert = function (collection_name, documents,
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
 MongoConnection.prototype._refresh = function (collectionName, selector) {
-  var refreshKey = {collection: collectionName};
+  const refreshKey = {collection: collectionName};
   // If we know which documents we're removing, don't poll queries that are
   // specific to other documents. (Note that multiple notifications here should
   // not cause multiple polls, since all our listener is doing is enqueueing a
   // poll.)
-  var specificIds = LocalCollection._idsMatchedBySelector(selector);
+  const specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
+    specificIds.forEach(function (id) {
       Meteor.refresh(_.extend({id: id}, refreshKey));
     });
   } else {
