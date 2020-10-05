@@ -39,6 +39,8 @@ N/A
 * Allow android-webview-video-poster [more](https://github.com/meteor/meteor/pull/11159)
 
 
+* Facebook OAuth has been updated to `1.8` now using Facebook GraphAPI v8.
+
 ## v1.11, 2020-08-18
 
 ### Breaking changes
