@@ -12,6 +12,8 @@ N/A
 
 * Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
 
+* Cordova add plugin works again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
+
 ## v1.11.1, 2020-09-16
 
 ### Breaking changes
@@ -48,6 +50,8 @@ N/A
     There is a potential breaking change as the underlying package started to use `dns.resolve()`
     instead of `dns.lookup()` which might be breaking on some environments.
     See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
+
+* (Added later) Cordova add plugin is not working with plugin name in the git URL when the plugin id was different than the name in the config.xml. Fixed on [#11202](https://github.com/meteor/meteor/pull/11202)
 
 ### Migration steps
 
