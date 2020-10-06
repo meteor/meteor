@@ -267,10 +267,10 @@ _.extend(Module.prototype, {
 
       const tree = getTree(file);
 
-      // if (file.aliasId) {
-      //   addToTree(file.aliasId, file.absModuleId, tree);
-      //   return;
-      // }
+      if (file.aliasId) {
+        addToTree(file.aliasId, file.absModuleId, tree);
+        return;
+      }
 
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);

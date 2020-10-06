@@ -1136,7 +1136,7 @@ class Target {
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
-    const { jsOutputFilesMap, resolveMap } = compilerPluginModule.PackageSourceBatch
+    const { jsOutputFilesMap, resolveMap = new Map() } = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
@@ -1172,9 +1172,18 @@ class Target {
       const unibuild = sourceBatch.unibuild;
       const name = unibuild.pkg.name || null;
       jsOutputFilesMap.get(name).files.forEach((file) => {
-        if (!file.imports) return;
-        Object.entries(file.imports).forEach(([key, object]) => {
+        const fileResolveMap = resolveMap.get(file.absPath) || new Map();
+        Object.entries(file.deps || {}).forEach(([key, depInfo]) => {
+          if(key.includes("jquery")){
+            debugger;
+          }
+          const absKey = fileResolveMap.get(key);
+          const wasImported = importMap.get(absKey) || false;
+          importMap.set(absKey, {commonJsImported: wasImported || depInfo.commonJsImported});
+        })
+        Object.entries(file.imports || []).forEach(([key, object]) => {
           importMap.set(key, {
+            ...importMap.get(key) || {},
             deps: [...new Set([...(importMap.get(key)?.deps || []), ...object.deps])],
             sideEffects: object.sideEffects
           })
@@ -1185,6 +1194,9 @@ class Target {
     const allFilesOnBundle = new Set(Array.from(jsOutputFilesMap).flatMap(([, value]) => {
       return value.files.map(({absPath}) => absPath);
     }));
+
+    const appSideEffects = sourceBatches.find((sourceBatch) => !sourceBatch.unibuild?.pkg?.name)?.pkg?.sideEffects ?? true
+
     // now we need to remove the exports, and let the minifier do it's job later
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
@@ -1193,7 +1205,7 @@ class Target {
       // we will assume that every meteor package that exports something is a
       // side effect true package, this is set on the package-api file when api.export is called
       // console.log(`${unibuild.pkg.name} sideEffects: ${unibuild.pkg.sideEffects}`)
-      if(unibuild.pkg.sideEffects && name !== 'modules' || unibuild.arch.includes("legacy")){
+      if(appSideEffects || unibuild.pkg.sideEffects && name !== 'modules' || unibuild.arch.includes("legacy")){
         return;
       }
       jsOutputFilesMap.get(name).files.forEach((file) => {
@@ -1201,7 +1213,7 @@ class Target {
 
 
         // if it was commonjsImported we have nothing to do here
-        if(file.deps?.commonJsImported){
+        if(importedSymbolsFromFile?.commonJsImported){
           return;
         }
         const { source:newSource, madeChanges } = removeUnusedExports(

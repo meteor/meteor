@@ -1,1 +1,1 @@
-export jsx from "./child";
+export { default as jsx } from "./child";
