@@ -549,7 +549,8 @@ from Cordova project`, async () => {
     buildmessage.assertInJob();
 
     if (utils.isUrlWithSha(version)) {
-      return usePluginName ? convertToGitUrl(version) : `${id}@${convertToGitUrl(version)}`;
+      return usePluginName ? convertToGitUrl(version) :
+        `${id}@${convertToGitUrl(version)}`;
     } else if (utils.isUrlWithFileScheme(version)) {
       // Strip file:// and resolve the path relative to the cordova-build
       // directory
@@ -594,12 +595,12 @@ to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
           commandOptions));
       } catch (error) {
         if (retry && utils.isUrlWithSha(version)) {
-          Console.warn(`plugin add for ${id} failed with plugin id in \
-          the URL with hash, retrying now with plugin name. If this works \
-          you can ignore the error above or you can update your plugin \
-          declaration to use the id from config.xml instead of the name \
-          from package.json`);
-          this.addPlugin(id, version, config, { ...options, usePluginName: true, retry: false });
+          Console.warn(`Cordova plugin add for ${id} failed with plugin id 
+          in the URL with hash, retrying now with plugin name. If this works you
+          can ignore the error above or you can update your plugin declaration
+          to use the id from config.xml instead of the name from package.json`);
+          this.addPlugin(id, version, config, { ...options,
+            usePluginName: true, retry: false });
           return;
         }
         throw error;
