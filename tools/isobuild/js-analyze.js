@@ -414,7 +414,7 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
                 const fileIsInBundle = absPath && this.allFilesOnBundle.has(absPath) || false;
                 if (!fileIsInBundle) {
                     // we don't want to remove any native node module import, as they are not bundled in the server bundle
-                    if(Resolver.isNative(firstArg.value) && archMatches(this.arch, "os")){
+                    if(Resolver.isNative(firstArg.value)){
                         return;
                     }
                     path.replace({
