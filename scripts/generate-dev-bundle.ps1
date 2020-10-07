@@ -19,7 +19,6 @@ $BUNDLE_VERSION = Read-VariableFromShellScript "${dirCheckout}\meteor" 'BUNDLE_V
 
 # extract the major package versions from the build-dev-bundle-common script.
 $MONGO_VERSION_64BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_64BIT'
-$MONGO_VERSION_32BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_32BIT'
 
 $NPM_VERSION = Read-VariableFromShellScript $shCommon 'NPM_VERSION'
 
