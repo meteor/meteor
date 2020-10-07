@@ -105,7 +105,7 @@ export default class Resolver {
         // import/export in their "module" dependency trees.
         this.mainFields = ["browser", "main", "module"];
       } else {
-        this.mainFields = ["module", "browser", "main"];
+        this.mainFields = ["browser", "module", "main"];
       }
     } else {
       this.mainFields = ["main"];

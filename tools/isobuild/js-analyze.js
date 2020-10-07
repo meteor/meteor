@@ -215,7 +215,9 @@ const importedIdentifierVisitor = new (class extends Visitor {
             this.addIdentifier(firstArg.value, "require", false, true, true);
             this.addDependency(firstArg.value, ['*'], true);
         } else if (node.callee.type === "Import" ||
-            isIdWithName(node.callee, "import")) {
+            isIdWithName(node.callee, "import") ||
+            node.callee?.property?.name === "dynamicImport"
+        ) {
             this.addIdentifier(firstArg.value, "import", true, false, true);
             this.addDependency(firstArg.value, ['*'], true);
         } else {
