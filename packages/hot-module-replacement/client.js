@@ -1,6 +1,8 @@
 // TODO: add an api to Reify to update cached exports for a module
 const ReifyEntry = require('/node_modules/meteor/modules/node_modules/reify/lib/runtime/entry.js')
 
+const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
+
 // Due to the bundler and proxy running in the same node process
 // this could possibly be ran after the next build finished
 // TODO: the builder should inject the build time in the bundle
@@ -126,15 +128,15 @@ function createInlineSourceMap(map) {
 
 function createModuleContent (code, map, id) {
   return function () {
-    // TODO: Use same sourceURL as the sourcemap for the main bundle does
     return eval(
       // Wrap the function(require,exports,module){...} expression in
       // parentheses to force it to be parsed as an expression.
-      "(" + code + ")\n//# sourceURL=" + id +
+      // The sourceURL is treated as a prefix for the sources array
+      // in the source map
+      "(" + code + ")\n//# sourceURL=" + SOURCE_URL_PREFIX +
       "\n" + createInlineSourceMap(map)
     ).apply(this, arguments);
   }
-
 }
 
 function replaceFileContent(file, contents) {
