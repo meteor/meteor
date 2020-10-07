@@ -2,6 +2,8 @@ const {
   comparePrelinkResult
 } = require('./changesets');
 
+const MAX_CHANGESETS = 30;
+
 // Meteor can load the plugin multiple times
 // when it is a local package
 // Any state that should be preserved is stored in
@@ -19,8 +21,20 @@ global.__hotState = sharedState;
 function findLast(array, compare) {
   for (let i = array.length - 1; i > 0; i--) {
     if (compare(array[i])) {
-      return array[i]
+      return array[i];
     }
+  }
+}
+
+function addChangeset(arch, changeset) {
+  const previousResults = sharedState.previousPrelinkResults[arch];
+  previousResults.push(changeset);
+
+  if (previousResults.length > MAX_CHANGESETS) {
+    previousResults.splice(
+      0,
+      previousResults.length - MAX_CHANGESETS
+    );
   }
 }
 
@@ -31,8 +45,6 @@ function prelinkResultHandler(prelinkResult) {
     bundleArch
   } = prelinkResult;
 
-  // TODO: we should limit the number of change sets that are saved
-  // to avoid a memory leak
   sharedState.previousPrelinkResults[bundleArch] =
     sharedState.previousPrelinkResults[bundleArch] || [];
 
@@ -40,11 +52,14 @@ function prelinkResultHandler(prelinkResult) {
   // TODO: support HMR in legacy bundle
   if (!isApp || bundleArch !== 'web.browser') {
     // Require a full reload whenever a package is modified
-    sharedState.previousPrelinkResults[bundleArch].push({
-      name,
-      reloadable: false,
-      linkedAt: Date.now()
-    })
+    addChangeset(
+      bundleArch,
+      {
+        name,
+        reloadable: false,
+        linkedAt: Date.now()
+      }
+    );
     return;
   }
   
@@ -57,7 +72,7 @@ function prelinkResultHandler(prelinkResult) {
   });
 
   const changeset = comparePrelinkResult(previousChangeset, prelinkResult);
-  sharedState.previousPrelinkResults[bundleArch].push(changeset);
+  addChangeset(bundleArch, changeset);
 
   // Try to do HMR without waiting for the build to finish
   // This might not work once we support HMR for packages
