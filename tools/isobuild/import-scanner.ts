@@ -427,21 +427,31 @@ export default class ImportScanner {
   private filesInfo: Map<string, JSAnalyzeInfo>;
 
 
-  private mergeImportInfo(file: any, importInfo: JSAnalyzeInfo): AnalyzeInfo {
+  private mergeImportInfo(file: any, importInfo: JSAnalyzeInfo, forDynamicImport: boolean): AnalyzeInfo {
     /*
       dependencies?: Record<string, ImportIdentifiersEntry>;
       proxyDependencies?: Record<string, ImportIdentifiersEntry>;
       identifiers?: Record<string, ImportInfo>;
       exports?: [string]
      */
+    if(file?.absModuleId?.includes("console-browserify")){
+      debugger;
+    }
     file.deps = file.deps || {};
     Object.entries(importInfo.identifiers || {}).forEach(([key, value]) => {
+      const dynamic = this.isWebBrowser() &&
+          (forDynamicImport ||
+              value.parentWasDynamic ||
+              value.dynamic);
+
       if(!file.deps[key]) {
-        file.deps[key] = value;
+        file.deps[key] = {...value, dynamic};
         return;
       }
+
       file.deps[key] = {
         ...file.deps[key],
+        dynamic,
         commonJsImported: value.commonJsImported || file.deps[key].commonJsImported,
         sideEffects: value.sideEffects || file.deps[key].sideEffects
       };
@@ -838,6 +848,9 @@ export default class ImportScanner {
     if(!root.status) root.status = ImportTreeNodeStatus.WHITE;
     const importInfo = root.absImportedPath && this.filesInfo.get(root.absImportedPath) || {}
     if(root.absImportedPath) {
+      if(root.absImportedPath?.includes("console-browserify")){
+        debugger;
+      }
       this.addFile(root.absImportedPath, Object.assign(root.depFile, importInfo));
     }
     root.status = ImportTreeNodeStatus.GRAY;
@@ -852,7 +865,7 @@ export default class ImportScanner {
   scanImports() {
     this.outputFiles.forEach(file => {
       if (! file.lazy) {
-        const importTree = this.scanFile(file, false, {deps:["*"], sideEffects: this.sideEffects});
+        const importTree = this.scanFile(file, file.imported === "dynamic", {deps:["*"], sideEffects: this.sideEffects});
         this.addImportTree(importTree);
       }
     });
@@ -1228,10 +1241,10 @@ export default class ImportScanner {
       // this is actually an temporary dependency tree, we will need to analyze the
       // children to see what they are exporting
       const cachedFileInfo = this.filesInfo.get(file.absPath) || {};
-      mergedInfo = this.mergeImportInfo(cachedFileInfo, importInfo);
+      mergedInfo = this.mergeImportInfo(cachedFileInfo, importInfo, forDynamicImport);
       // we only need the local view here, later we will need the global, merged one
       this.filesInfo.set(file.absPath, mergedInfo);
-      this.mergeImportInfo(file, importInfo)
+      this.mergeImportInfo(file, importInfo, forDynamicImport)
 
     } catch (e) {
       if (e.$ParseError) {
@@ -1251,6 +1264,9 @@ export default class ImportScanner {
       depFile: file,
     };
 
+    if(file?.absModuleId?.includes("console-browserify")){
+      debugger;
+    }
     // @ts-ignore
     each(file.deps, (info: ImportInfo, id: string) => {
 
@@ -1286,7 +1302,7 @@ export default class ImportScanner {
 
       let depFile = this.getFile(absImportedPath);
 
-      const visitFrom = `${file.absPath}->${absImportedPath}`
+      const visitFrom = `${file.absPath}->${absImportedPath}`;
 
       const depHasSideEffects = info.sideEffects || hasSideEffects;
       if (depFile) {
