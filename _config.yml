@@ -39,6 +39,7 @@ sidebar_categories:
     - api/assets
     - api/packagejs
     - api/mobile-config
+    - api/environment
   Packages:
     - packages/accounts-ui
     - packages/appcache
