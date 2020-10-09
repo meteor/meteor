@@ -1136,7 +1136,7 @@ class Target {
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
-    const { jsOutputFilesMap, resolveMap = new Map() } = compilerPluginModule.PackageSourceBatch
+    const { jsOutputFilesMap, resolveMap = new Map(), fileImportState = new Map() } = compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
@@ -1195,7 +1195,7 @@ class Target {
       return value.files.map(({absPath}) => absPath);
     }));
 
-    const appSideEffects = sourceBatches.find((sourceBatch) => !sourceBatch.unibuild?.pkg?.name)?.pkg?.sideEffects ?? true
+    const appSideEffects = sourceBatches.find((sourceBatch) => sourceBatch.unibuild.pkg.name == null).unibuild.pkg.sideEffects ?? true
 
     // now we need to remove the exports, and let the minifier do it's job later
     sourceBatches.forEach((sourceBatch) => {
@@ -1222,6 +1222,7 @@ class Target {
             importedSymbolsFromFile,
             allFilesOnBundle,
             resolveMap.get(file.absPath) || new Map(),
+            fileImportState,
             unibuild.arch
         );
 

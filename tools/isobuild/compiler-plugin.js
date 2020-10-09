@@ -1254,6 +1254,7 @@ export class PackageSourceBatch {
   static computeJsOutputFilesMap(sourceBatches) {
     const map = new Map;
     const resolveMap = new Map();
+    const fileImportState = new Map();
 
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
@@ -1326,6 +1327,7 @@ export class PackageSourceBatch {
     // relocated to a source batch that could handle them.
     const allRelocatedModules = Object.create(null);
     const scannerMap = new Map;
+    const appSideEffects = sourceBatches.find((sourceBatch) => sourceBatch.unibuild.pkg.name == null).unibuild.pkg.sideEffects ?? true
 
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
@@ -1348,11 +1350,13 @@ export class PackageSourceBatch {
       });
 
       const entry = map.get(name);
+      
 
+      const pkgSideEffects = name === 'modules' ? appSideEffects : batch.unibuild.pkg.sideEffects;
       const scanner = new ImportScanner({
         name,
         bundleArch: batch.processor.arch,
-        sideEffects: batch.unibuild.pkg.sideEffects,
+        sideEffects: pkgSideEffects,
         extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
@@ -1496,6 +1500,10 @@ export class PackageSourceBatch {
 
         entry.files = outputFiles;
       }
+
+      Object.entries(scanner.importedStatusFile).forEach(function([key, value]) {
+        fileImportState.set(key, value);
+      });
       scanner.resolveMap.forEach(function(value, key) {
         const current = resolveMap.get(key) || new Map();
         for(const [newKey, newValue] of value.entries()){
@@ -1504,10 +1512,10 @@ export class PackageSourceBatch {
         resolveMap.set(key, current);
       });
     });
-    return this._watchOutputFiles(map, resolveMap);
+    return this._watchOutputFiles(map, resolveMap, fileImportState);
   }
 
-  static _watchOutputFiles(jsOutputFilesMap, resolveMap) {
+  static _watchOutputFiles(jsOutputFilesMap, resolveMap, fileImportState) {
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
@@ -1534,7 +1542,7 @@ export class PackageSourceBatch {
         }
       });
     });
-    return { jsOutputFilesMap, resolveMap };
+    return { jsOutputFilesMap, resolveMap, fileImportState };
   }
 
   static _warnAboutMissingModules(missingModules) {

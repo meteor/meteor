@@ -1,11 +1,10 @@
-import {parse, getDefaultOptions} from 'meteor-babel';
+import {getDefaultOptions, parse} from 'meteor-babel';
 import generate from '@babel/generator';
 import {analyze as analyzeScope} from 'escope';
 import LRU from "lru-cache";
 
 import Visitor from "reify/lib/visitor.js";
 import {findPossibleIndexes} from "reify/lib/utils.js";
-import {matches as archMatches} from "../utils/archinfo";
 import Resolver from "./resolver";
 
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -322,7 +321,7 @@ const importedIdentifierVisitor = new (class extends Visitor {
     }
 });
 
-export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle = new Set(), resolveMap, arch) {
+export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle = new Set(), resolveMap, fileImportState, arch) {
     const possibleIndexes = findPossibleIndexes(source, [
         "export",
         "exportDefault",
@@ -335,18 +334,19 @@ export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle =
     }
 
     const ast = tryToParse(source, hash);
-    removeUnusedExportsVisitor.visit(ast, source, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap, arch);
+    removeUnusedExportsVisitor.visit(ast, source, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap, fileImportState, arch);
     const newSource = generate(ast, getDefaultOptions()).code;
     return {source: newSource, madeChanges: removeUnusedExportsVisitor.madeChanges};
 }
 
 const removeUnusedExportsVisitor = new (class extends Visitor {
 
-    reset(rootPath, code, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap, arch) {
+    reset(rootPath, code, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap, fileImportState, arch) {
         this.madeChanges = false;
         this.exportInfo = exportInfo;
         this.allFilesOnBundle = allFilesOnBundle;
         this.resolveMap = resolveMap || new Map();
+        this.fileImportState = fileImportState || new Map();
         this.arch = arch;
 
         // Defining this.possibleIndexes causes the Visitor to ignore any
@@ -377,8 +377,7 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
 
             const exportKey = property.key.value || property.key.name;
             const exportInfoSafe = this.exportInfo?.deps || [];
-            let returnValue = exportInfoSafe.includes(exportKey) || exportInfoSafe.includes("*") ? property : null;
-            return returnValue;
+            return exportInfoSafe.includes(exportKey) || exportInfoSafe.includes("*") ? property : null;
         }).filter(Boolean)
         this.madeChanges = true;
     }
@@ -414,6 +413,16 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
                 if(node.arguments.length <= 1) return;
                 const absPath = this.resolveMap.get(firstArg.value);
                 const fileIsInBundle = absPath && this.allFilesOnBundle.has(absPath) || false;
+                if(fileIsInBundle && isPropertyWithName(node.callee.property, "link")){
+                    // we are seeing a static import, but this import might have been "tree-shaked", remaining only the dynamic import
+                    const importStatus = this.fileImportState.get(absPath);
+                    if(importStatus === 'dynamic' || !importStatus){
+                        path.replace({
+                            type: "BooleanLiteral",
+                            value: false,
+                        });
+                    }
+                }
                 if (!fileIsInBundle) {
                     // we don't want to remove any native node module import, as they are not bundled in the server bundle
                     if(Resolver.isNative(firstArg.value)){
