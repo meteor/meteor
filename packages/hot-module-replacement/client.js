@@ -191,23 +191,23 @@ function findReloadableParents(importedBy) {
   }).flat(Infinity);
 }
 
-function addFiles(files) {
-  const tree = {};
+function addFiles(addedFiles) {
+  console.log('HMR: Added files', addedFiles.map(file => file.path));
 
-  console.log('HMR: Added files', files.map(file => file.path));
-
-  files.forEach(file => {
+  addedFiles.forEach(file => {
+    const tree = {};
     const segments = file.path.split('/').slice(1);
+    const fileName = segments.pop();
+
     let previous = tree;
-    segments.splice(0, segments.length - 1).forEach(segment => {
+    segments.forEach(segment => {
       previous[segment] = previous[segment] || {}
       previous = previous[segment]
-    })
-    previous[segments[0]] = createModuleContent(file.content.code, file.content.map, file.path);
-  })
+    });
+    previous[fileName] = createModuleContent(file.content.code, file.content.map, file.path);
 
-  // TODO: group the files by meteorInstallOptions
-  meteorInstall(tree, files[0].meteorInstallOptions);
+    meteorInstall(tree, file.meteorInstallOptions);
+  });
 }
 
 module.constructor.prototype.replaceModule = function (id, contents) {
