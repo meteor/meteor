@@ -547,4 +547,4 @@ This is a collection of points to check about your app that might catch common e
 1. [Make sure secret API keys and passwords aren't in your source code.](security.html#api-keys)
 1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's a nice UX feature.
 1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.
-1. Set up [browser policy](https://atmospherejs.com/meteor/browser-policy), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.
+1. Set up secure [HTTP headers](https://guide.meteor.com/security.html#httpheaders) using [Helmet](https://www.npmjs.com/package/helmet), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.
