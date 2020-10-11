@@ -82,13 +82,6 @@ const LINKER_CACHE = new LRU({
   }
 });
 
-// For HMR to work, we have to do a full link during the initial
-// build and each time the bundle changes. Here we store
-// the previous cache key for the app's web.browser arch
-// to check if it was modified or if we can use the cache
-// TODO: support HMR when using the linker cache
-let previousLinkKey = null;
-
 const serverLibPackages = {
   // Make sure fibers is defined, if nothing else.
   fibers: true
@@ -120,6 +113,7 @@ export class CompilerPluginProcessor {
     unibuilds,
     arch,
     sourceRoot,
+    buildMode,
     isopackCache,
     linkerCacheDir,
     scannerCacheDir,
@@ -298,6 +292,12 @@ class InputFile extends buildPluginModule.InputFile {
     // resources might not have this property.
     const { inputResource } = this._resourceSlot;
     return inputResource.fileOptions || (inputResource.fileOptions = {});
+  }
+
+  hmrAvailable() {
+    const fileOptions = this.getFileOptions() || {};
+
+    return this._resourceSlot.hmrAvailable() && !fileOptions.bare;
   }
 
   readAndWatchFileWithHash(path) {
@@ -1714,10 +1714,7 @@ export class PackageSourceBatch {
     const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
     onCacheKey(cacheKey, jsResources);
 
-    const canUseHMR = isApp && bundleArch === 'web.browser';
-    const canUseCache = !canUseHMR || previousLinkKey === cacheKey; 
-
-    if (canUseCache && LINKER_CACHE.has(cacheKey)) {
+    if (LINKER_CACHE.has(cacheKey)) {
       if (CACHE_DEBUG) {
         console.log('LINKER IN-MEMORY CACHE HIT:',
                     linkerOptions.name, bundleArch);
@@ -1740,7 +1737,7 @@ export class PackageSourceBatch {
       });
     }
 
-    if (canUseCache && cacheFilename) {
+    if (cacheFilename) {
       let diskCached = null;
       try {
         diskCached = files.readJSONOrNull(cacheFilename);
@@ -1813,10 +1810,6 @@ export class PackageSourceBatch {
           }
         });
       }
-    }
-
-    if (canUseHMR) {
-      previousLinkKey = cacheKey;
     }
 
     return ret;

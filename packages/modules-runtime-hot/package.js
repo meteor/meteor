@@ -9,16 +9,11 @@ Package.describe({
 Package.onUse(function (api) {
   api.addFiles("installer.js", [
     "client",
-    // "server"
   ], {
     bare: true
   });
 
   api.addFiles("modern.js", "modern");
-  // api.addFiles("legacy.js", "legacy");
-  // api.addFiles("server.js", "server");
-  // api.addFiles("profile.js");
-
   api.export("meteorInstall", "client");
 });
 
