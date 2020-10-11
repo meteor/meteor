@@ -1412,7 +1412,7 @@ class Target {
       const possiblyReplaceable = source._minifiedFiles.length === 1 && source._source.replaceable;
 
       source._minifiedFiles.forEach(file => {
-        if (typeof file.data === "string") {
+        if (typeof file.data === 'string') {
           file.data = Buffer.from(file.data, "utf8");
         }
         const replaceable = possiblyReplaceable && 

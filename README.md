@@ -13,7 +13,7 @@ With Meteor you write apps:
 * using your choice of popular open-source libraries
 
 Try a getting started tutorial:
- * [React](https://www.meteor.com/tutorials/react/creating-an-app)
+ * [React](https://react-tutorial.meteor.com) - new
  * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
  * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
  * [Vue](https://www.meteor.com/tutorials/vue/creating-an-app)
