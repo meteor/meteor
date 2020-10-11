@@ -2,8 +2,10 @@ import WS from 'ws';
 const crypto = require('crypto');
 
 export class HMRServer {
-  constructor({ proxy, hmrPath, secret }) {
+  constructor({ proxy, hmrPath, secret, projectContext }) {
     this.proxy = proxy;
+    this.projectContext = projectContext;
+
     this.hmrPath = hmrPath;
     this.secret = secret;
 
@@ -52,26 +54,40 @@ export class HMRServer {
 
       switch (message.type) {
         case 'register': {
-          const { arch, secret = '' } = message;
+          const { arch, appId, secret = '' } = message;
 
+          if (appId !== this.projectContext.appIdentifier) {
+            // A different app is trying to request changes
+            conn.send(JSON.stringify({
+              type: 'register-failed',
+              reason: 'wrong-app'
+            }));
+          }
           if (
             secret.length !== this.secret.length ||
             !crypto.timingSafeEqual(Buffer.from(secret), Buffer.from(this.secret))
           ) {
-            console.log('wrong hmr secret', this.secret, secret);
+            conn.send(JSON.stringify({
+              type: 'register-failed',
+              reason: 'wrong-secret'
+            }));
             conn.close();
             return;
           }
 
           this.connByArch[arch] = this.connByArch[arch] || [];
           this.connByArch[arch].push(conn);
+          connArch = arch;
           registered = true;
           break;
         }
 
         case 'request-changes': {
           if (!registered) {
-            throw new Error('HMR requested changes before registered');
+            // Might have sent the wrong secret or be the wrong app
+            // Even if we closed the connection, it might still handle
+            // this message.
+            return;
           }
           const { after, arch } = message;
 

@@ -119,7 +119,8 @@ class Runner {
       self.hmrServer = new HMRServer({
         proxy: self.proxy,
         hmrPath: HMRPath,
-        secret: hmrSecret
+        secret: hmrSecret,
+        projectContext: self.projectContext
       });
     }
 

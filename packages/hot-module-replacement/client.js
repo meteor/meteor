@@ -21,6 +21,24 @@ let pendingReload = () => Reload._reload({ immediateMigration: true });
 let mustReload = false;
 
 function handleMessage(message) {
+  if (message.type === 'register-failed') {
+    if (message.reason === 'wrong-app') {
+      console.log('HMR: A different app is running on', Meteor.absoluteUrl());
+      console.log('HMR: Once you start this app again reload the page to re-enable HMR');
+    } else if (message.reason === 'wrong-secret') {
+      // TODO: we could wait until the first update to use hot code push
+      // instead of reloading the page immediately in case the user has any
+      // client state they want to keep for now.
+      console.log('HMR: Have the wrong secret, possibly because Meteor was restarted');
+      console.log('HMR: Reloading page to get new secret');
+      mustReload = true;
+      pendingReload();
+    } else {
+      console.log(`HMR: Register failed for unknown reason`, message);
+    }
+    return;
+  }
+
   if (message.type !== 'changes') {
     throw new Error(`Unknown HMR message type ${message.type}`);
   }
@@ -96,6 +114,12 @@ function send(message) {
 }
 
 function connect() {
+  if (mustReload) {
+    // The page will reload, no reason to 
+    // connect and show more logs in the console
+    return;
+  }
+
   const wsUrl = Meteor.absoluteUrl('/__meteor__hmr__/websocket').replace(/^.+\/\//, 'ws://');
   socket = new WebSocket(wsUrl);
 
@@ -110,7 +134,8 @@ function connect() {
     socket.send(JSON.stringify({
       type: 'register',
       arch,
-      secret: __meteor_runtime_config__._hmrSecret
+      secret: __meteor_runtime_config__._hmrSecret,
+      appId: __meteor_runtime_config__.appId,
     }));
 
     const toSend = pendingMessages.slice();
