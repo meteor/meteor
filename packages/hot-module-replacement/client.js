@@ -5,7 +5,7 @@ const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
 // Due to the bundler and proxy running in the same node process
 // this could possibly be ran after the next build finished
-// TODO: the builder should inject the build time in the bundle
+// TODO: the builder should inject a build timestamp in the bundle
 let lastUpdated = Date.now();
 let appliedChangeSets = [];
 let reloadId = 0;
@@ -17,94 +17,126 @@ if (!enabled) {
   console.log(`HMR is not supported in ${arch}`);
 }
 
-let pendingReload = null;
+let pendingReload = () => Reload._reload({ immediateMigration: true });
 let mustReload = false;
 
-// TODO: handle disconnects
-const socket = new WebSocket('ws://localhost:3124');
+function handleMessage(message) {
+  if (message.type !== 'changes') {
+    throw new Error(`Unknown HMR message type ${message.type}`);
+  }
+
+  const hasUnreloadable = message.changeSets.find(changeSet => {
+    return !changeSet.reloadable;
+  });
+
+  if (
+    pendingReload &&
+    hasUnreloadable ||
+    message.changeSets.length === 0
+  ) {
+    if (message.eager) {
+      // This was an attempt to reload before the build finishes
+      // If we can't, we will wait until the build finishes to properly handle it
+      return;
+    }
+
+    console.log('HMR: Unable to do HMR. Falling back to hot code push.')
+    // Complete hot code push if we can not do hot module reload
+    mustReload = true;
+    return pendingReload();
+  }
+
+  // In case the user changed how a module works with HMR
+  // in one of the earlier change sets, we want to apply each
+  // change set one at a time in order.
+  const succeeded = message.changeSets.filter(changeSet => {
+    return !appliedChangeSets.includes(changeSet.id)
+  }).every(changeSet => {
+    const applied = applyChangeset(changeSet, message.eager);
+
+    // We don't record if a module is unreplaceable
+    // during an eager update so we can retry and
+    // handle the failure after the build finishes
+    if (applied || !message.eager) {
+      appliedChangeSets.push(changeSet.id);
+    }
+
+    return applied;
+  });
+
+  if (message.eager) {
+    // We will ignore any failures at this time
+    // and wait to handle them until the build finishes
+    return;
+  }
+
+  if (!succeeded) {
+    if (pendingReload) {
+      mustReload = true;
+      return pendingReload();
+    }
+
+    throw new Error('HMR failed and unable to fallback to hot code push?');
+  }
+
+  if (message.changeSets.length > 0) {
+    lastUpdated = message.changeSets[message.changeSets.length - 1].linkedAt;
+  }
+}
+
+let socket;
+let pendingMessages = [];
+
+function send(message) {
+  if (socket) {
+    socket.send(JSON.stringify(message));
+  } else {
+    pendingMessages.push(message);
+  }
+}
+
+function connect() {
+  const wsUrl = Meteor.absoluteUrl('/__meteor__hmr__/websocket').replace(/^.+\/\//, 'ws://');
+  socket = new WebSocket(wsUrl);
+
+  socket.addEventListener('close', function () {
+    socket = null;
+    console.log('HMR: websocket closed');
+    setTimeout(connect, 2000);
+  });
+
+  socket.addEventListener('open', function () {
+    console.log('HMR: connected');
+    socket.send(JSON.stringify({
+      type: 'register',
+      arch,
+      secret: __meteor_runtime_config__._hmrSecret
+    }));
+
+    const toSend = pendingMessages.slice();
+    pendingMessages = [];
+
+    toSend.forEach(message => {
+      send(message);
+    });
+  });
+
+  socket.addEventListener('message', function (event) {
+    handleMessage(JSON.parse(event.data));
+  });
+
+  socket.addEventListener('error', console.error);
+}
+
+connect();
 
 function requestChanges() {
-  socket.send(JSON.stringify({
+  send({
     type: 'request-changes',
     arch,
     after: lastUpdated
-  }));
+  });
 }
-
-socket.addEventListener('open', function () {
-  console.log('HMR: connected');
-  socket.send(JSON.stringify({
-    type: 'register',
-    arch
-  }));
-});
-
-socket.addEventListener('message', function (event) {
-  let message = JSON.parse(event.data);
-
-  switch (message.type) {
-    case 'changes':
-      // TODO: support removed
-      const hasUnreloadable = message.changeSets.find(changeSet => {
-        return !changeSet.reloadable ||
-          changeSet.removedFilePaths.length > 0
-      })
-
-      if (
-        pendingReload &&
-        hasUnreloadable ||
-        message.changeSets.length === 0
-      ) {
-        // This was an attempt to reload before the build finishes
-        // If we can't, we will wait until the build finishes to properly handle it
-        if (message.eager) {
-          return
-        }
-
-        console.log('HMR: Unable to do HMR. Falling back to hot code push.')
-        // Complete hot code push if we can not do hot module reload
-        mustReload = true;
-        return pendingReload();
-      }
-
-      // In case the user changed how a module works with HMR
-      // in one of the earlier change sets, we want to apply each
-      // change set one at a time in order.
-      const succeeded = message.changeSets.filter(changeSet => {
-        return !appliedChangeSets.includes(changeSet.id)
-      }).every(changeSet => {
-        const applied = applyChangeset(changeSet, message.eager);
-
-        // We don't record if a module is unreplaceable
-        // during an eager update so we can retry and
-        // handle the failure later
-        if (applied || !message.eager) {
-          appliedChangeSets.push(changeSet.id);
-        }
-
-        return applied;
-      });
-
-      if (message.eager) {
-        // We will ignore any failures at this time
-        // and wait to handle them until the build finishes
-        return;
-      }
-
-      if (!succeeded) {
-        if (pendingReload) {
-          mustReload = true;
-          return pendingReload();
-        }
-
-        throw new Error('HMR failed and unable to fallback to hot code push?');
-      }
-
-      if (message.changeSets.length > 0) {
-        lastUpdated = message.changeSets[message.changeSets.length - 1].linkedAt;
-      }
-  }
-});
 
 function walkTree(pathParts, tree) {
   const part = pathParts.shift();
@@ -126,7 +158,7 @@ function createInlineSourceMap(map) {
   return "//# sourceMappingURL=data:application/json;base64," + btoa(JSON.stringify(map));
 }
 
-function createModuleContent (code, map, id) {
+function createModuleContent (code, map) {
   return function () {
     return eval(
       // Wrap the function(require,exports,module){...} expression in
@@ -266,7 +298,6 @@ function applyChangeset({
   changedFiles,
   addedFiles
 }) {
-  // TODO: prevent requiring removed files
   const reloadableParents = [];
   let hasImportedModules = false;
 
@@ -300,16 +331,22 @@ function applyChangeset({
 
   reloadId += 1;
 
-  // TODO: deduplicate
   // TODO: handle errors
+  const evaluated = [];
   reloadableParents.forEach(parent => {
+    if (evaluated.includes(parent.module.id)) {
+      return;
+    }
+    evaluated.push(parent.module.id);
     rerunFile(parent);
   });
   console.log('HMR: finished updating');
   return true;
 }
 
-let nonRefreshableVersion = (__meteor_runtime_config__.autoupdate.versions || {})['web.browser'].versionNonRefreshable;
+const initialVersions = (__meteor_runtime_config__.autoupdate.versions || {})['web.browser'];
+let nonRefreshableVersion = initialVersions.versionNonRefreshable;
+let replaceableVersion = initialVersions.versionReplaceable;
 
 Meteor.startup(() => {
   if (!enabled) {
@@ -321,17 +358,14 @@ Meteor.startup(() => {
       return;
     }
 
-    // We can't do anything here until Reload._onMigrate
-    // has been called
-    if (!pendingReload) {
+    if (nonRefreshableVersion !== doc.versionNonRefreshable) {
       nonRefreshableVersion = doc.versionNonRefreshable;
-
-      return;
-    }
-
-    if (doc.versionNonRefreshable !== nonRefreshableVersion) {
+      console.log('HMR: Some changes can not be applied with HMR. Using hot code push.')
+      mustReload = true;
+      pendingReload();
+    } else if (doc.versionReplaceable !== replaceableVersion) {
+      replaceableVersion = doc.versionReplaceable;
       requestChanges();
-      nonRefreshableVersion = doc.versionNonRefreshable;
     }
   });
 

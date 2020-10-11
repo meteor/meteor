@@ -6,15 +6,7 @@ Plugin.registerCompiler({
   return new BabelCompiler({
     react: true
   }, (babelOptions, file) => {
-    // __hotState is set by the hot-module-replacement package
-    const hotReloadingAvailable = !!global.__hotState
-
-    // TODO: this should also use the reloadable checks done by hot-module-replacement
-    const canReload = process.env.NODE_ENV !== 'production' &&
-      file.getArch() === 'web.browser' &&
-      !file.getPackageName()
-
-    if (hotReloadingAvailable && canReload) {
+    if (file.hmrAvailable()) {
       babelOptions.plugins = babelOptions.plugins || []
       babelOptions.plugins.push(reactRefreshPlugin)      
     }
