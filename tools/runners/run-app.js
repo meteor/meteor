@@ -583,7 +583,7 @@ _.extend(AppRunner.prototype, {
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
           previousBuilders: self.builders,
-          onJsOutputFiles: self.hmrServer && self.hmrServer.compare.bind(self.hmrServer),
+          onJsOutputFiles: self.hmrServer ? self.hmrServer.compare.bind(self.hmrServer) : undefined,
           // Permit delayed bundling of client architectures if the
           // console is interactive.
           allowDelayedClientBuilds: ! Console.isHeadless(),
