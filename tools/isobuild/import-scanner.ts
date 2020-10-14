@@ -336,8 +336,8 @@ interface RawFile {
 }
 
 interface ImportIdentifiersEntry {
-  deps: [string];
-  sideEffects: boolean;
+  deps?: [string];
+  sideEffects?: boolean;
 }
 
 interface AnalyzeInfo {
@@ -436,26 +436,18 @@ export default class ImportScanner {
       identifiers?: Record<string, ImportInfo>;
       exports?: [string]
      */
-    if(file?.absModuleId?.includes("console-browserify")){
-      debugger;
-    }
     file.deps = file.deps || {};
     Object.entries(importInfo.identifiers || {}).forEach(([key, value]) => {
-      const dynamic = this.isWebBrowser() &&
-          (forDynamicImport ||
-              value.parentWasDynamic ||
-              value.dynamic);
 
       const current = file.deps[key];
       if(!current) {
-        file.deps[key] = {...value, dynamic};
+        file.deps[key] = {...value};
         return;
       }
 
       file.deps[key] = {
         ...current,
         imported: isHigherStatus(file.imported, current.imported) ? file.imported : current.imported,
-        dynamic: dynamic,
         commonJsImported: value.commonJsImported || current.commonJsImported,
         sideEffects: value.sideEffects || current.sideEffects
       };
@@ -853,7 +845,7 @@ export default class ImportScanner {
     if(!root.status) root.status = ImportTreeNodeStatus.WHITE;
     const importInfo = root.absImportedPath && this.filesInfo.get(root.absImportedPath) || {}
     if(root.absImportedPath) {
-      if(root.absImportedPath?.includes("console-browserify")){
+      if(root?.absImportedPath?.includes("uuid")){
         debugger;
       }
       this.addFile(root.absImportedPath, Object.assign(root.depFile, importInfo, {imported: this.importedStatusFile[root.absImportedPath]}));
@@ -932,7 +924,7 @@ export default class ImportScanner {
             // the _scanFile method, which is important because this file
             // doesn't have a .data or .dataString property.
             deps: { [id]: staticImportInfo }
-          }, false); // !forDynamicImport
+          }, false, {}, false, this.sideEffects); // !forDynamicImport
           this.addImportTree(tree);
         }
 
@@ -941,7 +933,7 @@ export default class ImportScanner {
             ...fakeStub,
             exports: ["*"], sideEffects: this.sideEffects,
             deps: { [id]: dynamicImportInfo },
-          }, true); // forDynamicImport
+          }, true, {}, true, this.sideEffects); // forDynamicImport
           this.addImportTree(tree);
         }
       });
@@ -1217,7 +1209,7 @@ export default class ImportScanner {
                    ) : ImportTreeNode {
 
 
-    const hasSideEffects = treeHasSideEffects || this.sideEffects || file.sideEffects;
+    const hasSideEffects = treeHasSideEffects || this.sideEffects;
 
     // Set file.imported to a truthy value (either "dynamic" or true).
     //TODO: we need a better logic to stop scanning a file.
@@ -1239,6 +1231,10 @@ export default class ImportScanner {
 
     let importInfo;
     let mergedInfo : AnalyzeInfo;
+    if(file.absPath?.includes("@material-ui/icons/esm/index.js")){
+      debugger
+    }
+
     try {
       importInfo = this.findImportedModuleIdentifiers(
           file,
@@ -1265,6 +1261,10 @@ export default class ImportScanner {
       }
       throw e;
     }
+    if(file.absModuleId?.includes("console")){
+      debugger;
+    }
+
 
     const rootChildren : ImportTreeNode = {
       children: [],
@@ -1281,9 +1281,9 @@ export default class ImportScanner {
       // browser (even though it works equally well on the server), so
       // it's better if forDynamicImport never becomes true on the server.
       const dynamic = this.isWebBrowser() &&
-        (forDynamicImport ||
-         file.imported === Status.DYNAMIC ||
-         info.dynamic) || false;
+          (forDynamicImport ||
+              info.parentWasDynamic ||
+              info.dynamic);
 
       const resolved = this.resolve(file, id, dynamic);
       const absImportedPath = resolved && resolved !== "missing" && resolved.path;
@@ -1354,9 +1354,12 @@ export default class ImportScanner {
       if (! depFile) {
         return;
       }
+
+
       if(depFile.alias) {
         console.log(`alias: ${JSON.stringify(depFile.alias)}`);
       }
+
 
       const parentImports = file.imports && file.imports[absImportedPath];
       if(!(this.visitedFromRoots[absImportedPath] || []).includes(fromFilePath)) {
@@ -1381,9 +1384,9 @@ export default class ImportScanner {
         depFile,
       };
 
-      // if(absImportedPath.includes("@apollo/react-ssr")){
-      //   debugger
-      // }
+      if(absImportedPath.includes("@material-ui/icons/esm/index.js")){
+        debugger
+      }
 
       const hasAnyImports = !!(file.imports || {})[absImportedPath];
       if(file.proxyImports &&
@@ -1402,7 +1405,7 @@ export default class ImportScanner {
         const isSomeSymbolImported = parentImportSymbols.deps.some((symbol) => {
           // @ts-ignore
           return depFileImportInfo?.includes(file.proxyImports[id][symbol]) || depFileImportInfo?.includes(symbol);
-        }) || parentImportSymbols.deps.includes("*");
+        }) || parentImportSymbols.deps?.includes("*");
         if(isSomeSymbolImported){
           rootChildren.children?.push(depRoot);
         }

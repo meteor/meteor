@@ -285,6 +285,7 @@ _.extend(Module.prototype, {
         });
 
         const stubArray = file.deps.slice(0);
+        console.log(`file.deps: ${file.deps}`);
 
         if (file.absModuleId.endsWith("/package.json") &&
             file.jsonData) {
@@ -746,6 +747,9 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       map: file.sourceMap || null,
     };
 
+    if(file.absModuleId && file.absModuleId.includes("acorn")){
+      debugger;
+    }
     var chunks = [];
     var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
 

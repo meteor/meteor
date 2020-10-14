@@ -215,15 +215,14 @@ const importedIdentifierVisitor = new (class extends Visitor {
             this.addDependency(firstArg.value, ['*'], true);
         } else if (node.callee.type === "Import" ||
             isIdWithName(node.callee, "import") ||
-            node.callee?.property?.name === "dynamicImport"
+            isPropertyWithName(node.callee.property, "dynamicImport")
         ) {
-            this.addIdentifier(firstArg.value, "import", true, false, true);
+            this.addIdentifier(firstArg.value, "import", true, true, true);
             this.addDependency(firstArg.value, ['*'], true);
         } else {
             if (isModuleUsage) {
                 const isImport =
-                    isPropertyWithName(node.callee.property, "link") ||
-                    isPropertyWithName(node.callee.property, "dynamicImport");
+                    isPropertyWithName(node.callee.property, "link");
 
                 if (isImport) {
                     // if we have an object definition on module.link(), we are importing with ES6 possible without side effects
@@ -233,7 +232,9 @@ const importedIdentifierVisitor = new (class extends Visitor {
                         this.addIdentifier(
                             firstArg.value,
                             "import",
-                            isImport === "dynamicImport"
+                            false,
+                            false,
+                            true
                         );
                         return;
                     }
@@ -267,7 +268,9 @@ const importedIdentifierVisitor = new (class extends Visitor {
                             this.addIdentifier(
                                 firstArg.value,
                                 "import",
-                                isImport === "dynamicImport"
+                                false,
+                                true,
+                                true
                             );
                         }
                         this.addDependency(firstArg.value, secondArg.properties.map(({key, value}) => {
@@ -283,7 +286,9 @@ const importedIdentifierVisitor = new (class extends Visitor {
                     this.addIdentifier(
                         firstArg.value,
                         "import",
-                        isImport === "dynamicImport"
+                        false,
+                        false,
+                        false
                     );
                     const importIdentifiers = secondArg.properties.map(({key}) => key.name || "*");
                     // console.log(importIdentifiers);
@@ -321,8 +326,8 @@ const importedIdentifierVisitor = new (class extends Visitor {
     }
 });
 
-export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle = new Set(), resolveMap, fileImportState, arch) {
-    const possibleIndexes = findPossibleIndexes(source, [
+export function removeUnusedExports(file, exportInfo, allFilesOnBundle = new Set(), resolveMap, fileImportState, arch) {
+    const possibleIndexes = findPossibleIndexes(file.dataString, [
         "export",
         "exportDefault",
         "link",
@@ -333,10 +338,18 @@ export function removeUnusedExports(source, hash, exportInfo, allFilesOnBundle =
         return {};
     }
 
-    const ast = tryToParse(source, hash);
-    removeUnusedExportsVisitor.visit(ast, source, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap, fileImportState, arch);
-    const newSource = generate(ast, getDefaultOptions()).code;
-    return {source: newSource, madeChanges: removeUnusedExportsVisitor.madeChanges};
+    const ast = tryToParse(file.dataString, file.hash);
+    removeUnusedExportsVisitor.visit(ast, file.dataString, possibleIndexes, exportInfo, allFilesOnBundle, resolveMap, fileImportState, arch);
+    const babelOptions = getDefaultOptions({
+        nodeMajorVersion: parseInt(process.versions.node, 10),
+        compileForShell: true
+    });
+
+    const filename = file.absModuleId;
+    console.log(filename);
+    const {code, map} = generate(ast, {...babelOptions, sourceMaps: true, sourceFileName: filename});
+
+    return {source: code, map, madeChanges: removeUnusedExportsVisitor.madeChanges};
 }
 
 const removeUnusedExportsVisitor = new (class extends Visitor {
@@ -411,23 +424,24 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
             if (isImport) {
                 if(firstArg.value && firstArg.value.startsWith("meteor/")) return;
                 if(node.arguments.length <= 1) return;
+                if(Resolver.isNative(firstArg.value)){
+                    return;
+                }
                 const absPath = this.resolveMap.get(firstArg.value);
                 const fileIsInBundle = absPath && this.allFilesOnBundle.has(absPath) || false;
+                const importStatus = this.fileImportState.get(absPath);
+                const isDynamic = importStatus === 'dynamic';
                 if(fileIsInBundle && isPropertyWithName(node.callee.property, "link")){
                     // we are seeing a static import, but this import might have been "tree-shaked", remaining only the dynamic import
-                    const importStatus = this.fileImportState.get(absPath);
-                    if(importStatus === 'dynamic' || !importStatus){
+                    if(isDynamic || !importStatus){
                         path.replace({
                             type: "BooleanLiteral",
                             value: false,
                         });
                     }
                 }
-                if (!fileIsInBundle) {
+                if (!fileIsInBundle && !isDynamic) {
                     // we don't want to remove any native node module import, as they are not bundled in the server bundle
-                    if(Resolver.isNative(firstArg.value)){
-                        return;
-                    }
                     path.replace({
                         type: "BooleanLiteral",
                         value: false,

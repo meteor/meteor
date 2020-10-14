@@ -1174,9 +1174,6 @@ class Target {
       jsOutputFilesMap.get(name).files.forEach((file) => {
         const fileResolveMap = resolveMap.get(file.absPath) || new Map();
         Object.entries(file.deps || {}).forEach(([key, depInfo]) => {
-          if(key.includes("jquery")){
-            debugger;
-          }
           const absKey = fileResolveMap.get(key);
           const wasImported = importMap.get(absKey) || false;
           importMap.set(absKey, {commonJsImported: wasImported || depInfo.commonJsImported});
@@ -1195,7 +1192,13 @@ class Target {
       return value.files.map(({absPath}) => absPath);
     }));
 
-    const appSideEffects = sourceBatches.find((sourceBatch) => sourceBatch.unibuild.pkg.name == null).unibuild.pkg.sideEffects ?? true
+    const sourceBatch = sourceBatches.find((sourceBatch) => {
+      const name = sourceBatch.unibuild.pkg.name || null;
+      return !name;
+    });
+    const appSideEffects = sourceBatch ? sourceBatch.unibuild.pkg.sideEffects : true;
+
+    console.log(`appSideEffects: ${appSideEffects}`);
 
     // now we need to remove the exports, and let the minifier do it's job later
     sourceBatches.forEach((sourceBatch) => {
@@ -1216,9 +1219,11 @@ class Target {
         if(importedSymbolsFromFile?.commonJsImported){
           return;
         }
-        const { source:newSource, madeChanges } = removeUnusedExports(
-            file.dataString,
-            file.hash,
+        if(file.absPath && file.absPath.includes("node_modules/acorn/dist/acorn.mjs")){
+          debugger;
+        }
+        const { source: newSource, map, madeChanges } = removeUnusedExports(
+            file,
             importedSymbolsFromFile,
             allFilesOnBundle,
             resolveMap.get(file.absPath) || new Map(),
@@ -1231,6 +1236,7 @@ class Target {
           file.data = Buffer.from(newSource, "utf8");
           file.source = Buffer.from(newSource, "utf8");
           file.hash = sha1(file.data);
+          file.sourceMap = map;
         }
       })
     })

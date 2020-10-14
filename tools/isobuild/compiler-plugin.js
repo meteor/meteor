@@ -1327,7 +1327,11 @@ export class PackageSourceBatch {
     // relocated to a source batch that could handle them.
     const allRelocatedModules = Object.create(null);
     const scannerMap = new Map;
-    const appSideEffects = sourceBatches.find((sourceBatch) => sourceBatch.unibuild.pkg.name == null).unibuild.pkg.sideEffects ?? true
+    const sourceBatch = sourceBatches.find((sourceBatch) => {
+      const name = sourceBatch.unibuild.pkg.name || null;
+      return !name;
+    });
+    const appSideEffects = sourceBatch ? sourceBatch.unibuild.pkg.sideEffects : true;
 
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
