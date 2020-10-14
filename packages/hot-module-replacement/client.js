@@ -303,6 +303,11 @@ module.constructor.prototype.replaceModule = function (id, contents) {
     replaceFileContent(file, contents);
   }
 
+  if (!file.module.exports) {
+    // File hasn't been imported.
+    return null;
+  }
+
   // Clear cached exports
   // TODO: check how this affects live bindings for ecmascript modules
   delete file.module.exports;
@@ -329,13 +334,11 @@ function applyChangeset({
   changedFiles.forEach(({ content, path }) => {
     const file = module.replaceModule(path, content);
 
-    // file will be null for dynamic imports that haven't been
-    // imported
     if (file) {
       hasImportedModules = true;
       reloadableParents.push(...findReloadableParents({ self: file }));
     } else {
-      console.log(`Unable to replace module ${path}. It is probably a dynamic file that hasn't been imported`);
+      console.log(`HMR: Updated file that hasn't been imported: ${path}`);
     }
   });
 
