@@ -12,6 +12,29 @@ N/A
 
 * Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
 
+## v2.0, TDB
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+#### Hot module replacement (HMR):  
+
+  `meteor --extra-packages hot-module-replacement`
+  
+  HMR updates modified files in the app without having to reload the page or restart the app. This is usually faster (many times updating the page before the build has finished), and allows state to be preserved, though it is also less reliable. In situations where HMR is not supported, it uses hot code push to update the page.
+
+  HMR is only available for apps that use the modules package. It will probably not work correctly with apps that use globals (though globals from packages or npm dependencies are fine) since it uses import/require to detect which modules need to be re-evaluated. [more](https://github.com/meteor/meteor/pull/11117)
+
+#### Other changes
+* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+
 ## v1.11.1, 2020-09-16
 
 ### Breaking changes
