@@ -25,8 +25,9 @@ N/A
 ### Changes
 
 #### Hot module replacement (HMR):  
-
-  `meteor --extra-packages hot-module-replacement`
+  To use Hot module replacement in your Meteor app you need to add the package `hot-module-replacement`. You can do this by running `meteor add hot-module-replacement`. 
+  
+  This package is only for development (`debugOnly`). You don't need to worry about it affecting your production bundle.
   
   HMR updates modified files in the app without having to reload the page or restart the app. This is usually faster (many times updating the page before the build has finished), and allows state to be preserved, though it is also less reliable. In situations where HMR is not supported, it uses hot code push to update the page.
 
