@@ -72,7 +72,6 @@ const pinnedPluginVersions = {
   "cordova-plugin-test-framework": "1.1.5",
   "cordova-plugin-vibration": "2.1.5",
   "cordova-plugin-whitelist": "1.3.2",
-  "cordova-plugin-wkwebview-engine": "1.1.3"
 }
 
 /**
