@@ -14,6 +14,7 @@ import { execFileSync } from '../utils/processes';
 
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
+import create from "cordova-create";
 import cordova_util from 'cordova-lib/src/cordova/util.js';
 import PluginInfoProvider from 'cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
@@ -207,7 +208,7 @@ outdated platforms`);
       this.runCommands('creating Cordova project', async () => {
         // No need to pass in appName and appId because these are set from
         // the generated config.xml
-        await cordova_lib.create(files.convertToOSPath(this.projectRoot),
+        await create(files.convertToOSPath(this.projectRoot),
           undefined, undefined, config);
       }, undefined, null);
     }
