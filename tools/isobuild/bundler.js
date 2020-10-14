@@ -1281,7 +1281,10 @@ class Target {
             data: resource.data,
             hash: resource.hash,
             cacheable: false,
-            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable
+            // Temporarily override for the dynamic-import package
+            // to allow updating with HMR the modules that are 
+            // dynamically imported
+            replaceable: resource.type === 'js' && (sourceBatch.hmrAvailable || name === 'dynamic-import')
           });
 
           const relPath = stripLeadingSlash(resource.servePath);
@@ -1794,6 +1797,7 @@ class ClientTarget extends Target {
           where: manifestItem.where,
           cacheable: manifestItem.cacheable,
           hash: manifestItem.hash,
+          replaceable: manifestItem.replaceable,
         });
 
         // Now that we've written the module with a source map URL comment
