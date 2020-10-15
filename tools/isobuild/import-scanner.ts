@@ -1261,9 +1261,6 @@ export default class ImportScanner {
       }
       throw e;
     }
-    if(file.absModuleId?.includes("console")){
-      debugger;
-    }
 
 
     const rootChildren : ImportTreeNode = {
@@ -1310,7 +1307,7 @@ export default class ImportScanner {
 
       const visitFrom = `${fromFilePath}->${absImportedPath}`;
 
-      const depHasSideEffects = info.sideEffects || hasSideEffects;
+      const depHasSideEffects = info.sideEffects;
       if (depFile) {
 
         // We should never have stored a fake file in this.outputFiles, so
@@ -1926,7 +1923,6 @@ export default class ImportScanner {
     const deps = pkgFile.deps || (pkgFile.deps = Object.create(null));
     const absPkgJsonPath = pathJoin(this.sourceRoot, pkgFile.sourcePath);
 
-    console.log(`resolvePkgJsonBrowserAliases: ${JSON.stringify(browser)}`);
     Object.keys(browser).forEach(sourceId => {
       deps[sourceId] = deps[sourceId] || {};
 
@@ -1944,7 +1940,6 @@ export default class ImportScanner {
       }
 
       const sourceAbsModuleId = this.getAbsModuleId(source.path);
-      console.log(`sourceAbsModuleId: ${sourceAbsModuleId}`);
       if(sourceAbsModuleId === '/node_modules/meteor-node-stubs/node_modules/assert/node_modules/util/support/isBuffer.js'){
         debugger;
       }

@@ -285,7 +285,6 @@ _.extend(Module.prototype, {
         });
 
         const stubArray = file.deps.slice(0);
-        console.log(`file.deps: ${file.deps}`);
 
         if (file.absModuleId.endsWith("/package.json") &&
             file.jsonData) {

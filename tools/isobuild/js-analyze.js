@@ -211,14 +211,14 @@ const importedIdentifierVisitor = new (class extends Visitor {
         }
 
         if (isIdWithName(node.callee, "require")) {
-            this.addIdentifier(firstArg.value, "require", false, true, true);
-            this.addDependency(firstArg.value, ['*'], true);
+            this.addIdentifier(firstArg.value, "require", false, true, false);
+            this.addDependency(firstArg.value, ['*'], false);
         } else if (node.callee.type === "Import" ||
             isIdWithName(node.callee, "import") ||
             isPropertyWithName(node.callee.property, "dynamicImport")
         ) {
-            this.addIdentifier(firstArg.value, "import", true, true, true);
-            this.addDependency(firstArg.value, ['*'], true);
+            this.addIdentifier(firstArg.value, "import", true, true, false);
+            this.addDependency(firstArg.value, ['*'], false);
         } else {
             if (isModuleUsage) {
                 const isImport =
@@ -270,7 +270,7 @@ const importedIdentifierVisitor = new (class extends Visitor {
                                 "import",
                                 false,
                                 true,
-                                true
+                                false
                             );
                         }
                         this.addDependency(firstArg.value, secondArg.properties.map(({key, value}) => {
@@ -346,7 +346,6 @@ export function removeUnusedExports(file, exportInfo, allFilesOnBundle = new Set
     });
 
     const filename = file.absModuleId;
-    console.log(filename);
     const {code, map} = generate(ast, {...babelOptions, sourceMaps: true, sourceFileName: filename});
 
     return {source: code, map, madeChanges: removeUnusedExportsVisitor.madeChanges};

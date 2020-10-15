@@ -1175,13 +1175,15 @@ class Target {
         const fileResolveMap = resolveMap.get(file.absPath) || new Map();
         Object.entries(file.deps || {}).forEach(([key, depInfo]) => {
           const absKey = fileResolveMap.get(key);
-          const wasImported = importMap.get(absKey) || false;
-          importMap.set(absKey, {commonJsImported: wasImported || depInfo.commonJsImported});
+          const importMapValue = importMap.get(absKey);
+          const wasImported = importMapValue && importMapValue.commonJsImported || false;
+          importMap.set(absKey, {...importMapValue, commonJsImported: wasImported || depInfo.commonJsImported});
         })
         Object.entries(file.imports || []).forEach(([key, object]) => {
+          const importMapValue = importMap.get(key) || {};
           importMap.set(key, {
-            ...importMap.get(key) || {},
-            deps: [...new Set([...(importMap.get(key)?.deps || []), ...object.deps])],
+            ...importMapValue || [],
+            deps: [...new Set([...(importMapValue?.deps || []), ...object.deps])],
             sideEffects: object.sideEffects
           })
         })
@@ -1218,9 +1220,6 @@ class Target {
         // if it was commonjsImported we have nothing to do here
         if(importedSymbolsFromFile?.commonJsImported){
           return;
-        }
-        if(file.absPath && file.absPath.includes("node_modules/acorn/dist/acorn.mjs")){
-          debugger;
         }
         const { source: newSource, map, madeChanges } = removeUnusedExports(
             file,
