@@ -429,7 +429,7 @@ export default class ImportScanner {
   private filesInfo: Map<string, JSAnalyzeInfo>;
 
 
-  private mergeImportInfo(file: any, importInfo: JSAnalyzeInfo, forDynamicImport: boolean): AnalyzeInfo {
+  private mergeImportInfo(file: any, importInfo: JSAnalyzeInfo): AnalyzeInfo {
     /*
       dependencies?: Record<string, ImportIdentifiersEntry>;
       proxyDependencies?: Record<string, ImportIdentifiersEntry>;
@@ -1245,10 +1245,10 @@ export default class ImportScanner {
       // this is actually an temporary dependency tree, we will need to analyze the
       // children to see what they are exporting
       const cachedFileInfo = this.filesInfo.get(file.absPath) || {};
-      mergedInfo = this.mergeImportInfo(cachedFileInfo, importInfo, forDynamicImport);
+      mergedInfo = this.mergeImportInfo(cachedFileInfo, importInfo);
       // we only need the local view here, later we will need the global, merged one
       this.filesInfo.set(file.absPath, mergedInfo);
-      this.mergeImportInfo(file, importInfo, forDynamicImport)
+      this.mergeImportInfo(file, importInfo)
 
     } catch (e) {
       if (e.$ParseError) {

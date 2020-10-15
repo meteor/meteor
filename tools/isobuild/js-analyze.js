@@ -428,18 +428,7 @@ const removeUnusedExportsVisitor = new (class extends Visitor {
                 }
                 const absPath = this.resolveMap.get(firstArg.value);
                 const fileIsInBundle = absPath && this.allFilesOnBundle.has(absPath) || false;
-                const importStatus = this.fileImportState.get(absPath);
-                const isDynamic = importStatus === 'dynamic';
-                if(fileIsInBundle && isPropertyWithName(node.callee.property, "link")){
-                    // we are seeing a static import, but this import might have been "tree-shaked", remaining only the dynamic import
-                    if(isDynamic || !importStatus){
-                        path.replace({
-                            type: "BooleanLiteral",
-                            value: false,
-                        });
-                    }
-                }
-                if (!fileIsInBundle && !isDynamic) {
+                if (!fileIsInBundle) {
                     // we don't want to remove any native node module import, as they are not bundled in the server bundle
                     path.replace({
                         type: "BooleanLiteral",
