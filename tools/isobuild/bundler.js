@@ -1281,10 +1281,7 @@ class Target {
             data: resource.data,
             hash: resource.hash,
             cacheable: false,
-            // Temporarily override for the dynamic-import package
-            // to allow updating with HMR the modules that are 
-            // dynamically imported
-            replaceable: resource.type === 'js' && (sourceBatch.hmrAvailable || name === 'dynamic-import')
+            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable
           });
 
           const relPath = stripLeadingSlash(resource.servePath);
