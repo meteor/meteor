@@ -1200,8 +1200,6 @@ class Target {
     });
     const appSideEffects = sourceBatch ? sourceBatch.unibuild.pkg.sideEffects : true;
 
-    console.log(`appSideEffects: ${appSideEffects}`);
-
     // now we need to remove the exports, and let the minifier do it's job later
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
