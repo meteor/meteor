@@ -617,7 +617,12 @@ export async function bundleAndDeploy(options) {
       method: 'POST',
       operation: 'deploy',
       site: site,
-      qs: Object.assign({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
+      qs: Object.assign(
+        {},
+        options.rawOptions,
+        settings !== null ? {settings: settings} : {},
+        { mongo: options.mongo }
+      ),
       bodyStream: createTarGzStream(pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
       preflightPassword: preflight.preflightPassword,
