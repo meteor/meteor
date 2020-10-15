@@ -42,6 +42,10 @@ HTTP.call = function(method, url, options, callback) {
   var headers = {};
 
   var content = options.content;
+  if (options.content && typeof options.content !== "string") {
+    content = JSON.stringify(options.content);
+    headers['Content-Type'] = 'application/json';
+  }
   if (options.data) {
     content = JSON.stringify(options.data);
     headers['Content-Type'] = 'application/json';
