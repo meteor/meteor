@@ -621,7 +621,7 @@ export async function bundleAndDeploy(options) {
         {},
         options.rawOptions,
         settings !== null ? {settings: settings} : {},
-        { free: options.free },
+        { free: options.free, mongo: options.mongo },
       ),
       bodyStream: createTarGzStream(pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
