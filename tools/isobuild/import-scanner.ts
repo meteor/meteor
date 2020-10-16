@@ -845,10 +845,8 @@ export default class ImportScanner {
     if(!root.status) root.status = ImportTreeNodeStatus.WHITE;
     const importInfo = root.absImportedPath && this.filesInfo.get(root.absImportedPath) || {}
     if(root.absImportedPath) {
-      if(root?.absImportedPath?.includes("uuid")){
-        debugger;
-      }
-      this.addFile(root.absImportedPath, Object.assign(root.depFile, importInfo, {imported: this.importedStatusFile[root.absImportedPath]}));
+      const imported = this.importedStatusFile[root.absImportedPath] || root.depFile?.imported || false;
+      this.addFile(root.absImportedPath, Object.assign(root.depFile, importInfo, {imported}));
     }
     root.status = ImportTreeNodeStatus.GRAY;
 
@@ -1231,9 +1229,6 @@ export default class ImportScanner {
 
     let importInfo;
     let mergedInfo : AnalyzeInfo;
-    if(file.absPath?.includes("@material-ui/icons/esm/index.js")){
-      debugger
-    }
 
     try {
       importInfo = this.findImportedModuleIdentifiers(
@@ -1386,6 +1381,7 @@ export default class ImportScanner {
       }
 
       const hasAnyImports = !!(file.imports || {})[absImportedPath];
+
       if(file.proxyImports &&
           file.proxyImports[id] &&
           parentImportSymbols &&
@@ -1857,9 +1853,7 @@ export default class ImportScanner {
 
   private setImportedStatusGlobal(file: File, status: string | boolean){
     const newStatus = setImportedStatus(file, status);
-    if(isHigherStatus(newStatus, this.importedStatusFile[file.absPath])){
-      this.importedStatusFile[file.absPath] = newStatus;
-    }
+    this.importedStatusFile[file.absPath] = newStatus
   }
 
   private addPkgJsonToOutput(
