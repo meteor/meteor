@@ -1159,6 +1159,14 @@ main.registerCommand({
   const showJson = !!options['json'];
   const showTree = !!options['tree'];
 
+  const suffixes = {
+    topLevel: '(top level)',
+    expandedAbove: '(expanded above)',
+    weak: '[weak]',
+    skipped: 'package skipped',
+    missing: 'missing?'
+  }
+
   if (showJson && showTree) {
     throw new Error('can only run for one option,found --json and --tree');
   }
@@ -1210,9 +1218,11 @@ main.registerCommand({
           indent1 += (shouldExpand ? '┬' : '─') + ' ';
         }
 
-        let suffix = (isWeak ? '[weak]' : '');
+        let suffix = (isWeak ? suffixes.weak : '');
         if (expandedAlready) {
-          suffix += topLevelSet.has(packageName) ? ' (top level)' : ' (expanded above)';
+          suffix += topLevelSet.has(packageName)
+            ? ` ${suffixes.topLevel}`
+            : ` ${suffixes.expandedAbove}`
         }
 
         Console.info(indent1 + packageName + '@' + packageToPrint.version + suffix);
@@ -1224,9 +1234,9 @@ main.registerCommand({
           // on expanded packages we only want to add minimal information to
           // keep the json file compact, so we make the value a stirng
           if (topLevelSet.has(packageName)) {
-            parent[packageName] = `${packageToPrint.version}-(top-level)`
+            parent[packageName] = `${packageToPrint.version}-${suffixes.topLevel}`
           } else {
-            parent[packageName] = `${packageToPrint.version}-(expanded-above)`
+            parent[packageName] = `${packageToPrint.version}-${suffixes.expandedAbove}`
           }
         } else {
           // on non-expanded packages we want detailed information but we
@@ -1274,9 +1284,9 @@ main.registerCommand({
                 indent2: newIndent2
               });
             } else if (weakRef) {
-              Console.info(newIndent1 + '─ ' + dep + '[weak] package skipped');
+              Console.info(`${newIndent1}─ ${dep} ${suffixes.weak} ${suffixes.skipped}`);
             } else {
-              Console.info(newIndent1 + '─ ' + dep + ' missing?');
+              Console.info(`${newIndent1}─ ${dep} ${suffixes.missing}`);
             }
           }
 
@@ -1288,9 +1298,9 @@ main.registerCommand({
                 parent: parent[packageName].dependencies
               });
             } else if (weakRef) {
-              parent[packageName].dependencies[dep] = '[weak]-package-skipped';
+              parent[packageName].dependencies[dep] = `${suffixes.weak} ${suffixes.skipped}`;
             } else {
-              parent[packageName].dependencies = 'missing?';
+              parent[packageName].dependencies = suffixes.missing;
             }
           }
         });
