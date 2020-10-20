@@ -10,7 +10,59 @@ N/A
 
 ### Changes
 
-* `--apollo` skeleton was missing client cache setup [PR #11146](https://github.com/meteor/meteor/pull/11146)
+* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+
+## v2.0, TDB
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+#### Hot module replacement (HMR):  
+  To use Hot module replacement in your Meteor app you need to add the package `hot-module-replacement`. You can do this by running `meteor add hot-module-replacement`. 
+  
+  This package is only for development (`debugOnly`). You don't need to worry about it affecting your production bundle.
+  
+  HMR updates modified files in the app without having to reload the page or restart the app. This is usually faster (many times updating the page before the build has finished), and allows state to be preserved, though it is also less reliable. In situations where HMR is not supported, it uses hot code push to update the page.
+
+  HMR is only available for apps that use the modules package. It will probably not work correctly with apps that use globals (though globals from packages or npm dependencies are fine) since it uses import/require to detect which modules need to be re-evaluated. [more](https://github.com/meteor/meteor/pull/11117)
+
+#### Other changes
+* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+
+## v1.11.1, 2020-09-16
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* `--apollo` skeleton was missing client cache setup [more](https://github.com/meteor/meteor/pull/11146)
+
+* `--vue` skeleton was updated to use proper folder structure [more](https://github.com/meteor/meteor/pull/11174)
+
+* All skeletons got their `npm` dependencies updated. [more](https://github.com/meteor/meteor/pull/11172)
+
+* Node.js has been updated to version [12.18.4](https://nodejs.org/en/blog/release/v12.18.4/), this is a [security release](https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/)
+
+* Updated npm to version 6.14.8 [more](https://blog.npmjs.org/post/626732790304686080/release-6148)
+
+* `npm-mongo` version 3.8.1 was published, updating `mongodb` to [3.6.2](https://github.com/mongodb/node-mongodb-native/releases/tag/v3.6.2) [more](https://github.com/advisories/GHSA-pp7h-53gx-mx7r)
+
+* Updated PostCSS from 7.0.31 to 7.0.32 [more](https://github.com/meteor/meteor/issues/10682)
+
+* Allow android-webview-video-poster [more](https://github.com/meteor/meteor/pull/11159)
 
 ## v1.11, 2020-08-18
 

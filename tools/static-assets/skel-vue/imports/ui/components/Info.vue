@@ -15,7 +15,7 @@
 </template>
 
 <script>
-import Links from '../collections/Links'
+import Links from '../../api/collections/Links'
 
 export default {
   data() {
