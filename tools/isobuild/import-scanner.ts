@@ -845,8 +845,7 @@ export default class ImportScanner {
     if(!root.status) root.status = ImportTreeNodeStatus.WHITE;
     const importInfo = root.absImportedPath && this.filesInfo.get(root.absImportedPath) || {}
     if(root.absImportedPath) {
-      const imported = this.importedStatusFile[root.absImportedPath] || root.depFile?.imported || false;
-      this.addFile(root.absImportedPath, Object.assign(root.depFile, importInfo, {imported}));
+      this.addFile(root.absImportedPath, Object.assign(root.depFile, importInfo));
     }
     root.status = ImportTreeNodeStatus.GRAY;
 
