@@ -9,7 +9,7 @@ import {
   isInfOrNaN,
   handleError,
 } from './utils';
-import Base64 from 'meteor/base64';
+
 /**
  * @namespace
  * @summary Namespace for EJSON functions
