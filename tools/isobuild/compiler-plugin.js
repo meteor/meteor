@@ -1326,6 +1326,7 @@ export class PackageSourceBatch {
     // Records the subset of allMissingModules that were successfully
     // relocated to a source batch that could handle them.
     const allRelocatedModules = Object.create(null);
+    let allMissingModulesAbsPath = Object.create(null);
     const scannerMap = new Map;
     const sourceBatch = sourceBatches.find((sourceBatch) => {
       const name = sourceBatch.unibuild.pkg.name || null;
@@ -1432,6 +1433,7 @@ export class PackageSourceBatch {
           scannerMap.get(name).scanMissingModules(missing);
         ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);
         ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
+        allMissingModulesAbsPath = { ...scannerMap.get(name).missingDepsAbsPath, ...(allMissingModulesAbsPath || {})};
       });
 
       if (! _.isEmpty(nextMissingModules)) {
@@ -1516,10 +1518,10 @@ export class PackageSourceBatch {
         resolveMap.set(key, current);
       });
     });
-    return this._watchOutputFiles(map, resolveMap, fileImportState);
+    return this._watchOutputFiles(map, resolveMap, fileImportState, allMissingModulesAbsPath);
   }
 
-  static _watchOutputFiles(jsOutputFilesMap, resolveMap, fileImportState) {
+  static _watchOutputFiles(jsOutputFilesMap, resolveMap, fileImportState, allMissingModulesAbsPath) {
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
@@ -1546,7 +1548,8 @@ export class PackageSourceBatch {
         }
       });
     });
-    return { jsOutputFilesMap, resolveMap, fileImportState };
+
+    return { jsOutputFilesMap, resolveMap, fileImportState, allMissingModulesAbsPath };
   }
 
   static _warnAboutMissingModules(missingModules) {

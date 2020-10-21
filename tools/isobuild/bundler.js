@@ -1136,8 +1136,12 @@ class Target {
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
-    const { jsOutputFilesMap, resolveMap = new Map(), fileImportState = new Map() } = compilerPluginModule.PackageSourceBatch
-      .computeJsOutputFilesMap(sourceBatches);
+    const {
+      jsOutputFilesMap,
+      resolveMap = new Map(),
+      fileImportState = new Map(),
+      allMissingModulesAbsPath = {}
+    } = compilerPluginModule.PackageSourceBatch.computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
       const { unibuild } = batch;
@@ -1175,13 +1179,24 @@ class Target {
         const fileResolveMap = resolveMap.get(file.absPath) || new Map();
         Object.entries(file.deps || {}).forEach(([key, depInfo]) => {
           const absKey = fileResolveMap.get(key);
-          const importMapValue = importMap.get(absKey);
+          const importMapValue = importMap.get(absKey) ||
+                      (allMissingModulesAbsPath && allMissingModulesAbsPath[key] ?
+                            importMap.get(allMissingModulesAbsPath[key]) : {});
           const wasImported = importMapValue && importMapValue.commonJsImported || false;
           importMap.set(absKey, {...importMapValue, commonJsImported: wasImported || depInfo.commonJsImported});
         })
         Object.entries(file.imports || []).forEach(([key, object]) => {
-          const importMapValue = importMap.get(key) || {};
-          importMap.set(key, {
+          let importMapValue;
+          let identifier;
+          if(files.pathIsAbsolute(key)){
+            importMapValue = importMap.get(key) || {};
+            identifier = key;
+          }else{
+            importMapValue = allMissingModulesAbsPath && allMissingModulesAbsPath[key] ?
+                importMap.get(allMissingModulesAbsPath[key]) : {};
+            identifier = allMissingModulesAbsPath[key] || key;
+          }
+          importMap.set(identifier, {
             ...importMapValue || [],
             deps: [...new Set([...(importMapValue?.deps || []), ...object.deps])],
             sideEffects: object.sideEffects

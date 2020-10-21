@@ -427,6 +427,7 @@ export default class ImportScanner {
   private allMissingModules: MissingMap = Object.create(null);
   private outputFiles: File[] = [];
   private filesInfo: Map<string, JSAnalyzeInfo>;
+  public missingDepsAbsPath: Record<string, string>;
 
 
   private mergeImportInfo(file: any, importInfo: JSAnalyzeInfo): AnalyzeInfo {
@@ -501,6 +502,7 @@ export default class ImportScanner {
     this.sourceRoot = sourceRoot;
     this.nodeModulesPaths = nodeModulesPaths;
     this.visitedFromRoots = {};
+    this.missingDepsAbsPath = {};
 
     this.defaultHandlers = new DefaultHandlers({
       cacheDir,
@@ -1281,6 +1283,11 @@ export default class ImportScanner {
       if (! absImportedPath) {
         return;
       }
+      // we are dealing with a dep that was marked as missing
+      if(file[fakeSymbol]){
+        this.missingDepsAbsPath[id] = absImportedPath;
+      }
+
       if(file.imports && file.imports[id]){
         file.imports[absImportedPath] = file.imports[id];
         if(mergedInfo && mergedInfo.imports){
