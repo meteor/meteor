@@ -48,9 +48,8 @@ meteorJsMinify = function (source, options) {
   }, {});
   globalDefsMapping.Meteor = {...globalDefsMapping.Meteor, ...customSettings};
   try {
-    //TODO: uncomment this code
-    // var optimizedCode = Babel.replaceMeteorInternalState(source, globalDefsMapping)
-    var terserResult = Meteor.wrapAsync(callback => terser.minify(source, {
+    var optimizedCode = Babel.replaceMeteorInternalState(source, globalDefsMapping)
+    var terserResult = Meteor.wrapAsync(callback => terser.minify(optimizedCode, {
       compress: {
         drop_debugger: false,
         unused: true,
