@@ -1437,7 +1437,7 @@ class Target {
   minifyJs(minifierDef, minifyMode) {
     const staticFiles = [];
     const dynamicFiles = [];
-    const { arch } = this;
+    const { arch, buildMode } = this;
     const inputHashesByJsFile = new Map;
 
     this.js.forEach(file => {
@@ -1460,7 +1460,7 @@ class Target {
     buildmessage.enterJob('minifying app code', function () {
       try {
         Promise.all([
-          markedMinifier(staticFiles, { minifyMode, arch }),
+          markedMinifier(staticFiles, { minifyMode, arch, buildMode }),
           ...dynamicFiles.map(
             file => markedMinifier([file], { minifyMode, arch })
           ),

@@ -1,11 +1,11 @@
 var terser;
 
-const getGlobalDefsOptions = ({ arch }) => ({
+const getGlobalDefsOptions = ({ arch, buildMode }) => ({
   "Meteor.isServer": false,
-  "Meteor.isTest": false,
+  "Meteor.isTest": buildMode === "test",
   "Meteor.isDevelopment": false,
   "Meteor.isClient": true,
-  "Meteor.isProduction": true,
+  "Meteor.isProduction": buildMode !== "test",
   "Meteor.isCordova": arch === 'web.cordova',
 });
 

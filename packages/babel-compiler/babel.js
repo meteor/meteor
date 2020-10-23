@@ -52,7 +52,7 @@ Babel = {
     try {
       const globalDefsKeys = Object.keys(globalDefsMapping);
       return Npm.require("@babel/core").transformSync(source, {
-        ...getMeteorBabel().getDefaultOptions(),
+        compact: false,
         plugins: [
           function replaceStateVars({types: t}) {
             return {
