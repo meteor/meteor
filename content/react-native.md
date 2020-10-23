@@ -78,7 +78,7 @@ If you've used React before, coding with React Native is pretty straightforward.
 Meteor React Native's usage is designed to be as close to `meteor/react-meteor-data` and the Meteor core as possible. It provides a `withTracker` method. The package also has full support for accounts, including `Meteor.loginWithPassword`, `Meteor.user`, `Accounts.createUser`, `Meteor.loggingIn`, `Accounts.forgotPassword`, etc.
 
 ````
-const MyAppContainer = withTracker(() = {
+const MyAppContainer = withTracker(() => {
     
     const myTodoTasks = Todos.find({completed:false}).fetch();
     const handle = Meteor.subscribe("myTodos");
