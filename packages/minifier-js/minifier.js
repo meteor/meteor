@@ -5,7 +5,7 @@ const getGlobalDefsOptions = ({ arch, buildMode }) => ({
   "Meteor.isTest": buildMode === "test",
   "Meteor.isDevelopment": false,
   "Meteor.isClient": true,
-  "Meteor.isProduction": buildMode !== "test",
+  "Meteor.isProduction": true,
   "Meteor.isCordova": arch === 'web.cordova',
 });
 
