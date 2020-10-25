@@ -3,8 +3,7 @@
 [![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
 [![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
 
-Meteor is an ultra-simple environment for building modern web
-applications.
+Meteor is an open source platform for web, mobile, and desktop used by over half a million developers around the globe to make shipping javascript applications simple, efficient, and scalable. (https://www.meteor.com/)
 
 With Meteor you write apps:
 
@@ -12,7 +11,7 @@ With Meteor you write apps:
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
-Try a getting started tutorial:
+Get started with a tutorial!:
  * [React](https://react-tutorial.meteor.com) - new
  * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
  * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
@@ -23,8 +22,7 @@ Next, read the [guide](https://guide.meteor.com) and the [documentation](https:/
 
 ## Quick Start
 
-On Windows, the installer can be found at https://www.meteor.com/install.
-
+Installation of Meteor can be found [here](https://www.meteor.com/install)
 On Linux/macOS, use this line:
 
 ```bash
