@@ -426,10 +426,6 @@ WebAppInternals.staticFilesMiddleware = async function (
   res,
   next,
 ) {
-  if ('GET' != req.method && 'HEAD' != req.method && 'OPTIONS' != req.method) {
-    next();
-    return;
-  }
   var pathname = parseRequest(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
@@ -439,11 +435,21 @@ WebAppInternals.staticFilesMiddleware = async function (
   }
 
   var serveStaticJs = function (s) {
-    res.writeHead(200, {
-      'Content-type': 'application/javascript; charset=UTF-8'
-    });
-    res.write(s);
-    res.end();
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      res.writeHead(200, {
+        'Content-type': 'application/javascript; charset=UTF-8',
+        'Content-Length': Buffer.byteLength(s),
+      });
+      res.write(s);
+      res.end();
+    } else {
+      const status = req.method === 'OPTIONS' ? 200 : 405;
+      res.writeHead(status, {
+        'Allow': 'OPTIONS, GET, HEAD',
+        'Content-Length': '0',
+      });
+      res.end();
+    }
   };
 
   if (_.has(additionalStaticJs, pathname) &&
@@ -474,6 +480,16 @@ WebAppInternals.staticFilesMiddleware = async function (
   const info = getStaticFileInfo(staticFilesByArch, pathname, path, arch);
   if (! info) {
     next();
+    return;
+  }
+  // "send" will handle HEAD & GET requests
+  if (req.method !== 'HEAD' && req.method !== 'GET') {
+    const status = req.method === 'OPTIONS' ? 200 : 405;
+    res.writeHead(status, {
+      'Allow': 'OPTIONS, GET, HEAD',
+      'Content-Length': '0',
+    })
+    res.end();
     return;
   }
 
@@ -522,6 +538,7 @@ WebAppInternals.staticFilesMiddleware = async function (
   }
 
   if (info.content) {
+    res.setHeader('Content-Length', Buffer.byteLength(info.content));
     res.write(info.content);
     res.end();
   } else {
@@ -961,6 +978,13 @@ function runWebAppServer() {
     if (! appUrl(req.url)) {
       return next();
 
+    } else if (req.method !== 'HEAD' && req.method !== 'GET') {
+      const status = req.method === 'OPTIONS' ? 200 : 405;
+      res.writeHead(status, {
+        'Allow': 'OPTIONS, GET, HEAD',
+        'Content-Length': '0',
+      })
+      res.end();
     } else {
       var headers = {
         'Content-Type': 'text/html; charset=utf-8'
