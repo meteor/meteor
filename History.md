@@ -12,6 +12,8 @@ N/A
 
 * Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
 
+* MongoDB & Minimongo now accept bulk entries: `collection.insert([{ doo: 1 }, { doo: 2 }])`
+
 ## v1.11.1, 2020-09-16
 
 ### Breaking changes

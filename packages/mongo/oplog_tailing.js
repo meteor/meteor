@@ -5,10 +5,10 @@ const { Timestamp } = NpmModuleMongodb;
 
 OPLOG_COLLECTION = 'oplog.rs';
 
-var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
-var TAIL_TIMEOUT = +process.env.METEOR_OPLOG_TAIL_TIMEOUT || 30000;
+let TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
+const TAIL_TIMEOUT = +process.env.METEOR_OPLOG_TAIL_TIMEOUT || 30000;
 
-var showTS = function (ts) {
+const showTS = function (ts) {
   return "Timestamp(" + ts.getHighBits() + ", " + ts.getLowBits() + ")";
 };
 

@@ -228,6 +228,23 @@ Tinytest.add('minimongo - error - with field', test => {
   }
 });
 
+Tinytest.add('minimongo - bulk insert', test => {
+  const ids = c.insert([{ _id: "count1", count: 1 }, { count: 2 }, { count: 3 }]);
+  test.length(ids, 3);
+  test.equal(ids[0], "count1");
+  [1, 2].forEach((c) => {
+    test.notEqual(ids[c], "count1");
+  });
+  test.notEqual(ids[2], ids[1]);
+  test.equal(c.find({ count: { $gte: 1 }}).count(), 3);
+
+  // Bulk inserts that fail partway through.
+  test.throws(function () {
+    c.insert([{ count: 4 }, { _id: "count1" }, { count: 5 }])
+  });
+  test.equal(c.find({ count: { $gte: 1 }}).count(), 4);
+});
+
 Tinytest.add('minimongo - cursors', test => {
   const c = new LocalCollection();
   let res;
@@ -3217,9 +3234,15 @@ Tinytest.add('minimongo - observe ordered', test => {
     expect('ra3_');
     c.insert({_id: 4, name: 'daisy', tags: ['flower']});
     expect('aa4_');
+    test.throws(function () {
+      c.insert([
+        { _id: 5, name: "tulip", tags: ["flower"] },
+        { _id: 4, name: "daisy", tags: ["edible"] }]);
+    });
+    expect("aa5_");
     handle.stop();
     // After calling stop, no more callbacks are called.
-    c.insert({_id: 5, name: 'iris', tags: ['flower']});
+    c.insert({_id: 6, name: 'iris', tags: ['flower']});
     expect('');
 
     // Test that observing a lookup by ID works.
@@ -3231,9 +3254,9 @@ Tinytest.add('minimongo - observe ordered', test => {
 
     // Test observe with reactive: false.
     handle = c.find({tags: 'flower'}, {reactive: false}).observe(makecb('c'));
-    expect('ac4_ac5_');
+    expect('ac4_ac5_ac6_');
     // This insert shouldn't trigger a callback because it's not reactive.
-    c.insert({_id: 6, name: 'river', tags: ['flower']});
+    c.insert({_id: 7, name: 'river', tags: ['flower']});
     expect('');
     handle.stop();
   });

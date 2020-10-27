@@ -368,39 +368,51 @@ var bindEnvironmentForWrite = function (callback) {
   return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
-MongoConnection.prototype._insert = function (collection_name, document,
+MongoConnection.prototype._insert = function (collection_name, documents,
                                               callback) {
-  var self = this;
+  const self = this;
+  const isBulkInsert = Array.isArray(documents);
+  documents = isBulkInsert ? documents : [ documents ];
 
-  var sendError = function (e) {
+  const sendError = function (e) {
     if (callback)
       return callback(e);
     throw e;
   };
 
   if (collection_name === "___meteor_failure_test_collection") {
-    var e = new Error("Failure test");
+    const e = new Error("Failure test");
     e._expectedByTest = true;
     sendError(e);
     return;
   }
 
-  if (!(LocalCollection._isPlainObject(document) &&
-        !EJSON._isCustomType(document))) {
+  const complexDoc = function (document) {
+    return !LocalCollection._isPlainObject(document) ||
+      EJSON._isCustomType(document);
+  };
+  if (documents.some(complexDoc)) {
     sendError(new Error(
       "Only plain objects may be inserted into MongoDB"));
     return;
   }
 
-  var write = self._maybeBeginWrite();
-  var refresh = function () {
-    Meteor.refresh({collection: collection_name, id: document._id });
+  const write = self._maybeBeginWrite();
+  const refresh = function () {
+    documents.forEach(function (document) {
+      Meteor.refresh({collection: collection_name, id: document._id });
+    });
   };
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
-    var collection = self.rawCollection(collection_name);
-    collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
-                      {safe: true}, callback);
+    const collection = self.rawCollection(collection_name);
+    if (isBulkInsert) {
+      collection.insertMany(replaceTypes(documents, replaceMeteorAtomWithMongo),
+        {safe: true}, callback);
+    } else {
+      collection.insertOne(replaceTypes(documents[0], replaceMeteorAtomWithMongo),
+        {safe: true}, callback);
+    }
   } catch (err) {
     write.committed();
     throw err;
@@ -410,14 +422,14 @@ MongoConnection.prototype._insert = function (collection_name, document,
 // Cause queries that may be affected by the selector to poll in this write
 // fence.
 MongoConnection.prototype._refresh = function (collectionName, selector) {
-  var refreshKey = {collection: collectionName};
+  const refreshKey = {collection: collectionName};
   // If we know which documents we're removing, don't poll queries that are
   // specific to other documents. (Note that multiple notifications here should
   // not cause multiple polls, since all our listener is doing is enqueueing a
   // poll.)
-  var specificIds = LocalCollection._idsMatchedBySelector(selector);
+  const specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
+    specificIds.forEach(function (id) {
       Meteor.refresh(_.extend({id: id}, refreshKey));
     });
   } else {

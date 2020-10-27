@@ -438,7 +438,7 @@ CollectionPrototype._callMutatorMethod = function _callMutatorMethod(name, args,
   const mutatorMethodName = this._prefix + name;
   return this._connection.apply(
     mutatorMethodName, args, { returnStubValue: true }, callback);
-}
+};
 
 function transformDoc(validator, doc) {
   if (validator.transform)

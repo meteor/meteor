@@ -62,7 +62,7 @@ var runInFence = function (f) {
   if (Meteor.isClient) {
     f();
   } else {
-    var fence = new DDPServer._WriteFence;
+    const fence = new DDPServer._WriteFence;
     DDPServer._CurrentWriteFence.withValue(fence, f);
     fence.armAndWait();
   }
@@ -531,16 +531,16 @@ Tinytest.addAsync("mongo-livedata - fuzz test, " + idGeneration, function(test, 
 });
 
 Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test, onComplete) {
-  var run = test.runId();
-  var coll;
+  const run = test.runId();
+  let coll;
   if (Meteor.isClient) {
     coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
   } else {
     coll = new Mongo.Collection("livedata_test_collection_"+run, collectionOptions);
   }
 
-  var numAddeds = 0;
-  var handle = coll.find({run: run}).observe({
+  let numAddeds = 0;
+  const handle = coll.find({ run }).observe({
     addedAt: function (o) {
       // test that we can scribble on the object we get back from Mongo without
       // breaking anything.  The worst possible scribble is messing with _id.
@@ -548,14 +548,22 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
       numAddeds++;
     }
   });
-  _.each([123, 456, 789], function (abc) {
+  [123, 456, 789].forEach((abc) => {
     runInFence(function () {
-      coll.insert({run: run, abc: abc});
+      coll.insert({ run, abc });
     });
   });
+
+  // Bulk inserts and observe handles.
+  runInFence(function () {
+    coll.insert([
+      { run, abc: 012 },
+      { run, abc: 345 }]);
+  });
+
   handle.stop();
-  // will be 6 (1+2+3) if we broke diffing!
-  test.equal(numAddeds, 3);
+  // will be 15 (1+2+3+4+5) if we broke diffing!
+  test.equal(numAddeds, 5);
 
   onComplete();
 });
@@ -590,7 +598,7 @@ if (Meteor.isServer) {
     ObserveMultiplexer.prototype._applyCallback = function(callback, args) {
       // Make sure that if anything touches the original object, this will throw
       return origApplyCallback.call(this, callback, freeze(args));
-    }
+    };
     
     const run = test.runId();
     const coll = new Mongo.Collection(`livedata_test_scribble_collection_${run}`, collectionOptions);
@@ -600,13 +608,13 @@ if (Meteor.isServer) {
       } catch (error) {
         test.fail();
       }
-    }
+    };
     const expectNotMutatable = (o) => {
       try {
         o.a[0].c = 3;
         test.fail();
       } catch (error) {}
-    }
+    };
     const handle = coll.find({run}).observe({
       addedAt: expectMutatable,
       changedAt: function(id, o) {
@@ -635,17 +643,17 @@ if (Meteor.isServer) {
 }
 
 Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
-  var run = Random.id();
-  var coll;
+  const run = Random.id();
+  let coll;
   if (Meteor.isClient) {
     coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
   } else {
     coll = new Mongo.Collection("stopHandleInCallback-"+run, collectionOptions);
   }
 
-  var output = [];
+  const output = [];
 
-  var handle = coll.find().observe({
+  const handle = coll.find().observe({
     added: function (doc) {
       output.push({added: doc._id});
     },
@@ -658,7 +666,7 @@ Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, f
   test.equal(output, []);
 
   // Insert a document. Observe that the added callback is called.
-  var docId;
+  let docId;
   runInFence(function () {
     docId = coll.insert({foo: 42});
   });
@@ -1344,12 +1352,12 @@ testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
   }, function (test, expect) {
-    var coll = new Mongo.Collection(this.collectionName, collectionOptions);
+    const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
     coll.insert({}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
-      var cursor = coll.find();
+      const cursor = coll.find();
       test.equal(cursor.count(), 1);
     }));
   }
@@ -1364,7 +1372,7 @@ testAsyncMulti('mongo-livedata - upsert without callback, ' + idGeneration, [
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
   }, function (test, expect) {
-    var coll = new Mongo.Collection(this.collectionName, collectionOptions);
+    const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
     // No callback!  Before fixing #2413, this method never returned and
     // so no future DDP methods worked either.
@@ -1438,13 +1446,13 @@ testAsyncMulti('mongo-livedata - document with a date, ' + idGeneration, [
     }
   }, function (test, expect) {
 
-    var coll = new Mongo.Collection(this.collectionName, collectionOptions);
-    var docId;
+    const coll = new Mongo.Collection(this.collectionName, collectionOptions);
+    let docId;
     coll.insert({d: new Date(1356152390004)}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
       docId = id;
-      var cursor = coll.find();
+      const cursor = coll.find();
       test.equal(cursor.count(), 1);
       test.equal(coll.findOne().d.getFullYear(), 2012);
     }));
@@ -3560,3 +3568,31 @@ if (Meteor.isServer) {
     });
   });
 }
+
+Tinytest.addAsync("mongo-livedata - bulk insertion of models", function (test, onComplete) {
+  const coll1 = new Mongo.Collection(`bulk_insert_test_${test.runId()}`);
+  const doc = { score: 5 };
+  const docTwo = { score: 10 };
+
+  // Test that passing an array of documents performs a bulk insertion
+  const docIds = coll1.insert([ doc, docTwo ]);
+  test.equal(coll1.find().count(), 2);
+  test.equal(coll1.find({ score: 5 }).count(), 1);
+  test.equal(coll1.find({ score: 10 }).count(), 1);
+
+  // Check that a bulk insertion returns a list of ids for the inserted documents
+  test.equal(docIds.length, 2);
+  test.equal(coll1.findOne(doc)._id, docIds[0]);
+  test.equal(coll1.findOne(docTwo)._id, docIds[1]);
+
+  onComplete();
+});
+
+Tinytest.addAsync("mongo-livedata - bulk insertion with null entries", function (test, onComplete) {
+  const coll2 = new Mongo.Collection(`bulk_insert_test2_${test.runId()}`);
+  const docsIds = coll2.insert([ { abc: 1 }, null, { abc: 2 } ]);
+  test.equal(docsIds.length, 2);
+  test.equal(coll2.find().count(), 2);
+
+  onComplete();
+});

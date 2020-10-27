@@ -88,68 +88,90 @@ export default class LocalCollection {
 
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
-  insert(doc, callback) {
-    doc = EJSON.clone(doc);
+  insert(document, callback) {
+    const isBulkInsert = Array.isArray(document);
+    let docs = [ document ];
+    if (isBulkInsert) docs = document;
+    let error;
+    const queriesToRecompute = new Map();
 
-    assertHasValidFieldNames(doc);
+    const insertedIds = docs.map(doc => {
+      try {
+        doc = EJSON.clone(doc);
 
-    // if you really want to use ObjectIDs, set this global.
-    // Mongo.Collection specifies its own ids and does not use this code.
-    if (!hasOwn.call(doc, '_id')) {
-      doc._id = LocalCollection._useOID ? new MongoID.ObjectID() : Random.id();
-    }
+        assertHasValidFieldNames(doc);
 
-    const id = doc._id;
-
-    if (this._docs.has(id)) {
-      throw MinimongoError(`Duplicate _id '${id}'`);
-    }
-
-    this._saveOriginal(id, undefined);
-    this._docs.set(id, doc);
-
-    const queriesToRecompute = [];
-
-    // trigger live queries that match
-    Object.keys(this.queries).forEach(qid => {
-      const query = this.queries[qid];
-
-      if (query.dirty) {
-        return;
-      }
-
-      const matchResult = query.matcher.documentMatches(doc);
-
-      if (matchResult.result) {
-        if (query.distances && matchResult.distance !== undefined) {
-          query.distances.set(id, matchResult.distance);
+        // if you really want to use ObjectIDs, set this global.
+        // Mongo.Collection specifies its own ids and does not use this code.
+        if (!hasOwn.call(doc, '_id')) {
+          doc._id = LocalCollection._useOID ? new MongoID.ObjectID() : Random.id();
         }
 
-        if (query.cursor.skip || query.cursor.limit) {
-          queriesToRecompute.push(qid);
+        const id = doc._id;
+
+        if (this._docs.has(id)) {
+          throw MinimongoError(`Duplicate _id '${id}'`);
+        }
+
+        this._saveOriginal(id, undefined);
+        this._docs.set(id, doc);
+
+        // trigger live queries that match
+        Object.keys(this.queries).forEach(qid => {
+          const query = this.queries[qid];
+
+          if (query.dirty) {
+            return;
+          }
+
+          const matchResult = query.matcher.documentMatches(doc);
+
+          if (matchResult.result) {
+            if (query.distances && matchResult.distance !== undefined) {
+              query.distances.set(id, matchResult.distance);
+            }
+
+            if (query.cursor.skip || query.cursor.limit) {
+              queriesToRecompute.set(qid, true);
+            } else {
+              LocalCollection._insertInResults(query, doc);
+            }
+          }
+        });
+
+        return id;
+      } catch (err) {
+        // Catch minimongo errors. If it is a failed insert, we want to continue
+        // dealing with the recompute queries before we rethrow it.
+        if (err.name ===  "MinimongoError") {
+          error = err;
+          return true;
         } else {
-          LocalCollection._insertInResults(query, doc);
+          // Something has just gone wrong, throw it now.
+          throw err;
         }
       }
     });
-
-    queriesToRecompute.forEach(qid => {
+    queriesToRecompute.forEach((recompute, qid) => {
       if (this.queries[qid]) {
         this._recomputeResults(this.queries[qid]);
       }
     });
-
     this._observeQueue.drain();
+
+    if (error) {
+      throw error;
+    }
 
     // Defer because the caller likely doesn't expect the callback to be run
     // immediately.
     if (callback) {
       Meteor.defer(() => {
-        callback(null, id);
+        callback(null, isBulkInsert ? insertedIds : insertedIds[0]);
       });
     }
 
-    return id;
+    return isBulkInsert ? insertedIds : insertedIds[0];
   }
 
   // Pause the observers. No callbacks from observers will fire until
