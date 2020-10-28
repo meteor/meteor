@@ -700,12 +700,7 @@ class ResourceSlot {
   }
 
   _isBare(options) {
-    return !! (
-      this._getOption("bare", options) ||
-      // XXX eventually get rid of backwards-compatible "raw" name
-      // XXX COMPAT WITH 0.6.4
-      this._getOption("raw", options)
-    );
+    return !! this._getOption("bare", options);
   }
 
   hmrAvailable() {

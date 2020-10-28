@@ -1621,15 +1621,6 @@ export class Connection {
       this._heartbeat.messageReceived();
     }
 
-    if (msg === null || !msg.msg) {
-      // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
-      // compat.  Remove this 'if' once the server stops sending welcome
-      // messages (stream_server.js).
-      if (!(msg && msg.server_id))
-        Meteor._debug('discarding invalid livedata message', msg);
-      return;
-    }
-
     if (msg.msg === 'connected') {
       this._version = this._versionSuggestion;
       this._livedata_connected(msg);
