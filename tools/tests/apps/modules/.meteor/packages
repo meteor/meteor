@@ -27,4 +27,4 @@ underscore@1.0.10
 import-local-json-module
 akryum:vue-component
 dummy-compiler
-typescript@3.7.5
+typescript
