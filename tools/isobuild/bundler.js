@@ -1382,7 +1382,7 @@ class Target {
 
     function handle(source, dynamic) {
       source._minifiedFiles.forEach(file => {
-        if (typeof file.data === "string") {
+        if (typeof file.data === 'string') {
           file.data = Buffer.from(file.data, "utf8");
         }
 

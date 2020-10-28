@@ -16,7 +16,7 @@ Facebook.handleAuthFromAccessToken = (accessToken, expiresAt) => {
     expiresAt,
     ...fields,
   };
-  
+
   return {
     serviceData,
     options: {profile: {name: identity.name}}
@@ -31,15 +31,24 @@ OAuth.registerService('facebook', 2, null, query => {
   return Facebook.handleAuthFromAccessToken(accessToken, (+new Date) + (1000 * expiresIn));
 });
 
-// checks whether a string parses as JSON
-const isJSON = str => {
-  try {
-    JSON.parse(str);
-    return true;
-  } catch (e) {
-    return false;
+function getAbsoluteUrlOptions(query) {
+  const overrideRootUrlFromStateRedirectUrl = Meteor.settings?.packages?.['facebook-oauth']?.overrideRootUrlFromStateRedirectUrl;
+  if (!overrideRootUrlFromStateRedirectUrl) {
+    return undefined;
   }
-};
+  try {
+    const state = OAuth._stateFromQuery(query) || {};
+    const redirectUrl = state.redirectUrl;
+    return {
+      rootUrl: redirectUrl,
+    }
+  } catch (e) {
+    console.error(
+      `Failed to complete OAuth handshake with Facebook because it was not able to obtain the redirect url from the state and you are using overrideRootUrlFromStateRedirectUrl.`, e
+    );
+    return undefined;
+  }
+}
 
 // returns an object containing:
 // - accessToken
@@ -51,12 +60,15 @@ const getTokenResponse = query => {
 
   let responseContent;
   try {
+
+    const absoluteUrlOptions = getAbsoluteUrlOptions(query);
+    const redirectUri = OAuth._redirectUri('facebook', config, undefined, absoluteUrlOptions);
     // Request an access token
     responseContent = HTTP.get(
-      "https://graph.facebook.com/v5.0/oauth/access_token", {
+      "https://graph.facebook.com/v8.0/oauth/access_token", {
         params: {
           client_id: config.appId,
-          redirect_uri: OAuth._redirectUri('facebook', config),
+          redirect_uri: redirectUri,
           client_secret: OAuth.openSecret(config.secret),
           code: query.code
         }
@@ -92,7 +104,7 @@ const getIdentity = (accessToken, fields) => {
   hmac.update(accessToken);
 
   try {
-    return HTTP.get("https://graph.facebook.com/v5.0/me", {
+    return HTTP.get("https://graph.facebook.com/v8.0/me", {
       params: {
         access_token: accessToken,
         appsecret_proof: hmac.digest('hex'),

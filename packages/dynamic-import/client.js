@@ -2,6 +2,11 @@ var Module = module.constructor;
 var cache = require("./cache.js");
 var meteorInstall = require("meteor/modules").meteorInstall;
 
+var dynamicImportSettings = Meteor.settings
+    && Meteor.settings.public
+    && Meteor.settings.public.packages
+    && Meteor.settings.public.packages['dynamic-import'] || {};
+
 // Call module.dynamicImport(id) to fetch a module and any/all of its
 // dependencies that have not already been fetched, and evaluate them as
 // soon as they arrive. This runtime API makes it very easy to implement
@@ -118,6 +123,14 @@ exports.setSecretKey = function (key) {
 
 var fetchURL = require("./common.js").fetchURL;
 
+function inIframe() {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true;
+  }
+}
+
 function fetchMissing(missingTree) {
   // If the hostname of the URL returned by Meteor.absoluteUrl differs
   // from location.host, then we'll be making a cross-origin request here,
@@ -127,7 +140,18 @@ function fetchMissing(missingTree) {
   // preflight OPTIONS request, which may add latency to the first dynamic
   // import() request, so it's a good idea for ROOT_URL to match
   // location.host if possible, though not strictly necessary.
-  var url = Meteor.absoluteUrl(fetchURL);
+
+  var url = fetchURL;
+
+  var useLocationOrigin = dynamicImportSettings.useLocationOrigin;
+
+  var disableLocationOriginIframe = dynamicImportSettings.disableLocationOriginIframe;
+
+  if (useLocationOrigin && location && !(disableLocationOriginIframe && inIframe())) {
+    url = location.origin.concat(url);
+  } else {
+    url = Meteor.absoluteUrl(url);
+  }
 
   if (secretKey) {
     url += "key=" + secretKey;
