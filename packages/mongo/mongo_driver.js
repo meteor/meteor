@@ -9,8 +9,8 @@
 
 const path = require("path");
 
-var MongoDB = NpmModuleMongodb;
-var Future = Npm.require('fibers/future');
+const MongoDB = NpmModuleMongodb;
+const Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
 
 MongoInternals = {};
@@ -34,10 +34,10 @@ const APP_FOLDER = 'app';
 
 // This is used to add or remove EJSON from the beginning of everything nested
 // inside an EJSON custom type. It should only be called on pure JSON!
-var replaceNames = function (filter, thing) {
+const replaceNames = function (filter, thing) {
   if (typeof thing === "object" && thing !== null) {
-    if (_.isArray(thing)) {
-      return _.map(thing, _.bind(replaceNames, null, filter));
+    if (Array.isArray(thing)) {
+      return thing.map(_.bind(replaceNames, null, filter));
     }
     var ret = {};
     _.each(thing, function (value, key) {
@@ -56,12 +56,12 @@ MongoDB.Timestamp.prototype.clone = function () {
   return this;
 };
 
-var makeMongoLegal = function (name) { return "EJSON" + name; };
-var unmakeMongoLegal = function (name) { return name.substr(5); };
+const makeMongoLegal = function (name) { return "EJSON" + name; };
+const unmakeMongoLegal = function (name) { return name.substr(5); };
 
-var replaceMongoAtomWithMeteor = function (document) {
+const replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
-    var buffer = document.value(true);
+    const buffer = document.value(true);
     return new Uint8Array(buffer);
   }
   if (document instanceof MongoDB.ObjectID) {
@@ -83,7 +83,7 @@ var replaceMongoAtomWithMeteor = function (document) {
   return undefined;
 };
 
-var replaceMeteorAtomWithMongo = function (document) {
+const replaceMeteorAtomWithMongo = function (document) {
   if (EJSON.isBinary(document)) {
     // This does more copies than we'd like, but is necessary because
     // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
@@ -111,11 +111,15 @@ var replaceMeteorAtomWithMongo = function (document) {
   return undefined;
 };
 
-var replaceTypes = function (document, atomTransformer) {
-  if (typeof document !== 'object' || document === null)
+const replaceTypes = function (document, atomTransformer, isBulk) {
+  if (!isBulk) {
+    if (typeof document !== 'object' || document === null)
+      return document;
+  } else if (!Array.isArray(document)) {
     return document;
+  }
 
-  var replacedTopLevelAtom = atomTransformer(document);
+  const replacedTopLevelAtom = atomTransformer(document);
   if (replacedTopLevelAtom !== undefined)
     return replacedTopLevelAtom;
 
@@ -307,7 +311,7 @@ MongoConnection.prototype._createCappedCollection = function (
 // after the observer notifiers have added themselves to the write
 // fence), you should call 'committed()' on the object returned.
 MongoConnection.prototype._maybeBeginWrite = function () {
-  var fence = DDPServer._CurrentWriteFence.get();
+  const fence = DDPServer._CurrentWriteFence.get();
   if (fence) {
     return fence.beginWrite();
   } else {
@@ -340,7 +344,7 @@ MongoConnection.prototype._onFailover = function (callback) {
 // well-defined -- a write "has been made" if it's returned, and an
 // observer "has been notified" if its callback has returned.
 
-var writeCallback = function (write, refresh, callback) {
+const writeCallback = function (write, refresh, callback) {
   return function (err, result) {
     if (! err) {
       // XXX We don't have to run this on error, right?
@@ -364,7 +368,7 @@ var writeCallback = function (write, refresh, callback) {
   };
 };
 
-var bindEnvironmentForWrite = function (callback) {
+const bindEnvironmentForWrite = function (callback) {
   return Meteor.bindEnvironment(callback, "Mongo write");
 };
 
@@ -407,7 +411,7 @@ MongoConnection.prototype._insert = function (collection_name, documents,
   try {
     const collection = self.rawCollection(collection_name);
     if (isBulkInsert) {
-      collection.insertMany(replaceTypes(documents, replaceMeteorAtomWithMongo),
+      collection.insertMany(replaceTypes(documents, replaceMeteorAtomWithMongo, isBulkInsert),
         {safe: true}, callback);
     } else {
       collection.insertOne(replaceTypes(documents[0], replaceMeteorAtomWithMongo),
@@ -442,7 +446,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   var self = this;
 
   if (collection_name === "___meteor_failure_test_collection") {
-    var e = new Error("Failure test");
+    const e = new Error("Failure test");
     e._expectedByTest = true;
     if (callback) {
       return callback(e);
@@ -458,7 +462,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
 
   try {
-    var collection = self.rawCollection(collection_name);
+    const collection = self.rawCollection(collection_name);
     var wrappedCallback = function(err, driverResult) {
       callback(err, transformResult(driverResult).numberAffected);
     };
@@ -481,7 +485,7 @@ MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
 
   try {
-    var collection = self.rawCollection(collectionName);
+    const collection = self.rawCollection(collectionName);
     collection.drop(cb);
   } catch (e) {
     write.committed();
@@ -518,7 +522,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   }
 
   if (collection_name === "___meteor_failure_test_collection") {
-    var e = new Error("Failure test");
+    const e = new Error("Failure test");
     e._expectedByTest = true;
     if (callback) {
       return callback(e);
@@ -671,7 +675,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   }
 };
 
-var transformResult = function (driverResult) {
+const transformResult = function (driverResult) {
   var meteorResult = { numberAffected: 0 };
   if (driverResult) {
     var mongoResult = driverResult.result;
@@ -694,7 +698,7 @@ var transformResult = function (driverResult) {
 };
 
 
-var NUM_OPTIMISTIC_TRIES = 3;
+const NUM_OPTIMISTIC_TRIES = 3;
 
 // exposed for testing
 MongoConnection._isCannotChangeIdError = function (err) {
@@ -703,7 +707,7 @@ MongoConnection._isCannotChangeIdError = function (err) {
   // {name: String, code: Number, errmsg: String}
   // Older Mongo returns:
   // {name: String, code: Number, err: String}
-  var error = err.errmsg || err.err;
+  const error = err.errmsg || err.err;
 
   // We don't use the error code here
   // because the error code we observed it producing (16837) appears to be
@@ -791,7 +795,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   doUpdate();
 };
 
-_.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
+["insert", "update", "remove", "dropCollection", "dropDatabase"].forEach((method) => {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
@@ -909,7 +913,7 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) {
+['forEach', 'map', 'fetch', 'count', Symbol.iterator].forEach((method) => {
   Cursor.prototype[method] = function () {
     var self = this;
 
@@ -1401,7 +1405,7 @@ MongoConnection.prototype._observeChanges = function (
 // to InvalidationCrossbar.listen.
 
 listenAll = function (cursorDescription, listenCallback) {
-  var listeners = [];
+  const listeners = [];
   forEachTrigger(cursorDescription, function (trigger) {
     listeners.push(DDPServer._InvalidationCrossbar.listen(
       trigger, listenCallback));
@@ -1409,7 +1413,7 @@ listenAll = function (cursorDescription, listenCallback) {
 
   return {
     stop: function () {
-      _.each(listeners, function (listener) {
+      listeners.forEach((listener) => {
         listener.stop();
       });
     }
@@ -1474,7 +1478,7 @@ MongoConnection.prototype._observeChangesTailable = function (
   }
 
   return self.tail(cursorDescription, function (doc) {
-    var id = doc._id;
+    const id = doc._id;
     delete doc._id;
     // The ts is an implementation detail. Hide it.
     delete doc.ts;
