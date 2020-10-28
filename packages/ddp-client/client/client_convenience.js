@@ -55,13 +55,3 @@ Meteor.connection = DDP.connect(ddpUrl, {
 ].forEach(name => {
   Meteor[name] = Meteor.connection[name].bind(Meteor.connection);
 });
-
-// Meteor.connection used to be called
-// Meteor.default_connection. Provide backcompat as a courtesy even
-// though it was never documented.
-// XXX COMPAT WITH 0.6.4
-Meteor.default_connection = Meteor.connection;
-
-// We should transition from Meteor.connect to DDP.connect.
-// XXX COMPAT WITH 0.6.4
-Meteor.connect = DDP.connect;

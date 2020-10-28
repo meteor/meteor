@@ -70,8 +70,7 @@ var showInvalidArchMsg = function (arch) {
 export function parseServerOptionsForRunCommand(options, runTargets) {
   const parsedServerUrl = parsePortOption(options.port);
 
-  // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
-  const mobileServerOption = options['mobile-server'] || options['mobile-port'];
+  const mobileServerOption = options['mobile-server'];
   let parsedMobileServerUrl;
   if (mobileServerOption) {
     parsedMobileServerUrl = parseMobileServerOption(mobileServerOption);
@@ -308,8 +307,6 @@ var runCommandOptions = {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
     ...inspectOptions,
@@ -927,8 +924,6 @@ var buildCommands = {
     'mobile-settings': { type: String },
     server: { type: String },
     "cordova-server-port": { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    "mobile-port": { type: String },
     // Indicates whether these build is running headless, e.g. in a
     // continuous integration building environment, where visual niceties
     // like progress bars and spinners are unimportant.
@@ -946,32 +941,6 @@ main.registerCommand({
   return Profile.run(
     "meteor build",
     () => Promise.await(buildCommand(options))
-  );
-});
-
-// Deprecated -- identical functionality to 'build' with one exception: it
-// doesn't output a directory with all builds but rather only one tarball with
-// server/client programs.
-// XXX COMPAT WITH 0.9.1.1
-main.registerCommand({
-  name: "bundle",
-  hidden: true,
-  ...buildCommands,
-}, async function (options) {
-  Console.error(
-    "This command has been deprecated in favor of " +
-    Console.command("'meteor build'") + ", which allows you to " +
-    "build for multiple platforms and outputs a directory instead of " +
-    "a single tarball. See " + Console.command("'meteor help build'") + " " +
-    "for more information.");
-  Console.error();
-
-  return Profile.run(
-    "meteor bundle",
-    () => Promise.await(buildCommand({
-      ...options,
-      _bundleOnly: true,
-    }))
   );
 });
 
@@ -1036,8 +1005,7 @@ on an OS X system.");
     }
 
     if (!_.isEmpty(cordovaPlatforms)) {
-      // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
-      const mobileServerOption = options.server || options["mobile-port"];
+      const mobileServerOption = options.server;
       if (!mobileServerOption) {
         // For Cordova builds, require '--server'.
         // XXX better error message?
@@ -1605,8 +1573,6 @@ testCommandOptions = {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
     'debug-port': { type: String },
     ...inspectOptions,
     'no-release-check': { type: Boolean },

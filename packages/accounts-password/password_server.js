@@ -351,79 +351,6 @@ Accounts.registerLoginHandler("password", options => {
   );
 });
 
-// Handler to login using the SRP upgrade path. To use this login
-// handler, the client must provide:
-//   - srp: H(identity + ":" + password)
-//   - password: a string or an object with properties 'digest' and 'algorithm'
-//
-// We use `options.srp` to verify that the client knows the correct
-// password without doing a full SRP flow. Once we've checked that, we
-// upgrade the user to bcrypt and remove the SRP information from the
-// user document.
-//
-// The client ends up using this login handler after trying the normal
-// login handler (above), which throws an error telling the client to
-// try the SRP upgrade path.
-//
-// XXX COMPAT WITH 0.8.1.3
-Accounts.registerLoginHandler("password", options => {
-  if (!options.srp || !options.password) {
-    return undefined; // don't handle
-  }
-
-  check(options, {
-    user: userQueryValidator,
-    srp: String,
-    password: passwordValidator
-  });
-
-  const user = Accounts._findUserByQuery(options.user, {fields: {
-    services: 1,
-    ...Accounts._checkPasswordUserFields,
-  }});
-  if (!user) {
-    handleError("User not found");
-  }
-
-  // Check to see if another simultaneous login has already upgraded
-  // the user record to bcrypt.
-  if (user.services && user.services.password && user.services.password.bcrypt) {
-    return checkPassword(user, options.password);
-  }
-
-  if (!(user.services && user.services.password && user.services.password.srp)) {
-    handleError("User has no password set");
-  }
-
-  const v1 = user.services.password.srp.verifier;
-  const v2 = SRP.generateVerifier(
-    null,
-    {
-      hashedIdentityAndPassword: options.srp,
-      salt: user.services.password.srp.salt
-    }
-  ).verifier;
-  if (v1 !== v2) {
-    return {
-      userId: Accounts._options.ambiguousErrorMessages ? null : user._id,
-      error: handleError("Incorrect password", false)
-    };
-  }
-
-  // Upgrade to bcrypt on successful login.
-  const salted = hashPassword(options.password);
-  Meteor.users.update(
-    user._id,
-    {
-      $unset: { 'services.password.srp': 1 },
-      $set: { 'services.password.bcrypt': salted }
-    }
-  );
-
-  return {userId: user._id};
-});
-
-
 ///
 /// CHANGING
 ///
@@ -470,12 +397,6 @@ Accounts.setUsername = (userId, newUsername) => {
 // password. `oldPassword` and `newPassword` should be objects with keys
 // `digest` and `algorithm` (representing the SHA256 of the password).
 //
-// XXX COMPAT WITH 0.8.1.3
-// Like the login method, if the user hasn't been upgraded from SRP to
-// bcrypt yet, then this method will throw an 'old password format'
-// error. The client should call the SRP upgrade login handler and then
-// retry this method again.
-//
 // UNLIKE the login method, there is no way to avoid getting SRP upgrade
 // errors thrown. The reasoning for this is that clients using this
 // method directly will need to be updated anyway because we no longer
@@ -497,16 +418,8 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
     handleError("User not found");
   }
 
-  if (!user.services || !user.services.password ||
-      (!user.services.password.bcrypt && !user.services.password.srp)) {
+  if (!user.services || !user.services.password || !user.services.password.bcrypt) {
     handleError("User has no password set");
-  }
-
-  if (! user.services.password.bcrypt) {
-    throw new Meteor.Error(400, "old password format", EJSON.stringify({
-      format: 'srp',
-      identity: user.services.password.srp.identity
-    }));
   }
 
   const result = checkPassword(user, oldPassword);
@@ -557,7 +470,6 @@ Accounts.setPassword = (userId, newPlaintextPassword, options) => {
 
   const update = {
     $unset: {
-      'services.password.srp': 1, // XXX COMPAT WITH 0.8.1.3
       'services.password.reset': 1
     },
     $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)}

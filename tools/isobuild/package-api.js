@@ -622,6 +622,3 @@ export class PackageAPI {
     });
   }
 }
-
-// XXX COMPAT WITH 0.8.x
-PackageAPI.prototype.add_files = PackageAPI.prototype.addFiles;

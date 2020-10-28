@@ -569,62 +569,6 @@ export class AccountsServer extends AccountsCommon {
       this.setUserId(null);
     };
 
-    // Delete all the current user's tokens and close all open connections logged
-    // in as this user. Returns a fresh new login token that this client can
-    // use. Tests set Accounts._noConnectionCloseDelayForTest to delete tokens
-    // immediately instead of using a delay.
-    //
-    // XXX COMPAT WITH 0.7.2
-    // This single `logoutOtherClients` method has been replaced with two
-    // methods, one that you call to get a new token, and another that you
-    // call to remove all tokens except your own. The new design allows
-    // clients to know when other clients have actually been logged
-    // out. (The `logoutOtherClients` method guarantees the caller that
-    // the other clients will be logged out at some point, but makes no
-    // guarantees about when.) This method is left in for backwards
-    // compatibility, especially since application code might be calling
-    // this method directly.
-    //
-    // @returns {Object} Object with token and tokenExpires keys.
-    methods.logoutOtherClients = function () {
-      const user = accounts.users.findOne(this.userId, {
-        fields: {
-          "services.resume.loginTokens": true
-        }
-      });
-      if (user) {
-        // Save the current tokens in the database to be deleted in
-        // CONNECTION_CLOSE_DELAY_MS ms. This gives other connections in the
-        // caller's browser time to find the fresh token in localStorage. We save
-        // the tokens in the database in case we crash before actually deleting
-        // them.
-        const tokens = user.services.resume.loginTokens;
-        const newToken = accounts._generateStampedLoginToken();
-        accounts.users.update(this.userId, {
-          $set: {
-            "services.resume.loginTokensToDelete": tokens,
-            "services.resume.haveLoginTokensToDelete": true
-          },
-          $push: { "services.resume.loginTokens": accounts._hashStampedToken(newToken) }
-        });
-        Meteor.setTimeout(() => {
-          // The observe on Meteor.users will take care of closing the connections
-          // associated with `tokens`.
-          accounts._deleteSavedTokensForUser(this.userId, tokens);
-        }, accounts._noConnectionCloseDelayForTest ? 0 :
-          CONNECTION_CLOSE_DELAY_MS);
-        // We do not set the login token on this connection, but instead the
-        // observe closes the connection and the client will reconnect with the
-        // new token.
-        return {
-          token: newToken.token,
-          tokenExpires: accounts._tokenExpiration(newToken.when)
-        };
-      } else {
-        throw new Meteor.Error("You are not logged in.");
-      }
-    };
-
     // Generates a new login token with the same expiration as the
     // connection's current token and saves it to the database. Associates
     // the connection with this new token and returns it. Throws an error

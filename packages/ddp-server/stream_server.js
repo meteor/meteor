@@ -119,16 +119,9 @@ StreamServer = function () {
     });
     self.open_sockets.push(socket);
 
-    // XXX COMPAT WITH 0.6.6. Send the old style welcome message, which
-    // will force old clients to reload. Remove this once we're not
-    // concerned about people upgrading from a pre-0.7.0 release. Also,
-    // remove the clause in the client that ignores the welcome message
-    // (livedata_connection.js)
-    socket.send(JSON.stringify({server_id: "0"}));
-
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
-    _.each(self.registration_callbacks, function (callback) {
+    self.registration_callbacks.forEach((callback) => {
       callback(socket);
     });
   });
