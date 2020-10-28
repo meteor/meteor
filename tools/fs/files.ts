@@ -373,12 +373,12 @@ export const blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 // Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
 // to modtime, uid/gid, or any permissions bits other than the current-user-exec
 // bit on normal files.
-export function treeHash(root: string, options: {
-  ignore: (path: string) => boolean;
+export function treeHash(root: string, optionsParams: {
+  ignore?: (path: string) => boolean;
 }) {
-  options = {
+  const options = {
     ignore() { return false; },
-    ...options,
+    ...optionsParams,
   };
 
   const hash = require('crypto').createHash('sha256');
