@@ -179,8 +179,21 @@ function walkTree(pathParts, tree) {
   return walkTree(pathParts, _module);
 }
 
+// Save default browser functions
+const btoa = window.btoa
+const atob = window.atob
+
+// Replace with unicode support
+window.btoa = function utoa(data) {
+  return btoa(unescape(encodeURIComponent(data)));
+}
+
+window.atob = function atou(data) {
+  return decodeURIComponent(escape(atob(b64)));
+}
+
 function createInlineSourceMap(map) {
-  return "//# sourceMappingURL=data:application/json;base64," + btoa(JSON.stringify(map));
+  return "//# sourceMappingURL=data:application/json;base64," + window.btoa(JSON.stringify(map));
 }
 
 function createModuleContent (code, map) {
