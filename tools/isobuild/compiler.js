@@ -72,6 +72,7 @@ compiler.compile = Profile(function (packageSource, options) {
         isopackCache: isopackCache,
         use: info.use,
         sourceRoot: packageSource.sourceRoot,
+        sideEffects: packageSource.sideEffects,
         sources: info.sources,
         // While we're not actually "serving" the file, the serveRoot is used to
         // calculate file names in source maps.
@@ -174,6 +175,7 @@ compiler.compile = Profile(function (packageSource, options) {
     prodOnly: packageSource.prodOnly,
     testOnly: packageSource.testOnly,
     pluginCacheDir: options.pluginCacheDir,
+    sideEffects: packageSource.sideEffects,
     isobuildFeatures
   });
 

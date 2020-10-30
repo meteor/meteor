@@ -288,6 +288,9 @@ var PackageSource = function () {
   // a package.
   self.name = null;
 
+
+  self.sideEffects = true;
+
   // The path relative to which all source file paths are interpreted
   // in this package. Also used to compute the location of the
   // package's .npm directory (npm shrinkwrap state).
@@ -456,6 +459,7 @@ _.extend(PackageSource.prototype, {
     const sourceArch = new SourceArch(self, {
       kind: options.kind,
       arch: "os",
+      sideEffects: self.sideEffects,
       sourceRoot: self.sourceRoot,
       uses: _.map(options.use, splitConstraint),
       getFiles() {
@@ -684,7 +688,6 @@ _.extend(PackageSource.prototype, {
         Cordova._dependencies = null;
       }
     }
-
     // By the way, you can't depend on yourself.
     var doNotDepOnSelf = function (dep) {
       if (dep.package === self.name) {
@@ -853,6 +856,7 @@ _.extend(PackageSource.prototype, {
           return result;
         },
         declaredExports: api.exports[arch],
+        sideEffects: api.sideEffects,
         watchSet: watchSet
       }));
     });
@@ -864,6 +868,8 @@ _.extend(PackageSource.prototype, {
     if (Package._hasTests) {
       self.testName = genTestName(self.name);
     }
+    self.sideEffects = api.sideEffects;
+
   }),
 
   _readAndWatchDirectory(relDir, watchSet, {include, exclude, names}) {
@@ -891,6 +897,12 @@ _.extend(PackageSource.prototype, {
     self.name = null;
     self.sourceRoot = appDir;
     self.serveRoot = '/';
+    let sideEffects = true;
+
+    try {
+      sideEffects = JSON.parse(files.readFile(projectContext.meteorConfig.packageJsonPath)).sideEffects || false;
+    }catch(e){}
+    self.sideEffects = sideEffects;
 
     // Determine used packages. Note that these are the same for all arches,
     // because there's no way to specify otherwise in .meteor/packages.
@@ -939,6 +951,7 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         sourceRoot: self.sourceRoot,
         uses: uses,
+        sideEffects,
         getFiles(sourceProcessorSet, watchSet) {
           sourceProcessorSet.watchSet = watchSet;
 
