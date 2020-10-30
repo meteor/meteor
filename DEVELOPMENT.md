@@ -65,6 +65,7 @@ When `meteor` is run from a checkout, a `dev_bundle` is automatically downloaded
 * Node.js version
 * npm version
 * MongoDB version
+* TypeScript version
 * Packages [used by `meteor-tool`](scripts/dev-bundle-tool-package.js)
 * Packages [used by the server bundle](scripts/dev-bundle-server-package.js)
 
