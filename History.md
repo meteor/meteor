@@ -33,6 +33,30 @@ N/A
 
   HMR is only available for apps that use the modules package. It will probably not work correctly with apps that use globals (though globals from packages or npm dependencies are fine) since it uses import/require to detect which modules need to be re-evaluated. [more](https://github.com/meteor/meteor/pull/11117)
 
+#### Tree Shaking:
+Tree-shaking is a strategy that the bundler uses to remove unused files and code from the final bundle. This implementation is totally backward compatible, so it will only be enabled by following the steps .
+
+This PR implements 2:
+
+1. Remove unused Files, by checking es6 imports/exports
+2. Remove unused exports, by checking used imports.
+
+This PR does not implement yet a verification for actual usage in the code, for tree shaking. It is restricted to imports, and also deals with dynamic and nested imports.
+
+*Usage on your app:*
+For enabling tree shaking in your app, simply add the flag:
+> sideEffects: false
+
+to your package.json.
+
+*packages*
+For packages, you can use on package.js the following:
+>  api.setSideEffects(false);
+
+inside the Package.onUse section. Note that if you use api.export(), tree shaking will be disabled.
+
+
+
 #### Other changes
 * Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
 
