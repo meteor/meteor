@@ -27,19 +27,17 @@ Are you new here? Please check our issues `good-for-first-contribution`: [core](
 
 We curate specific issues that would make great pull requests for community contributors by applying the `pull-requests-encouraged` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged)).
 
-Issues which *also* have the `confirmed` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed)) are considered to have their details clear enough to begin working on.
+Issues which *also* have the `Stage:Confirmed` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed)) are considered to have their details clear enough to begin working on.
 
-Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach Filipe Névola (Meteor Developer Evangelist) and he will help you to find something interesting to work on.
-
-Please note that `pull-requests-encouraged` issues with low activity will often be closed without being implemented. These issues are tagged with an additional [`not-implemented`](https://github.com/meteor/meteor/issues?utf8=✓&q=label%3Apull-requests-encouraged+label%3Anot-implemented) label, and can still be considered good candidates to work on. If you're interested in working on a closed and `not-implemented` issue, please let us know by posting on that issue.
+Any issue which does not have the `Stage:Confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull request opened on an issue which is not `Stage:Confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `Stage:Confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach Filipe Névola (Meteor Developer Evangelist, @FilipeNevola) and he will help you to find something interesting to work on.
 
 ### Project roles
 
-We’ve just begun to create more defined project roles for Meteor. Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
+Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
 
 #### Issue Triager
 
-Issue Triagers are members of the community that meet with us weekly to help triage Meteor’s open issues and bug reports. Once you’ve begun triaging issues regularly on your own, we will invite you to join our dedicated Slack channel to participate in these regular coordination sessions.
+Issue Triagers are members of the community that help every week with  Meteor’s open issues and bug reports.
 
 Current Issue Triagers:
 - [meteor](https://github.com/meteor/meteor)
@@ -56,37 +54,24 @@ Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
   - [@klaussner](https://github.com/klaussner)
   - [@zodern](https://github.com/zodern)
-  - [@benjamn](https://github.com/benjamn)
-  - [@abernix](https://github.com/abernix)
-  - [@hwillson](https://github.com/hwillson)
+  - [@StorytellerCZ](https://github.com/StorytellerCZ)
+  - [@sebakerckhof](https://github.com/sebakerckhof)
   - [@filipenevola](https://github.com/filipenevola)
+  - [@renanccastro](https://github.com/renanccastro)
 
 - [docs](https://github.com/meteor/docs) / [guide](https://github.com/meteor/guide)
   - [@lorensr](https://github.com/lorensr)
   - [@filipenevola](https://github.com/filipenevola)
+  - [@renanccastro](https://github.com/renanccastro)
 
 #### Core Committer
 
 The contributors with commit access to meteor/meteor are employees of Meteor Software Ltd or community members who have distinguished themselves in other contribution areas. If you want to become a core committer please start writing PRs.
 
 Current Core Committers:
-- [@benjamn](https://github.com/benjamn)
 - [@filipenevola](https://github.com/filipenevola)
-
-#### Documentation Maintainer
-
-Documentation Maintainers are regular documentation contributors that have been given the ability to merge docs changes on [meteor/docs](https://github.com/meteor/docs).
-
-Current Documentation Maintainers:
-- [@abernix](https://github.com/abernix)
-- [@lorensr](https://github.com/lorensr)
-
-#### Community Package Maintainer:
-
-Community package maintainers are community members who maintain packages outside of Meteor core. This requires code to be extracted from meteor/meteor, and entails a high level of responsibility. For this reason, community maintainers generally (and currently) must first become an advanced contributor to Meteor core and have 4-5 non-trivial pull requests merged that went through the proper contribution work-flow. At that point, core contributors may make the case for breaking out a particular core package, and assist in the technical process around doing so.
-
-Current Community Package Maintainers:
-- [@mitar](https://github.com/mitar) for [Blaze](https://github.com/meteor/blaze)
+- [@renanccastro](https://github.com/renanccastro)
+- [@denihs](https://github.com/denihs)
 
 #### Developer Evangelist
 
