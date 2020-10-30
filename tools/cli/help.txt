@@ -524,6 +524,8 @@ Options:
                   ('galaxy.meteor.com'.env.MONGO_URL), when deploying, Galaxy will create
                   a database to your app in its shared cluster and will insert the URL in
                   your app's settings for you.
+  --free          When deploying an app for the first time, you can pass this option
+                  to deploy your app in the Galaxy's free mode.
 
 >>> authorized
 View or change authorized users and organizations for a site.

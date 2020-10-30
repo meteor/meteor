@@ -10,6 +10,32 @@ N/A
 
 ### Changes
 
+* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+
+## v2.0, TDB
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+#### Hot module replacement (HMR):  
+  To use Hot module replacement in your Meteor app you need to add the package `hot-module-replacement`. You can do this by running `meteor add hot-module-replacement`. 
+  
+  This package is only for development (`debugOnly`). You don't need to worry about it affecting your production bundle.
+  
+  HMR updates modified files in the app without having to reload the page or restart the app. This is usually faster (many times updating the page before the build has finished), and allows state to be preserved, though it is also less reliable. In situations where HMR is not supported, it uses hot code push to update the page.
+
+  HMR is only available for apps that use the modules package. It will probably not work correctly with apps that use globals (though globals from packages or npm dependencies are fine) since it uses import/require to detect which modules need to be re-evaluated. [more](https://github.com/meteor/meteor/pull/11117)
+
+#### Other changes
+* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+
 ## v1.11.1, 2020-09-16
 
 ### Breaking changes
@@ -37,7 +63,6 @@ N/A
 * Updated PostCSS from 7.0.31 to 7.0.32 [more](https://github.com/meteor/meteor/issues/10682)
 
 * Allow android-webview-video-poster [more](https://github.com/meteor/meteor/pull/11159)
-
 
 ## v1.11, 2020-08-18
 
