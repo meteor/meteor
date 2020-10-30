@@ -520,6 +520,8 @@ Options:
                   waiting for the deploy to conclude.
   --cache-build   Reuses the build already created if the git commit hash is the
                   same
+  --free          When deploying an app for the first time, you can pass this option
+                  to deploy your app in the Galaxy's free mode.
 
 >>> authorized
 View or change authorized users and organizations for a site.
