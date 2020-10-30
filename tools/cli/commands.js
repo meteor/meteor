@@ -1437,7 +1437,7 @@ main.registerCommand({
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
     'cache-build': { type: Boolean },
-    mongo: { type: Boolean }
+    mongo: { type: Boolean },
     free: { type: Boolean }
   },
   allowUnrecognizedOptions: true,
