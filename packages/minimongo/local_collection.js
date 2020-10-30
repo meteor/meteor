@@ -152,6 +152,7 @@ export default class LocalCollection {
         }
       }
     });
+
     queriesToRecompute.forEach((recompute, qid) => {
       if (this.queries[qid]) {
         this._recomputeResults(this.queries[qid]);

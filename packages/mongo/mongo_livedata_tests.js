@@ -206,7 +206,7 @@ testAsyncMulti("mongo-livedata - database error reporting. " + idGeneration, [
       test.instanceOf(err, Error);
     };
 
-    _.each(["insert", "remove", "update"], function (op) {
+    ["insert", "remove", "update"].forEach(function (op) {
       var arg = (op === "insert" ? {} : 'bla');
       var arg2 = {};
 
@@ -1343,7 +1343,6 @@ if (Meteor.isServer) {
   });
 }
 
-
 testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
   function (test, expect) {
     this.collectionName = Random.id();
@@ -1359,6 +1358,26 @@ testAsyncMulti('mongo-livedata - empty documents, ' + idGeneration, [
       test.isTrue(id);
       const cursor = coll.find();
       test.equal(cursor.count(), 1);
+    }));
+  }
+]);
+
+testAsyncMulti('mongo-livedata - bulk insert empty documents, ' + idGeneration, [
+  function (test, expect) {
+    this.collectionName = Random.id();
+    if (Meteor.isClient) {
+      Meteor.call('createInsecureCollection', this.collectionName);
+      Meteor.subscribe('c-' + this.collectionName, expect());
+    }
+  }, function (test, expect) {
+    const coll = new Mongo.Collection(this.collectionName, collectionOptions);
+
+    coll.insert([{}, {}, {}], expect(function (err, ids) {
+      test.isFalse(err);
+      test.isTrue(ids);
+      test.equal(ids.length, 3);
+      const cursor = coll.find();
+      test.equal(cursor.count(), 3);
     }));
   }
 ]);

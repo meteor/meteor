@@ -138,15 +138,34 @@ CollectionPrototype._defineMutationMethods = function(options) {
           // between arbitrary client-specified _id fields and merely
           // client-controlled-via-randomSeed fields.
           let generatedId = null;
-          if (method === "insert" && !hasOwn.call(args[0], '_id')) {
-            generatedId = self._makeNewID();
+          let isBulkInsert = false;
+          if (method === "insert") {
+            isBulkInsert = Array.isArray(args[0]);
+            if (!isBulkInsert && !hasOwn.call(args[0], '_id')) {
+              generatedId = self._makeNewID();
+            }
+            if (isBulkInsert) {
+              generatedId = [];
+              args[0].forEach(doc => {
+                if (!hasOwn.call(doc, '_id')) {
+                  generatedId.push(self._makeNewID());
+                }
+              });
+            }
           }
 
           if (this.isSimulation) {
             // In a client simulation, you can do any mutation (even with a
             // complex selector).
-            if (generatedId !== null)
-              args[0]._id = generatedId;
+            if (generatedId !== null) {
+              if (!isBulkInsert) {
+                args[0]._id = generatedId;
+              } else {
+                args[0].forEach(doc => {
+                  doc._id = generatedId;
+                });
+              }
+            }
             return self._collection[method].apply(
               self._collection, args);
           }
@@ -169,7 +188,8 @@ CollectionPrototype._defineMutationMethods = function(options) {
             const validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
             args.unshift(this.userId);
-            method === 'insert' && args.push(generatedId);
+            method === 'insert' && !isBulkInsert && args.push(generatedId);
+            method === 'insert' && isBulkInsert && args.concat(generatedId);
             return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
             if (generatedId !== null)
@@ -510,7 +530,7 @@ function throwIfSelectorIsNotId(selector, methodName) {
       403, "Not permitted. Untrusted code may only " + methodName +
         " documents by ID.");
   }
-};
+}
 
 // Determine if we are in a DDP method simulation
 function alreadyInSimulation() {

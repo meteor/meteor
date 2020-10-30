@@ -59,19 +59,19 @@ Mongo.Collection = function Collection(name, options) {
   };
 
   switch (options.idGeneration) {
-  case 'MONGO':
-    this._makeNewID = function () {
-      const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
-      return new Mongo.ObjectID(src.hexString(24));
-    };
-    break;
-  case 'STRING':
-  default:
-    this._makeNewID = function () {
-      const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
-      return src.id();
-    };
-    break;
+    case 'MONGO':
+      this._makeNewID = function () {
+        const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
+        return new Mongo.ObjectID(src.hexString(24));
+      };
+      break;
+    case 'STRING':
+    default:
+      this._makeNewID = function () {
+        const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
+        return src.id();
+      };
+      break;
   }
 
   this._transform = LocalCollection.wrapTransform(options.transform);
@@ -451,16 +451,15 @@ Object.assign(Mongo.Collection.prototype, {
    * @method  insert
    * @memberof Mongo.Collection
    * @instance
-   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   * @param {Object|[Object]} doc The document(s) to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
    */
   insert(doc, callback) {
-    const isBulkInsert = Array.isArray(doc);
-
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error("insert requires an argument");
     }
+    const isBulkInsert = Array.isArray(doc);
 
     const checkId = document => {
       // Make a shallow clone of the document, preserving its prototype.
@@ -513,7 +512,8 @@ Object.assign(Mongo.Collection.prototype, {
     const chooseReturnValueFromCollectionResult = function (result, minimongo = false) {
       if (minimongo) return result;
       if (isBulkInsert) {
-        if (result.insertedIds) {
+        // XXX Sometimes the initial return for bulk insert is undefined for some reason.
+        if (result?.insertedIds) {
           return Object.values(result.insertedIds);
         }
         return [];
