@@ -179,8 +179,13 @@ function walkTree(pathParts, tree) {
   return walkTree(pathParts, _module);
 }
 
+// btoa with unicode support
+function utoa(data) {
+  return btoa(unescape(encodeURIComponent(data)));
+}
+
 function createInlineSourceMap(map) {
-  return "//# sourceMappingURL=data:application/json;base64," + btoa(JSON.stringify(map));
+  return "//# sourceMappingURL=data:application/json;base64," + utoa(JSON.stringify(map));
 }
 
 function createModuleContent (code, map) {
