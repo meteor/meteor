@@ -10,9 +10,34 @@ N/A
 
 ### Changes
 
-* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+## v1.12, unreleased
 
-* Cordova add plugin works again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+#### Meteor Version Release
+* `meteor-tool@1.12` 
+  - adds new options for `meteor list` command (TODO pending link to updated doc). [#11165](https://github.com/meteor/meteor/pull/11165).
+  - supports Cordova add plugin command working again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
+  - avoids MiTM by downloading through https. [#11188](https://github.com/meteor/meteor/pull/11188)
+  
+* `minimongo@1.6.1`
+  - fixes a null reference exception, if an array contains null values while compiling a fields projection. [#10499](https://github.com/meteor/meteor/pull/10499).
+
+* `accounts-password@1.6.3` 
+  - adds a new function `createUserVerifyingEmail` (TODO pending link to updated doc). [#11080](https://github.com/meteor/meteor/pull/11080)
+  - fixes a typo. [#11182](https://github.com/meteor/meteor/pull/11182)
+
+#### Independent Releases
+* `facebook-oauth@1.7.3` 
+  - is now using Facebook GraphAPI v8. [#11160](https://github.com/meteor/meteor/pull/11160)
 
 ## v1.11.1, 2020-09-16
 
