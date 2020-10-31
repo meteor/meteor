@@ -96,8 +96,8 @@ isn't a security risk, please file a report in
 > will page the security team.
 
 A Meteor app has many moving parts, and it's often difficult to
-reproduce a bug based on just a few lines of code.  So your report
-should include a link to a repository with a reproduction.  By making it as easy as possible
+reproduce a bug based on just a few lines of code. So your report
+should include a link to a repository with a reproduction. By making it as easy as possible
 for others to reproduce your bug, you make it easier for your bug to be
 fixed. 
 
@@ -214,7 +214,7 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 ### Proposing your change
 
-You'll have the best chance of getting a change into core if you can build consensus in the community for it. Start by creating a well specified feature request as a Github issue, in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository.
+You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://github.com/meteor/meteor/blob/devel/Roadmap.md). Start by creating a well specified feature request as a Github issue, in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository.
 
 Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `pull-requests-encouraged` label.
 
@@ -229,7 +229,7 @@ Once you've come up with a good design, go ahead and submit a pull request (PR).
  * Sign the CLA (the bot will ask you do to this in the PR).
 
  * Base all your work off of the **devel** branch. The **devel** branch
-   is where active development happens.  **We do not merge pull requests
+   is where active development happens. **We do not merge pull requests
    directly into master.**
 
  * Name your branch to match the feature/bug fix that you are
@@ -243,12 +243,30 @@ Once you've come up with a good design, go ahead and submit a pull request (PR).
    [code contributions](DEVELOPMENT.md#code-style)
    and
    [commit messages](DEVELOPMENT.md#commit-messages)
+   
+ * Bump the version of the changed package accordingly
+    * If your changes are ok to be released without a whole new Meteor version bump just the patch, for example, 2.4.5 will become 2.4.6.
+    * If your changes need a new Meteor version because they are affecting many parts or they depend on changes in the meteor-tool bump the minor, for example, 2.4.5 will become 2.5.0.
+    * If your change is a major rewrite then bump the major, for example, 2.4.5 will become 3.0.0.
+    * If you bump anything that is not the patch you will need to wait a new Meteor version to have your changes available. This is how Meteor core packages work.
 
  * Be sure your author field in git is properly filled out with your full name
  and email address so we can credit you.
 
-### Need help with your pull request?
+ * You can submit PRs that are not ready yet, submit them as Draft on GitHub and explain what is left and also if you need help.
 
-If you need help with a pull request, you should start by asking questions in the issue which it pertains to.  If you feel that your pull request is almost ready or needs feedback which can only be demonstrated with code, go ahead and open a pull-request with as much progress as possible.  By including a "[Work in Progress]" note in the subject, project contributors will know you need help!
+#### Keeping PRs up-to-date
 
-Submitting a pull request is no guarantee it will be accepted, but contributors will do their best to help move your pull request toward release.
+We should add new labels when the stage is evolving. This is specially important on PRs.
+
+##### Stages
+_[Stage:Confirmed, Stage:In discussion, Stage:Ready, Stage:Needs reproduction, Stage:In development, Stage:Pending tests, Stage:Waiting feedback]_
+
+- `Confirmed`: We want to fix or implement it
+- `Ready`: We've decided how to solve or implement it
+- `In discussion`: We are still discussing how to solve or implement it
+- `Needs reproduction`: We can't reproduce so it's blocked
+- `In development`: We are already working on it
+- `Pending tests`: Tests are not passing, stuck or we need new tests
+- `Waiting feedback`: It's implemented but we need feedback that it is working as expected
+
