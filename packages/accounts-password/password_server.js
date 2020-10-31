@@ -1155,24 +1155,41 @@ Meteor.methods({createUser: function (...args) {
           error: new Meteor.Error(403, "Signups forbidden")
         };
 
-      // Create user. result contains id and token.
-      const userId = createUser(options);
-      // safety belt. createUser is supposed to throw on error. send 500 error
-      // instead of sending a verification email with empty userid.
-      if (! userId)
-        throw new Error("createUser failed to insert new user");
-
-      // If `Accounts._options.sendVerificationEmail` is set, register
-      // a token to verify the user's primary email, and send it to
-      // that address.
-      if (options.email && Accounts._options.sendVerificationEmail)
-        Accounts.sendVerificationEmail(userId, options.email);
+      const userId = Accounts.createUserVerifyingEmail(options);
 
       // client gets logged in as the new user afterwards.
       return {userId: userId};
     }
   );
 }});
+
+// Create user directly on the server.
+//
+// Differently from Accounts.createUser(), this evaluates the Accounts package
+// configurations and send a verification email if the user has been registered
+// successfully.
+Accounts.createUserVerifyingEmail = (options) => {
+  options = { ...options };
+  // Create user. result contains id and token.
+  const userId = createUser(options);
+  // safety belt. createUser is supposed to throw on error. send 500 error
+  // instead of sending a verification email with empty userid.
+  if (! userId)
+    throw new Error("createUser failed to insert new user");
+
+  // If `Accounts._options.sendVerificationEmail` is set, register
+  // a token to verify the user's primary email, and send it to
+  // that address.
+  if (options.email && Accounts._options.sendVerificationEmail) {
+    if (options.password) {
+      Accounts.sendVerificationEmail(userId, options.email);
+    } else {
+      Accounts.sendEnrollmentEmail(userId, options.email);
+    }
+  }
+
+  return userId;
+};
 
 // Create user directly on the server.
 //
