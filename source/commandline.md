@@ -249,6 +249,30 @@ Lists all the packages that you have added to your project. For each package,
 lists the version that you are using. Lets you know if a newer version of that
 package is available.
 
+**Flags**
+
+Flags are optional and can be used to format the output. The default output
+requires no flags whatsoever. The following flags are supported:
+
+`--tree`
+
+Outputs a tree showing how packages are referenced.
+
+`--json`
+
+Outputs an unformatted JSON String, showing how packages are referenced.
+
+`--weak`
+
+Show weakly referenced dependencies in the tree.
+Only functional in combination with `--tree` or `--json`.
+
+`--details`
+
+Adds more package details to the JSON output.
+Only functional in combination with `--json`.
+
+
 <h2 id="meteoraddplatform">meteor add-platform <i>platform</i></h2>
 
 Adds platforms to your Meteor project. You can add multiple
