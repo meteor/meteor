@@ -199,6 +199,8 @@ if (Meteor.isServer) {
 
 This will make every Method only callable 5 times per second per connection. This is a rate limit that shouldn't be noticeable by the user at all, but will prevent a malicious script from totally flooding the server with requests. You will need to tune the limit parameters to match your app's needs.
 
+If you're using validated methods, there's an available [ddp-rate-limiter-mixin](https://github.com/nlhuykhang/ddp-rate-limiter-mixin).
+
 <h2 id="publications">Publications</h2>
 
 Publications are the primary way a Meteor server can make data available to a client. While with Methods the primary concern was making sure users can't modify the database in unexpected ways, with publications the main issue is filtering the data being returned so that a malicious user can't get access to data they aren't supposed to see.
@@ -540,6 +542,7 @@ This is a collection of points to check about your app that might catch common e
 
 1. Make sure your app doesn't have the `insecure` or `autopublish` packages.
 1. Validate all Method and publication arguments, and include the `audit-argument-checks` to check this automatically.
+1. Apply rate limiting to your application to prevent DDoS attacks.
 1. [Deny writes to the `profile` field on user documents.](accounts.html#dont-use-profile)
 1. [Use Methods instead of client-side insert/update/remove and allow/deny.](security.html#allow-deny)
 1. Use specific selectors and [filter fields](http://guide.meteor.com/security.html#fields) in publications.
