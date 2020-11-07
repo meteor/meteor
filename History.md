@@ -43,6 +43,12 @@ N/A
   - adds a new function `createUserVerifyingEmail` (TODO pending link to updated doc). [#11080](https://github.com/meteor/meteor/pull/11080)
   - fixes a typo. [#11182](https://github.com/meteor/meteor/pull/11182)
 
+* `browser-content-policy@1.1.1` 
+  - adds support to nonce
+  ```js
+    BrowserPolicy.content.allowScriptOrigin(`nonce-${nonce}`);
+  ```
+
 #### Independent Releases
 * `facebook-oauth@1.7.3` 
   - is now using Facebook GraphAPI v8. [#11160](https://github.com/meteor/meteor/pull/11160)
