@@ -64,12 +64,14 @@ N/A
   - HMR
   - Tree-shaking
 
-* `accounts-base@1.7.1` adds method `setDefaultPublishFields` to `Accounts` so you can customize what fields are published by default from the `Users` collection.
+* `accounts-base@1.7.1`
+  - adds method `setDefaultPublishFields` to `Accounts` so you can customize what fields are published by default from the `Users` collection.
     ```js
     Accounts.setDefaultPublishFields({username: 1, profile: 1, emails: 1, 'foo.bar': 1});
     // or
     Accounts.setDefaultPublishFields({'do.not.publish.this': -1});
     ```
+
 
 #### Independent Releases
 N/A
