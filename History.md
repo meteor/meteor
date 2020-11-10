@@ -48,6 +48,10 @@ N/A
   ```js
     BrowserPolicy.content.allowScriptOrigin(`nonce-${nonce}`);
   ```
+  
+* `accounts-ui-unstyled@1.4.3` 
+  - fixes the login form would send the server two login requests
+  - fixes the "forgot password" form would not only send the email but also refresh the page
 
 #### Independent Releases
 * `facebook-oauth@1.7.3` 
