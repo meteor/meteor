@@ -239,7 +239,7 @@ Reload._migrate = function (tryReload, options) {
   return true;
 };
 
-// Allows tests to isolate thπe list of providers.
+// Allows tests to isolate the list of providers.
 Reload._withFreshProvidersForTest = function (f) {
   const originalProviders = providers.slice(0);
   providers = [];
