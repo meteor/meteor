@@ -1,7 +1,9 @@
 Tinytest.add("reload - migrate", function (test) {
   Reload._withFreshProvidersForTest(function () {
+    // Simulate the state of migration 1
+    let readyStateMigration1 = false;
     Reload._onMigrate("reload test data 1", function (tryReload, options) {
-      return [false, { foo: "bar" }];
+      return [readyStateMigration1, { foo: "bar" }];
     });
 
     Reload._onMigrate("reload test data 2", function (tryReload, options) {
@@ -21,6 +23,7 @@ Tinytest.add("reload - migrate", function (test) {
     test.equal(data.reload, true);
 
     // Now all providers are ready.
+    readyStateMigration1 = true;
     test.isTrue(Reload._migrate(function () { }));
 
     data = JSON.parse(Reload._getData());
