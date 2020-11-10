@@ -54,6 +54,33 @@ ruleTester.run('eventmap-params', rule, {
     `
       Template.foo.events()
     `,
+    {
+      code: `
+        const SharedFeature = Template.SharedFeatures;
+
+        Template.SharedFeatures = {
+          EVENT_HANDLERS: {
+            'click .some-classname': function (e, tmpl) {
+              //
+            },
+          },
+        }
+
+        Template.foo.events({ ...SharedFeatures.EVENT_HANDLERS })
+      `,
+      parserOptions: {
+        ecmaFeatures: {
+          globalReturn: false,
+          impliedStrict: true,
+          experimentalObjectRestSpread: true,
+          jsx: true,
+          generators: false,
+          objectLiteralDuplicateProperties: false,
+        },
+        ecmaVersion: 2018,
+        sourceType: 'module',
+      },
+    },
     `
       Template.foo.events(null)
     `,
