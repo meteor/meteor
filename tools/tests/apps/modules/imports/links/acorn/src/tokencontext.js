@@ -45,13 +45,13 @@ pp.braceIsBlock = function(prevType) {
   // The check for `tt.name && exprAllowed` detects whether we are
   // after a `yield` or `of` construct. See the `updateContext` for
   // `tt.name`.
-  if (prevType === tt._return || prevType == tt.name && this.exprAllowed)
+  if (prevType === tt._return || prevType === tt.name && this.exprAllowed)
     return lineBreak.test(this.input.slice(this.lastTokEnd, this.start))
-  if (prevType === tt._else || prevType === tt.semi || prevType === tt.eof || prevType === tt.parenR || prevType == tt.arrow)
+  if (prevType === tt._else || prevType === tt.semi || prevType === tt.eof || prevType === tt.parenR || prevType === tt.arrow)
     return true
-  if (prevType == tt.braceL)
+  if (prevType === tt.braceL)
     return parent === types.b_stat
-  if (prevType == tt._var || prevType == tt.name)
+  if (prevType === tt._var || prevType === tt._const || prevType === tt.name)
     return false
   return !this.exprAllowed
 }
@@ -67,7 +67,7 @@ pp.inGeneratorContext = function() {
 
 pp.updateContext = function(prevType) {
   let update, type = this.type
-  if (type.keyword && prevType == tt.dot)
+  if (type.keyword && prevType === tt.dot)
     this.exprAllowed = false
   else if (update = type.updateContext)
     update.call(this, prevType)
@@ -78,7 +78,7 @@ pp.updateContext = function(prevType) {
 // Token-specific context update code
 
 tt.parenR.updateContext = tt.braceR.updateContext = function() {
-  if (this.context.length == 1) {
+  if (this.context.length === 1) {
     this.exprAllowed = true
     return
   }
@@ -111,6 +111,7 @@ tt.incDec.updateContext = function() {
 
 tt._function.updateContext = tt._class.updateContext = function(prevType) {
   if (prevType.beforeExpr && prevType !== tt.semi && prevType !== tt._else &&
+      !(prevType === tt._return && lineBreak.test(this.input.slice(this.lastTokEnd, this.start))) &&
       !((prevType === tt.colon || prevType === tt.braceL) && this.curContext() === types.b_stat))
     this.context.push(types.f_expr)
   else
@@ -127,7 +128,7 @@ tt.backQuote.updateContext = function() {
 }
 
 tt.star.updateContext = function(prevType) {
-  if (prevType == tt._function) {
+  if (prevType === tt._function) {
     let index = this.context.length - 1
     if (this.context[index] === types.f_expr)
       this.context[index] = types.f_expr_gen
@@ -139,9 +140,9 @@ tt.star.updateContext = function(prevType) {
 
 tt.name.updateContext = function(prevType) {
   let allowed = false
-  if (this.options.ecmaVersion >= 6) {
-    if (this.value == "of" && !this.exprAllowed ||
-        this.value == "yield" && this.inGeneratorContext())
+  if (this.options.ecmaVersion >= 6 && prevType !== tt.dot) {
+    if (this.value === "of" && !this.exprAllowed ||
+        this.value === "yield" && this.inGeneratorContext())
       allowed = true
   }
   this.exprAllowed = allowed

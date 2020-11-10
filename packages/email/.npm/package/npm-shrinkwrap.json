@@ -1,15 +1,15 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
-    "node4mailer": {
-      "version": "4.0.3",
-      "resolved": "https://registry.npmjs.org/node4mailer/-/node4mailer-4.0.3.tgz",
-      "integrity": "sha1-jwx6ZzdSehKFMBhaFMLoeZiaiRA="
+    "nodemailer": {
+      "version": "6.4.6",
+      "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-6.4.6.tgz",
+      "integrity": "sha512-/kJ+FYVEm2HuUlw87hjSqTss+GU35D4giOpdSfGp7DO+5h6RlJj7R94YaYHOkoxu1CSaM0d3WRBtCzwXrY6MKA=="
     },
     "stream-buffers": {
-      "version": "0.2.5",
-      "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-0.2.5.tgz",
-      "integrity": "sha1-+TBTnTzwjXSKNArWE5+Vss60jwU="
+      "version": "3.0.2",
+      "resolved": "https://registry.npmjs.org/stream-buffers/-/stream-buffers-3.0.2.tgz",
+      "integrity": "sha512-DQi1h8VEBA/lURbSwFtEHnSTb9s2/pwLEaFuNhXwy1Dx3Sa0lOuYT2yNUr4/j2fs8oCAMANtrZ5OrPZtyVs3MQ=="
     }
   }
 }

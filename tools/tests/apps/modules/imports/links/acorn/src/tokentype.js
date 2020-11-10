@@ -136,7 +136,7 @@ export const types = {
   _class: kw("class", startsExpr),
   _extends: kw("extends", beforeExpr),
   _export: kw("export"),
-  _import: kw("import"),
+  _import: kw("import", startsExpr),
   _null: kw("null", startsExpr),
   _true: kw("true", startsExpr),
   _false: kw("false", startsExpr),

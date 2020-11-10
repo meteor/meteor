@@ -65,6 +65,7 @@ When `meteor` is run from a checkout, a `dev_bundle` is automatically downloaded
 * Node.js version
 * npm version
 * MongoDB version
+* TypeScript version
 * Packages [used by `meteor-tool`](scripts/dev-bundle-tool-package.js)
 * Packages [used by the server bundle](scripts/dev-bundle-server-package.js)
 
@@ -102,7 +103,7 @@ Pull requests that contain `dev_bundle` changes will be noted by repo collaborat
 
 The Meteor core is best documented within the code itself, however, many components also have a `README.md` in their respective directories.
 
-Some compartmentalized portions of Meteor are broken into packages ([see a list of packages](packages/)) and they almost all have a `README.md` within their directory.  For example, [`ddp`](packages/ddp/README.md), [`ecmascript`](packages/ecmascript/README.md) and [`tinytest`](packages/tinytest/README.md).
+Some compartmentalized portions of Meteor are broken into packages ([see a list of packages](packages/)) and almost all of them have a `README.md` within their directory.  For example, [`ddp`](packages/ddp/README.md), [`ecmascript`](packages/ecmascript/README.md) and [`tinytest`](packages/tinytest/README.md).
 
 For the rest, try looking nearby for a `README.md`.  For example, [`isobuild`](tools/isobuild/README.md) or [`cordova`](tools/cordova/README.md).
 
@@ -110,10 +111,10 @@ For the rest, try looking nearby for a `README.md`.  For example, [`isobuild`](t
 
 ### Test against the local meteor copy
 
-When running any of tests, be sure run them against the checked-out copy of Meteor instead of
+When running any tests, be sure to run them against the checked-out copy of Meteor instead of
 the globally-installed version.  This means ensuring that the command is `path-to-meteor-checkout/meteor` and not just `meteor`.
 
-This is important so that tests are run against the version in development and not the stable (installed) Meteor release.
+This is important so that tests are run against your local development version and not the stable (installed) Meteor release.
 
 ### Running tests on Meteor core
 
@@ -142,7 +143,7 @@ While TinyTest and the `test-packages` command can be used to test internal Mete
 
 #### Listing available tests
 
-To see a list of the tests which are included in the self-test system, list them with the `--list` option:
+To see a list of tests included in the self-test system, use the `--list` option:
 
     ./meteor self-test --list
 
@@ -161,6 +162,13 @@ In a similar way to the method of specifying which tests TO run, there is a way 
     ./meteor self-test --exclude "^[a-b]" --list
 
 Simply remove the `--list` flag to actually run the matching tests.
+
+#### Avoiding retries
+
+On CI we want to retry the tests to avoid false failures but in development can take some time if you retry every time a test is failing. So to avoid retries use:
+
+    ./meteor self-test --retries 0
+
 
 #### More reading
 
@@ -182,7 +190,7 @@ Since Meteor is a free, open-source project, you can run tests in the context of
 
 To enable CircleCI for your development:
 
-1. Make sure you have an account with [CircleCI](https://circleci.com)
+0. Make sure you have an account with [CircleCI](https://circleci.com)
 0. Make sure you have [forked](https://help.github.com/articles/fork-a-repo/) [Meteor](https://github.com/meteor/meteor) into your own GitHub account.
 0. Go to the [Add Projects](https://circleci.com/add-projects) page on CircleCI.
 0. On the left, click on your GitHub username.
@@ -201,7 +209,7 @@ To enable CircleCI for your development:
 
 ## Commit messages
 
-Good commit messages are very important and you should make sure to explain what is changing and why.  The commit message should include:
+Good commit messages are very important and you should make sure to explain what is changing and why. The commit message should include:
 
 * A short and helpful commit title (maximum 80 characters).
 * A commit description which clearly explains the change if it's not super-obvious by the title.  Some description always helps!

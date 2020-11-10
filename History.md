@@ -1,4 +1,135 @@
-## v1.10, 2020-03-12
+## vNEXT, unreleased
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+
+## v1.11.1, 2020-09-16
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* `--apollo` skeleton was missing client cache setup [more](https://github.com/meteor/meteor/pull/11146)
+
+* `--vue` skeleton was updated to use proper folder structure [more](https://github.com/meteor/meteor/pull/11174)
+
+* All skeletons got their `npm` dependencies updated. [more](https://github.com/meteor/meteor/pull/11172)
+
+* Node.js has been updated to version [12.18.4](https://nodejs.org/en/blog/release/v12.18.4/), this is a [security release](https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/)
+
+* Updated npm to version 6.14.8 [more](https://blog.npmjs.org/post/626732790304686080/release-6148)
+
+* `npm-mongo` version 3.8.1 was published, updating `mongodb` to [3.6.2](https://github.com/mongodb/node-mongodb-native/releases/tag/v3.6.2) [more](https://github.com/advisories/GHSA-pp7h-53gx-mx7r)
+
+* Updated PostCSS from 7.0.31 to 7.0.32 [more](https://github.com/meteor/meteor/issues/10682)
+
+* Allow android-webview-video-poster [more](https://github.com/meteor/meteor/pull/11159)
+
+## v1.11, 2020-08-18
+
+### Breaking changes
+
+* `email` package dependencies have been update and package version has been bumped to 2.0.0
+    There is a potential breaking change as the underlying package started to use `dns.resolve()`
+    instead of `dns.lookup()` which might be breaking on some environments.
+    See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* `meteor create --apollo` is now available thanks to [@StorytellerCZ](https://github.com/StorytellerCZ). PR [#11119](https://github.com/meteor/meteor/pull/11119)
+
+* `meteor create --vue` is now available thanks to [@chris-visser](https://github.com/chris-visser). PR [#11086](https://github.com/meteor/meteor/pull/11086)
+
+* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://galaxy-guide.meteor.com/deploy-guide.html#cache-build).
+
+* Multiple optimizations in build performance, many of them for Windows thanks to [@zodern](https://github.com/zodern). PRs [#10838](https://github.com/meteor/meteor/pull/10838), [#11114](https://github.com/meteor/meteor/pull/11114), [#11115](https://github.com/meteor/meteor/pull/11115), [#11102](https://github.com/meteor/meteor/pull/11102), [#10839](https://github.com/meteor/meteor/pull/10839)
+
+* Fixes error when removing cordova plugin that depends on cli variables. PR [#10976](https://github.com/meteor/meteor/pull/11052)
+
+* `email` package now exposes `hookSend` that runs before emails are send.
+
+* Node.js has been updated to version
+    [12.18.3](https://nodejs.org/en/blog/release/v12.18.3/)
+    
+* Updated npm to version 6.14.5
+
+* `mongodb` driver npm dependency has been updated to 3.6.0
+
+* The version of MongoDB used by Meteor in development has been updated
+    from 4.2.5 to 4.2.8
+
+## v1.10.2, 2020-04-21
+
+### Breaking changes
+
+* The `babel-compiler` package, used by both `ecmascript` and
+  `typescript`, no longer supports stripping [Flow](https://flow.org/)
+  type annotations by default, which may be a breaking change if your
+  application (or Meteor package) relied on Flow syntax.
+
+### Migration steps
+
+* If you still need Babel's Flow plugins, you can install them with npm
+  and then enable them with a custom `.babelrc` file in your application's
+  (or package's) root directory:
+  ```json
+  {
+    "plugins": [
+      "@babel/plugin-syntax-flow",
+      "@babel/plugin-transform-flow-strip-types"
+    ]
+  }
+  ```
+
+### Changes
+
+* Adds support to override MongoDB options via Meteor settings. Code PR 
+[#10976](https://github.com/meteor/meteor/pull/10976), Docs PR 
+[#662](https://github.com/meteor/docs/pull/662)
+
+* The `meteor-babel` npm package has been updated to version 7.9.0.
+
+* The `typescript` npm package has been updated to version 3.8.3.
+  
+* To pass Node command line flags to the server node instance,
+  now it is recommended to use `SERVER_NODE_OPTIONS` instead of `NODE_OPTIONS`.
+  Since Meteor 0.5.3, Meteor allowed to pass node command line flags via the  `NODE_OPTIONS`
+  environment variable.
+  However, since Node version 8 / Meteor 1.6 this has become a default node
+  envar with the same behavior. The side effect is that this now also affects
+  Meteor tool. The command line parameters could already be set separately
+  via the `TOOL_NODE_FLAGS` envar. This is now also possible (again) for the server.
+
+* The version of MongoDB used by Meteor in development has been updated from
+  4.2.1 to 4.2.5.
+  [PR #11020](https://github.com/meteor/meteor/pull/11020)
+  
+* The `url` package now provides an isomorphic implentation of the [WHATWG `url()`
+  API](https://url.spec.whatwg.org/).
+  While remaining backwards compatible, you can now also import `URL` and `URLSearchParams` from `meteor/url`.
+  These will work for both modern and legacy browsers as well as node.
+  
+
+## v1.10.1, 2020-03-12
 
 ### Breaking changes
 
@@ -85,10 +216,10 @@
 ## v1.9.3, 2020-03-09
 
 ### Breaking changes
-N/A
+* The MongoDB `retryWrites` option now defaults to `true` (it previously defaulted to false). Users of database services that don't support retryWrites will experience a fatal error due to this.
 
 ### Migration Steps
-N/A
+* If you get the error `MongoError: This MongoDB deployment does not support retryable writes. Please add retryWrites=false to your connection string.`, append `retryWrites=false` to your MongoDB connection string.
 
 ### Changes
 * `mongodb` driver package has been updated
@@ -193,7 +324,7 @@ N/A
   fields. [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 
 * Lots of internal calls to `Meteor.user()` without field specifiers in `accounts-base` and
-  `accounts-password` packages have been optimized with explicit field selectors to only fetch
+  `accounts-password` packages have been optimized with explicit field selectors to only 
   the fields needed by the functions they are in.
   [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 
@@ -249,6 +380,8 @@ N/A
   `Uncaught SyntaxError: Identifier 'exports' has already been declared`.
   See [this comment](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056)
   by [@SimonSimCity](https://github.com/SimonSimCity).
+
+* `Plugin.fs` methods are now always sync and no longer accept a callback.
 
 ### Migration Steps
 

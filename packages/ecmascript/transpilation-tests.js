@@ -120,9 +120,3 @@ class Foo {
 
   test.isTrue(/helpers\/(builtin\/)?createClass/.test(output));
 });
-
-Tinytest.add("ecmascript - transpilation - flow", (test) => {
-  const output = transform(
-    'var foo = function (one: any, two: number, three?): string {};');
-  test.isTrue(contains(output, '(one, two, three)'));
-});

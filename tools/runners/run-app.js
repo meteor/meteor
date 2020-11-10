@@ -23,13 +23,13 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
-    throw new Error("Meteor cannot currently handle quoted NODE_OPTIONS");
+    throw new Error("Meteor cannot currently handle quoted SERVER_NODE_OPTIONS");
   }
   return _.without(s.split(/\s+/), '');
 };
 
 var getNodeOptionsFromEnvironment = function () {
-  return bashParse(process.env.NODE_OPTIONS || "");
+  return bashParse(process.env.SERVER_NODE_OPTIONS || "");
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -579,6 +579,10 @@ _.extend(AppRunner.prototype, {
           // Permit delayed bundling of client architectures if the
           // console is interactive.
           allowDelayedClientBuilds: ! Console.isHeadless(),
+
+          // None of the targets are used during full rebuilds
+          // so we can safely build in place on Windows
+          forceInPlaceBuild: !cachedServerWatchSet
         });
       });
 
