@@ -65,15 +65,27 @@ function precacheOnLoad(event) {
   // multiple times in the same tick of the event loop, all those modules
   // will be fetched in one HTTP POST request.
   function prefetchInChunks(modules, amount) {
-    Promise.all(modules.splice(0, amount).map(function (id) {
-      return module.prefetch(id);
-    })).then(function () {
-      if (modules.length > 0) {
-        setTimeout(function () {
-          prefetchInChunks(modules, amount);
-        }, 0);
-      }
-    });
+      Promise.all(modules.splice(0, amount).map(function (id) {
+        return new Promise(function(resolve, reject) {
+          module.prefetch(id).then((module)=>resolve(module)).catch((err)=>{
+            // we probably have a : _ mismatch 
+            // what can get wrong if we do the replacement
+            // 1. a package with a name like a_b:package will not resolve
+            // 2. someone falsely imports a_package that does not exist but a package
+            //    a:package exists, so this one gets imported and its usage will fail
+            if(id.indexOf('/node_modules/meteor/')===0) {
+              module.prefetch('/node_modules/meteor/'+id.replace('/node_modules/meteor/','').replace('_',':')
+              ).then(resolve).catch(reject);
+            } else reject(err);
+          })
+        });
+      })).then(function () {
+        if (modules.length > 0) {
+          setTimeout(function () {
+            prefetchInChunks(modules, amount);
+          }, 0);
+        }
+      });
   }
 
   // Get a flat array of modules and start prefetching.
