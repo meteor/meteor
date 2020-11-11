@@ -74,7 +74,7 @@ const getRoundsFromBcryptHash = hash => {
 // `password.digest`).
 //
 // The user parameter needs at least user._id and user.services
-Accounts._checkPasswordUserFields = {_id: 1, services: 1},
+Accounts._checkPasswordUserFields = {_id: 1, services: 1};
 //
 Accounts._checkPassword = (user, password) => {
   const result = {

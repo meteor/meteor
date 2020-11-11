@@ -289,13 +289,17 @@ Options:
 List the packages explicitly used by your project.
 Usage: meteor list
        meteor list --tree [--weak]
+       meteor list --json [--weak] [--details]
 
 Lists the packages that you have explicitly added to your project.
 Transitive dependencies are not listed unless you use the --tree option,
 which outputs a tree showing how packages are referenced.
 
+Use the --json option to output the tree in JSON format.
+
 Options:
   --weak           Show weakly referenced dependencies in the tree.
+  --details        Adds more package details to the JSON output.
 
 >>> add-platform
 Add a platform to this project.
