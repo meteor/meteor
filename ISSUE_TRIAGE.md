@@ -21,8 +21,6 @@ All issues follow the flow outlined below. Your job as an issue maintainer is to
 
 The first step is in determining whether the issue is a bug, help question or feature request. Read on for more details.
 
-We have [Stale bot](https://github.com/probot/stale) watching this repository with these [settings](https://github.com/meteor/meteor/blob/devel/.github/stale.yml) and closing stale issues (40 days without activities). Issues marked as `Stage:Confirmed` or `Stage:Ready` are never considered stale.
-
 ### Bugs
 
 1. Duplicates should be closed and marked as such.
