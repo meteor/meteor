@@ -22,6 +22,7 @@ export default class SourceArch {
     // Do not include the source files in watchSet. They will be added at
     // compile time when the sources are actually read.
     watchSet = new WatchSet(),
+    sideEffects = true,
   }) {
     isString(kind) || reportMissingOption('kind');
     isString(arch) || reportMissingOption('arch');
@@ -29,6 +30,7 @@ export default class SourceArch {
     isFunction(getFiles) || reportMissingOption('getFiles');
 
     this.pkg = pkg;
+    this.sideEffects = sideEffects;
 
     // Kind of this sourceArchitecture. At the moment, there are really
     // three options -- package, plugin, and app. We use these in linking.

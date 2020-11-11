@@ -113,6 +113,7 @@ export class CompilerPluginProcessor {
     unibuilds,
     arch,
     sourceRoot,
+    buildMode,
     isopackCache,
     linkerCacheDir,
     scannerCacheDir,
@@ -122,6 +123,7 @@ export class CompilerPluginProcessor {
       unibuilds,
       arch,
       sourceRoot,
+      buildMode,
       isopackCache,
       linkerCacheDir,
       scannerCacheDir,
@@ -145,6 +147,7 @@ export class CompilerPluginProcessor {
     var sourceProcessorsWithSlots = {};
 
     var sourceBatches = _.map(self.unibuilds, function (unibuild) {
+
       const { pkg: { name }, arch } = unibuild;
       const sourceRoot = name
         && self.isopackCache.getSourceRoot(name, arch)
@@ -290,6 +293,12 @@ class InputFile extends buildPluginModule.InputFile {
     // resources might not have this property.
     const { inputResource } = this._resourceSlot;
     return inputResource.fileOptions || (inputResource.fileOptions = {});
+  }
+
+  hmrAvailable() {
+    const fileOptions = this.getFileOptions() || {};
+
+    return this._resourceSlot.hmrAvailable() && !fileOptions.bare;
   }
 
   readAndWatchFileWithHash(path) {
@@ -700,6 +709,10 @@ class ResourceSlot {
     );
   }
 
+  hmrAvailable() {
+    return this.packageSourceBatch.hmrAvailable;
+  }
+
   addStylesheet(options, lazyFinalizer) {
     if (! this.sourceProcessor) {
       throw Error("addStylesheet on non-source ResourceSlot?");
@@ -1100,6 +1113,19 @@ export class PackageSourceBatch {
         self.unibuild.arch
       );
 
+    // TODO: probably safe to remove buildMode check once hot-module-replacement is debugOnly
+    const isDevelopment = self.processor.buildMode === 'development';
+    const usesHMRPackage = self.unibuild.pkg.name !== "hot-module-replacement" &&
+      self.processor.isopackCache.uses(
+        self.unibuild.pkg,
+        "hot-module-replacement",
+        self.unibuild.arch
+      );
+    const supportedArch = self.unibuild.arch === 'web.browser';
+
+    self.hmrAvailable = self.useMeteorInstall && isDevelopment
+      && usesHMRPackage && supportedArch;
+
     // These are the options that should be passed as the second argument
     // to meteorInstall when modules in this source batch are installed.
     self.meteorInstallOptions = self.useMeteorInstall ? {
@@ -1252,6 +1278,8 @@ export class PackageSourceBatch {
   // Returns a map from package names to arrays of JS output files.
   static computeJsOutputFilesMap(sourceBatches) {
     const map = new Map;
+    const resolveMap = new Map();
+    const fileImportState = new Map();
 
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
@@ -1262,7 +1290,10 @@ export class PackageSourceBatch {
       });
 
       map.set(name, {
-        files: inputFiles,
+        files: inputFiles.map(file => {
+          file.sideEffects = batch.unibuild.pkg.sideEffects;
+          return file;
+        }),
         mainModule: _.find(inputFiles, file => file.mainModule) || null,
         batch,
         importScannerWatchSet: new WatchSet(),
@@ -1320,7 +1351,13 @@ export class PackageSourceBatch {
     // Records the subset of allMissingModules that were successfully
     // relocated to a source batch that could handle them.
     const allRelocatedModules = Object.create(null);
+    let allMissingModulesAbsPath = Object.create(null);
     const scannerMap = new Map;
+    const sourceBatch = sourceBatches.find((sourceBatch) => {
+      const name = sourceBatch.unibuild.pkg.name || null;
+      return !name;
+    });
+    const appSideEffects = sourceBatch ? sourceBatch.unibuild.pkg.sideEffects : true;
 
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
@@ -1343,10 +1380,13 @@ export class PackageSourceBatch {
       });
 
       const entry = map.get(name);
+      
 
+      const pkgSideEffects = name === 'modules' ? appSideEffects : batch.unibuild.pkg.sideEffects;
       const scanner = new ImportScanner({
         name,
         bundleArch: batch.processor.arch,
+        sideEffects: pkgSideEffects,
         extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
@@ -1418,6 +1458,7 @@ export class PackageSourceBatch {
           scannerMap.get(name).scanMissingModules(missing);
         ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);
         ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
+        allMissingModulesAbsPath = { ...scannerMap.get(name).missingDepsAbsPath, ...(allMissingModulesAbsPath || {})};
       });
 
       if (! _.isEmpty(nextMissingModules)) {
@@ -1436,6 +1477,7 @@ export class PackageSourceBatch {
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;
       const outputFiles = scanner.getOutputFiles();
+
       const entry = map.get(name);
 
       if (entry.batch.useMeteorInstall) {
@@ -1486,14 +1528,25 @@ export class PackageSourceBatch {
         entry.files = appFilesWithoutNodeModules;
 
       } else {
+
         entry.files = outputFiles;
       }
-    });
 
-    return this._watchOutputFiles(map);
+      Object.entries(scanner.importedStatusFile).forEach(function([key, value]) {
+        fileImportState.set(key, value);
+      });
+      scanner.resolveMap.forEach(function(value, key) {
+        const current = resolveMap.get(key) || new Map();
+        for(const [newKey, newValue] of value.entries()){
+          current.set(newKey, newValue);
+        }
+        resolveMap.set(key, current);
+      });
+    });
+    return this._watchOutputFiles(map, resolveMap, fileImportState, allMissingModulesAbsPath);
   }
 
-  static _watchOutputFiles(jsOutputFilesMap) {
+  static _watchOutputFiles(jsOutputFilesMap, resolveMap, fileImportState, allMissingModulesAbsPath) {
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
@@ -1520,7 +1573,8 @@ export class PackageSourceBatch {
         }
       });
     });
-    return jsOutputFilesMap;
+
+    return { jsOutputFilesMap, resolveMap, fileImportState, allMissingModulesAbsPath };
   }
 
   static _warnAboutMissingModules(missingModules) {
@@ -1624,7 +1678,7 @@ export class PackageSourceBatch {
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources(jsResources) {
+  getResources(jsResources, onCacheKey) {
     buildmessage.assertInJob();
 
     const resources = [];
@@ -1633,12 +1687,12 @@ export class PackageSourceBatch {
       resources.push(...slot.outputResources);
     });
 
-    resources.push(...this._linkJS(jsResources));
+    resources.push(...this._linkJS(jsResources, onCacheKey));
 
     return resources;
   }
 
-  _linkJS(jsResources) {
+  _linkJS(jsResources, onCacheKey = () => {}) {
     const self = this;
     buildmessage.assertInJob();
 
@@ -1687,6 +1741,7 @@ export class PackageSourceBatch {
       fileHashes
     }));
     const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
+    onCacheKey(cacheKey, jsResources);
 
     if (LINKER_CACHE.has(cacheKey)) {
       if (CACHE_DEBUG) {
@@ -1752,6 +1807,7 @@ export class PackageSourceBatch {
     const ret = linkedFiles.map((file) => {
       const sm = (typeof file.sourceMap === 'string')
         ? JSON.parse(file.sourceMap) : file.sourceMap;
+
       return {
         type: "js",
         // This is a string... but we will convert it to a Buffer

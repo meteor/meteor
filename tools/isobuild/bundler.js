@@ -148,6 +148,8 @@
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
+import { removeUnusedExports } from "./js-analyze";
+
 var assert = require('assert');
 var util = require('util');
 var Fiber = require('fibers');
@@ -159,7 +161,7 @@ import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
-import { addToTree } from "./linker.js";
+import { addToTree, File as LinkerFile } from "./linker.js";
 
 var files = require('../fs/files');
 var archinfo = require('../utils/archinfo');
@@ -174,6 +176,7 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
+import { sha1 } from "../fs/watch";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -572,6 +575,9 @@ class File {
     // file is not intended to be served over HTTP).
     this.url = null;
 
+    // If updates to this file will be handled with HMR
+    this.replaceable = options.replaceable;
+
     // A prefix that will be prepended to this.url.
     // Prefixing is currently restricted to web.cordova URLs.
     if (options.arch.startsWith("web.") &&
@@ -838,7 +844,7 @@ class Target {
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
-  make({packages, minifyMode, addCacheBusters, minifiers}) {
+  make({packages, minifyMode, addCacheBusters, minifiers, onJsOutputFiles = () => {}}) {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob("building for " + this.arch, () => {
@@ -853,7 +859,22 @@ class Target {
       });
 
       // Link JavaScript and set up this.js, etc.
-      this._emitResources(sourceBatches);
+      this._emitResources(sourceBatches, (outputFiles, sourceBatch, cacheKey) => {
+        function getFileOutput(file) {
+          return new LinkerFile(file).getPrelinkedOutput({});
+        };
+
+        onJsOutputFiles(
+          {
+            arch: this.arch,
+            name: sourceBatch.unibuild.pkg.name || null,
+            files: outputFiles,
+            hmrAvailable: sourceBatch.hmrAvailable,
+            cacheKey
+          },
+          getFileOutput  
+        );
+      });
 
       // Add top-level Cordova dependencies, which override Cordova
       // dependencies from packages.
@@ -1089,6 +1110,7 @@ class Target {
       unibuilds: this.unibuilds,
       arch: this.arch,
       sourceRoot: this.sourceRoot,
+      buildMode: this.buildMode,
       isopackCache: this.isopackCache,
       linkerCacheDir,
       scannerCacheDir,
@@ -1127,14 +1149,18 @@ class Target {
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
   // linker).
-  _emitResources(sourceBatches) {
+  _emitResources(sourceBatches, onJsOutputFiles = () => {}) {
     buildmessage.assertInJob();
 
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
-    const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
-      .computeJsOutputFilesMap(sourceBatches);
+    const {
+      jsOutputFilesMap,
+      resolveMap = new Map(),
+      fileImportState = new Map(),
+      allMissingModulesAbsPath = {}
+    } = compilerPluginModule.PackageSourceBatch.computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
       const { unibuild } = batch;
@@ -1162,6 +1188,91 @@ class Target {
     const versions = {};
     const dynamicImportFiles = new Set;
 
+    // importMap has all the import { x } from '...'
+    // info from every target/bundle in the build system
+    const importMap = new Map();
+    sourceBatches.forEach((sourceBatch) => {
+      const unibuild = sourceBatch.unibuild;
+      const name = unibuild.pkg.name || null;
+      jsOutputFilesMap.get(name).files.forEach((file) => {
+        const fileResolveMap = resolveMap.get(file.absPath) || new Map();
+        Object.entries(file.deps || {}).forEach(([key, depInfo]) => {
+          const absKey = fileResolveMap.get(key);
+          const importMapValue = importMap.get(absKey) ||
+                      (allMissingModulesAbsPath && allMissingModulesAbsPath[key] ?
+                            importMap.get(allMissingModulesAbsPath[key]) : {});
+          const wasImported = importMapValue && importMapValue.commonJsImported || false;
+          importMap.set(absKey, {...importMapValue, commonJsImported: wasImported || depInfo.commonJsImported});
+        })
+        Object.entries(file.imports || []).forEach(([key, object]) => {
+          let importMapValue;
+          let identifier;
+          if(files.pathIsAbsolute(key)){
+            importMapValue = importMap.get(key) || {};
+            identifier = key;
+          }else{
+            importMapValue = allMissingModulesAbsPath && allMissingModulesAbsPath[key] ?
+                importMap.get(allMissingModulesAbsPath[key]) : {};
+            identifier = allMissingModulesAbsPath[key] || key;
+          }
+          importMap.set(identifier, {
+            ...importMapValue || [],
+            deps: [...new Set([...(importMapValue?.deps || []), ...object.deps])],
+            sideEffects: object.sideEffects
+          })
+        })
+      })
+    })
+
+    const allFilesOnBundle = new Set(Array.from(jsOutputFilesMap).flatMap(([, value]) => {
+      return value.files.map(({absPath}) => absPath);
+    }));
+
+    const sourceBatch = sourceBatches.find((sourceBatch) => {
+      const name = sourceBatch.unibuild.pkg.name || null;
+      return !name;
+    });
+    const appSideEffects = sourceBatch ? sourceBatch.unibuild.pkg.sideEffects : true;
+
+    // now we need to remove the exports, and let the minifier do it's job later
+    sourceBatches.forEach((sourceBatch) => {
+      const unibuild = sourceBatch.unibuild;
+      const name = unibuild.pkg.name || null;
+
+      // we will assume that every meteor package that exports something is a
+      // side effect true package, this is set on the package-api file when api.export is called
+      // console.log(`${unibuild.pkg.name} sideEffects: ${unibuild.pkg.sideEffects}`)
+      if(appSideEffects || unibuild.pkg.sideEffects && name !== 'modules' || unibuild.arch.includes("legacy")){
+        return;
+      }
+      jsOutputFilesMap.get(name).files.forEach((file) => {
+        const importedSymbolsFromFile = importMap.get(file.absPath)
+
+
+        // if it was commonjsImported we have nothing to do here
+        if(importedSymbolsFromFile?.commonJsImported){
+          return;
+        }
+        const { source: newSource, map, madeChanges } = removeUnusedExports(
+            file,
+            importedSymbolsFromFile,
+            allFilesOnBundle,
+            resolveMap.get(file.absPath) || new Map(),
+            fileImportState,
+            unibuild.arch
+        );
+
+        if(newSource) {
+          file.dataString = newSource;
+          file.data = Buffer.from(newSource, "utf8");
+          file.source = Buffer.from(newSource, "utf8");
+          file.hash = sha1(file.data);
+          file.sourceMap = map;
+        }
+      })
+    })
+
+
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
@@ -1183,6 +1294,7 @@ class Target {
       // Emit the resources
       const resources = sourceBatch.getResources(
         jsOutputFilesMap.get(name).files,
+        (linkCacheKey, jsResources) => onJsOutputFiles(jsResources, sourceBatch, linkCacheKey)
       );
 
       // First, find all the assets, so that we can associate them with each js
@@ -1261,6 +1373,7 @@ class Target {
             data: resource.data,
             hash: resource.hash,
             cacheable: false,
+            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable
           });
 
           const relPath = stripLeadingSlash(resource.servePath);
@@ -1345,7 +1458,7 @@ class Target {
   minifyJs(minifierDef, minifyMode) {
     const staticFiles = [];
     const dynamicFiles = [];
-    const { arch } = this;
+    const { arch, buildMode } = this;
     const inputHashesByJsFile = new Map;
 
     this.js.forEach(file => {
@@ -1368,9 +1481,9 @@ class Target {
     buildmessage.enterJob('minifying app code', function () {
       try {
         Promise.all([
-          markedMinifier(staticFiles, { minifyMode }),
+          markedMinifier(staticFiles, { minifyMode, arch, buildMode }),
           ...dynamicFiles.map(
-            file => markedMinifier([file], { minifyMode })
+            file => markedMinifier([file], { minifyMode, arch })
           ),
         ]).await();
       } catch (e) {
@@ -1381,16 +1494,28 @@ class Target {
     const js = [];
 
     function handle(source, dynamic) {
+      // Allows minifiers to be compatible with HMR without being
+      // updated to support it.
+      // In development most minifiers add the file to itself with no
+      // modifications, and we can safely assume that the file
+      // is replaceable if the original was. We could provide a way for
+      // minifiers to set this if they do modify the file in development
+      // and believe HMR will still update the client correctly.
+      const possiblyReplaceable = source._minifiedFiles.length === 1 && source._source.replaceable;
+
       source._minifiedFiles.forEach(file => {
         if (typeof file.data === 'string') {
           file.data = Buffer.from(file.data, "utf8");
         }
+        const replaceable = possiblyReplaceable && 
+          file.data.equals(source._source.contents());
 
         const newFile = new File({
           info: 'minified js',
           arch,
           data: file.data,
           hash: inputHashesByJsFile.get(source),
+          replaceable
         });
 
         if (file.sourceMap) {
@@ -1684,7 +1809,8 @@ class ClientTarget extends Target {
         where: "client",
         type: type,
         cacheable: file.cacheable,
-        url: file.url
+        url: file.url,
+        replaceable: file.replaceable
       };
 
       const antiXSSIPrepend = Profile("anti-XSSI header for source-maps", function (sourceMap) {
@@ -1760,6 +1886,7 @@ class ClientTarget extends Target {
           where: manifestItem.where,
           cacheable: manifestItem.cacheable,
           hash: manifestItem.hash,
+          replaceable: manifestItem.replaceable,
         });
 
         // Now that we've written the module with a source map URL comment
@@ -3087,6 +3214,10 @@ Find out more about Meteor at meteor.com.
  *    since they are only safe when the output files from the previous build
  *    are not being used. This can be set to true when it is safe.
  *
+ *  - onJsOutputFiles Called for each unibuild in a client arch with a list of js files
+ *    that will be linked, and a function to get their prelink output with their closure
+ *    and banner.
+ * 
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - serverWatchSet: Information about server files and paths that were
@@ -3120,6 +3251,7 @@ function bundle({
   buildOptions,
   previousBuilders = Object.create(null),
   hasCachedBundle,
+  onJsOutputFiles,
   allowDelayedClientBuilds = false,
   forceInPlaceBuild,
 }) {
@@ -3171,7 +3303,6 @@ function bundle({
   }, function () {
     var packageSource = new PackageSource;
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
-
     var makeClientTarget = Profile(
       "bundler.bundle..makeClientTarget", function (app, webArch, options) {
       var client = new ClientTarget({
@@ -3189,7 +3320,8 @@ function bundle({
         packages: [app],
         minifyMode: minifyMode,
         minifiers: options.minifiers || [],
-        addCacheBusters: true
+        addCacheBusters: true,
+        onJsOutputFiles
       });
 
       return client;
@@ -3485,6 +3617,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir,
     localNodeModulesDirs: options.localNodeModulesDirs,
+    sideEffects: options.sideEffects,
   });
 
   var isopack = compiler.compile(packageSource, {

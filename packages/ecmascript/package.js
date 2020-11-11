@@ -1,15 +1,22 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.14.3',
+  version: '0.15.0-beta200.4',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md'
 });
 
+const sharedDependencies = {
+  'react-refresh': '0.8.3'
+}
+
 Package.registerBuildPlugin({
   name: 'compile-ecmascript',
   use: ['babel-compiler'],
+  npmDependencies: sharedDependencies,
   sources: ['plugin.js']
 });
+
+Npm.depends(sharedDependencies)
 
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
@@ -24,6 +31,9 @@ Package.onUse(function (api) {
 
   // Runtime support for Meteor 1.5 dynamic import(...) syntax.
   api.imply('dynamic-import');
+
+  api.use('modules', 'web.browser');
+  api.addFiles('react-fast-refresh.js', 'web.browser');
 
   api.addFiles("ecmascript.js", "server");
   api.export("ECMAScript", "server");
