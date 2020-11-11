@@ -52,6 +52,9 @@ N/A
 * `accounts-ui-unstyled@1.4.3` 
   - fixes the login form would send the server two login requests
   - fixes the "forgot password" form would not only send the email but also refresh the page
+  
+* `dynamic-import@0.5.4` 
+  - fixes prefetching errors. [#11209](https://github.com/meteor/meteor/pull/11209)
 
 #### Independent Releases
 * `facebook-oauth@1.7.3` 
