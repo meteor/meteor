@@ -55,6 +55,7 @@ N/A
   
 * `dynamic-import@0.5.4` 
   - fixes prefetching errors. [#11209](https://github.com/meteor/meteor/pull/11209)
+  - adds the option for dynamic-imports to fetch from the current origin instead of the absolute URL. [#11105](https://github.com/meteor/meteor/pull/11105)
 
 #### Independent Releases
 * `facebook-oauth@1.7.3` 
