@@ -10,6 +10,8 @@ N/A
 
 ### Changes
 
+* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+
 * `mongo-decimal` package npm dependency `decimal.js` has been updated to v10.2.1 
 
 ## v1.11.1, 2020-09-16
@@ -39,7 +41,6 @@ N/A
 * Updated PostCSS from 7.0.31 to 7.0.32 [more](https://github.com/meteor/meteor/issues/10682)
 
 * Allow android-webview-video-poster [more](https://github.com/meteor/meteor/pull/11159)
-
 
 ## v1.11, 2020-08-18
 

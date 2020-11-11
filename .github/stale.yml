@@ -2,9 +2,8 @@
 daysUntilStale: 32
 daysUntilClose: 8
 exemptLabels:
-  - pinned
-  - security
-  - confirmed
+  - "Stage:Confirmed"
+  - "Stage:Ready"
 staleLabel: stale-bot
 markComment: >
   This issue has been automatically marked as stale because it has not had
