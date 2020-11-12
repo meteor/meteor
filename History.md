@@ -57,11 +57,13 @@ N/A
   - fixes prefetching errors. [#11209](https://github.com/meteor/meteor/pull/11209)
   - adds the option for dynamic-imports to fetch from the current origin instead of the absolute URL. [#11105](https://github.com/meteor/meteor/pull/11105)
 
+* `mongo-decimal@0.1.2`
+  - updates npm dependency `decimal.js` to v10.2.1
+  
+
 #### Independent Releases
 * `facebook-oauth@1.7.3` 
   - is now using Facebook GraphAPI v8. [#11160](https://github.com/meteor/meteor/pull/11160)
-
-* `mongo-decimal` package npm dependency `decimal.js` has been updated to v10.2.1 
 
 ## v1.11.1, 2020-09-16
 
