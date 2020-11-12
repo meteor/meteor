@@ -60,6 +60,12 @@ N/A
 * `mongo-decimal@0.1.2`
   - updates npm dependency `decimal.js` to v10.2.1
   
+* `accounts-base@1.7.1`
+  - adds the ability to define default user fields published on login. [#11118](https://github.com/meteor/meteor/pull/11118)
+  
+* `standard-minifier-css@1.7.0`
+  - modernize and update dependencies. [#11196](https://github.com/meteor/meteor/pull/11196)
+  
 
 #### Independent Releases
 * `facebook-oauth@1.7.3` 
