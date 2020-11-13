@@ -23,13 +23,13 @@ If you can think of any changes to the project, [documentation](https://github.c
 
 ### Finding work
 
-Are you new here? Please check our issues `good-for-first-contribution`: [core](https://github.com/meteor/meteor/labels/good-for-first-contribution), [docs](https://github.com/meteor/docs/labels/good-for-first-contribution), [guide](https://github.com/meteor/guide/labels/good-for-first-contribution).
+Are you new here? Please check our issues `good-first-issue`: [core](https://github.com/meteor/meteor/labels/good%20first%20issue), [docs](https://github.com/meteor/docs/labels/good%20first%20issue), [guide](https://github.com/meteor/guide/labels/good%20first%20issue).
 
-We curate specific issues that would make great pull requests for community contributors by applying the `pull-requests-encouraged` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged)).
+We curate specific issues that would make great pull requests for community contributors by applying the `ready` label.
 
-Issues which *also* have the `Stage:Confirmed` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed)) are considered to have their details clear enough to begin working on.
+Any issue which does not have the `ready` label still requires discussion on implementation details but input and positive commentary is welcome! Any pull request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `ready` issue.  
 
-Any issue which does not have the `Stage:Confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull request opened on an issue which is not `Stage:Confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `Stage:Confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach Filipe Névola (Meteor Developer Evangelist, @FilipeNevola) and he will help you to find something interesting to work on.
+If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [core committers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-committer) and they will help you to find something interesting to work on.
 
 ### Project roles
 
@@ -48,7 +48,7 @@ Current Issue Triagers:
 
 #### Reviewer
 
-Our most regular and experienced Issue Triagers sometimes move on to doing code reviews for pull requests, and have input into which pull requests should be merged.
+Reviwers are members of the community that help with Pull Requests reviews.
 
 Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
@@ -76,8 +76,6 @@ Current Core Committers:
 #### Developer Evangelist
 
 - [@filipenevola](https://github.com/filipenevola) (Feel free to reach him out on [Twitter](https://twitter.com/FilipeNevola))
-
-[Read more](https://forums.meteor.com/t/im-joining-meteor-as-developer-evangelist/50613/2)
 
 ### Tracking project work
 
@@ -162,6 +160,8 @@ Finally, you can show your support for (or against!) features by using [GitHub r
 
 A great way to contribute to Meteor is by helping keep the issues in the repository clean and well organized. This process is called 'issue triage' and the steps are described [here](ISSUE_TRIAGE.md).
 
+Learn how we use GitHub labels [here](LABELS.md)
+
 ## Documentation
 
 If you'd like to contribute to Meteor's documentation, head over to https://github.com/meteor/docs or https://github.com/meteor/guide and create issues or pull requests there.
@@ -216,11 +216,11 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://github.com/meteor/meteor/blob/devel/Roadmap.md). Start by creating a well specified feature request as a Github issue, in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository.
 
-Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `pull-requests-encouraged` label.
+Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `ready` label.
 
 Split features up into smaller, logically separate chunks. It is unlikely that large and complicated PRs will be merged.
 
-Once your feature has been labelled with `pull-requests-encouraged`, leave a comment letting people know you're working on it and you can begin work on the code.
+Once your feature has been labelled with `ready`, leave a comment letting people know you're working on it and you can begin work on the code. We have the label `in-development` to track the items in progress.
 
 ### Submitting pull requests
 
@@ -254,19 +254,3 @@ Once you've come up with a good design, go ahead and submit a pull request (PR).
  and email address so we can credit you.
 
  * You can submit PRs that are not ready yet, submit them as Draft on GitHub and explain what is left and also if you need help.
-
-#### Keeping PRs up-to-date
-
-We should add new labels when the stage is evolving. This is specially important on PRs.
-
-##### Stages
-_[Stage:Confirmed, Stage:In discussion, Stage:Ready, Stage:Needs reproduction, Stage:In development, Stage:Pending tests, Stage:Waiting feedback]_
-
-- `Confirmed`: We want to fix or implement it
-- `Ready`: We've decided how to solve or implement it
-- `In discussion`: We are still discussing how to solve or implement it
-- `Needs reproduction`: We can't reproduce so it's blocked
-- `In development`: We are already working on it
-- `Pending tests`: Tests are not passing, stuck or we need new tests
-- `Waiting feedback`: It's implemented but we need feedback that it is working as expected
-
