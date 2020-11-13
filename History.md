@@ -33,8 +33,9 @@ N/A
   - supports Cordova add plugin command working again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
   - avoids MiTM by downloading through https. [#11188](https://github.com/meteor/meteor/pull/11188)
   
-* `meteor-babel@7.10.1`
+* `meteor-babel@7.10.2`
   - updates TypeScript to 4.0.5 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225)
+  - updates babel/core to 7.12.3.
   
 * `minimongo@1.6.1`
   - fixes a null reference exception, if an array contains null values while compiling a fields projection. [#10499](https://github.com/meteor/meteor/pull/10499).
