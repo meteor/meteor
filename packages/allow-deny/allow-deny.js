@@ -161,8 +161,8 @@ CollectionPrototype._defineMutationMethods = function(options) {
               if (!isBulkInsert) {
                 args[0]._id = generatedId;
               } else {
-                args[0].forEach(doc => {
-                  doc._id = generatedId;
+                args[0].forEach((doc, index) => {
+                  doc._id = generatedId[index];
                 });
               }
             }
@@ -192,8 +192,15 @@ CollectionPrototype._defineMutationMethods = function(options) {
             method === 'insert' && isBulkInsert && args.concat(generatedId);
             return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
-            if (generatedId !== null)
-              args[0]._id = generatedId;
+            if (generatedId !== null) {
+              if (isBulkInsert) {
+                args[0].forEach((doc, index) => {
+                  doc._id = generatedId[index];
+                });
+              } else {
+                args[0]._id = generatedId;
+              }
+            }
             // In insecure mode, allow any mutation (with a simple selector).
             // XXX This is kind of bogus.  Instead of blindly passing whatever
             //     we get from the network to this function, we should actually

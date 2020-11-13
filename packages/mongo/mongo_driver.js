@@ -360,7 +360,7 @@ const writeCallback = function (write, refresh, callback) {
       }
     }
     write.committed();
-    if (callback) {
+    if (callback && typeof callback === 'function') {
       callback(err, result);
     } else if (err) {
       throw err;
