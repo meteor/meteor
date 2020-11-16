@@ -8,7 +8,7 @@ Meteor é um ambiente ultra-simples para construir aplicações web modernas.
 Com Meteor você escreve aplicações:
 
 * em JavaScript moderno
-* que manda dados pelo wire, ao invés de HTML
+* que manda dados pela rede, ao invés de HTML
 * usando sua escolha de bibliotecas open-source populares
 
 Tente um tutorial para começar:
@@ -18,7 +18,7 @@ Tente um tutorial para começar:
  * [Vue](https://www.meteor.com/tutorials/vue/creating-an-app)
  * [Svelte](https://www.meteor.com/tutorials/svelte/creating-an-app)
 
-Depois, leia a [guia](https://guide.meteor.com) e a [documentação](https://docs.meteor.com/).
+Depois, leia o [guia](https://guide.meteor.com) e a [documentação](https://docs.meteor.com/).
 
 ## Começo Rápido
 
@@ -63,7 +63,7 @@ Interessado em ajudar ou contribuir para o Meteor? Esses recursos vão ajudar:
 
 ## Desinstalando Meteor
 
-Sem ser pelo pequeno script launcher shell, o Meteor se instala dentro de seu diretório principal. Para desinstalar Meteor, use:
+Sem ser pelo pequeno script iniciador de shell, o Meteor se instala dentro de seu diretório principal. Para desinstalar Meteor, use:
 
 ```bash
 rm -rf ~/.meteor/
