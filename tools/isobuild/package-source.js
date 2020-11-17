@@ -1260,10 +1260,9 @@ _.extend(PackageSource.prototype, {
 
     const baseCacheKey = JSON.stringify({
       isApp,
+      arch,
       sourceRoot: self.sourceRoot,
       excludes: anyLevelExcludes,
-      names: sourceReadOptions.names,
-      include: sourceReadOptions.include
     }, (key, value) => {
       if (_.isRegExp(value)) {
         return [value.source, value.flags];
