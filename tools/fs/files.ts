@@ -135,7 +135,7 @@ export function findPackageDir(filepath: string) {
 // truly unexpected happens). The result value is a string when a Git
 // revision was successfully resolved, or undefined otherwise.
 export function findGitCommitHash(path: string) {
-  return new Promise(resolve => {
+  return new Promise<string>(resolve => {
     const appDir = findAppDir(path);
     if (appDir) {
       execFile("git", ["rev-parse", "HEAD"], {
@@ -330,7 +330,7 @@ export function realpathOrNull(path: string) {
 }
 
 export function rm_recursive_async(path: string) {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     rimraf(convertToOSPath(path), (err: Error) => err
       ? reject(err)
       : resolve());
@@ -1711,7 +1711,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
   const intervalMs = 50;
   const timeLimitMs = 1000;
 
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     function attempt() {
       try {
         // Despite previous failures, the top-level destination directory
