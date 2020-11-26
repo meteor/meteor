@@ -135,7 +135,7 @@ export function findPackageDir(filepath: string) {
 // truly unexpected happens). The result value is a string when a Git
 // revision was successfully resolved, or undefined otherwise.
 export function findGitCommitHash(path: string) {
-  return new Promise<string>(resolve => {
+  return new Promise<string|void>(resolve => {
     const appDir = findAppDir(path);
     if (appDir) {
       execFile("git", ["rev-parse", "HEAD"], {
