@@ -10,11 +10,21 @@ N/A
 
 ### Changes
 
-## v1.12, unreleased
+## v1.12, 2020-04-12
 
 ### Breaking changes
 
-N/A
+- When importing types, you might need to use the "type" qualifier, like so:
+```js
+import { Point } from 'react-easy-crop/types';
+```
+to
+```ts
+import type { Point } from 'react-easy-crop/types';
+```
+Because now emitDecoratorsMetadata is enabled.
+
+- Refer to typescript breaking changes before migrating your existing project, from 3.7.6 to 4.1.2: https://github.com/Microsoft/TypeScript/wiki/Breaking-Changes
 
 ### Migration steps
 
@@ -23,18 +33,18 @@ N/A
 ### Changes
 
 #### Highlights
-- TypeScript update from 3.7.6 to 4.0.5.
+- TypeScript update from 3.7.6 to 4.1.2.
   - enables decorators and metadata reflection. Important: these are stage 2 features so be aware that breaking changes could be introduced before they reach stage 3. 
 
 #### Meteor Version Release
 * `meteor-tool@1.12` 
-  - updates TypeScript to 4.0.5. [#11225](https://github.com/meteor/meteor/pull/11225)
+  - updates TypeScript to 4.1.2. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255) 
   - adds new options for `meteor list` command (TODO pending link to updated doc). [#11165](https://github.com/meteor/meteor/pull/11165)
   - supports Cordova add plugin command working again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
   - avoids MiTM by downloading through https. [#11188](https://github.com/meteor/meteor/pull/11188)
   
-* `meteor-babel@7.10.1`
-  - updates TypeScript to 4.0.5 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225)
+* `meteor-babel@7.10.7`
+  - updates TypeScript to 4.1.2 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255)
   
 * `minimongo@1.6.1`
   - fixes a null reference exception, if an array contains null values while compiling a fields projection. [#10499](https://github.com/meteor/meteor/pull/10499).
@@ -48,6 +58,9 @@ N/A
   ```js
     BrowserPolicy.content.allowScriptOrigin(`nonce-${nonce}`);
   ```
+  
+* `accounts-ui@1.3.2` 
+  - follow accounts-ui-unstyled release
   
 * `accounts-ui-unstyled@1.4.3` 
   - fixes the login form would send the server two login requests
