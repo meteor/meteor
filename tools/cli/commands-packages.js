@@ -1139,7 +1139,9 @@ main.registerCommand({
   requiresApp: true,
   options: {
     'tree': { type: Boolean },
+    'json': { type: Boolean },
     'weak': { type: Boolean },
+    'details': { type: Boolean },
     'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
@@ -1154,8 +1156,25 @@ main.registerCommand({
   // No need to display the PackageMapDelta here, since we're about to list all
   // of the packages anyway!
 
-  if (options['tree']) {
+  const showJson = !!options['json'];
+  const showTree = !!options['tree'];
+
+  const suffixes = {
+    topLevel: '(top level)',
+    expandedAbove: '(expanded above)',
+    weak: '[weak]',
+    skipped: 'package skipped',
+    missing: 'missing?'
+  }
+
+  if (showJson && showTree) {
+    throw new Error('can only run for one option,found --json and --tree');
+  }
+
+  if (showTree || showJson) {
+    const jsonOut = showJson && {};
     const showWeak = !!options['weak'];
+    const showDetails = !!options['details'];
     // Load package details of all used packages (inc. dependencies)
     const packageDetails = new Map;
     projectContext.packageMap.eachPackage(function (name, info) {
@@ -1172,7 +1191,7 @@ main.registerCommand({
     const dontExpand = new Set(topLevelSet.values());
 
     // Recursive function that outputs each package
-    const printPackage = function (packageToPrint, isWeak, indent1, indent2) {
+    const printPackage = function ({ packageToPrint, isWeak, indent1, indent2, parent }) {
       const packageName = packageToPrint.packageName;
       const depsObj = packageToPrint.dependencies || {};
       let deps = Object.keys(depsObj).sort();
@@ -1192,16 +1211,59 @@ main.registerCommand({
 
       const expandedAlready = (deps.length > 0 && dontExpand.has(packageName));
       const shouldExpand = (deps.length > 0 && !expandedAlready && !isWeak);
-      if (indent1 !== '') {
-        indent1 += (shouldExpand ? '┬' : '─') + ' ';
+
+      // with normal tree display we send the current info to stdout
+      if (showTree) {
+        if (indent1 !== '') {
+          indent1 += (shouldExpand ? '┬' : '─') + ' ';
+        }
+
+        let suffix = (isWeak ? suffixes.weak : '');
+        if (expandedAlready) {
+          suffix += topLevelSet.has(packageName)
+            ? ` ${suffixes.topLevel}`
+            : ` ${suffixes.expandedAbove}`
+        }
+
+        Console.info(indent1 + packageName + '@' + packageToPrint.version + suffix);
       }
 
-      let suffix = (isWeak ? '[weak]' : '');
-      if (expandedAlready) {
-        suffix += topLevelSet.has(packageName) ? ' (top level)' : ' (expanded above)';
+      // with json we add detailed info to the json object
+      if (showJson) {
+        if (expandedAlready) {
+          // on expanded packages we only want to add minimal information to
+          // keep the json file compact, so we make the value a stirng
+          if (topLevelSet.has(packageName)) {
+            parent[packageName] = `${packageToPrint.version}-${suffixes.topLevel}`
+          } else {
+            parent[packageName] = `${packageToPrint.version}-${suffixes.expandedAbove}`
+          }
+        } else {
+          // on non-expanded packages we want detailed information but we
+          // omit falsy values in order to keep the output minimal and readable
+          const entry = {};
+          parent[packageName] = entry;
+
+          const mapInfo = projectContext.packageMap.getInfo(packageName);
+          const infoSource = Object.assign({}, showDetails ? packageToPrint : {}, {
+            version: packageToPrint.version,
+            local: mapInfo && mapInfo.kind === 'local',
+            weak: isWeak,
+            newerVersion: getNewerVersion(packageName, packageToPrint.version, catalog.official)
+          });
+
+          Object.entries(infoSource).forEach(([key, value]) => {
+            if (value) {
+              entry[key] = value;
+            }
+          });
+
+          if (shouldExpand) {
+            entry.dependencies = {};
+          }
+        }
       }
 
-      Console.info(indent1 + packageName + '@' + packageToPrint.version + suffix);
       if (shouldExpand) {
         dontExpand.add(packageName);
         deps.forEach((dep, index) => {
@@ -1209,14 +1271,37 @@ main.registerCommand({
           const weakRef = references.length > 0 && references.every(r => r.weak);
           const last = ((index + 1) === deps.length);
           const child = packageDetails.get(dep);
-          const newIndent1 = indent2 + (last ? '└─' : '├─');
-          const newIndent2 = indent2 + (last ? '  ' : '│ ');
-          if (child) {
-            printPackage(child, weakRef, newIndent1, newIndent2);
-          } else if (weakRef) {
-            Console.info(newIndent1 + '─ ' + dep + '[weak] package skipped');
-          } else {
-            Console.info(newIndent1 + '─ ' + dep + ' missing?');
+
+          // with normal tree display we increase indentation
+          if (showTree) {
+            const newIndent1 = indent2 + (last ? '└─' : '├─');
+            const newIndent2 = indent2 + (last ? '  ' : '│ ');
+            if (child) {
+              printPackage({
+                packageToPrint: child,
+                isWeak: weakRef,
+                indent1: newIndent1,
+                indent2: newIndent2
+              });
+            } else if (weakRef) {
+              Console.info(`${newIndent1}─ ${dep} ${suffixes.weak} ${suffixes.skipped}`);
+            } else {
+              Console.info(`${newIndent1}─ ${dep} ${suffixes.missing}`);
+            }
+          }
+
+          if (showJson) {
+            if (child) {
+              printPackage({
+                packageToPrint: child,
+                isWeak: weakRef,
+                parent: parent[packageName].dependencies
+              });
+            } else if (weakRef) {
+              parent[packageName].dependencies[dep] = `${suffixes.weak} ${suffixes.skipped}`;
+            } else {
+              parent[packageName].dependencies = suffixes.missing;
+            }
           }
         });
       }
@@ -1228,9 +1313,22 @@ main.registerCommand({
       if (topLevelPackage) {
         // Force top level packages to be expanded
         dontExpand.delete(topLevelPackage.packageName);
-        printPackage(topLevelPackage, false, '', '');
+        printPackage({
+          packageToPrint: topLevelPackage,
+          isWeak: false,
+          indent1: '',
+          indent2: '',
+          parent: jsonOut
+        })
       }
     });
+
+    if (showJson) {
+      // we can't use Console here, because it pretty prints the output with
+      // a wrap at 80 chars per line, which causes the json to break if details
+      // options is active and the package descriptions exceed the limit
+      console.info(JSON.stringify(jsonOut));
+    }
 
     return 0;
   }
