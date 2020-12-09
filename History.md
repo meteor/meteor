@@ -10,6 +10,9 @@ N/A
 
 ### Changes
 
+* `meteor-babel@7.10.6`
+  - Allows to disable sourceMap generation [#36](https://github.com/meteor/babel/pull/36)
+
 ## v1.12, 2020-04-12
 
 ### Breaking changes
@@ -43,7 +46,7 @@ N/A
   - supports Cordova add plugin command working again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
   - avoids MiTM by downloading through https. [#11188](https://github.com/meteor/meteor/pull/11188)
   
-* `meteor-babel@7.10.7`
+* `meteor-babel@7.10.5`
   - updates TypeScript to 4.1.2 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255)
   
 * `minimongo@1.6.1`
