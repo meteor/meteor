@@ -25,7 +25,7 @@
     "mssql": "^3.1.1",
     "mysql": "^2.15.0",
     "pify": "^4.0.1",
-    "puppeteer": "^1.6.2",
+    "puppeteer": "^2.1.1",
     "react-dom": "^16.8.6",
     "react-trello": "2.1.4",
     "regenerator-runtime": "^0.11.1",
