@@ -493,11 +493,10 @@ export class NodeModulesDirectory {
           // answer by calling isWithinProdPackage(real).
           // guard against broken symlinks (#11241)
           const realpath = files.realpathOrNull(path);
-          if (realpath) {
-            return isWithinProdPackage(realpath);
-          } else {
+          if (!realpath) {
             throw new Error(`Broken symbolic link encountered at ${path}`);
           }
+          return isWithinProdPackage(realpath);
         }
 
         // If node_modules/.bin/command is not a symlink, then it's hard
