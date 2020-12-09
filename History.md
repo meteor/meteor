@@ -10,6 +10,83 @@ N/A
 
 ### Changes
 
+* `meteor-babel@7.10.6`
+  - Allows to disable sourceMap generation [#36](https://github.com/meteor/babel/pull/36)
+
+## v1.12, 2020-04-12
+
+### Breaking changes
+
+- When importing types, you might need to use the "type" qualifier, like so:
+```js
+import { Point } from 'react-easy-crop/types';
+```
+to
+```ts
+import type { Point } from 'react-easy-crop/types';
+```
+Because now emitDecoratorsMetadata is enabled.
+
+- Refer to typescript breaking changes before migrating your existing project, from 3.7.6 to 4.1.2: https://github.com/Microsoft/TypeScript/wiki/Breaking-Changes
+
+### Migration steps
+
+N/A
+
+### Changes
+
+#### Highlights
+- TypeScript update from 3.7.6 to 4.1.2.
+  - enables decorators and metadata reflection. Important: these are stage 2 features so be aware that breaking changes could be introduced before they reach stage 3. 
+
+#### Meteor Version Release
+* `meteor-tool@1.12` 
+  - updates TypeScript to 4.1.2. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255) 
+  - adds new options for `meteor list` command (TODO pending link to updated doc). [#11165](https://github.com/meteor/meteor/pull/11165)
+  - supports Cordova add plugin command working again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
+  - avoids MiTM by downloading through https. [#11188](https://github.com/meteor/meteor/pull/11188)
+  
+* `meteor-babel@7.10.5`
+  - updates TypeScript to 4.1.2 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255)
+  
+* `minimongo@1.6.1`
+  - fixes a null reference exception, if an array contains null values while compiling a fields projection. [#10499](https://github.com/meteor/meteor/pull/10499).
+
+* `accounts-password@1.6.3` 
+  - adds a new function `createUserVerifyingEmail` (TODO pending link to updated doc). [#11080](https://github.com/meteor/meteor/pull/11080)
+  - fixes a typo. [#11182](https://github.com/meteor/meteor/pull/11182)
+
+* `browser-content-policy@1.1.1` 
+  - adds support to nonce
+  ```js
+    BrowserPolicy.content.allowScriptOrigin(`nonce-${nonce}`);
+  ```
+  
+* `accounts-ui@1.3.2` 
+  - follow accounts-ui-unstyled release
+  
+* `accounts-ui-unstyled@1.4.3` 
+  - fixes the login form would send the server two login requests
+  - fixes the "forgot password" form would not only send the email but also refresh the page
+  
+* `dynamic-import@0.5.4` 
+  - fixes prefetching errors. [#11209](https://github.com/meteor/meteor/pull/11209)
+  - adds the option for dynamic-imports to fetch from the current origin instead of the absolute URL. [#11105](https://github.com/meteor/meteor/pull/11105)
+
+* `mongo-decimal@0.1.2`
+  - updates npm dependency `decimal.js` to v10.2.1
+  
+* `accounts-base@1.7.1`
+  - adds the ability to define default user fields published on login. [#11118](https://github.com/meteor/meteor/pull/11118)
+  
+* `standard-minifier-css@1.7.0`
+  - modernize and update dependencies. [#11196](https://github.com/meteor/meteor/pull/11196)
+  
+
+#### Independent Releases
+* `facebook-oauth@1.7.3` 
+  - is now using Facebook GraphAPI v8. [#11160](https://github.com/meteor/meteor/pull/11160)
+
 ## v1.11.1, 2020-09-16
 
 ### Breaking changes
@@ -38,7 +115,6 @@ N/A
 
 * Allow android-webview-video-poster [more](https://github.com/meteor/meteor/pull/11159)
 
-
 ## v1.11, 2020-08-18
 
 ### Breaking changes
@@ -47,6 +123,8 @@ N/A
     There is a potential breaking change as the underlying package started to use `dns.resolve()`
     instead of `dns.lookup()` which might be breaking on some environments.
     See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
+
+* (Added later) Cordova add plugin is not working with plugin name in the git URL when the plugin id was different than the name in the config.xml. Fixed on [#11202](https://github.com/meteor/meteor/pull/11202)
 
 ### Migration steps
 

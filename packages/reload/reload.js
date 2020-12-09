@@ -33,14 +33,29 @@
 
 export const Reload = {};
 
-var KEY_NAME = 'Meteor_Reload';
+const reloadSettings =
+  (Meteor.settings &&
+    Meteor.settings.public &&
+    Meteor.settings.public.packages &&
+    Meteor.settings.public.packages.reload) ||
+  {};
 
-var old_data = {};
+function debug(message, context) {
+  if (!reloadSettings.debug) {
+    return;
+  }
+  // eslint-disable-next-line no-console
+  console.log(`[reload] ${message}`, JSON.stringify(context));
+}
+
+const KEY_NAME = 'Meteor_Reload';
+
+let old_data = {};
 // read in old data at startup.
-var old_json;
+let old_json;
 
 // This logic for sessionStorage detection is based on browserstate/history.js
-var safeSessionStorage = null;
+let safeSessionStorage = null;
 try {
   // This throws a SecurityError on Chrome if cookies & localStorage are
   // explicitly disabled
@@ -80,24 +95,23 @@ if (safeSessionStorage) {
 }
 
 if (!old_json) old_json = '{}';
-var old_parsed = {};
+let old_parsed = {};
 try {
   old_parsed = JSON.parse(old_json);
-  if (typeof old_parsed !== "object") {
-    Meteor._debug("Got bad data on reload. Ignoring.");
+  if (typeof old_parsed !== 'object') {
+    Meteor._debug('Got bad data on reload. Ignoring.');
     old_parsed = {};
   }
 } catch (err) {
-  Meteor._debug("Got invalid JSON on reload. Ignoring.");
+  Meteor._debug('Got invalid JSON on reload. Ignoring.');
 }
 
-if (old_parsed.reload && typeof old_parsed.data === "object") {
+if (old_parsed.reload && typeof old_parsed.data === 'object') {
   // Meteor._debug("Restoring reload data.");
   old_data = old_parsed.data;
 }
 
-
-var providers = [];
+let providers = [];
 
 ////////// External API //////////
 
@@ -120,57 +134,89 @@ var providers = [];
 // (used for OAuth redirect login).
 //
 Reload._onMigrate = function (name, callback) {
+  debug('_onMigrate', {name});
   if (!callback) {
     // name not provided, so first arg is callback.
     callback = name;
     name = undefined;
+    debug('_onMigrate no callback');
   }
-  providers.push({ name: name, callback: callback });
+
+  providers.push({name: name, callback: callback});
 };
 
 // Called by packages when they start up.
 // Returns the object that was saved, or undefined if none saved.
 //
 Reload._migrationData = function (name) {
+  debug('_migrationData', {name});
   return old_data[name];
 };
 
 // Options are the same as for `Reload._migrate`.
-var pollProviders = function (tryReload, options) {
-  tryReload = tryReload || function () {};
+const pollProviders = function (tryReload, options) {
+  debug('pollProviders', {options});
+  tryReload = tryReload || function () {
+  };
   options = options || {};
 
-  var migrationData = {};
-  var remaining = providers.slice(0);
-  var allReady = true;
-  while (remaining.length) {
-    var p = remaining.shift();
-    var status = p.callback(tryReload, options);
-    if (!status[0])
+  const {immediateMigration} = options;
+  debug(
+    `pollProviders is ${immediateMigration ? '' : 'NOT '}immediateMigration`,
+    {options}
+  );
+  const migrationData = {};
+  let allReady = true;
+  providers.forEach(p => {
+    const {callback, name} = p || {};
+    const [ready, data] = callback(tryReload, options) || [];
+
+    debug(
+      `pollProviders provider ${name || 'unknown'} is ${
+        ready ? 'ready' : 'NOT ready'
+      }`,
+      {options}
+    );
+    if (!ready) {
       allReady = false;
-    if (status.length > 1 && p.name)
-      migrationData[p.name] = status[1];
-  };
-  if (allReady || options.immediateMigration)
+    }
+
+    if (data !== undefined && name) {
+      migrationData[name] = data;
+    }
+  });
+
+  if (allReady) {
+    debug('pollProviders allReady', {options, migrationData});
     return migrationData;
-  else
-    return null;
+  }
+
+  if (immediateMigration) {
+    debug('pollProviders immediateMigration', {options, migrationData});
+    return migrationData;
+  }
+
+  return null;
 };
 
 // Options are:
 //  - immediateMigration: true if the page will be reloaded immediately
 //    regardless of whether packages report that they are ready or not.
 Reload._migrate = function (tryReload, options) {
+  debug('_migrate', {options});
   // Make sure each package is ready to go, and collect their
   // migration data
-  var migrationData = pollProviders(tryReload, options);
-  if (migrationData === null)
+  const migrationData = pollProviders(tryReload, options);
+  if (migrationData === null) {
     return false; // not ready yet..
+  }
 
+  let json;
   try {
     // Persist the migration data
-    var json = JSON.stringify({
-      data: migrationData, reload: true
+    json = JSON.stringify({
+      data: migrationData,
+      reload: true,
     });
   } catch (err) {
     Meteor._debug("Couldn't serialize data for migration", migrationData);
@@ -185,7 +231,9 @@ Reload._migrate = function (tryReload, options) {
       Meteor._debug("Couldn't save data for migration to sessionStorage", err);
     }
   } else {
-    Meteor._debug("Browser does not support sessionStorage. Not saving migration state.");
+    Meteor._debug(
+      'Browser does not support sessionStorage. Not saving migration state.'
+    );
   }
 
   return true;
@@ -193,7 +241,7 @@ Reload._migrate = function (tryReload, options) {
 
 // Allows tests to isolate the list of providers.
 Reload._withFreshProvidersForTest = function (f) {
-  var originalProviders = providers.slice(0);
+  const originalProviders = providers.slice(0);
   providers = [];
   try {
     f();
@@ -208,41 +256,51 @@ Reload._withFreshProvidersForTest = function (f) {
 // will happen at some point in the future once all of the packages
 // are ready to migrate.
 //
-var reloading = false;
+let reloading = false;
 Reload._reload = function (options) {
+  debug('_reload', {options});
   options = options || {};
 
-  if (reloading)
+  if (reloading) {
+    debug('reloading in progress already', {options});
     return;
+  }
   reloading = true;
 
   function tryReload() {
+    debug('tryReload');
     setTimeout(reload, 1);
   }
 
   function forceBrowserReload() {
+    debug('forceBrowserReload');
     // We'd like to make the browser reload the page using location.replace()
     // instead of location.reload(), because this avoids validating assets
     // with the server if we still have a valid cached copy. This doesn't work
     // when the location contains a hash however, because that wouldn't reload
     // the page and just scroll to the hash location instead.
-    if (window.location.hash || window.location.href.endsWith("#")) {
+    if (window.location.hash || window.location.href.endsWith('#')) {
       window.location.reload();
-    } else {
-      window.location.replace(window.location.href);
+      return;
     }
+
+    window.location.replace(window.location.href);
   }
 
   function reload() {
-    if (Reload._migrate(tryReload, options)) {
-      if (Meteor.isCordova) {
-        WebAppLocalServer.switchToPendingVersion(() => {
-          forceBrowserReload();
-        });
-      } else {
-        forceBrowserReload();
-      }
+    debug('reload');
+    if (!Reload._migrate(tryReload, options)) {
+      return;
     }
+
+    if (Meteor.isCordova) {
+      WebAppLocalServer.switchToPendingVersion(() => {
+        forceBrowserReload();
+      });
+      return;
+    }
+
+    forceBrowserReload();
   }
 
   tryReload();
