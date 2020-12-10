@@ -29,6 +29,8 @@ const publicationStrategies = {
   SERVER_MERGE: 'server_merge',
 };
 
+DDPServer.publicationStrategies = publicationStrategies;
+
 // This file contains classes:
 // * Session - The server's connection to a single DDP client
 // * Subscription - A single subscription for a single client
