@@ -16,11 +16,11 @@ import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
 import { isModern } from "meteor/modern-browsers";
 import send from "send";
-import cluster from "cluster";
 import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
+import cluster from "cluster";
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -1145,11 +1145,12 @@ function runWebAppServer() {
     };
 
     let localPort = process.env.PORT || 0;
-    const unixSocketPath = process.env.UNIX_SOCKET_PATH;
+    let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
       if (cluster.isWorker) {
-        unixSocketPath += "." + cluster.worker.id + ".sock";
+        const workerName = cluster.worker.process.env.name || cluster.worker.id
+        unixSocketPath += "." + workerName + ".sock";
       }
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
