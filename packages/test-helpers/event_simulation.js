@@ -2,7 +2,7 @@
 // bubbles: A boolean indicating whether the event should bubble up through
 //  the event chain or not. (default is true)
 simulateEvent = function (node, event, args, options) {
-  node = (node instanceof $ ? node[0] : node);
+  node = (node.jquery ? node[0] : node);
 
   var bubbles = (options && "bubbles" in options) ? options.bubbles : true;
 

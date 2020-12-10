@@ -1,16 +1,10 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: "1.2.6",
+  version: "1.3.0",
 });
 
-const cordovaPluginGooglePlusURL =
-  // This revision is from the "update-entitlements-plist-files" branch.
-  // This logic can be reverted when/if this PR is merged:
-  // https://github.com/EddyVerbruggen/cordova-plugin-googleplus/pull/366
-  "https://github.com/meteor/cordova-plugin-googleplus.git#3095abe327e710ab04059ae9d3521bd4037c5a37";
-
 Cordova.depends({
-  "cordova-plugin-googleplus": cordovaPluginGooglePlusURL
+  "cordova-plugin-googleplus": "8.4.0",
 });
 
 Package.onUse(api => {

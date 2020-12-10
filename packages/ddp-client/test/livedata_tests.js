@@ -2,7 +2,7 @@ import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
 
 // XXX should check error codes
-var failure = function(test, code, reason) {
+const failure = function(test, code, reason) {
   return function(error, result) {
     test.equal(result, undefined);
     test.isTrue(error && typeof error === 'object');
@@ -22,8 +22,8 @@ var failure = function(test, code, reason) {
   };
 };
 
-var failureOnStopped = function(test, code, reason) {
-  var f = failure(test, code, reason);
+const failureOnStopped = function(test, code, reason) {
+  const f = failure(test, code, reason);
 
   return function(error) {
     if (error) {
@@ -33,7 +33,7 @@ var failureOnStopped = function(test, code, reason) {
 };
 
 Tinytest.add('livedata - Meteor.Error', function(test) {
-  var error = new Meteor.Error(123, 'kittens', 'puppies');
+  const error = new Meteor.Error(123, 'kittens', 'puppies');
   test.instanceOf(error, Meteor.Error);
   test.instanceOf(error, Error);
   test.equal(error.error, 123);
@@ -43,7 +43,7 @@ Tinytest.add('livedata - Meteor.Error', function(test) {
 
 if (Meteor.isServer) {
   Tinytest.add('livedata - version negotiation', function(test) {
-    var versionCheck = function(clientVersions, serverVersions, expected) {
+    const versionCheck = function(clientVersions, serverVersions, expected) {
       test.equal(
         DDPServer._calculateVersion(clientVersions, serverVersions),
         expected
@@ -58,8 +58,8 @@ if (Meteor.isServer) {
 }
 
 Tinytest.add('livedata - methods with colliding names', function(test) {
-  var x = Random.id();
-  var m = {};
+  const x = Random.id();
+  const m = {};
   m[x] = function() {};
   Meteor.methods(m);
 
@@ -69,8 +69,8 @@ Tinytest.add('livedata - methods with colliding names', function(test) {
 });
 
 Tinytest.add('livedata - non-function method', function(test) {
-  var x = Random.id();
-  var m = {};
+  const x = Random.id();
+  const m = {};
   m[x] = 'kitten';
 
   test.throws(function() {
@@ -78,7 +78,7 @@ Tinytest.add('livedata - non-function method', function(test) {
   });
 });
 
-var echoTest = function(item) {
+const echoTest = function(item) {
   return function(test, expect) {
     if (Meteor.isServer) {
       test.equal(Meteor.call('echo', item), [item]);
@@ -99,11 +99,13 @@ testAsyncMulti('livedata - basic method invocation', [
   function(test, expect) {
     if (Meteor.isServer) {
       // On server, with no callback, throws exception
+      let ret;
+      let threw;
       try {
-        var ret = Meteor.call('unknown method');
+        ret = Meteor.call('unknown method');
       } catch (e) {
         test.equal(e.error, 404);
-        var threw = true;
+        threw = true;
       }
       test.isTrue(threw);
       test.equal(ret, undefined);
@@ -111,12 +113,12 @@ testAsyncMulti('livedata - basic method invocation', [
 
     if (Meteor.isClient) {
       // On client, with no callback, just returns undefined
-      var ret = Meteor.call('unknown method');
+      const ret = Meteor.call('unknown method');
       test.equal(ret, undefined);
     }
 
     // On either, with a callback, calls the callback and does not throw
-    var ret = Meteor.call(
+    const ret = Meteor.call(
       'unknown method',
       expect(failure(test, 404, "Method 'unknown method' not found"))
     );
@@ -167,7 +169,7 @@ testAsyncMulti('livedata - basic method invocation', [
   function(test, expect) {
     if (Meteor.isClient) {
       // For test isolation
-      var token = Random.id();
+      const token = Random.id();
       Meteor.apply(
         'delayedTrue',
         [token],
@@ -183,7 +185,7 @@ testAsyncMulti('livedata - basic method invocation', [
   // test that `wait: true` is respected
   function(test, expect) {
     if (Meteor.isClient) {
-      var token = Random.id();
+      const token = Random.id();
       Meteor.apply(
         'delayedTrue',
         [token],
@@ -277,7 +279,7 @@ testAsyncMulti('livedata - basic method invocation', [
 
   function(test, expect) {
     if (Meteor.isServer) {
-      var threw = false;
+      let threw = false;
       try {
         Meteor.call('exception', 'both', { intended: true });
       } catch (e) {
@@ -335,9 +337,9 @@ testAsyncMulti('livedata - basic method invocation', [
   }
 ]);
 
-var checkBalances = function(test, a, b) {
-  var alice = Ledger.findOne({ name: 'alice', world: test.runId() });
-  var bob = Ledger.findOne({ name: 'bob', world: test.runId() });
+const checkBalances = function(test, a, b) {
+  const alice = Ledger.findOne({ name: 'alice', world: test.runId() });
+  const bob = Ledger.findOne({ name: 'bob', world: test.runId() });
   test.equal(alice.balance, a);
   test.equal(bob.balance, b);
 };
@@ -401,12 +403,12 @@ testAsyncMulti('livedata - compound methods', [
 //
 // @param messages {Array} The array to which to append the messages
 // @return {Function} A function to call to undo the eavesdropping
-var eavesdropOnCollection = function(
+const eavesdropOnCollection = function(
   livedata_connection,
   collection_name,
   messages
 ) {
-  var old_livedata_data = _.bind(
+  const old_livedata_data = _.bind(
     livedata_connection._livedata_data,
     livedata_connection
   );
@@ -434,8 +436,8 @@ if (Meteor.isClient) {
     'livedata - changing userid reruns subscriptions without flapping data on the wire',
     [
       function(test, expect) {
-        var messages = [];
-        var undoEavesdrop = eavesdropOnCollection(
+        const messages = [];
+        const undoEavesdrop = eavesdropOnCollection(
           Meteor.connection,
           'objectsWithUsers',
           messages
@@ -444,13 +446,13 @@ if (Meteor.isClient) {
         // A helper for testing incoming set and unset messages
         // XXX should this be extracted as a general helper together with
         // eavesdropOnCollection?
-        var expectMessages = function(
+        const expectMessages = function(
           expectedAddedMessageCount,
           expectedRemovedMessageCount,
           expectedNamesInCollection
         ) {
-          var actualAddedMessageCount = 0;
-          var actualRemovedMessageCount = 0;
+          let actualAddedMessageCount = 0;
+          let actualRemovedMessageCount = 0;
           _.each(messages, function(msg) {
             if (msg.msg === 'added') ++actualAddedMessageCount;
             else if (msg.msg === 'removed') ++actualRemovedMessageCount;
@@ -478,6 +480,10 @@ if (Meteor.isClient) {
           expect(function() {})
         );
 
+        let afterFirstSetUserId;
+        let afterSecondSetUserId;
+        let afterThirdSetUserId;
+
         Meteor.subscribe(
           'objectsWithUsers',
           expect(function() {
@@ -491,7 +497,7 @@ if (Meteor.isClient) {
           })
         );
 
-        var afterFirstSetUserId = expect(function() {
+        afterFirstSetUserId = expect(function() {
           expectMessages(3, 1, [
             'owned by one - a',
             'owned by one/two - a',
@@ -505,7 +511,7 @@ if (Meteor.isClient) {
           );
         });
 
-        var afterSecondSetUserId = expect(function() {
+        afterSecondSetUserId = expect(function() {
           expectMessages(2, 1, [
             'owned by one/two - a',
             'owned by one/two - b',
@@ -515,7 +521,7 @@ if (Meteor.isClient) {
           Meteor.apply('setUserId', ['2'], { wait: true }, afterThirdSetUserId);
         });
 
-        var afterThirdSetUserId = expect(function() {
+        afterThirdSetUserId = expect(function() {
           // Nothing should have been sent since the results of the
           // query are the same ("don't flap data on the wire")
           expectMessages(0, 0, [
@@ -528,7 +534,7 @@ if (Meteor.isClient) {
         });
       },
       function(test, expect) {
-        var key = Random.id();
+        const key = Random.id();
         Meteor.subscribe('recordUserIdOnStop', key);
         Meteor.apply(
           'setUserId',
@@ -573,9 +579,11 @@ Tinytest.add('livedata - setUserId error when called from server', function(
   }
 });
 
+let pubHandles;
 if (Meteor.isServer) {
-  var pubHandles = {};
+  pubHandles = {};
 }
+
 Meteor.methods({
   'livedata/setup': function(id) {
     check(id, String);
@@ -611,16 +619,16 @@ Meteor.methods({
 
 if (Meteor.isClient) {
   (function() {
-    var MultiPub;
-    var id = Random.id();
+    let MultiPub;
+    const id = Random.id();
     testAsyncMulti('livedata - added from two different subs', [
       function(test, expect) {
         Meteor.call('livedata/setup', id, expect(function() {}));
       },
       function(test, expect) {
         MultiPub = new Mongo.Collection('MultiPubCollection' + id);
-        var sub1 = Meteor.subscribe('pub1' + id, expect(function() {}));
-        var sub2 = Meteor.subscribe('pub2' + id, expect(function() {}));
+        const sub1 = Meteor.subscribe('pub1' + id, expect(function() {}));
+        const sub2 = Meteor.subscribe('pub2' + id, expect(function() {}));
       },
       function(test, expect) {
         Meteor.call(
@@ -653,8 +661,8 @@ if (Meteor.isClient) {
 if (Meteor.isClient) {
   testAsyncMulti('livedata - overlapping universal subs', [
     function(test, expect) {
-      var coll = new Mongo.Collection('overlappingUniversalSubs');
-      var token = Random.id();
+      const coll = new Mongo.Collection('overlappingUniversalSubs');
+      const token = Random.id();
       test.isFalse(coll.findOne(token));
       Meteor.call(
         'testOverlappingSubs',
@@ -669,8 +677,8 @@ if (Meteor.isClient) {
 
   testAsyncMulti('livedata - runtime universal sub creation', [
     function(test, expect) {
-      var coll = new Mongo.Collection('runtimeSubCreation');
-      var token = Random.id();
+      const coll = new Mongo.Collection('runtimeSubCreation');
+      const token = Random.id();
       test.isFalse(coll.findOne(token));
       Meteor.call(
         'runtimeUniversalSubCreation',
@@ -698,9 +706,9 @@ if (Meteor.isClient) {
   testAsyncMulti(
     'livedata - publisher errors with onError callback',
     (function() {
-      var conn, collName, coll;
-      var errorFromRerun;
-      var gotErrorFromStopper = false;
+      let conn, collName, coll;
+      let errorFromRerun;
+      let gotErrorFromStopper = false;
       return [
         function(test, expect) {
           // Use a separate connection so that we can safely check to see if
@@ -711,7 +719,7 @@ if (Meteor.isClient) {
           collName = Random.id();
           coll = new Mongo.Collection(collName, { connection: conn });
 
-          var testSubError = function(options) {
+          const testSubError = function(options) {
             conn.subscribe('publisherErrors', collName, options, {
               onReady: expect(),
               onError: expect(
@@ -794,9 +802,9 @@ if (Meteor.isClient) {
   testAsyncMulti(
     'livedata - publisher errors with onStop callback',
     (function() {
-      var conn, collName, coll;
-      var errorFromRerun;
-      var gotErrorFromStopper = false;
+      let conn, collName, coll;
+      let errorFromRerun;
+      let gotErrorFromStopper = false;
       return [
         function(test, expect) {
           // Use a separate connection so that we can safely check to see if
@@ -807,7 +815,7 @@ if (Meteor.isClient) {
           collName = Random.id();
           coll = new Mongo.Collection(collName, { connection: conn });
 
-          var testSubError = function(options) {
+          const testSubError = function(options) {
             conn.subscribe('publisherErrors', collName, options, {
               onReady: expect(),
               onStop: expect(
@@ -891,7 +899,7 @@ if (Meteor.isClient) {
 
   testAsyncMulti('livedata - publish multiple cursors', [
     function(test, expect) {
-      var sub = Meteor.subscribe(
+      const sub = Meteor.subscribe(
         'multiPublish',
         { normal: 1 },
         {
@@ -927,7 +935,7 @@ if (Meteor.isClient) {
   ]);
 }
 
-var selfUrl = Meteor.isServer
+const selfUrl = Meteor.isServer
   ? Meteor.absoluteUrl()
   : Meteor._relativeToSiteRootUrl('/');
 
@@ -942,7 +950,7 @@ if (Meteor.isServer) {
 (function() {
   testAsyncMulti('livedata - connect works from both client and server', [
     function(test, expect) {
-      var self = this;
+      const self = this;
       self.conn = DDP.connect(selfUrl);
       pollUntil(
         expect,
@@ -954,7 +962,7 @@ if (Meteor.isServer) {
     },
 
     function(test, expect) {
-      var self = this;
+      const self = this;
       if (self.conn.status().connected) {
         self.conn.call(
           's2s',
@@ -973,7 +981,7 @@ if (Meteor.isServer) {
   (function() {
     testAsyncMulti('livedata - method call on server blocks in a fiber way', [
       function(test, expect) {
-        var self = this;
+        const self = this;
         self.conn = DDP.connect(selfUrl);
         pollUntil(
           expect,
@@ -985,7 +993,7 @@ if (Meteor.isServer) {
       },
 
       function(test, expect) {
-        var self = this;
+        const self = this;
         if (self.conn.status().connected) {
           test.equal(self.conn.call('s2s', 'foo'), 's2s foo');
         }
@@ -997,7 +1005,7 @@ if (Meteor.isServer) {
 (function() {
   testAsyncMulti('livedata - connect fails to unknown place', [
     function(test, expect) {
-      var self = this;
+      const self = this;
       self.conn = DDP.connect('example.com', { _dontPrintErrors: true });
       Meteor.setTimeout(
         expect(function() {
@@ -1012,15 +1020,15 @@ if (Meteor.isServer) {
 
 if (Meteor.isServer) {
   Meteor.publish('publisherCloning', function() {
-    var self = this;
-    var fields = { x: { y: 42 } };
+    const self = this;
+    const fields = { x: { y: 42 } };
     self.added('publisherCloning', 'a', fields);
     fields.x.y = 43;
     self.changed('publisherCloning', 'a', fields);
     self.ready();
   });
 } else {
-  var PublisherCloningCollection = new Mongo.Collection('publisherCloning');
+  const PublisherCloningCollection = new Mongo.Collection('publisherCloning');
   testAsyncMulti('livedata - publish callbacks clone', [
     function(test, expect) {
       Meteor.subscribe(
@@ -1042,7 +1050,7 @@ if (Meteor.isServer) {
 
 testAsyncMulti('livedata - result by value', [
   function(test, expect) {
-    var self = this;
+    const self = this;
     self.testId = Random.id();
     Meteor.call(
       'getArray',
@@ -1055,7 +1063,7 @@ testAsyncMulti('livedata - result by value', [
     );
   },
   function(test, expect) {
-    var self = this;
+    const self = this;
     Meteor.call(
       'pushToArray',
       self.testId,
@@ -1066,7 +1074,7 @@ testAsyncMulti('livedata - result by value', [
     );
   },
   function(test, expect) {
-    var self = this;
+    const self = this;
     Meteor.call(
       'getArray',
       self.testId,

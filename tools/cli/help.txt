@@ -83,6 +83,11 @@ Options:
                    Defaults to your local IP and the port that the Meteor
                    server binds to. Can include a URL scheme (for
                    example, --mobile-server=https://example.com:443).
+  --cordova-server-port
+                   Local port where Cordova will serve the content. It's
+                   important when multiple Cordova apps are build from the same
+                   Meteor app source code as by default the port is generated
+                   using the id inside .meteor/.id file.
   --production     Simulate production mode. Minify and bundle CSS and JS files.
   --raw-logs       Run without parsing logs from stdout and stderr.
   --settings, -s   Set optional data for Meteor.settings on the server.
@@ -98,6 +103,9 @@ Options:
                    version constraints.
   --extra-packages Run with additional packages (comma separated, for example:
                    --extra-packages "package-name1, package-name2@1.2.3")
+  --exclude-archs  Don't create bundles for certain web architectures
+                  (comma separated, for example:
+                   --exclude-archs "web.browser.legacy, web.cordova")
 
 >>> debug
 Run the project with server-side debugging enabled.
@@ -168,13 +176,14 @@ sample applications. Use --list to see the available examples. There are
 currently no package examples.
 
 Options:
-  --package  Create a new meteor package instead of an app.
-  --example  Example template to use.
-  --list     Show list of available examples.
-  --bare     Create an empty app.
-  --minimal  Create an app with as few Meteor packages as possible.
-  --full     Create a fully scaffolded app.
-  --react    Create a basic React-based app.
+  --package       Create a new meteor package instead of an app.
+  --example       Example template to use.
+  --list          Show list of available examples.
+  --bare          Create an empty app.
+  --minimal       Create an app with as few Meteor packages as possible.
+  --full          Create a fully scaffolded app.
+  --react         Create a basic React-based app.
+  --typescript    Create a basic Typescript React-based app.
 
 
 >>> update
@@ -281,13 +290,17 @@ Options:
 List the packages explicitly used by your project.
 Usage: meteor list
        meteor list --tree [--weak]
+       meteor list --json [--weak] [--details]
 
 Lists the packages that you have explicitly added to your project.
 Transitive dependencies are not listed unless you use the --tree option,
 which outputs a tree showing how packages are referenced.
 
+Use the --json option to output the tree in JSON format.
+
 Options:
   --weak           Show weakly referenced dependencies in the tree.
+  --details        Adds more package details to the JSON output.
 
 >>> add-platform
 Add a platform to this project.
@@ -334,6 +347,12 @@ List the platforms added to your project.
 Usage: meteor list-platforms
 
 Lists all of the platforms added to your project.
+
+>>> ensure-cordova-dependencies
+Ensure that Cordova dependencies are installed.
+Usage: meteor ensure-cordova-dependencies
+
+Check if the dependencies are installed, otherwise install them.
 
 >>> configure-android
 Run the Android configuration tool from Meteor's ADK environment.
@@ -504,6 +523,8 @@ Options:
                   minified code; defaults to 15 minutes.
   --no-wait       Exits when Meteor has uploaded the app's code instead of
                   waiting for the deploy to conclude.
+  --cache-build   Reuses the build already created if the git commit hash is the
+                  same
 
 >>> authorized
 View or change authorized users and organizations for a site.
@@ -598,6 +619,11 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
+  --cordova-server-port
+                    Local port where Cordova will serve the content. It's
+                    important when multiple Cordova apps are build from the same
+                    Meteor app source code as by default the port is generated
+                    using the id inside .meteor/.id file.
   --production      Simulate production mode. Minify and bundle CSS, JS files.
   --settings, -s    Set optional data for Meteor.settings on the server
 
@@ -682,6 +708,11 @@ Options:
                     port that the Meteor server binds to. Can include a
                     URL scheme (for example,
                     --mobile-server=https://example.com:443).
+  --cordova-server-port
+                    Local port where Cordova will serve the content. It's
+                    important when multiple Cordova apps are build from the same
+                    Meteor app source code as by default the port is generated
+                    using the id inside .meteor/.id file.
   --raw-logs        Run without parsing logs from stdout and stderr.
   --settings, -s    Set optional data for Meteor.settings on the server
 
@@ -698,6 +729,9 @@ Options:
   --driver-package  Name of the optional test driver package to use to run
                     tests and display results. For example:
                     --driver-package practicalmeteor:mocha
+  --exclude-archs   Don't create test bundles for certain web architectures
+                    (comma separated, for example:
+                    --exclude-archs "web.browser.legacy, web.cordova")
 
 >>> self-test
 Run tests of the 'meteor' tool.
@@ -782,7 +816,7 @@ Usage: meteor list-sites
 List the sites that you have deployed with 'meteor deploy', and sites
 for which other users have authorized you with the 'meteor authorized'
 command. To see sites in a region other than us-east-1, set the DEPLOY_HOSTNAME
-environment variable. For example, 
+environment variable. For example,
 `DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor list-sites`
 
 

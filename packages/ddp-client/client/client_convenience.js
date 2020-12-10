@@ -20,25 +20,18 @@ Meteor.refresh = () => {};
 // _translateUrl in stream_client_common.js not force absolute paths
 // to be treated like relative paths. See also
 // stream_client_common.js #RationalizingRelativeDDPURLs
-var ddpUrl = '/';
-if (typeof __meteor_runtime_config__ !== 'undefined') {
-  if (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL)
-    ddpUrl = __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL;
-}
+const runtimeConfig = typeof __meteor_runtime_config__ !== 'undefined' ? __meteor_runtime_config__ : Object.create(null);
+const ddpUrl = runtimeConfig.DDP_DEFAULT_CONNECTION_URL || '/';
 
-var retry = new Retry();
+const retry = new Retry();
 
 function onDDPVersionNegotiationFailure(description) {
   Meteor._debug(description);
   if (Package.reload) {
-    var migrationData =
-      Package.reload.Reload._migrationData('livedata') ||
-      Object.create(null);
-    var failures = migrationData.DDPVersionNegotiationFailures || 0;
+    const migrationData = Package.reload.Reload._migrationData('livedata') || Object.create(null);
+    let failures = migrationData.DDPVersionNegotiationFailures || 0;
     ++failures;
-    Package.reload.Reload._onMigrate('livedata', () => {
-      return [true, { DDPVersionNegotiationFailures: failures }];
-    });
+    Package.reload.Reload._onMigrate('livedata', () => [true, { DDPVersionNegotiationFailures: failures }]);
     retry.retryLater(failures, () => {
       Package.reload.Reload._reload({ immediateMigration: true });
     });

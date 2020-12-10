@@ -3,7 +3,7 @@ import Client from '../../client.js';
 import configuredClients from "./clients.js";
 import { enterJob } from '../../../utils/buildmessage.js';
 import { getUrlWithResuming } from '../../../utils/http-helpers.js';
-import { execFileSync } from '../../../utils/processes.js';
+import { execFileSync } from '../../../utils/processes';
 import { ensureDependencies } from '../../../cli/dev-bundle-helpers.js';
 import {
   mkdtemp,
@@ -13,12 +13,14 @@ import {
   readFile,
   createWriteStream,
   getDevBundle,
-} from '../../../fs/files.js';
+} from '../../../fs/files';
 
 const NPM_DEPENDENCIES = {
   'browserstack-webdriver': '2.41.1',
   'browserstack-local': '1.3.0',
 };
+
+const USER = 'dev1141';
 
 // A memoized key from BrowserStackClient._getBrowserStackKey.
 let browserStackKey;
@@ -68,7 +70,7 @@ export default class BrowserStackClient extends Client {
 
     const capabilities = {
       // Authentication
-      'browserstack.user': 'meteoropensource1',
+      'browserstack.user': USER,
       'browserstack.key': key,
 
       // Use the BrowserStackLocal tunnel, to allow BrowserStack to
@@ -124,15 +126,18 @@ export default class BrowserStackClient extends Client {
 
     // Try to get the credentials from S3 with the s3cmd tool.
     const outputDir = pathJoin(mkdtemp(), "key");
+      const browserstackKey = "s3://meteor-browserstack-keys/browserstack-key";
     try {
       execFileSync("s3cmd", ["get",
-        "s3://meteor-browserstack-keys/browserstack-key",
+        browserstackKey,
         outputDir
       ]);
 
       return (browserStackKey = readFile(outputDir, "utf8").trim());
     } catch (e) {
       // A failure is acceptable here; it was just a try.
+      console.warn(`Failed to load browserstack key from 
+        ${browserstackKey}`, e);
     }
 
     return (browserStackKey = null);

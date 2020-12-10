@@ -1,11 +1,11 @@
 import { inspect } from 'util';
-import * as files from '../fs/files.js';
+import * as files from '../fs/files';
 import { createHash } from 'crypto';
 import {
   markBottom as parseStackMarkBottom,
   markTop as parseStackMarkTop,
   parse as parseStackParse,
-} from '../utils/parse-stack.js';
+} from '../utils/parse-stack';
 import { Console } from '../console/console.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import TestFailure from './test-failure.js';
@@ -21,7 +21,7 @@ import "../tool-env/install-runtime.js";
 // Use this to decorate functions that throw TestFailure. Decorate the
 // first function that should not be included in the call stack shown
 // to the user.
-export const markStack = parseStackMarkTop;
+export { parseStackMarkTop as markStack };
 
 // Call from a test to throw a TestFailure exception and bail out of the test
 export const fail = parseStackMarkTop(function (reason) {

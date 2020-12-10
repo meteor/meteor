@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.7.0'
+  version: '1.9.1'
 });
 
 Npm.depends({"basic-auth-connect": "1.0.0",
@@ -11,8 +11,8 @@ Npm.depends({"basic-auth-connect": "1.0.0",
              parseurl: "1.3.2",
              send: "0.16.1",
              "stream-to-string": "1.1.0",
-             "qs-middleware": "1.0.3",
-             useragent: "2.2.1"});
+             "qs": "6.4.0",
+             useragent: "2.3.0"});
 
 Npm.strip({
   multiparty: ["test/"],
@@ -20,9 +20,9 @@ Npm.strip({
 });
 
 Cordova.depends({
-  'cordova-plugin-whitelist': '1.3.2',
-  'cordova-plugin-wkwebview-engine': '1.1.3',
-  'cordova-plugin-meteor-webapp': '1.6.0'
+  'cordova-plugin-whitelist': '1.3.4',
+  'cordova-plugin-wkwebview-engine': '1.2.1',
+  'cordova-plugin-meteor-webapp': '1.9.1'
 });
 
 Package.onUse(function (api) {

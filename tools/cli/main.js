@@ -7,7 +7,7 @@ var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Console = require('../console/console.js').Console;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var warehouse = require('../packaging/warehouse.js');
 var tropohouse = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
@@ -15,7 +15,7 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
-const archinfo = require('../utils/archinfo.js');
+const archinfo = require('../utils/archinfo');
 import { isEmacs } from "../utils/utils.js";
 
 var main = exports;
@@ -509,8 +509,6 @@ var springboard = function (rel, options) {
     }
   }
 
-  const executable = files.pathJoin(newToolsDir, "meteor");
-
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = [];
@@ -543,10 +541,16 @@ var springboard = function (rel, options) {
   // process, so that the springboarded process can reestablish it.
   catalog.official.closePermanently();
 
-  if (process.platform === 'win32') {
+  const isWindows = process.platform === "win32";
+  const executable = files.pathJoin(
+    newToolsDir,
+    isWindows ? "meteor.bat" : "meteor",
+  );
+
+  if (isWindows) {
     process.exit(new Promise(function (resolve) {
-      var batPath = files.convertToOSPath(executable + ".bat");
-      var child = require("child_process").spawn(batPath, newArgv, {
+      var execPath = files.convertToOSPath(executable);
+      var child = require("child_process").spawn(execPath, newArgv, {
         env: process.env,
         stdio: 'inherit'
       }).on('exit', resolve);
@@ -600,18 +604,11 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v8.0.0';
+  var MIN_NODE_VERSION = 'v12.0.0';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');
     process.exit(1);
-  }
-
-  // Set up git hooks, but not on Windows because they don't work there and it;s
-  // not worth setting it up at the moment
-  if (files.inCheckout() && process.platform !== "win32") {
-    var installGitHooks = require('../tool-env/install-git-hooks.js')['default'];
-    installGitHooks();
   }
 
   // This is a bit of a hack, but: if we don't check this in the tool, then the

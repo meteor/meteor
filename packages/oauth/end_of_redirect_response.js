@@ -1,6 +1,7 @@
-(() => {
+// NOTE: This file is added to the client as asset and hence ecmascript package has no effect here.
+(function() {
 
-  const config = JSON.parse(document.getElementById("config").innerHTML);
+  var config = JSON.parse(document.getElementById("config").innerHTML);
 
   if (config.setCredentialToken) {
     sessionStorage[config.storagePrefix + config.credentialToken] =

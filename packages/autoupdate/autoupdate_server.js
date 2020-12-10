@@ -22,6 +22,7 @@
 // The ID of each document is the client architecture, and the fields of
 // the document are the versions described above.
 
+import { ClientVersions } from "./client_versions.js";
 var Future = Npm.require("fibers/future");
 
 export const Autoupdate = __meteor_runtime_config__.autoupdate = {
@@ -34,11 +35,8 @@ export const Autoupdate = __meteor_runtime_config__.autoupdate = {
   versions: {}
 };
 
-// The collection of acceptable client versions.
-const ClientVersions =
-  new Mongo.Collection("meteor_autoupdate_clientVersions", {
-    connection: null
-  });
+// Stores acceptable client versions.
+const clientVersions = new ClientVersions();
 
 // The client hash includes __meteor_runtime_config__, so wait until
 // all packages have loaded and have had a chance to populate the
@@ -96,11 +94,8 @@ function updateVersions(shouldReloadClientProgram) {
         ...Autoupdate.versions[arch],
         assets: WebApp.getRefreshableAssets(arch),
       };
-      if (! ClientVersions.findOne({ _id: arch })) {
-        ClientVersions.insert({ _id: arch, ...payload });
-      } else {
-        ClientVersions.update(arch, { $set: payload });
-      }
+
+      clientVersions.set(arch, payload);
     });
   });
 }
@@ -118,7 +113,13 @@ Meteor.publish(
     if (Autoupdate.appId && appId && Autoupdate.appId !== appId)
       return [];
 
-    return ClientVersions.find();
+    const stop = clientVersions.watch((version, isNew) => {
+      (isNew ? this.added : this.changed)
+        .call(this, "meteor_autoupdate_clientVersions", version._id, version);
+    });
+
+    this.onStop(() => stop());
+    this.ready();
   },
   {is_auto: true}
 );
@@ -132,8 +133,8 @@ Meteor.startup(function () {
    "version-refreshable",
    "version-cordova",
   ].forEach(_id => {
-    ClientVersions.upsert(_id, {
-      $set: { version: "outdated" }
+    clientVersions.set(_id, {
+      version: "outdated"
     });
   });
 });

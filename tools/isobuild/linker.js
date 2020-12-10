@@ -1,12 +1,12 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('../utils/buildmessage.js');
-var watch = require('../fs/watch.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var watch = require('../fs/watch');
+var Profile = require('../tool-env/profile').Profile;
 import assert from 'assert';
 import LRU from 'lru-cache';
 import { sourceMapLength } from '../utils/utils.js';
-import files from '../fs/files.js';
+import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
 
@@ -20,6 +20,10 @@ const APP_PRELINK_CACHE = new LRU({
   length: function (prelinked) {
     return prelinked.source.length + sourceMapLength(prelinked.sourceMap);
   }
+});
+// Caches code with source map for dynamic files
+const DYNAMIC_PRELINKED_OUTPUT_CACHE = new LRU({
+  max: Math.pow(2, 11)
 });
 
 var packageDot = function (name) {
@@ -122,7 +126,10 @@ _.extend(Module.prototype, {
 
       return _.map(eagerFiles, function (file) {
         const cacheKey = JSON.stringify([
-          file.sourceHash, file.bare, file.servePath]);
+          file._inputHash,
+          file.bare,
+          file.servePath,
+        ]);
 
         if (APP_PRELINK_CACHE.has(cacheKey)) {
           return APP_PRELINK_CACHE.get(cacheKey);
@@ -146,7 +153,8 @@ _.extend(Module.prototype, {
           source: results.code,
           sourcePath: file.sourcePath,
           servePath: file.servePath,
-          sourceMap: sourceMap
+          sourceMap: sourceMap,
+          hash: file._inputHash,
         };
 
         APP_PRELINK_CACHE.set(cacheKey, prelinked);
@@ -164,6 +172,9 @@ _.extend(Module.prototype, {
       // .sourceMap, and (optionally) .exportsName properties before being
       // returned from this method in a singleton array.
       servePath: self.combinedServePath,
+      hash: watch.sha1(
+        JSON.stringify(self.files.map(file => file._inputHash))
+      ),
     };
 
     const results = [result];
@@ -264,11 +275,7 @@ _.extend(Module.prototype, {
       if (file.isDynamic()) {
         const servePath = files.pathJoin("dynamic", file.absModuleId);
         const { code: source, map } =
-          file.getPrelinkedOutput({
-            sourceWidth: sourceWidth,
-          }).toStringWithSourceMap({
-            file: servePath,
-          });
+          getOutputWithSourceMapCached(file, servePath, { sourceWidth })
 
         results.push({
           source,
@@ -292,6 +299,7 @@ _.extend(Module.prototype, {
           }
 
           tryMain("browser");
+          tryMain("module");
           tryMain("main");
 
           stubArray.push(stub);
@@ -550,7 +558,7 @@ function File(inputFile, module) {
 
   // hash of source (precalculated for *.js files, calculated here for files
   // produced by plugins)
-  self.sourceHash = inputFile.hash || watch.sha1(self.source);
+  self._inputHash = inputFile.hash || watch.sha1(self.source);
 
   // The path of the source file, relative to the root directory of the
   // package or application.
@@ -637,7 +645,7 @@ _.extend(File.prototype, {
     }
 
     try {
-      return _.keys(findAssignedGlobals(self.source, self.sourceHash));
+      return _.keys(findAssignedGlobals(self.source, self._inputHash));
     } catch (e) {
       if (!e.$ParseError) {
         throw e;
@@ -649,7 +657,7 @@ _.extend(File.prototype, {
         column: e.column
       };
       if (self.sourceMap) {
-        var parsed = new sourcemap.SourceMapConsumer(self.sourceMap);
+        var parsed = Promise.await(new sourcemap.SourceMapConsumer(self.sourceMap));
         var original = parsed.originalPositionFor(
           {line: e.lineNumber, column: e.column - 1});
         if (original.source) {
@@ -657,6 +665,7 @@ _.extend(File.prototype, {
           errorOptions.line = original.line;
           errorOptions.column = original.column + 1;
         }
+        parsed.destroy();
       }
 
       buildmessage.error(e.message, errorOptions);
@@ -664,7 +673,7 @@ _.extend(File.prototype, {
       // Recover by pretending that this file is empty (which
       // includes replacing its source code with '' in the output)
       self.source = "";
-      self.sourceHash = watch.sha1(self.source);
+      self._inputHash = watch.sha1(self.source);
       self.sourceMap = null;
       return [];
     }
@@ -676,7 +685,7 @@ _.extend(File.prototype, {
 
   _getClosureHeader() {
     if (this.meteorInstallOptions) {
-      const headerParts = ["function("];
+      const headerParts = ["function module("];
 
       if (this.source.match(/\b__dirname\b/)) {
         headerParts.push("require,exports,module,__filename,__dirname");
@@ -771,10 +780,12 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       let chunk = result.code;
 
       if (result.map) {
+        const sourcemapConsumer = Promise.await(new sourcemap.SourceMapConsumer(result.map));
         chunk = sourcemap.SourceNode.fromStringWithSourceMap(
           result.code,
-          new sourcemap.SourceMapConsumer(result.map),
+          sourcemapConsumer,
         );
+        sourcemapConsumer.destroy();
       }
 
       chunks.push(chunk);
@@ -805,14 +816,17 @@ const getPrelinkedOutputCached = require("optimism").wrap(
     }
 
     return new sourcemap.SourceNode(null, null, null, chunks);
-
   }, {
     // Store at most 4096 Files worth of prelinked output in this cache.
     max: Math.pow(2, 12),
 
     makeCacheKey(file, options) {
+      if (options.disableCache) {
+        return;
+      }
+
       return JSON.stringify({
-        sourceHash: file.sourceHash,
+        hash: file._inputHash,
         arch: file.module.bundleArch,
         bare: file.bare,
         servePath: file.servePath,
@@ -821,6 +835,32 @@ const getPrelinkedOutputCached = require("optimism").wrap(
     }
   }
 );
+
+function getOutputWithSourceMapCached(file, servePath, options) {
+  const key = JSON.stringify({
+    hash: file._inputHash,
+    arch: file.module.bundleArch,
+    bare: file.bare,
+    servePath: file.servePath,
+    dynamic: file.isDynamic(),
+    options,
+  });
+
+  if (DYNAMIC_PRELINKED_OUTPUT_CACHE.has(key)) {
+    return DYNAMIC_PRELINKED_OUTPUT_CACHE.get(key);
+  }
+
+  const result = file.getPrelinkedOutput({
+    ...options,
+    disableCache: true
+  }).toStringWithSourceMap({
+    file: servePath,
+  });
+
+  DYNAMIC_PRELINKED_OUTPUT_CACHE.set(key, result);
+
+  return result;
+}
 
 // Given a list of lines (not newline-terminated), returns a string placing them
 // in a pretty banner of width bannerWidth. All lines must have length at most

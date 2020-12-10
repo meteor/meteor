@@ -2,24 +2,29 @@ import _ from 'underscore';
 import assert from 'assert';
 import utils from '../utils/utils.js';
 import buildmessage from '../utils/buildmessage.js';
+import {
+  pathJoin,
+  statOrNull,
+  getDevBundle,
+  rm_recursive,
+} from '../fs/files';
 
 export const CORDOVA_ARCH = "web.cordova";
 
 export const CORDOVA_PLATFORMS = ['ios', 'android'];
 
 export const CORDOVA_DEV_BUNDLE_VERSIONS = {
-  'cordova-lib': '7.1.0',
-  'cordova-common': '2.1.1',
+  'cordova-lib': '9.0.1',
+  'cordova-common': '3.2.1',
   'cordova-registry-mapper': '1.1.15',
 };
 
 export const CORDOVA_PLATFORM_VERSIONS = {
-  // This commit represents cordova-android@6.4.0 plus
-  // https://github.com/apache/cordova-android/pull/417, aka
-  // https://github.com/meteor/cordova-android/tree/v6.4.0-with-pr-417:
-  'android': 'https://github.com/meteor/cordova-android/tarball/317db7df0f7a054444197bc6d28453cf4ab23280',
-  'ios': '4.5.4'
+  'android': '8.1.0',
+  'ios': '5.1.1',
 };
+
+export const SWIFT_VERSION = 5;
 
 const PLATFORM_TO_DISPLAY_NAME_MAP = {
   'ios': 'iOS',
@@ -34,6 +39,27 @@ export function ensureDevBundleDependencies() {
     () => {
       require("../cli/dev-bundle-helpers.js")
         .ensureDependencies(CORDOVA_DEV_BUNDLE_VERSIONS);
+
+      const cordovaNodeModulesDir = pathJoin(
+        getDevBundle(),
+        "lib",
+        "node_modules",
+        "cordova-lib",
+        "node_modules",
+      );
+
+      [
+        // Remove these bundled packages in preference to
+        // dev_bundle/lib/node_modules/<package name>:
+        "graceful-fs",
+        pathJoin("npm", "node_modules", "graceful-fs"),
+      ].forEach(pkg => {
+        const path = pathJoin(cordovaNodeModulesDir, pkg);
+        const stat = statOrNull(path);
+        if (stat && stat.isDirectory()) {
+          rm_recursive(path);
+        }
+      });
     }
   );
 }

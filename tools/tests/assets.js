@@ -30,11 +30,11 @@ selftest.define("assets - unicode asset names are allowed", () => {
 });
 
 // Verify path strings can be Unicode normalized through the
-// tools/static-assets/server/mini-files.js#unicodeNormalizePath helper
+// tools/static-assets/server/mini-files.ts#unicodeNormalizePath helper
 selftest.define(
   "assets - helper exists to unicode normalize path strings",
   () => {
-    const files = require('../static-assets/server/mini-files.js');
+    const files = require('../static-assets/server/mini-files.ts');
 
     selftest.expectEqual(null, files.unicodeNormalizePath(null));
 

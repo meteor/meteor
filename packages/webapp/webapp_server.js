@@ -10,14 +10,11 @@ import { createHash } from "crypto";
 import { connect } from "./connect.js";
 import compress from "compression";
 import cookieParser from "cookie-parser";
-import query from "qs-middleware";
+import qs from "qs";
 import parseRequest from "parseurl";
 import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
-import {
-  isModern,
-  calculateHashOfMinimumVersions,
-} from "meteor/modern-browsers";
+import { isModern } from "meteor/modern-browsers";
 import send from "send";
 import cluster from "cluster";
 import {
@@ -63,6 +60,16 @@ var sha1 = function (contents) {
   var hash = createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
+};
+
+ function shouldCompress(req, res) {
+  if (req.headers['x-no-compression']) {
+    // don't compress responses with this request header
+    return false;
+  }
+
+  // fallback to standard filter function
+  return compress.filter(req, res);
 };
 
 // #BrowserIdentification
@@ -124,10 +131,63 @@ var identifyBrowser = function (userAgentString) {
 WebAppInternals.identifyBrowser = identifyBrowser;
 
 WebApp.categorizeRequest = function (req) {
-  return _.extend({
-    browser: identifyBrowser(req.headers['user-agent']),
-    url: parseUrl(req.url, true)
-  }, _.pick(req, 'dynamicHead', 'dynamicBody', 'headers', 'cookies'));
+  if (req.browser && req.arch && typeof req.modern === "boolean") {
+    // Already categorized.
+    return req;
+  }
+
+  const browser = identifyBrowser(req.headers["user-agent"]);
+  const modern = isModern(browser);
+  const path = typeof req.pathname === "string"
+   ? req.pathname
+   : parseRequest(req).pathname;
+
+  const categorized = {
+    browser,
+    modern,
+    path,
+    arch: WebApp.defaultArch,
+    url: parseUrl(req.url, true),
+    dynamicHead: req.dynamicHead,
+    dynamicBody: req.dynamicBody,
+    headers: req.headers,
+    cookies: req.cookies,
+  };
+
+  const pathParts = path.split("/");
+  const archKey = pathParts[1];
+
+  if (archKey.startsWith("__")) {
+    const archCleaned = "web." + archKey.slice(2);
+    if (hasOwn.call(WebApp.clientPrograms, archCleaned)) {
+      pathParts.splice(1, 1); // Remove the archKey part.
+      return Object.assign(categorized, {
+        arch: archCleaned,
+        path: pathParts.join("/"),
+      });
+    }
+  }
+
+  // TODO Perhaps one day we could infer Cordova clients here, so that we
+  // wouldn't have to use prefixed "/__cordova/..." URLs.
+  const preferredArchOrder = isModern(browser)
+    ? ["web.browser", "web.browser.legacy"]
+    : ["web.browser.legacy", "web.browser"];
+
+  for (const arch of preferredArchOrder) {
+    // If our preferred arch is not available, it's better to use another
+    // client arch that is available than to guarantee the site won't work
+    // by returning an unknown arch. For example, if web.browser.legacy is
+    // excluded using the --exclude-archs command-line option, legacy
+    // clients are better off receiving web.browser (which might actually
+    // work) than receiving an HTTP 404 response. If none of the archs in
+    // preferredArchOrder are defined, only then should we send a 404.
+    if (hasOwn.call(WebApp.clientPrograms, arch)) {
+      return Object.assign(categorized, { arch });
+    }
+  }
+
+  return categorized;
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -311,9 +371,11 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
-  var runtimeConfig = _.extend(
-    _.clone(__meteor_runtime_config__),
-    additionalOptions.runtimeConfigOverrides || {}
+  const meteorRuntimeConfig = JSON.stringify(
+    encodeURIComponent(JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || {})
+    }))
   );
 
   return new Boilerplate(arch, manifest, _.extend({
@@ -336,8 +398,8 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
       // end up inside a <script> tag so we need to be careful to not include
       // "</script>", but normal {{spacebars}} escaping escapes too much! See
       // https://github.com/meteor/meteor/issues/3730
-      meteorRuntimeConfig: JSON.stringify(
-        encodeURIComponent(JSON.stringify(runtimeConfig))),
+      meteorRuntimeConfig,
+      meteorRuntimeHash: sha1(meteorRuntimeConfig),
       rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
       bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
       sriMode: sriMode,
@@ -356,8 +418,6 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
 // Info also contains one of the following:
 // - content: the stringified content that should be served at this path
 // - absolutePath: the absolute path on disk to the file
-
-var staticFilesByArch;
 
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
@@ -387,27 +447,32 @@ WebAppInternals.staticFilesMiddleware = async function (
     res.end();
   };
 
-  if (pathname === "/meteor_runtime_config.js" &&
-      ! WebAppInternals.inlineScriptsAllowed()) {
-    serveStaticJs("__meteor_runtime_config__ = " +
-                  JSON.stringify(__meteor_runtime_config__) + ";");
-    return;
-  } else if (_.has(additionalStaticJs, pathname) &&
+  if (_.has(additionalStaticJs, pathname) &&
               ! WebAppInternals.inlineScriptsAllowed()) {
     serveStaticJs(additionalStaticJs[pathname]);
     return;
   }
 
-  const { arch, path } = getArchAndPath(
-    pathname,
-    identifyBrowser(req.headers["user-agent"]),
-  );
+  const { arch, path } = WebApp.categorizeRequest(req);
+
+  if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+    // We could come here in case we run with some architectures excluded
+    next();
+    return;
+  }
 
   // If pauseClient(arch) has been called, program.paused will be a
   // Promise that will be resolved when the program is unpaused.
-  await WebApp.clientPrograms[arch].paused;
+  const program = WebApp.clientPrograms[arch];
+  await program.paused;
 
-  const info = getStaticFileInfo(pathname, path, arch);
+  if (path === "/meteor_runtime_config.js" &&
+      ! WebAppInternals.inlineScriptsAllowed()) {
+    serveStaticJs(`__meteor_runtime_config__ = ${program.meteorRuntimeConfig};`);
+    return;
+  }
+
+  const info = getStaticFileInfo(staticFilesByArch, pathname, path, arch);
   if (! info) {
     next();
     return;
@@ -477,7 +542,7 @@ WebAppInternals.staticFilesMiddleware = async function (
   }
 };
 
-function getStaticFileInfo(originalPath, path, arch) {
+function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
   if (! hasOwn.call(WebApp.clientPrograms, arch)) {
     return null;
   }
@@ -511,7 +576,7 @@ function getStaticFileInfo(originalPath, path, arch) {
       return finalize(originalPath);
     }
 
-    // If getArchAndPath returned an alternate path, try that instead.
+    // If categorizeRequest returned an alternate path, try that instead.
     if (path !== originalPath &&
         hasOwn.call(staticFiles, path)) {
       return finalize(path);
@@ -519,37 +584,6 @@ function getStaticFileInfo(originalPath, path, arch) {
   });
 
   return info;
-}
-
-function getArchAndPath(path, browser) {
-  const pathParts = path.split("/");
-  const archKey = pathParts[1];
-
-  if (archKey.startsWith("__")) {
-    const archCleaned = "web." + archKey.slice(2);
-    if (hasOwn.call(WebApp.clientPrograms, archCleaned)) {
-      pathParts.splice(1, 1); // Remove the archKey part.
-      return {
-        arch: archCleaned,
-        path: pathParts.join("/"),
-      };
-    }
-  }
-
-  // TODO Perhaps one day we could infer Cordova clients here, so that we
-  // wouldn't have to use prefixed "/__cordova/..." URLs.
-  const arch = isModern(browser)
-    ? "web.browser"
-    : "web.browser.legacy";
-
-  if (hasOwn.call(WebApp.clientPrograms, arch)) {
-    return { arch, path };
-  }
-
-  return {
-    arch: WebApp.defaultArch,
-    path,
-  };
 }
 
 // Parse the passed in port value. Return the port as-is if it's a String
@@ -586,14 +620,16 @@ function runWebAppServer() {
 
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
-      staticFilesByArch = Object.create(null);
+      const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
       const clientArchs = configJson.clientArchs ||
         Object.keys(configJson.clientPaths);
 
       try {
-        clientArchs.forEach(generateClientProgram);
+        clientArchs.forEach(arch => {
+          generateClientProgram(arch, staticFilesByArch);
+        });
         WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error("Error reloading the client program: " + e.stack);
@@ -627,7 +663,10 @@ function runWebAppServer() {
     syncQueue.runTask(() => generateClientProgram(arch));
   };
 
-  function generateClientProgram(arch) {
+  function generateClientProgram(
+    arch,
+    staticFilesByArch = WebAppInternals.staticFilesByArch,
+  ) {
     const clientDir = pathJoin(
       pathDirname(__meteor_bootstrap__.serverDir),
       arch,
@@ -682,11 +721,6 @@ function runWebAppServer() {
     const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
     const configOverrides = {
       PUBLIC_SETTINGS,
-      // Since the minimum modern versions defined in the modern-versions
-      // package affect which bundle a given client receives, any changes
-      // in those versions should trigger a corresponding change in the
-      // versions calculated below.
-      minimumModernVersionsHash: calculateHashOfMinimumVersions(),
     };
 
     const oldProgram = WebApp.clientPrograms[arch];
@@ -696,6 +730,10 @@ function runWebAppServer() {
       // Use arrow functions so that these versions can be lazily
       // calculated later, and so that they will not be included in the
       // staticFiles[manifestUrl].content string below.
+      //
+      // Note: these version calculations must be kept in agreement with
+      // CordovaBuilder#appendVersion in tools/cordova/builder.js, or hot
+      // code push will reload Cordova apps unnecessarily.
       version: () => WebAppHashing.calculateClientHash(
         manifest, null, configOverrides),
       versionRefreshable: () => WebAppHashing.calculateClientHash(
@@ -790,13 +828,18 @@ function runWebAppServer() {
 
   function generateBoilerplateForArch(arch) {
     const program = WebApp.clientPrograms[arch];
+    const additionalOptions = defaultOptionsForArch[arch] || {};
     const { baseData } = boilerplateByArch[arch] =
       WebAppInternals.generateBoilerplateInstance(
         arch,
         program.manifest,
-        defaultOptionsForArch[arch],
+        additionalOptions,
       );
-
+    // We need the runtime config with overrides for meteor_runtime_config.js:
+    program.meteorRuntimeConfig = JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || null),
+    });
     program.refreshableAssets = baseData.css.map(file => ({
       url: bundledJsCssUrlRewriteHook(file.url),
     }));
@@ -813,7 +856,7 @@ function runWebAppServer() {
   app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
-  app.use(compress());
+  app.use(compress({filter: shouldCompress}));
 
   // parse cookies into an object
   app.use(cookieParser());
@@ -835,8 +878,11 @@ function runWebAppServer() {
   //
   // Do this before the next middleware destroys req.url if a path prefix
   // is set to close #10111.
-  app.use(query());
-  
+  app.use(function (request, response, next) {
+    request.query = qs.parse(parseUrl(request.url).query);
+    next();
+  });
+
   function getPathParts(path) {
     const parts = path.split("/");
     while (parts[0] === "") parts.shift();
@@ -851,7 +897,7 @@ function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname } = parseUrl(request.url);
+    const { pathname, search } = parseUrl(request.url);
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
@@ -859,6 +905,9 @@ function runWebAppServer() {
       const pathParts = getPathParts(pathname);
       if (isPrefixOf(prefixParts, pathParts)) {
         request.url = "/" + pathParts.slice(prefixParts.length).join("/");
+        if (search) {
+          request.url += search;
+        }
         return next();
       }
     }
@@ -881,7 +930,10 @@ function runWebAppServer() {
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    WebAppInternals.staticFilesMiddleware(staticFilesByArch, req, res, next);
+    WebAppInternals.staticFilesMiddleware(
+      WebAppInternals.staticFilesByArch,
+      req, res, next
+    );
   });
 
   // Core Meteor packages like dynamic-import can add handlers before
@@ -959,10 +1011,21 @@ function runWebAppServer() {
         return;
       }
 
-      const { arch } = getArchAndPath(
-        parseRequest(req).pathname,
-        request.browser,
-      );
+      const { arch } = request;
+      assert.strictEqual(typeof arch, "string", { arch });
+
+      if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+        // We could come here in case we run with some architectures excluded
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(404, headers);
+        if (Meteor.isDevelopment) {
+          res.end(`No client program found for the ${arch} architecture.`);
+        } else {
+          // Safety net, but this branch should not be possible.
+          res.end("404 Not Found");
+        }
+        return;
+      }
 
       // If pauseClient(arch) has been called, program.paused will be a
       // Promise that will be resolved when the program is unpaused.

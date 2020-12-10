@@ -1,4 +1,744 @@
-## v.NEXT
+## vNEXT, unreleased
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+## v1.12, 2020-04-12
+
+### Breaking changes
+
+- When importing types, you might need to use the "type" qualifier, like so:
+```js
+import { Point } from 'react-easy-crop/types';
+```
+to
+```ts
+import type { Point } from 'react-easy-crop/types';
+```
+Because now emitDecoratorsMetadata is enabled.
+
+- Refer to typescript breaking changes before migrating your existing project, from 3.7.6 to 4.1.2: https://github.com/Microsoft/TypeScript/wiki/Breaking-Changes
+
+### Migration steps
+
+N/A
+
+### Changes
+
+#### Highlights
+- TypeScript update from 3.7.6 to 4.1.2.
+  - enables decorators and metadata reflection. Important: these are stage 2 features so be aware that breaking changes could be introduced before they reach stage 3. 
+
+#### Meteor Version Release
+* `meteor-tool@1.12` 
+  - updates TypeScript to 4.1.2. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255) 
+  - adds new options for `meteor list` command (TODO pending link to updated doc). [#11165](https://github.com/meteor/meteor/pull/11165)
+  - supports Cordova add plugin command working again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
+  - avoids MiTM by downloading through https. [#11188](https://github.com/meteor/meteor/pull/11188)
+  
+* `meteor-babel@7.10.7`
+  - updates TypeScript to 4.1.2 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255)
+  
+* `minimongo@1.6.1`
+  - fixes a null reference exception, if an array contains null values while compiling a fields projection. [#10499](https://github.com/meteor/meteor/pull/10499).
+
+* `accounts-password@1.6.3` 
+  - adds a new function `createUserVerifyingEmail` (TODO pending link to updated doc). [#11080](https://github.com/meteor/meteor/pull/11080)
+  - fixes a typo. [#11182](https://github.com/meteor/meteor/pull/11182)
+
+* `browser-content-policy@1.1.1` 
+  - adds support to nonce
+  ```js
+    BrowserPolicy.content.allowScriptOrigin(`nonce-${nonce}`);
+  ```
+  
+* `accounts-ui@1.3.2` 
+  - follow accounts-ui-unstyled release
+  
+* `accounts-ui-unstyled@1.4.3` 
+  - fixes the login form would send the server two login requests
+  - fixes the "forgot password" form would not only send the email but also refresh the page
+  
+* `dynamic-import@0.5.4` 
+  - fixes prefetching errors. [#11209](https://github.com/meteor/meteor/pull/11209)
+  - adds the option for dynamic-imports to fetch from the current origin instead of the absolute URL. [#11105](https://github.com/meteor/meteor/pull/11105)
+
+* `mongo-decimal@0.1.2`
+  - updates npm dependency `decimal.js` to v10.2.1
+  
+* `accounts-base@1.7.1`
+  - adds the ability to define default user fields published on login. [#11118](https://github.com/meteor/meteor/pull/11118)
+  
+* `standard-minifier-css@1.7.0`
+  - modernize and update dependencies. [#11196](https://github.com/meteor/meteor/pull/11196)
+  
+
+#### Independent Releases
+* `facebook-oauth@1.7.3` 
+  - is now using Facebook GraphAPI v8. [#11160](https://github.com/meteor/meteor/pull/11160)
+
+## v1.11.1, 2020-09-16
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* `--apollo` skeleton was missing client cache setup [more](https://github.com/meteor/meteor/pull/11146)
+
+* `--vue` skeleton was updated to use proper folder structure [more](https://github.com/meteor/meteor/pull/11174)
+
+* All skeletons got their `npm` dependencies updated. [more](https://github.com/meteor/meteor/pull/11172)
+
+* Node.js has been updated to version [12.18.4](https://nodejs.org/en/blog/release/v12.18.4/), this is a [security release](https://nodejs.org/en/blog/vulnerability/september-2020-security-releases/)
+
+* Updated npm to version 6.14.8 [more](https://blog.npmjs.org/post/626732790304686080/release-6148)
+
+* `npm-mongo` version 3.8.1 was published, updating `mongodb` to [3.6.2](https://github.com/mongodb/node-mongodb-native/releases/tag/v3.6.2) [more](https://github.com/advisories/GHSA-pp7h-53gx-mx7r)
+
+* Updated PostCSS from 7.0.31 to 7.0.32 [more](https://github.com/meteor/meteor/issues/10682)
+
+* Allow android-webview-video-poster [more](https://github.com/meteor/meteor/pull/11159)
+
+## v1.11, 2020-08-18
+
+### Breaking changes
+
+* `email` package dependencies have been update and package version has been bumped to 2.0.0
+    There is a potential breaking change as the underlying package started to use `dns.resolve()`
+    instead of `dns.lookup()` which might be breaking on some environments.
+    See [nodemailer changelog](https://github.com/nodemailer/nodemailer/blob/master/CHANGELOG.md) for more information.
+
+* (Added later) Cordova add plugin is not working with plugin name in the git URL when the plugin id was different than the name in the config.xml. Fixed on [#11202](https://github.com/meteor/meteor/pull/11202)
+
+### Migration steps
+
+N/A
+
+### Changes
+
+* `meteor create --apollo` is now available thanks to [@StorytellerCZ](https://github.com/StorytellerCZ). PR [#11119](https://github.com/meteor/meteor/pull/11119)
+
+* `meteor create --vue` is now available thanks to [@chris-visser](https://github.com/chris-visser). PR [#11086](https://github.com/meteor/meteor/pull/11086)
+
+* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://galaxy-guide.meteor.com/deploy-guide.html#cache-build).
+
+* Multiple optimizations in build performance, many of them for Windows thanks to [@zodern](https://github.com/zodern). PRs [#10838](https://github.com/meteor/meteor/pull/10838), [#11114](https://github.com/meteor/meteor/pull/11114), [#11115](https://github.com/meteor/meteor/pull/11115), [#11102](https://github.com/meteor/meteor/pull/11102), [#10839](https://github.com/meteor/meteor/pull/10839)
+
+* Fixes error when removing cordova plugin that depends on cli variables. PR [#10976](https://github.com/meteor/meteor/pull/11052)
+
+* `email` package now exposes `hookSend` that runs before emails are send.
+
+* Node.js has been updated to version
+    [12.18.3](https://nodejs.org/en/blog/release/v12.18.3/)
+    
+* Updated npm to version 6.14.5
+
+* `mongodb` driver npm dependency has been updated to 3.6.0
+
+* The version of MongoDB used by Meteor in development has been updated
+    from 4.2.5 to 4.2.8
+
+## v1.10.2, 2020-04-21
+
+### Breaking changes
+
+* The `babel-compiler` package, used by both `ecmascript` and
+  `typescript`, no longer supports stripping [Flow](https://flow.org/)
+  type annotations by default, which may be a breaking change if your
+  application (or Meteor package) relied on Flow syntax.
+
+### Migration steps
+
+* If you still need Babel's Flow plugins, you can install them with npm
+  and then enable them with a custom `.babelrc` file in your application's
+  (or package's) root directory:
+  ```json
+  {
+    "plugins": [
+      "@babel/plugin-syntax-flow",
+      "@babel/plugin-transform-flow-strip-types"
+    ]
+  }
+  ```
+
+### Changes
+
+* Adds support to override MongoDB options via Meteor settings. Code PR 
+[#10976](https://github.com/meteor/meteor/pull/10976), Docs PR 
+[#662](https://github.com/meteor/docs/pull/662)
+
+* The `meteor-babel` npm package has been updated to version 7.9.0.
+
+* The `typescript` npm package has been updated to version 3.8.3.
+  
+* To pass Node command line flags to the server node instance,
+  now it is recommended to use `SERVER_NODE_OPTIONS` instead of `NODE_OPTIONS`.
+  Since Meteor 0.5.3, Meteor allowed to pass node command line flags via the  `NODE_OPTIONS`
+  environment variable.
+  However, since Node version 8 / Meteor 1.6 this has become a default node
+  envar with the same behavior. The side effect is that this now also affects
+  Meteor tool. The command line parameters could already be set separately
+  via the `TOOL_NODE_FLAGS` envar. This is now also possible (again) for the server.
+
+* The version of MongoDB used by Meteor in development has been updated from
+  4.2.1 to 4.2.5.
+  [PR #11020](https://github.com/meteor/meteor/pull/11020)
+  
+* The `url` package now provides an isomorphic implentation of the [WHATWG `url()`
+  API](https://url.spec.whatwg.org/).
+  While remaining backwards compatible, you can now also import `URL` and `URLSearchParams` from `meteor/url`.
+  These will work for both modern and legacy browsers as well as node.
+  
+
+## v1.10.1, 2020-03-12
+
+### Breaking changes
+
+* Cordova has been updated from version 7 to 9. We recommend that you test
+  your features that are taking advantage of Cordova plugins to be sure
+  they are still working as expected.
+  
+  * WKWebViewOnly is set by default now as true so if you are relying on 
+  UIWebView or plugins that are using UIWebView APIs you probably want to
+  set it as false, you can do this by calling 
+  `App.setPreference('WKWebViewOnly', false);` in your mobile-config.js. But we 
+  don't recommend turning this into false because 
+  [Apple have said](https://developer.apple.com/news/?id=12232019b) they are 
+  going to reject apps using UIWebView.
+  
+* Because MongoDB since 3.4 no longer supports 32-bit Windows, Meteor 1.10 has
+  also dropped support for 32-bit Windows. In other words, Meteor 1.10 supports
+  64-bit Mac, Windows 64-bit, and Linux 64-bit.
+
+### Migration Steps
+* If you get `Unexpected mongo exit code 62. Restarting.` when starting your local
+  MongoDB, you can either reset your project (`meteor reset`)
+  (if you don't care about your local data)
+  or you will need to update the feature compatibility version of your local MongoDB:
+  
+    1. Downgrade your app to earlier version of Meteor `meteor update --release 1.9.2`
+    2. Start your application
+    3. While your application is running open a new terminal window, navigate to the
+       app directory and open `mongo` shell: `meteor mongo`
+    4. Use: `db.adminCommand({ getParameter: 1, featureCompatibilityVersion: 1 })` to
+       check the current feature compatibility.
+    5. If the returned version is less than 4.0 update like this:
+       `db.adminCommand({ setFeatureCompatibilityVersion: "4.2" })`
+    6. You can now stop your app and update to Meteor 1.10.
+    
+    For more information about this, check out [MongoDB documentation](https://docs.mongodb.com/manual/release-notes/4.2-upgrade-standalone/).
+
+### Changes
+
+* The version of MongoDB used by Meteor in development has been updated
+  from 4.0.6 to 4.2.1, and the `mongodb` driver package has been updated
+  from 3.2.7 to 3.5.4, thanks to [@klaussner](https://github.com/klaussner).
+  [Feature #361](https://github.com/meteor/meteor-feature-requests/issues/361)
+  [PR #10723](https://github.com/meteor/meteor/pull/10723)
+
+* The `npm` command-line tool used by the `meteor npm` command (and by
+  Meteor internally) has been updated to version 6.14.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.12-meteor) of its
+  `pacote` dependency has been updated to version 9.5.12.
+
+* Cordova was updated from version 7 to 9
+  * cordova-lib from 7.1.0 to 9.0.1 [release notes](https://github.com/apache/cordova-lib/blob/master/RELEASENOTES.md)
+  * cordova-common from 2.1.1 to 3.2.1 [release notes](https://github.com/apache/cordova-common/blob/master/RELEASENOTES.md)
+  * cordova-android from 7.1.4 to 8.1.0 [release notes](https://github.com/apache/cordova-android/blob/master/RELEASENOTES.md)
+  * cordova-ios from 4.5.5 to 5.1.1 [release notes](https://github.com/apache/cordova-ios/blob/master/RELEASENOTES.md)
+  * cordova-plugin-wkwebview-engine from 1.1.4 to 1.2.1 [release notes](https://github.com/apache/cordova-plugin-wkwebview-engine/blob/master/RELEASENOTES.md#121-jul-20-2019)
+  * cordova-plugin-whitelist from 1.3.3 to 1.3.4 [release notes](https://github.com/apache/cordova-plugin-whitelist/blob/master/RELEASENOTES.md#134-jun-19-2019)
+  * cordova-plugin-splashscreen (included by mobile-experience > launch-screen) 
+  from 4.1.0 to 5.0.3 [release notes](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#503-may-09-2019)
+  * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar) 
+  from 2.3.0 to 2.4.3 [release notes](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#243-jun-19-2019)
+  * On iOS WKWebViewOnly is set by default now as true.
+  * On iOS the Swift version is now set by default to `5` this change can make
+  your app to produce some warnings if your plugins are using old Swift code. 
+  You can override the Swift version using 
+  `App.setPreference('SwiftVersion', 4.2);` but we don't recommend that.
+  
+* New command to ensure that Cordova dependencies are installed. Usage: 
+  `meteor ensure-cordova-dependencies`. Meteor handles this automatically but in 
+  some cases, like running in a CI, is useful to install them in advance.
+
+* You can now pass an `--exclude-archs` option to the `meteor run` and
+  `meteor test` commands to temporarily disable building certain web
+  architectures. For example, `meteor run --exclude-archs web.browser.legacy`.
+  Multiple architectures should be separated by commas. This option can be
+  used to improve (re)build times if you're not actively testing the
+  excluded architectures during development.
+  [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
+  [PR #10824](https://github.com/meteor/meteor/pull/10824)
+  
+* `meteor create --react app` and `--typescript` now use `useTracker` hook instead of 
+  `withTracker` HOC, it also uses `function` components instead of `classes`. 
+
+## v1.9.3, 2020-03-09
+
+### Breaking changes
+* The MongoDB `retryWrites` option now defaults to `true` (it previously defaulted to false). Users of database services that don't support retryWrites will experience a fatal error due to this.
+
+### Migration Steps
+* If you get the error `MongoError: This MongoDB deployment does not support retryable writes. Please add retryWrites=false to your connection string.`, append `retryWrites=false` to your MongoDB connection string.
+
+### Changes
+* `mongodb` driver package has been updated
+  from 3.2.7 to 3.5.4 [#10961](https://github.com/meteor/meteor/pull/10961)
+  
+## v1.9.2, 2020-02-20
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  [12.16.1](https://nodejs.org/en/blog/release/v12.16.1/), fixing several unintended
+  [regressions](https://github.com/nodejs/node/blob/master/doc/changelogs/CHANGELOG_V12.md#12.16.1)
+  introduced in 12.16.0.
+
+* The `meteor-babel` npm package has been updated to version 7.8.2.
+
+* The `typescript` npm package has been updated to version 3.7.5.
+
+## v1.9.1, 2020-02-18
+
+### Breaking changes
+
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  12.16.0 from 12.14.0, which includes
+  security updates and small changes:
+  * [12.16.0](https://nodejs.org/en/blog/release/v12.16.0/)
+    * Updated V8 to [release v7.8](https://v8.dev/blog/v8-release-78) which includes improvements in performance, for example, object destructuring now is as fast as the equivalent variable assignment.
+  * [12.15.0](https://nodejs.org/en/blog/release/v12.15.0/)
+
+* `cursor.observeChanges` now accepts a second options argument.
+  If your observer functions do not mutate the passed arguments, you can specify
+  `{ nonMutatingCallbacks: true }`, which improves performance by reducing
+  the amount of data copies.
+
+## v1.9, 2020-01-09
+
+### Breaking changes
+
+* Because Node.js 12 no longer supports 32-bit Linux, Meteor 1.9 has also
+  dropped support for 32-bit Linux. In other words, Meteor 1.9 supports
+  64-bit Mac, Windows, and Linux, as well as 32-bit Windows.
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node.js has been updated to version
+  [12.14.0](https://nodejs.org/en/blog/release/v12.14.0/), which includes
+  several major Node.js versions since 8.17.0 (used by Meteor 1.8.3):
+  * [12.0.0](https://nodejs.org/en/blog/release/v12.0.0/)
+  * [11.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [10.0.0](https://nodejs.org/en/blog/release/v10.0.0/)
+  * [9.0.0](https://nodejs.org/en/blog/release/v9.0.0/)
+
+* The `fibers` npm package has been updated to version 4.0.3, which
+  includes [changes](https://github.com/laverdet/node-fibers/pull/429)
+  that may drastically reduce garbage collection pressure resulting from
+  heavy `Fiber` usage.
+
+* The `pathwatcher` npm package has been updated to use a fork of version
+  8.0.2, with [PR #128](https://github.com/atom/node-pathwatcher/pull/128)
+  applied.
+
+* The `sqlite3` npm package has been updated to version 4.1.0.
+
+* The `node-gyp` npm package has been updated to version 6.0.1, and
+  `node-pre-gyp` has been updated to version 0.14.0.
+
+* The feature that restarts the application up to two times if it crashes
+  on startup has been removed.
+  [Feature #335](https://github.com/meteor/meteor-feature-requests/issues/335)
+  [PR #10345](https://github.com/meteor/meteor/pull/10345)
+
+* Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
+
+### Changes
+
+* `Meteor.user()`, `Meteor.findUserByEmail()` and `Meteor.findUserByUserName()` can take a new
+  `options` parameter which can be used to limit the returned fields. Useful for minimizing
+  DB bandwidth on the server and avoiding unnecessary reactive UI updates on the client.
+  [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+
+* `Accounts.config()` has a new option `defaultFieldSelector` which will apply to all
+  `Meteor.user()` and `Meteor.findUserBy...()` functions without explicit field selectors, and
+  also to all `onLogin`, `onLogout` and `onLoginFailure` callbacks.  This is useful if you store
+  large data on the user document (e.g. a growing list of transactions) which do no need to be
+  retrieved from the DB whenever you or a package author call `Meteor.user()` without limiting the
+  fields. [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+
+* Lots of internal calls to `Meteor.user()` without field specifiers in `accounts-base` and
+  `accounts-password` packages have been optimized with explicit field selectors to only 
+  the fields needed by the functions they are in.
+  [Issue #10469](https://github.com/meteor/meteor/issues/10469)
+
+## v1.8.3, 2019-12-19
+
+### Migration Steps
+
+* If your application uses `blaze-html-templates`, the Meteor `jquery`
+  package will be automatically installed in your `.meteor/packages` file
+  when you update to Meteor 1.8.3. However, this new version of the Meteor
+  `jquery` package no longer bundles its own copy of the `jquery` npm
+  implementation, so you may need to install `jquery` from npm by running
+  ```sh
+  meteor npm i jquery
+  ```
+  in your application directory. Symptoms of not installing jquery include
+  a blank browser window, with helpful error messages in the console.
+
+### Changes
+
+* Node has been updated to version
+  [8.17.0](https://nodejs.org/en/blog/release/v8.17.0/).
+
+* The `npm` npm package has been updated to version 6.13.4, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.11-meteor) of its
+  `pacote` dependency has been updated to version 9.5.11, an important
+  [security release](https://nodejs.org/en/blog/vulnerability/december-2019-security-releases/).
+
+* Prior to Meteor 1.8.3, installing the `jquery` package from npm along
+  with the Meteor `jquery` package could result in bundling jQuery twice.
+  Thanks to [PR #10498](https://github.com/meteor/meteor/pull/10498), the
+  Meteor `jquery` package will no longer provide its own copy of jQuery,
+  but will simply display a warning in the console if the `jquery` npm
+  package cannot be found in your `node_modules` directory. If you are
+  using `blaze` in your application, updating to Meteor 1.8.3 will
+  automatically add this new version of the Meteor `jquery` package to
+  your application if you were not already using it (thanks to
+  [PR #10801](https://github.com/meteor/meteor/pull/10801)), but you might
+  need to run `meteor npm i jquery` manually, so that `blaze` can import
+  `jquery` from your `node_modules` directory.
+
+* The `meteor-babel` npm package has been updated to version 7.7.5.
+
+* The `typescript` npm package has been updated to version 3.7.3.
+
+## v1.8.2, 2019-11-14
+
+### Breaking changes
+
+* Module-level variable declarations named `require` or `exports` are no
+  longer automatically renamed, so they may collide with module function
+  parameters of the same name, leading to errors like
+  `Uncaught SyntaxError: Identifier 'exports' has already been declared`.
+  See [this comment](https://github.com/meteor/meteor/pull/10522#issuecomment-535535056)
+  by [@SimonSimCity](https://github.com/SimonSimCity).
+
+* `Plugin.fs` methods are now always sync and no longer accept a callback.
+
+### Migration Steps
+
+* Be sure to update the `@babel/runtime` npm package to its latest version
+  (currently 7.7.2):
+  ```sh
+  meteor npm install @babel/runtime@latest
+  ```
+
+* New Meteor applications now depend on `meteor-node-stubs@1.0.0`, so it
+  may be a good idea to update to the same major version:
+  ```sh
+  meteor npm install meteor-node-stubs@next
+  ```
+
+* If you are the author of any Meteor packages, and you encounter errors
+  when using those packages in a Meteor 1.8.2 application (for example,
+  `module.watch` being undefined), we recommend that you bump the minor
+  version of your package and republish it using Meteor 1.8.2, so
+  Meteor 1.8.2 applications will automatically use the new version of the
+  package, as compiled by Meteor 1.8.2:
+  ```sh
+  cd path/to/your/package
+  # Add api.versionsFrom("1.8.2") to Package.onUse in package.js...
+  meteor --release 1.8.2 publish
+  ```
+  This may not be necessary for all packages, especially those that have
+  been recently republished using Meteor 1.8.1, or local packages in the
+  `packages/` directory (which are always recompiled from source).
+  However, republishing packages is a general solution to a wide variety
+  of package versioning and compilation problems, and package authors can
+  make their users' lives easier by handling these issues proactively.
+
+### Changes
+
+* Node has been updated to version
+  [8.16.2](https://nodejs.org/en/blog/release/v8.16.2/).
+
+* The `npm` npm package has been updated to version 6.13.0, and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.9-meteor) of its
+  `pacote` dependency has been updated to version 9.5.9.
+
+* New Meteor applications now include an official `typescript` package,
+  supporting TypeScript compilation of `.ts` and `.tsx` modules, which can
+  be added to existing apps by running `meteor add typescript`.
+
+* New TypeScript-based Meteor applications can be created by running
+  ```sh
+  meteor create --typescript new-typescript-app
+  ```
+  This app skeleton contains a recommended tsconfig.json file, and should
+  serve as a reference for how to make TypeScript and Meteor work together
+  (to the best of our current knowledge).
+  [PR #10695](https://github.com/meteor/meteor/pull/10695)
+
+* When bundling modern client code, the Meteor module system now prefers
+  the `"module"` field in `package.json` (if defined) over the `"main"`
+  field, which should unlock various `import`/`export`-based optimizations
+  such as tree shaking in future versions of Meteor. As before, server
+  code uses only the `"main"` field, like Node.js, and legacy client code
+  prefers `"browser"`, `"main"`, and then `"module"`.
+  [PR #10541](https://github.com/meteor/meteor/pull/10541),
+  [PR #10765](https://github.com/meteor/meteor/pull/10765).
+
+* ECMAScript module syntax (`import`, `export`, and dynamic `import()`) is
+  now supported by default everywhere, including in modules imported from
+  `node_modules`, thanks to the [Reify](https://github.com/benjamn/reify)
+  compiler.
+
+* If you need to import code from `node_modules` that uses modern syntax
+  beyond module syntax, it is now possible to enable recompilation for
+  specific npm packages using the `meteor.nodeModules.recompile` option in
+  your application's `package.json` file.
+  See [PR #10603](https://github.com/meteor/meteor/pull/10603) for further
+  explanation.
+
+* The Meteor build process is now able to detect whether files changed in
+  development were actually used by the server bundle, so that a full
+  server restart can be avoided when no files used by the server bundle
+  have changed. Client-only refreshes are typically much faster than
+  server restarts. Run `meteor add autoupdate` to enable client refreshes,
+  if you are not already using the `autoupdate` package.
+  [Issue #10449](https://github.com/meteor/meteor/issues/10449)
+  [PR #10686](https://github.com/meteor/meteor/pull/10686)
+
+* The `mongodb` npm package used by the `npm-mongo` Meteor package has
+  been updated to version 3.2.7.
+
+* The `meteor-babel` npm package has been updated to version 7.7.0,
+  enabling compilation of the `meteor/tools` codebase with TypeScript
+  (specifically, version 3.7.2 of the `typescript` npm package).
+
+* The `reify` npm package has been updated to version 0.20.12.
+
+* The `core-js` npm package used by `ecmascript-runtime-client` and
+  `ecmascript-runtime-server` has been updated to version 3.2.1.
+
+* The `terser` npm package used by `minifier-js` (and indirectly by
+  `standard-minifier-js`) has been updated to version 4.3.1.
+
+* The `node-gyp` npm package has been updated to version 5.0.1, and
+  `node-pre-gyp` has been updated to 0.13.0.
+
+* The `optimism` npm package has been updated to version 0.11.3, which
+  enables caching of thrown exceptions as well as ordinary results, in
+  addition to performance improvements.
+
+* The `pathwatcher` npm package has been updated to version 8.1.0.
+
+* The `underscore` npm package installed in the Meteor dev bundle (for use
+  by the `meteor/tools` codebase) has been updated from version 1.5.2 to
+  version 1.9.1, and `@types/underscore` has been installed for better
+  TypeScript support.
+
+* In addition to the `.js` and `.jsx` file extensions, the `ecmascript`
+  compiler plugin now automatically handles JavaScript modules with the
+  `.mjs` file extension.
+
+* Add `--cordova-server-port` option to override local port where Cordova will
+  serve static resources, which is useful when multiple Cordova apps are built
+  from the same application source code, since by default the port is generated
+  using the ID from the application's `.meteor/.id` file.
+
+* The `--test-app-path <directory>` option for `meteor test-packages` and
+  `meteor test` now accepts relative paths as well as absolute paths.
+
+## v1.8.1, 2019-04-03
+
+### Breaking changes
+
+* Although we are not aware of any specific backwards incompatibilities,
+  the major upgrade of `cordova-android` from 6.4.0 to 7.1.4 likely
+  deserves extra attention, if you use Cordova to build Android apps.
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node has been updated from version 8.11.4 to version
+  [8.15.1](https://nodejs.org/en/blog/release/v8.15.1/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/february-2019-security-releases/),
+  which includes the changes from four other minor releases:
+  * [8.15.0](https://nodejs.org/en/blog/release/v8.15.0/)
+  * [8.14.0](https://nodejs.org/en/blog/release/v8.14.0/), an important
+    [security release](https://nodejs.org/en/blog/vulnerability/november-2018-security-releases/)
+  * [8.12.0](https://nodejs.org/en/blog/release/v8.12.0/)
+  * [8.13.0](https://nodejs.org/en/blog/release/v8.13.0/)
+
+  > Note: While Node 8.12.0 included changes that may improve the
+  performance of Meteor apps, there have been reports of CPU usage spikes
+  in production due to excessive garbage collection, so this version of
+  Meteor should be considered experimental until those problems have been
+  fixed. [Issue #10216](https://github.com/meteor/meteor/issues/10216)
+
+* The `npm` tool has been upgraded to version
+  [6.9.0](https://github.com/npm/cli/releases/tag/v6.9.0), and our
+  [fork](https://github.com/meteor/pacote/tree/v9.5.0-meteor) of its
+  `pacote` dependency has been updated to version 9.5.0.
+
+* Mongo has been upgraded to version 4.0.6 for 64-bit systems (was 4.0.2),
+  and 3.2.22 for 32-bit systems (was 3.2.19). The `mongodb` npm package
+  used by `npm-mongo` has been updated to version 3.1.13 (was 3.1.6).
+
+* The `fibers` npm package has been updated to version 3.1.1, a major
+  update from version 2.0.0. Building this version of `fibers` requires a
+  C++11 compiler, unlike previous versions. If you deploy your Meteor app
+  manually (without using Galaxy), you may need to update the version of
+  `g++` used when running `npm install` in the `bundle/programs/server`
+  directory.
+
+* The `meteor-babel` npm package has been updated to version 7.3.4.
+
+* Cordova Hot Code Push mechanism is now switching versions explicitly with
+  call to `WebAppLocalServer.switchToPendingVersion` instead of trying to
+  switch every time a browser reload is detected. If you use any third
+  party package or have your own HCP routines implemented be sure to call
+  it before forcing a browser reload. If you use the automatic reload from
+  the `Reload` meteor package you do not need to do anything.
+  [cordova-plugin-meteor-webapp PR #62](https://github.com/meteor/cordova-plugin-meteor-webapp/pull/62)
+
+* Multiple Cordova-related bugs have been fixed, including Xcode 10 build
+  incompatibilities and hot code push errors due to duplicated
+  images/assets. [PR #10339](https://github.com/meteor/meteor/pull/10339)
+
+* The `cordova-android` and `cordova-ios` npm dependencies have been
+  updated to 7.1.4 (from 6.4.0) and 4.5.5 (from 4.5.4), respectively.
+
+* Build performance has improved (especially on Windows) thanks to
+  additional caching implemented by [@zodern](https://github.com/zodern)
+  in PRs [#10399](https://github.com/meteor/meteor/pull/10399),
+  [#10452](https://github.com/meteor/meteor/pull/10452),
+  [#10453](https://github.com/meteor/meteor/pull/10453), and
+  [#10454](https://github.com/meteor/meteor/pull/10454).
+
+* The `meteor mongo` command no longer uses the `--quiet` option, so the
+  normal startup text will be displayed, albeit without the banner about
+  Mongo's free monitoring service. See this
+  [MongoDB Jira issue](https://jira.mongodb.org/browse/SERVER-38862)
+  for more details.
+
+* In Meteor packages, `client/` and `server/` directories no longer have
+  any special meaning. In application code, `client/` directories are
+  ignored during the server build, and `server/` directories are ignored
+  during the client build, as before. This special behavior previously
+  applied to packages as well, but has now been removed.
+  [Issue #10393](https://github.com/meteor/meteor/issues/10393)
+  [PR #10414](https://github.com/meteor/meteor/pull/10414)
+
+* If your application is using Git for version control, the current Git
+  commit hash will now be exposed via the `Meteor.gitCommitHash` property
+  while the app is running (in both server and client code), and also via
+  the `"gitCommitHash"` property in the `star.json` file located in the
+  root directory of builds produced by `meteor build`, for consumption by
+  deployment tools. If you are not using Git, neither property will be
+  defined. [PR #10442](https://github.com/meteor/meteor/pull/10442)
+
+* The Meteor Tool now uses a more reliable method (the MongoDB
+  [`isMaster` command](https://docs.mongodb.com/manual/reference/command/isMaster/))
+  to detect when the local development database has started and is ready to
+  accept read and write operations.
+  [PR #10500](https://github.com/meteor/meteor/pull/10500)
+
+* Setting the `x-no-compression` request header will prevent the `webapp`
+  package from compressing responses with `gzip`, which may be useful if
+  your Meteor app is behind a proxy that compresses resources with another
+  compression algorithm, such as [brotli](https://github.com/google/brotli).
+  [PR #10378](https://github.com/meteor/meteor/pull/10378)
+
+## v1.8.0.2, 2019-01-07
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
+* The [React tutorial](https://www.meteor.com/tutorials/react/creating-an-app)
+  has been updated to address a number of inaccuracies due to changes in
+  recent Meteor releases that were not fully incorporated back into the
+  tutorial. As a reminder, Meteor now supports a `meteor create --react`
+  command that can be used to create a new React-based app quickly.
+
+* Fixed a bug where modules named with `*.app-tests.js` (or `*.tests.js`)
+  file extensions sometimes could not be imported by the
+  `meteor.testModule` entry point when running the `meteor test` command
+  (or `meteor test --full-app`).
+  [PR #10402](https://github.com/meteor/meteor/pull/10402)
+
+* The `meteor-promise` package has been updated to version 0.8.7, which
+  includes a [commit](https://github.com/meteor/promise/commit/bbe4f0d20b70417950381aea112993c4cc8c1168)
+  that should prevent memory leaks when excess fibers are discarded from
+  the `Fiber` pool.
+
+* The `meteor-babel` npm package has been updated to version 7.2.0,
+  improving source maps for applications with custom `.babelrc` files.
+
+## v1.8.0.1, 2018-11-23
+
+### Breaking changes
+N/A
+
+### Migration steps
+N/A
+
+### Changes
+
+* The `useragent` npm package used by `webapp` and (indirectly) by the
+  `modern-browsers` package has been updated from 2.2.1 to 2.3.0. The
+  `chromium` browser name has been aliased to use the same minimum modern
+  version as `chrome`, and browser names are now processed
+  case-insensitively by the `modern-browsers` package.
+  [PR #10334](https://github.com/meteor/meteor/pull/10334)
+
+* Fixed a module caching bug that allowed `findImportedModuleIdentifiers`
+  to return the same identifiers for the modern and legacy versions of a
+  given module, even if the set of imported modules is different (for
+  example, because Babel injects fewer `@babel/runtime/...` imports into
+  modern code). Now the caching is always based on the SHA-1 hash of the
+  _generated_ code, rather than trusting the hash provided by compiler
+  plugins. [PR #10330](https://github.com/meteor/meteor/pull/10330)
 
 ## v1.8, 2018-10-08
 
@@ -8,7 +748,6 @@ N/A
 ### Migration Steps
 
 * Update the `@babel/runtime` npm package to version 7.0.0 or later:
-
   ```sh
   meteor npm install @babel/runtime@latest
   ```
@@ -21,9 +760,13 @@ N/A
   planning a quick follow-up Meteor 1.8.1 release, which can be obtained
   by running the command
   ```bash
-  meteor update --release 1.8.1
+  meteor update --release 1.8.1-beta.n
   ```
+  where `-beta.n` is the latest beta release according to the
+  [releases](https://github.com/meteor/meteor/releases) page (currently
+  `-beta.6`).
   [Issue #10216](https://github.com/meteor/meteor/issues/10216)
+  [PR #10248](https://github.com/meteor/meteor/pull/10248)
 
 * Meteor 1.7 introduced a new client bundle called `web.browser.legacy` in
   addition to the `web.browser` (modern) and `web.cordova` bundles.
@@ -383,7 +1126,7 @@ N/A
 
 ### Migration Steps
 
-* Update `@babel/runtime` (as well as other Babel-related packages) and 
+* Update `@babel/runtime` (as well as other Babel-related packages) and
   `meteor-node-stubs` to their latest versions:
   ```sh
   meteor npm install @babel/runtime@latest meteor-node-stubs@latest
@@ -731,6 +1474,20 @@ N/A
   [Feature #24](https://github.com/meteor/meteor-feature-requests/issues/24)
   [PR #9657](https://github.com/meteor/meteor/pull/9657)
 
+## v1.6.1.4, 2018-08-16
+
+### Breaking changes
+N/A
+
+### Migration Steps
+N/A
+
+### Changes
+
+* Node has been updated to version
+  [8.11.4](https://nodejs.org/en/blog/release/v8.11.4/), an important
+  [security release](https://nodejs.org/en/blog/vulnerability/august-2018-security-releases/).
+
 ## v1.6.1.3, 2018-06-16
 
 ### Breaking changes
@@ -768,7 +1525,7 @@ N/A
 N/A
 
 ### Migration Steps
-* Update `@babel/runtime` npm package and any custom Babel plugin enabled in 
+* Update `@babel/runtime` npm package and any custom Babel plugin enabled in
 `.babelrc`
   ```sh
   meteor npm install @babel/runtime@latest
@@ -803,7 +1560,7 @@ N/A
   values are not first converted to `null`, when inserted/updated. `undefined`
   values are now removed from all Mongo queries and insert/update documents.
 
-  This is a potentially breaking change if you are upgrading an existing app 
+  This is a potentially breaking change if you are upgrading an existing app
   from an earlier version of Meteor.
 
   For example:
@@ -813,11 +1570,11 @@ N/A
       userId: currentUser._id // undefined
   });
   ```
-  Assuming there are no documents in the `privateUserData` collection with 
-  `userId: null`, in Meteor versions prior to 1.6.1 this query will return 
-  zero documents. From Meteor 1.6.1 onwards, this query will now return 
-  _every_ document in the collection. It is highly recommend you review all 
-  your existing queries to ensure that any potential usage of `undefined` in 
+  Assuming there are no documents in the `privateUserData` collection with
+  `userId: null`, in Meteor versions prior to 1.6.1 this query will return
+  zero documents. From Meteor 1.6.1 onwards, this query will now return
+  _every_ document in the collection. It is highly recommend you review all
+  your existing queries to ensure that any potential usage of `undefined` in
   query objects won't lead to problems.
 
 ### Migration Steps

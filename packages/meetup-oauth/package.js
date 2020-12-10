@@ -1,9 +1,10 @@
 Package.describe({
   summary: 'Meetup OAuth flow',
-  version: '1.0.3'
+  version: '1.0.4'
 });
 
 Package.onUse(api => {
+  api.use('ecmascript');
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('http', 'server');

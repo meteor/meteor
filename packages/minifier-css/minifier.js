@@ -21,7 +21,7 @@ const CssTools = {
       options.from = options.source;
       delete options.source;
     }
-    return postcss().process(cssText, options).root;
+    return postcss.parse(cssText, options);
   },
 
   /**
@@ -45,14 +45,13 @@ const CssTools = {
       };
       delete options.sourcemap;
     }
+    // explicitly set from to undefined to prevent postcss warnings
+    if (!options.from){
+      options.from = void 0;
+    }
 
-    const f = new Future;
-    postcss().process(cssAst, options).then(result => {
-      f.return(result);
-    }).catch(error => {
-      f.throw(error);
-    });
-    transformResult = f.wait();
+    transformResult = cssAst.toResult(options);
+
     return {
       code: transformResult.css,
       map: transformResult.map ? transformResult.map.toJSON() : null,
@@ -67,7 +66,11 @@ const CssTools = {
    */
   minifyCss(cssText) {
     const f = new Future;
-    postcss([ cssnano({ safe: true }) ]).process(cssText).then(result => {
+    postcss([
+      cssnano({ safe: true }),
+    ]).process(cssText, {
+      from: void 0,
+    }).then(result => {
       f.return(result.css);
     }).catch(error => {
       f.throw(error);
@@ -93,8 +96,13 @@ const CssTools = {
       if (! Array.isArray(rules)) {
         rules = [rules];
       }
-      return node =>
-        exclude ? !rules.includes(node.name) : rules.includes(node.name);
+      return node => {
+        // PostCSS AtRule nodes have `type: 'atrule'` and a descriptive name,
+        // e.g. 'import' or 'charset', while Comment nodes have type only.
+        const nodeMatchesRule = rules.includes(node.name || node.type);
+
+        return exclude ? !nodeMatchesRule : nodeMatchesRule;
+      }
     };
 
     // Simple concatenation of CSS files would break @import rules
@@ -141,8 +149,9 @@ const CssTools = {
         if (ast.nodes.some(rulesPredicate('import'))) {
           warnCb(
             ast.filename,
-            'There are some @import rules those are not taking effect as ' +
-            'they are required to be in the beginning of the file.'
+            'There are some @import rules in the middle of a file. This ' +
+            'might be a bug, as imports are only valid at the beginning of ' +
+            'a file.'
           );
         }
       }

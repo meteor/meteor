@@ -28,6 +28,20 @@ class CachedCoffeeScriptCompiler extends CachingCompiler {
     return super.setDiskCacheDirectory(cacheDir);
   }
 
+  compileOneFileLater(inputFile, getResult) {
+    inputFile.addJavaScript({
+      path: this.coffeeScriptCompiler.outputFilePath(inputFile),
+      sourcePath: inputFile.getPathInPackage(),
+      bare: inputFile.getFileOptions().bare
+    }, async () => {
+      const result = await getResult();
+      return result && {
+        data: result.source,
+        sourceMap: result.sourceMap,
+      };
+    });
+  }
+
   compileOneFile(inputFile) {
     return this.coffeeScriptCompiler.compileOneFile(inputFile);
   }

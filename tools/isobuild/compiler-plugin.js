@@ -1,25 +1,30 @@
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var buildPluginModule = require('./build-plugin.js');
 var colonConverter = require('../utils/colon-converter.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var compiler = require('./compiler.js');
 var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
-import {sha1, readAndWatchFileWithHash} from  '../fs/watch.js';
+import {
+  WatchSet,
+  sha1,
+  readAndWatchFileWithHash,
+} from  '../fs/watch';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
-import ImportScanner from './import-scanner.js';
-import {cssToCommonJS} from "./css-modules.js";
-import Resolver from "./resolver.js";
+import ImportScanner from './import-scanner';
+import {cssToCommonJS} from "./css-modules";
+import Resolver from "./resolver";
 import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
-} from "../fs/optimistic.js";
+  optimisticHashOrNull,
+} from "../fs/optimistic";
 
 import { isTestFilePath } from './test-files.js';
 
@@ -65,7 +70,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 21; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 24; // Increment this number to force relinking.
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -110,6 +115,7 @@ export class CompilerPluginProcessor {
     sourceRoot,
     isopackCache,
     linkerCacheDir,
+    scannerCacheDir,
     minifyCssResource,
   }) {
     Object.assign(this, {
@@ -118,11 +124,16 @@ export class CompilerPluginProcessor {
       sourceRoot,
       isopackCache,
       linkerCacheDir,
+      scannerCacheDir,
       minifyCssResource,
     });
 
-    if (this.linkerCacheDir) {
-      files.mkdir_p(this.linkerCacheDir);
+    if (linkerCacheDir) {
+      files.mkdir_p(linkerCacheDir);
+    }
+
+    if (scannerCacheDir) {
+      files.mkdir_p(scannerCacheDir);
     }
   }
 
@@ -141,7 +152,8 @@ export class CompilerPluginProcessor {
 
       return new PackageSourceBatch(unibuild, self, {
         sourceRoot,
-        linkerCacheDir: self.linkerCacheDir
+        linkerCacheDir: self.linkerCacheDir,
+        scannerCacheDir: self.scannerCacheDir,
       });
     });
 
@@ -281,19 +293,10 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   readAndWatchFileWithHash(path) {
-    const osPath = files.convertToOSPath(path);
-    const sourceRoot = this.getSourceRoot();
-    const relPath = files.pathRelative(sourceRoot, osPath);
-    if (relPath.startsWith("..")) {
-      throw new Error(
-        `Attempting to read file outside ${
-          this.getPackageName() || "the app"}: ${osPath}`
-      );
-    }
     const sourceBatch = this._resourceSlot.packageSourceBatch;
     return readAndWatchFileWithHash(
       sourceBatch.unibuild.watchSet,
-      osPath
+      files.convertToOSPath(path),
     );
   }
 
@@ -530,7 +533,7 @@ class InputFile extends buildPluginModule.InputFile {
    * @memberOf InputFile
    * @instance
    */
-  addHtml(options) {
+  addHtml(options, lazyFinalizer) {
     if (typeof lazyFinalizer === "function") {
       // For now, just call the lazyFinalizer function immediately. Since
       // HTML is not compiled, this immediate invocation is probably
@@ -571,20 +574,7 @@ class ResourceSlot {
         // If we have a sourceProcessor, it will handle the adding of the
         // final processed JavaScript.
       } else if (self.inputResource.extension === "js") {
-        // If there is no sourceProcessor for a .js file, add the source
-        // directly to the output. #HardcodeJs
-        self.addJavaScript({
-          // XXX it's a shame to keep converting between Buffer and string, but
-          // files.convertToStandardLineEndings only works on strings for now
-          data: self.inputResource.data.toString('utf8'),
-          path: self.inputResource.path,
-          hash: self.inputResource.hash,
-          bare: self.inputResource.fileOptions &&
-            (self.inputResource.fileOptions.bare ||
-             // XXX eventually get rid of backward-compatibility "raw" name
-             // XXX COMPAT WITH 0.6.4
-             self.inputResource.fileOptions.raw)
-        });
+        self._addDirectlyToJsOutputResources();
       }
     } else {
       if (sourceProcessor) {
@@ -594,18 +584,21 @@ class ResourceSlot {
       // Any resource that isn't handled by compiler plugins just gets passed
       // through.
       if (self.inputResource.type === "js") {
-        let resource = self.inputResource;
-        if (! _.isString(resource.sourcePath)) {
-          resource.sourcePath = self.inputResource.path;
-        }
-        if (! _.isString(resource.targetPath)) {
-          resource.targetPath = resource.sourcePath;
-        }
-        self.jsOutputResources.push(resource);
+        self._addDirectlyToJsOutputResources();
       } else {
         self.outputResources.push(self.inputResource);
       }
     }
+  }
+
+  // Add this resource directly to jsOutputResources without modifying the
+  // original data. #HardcodeJs
+  _addDirectlyToJsOutputResources() {
+    this.addJavaScript({
+      ...(this.inputResource.fileOptions || {}),
+      path: this.inputResource.path,
+      data: this.inputResource.data,
+    });
   }
 
   _getOption(name, options) {
@@ -698,6 +691,15 @@ class ResourceSlot {
     return isInImports;
   }
 
+  _isBare(options) {
+    return !! (
+      this._getOption("bare", options) ||
+      // XXX eventually get rid of backwards-compatible "raw" name
+      // XXX COMPAT WITH 0.6.4
+      this._getOption("raw", options)
+    );
+  }
+
   addStylesheet(options, lazyFinalizer) {
     if (! this.sourceProcessor) {
       throw Error("addStylesheet on non-source ResourceSlot?");
@@ -787,7 +789,9 @@ class ResourceSlot {
 
   addJavaScript(options, lazyFinalizer) {
     // #HardcodeJs this gets called by constructor in the "js" case
-    if (! this.sourceProcessor && this.inputResource.extension !== "js") {
+    if (! this.sourceProcessor &&
+        this.inputResource.extension !== "js" &&
+        this.inputResource.type !== "js") {
       throw Error("addJavaScript on non-source ResourceSlot?");
     }
 
@@ -869,16 +873,21 @@ class OutputResource {
     }
 
     const targetPath = options.path || sourcePath;
+    const servePath = targetPath
+      ? resourceSlot.packageSourceBatch.unibuild.pkg._getServePath(targetPath)
+      : resourceSlot.inputResource.servePath;
 
     Object.assign(this, {
       type,
       lazy: resourceSlot._isLazy(options, true),
-      bare: !! resourceSlot._getOption("bare", options),
+      bare: resourceSlot._isBare(options),
       mainModule: !! resourceSlot._getOption("mainModule", options),
       sourcePath,
       targetPath,
-      servePath: resourceSlot.packageSourceBatch
-        .unibuild.pkg._getServePath(targetPath),
+      servePath,
+      // Remember the source hash so that changes to the source that
+      // disappear after compilation can still contribute to the hash.
+      _inputHash: resourceSlot.inputResource.hash,
     });
   }
 
@@ -963,9 +972,17 @@ class OutputResource {
       }
       return this._set("data", data);
 
-    case "hash":
-      const { hash } = this._initialOptions;
-      return this._set("hash", hash || sha1(this._get("data")));
+    case "hash": {
+      const hashes = [];
+
+      if (typeof this._inputHash === "string") {
+        hashes.push(this._inputHash);
+      }
+
+      hashes.push(sha1(this._get("data")));
+
+      return this._set("hash", sha1(...hashes));
+    }
 
     case "sourceMap":
       let { sourceMap } = this._initialOptions;
@@ -1022,6 +1039,7 @@ export class PackageSourceBatch {
   constructor(unibuild, processor, {
     sourceRoot,
     linkerCacheDir,
+    scannerCacheDir,
   }) {
     const self = this;
     buildmessage.assertInJob();
@@ -1030,45 +1048,16 @@ export class PackageSourceBatch {
     self.processor = processor;
     self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
+    self.scannerCacheDir = scannerCacheDir;
     self.importExtensions = [".js", ".json"];
     self._nodeModulesPaths = null;
 
-    var sourceProcessorSet = self._getSourceProcessorSet();
-
     self.resourceSlots = [];
-    unibuild.resources.forEach(function (resource) {
-      let sourceProcessor = null;
-      if (resource.type === "source") {
-        var extension = resource.extension;
-        if (extension === null) {
-          const filename = files.pathBasename(resource.path);
-          sourceProcessor = sourceProcessorSet.getByFilename(filename);
-          if (! sourceProcessor) {
-            buildmessage.error(
-              `no plugin found for ${ resource.path } in ` +
-                `${ unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
-                `was active when it was published but none is now`);
-            return;
-            // recover by ignoring
-          }
-        } else {
-          sourceProcessor = sourceProcessorSet.getByExtension(extension);
-          // If resource.extension === 'js', it's ok for there to be no
-          // sourceProcessor, since we #HardcodeJs in ResourceSlot.
-          if (! sourceProcessor && extension !== 'js') {
-            buildmessage.error(
-              `no plugin found for ${ resource.path } in ` +
-                `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
-                `was active when it was published but none is now`);
-            return;
-            // recover by ignoring
-          }
-
-          self.addImportExtension(extension);
-        }
+    unibuild.resources.forEach(resource => {
+      const slot = self.makeResourceSlot(resource);
+      if (slot) {
+        self.resourceSlots.push(slot);
       }
-
-      self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
     });
 
     // Compute imports by merging the exports of all of the packages we
@@ -1118,6 +1107,85 @@ export class PackageSourceBatch {
     } : null;
   }
 
+  compileOneJsResource(resource) {
+    const slot = this.makeResourceSlot({
+      type: "source",
+      extension: "js",
+      // Need { data, path, hash } here, at least.
+      ...resource,
+      fileOptions: {
+        lazy: true,
+        ...resource.fileOptions,
+      }
+    });
+
+    if (slot) {
+      // If the resource was not handled by a source processor, it will be
+      // added directly to slot.jsOutputResources by makeResourceSlot,
+      // meaning we do not need to compile it.
+      if (slot.jsOutputResources.length > 0) {
+        return slot.jsOutputResources
+      }
+
+      const inputFile = new InputFile(slot);
+      inputFile.supportsLazyCompilation = false;
+
+      if (slot.sourceProcessor) {
+        const { userPlugin } = slot.sourceProcessor;
+        if (userPlugin) {
+          const markedMethod = buildmessage.markBoundary(
+            userPlugin.processFilesForTarget,
+            userPlugin
+          );
+          try {
+            Promise.await(markedMethod([inputFile]));
+          } catch (e) {
+            buildmessage.exception(e);
+          }
+        }
+      }
+
+      return slot.jsOutputResources;
+    }
+
+    return [];
+  }
+
+  makeResourceSlot(resource) {
+    let sourceProcessor = null;
+    if (resource.type === "source") {
+      var extension = resource.extension;
+      if (extension === null) {
+        const filename = files.pathBasename(resource.path);
+        sourceProcessor = this._getSourceProcessorSet().getByFilename(filename);
+        if (! sourceProcessor) {
+          buildmessage.error(
+            `no plugin found for ${ resource.path } in ` +
+              `${ this.unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
+              `was active when it was published but none is now`);
+          return null;
+          // recover by ignoring
+        }
+      } else {
+        sourceProcessor = this._getSourceProcessorSet().getByExtension(extension);
+        // If resource.extension === 'js', it's ok for there to be no
+        // sourceProcessor, since we #HardcodeJs in ResourceSlot.
+        if (! sourceProcessor && extension !== 'js') {
+          buildmessage.error(
+            `no plugin found for ${ resource.path } in ` +
+              `${ this.unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
+              `was active when it was published but none is now`);
+          return null;
+          // recover by ignoring
+        }
+
+        this.addImportExtension(extension);
+      }
+    }
+
+    return new ResourceSlot(resource, sourceProcessor, this);
+  }
+
   addImportExtension(extension) {
     extension = extension.toLowerCase();
 
@@ -1158,26 +1226,27 @@ export class PackageSourceBatch {
   }
 
   _getSourceProcessorSet() {
-    const self = this;
+    if (! this._sourceProcessorSet) {
+      buildmessage.assertInJob();
 
-    buildmessage.assertInJob();
+      const isopack = this.unibuild.pkg;
+      const activePluginPackages = compiler.getActivePluginPackages(isopack, {
+        uses: this.unibuild.uses,
+        isopackCache: this.processor.isopackCache
+      });
 
-    var isopack = self.unibuild.pkg;
-    const activePluginPackages = compiler.getActivePluginPackages(isopack, {
-      uses: self.unibuild.uses,
-      isopackCache: self.processor.isopackCache
-    });
-    const sourceProcessorSet = new buildPluginModule.SourceProcessorSet(
-      isopack.displayName(), { hardcodeJs: true });
+      this._sourceProcessorSet = new buildPluginModule.SourceProcessorSet(
+        isopack.displayName(), { hardcodeJs: true });
 
-    _.each(activePluginPackages, function (otherPkg) {
-      otherPkg.ensurePluginsInitialized();
+      _.each(activePluginPackages, otherPkg => {
+        otherPkg.ensurePluginsInitialized();
+        this._sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler, {
+          arch: this.processor.arch,
+        });
+      });
+    }
 
-      sourceProcessorSet.merge(
-        otherPkg.sourceProcessors.compiler, {arch: self.processor.arch});
-    });
-
-    return sourceProcessorSet;
+    return this._sourceProcessorSet;
   }
 
   // Returns a map from package names to arrays of JS output files.
@@ -1196,6 +1265,7 @@ export class PackageSourceBatch {
         files: inputFiles,
         mainModule: _.find(inputFiles, file => file.mainModule) || null,
         batch,
+        importScannerWatchSet: new WatchSet(),
       });
     });
 
@@ -1203,7 +1273,7 @@ export class PackageSourceBatch {
       // In the unlikely event that no package is using the modules
       // package, then the map is already complete, and we don't need to
       // do any import scanning.
-      return map;
+      return this._watchOutputFiles(map);
     }
 
     // Append install(<name>) calls to the install-packages.js file in the
@@ -1272,16 +1342,19 @@ export class PackageSourceBatch {
         }
       });
 
+      const entry = map.get(name);
+
       const scanner = new ImportScanner({
         name,
         bundleArch: batch.processor.arch,
         extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
         nodeModulesPaths,
-        watchSet: batch.unibuild.watchSet,
+        watchSet: entry.importScannerWatchSet,
+        cacheDir: batch.scannerCacheDir,
       });
 
-      scanner.addInputFiles(map.get(name).files);
+      scanner.addInputFiles(entry.files);
 
       if (batch.useMeteorInstall) {
         scanner.scanImports();
@@ -1417,7 +1490,37 @@ export class PackageSourceBatch {
       }
     });
 
-    return map;
+    return this._watchOutputFiles(map);
+  }
+
+  static _watchOutputFiles(jsOutputFilesMap) {
+    // Watch all output files produced by computeJsOutputFilesMap.
+    jsOutputFilesMap.forEach(entry => {
+      entry.files.forEach(file => {
+        const {
+          sourcePath,
+          absPath = sourcePath &&
+            files.pathJoin(entry.batch.sourceRoot, sourcePath),
+        } = file;
+        const { importScannerWatchSet } = entry;
+        if (
+          typeof absPath === "string" &&
+          // Blindly calling importScannerWatchSet.addFile would be
+          // logically correct here, but we can save the cost of calling
+          // optimisticHashOrNull(absPath) if the importScannerWatchSet
+          // already knows about the file and it has not been marked as
+          // potentially unused.
+          ! importScannerWatchSet.isDefinitelyUsed(absPath)
+        ) {
+          // If this file was previously added to the importScannerWatchSet
+          // using the addPotentiallyUnusedFile method (see compileUnibuild),
+          // calling addFile here will update its usage status to reflect that
+          // the ImportScanner did, in fact, end up "using" the file.
+          importScannerWatchSet.addFile(absPath, optimisticHashOrNull(absPath));
+        }
+      });
+    });
+    return jsOutputFilesMap;
   }
 
   static _warnAboutMissingModules(missingModules) {
@@ -1611,7 +1714,7 @@ export class PackageSourceBatch {
     if (cacheFilename) {
       let diskCached = null;
       try {
-        diskCached = optimisticReadJsonOrNull(cacheFilename);
+        diskCached = files.readJSONOrNull(cacheFilename);
       } catch (e) {
         // Ignore JSON parse errors; pretend there was no cache.
         if (!(e instanceof SyntaxError)) {
@@ -1655,6 +1758,7 @@ export class PackageSourceBatch {
         // before returning from the method (but after writing
         // to cache).
         data: file.source,
+        hash: file.hash,
         servePath: file.servePath,
         sourceMap: sm
       };

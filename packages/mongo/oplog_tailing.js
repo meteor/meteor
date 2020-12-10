@@ -1,5 +1,8 @@
 var Future = Npm.require('fibers/future');
 
+import { NpmModuleMongodb } from "meteor/npm-mongo";
+const { Timestamp } = NpmModuleMongodb;
+
 OPLOG_COLLECTION = 'oplog.rs';
 
 var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
@@ -270,7 +273,15 @@ _.extend(OplogHandle.prototype, {
           if (doc.o.applyOps) {
             // This was a successful transaction, so we need to apply the
             // operations that were involved.
-            doc.o.applyOps.forEach(handleDoc);
+            let nextTimestamp = doc.ts;
+            doc.o.applyOps.forEach(op => {
+              // See https://github.com/meteor/meteor/issues/10420.
+              if (!op.ts) {
+                op.ts = nextTimestamp;
+                nextTimestamp = nextTimestamp.add(Timestamp.ONE);
+              }
+              handleDoc(op);
+            });
             return;
           }
           throw new Error("Unknown command " + EJSON.stringify(doc));
@@ -285,8 +296,6 @@ _.extend(OplogHandle.prototype, {
         if (typeof doc.ns === "string" &&
             doc.ns.startsWith(self._dbName + ".")) {
           trigger.collection = doc.ns.slice(self._dbName.length + 1);
-        } else {
-          throw new Error("Unexpected ns");
         }
 
         // Is it a special command and the collection name is hidden

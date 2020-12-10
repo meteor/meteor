@@ -89,6 +89,7 @@ const PROGRESS_BAR_FORMAT = '[:bar] :percent :etas';
 const TEMP_STATUS_LENGTH = STATUS_MAX_LENGTH + 12;
 
 const STATUS_INTERVAL_MS = 50;
+const PROGRESS_THROTTLE_MS = 300;
 
 // Message to show when we don't know what we're doing
 // XXX: ? FALLBACK_STATUS = 'Pondering';
@@ -309,9 +310,11 @@ class ProgressDisplayFull {
 
     this._lastWrittenLine = null;
     this._lastWrittenTime = 0;
+    this._renderTimeout = null;
   }
 
   depaint() {
+    this._clearDelayedRender();
     this._stream.write(spacesString(this._printedLength) + CARRIAGE_RETURN);
   }
 
@@ -332,7 +335,15 @@ class ProgressDisplayFull {
     if (startTime) {
       this._progressBarRenderer.start = startTime;
     }
-    this._render();
+
+    if (!this._rerenderTimeout && this._lastWrittenTime) {
+      this._rerenderTimeout = setTimeout(() => {
+        this._rerenderTimeout = null;
+        this._render()
+      }, PROGRESS_THROTTLE_MS);
+    } else if (this._lastWrittenTime === 0) {
+      this._render();
+    }
   }
 
   repaint() {
@@ -343,8 +354,18 @@ class ProgressDisplayFull {
     this._headless = !! headless;
   }
 
+  _clearDelayedRender() {
+    if (this._rerenderTimeout) {
+      clearTimeout(this._rerenderTimeout);
+      this._rerenderTimeout = null;
+    }
+  }
+
   _render() {
-    // XXX: Throttle these updates?
+    if (this._rerenderTimeout) {
+      this._clearDelayedRender();
+    }
+
     // XXX: Or maybe just jump to the correct position?
     var progressGraphic = '';
 
@@ -488,7 +509,7 @@ class StatusPoller {
 
     this._watching = watching;
 
-    var title = (watching != null ? watching._title : null) || FALLBACK_STATUS;
+    var title = (watching != null ? watching.title : null) || FALLBACK_STATUS;
 
     var progressDisplay = this._console._progressDisplay;
     progressDisplay.updateStatus && progressDisplay.updateStatus(title);
