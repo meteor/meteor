@@ -70,7 +70,7 @@ function precacheOnLoad(event) {
     Promise.all(modules.splice(0, amount).map(function (id) {
       return new Promise(function (resolve, reject) {
         module.prefetch(id).then(resolve).catch(
-          (err) => {
+          function (err) {
             // we probably have a : _ mismatch
             // what can get wrong if we do the replacement
             // 1. a package with a name like a_b:package will not resolve
