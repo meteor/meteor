@@ -145,7 +145,7 @@ What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's
 
 Now that you are familiar with the basic API of Simple Schema, it's worth considering a few of the constraints of the Meteor data system that can influence the design of your data schema. Although generally speaking you can build a Meteor data schema much like any MongoDB data schema, there are some important details to keep in mind.
 
-The most important consideration is related to the way DDP, Meteor's data loading protocol, communicates documents over the wire. The key thing to realize is that DDP sends changes to documents at the level of top-level document *fields*. What this means is that if you have large and complex subfields on document that change often, DDP can send unnecessary changes over the wire.
+The most important consideration is related to the way DDP, Meteor's data loading protocol, communicates documents over the wire. The key thing to realize is that DDP sends changes to documents at the level of top-level document *fields*. What this means is that if you have large and complex subfields on a document that change often, DDP can send unnecessary changes over the wire.
 
 For instance, in "pure" MongoDB you might design the schema so that each list document had a field called `todos` which was an array of todo items:
 
@@ -210,7 +210,7 @@ class ListsCollection extends Mongo.Collection {
       list.name = `List ${nextLetter}`;
 
       while (!!this.findOne({name: list.name})) {
-        // not going to be too smart here, can go past Z
+        // not going to be too smart here, can't go past Z
         nextLetter = String.fromCharCode(nextLetter.charCodeAt(0) + 1);
         list.name = `List ${nextLetter}`;
       }
@@ -344,7 +344,7 @@ If your migration needs to change a lot of data, and especially if you need to s
 
 The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that if your migration is complex (which it usually is if you can't do an `.update(.., .., {multi: true})`), it can take a significant amount of time to prepare the bulk update.
 
-What this means is if users are accessing the site whilst the update is being prepared, it will likely go out of date! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user experience if it takes a while. For these reason, you often need to stop your server and let your users know you are performing maintenance while the update is happening.
+What this means is if users are accessing the site whilst the update is being prepared, it will likely go out of service! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user experience if it takes a while. For these reason, you often need to stop your server and let your users know you are performing maintenance while the update is happening.
 
 We could write our above migration like so (note that you must be on MongoDB 2.6 or later for the bulk update operations to exist). We can access the native MongoDB API via [`Collection#rawCollection()`](http://docs.meteor.com/api/collections.html#Mongo-Collection-rawCollection):
 
@@ -395,7 +395,7 @@ To run a migration against your production database, run your app locally in pro
 
 A good way to do the above is to spin up a virtual machine close to your database that has Meteor installed and SSH access (a special EC2 instance that you start and stop for the purpose is a reasonable option), and running the command after shelling into it. That way any latencies between your machine and the database will be eliminated, but you still can be very careful about how the migration is run.
 
-**Note that you should always take a database backup before running any migration!**
+**Note that you should always make a database backup before running any migration!**
 
 <h3 id="breaking-changes">Breaking schema changes</h3>
 
