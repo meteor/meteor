@@ -16,6 +16,11 @@ versions:
   - '1.2'
 versioned-netlify-redirects:
     netlify_site_id: meteor-guide
+
+logo:
+  title:
+  subtitle: Guide
+
 sidebar_categories:
   null:
     - index
