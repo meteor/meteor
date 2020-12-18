@@ -24,7 +24,10 @@ N/A
 
 ### Changes
 
-#### Hot module replacement (HMR):  
+#### Highlights
+
+##### Hot module replacement (HMR):  
+
   To use Hot module replacement in your Meteor app you need to add the package `hot-module-replacement`. You can do this by running `meteor add hot-module-replacement`. 
   
   This package is only for development (`debugOnly`). You don't need to worry about it affecting your production bundle.
@@ -33,8 +36,45 @@ N/A
 
   HMR is only available for apps that use the modules package. It will probably not work correctly with apps that use globals (though globals from packages or npm dependencies are fine) since it uses import/require to detect which modules need to be re-evaluated. [more](https://github.com/meteor/meteor/pull/11117)
 
-#### Other changes
-* Facebook OAuth has been updated to `1.7.3` now using Facebook GraphAPI v8.
+##### Tree Shaking:
+
+  Tree-shaking is a strategy that the bundler uses to remove unused files and code from the final bundle. This implementation is totally backward compatible, so it will only be enabled by following the steps .
+
+  This PR implements 2:
+
+  1. Remove unused Files, by checking es6 imports/exports
+  2. Remove unused exports, by checking used imports.
+
+  This PR does not implement yet a verification for actual usage in the code, for tree shaking. It is restricted to imports, and also deals with dynamic and nested imports.
+
+  *Usage on your app:*
+  For enabling tree shaking in your app, simply add the flag:
+    > sideEffects: false
+
+  to your package.json.
+
+  *packages*
+  For packages, you can use on package.js the following:
+  >  api.setSideEffects(false);
+
+  inside the Package.onUse section. Note that if you use api.export(), tree shaking will be disabled.
+
+#### Meteor Version Release
+* `meteor-tool@2.0`
+  - HMR
+  - Tree-shaking
+
+* `accounts-base@1.7.1`
+  - adds method `setDefaultPublishFields` to `Accounts` so you can customize what fields are published by default from the `Users` collection.
+    ```js
+    Accounts.setDefaultPublishFields({username: 1, profile: 1, emails: 1, 'foo.bar': 1});
+    // or
+    Accounts.setDefaultPublishFields({'do.not.publish.this': -1});
+    ```
+
+
+#### Independent Releases
+N/A
 
 ## v1.11.1, 2020-09-16
 

@@ -148,6 +148,8 @@
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
+import { removeUnusedExports } from "./js-analyze";
+
 var assert = require('assert');
 var util = require('util');
 var Fiber = require('fibers');
@@ -174,6 +176,7 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
+import { sha1 } from "../fs/watch";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -1152,8 +1155,12 @@ class Target {
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
-    const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
-      .computeJsOutputFilesMap(sourceBatches);
+    const {
+      jsOutputFilesMap,
+      resolveMap = new Map(),
+      fileImportState = new Map(),
+      allMissingModulesAbsPath = {}
+    } = compilerPluginModule.PackageSourceBatch.computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
       const { unibuild } = batch;
@@ -1180,6 +1187,91 @@ class Target {
 
     const versions = {};
     const dynamicImportFiles = new Set;
+
+    // importMap has all the import { x } from '...'
+    // info from every target/bundle in the build system
+    const importMap = new Map();
+    sourceBatches.forEach((sourceBatch) => {
+      const unibuild = sourceBatch.unibuild;
+      const name = unibuild.pkg.name || null;
+      jsOutputFilesMap.get(name).files.forEach((file) => {
+        const fileResolveMap = resolveMap.get(file.absPath) || new Map();
+        Object.entries(file.deps || {}).forEach(([key, depInfo]) => {
+          const absKey = fileResolveMap.get(key);
+          const importMapValue = importMap.get(absKey) ||
+                      (allMissingModulesAbsPath && allMissingModulesAbsPath[key] ?
+                            importMap.get(allMissingModulesAbsPath[key]) : {});
+          const wasImported = importMapValue && importMapValue.commonJsImported || false;
+          importMap.set(absKey, {...importMapValue, commonJsImported: wasImported || depInfo.commonJsImported});
+        })
+        Object.entries(file.imports || []).forEach(([key, object]) => {
+          let importMapValue;
+          let identifier;
+          if(files.pathIsAbsolute(key)){
+            importMapValue = importMap.get(key) || {};
+            identifier = key;
+          }else{
+            importMapValue = allMissingModulesAbsPath && allMissingModulesAbsPath[key] ?
+                importMap.get(allMissingModulesAbsPath[key]) : {};
+            identifier = allMissingModulesAbsPath[key] || key;
+          }
+          importMap.set(identifier, {
+            ...importMapValue || [],
+            deps: [...new Set([...(importMapValue?.deps || []), ...object.deps])],
+            sideEffects: object.sideEffects
+          })
+        })
+      })
+    })
+
+    const allFilesOnBundle = new Set(Array.from(jsOutputFilesMap).flatMap(([, value]) => {
+      return value.files.map(({absPath}) => absPath);
+    }));
+
+    const sourceBatch = sourceBatches.find((sourceBatch) => {
+      const name = sourceBatch.unibuild.pkg.name || null;
+      return !name;
+    });
+    const appSideEffects = sourceBatch ? sourceBatch.unibuild.pkg.sideEffects : true;
+
+    // now we need to remove the exports, and let the minifier do it's job later
+    sourceBatches.forEach((sourceBatch) => {
+      const unibuild = sourceBatch.unibuild;
+      const name = unibuild.pkg.name || null;
+
+      // we will assume that every meteor package that exports something is a
+      // side effect true package, this is set on the package-api file when api.export is called
+      // console.log(`${unibuild.pkg.name} sideEffects: ${unibuild.pkg.sideEffects}`)
+      if(appSideEffects || unibuild.pkg.sideEffects && name !== 'modules' || unibuild.arch.includes("legacy")){
+        return;
+      }
+      jsOutputFilesMap.get(name).files.forEach((file) => {
+        const importedSymbolsFromFile = importMap.get(file.absPath)
+
+
+        // if it was commonjsImported we have nothing to do here
+        if(importedSymbolsFromFile?.commonJsImported){
+          return;
+        }
+        const { source: newSource, map, madeChanges } = removeUnusedExports(
+            file,
+            importedSymbolsFromFile,
+            allFilesOnBundle,
+            resolveMap.get(file.absPath) || new Map(),
+            fileImportState,
+            unibuild.arch
+        );
+
+        if(newSource) {
+          file.dataString = newSource;
+          file.data = Buffer.from(newSource, "utf8");
+          file.source = Buffer.from(newSource, "utf8");
+          file.hash = sha1(file.data);
+          file.sourceMap = map;
+        }
+      })
+    })
+
 
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
@@ -1366,7 +1458,7 @@ class Target {
   minifyJs(minifierDef, minifyMode) {
     const staticFiles = [];
     const dynamicFiles = [];
-    const { arch } = this;
+    const { arch, buildMode } = this;
     const inputHashesByJsFile = new Map;
 
     this.js.forEach(file => {
@@ -1389,9 +1481,9 @@ class Target {
     buildmessage.enterJob('minifying app code', function () {
       try {
         Promise.all([
-          markedMinifier(staticFiles, { minifyMode }),
+          markedMinifier(staticFiles, { minifyMode, arch, buildMode }),
           ...dynamicFiles.map(
-            file => markedMinifier([file], { minifyMode })
+            file => markedMinifier([file], { minifyMode, arch })
           ),
         ]).await();
       } catch (e) {
@@ -3211,7 +3303,6 @@ function bundle({
   }, function () {
     var packageSource = new PackageSource;
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
-
     var makeClientTarget = Profile(
       "bundler.bundle..makeClientTarget", function (app, webArch, options) {
       var client = new ClientTarget({
@@ -3526,6 +3617,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir,
     localNodeModulesDirs: options.localNodeModulesDirs,
+    sideEffects: options.sideEffects,
   });
 
   var isopack = compiler.compile(packageSource, {
