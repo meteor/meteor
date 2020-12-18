@@ -10,11 +10,24 @@ N/A
 
 ### Changes
 
-## v1.12, unreleased
+* `meteor-babel@7.10.6`
+  - Allows to disable sourceMap generation [#36](https://github.com/meteor/babel/pull/36)
+
+## v1.12, 2020-12-04
 
 ### Breaking changes
 
-N/A
+- When importing types, you might need to use the "type" qualifier, like so:
+```js
+import { Point } from 'react-easy-crop/types';
+```
+to
+```ts
+import type { Point } from 'react-easy-crop/types';
+```
+Because now emitDecoratorsMetadata is enabled.
+
+- Refer to typescript breaking changes before migrating your existing project, from 3.7.6 to 4.1.2: https://github.com/Microsoft/TypeScript/wiki/Breaking-Changes
 
 ### Migration steps
 
@@ -23,52 +36,55 @@ N/A
 ### Changes
 
 #### Highlights
-- TypeScript update from 3.7.6 to 4.0.5.
-  - enables decorators and metadata reflection. Important: these are stage 2 features so be aware that breaking changes could be introduced before they reach stage 3. 
+- TypeScript update from 3.7.6 to 4.1.2.
+  - enables decorators and metadata reflection. Important: these are stage 2 features so be aware that breaking changes could be introduced before they reach stage 3.
 
 #### Meteor Version Release
-* `meteor-tool@1.12` 
-  - updates TypeScript to 4.0.5. [#11225](https://github.com/meteor/meteor/pull/11225)
+* `meteor-tool@1.12`
+  - updates TypeScript to 4.1.2. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255)
   - adds new options for `meteor list` command (TODO pending link to updated doc). [#11165](https://github.com/meteor/meteor/pull/11165)
   - supports Cordova add plugin command working again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
   - avoids MiTM by downloading through https. [#11188](https://github.com/meteor/meteor/pull/11188)
   
-* `meteor-babel@7.10.1`
-  - updates TypeScript to 4.0.5 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225)
-  
+* `meteor-babel@7.10.5`
+  - updates TypeScript to 4.1.2 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255)
+
 * `minimongo@1.6.1`
   - fixes a null reference exception, if an array contains null values while compiling a fields projection. [#10499](https://github.com/meteor/meteor/pull/10499).
 
-* `accounts-password@1.6.3` 
+* `accounts-password@1.6.3`
   - adds a new function `createUserVerifyingEmail` (TODO pending link to updated doc). [#11080](https://github.com/meteor/meteor/pull/11080)
   - fixes a typo. [#11182](https://github.com/meteor/meteor/pull/11182)
 
-* `browser-content-policy@1.1.1` 
+* `browser-content-policy@1.1.1`
   - adds support to nonce
   ```js
     BrowserPolicy.content.allowScriptOrigin(`nonce-${nonce}`);
   ```
-  
-* `accounts-ui-unstyled@1.4.3` 
+
+* `accounts-ui@1.3.2`
+  - follow accounts-ui-unstyled release
+
+* `accounts-ui-unstyled@1.4.3`
   - fixes the login form would send the server two login requests
   - fixes the "forgot password" form would not only send the email but also refresh the page
-  
-* `dynamic-import@0.5.4` 
+
+* `dynamic-import@0.5.4`
   - fixes prefetching errors. [#11209](https://github.com/meteor/meteor/pull/11209)
   - adds the option for dynamic-imports to fetch from the current origin instead of the absolute URL. [#11105](https://github.com/meteor/meteor/pull/11105)
 
 * `mongo-decimal@0.1.2`
   - updates npm dependency `decimal.js` to v10.2.1
-  
+
 * `accounts-base@1.7.1`
   - adds the ability to define default user fields published on login. [#11118](https://github.com/meteor/meteor/pull/11118)
-  
+
 * `standard-minifier-css@1.7.0`
   - modernize and update dependencies. [#11196](https://github.com/meteor/meteor/pull/11196)
-  
+
 
 #### Independent Releases
-* `facebook-oauth@1.7.3` 
+* `facebook-oauth@1.7.3`
   - is now using Facebook GraphAPI v8. [#11160](https://github.com/meteor/meteor/pull/11160)
 
 ## v1.11.1, 2020-09-16
@@ -130,7 +146,7 @@ N/A
 
 * Node.js has been updated to version
     [12.18.3](https://nodejs.org/en/blog/release/v12.18.3/)
-    
+
 * Updated npm to version 6.14.5
 
 * `mongodb` driver npm dependency has been updated to 3.6.0
@@ -163,14 +179,14 @@ N/A
 
 ### Changes
 
-* Adds support to override MongoDB options via Meteor settings. Code PR 
-[#10976](https://github.com/meteor/meteor/pull/10976), Docs PR 
+* Adds support to override MongoDB options via Meteor settings. Code PR
+[#10976](https://github.com/meteor/meteor/pull/10976), Docs PR
 [#662](https://github.com/meteor/docs/pull/662)
 
 * The `meteor-babel` npm package has been updated to version 7.9.0.
 
 * The `typescript` npm package has been updated to version 3.8.3.
-  
+
 * To pass Node command line flags to the server node instance,
   now it is recommended to use `SERVER_NODE_OPTIONS` instead of `NODE_OPTIONS`.
   Since Meteor 0.5.3, Meteor allowed to pass node command line flags via the  `NODE_OPTIONS`
@@ -183,12 +199,12 @@ N/A
 * The version of MongoDB used by Meteor in development has been updated from
   4.2.1 to 4.2.5.
   [PR #11020](https://github.com/meteor/meteor/pull/11020)
-  
+
 * The `url` package now provides an isomorphic implentation of the [WHATWG `url()`
   API](https://url.spec.whatwg.org/).
   While remaining backwards compatible, you can now also import `URL` and `URLSearchParams` from `meteor/url`.
   These will work for both modern and legacy browsers as well as node.
-  
+
 
 ## v1.10.1, 2020-03-12
 
@@ -197,15 +213,15 @@ N/A
 * Cordova has been updated from version 7 to 9. We recommend that you test
   your features that are taking advantage of Cordova plugins to be sure
   they are still working as expected.
-  
-  * WKWebViewOnly is set by default now as true so if you are relying on 
+
+  * WKWebViewOnly is set by default now as true so if you are relying on
   UIWebView or plugins that are using UIWebView APIs you probably want to
-  set it as false, you can do this by calling 
-  `App.setPreference('WKWebViewOnly', false);` in your mobile-config.js. But we 
-  don't recommend turning this into false because 
-  [Apple have said](https://developer.apple.com/news/?id=12232019b) they are 
+  set it as false, you can do this by calling
+  `App.setPreference('WKWebViewOnly', false);` in your mobile-config.js. But we
+  don't recommend turning this into false because
+  [Apple have said](https://developer.apple.com/news/?id=12232019b) they are
   going to reject apps using UIWebView.
-  
+
 * Because MongoDB since 3.4 no longer supports 32-bit Windows, Meteor 1.10 has
   also dropped support for 32-bit Windows. In other words, Meteor 1.10 supports
   64-bit Mac, Windows 64-bit, and Linux 64-bit.
@@ -215,7 +231,7 @@ N/A
   MongoDB, you can either reset your project (`meteor reset`)
   (if you don't care about your local data)
   or you will need to update the feature compatibility version of your local MongoDB:
-  
+
     1. Downgrade your app to earlier version of Meteor `meteor update --release 1.9.2`
     2. Start your application
     3. While your application is running open a new terminal window, navigate to the
@@ -225,7 +241,7 @@ N/A
     5. If the returned version is less than 4.0 update like this:
        `db.adminCommand({ setFeatureCompatibilityVersion: "4.2" })`
     6. You can now stop your app and update to Meteor 1.10.
-    
+
     For more information about this, check out [MongoDB documentation](https://docs.mongodb.com/manual/release-notes/4.2-upgrade-standalone/).
 
 ### Changes
@@ -248,18 +264,18 @@ N/A
   * cordova-ios from 4.5.5 to 5.1.1 [release notes](https://github.com/apache/cordova-ios/blob/master/RELEASENOTES.md)
   * cordova-plugin-wkwebview-engine from 1.1.4 to 1.2.1 [release notes](https://github.com/apache/cordova-plugin-wkwebview-engine/blob/master/RELEASENOTES.md#121-jul-20-2019)
   * cordova-plugin-whitelist from 1.3.3 to 1.3.4 [release notes](https://github.com/apache/cordova-plugin-whitelist/blob/master/RELEASENOTES.md#134-jun-19-2019)
-  * cordova-plugin-splashscreen (included by mobile-experience > launch-screen) 
+  * cordova-plugin-splashscreen (included by mobile-experience > launch-screen)
   from 4.1.0 to 5.0.3 [release notes](https://github.com/apache/cordova-plugin-splashscreen/blob/master/RELEASENOTES.md#503-may-09-2019)
-  * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar) 
+  * cordova-plugin-statusbar (included by mobile-experience > mobile-status-bar)
   from 2.3.0 to 2.4.3 [release notes](https://github.com/apache/cordova-plugin-statusbar/blob/master/RELEASENOTES.md#243-jun-19-2019)
   * On iOS WKWebViewOnly is set by default now as true.
   * On iOS the Swift version is now set by default to `5` this change can make
-  your app to produce some warnings if your plugins are using old Swift code. 
-  You can override the Swift version using 
+  your app to produce some warnings if your plugins are using old Swift code.
+  You can override the Swift version using
   `App.setPreference('SwiftVersion', 4.2);` but we don't recommend that.
-  
-* New command to ensure that Cordova dependencies are installed. Usage: 
-  `meteor ensure-cordova-dependencies`. Meteor handles this automatically but in 
+
+* New command to ensure that Cordova dependencies are installed. Usage:
+  `meteor ensure-cordova-dependencies`. Meteor handles this automatically but in
   some cases, like running in a CI, is useful to install them in advance.
 
 * You can now pass an `--exclude-archs` option to the `meteor run` and
@@ -270,9 +286,9 @@ N/A
   excluded architectures during development.
   [Feature #333](https://github.com/meteor/meteor-feature-requests/issues/333),
   [PR #10824](https://github.com/meteor/meteor/pull/10824)
-  
-* `meteor create --react app` and `--typescript` now use `useTracker` hook instead of 
-  `withTracker` HOC, it also uses `function` components instead of `classes`. 
+
+* `meteor create --react app` and `--typescript` now use `useTracker` hook instead of
+  `withTracker` HOC, it also uses `function` components instead of `classes`.
 
 ## v1.9.3, 2020-03-09
 
@@ -285,7 +301,7 @@ N/A
 ### Changes
 * `mongodb` driver package has been updated
   from 3.2.7 to 3.5.4 [#10961](https://github.com/meteor/meteor/pull/10961)
-  
+
 ## v1.9.2, 2020-02-20
 
 ### Breaking changes
@@ -385,7 +401,7 @@ N/A
   fields. [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 
 * Lots of internal calls to `Meteor.user()` without field specifiers in `accounts-base` and
-  `accounts-password` packages have been optimized with explicit field selectors to only 
+  `accounts-password` packages have been optimized with explicit field selectors to only
   the fields needed by the functions they are in.
   [Issue #10469](https://github.com/meteor/meteor/issues/10469)
 

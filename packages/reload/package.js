@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.3.1-beta1120.2'
+  version: '1.3.1'
 });
 
 Package.onUse(function (api) {

@@ -122,3 +122,27 @@ selftest.define("build - link npm package named 'config' (#10892)", function () 
 
   selftest.expectTrue(commandResult === "1\n");
 });
+
+selftest.define("bundle - isobuild crashes with ERR_INVALID_ARG_TYPE when encountering broken symlinks (#11241)", function () {
+  const s = new Sandbox({ fakeMongo: true });
+
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+
+  //Add bad symlink
+  s.mkdir("node_modules/.bin");
+  const symlink = files.pathJoin(s.cwd, "node_modules/.bin/bad");
+  try {
+    files.unlink(symlink);
+  } catch (e) {
+    if (e.code !== "ENOENT") throw e;
+  }
+  files.symlink("nonexistent", symlink);
+
+  const run = s.run();
+  run.match("myapp");
+  run.match("proxy");
+
+  //make sure we get the useful error, not the cryptic one
+  run.matchErr("Broken symbolic link encountered at");
+});
