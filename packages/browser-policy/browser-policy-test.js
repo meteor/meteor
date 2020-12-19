@@ -143,6 +143,30 @@ Tinytest.add("browser-policy - csp", function (test) {
                         "default-src 'none'; frame-src https://foo.com; " + 
                         "object-src http://foo.com https://foo.com; " + 
                         "frame-ancestors https://foo.com;"));
+
+  // CSP2 options: nonce
+  BrowserPolicy.content.disallowAll();
+  BrowserPolicy.content.allowScriptOrigin('nonce-2gB8y5CrknnK2dgQk');
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'none'; script-src 'nonce-2gB8y5CrknnK2dgQk';"));
+
+  // CSP2 options: sha256
+  BrowserPolicy.content.disallowAll();
+  BrowserPolicy.content.allowScriptOrigin('sha256-KFQx9ysdKgqbAPoY7');
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'none'; script-src 'sha256-KFQx9ysdKgqbAPoY7';"));
+
+  // CSP2 options: sha384
+  BrowserPolicy.content.disallowAll();
+  BrowserPolicy.content.allowScriptOrigin('sha384-mChdKgyBF83ewvbTy');
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'none'; script-src 'sha384-mChdKgyBF83ewvbTy';"));
+
+  // CSP2 options: sha512
+  BrowserPolicy.content.disallowAll();
+  BrowserPolicy.content.allowScriptOrigin('sha512-A8x946bPwaak2LToB');
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'none'; script-src 'sha512-A8x946bPwaak2LToB';"));
 });
 
 Tinytest.add("browser-policy - x-frame-options", function (test) {

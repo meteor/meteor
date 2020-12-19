@@ -176,13 +176,14 @@ sample applications. Use --list to see the available examples. There are
 currently no package examples.
 
 Options:
-  --package  Create a new meteor package instead of an app.
-  --example  Example template to use.
-  --list     Show list of available examples.
-  --bare     Create an empty app.
-  --minimal  Create an app with as few Meteor packages as possible.
-  --full     Create a fully scaffolded app.
-  --react    Create a basic React-based app.
+  --package       Create a new meteor package instead of an app.
+  --example       Example template to use.
+  --list          Show list of available examples.
+  --bare          Create an empty app.
+  --minimal       Create an app with as few Meteor packages as possible.
+  --full          Create a fully scaffolded app.
+  --react         Create a basic React-based app.
+  --typescript    Create a basic Typescript React-based app.
 
 
 >>> update
@@ -289,13 +290,17 @@ Options:
 List the packages explicitly used by your project.
 Usage: meteor list
        meteor list --tree [--weak]
+       meteor list --json [--weak] [--details]
 
 Lists the packages that you have explicitly added to your project.
 Transitive dependencies are not listed unless you use the --tree option,
 which outputs a tree showing how packages are referenced.
 
+Use the --json option to output the tree in JSON format.
+
 Options:
   --weak           Show weakly referenced dependencies in the tree.
+  --details        Adds more package details to the JSON output.
 
 >>> add-platform
 Add a platform to this project.

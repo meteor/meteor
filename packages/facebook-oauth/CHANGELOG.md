@@ -1,5 +1,12 @@
 ## Changelog
 
+## 1.7.3 - 2020-10-05
+### Breaking changes
+- N/A
+
+### Changes
+- Updated to `1.8` now using Facebook GraphAPI v8.
+
 ## 1.7.2 - 2020-09-30
 ### Breaking changes
 - N/A
