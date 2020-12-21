@@ -42,11 +42,16 @@ To install the `@meteorrn/core` package, run the following command in your React
 npm install --save @meteorrn/core
 ````
 
+You also need to confirm you have the package's peer dependencies installed:
+- Confirm you have `@react-native-community/netinfo` installed
+- Confirm you have `@react-native-async-storage/async-storage@>=1.8.1` installed. If you are using Expo, or otherwise cannot use `@react-native-async-storage/async-storage`, please see [these instructions](https://github.com/TheRealNate/meteor-react-native#custom-storage-adapter).
+
 The `@meteorrn/core` package enables your React Native app to establish a DDP connection with your Meteor server so it can receive data from publications and call server methods. It also provides access to core Meteor client methods like `Accounts.createUser` and `Meteor.loginWithPasword`, and allows you to display data in your app with the `withTracker` method.
 
 **Note: If your React Native app uses version 0.59 or lower, the @meteorrn/core package contains breaking changes. Use [react-native-meteor](https://www.npmjs.com/package/react-native-meteor) instead.**
 
-Now to setup your app.
+<h2 id="setup">Setup</h2>
+
 
 First, import `Meteor`, `withTracker`, and `Mongo`:
 
@@ -59,9 +64,6 @@ Next, you need to connect to your Meteor server. This should typically be at the
 ````
 Meteor.connect("wss://myapp.meteor.com/websocket");
 ````
-
-**Note: If you are using Expo, please see [these instructions](https://github.com/TheRealNate/meteor-react-native#custom-storage-adapter) for an extra step when connecting to your Meteor server**
-
 
 Define your collections:
 
