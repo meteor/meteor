@@ -386,6 +386,9 @@ upload the build to the architecture that you were using to publish it. You can
 use `publish-for-arch` to upload a build to a different architecture from a
 different machine.
 
+If you have already published a package but need to update it's metadata 
+(the content of `Package.describe`) or the README you can actually achieve this
+via `meteor publish --update`.
 
 <h2 id="meteorpublishforarch">meteor publish-for-arch</h2>
 
