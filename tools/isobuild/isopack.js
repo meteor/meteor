@@ -1347,17 +1347,17 @@ _.extend(Isopack.prototype, {
           delete unibuildJson.declaredExports;
           builder.writeJson(legacyFilename, unibuildJson);
         });
-      }
 
-      // old unipackage.json format/filename.  no point to save this if
-      // we can't even support isopack-1.
-      // XXX COMPAT WITH 0.9.3
-      builder.writeJson(
-        "unipackage.json",
-        Isopack.convertIsopackFormat(
-          // Note that mainLegacyJson is isopack-1 (has no "source" resources)
-          // rather than isopack-2.
-          mainLegacyJson, "isopack-1", "unipackage-pre2"));
+        // old unipackage.json format/filename.  no point to save this if
+        // we can't even support isopack-1.
+        // XXX COMPAT WITH 0.9.3
+        builder.writeJson(
+          "unipackage.json",
+          Isopack.convertIsopackFormat(
+            // Note that mainLegacyJson is isopack-1 (has no "source" resources)
+            // rather than isopack-2.
+            mainLegacyJson, "isopack-1", "unipackage-pre2"));
+      }
 
       var isopackJson = {};
       isopackJson['isopack-2'] = mainJson;

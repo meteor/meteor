@@ -218,9 +218,9 @@ export function getToolsVersion() {
 
     // XXX COMPAT WITH 0.9.3
     const unipackageJsonPath = pathJoin(
-        getCurrentToolsDir(),
-        '..',  // get out of tool, back to package
-        'unipackage.json'
+      getCurrentToolsDir(),
+      '..',  // get out of tool, back to package
+      'unipackage.json'
     );
     parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
