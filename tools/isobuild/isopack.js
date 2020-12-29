@@ -124,7 +124,7 @@ var Isopack = function () {
   self.lintingMessages = null;
 };
 
-Isopack.knownFormats = ["isopack-1", "isopack-2"];
+Isopack.knownFormats = ["unipackage-pre2", "isopack-1", "isopack-2"];
 
 // These functions are designed to convert isopack metadata between
 // versions. They were designed to convert between unipackage-pre2 and
@@ -132,11 +132,17 @@ Isopack.knownFormats = ["isopack-1", "isopack-2"];
 // not semantic, and occur entirely in the isopack.json file, not in the
 // individual unibuild json files. These functions are written assuming those
 // constraints, and were not actually useful in the isopack-1/isopack-2
-// transition,where most of the changes are in the unibuild level, and there's
+// transition, where most of the changes are in the unibuild level, and there's
 // actual semantic changes involved. So they are not actually used as much as
 // they were before.
 Isopack.convertOneStepForward = function (data, fromFormat) {
   var convertedData = _.clone(data);
+  // XXX COMPAT WITH 0.9.3
+  if (fromFormat === "unipackage-pre2") {
+    convertedData.builds = convertedData.unibuilds;
+    delete convertedData.unibuilds;
+    return convertedData;
+  }
   if (fromFormat === "isopack-1") {
     // For now, there's no difference in this direction at the isopack level.
     return convertedData;
@@ -208,6 +214,27 @@ Isopack.readMetadataFromDirectory =
       // This file is from the future and no longer supports this version
       throw new Error("Could not find isopack data supported any supported format (isopack-1 or isopack-2).\n" +
         "This isopack was likely built with a much newer version of Meteor.");
+    }
+  } else if (files.exists(unipackageJsonPath)) {
+    // super old version with different file name
+    // XXX COMPAT WITH 0.9.3
+    if (files.exists(unipackageJsonPath)) {
+      metadata = JSON.parse(files.readFile(unipackageJsonPath));
+
+      metadata = Isopack.convertIsopackFormat(metadata,
+        "unipackage-pre2", "isopack-2");
+      originalVersion = 'unipackage-pre2';
+    }
+
+    if (metadata.format !== "unipackage-pre2") {
+      // We don't support pre-0.9.0 isopacks, but we do know enough to delete
+      // them if we find them in an isopack cache somehow (rather than crash).
+      if (metadata.format === "unipackage-pre1") {
+        throw new exports.OldIsopackFormatError();
+      }
+
+      throw new Error("Unsupported isopack format: " +
+                      JSON.stringify(metadata.format));
     }
   }
 
@@ -1033,6 +1060,9 @@ _.extend(Isopack.prototype, {
         };
       }
 
+      // XXX COMPAT WITH 0.9.3
+      builder.reserve("unipackage.json");
+
       builder.reserve("isopack.json");
       // Reserve this even if includeIsopackBuildInfo is not set, to ensure
       // nothing else writes it somehow.
@@ -1318,6 +1348,16 @@ _.extend(Isopack.prototype, {
           builder.writeJson(legacyFilename, unibuildJson);
         });
       }
+
+      // old unipackage.json format/filename.  no point to save this if
+      // we can't even support isopack-1.
+      // XXX COMPAT WITH 0.9.3
+      builder.writeJson(
+        "unipackage.json",
+        Isopack.convertIsopackFormat(
+          // Note that mainLegacyJson is isopack-1 (has no "source" resources)
+          // rather than isopack-2.
+          mainLegacyJson, "isopack-1", "unipackage-pre2"));
 
       var isopackJson = {};
       isopackJson['isopack-2'] = mainJson;
