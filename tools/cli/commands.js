@@ -947,6 +947,32 @@ main.registerCommand({
   );
 });
 
+// Deprecated -- identical functionality to 'build' with one exception: it
+// doesn't output a directory with all builds but rather only one tarball with
+// server/client programs.
+// XXX COMPAT WITH 0.9.1.1
+main.registerCommand({
+  name: "bundle",
+  hidden: true,
+  ...buildCommands,
+}, async function (options) {
+  Console.error(
+    "This command has been deprecated in favor of " +
+    Console.command("'meteor build'") + ", which allows you to " +
+    "build for multiple platforms and outputs a directory instead of " +
+    "a single tarball. See " + Console.command("'meteor help build'") + " " +
+    "for more information.");
+  Console.error();
+
+  return Profile.run(
+    "meteor bundle",
+    () => Promise.await(buildCommand({
+      ...options,
+      _bundleOnly: true,
+    }))
+  );
+});
+
 var buildCommand = function (options) {
   Console.setVerbose(!!options.verbose);
   if (options.headless) {
