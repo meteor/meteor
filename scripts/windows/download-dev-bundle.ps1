@@ -63,3 +63,5 @@ if ("$env:SAVE_DEV_BUNDLE_TARBALL" -ne "") {
   Write-Host "your environment."
   Remove-Item -Force $devbundle_zip
 }
+
+Write-Host "Done getting the dev_bundle for $PLATFORM version $BUNDLE_VERSION"
