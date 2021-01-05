@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "react-refresh": {
+      "version": "0.8.3",
+      "resolved": "https://registry.npmjs.org/react-refresh/-/react-refresh-0.8.3.tgz",
+      "integrity": "sha512-X8jZHc7nCMjaCqoU+V2I0cOhNW+QMBwSUkeXnTi8IPe6zaRWfn60ZzvFDZqWPfmSJfjub7dDW1SP0jaHWLu/hg=="
+    }
+  }
+}
