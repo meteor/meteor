@@ -662,7 +662,7 @@ jobs:
       - run:
           name: "Running self-test (Browserstack Test)"
           command: |
-            TEST_GROUP='css hot code push|custom minifier - devel vs prod|versioning hot code push|javascript hot code push|add packages client archs';
+            TEST_GROUP='css hot code push|custom minifier - devel vs prod|versioning hot code push|javascript hot code push|add packages client archs|dynamic-import';
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
