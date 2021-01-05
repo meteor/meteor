@@ -34,6 +34,9 @@ N/A
   
 * `meteor-babel@7.10.6`
   - Allows to disable sourceMap generation [#36](https://github.com/meteor/babel/pull/36)
+  
+* `babel-compiler@7.5.5`
+  - Allows to disable sourceMap generation [#36](https://github.com/meteor/babel/pull/36)
 
 ## v1.12, 2020-12-04
 
