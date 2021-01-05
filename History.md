@@ -10,6 +10,28 @@ N/A
 
 ### Changes
 
+## v1.12.1, TBD
+
+### Breaking changes
+
+N/A
+
+### Migration steps
+
+N/A
+
+### Changes
+
+#### Highlights
+
+- Node.js 12.20.1 [release notes](https://nodejs.org/en/blog/vulnerability/january-2021-security-releases/)
+- Fixes problem on IE because of modern syntax on `dynamic-import` package.
+
+#### Meteor Version Release
+
+* `dynamic-import@0.5.5`
+  - Fixes problem on IE because of modern syntax (arrow function).
+  
 * `meteor-babel@7.10.6`
   - Allows to disable sourceMap generation [#36](https://github.com/meteor/babel/pull/36)
 
