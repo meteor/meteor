@@ -10,7 +10,7 @@ N/A
 
 ### Changes
 
-## v1.12.1, TBD
+## v1.12.1, 2022-01-06
 
 ### Breaking changes
 
