@@ -9,7 +9,7 @@
     "@babel/runtime": "^7.9.2",
     "acorn": "^7.1.1",
     "arson": "^0.2.6",
-    "jquery": "^3.4.1",
+    "jquery": "^3.5.1",
     "meteor-node-stubs": "^1.0.1",
     "moment": "^2.24.0",
     "optimism": "^0.11.5",

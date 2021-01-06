@@ -542,6 +542,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Object} [options]
    * @param {Boolean} options.multi True to modify all matching documents; false to only modify one of the matching documents (the default).
    * @param {Boolean} options.upsert True to insert a document if no matching documents are found.
+   * @param {Array} options.arrayFilters Optional. Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to modify in an array field.
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
   update(selector, modifier, ...optionsAndCallback) {
