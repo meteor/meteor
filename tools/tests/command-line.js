@@ -347,9 +347,24 @@ selftest.define("argument parsing", function () {
   s.createApp('myapp', 'standard-app');
   s.cd('myapp', function () {
     run = s.run("list");
-    run.waitSecs(60);
+    run.waitSecs(20);
     run.expectExit(0);
   });
+
+  s.cd('myapp', function () {
+    run = s.run("list", "--tree");
+    run.waitSecs(20);
+    run.match("├─┬")
+    run.match("│ ├─┬")
+    run.expectExit(0);
+  })
+
+  s.cd('myapp', function () {
+    run = s.run("list", "--json");
+    run.waitSecs(20);
+    run.match(/[{}"a-zA-Z0-9,\s\n\r:_.()\[\]]+/)
+    run.expectExit(0);
+  })
 
   s.createApp("app-with-extra-packages", "extra-packages-option", {
     dontPrepareApp: true
