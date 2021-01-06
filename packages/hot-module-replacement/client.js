@@ -115,7 +115,7 @@ function send(message) {
 
 function connect() {
   if (mustReload) {
-    // The page will reload, no reason to 
+    // The page will reload, no reason to
     // connect and show more logs in the console
     return;
   }
@@ -179,8 +179,13 @@ function walkTree(pathParts, tree) {
   return walkTree(pathParts, _module);
 }
 
+// btoa with unicode support
+function utoa(data) {
+  return btoa(unescape(encodeURIComponent(data)));
+}
+
 function createInlineSourceMap(map) {
-  return "//# sourceMappingURL=data:application/json;base64," + btoa(JSON.stringify(map));
+  return "//# sourceMappingURL=data:application/json;base64," + utoa(JSON.stringify(map));
 }
 
 function createModuleContent (code, map) {
