@@ -27,7 +27,7 @@ const requestCredential = (options, credentialRequestCompleteCallback) => {
         "/oauth2/authorize?" +
         `state=${OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl)}` +
         "&response_type=code&" +
-        `client_id=${config.clientId}`;
+        `client_id=${config.clientId}${options && options.details ? `&details=${options && options.details}` : ''}`;
 
   /**
    * @deprecated in 1.3.0
