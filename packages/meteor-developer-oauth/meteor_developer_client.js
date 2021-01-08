@@ -49,7 +49,7 @@ const requestCredential = (options, credentialRequestCompleteCallback) => {
     loginUrl,
     credentialRequestCompleteCallback,
     credentialToken,
-    popupOptions: {width: 470, height: 490}
+    popupOptions: {width: 497, height: 749}
   });
 };
 
