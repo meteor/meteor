@@ -17,6 +17,31 @@ if (!enabled) {
   console.log(`HMR is not supported in ${arch}`);
 }
 
+
+const imported = Object.create(null);
+const importedBy = Object.create(null);
+
+if (module._onRequire) {
+  let parentModule = '/';
+  module._onRequire({
+    before(importedModule) {
+      imported[parentModule] = imported[parentModule] || new Set();
+      imported[parentModule].add(importedModule.id);
+
+      importedBy[importedModule.id] = importedBy[importedModule.id] || new Set();
+      importedBy[importedModule.id].add(parentModule);
+
+      const oldParent = parentModule;
+      parentModule = importedModule.id;
+
+      return oldParent;
+    },
+    after(_importedModule, oldParent) {
+      parentModule = oldParent;
+    }
+  });
+}
+
 let pendingReload = () => Reload._reload({ immediateMigration: true });
 let mustReload = false;
 
@@ -179,6 +204,10 @@ function walkTree(pathParts, tree) {
   return walkTree(pathParts, _module);
 }
 
+function findFile(moduleId) {
+  return walkTree(moduleId.split('/').slice(1), module._getRoot());
+}
+
 // btoa with unicode support
 function utoa(data) {
   return btoa(unescape(encodeURIComponent(data)));
@@ -211,46 +240,59 @@ function replaceFileContent(file, contents) {
   file.contents = moduleFunction;
 }
 
-function rerunFile(file) {
-  delete file.module.exports;
+function rerunFile(moduleId) {
+  const file = findFile(moduleId);
+
+  // clear module caches and hot state
+  file.module._reset();
   file.module.loaded = false;
 
   console.log('HMR: rerunning', file.module.id);
-  // re-eveluate the file
+
+  // re-evaluate the file
   require(file.module.id);
 }
 
-const oldLink = module.constructor.prototype.link;
-module.constructor.prototype.link = function (path) {
-  if (this._recordImport) {
-    this._recordImport(path);
-  };
-  return oldLink.apply(this, arguments);
-}
+function checkModuleAcceptsUpdate(moduleId) {
+  let accepts = true;
+  const checked = new Set();
+  checked.add(moduleId);
+  
+  if (moduleId === '/' ) {
+    accepts = false;
+    return { accepts, checked };
+  }
+  
+  const file = findFile(moduleId);
+  const moduleHot = file.module.hot;
+  const moduleAccepts = moduleHot ? moduleHot._canAcceptUpdate() : false;
 
-function findReloadableParents(importedBy) {
-  return Object.values(importedBy).map(parentFile => {
-    if (parentFile.module.id === '/') {
-      // Have reached the install tree's root. None of the modules have accepted this change
-      return false;
+  if (moduleAccepts !== null) {
+    accepts = moduleAccepts;
+    return { accepts, checked };
+  }
+
+  // The module did not accept the update. If the update is accepted depends
+  // on if the modules that imported this module accept the update.
+  importedBy[moduleId].forEach(depId => {
+    if (depId === '/' && importedBy[moduleId].size > 1) {
+      // This module was eagerly required by Meteor.
+      // Meteor won't know if the module can be updated
+      // but we can check with the other modules that imported it.
+      return;
     }
 
-    // Force module to be rerun when we complete applying the changeset
-    parentFile.module.replaceModule();
+    const depResult = checkModuleAcceptsUpdate(depId, module._getRoot());
 
-    const canAccept = parentFile.module.hot && parentFile.module.hot._canAcceptUpdate();
-    if (canAccept === true) {
-      return parentFile;
-    } else if (
-      canAccept === null && Object.keys(parentFile.importedBy).length > 0
-    ) {
-      // When canAccept is null, whether it is reloadable or not depends on
-      // if its parents can accept changes.
-      return findReloadableParents(parentFile.importedBy);
-    } else {
-      return false;
+    if (accepts) {
+      accepts = depResult.accepts;
+      depResult.checked.forEach(checkedId => {
+        checked.add(checkedId);
+      });
     }
-  }).flat(Infinity);
+  });
+
+  return { accepts, checked };
 }
 
 function addFiles(addedFiles) {
@@ -272,7 +314,46 @@ function addFiles(addedFiles) {
   });
 }
 
-module.constructor.prototype.replaceModule = function (id, contents) {
+module.constructor.prototype._reset = function (id) {
+  const moduleId = id || this.id;
+  const file = findFile(moduleId);
+
+  const hotState = file.module._hotState;
+  if (file._reloadedAt !== reloadId && hotState) {
+    file._reloadedAt = reloadId;
+
+    const hotData = {};
+    hotState._disposeHandlers.forEach(cb => {
+      cb(hotData);
+    });
+
+    hotState.data = hotData;
+    hotState._disposeHandlers = [];
+    hotState._hotAccepts = null;
+  }
+
+  // Clear cached exports
+  // TODO: check how this affects live bindings for ecmascript modules
+  delete file.module.exports;
+  const entry = ReifyEntry.getOrCreate(moduleId);
+  entry.getters = {};
+  entry.setters = {};
+  entry.module = null;
+  Object.keys(entry.namespace).forEach(key => {
+    if (key !== '__esModule') {
+      delete entry.namespace[key];
+    }
+  });
+
+  if (imported[moduleId]) {
+    imported[moduleId].forEach(depId => {
+      importedBy[depId].delete(moduleId);
+    });
+    imported[moduleId] = new Set();
+  }
+}
+
+module.constructor.prototype._replaceModule = function (id, contents) {
   const moduleId = id || this.id;
   const root = this._getRoot();
 
@@ -289,90 +370,67 @@ module.constructor.prototype.replaceModule = function (id, contents) {
 
   if (!file.contents) {
     // File is a dynamic import that hasn't been loaded
-    return null;
+    return;
   }
 
-  const hotState = file.module._hotState;
-  if (file._reloadedAt !== reloadId && hotState) {
-    file._reloadedAt = reloadId;
-
-    const hotData = {};
-    hotState._disposeHandlers.forEach(cb => {
-      cb(hotData);
-    });
-    hotState._disposeHandlers = [];
-    hotState.data = hotData;
-  }
-
-  if (contents) {
-    replaceFileContent(file, contents);
-  }
+  replaceFileContent(file, contents);
 
   if (!file.module.exports) {
     // File hasn't been imported.
-    return null;
+    return;
   }
 
-  // Clear cached exports
-  // TODO: check how this affects live bindings for ecmascript modules
-  delete file.module.exports;
-  const entry = ReifyEntry.getOrCreate(moduleId);
-  entry.getters = {};
-  entry.setters = {};
-  entry.module = null;
-  Object.keys(entry.namespace).forEach(key => {
-    if (key !== '__esModule') {
-      delete entry.namespace[key];
-    }
-  });
-
-  return file;
+  file.module._reset();
 }
 
 function applyChangeset({
   changedFiles,
   addedFiles
 }) {
-  const reloadableParents = [];
-  let hasImportedModules = false;
+  let canApply = true;
+  let toRerun = new Set();
 
-  changedFiles.forEach(({ content, path }) => {
-    const file = module.replaceModule(path, content);
+  changedFiles.forEach(({ path }) => {
+    const file = findFile(path);
 
-    if (file) {
-      hasImportedModules = true;
-      reloadableParents.push(...findReloadableParents({ self: file }));
+    // Check if the file has been imported. If it hasn't been,
+    // we can assume update to it can be accepted
+    if (file.module.exports) {
+      const {
+        accepts,
+        checked
+      } = checkModuleAcceptsUpdate(path);
+      if (canApply) {
+        canApply = accepts;
+        checked.forEach(moduleId => {
+          toRerun.add(moduleId);
+        });
+      }
     } else {
+      // TODO: remove this log
       console.log(`HMR: Updated file that hasn't been imported: ${path}`);
     }
+  });
+
+  if (!canApply) {
+    return false;
+  }
+
+
+  changedFiles.forEach(({ content, path }) => {
+    module._replaceModule(path, content);
   });
 
   if (addedFiles.length > 0) {
     addFiles(addedFiles);
   }
 
-  // Check if some of the module's parents are not reloadable
-  // In that case, we have to do a full reload
-  // TODO: record which parents cause this
-  if (
-    hasImportedModules &&
-    reloadableParents.length === 0 ||
-    reloadableParents.some(parent => !parent)
-  ) {
-    return false;
-  }
-
   reloadId += 1;
 
-  // TODO: handle errors
-  const evaluated = [];
-  reloadableParents.forEach(parent => {
-    if (evaluated.includes(parent.module.id)) {
-      return;
-    }
-    evaluated.push(parent.module.id);
-    rerunFile(parent);
+  toRerun.forEach(moduleId => {
+    rerunFile(moduleId);
   });
+
   console.log('HMR: finished updating');
   return true;
 }

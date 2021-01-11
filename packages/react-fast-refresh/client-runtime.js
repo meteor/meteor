@@ -4,7 +4,7 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
   // The react refresh babel plugin only registers functions. For react
   // to update other types of exports (such as classes), we have to
   // register them
-  function registerExportsForReactRefresh (moduleId, moduleExports) {
+  function registerExportsForReactRefresh(moduleId, moduleExports) {
     runtime.register(moduleExports, moduleId + ' %exports%');
 
     if (moduleExports == null || typeof moduleExports !== 'object') {
@@ -18,7 +18,7 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
         // Don't invoke getters as they may have side effects.
         continue;
       }
-  
+
       var exportValue = moduleExports[key];
       var typeID = moduleId + ' %exports% ' + key;
       runtime.register(exportValue, typeID);
@@ -26,7 +26,7 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
   };
 
   // Modules that only export components become React Refresh boundaries.
-  function isReactRefreshBoundary (moduleExports) {
+  function isReactRefreshBoundary(moduleExports) {
     if (runtime.isLikelyComponentType(moduleExports)) {
       return true;
     }
@@ -57,10 +57,10 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
 
   runtime.injectIntoGlobalHook(window);
 
-  window.$RefreshReg$ = () => {};
+  window.$RefreshReg$ = () => { };
   window.$RefreshSig$ = () => type => type;
 
-  module.onRequire({
+  module.hot.onRequire({
     before(module) {
       if (module.loaded) {
         // The module was already executed
@@ -69,7 +69,7 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
 
       var prevRefreshReg = window.$RefreshReg$;
       var prevRefreshSig = window.$RefreshSig$;
-  
+
       window.RefreshRuntime = runtime;
       window.$RefreshReg$ = (type, _id) => {
         const fullId = module.id + ' ' + _id;
@@ -93,7 +93,7 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
       if (isReactRefreshBoundary(module.exports)) {
         registerExportsForReactRefresh(module.id, module.exports);
         module.hot.accept();
-        
+
         // TODO: debounce
         runtime.performReactRefresh();
       }

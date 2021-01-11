@@ -208,8 +208,13 @@ makeInstaller = function (options) {
   }
 
   Module.prototype.onRequire = function (callbacks) {
+    console.warn('module.onRequire is depreciated. Use module.hot.onRequire instead.');
+    this._onRequire(callbacks);
+  };
+
+  Module.prototype._onRequire = function (callbacks) {
     requireHooks.push(callbacks);
-  }
+  };
 
   Module.prototype.resolve = function (id) {
     var file = fileResolve(filesByModuleId[this.id], id);
@@ -225,7 +230,6 @@ makeInstaller = function (options) {
     var result = fileResolve(filesByModuleId[this.id], id);
 
     if (result) {
-      result.importedBy[this.id] = filesByModuleId[this.id];
       // Skip any hooks added while requiring this module
       var hookCount = requireHooks.length;
       var hookData = []
@@ -270,13 +274,6 @@ makeInstaller = function (options) {
       return result.module;
     }
     return null;
-  }
-
-  Module.prototype._recordImport = function (id) {
-    var result = fileResolve(filesByModuleId[this.id], id);
-    if (result) {
-      result.importedBy[this.id] = filesByModuleId[this.id];
-    }
   }
 
   function makeRequire(file) {
@@ -332,9 +329,6 @@ makeInstaller = function (options) {
     // set is not necessarily complete, so don't rely on it unless you
     // know what you're doing.
     file.deps = {};
-
-    // Files that imported this module.
-    file.importedBy = {};
   }
 
   function fileEvaluate(file, parentModule) {
