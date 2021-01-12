@@ -241,19 +241,6 @@ function replaceFileContent(file, contents) {
   file.contents = moduleFunction;
 }
 
-function rerunFile(moduleId) {
-  const file = findFile(moduleId);
-
-  // clear module caches and hot state
-  file.module._reset();
-  file.module.loaded = false;
-
-  console.log('HMR: rerunning', file.module.id);
-
-  // re-evaluate the file
-  require(file.module.id);
-}
-
 function checkModuleAcceptsUpdate(moduleId, checked) {
   checked.add(moduleId);
   
@@ -425,9 +412,16 @@ function applyChangeset({
     addFiles(addedFiles);
   }
 
+  toRerun.forEach(moduleId => {
+    const file = findFile(moduleId);
+    // clear module caches and hot state
+    file.module._reset();
+    file.module.loaded = false;
+  });
+
   try {
     toRerun.forEach(moduleId => {
-      rerunFile(moduleId);
+      require(moduleId);
     });
   } catch (error) {
     console.error('HMR: Error while applying changes:', error);
