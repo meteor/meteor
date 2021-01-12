@@ -144,7 +144,9 @@ function connect() {
     return;
   }
 
-  const wsUrl = Meteor.absoluteUrl('/__meteor__hmr__/websocket').replace(/^.+\/\//, 'ws://');
+  let wsUrl = Meteor.absoluteUrl('/__meteor__hmr__/websocket');
+  const protocol = wsUrl.startsWith('https://') ? 'wss://' : 'ws://';
+  wsUrl = wsUrl.replace(/^.+\/\//, protocol);
   socket = new WebSocket(wsUrl);
 
   socket.addEventListener('close', function () {
