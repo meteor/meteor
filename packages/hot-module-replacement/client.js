@@ -253,14 +253,11 @@ function rerunFile(moduleId) {
   require(file.module.id);
 }
 
-function checkModuleAcceptsUpdate(moduleId) {
-  let accepts = true;
-  const checked = new Set();
+function checkModuleAcceptsUpdate(moduleId, checked) {
   checked.add(moduleId);
   
   if (moduleId === '/' ) {
-    accepts = false;
-    return { accepts, checked };
+    return false;
   }
   
   const file = findFile(moduleId);
@@ -268,9 +265,10 @@ function checkModuleAcceptsUpdate(moduleId) {
   const moduleAccepts = moduleHot ? moduleHot._canAcceptUpdate() : false;
 
   if (moduleAccepts !== null) {
-    accepts = moduleAccepts;
-    return { accepts, checked };
+    return moduleAccepts;
   }
+
+  let accepts = null;
 
   // The module did not accept the update. If the update is accepted depends
   // on if the modules that imported this module accept the update.
@@ -282,17 +280,19 @@ function checkModuleAcceptsUpdate(moduleId) {
       return;
     }
 
-    const depResult = checkModuleAcceptsUpdate(depId, module._getRoot());
+    if (checked.has(depId)) {
+      // There is a circular dependency
+      return;
+    }
 
-    if (accepts) {
-      accepts = depResult.accepts;
-      depResult.checked.forEach(checkedId => {
-        checked.add(checkedId);
-      });
+    const depResult = checkModuleAcceptsUpdate(depId, checked);
+
+    if (accepts !== false) {
+      accepts = depResult;
     }
   });
 
-  return { accepts, checked };
+  return accepts === null ? false : accepts;
 }
 
 function addFiles(addedFiles) {
@@ -308,7 +308,11 @@ function addFiles(addedFiles) {
       previous[segment] = previous[segment] || {}
       previous = previous[segment]
     });
-    previous[fileName] = createModuleContent(file.content.code, file.content.map, file.path);
+    previous[fileName] = createModuleContent(
+      file.content.code,
+      file.content.map,
+      file.path
+    );
 
     meteorInstall(tree, file.meteorInstallOptions);
   });
@@ -396,10 +400,9 @@ function applyChangeset({
     // Check if the file has been imported. If it hasn't been,
     // we can assume update to it can be accepted
     if (file.module.exports) {
-      const {
-        accepts,
-        checked
-      } = checkModuleAcceptsUpdate(path);
+      const checked = new Set();
+      const accepts = checkModuleAcceptsUpdate(path, checked);
+
       if (canApply) {
         canApply = accepts;
         checked.forEach(moduleId => {
