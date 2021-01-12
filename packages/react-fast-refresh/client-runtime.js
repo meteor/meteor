@@ -1,6 +1,16 @@
 if (process.env.NODE_ENV !== 'production' && module.hot) {
   const runtime = require('react-refresh/runtime');
 
+  let timeout = null;
+  function scheduleRefresh() {
+    if (!timeout) {
+      timeout = setTimeout(() => {
+        timeout = null;
+        runtime.performReactRefresh();
+      }, 0);
+    }
+  }
+
   // The react refresh babel plugin only registers functions. For react
   // to update other types of exports (such as classes), we have to
   // register them
@@ -94,8 +104,7 @@ if (process.env.NODE_ENV !== 'production' && module.hot) {
         registerExportsForReactRefresh(module.id, module.exports);
         module.hot.accept();
 
-        // TODO: debounce
-        runtime.performReactRefresh();
+        scheduleRefresh();
       }
     }
   });
