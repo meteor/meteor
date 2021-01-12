@@ -8,7 +8,6 @@ const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 // TODO: the builder should inject a build timestamp in the bundle
 let lastUpdated = Date.now();
 let appliedChangeSets = [];
-let reloadId = 0;
 
 let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
 let enabled = arch === 'web.browser';
@@ -323,18 +322,16 @@ module.constructor.prototype._reset = function (id) {
   const file = findFile(moduleId);
 
   const hotState = file.module._hotState;
-  if (file._reloadedAt !== reloadId && hotState) {
-    file._reloadedAt = reloadId;
 
-    const hotData = {};
-    hotState._disposeHandlers.forEach(cb => {
-      cb(hotData);
-    });
+  const hotData = {};
+  hotState._disposeHandlers.forEach(cb => {
+    cb(hotData);
+  });
 
-    hotState.data = hotData;
-    hotState._disposeHandlers = [];
-    hotState._hotAccepts = null;
-  }
+  hotState.data = hotData;
+  hotState._disposeHandlers = [];
+  hotState._hotAccepts = null;
+
 
   // Clear cached exports
   // TODO: check how this affects live bindings for ecmascript modules
@@ -383,8 +380,6 @@ module.constructor.prototype._replaceModule = function (id, contents) {
     // File hasn't been imported.
     return;
   }
-
-  file.module._reset();
 }
 
 function applyChangeset({
@@ -427,8 +422,6 @@ function applyChangeset({
   if (addedFiles.length > 0) {
     addFiles(addedFiles);
   }
-
-  reloadId += 1;
 
   try {
     toRerun.forEach(moduleId => {
