@@ -430,9 +430,13 @@ function applyChangeset({
 
   reloadId += 1;
 
-  toRerun.forEach(moduleId => {
-    rerunFile(moduleId);
-  });
+  try {
+    toRerun.forEach(moduleId => {
+      rerunFile(moduleId);
+    });
+  } catch (error) {
+    console.error('HMR: Error while applying changes:', error);
+  }
 
   console.log('HMR: finished updating');
   return true;
