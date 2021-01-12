@@ -236,7 +236,7 @@ makeInstaller = function (options) {
 
       for (var i = 0; i < hookCount; i++) {
         if (requireHooks[i].before) {
-          hookData.push(requireHooks[i].before(result.module));
+          hookData.push(requireHooks[i].before(result.module, this.id));
         }
       }
 

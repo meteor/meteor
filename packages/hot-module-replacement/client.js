@@ -21,23 +21,14 @@ const imported = Object.create(null);
 const importedBy = Object.create(null);
 
 if (module._onRequire) {
-  let parentModule = '/';
   module._onRequire({
-    before(importedModule) {
-      imported[parentModule] = imported[parentModule] || new Set();
-      imported[parentModule].add(importedModule.id);
+    before(importedModule, parentId) {
+      imported[parentId] = imported[parentId] || new Set();
+      imported[parentId].add(importedModule.id);
 
       importedBy[importedModule.id] = importedBy[importedModule.id] || new Set();
-      importedBy[importedModule.id].add(parentModule);
-
-      const oldParent = parentModule;
-      parentModule = importedModule.id;
-
-      return oldParent;
+      importedBy[importedModule.id].add(parentId);
     },
-    after(_importedModule, oldParent) {
-      parentModule = oldParent;
-    }
   });
 }
 
