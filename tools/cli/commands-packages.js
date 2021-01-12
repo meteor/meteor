@@ -1245,11 +1245,13 @@ main.registerCommand({
           parent[packageName] = entry;
 
           const mapInfo = projectContext.packageMap.getInfo(packageName);
+          const isLocal = mapInfo && mapInfo.kind === 'local';
+
           const infoSource = Object.assign({}, showDetails ? packageToPrint : {}, {
             version: packageToPrint.version,
-            local: mapInfo && mapInfo.kind === 'local',
+            local: isLocal,
             weak: isWeak,
-            newerVersion: getNewerVersion(packageName, packageToPrint.version, catalog.official)
+            newerVersion: !isLocal && getNewerVersion(packageName, packageToPrint.version, catalog.official)
           });
 
           Object.entries(infoSource).forEach(([key, value]) => {
