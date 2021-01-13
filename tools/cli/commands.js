@@ -1431,8 +1431,8 @@ main.registerCommand({
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
     'cache-build': { type: Boolean },
-    mongo: { type: Boolean },
-    free: { type: Boolean }
+    free: { type: Boolean },
+    mongo: { type: Boolean }
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1513,8 +1513,8 @@ function deployCommand(options, { rawOptions }) {
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
-    mongo: options.mongo,
     free: options.free,
+    mongo: options.mongo,
     buildOptions: buildOptions,
     rawOptions,
     deployPollingTimeoutMs,

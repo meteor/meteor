@@ -1,6 +1,6 @@
 <!--
 * ❓ Questions?
-          Use Stack Overflow (http://stackoverflow.com/questions/tagged/meteor), start a discussion on the Meteor forums (https://forums.meteor.com/) or post a message on (Community Slack)[https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc]
+          Start a discussion on the Meteor forums (https://forums.meteor.com/) or post a message on (Community Slack)[https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc]
 * 💡 Feature requests?
           Visit the feature request repository (https://github.com/meteor/meteor-feature-requests).
 * ❗️ Bug?
