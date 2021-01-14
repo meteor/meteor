@@ -35,7 +35,8 @@ selftest.define("'meteor update' alters constraints in `.meteor/packages`", () =
   });
 
   s.createApp("myapp", "very-simple-app-with-no-package-constraints", {
-    release: DEFAULT_RELEASE_TRACK + '@v1'
+    release: DEFAULT_RELEASE_TRACK + '@v1',
+    dontPrepareApp: true,
   });
   s.cd("myapp");
 
