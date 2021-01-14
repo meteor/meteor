@@ -10,7 +10,10 @@ Package.onUse(function (api) {
   api.use('modules');
   api.use('meteor');
   api.imply('modules-runtime-hot@0.12.0');
-  api.addFiles('./client.js', 'client');
+  api.addFiles([ 
+    './hot-api.js',
+    './client.js'
+  ], 'client');
   api.addFiles('./server.js', 'server');
 });
 
