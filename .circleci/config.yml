@@ -149,6 +149,7 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             pushd tools
+            npm install @types/node --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
             ../meteor npx tsc --noEmit
             popd
