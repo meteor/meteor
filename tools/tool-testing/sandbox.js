@@ -83,7 +83,7 @@ export default class Sandbox {
       this.warehouse = files.pathJoin(this.root, 'tropohouse');
       this._makeWarehouse(this.options.warehouse);
     }
-    
+
     const meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
 
     // Figure out the 'meteor' to run
@@ -211,7 +211,7 @@ export default class Sandbox {
       // multiple calls to createApp with the same template get the same cache?
       // This is a little tricky because isopack-buildinfo.json uses absolute
       // paths.
-      run.waitSecs(120);
+      run.waitSecs(options.timeout || 120);
       run.expectExit(0);
     });
   }
