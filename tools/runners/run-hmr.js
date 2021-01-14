@@ -266,7 +266,6 @@ export class HMRServer {
           sourcePath: file.sourcePath,
           targetPath: file.targetPath
         });
-        console.log('is alias', file.targetPath, file.sourcePath, file.implicit);
       } else {
         fileConfig = JSON.stringify({
           meteorInstallOptions: file.meteorInstallOptions,

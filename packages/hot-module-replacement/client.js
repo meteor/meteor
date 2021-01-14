@@ -186,7 +186,7 @@ function walkTree(pathParts, tree) {
   const _module = tree.contents[part];
 
   if (!_module) {
-    console.log(part, pathParts, _module, tree);
+    console.log('HMR: file does not exist', part, pathParts, _module, tree);
     throw new Error('not-exist');
   }
 
@@ -224,8 +224,6 @@ function createModuleContent (code, map) {
 }
 
 function replaceFileContent(file, contents) {
-  console.log('HMR: replacing module:', file.module.id);
-
   // TODO: to replace content in packages, we need an eval function that runs
   // within the package scope, like dynamic imports does.
   const moduleFunction = createModuleContent(contents.code, contents.map, file.module.id);
@@ -276,8 +274,6 @@ function checkModuleAcceptsUpdate(moduleId, checked) {
 }
 
 function addFiles(addedFiles) {
-  console.log('HMR: Added files', addedFiles.map(file => file.path));
-
   addedFiles.forEach(file => {
     const tree = {};
     const segments = file.path.split('/').slice(1);
@@ -385,9 +381,6 @@ function applyChangeset({
           toRerun.add(moduleId);
         });
       }
-    } else {
-      // TODO: remove this log
-      console.log(`HMR: Updated file that hasn't been imported: ${path}`);
     }
   });
 
@@ -419,7 +412,8 @@ function applyChangeset({
     console.error('HMR: Error while applying changes:', error);
   }
 
-  console.log('HMR: finished updating');
+  const updateCount = changedFiles.length + addedFiles.length;
+  console.log(`HMR: updated ${updateCount} ${updateCount === 1 ? 'file' : 'files'}`);
   return true;
 }
 
