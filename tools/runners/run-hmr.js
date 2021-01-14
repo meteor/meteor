@@ -253,16 +253,32 @@ export class HMRServer {
     let onlyReplaceableChanges = true;
 
     currentFiles.forEach(file => {
-      const fileConfig = JSON.stringify({
-        meteorInstallOptions: file.meteorInstallOptions,
-        absModuleId: file.absModuleId,
-        sourceMap: !!file.sourceMap,
-        mainModule: file.mainModule,
-        imported: file.imported,
-        alias: file.alias,
-        lazy: file.lazy,
-        bare: file.bare
-      });
+      let fileConfig;
+      let ignoreHash = false;
+
+      if (file.targetPath !== file.sourcePath && file.implicit) {
+        // The import scanner created this file as an alias to the target path
+        // This file's content does not change when the hash does, only the
+        // content of the new file created at the target path.
+        ignoreHash = true;
+        fileConfig = JSON.stringify({
+          implicit: file.implicit,
+          sourcePath: file.sourcePath,
+          targetPath: file.targetPath
+        });
+        console.log('is alias', file.targetPath, file.sourcePath, file.implicit);
+      } else {
+        fileConfig = JSON.stringify({
+          meteorInstallOptions: file.meteorInstallOptions,
+          absModuleId: file.absModuleId,
+          sourceMap: !!file.sourceMap,
+          mainModule: file.mainModule,
+          imported: file.imported,
+          alias: file.alias,
+          lazy: file.lazy,
+          bare: file.bare
+        })
+      }
 
       if (
         !this._checkReloadable(file)
@@ -285,7 +301,7 @@ export class HMRServer {
         addedFiles.push(file);
       } else if (previousConfig !== fileConfig) {
         onlyReplaceableChanges = false;
-      } else if (previousInputHash !== file._inputHash) {
+      } else if (!ignoreHash && previousInputHash !== file._inputHash) {
         changedFiles.push(file);
       }
 
