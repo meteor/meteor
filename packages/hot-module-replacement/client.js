@@ -105,6 +105,7 @@ function handleMessage(message) {
 
   if (!succeeded) {
     if (pendingReload) {
+      console.log('HMR: Some changes can not be applied with HMR. Using hot code push.')
       mustReload = true;
       return pendingReload();
     }
