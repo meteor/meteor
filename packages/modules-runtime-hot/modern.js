@@ -33,6 +33,7 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
     }
 
     let hotState = this._hotState;
+    let module = this;
 
     return {
       accept() {
@@ -51,6 +52,9 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
       },
       dispose(cb) {
         hotState._disposeHandlers.push(cb);
+      },
+      onRequire(callbacks) {
+        return module._onRequire(callbacks);
       },
       _canAcceptUpdate() {
         return hotState._hotAccepts;

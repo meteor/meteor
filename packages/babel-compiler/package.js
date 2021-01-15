@@ -1,11 +1,16 @@
 Package.describe({
   name: "babel-compiler",
   summary: "Parser/transpiler for ECMAScript 2015+ syntax",
-  version: '7.6.0-beta200.4'
+  // Tracks the npm version below.  Use wrap numbers to increment
+  // without incrementing the npm version.  Hmm-- Apparently this
+  // isn't possible because you can't publish a non-recommended
+  // release with package versions that don't have a pre-release
+  // identifier at the end (eg, -dev)
+  version: '7.6.0-beta200.6'
 });
 
 Npm.depends({
-  'meteor-babel': '7.9.0',
+  'meteor-babel': '7.10.6',
   'json5': '2.1.1'
 });
 
