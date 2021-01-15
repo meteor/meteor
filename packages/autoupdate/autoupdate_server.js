@@ -78,7 +78,6 @@ function updateVersions(shouldReloadClientProgram) {
         WebApp.calculateClientHashRefreshable(arch),
       versionNonRefreshable: AUTOUPDATE_VERSION ||
         WebApp.calculateClientHashNonRefreshable(arch),
-      // TODO: should we allow overriding versionReplaceable?
       versionReplaceable: AUTOUPDATE_VERSION ||
         WebApp.calculateClientHashReplaceable(arch)
     };
@@ -169,7 +168,6 @@ function enqueueVersionsRefresh() {
 
 // Listen for messages pertaining to the client-refresh topic.
 import { onMessage } from "meteor/inter-process-messaging";
-import { WebApp } from 'meteor/webapp';
 onMessage("client-refresh", enqueueVersionsRefresh);
 
 // Another way to tell the process to refresh: send SIGHUP signal

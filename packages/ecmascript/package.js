@@ -26,8 +26,6 @@ Package.onUse(function (api) {
   // Runtime support for Meteor 1.5 dynamic import(...) syntax.
   api.imply('dynamic-import');
 
-  api.use('modules', 'web.browser');
-
   api.addFiles("ecmascript.js", "server");
   api.export("ECMAScript", "server");
 });
