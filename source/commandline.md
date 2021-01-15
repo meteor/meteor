@@ -186,6 +186,10 @@ With the argument `--mongo` you can deploy your app without having to pay for a 
 
 Use the arguments `--mongo` and `--free` to easily deploy a free app already with a mongo database connected to it.
 
+{% pullquote warning %}
+Free Plan and Mongo DB: Meteor Software reserves the right to stop or remove applications we deem to be abusing the free plan offering at any time. Please be advised that the free plan offering is not recommended for production applications. The shared MongoDB cluster that comes configured with the free plan does not provide backups or restoration resources.
+{% endpullquote %}
+
 <h2 id="meteorupdate">meteor update</h2>
 
 Attempts to bring you to the latest version of Meteor, and then to upgrade your
