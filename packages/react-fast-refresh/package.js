@@ -7,7 +7,8 @@ Package.describe({
 });
 
 Npm.depends({
-  'react-refresh': '0.8.3'
+  'react-refresh': '0.8.3',
+   semver: '7.3.4'
 });
 
 Package.onUse(function (api) {
@@ -15,4 +16,5 @@ Package.onUse(function (api) {
   api.use('modules');
   api.addFiles('server.js', 'server');
   api.addFiles('client-runtime.js', 'web.browser');
+  api.use('hot-module-replacement', { weak: true });
 });
