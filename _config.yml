@@ -13,6 +13,11 @@ versions:
   - '1.3'
 versioned-netlify-redirects:
   netlify_site_id: meteor-docs
+
+logo:
+  title:
+  subtitle: Docs
+
 sidebar_categories:
   null:
     - index
