@@ -733,6 +733,9 @@ _.extend(AppRunner.prototype, {
       inspect: self.inspect,
       onListen: function () {
         self.proxy.setMode("proxy");
+        if (self.hmrServer) {
+          self.hmrServer.setAppState("okay");
+        }
         options.onListen && options.onListen();
         self._resolvePromise("start");
         self._resolvePromise("listen");
@@ -923,6 +926,9 @@ _.extend(AppRunner.prototype, {
       }
 
       self.proxy.setMode("hold");
+      if (self.hmrServer) {
+        self.hmrServer.setAppState("okay");
+      }
       appProcess.stop();
 
       serverWatcher && serverWatcher.stop();
@@ -1010,6 +1016,9 @@ _.extend(AppRunner.prototype, {
           }
         });
         self.proxy.setMode("errorpage");
+        if (self.hmrServer) {
+          self.hmrServer.setAppState("error");
+        }
         // If onChange wasn't called synchronously (clearing watchPromise), wait
         // on it.
         self.watchPromise && self.watchPromise.await();

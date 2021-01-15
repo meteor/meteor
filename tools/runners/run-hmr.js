@@ -1,5 +1,8 @@
 import WS from 'ws';
-const crypto = require('crypto');
+import runLog from './run-log.js';
+import crypto from 'crypto';
+import { AssertionError } from 'assert';
+import Anser from "anser";
 
 export class HMRServer {
   constructor({ proxy, hmrPath, secret, projectContext }) {
@@ -138,6 +141,32 @@ export class HMRServer {
         );
       }
     });
+  }
+
+  _sendAll(message) {
+    Object.values(this.connByArch).forEach(conns => {
+      conns.forEach(conn => {
+        conn.send(JSON.stringify(message));
+      });
+    });
+  }
+
+  setAppState(state) {
+    if (state === 'error') {
+      const lines = runLog.getLog().map(line => {
+        return Anser.ansiToHtml(Anser.escapeForHtml(line.message))
+      });
+      this._sendAll({
+        type: 'app-state',
+        state: 'error',
+        log: lines
+      });
+    } else if (state === 'okay') {
+      this._sendAll({
+        type: 'app-state',
+        state: 'okay'
+      });
+    }
   }
 
   compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {

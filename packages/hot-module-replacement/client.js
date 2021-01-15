@@ -8,6 +8,7 @@ const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 // TODO: the builder should inject a build timestamp in the bundle
 let lastUpdated = Date.now();
 let appliedChangeSets = [];
+let removeErrorMessage = null;
 
 let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
 let enabled = arch === 'web.browser';
@@ -51,6 +52,18 @@ function handleMessage(message) {
     } else {
       console.log(`HMR: Register failed for unknown reason`, message);
     }
+    return;
+  } else if (message.type === 'app-state') {
+    if (removeErrorMessage) {
+      removeErrorMessage();
+    }
+
+    if (message.state === 'error' && Package['dev-error-overlay']) {
+      removeErrorMessage = Package['dev-error-overlay']
+        .DevErrorOverlay
+        .showMessage('Your app is crashing. Here are the latest logs:', message.log.join('\n'));
+    }
+
     return;
   }
 
