@@ -662,7 +662,171 @@ jobs:
       - run:
           name: "Running self-test (Browserstack Test)"
           command: |
-            TEST_GROUP='css hot code push|custom minifier - devel vs prod|versioning hot code push|javascript hot code push|add packages client archs';
+            TEST_GROUP='css hot code push';
+            echo $TEST_GROUP;
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              "$TEST_GROUP" \
+              --browserstack \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit ./tmp/results/junit/11.xml \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 40m
+      - run:
+          <<: *run_save_node_bin
+      - store_test_results:
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
+      - store_artifacts:
+          path: ./tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Test Group 12:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (Browserstack Test)"
+          command: |
+            TEST_GROUP='custom minifier - devel vs prod';
+            echo $TEST_GROUP;
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              "$TEST_GROUP" \
+              --browserstack \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit ./tmp/results/junit/11.xml \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 40m
+      - run:
+          <<: *run_save_node_bin
+      - store_test_results:
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
+      - store_artifacts:
+          path: ./tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Test Group 13:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (Browserstack Test)"
+          command: |
+            TEST_GROUP='versioning hot code push';
+            echo $TEST_GROUP;
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              "$TEST_GROUP" \
+              --browserstack \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit ./tmp/results/junit/11.xml \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 40m
+      - run:
+          <<: *run_save_node_bin
+      - store_test_results:
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
+      - store_artifacts:
+          path: ./tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Test Group 14:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (Browserstack Test)"
+          command: |
+            TEST_GROUP='javascript hot code push';
+            echo $TEST_GROUP;
+            eval $PRE_TEST_COMMANDS;
+            ./meteor self-test \
+              "$TEST_GROUP" \
+              --browserstack \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --exclude "${SELF_TEST_EXCLUDE}" \
+              --headless \
+              --junit ./tmp/results/junit/11.xml \
+              --without-tag "custom-warehouse"
+          no_output_timeout: 40m
+      - run:
+          <<: *run_save_node_bin
+      - store_test_results:
+          path: ./tmp/results
+      - persist_to_workspace:
+          root: .
+          paths: ./tmp/results/junit
+      - store_artifacts:
+          path: ./tmp/results
+      - store_artifacts:
+          path: /tmp/core_dumps
+      - store_artifacts:
+          path: /tmp/memuse.txt
+
+  Test Group 15:
+    <<: *build_machine_environment
+    steps:
+      - run:
+          <<: *run_log_mem_use
+      - run:
+          <<: *run_env_change
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Print environment"
+          command: printenv
+      - run:
+          name: "Running self-test (Browserstack Test)"
+          command: |
+            TEST_GROUP='add packages client archs';
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
@@ -847,6 +1011,18 @@ workflows:
       - Test Group 11:
           requires:
             - Get Ready
+      - Test Group 12:
+          requires:
+            - Get Ready
+      - Test Group 13:
+          requires:
+            - Get Ready
+      - Test Group 14:
+          requires:
+            - Get Ready
+      - Test Group 15:
+          requires:
+            - Get Ready
       - Clean Up:
           requires:
             - Isolated Tests
@@ -862,3 +1038,7 @@ workflows:
             - Test Group 9
             - Test Group 10
             - Test Group 11
+            - Test Group 12
+            - Test Group 13
+            - Test Group 14
+            - Test Group 15
