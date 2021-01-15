@@ -7,7 +7,8 @@ Package.describe({
 });
 
 Npm.depends({
-  'react-refresh': '0.8.3'
+  'react-refresh': '0.8.3',
+   semver: '7.3.4'
 });
 
 Package.onUse(function (api) {
