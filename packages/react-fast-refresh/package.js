@@ -16,4 +16,5 @@ Package.onUse(function (api) {
   api.use('modules');
   api.addFiles('server.js', 'server');
   api.addFiles('client-runtime.js', 'web.browser');
+  api.use('hot-module-replacement', { weak: true });
 });
