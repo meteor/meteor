@@ -1,6 +1,10 @@
 var MAX_LENGTH = 500; // if you change this, also change the appropriate test
 var slice = Array.prototype.slice;
 
+var deprecationMessage = function() {
+  Log.debug('The http package has been deprecated, please migrate to the fetch package and new web standards.');
+};
+
 exports.makeErrorByStatus = function(statusCode, content) {
   var message = "failed [" + statusCode + "]";
 
@@ -49,8 +53,10 @@ var HTTP = exports.HTTP = {};
  * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
  * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
  * @locus Anywhere
+ * @deprecated
  */
 HTTP.get = function (/* varargs */) {
+  deprecationMessage();
   return HTTP.call.apply(this, ["GET"].concat(slice.call(arguments)));
 };
 
@@ -60,8 +66,10 @@ HTTP.get = function (/* varargs */) {
  * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
  * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
  * @locus Anywhere
+ * @deprecated
  */
 HTTP.post = function (/* varargs */) {
+  deprecationMessage();
   return HTTP.call.apply(this, ["POST"].concat(slice.call(arguments)));
 };
 
@@ -71,8 +79,10 @@ HTTP.post = function (/* varargs */) {
  * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
  * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
  * @locus Anywhere
+ * @deprecated
  */
 HTTP.put = function (/* varargs */) {
+  deprecationMessage();
   return HTTP.call.apply(this, ["PUT"].concat(slice.call(arguments)));
 };
 
@@ -82,8 +92,10 @@ HTTP.put = function (/* varargs */) {
  * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
  * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
  * @locus Anywhere
+ * @deprecated
  */
 HTTP.del = function (/* varargs */) {
+  deprecationMessage();
   return HTTP.call.apply(this, ["DELETE"].concat(slice.call(arguments)));
 };
 
@@ -93,7 +105,9 @@ HTTP.del = function (/* varargs */) {
  * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
  * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
  * @locus Anywhere
+ * @deprecated
  */
 HTTP.patch = function (/* varargs */) {
+  deprecationMessage();
   return HTTP.call.apply(this, ["PATCH"].concat(slice.call(arguments)));
 };

@@ -2,7 +2,7 @@
 
 ### Breaking changes
 
-N/A
+* `http` package has been deprecated. Please start on migrating towards the [fetch](https://atmospherejs.com/meteor/fetch) package instead.
 
 ### Migration steps
 

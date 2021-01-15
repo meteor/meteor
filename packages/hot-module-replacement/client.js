@@ -8,6 +8,7 @@ const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 // TODO: the builder should inject a build timestamp in the bundle
 let lastUpdated = Date.now();
 let appliedChangeSets = [];
+let removeErrorMessage = null;
 
 let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
 let enabled = arch === 'web.browser';
@@ -51,6 +52,18 @@ function handleMessage(message) {
     } else {
       console.log(`HMR: Register failed for unknown reason`, message);
     }
+    return;
+  } else if (message.type === 'app-state') {
+    if (removeErrorMessage) {
+      removeErrorMessage();
+    }
+
+    if (message.state === 'error' && Package['dev-error-overlay']) {
+      removeErrorMessage = Package['dev-error-overlay']
+        .DevErrorOverlay
+        .showMessage('Your app is crashing. Here are the latest logs:', message.log.join('\n'));
+    }
+
     return;
   }
 
@@ -105,6 +118,7 @@ function handleMessage(message) {
 
   if (!succeeded) {
     if (pendingReload) {
+      console.log('HMR: Some changes can not be applied with HMR. Using hot code push.')
       mustReload = true;
       return pendingReload();
     }
@@ -185,7 +199,7 @@ function walkTree(pathParts, tree) {
   const _module = tree.contents[part];
 
   if (!_module) {
-    console.log(part, pathParts, _module, tree);
+    console.log('HMR: file does not exist', part, pathParts, _module, tree);
     throw new Error('not-exist');
   }
 
@@ -223,8 +237,6 @@ function createModuleContent (code, map) {
 }
 
 function replaceFileContent(file, contents) {
-  console.log('HMR: replacing module:', file.module.id);
-
   // TODO: to replace content in packages, we need an eval function that runs
   // within the package scope, like dynamic imports does.
   const moduleFunction = createModuleContent(contents.code, contents.map, file.module.id);
@@ -275,8 +287,6 @@ function checkModuleAcceptsUpdate(moduleId, checked) {
 }
 
 function addFiles(addedFiles) {
-  console.log('HMR: Added files', addedFiles.map(file => file.path));
-
   addedFiles.forEach(file => {
     const tree = {};
     const segments = file.path.split('/').slice(1);
@@ -384,9 +394,6 @@ function applyChangeset({
           toRerun.add(moduleId);
         });
       }
-    } else {
-      // TODO: remove this log
-      console.log(`HMR: Updated file that hasn't been imported: ${path}`);
     }
   });
 
@@ -418,7 +425,8 @@ function applyChangeset({
     console.error('HMR: Error while applying changes:', error);
   }
 
-  console.log('HMR: finished updating');
+  const updateCount = changedFiles.length + addedFiles.length;
+  console.log(`HMR: updated ${updateCount} ${updateCount === 1 ? 'file' : 'files'}`);
   return true;
 }
 
