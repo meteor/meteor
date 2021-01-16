@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.4.3-beta200.9'
+  version: '1.4.3'
 });
 
 Npm.depends({
@@ -8,6 +8,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
+  api.versionsFrom('1.12.1');
   api.use([
     'url',
     // This package intentionally does not depend on ecmascript, so that
