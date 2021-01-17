@@ -1,6 +1,6 @@
 Package.describe({
   name: "dynamic-import",
-  version: "0.6.0-beta200.9",
+  version: "0.6.0-rc200.0",
   summary: "Runtime support for Meteor 1.5 dynamic import(...) syntax",
   documentation: "README.md"
 });

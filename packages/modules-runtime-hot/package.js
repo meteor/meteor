@@ -1,6 +1,6 @@
 Package.describe({
   name: "modules-runtime-hot",
-  version: "0.13.0-beta200.9",
+  version: "0.13.0-rc200.0",
   summary: "Patches modules-runtime to support Hot Module Reload",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"
