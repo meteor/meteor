@@ -181,7 +181,7 @@ preserved unless you explicitly pass new settings using the `--settings` option.
 To unset `Meteor.settings`, pass an empty settings file.
 
 {% pullquote warning %}
---free and --mongo options were introduced in Meteor 2.0
+`free` and `mongo options were introduced in Meteor 2.0
 {% endpullquote %}
 
 You can run your app for free using the option `--free`. But, there are some limitations. The first one is that you cannot use a custom domain to run a free app. Your domain must contain a Meteor domain name (`.meteorapp.com` to US region, `.au.meteorapp.com` to Asia region, or `.eu.meteorapp.com` to Europe region). Second thing you must know is that your free apps have Cold Start enabled. Cold Start means that your app will stop if it has no connection for 3 minutes, and it will go automatically up when someone tries to connect to it. The third thing you must know is that free apps run on one, and just one, Tiny container. This is important to know, because Tiny containers are NOT meant to production environment, so even small apps can crash with a lot of connections. To keep your app on free, you always need to provide this option.
