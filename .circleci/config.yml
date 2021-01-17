@@ -1008,19 +1008,19 @@ workflows:
       - Test Group 10:
           requires:
             - Get Ready
-      - Test Group 11:
+      - Test Browserstack 1:
           requires:
             - Get Ready
-      - Test Group 12:
+      - Test Browserstack 2:
           requires:
             - Get Ready
-      - Test Group 13:
+      - Test Browserstack 3:
           requires:
             - Get Ready
-      - Test Group 14:
+      - Test Browserstack 4:
           requires:
             - Get Ready
-      - Test Group 15:
+      - Test Browserstack 5:
           requires:
             - Get Ready
       - Clean Up:
@@ -1037,8 +1037,8 @@ workflows:
             - Test Group 8
             - Test Group 9
             - Test Group 10
-            - Test Group 11
-            - Test Group 12
-            - Test Group 13
-            - Test Group 14
-            - Test Group 15
+            - Test Browserstack 1
+            - Test Browserstack 2
+            - Test Browserstack 3
+            - Test Browserstack 4
+            - Test Browserstack 5
