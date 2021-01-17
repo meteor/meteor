@@ -10,7 +10,14 @@ N/A
 
 ### Changes
 
-* Extra parameters can now be added to reset password, verify e-mail and enroll account links that are generated for account e-mails. By default, these are added as search parameters to the generated url. You can pass them as an object in the appropriate functions. E.g. `Accounts.sendEnrollmentEmail(userId, email, null, extraParams);`
+#### Meteor Version Release
+
+* `meteor-tool@2.0`
+  - `meteor create my-app` now creates by default a project using React. If you want to create a new project using Blaze you should use the new option `--blaze`.
+    - `meteor create --react my-app` is still going to create a React project.
+
+* `accounts-base@1.8.0` and `accounts-password@1.7.0`
+  - Extra parameters can now be added to reset password, verify e-mail and enroll account links that are generated for account e-mails. By default, these are added as search parameters to the generated url. You can pass them as an object in the appropriate functions. E.g. `Accounts.sendEnrollmentEmail(userId, email, null, extraParams);`
 
 ## v1.12.1, 2021-01-06
 
