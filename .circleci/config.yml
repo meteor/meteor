@@ -647,7 +647,7 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Test Group 11:
+  Test Browserstack 1:
     <<: *build_machine_environment
     steps:
       - run:
@@ -660,7 +660,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (Browserstack Test)"
+          name: "Running self-test (Test Browserstack 1)"
           command: |
             TEST_GROUP='css hot code push';
             echo $TEST_GROUP;
@@ -671,7 +671,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit ./tmp/results/junit/11.xml \
+              --junit ./tmp/results/junit/bs1.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 40m
       - run:
@@ -688,7 +688,7 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Test Group 12:
+  Test Browserstack 2:
     <<: *build_machine_environment
     steps:
       - run:
@@ -701,7 +701,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (Browserstack Test)"
+          name: "Running self-test (Test Browserstack 2)"
           command: |
             TEST_GROUP='custom minifier - devel vs prod';
             echo $TEST_GROUP;
@@ -712,7 +712,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit ./tmp/results/junit/11.xml \
+              --junit ./tmp/results/junit/bs2.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 40m
       - run:
@@ -729,7 +729,7 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Test Group 13:
+  Test Browserstack 3:
     <<: *build_machine_environment
     steps:
       - run:
@@ -742,7 +742,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (Browserstack Test)"
+          name: "Running self-test (Test Browserstack 3)"
           command: |
             TEST_GROUP='versioning hot code push';
             echo $TEST_GROUP;
@@ -753,7 +753,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit ./tmp/results/junit/11.xml \
+              --junit ./tmp/results/junit/bs3.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 40m
       - run:
@@ -770,7 +770,7 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Test Group 14:
+  Test Browserstack 4:
     <<: *build_machine_environment
     steps:
       - run:
@@ -783,7 +783,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (Browserstack Test)"
+          name: "Running self-test (Test Browserstack 4)"
           command: |
             TEST_GROUP='javascript hot code push';
             echo $TEST_GROUP;
@@ -794,7 +794,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit ./tmp/results/junit/11.xml \
+              --junit ./tmp/results/junit/bs4.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 40m
       - run:
@@ -811,7 +811,7 @@ jobs:
       - store_artifacts:
           path: /tmp/memuse.txt
 
-  Test Group 15:
+  Test Browserstack 5:
     <<: *build_machine_environment
     steps:
       - run:
@@ -824,7 +824,7 @@ jobs:
           name: "Print environment"
           command: printenv
       - run:
-          name: "Running self-test (Browserstack Test)"
+          name: "Running self-test (Test Browserstack 5)"
           command: |
             TEST_GROUP='add packages client archs';
             echo $TEST_GROUP;
@@ -835,7 +835,7 @@ jobs:
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
-              --junit ./tmp/results/junit/11.xml \
+              --junit ./tmp/results/junit/bs5.xml \
               --without-tag "custom-warehouse"
           no_output_timeout: 40m
       - run:
