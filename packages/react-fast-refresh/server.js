@@ -15,6 +15,10 @@ if (enabled) {
   }
 }
 
+if (typeof __meteor_runtime_config__ === 'object') {
+  __meteor_runtime_config__.reactFastRefreshEnabled = enabled;
+}
+
 const babelPlugin = enabled ?
   require('react-refresh/babel') :
   null;
