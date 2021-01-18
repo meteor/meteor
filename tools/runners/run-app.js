@@ -226,7 +226,9 @@ _.extend(AppProcess.prototype, {
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
 
-    env.METEOR_HMR_SECRET = self.hmrSecret; 
+    if (self.hmrSecret) {
+      env.METEOR_HMR_SECRET = self.hmrSecret;
+    }
 
     return env;
   },
