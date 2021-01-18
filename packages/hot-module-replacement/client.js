@@ -24,6 +24,12 @@ const importedBy = Object.create(null);
 if (module._onRequire) {
   module._onRequire({
     before(importedModule, parentId) {
+      if (parentId === module.id) {
+        // While applying updates we import modules to re-run them.
+        // Don't track those imports since we don't want them to affect
+        // if a future change to the file can be accepted
+        return;
+      }
       imported[parentId] = imported[parentId] || new Set();
       imported[parentId].add(importedModule.id);
 
