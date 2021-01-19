@@ -12,6 +12,7 @@ Npm.depends({
 
 Package.onUse(function(api) {
   api.use("modules-runtime");
+  api.use("modules-runtime-hot", { weak: true });
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.export("meteorInstall");

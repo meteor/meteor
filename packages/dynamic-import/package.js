@@ -14,6 +14,7 @@ Package.onUse(function (api) {
   api.use("fetch");
   api.use("modern-browsers");
   api.use("inter-process-messaging", "server");
+  api.use("hot-module-replacement", { weak: true });
 
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");

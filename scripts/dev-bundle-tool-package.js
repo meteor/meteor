@@ -63,7 +63,8 @@ var packageJson = {
     "@wry/context": "0.4.4",
     'lru-cache': '4.1.3',
     "anser": "1.4.8",
-    'xmlbuilder2': '1.3.0'
+    'xmlbuilder2': '1.3.0',
+    "ws": "7.2.5"
   }
 };
 
