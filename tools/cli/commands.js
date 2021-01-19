@@ -882,9 +882,9 @@ main.registerCommand({
       Console.options({ indent: 2 }));
 
   Console.info("");
-  Console.info("When you’re ready to deploy and host your new Meteor application, check out Galaxy:");
+  Console.info("When you’re ready to deploy and host your new Meteor application, check out Cloud:");
   Console.info(
-    Console.url("https://www.meteor.com/hosting"),
+    Console.url("https://www.meteor.com/cloud"),
       Console.options({ indent: 2 }));
 
   if (!!skeletonExplicitOption) {
