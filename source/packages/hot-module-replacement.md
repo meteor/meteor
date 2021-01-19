@@ -5,6 +5,10 @@ description: Documentation of Meteor's `hot-module-replacement` package.
 
 Hot Module Replacement (HMR) is a method of updating javascript modules within a running application. This reduces the feedback cycle while developing, so you can view and test changes quicker. In Meteor's implementation, the app can be updated before the build has even finished.
 
+{% pullquote warning %}
+`hot-module-replacement` package was introduced in Meteor 2.0
+{% endpullquote %}
+
 To enable HMR for an app, it should use the `hot-module-replacement` package. HMR is currently not supported for packages, but packages can depend on the `hot-module-replacement` package to ensure access to the hot API. When a change can not be accepted with HMR, Meteor uses hot code push to update the app, as is normally done when HMR is not used.
 
 HMR currently supports the modern web architecture. It is always disabled in other architectures and in production.
