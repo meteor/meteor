@@ -1,5 +1,10 @@
 const meteorInstall = Package['modules-runtime'].meteorInstall;
 
+/**
+ * @summary The Hot API used to configure HMR
+ * @memberof module
+ * @name hot
+ */
 Object.defineProperty(meteorInstall.Module.prototype, "hot", {
   get: function () {
     if (!this._hotState) {
@@ -16,12 +21,29 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
     let module = this;
 
     return {
+      /**
+       * @summary Accept updates to this module. Also applies to its dependencies,
+       * as long as the other modules that import the dependencies also accept
+       * updates.
+       * @locus Client
+       * @memberOf module.hot
+       * @instance
+       * @name accept
+       */
       accept() {
         if (arguments.length > 0) {
           console.warn('hot.accept does not support any arguments.');
         }
         hotState._hotAccepts = true;
       },
+      /**
+        * @summary Disable updating this module or its dependencies with HMR.
+        * Hot code push will be used instead.
+        * @locus Client
+        * @memberOf module.hot
+        * @instance
+        * @name decline
+        */
       decline() {
         if (arguments.length > 0) {
           throw new Error('hot.decline does not support any arguments.');
@@ -29,15 +51,40 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
 
         hotState._hotAccepts = false;
       },
+      /**
+        * @summary Add a call back to clean up the module before replacing it
+        * @locus Client
+        * @memberOf module.hot
+        * @instance
+        * @name dispose
+        * @param {module.hot.DisposeFunction} callback Called before replacing the old module.
+        */
       dispose(cb) {
         hotState._disposeHandlers.push(cb);
       },
+      /**
+        * @summary Add callbacks to run before and after a module is required
+        * @locus Client
+        * @memberOf module.hot
+        * @instance
+        * @name onRequire
+        * @param {Object} callbacks Can have before and after methods, called before a module is required,
+        * and after it finished being evaluated
+        */
       onRequire(callbacks) {
         return module._onRequire(callbacks);
       },
       _canAcceptUpdate() {
         return hotState._hotAccepts;
       },
+      /**
+       * @summary Defaults to null. When the module is replaced,
+       * this is set to the object passed to dispose handlers.
+       * @locus Client
+       * @memberOf module.hot
+       * @instance
+       * @name data
+       */
       data: hotState.data
     }
   },
