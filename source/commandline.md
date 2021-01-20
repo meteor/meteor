@@ -199,7 +199,8 @@ If you want to connect to your free MongoDB shared cluster using your on setting
 ```
 packages: {
   mongo: {
-    options: { tlsAllowInvalidCertificates: true,
+    options: { 
+        tlsAllowInvalidCertificates: true,
     },
   },
 }
