@@ -5,8 +5,9 @@ var JSON5 = Npm.require("json5");
  * Plugin.registerCompiler
  * @param {Object} extraFeatures The same object that getDefaultOptions takes
  */
-BabelCompiler = function BabelCompiler(extraFeatures) {
+BabelCompiler = function BabelCompiler(extraFeatures, modifyBabelConfig) {
   this.extraFeatures = extraFeatures;
+  this.modifyBabelConfig = modifyBabelConfig;
   this._babelrcCache = null;
   this._babelrcWarnings = Object.create(null);
   this.cacheDirectory = null;
@@ -129,6 +130,10 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       babelOptions.sourceFileName = packageName
       ? "packages/" + packageName + "/" + inputFilePath
       : inputFilePath;
+
+    if (this.modifyBabelConfig) {
+      this.modifyBabelConfig(babelOptions, inputFile);
+    }
 
     try {
       var result = profile('Babel.compile', function () {

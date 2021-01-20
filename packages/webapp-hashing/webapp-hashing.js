@@ -28,7 +28,7 @@ WebAppHashing.calculateClientHash =
   hash.update(JSON.stringify(runtimeCfg, 'utf8'));
 
   _.each(manifest, function (resource) {
-      if ((! includeFilter || includeFilter(resource.type)) &&
+      if ((! includeFilter || includeFilter(resource.type, resource.replaceable)) &&
           (resource.where === 'client' || resource.where === 'internal')) {
       hash.update(resource.path);
       hash.update(resource.hash);
