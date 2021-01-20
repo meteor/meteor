@@ -12,7 +12,7 @@ The Meteor build tool is what compiles, runs, deploys, and publishes all of your
 
 <h3 id="reload-on-file-change">Reloads app on file change</h3>
 
-After executing the `meteor` command to start the build tool you should leave it running while further developing your app. The build tool automatically detects any relevant file changes using a file watching system and recompiles the necessary changes, restarting your client or server environment as needed.
+After executing the `meteor` command to start the build tool you should leave it running while further developing your app. The build tool automatically detects any relevant file changes using a file watching system and recompiles the necessary changes, restarting your client or server environment as needed. [Hot module replacement](#hot-module-replacement) can optionally be used so you can view and test your changes even quicker.
 
 <h3 id="compiles-with-build-plugins">Compiles files with build plugins</h3>
 
@@ -272,6 +272,26 @@ Then we can install any npm CSS processing packages that we'd like to use and re
 ```
 
 After doing the above, you'll need to ensure you `npm install` and restart the `meteor` process running your app to make sure the PostCSS system has had a chance to set itself up.
+
+<h2 id="hot-module-replacement">Hot Module Replacement</h2>
+
+In Meteor apps, javascript, typescript, css files that are dynamically imported, and many other types of files are converted into javascript modules during the build process. Instead of reloading the client after a rebuild, Meteor is able to update the javascript modules within the running application that were modified. This reduces the feedback cycle while developing by allowing you to view and test your changes quicker.
+
+Hot module replacement (HMR) can be enabled by adding the `hot-module-replacement` package to your app:
+
+```
+meteor add hot-module-replacement
+```
+
+Many types of javascript modules can not be updated with HMR, so HMR has to be configured to know which modules can be replace and how to replace them. Most apps never need to do this manually. Instead, you can use integrations that configure HMR for you:
+
+- React components are automatically updated using [React Fast Refresh](https://atmospherejs.com/meteor/react-fast-refresh). This integration is enabled for all Meteor apps that use HMR and a supported react version.
+- An integration for Blaze templates is in [beta](https://github.com/meteor/blaze/pull/313).
+- Svelte files can be automatically updated with HMR by using the [zodern:melte](https://atmospherejs.com/zodern/melte) compiler package.
+- [akryum:vue-component](https://atmospherejs.com/akryum/vue-component) uses its own implementation of HMR to update vue components.
+- Some packages are able to help automatically dispose old versions of modules. For example, [zodern:pure-admin](https://atmospherejs.com/zodern/pure-admin) removes menu items and pages added in the old version of the module so you don't end up with duplicate or outdated items when the new version of the module is ran.
+
+To further control how HMR applies updates in your app, you can use the [hot API](https://docs.meteor.com/packages/hot-module-replacement.html). This can be used to accept updates for additional types of files, help dispose a module so the old version no longer affects the app (such as stopping Tracker.autorun computations), or creating your own integrations with other view layers or libraries.
 
 <h2 id="build-plugins">Build plugins</h2>
 
