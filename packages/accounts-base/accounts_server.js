@@ -4,6 +4,7 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
   CONNECTION_CLOSE_DELAY_MS
 } from './accounts_common.js';
+import { URL } from 'meteor/url';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -78,14 +79,25 @@ export class AccountsServer extends AccountsCommon {
 
     this._skipCaseInsensitiveChecksForTest = {};
 
-    // XXX These should probably not actually be public?
     this.urls = {
-      resetPassword: token => Meteor.absoluteUrl(`#/reset-password/${token}`),
-      verifyEmail: token => Meteor.absoluteUrl(`#/verify-email/${token}`),
-      enrollAccount: token => Meteor.absoluteUrl(`#/enroll-account/${token}`),
+      resetPassword: (token, extraParams) => this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
+      verifyEmail: (token, extraParams) => this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
+      enrollAccount: (token, extraParams) => this.buildEmailUrl(`#/enroll-account/${token}`, extraParams),
     };
 
     this.addDefaultRateLimit();
+
+    this.buildEmailUrl = (path, extraParams = {}) => {
+      const url = new URL(Meteor.absoluteUrl(path));
+      const params = Object.entries(extraParams);
+      if (params.length > 0) {
+        // Add additional parameters to the url
+        for (const [key, value] of params) {
+          url.searchParams.append(key, value);
+        }
+      }
+      return url.toString();
+    };
   }
 
   ///

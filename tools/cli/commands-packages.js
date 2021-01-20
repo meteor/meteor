@@ -689,6 +689,8 @@ main.registerCommand({
   options: {
     'create-track': { type: Boolean },
     'from-checkout': { type: Boolean },
+    // It is going to produce a fake error and nothing will be published
+    'dry-run': { type: Boolean },
     // Normally the publish-release script will complain if the source of
     // a core package differs in any way from what was previously
     // published for the current version of the package. However, if the
@@ -984,6 +986,15 @@ main.registerCommand({
         });
       });
     });
+
+    if (options['dry-run']) {
+      main.captureAndExit("=> Dry run", function () {
+          buildmessage.error(
+            "This is not an error but it was just a validation" +
+            " and nothing was published. Remove --dry-run to publish.");
+        }
+      )
+    }
 
     // We now have an object of packages that have new versions on disk that
     // don't exist in the server catalog. Publish them.

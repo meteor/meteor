@@ -1,4 +1,6 @@
-if (process.env.NODE_ENV !== 'production' && module.hot) {
+const enabled = __meteor_runtime_config__.reactFastRefreshEnabled;
+
+if (enabled && process.env.NODE_ENV !== 'production' && module.hot) {
   const runtime = require('react-refresh/runtime');
 
   let timeout = null;

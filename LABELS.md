@@ -7,10 +7,8 @@ We should change the labels of issues and PRs when its status changes.
 ### Status Labels
 Labels to indicate the status of a specific issue or PR. These are the most important labels as they tell us in which stage a specific item is at the moment at a glance.
 
-#### Stage 0
-- `triage`: Waiting triage 
-  - New items receive this label [automatically](https://probot.github.io/apps/triage-new-issues/)
-    
+You can filter issues that are missing status labels using this [filter](https://github.com/meteor/meteor/issues?q=is%3Aissue+is%3Aopen+-label%3Aconfirmed+-label%3Anot-ready+-label%3Ain-discussion+-label%3Aneeds-reproduction+-label%3Aready+-label%3Ain-development++-label%3Apending-tests+-label%3Awaiting-feedback): `is:issue is:open -label:confirmed -label:not-ready -label:in-discussion -label:needs-reproduction -label:ready -label:in-development -label:pending-tests -label:waiting-feedback`
+
 #### Stage 1
 - `confirmed`: We want to fix or implement it
 - `not-ready`: Something is missing, we are not able to work on this issue yet

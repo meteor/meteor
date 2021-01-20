@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.15.0-beta200.6',
+  version: '0.15.0-rc200.3',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md'
 });
@@ -25,8 +25,6 @@ Package.onUse(function (api) {
 
   // Runtime support for Meteor 1.5 dynamic import(...) syntax.
   api.imply('dynamic-import');
-
-  api.use('modules', 'web.browser');
 
   api.addFiles("ecmascript.js", "server");
   api.export("ECMAScript", "server");

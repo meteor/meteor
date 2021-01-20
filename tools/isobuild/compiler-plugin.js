@@ -1108,7 +1108,6 @@ export class PackageSourceBatch {
         self.unibuild.arch
       );
 
-    // TODO: probably safe to remove buildMode check once hot-module-replacement is debugOnly
     const isDevelopment = self.processor.buildMode === 'development';
     const usesHMRPackage = self.unibuild.pkg.name !== "hot-module-replacement" &&
       self.processor.isopackCache.uses(

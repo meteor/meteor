@@ -672,13 +672,14 @@ Accounts.generateOptionsForEmail = (email, user, url, reason) => {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the reset url.
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendResetPasswordEmail = (userId, email, extraTokenData) => {
+Accounts.sendResetPasswordEmail = (userId, email, extraTokenData, extraParams) => {
   const {email: realEmail, user, token} =
     Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
-  const url = Accounts.urls.resetPassword(token);
+  const url = Accounts.urls.resetPassword(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
   Email.send(options);
   if (Meteor.isDevelopment) {
@@ -701,13 +702,14 @@ Accounts.sendResetPasswordEmail = (userId, email, extraTokenData) => {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the enrollment url.
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendEnrollmentEmail = (userId, email, extraTokenData) => {
+Accounts.sendEnrollmentEmail = (userId, email, extraTokenData, extraParams) => {
   const {email: realEmail, user, token} =
     Accounts.generateResetToken(userId, email, 'enrollAccount', extraTokenData);
-  const url = Accounts.urls.enrollAccount(token);
+  const url = Accounts.urls.enrollAccount(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
   Email.send(options);
   if (Meteor.isDevelopment) {
@@ -814,17 +816,19 @@ Meteor.methods({resetPassword: function (...args) {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the verification url.
+ *
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendVerificationEmail = (userId, email, extraTokenData) => {
+Accounts.sendVerificationEmail = (userId, email, extraTokenData, extraParams) => {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
   // this account.
 
   const {email: realEmail, user, token} =
     Accounts.generateVerificationToken(userId, email, extraTokenData);
-  const url = Accounts.urls.verifyEmail(token);
+  const url = Accounts.urls.verifyEmail(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
   Email.send(options);
   if (Meteor.isDevelopment) {

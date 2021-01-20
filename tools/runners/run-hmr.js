@@ -1,5 +1,8 @@
 import WS from 'ws';
-const crypto = require('crypto');
+import runLog from './run-log.js';
+import crypto from 'crypto';
+import { AssertionError } from 'assert';
+import Anser from "anser";
 
 export class HMRServer {
   constructor({ proxy, hmrPath, secret, projectContext }) {
@@ -140,6 +143,32 @@ export class HMRServer {
     });
   }
 
+  _sendAll(message) {
+    Object.values(this.connByArch).forEach(conns => {
+      conns.forEach(conn => {
+        conn.send(JSON.stringify(message));
+      });
+    });
+  }
+
+  setAppState(state) {
+    if (state === 'error') {
+      const lines = runLog.getLog().map(line => {
+        return Anser.ansiToHtml(Anser.escapeForHtml(line.message))
+      });
+      this._sendAll({
+        type: 'app-state',
+        state: 'error',
+        log: lines
+      });
+    } else if (state === 'okay') {
+      this._sendAll({
+        type: 'app-state',
+        state: 'okay'
+      });
+    }
+  }
+
   compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {
     this.changeSetsByArch[arch] = this.changeSetsByArch[arch] || [];
     const previousCacheKey = this.cacheKeys[`${arch}-${name}`];
@@ -253,16 +282,31 @@ export class HMRServer {
     let onlyReplaceableChanges = true;
 
     currentFiles.forEach(file => {
-      const fileConfig = JSON.stringify({
-        meteorInstallOptions: file.meteorInstallOptions,
-        absModuleId: file.absModuleId,
-        sourceMap: !!file.sourceMap,
-        mainModule: file.mainModule,
-        imported: file.imported,
-        alias: file.alias,
-        lazy: file.lazy,
-        bare: file.bare
-      });
+      let fileConfig;
+      let ignoreHash = false;
+
+      if (file.targetPath !== file.sourcePath && file.implicit) {
+        // The import scanner created this file as an alias to the target path
+        // This file's content does not change when the hash does, only the
+        // content of the new file created at the target path.
+        ignoreHash = true;
+        fileConfig = JSON.stringify({
+          implicit: file.implicit,
+          sourcePath: file.sourcePath,
+          targetPath: file.targetPath
+        });
+      } else {
+        fileConfig = JSON.stringify({
+          meteorInstallOptions: file.meteorInstallOptions,
+          absModuleId: file.absModuleId,
+          sourceMap: !!file.sourceMap,
+          mainModule: file.mainModule,
+          imported: file.imported,
+          alias: file.alias,
+          lazy: file.lazy,
+          bare: file.bare
+        })
+      }
 
       if (
         !this._checkReloadable(file)
@@ -285,7 +329,7 @@ export class HMRServer {
         addedFiles.push(file);
       } else if (previousConfig !== fileConfig) {
         onlyReplaceableChanges = false;
-      } else if (previousInputHash !== file._inputHash) {
+      } else if (!ignoreHash && previousInputHash !== file._inputHash) {
         changedFiles.push(file);
       }
 
