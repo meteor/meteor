@@ -3,6 +3,8 @@ title: HTTP
 description: Documentation of Meteor's HTTP API.
 ---
 
+** `http` package has been deprecated. Please use the `fetch` package instead. **
+
 `HTTP` provides an HTTP request API on the client and server.  To use
 these functions, add the HTTP package to your project by running in your
 terminal:
