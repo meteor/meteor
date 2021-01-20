@@ -10,7 +10,7 @@
 - Deploy including MongoDB on [Cloud](https://www.meteor.com/cloud): Deploy including MongoDB in a shared instance for free to Cloud with one command: `meteor deploy myapp.meteorapp.com --free --mongo`. ([docs](https://docs.meteor.com/commandline.html#meteordeploy))
   
 
-- Hot Module Replacement (HMR): Updates the javascript modules in a running app that were modified during a rebuild. Reduces the feedback cycle while developing so you can view and test changes quicker (it even updates the app before the build has finished). Enabled by adding the `hot-module-replacement` package to an app. React components are automatically updated by default using React Fast Refresh. Integrations with other libraries and view layers can be provided by third party packages. Support for Blaze is coming soon. This first version supports app code in the modern web architecture. ([docs](https://docs.meteor.com/packages/hot-module-replacement.html)) [#11117](https://github.com/meteor/meteor/pull/11117)
+- Hot Module Replacement (HMR): Updates the javascript modules in a running app that were modified during a rebuild. Reduces the feedback cycle while developing so you can view and test changes quicker (it even updates the app before the build has finished). Enabled by adding the `hot-module-replacement` package to an app. React components are automatically updated by default using React Fast Refresh. Integrations with other libraries and view layers can be provided by third party packages. Support for Blaze is coming soon. This first version supports app code in the modern web architecture. ([docs](https://guide.meteor.com/build-tool.html#hot-module-replacement)) [#11117](https://github.com/meteor/meteor/pull/11117)
 
 #### Meteor Version Release
 
