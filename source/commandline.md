@@ -194,6 +194,20 @@ Use the options `--mongo` and `--free` to easily deploy a free app already with 
 Free apps and MongoDB shared hosting: Meteor Software reserves the right to stop or remove applications we deem to be abusing the free plan offering at any time. Please be advised that the free plan offering is not recommended for production applications. The shared MongoDB cluster that comes configured with the free plan does not provide backups or restoration resources.
 {% endpullquote %}
 
+{% pullquote warning %}
+If you want to connect to your free MongoDB shared cluster using your on settings make sure you include this option in your settings in the Mongo package configuration section:
+```
+packages: {
+  mongo: {
+    options: { 
+        tlsAllowInvalidCertificates: true,
+    },
+  },
+}
+```
+This is necessary as our database provider does not have certificates installed on every machine and we don't want to force apps to have this certificate. More about this option [here](https://docs.meteor.com/api/collections.html#mongo_connection_options_settings)
+{% endpullquote %}
+
 <h2 id="meteorupdate">meteor update</h2>
 
 Attempts to bring you to the latest version of Meteor, and then to upgrade your
