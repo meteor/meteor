@@ -283,7 +283,7 @@ Hot module replacement (HMR) can be enabled by adding the [hot-module-replacemen
 meteor add hot-module-replacement
 ```
 
-Many types of javascript modules can not be updated with HMR, so HMR has to be configured to know which modules can be replace and how to replace them. Most apps never need to do this manually. Instead, you can use integrations that configure HMR for you:
+Many types of javascript modules can not be updated with HMR, so HMR has to be configured to know which modules can be replaced and how to replace them. Most apps never need to do this manually. Instead, you can use integrations that configure HMR for you:
 
 - React components are automatically updated using [React Fast Refresh](https://atmospherejs.com/meteor/react-fast-refresh). This integration is enabled for all Meteor apps that use HMR and a supported react version.
 - An integration for Blaze templates is in [beta](https://github.com/meteor/blaze/pull/313).
