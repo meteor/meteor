@@ -277,7 +277,7 @@ After doing the above, you'll need to ensure you `npm install` and restart the `
 
 In Meteor apps, javascript, typescript, css files that are dynamically imported, and many other types of files are converted into javascript modules during the build process. Instead of reloading the client after a rebuild, Meteor is able to update the javascript modules within the running application that were modified. This reduces the feedback cycle while developing by allowing you to view and test your changes quicker.
 
-Hot module replacement (HMR) can be enabled by adding the `hot-module-replacement` package to your app:
+Hot module replacement (HMR) can be enabled by adding the [hot-module-replacement](https://docs.meteor.com/packages/hot-module-replacement.html) package to your app:
 
 ```
 meteor add hot-module-replacement
