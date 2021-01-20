@@ -293,6 +293,8 @@ Many types of javascript modules can not be updated with HMR, so HMR has to be c
 
 To further control how HMR applies updates in your app, you can use the [hot API](https://docs.meteor.com/packages/hot-module-replacement.html). This can be used to accept updates for additional types of files, help dispose a module so the old version no longer affects the app (such as stopping Tracker.autorun computations), or creating your own integrations with other view layers or libraries.
 
+If a change was made to the app that can not be applied with HMR, it reloads the page with hot code push, as is done when HMR is not enabled. It currently only supports app code in the modern client architecture. Future versions of Meteor will add support for packages and other architectures.
+
 <h2 id="build-plugins">Build plugins</h2>
 
 The most powerful feature of Meteor's build system is the ability to define custom build plugins. If you find yourself writing scripts that mangle one type of file into another, merge multiple files, or something else, it's likely that these scripts would be better implemented as a build plugin. The `ecmascript`, `templating`, and `coffeescript` packages are all implemented as build plugins, so you can replace them with your own versions if you want to!
