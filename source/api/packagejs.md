@@ -275,6 +275,11 @@ methods are available:
    `Assets.getText` or `Assets.getBinary`.
  - `addHtml` - Works in web targets only. Add markup to the `head` or `body`
    section of the document.
+ - `hmrAvailable` - Returns true if the file can be updated with HMR. Among other things,
+   it checks if HMR supports the current architecture and build mode, and that the unibuild
+   uses the `hot-module-replacement` package. There are rare situations where `hmrAvailable`
+   returns true, but when more information is available later in the build process Meteor
+   decides the file can not be updated with HMR.
 
 Meteor implements a couple of compilers as Core packages, good examples would be
 the
@@ -355,6 +360,13 @@ Right now, Meteor Core ships with the `standard-minifiers` package that can be
 replaced with a custom one. The
 [source](https://github.com/meteor/meteor/tree/devel/packages/standard-minifiers)
 of the package is a good example how to build your own minification plugin.
+
+In development builds, minifiers must meet these requirements to not prevent hot module replacement:
+
+- Call `addJavasScript` once for each file to add the file's contents
+- The contents of the files are not modified
+
+In the future Meteor will allow minifiers to concatenate or modify files in development without affected hot module replacement.
 
 <h3 id="build-plugin-caching">Caching</h3>
 
