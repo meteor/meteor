@@ -24,23 +24,33 @@
   - `cordova` ensures the pathname of the rootUrl is used in the mobile URL. [#11053](hhttps://github.com/meteor/meteor/pull/11053)
   - Add `file.hmrAvailable()` for compiler plugins to check if a file meets the minimum requirements to be updated with HMR [#11117](https://github.com/meteor/meteor/pull/11117)
 
+
 * `hot-module-replacement@1.0.0`
   - New package that enables Hot Module Replacement for the Meteor app and provides an API to configure how updates are applied. HMR reduces the feedback cycle while developing by updating modified javascript modules within the running application. ([docs](https://docs.meteor.com/packages/hot-module-replacement.html)) [#11117](https://github.com/meteor/meteor/pull/11117)
   - These packages have been updated to support HMR: `autoupdate@1.7.0`, `babel-compiler@7.6.0`, `ddp-client@2.4.0`, `dynamic-import@0.6.0`, `ecmascript@0.15.0`, `modules@0.16.0`, `modules-runtime-hot@0.13.0`, `standard-minifier-css@1.7.2`, `webapp@1.10.0`, `webapp-hashing@1.1.0` 
   
+
 * `react-fast-refresh@0.1.0`
   - New package that updates React components using HMR. This is enabled by default in apps that have HMR enabled and use a supported React version. ([docs](https://atmospherejs.com/meteor/react-fast-refresh)) [#11117](https://github.com/meteor/meteor/pull/11117)
   
+
 * `dev-error-overly@0.1.0`
   - New package that allows you to see build errors and server crashes in your browser during development. Requires the app to have HMR enabled. [#11117](https://github.com/meteor/meteor/pull/11117)
+
 
 * `accounts-base@1.8.0` and `accounts-password@1.7.0`
   - Extra parameters can now be added to reset password, verify e-mail and enroll account links that are generated for account e-mails. By default, these are added as search parameters to the generated url. You can pass them as an object in the appropriate functions. E.g. `Accounts.sendEnrollmentEmail(userId, email, null, extraParams);`. [#11288](https://github.com/meteor/meteor/pull/11288)
     
+
 * `logging@1.2.0`
   - Updates dependencies and make debug available for use in non production environments. [#11068](https://github.com/meteor/meteor/pull/11068)
 
 #### Independent Releases
+* `react-meteor-data@2.2.0`
+  - Fix issue with useTracker and Subscriptions when using deps. [#306](https://github.com/meteor/react-packages/pull/306)
+  - Remove version constraint on core TypeScript package [#308](https://github.com/meteor/react-packages/pull/308)
+  
+
 * `http`
     - It has been deprecated. [#11068](https://github.com/meteor/meteor/pull/11068)
 
