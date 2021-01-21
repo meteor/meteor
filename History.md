@@ -62,7 +62,7 @@
 
 Simple run `meteor update` in your app.
 
-Great new features and no breaking changes (except one package deprecation). We can always check our [Roadmap](./Roadmap.md) to understand what is next.
+Great new features and no breaking changes (except one package deprecation). You can always check our [Roadmap](./Roadmap.md) to understand what is next.
 
 ## v1.12.1, 2021-01-06
 
