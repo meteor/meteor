@@ -74,6 +74,8 @@ var AppProcess = function (options) {
   self.testMetadata = options.testMetadata;
   self.autoRestart = options.autoRestart;
 
+  self.hmrSecret = options.hmrSecret;
+
   self.proc = null;
   self.madeExitCallback = false;
 };
@@ -223,6 +225,10 @@ _.extend(AppProcess.prototype, {
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
+
+    if (self.hmrSecret) {
+      env.METEOR_HMR_SECRET = self.hmrSecret;
+    }
 
     return env;
   },
@@ -375,6 +381,9 @@ var AppRunner = function (options) {
   self.exitPromise = null;
   self.watchPromise = null;
   self._promiseResolvers = {};
+
+  self.hmrServer = options.hmrServer;
+  self.hmrSecret = options.hmrSecret;
 
   // If this promise is set with self.makeBeforeStartPromise, then for the first
   // run, we will wait on it just before self.appProcess.start() is called.
@@ -576,6 +585,7 @@ _.extend(AppRunner.prototype, {
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
           previousBuilders: self.builders,
+          onJsOutputFiles: self.hmrServer ? self.hmrServer.compare.bind(self.hmrServer) : undefined,
           // Permit delayed bundling of client architectures if the
           // console is interactive.
           allowDelayedClientBuilds: ! Console.isHeadless(),
@@ -725,6 +735,9 @@ _.extend(AppRunner.prototype, {
       inspect: self.inspect,
       onListen: function () {
         self.proxy.setMode("proxy");
+        if (self.hmrServer) {
+          self.hmrServer.setAppState("okay");
+        }
         options.onListen && options.onListen();
         self._resolvePromise("start");
         self._resolvePromise("listen");
@@ -733,6 +746,7 @@ _.extend(AppRunner.prototype, {
       settings: settings,
       testMetadata: self.testMetadata,
       autoRestart: self.autoRestart,
+      hmrSecret: self.hmrSecret
     });
 
     if (options.firstRun && self._beforeStartPromise) {
@@ -914,6 +928,9 @@ _.extend(AppRunner.prototype, {
       }
 
       self.proxy.setMode("hold");
+      if (self.hmrServer) {
+        self.hmrServer.setAppState("okay");
+      }
       appProcess.stop();
 
       serverWatcher && serverWatcher.stop();
@@ -1001,6 +1018,9 @@ _.extend(AppRunner.prototype, {
           }
         });
         self.proxy.setMode("errorpage");
+        if (self.hmrServer) {
+          self.hmrServer.setAppState("error");
+        }
         // If onChange wasn't called synchronously (clearing watchPromise), wait
         // on it.
         self.watchPromise && self.watchPromise.await();

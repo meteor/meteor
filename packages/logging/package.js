@@ -1,18 +1,14 @@
 Package.describe({
   summary: 'Logging facility.',
-  version: '1.1.20'
+  version: '1.2.0'
 });
 
 Npm.depends({
-  'cli-color': '0.2.3'
+  'cli-color': '2.0.0'
 });
 
 Npm.strip({
   'es5-ext': ['test/']
-});
-
-Cordova.depends({
-  'cordova-plugin-console': '1.1.0' // Deprecated, remove in future
 });
 
 Package.onUse(function (api) {
@@ -21,7 +17,7 @@ Package.onUse(function (api) {
   // here due to this package's dependency on
   // `String.prototype.padRight` which is polyfilled only in
   // `ecmascript-runtime-client@0.6.2` or newer.
-  api.use(['ejson', 'ecmascript', 'ecmascript-runtime-client@0.6.2']);
+  api.use(['ejson', 'ecmascript', 'ecmascript-runtime-client']);
   api.mainModule('logging.js');
   api.mainModule('logging_cordova.js', 'web.cordova');
 });

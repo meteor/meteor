@@ -38,8 +38,8 @@ Package.onUse(function (api) {
   ]);
 
   // Make weak use of Decimal type on client
-  api.use('mongo-decimal@0.1.1', 'client', {weak: true});
-  api.use('mongo-decimal@0.1.1', 'server');
+  api.use('mongo-decimal', 'client', {weak: true});
+  api.use('mongo-decimal', 'server');
 
   api.use('underscore', 'server');
 

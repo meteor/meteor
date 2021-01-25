@@ -24,3 +24,6 @@ npm-debug.log
 universe
 .babel-cache
 mongo-test-output
+
+# core packages shouldn't have .versions files
+packages/*/.versions

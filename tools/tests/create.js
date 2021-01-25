@@ -7,7 +7,7 @@ selftest.define("create", function () {
   var s = new Sandbox({ warehouse: SIMPLE_WAREHOUSE });
 
   // Can we create an app? Yes!
-  var run = s.run("create", "foobar");
+  var run = s.run("create", "foobar", "--blaze");
   run.waitSecs(60);
   run.match("Created a new Meteor app in 'foobar'.");
   run.match("To run your new app");

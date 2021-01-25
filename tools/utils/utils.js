@@ -44,11 +44,15 @@ exports.parseUrl = function (str, defaults) {
   // for consistency remove colon at the end of protocol
   parsed.protocol = parsed.protocol.replace(/\:$/, '');
 
-  return {
+  var ret = {
     protocol: hasScheme ? parsed.protocol : defaultProtocol,
     hostname: parsed.hostname || defaultHostname,
     port: parsed.port || defaultPort
   };
+  if (parsed.pathname !== '/' && parsed.pathname) {
+    ret.pathname = parsed.pathname;
+  }
+  return ret;
 };
 
 // 'options' is an object with 'hostname', 'port', and 'protocol' keys, such as
