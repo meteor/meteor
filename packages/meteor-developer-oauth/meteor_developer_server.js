@@ -37,8 +37,9 @@ const getTokens = query => {
 
   let response;
   try {
-    response = HTTP.post(
+    response = fetch(
       MeteorDeveloperAccounts._server + "/oauth2/token", {
+        method: 'POST',
         params: {
           grant_type: "authorization_code",
           code: query.code,
@@ -76,9 +77,10 @@ const getTokens = query => {
 
 const getIdentity = accessToken => {
   try {
-    return HTTP.get(
+    return fetch(
       `${MeteorDeveloperAccounts._server}/api/v1/identity`,
       {
+        method: 'GET',
         headers: { Authorization: `Bearer ${accessToken}`}
       }
     ).data;
@@ -91,6 +93,6 @@ const getIdentity = accessToken => {
   }
 };
 
-MeteorDeveloperAccounts.retrieveCredential = 
-  (credentialToken, credentialSecret) => 
+MeteorDeveloperAccounts.retrieveCredential =
+  (credentialToken, credentialSecret) =>
     OAuth.retrieveCredential(credentialToken, credentialSecret);

@@ -31,16 +31,16 @@ const getAccessToken = query => {
 
   let response;
   try {
-    response = HTTP.post(
+    response = fetch(
       "https://github.com/login/oauth/access_token", {
+        method: 'POST',
         headers: {
           Accept: 'application/json',
-          "User-Agent": userAgent
+          "User-Agent": userAgent,
+          Authorization: `Basic ${config.clientId}:${OAuth.openSecret(config.secret)}`
         },
         params: {
           code: query.code,
-          client_id: config.clientId,
-          client_secret: OAuth.openSecret(config.secret),
           redirect_uri: OAuth._redirectUri('github', config),
           state: query.state
         }
@@ -60,8 +60,9 @@ const getAccessToken = query => {
 
 const getIdentity = accessToken => {
   try {
-    return HTTP.get(
+    return fetch(
       "https://api.github.com/user", {
+        method: 'GET',
         headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
       }).data;
   } catch (err) {
@@ -74,8 +75,9 @@ const getIdentity = accessToken => {
 
 const getEmails = accessToken => {
   try {
-    return HTTP.get(
+    return fetch(
       "https://api.github.com/user/emails", {
+        method: 'GET',
         headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
       }).data;
   } catch (err) {

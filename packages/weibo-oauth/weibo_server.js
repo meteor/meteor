@@ -27,7 +27,7 @@ OAuth.registerService('weibo', 2, null, query => {
   };
 });
 
-// return an object containining:
+// return an object containing:
 // - uid
 // - access_token
 // - expires_in: lifetime of this token in seconds (5 years(!) right now)
@@ -38,14 +38,17 @@ const getTokenResponse = query => {
 
   let response;
   try {
-    response = HTTP.post(
-      "https://api.weibo.com/oauth2/access_token", {params: {
-        code: query.code,
-        client_id: config.clientId,
-        client_secret: OAuth.openSecret(config.secret),
-        redirect_uri: OAuth._redirectUri('weibo', config, null, {replaceLocalhost: true}),
-        grant_type: 'authorization_code'
-      }});
+    response = fetch(
+      "https://api.weibo.com/oauth2/access_token", {
+        method: 'POST',
+        params: {
+          code: query.code,
+          client_id: config.clientId,
+          client_secret: OAuth.openSecret(config.secret),
+          redirect_uri: OAuth._redirectUri('weibo', config, null, {replaceLocalhost: true}),
+          grant_type: 'authorization_code'
+        }
+      });
   } catch (err) {
     throw Object.assign(new Error(`Failed to complete OAuth handshake with Weibo. ${err.message}`),
                    {response: err.response});
@@ -64,9 +67,15 @@ const getTokenResponse = query => {
 
 const getIdentity = (accessToken, userId) => {
   try {
-    return HTTP.get(
+    return fetch(
       "https://api.weibo.com/2/users/show.json",
-      {params: {access_token: accessToken, uid: userId}}).data;
+      {
+        method: 'GET',
+        params: {
+          access_token: accessToken,
+          uid: userId
+        }
+      }).data;
   } catch (err) {
     throw Object.assign(new Error("Failed to fetch identity from Weibo. " + err.message),
                    {response: err.response});

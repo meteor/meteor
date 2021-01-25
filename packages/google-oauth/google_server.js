@@ -1,5 +1,6 @@
 import Google from './namespace.js';
 import { Accounts } from 'meteor/accounts-base';
+import { fetch } from 'meteor/fetch';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -92,14 +93,17 @@ const getTokens = query => {
 
   let response;
   try {
-    response = HTTP.post(
-      "https://accounts.google.com/o/oauth2/token", {params: {
-        code: query.code,
-        client_id: config.clientId,
-        client_secret: OAuth.openSecret(config.secret),
-        redirect_uri: OAuth._redirectUri('google', config),
-        grant_type: 'authorization_code'
-      }});
+    response = fetch(
+      "https://accounts.google.com/o/oauth2/token", {
+        method: 'POST',
+        params: {
+          code: query.code,
+          client_id: config.clientId,
+          client_secret: OAuth.openSecret(config.secret),
+          redirect_uri: OAuth._redirectUri('google', config),
+          grant_type: 'authorization_code'
+        }
+      });
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to complete OAuth handshake with Google. ${err.message}`),
@@ -121,9 +125,12 @@ const getTokens = query => {
 
 const getIdentity = accessToken => {
   try {
-    return HTTP.get(
+    return fetch(
       "https://www.googleapis.com/oauth2/v1/userinfo",
-      {params: {access_token: accessToken}}).data;
+      {
+        method: 'GET',
+        params: { access_token: accessToken }
+      }).data;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Google. ${err.message}`),
@@ -134,9 +141,12 @@ const getIdentity = accessToken => {
 
 const getScopes = accessToken => {
   try {
-    return HTTP.get(
+    return fetch(
       "https://www.googleapis.com/oauth2/v1/tokeninfo",
-      {params: {access_token: accessToken}}).data.scope.split(' ');
+      {
+        method: 'GET',
+        params: {access_token: accessToken}
+      }).data.scope.split(' ');
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch tokeninfo from Google. ${err.message}`),

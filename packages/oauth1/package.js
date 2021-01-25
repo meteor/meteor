@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth1-based login services",
-  version: "1.3.0",
+  version: "1.3.1",
 });
 
 Package.onUse(api => {
@@ -14,6 +14,7 @@ Package.onUse(api => {
   ], 'server');
 
   api.use('mongo');
+  api.use('fetch');
 
   api.export('OAuth1Binding', 'server');
   api.export('OAuth1Test', 'server', {testOnly: true});

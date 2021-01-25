@@ -1,5 +1,11 @@
 ## Changelog
 
+## 1.7.5 -
+### Changes
+- Replaced deprecated `http` package with `fetch`.
+
+## 1.7.4 -
+
 ## 1.7.3 - 2020-10-05
 ### Breaking changes
 - N/A

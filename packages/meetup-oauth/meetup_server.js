@@ -40,15 +40,19 @@ const getAccessToken = query => {
 
   let response;
   try {
-    response = HTTP.post(
-      "https://secure.meetup.com/oauth2/access", {headers: {Accept: 'application/json'}, params: {
-        code: query.code,
-        client_id: config.clientId,
-        client_secret: OAuth.openSecret(config.secret),
-        grant_type: 'authorization_code',
-        redirect_uri: OAuth._redirectUri('meetup', config),
-        state: query.state
-      }});
+    response = fetch(
+      "https://secure.meetup.com/oauth2/access", {
+        method: 'POST',
+        headers: {Accept: 'application/json'},
+        params: {
+          code: query.code,
+          client_id: config.clientId,
+          client_secret: OAuth.openSecret(config.secret),
+          grant_type: 'authorization_code',
+          redirect_uri: OAuth._redirectUri('meetup', config),
+          state: query.state
+        }
+      });
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to complete OAuth handshake with Meetup. ${err.message}`),
@@ -65,9 +69,15 @@ const getAccessToken = query => {
 
 const getIdentity = accessToken => {
   try {
-    const response = HTTP.get(
+    const response = fetch(
       "https://api.meetup.com/2/members",
-      {params: {member_id: 'self', access_token: accessToken}});
+      {
+        method: 'GET',
+        params: {
+          member_id: 'self',
+          access_token: accessToken
+        }
+      });
     return response.data.results && response.data.results[0];
   } catch (err) {
     throw Object.assign(

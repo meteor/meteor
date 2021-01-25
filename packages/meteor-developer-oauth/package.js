@@ -1,12 +1,12 @@
 Package.describe({
   summary: 'Meteor developer accounts OAuth flow',
-  version: '1.2.3'
+  version: '1.2.4'
 });
 
 Package.onUse(api => {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('http', ['server']);
+  api.use('fetch', ['server']);
   api.use(['ecmascript', 'service-configuration'], ['client', 'server']);
   api.use('random', 'client');
 

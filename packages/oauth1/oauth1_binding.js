@@ -144,7 +144,8 @@ export class OAuth1Binding {
 
     // Make signed request
     try {
-      const response = HTTP.call(method, url, {
+      const response = fetch(url, {
+        method,
         params,
         headers: {
           Authorization: authString

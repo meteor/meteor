@@ -1,5 +1,6 @@
 Facebook = {};
 import crypto from 'crypto';
+import { fetch } from 'meteor/fetch';
 
 Facebook.handleAuthFromAccessToken = (accessToken, expiresAt) => {
   // include basic fields from facebook
@@ -64,8 +65,9 @@ const getTokenResponse = query => {
     const absoluteUrlOptions = getAbsoluteUrlOptions(query);
     const redirectUri = OAuth._redirectUri('facebook', config, undefined, absoluteUrlOptions);
     // Request an access token
-    responseContent = HTTP.get(
+    responseContent = fetch(
       "https://graph.facebook.com/v8.0/oauth/access_token", {
+        method: 'GET',
         params: {
           client_id: config.appId,
           redirect_uri: redirectUri,
@@ -104,7 +106,8 @@ const getIdentity = (accessToken, fields) => {
   hmac.update(accessToken);
 
   try {
-    return HTTP.get("https://graph.facebook.com/v8.0/me", {
+    return fetch("https://graph.facebook.com/v8.0/me", {
+      method: 'GET',
       params: {
         access_token: accessToken,
         appsecret_proof: hmac.digest('hex'),
