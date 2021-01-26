@@ -34,7 +34,7 @@
   - New package that updates React components using HMR. This is enabled by default in apps that have HMR enabled and use a supported React version. ([docs](https://atmospherejs.com/meteor/react-fast-refresh)) [#11117](https://github.com/meteor/meteor/pull/11117)
   
 
-* `dev-error-overly@0.1.0`
+* `dev-error-overlay@0.1.0`
   - New package that allows you to see build errors and server crashes in your browser during development. Requires the app to have HMR enabled. [#11117](https://github.com/meteor/meteor/pull/11117)
 
 
