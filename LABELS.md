@@ -14,6 +14,7 @@ You can filter issues that are missing status labels using this [filter](https:/
 - `not-ready`: Something is missing, we are not able to work on this issue yet
 - `in-discussion`: We are still discussing how to solve or implement it
 - `needs-reproduction`: We can't reproduce so it's blocked
+- `invalid`: We don't need to analyze
 
 #### Stage 2
 - `ready`: We've decided how to solve or implement it
