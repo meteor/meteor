@@ -3,18 +3,13 @@ Package.describe({
   version: '1.4.3'
 });
 
-Npm.depends({
-  request: "2.88.0"
-});
-
 Package.onUse(function (api) {
   api.versionsFrom('1.12.1');
   api.use([
     'url',
-    // This package intentionally does not depend on ecmascript, so that
-    // ecmascript and its dependencies can depend on http without creating
-    // package dependency cycles.
+    'ecmascript',
     'modules',
+    'fetch',
     'logging' // For deprecation message
   ]);
 
