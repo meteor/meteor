@@ -46,6 +46,8 @@ In development, you may need to diagnose what has made builds start taking a lon
 ## METEOR_PACKAGE_DIRS
 (_development, production_)
 
+Colon-delimited list of local package directories to look in, outside your normal application structure, for example: `METEOR_PACKAGE_DIRS="/usr/local/my_packages/"`. Note that this used to be `PACKAGE_DIRS` but was changed in Meteor 1.4.2.
+
 ## METEOR_SETTINGS
 (_production_)
 
