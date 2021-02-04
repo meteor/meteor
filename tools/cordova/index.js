@@ -16,13 +16,13 @@ export const CORDOVA_PLATFORMS = ['ios', 'android'];
 export const CORDOVA_DEV_BUNDLE_VERSIONS = {
   'cordova-lib': '10.0.0',
   'cordova-common': '4.0.2',
-  'cordova-create': '3.0.0',
+  'cordova-create': '2.0.0',
   'cordova-registry-mapper': '1.1.15',
 };
 
 export const CORDOVA_PLATFORM_VERSIONS = {
   'android': '9.0.0',
-  'ios': '6.1.0',
+  'ios': '6.1.1',
 };
 
 export const SWIFT_VERSION = 5;
