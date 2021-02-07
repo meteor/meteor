@@ -83,7 +83,7 @@ You can learn more about them [here](https://github.com/meteor/react-packages/tr
 
 <h2 id="routing">Routing</h2>
 
-Although there are many solutions for routing with Meteor and React, react-router is the most popular packages right now. 
+Although there are many solutions for routing with Meteor and React, [react-router](https://reactrouter.com/) is the most popular package right now.
 
 As always Meteor does not require anything different when using React Router so you can follow their [quick-start guide](https://reactrouter.com/web/guides/quick-start) to set up React Router in your Meteor project.
 
