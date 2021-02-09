@@ -151,9 +151,11 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 <h3 id="mup">Meteor Up</h3>
 
-[Meteor Up](http://meteor-up.com), often referred to as "mup", is a third-party open-source tool that can be used to deploy Meteor application to any online server over SSH. It handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly.  It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
+[Meteor Up](https://meteor-up.com), often referred to as "mup", is a third-party, open-source tool that can be used to deploy Meteor applications to any online server over SSH. It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server. It also handles setting up the servers, including installing any dependencies, and setting up load balancing and SSL. Although it takes care of many of the details, it can be more work than using a hosting provider.
 
-You can obtain a server running Ubuntu or Debian from many generic hosting providers and Meteor Up can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
+You can obtain a server running Ubuntu or Debian from many generic hosting providers and Meteor Up can SSH into your server with the keys you provide in the config. You can get started with the [tutorial](https://meteor-up.com/getting-started.html).
+
+One of its plugins, [mup-aws-beanstalk](https://github.com/zodern/mup-aws-beanstalk/) deploys Meteor Apps to [AWS Elastic Beanstalk](https://aws.amazon.com/elasticbeanstalk/) instead of a server. It supports autoscaling, load balancing, and zero downtime deploys while taking care of many of the challenges with using Meteor and Elastic Beanstalk.
 
 <h3 id="docker">Docker</h3>
 
