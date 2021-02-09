@@ -38,6 +38,11 @@ When running `meteor build` or `meteor deploy` you can set `METEOR_DISABLE_OPTIM
 
 Since optimistic in-memory caching is one of the more memory-intensive parts of the build system, setting the environment variable `METEOR_DISABLE_OPTIMISTIC_CACHING=1` can help improve memory usage during meteor build, which seems to improve the total build times. This configuration is perfectly safe because the whole point of optimistic caching is to keep track of previous results for future rebuilds, but in the case of meteor `build` or `deploy` there's only ever one initial build, so the extra bookkeeping is unnecessary.
 
+## METEOR_PROFILE
+(_development_)
+
+In development, you may need to diagnose what has made builds start taking a long time. To get the callstack and times during builds, you can run `METEOR_PROFILE=1 meteor`.
+
 ## METEOR_PACKAGE_DIRS
 (_development, production_)
 
