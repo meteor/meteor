@@ -6,6 +6,8 @@ We are excited to have your help building Meteor &mdash; both the platform and t
 
 Before we jump into detailed guidelines for opening and triaging issues and submitting pull requests, here is some information about how our project is structured and resources you should refer to as you start contributing.
 
+Also, please take a few minutes to understand a few terms in Meteor context reading our [Glossary](GLOSSARY.md).
+
 ### Ways to contribute
 
 There are many ways to contribute to the Meteor Project. Here’s a list of technical contributions with increasing levels of involvement and required knowledge of Meteor’s code and operations.  

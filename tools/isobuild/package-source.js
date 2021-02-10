@@ -1263,7 +1263,9 @@ _.extend(PackageSource.prototype, {
       sourceRoot: self.sourceRoot,
       excludes: anyLevelExcludes,
       names: sourceReadOptions.names,
-      include: sourceReadOptions.include
+      include: sourceReadOptions.include,
+      // stringify does not work on Set
+      nodeModulesToRecompile: [...nodeModulesToRecompile],
     }, (key, value) => {
       if (_.isRegExp(value)) {
         return [value.source, value.flags];

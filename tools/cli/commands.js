@@ -505,6 +505,17 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 // create
 ///////////////////////////////////////////////////////////////////////////////
+const DEFAULT_SKELETON = "react";
+const AVAILABLE_SKELETONS = [
+  "apollo",
+  "bare",
+  "blaze",
+  "full",
+  "minimal",
+  DEFAULT_SKELETON,
+  "typescript",
+  "vue"
+];
 
 main.registerCommand({
   name: 'create',
@@ -516,6 +527,7 @@ main.registerCommand({
     bare: { type: Boolean },
     minimal: { type: Boolean },
     full: { type: Boolean },
+    blaze: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
     typescript: { type: Boolean },
@@ -763,24 +775,11 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
-  let skelName = "skel";
-  if (options.minimal) {
-    skelName += "-minimal";
-  } else if (options.bare) {
-    skelName += "-bare";
-  } else if (options.full) {
-    skelName += "-full";
-  } else if (options.react) {
-    skelName += "-react";
-  } else if (options.vue) {
-    skelName += "-vue";
-  } else if (options.typescript) {
-    skelName += "-typescript";
-  } else if (options.apollo) {
-    skelName += "-apollo";
-  }
-
-  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
+  const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
+    !!options[skeleton]);
+  const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
+  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
+    `skel-${skeleton}`), appPath, {
     transformFilename: function (f) {
       return transform(f);
     },
@@ -883,18 +882,13 @@ main.registerCommand({
       Console.options({ indent: 2 }));
 
   Console.info("");
-  Console.info("When you’re ready to deploy and host your new Meteor application, check out Galaxy:");
+  Console.info("When you’re ready to deploy and host your new Meteor application, check out Cloud:");
   Console.info(
-    Console.url("https://www.meteor.com/hosting"),
+    Console.url("https://www.meteor.com/cloud"),
       Console.options({ indent: 2 }));
 
-  if (! options.bare &&
-      ! options.minimal &&
-      ! options.full &&
-      ! options.react &&
-      ! options.vue &&
-      ! options.typescript) {
-    // Notify people about --bare, --minimal, --full, --react, --vue, --apollo and --typescript.
+  if (!!skeletonExplicitOption) {
+    // Notify people about the skeleton options
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
@@ -908,6 +902,7 @@ main.registerCommand({
     cmd("meteor create --vue        # to create a basic Vue-based app");
     cmd("meteor create --apollo     # to create a basic Apollo + React app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
+    cmd("meteor create --blaze      # to create an app using Blaze");
   }
 
   Console.info("");
@@ -1437,6 +1432,8 @@ main.registerCommand({
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
     'cache-build': { type: Boolean },
+    free: { type: Boolean },
+    mongo: { type: Boolean }
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1517,6 +1514,8 @@ function deployCommand(options, { rawOptions }) {
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
+    free: options.free,
+    mongo: options.mongo,
     buildOptions: buildOptions,
     rawOptions,
     deployPollingTimeoutMs,

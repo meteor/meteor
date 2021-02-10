@@ -6,6 +6,7 @@ var hasOwn = Object.prototype.hasOwnProperty;
 /**
  * @summary Perform an outbound HTTP request.
  * @locus Anywhere
+ * @deprecated
  * @param {String} method The [HTTP method](http://en.wikipedia.org/wiki/HTTP_method) to use, such as "`GET`", "`POST`", or "`HEAD`".
  * @param {String} url The URL to retrieve.
  * @param {Object} [options]

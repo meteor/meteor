@@ -1,14 +1,85 @@
 ## vNEXT, unreleased
 
-### Breaking changes
+### Changes
 
-* `node` has been updated to v14.15.4, this means among other things that Meteor is now build with [full-icu](https://nodejs.org/api/intl.html) support.
+#### Highlights
+
+- Node.js has been updated to v14.
+
+#### Meteor Version Release
+
+* `meteor-tool@2.1`
+  - Node.js has been updated to v14.15.4, this means among other things that Meteor is now built with [full-icu](https://nodejs.org/api/intl.html) support.
+
+### Breaking changes
 
 ### Migration steps
 
-N/A
+## v2.0, 2021-01-20
 
 ### Changes
+
+#### Highlights
+
+- Free deploy on [Cloud](https://www.meteor.com/cloud): Deploy for free to Cloud with one command: `meteor deploy myapp.meteorapp.com --free`. ([docs](https://docs.meteor.com/commandline.html#meteordeploy))
+  
+
+- Deploy including MongoDB on [Cloud](https://www.meteor.com/cloud): Deploy including MongoDB in a shared instance for free to Cloud with one command: `meteor deploy myapp.meteorapp.com --free --mongo`. ([docs](https://docs.meteor.com/commandline.html#meteordeploy))
+  
+
+- Hot Module Replacement (HMR): Updates the javascript modules in a running app that were modified during a rebuild. Reduces the feedback cycle while developing so you can view and test changes quicker (it even updates the app before the build has finished). Enabled by adding the `hot-module-replacement` package to an app. React components are automatically updated by default using React Fast Refresh. Integrations with other libraries and view layers can be provided by third party packages. Support for Blaze is coming soon. This first version supports app code in the modern web architecture. ([docs](https://guide.meteor.com/build-tool.html#hot-module-replacement)) [#11117](https://github.com/meteor/meteor/pull/11117)
+
+#### Meteor Version Release
+
+* `meteor-tool@2.0`
+  - `meteor create my-app` now creates by default a project using React. If you want to create a new project using Blaze you should use the new option `--blaze`.
+    - `meteor create --react my-app` is still going to create a React project.
+  - `meteor create --free` deploy for free to Cloud with one command: `meteor deploy myapp.meteorapp.com --free`. ([docs](https://docs.meteor.com/commandline.html#meteordeploy)).
+  - `meteor create --free --mongo` deploy including MongoDB in a shared instance for free to Cloud with one command: `meteor deploy myapp.meteorapp.com --free --mongo`. ([docs](https://docs.meteor.com/commandline.html#meteordeploy))
+  - `isobuild` fixes a regression on recompiling node modules in different architectures. [#11290](https://github.com/meteor/meteor/pull/11290)
+  - `isobuild` converts npm-discards.js to TypeScript. [#10663](https://github.com/meteor/meteor/pull/10663)
+  - `cordova` ensures the pathname of the rootUrl is used in the mobile URL. [#11053](hhttps://github.com/meteor/meteor/pull/11053)
+  - Add `file.hmrAvailable()` for compiler plugins to check if a file meets the minimum requirements to be updated with HMR [#11117](https://github.com/meteor/meteor/pull/11117)
+
+
+* `hot-module-replacement@1.0.0`
+  - New package that enables Hot Module Replacement for the Meteor app and provides an API to configure how updates are applied. HMR reduces the feedback cycle while developing by updating modified javascript modules within the running application. ([docs](https://docs.meteor.com/packages/hot-module-replacement.html)) [#11117](https://github.com/meteor/meteor/pull/11117)
+  - These packages have been updated to support HMR: `autoupdate@1.7.0`, `babel-compiler@7.6.0`, `ddp-client@2.4.0`, `dynamic-import@0.6.0`, `ecmascript@0.15.0`, `modules@0.16.0`, `modules-runtime-hot@0.13.0`, `standard-minifier-css@1.7.2`, `webapp@1.10.0`, `webapp-hashing@1.1.0` 
+  
+
+* `react-fast-refresh@0.1.0`
+  - New package that updates React components using HMR. This is enabled by default in apps that have HMR enabled and use a supported React version. ([docs](https://atmospherejs.com/meteor/react-fast-refresh)) [#11117](https://github.com/meteor/meteor/pull/11117)
+  
+
+* `dev-error-overlay@0.1.0`
+  - New package that allows you to see build errors and server crashes in your browser during development. Requires the app to have HMR enabled. [#11117](https://github.com/meteor/meteor/pull/11117)
+
+
+* `accounts-base@1.8.0` and `accounts-password@1.7.0`
+  - Extra parameters can now be added to reset password, verify e-mail and enroll account links that are generated for account e-mails. By default, these are added as search parameters to the generated url. You can pass them as an object in the appropriate functions. E.g. `Accounts.sendEnrollmentEmail(userId, email, null, extraParams);`. [#11288](https://github.com/meteor/meteor/pull/11288)
+    
+
+* `logging@1.2.0`
+  - Updates dependencies and make debug available for use in non production environments. [#11068](https://github.com/meteor/meteor/pull/11068)
+
+#### Independent Releases
+* `react-meteor-data@2.2.0`
+  - Fix issue with useTracker and Subscriptions when using deps. [#306](https://github.com/meteor/react-packages/pull/306)
+  - Remove version constraint on core TypeScript package [#308](https://github.com/meteor/react-packages/pull/308)
+  
+
+* `http`
+    - It has been deprecated. [#11068](https://github.com/meteor/meteor/pull/11068)
+
+### Breaking changes
+
+* `http` package has been deprecated. Please start on migrating towards the [fetch](https://atmospherejs.com/meteor/fetch) package instead.
+
+### Migration steps
+
+Simple run `meteor update` in your app.
+
+Great new features and no breaking changes (except one package deprecation). You can always check our [Roadmap](./Roadmap.md) to understand what is next.
 
 ## v1.12.1, 2021-01-06
 

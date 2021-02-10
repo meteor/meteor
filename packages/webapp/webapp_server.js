@@ -267,6 +267,7 @@ Meteor.startup(function () {
   WebApp.calculateClientHash = WebApp.clientHash = getter("version");
   WebApp.calculateClientHashRefreshable = getter("versionRefreshable");
   WebApp.calculateClientHashNonRefreshable = getter("versionNonRefreshable");
+  WebApp.calculateClientHashReplaceable = getter("versionReplaceable");
   WebApp.getRefreshableAssets = getter("refreshableAssets");
 });
 
@@ -738,7 +739,17 @@ function runWebAppServer() {
       versionRefreshable: () => WebAppHashing.calculateClientHash(
         manifest, type => type === "css", configOverrides),
       versionNonRefreshable: () => WebAppHashing.calculateClientHash(
-        manifest, type => type !== "css", configOverrides),
+        manifest, (type, replaceable) => type !== "css" && !replaceable, configOverrides),
+      versionReplaceable: () => WebAppHashing.calculateClientHash(
+        manifest, (_type, replaceable) => {
+          if (Meteor.isProduction && replaceable) {
+            throw new Error('Unexpected replaceable file in production');
+          }
+
+          return replaceable
+        },
+        configOverrides
+      ),
       cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,
       PUBLIC_SETTINGS,
     };
