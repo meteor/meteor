@@ -545,9 +545,9 @@ export function listTests(options) {
   const grouped = groupTestsByFile(testList.filteredTests);
 
   Object.keys(grouped).forEach((file) => {
-    Console.rawInfo(file + ':\n');
+    Console.rawInfo(`${file}.js\n`);
     grouped[file].forEach((test) => {
-      Console.rawInfo('  - ' + test.name +
+      Console.rawInfo('  - test:' + test.name +
                       (test.tags.length ? ' [' + test.tags.join(' ') + ']'
                       : '') + '\n');
     });
@@ -580,7 +580,7 @@ export function runTests(options) {
 
   testList.filteredTests.forEach((test) => {
     totalRun++;
-    Console.error(test.file + ": " + test.name + " ... ");
+    Console.error(`${test.file}.js test:${test.name} ... `);
 
     Run.runTest(
       testList,
@@ -625,7 +625,7 @@ export function runTests(options) {
     Console.error(failureCount + " failure" +
                   (failureCount > 1 ? "s" : "") + ":");
     testList.failedTests.forEach((test) => {
-      Console.rawError(`  - ${test.file}: ${test.name}\n`);
+      Console.rawError(`  - ${test.file}.js: test:${test.name}\n`);
     });
     return 1;
   }
