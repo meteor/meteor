@@ -579,6 +579,7 @@ class Console extends ConsoleBase {
     this._throttledYield = new ThrottledYield();
 
     this.verbose = false;
+    this._simpleDebug = false;
 
     // Legacy helpers
     this.stdout = Object.create(null);
@@ -591,11 +592,16 @@ class Console extends ConsoleBase {
 
     this._logThreshold = LEVEL_CODE_INFO;
     var logspec = process.env.METEOR_LOG;
+
     if (logspec) {
       logspec = logspec.trim().toLowerCase();
       if (logspec == 'debug') {
         this._logThreshold = LEVEL_CODE_DEBUG;
       }
+    }
+
+    if (process.env.METEOR_SIMPLE_DEBUG) {
+      this._simpleDebug = true;
     }
 
     cleanupOnExit((sig) => {
@@ -762,6 +768,17 @@ class Console extends ConsoleBase {
 
     var message = this._format(args);
     this._print(LEVEL_DEBUG, message);
+  }
+
+  // Don't use console and so it does not affect tests.
+  // like this.fullBuffer from matcher.
+  simpleDebug(...args) {
+    if (! this._simpleDebug) {
+      return;
+    }
+
+    var message = this._format(args);
+    process.stdout.write( '\n*** simpleDebug ***\n' + message + '\n*** end simpleDebug ***\n');
   }
 
   // By default, Console.debug automatically line wraps the output.
