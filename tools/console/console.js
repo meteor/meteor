@@ -595,7 +595,7 @@ class Console extends ConsoleBase {
 
     if (logspec) {
       logspec = logspec.trim().toLowerCase();
-      if (logspec == 'debug') {
+      if (logspec === 'debug') {
         this._logThreshold = LEVEL_CODE_DEBUG;
       }
     }
