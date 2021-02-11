@@ -558,6 +558,22 @@ export function listTests(options) {
   Console.error(testList.generateSkipReport());
 }
 
+const shouldSkipCurrentTest = ({currentTestIndex, options: {skip, limit} = {}}) => {
+  if (!skip && !limit) {
+    return false;
+  }
+  if (limit && skip) {
+    return currentTestIndex < skip || (currentTestIndex - skip) >= limit;
+  }
+  if (limit) {
+    return currentTestIndex >= limit;
+  }
+  if (skip) {
+    return currentTestIndex < skip;
+  }
+  return false;
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 // Running tests
 ///////////////////////////////////////////////////////////////////////////////
@@ -578,9 +594,26 @@ export function runTests(options) {
 
   let totalRun = 0;
 
-  testList.filteredTests.forEach((test) => {
+  testList.filteredTests.forEach((test, index) => {
     totalRun++;
-    Console.error(`${test.file}.js test:${test.name} ... `);
+    const shouldSkip = shouldSkipCurrentTest({
+      currentTestIndex: index,
+      options,
+    });
+    const skipMessage = shouldSkip
+      ? options.plan
+        ? 'will skip'
+        : 'skipped'
+      : options.plan
+      ? 'will run'
+      : 'running';
+    const countMessage = `(${index + 1}/${testList.filteredTests.length})`;
+    const testMessage = `${test.file}.js test:${test.name} ...`;
+    Console.error(`${skipMessage} ${countMessage} ${testMessage}`);
+
+    if (shouldSkip || options.plan) {
+      return;
+    }
 
     Run.runTest(
       testList,
