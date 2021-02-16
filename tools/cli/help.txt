@@ -530,9 +530,9 @@ Options:
                   same
   --free          When deploying an app for the first time, you can pass this option
                   to deploy your app in the Galaxy's free mode.
-  --plan          You change the app plan by providing this argument with one of the
-                  following values: professional, essentials, or free. Be aware that
-                  this argument overwrites the --free argument.
+  --plan          You can change the app plan by providing this argument with one of
+                  the following values: professional, essentials, or free. Be aware
+                  that this argument overwrites the --free argument.
   --mongo         If this flag is true and it's not provided a mongo url in the settings
                   ('galaxy.meteor.com'.env.MONGO_URL), when deploying, Galaxy will create
                   a database to your app in its shared cluster and will insert the URL in
