@@ -1433,6 +1433,7 @@ main.registerCommand({
     'no-wait': { type: Boolean },
     'cache-build': { type: Boolean },
     free: { type: Boolean },
+    plan: { type: String },
     mongo: { type: Boolean }
   },
   allowUnrecognizedOptions: true,
@@ -1506,10 +1507,15 @@ function deployCommand(options, { rawOptions }) {
   if (options['deploy-polling-timeout']) {
     deployPollingTimeoutMs = options['deploy-polling-timeout'];
   }
+  let plan = null;
+  if (options.plan) {
+    plan = options.plan;
+  }
 
   const isCacheBuildEnabled = !!options['cache-build'];
   const waitForDeploy = !options['no-wait'];
 
+  console.log('deployCommand', options.plan);
   var deployResult = deploy.bundleAndDeploy({
     projectContext: projectContext,
     site: site,
@@ -1517,6 +1523,7 @@ function deployCommand(options, { rawOptions }) {
     free: options.free,
     mongo: options.mongo,
     buildOptions: buildOptions,
+    plan,
     rawOptions,
     deployPollingTimeoutMs,
     waitForDeploy,
