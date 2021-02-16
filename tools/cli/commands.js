@@ -1515,7 +1515,6 @@ function deployCommand(options, { rawOptions }) {
   const isCacheBuildEnabled = !!options['cache-build'];
   const waitForDeploy = !options['no-wait'];
 
-  console.log('deployCommand', options.plan);
   var deployResult = deploy.bundleAndDeploy({
     projectContext: projectContext,
     site: site,
