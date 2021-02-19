@@ -208,6 +208,13 @@ packages: {
 This is necessary as our database provider does not have certificates installed on every machine and we don't want to force apps to have this certificate. More about this option [here](https://docs.meteor.com/api/collections.html#mongo_connection_options_settings)
 {% endpullquote %}
 
+
+You can change the app plan by providing argument `--plan` with one of the following values: professional, essentials, or free. Be aware that this argument overwrites the `--free` argument.
+
+{% pullquote warning %}
+The `plan` option is available to Meteor 2.1+
+{% endpullquote %}
+
 <h2 id="meteorupdate">meteor update</h2>
 
 Attempts to bring you to the latest version of Meteor, and then to upgrade your
