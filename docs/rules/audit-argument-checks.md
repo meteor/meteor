@@ -41,14 +41,26 @@ Meteor.methods({
   }
 })
 
+Meteor.methods({
+  foo: function (bar) {
+    var ret;
+    ret = check(bar, Match.Any)
+  }
+})
+
 ```
+
+For a check function to be considered "called", it must be called at the
+top level of the method or publish function (not e.g. within an `if` block),
+either as a lone expression statement or as an assignment statement where the
+right-hand side is just the function call (as in the last example above).
 
 ### Options
 
 If you define your own functions that call `check`, you can provide a list of
 such functions via the configuration `checkEquivalents`.  This rule assumes
 that these functions effectively check their first argument (an identifier or
-a list of identifiers).
+an array of identifiers).
 
 For example, in `.eslintrc.json`, you can specify the following configuration:
 

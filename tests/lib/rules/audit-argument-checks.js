@@ -42,6 +42,15 @@ ruleTester.run('audit-argument-checks', rule, {
       code: 'Meteor.publish("foo", function (bar) { checkId(bar); })',
       options: [{ checkEquivalents: ['checkId'] }],
     },
+    {
+      code:
+        'Meteor.publish("foo", function (bar) { var r; r = checkId(bar); })',
+      options: [{ checkEquivalents: ['checkId'] }],
+    },
+    {
+      code: 'Meteor.publish("foo", function () { checkId(); })',
+      options: [{ checkEquivalents: ['checkId'] }],
+    },
 
     'Meteor.methods()',
     'Meteor.methods({ x: function () {} })',
