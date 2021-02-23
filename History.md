@@ -1,3 +1,25 @@
+## v2.1, 2021-02-23
+
+### Changes
+
+#### Highlights
+
+- Node.js security [update](https://nodejs.org/en/blog/vulnerability/february-2021-security-releases/) to 12.21.0
+
+#### Meteor Version Release
+
+* `meteor-tool@2.1`
+  - Node.js security [update](https://nodejs.org/en/blog/vulnerability/february-2021-security-releases/) to 12.21.0
+  - `meteor create my-app --plan professional` new flag `plan` to enable you to choose a plan from the deploy command.
+  
+### Breaking changes
+
+* N/A
+
+### Migration steps
+
+* N/A
+
 ## v2.0, 2021-01-20
 
 ### Changes
