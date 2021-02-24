@@ -14,7 +14,7 @@ PRs to the roadmap are welcome. If you are willing to contribute please open a P
 
 Updated at: 2021/01/20
 
-V2 initial release (2.0) was delivered today (2021/01/20) with Hot Module Replacement (HMR) for React and Free deploy including MongoDB on [Cloud](https://www.meteor.com/cloud) and some other features. See all the changes [here](./History.md). 
+V2 initial release (2.0) was delivered today (2021/01/20) with Hot Module Replacement (HMR), React Fast Refresh, and Free deploy including MongoDB on [Cloud](https://www.meteor.com/cloud) and some other features. See all the changes [here](./History.md). 
 
 We expect to have HMR also working for Blaze in Meteor 2.1 in the following weeks (it's currently on [beta](https://github.com/meteor/blaze/pull/313)).
 
