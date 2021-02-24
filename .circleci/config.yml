@@ -154,8 +154,8 @@ jobs:
             ../meteor npx tsc --noEmit
             popd
             ./meteor --get-ready
-          # shouldn't take longer than 20 minutes
-          no_output_timeout: 20m
+          # shouldn't take longer than 30 minutes
+          no_output_timeout: 30m
       - run:
           <<: *run_save_node_bin
       - persist_to_workspace:
