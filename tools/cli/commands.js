@@ -2300,7 +2300,7 @@ main.registerCommand({
     // Limit tests, after filter
     limit: { type: Number },
     // Don't run tests, just show the plan after filter, skip and limit
-    plan: { type: Boolean },
+    preview: { type: Boolean },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2405,7 +2405,7 @@ main.registerCommand({
     'with-tag': options['with-tag'],
     skip: options.skip,
     limit: options.limit,
-    plan: options.plan,
+    preview: options.preview,
   });
 
 });
