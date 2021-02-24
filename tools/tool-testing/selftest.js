@@ -601,17 +601,17 @@ export function runTests(options) {
       options,
     });
     const skipMessage = shouldSkip
-      ? options.plan
+      ? options.preview
         ? 'will skip'
         : 'skipped'
-      : options.plan
+      : options.preview
       ? 'will run'
       : 'running';
     const countMessage = `(${index + 1}/${testList.filteredTests.length})`;
     const testMessage = `${test.file}.js test:${test.name} ...`;
     Console.error(`${skipMessage} ${countMessage} ${testMessage}`);
 
-    if (shouldSkip || options.plan) {
+    if (shouldSkip || options.preview) {
       return;
     }
 
