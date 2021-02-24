@@ -152,9 +152,9 @@ jobs:
             # Ensure that meteor/tools has no TypeScript errors.
             ../meteor npx tsc --noEmit
             popd
-#            METEOR_TEST_PRINT_LINKER_CACHE_DEBUG=1 METEOR_PROFILE=1 ./meteor --get-ready
-          # shouldn't take longer than 30 minutes
-          no_output_timeout: 30m
+            ./meteor --get-ready
+          # shouldn't take longer than 60 minutes
+          no_output_timeout: 60m
       - run:
           <<: *run_save_node_bin
       - persist_to_workspace:
