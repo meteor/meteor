@@ -2301,6 +2301,12 @@ main.registerCommand({
     'with-tag': { type: String },
     junit: { type: String },
     retries: { type: Number, default: 2 },
+    // Skip tests, after filter
+    skip: { type: Number },
+    // Limit tests, after filter
+    limit: { type: Number },
+    // Don't run tests, just show the plan after filter, skip and limit
+    preview: { type: Boolean },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2402,7 +2408,10 @@ main.registerCommand({
     clients: clients,
     junit: options.junit && files.pathResolve(options.junit),
     'without-tag': options['without-tag'],
-    'with-tag': options['with-tag']
+    'with-tag': options['with-tag'],
+    skip: options.skip,
+    limit: options.limit,
+    preview: options.preview,
   });
 
 });
