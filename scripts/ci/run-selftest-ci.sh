@@ -19,12 +19,6 @@ echo "meteor get-ready starting"
 echo "meteor get-ready finished"
 
 # selftest
-echo "meteor self-test isolated starting"
-./meteor self-test \
-              'add debugOnly and prodOnly packages' \
-              --retries ${METEOR_SELF_TEST_RETRIES} \
-              --headless
-echo "meteor self-test isolated finished"
 echo "meteor self-test first 0-50 starting"
 ./meteor self-test \
               --headless \
@@ -51,3 +45,9 @@ echo "meteor self-test first 101- starting"
               --exclude "add debugOnly and prodOnly packages" \
               --skip 100
 echo "meteor self-test first 101- finished"
+echo "meteor self-test isolated starting"
+./meteor self-test \
+              'add debugOnly and prodOnly packages' \
+              --retries ${METEOR_SELF_TEST_RETRIES} \
+              --headless
+echo "meteor self-test isolated finished"
