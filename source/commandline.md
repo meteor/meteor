@@ -184,7 +184,7 @@ To unset `Meteor.settings`, pass an empty settings file.
 `free` and `mongo` options were introduced in Meteor 2.0
 {% endpullquote %}
 
-You can run your app for free using the option `--free`. But, there are some limitations. The first one is that you cannot use a custom domain to run a free app. Your domain must contain a Meteor domain name (`.meteorapp.com` to US region, `.au.meteorapp.com` to Asia region, or `.eu.meteorapp.com` to Europe region). Second thing you must know is that your free apps have Cold Start enabled. Cold Start means that your app will stop if it has no connection for 3 minutes, and it will go automatically up when someone tries to connect to it. The third thing you must know is that free apps run on one, and just one, Tiny container. This is important to know, because Tiny containers are NOT meant to production environment, so even small apps can crash with a lot of connections. To keep your app on free, you always need to provide this option.
+You can run your app for free using the option `--free`. But, there are some limitations. The first one is that you cannot use a custom domain to run a free app. Your domain must contain a Meteor domain name (`.meteorapp.com` to US region, `.au.meteorapp.com` to Asia region, or `.eu.meteorapp.com` to Europe region). Second thing you must know is that your free apps have Cold Start enabled. Cold Start means that your app will stop if it has no connection for 10 minutes, and it will go automatically up when someone tries to connect to it. The third thing you must know is that free apps run on one, and just one, Tiny container. This is important to know, because Tiny containers are NOT meant to production environment, so even small apps can crash with a lot of connections. To keep your app on free, you always need to provide this option.
 
 With the option `--mongo` you can deploy your app without having to pay for a MongoDB provider. By providing this option, Galaxy will create a database for you in our shared cluster and inject the mongo URL on your settings. So with this, you don't even need to provide the settings file anymore (if your settings files just have the mongo URL of course). This is great to test apps, but it shouldn't be used in a production environment, as you will be running in a shared Cluster with limited space. The rules behind this option are: If it is the first deploy of the app, and you provided the option `--mongo`, after the deploy is finished you will receive your mongo URL on your console (you can also see your URL on Galaxy in your app's version). You can put that URL on your settings file if want to. If you try to do a second without the option `--mongo` and without providing a mongo URL on your settings, your deploy will fail as usual. If you provide the option `--mongo` and a mongo URL, the mongo URL on your settings file is the one that will be used by Galaxy to connect your app to a MongoDB. One last thing, you need to have at least one document in your database so Meteor is really going to instantiate it. Then you will be able to access it using any MongoDB client with the provided URI.
 
@@ -206,6 +206,13 @@ packages: {
 }
 ```
 This is necessary as our database provider does not have certificates installed on every machine and we don't want to force apps to have this certificate. More about this option [here](https://docs.meteor.com/api/collections.html#mongo_connection_options_settings)
+{% endpullquote %}
+
+
+You can change the app plan by providing argument `--plan` with one of the following values: professional, essentials, or free. Be aware that this argument overwrites the `--free` argument.
+
+{% pullquote warning %}
+The `plan` option is available to Meteor 2.1+
 {% endpullquote %}
 
 <h2 id="meteorupdate">meteor update</h2>
