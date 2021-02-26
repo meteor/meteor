@@ -15,5 +15,94 @@ echo "meteor get-ready finished"'''
       }
     }
 
+    stage('Selftest 0-20') {
+      parallel {
+        stage('Selftest 0-20') {
+          steps {
+            sh '''./meteor self-test \\
+              --headless \\
+              --without-tag "custom-warehouse" \\
+              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --exclude "add debugOnly and prodOnly packages" \\
+              --limit 20 \\
+              --skip 0'''
+          }
+        }
+
+        stage('Selftest 21-40') {
+          steps {
+            sh '''./meteor self-test \\
+              --headless \\
+              --without-tag "custom-warehouse" \\
+              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --exclude "add debugOnly and prodOnly packages" \\
+              --limit 20 \\
+              --skip 20'''
+          }
+        }
+
+        stage('Selftest 41-60') {
+          steps {
+            sh '''./meteor self-test \\
+              --headless \\
+              --without-tag "custom-warehouse" \\
+              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --exclude "add debugOnly and prodOnly packages" \\
+              --limit 20 \\
+              --skip 40'''
+          }
+        }
+
+        stage('Selftest 61-80') {
+          steps {
+            sh '''./meteor self-test \\
+              --headless \\
+              --without-tag "custom-warehouse" \\
+              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --exclude "add debugOnly and prodOnly packages" \\
+              --limit 20 \\
+              --skip 60'''
+          }
+        }
+
+        stage('Selftest 81-100') {
+          steps {
+            sh '''./meteor self-test \\
+              --headless \\
+              --without-tag "custom-warehouse" \\
+              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --exclude "add debugOnly and prodOnly packages" \\
+              --limit 20 \\
+              --skip 80'''
+          }
+        }
+
+        stage('Selftest 101-120') {
+          steps {
+            sh '''./meteor self-test \\
+              --headless \\
+              --without-tag "custom-warehouse" \\
+              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --exclude "add debugOnly and prodOnly packages" \\
+              --limit 20 \\
+              --skip 100'''
+          }
+        }
+
+        stage('Selftest >121') {
+          steps {
+            sh '''./meteor self-test \\
+              --headless \\
+              --without-tag "custom-warehouse" \\
+              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --exclude "add debugOnly and prodOnly packages" \\
+              --limit 0 \\
+              --skip 120'''
+          }
+        }
+
+      }
+    }
+
   }
 }
