@@ -10,7 +10,7 @@ echo "typescript compiler starting"
 echo "typescript compiler finished"
 popd
 echo "meteor get-ready starting"
-METEOR_PROFILE=1000 ./meteor --get-ready
+NODE_OPTIONS="--max-old-space-size=2048" METEOR_PROFILE=1000 ./meteor --get-ready
 echo "meteor get-ready finished"'''
       }
     }
