@@ -22,7 +22,7 @@ echo "meteor get-ready finished"'''
             sh '''./meteor self-test \\
               --headless \\
               --without-tag "custom-warehouse" \\
-              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --retries 0 \\
               --exclude "add debugOnly and prodOnly packages" \\
               --limit 20 \\
               --skip 0'''
@@ -34,7 +34,7 @@ echo "meteor get-ready finished"'''
             sh '''./meteor self-test \\
               --headless \\
               --without-tag "custom-warehouse" \\
-              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --retries 0 \\
               --exclude "add debugOnly and prodOnly packages" \\
               --limit 20 \\
               --skip 20'''
@@ -46,7 +46,7 @@ echo "meteor get-ready finished"'''
             sh '''./meteor self-test \\
               --headless \\
               --without-tag "custom-warehouse" \\
-              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --retries 0 \\
               --exclude "add debugOnly and prodOnly packages" \\
               --limit 20 \\
               --skip 40'''
@@ -58,7 +58,7 @@ echo "meteor get-ready finished"'''
             sh '''./meteor self-test \\
               --headless \\
               --without-tag "custom-warehouse" \\
-              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --retries 0 \\
               --exclude "add debugOnly and prodOnly packages" \\
               --limit 20 \\
               --skip 60'''
@@ -70,7 +70,7 @@ echo "meteor get-ready finished"'''
             sh '''./meteor self-test \\
               --headless \\
               --without-tag "custom-warehouse" \\
-              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --retries 0 \\
               --exclude "add debugOnly and prodOnly packages" \\
               --limit 20 \\
               --skip 80'''
@@ -82,7 +82,7 @@ echo "meteor get-ready finished"'''
             sh '''./meteor self-test \\
               --headless \\
               --without-tag "custom-warehouse" \\
-              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --retries 0 \\
               --exclude "add debugOnly and prodOnly packages" \\
               --limit 20 \\
               --skip 100'''
@@ -94,7 +94,7 @@ echo "meteor get-ready finished"'''
             sh '''./meteor self-test \\
               --headless \\
               --without-tag "custom-warehouse" \\
-              --retries ${METEOR_SELF_TEST_RETRIES} \\
+              --retries 0 \\
               --exclude "add debugOnly and prodOnly packages" \\
               --limit 0 \\
               --skip 120'''
