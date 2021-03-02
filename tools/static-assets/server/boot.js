@@ -224,8 +224,9 @@ var specialArgPaths = {
 
 var loadServerBundles = Profile("Load server bundles", function () {
   var infos = [];
+  console.log(`serverJson`, serverJson);
 
-  serverJson.load.forEach(function (fileInfo) {
+  for (const fileInfo of serverJson.load) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
     var nonLocalNodeModulesPaths = [];
 
@@ -245,6 +246,8 @@ var loadServerBundles = Profile("Load server bundles", function () {
         }
       });
     }
+
+    console.log(`addNodeModulesPath`, fileInfo.path);
 
     // Add dev_bundle/server-lib/node_modules.
     addNodeModulesPath("node_modules");
@@ -401,11 +404,15 @@ var loadServerBundles = Profile("Load server bundles", function () {
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
+
+    console.log(`require('vm').runInThisContext`, fileInfo.path);
+
     var func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
       displayErrors: true
     });
-
+    console.log(`scriptPath`, scriptPath, func);
+    console.log(`[Npm, Assets]`, fileInfo.path);
     var args = [Npm, Assets];
 
     specialKeys.forEach(function (key) {
@@ -418,14 +425,21 @@ var loadServerBundles = Profile("Load server bundles", function () {
         args
       });
     } else {
+      console.log(` Profile(fileInfo.path, func).apply`, fileInfo.path);
+      const isAsync = func.constructor.name === "AsyncFunction";
+      console.log(`isAsync`, isAsync);
+
       // Allows us to use code-coverage if the debugger is not enabled
       Profile(fileInfo.path, func).apply(global, args);
     }
-  });
+    console.log(`after Profile(fileInfo.path, func).apply(global, args)`, fileInfo.path);
+  }
+  console.log(`maybeWaitForDebuggerToAttach`);
 
   maybeWaitForDebuggerToAttach();
 
   infos.forEach(info => {
+    console.log(`infos.forEach => info.fn.apply(global, info.args)`, info.path);
     info.fn.apply(global, info.args);
   });
 });
@@ -477,10 +491,20 @@ var runMain = Profile("Run main()", function () {
   }
 });
 
-Fiber(function () {
-  Profile.run("Server startup", function () {
-    loadServerBundles();
-    callStartupHooks();
-    runMain();
-  });
-}).run();
+console.log(`fibers::async`);
+  try {
+
+    Profile.run("Server startup", function () {
+      console.log(`fibers::loadServerBundles`);
+
+      loadServerBundles();
+      console.log(`fibers::callStartupHooks`);
+
+      callStartupHooks();
+      console.log(`fibers::runMain`);
+
+      runMain();
+    });
+  } catch (e) {
+    console.error('Error in boot',e )
+  }

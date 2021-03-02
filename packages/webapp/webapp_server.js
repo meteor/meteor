@@ -786,16 +786,18 @@ onMessage('webapp-reload-client', async ({ arch }) => {
   WebAppInternals.generateClientProgram(arch);
 });
 
-function runWebAppServer() {
+async function runWebAppServer() {
+  console.log(`runWebAppServer`);
+
   var shuttingDown = false;
   var syncQueue = new Meteor._SynchronousQueue();
+  console.log(`var syncQueue = new Meteor._SynchronousQueue()`);
 
   var getItemPathname = function(itemUrl) {
     return decodeURIComponent(parseUrl(itemUrl).pathname);
   };
 
-  WebAppInternals.reloadClientPrograms = function() {
-    syncQueue.runTask(function() {
+  WebAppInternals.reloadClientPrograms = async function () {
       const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
@@ -811,7 +813,6 @@ function runWebAppServer() {
         Log.error('Error reloading the client program: ' + e.stack);
         process.exit(1);
       }
-    });
   };
 
   // Pause any incoming requests and make them wait for the program to be
@@ -1035,7 +1036,10 @@ function runWebAppServer() {
     }));
   }
 
-  WebAppInternals.reloadClientPrograms();
+  console.log(`WebAppInternals.reloadClientPrograms()`);
+
+  await WebAppInternals.reloadClientPrograms();
+  console.log(`after WebAppInternals.reloadClientPrograms()`);
 
   // webserver
   var app = connect();
@@ -1303,6 +1307,8 @@ function runWebAppServer() {
   });
 
   var httpServer = createServer(app);
+  console.log(`httpServer`);
+
   var onListeningCallbacks = [];
 
   // After 5 seconds w/o data on a socket, kill it.  On the other hand, if
@@ -1485,4 +1491,4 @@ WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
 
 // Start the server!
-runWebAppServer();
+runWebAppServer().catch(e => console.error('Error on runWebAppServer', e));
