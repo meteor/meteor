@@ -8,6 +8,7 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 var Console = require('../console/console.js').Console;
 var files = require('../fs/files');
+var Profile = require('../tool-env/profile').Profile;
 var warehouse = require('../packaging/warehouse.js');
 var tropohouse = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
@@ -867,7 +868,7 @@ Fiber(function () {
     appDir = files.pathResolve(appDir);
   }
 
-  require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
+  Profile.run('Build combined isopackets', () => require('../tool-env/isopackets.js').ensureIsopacketsLoadable())
 
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk
