@@ -1,10 +1,9 @@
 {
   "name": "@meteor/meteor",
-  "version": "0.1.0",
+  "version": "2.1.0-beta.0",
   "description": "Install Meteor on Windows",
   "main": "install.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "install": "node cli.js install"
   },
   "author": "zodern",
