@@ -73,7 +73,7 @@ function download() {
     clearOnComplete: true,
   }, cliProgress.Presets.shades_classic);
   downloadProgress.start(100, 0);
-  
+
   const url = `https://packages.meteor.com/bootstrap-link?arch=os.windows.x86_64&release=${release}`
   const dl = new DownloaderHelper(url, tempPath, {
     retry: { maxRetries: 5, delay: 5000 },
@@ -173,7 +173,11 @@ To get started fast:
 
 Or see the docs at:
 
-  https://docs.meteor.com
+  docs.meteor.com
+
+Deploy and host your app with Cloud:
+
+  www.meteor.com/cloud
 
 ***************************************
   `;
