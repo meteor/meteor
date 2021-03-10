@@ -837,15 +837,12 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
-  const isWindows = process.platform === "win32";
-  if (!isWindows) {
-    // Since some of the project skeletons include npm `devDependencies`, we need
-    // to make sure they're included when running `npm install`.
-    require("./default-npm-deps.js").install(
-      appPath,
-      {includeDevDependencies: true}
-    );
-  }
+  // Since some of the project skeletons include npm `devDependencies`, we need
+  // to make sure they're included when running `npm install`.
+  require("./default-npm-deps.js").install(
+    appPath,
+    { includeDevDependencies: true }
+  );
 
   var appNameToDisplay = appPathAsEntered === "." ?
     "current directory" : `'${appPathAsEntered}'`;
@@ -874,10 +871,6 @@ main.registerCommand({
 
     // Don't tell people to 'cd .'
     cmd("cd " + appPathWithQuotesIfSpaces);
-  }
-
-  if (isWindows) {
-    cmd("meteor npm install");
   }
 
   cmd("meteor");
