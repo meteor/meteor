@@ -50,7 +50,7 @@ meteor
 
 Building an application with Meteor?
 
-* Deploy on Galaxy hosting: https://www.meteor.com/cloudl
+* Deploy on Galaxy hosting: https://www.meteor.com/cloud
 * Announcement list: sign up at https://www.meteor.com/
 * Discussion forums: https://forums.meteor.com/
 * Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
