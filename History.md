@@ -1,3 +1,9 @@
+## vNEXT
+
+### Changes
+
+* The version of MongoDB used by Meteor in development has been updated from 4.2.8 to 4.2.12
+
 ## v2.1, 2021-02-24
 
 ### Changes
