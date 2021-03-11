@@ -1,3 +1,9 @@
+## vNEXT
+
+### Changes
+
+* update MongoDB version to 4.4.4
+
 ## v2.1, 2021-02-24
 
 ### Changes
