@@ -13,13 +13,15 @@ With Meteor you write apps:
 * using your choice of popular open-source libraries
 
 Try a getting started tutorial:
- * [React](https://www.meteor.com/tutorials/react/creating-an-app)
+ * [React](https://react-tutorial.meteor.com)
  * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
  * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
  * [Vue](https://www.meteor.com/tutorials/vue/creating-an-app)
  * [Svelte](https://www.meteor.com/tutorials/svelte/creating-an-app)
 
 Next, read the [guide](https://guide.meteor.com) and the [documentation](https://docs.meteor.com/).
+
+Are you looking for examples? Check this [meteor/examples](https://github.com/meteor/examples)
 
 ## Quick Start
 
@@ -48,9 +50,8 @@ meteor
 
 Building an application with Meteor?
 
-* Deploy on Galaxy hosting: https://www.meteor.com/hosting
+* Deploy on Galaxy hosting: https://www.meteor.com/cloud
 * Announcement list: sign up at https://www.meteor.com/
-* Having problems? Ask for help at: https://stackoverflow.com/questions/tagged/meteor
 * Discussion forums: https://forums.meteor.com/
 * Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
  

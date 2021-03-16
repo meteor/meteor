@@ -3,6 +3,8 @@
 // modules, for use in client.js and cache.js.
 var versions = __DYNAMIC_VERSIONS__;
 
+const METEOR_PREFIX = '/node_modules/meteor/';
+
 exports.get = function (id) {
   var tree = versions;
   var version = null;
@@ -66,7 +68,24 @@ function precacheOnLoad(event) {
   // will be fetched in one HTTP POST request.
   function prefetchInChunks(modules, amount) {
     Promise.all(modules.splice(0, amount).map(function (id) {
-      return module.prefetch(id);
+      return new Promise(function (resolve, reject) {
+        module.prefetch(id).then(resolve).catch(
+          function (err) {
+            // we probably have a : _ mismatch
+            // what can get wrong if we do the replacement
+            // 1. a package with a name like a_b:package will not resolve
+            // 2. someone falsely imports a_package that does not exist but a
+            // package a:package exists, so this one gets imported and its usage
+            // will fail
+            if (id.indexOf(METEOR_PREFIX) === 0) {
+              module.prefetch(
+                METEOR_PREFIX + id.replace(METEOR_PREFIX, '').replace('_', ':')
+              ).then(resolve).catch(reject);
+            } else {
+              reject(err);
+            }
+          })
+      });
     })).then(function () {
       if (modules.length > 0) {
         setTimeout(function () {
