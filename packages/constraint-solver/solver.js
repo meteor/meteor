@@ -28,6 +28,7 @@ CS.Solver = function (input, options) {
   self.stepsByName = {};
 
   self.analysis = {};
+  console.log(`analyze`);
 
   self.Profile.time("Solver#analyze", function () {
     self.analyze();
@@ -169,6 +170,8 @@ CS.Solver.prototype.analyze = function () {
   analysis.unknownPackages = {};
 
   var markReachable = function (p) {
+    console.log(`markReachable`, p);
+
     analysis.reachablePackages[p] = true;
 
     _.each(self.getVersions(p), function (v) {
@@ -194,9 +197,13 @@ CS.Solver.prototype.analyze = function () {
     });
   };
 
+  console.log(`input.dependencies`, input.dependencies);
+
   Profile.time("analyze reachability", function () {
     _.each(input.dependencies, markReachable);
   });
+  console.log(`analysis.unknownPackages`, analysis.unknownPackages);
+
 
   ////////// ANALYZE CONSTRAINTS
 
@@ -903,8 +910,11 @@ CS.Solver.prototype._getAnswer = function (options) {
 
   // throw errors about unknown packages
   if (self.stepsByName['unknown_packages'].optimum > 0) {
+    console.log('unknown_packages.optimum', self.stepsByName['unknown_packages'].optimum)
     Profile.time("generate error for unknown packages", function () {
       var unknownPackages = _.keys(analysis.unknownPackages);
+      console.log(`unknownPackages`, unknownPackages);
+
       var unknownPackagesNeeded = _.filter(unknownPackages, function (p) {
         return self.solution.evaluate(p);
       });
