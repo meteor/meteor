@@ -588,7 +588,6 @@ describe("symlinking node_modules", () => {
 
   it("should not break custom import extensions", () => {
     import { jsx } from "jsx-import-test";
-    console.log(jsx);
     assert.strictEqual(jsx.type, "div");
     assert.strictEqual(jsx.props.children, "oyez");
     return import("./imports/links/jsx-import-test/child").then(ns => {
