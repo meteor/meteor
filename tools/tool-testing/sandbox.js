@@ -83,7 +83,7 @@ export default class Sandbox {
       this.warehouse = files.pathJoin(this.root, 'tropohouse');
       this._makeWarehouse(this.options.warehouse);
     }
-    
+
     const meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
 
     // Figure out the 'meteor' to run

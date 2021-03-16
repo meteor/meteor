@@ -403,6 +403,8 @@ export function treeHash(root: string, optionsParams: {
       }
       hash.update('file ' + JSON.stringify(relativePath) + ' ' +
                   stat.size + ' ' + fileHash(absPath) + '\n');
+
+      // @ts-ignore
       if (stat.mode & 0o100) {
         hash.update('exec\n');
       }
@@ -536,6 +538,8 @@ export function cp_r(from: string, to: string, options: {
       // owner. (This mode will be modified by umask.) We don't copy the
       // mode *directly* because this function is used by 'meteor create'
       // which is copying from the read-only tools tree into a writable app.
+
+      // @ts-ignore
       mode: (stat.mode & 0o100) ? 0o777 : 0o666,
     });
 
@@ -1697,6 +1701,8 @@ export function copyFile(from: string, to: string, flags = 0) {
     // modified by umask.) We don't copy the mode *directly* because this function
     // is used by 'meteor create' which is copying from the read-only tools tree
     // into a writable app.
+
+    // @ts-ignore
     chmod(to, (stat.mode & 0o100) ? 0o777 : 0o666);
   }
 }

@@ -96,7 +96,7 @@
       }
     });
 
-    // Callback descriptions are going to be embeded into Function descriptions
+    // Callback descriptions are going to be embedded into Function descriptions
     // when they are used as arguments, so we always attach them to reference
     // them later.
     var callbacks = helper.find(data, {kind: "typedef"});

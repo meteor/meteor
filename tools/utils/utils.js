@@ -3,7 +3,6 @@ var semver = require('semver');
 var os = require('os');
 var url = require('url');
 
-var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files');
@@ -77,7 +76,7 @@ exports.ipAddress = function () {
     .where({ family: "IPv4", internal: false })
     .value();
 
-  if (addressEntries.length == 0) {
+  if (! addressEntries.length) {
     throw new Error(`Could not find a network interface with a non-internal IPv4 address.`);
   }
 
