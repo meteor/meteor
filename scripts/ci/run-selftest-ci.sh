@@ -10,6 +10,8 @@ METEOR_SELF_TEST_RETRIES=0
 
 pushd tools
 # Ensure that meteor/tools has no TypeScript errors.
+echo "install @types/node"
+npm install @types/node --save-dev
 echo "typescript compiler starting"
 ../meteor npx tsc --noEmit
 echo "typescript compiler finished"
