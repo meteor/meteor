@@ -60,8 +60,6 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
   if (! _.has(this._dependencies, key)) {
     throw new Error("No entry for " + key);
   }
-  console.log(`this._dependencies[key]`, this._dependencies[key]);
-
   return this._dependencies[key];
 };
 
