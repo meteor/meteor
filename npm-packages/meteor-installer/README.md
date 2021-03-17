@@ -5,7 +5,7 @@ Requires [Node.js](https://nodejs.org/) 8 or newer.
 Install Meteor on Windows by running:
 
 ```bash
-npm install --global meteor
+npm install -g meteor
 ```
 
 If Meteor is already installed, it will do nothing.
