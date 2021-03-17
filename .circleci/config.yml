@@ -427,7 +427,7 @@ jobs:
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             METEOR_SIMPLE_DEBUG=1 ./meteor self-test \
-              "$TEST_GROUP" \
+              "'meteor update' adds constraints to `.meteor/packages`" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
