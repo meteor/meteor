@@ -35,6 +35,8 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
   if (! _.has(this._versions, p)) {
     this._versions[p] = [];
   }
+  console.log(`this._versions[p].push(v);`, p, v);
+
   this._versions[p].push(v);
   this._versions[p].sorted = false;
 
@@ -58,6 +60,8 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
   if (! _.has(this._dependencies, key)) {
     throw new Error("No entry for " + key);
   }
+  console.log(`this._dependencies[key]`, this._dependencies[key]);
+
   return this._dependencies[key];
 };
 
@@ -104,6 +108,8 @@ CS.CatalogCache.fromJSONable = function (obj) {
   _.each(obj.data, function (depsArray, pv) {
     check(depsArray, [String]);
     pv = CS.PackageAndVersion.fromString(pv);
+    console.log(`CS.CatalogCache.fromJSONable addPackageVersion`, pv.package);
+
     cache.addPackageVersion(
       pv.package, pv.version,
       _.map(depsArray, function (str) {

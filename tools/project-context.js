@@ -543,6 +543,8 @@ _.extend(ProjectContext.prototype, {
           missingPreviousVersionIsError: canRetry,
           supportedIsobuildFeaturePackages: KNOWN_ISOBUILD_FEATURE_PACKAGES,
         };
+        console.log(`resolveOptions.supportedIsobuildFeaturePackages`, resolveOptions.supportedIsobuildFeaturePackages);
+
         if (self._upgradePackageNames) {
           resolveOptions.upgrade = self._upgradePackageNames;
         }
@@ -558,6 +560,8 @@ _.extend(ProjectContext.prototype, {
             "Select Package Versions" +
               (resolverRunCount > 1 ? (" (Try " + resolverRunCount + ")") : ""),
             function () {
+              console.log(`resolver.resolve`, depsAndConstraints.deps);
+
               solution = resolver.resolve(
                 depsAndConstraints.deps, depsAndConstraints.constraints,
                 resolveOptions);

@@ -50,8 +50,12 @@ CS.Solver.prototype.throwAnyErrors = function () {
 CS.Solver.prototype.getVersions = function (pkg) {
   var self = this;
   if (_.has(self.analysis.allowedVersions, pkg)) {
+    console.log(`self.analysis.allowedVersions[pkg]`, self.analysis.allowedVersions[pkg]);
+
     return self.analysis.allowedVersions[pkg];
   } else {
+    console.log(`self.input.catalogCache.getPackageVersions(pkg)`, self.input.catalogCache.getPackageVersions(pkg));
+
     return self.input.catalogCache.getPackageVersions(pkg);
   }
 };
@@ -179,6 +183,8 @@ CS.Solver.prototype.analyze = function () {
         // `dep` is a CS.Dependency
         var p2 = dep.packageConstraint.package;
         if (! input.isKnownPackage(p2)) {
+          console.log(`! input.isKnownPackage(p2)`);
+
           // record this package so we will generate a variable
           // for it.  we'll try not to select it, and ultimately
           // throw an error if we are forced to.
@@ -186,9 +192,16 @@ CS.Solver.prototype.analyze = function () {
             analysis.unknownPackages[p2] = [];
           }
           analysis.unknownPackages[p2].push(pvVar(p, v));
+          console.log(`analysis.unknownPackages`, analysis.unknownPackages);
+
         } else {
+          console.log(`else ! input.isKnownPackage(p2)`);
           if (! dep.isWeak) {
+            console.log(`! dep.isWeak`);
+
             if (! _.has(analysis.reachablePackages, p2)) {
+              console.log(`! _.has(analysis.reachablePackages, p2)`);
+
               markReachable(p2);
             }
           }

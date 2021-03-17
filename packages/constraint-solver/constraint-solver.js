@@ -86,6 +86,8 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   if (options.supportedIsobuildFeaturePackages) {
     _.each(options.supportedIsobuildFeaturePackages, function (versions, pkg) {
       _.each(versions, function (version) {
+        console.log(`CS.PackagesResolver.prototype.resolve addPackageVersion`, pkg);
+
         input.catalogCache.addPackageVersion(pkg, version, []);
       });
     });

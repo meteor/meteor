@@ -75,6 +75,8 @@ CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
     }
     if (rec) {
       var deps = convertDeps(rec.dependencies);
+      console.log(`CS.CatalogLoader.prototype.loadSingleVersion addPackageVersion`, pkg);
+
       cache.addPackageVersion(pkg, version, deps);
     }
   }
@@ -88,6 +90,8 @@ CS.CatalogLoader.prototype.loadAllVersions = function (pkg) {
     var version = rec.version;
     if (! cache.hasPackageVersion(pkg, version)) {
       var deps = convertDeps(rec.dependencies);
+      console.log(`CS.CatalogLoader.prototype.loadAllVersions addPackageVersion`, pkg);
+
       cache.addPackageVersion(pkg, version, deps);
     }
   });
