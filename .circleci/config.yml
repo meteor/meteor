@@ -173,8 +173,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -215,8 +213,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -255,8 +251,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -295,8 +289,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -335,8 +327,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -375,8 +365,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -415,8 +403,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -427,7 +413,7 @@ jobs:
             echo $TEST_GROUP;
             eval $PRE_TEST_COMMANDS;
             ./meteor self-test \
-              "$TEST_GROUP" \
+              "'meteor update' adds constraints to `.meteor/packages`" \
               --retries ${METEOR_SELF_TEST_RETRIES} \
               --exclude "${SELF_TEST_EXCLUDE}" \
               --headless \
@@ -455,8 +441,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -495,8 +479,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -535,8 +517,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -575,8 +555,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -615,8 +593,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -655,8 +631,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -696,8 +670,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -737,8 +709,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -778,8 +748,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -819,8 +787,6 @@ jobs:
           <<: *run_log_mem_use
       - run:
           <<: *run_env_change
-      - attach_workspace:
-          at: .
       - run:
           name: "Print environment"
           command: printenv
@@ -894,8 +860,6 @@ jobs:
   Clean Up:
     <<: *build_machine_environment
     steps:
-      - attach_workspace:
-          at: .
       - run:
           name: Create Test Groups Directory
           command: |
