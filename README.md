@@ -79,4 +79,4 @@ rm -rf ~/.meteor/
 sudo rm /usr/local/bin/meteor
 ```
 
-On Windows, just run the uninstaller from your Control Panel.
+On Windows, [read here](npm-packages/meteor-installer/README.md).
