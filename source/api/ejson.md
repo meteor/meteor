@@ -9,6 +9,8 @@ types, as well as:
  - **Date** (JavaScript `Date`)
  - **Binary** (JavaScript `Uint8Array` or the
    result of [`EJSON.newBinary`](#ejson_new_binary))
+ - **Special numbers** (JavaScript `NaN`, `Infinity`, and `-Infinity`)
+ - **Regular expressions** (JavaScript `RegExp`)
  - **User-defined types** (see [`EJSON.addType`](#ejson_add_type).  For example,
  [`Mongo.ObjectID`](#mongo_object_id) is implemented this way.)
 
