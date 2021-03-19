@@ -762,7 +762,8 @@ _.extend(PackageQuery.prototype, {
   // - exports: a PkgExports object, representing package exports.
   // - exports: a PkgImplies object, representing package implies.
   // - dependencies: a PkgDependencies object, representing dependencies.
-  // - deprecated: If the package has been deprecated or not
+  // - deprecated: If the package has been deprecated or not.
+  // - deprecatedMessage: Optional message from the deprecated package for the users.
   _displayVersion: function (data) {
     var self = this;
     Console.info(

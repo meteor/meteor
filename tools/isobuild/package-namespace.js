@@ -142,7 +142,7 @@ export class PackageNamespace {
       } else if (key === "testOnly") {
         source.testOnly = !!value;
       } else if (key === "deprecated") {
-        if (typeof(value) !== "string") {
+        if (typeof(value) === "string") {
           source.deprecatedMessage = value;
         }
         source.deprecated = true;
