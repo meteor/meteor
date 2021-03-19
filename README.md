@@ -25,13 +25,19 @@ Are you looking for examples? Check this [meteor/examples](https://github.com/me
 
 ## Quick Start
 
-On Windows, the installer can be found at https://www.meteor.com/install.
-
 On Linux/macOS, use this line:
 
 ```bash
 curl https://install.meteor.com/ | sh
 ```
+
+On Windows, use this line:
+
+```bash
+npm install -g meteor
+```
+
+Visit the official [install page](https://www.meteor.com/developers/install) to learn more.
 
 Create a project:
 
@@ -54,7 +60,7 @@ Building an application with Meteor?
 * Announcement list: sign up at https://www.meteor.com/
 * Discussion forums: https://forums.meteor.com/
 * Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
- 
+
 
 Interested in helping or contributing to Meteor?  These resources will help:
 
@@ -73,4 +79,4 @@ rm -rf ~/.meteor/
 sudo rm /usr/local/bin/meteor
 ```
 
-On Windows, just run the uninstaller from your Control Panel.
+On Windows, [read here](npm-packages/meteor-installer/README.md).
