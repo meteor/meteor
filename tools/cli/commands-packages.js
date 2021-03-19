@@ -1971,7 +1971,7 @@ main.registerCommand({
         deprecatedDeps.push({
           name: name,
           selectedVersion: selectedVersion,
-          message: info.packageSource.deprecatedMessage
+          deprecatedMessage: info.packageSource.deprecatedMessage
         })
       }
     });
@@ -1987,7 +1987,7 @@ main.registerCommand({
     if(deprecatedDeps.length) {
       Console.info("\nThe following packages have been DEPRECATED. Please consider finding replacements for them.");
       deprecatedDeps.forEach(function (item) {
-        Console.info(" * " +  item.name + " " + item.selectedVersion + " " + (item.deprecatedMessage || ""));
+        Console.info(" * " +  item.name + " " + item.selectedVersion + " " + (item.deprecatedMessage ? "(" + item.deprecatedMessage + ")" : ""));
       })
     }
     if (nonlatestIndirectDeps.length) {
