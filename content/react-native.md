@@ -108,7 +108,7 @@ class MyApp extends React.Component {
         
         return (
             <ScrollView>
-                {myTodoTasks.length > 0 ?
+                {!myTodoTasks.length ?
                     <Text>You don't have any tasks</Text>
                 :
                     myTodoTasks.map(task => (
