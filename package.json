@@ -2,7 +2,7 @@
   "name": "meteor-node-stubs",
   "author": "Ben Newman <ben@meteor.com>",
   "description": "Stub implementations of Node built-in modules, a la Browserify",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "index.js",
   "license": "MIT",
   "scripts": {
@@ -16,6 +16,7 @@
     "constants-browserify": "^1.0.0",
     "crypto-browserify": "^3.12.0",
     "domain-browser": "^1.2.0",
+    "elliptic": "^6.5.4",
     "events": "^3.0.0",
     "https-browserify": "^1.0.0",
     "os-browserify": "^0.3.0",
