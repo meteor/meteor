@@ -515,7 +515,162 @@ WebApp.connectHandlers.use(
 
 Helmet supports a large number of directives, users should further customise their CSP based on their needs. For more detail please read the following guide: [Content Security Policy](https://helmetjs.github.io/docs/csp/). CSP can be complex, so in addition there are some excellent tools out there to help, including [Google's CSP Evaluator](https://csp-evaluator.withgoogle.com/), [Report-URI's CSP Builder](https://report-uri.com/home/generate), [CSP documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) from Mozilla and [CSPValidator](https://cspvalidator.org/).
 
-A great example of CSP and other Security Headers used in a Production Meteor Application has been provided by the [LegalRobot Team](https://gist.github.com/dhrubins/31248506873a006ba5e6b459a81855c2).
+The following example presents a potential CSP and other Security Headers used in a Production Meteor Application.
+This configuration may require customization, depending on your setup and use-cases.
+
+```javascript
+/* global __meteor_runtime_config__ */
+import { Meteor } from 'meteor/meteor'
+import { WebApp } from 'meteor/webapp'
+import { Autoupdate } from 'meteor/autoupdate'
+import { check } from 'meteor/check'
+import crypto from 'crypto'
+
+const self = '\'self\''
+const data = 'data:'
+const unsafeEval = '\'unsafe-eval\''
+const unsafeInline = '\'unsafe-inline\''
+
+/**
+ * Creates a helmet-compatible CSP-configuration
+ * @param externalHostUrls {Array|undefined} Optional array with allowed hosts
+ * @return {Object} a CSP configuration object
+ */
+export function createCSPOptions (externalHostUrls = []) {
+  // get the default connect source for our current domain
+  const { usesHttps, connectSrc } = getConnectSrc(Meteor.absoluteUrl())
+
+  // Prepare runtime config for generating the sha256 hash
+  // It is important, that the hash meets exactly the hash of the
+  // script in the client bundle.
+  // Otherwise the app would not be able to start, since the runtimeConfigScript
+  // is rejected __meteor_runtime_config__ is not available, causing
+  // a cascade of follow-up errors.
+  const runtimeConfig = Object.assign(__meteor_runtime_config__, Autoupdate, {
+    // the following lines may depend on, whether you called Accounts.config
+    // and whether your Meteor app is a "newer" version
+    accountsConfigCalled: true,
+    isModern: true
+  })
+
+  // add client versions to __meteor_runtime_config__
+  Object.keys(WebApp.clientPrograms).forEach(arch => {
+    __meteor_runtime_config__.versions[arch] = {
+      version: Autoupdate.autoupdateVersion || WebApp.clientPrograms[arch].version(),
+      versionRefreshable: Autoupdate.autoupdateVersion || WebApp.clientPrograms[arch].versionRefreshable(),
+      versionNonRefreshable: Autoupdate.autoupdateVersion || WebApp.clientPrograms[arch].versionNonRefreshable(),
+      // comment the following line if you use Meteor < 2.0
+      versionReplaceable: Autoupdate.autoupdateVersion || WebApp.clientPrograms[arch].versionReplaceable()
+    }
+  })
+
+  const runtimeConfigScript = `__meteor_runtime_config__ = JSON.parse(decodeURIComponent("${encodeURIComponent(JSON.stringify(runtimeConfig))}"))`
+  const runtimeConfigHash = crypto.createHash('sha256').update(runtimeConfigScript).digest('base64')
+
+  const opt = {
+    contentSecurityPolicy: {
+      blockAllMixedContent: true,
+      directives: {
+        defaultSrc: [self],
+        scriptSrc: [
+          self,
+          // Remove / comment out unsafeEval if you do not use dynamic imports
+          // to tighten security. However, if you use dynamic imports this line
+          // must be kept in order to make them work.
+          unsafeEval,
+          `'sha256-${runtimeConfigHash}'`
+        ],
+        childSrc: [self],
+        // If you have external apps, that should be allowed as sources for
+        // connections or images, your should add them here
+        // Call helmetOptions() without args if you have no external sources
+        // Note, that this is just an example and you may configure this to your needs
+        connectSrc: connectSrc.concat(externalHostUrls),
+        fontSrc: [self, data],
+        formAction: [self],
+        frameAncestors: [self],
+        frameSrc: ['*'],
+        // This is an example to show, that we can define to show images only
+        // from our self, browser data/blob and a defined set of hosts.
+        // Configure to your needs.
+        imgSrc: [self, data, 'blob:'].concat(externalHostUrls),
+        manifestSrc: [self],
+        mediaSrc: [self],
+        objectSrc: [self],
+        // these are just examples, configure to your needs, see
+        // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/sandbox
+        sandbox: [
+          // allow-downloads-without-user-activation // experimental
+          'allow-forms',
+          'allow-modals',
+          // 'allow-orientation-lock',
+          // 'allow-pointer-lock',
+          // 'allow-popups',
+          // 'allow-popups-to-escape-sandbox',
+          // 'allow-presentation',
+          'allow-same-origin',
+          'allow-scripts',
+          // 'allow-storage-access-by-user-activation ', // experimental
+          // 'allow-top-navigation',
+          // 'allow-top-navigation-by-user-activation'
+        ],
+        styleSrc: [self, unsafeInline],
+        workerSrc: [self, 'blob:']
+      }
+    },
+    // see the helmet documentation to get a better understanding of
+    // the following configurations and settings
+    strictTransportSecurity: {
+      maxAge: 15552000,
+      includeSubDomains: true,
+      preload: false
+    },
+    referrerPolicy: {
+      policy: 'no-referrer'
+    },
+    expectCt: {
+      enforce: true,
+      maxAge: 604800
+    },
+    frameguard: {
+      action: 'sameorigin'
+    },
+    dnsPrefetchControl: {
+      allow: false
+    },
+    permittedCrossDomainPolicies: {
+      permittedPolicies: 'none'
+    }
+  }
+
+  // We assume, that we are working on a localhost when there is no https
+  // connection available.
+  // Run your project with --production flag to simulate script-src hashing
+  if (!usesHttps && Meteor.isDevelopment) {
+    delete opt.contentSecurityPolicy.directives.blockAllMixedContent
+    opt.contentSecurityPolicy.directives.scriptSrc = [self, unsafeEval, unsafeInline]
+  }
+
+  return opt
+}
+
+/**
+ * @private Transforms a given url to a valid connect-src
+ */
+const getConnectSrc = url => {
+  check(url, String)
+  const domain = url.replace(/http(s)*:\/\//, '').replace(/\/$/, '')
+  const s = url.match(/(?!=http)s(?=:\/\/)/) ? 's' : ''
+  const usesHttps = s.length > 0
+  const connectSrc = [
+    self,
+    `http${s}://${domain}`,
+    `ws${s}://${domain}`
+  ]
+
+  return { domain, usesHttps, connectSrc }
+}
+``` 
 
 <h3 id="xframeoptions">X-Frame-Options</h3>
 
