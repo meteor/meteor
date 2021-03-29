@@ -1009,18 +1009,33 @@ workflows:
           requires:
             - Get Ready
       - Test Browserstack 1:
+          filters:
+            branches:
+              only: browserstack-check
           requires:
             - Get Ready
       - Test Browserstack 2:
+          filters:
+            branches:
+              only: browserstack-check
           requires:
             - Get Ready
       - Test Browserstack 3:
+          filters:
+            branches:
+              only: browserstack-check
           requires:
             - Get Ready
       - Test Browserstack 4:
+          filters:
+            branches:
+              only: browserstack-check
           requires:
             - Get Ready
       - Test Browserstack 5:
+          filters:
+            branches:
+              only: browserstack-check
           requires:
             - Get Ready
       - Clean Up:
