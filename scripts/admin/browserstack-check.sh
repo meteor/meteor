@@ -10,6 +10,13 @@
 # This script is executed in our internal machine called Jenkins V3 before
 # at least every official release to be sure these tests listed below are
 # passing.
+#
+# They will take around 26 minutes to run:
+# custom-minifier.js test:custom minifier - devel vs prod (252998 ms)
+# hot-code-push.js test:css hot code push (370241 ms)
+# hot-code-push.js test:versioning hot code push (179834 ms)
+# hot-code-push.js test:javascript hot code push (621682 ms)
+# package-tests.js test:add packages client archs (164742 ms)
 
 cd ../..
 
