@@ -7,3 +7,5 @@ cd ../..
   --browserstack \
   --retries 2 \
   --headless
+
+cd scripts/admin
