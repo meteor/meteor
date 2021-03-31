@@ -7,11 +7,13 @@ const runLog = require('./run-log.js');
 const release = require('../packaging/release.js');
 
 const Console = require('../console/console.js').Console;
+const crypto = require('crypto');
 
 const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
+const HMRServer = require('./run-hmr').HMRServer;
 const Updater = require('./run-updater.js').Updater;
 
 class Runner {
@@ -63,12 +65,15 @@ class Runner {
       });
     }
 
+    const HMRPath = '/__meteor__hmr__/websocket';
+
     self.proxy = new Proxy({
       listenPort,
       listenHost: proxyHost,
       proxyToPort: self.appPort,
       proxyToHost: appHost,
-      onFailure
+      onFailure,
+      ignoredUrls: [HMRPath]
     });
 
     buildmessage.capture(function () {
@@ -105,6 +110,20 @@ class Runner {
       mongoUrl = 'no-mongo-server';
     }
 
+    const hasHotModuleReplacementPackage = packageMap &&
+      packageMap.getInfo('hot-module-replacement') != null;
+    self.hmrServer = null;
+    let hmrSecret = null;
+    if (hasHotModuleReplacementPackage) {
+      hmrSecret = crypto.randomBytes(64).toString('hex');
+      self.hmrServer = new HMRServer({
+        proxy: self.proxy,
+        hmrPath: HMRPath,
+        secret: hmrSecret,
+        projectContext: self.projectContext
+      });
+    }
+
     self.updater = new Updater();
 
     self.appRunner = new AppRunner({
@@ -117,7 +136,9 @@ class Runner {
       rootUrl: self.rootUrl,
       proxy: self.proxy,
       noRestartBanner: self.quiet,
-      cordovaRunner: cordovaRunner
+      cordovaRunner: cordovaRunner,
+      hmrServer: self.hmrServer,
+      hmrSecret
     });
 
     self.selenium = null;
@@ -167,6 +188,14 @@ class Runner {
 
     if (!self.noReleaseCheck && ! self.stopped) {
       self.updater.start();
+    }
+
+    if (!self.stopped && self.hmrServer) {
+      self.hmrServer.start();
+
+      if (!self.quiet && !self.stopped) {
+        runLog.log("Started HMR server.", { arrow: true });
+      }
     }
 
     if (! self.stopped) {

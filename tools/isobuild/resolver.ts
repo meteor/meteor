@@ -14,7 +14,7 @@ import {
   convertToOSPath,
   convertToPosixPath,
 } from "../fs/files";
-import { Stats } from "fs";
+import { Stats, BigIntStats } from "fs";
 import { wrap } from "optimism";
 import {
   optimisticStatOrNull,
@@ -42,7 +42,7 @@ export type ResolverOptions = {
 }
 
 export type Resolution = {
-  stat: Stats;
+  stat: Stats | BigIntStats;
   path: string;
   packageJsonMap?: Record<string, Record<string, any>>;
   id?: string;
@@ -63,7 +63,7 @@ export default class Resolver {
   private nodeModulesPaths: string[];
   private mainFields: string[];
 
-  public statOrNull = optimisticStatOrNull as (path: string) => Stats | null;
+  public statOrNull = optimisticStatOrNull as (path: string) => Stats | BigIntStats | null;
 
   constructor({
     sourceRoot,

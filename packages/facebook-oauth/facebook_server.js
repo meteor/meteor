@@ -38,9 +38,9 @@ function getAbsoluteUrlOptions(query) {
   }
   try {
     const state = OAuth._stateFromQuery(query) || {};
-    const redirectUrl = state.redirectUrl;
+    const redirectUrl = new URL(state.redirectUrl);
     return {
-      rootUrl: redirectUrl,
+      rootUrl: redirectUrl.origin,
     }
   } catch (e) {
     console.error(
