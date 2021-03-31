@@ -135,7 +135,7 @@ export function findPackageDir(filepath: string) {
 // truly unexpected happens). The result value is a string when a Git
 // revision was successfully resolved, or undefined otherwise.
 export function findGitCommitHash(path: string) {
-  return new Promise(resolve => {
+  return new Promise<string|void>(resolve => {
     const appDir = findAppDir(path);
     if (appDir) {
       execFile("git", ["rev-parse", "HEAD"], {
@@ -330,7 +330,7 @@ export function realpathOrNull(path: string) {
 }
 
 export function rm_recursive_async(path: string) {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     rimraf(convertToOSPath(path), (err: Error) => err
       ? reject(err)
       : resolve());
@@ -373,12 +373,12 @@ export const blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 // Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
 // to modtime, uid/gid, or any permissions bits other than the current-user-exec
 // bit on normal files.
-export function treeHash(root: string, options: {
-  ignore: (path: string) => boolean;
+export function treeHash(root: string, optionsParams: {
+  ignore?: (path: string) => boolean;
 }) {
-  options = {
+  const options = {
     ignore() { return false; },
-    ...options,
+    ...optionsParams,
   };
 
   const hash = require('crypto').createHash('sha256');
@@ -404,6 +404,8 @@ export function treeHash(root: string, options: {
       }
       hash.update('file ' + JSON.stringify(relativePath) + ' ' +
                   stat.size + ' ' + fileHash(absPath) + '\n');
+
+      // @ts-ignore
       if (stat.mode & 0o100) {
         hash.update('exec\n');
       }
@@ -537,6 +539,8 @@ export function cp_r(from: string, to: string, options: {
       // owner. (This mode will be modified by umask.) We don't copy the
       // mode *directly* because this function is used by 'meteor create'
       // which is copying from the read-only tools tree into a writable app.
+
+      // @ts-ignore
       mode: (stat.mode & 0o100) ? 0o777 : 0o666,
     });
 
@@ -1698,6 +1702,8 @@ export function copyFile(from: string, to: string, flags = 0) {
     // modified by umask.) We don't copy the mode *directly* because this function
     // is used by 'meteor create' which is copying from the read-only tools tree
     // into a writable app.
+
+    // @ts-ignore
     chmod(to, (stat.mode & 0o100) ? 0o777 : 0o666);
   }
 }
@@ -1711,7 +1717,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
   const intervalMs = 50;
   const timeLimitMs = 1000;
 
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     function attempt() {
       try {
         // Despite previous failures, the top-level destination directory

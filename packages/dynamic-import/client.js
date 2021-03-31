@@ -1,6 +1,7 @@
 var Module = module.constructor;
 var cache = require("./cache.js");
 var meteorInstall = require("meteor/modules").meteorInstall;
+var dynamicVersions = require("./dynamic-versions.js");
 
 var dynamicImportSettings = Meteor.settings
     && Meteor.settings.public
@@ -23,7 +24,6 @@ Module.prototype.dynamicImport = function (id) {
 meteorInstall.fetch = function (ids) {
   var tree = Object.create(null);
   var versions = Object.create(null);
-  var dynamicVersions = require("./dynamic-versions.js");
   var missing;
 
   function addSource(id, source) {

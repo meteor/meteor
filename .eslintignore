@@ -90,7 +90,7 @@ tools/isobuild/js-analyze.js
 tools/isobuild/linker.js
 tools/isobuild/linter-plugin.js
 tools/isobuild/meteor-npm.js
-tools/isobuild/npm-discards.js
+tools/isobuild/npm-discards.ts
 tools/isobuild/package-api.js
 tools/isobuild/package-source.js
 tools/isobuild/source-arch.js

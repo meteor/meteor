@@ -33,6 +33,10 @@ export default class Matcher {
     return mp;
   }
 
+  setMatchStrict(strict) {
+    this.matchStrict = strict;
+  }
+
   rejectMatch(error) {
     const mp = this.resetMatch();
     if (mp) {
@@ -132,6 +136,8 @@ export default class Matcher {
     }
 
     let ret = null;
+
+    Console.simpleDebug(`fullBuffer`, this.fullBuffer);
 
     if (this.matchFullBuffer) {
       // Note: this.matchStrict is ignored if this.matchFullBuffer truthy.

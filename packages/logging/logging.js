@@ -176,8 +176,8 @@ Log._getCallerDetails = () => {
   obj.time = new Date();
   obj.level = level;
 
-  // XXX allow you to enable 'debug', probably per-package
-  if (level === 'debug') {
+  // If we are in production don't write out debug logs.
+  if (level === 'debug' && Meteor.isProduction) {
     return;
   }
 

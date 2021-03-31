@@ -63,7 +63,7 @@ _.extend(Module.prototype, {
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
     var self = this;
-    self.files.push(new File(inputFile, self));
+    self.files.push(new File(inputFile, self.bundleArch));
   },
 
 
@@ -550,7 +550,7 @@ var writeSymbolTree = function (symbolTree, indent) {
 // File
 ///////////////////////////////////////////////////////////////////////////////
 
-function File(inputFile, module) {
+export function File(inputFile, arch) {
   var self = this;
 
   // source code for this file (a string)
@@ -603,8 +603,8 @@ function File(inputFile, module) {
   // .jsonData property.
   self.jsonData = inputFile.jsonData || null;
 
-  // The Module containing this file.
-  self.module = module;
+  // The arch this file will run in
+  self.bundleArch = arch;
 
   // Options to pass to meteorInstall when this file is installed.
   // Defined only when the modules package is in use by this module.
@@ -827,7 +827,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
 
       return JSON.stringify({
         hash: file._inputHash,
-        arch: file.module.bundleArch,
+        arch: file.bundleArch,
         bare: file.bare,
         servePath: file.servePath,
         options,
@@ -839,7 +839,7 @@ const getPrelinkedOutputCached = require("optimism").wrap(
 function getOutputWithSourceMapCached(file, servePath, options) {
   const key = JSON.stringify({
     hash: file._inputHash,
-    arch: file.module.bundleArch,
+    arch: file.bundleArch,
     bare: file.bare,
     servePath: file.servePath,
     dynamic: file.isDynamic(),
