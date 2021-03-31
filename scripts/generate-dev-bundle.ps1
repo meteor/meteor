@@ -229,7 +229,7 @@ Function Add-Mongo {
 
   # the folder inside the zip still uses win32
   $mongo_zip_filenames = @{
-    windows_x64 = "mongodb-win32-x86_64-${MONGO_VERSION_64BIT}"
+    windows_x64 = "mongodb-win32-x86_64-windows-${MONGO_VERSION_64BIT}"
   }
 
   $previousCwd = $PWD
