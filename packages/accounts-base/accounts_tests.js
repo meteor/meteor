@@ -1,3 +1,7 @@
+import { URL } from 'meteor/url';
+import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base';
+
 Meteor.methods({
   getCurrentLoginToken: function () {
     return Accounts._getLoginToken(this.connection.id);
@@ -664,3 +668,21 @@ Tinytest.add(
         Accounts._beforeExternalLoginHook = null;
     }
 );
+
+if(Meteor.isServer) {
+  Tinytest.add(
+    'accounts - make sure that extra params to accounts urls are added',
+    test => {
+      // No extra params
+      const verifyEmailURL = new URL(Accounts.urls.verifyEmail('test'));
+      test.equal(verifyEmailURL.searchParams.toString(), "");
+
+      // Extra params
+      const extraParams = { test: 'success'};
+      const resetPasswordURL = new URL(Accounts.urls.resetPassword('test', extraParams));
+      test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
+      const enrollAccountURL = new URL(Accounts.urls.enrollAccount('test', extraParams));
+      test.equal(enrollAccountURL.searchParams.get('test'), extraParams.test);
+    }
+  );
+}

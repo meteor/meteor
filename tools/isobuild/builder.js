@@ -3,7 +3,7 @@ import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
   symlinkWithOverwrite, realpath,
 } from '../fs/files';
-import NpmDiscards from './npm-discards.js';
+import NpmDiscards from './npm-discards';
 import {Profile} from '../tool-env/profile';
 import {
   optimisticReadFile,

@@ -2,15 +2,18 @@
 // (web.browser, web.browser.legacy, web.cordova). When a client observes
 // a change in the versions associated with its client architecture,
 // it will refresh itself, either by swapping out CSS assets or by
-// reloading the page.
+// reloading the page. Changes to the replaceable version are ignored
+// and handled by the hot-module-replacement package.
 //
-// There are three versions for any given client architecture: `version`,
-// `versionRefreshable`, and `versionNonRefreshable`. The refreshable
-// version is a hash of just the client resources that are refreshable,
-// such as CSS, while the non-refreshable version is a hash of the rest of
-// the client assets, excluding the refreshable ones: HTML, JS, and static
-// files in the `public` directory. The `version` version is a combined
-// hash of everything.
+// There are four versions for any given client architecture: `version`,
+// `versionRefreshable`, `versionNonRefreshable`, and
+// `versionReplaceable`. The refreshable version is a hash of just the
+// client resources that are refreshable, such as CSS. The replaceable
+// version is a hash of files that can be updated with HMR. The
+// non-refreshable version is a hash of the rest of the client assets,
+// excluding the refreshable ones: HTML, JS that is not replaceable, and
+// static files in the `public` directory. The `version` version is a
+// combined hash of everything.
 //
 // If the environment variable `AUTOUPDATE_VERSION` is set, it will be
 // used in place of all client versions. You can use this variable to
@@ -75,6 +78,8 @@ function updateVersions(shouldReloadClientProgram) {
         WebApp.calculateClientHashRefreshable(arch),
       versionNonRefreshable: AUTOUPDATE_VERSION ||
         WebApp.calculateClientHashNonRefreshable(arch),
+      versionReplaceable: AUTOUPDATE_VERSION ||
+        WebApp.calculateClientHashReplaceable(arch)
     };
   });
 
