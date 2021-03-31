@@ -1,10 +1,10 @@
 "use strict";
 
 import _ from "underscore";
-import files from "../fs/files.js";
-import { WatchSet, sha1 } from "../fs/watch.js";
+import files from "../fs/files";
+import { WatchSet, sha1 } from "../fs/watch";
 import { NodeModulesDirectory } from "./bundler.js";
-import * as archinfo from "../utils/archinfo.js";
+import * as archinfo from "../utils/archinfo";
 
 function rejectBadPath(p) {
   if (p.indexOf("..") >= 0) {
@@ -255,10 +255,8 @@ export class Unibuild {
       const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
       // We already have this npm directory from another unibuild.
         ? npmDirsToCopy[nmd.sourcePath]
-        : npmDirsToCopy[nmd.sourcePath] = builder.generateFilename(
-          nmd.getPreferredBundlePath("isopack"),
-          { directory: true }
-        );
+        : npmDirsToCopy[nmd.sourcePath] =
+            nmd.getPreferredBundlePath("isopack");
       node_modules[bundlePath] = nmd.toJSON();
     });
 

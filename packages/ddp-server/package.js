@@ -1,12 +1,12 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: '2.1.1',
+  version: '2.3.2',
   documentation: null
 });
 
 Npm.depends({
-  "permessage-deflate": "0.1.6",
-  sockjs: "0.3.19"
+  "permessage-deflate": "0.1.7",
+  sockjs: "0.3.20"
 });
 
 Package.onUse(function (api) {
@@ -31,14 +31,9 @@ Package.onUse(function (api) {
   api.use('autopublish', 'server', {weak: true});
 
   // If the facts package is loaded, publish some statistics.
-  api.use('facts', 'server', {weak: true});
+  api.use('facts-base', 'server', {weak: true});
 
   api.use('callback-hook', 'server');
-
-  // we depend on LocalCollection._diffObjects, _applyChanges,
-  // _idParse, _idStringify.
-  api.use('minimongo', 'server');
-
   api.export('DDPServer', 'server');
 
   api.addFiles('stream_server.js', 'server');

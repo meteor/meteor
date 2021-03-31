@@ -14,6 +14,10 @@ slow machine:
 set TIMEOUT_SCALE_FACTOR=3
 ```
 
+Before you run your tests you can preview which ones will run and which ones will be skipped with `--preview` flag.
+
+You can also use `--skip` <number> or `--limit` <number>. It's different from regex filter, we are not filtering anything, we are just skipping or limiting or both after the filter was already applied. This is helpful when you want to run in batches but you don't care about specific tests to be skipped or not.
+
 ## Writing tests
 
 All tests are currently stored at `/tools/tests/`, each JS file can register a

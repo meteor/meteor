@@ -77,6 +77,11 @@ export class Sunburst {
         .append("div")
           .attr("class", prefixedClass("main"));
 
+    this.elements.pillContainer =
+      this.elements.container
+        .append("div")
+          .attr("class", prefixedClass("pills"));
+
     this.elements.sequence =
       this.elements.main
         .append("div")
@@ -105,16 +110,6 @@ export class Sunburst {
         .append("span")
           .attr("class", prefixedClass("bytes"));
 
-    this.svg = this.elements.chart
-      .append("svg:svg")
-        .attr("width", width)
-        .attr("height", height);
-
-    this.vis = this.svg
-      .append("svg:g")
-        .attr("class", prefixedClass("top"))
-        .attr("transform", `translate(${width / 2},${height / 2})`);
-
     this.partition = d3.partition()
       .size([2 * Math.PI, radius * radius]);
 
@@ -123,6 +118,10 @@ export class Sunburst {
       .endAngle(d => d.x1)
       .innerRadius(d => Math.sqrt(d.y0))
       .outerRadius(d => Math.sqrt(d.y1));
+
+    this.svg = [];
+    this.vis = [];
+    this.totalSizes = [];
   }
 
   getColor(data) {
@@ -149,16 +148,61 @@ export class Sunburst {
         .attr("class", prefixedClass("trail"));
   }
 
-  loadJson(json) {
-    // Basic setup of page elements.
-    this.initializeBreadcrumbTrail();
+  createPills(json) {
+    this.elements.pills = [];
+    json.children.forEach((child, i) => {
+      const className =
+        prefixedClass("pill") + (i ? '' : ` ${prefixedClass("active")}`);
+      this.elements.pills.push(
+        this.elements.pillContainer
+          .append("div")
+          .attr("class", className)
+          .attr("name", child.name)
+          .text(child.name)
+          .on("click", () => this.handlePillClick(child.name))
+      );
+    })
+  }
+
+  handlePillClick(name) {
+    this.elements.pills.forEach((pill, i) => {
+      const className =
+        pill.attr("name") === name
+          ? `${prefixedClass("pill")} ${prefixedClass("active")}`
+          : prefixedClass("pill");
+
+      pill.attr("class", className);
+      if (pill.attr("name") === name) {
+        this.svg[i].style("display", null);
+        this.totalSize = this.totalSizes[i];
+        this.activeBundle = i;
+      } else {
+        this.svg[i].style("display", "none");
+      }
+    });
+  }
+
+  draw(json, i) {
+    const svg = this.elements.chart
+      .append("svg:svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("display", "none");
+
+    const vis = svg
+      .append("svg:g")
+        .attr("class", prefixedClass("top"))
+        .attr("transform", `translate(${width / 2},${height / 2})`)
 
     // Bounding circle underneath the sunburst, to make it easier to detect
     // when the mouse leaves the parent g.
-    this.vis
+    vis
       .append("svg:circle")
         .attr("r", radius)
         .style("opacity", 0);
+
+    // Add the mouseleave handler to the bounding circle.
+    vis.on("mouseleave", this.mouseleaveEvent());
 
     // Turn the data into a d3 hierarchy and calculate the sums.
     this.root = d3.hierarchy(json)
@@ -171,7 +215,7 @@ export class Sunburst {
       .descendants()
       .filter(d => d.x1 - d.x0 > 0.005); // 0.005 radians = 0.29 degrees
 
-    this.path = this.vis.data([json]).selectAll("path")
+    this.path = vis.data([json]).selectAll("path")
       .data(this.nodes)
       .enter()
       .append("svg:path")
@@ -182,41 +226,56 @@ export class Sunburst {
         .style("opacity", 1)
         .on("mouseover", this.mouseoverEvent());
 
-    // Add the mouseleave handler to the bounding circle.
-    this.vis.on("mouseleave", this.mouseleaveEvent());
-
     // // Get total size of the tree = value of root node from partition.
-    this.totalSize = this.path.datum().value;
+    const totalSize = this.path.datum().value;
+
+    this.svg.push(svg);
+    this.vis.push(vis);
+    this.totalSizes.push(totalSize);
+  }
+
+  loadJson(json) {
+    // Draw the starburst for the each bundle
+    json.children
+      .forEach(bundle => this.draw({ name: 'main', children: [bundle] }));
+
+    // Basic setup of page elements.
+    this.json = json;
+    this.createPills(json);
+    this.initializeBreadcrumbTrail();
+
+    this.svg[0].style("display", null);
+    this.activeBundle = 0;
   }
 
   mouseoverEvent() {
-    const self = this;
-    return self.mouseover || (self.mouseover = function (d) {
-      const percentage = (100 * d.value / self.totalSize).toPrecision(3);
+    return this.mouseover || (this.mouseover = d => {
+      const percentage =
+        (100 * d.value / this.totalSizes[this.activeBundle]).toPrecision(3);
       let percentageString = `${percentage}%`;
       if (percentage < 0.1) {
         percentageString = "< 0.1%";
       }
 
-      self.elements.percentage
+      this.elements.percentage
         .text(percentageString);
 
-      self.elements.bytes
+      this.elements.bytes
         .text(prettyBytes(d.value || 0));
 
-      self.elements.explanation
+      this.elements.explanation
         .style("display", null);
 
       const sequenceArray = d.ancestors().reverse();
       sequenceArray.shift(); // remove root node from the array
-      self.updateBreadcrumbs(sequenceArray, percentageString);
+      this.updateBreadcrumbs(sequenceArray, percentageString);
 
       // Fade all the segments.
       d3.selectAll("path")
         .style("opacity", 0.3);
 
       // Then highlight only those that are an ancestor of the current segment.
-      self.vis.selectAll("path")
+      this.vis[this.activeBundle].selectAll("path")
         .filter((node) => sequenceArray.indexOf(node) >= 0)
         .style("opacity", 1);
     });

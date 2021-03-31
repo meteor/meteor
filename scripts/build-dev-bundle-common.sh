@@ -5,13 +5,13 @@ set -u
 
 UNAME=$(uname)
 ARCH=$(uname -m)
-NODE_VERSION=8.8.1
-MONGO_VERSION_64BIT=3.2.15
-MONGO_VERSION_32BIT=3.2.15
-NPM_VERSION=5.4.2
+NODE_VERSION=12.21.0
+MONGO_VERSION_64BIT=4.2.8
+MONGO_VERSION_32BIT=3.2.22
+NPM_VERSION=6.14.8
 
 # If we built Node from source on Jenkins, this is the build number.
-NODE_BUILD_NUMBER=111
+NODE_BUILD_NUMBER=
 
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
@@ -40,7 +40,7 @@ elif [ "$UNAME" == "Darwin" ] ; then
         exit 1
     fi
 
-    OS="osx"
+    OS="macos"
 
     # We don't strip on Mac because we don't know a safe command. (Can't strip
     # too much because we do need node to be able to load objects like

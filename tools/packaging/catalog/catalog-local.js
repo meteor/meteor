@@ -1,14 +1,14 @@
 var _ = require('underscore');
 var buildmessage = require('../../utils/buildmessage.js');
-var files = require('../../fs/files.js');
-var watch = require('../../fs/watch.js');
+var files = require('../../fs/files');
+var watch = require('../../fs/watch');
 var PackageSource = require('../../isobuild/package-source.js');
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../../isobuild/compiler.js';
 import { sync as glob } from "glob";
-import { Profile } from "../../tool-env/profile.js";
+import { Profile } from "../../tool-env/profile";
 import {
   optimisticHashOrNull,
-} from "../../fs/optimistic.js";
+} from "../../fs/optimistic";
 
 // LocalCatalog represents packages located in the application's
 // package directory, other package directories specified via an

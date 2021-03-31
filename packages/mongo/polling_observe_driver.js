@@ -1,3 +1,6 @@
+var POLLING_THROTTLE_MS = +process.env.METEOR_POLLING_THROTTLE_MS || 50;
+var POLLING_INTERVAL_MS = +process.env.METEOR_POLLING_INTERVAL_MS || 10 * 1000;
+
 PollingObserveDriver = function (options) {
   var self = this;
 
@@ -29,7 +32,7 @@ PollingObserveDriver = function (options) {
   // PollingObserveDriver object.
   self._ensurePollIsScheduled = _.throttle(
     self._unthrottledEnsurePollIsScheduled,
-    self._cursorDescription.options.pollingThrottleMs || 50 /* ms */);
+    self._cursorDescription.options.pollingThrottleMs || POLLING_THROTTLE_MS /* ms */);
 
   // XXX figure out if we still need a queue
   self._taskQueue = new Meteor._SynchronousQueue();
@@ -64,7 +67,7 @@ PollingObserveDriver = function (options) {
     var pollingInterval =
           self._cursorDescription.options.pollingIntervalMs ||
           self._cursorDescription.options._pollingInterval || // COMPAT with 1.2
-          10 * 1000;
+          POLLING_INTERVAL_MS;
     var intervalHandle = Meteor.setInterval(
       _.bind(self._ensurePollIsScheduled, self), pollingInterval);
     self._stopCallbacks.push(function () {
@@ -75,7 +78,7 @@ PollingObserveDriver = function (options) {
   // Make sure we actually poll soon!
   self._unthrottledEnsurePollIsScheduled();
 
-  Package.facts && Package.facts.Facts.incrementServerFact(
+  Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "mongo-livedata", "observe-drivers-polling", 1);
 };
 
@@ -173,7 +176,7 @@ _.extend(PollingObserveDriver.prototype, {
       // "cancel" the observe from the inside in this case.
       Array.prototype.push.apply(self._pendingWrites, writesForCycle);
       Meteor._debug("Exception while polling query " +
-                    JSON.stringify(self._cursorDescription) + ": " + e.stack);
+                    JSON.stringify(self._cursorDescription), e);
       return;
     }
 
@@ -213,7 +216,7 @@ _.extend(PollingObserveDriver.prototype, {
     _.each(self._pendingWrites, function (w) {
       w.committed();
     });
-    Package.facts && Package.facts.Facts.incrementServerFact(
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);
   }
 });

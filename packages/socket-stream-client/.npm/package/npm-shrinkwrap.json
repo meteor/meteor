@@ -1,0 +1,30 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "faye-websocket": {
+      "version": "0.11.1",
+      "resolved": "https://registry.npmjs.org/faye-websocket/-/faye-websocket-0.11.1.tgz",
+      "integrity": "sha1-8O/hjE9W5PQK/H4Gxxn9XuYYjzg="
+    },
+    "http-parser-js": {
+      "version": "0.4.9",
+      "resolved": "https://registry.npmjs.org/http-parser-js/-/http-parser-js-0.4.9.tgz",
+      "integrity": "sha1-6hoE+2St/wJC6ZdPKX3Uw8rSceE="
+    },
+    "permessage-deflate": {
+      "version": "0.1.6",
+      "resolved": "https://registry.npmjs.org/permessage-deflate/-/permessage-deflate-0.1.6.tgz",
+      "integrity": "sha1-WB8c7fvUQPrEfQd3vohjM4a5kt4="
+    },
+    "websocket-driver": {
+      "version": "0.7.0",
+      "resolved": "https://registry.npmjs.org/websocket-driver/-/websocket-driver-0.7.0.tgz",
+      "integrity": "sha1-DK+dLXVdk67gSdS90NP+LMoqJOs="
+    },
+    "websocket-extensions": {
+      "version": "0.1.3",
+      "resolved": "https://registry.npmjs.org/websocket-extensions/-/websocket-extensions-0.1.3.tgz",
+      "integrity": "sha512-nqHUnMXmBzT0w570r2JpJxfiSD1IzoI+HGVdd3aZ0yNi3ngvQ4jv1dtHt5VGxfI2yj5yqImPhOK4vmIh2xMbGg=="
+    }
+  }
+}

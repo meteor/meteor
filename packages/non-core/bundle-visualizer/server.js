@@ -33,21 +33,39 @@ function getStatBundles() {
     f.absolutePath.endsWith(".stats.json");
 
   // Read the stat file, but if it's in any way unusable just return null.
-  const readOrNull = file => {
+  function readOrNull(file) {
     try {
       return JSON.parse(fsReadFileSync(file, "utf8"));
     } catch (err) {
       return null;
     }
-  };
+  }
 
-  return Object.keys(WebAppInternals.staticFiles)
-    .map(staticFile => WebAppInternals.staticFiles[staticFile])
-    .filter(statFileFilter)
-    .map(statFile => ({
-      name: statFile.hash,
-      stats: readOrNull(statFile.absolutePath),
-    }));
+  const {
+    staticFiles,
+    staticFilesByArch,
+  } = WebAppInternals;
+
+  const files = [];
+
+  if (staticFilesByArch) {
+    Object.keys(staticFilesByArch).forEach(arch => {
+      const staticFiles = staticFilesByArch[arch];
+      Object.keys(staticFiles).forEach(path => {
+        files.push({ ...staticFiles[path], arch });
+      });
+    });
+  } else if (staticFiles) {
+    Object.keys(staticFiles).forEach(path => {
+      files.push({ ...staticFiles[path], arch: 'bundle' });
+    });
+  }
+
+  return files.filter(statFileFilter).map(file => ({
+    name: file.hash,
+    arch: file.arch,
+    stats: readOrNull(file.absolutePath),
+  }));
 }
 
 function _childModules(node) {
@@ -101,29 +119,43 @@ function d3TreeFromStats(stats) {
           stats.minifiedBytesByPackage[name]));
 }
 
-Meteor.methods({
-  [methodNameStats]() {
-    const statBundles = getStatBundles();
-
-    // Silently return no data if not simulating production.
-    if (! Meteor.isProduction) {
-      return null;
-    }
-
-    if (! (statBundles && statBundles.length)) {
-      throw new Meteor.Error("no-stats-bundles", "Unable to retrieve stats");
-    }
-
-    return {
-      name: "main",
-      children: statBundles.map((statBundle, index, array) => ({
-        // TODO: If multiple bundles, could
-        // show abbr. bundle names with:
-        //   `...${bundle.name.substr(-3)}`,
-        name: "bundle" + (array.length > 1 ? ` (${index + 1})` : ""),
-        type: typeBundle,
-        children: d3TreeFromStats(statBundle.stats),
-      })),
-    };
+Meteor.startup(() => {
+  if (! Package.webapp) {
+    return;
   }
+
+  Package.webapp.WebAppInternals.meteorInternalHandlers.use(
+    methodNameStats,
+    statsMiddleware
+  );
 });
+
+function statsMiddleware(request, response) {
+  const statBundles = getStatBundles();
+
+  function sendJSON(data) {
+    response.setHeader("Content-Type", "application/json");
+    response.end(JSON.stringify(data, null, 2));
+  }
+
+  // Silently return no data if not simulating production.
+  if (! Meteor.isProduction) {
+    return sendJSON(null);
+  }
+
+  if (! (statBundles && statBundles.length)) {
+    throw new Meteor.Error(
+      "no-stats-bundles",
+      "Unable to retrieve stats"
+    );
+  }
+
+  sendJSON({
+    name: "main",
+    children: statBundles.map((statBundle, index, array) => ({
+      name: statBundle.arch,
+      type: typeBundle,
+      children: d3TreeFromStats(statBundle.stats),
+    }))
+  });
+}

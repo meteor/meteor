@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.2.0"
+  version: "1.3.2"
 });
 
-Package.onUse(function (api) {
+Package.onUse(api => {
   api.use('check');
-  api.use('underscore');
+  api.use('ecmascript');
 
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
@@ -47,8 +47,11 @@ Package.onUse(function (api) {
   api.addFiles('deprecated.js', ['client', 'server']);
 });
 
+Npm.depends({
+  'body-parser': '1.19.0',
+});
 
-Package.onTest(function (api) {
+Package.onTest(api => {
   api.use('tinytest');
   api.use('random');
   api.use('service-configuration', 'server');
@@ -57,5 +60,5 @@ Package.onTest(function (api) {
 });
 
 Cordova.depends({
-  'cordova-plugin-inappbrowser': '1.7.1'
+  'cordova-plugin-inappbrowser': '3.2.0'
 });

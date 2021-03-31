@@ -128,6 +128,18 @@ Tinytest.addAsync(name, (test, onComplete) => {
 });
 ```
 
+You can avoid having to call the `onComplete` callback explicitly by
+returning a `Promise` from the test function, which conveniently enables
+`async` test functions:
+
+```javascript
+Tinytest.addAsync(name, async (test) => {
+  test.equal(shouldReturnFoo(), "foo");
+  const bar = await shouldReturnBarAsync();
+  test.equal(bar, "bar");
+});
+```
+
 ## Executing the Tests
 
 Tests are executed by running the (development) application with the `test-packages` command. By default, all packages are tested, but specific packages can be tested by specifying them by name.

@@ -25,12 +25,23 @@ var makeResolver = function (data) {
   });
 
   var catalogStub = {
-    getSortedVersionRecords: function (name) {
+    getSortedVersionRecords(name) {
       var records = Versions.find({packageName: name}).fetch();
       records.sort(function (a, b) {
         return PV.compare(a.version, b.version);
       });
       return records;
+    },
+
+    getVersion(packageName, version) {
+      let result = null;
+      this.getSortedVersionRecords(packageName).some(pkgVersion => {
+        if (pkgVersion.version === version) {
+          result = pkgVersion;
+          return true;
+        }
+      });
+      return result;
     }
   };
   return new CS.PackagesResolver(catalogStub);

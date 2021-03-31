@@ -1,12 +1,8 @@
 Template.configureLoginServiceDialogForMeetup.helpers({
-  siteUrl: function () {
-    return Meteor.absoluteUrl();
-  }
+  siteUrl: () => Meteor.absoluteUrl(),
 });
 
-Template.configureLoginServiceDialogForMeetup.fields = function () {
-  return [
-    {property: 'clientId', label: 'Key'},
-    {property: 'secret', label: 'Secret'}
-  ];
-};
+Template.configureLoginServiceDialogForMeetup.fields = () => [
+  {property: 'clientId', label: 'Key'},
+  {property: 'secret', label: 'Secret'}
+]

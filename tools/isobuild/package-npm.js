@@ -1,6 +1,6 @@
 import { ensureOnlyValidVersions } from "../utils/utils.js";
 import buildmessage from "../utils/buildmessage.js";
-import NpmDiscards from "./npm-discards.js";
+import NpmDiscards from "./npm-discards";
 
 const nodeRequire = require;
 
@@ -24,7 +24,7 @@ export class PackageNpm {
    * @param  {Object} dependencies An object where the keys are package
    * names and the values are one of:
    *   1. Version numbers in string form
-   *   2. Http(s) URLs to a git commit by SHA.
+   *   2. http(s) URLs of npm packages
    *   3. Git URLs in the format described [here](https://docs.npmjs.com/files/package.json#git-urls-as-dependencies)
    *
    * Https URL example:
@@ -101,6 +101,14 @@ export class PackageNpm {
   //   Npm.strip({
   //     connect: [/*\.wmv$/],
   //     useragent: ["tests/"]
+  //   });
+  //
+  // Alternatively, a single string or regular expression can be passed
+  // instead of an array:
+  //
+  //   Npm.strip({
+  //     connect: /*\.wmv$/,
+  //     useragent: "tests/"
   //   });
   //
   // This means (1) "remove any files with the `.wmv` extension from

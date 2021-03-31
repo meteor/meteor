@@ -116,8 +116,16 @@ CallbackLogger.prototype._expectNoResultImpl = function () {
   self._test.length(self._log, 0);
 };
 
-CallbackLogger.prototype.expectNoResult = function () {
+CallbackLogger.prototype.expectNoResult = function (fn) {
   var self = this;
+
+  if (typeof fn === "function") {
+    // If a function is provided, empty self._log and then call the
+    // function, so that we don't accidentally carry over log items.
+    self._log.length = 0;
+    fn();
+  }
+
   if (self.fiber) {
     var handle = setTimeout(function () {
       self.fiber.run(handle);
@@ -128,5 +136,6 @@ CallbackLogger.prototype.expectNoResult = function () {
     }
     clearTimeout(handle);
   }
+
   self._expectNoResultImpl();
 };

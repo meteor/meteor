@@ -669,17 +669,18 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
       this.docs = new OrderedDict(MongoID.idStringify);
       this.applyChange = {
         addedBefore: (id, fields, before) => {
-          const doc = EJSON.clone(fields);
+          // Take a shallow copy since the top-level properties can be changed
+          const doc = { ...fields };
 
           doc._id = id;
 
           if (callbacks.addedBefore) {
-            callbacks.addedBefore.call(this, id, fields, before);
+            callbacks.addedBefore.call(this, id, EJSON.clone(fields), before);
           }
 
           // This line triggers if we provide added with movedBefore.
           if (callbacks.added) {
-            callbacks.added.call(this, id, fields);
+            callbacks.added.call(this, id, EJSON.clone(fields));
           }
 
           // XXX could `before` be a falsy ID?  Technically
@@ -701,10 +702,11 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
       this.docs = new LocalCollection._IdMap;
       this.applyChange = {
         added: (id, fields) => {
-          const doc = EJSON.clone(fields);
+          // Take a shallow copy since the top-level properties can be changed
+          const doc = { ...fields };
 
           if (callbacks.added) {
-            callbacks.added.call(this, id, fields);
+            callbacks.added.call(this, id, EJSON.clone(fields));
           }
 
           doc._id = id;
@@ -878,7 +880,7 @@ LocalCollection._compileProjection = fields => {
     const result = details.including ? {} : EJSON.clone(doc);
 
     Object.keys(ruleTree).forEach(key => {
-      if (!hasOwn.call(doc, key)) {
+      if (doc == null || !hasOwn.call(doc, key)) {
         return;
       }
 
@@ -897,7 +899,7 @@ LocalCollection._compileProjection = fields => {
       }
     });
 
-    return result;
+    return doc != null ? result : doc;
   };
 
   return doc => {
@@ -1330,7 +1332,12 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
     callbacks: observeChangesCallbacks
   });
 
-  const handle = cursor.observeChanges(changeObserver.applyChange);
+  // CachingChangeObserver clones all received input on its callbacks
+  // So we can mark it as safe to reduce the ejson clones.
+  // This is tested by the `mongo-livedata - (extended) scribbling` tests
+  changeObserver.applyChange._fromObserve = true;
+  const handle = cursor.observeChanges(changeObserver.applyChange,
+    { nonMutatingCallbacks: true });
 
   suppressed = false;
 
@@ -1848,6 +1855,12 @@ const MODIFIERS = {
     // native javascript numbers (doubles) so far, so we can't support $bit
     throw MinimongoError('$bit is not supported', {field});
   },
+  $v() {
+    // As discussed in https://github.com/meteor/meteor/issues/9623,
+    // the `$v` operator is not needed by Meteor, but problems can occur if
+    // it's not at least callable (as of Mongo >= 3.6). It's defined here as
+    // a no-op to work around these problems.
+  }
 };
 
 const NO_CREATE_MODIFIERS = {

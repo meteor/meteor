@@ -59,11 +59,27 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                 'upgradeIndirectDepPatchVersions'));
   });
 
-  var resultCache = self._options.resultCache;
-  if (resultCache &&
-      resultCache.lastInput &&
-      _.isEqual(resultCache.lastInput,
-                input.toJSONable(true))) {
+  // The constraint solver avoids re-solving everything from scratch on
+  // rebuilds if the current input of top-level constraints matches the
+  // previously solved input (also just top-level constraints). This is
+  // slightly unsound, because non-top-level dependency constraints might
+  // have changed, but it's important for performance, and relatively
+  // harmless in practice (if there's a version conflict, you'll find out
+  // about it the next time you do a full restart of the development
+  // server). The unsoundness can cause problems for tests, however, so it
+  // may be a good idea to set this environment variable to "true" to
+  // disable the caching entirely.
+  const disableCaching = !! JSON.parse(
+    process.env.METEOR_DISABLE_CONSTRAINT_SOLVER_CACHING || "false"
+  );
+
+  let resultCache = self._options.resultCache;
+  if (disableCaching) {
+    resultCache = null;
+  } else if (resultCache &&
+             resultCache.lastInput &&
+             _.isEqual(resultCache.lastInput,
+                       input.toJSONable(true))) {
     return resultCache.lastOutput;
   }
 
@@ -182,10 +198,26 @@ CS.isConstraintSatisfied = function (pkg, vConstraint, version) {
 
     if (type === "any-reasonable") {
       return true;
-    } else if (type === "exactly") {
+    }
+
+    // If any top-level constraints use the @x.y.z! override syntax, all
+    // other constraints on the same package will be marked with the
+    // weakMinimum property, which means they constrain nothing other than
+    // the minimum version of the package. Look for weakMinimum in the
+    // CS.Solver#analyze method for related logic.
+    if (vConstraint.weakMinimum) {
+      return ! PV.lessThan(
+        PV.parse(version),
+        PV.parse(simpleConstraint.versionString)
+      );
+    }
+
+    if (type === "exactly") {
       var cVersion = simpleConstraint.versionString;
       return (cVersion === version);
-    } else if (type === 'compatible-with') {
+    }
+
+    if (type === 'compatible-with') {
       if (typeof simpleConstraint.test === "function") {
         return simpleConstraint.test(version);
       }
@@ -206,9 +238,9 @@ CS.isConstraintSatisfied = function (pkg, vConstraint, version) {
       }
 
       return true;
-    } else {
-      throw Error("Unknown constraint type: " + type);
     }
+
+    throw Error("Unknown constraint type: " + type);
   });
 };
 

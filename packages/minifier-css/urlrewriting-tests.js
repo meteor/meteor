@@ -1,20 +1,20 @@
+import { CssTools } from './minifier';
 
-Tinytest.add("minifier-css - url rewriting when merging", function (test) {
-  var stylesheet = function(backgroundPath) {
-    return "body { color: green; background: top center url(" + backgroundPath + ") black, bottom center url(" + backgroundPath + "); }"
+Tinytest.add('minifier-css - url rewriting when merging', (test) => {
+  const stylesheet = backgroundPath => (
+    `body { color: green; background: top center url(${backgroundPath}) black, bottom center url(${backgroundPath}); }`
+  );
+
+  const parseOptions = { from: null, position: true };
+
+  const t = (relativeUrl, absoluteUrl, desc) => {
+    const ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
+    const ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
+    CssTools.rewriteCssUrls(ast1);
+    test.equal(CssTools.stringifyCss(ast1), CssTools.stringifyCss(ast2), desc);
   };
 
-  var parseOptions = { source: null, position: true };
-
-  function t(relativeUrl, absoluteUrl, desc) {
-    var ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
-    var ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
-    CssTools.rewriteCssUrls(ast1);
-
-    test.equal(CssTools.stringifyCss(ast1), CssTools.stringifyCss(ast2), desc);
-  }
-
-  parseOptions.source = 'packages/nameOfPackage/style.css';
+  parseOptions.from = 'packages/nameOfPackage/style.css';
   t('../image.png', 'packages/image.png', 'parent directory');
   t('./../image.png', 'packages/image.png', 'parent directory');
   t('../nameOfPackage2/image.png', 'packages/nameOfPackage2/image.png', 'cousin directory');
@@ -31,7 +31,7 @@ Tinytest.add("minifier-css - url rewriting when merging", function (test) {
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
   t('http://', 'http://', 'malformed URL');
 
-  parseOptions.source = 'application/client/dir/other-style.css';
+  parseOptions.from = 'application/client/dir/other-style.css';
   t('./image.png', 'image.png', 'base path is root');
   t('./child/image.png', 'child/image.png', 'child directory from root');
   t('child/image.png', 'child/image.png', 'child directory from root');
@@ -44,27 +44,26 @@ Tinytest.add("minifier-css - url rewriting when merging", function (test) {
   t('http://', 'http://', 'malformed URL');
 });
 
-Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursion)", function (test) {
-  var stylesheet = function(backgroundPath) {
-    return "@media (min--moz-device-pixel-ratio: 1.5),\n\
+Tinytest.add('minifier-css - url rewriting with media queries (ast rule recursion)', (test) => {
+  const stylesheet = backgroundPath => (
+    `@media (min--moz-device-pixel-ratio: 1.5),\n\
     (-o-min-device-pixel-ratio: 3/2),\n\
     (-webkit-min-device-pixel-ratio: 1.5),\n\
     (min-device-pixel-ratio: 1.5),\n\
     (min-resolution: 1.5dppx) \n\
-    { .foobar { background-image: url(" + backgroundPath + "); } }"
-  };
+    { .foobar { background-image: url(${backgroundPath}); } }`
+  );
 
-  var parseOptions = { source: null, position: true };
+  const parseOptions = { from: null, position: true };
 
-  var t = function(relativeUrl, absoluteUrl, desc) {
-    var ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
-    var ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
+  const t = (relativeUrl, absoluteUrl, desc) => {
+    const ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
+    const ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
     CssTools.rewriteCssUrls(ast1);
-
     test.equal(CssTools.stringifyCss(ast1), CssTools.stringifyCss(ast2), desc);
   };
 
-  parseOptions.source = 'packages/nameOfPackage/style.css';
+  parseOptions.from = 'packages/nameOfPackage/style.css';
   t('../image.png', 'packages/image.png', 'parent directory');
   t('./../image.png', 'packages/image.png', 'parent directory');
   t('../nameOfPackage2/image.png', 'packages/nameOfPackage2/image.png', 'cousin directory');
@@ -82,7 +81,7 @@ Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursio
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
   t('http://', 'http://', 'malformed URL');
 
-  parseOptions.source = 'application/client/dir/other-style.css';
+  parseOptions.from = 'application/client/dir/other-style.css';
   t('./image.png', 'image.png', 'base path is root');
   t('./child/image.png', 'child/image.png', 'child directory from root');
   t('child/image.png', 'child/image.png', 'child directory from root');
@@ -97,22 +96,21 @@ Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursio
 
 });
 
-Tinytest.add("minifier-css - url rewriting with hash symbols", function (test) {
-  var stylesheet = function(backgroundPath) {
-    return "body { background-image: url(" + backgroundPath + ")}"
-  };
+Tinytest.add('minifier-css - url rewriting with hash symbols', (test) => {
+  const stylesheet = backgroundPath => (
+    `body { background-image: url(${backgroundPath})}`
+  );
 
-  var parseOptions = { source: null, position: true };
+  const parseOptions = { from: null, position: true };
 
-  var t = function(relativeUrl, absoluteUrl, desc) {
-    var ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
-    var ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
+  const t = (relativeUrl, absoluteUrl, desc) => {
+    const ast1 = CssTools.parseCss(stylesheet(relativeUrl), parseOptions);
+    const ast2 = CssTools.parseCss(stylesheet(absoluteUrl), parseOptions);
     CssTools.rewriteCssUrls(ast1);
-
     test.equal(CssTools.stringifyCss(ast1), CssTools.stringifyCss(ast2), desc);
   };
 
-  parseOptions.source = 'packages/nameOfPackage/style.css';
+  parseOptions.from = 'packages/nameOfPackage/style.css';
   t('../filters.svg#theFilterId', 'packages/filters.svg#theFilterId', 'parent directory');
   t('./../filters.svg#theFilterId', 'packages/filters.svg#theFilterId', 'parent directory');
   t('../nameOfPackage2/filters.svg#theFilterId', 'packages/nameOfPackage2/filters.svg#theFilterId', 'cousin directory');
@@ -130,7 +128,7 @@ Tinytest.add("minifier-css - url rewriting with hash symbols", function (test) {
   t('http://', 'http://', 'malformed URL');
   t('#theFilterId', '#theFilterId', 'URL starting with a #');
 
-  parseOptions.source = 'application/client/dir/other-style.css';
+  parseOptions.from = 'application/client/dir/other-style.css';
   t('./filters.svg#theFilterId', 'filters.svg#theFilterId', 'base path is root');
   t('./child/filters.svg#theFilterId', 'child/filters.svg#theFilterId', 'child directory from root');
   t('child/filters.svg#theFilterId', 'child/filters.svg#theFilterId', 'child directory from root');

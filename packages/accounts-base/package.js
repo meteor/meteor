@@ -1,10 +1,9 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.4.0"
+  version: "1.8.0",
 });
 
-Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
+Package.onUse(api => {
   api.use('ecmascript', ['client', 'server']);
   api.use('ddp-rate-limiter');
   api.use('localstorage', 'client');
@@ -14,6 +13,7 @@ Package.onUse(function (api) {
   api.use('ejson', 'server');
   api.use('callback-hook', ['client', 'server']);
   api.use('reactive-var', 'client');
+  api.use('url', ['client', 'server']);
 
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)
@@ -28,7 +28,7 @@ Package.onUse(function (api) {
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use('blaze', 'client', {weak: true});
+  api.use('blaze@2.3.4', 'client', {weak: true});
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.
@@ -50,7 +50,7 @@ Package.onUse(function (api) {
   api.mainModule('client_main.js', 'client');
 });
 
-Package.onTest(function (api) {
+Package.onTest(api => {
   api.use([
     'accounts-base',
     'ecmascript',
@@ -58,7 +58,6 @@ Package.onTest(function (api) {
     'random',
     'test-helpers',
     'oauth-encryption',
-    'underscore',
     'ddp',
     'accounts-password'
   ]);

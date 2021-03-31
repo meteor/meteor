@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=8.8.1
+BUNDLE_VERSION=12.21.0.0
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -21,9 +21,9 @@ if [ "$UNAME" = "Darwin" ] ; then
     ARCH="x86_64"
 elif [ "$UNAME" = "Linux" ] ; then
     ARCH="$(uname -m)"
-    if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
+    if [ "$ARCH" != "x86_64" ] ; then
         echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports i686 and x86_64 for now."
+        echo "Meteor only supports x86_64"
         exit 1
     fi
 fi
@@ -132,7 +132,10 @@ fi
 # the script take precedence over $NODE_PATH; it used to be that users would
 # screw up their meteor installs by have a ~/node_modules
 
+# --no-wasm-code-gc is currently necessary as a workaround for
+# https://github.com/nodejs/node/issues/29767
 exec "$DEV_BUNDLE/bin/node" \
-     --expose-gc \
+     --max-old-space-size=4096 \
+     --no-wasm-code-gc \
      ${TOOL_NODE_FLAGS} \
      "$METEOR" "$@"

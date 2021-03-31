@@ -1,12 +1,8 @@
 Template.configureLoginServiceDialogForMeteorDeveloper.helpers({
-  siteUrl: function () {
-    return Meteor.absoluteUrl();
-  }
+  siteUrl: () => Meteor.absoluteUrl(),
 });
 
-Template.configureLoginServiceDialogForMeteorDeveloper.fields = function () {
-  return [
-    {property: 'clientId', label: 'App ID'},
-    {property: 'secret', label: 'App secret'}
-  ];
-};
+Template.configureLoginServiceDialogForMeteorDeveloper.fields = () => [
+  {property: 'clientId', label: 'App ID'},
+  {property: 'secret', label: 'App secret'}
+];

@@ -1,6 +1,6 @@
 var main = require('./main.js');
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var buildmessage = require('../utils/buildmessage.js');
 var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');
@@ -23,7 +23,11 @@ var packageMapModule = require('../packaging/package-map.js');
 var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
 
-import * as cordova from '../cordova';
+import {
+  ensureDevBundleDependencies,
+  newPluginId,
+  splitPluginsAndPackages,
+} from '../cordova/index.js';
 import { updateMeteorToolSymlink } from "../packaging/updater.js";
 
 // For each release (or package), we store a meta-record with its name,
@@ -685,6 +689,8 @@ main.registerCommand({
   options: {
     'create-track': { type: Boolean },
     'from-checkout': { type: Boolean },
+    // It is going to produce a fake error and nothing will be published
+    'dry-run': { type: Boolean },
     // Normally the publish-release script will complain if the source of
     // a core package differs in any way from what was previously
     // published for the current version of the package. However, if the
@@ -818,8 +824,8 @@ main.registerCommand({
   // version number, this will use buildmessage to error and exit.)
   //
   // Without any modifications about forks and package names, this particular
-  // option is not very useful outside of MDG. Right now, to run this option on
-  // a non-MDG fork of meteor, someone would probably need to go through and
+  // option is not very useful outside of Meteor Software. Right now, to run this option on
+  // a non-Meteor Software fork of meteor, someone would probably need to go through and
   // change the package names to have proper prefixes, etc.
   if (options['from-checkout']) {
     // You must be running from checkout to bundle up your checkout as a release.
@@ -929,9 +935,22 @@ main.registerCommand({
               throw Error("no isopack for " + packageName);
             }
 
-            var existingBuild =
-                  catalog.official.getBuildWithPreciseBuildArchitectures(
-                    oldVersionRecord, isopk.buildArchitectures());
+            const existingBuild =
+              // First try with the non-simplified build architecture
+              // list, which is likely to be something like
+              // os+web.browser+web.browser.legacy+web.cordova:
+              catalog.official.getBuildWithPreciseBuildArchitectures(
+                oldVersionRecord,
+                isopk.buildArchitectures(),
+              ) ||
+              // If that fails, fall back to the simplified architecture
+              // list (e.g. os+web.browser+web.cordova), to match packages
+              // published before the web.browser.legacy architecture was
+              // introduced (in Meteor 1.7).
+              catalog.official.getBuildWithPreciseBuildArchitectures(
+                oldVersionRecord,
+                isopk.buildArchitectures(true),
+              );
 
             var somethingChanged;
 
@@ -967,6 +986,15 @@ main.registerCommand({
         });
       });
     });
+
+    if (options['dry-run']) {
+      main.captureAndExit("=> Dry run", function () {
+          buildmessage.error(
+            "This is not an error but it was just a validation" +
+            " and nothing was published. Remove --dry-run to publish.");
+        }
+      )
+    }
 
     // We now have an object of packages that have new versions on disk that
     // don't exist in the server catalog. Publish them.
@@ -1122,7 +1150,9 @@ main.registerCommand({
   requiresApp: true,
   options: {
     'tree': { type: Boolean },
+    'json': { type: Boolean },
     'weak': { type: Boolean },
+    'details': { type: Boolean },
     'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
@@ -1137,8 +1167,25 @@ main.registerCommand({
   // No need to display the PackageMapDelta here, since we're about to list all
   // of the packages anyway!
 
-  if (options['tree']) {
+  const showJson = !!options['json'];
+  const showTree = !!options['tree'];
+
+  const suffixes = {
+    topLevel: '(top level)',
+    expandedAbove: '(expanded above)',
+    weak: '[weak]',
+    skipped: 'package skipped',
+    missing: 'missing?'
+  }
+
+  if (showJson && showTree) {
+    throw new Error('can only run for one option,found --json and --tree');
+  }
+
+  if (showTree || showJson) {
+    const jsonOut = showJson && {};
     const showWeak = !!options['weak'];
+    const showDetails = !!options['details'];
     // Load package details of all used packages (inc. dependencies)
     const packageDetails = new Map;
     projectContext.packageMap.eachPackage(function (name, info) {
@@ -1155,7 +1202,7 @@ main.registerCommand({
     const dontExpand = new Set(topLevelSet.values());
 
     // Recursive function that outputs each package
-    const printPackage = function (packageToPrint, isWeak, indent1, indent2) {
+    const printPackage = function ({ packageToPrint, isWeak, indent1, indent2, parent }) {
       const packageName = packageToPrint.packageName;
       const depsObj = packageToPrint.dependencies || {};
       let deps = Object.keys(depsObj).sort();
@@ -1175,16 +1222,61 @@ main.registerCommand({
 
       const expandedAlready = (deps.length > 0 && dontExpand.has(packageName));
       const shouldExpand = (deps.length > 0 && !expandedAlready && !isWeak);
-      if (indent1 !== '') {
-        indent1 += (shouldExpand ? '┬' : '─') + ' ';
+
+      // with normal tree display we send the current info to stdout
+      if (showTree) {
+        if (indent1 !== '') {
+          indent1 += (shouldExpand ? '┬' : '─') + ' ';
+        }
+
+        let suffix = (isWeak ? suffixes.weak : '');
+        if (expandedAlready) {
+          suffix += topLevelSet.has(packageName)
+            ? ` ${suffixes.topLevel}`
+            : ` ${suffixes.expandedAbove}`
+        }
+
+        Console.info(indent1 + packageName + '@' + packageToPrint.version + suffix);
       }
 
-      let suffix = (isWeak ? '[weak]' : '');
-      if (expandedAlready) {
-        suffix += topLevelSet.has(packageName) ? ' (top level)' : ' (expanded above)';
+      // with json we add detailed info to the json object
+      if (showJson) {
+        if (expandedAlready) {
+          // on expanded packages we only want to add minimal information to
+          // keep the json file compact, so we make the value a stirng
+          if (topLevelSet.has(packageName)) {
+            parent[packageName] = `${packageToPrint.version}-${suffixes.topLevel}`
+          } else {
+            parent[packageName] = `${packageToPrint.version}-${suffixes.expandedAbove}`
+          }
+        } else {
+          // on non-expanded packages we want detailed information but we
+          // omit falsy values in order to keep the output minimal and readable
+          const entry = {};
+          parent[packageName] = entry;
+
+          const mapInfo = projectContext.packageMap.getInfo(packageName);
+          const isLocal = mapInfo && mapInfo.kind === 'local';
+
+          const infoSource = Object.assign({}, showDetails ? packageToPrint : {}, {
+            version: packageToPrint.version,
+            local: isLocal,
+            weak: isWeak,
+            newerVersion: !isLocal && getNewerVersion(packageName, packageToPrint.version, catalog.official)
+          });
+
+          Object.entries(infoSource).forEach(([key, value]) => {
+            if (value) {
+              entry[key] = value;
+            }
+          });
+
+          if (shouldExpand) {
+            entry.dependencies = {};
+          }
+        }
       }
 
-      Console.info(indent1 + packageName + '@' + packageToPrint.version + suffix);
       if (shouldExpand) {
         dontExpand.add(packageName);
         deps.forEach((dep, index) => {
@@ -1192,14 +1284,37 @@ main.registerCommand({
           const weakRef = references.length > 0 && references.every(r => r.weak);
           const last = ((index + 1) === deps.length);
           const child = packageDetails.get(dep);
-          const newIndent1 = indent2 + (last ? '└─' : '├─');
-          const newIndent2 = indent2 + (last ? '  ' : '│ ');
-          if (child) {
-            printPackage(child, weakRef, newIndent1, newIndent2);
-          } else if (weakRef) {
-            Console.info(newIndent1 + '─ ' + dep + '[weak] package skipped');
-          } else {
-            Console.info(newIndent1 + '─ ' + dep + ' missing?');
+
+          // with normal tree display we increase indentation
+          if (showTree) {
+            const newIndent1 = indent2 + (last ? '└─' : '├─');
+            const newIndent2 = indent2 + (last ? '  ' : '│ ');
+            if (child) {
+              printPackage({
+                packageToPrint: child,
+                isWeak: weakRef,
+                indent1: newIndent1,
+                indent2: newIndent2
+              });
+            } else if (weakRef) {
+              Console.info(`${newIndent1}─ ${dep} ${suffixes.weak} ${suffixes.skipped}`);
+            } else {
+              Console.info(`${newIndent1}─ ${dep} ${suffixes.missing}`);
+            }
+          }
+
+          if (showJson) {
+            if (child) {
+              printPackage({
+                packageToPrint: child,
+                isWeak: weakRef,
+                parent: parent[packageName].dependencies
+              });
+            } else if (weakRef) {
+              parent[packageName].dependencies[dep] = `${suffixes.weak} ${suffixes.skipped}`;
+            } else {
+              parent[packageName].dependencies = suffixes.missing;
+            }
           }
         });
       }
@@ -1211,9 +1326,22 @@ main.registerCommand({
       if (topLevelPackage) {
         // Force top level packages to be expanded
         dontExpand.delete(topLevelPackage.packageName);
-        printPackage(topLevelPackage, false, '', '');
+        printPackage({
+          packageToPrint: topLevelPackage,
+          isWeak: false,
+          indent1: '',
+          indent2: '',
+          parent: jsonOut
+        })
       }
     });
+
+    if (showJson) {
+      // we can't use Console here, because it pretty prints the output with
+      // a wrap at 80 chars per line, which causes the json to break if details
+      // options is active and the package descriptions exceed the limit
+      console.info(JSON.stringify(jsonOut));
+    }
 
     return 0;
   }
@@ -1998,34 +2126,39 @@ main.registerCommand({
 
   // Split arguments into Cordova plugins and packages
   const { plugins: pluginsToAdd, packages: packagesToAdd } =
-    cordova.splitPluginsAndPackages(options.args);
+    splitPluginsAndPackages(options.args);
 
   if (!_.isEmpty(pluginsToAdd)) {
-    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
-    let changed = false;
+    function cordovaPluginAdd() {
+      const plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+      let changed = false;
 
-    for (target of pluginsToAdd) {
-      let [id, version] = target.split('@');
+      for (target of pluginsToAdd) {
+        const { id, version } =
+          require('../cordova/package-id-version-parser.js').parse(target);
+        const newId = newPluginId(id);
 
-      const newId = cordova.newPluginId(id);
-
-      if (!(version && utils.isValidVersion(version, {forCordova: true}))) {
-        Console.error(`${id}: Meteor requires either an exact version \
-(e.g. ${id}@1.0.0), a Git URL with a SHA reference, or a local path.`);
-        exitCode = 1;
-      } else if (newId) {
-        plugins[newId] = version;
-        Console.info(`Added Cordova plugin ${newId}@${version} \
-(plugin has been renamed as part of moving to npm).`);
-        changed = true;
-      } else {
-        plugins[id] = version;
-        Console.info(`Added Cordova plugin ${id}@${version}.`);
-        changed = true;
+        if (!(version && utils.isValidVersion(version, {forCordova: true}))) {
+          Console.error(`${id}: Meteor requires either an exact version \
+  (e.g. ${id}@1.0.0), a Git URL with a SHA reference, or a local path.`);
+          exitCode = 1;
+        } else if (newId) {
+          plugins[newId] = version;
+          Console.info(`Added Cordova plugin ${newId}@${version} \
+  (plugin has been renamed as part of moving to npm).`);
+          changed = true;
+        } else {
+          plugins[id] = version;
+          Console.info(`Added Cordova plugin ${id}@${version}.`);
+          changed = true;
+        }
       }
+
+      changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    changed && projectContext.cordovaPluginsFile.write(plugins);
+    ensureDevBundleDependencies();
+    cordovaPluginAdd();
   }
 
   if (_.isEmpty(packagesToAdd)) {
@@ -2191,34 +2324,39 @@ main.registerCommand({
 
   // Split arguments into Cordova plugins and packages
   const { plugins: pluginsToRemove, packages }  =
-    cordova.splitPluginsAndPackages(options.args);
+    splitPluginsAndPackages(options.args);
 
   if (!_.isEmpty(pluginsToRemove)) {
-    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
-    let changed = false;
+    function cordovaPluginRemove() {
+      const plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+      let changed = false;
 
-    for (id of pluginsToRemove) {
-      const newId = cordova.newPluginId(id);
+      for (id of pluginsToRemove) {
+        const newId = newPluginId(id);
 
-      if (/@/.test(id)) {
-        Console.error(`${id}: do not specify version constraints.`);
-        exitCode = 1;
-      } else if (_.has(plugins, id)) {
-        delete plugins[id];
-        Console.info(`Removed Cordova plugin ${id}.`);
-        changed = true;
-      } else if (newId && _.has(plugins, newId)) {
-        delete plugins[newId];
-        Console.info(`Removed Cordova plugin ${newId} \
-(plugin has been renamed as part of moving to npm).`);
-        changed = true;
-      } else {
-        Console.error(`Cordova plugin ${id} is not in this project.`);
-        exitCode = 1;
+        if (/@/.test(id)) {
+          Console.error(`${id}: do not specify version constraints.`);
+          exitCode = 1;
+        } else if (_.has(plugins, id)) {
+          delete plugins[id];
+          Console.info(`Removed Cordova plugin ${id}.`);
+          changed = true;
+        } else if (newId && _.has(plugins, newId)) {
+          delete plugins[newId];
+          Console.info(`Removed Cordova plugin ${newId} \
+  (plugin has been renamed as part of moving to npm).`);
+          changed = true;
+        } else {
+          Console.error(`Cordova plugin ${id} is not in this project.`);
+          exitCode = 1;
+        }
       }
+
+      changed && projectContext.cordovaPluginsFile.write(plugins);
     }
 
-    changed && projectContext.cordovaPluginsFile.write(plugins);
+    ensureDevBundleDependencies();
+    cordovaPluginRemove();
   }
 
   if (_.isEmpty(packages)) {

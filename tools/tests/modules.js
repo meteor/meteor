@@ -11,6 +11,7 @@ function startRun(sandbox) {
   run.match("myapp");
   run.match("proxy");
   run.tellMongo(MONGO_LISTENING);
+  run.waitSecs(20);
   run.match("MongoDB");
   return run;
 };
@@ -21,11 +22,15 @@ selftest.define("modules - test app", function () {
   // Make sure we use the right "env" section of .babelrc.
   s.set("NODE_ENV", "development");
 
+    // For meteortesting:mocha to work we must set test broswer driver
+  // See https://github.com/meteortesting/meteor-mocha
+  s.set("TEST_BROWSER_DRIVER", "puppeteer");
+
   s.createApp("modules-test-app", "modules");
   s.cd("modules-test-app", function () {
     const run = s.run(
       "test", "--once", "--full-app",
-      "--driver-package", "dispatch:mocha-phantomjs"
+      "--driver-package", "meteortesting:mocha"
     );
 
     run.waitSecs(60);
@@ -82,11 +87,21 @@ selftest.define("modules - import chain for packages", () => {
   run.match("with-main-module: with-main-module");
 
   // On the client, we just check that install() is called correctly
-  const modules = getUrl("http://localhost:3000/packages/modules.js");
-  selftest.expectTrue(modules.includes('\ninstall("with-add-files");'));
-  selftest.expectTrue(modules.includes('\n' +
-    'install("with-main-module", "meteor/with-main-module/with-main-module.js");'
-  ));
+  checkModernAndLegacyUrls("/packages/modules.js", body => {
+    selftest.expectTrue(body.includes('\ninstall("with-add-files");'));
+    selftest.expectTrue(
+      body.includes('\ninstall("with-main-module", ' +
+                    '"meteor/with-main-module/with-main-module.js");')
+    );
+  });
 
   run.stop();
 });
+
+function checkModernAndLegacyUrls(path, test) {
+  if (! path.startsWith("/")) {
+    path = "/" + path;
+  }
+  test(getUrl("http://localhost:3000" + path));
+  test(getUrl("http://localhost:3000/__browser.legacy" + path));
+}

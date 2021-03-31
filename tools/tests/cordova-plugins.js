@@ -1,7 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../fs/files.js');
-import { execFileSync } from '../utils/processes.js';
+var files = require('../fs/files');
+import { execFileSync } from '../utils/processes';
 var _ = require('underscore');
 
 // Copy the contents of one file to another.  In these series of tests, we often
@@ -142,8 +142,6 @@ selftest.define("change cordova plugins", ["cordova"], function () {
   run = s.run();
   run.match("myapp");
   run.match("proxy");
-  run.waitSecs(30);
-  run.match("MongoDB");
   run.match("your app");
   run.match("running at");
   run.match("localhost");
@@ -611,3 +609,36 @@ selftest.define("cordova plugins in star.json, direct and transitive", ["slow", 
 
   buildAndCheckPluginInStar(s, "cordova-plugin-camera", "1.0.0");
 });
+
+selftest.define(
+  'parse cordova plugin ID and version',
+  ['cordova'],
+  function () {
+    const parseCordovaIdVersion =
+      require('../cordova/package-id-version-parser.js').parse;
+
+    let fullPackageId = 'some-cordova-plugin';
+    selftest.expectEqual(
+      parseCordovaIdVersion(fullPackageId),
+      { id: 'some-cordova-plugin', version: null }
+    );
+
+    fullPackageId = 'some-cordova-plugin@1.0.0';
+    selftest.expectEqual(
+      parseCordovaIdVersion(fullPackageId),
+      { id: 'some-cordova-plugin', version: '1.0.0' }
+    );
+
+    fullPackageId = '@somescope/some-cordova-plugin';
+    selftest.expectEqual(
+      parseCordovaIdVersion(fullPackageId),
+      { id: '@somescope/some-cordova-plugin', version: null }
+    );
+
+    fullPackageId = '@somescope/some-cordova-plugin@1.0.0';
+    selftest.expectEqual(
+      parseCordovaIdVersion(fullPackageId),
+      { id: '@somescope/some-cordova-plugin', version: '1.0.0' }
+    );
+  }
+);

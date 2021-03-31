@@ -4,9 +4,11 @@ var utils = require('../utils/utils.js');
 var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var catalog = require('../packaging/catalog/catalog.js');
 var os = require('os');
+var isReachable = require("is-reachable");
+var httpHelpers = require('../utils/http-helpers.js');
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
@@ -73,31 +75,14 @@ selftest.define("run", function () {
   run.waitSecs(5);
   run.match("Modified");
   run.match("prevented startup");
-  run.match("End of comment missing");
+  run.match("Unclosed comment");
   run.match("file change");
 
   // Back to working
   s.unlink("junk.css");
   run.waitSecs(5);
   run.match("restarted");
-
-  // Crash just once, then restart successfully
-  s.write("crash_then_restart.js", `
-var fs = Npm.require('fs');
-var path = Npm.require('path');
-var crashmark = path.join(process.env.METEOR_TEST_TMP, 'crashed');
-try {
-  fs.readFileSync(crashmark);
-} catch (e) {
-  fs.writeFileSync(crashmark);
-  process.exit(137);
-}`);
-  run.waitSecs(5);
-  run.match("with code: 137");
-  run.waitSecs(5);
-  run.match("restarted");
   run.stop();
-  s.unlink("crash_then_restart.js");
 
   run = s.run('--settings', 's.json');
   run.waitSecs(5);
@@ -125,7 +110,7 @@ try {
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
   run.match("prevented startup");
-  run.match("End of comment missing");
+  run.match("Unclosed comment");
   run.match("file change");
   s.unlink("junk.css");
   run.waitSecs(5);
@@ -165,7 +150,7 @@ selftest.define("run --once", ["yet-unsolved-windows-failure"], function () {
   run = s.run("--once");
   run.waitSecs(5);
   run.matchErr("Build failed");
-  run.matchErr("End of comment missing");
+  run.matchErr("Unclosed comment");
   run.expectExit(254);
   s.unlink("junk.css");
 
@@ -239,6 +224,37 @@ selftest.define("run errors", function () {
   f = new Future;
   server.close(f.resolver());
   f.wait();
+});
+
+selftest.define("handle requests with large headers", function() {
+  const sandbox = new Sandbox();
+  sandbox.env.NODE_OPTIONS = '--max-http-header-size=8192';
+
+  sandbox.createApp('myapp', 'standard-app');
+  sandbox.cd('myapp');
+  sandbox.append('.meteor/packages', 'browser-policy\n');
+
+  const browserPolicyCode = Array(1000).fill(null)
+    .map((_, index) => (
+      `BrowserPolicy.content.allowConnectOrigin('host${index}.com');`
+    ))
+    .join('\n');
+  sandbox.write('packageless.js', browserPolicyCode);
+
+  const run = sandbox.run();
+  run.waitSecs(5);
+  run.match('App running');
+
+  let errorMessage = null;
+  try {
+    httpHelpers.getUrl('http://localhost:3000');
+  } catch (error) {
+    errorMessage = error.message;
+  }
+
+  const errorMatchesExpected = /Unexpected error\./.test(errorMessage);
+  selftest.expectTrue(errorMatchesExpected);
+  run.match('due to the header size exceeding Node\'s currently');
 });
 
 selftest.define("update during run", ["checkout", 'custom-warehouse'], function () {
@@ -377,23 +393,20 @@ selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure
   }
   childPid = match[1];
 
+  if (!isReachable("localhost:3000").await()) {
+    selftest.fail("Child process " + childPid + " already dead?");
+  }
+
   process.kill(run.proc.pid, "SIGKILL");
   // This sleep should be a little more time than the interval at which
   // the child checks if the parent is still alive, in
   // packages/webapp/webapp_server.js.
-  utils.sleepMs(3500);
+  utils.sleepMs(10000);
 
   // Send the child process a signal of 0. If there is no error, it
   // means that the process is still running, which is not what we
   // expect.
-  var caughtError;
-  try {
-    process.kill(childPid, 0);
-  } catch (err) {
-    caughtError = err;
-  }
-
-  if (! caughtError) {
+  if (isReachable("localhost:3000").await()) {
     selftest.fail("Child process " + childPid + " is still running");
   }
 
@@ -497,4 +510,31 @@ selftest.define("run logging in order", function () {
   for (var i = 0; i < 100000; i++) {
     run.match(`line: ${i}.`);
   }
+});
+
+selftest.define("run ROOT_URL must be an URL", function () {
+  var s = new Sandbox();
+  var run;
+
+  s.set("ROOT_URL", "192.168.0.1");
+  s.createApp("myapp", "standard-app", { dontPrepareApp: true });
+  s.cd("myapp");
+
+  run = s.run();
+  run.matchErr("$ROOT_URL, if specified, must be an URL");
+  run.expectExit(1);
+});
+
+selftest.define("app starts when settings file has BOM", function () {
+  var s = new Sandbox({ fakeMongo: true });
+  var run;
+  s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+  files.writeFile(
+    files.pathJoin(s.cwd, "settings.json"),
+    "\ufeff" + JSON.stringify({ foo: "bar" }),
+  );
+  run = s.run("--settings", "settings.json", "--once");
+  run.tellMongo(MONGO_LISTENING);
+  run.forbid("Build failed");
 });

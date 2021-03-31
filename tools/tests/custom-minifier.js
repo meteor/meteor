@@ -12,7 +12,6 @@ selftest.define('custom minifier - devel vs prod', function (options) {
     run.waitSecs(5);
     run.match('myapp');
     run.match('proxy');
-    run.match('MongoDB');
 
     run.connectClient();
     run.waitSecs(20);
@@ -32,7 +31,6 @@ selftest.define('custom minifier - devel vs prod', function (options) {
     run.waitSecs(5);
     run.match('myapp');
     run.match('proxy');
-    run.match('MongoDB');
 
     run.connectClient();
     run.waitSecs(20);

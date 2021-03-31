@@ -19,10 +19,7 @@ export default class Cursor {
       this._selectorId = undefined;
 
       if (this.matcher.hasGeoQuery() || options.sort) {
-        this.sorter = new Minimongo.Sorter(
-          options.sort || [],
-          {matcher: this.matcher}
-        );
+        this.sorter = new Minimongo.Sorter(options.sort || []);
       }
     }
 
@@ -231,8 +228,8 @@ export default class Cursor {
     // XXX allow skip/limit with unordered observe
     if (!options._allow_unordered && !ordered && (this.skip || this.limit)) {
       throw new Error(
-        'must use ordered observe (ie, \'addedBefore\' instead of \'added\') ' +
-        'with skip or limit'
+        "Must use an ordered observe with skip or limit (i.e. 'addedBefore' " +
+        "for observeChanges or 'addedAt' for observe, instead of 'added')."
       );
     }
 
@@ -308,10 +305,7 @@ export default class Cursor {
     }
 
     if (!options._suppress_initial && !this.collection.paused) {
-      const results = ordered ? query.results : query.results._map;
-
-      Object.keys(results).forEach(key => {
-        const doc = results[key];
+      query.results.forEach(doc => {
         const fields = EJSON.clone(doc);
 
         delete fields._id;

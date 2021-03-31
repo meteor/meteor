@@ -1,11 +1,11 @@
 /* eslint no-console: 0 */
 
 var _ = require('underscore');
-var files = require('./fs/files.js');
+var files = require('./fs/files');
 var Console = require('./console/console.js').Console;
 import main from './cli/main.js';
 import buildmessage from './utils/buildmessage.js';
-import * as cordova from './cordova';
+import { convertPluginVersions } from './cordova/index.js';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -183,7 +183,7 @@ var upgradersByName = {
       messages = buildmessage.capture(
         { title: `converting Cordova plugins` }, () => {
         let pluginVersions = pluginsFile.getPluginVersions();
-        pluginVersions = cordova.convertPluginVersions(pluginVersions);
+        pluginVersions = convertPluginVersions(pluginVersions);
         pluginsFile.write(pluginVersions);
       });
     }
@@ -277,7 +277,7 @@ be removed if there is no need for the Blaze configuration interface.`,
 
       // If `<service>`, it changes to `<service>-oauth`
       if (packagesFile.getConstraint(service)) {
-        packagesFile.removePackages([service])
+        packagesFile.removePackages([service]);
         packagesFile.addPackages([`${service}-oauth`]);
       }
     });
@@ -290,6 +290,44 @@ be removed if there is no need for the Blaze configuration interface.`,
     packagesFile.addPackages(["dynamic-import"]);
     packagesFile.writeIfModified();
   },
+
+  '1.7-split-underscore-from-meteor-base': function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    if (! packagesFile.getConstraint(`underscore`) &&
+      packagesFile.getConstraint(`meteor-base`)) {
+
+      maybePrintNoticeHeader();
+      Console.info(
+`The underscore package has been removed as a dependency of all packages in \
+meteor-base. Since some apps may have been using underscore through this \
+dependency without having it listed in their .meteor/packages files, it has \
+been added automatically. If your app is not using underscore, then you can \
+safely remove it using 'meteor remove underscore'.`,
+        Console.options({ bulletPoint: "1.7: " })
+      );
+      packagesFile.addPackages([`underscore`]);
+      packagesFile.writeIfModified();
+    }
+  },
+
+  '1.8.3-split-jquery-from-blaze': function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    if (! packagesFile.getConstraint(`jquery`) &&
+      packagesFile.getConstraint(`blaze-html-templates`)) {
+
+      maybePrintNoticeHeader();
+      Console.info(
+`The jquery package has become a weak dependency of the blaze package. \
+Since you will most likely need jquery as the commonly used blaze backend \
+and it was not listed in your .meteor/packages files, it has \
+been added automatically. If your app is not using jquery, then you can \
+safely remove it using 'meteor remove jquery'.`,
+        Console.options({ bulletPoint: "1.8.3: " })
+      );
+      packagesFile.addPackages([`jquery`]);
+      packagesFile.writeIfModified();
+    }
+  }
 
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the

@@ -1,5 +1,8 @@
+import RoutePolicy from 'meteor/routepolicy/routepolicy';
+import { Tinytest } from "meteor/tinytest";
+
 Tinytest.add("routepolicy - declare", function (test) {
-  var policy = new RoutePolicyTest.Constructor();
+  const policy = new RoutePolicy();
 
   policy.declare('/sockjs/', 'network');
   policy.declare('/bigphoto.jpg', 'static-online');
@@ -23,7 +26,7 @@ Tinytest.add("routepolicy - declare", function (test) {
 });
 
 Tinytest.add("routepolicy - static conflicts", function (test) {
-  var manifest = [
+  const manifest = [
     {
       "path": "static/sockjs/socks-are-comfy.jpg",
       "type": "static",
@@ -37,7 +40,7 @@ Tinytest.add("routepolicy - static conflicts", function (test) {
       "url": "/bigphoto.jpg"
     }
   ];
-  var policy = new RoutePolicyTest.Constructor();
+  const policy = new RoutePolicy();
 
   test.equal(
     policy.checkForConflictWithStatic('/sockjs/', 'network', manifest),
@@ -51,7 +54,7 @@ Tinytest.add("routepolicy - static conflicts", function (test) {
 });
 
 Tinytest.add("routepolicy - checkUrlPrefix", function (test) {
-  var policy = new RoutePolicyTest.Constructor();
+  const policy = new RoutePolicy();
   policy.declare('/sockjs/', 'network');
 
   test.equal(

@@ -1,20 +1,19 @@
 Accounts.oauth.registerService('facebook');
 
 if (Meteor.isClient) {
-  const loginWithFacebook = function(options, callback) {
+  const loginWithFacebook = (options, callback) => {
     // support a callback without options
     if (! callback && typeof options === "function") {
       callback = options;
       options = null;
     }
 
-    var credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
+    const credentialRequestCompleteCallback = Accounts.oauth.credentialRequestCompleteHandler(callback);
     Facebook.requestCredential(options, credentialRequestCompleteCallback);
   };
   Accounts.registerClientLoginFunction('facebook', loginWithFacebook);
-  Meteor.loginWithFacebook = function () {
-    return Accounts.applyLoginFunction('facebook', arguments);
-  };
+  Meteor.loginWithFacebook = 
+    (...args) => Accounts.applyLoginFunction('facebook', args);
 } else {
   Accounts.addAutopublishFields({
     // publish all fields including access token, which can legitimately

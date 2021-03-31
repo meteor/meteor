@@ -1,20 +1,27 @@
 var _ = require('underscore');
 var sqlite3 = require('sqlite3');
 
-var files = require('../../fs/files.js');
+var files = require('../../fs/files');
 var utils = require('../../utils/utils.js');
 var buildmessage = require('../../utils/buildmessage.js');
 var config = require('../../meteor-services/config.js');
-var archinfo = require('../../utils/archinfo.js');
+var archinfo = require('../../utils/archinfo');
 var Console = require('../../console/console.js').Console;
 
 var tropohouse = require('../tropohouse.js');
 var packageClient = require('../package-client.js');
 var VersionParser = require('../package-version-parser.js');
-var Profile = require('../../tool-env/profile.js').Profile;
+var Profile = require('../../tool-env/profile').Profile;
 
 // XXX: Rationalize these flags.  Maybe use the logger?
 var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
+
+// Developers using Windows Subsystem for Linux (WSL) may want to override
+// this environment variable to TRUNCATE instead of WAL. WAL mode copes
+// better with (multi-process) concurrency but is currently incompatible
+// with WSL: https://github.com/meteor/meteor-feature-requests/issues/154
+const JOURNAL_MODE =
+  process.env.METEOR_SQLITE_JOURNAL_MODE || "WAL";
 
 var SYNCTOKEN_ID = "1";
 
@@ -139,9 +146,8 @@ var Db = function (dbFile, options) {
     return self.open(dbFile);
   });
 
-  // WAL mode copes much better with (multi-process) concurrency
   self._retry(function () {
-    self._execute('PRAGMA journal_mode=WAL');
+    self._execute(`PRAGMA journal_mode=${JOURNAL_MODE}`);
   });
 };
 
@@ -241,9 +247,9 @@ _.extend(Db.prototype, {
       } catch (err) {
         var retry = false;
         // Grr... doesn't expose error code; must string-match
-        if (err.message
-            && (   err.message == "SQLITE_BUSY: database is locked"
-                || err.message == "SQLITE_BUSY: cannot commit transaction - SQL statements in progress")) {
+        if (err.message &&
+            (err.message === "SQLITE_BUSY: database is locked" ||
+             err.message === "SQLITE_BUSY: cannot commit transaction - SQL statements in progress")) {
           if (attempt < BUSY_RETRY_ATTEMPTS) {
             retry = true;
           }
@@ -530,14 +536,11 @@ _.extend(RemoteCatalog.prototype, {
     self.db = null;
   },
 
-  getVersion: function (name, version) {
+  getVersion: function (packageName, version) {
     var result = this._contentQuery(
       "SELECT content FROM versions WHERE packageName=? AND version=?",
-      [name, version]);
-    if(!result || result.length === 0) {
-      return null;
-    }
-    return result[0];
+      [packageName, version]);
+    return filterExactRows(result, { packageName, version });
   },
 
   // As getVersion, but returns info on the latest version of the
@@ -652,9 +655,7 @@ _.extend(RemoteCatalog.prototype, {
     var self = this;
     var result = self._contentQuery(
       "SELECT content FROM releaseTracks WHERE name=?", name);
-    if (!result || result.length === 0)
-      return null;
-    return result[0];
+    return filterExactRows(result, { name });
   },
 
   getReleaseVersion: function (track, version) {
@@ -662,9 +663,7 @@ _.extend(RemoteCatalog.prototype, {
     var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=? AND version=?",
       [track, version]);
-    if (!result || result.length === 0)
-      return null;
-    return result[0];
+    return filterExactRows(result, { track, version });
   },
 
   // Used by make-bootstrap-tarballs. Only should be used on catalogs that are
@@ -989,6 +988,29 @@ _.extend(RemoteCatalog.prototype, {
     });
   }
 });
+
+// SQLite has a bizarre philosophy about automaticaly converting between
+// different data types, such as strings and floating point numbers:
+// https://www.sqlite.org/quirks.html#flexible_typing
+//
+// This means querying for the string "1.10" in a given column can return
+// rows where the column is actually the string "1.1", since SQLite thinks
+// you might be talking about the number 1.1 rather than the string you
+// actually requested.
+//
+// This "feature" first became a problem for Meteor after we published
+// Meteor 1.10, which caused SQLite to return multiple rows for the
+// getReleaseVersion query, including both 1.10 and 1.1.1 (ancient).
+//
+// While this policy seems completely indefensible, the SQLite project
+// does not consider it a bug, which forces us to work around it by
+// double-checking the queried results with this helper function:
+function filterExactRows(rows, requirements) {
+  const keys = Object.keys(requirements);
+  return rows && rows.filter(row => {
+    return keys.every(key => row[key] === requirements[key]);
+  })[0] || null;
+}
 
 exports.RemoteCatalog = RemoteCatalog;
 

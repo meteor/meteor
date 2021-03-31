@@ -99,7 +99,7 @@ selftest.define('galaxy deploy - settings', ['galaxy'], function () {
   // Test that the app is actually running on Galaxy.
   checkAppIsRunning(appName, { text: "Hello" });
 
-  // Test that the public settins appear in the HTTP response body.
+  // Test that the public settings appear in the HTTP response body.
   if (! galaxyUtils.ignoreHttpChecks()) {
     testUtils.checkForSettings(appName, settings, 10);
   }

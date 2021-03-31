@@ -4,16 +4,16 @@ import {
   statOrNull,
   writeFile,
   unlink,
-} from "../fs/files.js";
+} from "../fs/files";
 
 const INSTALL_JOB_MESSAGE = "installing npm dependencies";
 
-export function install(appDir) {
+export function install(appDir, options) {
   const packageJsonPath = pathJoin(appDir, "package.json");
   const needTempPackageJson = ! statOrNull(packageJsonPath);
 
   if (needTempPackageJson) {
-    const { dependencies } = require("../static-assets/skel/package.json");
+    const { dependencies } = require("../static-assets/skel-minimal/package.json");
 
     // Write a minimial package.json with the same dependencies as the
     // default new-app package.json file.
@@ -25,9 +25,13 @@ export function install(appDir) {
   }
 
   const ok = buildmessage.enterJob(INSTALL_JOB_MESSAGE, function () {
-    const { runNpmCommand } = require("../isobuild/meteor-npm.js");
+    const npmCommand = ["install"];
+    if (options && options.includeDevDependencies) {
+      npmCommand.push("--production=false");
+    }
 
-    const installResult = runNpmCommand(["install"], appDir);
+    const { runNpmCommand } = require("../isobuild/meteor-npm.js");
+    const installResult = runNpmCommand(npmCommand, appDir);
     if (! installResult.success) {
       buildmessage.error(
         "Could not install npm dependencies for test-packages: " +

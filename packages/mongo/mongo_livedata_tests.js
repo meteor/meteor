@@ -560,6 +560,80 @@ Tinytest.addAsync("mongo-livedata - scribbling, " + idGeneration, function (test
   onComplete();
 });
 
+if (Meteor.isServer) {
+  Tinytest.addAsync("mongo-livedata - extended scribbling, " + idGeneration, function (test, onComplete) {
+    function error() {
+      throw new Meteor.Error('unsafe object mutation');
+    }
+    
+    const denyModifications = {
+      get(target, key) {
+        const type = Object.prototype.toString.call(target[key]);
+        if (type === '[object Object]' || type === '[object Array]') {
+          return freeze(target[key]);
+        } else {
+          return target[key];
+        }
+      },
+      set: error,
+      deleteProperty: error,
+      defineProperty: error,
+    };
+    
+    // Object.freeze only throws in silent mode
+    // So we make our own version that always throws.
+    function freeze(obj) {
+      return new Proxy(obj, denyModifications);
+    }
+
+    const origApplyCallback = ObserveMultiplexer.prototype._applyCallback;
+    ObserveMultiplexer.prototype._applyCallback = function(callback, args) {
+      // Make sure that if anything touches the original object, this will throw
+      return origApplyCallback.call(this, callback, freeze(args));
+    }
+    
+    const run = test.runId();
+    const coll = new Mongo.Collection(`livedata_test_scribble_collection_${run}`, collectionOptions);
+    const expectMutatable = (o) => {
+      try {
+        o.a[0].c = 3;
+      } catch (error) {
+        test.fail();
+      }
+    }
+    const expectNotMutatable = (o) => {
+      try {
+        o.a[0].c = 3;
+        test.fail();
+      } catch (error) {}
+    }
+    const handle = coll.find({run}).observe({
+      addedAt: expectMutatable,
+      changedAt: function(id, o) {
+        expectMutatable(o);
+      }
+    });
+
+    const handle2 = coll.find({run}).observeChanges({
+      added: expectNotMutatable,
+      changed: function(id, o) {
+        expectNotMutatable(o);
+      }
+    }, { nonMutatingCallbacks: true });
+
+    runInFence(function () {
+      coll.insert({run, a: [ {c: 1} ]});
+      coll.update({run}, { $set: { 'a.0.c': 2 } });
+    });
+ 
+    handle.stop();
+    handle2.stop();
+
+    ObserveMultiplexer.prototype._applyCallback = origApplyCallback;
+    onComplete();
+  });
+}
+
 Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
   var run = Random.id();
   var coll;
@@ -1507,13 +1581,15 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       Meteor.call('createInsecureCollection', this.collectionName, collectionOptions);
       Meteor.subscribe('c-' + this.collectionName, expect());
     }
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll = new Mongo.Collection(this.collectionName, collectionOptions);
     var docId;
     // Dog is implemented at the top of the file, outside of the idGeneration
     // loop (so that we only call EJSON.addType once).
-    var d = new Dog("reginald", "purple");
+    var d = new Dog("reginald", null);
     self.coll.insert({d: d}, expect(function (err, id) {
       test.isFalse(err);
       test.isTrue(id);
@@ -1524,14 +1600,19 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       var inColl = self.coll.findOne();
       test.isTrue(inColl);
       inColl && test.equal(inColl.d.speak(), "woof");
+      inColl && test.isNull(inColl.d.color);
     }));
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll.insert(new Dog("rover", "orange"), expect(function (err, id) {
       test.isTrue(err);
       test.isFalse(id);
     }));
-  }, function (test, expect) {
+  },
+
+  function (test, expect) {
     var self = this;
     self.coll.update(
       self.docId, new Dog("rover", "orange"), expect(function (err) {
@@ -3227,7 +3308,7 @@ Meteor.isServer && Tinytest.add(
 
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(MongoInternals.NpmModules.mongodb.version, /^2\.(\d+)\.(\d+)/);
+  test.matches(MongoInternals.NpmModules.mongodb.version, /^3\.(\d+)\.(\d+)/);
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'function');
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module.connect),
              'function');
@@ -3418,5 +3499,64 @@ if (Meteor.isServer) {
     };
 
     test1();
+  });
+}
+
+if (Meteor.isServer) {
+  Tinytest.addAsync("mongo-livedata - transaction", function (test, onComplete) {
+    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
+
+    const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
+    const rawCollection = Collection.rawCollection();
+
+    Collection.insert({ _id: "a" });
+    Collection.insert({ _id: "b" });
+
+    let changeCount = 0;
+
+    function finalize() {
+      observeHandle.stop();
+      Meteor.clearTimeout(timeout);
+      onComplete();
+    }
+
+    const observeHandle = Collection.find().observeChanges({
+      changed(id, fields) {
+        let expectedValue;
+
+        if (id === "a") {
+          expectedValue = "updated1";
+        } else if (id === "b") {
+          expectedValue = "updated2";
+        }
+
+        test.equal(fields.field, expectedValue);
+        changeCount += 1;
+
+        if (changeCount === 2) {
+          finalize();
+        }
+      }
+    });
+
+    const timeout = Meteor.setTimeout(() => {
+      test.fail("Didn't receive all transaction operations in two seconds.");
+      finalize();
+    }, 2000);
+
+    const session = client.startSession();
+    session.withTransaction(session => {
+      let promise = Promise.resolve();
+      ["a", "b"].forEach((id, index) => {
+        promise = promise.then(() => rawCollection.update(
+          { _id: id },
+          { $set: { field: `updated${index + 1}` } },
+          { session }
+        ));
+      });
+      return promise;
+    }).finally(() => {
+      session.endSession();
+    });
   });
 }

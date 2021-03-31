@@ -3,14 +3,14 @@ require('../../tool-env/install-babel.js');
 var _ = require('underscore');
 var assert = require('assert');
 var Future = require('fibers/future');
-var files = require('../../fs/files.js');
+var files = require('../../fs/files');
 var bundler = require('../../isobuild/bundler.js');
 var isopackets = require('../../tool-env/isopackets.js');
 var release = require('../../packaging/release.js');
 var catalog = require('../../packaging/catalog/catalog.js');
 var buildmessage = require('../../utils/buildmessage.js');
 var projectContextModule = require('../../project-context.js');
-var safeWatcher = require("../../fs/safe-watcher.js");
+var safeWatcher = require("../../fs/safe-watcher");
 
 var lastTmpDir = null;
 var tmpDir = function () {
@@ -23,7 +23,9 @@ var makeProjectContext = function (appName) {
 
   var projectDir = files.mkdtemp("test-bundler-assets");
 
-  files.cp_r(testAppDir, projectDir);
+  files.cp_r(testAppDir, projectDir, {
+    preserveSymlinks: true,
+  });
 
   require("../../cli/default-npm-deps.js").install(projectDir);
 
@@ -77,7 +79,7 @@ var runTest = function () {
                    ["/nested/nested.txt", "Nested\n"]];
   _.each(testCases, function (file) {
     var manifestItem = _.find(clientManifest.manifest, function (m) {
-      return m.url === file[0];
+      return m.url.endsWith(file[0]);
     });
     assert(manifestItem);
     var diskPath = files.pathJoin(tmpOutputDir, "programs", "web.browser",

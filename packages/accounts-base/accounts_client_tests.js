@@ -1,5 +1,13 @@
 const username = 'jsmith';
 const password = 'password';
+const excludeField = 'excludeField';
+const defaultExcludeField = 'defaultExcludeField';
+const excludeValue = 'foo';
+const profile = {
+  name: username,
+  [excludeField]: excludeValue,
+  [defaultExcludeField]: excludeValue,
+}
 
 const logoutAndCreateUser = (test, done, nextTests) => {
   Meteor.logout(() => {
@@ -7,7 +15,7 @@ const logoutAndCreateUser = (test, done, nextTests) => {
     test.isFalse(Meteor.user());
 
     // Setup a new test user
-    Accounts.createUser({ username, password }, () => {
+    Accounts.createUser({ username, password, profile }, () => {
       // Handle next tests
       nextTests(test, done);
     });
@@ -66,6 +74,64 @@ Tinytest.addAsync(
       Meteor.logout((error) => {
         test.isFalse(Meteor.user());
         test.isFalse(Meteor.loggingOut());
+        removeTestUser(done);
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - onLogin callback receives { type: "password" } param on login',
+  (test, done) => {
+    const onLogin = Accounts.onLogin((loginDetails) => {
+      test.equal('password', loginDetails.type);
+      onLogin.stop();
+      removeTestUser(done);
+    });
+    logoutAndCreateUser(test, done, () => {});
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - onLogin callback receives { type: "resume" } param on ' +
+  'reconnect, if already logged in',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLogin = Accounts.onLogin((loginDetails) => {
+        test.equal('resume', loginDetails.type);
+        onLogin.stop();
+        removeTestUser(done);
+      });
+
+      Meteor.disconnect();
+      Meteor.reconnect();
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - Meteor.user obeys explicit and default field selectors',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      Meteor.loginWithPassword(username, password, () => {
+        // by default, all fields should be returned
+        test.equal(Meteor.user().profile[excludeField], excludeValue);
+
+        // this time we want to exclude the default fields
+        const options = Accounts._options;
+        Accounts._options = {};
+        Accounts.config({defaultFieldSelector: {['profile.'+defaultExcludeField]: 0}});
+        let user = Meteor.user();
+        test.isUndefined(user.profile[defaultExcludeField]);
+        test.equal(user.profile[excludeField], excludeValue);
+        test.equal(user.profile.name, username);
+
+        // this time we only want certain fields...
+        user = Meteor.user({fields: {'profile.name': 1}});
+        test.isUndefined(user.profile[excludeField]);
+        test.isUndefined(user.profile[defaultExcludeField]);
+        test.equal(user.profile.name, username);
+        Accounts._options = options;
         removeTestUser(done);
       });
     });

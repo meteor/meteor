@@ -3,8 +3,11 @@ meteorEnv = {
   TEST_METADATA: process.env.TEST_METADATA || "{}"
 };
 
-if (typeof __meteor_runtime_config__ === "object") {
-  __meteor_runtime_config__.meteorEnv = meteorEnv;
+const config = typeof __meteor_runtime_config__ === "object" &&
+  __meteor_runtime_config__;
+
+if (config) {
+  config.meteorEnv = meteorEnv;
 }
 
 Meteor = {
@@ -12,7 +15,10 @@ Meteor = {
   isDevelopment: meteorEnv.NODE_ENV !== "production",
   isClient: false,
   isServer: true,
-  isCordova: false
+  isCordova: false,
+  // Server code runs in Node 8+, which is decidedly "modern" by any
+  // reasonable definition.
+  isModern: true
 };
 
 Meteor.settings = {};
@@ -21,7 +27,7 @@ if (process.env.METEOR_SETTINGS) {
   try {
     Meteor.settings = JSON.parse(process.env.METEOR_SETTINGS);
   } catch (e) {
-    throw new Error("METEOR_SETTINGS are not valid JSON: " + process.env.METEOR_SETTINGS);
+    throw new Error("METEOR_SETTINGS are not valid JSON.");
   }
 }
 
@@ -36,6 +42,10 @@ if (! Meteor.settings.public) {
 // server, it also mutates
 // `__meteor_runtime_config__.PUBLIC_SETTINGS`, and the modified
 // settings will be sent to the client.
-if (typeof __meteor_runtime_config__ === "object") {
-  __meteor_runtime_config__.PUBLIC_SETTINGS = Meteor.settings.public;
+if (config) {
+  config.PUBLIC_SETTINGS = Meteor.settings.public;
+}
+
+if (config && config.gitCommitHash) {
+  Meteor.gitCommitHash = config.gitCommitHash;
 }

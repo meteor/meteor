@@ -102,6 +102,8 @@ Tinytest.add("core-js - String", function (test) {
   test.equal(typeof "asdf".endsWith, "function");
   test.equal(typeof "asdf".repeat, "function");
   test.equal(typeof "asdf".trim, "function");
+  test.equal(typeof "asdf".padStart, "function");
+  test.equal(typeof "asdf".padEnd, "function");
 });
 
 Tinytest.add("core-js - Symbol", function (test) {
@@ -121,4 +123,31 @@ Tinytest.add("core-js - Function", function (test) {
   function Constructor() {};
   test.equal(Constructor[Symbol.hasInstance](new Constructor), true);
   test.equal(Constructor[Symbol.hasInstance]({}), false);
+});
+
+Tinytest.addAsync("async iterators", async test => {
+  class Range {
+    constructor(limit) {
+      this.limit = limit;
+    }
+
+    [Symbol.asyncIterator]() {
+      const promises = [];
+      for (let value = 1; value <= this.limit; ++value) {
+        promises.push(Promise.resolve({ value, done: false }));
+      }
+
+      return {
+        next() {
+          return promises.shift() || Promise.resolve({ done: true });
+        }
+      };
+    }
+  }
+
+  let sum = 0;
+  for await (const n of new Range(10)) {
+    sum += n;
+  }
+  test.equal(sum, (10 * 11) / 2);
 });

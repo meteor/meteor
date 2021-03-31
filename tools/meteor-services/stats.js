@@ -2,7 +2,7 @@ var Fiber = require("fibers");
 var _ = require("underscore");
 
 var config = require('./config.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var auth = require('./auth.js');
 var ServiceConnection = require('./service-connection.js');
 var httpHelpers = require('../utils/http-helpers.js');
@@ -115,7 +115,8 @@ var recordPackages = function (options) {
 };
 
 var logErrorIfInCheckout = function (err) {
-  if (files.inCheckout() || process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
+  if ((Console.isInteractive() && files.inCheckout())
+      || process.env.METEOR_PACKAGE_STATS_TEST_OUTPUT) {
     Console.warn("Failed to record package usage.");
     Console.warn(
       "(This error is hidden when you are not running Meteor from a",

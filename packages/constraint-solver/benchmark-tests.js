@@ -283,7 +283,7 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
 // Given a set of gems definitions returns a Catalog-like object
 function getCatalogStub (gems) {
   return {
-    getSortedVersionRecords: function (name) {
+    getSortedVersionRecords(name) {
       var versions = _.chain(gems)
         .filter(function (pv) { return pv.name === name; })
         .pluck('number')
@@ -319,6 +319,17 @@ function getCatalogStub (gems) {
 
         return packageVersion;
       });
+    },
+
+    getVersion(packageName, version) {
+      let result = null;
+      this.getSortedVersionRecords(packageName).some(pkgVersion => {
+        if (pkgVersion.version === version) {
+          result = pkgVersion;
+          return true;
+        }
+      });
+      return result;
     }
   };
 }

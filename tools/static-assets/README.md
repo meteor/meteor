@@ -4,7 +4,7 @@ Files here are designed to be copied to the output destination of a Meteor CLI
 command.
 
 Sometimes, for code sharing, the JS files can be imported by parts of the tool
-(like `mini-files.js` - it is shared between built apps and tool).
+(like `mini-files.ts` - it is shared between built apps and tool).
 
 ## skel - App Skeleton
 
@@ -23,6 +23,10 @@ Similar to `skel`, `skel-full` is copied on `meteor create --full` command.
 ## skel-pack - Package Skeleton
 
 Similar to `skel`, `skel-pack` is copied on `meteor create --package` command.
+
+## skel-react - Package Skeleton
+
+Similar to `skel`, `skel-react` is copied on `meteor create --react` command.
 
 ## server - Bundled App's Bootstrap
 

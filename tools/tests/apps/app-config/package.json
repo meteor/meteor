@@ -1,0 +1,15 @@
+{
+  "name": "app-config",
+  "private": true,
+  "scripts": {
+    "start": "meteor run"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.5.0",
+    "meteor-node-stubs": "^1.0.1",
+    "puppeteer": "^2.1.1"
+  },
+  "meteor": {
+    "testModule": "tests.js"
+  }
+}

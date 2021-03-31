@@ -1,29 +1,30 @@
-LocalCollectionDriver = function () {
-  var self = this;
-  self.noConnCollections = {};
-};
+// singleton
+export const LocalCollectionDriver = new (class LocalCollectionDriver {
+  constructor() {
+    this.noConnCollections = Object.create(null);
+  }
 
-var ensureCollection = function (name, collections) {
-  if (!(name in collections))
-    collections[name] = new LocalCollection(name);
-  return collections[name];
-};
-
-_.extend(LocalCollectionDriver.prototype, {
-  open: function (name, conn) {
-    var self = this;
-    if (!name)
+  open(name, conn) {
+    if (! name) {
       return new LocalCollection;
-    if (! conn) {
-      return ensureCollection(name, self.noConnCollections);
     }
-    if (! conn._mongo_livedata_collections)
-      conn._mongo_livedata_collections = {};
+
+    if (! conn) {
+      return ensureCollection(name, this.noConnCollections);
+    }
+
+    if (! conn._mongo_livedata_collections) {
+      conn._mongo_livedata_collections = Object.create(null);
+    }
+
     // XXX is there a way to keep track of a connection's collections without
     // dangling it off the connection object?
     return ensureCollection(name, conn._mongo_livedata_collections);
   }
 });
 
-// singleton
-LocalCollectionDriver = new LocalCollectionDriver;
+function ensureCollection(name, collections) {
+  return (name in collections)
+    ? collections[name]
+    : collections[name] = new LocalCollection(name);
+}

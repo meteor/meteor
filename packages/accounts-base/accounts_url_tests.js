@@ -1,17 +1,16 @@
-import {AccountsTest} from "meteor/accounts-base";
+import { AccountsTest } from "./accounts_client.js";
 
-Tinytest.add("accounts - parse urls for accounts-password",
-  function (test) {
-    var actions = ["reset-password", "verify-email", "enroll-account"];
+Tinytest.add("accounts - parse urls for accounts-password", test => {
+    const actions = ["reset-password", "verify-email", "enroll-account"];
 
     // make sure the callback was called the right number of times
-    var actionsParsed = [];
+    const actionsParsed = [];
 
-    _.each(actions, function (hashPart) {
-      var fakeToken = "asdf";
+    actions.forEach(hashPart => {
+      const fakeToken = "asdf";
       
-      var hashTokenOnly = "#/" + hashPart + "/" + fakeToken;
-      AccountsTest.attemptToMatchHash(hashTokenOnly, function (token, action) {
+      const hashTokenOnly = `#/${hashPart}/${fakeToken}`;
+      AccountsTest.attemptToMatchHash(hashTokenOnly, (token, action) => {
         test.equal(token, fakeToken);
         test.equal(action, hashPart);
 

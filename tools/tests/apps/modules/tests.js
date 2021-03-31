@@ -124,9 +124,9 @@ describe("template modules", () => {
   Meteor.isClient &&
   it("should be importable on the client", () => {
     assert.strictEqual(typeof Template, "function");
-    assert.ok(! _.has(Template, "lazy"));
+    assert.ok(! Object.prototype.hasOwnProperty.call(Template, "lazy"));
     require("./imports/lazy.html");
-    assert.ok(_.has(Template, "lazy"));
+    assert.ok(Object.prototype.hasOwnProperty.call(Template, "lazy"));
     assert.ok(Template.lazy instanceof Template);
   });
 
@@ -284,7 +284,7 @@ describe("local node_modules", () => {
 
   it('should expose "version" field of package.json', () => {
     const pkg = require("moment/package.json");
-    assert.strictEqual(pkg.version, "2.11.1");
+    assert.strictEqual(pkg.version, "2.24.0");
   });
 
   it('should support object-valued package.json "browser" fields', () => {
@@ -302,6 +302,135 @@ describe("local node_modules", () => {
       const { browser } = require(["uuid", "package.json"].join("/"));
       assert.strictEqual(typeof browser, "object");
     }
+  });
+
+  it('should support package.json without a "main" field', () => {
+    if (Meteor.isServer) {
+      // Only import mysql during server tests, but register the
+      // dependency in the client bundle, too.
+      assert.strictEqual(
+        typeof require("mysql").createQuery,
+        "function"
+      );
+    }
+
+    assert.strictEqual(
+      require.resolve("mysql"),
+      "/node_modules/mysql/index.js"
+    );
+
+    // Verify that the package.json stub is bundled even though it is not
+    // needed for looking up the index.js module (#9235).
+    const pkg = require(["mysql", "package.json"].join("/"));
+    assert.strictEqual(pkg.name, "mysql");
+    assert.strictEqual(pkg.main, void 0);
+  });
+
+  it('should support package.json with a directory "main" field', () => {
+    if (Meteor.isServer) {
+      assert.strictEqual(typeof require("cli-color"), "function");
+    }
+
+    assert.strictEqual(
+      require.resolve("cli-color"),
+      "/node_modules/cli-color/lib/index.js"
+    );
+
+    const pkg = require(["cli-color", "package.json"].join("/"));
+    assert.strictEqual(pkg.name, "cli-color");
+    assert.strictEqual(pkg.main, "lib");
+
+    // We have to use an older version of cli-color to get this unusual
+    // module layout, so we shouldn't let this change without notice.
+    assert.strictEqual(pkg.version, "0.2.3");
+  });
+
+  it('should prefer "module" field of package.json on client', () => {
+    assert.strictEqual(
+      require.resolve("@wry/context"),
+      "/node_modules/@wry/context/lib/" + (
+        Meteor.isClient && Meteor.isModern ? "context.esm.js" : "context.js"
+      ),
+    );
+
+    assert.strictEqual(
+      typeof require("@wry/context").Slot,
+      "function",
+    );
+  });
+
+  it("packages with .mjs entry points can be imported", () => {
+    assert.strictEqual(
+      require.resolve("graphql"),
+      "/node_modules/graphql/index." + (
+        Meteor.isClient && Meteor.isModern ? "mjs" : "js"
+      ),
+    );
+    const { parse } = require("graphql");
+    const nestedParse = require("graphql/language/parser").parse;
+    assert.strictEqual(typeof parse, "function");
+    assert.strictEqual(parse, nestedParse);
+  });
+
+  Meteor.isClient && it("can import @polymer/lit-element", () => {
+    // This import is enabled by the meteor.nodeModules.recompile section of
+    // the package.json file for the modules test application.
+    const litElement = require("@polymer/lit-element");
+    const typeofMap = {};
+    Object.keys(litElement).forEach(key => {
+      typeofMap[key] = typeof litElement[key];
+    });
+
+    assert.deepEqual(typeofMap, {
+      defaultConverter: "object",
+      notEqual: "function",
+      UpdatingElement: "function",
+      customElement: "function",
+      property: "function",
+      query: "function",
+      queryAll: "function",
+      eventOptions: "function",
+      html: "function",
+      svg: "function",
+      TemplateResult: "function",
+      SVGTemplateResult: "function",
+      supportsAdoptingStyleSheets: "boolean",
+      CSSResult: "function",
+      css: "function",
+      LitElement: "function"
+    });
+  });
+
+  it("can import @babel/runtime/helpers/esm/*", () => {
+    import asyncIterator from "@babel/runtime/helpers/esm/asyncIterator.js";
+    import createClass from "@babel/runtime/helpers/esm/createClass.js";
+    import getPrototypeOf from "@babel/runtime/helpers/esm/getPrototypeOf.js";
+    import inherits from "@babel/runtime/helpers/esm/inherits.js";
+    import toArray from "@babel/runtime/helpers/esm/toArray.js";
+    import _typeof from "@babel/runtime/helpers/esm/typeof.js";
+
+    assert.strictEqual(typeof asyncIterator, "function");
+    assert.strictEqual(typeof createClass, "function");
+    assert.strictEqual(typeof getPrototypeOf, "function");
+    assert.strictEqual(typeof inherits, "function");
+    assert.strictEqual(typeof toArray, "function");
+    assert.strictEqual(typeof _typeof, "function");
+  });
+
+  it('can import packages with broken "module" fields', () => {
+    assert.strictEqual(
+      require.resolve("markdown-to-jsx"),
+      "/node_modules/markdown-to-jsx/index.es5.js",
+    );
+    const md2jsx = require("markdown-to-jsx");
+    assert.strictEqual(typeof md2jsx.default, "function");
+
+    assert.strictEqual(
+      require.resolve("react-trello"),
+      "/node_modules/react-trello/dist/index.js",
+    );
+    const reactTrello = require("react-trello");
+    assert.strictEqual(typeof reactTrello.default, "function");
   });
 });
 
@@ -385,7 +514,9 @@ describe("Meteor packages", () => {
       assert.deepEqual(os.resources.map(function (res) {
         return res.path;
       }), ["server.js"]);
-      assert.deepEqual(os.resources[0].fileOptions, {});
+      assert.deepEqual(os.resources[0].fileOptions, {
+        lazy: false
+      });
 
       assert.deepEqual(ServerTypeof, {
         require: "undefined",
@@ -414,6 +545,105 @@ describe("Meteor packages", () => {
     assert.strictEqual(array[0], "asdf");
     assert.strictEqual(array[1], array);
     assert.strictEqual(array[2], Infinity);
+  });
+});
+
+describe("symlinking node_modules", () => {
+  it("should allow selective compilation of npm packages", () => {
+    import each from "lodash-es/each";
+    import range from "lodash-es/range";
+    const n = 100;
+    let sum = 0;
+    each(range(1, n + 1), n => sum += n);
+    assert.strictEqual(sum, n * (n + 1) / 2);
+  });
+
+  it("should preserve equivalence for require", async () => {
+    const pkg1 = require("immutable-tuple/package.json");
+    const pkg2 = require("./imports/links/immutable-tuple/package");
+    assert.strictEqual(pkg1.author.name, "Ben Newman");
+    assert.strictEqual(pkg1.author, pkg2.author);
+  });
+
+  it("should preserve equivalence for dynamic import()", async () => {
+    const { default: tuple1 } = await import("immutable-tuple/src/tuple");
+    const { tuple: tuple2 } =
+      await import("/imports/links/immutable-tuple/src/tuple");
+    assert.strictEqual(tuple1, tuple2);
+  });
+
+  Meteor.isClient &&
+  it("should support application-compiled `npm link`ed packages", () => {
+    assert.strictEqual(
+      require.resolve("acorn"),
+      "/node_modules/acorn/src/index.js"
+    );
+    const { parse } = require("acorn");
+    assert.strictEqual(typeof parse, "function");
+    assert.strictEqual(
+      parse,
+      require("./imports/links/acorn").parse
+    );
+  });
+
+  it("should not break custom import extensions", () => {
+    import { jsx } from "jsx-import-test";
+    assert.strictEqual(jsx.type, "div");
+    assert.strictEqual(jsx.props.children, "oyez");
+    return import("./imports/links/jsx-import-test/child").then(ns => {
+      assert.strictEqual(ns.default, jsx);
+    });
+  });
+});
+
+describe("issue #9878", () => {
+  it("should be fixed by PR #9903", () => {
+    const {
+      packageJson,
+      normalJson,
+    } = require("./issue-9878-test-package");
+
+    assert.deepEqual(packageJson, {
+      stripped: false,
+      nested: {
+        stripped: false,
+        _stripped: false
+      }
+    });
+
+    assert.deepEqual(normalJson, {
+      stripped: false,
+      _stripped: false,
+      nested: {
+        stripped: false,
+        _stripped: false
+      }
+    });
+
+    assert.deepEqual(require("./issue-9878-test-package/package"), {
+      name: "issue-9878-test-package",
+      main: "main.js",
+      nested: {
+        _stripped: false
+      }
+    });
+  });
+});
+
+describe("issue #10233", () => {
+  it("should be fixed", () => {
+    require("meteor/dummy-compiler").check();
+  });
+});
+
+describe("local .json modules", () => {
+  it("should be importable within Meteor packages (issue #10122)", () => {
+    import { oyez } from "meteor/import-local-json-module";
+    assert.strictEqual(oyez, 1234);
+    assert.strictEqual(
+      require("meteor/import-local-json-module/data").oyez,
+      1234
+    );
   });
 });
 
@@ -463,6 +693,32 @@ describe("ecmascript miscellany", () => {
       4
     );
   });
+
+  it("should support plugins like proposal-optional-chaining", () => {
+    const { check } = require("./imports/chaining.js");
+
+    assert.strictEqual(check({
+      oyez: true
+    }), void 0);
+
+    assert.strictEqual(check({
+      foo: {
+        bar: {
+          baz: {
+            qux: 1234
+          }
+        }
+      }
+    }), 1234);
+  });
+});
+
+describe("TypeScript", () => {
+  it("can be imported", () => {
+    const { Test } = require("./typescript");
+    assert.strictEqual(typeof Test, "function");
+    assert.strictEqual(new Test(1234).value, 1234);
+  });
 });
 
 Meteor.isClient &&
@@ -491,6 +747,33 @@ describe("circular package.json resolution chains", () => {
     assert.strictEqual(
       require("./lib").aMain,
       "/lib/a/index.js"
+    );
+  });
+});
+
+describe("imported *.tests.js modules", () => {
+  const { name } = require("./imports/imported.tests.js");
+  it("should be properly compiled", () => {
+    assert.strictEqual(name, "imported.tests.js");
+  });
+});
+
+describe("issue #10409", () => {
+  it("should be able to import mobx@5.8.0", () => {
+    const { observable, action } = require("mobx");
+    assert.strictEqual(typeof observable, "function");
+    assert.strictEqual(typeof action, "function");
+  });
+});
+
+describe("issue #10563", () => {
+  it("should be able to import pify@4.0.1 in legacy browsers", () => {
+    const pify = require("pify");
+    assert.strictEqual(typeof pify, "function");
+    const code = Function.prototype.toString.call(pify);
+    assert.strictEqual(
+      /\bconst\b/.test(code),
+      Meteor.isModern,
     );
   });
 });

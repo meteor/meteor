@@ -14,8 +14,10 @@ Meteor.startup = function startup(callback) {
       .replace(/^Error: /, ""); // Not really an Error per se.
   }
 
-  if (__meteor_bootstrap__.startupHooks) {
-    __meteor_bootstrap__.startupHooks.push(callback);
+  var bootstrap = global.__meteor_bootstrap__;
+  if (bootstrap &&
+      bootstrap.startupHooks) {
+    bootstrap.startupHooks.push(callback);
   } else {
     // We already started up. Just call it now.
     callback();

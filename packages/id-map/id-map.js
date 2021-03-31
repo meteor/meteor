@@ -1,77 +1,81 @@
-IdMap = function (idStringify, idParse) {
-  var self = this;
-  self._map = {};
-  self._idStringify = idStringify || JSON.stringify;
-  self._idParse = idParse || JSON.parse;
-};
+const hasOwn = Object.prototype.hasOwnProperty;
+
+export class IdMap {
+  constructor(idStringify, idParse) {
+    this._map = new Map();
+    this._idStringify = idStringify || JSON.stringify;
+    this._idParse = idParse || JSON.parse;
+  }
 
 // Some of these methods are designed to match methods on OrderedDict, since
 // (eg) ObserveMultiplex and _CachingChangeObserver use them interchangeably.
 // (Conceivably, this should be replaced with "UnorderedDict" with a specific
 // set of methods that overlap between the two.)
 
-_.extend(IdMap.prototype, {
-  get: function (id) {
-    var self = this;
-    var key = self._idStringify(id);
-    return self._map[key];
-  },
-  set: function (id, value) {
-    var self = this;
-    var key = self._idStringify(id);
-    self._map[key] = value;
-  },
-  remove: function (id) {
-    var self = this;
-    var key = self._idStringify(id);
-    delete self._map[key];
-  },
-  has: function (id) {
-    var self = this;
-    var key = self._idStringify(id);
-    return _.has(self._map, key);
-  },
-  empty: function () {
-    var self = this;
-    return _.isEmpty(self._map);
-  },
-  clear: function () {
-    var self = this;
-    self._map = {};
-  },
+  get(id) {
+    var key = this._idStringify(id);
+    return this._map.get(key);
+  }
+
+  set(id, value) {
+    var key = this._idStringify(id);
+    this._map.set(key, value);
+  }
+
+  remove(id) {
+    var key = this._idStringify(id);
+    this._map.delete(key);
+  }
+
+  has(id) {
+    var key = this._idStringify(id);
+    return this._map.has(key);
+  }
+
+  empty() {
+    return this._map.size === 0;
+  }
+
+  clear() {
+    this._map.clear();
+  }
+
   // Iterates over the items in the map. Return `false` to break the loop.
-  forEach: function (iterator) {
-    var self = this;
+  forEach(iterator) {
     // don't use _.each, because we can't break out of it.
-    var keys = _.keys(self._map);
-    for (var i = 0; i < keys.length; i++) {
-      var breakIfFalse = iterator.call(null, self._map[keys[i]],
-                                       self._idParse(keys[i]));
-      if (breakIfFalse === false)
+    for (const [key, value] of this._map){
+      var breakIfFalse = iterator.call(
+        null,
+        value,
+        this._idParse(key)
+      );
+      if (breakIfFalse === false) {
         return;
+      }
     }
-  },
-  size: function () {
-    var self = this;
-    return _.size(self._map);
-  },
-  setDefault: function (id, def) {
-    var self = this;
-    var key = self._idStringify(id);
-    if (_.has(self._map, key))
-      return self._map[key];
-    self._map[key] = def;
+  }
+
+  size() {
+    return this._map.size;
+  }
+
+  setDefault(id, def) {
+    var key = this._idStringify(id);
+    if (this._map.has(key)) {
+      return this._map.get(key);
+    }
+    this._map.set(key, def);
     return def;
-  },
+  }
+
   // Assumes that values are EJSON-cloneable, and that we don't need to clone
   // IDs (ie, that nobody is going to mutate an ObjectId).
-  clone: function () {
-    var self = this;
-    var clone = new IdMap(self._idStringify, self._idParse);
-    self.forEach(function (value, id) {
-      clone.set(id, EJSON.clone(value));
+  clone() {
+    var clone = new IdMap(this._idStringify, this._idParse);
+    // copy directly to avoid stringify/parse overhead
+    this._map.forEach(function(value, key){
+      clone._map.set(key, EJSON.clone(value));
     });
     return clone;
   }
-});
-
+}

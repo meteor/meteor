@@ -1,13 +1,14 @@
 var assert = require('assert');
 var compiler = require('./compiler.js');
-var archinfo = require('../utils/archinfo.js');
+var archinfo = require('../utils/archinfo');
 var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('../utils/buildmessage.js');
 import Builder from './builder.js';
 var bundler = require('./bundler.js');
-var watch = require('../fs/watch.js');
-var files = require('../fs/files.js');
+var watch = require('../fs/watch');
+import * as files from '../fs/files';
+import * as fsFixPath from '../fs/fsFixPath';
 import {
   ISOPACKETS,
   makeIsopacketBuildContext,
@@ -16,7 +17,7 @@ var colonConverter = require('../utils/colon-converter.js');
 var utils = require('../utils/utils.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console/console.js').Console;
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 import { Unibuild } from "./unibuild.js";
 
@@ -349,9 +350,32 @@ _.extend(Isopack.prototype, {
 
   // A sorted plus-separated string of all the architectures included in this
   // package.
-  buildArchitectures: function () {
-    var self = this;
-    return self.architectures().join('+');
+  buildArchitectures(simplify) {
+    const arches = this.architectures();
+
+    if (simplify) {
+      const simpler = [];
+
+      arches.forEach(arch => {
+        const parts = arch.split(".");
+        while (parts.length > 1) {
+          parts.pop();
+          if (arches.indexOf(parts.join(".")) >= 0) {
+            // If the arches array contains a strict prefix of this arch,
+            // omit this arch from the result, since it should be covered
+            // by the prefix. For example, if arches contains "web" or
+            // "web.browser" then it shouldn't need to contain
+            // "web.browser.legacy" as well.
+            return;
+          }
+        }
+        simpler.push(arch);
+      });
+
+      return simpler.join("+");
+    }
+
+    return arches.join("+");
   },
 
   // Returns true if we think that this isopack is platform specific (contains
@@ -449,7 +473,7 @@ _.extend(Isopack.prototype, {
         // case right.)
       }, function () {
         // Make a new Plugin API object for this plugin.
-        var Plugin = self._makePluginApi();
+        var Plugin = self._makePluginApi(name);
         plugin.load({ Plugin: Plugin, Profile: Profile });
       });
     });
@@ -469,7 +493,7 @@ _.extend(Isopack.prototype, {
     self._pluginsInitialized = true;
   }),
 
-  _makePluginApi: function () {
+  _makePluginApi: function (pluginName) {
     var isopack = this;
 
     /**
@@ -478,6 +502,8 @@ _.extend(Isopack.prototype, {
      * @summary The namespace that is exposed inside build plugin files.
      */
     var Plugin = {
+      name: pluginName,
+
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
       //
@@ -780,7 +806,7 @@ _.extend(Isopack.prototype, {
         extname: files.pathExtname,
         sep: files.pathSep
       },
-      fs: files.fsFixPath
+      fs: fsFixPath,
     };
     return Plugin;
   },
@@ -1121,7 +1147,7 @@ _.extend(Isopack.prototype, {
 
       // If unibuilds included node_modules, copy them in.
       _.each(npmDirsToCopy, (bundlePath, sourcePath) => {
-        builder.copyDirectory({
+        builder.copyNodeModulesDirectory({
           from: sourcePath,
           to: bundlePath,
           npmDiscards: self.npmDiscards,
@@ -1384,33 +1410,33 @@ _.extend(Isopack.prototype, {
         !f.match(/^examples\/unfinished/);
     });
 
-    // Regexes matching paths to transpile using babel
-    var transpileRegexes = [
-      /^tools\/[^\/]+\.js$/, // General tools files
-      /^tools\/isobuild\/[^\/]+\.js$/, // Isobuild files
-      /^tools\/cli\/[^\/]+\.js$/, // CLI files
-      /^tools\/tool-env\/[^\/]+\.js$/, // Tool initiation and clean up
-      /^tools\/runners\/[^\/]+\.js$/, // Parts of tool process
-      /^tools\/packaging\/[^\/]+\.js$/,
-      /^tools\/packaging\/catalog\/[^\/]+\.js$/,
-      /^tools\/utils\/[^\/]+\.js$/,
-      /^tools\/fs\/[^\/]+\.js$/,
-      /^tools\/meteor-services\/[^\/]+\.js$/,
-      /^tools\/tool-testing\/[^\/]+\.js$/,
-      /^tools\/console\/[^\/]+\.js$/,
-      /^tools\/cordova\/[^\/]+\.js$/,
-      // We don't support running self-test from an install anymore
-    ];
+    function shouldTranspile(path) {
+      const parts = path.split("/");
+      if (parts[0] === "tools" &&
+          (path.endsWith(".js") || path.endsWith(".ts"))) {
+        if (path.endsWith(".d.ts")) {
+          // The official TypeScript compiler's transpileModule function fails
+          // for .d.ts declaration files with the cryptic error "Error: Debug
+          // Failure. Output generation failed".
+          return false;
+        }
+        if (parts[1] === "static-assets") {
+          return parts[2] === "server";
+        }
+        if (parts[1] !== "node_modules" &&
+            parts[1] !== "tests") {
+          return true;
+        }
+      }
+      return false;
+    }
 
     // Split pathsToCopy into two arrays - one of files that should be copied
     // directly, and one of files that should be transpiled with Babel
     var pathsToTranspile = [];
     var pathsToCopyStraight = [];
-    pathsToCopy.forEach((path) => {
-      var shouldTranspile =
-        _.some(transpileRegexes, (regex) => path.match(regex));
-
-      if (shouldTranspile) {
+    pathsToCopy.forEach(path => {
+      if (shouldTranspile(path)) {
         pathsToTranspile.push(path);
       } else {
         pathsToCopyStraight.push(path);
@@ -1421,45 +1447,10 @@ _.extend(Isopack.prototype, {
     var toolPath = 'mt-' + archinfo.host();
     builder = builder.enter(toolPath);
 
-    // Transpile the files we selected
-    var babel = require("meteor-babel");
-    pathsToTranspile.forEach((path) => {
-      var fullPath = files.convertToOSPath(
-        files.pathJoin(files.getCurrentToolsDir(), path));
-
-      var inputFileContents = files.readFile(fullPath, "utf-8");
-
-      // #RemoveInProd
-      // We don't actually want to load the babel auto-transpiler when we are
-      // in a Meteor installation where everything is already transpiled for us.
-      // Therefore, strip out that line in main.js
-      if (path === "tools/tool-env/install-babel.js" ||
-          path === "tools/tool-env/source-map-retriever-stack.js") {
-        inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
-      }
-
-      var babelOptions = babel.getDefaultOptions({
-        nodeMajorVersion: parseInt(process.versions.node)
-      });
-
-      _.extend(babelOptions, {
-        filename: path,
-        sourceFileName: "/" + path,
-        sourceMapTarget: path + ".map",
-        sourceMap: true
-      });
-
-      var transpiled = babel.compile(inputFileContents, babelOptions);
-
-      var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
-
-      builder.write(path, {
-        data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
-      });
-
-      builder.write(path + ".map", {
-        data: Buffer.from(JSON.stringify(transpiled.map), 'utf8')
-      });
+    const sourceRootDir = files.getCurrentToolsDir();
+    builder.copyTranspiledModules(pathsToTranspile, {
+      sourceRootDir,
+      needToTranspile: true,
     });
 
     var gitSha = utils.runGitInCheckout('rev-parse', 'HEAD');

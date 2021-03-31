@@ -69,7 +69,7 @@ C.find().observeChanges({
       Meteor.clearTimeout(nextStepTimeout);
       nextStepTimeout = null;
     }
-    if (!fields.step && _.has(steps, fields.step)) {
+    if (!fields.step && Object.prototoype.hasOwnProperty.call(steps, fields.step)) {
       console.log('Unexpected step:', fields.step);
       process.exit(1);
     }

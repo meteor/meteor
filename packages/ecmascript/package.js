@@ -1,19 +1,20 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.9.0',
+  version: '0.15.0',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md'
 });
 
 Package.registerBuildPlugin({
   name: 'compile-ecmascript',
-  use: ['babel-compiler'],
+  use: ['babel-compiler', 'react-fast-refresh'],
   sources: ['plugin.js']
 });
 
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
   api.use('babel-compiler');
+  api.use('react-fast-refresh');
 
   // The following api.imply calls should match those in
   // ../coffeescript/package.js.
@@ -21,6 +22,9 @@ Package.onUse(function (api) {
   api.imply('ecmascript-runtime');
   api.imply('babel-runtime');
   api.imply('promise');
+
+  // Runtime support for Meteor 1.5 dynamic import(...) syntax.
+  api.imply('dynamic-import');
 
   api.addFiles("ecmascript.js", "server");
   api.export("ECMAScript", "server");

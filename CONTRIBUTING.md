@@ -6,84 +6,78 @@ We are excited to have your help building Meteor &mdash; both the platform and t
 
 Before we jump into detailed guidelines for opening and triaging issues and submitting pull requests, here is some information about how our project is structured and resources you should refer to as you start contributing.
 
+Also, please take a few minutes to understand a few terms in Meteor context reading our [Glossary](GLOSSARY.md).
+
 ### Ways to contribute
 
 There are many ways to contribute to the Meteor Project. Here’s a list of technical contributions with increasing levels of involvement and required knowledge of Meteor’s code and operations.  
 - [Reporting a bug](CONTRIBUTING.md#reporting-a-bug-in-meteor)
 - [Triaging issues](ISSUE_TRIAGE.md)
-- [Contributing to documentation](https://github.com/meteor/docs/blob/master/CONTRIBUTING.md)
+- [Contributing to documentation](CONTRIBUTING.md#documentation)
 - [Finding work](CONTRIBUTING.md#finding-work)
 - [Submitting pull requests](CONTRIBUTING.md#making-changes-to-meteor-core)
 - [Reviewing pull requests](CONTRIBUTING.md#reviewer)
 - [Maintaining a community package](CONTRIBUTING.md#community-package-maintainer)
 
-There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://www.meetup.com/topics/meteor/) and events and helping to moderate our [forums](https://forums.meteor.com/).
+There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://forums.meteor.com/c/meetups) and events and helping to moderate our [forums](https://forums.meteor.com/).
 
 If you can think of any changes to the project, [documentation](https://github.com/meteor/docs), or [guide](https://github.com/meteor/guide) that would improve the contributor experience, let us know by opening an issue in the correct repository!
 
 ### Finding work
 
-We curate specific issues that would make great pull requests for community contributors by applying the `pull-requests-encouraged` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aopen+is%3Aissue+label%3Apull-requests-encouraged)).
+Are you new here? Please check our issues `good-first-issue`: [core](https://github.com/meteor/meteor/labels/good%20first%20issue), [docs](https://github.com/meteor/docs/labels/good%20first%20issue), [guide](https://github.com/meteor/guide/labels/good%20first%20issue).
 
-Issues which *also* have the `confirmed` label ([bugs](https://github.com/meteor/meteor/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed) / [feature requests](https://github.com/meteor/meteor-feature-requests/issues?q=is%3Aissue%20is%3Aopen%20label%3Apull-requests-encouraged%20label%3Aconfirmed)) are considered to have their details clear enough to begin working on.
+We curate specific issues that would make great pull requests for community contributors by applying the `ready` label.
 
-Any issue which does not have the `confirmed` label still requires discussion on implementation details but input and positive commentary is welcome!  Any pull request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `confirmed` issue.  If in doubt about the best way to implement something, please create additional conversation on the issue.
+Any issue which does not have the `ready` label still requires discussion on implementation details but input and positive commentary is welcome! Any pull request opened on an issue which is not `confirmed` is still welcome, however the pull-request is more likely to be sent back for reworking than a `ready` issue.  
+
+If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [core committers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-committer) and they will help you to find something interesting to work on.
 
 ### Project roles
 
-We’ve just begun to create more defined project roles for Meteor. Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
+Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
 
 #### Issue Triager
 
-Issue Triagers are members of the community that meet with us weekly to help triage Meteor’s open issues and bug reports. Once you’ve begun triaging issues regularly on your own, we will invite you to join our dedicated Slack channel to participate in these regular coordination sessions.
+Issue Triagers are members of the community that help every week with  Meteor’s open issues and bug reports.
 
 Current Issue Triagers:
-- [@hwillson](https://github.com/hwillson)
-- [@laosb](https://github.com/laosb)
-- [@abernix](https://github.com/abernix)
-- [@lorensr](https://github.com/lorensr)
+- [meteor](https://github.com/meteor/meteor)
+  - [@klaussner](https://github.com/klaussner)
+
+- [docs](https://github.com/meteor/docs) / [guide](https://github.com/meteor/guide)
+  - [@lorensr](https://github.com/lorensr)
 
 #### Reviewer
 
-Our most regular and experienced Issue Triagers sometimes move on to doing code reviews for pull requests, and have input into which pull requests should be merged.
+Reviwers are members of the community that help with Pull Requests reviews.
 
 Current Reviewers:
-- [@hwillson](https://github.com/hwillson)
-- [@lorensr](https://github.com/lorensr)
-- [@abernix](https://github.com/abernix)
+- [meteor](https://github.com/meteor/meteor)
+  - [@klaussner](https://github.com/klaussner)
+  - [@zodern](https://github.com/zodern)
+  - [@StorytellerCZ](https://github.com/StorytellerCZ)
+  - [@sebakerckhof](https://github.com/sebakerckhof)
+  - [@filipenevola](https://github.com/filipenevola)
+  - [@renanccastro](https://github.com/renanccastro)
+
+- [docs](https://github.com/meteor/docs) / [guide](https://github.com/meteor/guide)
+  - [@lorensr](https://github.com/lorensr)
+  - [@filipenevola](https://github.com/filipenevola)
+  - [@renanccastro](https://github.com/renanccastro)
 
 #### Core Committer
 
-For now, the only contributors with commit access to meteor/meteor are employees of Meteor Development Group, the company that sponsors the Meteor project. We're actively exploring adding non-MDG core committers who have distinguished themselves in other contribution areas.  
-
-Project Lead: [@benjamn](https://github.com/benjamn)
+The contributors with commit access to meteor/meteor are employees of Meteor Software Ltd or community members who have distinguished themselves in other contribution areas. If you want to become a core committer please start writing PRs.
 
 Current Core Committers:
-- [@abernix](https://github.com/abernix)
-- [@glasser](https://github.com/glasser)
-- [@stubailo](https://github.com/stubailo)
+- [@filipenevola](https://github.com/filipenevola)
+- [@renanccastro](https://github.com/renanccastro)
+- [@denihs](https://github.com/denihs)
 
-#### Documentation Maintainer
+#### Developer Evangelist
 
-Documentation Maintainers are regular documentation contributors that have been given the ability to merge docs changes on [meteor/docs](https://github.com/meteor/docs).
-
-Current Documentation Maintainers:
-- [@abernix](https://github.com/abernix)
-- [@lorensr](https://github.com/lorensr)
-
-#### Community Package Maintainer:
-
-Community package maintainers are community members who maintain packages outside of Meteor core. This requires code to be extracted from meteor/meteor, and entails a high level of responsibility. For this reason, community maintainers generally (and currently) must first become an advanced contributor to Meteor core and have 4-5 non-trivial pull requests merged that went through the proper contribution work-flow. At that point, core contributors may make the case for breaking out a particular core package, and assist in the technical process around doing so.
-
-Current Community Package Maintainers:
-- [@mitar](https://github.com/mitar) for [Blaze](https://github.com/meteor/blaze)
-
-#### Community Manager
-
-The community manager helps to coordinate resources, documentation, events, and other supportive work needed to ensure the health of the Meteor project.
-
-Current Community Manager:
-- [@theadactyl](https://github.com/theadactyl)
+- [@filipenevola](https://github.com/filipenevola) (Feel free to reach him out on [Twitter](https://twitter.com/FilipeNevola))
 
 ### Tracking project work
 
@@ -102,14 +96,16 @@ isn't a security risk, please file a report in
 > will page the security team.
 
 A Meteor app has many moving parts, and it's often difficult to
-reproduce a bug based on just a few lines of code.  So your report
-should include a reproduction recipe.  By making it as easy as possible
+reproduce a bug based on just a few lines of code. So your report
+should include a link to a repository with a reproduction. By making it as easy as possible
 for others to reproduce your bug, you make it easier for your bug to be
-fixed. **It's likely that without a reproduction, contributors won't look into fixing your issue and it will end up being closed.**
+fixed. 
 
-**A single code snippet is _not_ a reproduction recipe and neither is an entire application.**
+**It's likely that without a reproduction, contributors won't look into fixing your issue and it will end up being closed.**
 
-A reproduction recipe works like this:
+**A single code snippet is _not_ a reproduction and neither is an entire application.**
+
+A reproduction works like this:
 
  * Create a new Meteor app that displays the bug with as little code as
    possible. Try to delete any code that is unrelated to the precise bug
@@ -135,6 +131,8 @@ A reproduction recipe works like this:
 
  * Mention what operating system you're using and what browser (if any).
 
+If you can't provide a reproduction make this very clear in the issue and explain why that is the case.
+
 If you want to submit a pull request that fixes your bug, that's even
 better.  We love getting bugfix pull requests.  Just make sure they're
 written with the [correct style](DEVELOPMENT.md#code-style) and *come with tests*.  Read further down
@@ -145,9 +143,7 @@ for more details on proposing changes to core code.
 Feature requests are tracked in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository, and include a label that corresponds to the Meteor subproject that they are a part of.
 
 Meteor is a big project with [many sub-projects](https://github.com/meteor/meteor/tree/devel/packages).
-There aren't as many [core developers (we're hiring!)](https://www.meteor.io/jobs/)
-as there are sub-projects, so we're not able to work on every single sub-project every
-month.  We use our [roadmap](Roadmap.md) to communicate the high-level features we're currently prioritizing.
+Community is welcome to help in all the sub-projects. We use our [roadmap](Roadmap.md) to communicate the high-level features we're currently prioritizing.
 
 Every additional feature adds a maintenance cost in addition to its value. This
 cost starts with the work of writing the feature or reviewing a community pull
@@ -166,9 +162,11 @@ Finally, you can show your support for (or against!) features by using [GitHub r
 
 A great way to contribute to Meteor is by helping keep the issues in the repository clean and well organized. This process is called 'issue triage' and the steps are described [here](ISSUE_TRIAGE.md).
 
+Learn how we use GitHub labels [here](LABELS.md)
+
 ## Documentation
 
-If you'd like to contribution to Meteor's documentation, head over to https://github.com/meteor/docs and create issues or pull requests there.
+If you'd like to contribute to Meteor's documentation, head over to https://github.com/meteor/docs or https://github.com/meteor/guide and create issues or pull requests there.
 
 ## Blaze
 
@@ -179,7 +177,7 @@ Blaze lives in its [own repository](https://github.com/meteor/blaze/) with its o
 Eventually you may want to change something in a core Meteor package, or
 in the `meteor` command line tool.  These changes have the highest
 standards for API design, for the names of symbols, for documentation,
-and for the code itself.  Be prepared for a lot of work!
+and for the code itself. 
 
 It may take some study to get comfortable with Meteor's core architecture.  Each core package is
 designed to stand separately.  At the same time, all the parts of core fit together to make the
@@ -218,22 +216,22 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 ### Proposing your change
 
-You'll have the best chance of getting a change into core if you can build consensus in the community for it. Start by creating a well specified feature request as a Github issue, in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository.
+You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://github.com/meteor/meteor/blob/devel/Roadmap.md). Start by creating a well specified feature request as a Github issue, in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository.
 
-Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `pull-requests-encouraged` label.
+Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `ready` label.
 
 Split features up into smaller, logically separate chunks. It is unlikely that large and complicated PRs will be merged.
 
-Once your feature has been labelled with `pull-requests-encouraged`, leave a comment letting people know you're working on it and you can begin work on the code.
+Once your feature has been labelled with `ready`, leave a comment letting people know you're working on it and you can begin work on the code. We have the label `in-development` to track the items in progress.
 
 ### Submitting pull requests
 
-Once you've come up with a good design, go ahead and submit a pull request (PR). If your PR isn't against a bug with the `confirmed` label or a feature request with the `pull-requests-encouraged` label, don't expect your PR to be merged unless it's a trivial and obvious fix (e.g. documentation). When submitting a PR, please follow these guidelines:
+Once you've come up with a good design, go ahead and submit a pull request (PR). When submitting a PR, please follow these guidelines:
 
- * Sign the [contributor's agreement](http://contribute.meteor.com/).
+ * Sign the CLA (the bot will ask you do to this in the PR).
 
  * Base all your work off of the **devel** branch. The **devel** branch
-   is where active development happens.  **We do not merge pull requests
+   is where active development happens. **We do not merge pull requests
    directly into master.**
 
  * Name your branch to match the feature/bug fix that you are
@@ -247,12 +245,14 @@ Once you've come up with a good design, go ahead and submit a pull request (PR).
    [code contributions](DEVELOPMENT.md#code-style)
    and
    [commit messages](DEVELOPMENT.md#commit-messages)
+   
+ * Bump the version of the changed package accordingly
+    * If your changes are ok to be released without a whole new Meteor version bump just the patch, for example, 2.4.5 will become 2.4.6.
+    * If your changes need a new Meteor version because they are affecting many parts or they depend on changes in the meteor-tool bump the minor, for example, 2.4.5 will become 2.5.0.
+    * If your change is a major rewrite then bump the major, for example, 2.4.5 will become 3.0.0.
+    * If you bump anything that is not the patch you will need to wait a new Meteor version to have your changes available. This is how Meteor core packages work.
 
  * Be sure your author field in git is properly filled out with your full name
  and email address so we can credit you.
 
-### Need help with your pull request?
-
-If you need help with a pull request, you should start by asking questions in the issue which it pertains to.  If you feel that your pull request is almost ready or needs feedback which can only be demonstrated with code, go ahead and open a pull-request with as much progress as possible.  By including a "[Work in Progress]" note in the subject, project contributors will know you need help!
-
-Submitting a pull request is no guarantee it will be accepted, but contributors will do their best to help move your pull request toward release.
+ * You can submit PRs that are not ready yet, submit them as Draft on GitHub and explain what is left and also if you need help.

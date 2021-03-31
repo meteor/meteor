@@ -1,5 +1,5 @@
 import assert from "assert";
-import { readFile } from "fs";
+import { readFileSync } from "fs";
 import { createServer } from "http";
 import {
   join as pathJoin,
@@ -7,9 +7,14 @@ import {
 } from "path";
 import { parse as parseUrl } from "url";
 import { createHash } from "crypto";
-import connect from "connect";
+import { connect } from "./connect.js";
+import compress from "compression";
+import cookieParser from "cookie-parser";
+import qs from "qs";
 import parseRequest from "parseurl";
+import basicAuth from "basic-auth-connect";
 import { lookup as lookupUserAgent } from "useragent";
+import { isModern } from "meteor/modern-browsers";
 import send from "send";
 import cluster from "cluster";
 import {
@@ -23,14 +28,21 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 export const WebApp = {};
 export const WebAppInternals = {};
 
+const hasOwn = Object.prototype.hasOwnProperty;
+
+// backwards compat to 2.0 of connect
+connect.basicAuth = basicAuth;
+
 WebAppInternals.NpmModules = {
   connect: {
     version: Npm.require('connect/package.json').version,
-    module: connect
+    module: connect,
   }
 };
 
-WebApp.defaultArch = 'web.browser';
+// Though we might prefer to use web.browser (modern) as the default
+// architecture, safety requires a more compatible defaultArch.
+WebApp.defaultArch = 'web.browser.legacy';
 
 // XXX maps archs to manifests
 WebApp.clientPrograms = {};
@@ -50,8 +62,14 @@ var sha1 = function (contents) {
   return hash.digest('hex');
 };
 
-var readUtf8FileSync = function (filename) {
-  return Meteor.wrapAsync(readFile)(filename, 'utf8');
+ function shouldCompress(req, res) {
+  if (req.headers['x-no-compression']) {
+    // don't compress responses with this request header
+    return false;
+  }
+
+  // fallback to standard filter function
+  return compress.filter(req, res);
 };
 
 // #BrowserIdentification
@@ -113,10 +131,63 @@ var identifyBrowser = function (userAgentString) {
 WebAppInternals.identifyBrowser = identifyBrowser;
 
 WebApp.categorizeRequest = function (req) {
-  return _.extend({
-    browser: identifyBrowser(req.headers['user-agent']),
-    url: parseUrl(req.url, true)
-  }, _.pick(req, 'dynamicHead', 'dynamicBody'));
+  if (req.browser && req.arch && typeof req.modern === "boolean") {
+    // Already categorized.
+    return req;
+  }
+
+  const browser = identifyBrowser(req.headers["user-agent"]);
+  const modern = isModern(browser);
+  const path = typeof req.pathname === "string"
+   ? req.pathname
+   : parseRequest(req).pathname;
+
+  const categorized = {
+    browser,
+    modern,
+    path,
+    arch: WebApp.defaultArch,
+    url: parseUrl(req.url, true),
+    dynamicHead: req.dynamicHead,
+    dynamicBody: req.dynamicBody,
+    headers: req.headers,
+    cookies: req.cookies,
+  };
+
+  const pathParts = path.split("/");
+  const archKey = pathParts[1];
+
+  if (archKey.startsWith("__")) {
+    const archCleaned = "web." + archKey.slice(2);
+    if (hasOwn.call(WebApp.clientPrograms, archCleaned)) {
+      pathParts.splice(1, 1); // Remove the archKey part.
+      return Object.assign(categorized, {
+        arch: archCleaned,
+        path: pathParts.join("/"),
+      });
+    }
+  }
+
+  // TODO Perhaps one day we could infer Cordova clients here, so that we
+  // wouldn't have to use prefixed "/__cordova/..." URLs.
+  const preferredArchOrder = isModern(browser)
+    ? ["web.browser", "web.browser.legacy"]
+    : ["web.browser.legacy", "web.browser"];
+
+  for (const arch of preferredArchOrder) {
+    // If our preferred arch is not available, it's better to use another
+    // client arch that is available than to guarantee the site won't work
+    // by returning an unknown arch. For example, if web.browser.legacy is
+    // excluded using the --exclude-archs command-line option, legacy
+    // clients are better off receiving web.browser (which might actually
+    // work) than receiving an HTTP 404 response. If none of the archs in
+    // preferredArchOrder are defined, only then should we send a 404.
+    if (hasOwn.call(WebApp.clientPrograms, arch)) {
+      return Object.assign(categorized, { arch });
+    }
+  }
+
+  return categorized;
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -180,35 +251,25 @@ var appUrl = function (url) {
 // the right moment.
 
 Meteor.startup(function () {
-  var calculateClientHash = WebAppHashing.calculateClientHash;
-  WebApp.clientHash = function (archName) {
-    archName = archName || WebApp.defaultArch;
-    return calculateClientHash(WebApp.clientPrograms[archName].manifest);
-  };
+  function getter(key) {
+    return function (arch) {
+      arch = arch || WebApp.defaultArch;
+      const program = WebApp.clientPrograms[arch];
+      const value = program && program[key];
+      // If this is the first time we have calculated this hash,
+      // program[key] will be a thunk (lazy function with no parameters)
+      // that we should call to do the actual computation.
+      return typeof value === "function"
+        ? program[key] = value()
+        : value;
+    };
+  }
 
-  WebApp.calculateClientHashRefreshable = function (archName) {
-    archName = archName || WebApp.defaultArch;
-    return calculateClientHash(WebApp.clientPrograms[archName].manifest,
-      function (name) {
-        return name === "css";
-      });
-  };
-  WebApp.calculateClientHashNonRefreshable = function (archName) {
-    archName = archName || WebApp.defaultArch;
-    return calculateClientHash(WebApp.clientPrograms[archName].manifest,
-      function (name) {
-        return name !== "css";
-      });
-  };
-  WebApp.calculateClientHashCordova = function () {
-    var archName = 'web.cordova';
-    if (! WebApp.clientPrograms[archName])
-      return 'none';
-
-    return calculateClientHash(
-      WebApp.clientPrograms[archName].manifest, null, _.pick(
-        __meteor_runtime_config__, 'PUBLIC_SETTINGS'));
-  };
+  WebApp.calculateClientHash = WebApp.clientHash = getter("version");
+  WebApp.calculateClientHashRefreshable = getter("versionRefreshable");
+  WebApp.calculateClientHashNonRefreshable = getter("versionNonRefreshable");
+  WebApp.calculateClientHashReplaceable = getter("versionReplaceable");
+  WebApp.getRefreshableAssets = getter("refreshableAssets");
 });
 
 
@@ -274,8 +335,6 @@ WebAppInternals.registerBoilerplateDataCallback = function (key, callback) {
 // memoizes on HTML attributes (used by, eg, appcache) and whether inline
 // scripts are currently allowed.
 // XXX so far this function is always called with arch === 'web.browser'
-var memoizedBoilerplate = {};
-
 function getBoilerplate(request, arch) {
   return getBoilerplateAsync(request, arch).await();
 }
@@ -301,34 +360,11 @@ function getBoilerplateAsync(request, arch) {
     });
   });
 
-  return promise.then(() => {
-    const useMemoized = ! (
-      data.dynamicHead ||
-      data.dynamicBody ||
-      madeChanges
-    );
-
-    if (! useMemoized) {
-      return boilerplate.toHTML(data);
-    }
-
-    // The only thing that changes from request to request (unless extra
-    // content is added to the head or body, or boilerplateDataCallbacks
-    // modified the data) are the HTML attributes (used by, eg, appcache)
-    // and whether inline scripts are allowed, so memoize based on that.
-    var memHash = JSON.stringify({
-      inlineScriptsAllowed,
-      htmlAttributes: data.htmlAttributes,
-      arch,
-    });
-
-    if (! memoizedBoilerplate[memHash]) {
-      memoizedBoilerplate[memHash] =
-        boilerplateByArch[arch].toHTML(data);
-    }
-
-    return memoizedBoilerplate[memHash];
-  });
+  return promise.then(() => ({
+    stream: boilerplate.toHTMLStream(data),
+    statusCode: data.statusCode,
+    headers: data.headers,
+  }));
 }
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
@@ -336,42 +372,46 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
-  var runtimeConfig = _.extend(
-    _.clone(__meteor_runtime_config__),
-    additionalOptions.runtimeConfigOverrides || {}
+  const meteorRuntimeConfig = JSON.stringify(
+    encodeURIComponent(JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || {})
+    }))
   );
-  return new Boilerplate(arch, manifest,
-    _.extend({
-      pathMapper: function (itemPath) {
-        return pathJoin(archPath[arch], itemPath); },
-      baseDataExtension: {
-        additionalStaticJs: _.map(
-          additionalStaticJs || [],
-          function (contents, pathname) {
-            return {
-              pathname: pathname,
-              contents: contents
-            };
-          }
-        ),
-        // Convert to a JSON string, then get rid of most weird characters, then
-        // wrap in double quotes. (The outermost JSON.stringify really ought to
-        // just be "wrap in double quotes" but we use it to be safe.) This might
-        // end up inside a <script> tag so we need to be careful to not include
-        // "</script>", but normal {{spacebars}} escaping escapes too much! See
-        // https://github.com/meteor/meteor/issues/3730
-        meteorRuntimeConfig: JSON.stringify(
-          encodeURIComponent(JSON.stringify(runtimeConfig))),
-        rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
-        inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
-        inline: additionalOptions.inline
-      }
-    }, additionalOptions)
-  );
+
+  return new Boilerplate(arch, manifest, _.extend({
+    pathMapper(itemPath) {
+      return pathJoin(archPath[arch], itemPath);
+    },
+    baseDataExtension: {
+      additionalStaticJs: _.map(
+        additionalStaticJs || [],
+        function (contents, pathname) {
+          return {
+            pathname: pathname,
+            contents: contents
+          };
+        }
+      ),
+      // Convert to a JSON string, then get rid of most weird characters, then
+      // wrap in double quotes. (The outermost JSON.stringify really ought to
+      // just be "wrap in double quotes" but we use it to be safe.) This might
+      // end up inside a <script> tag so we need to be careful to not include
+      // "</script>", but normal {{spacebars}} escaping escapes too much! See
+      // https://github.com/meteor/meteor/issues/3730
+      meteorRuntimeConfig,
+      meteorRuntimeHash: sha1(meteorRuntimeConfig),
+      rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
+      bundledJsCssUrlRewriteHook: bundledJsCssUrlRewriteHook,
+      sriMode: sriMode,
+      inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
+      inline: additionalOptions.inline
+    }
+  }, additionalOptions));
 };
 
-// A mapping from url path to "info". Where "info" has the following fields:
+// A mapping from url path to architecture (e.g. "web.browser") to static
+// file information with the following fields:
 // - type: the type of file to be served
 // - cacheable: optionally, whether the file should be cached or not
 // - sourceMapUrl: optionally, the url of the source map
@@ -380,11 +420,14 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
 // - content: the stringified content that should be served at this path
 // - absolutePath: the absolute path on disk to the file
 
-var staticFiles;
-
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
-WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
+WebAppInternals.staticFilesMiddleware = async function (
+  staticFilesByArch,
+  req,
+  res,
+  next,
+) {
   if ('GET' != req.method && 'HEAD' != req.method && 'OPTIONS' != req.method) {
     next();
     return;
@@ -405,18 +448,33 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.end();
   };
 
-  if (pathname === "/meteor_runtime_config.js" &&
-      ! WebAppInternals.inlineScriptsAllowed()) {
-    serveStaticJs("__meteor_runtime_config__ = " +
-                  JSON.stringify(__meteor_runtime_config__) + ";");
-    return;
-  } else if (_.has(additionalStaticJs, pathname) &&
+  if (_.has(additionalStaticJs, pathname) &&
               ! WebAppInternals.inlineScriptsAllowed()) {
     serveStaticJs(additionalStaticJs[pathname]);
     return;
   }
 
-  if (!_.has(staticFiles, pathname)) {
+  const { arch, path } = WebApp.categorizeRequest(req);
+
+  if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+    // We could come here in case we run with some architectures excluded
+    next();
+    return;
+  }
+
+  // If pauseClient(arch) has been called, program.paused will be a
+  // Promise that will be resolved when the program is unpaused.
+  const program = WebApp.clientPrograms[arch];
+  await program.paused;
+
+  if (path === "/meteor_runtime_config.js" &&
+      ! WebAppInternals.inlineScriptsAllowed()) {
+    serveStaticJs(`__meteor_runtime_config__ = ${program.meteorRuntimeConfig};`);
+    return;
+  }
+
+  const info = getStaticFileInfo(staticFilesByArch, pathname, path, arch);
+  if (! info) {
     next();
     return;
   }
@@ -425,14 +483,20 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   // 'send' and yield to the event loop, we never call another handler with
   // 'next'.
 
-  var info = staticFiles[pathname];
-
   // Cacheable files are files that should never change. Typically
   // named by their hash (eg meteor bundled js and css files).
   // We cache them ~forever (1yr).
-  var maxAge = info.cacheable
-        ? 1000 * 60 * 60 * 24 * 365
-        : 0;
+  const maxAge = info.cacheable
+    ? 1000 * 60 * 60 * 24 * 365
+    : 0;
+
+  if (info.cacheable) {
+    // Since we use req.headers["user-agent"] to determine whether the
+    // client should receive modern or legacy resources, tell the client
+    // to invalidate cached resources when/if its user agent string
+    // changes in the future.
+    res.setHeader("Vary", "User-Agent");
+  }
 
   // Set the X-SourceMap header, which current Chrome, FireFox, and Safari
   // understand.  (The SourceMap header is slightly more spec-correct but FF
@@ -464,32 +528,64 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.end();
   } else {
     send(req, info.absolutePath, {
-        maxage: maxAge,
-        dotfiles: 'allow', // if we specified a dotfile in the manifest, serve it
-        lastModified: false // don't set last-modified based on the file date
-      }).on('error', function (err) {
-        Log.error("Error serving static file " + err);
-        res.writeHead(500);
-        res.end();
-      })
-      .on('directory', function () {
-        Log.error("Unexpected directory " + info.absolutePath);
-        res.writeHead(500);
-        res.end();
-      })
-      .pipe(res);
+      maxage: maxAge,
+      dotfiles: 'allow', // if we specified a dotfile in the manifest, serve it
+      lastModified: false // don't set last-modified based on the file date
+    }).on('error', function (err) {
+      Log.error("Error serving static file " + err);
+      res.writeHead(500);
+      res.end();
+    }).on('directory', function () {
+      Log.error("Unexpected directory " + info.absolutePath);
+      res.writeHead(500);
+      res.end();
+    }).pipe(res);
   }
 };
 
-var getUrlPrefixForArch = function (arch) {
-  // XXX we rely on the fact that arch names don't contain slashes
-  // in that case we would need to uri escape it
+function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
+  if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+    return null;
+  }
 
-  // We add '__' to the beginning of non-standard archs to "scope" the url
-  // to Meteor internals.
-  return arch === WebApp.defaultArch ?
-    '' : '/' + '__' + arch.replace(/^web\./, '');
-};
+  // Get a list of all available static file architectures, with arch
+  // first in the list if it exists.
+  const staticArchList = Object.keys(staticFilesByArch);
+  const archIndex = staticArchList.indexOf(arch);
+  if (archIndex > 0) {
+    staticArchList.unshift(staticArchList.splice(archIndex, 1)[0]);
+  }
+
+  let info = null;
+
+  staticArchList.some(arch => {
+    const staticFiles = staticFilesByArch[arch];
+
+    function finalize(path) {
+      info = staticFiles[path];
+      // Sometimes we register a lazy function instead of actual data in
+      // the staticFiles manifest.
+      if (typeof info === "function") {
+        info = staticFiles[path] = info();
+      }
+      return info;
+    }
+
+    // If staticFiles contains originalPath with the arch inferred above,
+    // use that information.
+    if (hasOwn.call(staticFiles, originalPath)) {
+      return finalize(originalPath);
+    }
+
+    // If categorizeRequest returned an alternate path, try that instead.
+    if (path !== originalPath &&
+        hasOwn.call(staticFiles, path)) {
+      return finalize(path);
+    }
+  });
+
+  return info;
+}
 
 // Parse the passed in port value. Return the port as-is if it's a String
 // (e.g. a Windows Server style named pipe), otherwise return the port as an
@@ -505,6 +601,16 @@ WebAppInternals.parsePort = port => {
   return parsedPort;
 }
 
+import { onMessage } from "meteor/inter-process-messaging";
+
+onMessage("webapp-pause-client", async ({ arch }) => {
+  WebAppInternals.pauseClient(arch);
+});
+
+onMessage("webapp-reload-client", async ({ arch }) => {
+  WebAppInternals.generateClientProgram(arch);
+});
+
 function runWebAppServer() {
   var shuttingDown = false;
   var syncQueue = new Meteor._SynchronousQueue();
@@ -515,79 +621,17 @@ function runWebAppServer() {
 
   WebAppInternals.reloadClientPrograms = function () {
     syncQueue.runTask(function() {
-      staticFiles = {};
-      var generateClientProgram = function (clientPath, arch) {
-        // read the control for the client we'll be serving up
-        var clientJsonPath = pathJoin(__meteor_bootstrap__.serverDir,
-                                   clientPath);
-        var clientDir = pathDirname(clientJsonPath);
-        var clientJson = JSON.parse(readUtf8FileSync(clientJsonPath));
-        if (clientJson.format !== "web-program-pre1")
-          throw new Error("Unsupported format for client assets: " +
-                          JSON.stringify(clientJson.format));
+      const staticFilesByArch = Object.create(null);
 
-        if (! clientJsonPath || ! clientDir || ! clientJson)
-          throw new Error("Client config file not parsed.");
-
-        var urlPrefix = getUrlPrefixForArch(arch);
-
-        var manifest = clientJson.manifest;
-        _.each(manifest, function (item) {
-          if (item.url && item.where === "client") {
-            staticFiles[urlPrefix + getItemPathname(item.url)] = {
-              absolutePath: pathJoin(clientDir, item.path),
-              cacheable: item.cacheable,
-              hash: item.hash,
-              // Link from source to its map
-              sourceMapUrl: item.sourceMapUrl,
-              type: item.type
-            };
-
-            if (item.sourceMap) {
-              // Serve the source map too, under the specified URL. We assume all
-              // source maps are cacheable.
-              staticFiles[urlPrefix + getItemPathname(item.sourceMapUrl)] = {
-                absolutePath: pathJoin(clientDir, item.sourceMap),
-                cacheable: true
-              };
-            }
-          }
-        });
-
-        var program = {
-          format: "web-program-pre1",
-          manifest: manifest,
-          version: process.env.AUTOUPDATE_VERSION ||
-            WebAppHashing.calculateClientHash(
-              manifest,
-              null,
-              _.pick(__meteor_runtime_config__, "PUBLIC_SETTINGS")
-            ),
-          cordovaCompatibilityVersions: clientJson.cordovaCompatibilityVersions,
-          PUBLIC_SETTINGS: __meteor_runtime_config__.PUBLIC_SETTINGS
-        };
-
-        WebApp.clientPrograms[arch] = program;
-
-        // Serve the program as a string at /foo/<arch>/manifest.json
-        // XXX change manifest.json -> program.json
-        staticFiles[urlPrefix + getItemPathname('/manifest.json')] = {
-          content: JSON.stringify(program),
-          cacheable: false,
-          hash: program.version,
-          type: "json"
-        };
-      };
+      const { configJson } = __meteor_bootstrap__;
+      const clientArchs = configJson.clientArchs ||
+        Object.keys(configJson.clientPaths);
 
       try {
-        var clientPaths = __meteor_bootstrap__.configJson.clientPaths;
-        _.each(clientPaths, function (clientPath, arch) {
-          archPath[arch] = pathDirname(clientPath);
-          generateClientProgram(clientPath, arch);
+        clientArchs.forEach(arch => {
+          generateClientProgram(arch, staticFilesByArch);
         });
-
-        // Exported for tests.
-        WebAppInternals.staticFiles = staticFiles;
+        WebAppInternals.staticFilesByArch = staticFilesByArch;
       } catch (e) {
         Log.error("Error reloading the client program: " + e.stack);
         process.exit(1);
@@ -595,54 +639,222 @@ function runWebAppServer() {
     });
   };
 
+  // Pause any incoming requests and make them wait for the program to be
+  // unpaused the next time generateClientProgram(arch) is called.
+  WebAppInternals.pauseClient = function (arch) {
+    syncQueue.runTask(() => {
+      const program = WebApp.clientPrograms[arch];
+      const { unpause } = program;
+      program.paused = new Promise(resolve => {
+        if (typeof unpause === "function") {
+          // If there happens to be an existing program.unpause function,
+          // compose it with the resolve function.
+          program.unpause = function () {
+            unpause();
+            resolve();
+          };
+        } else {
+          program.unpause = resolve;
+        }
+      });
+    });
+  };
+
+  WebAppInternals.generateClientProgram = function (arch) {
+    syncQueue.runTask(() => generateClientProgram(arch));
+  };
+
+  function generateClientProgram(
+    arch,
+    staticFilesByArch = WebAppInternals.staticFilesByArch,
+  ) {
+    const clientDir = pathJoin(
+      pathDirname(__meteor_bootstrap__.serverDir),
+      arch,
+    );
+
+    // read the control for the client we'll be serving up
+    const programJsonPath = pathJoin(clientDir, "program.json");
+
+    let programJson;
+    try {
+      programJson = JSON.parse(readFileSync(programJsonPath));
+    } catch (e) {
+      if (e.code === "ENOENT") return;
+      throw e;
+    }
+
+    if (programJson.format !== "web-program-pre1") {
+      throw new Error("Unsupported format for client assets: " +
+                      JSON.stringify(programJson.format));
+    }
+
+    if (! programJsonPath || ! clientDir || ! programJson) {
+      throw new Error("Client config file not parsed.");
+    }
+
+    archPath[arch] = clientDir;
+    const staticFiles = staticFilesByArch[arch] = Object.create(null);
+
+    const { manifest } = programJson;
+    manifest.forEach(item => {
+      if (item.url && item.where === "client") {
+        staticFiles[getItemPathname(item.url)] = {
+          absolutePath: pathJoin(clientDir, item.path),
+          cacheable: item.cacheable,
+          hash: item.hash,
+          // Link from source to its map
+          sourceMapUrl: item.sourceMapUrl,
+          type: item.type
+        };
+
+        if (item.sourceMap) {
+          // Serve the source map too, under the specified URL. We assume
+          // all source maps are cacheable.
+          staticFiles[getItemPathname(item.sourceMapUrl)] = {
+            absolutePath: pathJoin(clientDir, item.sourceMap),
+            cacheable: true
+          };
+        }
+      }
+    });
+
+    const { PUBLIC_SETTINGS } = __meteor_runtime_config__;
+    const configOverrides = {
+      PUBLIC_SETTINGS,
+    };
+
+    const oldProgram = WebApp.clientPrograms[arch];
+    const newProgram = WebApp.clientPrograms[arch] = {
+      format: "web-program-pre1",
+      manifest: manifest,
+      // Use arrow functions so that these versions can be lazily
+      // calculated later, and so that they will not be included in the
+      // staticFiles[manifestUrl].content string below.
+      //
+      // Note: these version calculations must be kept in agreement with
+      // CordovaBuilder#appendVersion in tools/cordova/builder.js, or hot
+      // code push will reload Cordova apps unnecessarily.
+      version: () => WebAppHashing.calculateClientHash(
+        manifest, null, configOverrides),
+      versionRefreshable: () => WebAppHashing.calculateClientHash(
+        manifest, type => type === "css", configOverrides),
+      versionNonRefreshable: () => WebAppHashing.calculateClientHash(
+        manifest, (type, replaceable) => type !== "css" && !replaceable, configOverrides),
+      versionReplaceable: () => WebAppHashing.calculateClientHash(
+        manifest, (_type, replaceable) => {
+          if (Meteor.isProduction && replaceable) {
+            throw new Error('Unexpected replaceable file in production');
+          }
+
+          return replaceable
+        },
+        configOverrides
+      ),
+      cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,
+      PUBLIC_SETTINGS,
+    };
+
+    // Expose program details as a string reachable via the following URL.
+    const manifestUrlPrefix = "/__" + arch.replace(/^web\./, "");
+    const manifestUrl = manifestUrlPrefix + getItemPathname("/manifest.json");
+
+    staticFiles[manifestUrl] = () => {
+      if (Package.autoupdate) {
+        const {
+          AUTOUPDATE_VERSION =
+            Package.autoupdate.Autoupdate.autoupdateVersion
+        } = process.env;
+
+        if (AUTOUPDATE_VERSION) {
+          newProgram.version = AUTOUPDATE_VERSION;
+        }
+      }
+
+      if (typeof newProgram.version === "function") {
+        newProgram.version = newProgram.version();
+      }
+
+      return {
+        content: JSON.stringify(newProgram),
+        cacheable: false,
+        hash: newProgram.version,
+        type: "json"
+      };
+    };
+
+    generateBoilerplateForArch(arch);
+
+    // If there are any requests waiting on oldProgram.paused, let them
+    // continue now (using the new program).
+    if (oldProgram &&
+        oldProgram.paused) {
+      oldProgram.unpause();
+    }
+  };
+
+  const defaultOptionsForArch = {
+    'web.cordova': {
+      runtimeConfigOverrides: {
+        // XXX We use absoluteUrl() here so that we serve https://
+        // URLs to cordova clients if force-ssl is in use. If we were
+        // to use __meteor_runtime_config__.ROOT_URL instead of
+        // absoluteUrl(), then Cordova clients would immediately get a
+        // HCP setting their DDP_DEFAULT_CONNECTION_URL to
+        // http://example.meteor.com. This breaks the app, because
+        // force-ssl doesn't serve CORS headers on 302
+        // redirects. (Plus it's undesirable to have clients
+        // connecting to http://example.meteor.com when force-ssl is
+        // in use.)
+        DDP_DEFAULT_CONNECTION_URL: process.env.MOBILE_DDP_URL ||
+          Meteor.absoluteUrl(),
+        ROOT_URL: process.env.MOBILE_ROOT_URL ||
+          Meteor.absoluteUrl()
+      }
+    },
+
+    "web.browser": {
+      runtimeConfigOverrides: {
+        isModern: true,
+      }
+    },
+
+    "web.browser.legacy": {
+      runtimeConfigOverrides: {
+        isModern: false,
+      }
+    },
+  };
+
   WebAppInternals.generateBoilerplate = function () {
     // This boilerplate will be served to the mobile devices when used with
     // Meteor/Cordova for the Hot-Code Push and since the file will be served by
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
-    var defaultOptionsForArch = {
-      'web.cordova': {
-        runtimeConfigOverrides: {
-          // XXX We use absoluteUrl() here so that we serve https://
-          // URLs to cordova clients if force-ssl is in use. If we were
-          // to use __meteor_runtime_config__.ROOT_URL instead of
-          // absoluteUrl(), then Cordova clients would immediately get a
-          // HCP setting their DDP_DEFAULT_CONNECTION_URL to
-          // http://example.meteor.com. This breaks the app, because
-          // force-ssl doesn't serve CORS headers on 302
-          // redirects. (Plus it's undesirable to have clients
-          // connecting to http://example.meteor.com when force-ssl is
-          // in use.)
-          DDP_DEFAULT_CONNECTION_URL: process.env.MOBILE_DDP_URL ||
-            Meteor.absoluteUrl(),
-          ROOT_URL: process.env.MOBILE_ROOT_URL ||
-            Meteor.absoluteUrl()
-        }
-      }
-    };
-
     syncQueue.runTask(function() {
-      _.each(WebApp.clientPrograms, function (program, archName) {
-        boilerplateByArch[archName] =
-          WebAppInternals.generateBoilerplateInstance(
-            archName, program.manifest,
-            defaultOptionsForArch[archName]);
-      });
-
-      // Clear the memoized boilerplate cache.
-      memoizedBoilerplate = {};
-
-      // Configure CSS injection for the default arch
-      // XXX implement the CSS injection for all archs?
-      var cssFiles = boilerplateByArch[WebApp.defaultArch].baseData.css;
-      // Rewrite all CSS files (which are written directly to <style> tags)
-      // by autoupdate_client to use the CDN prefix/etc
-      var allCss = _.map(cssFiles, function(cssFile) {
-        return { url: bundledJsCssUrlRewriteHook(cssFile.url) };
-      });
-      WebAppInternals.refreshableAssets = { allCss };
+      Object.keys(WebApp.clientPrograms)
+        .forEach(generateBoilerplateForArch);
     });
   };
+
+  function generateBoilerplateForArch(arch) {
+    const program = WebApp.clientPrograms[arch];
+    const additionalOptions = defaultOptionsForArch[arch] || {};
+    const { baseData } = boilerplateByArch[arch] =
+      WebAppInternals.generateBoilerplateInstance(
+        arch,
+        program.manifest,
+        additionalOptions,
+      );
+    // We need the runtime config with overrides for meteor_runtime_config.js:
+    program.meteorRuntimeConfig = JSON.stringify({
+      ...__meteor_runtime_config__,
+      ...(additionalOptions.runtimeConfigOverrides || null),
+    });
+    program.refreshableAssets = baseData.css.map(file => ({
+      url: bundledJsCssUrlRewriteHook(file.url),
+    }));
+  }
 
   WebAppInternals.reloadClientPrograms();
 
@@ -655,7 +867,10 @@ function runWebAppServer() {
   app.use(rawConnectHandlers);
 
   // Auto-compress any json, javascript, or text.
-  app.use(connect.compress());
+  app.use(compress({filter: shouldCompress}));
+
+  // parse cookies into an object
+  app.use(cookieParser());
 
   // We're not a proxy; reject (without crashing) attempts to treat us like
   // one. (See #1212.)
@@ -669,40 +884,72 @@ function runWebAppServer() {
     res.end();
   });
 
+  // Parse the query string into res.query. Used by oauth_server, but it's
+  // generally pretty handy..
+  //
+  // Do this before the next middleware destroys req.url if a path prefix
+  // is set to close #10111.
+  app.use(function (request, response, next) {
+    request.query = qs.parse(parseUrl(request.url).query);
+    next();
+  });
+
+  function getPathParts(path) {
+    const parts = path.split("/");
+    while (parts[0] === "") parts.shift();
+    return parts;
+  }
+
+  function isPrefixOf(prefix, array) {
+    return prefix.length <= array.length &&
+      prefix.every((part, i) => part === array[i]);
+  }
+
   // Strip off the path prefix, if it exists.
   app.use(function (request, response, next) {
-    var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    var url = Npm.require('url').parse(request.url);
-    var pathname = url.pathname;
-    // check if the path in the url starts with the path prefix (and the part
-    // after the path prefix must start with a / if it exists.)
-    if (pathPrefix && pathname.substring(0, pathPrefix.length) === pathPrefix &&
-       (pathname.length == pathPrefix.length
-        || pathname.substring(pathPrefix.length, pathPrefix.length + 1) === "/")) {
-      request.url = request.url.substring(pathPrefix.length);
-      next();
-    } else if (pathname === "/favicon.ico" || pathname === "/robots.txt") {
-      next();
-    } else if (pathPrefix) {
+    const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
+    const { pathname, search } = parseUrl(request.url);
+
+    // check if the path in the url starts with the path prefix
+    if (pathPrefix) {
+      const prefixParts = getPathParts(pathPrefix);
+      const pathParts = getPathParts(pathname);
+      if (isPrefixOf(prefixParts, pathParts)) {
+        request.url = "/" + pathParts.slice(prefixParts.length).join("/");
+        if (search) {
+          request.url += search;
+        }
+        return next();
+      }
+    }
+
+    if (pathname === "/favicon.ico" ||
+        pathname === "/robots.txt") {
+      return next();
+    }
+
+    if (pathPrefix) {
       response.writeHead(404);
       response.write("Unknown path");
       response.end();
-    } else {
-      next();
+      return;
     }
-  });
 
-  // Parse the query string into res.query. Used by oauth_server, but it's
-  // generally pretty handy..
-  app.use(connect.query());
+    next();
+  });
 
   // Serve static files from the manifest.
   // This is inspired by the 'static' middleware.
   app.use(function (req, res, next) {
-    Promise.resolve().then(() => {
-      WebAppInternals.staticFilesMiddleware(staticFiles, req, res, next);
-    });
+    WebAppInternals.staticFilesMiddleware(
+      WebAppInternals.staticFilesByArch,
+      req, res, next
+    );
   });
+
+  // Core Meteor packages like dynamic-import can add handlers before
+  // other handlers added by package and application code.
+  app.use(WebAppInternals.meteorInternalHandlers = connect());
 
   // Packages and apps can add handlers to this via WebApp.connectHandlers.
   // They are inserted before our default handler.
@@ -722,12 +969,11 @@ function runWebAppServer() {
     res.end("An error message");
   });
 
-  app.use(function (req, res, next) {
-    Promise.resolve().then(() => {
-      if (! appUrl(req.url)) {
-        return next();
-      }
+  app.use(async function (req, res, next) {
+    if (! appUrl(req.url)) {
+      return next();
 
+    } else {
       var headers = {
         'Content-Type': 'text/html; charset=utf-8'
       };
@@ -776,31 +1022,52 @@ function runWebAppServer() {
         return;
       }
 
-      // /packages/asdfsad ... /__cordova/dafsdf.js
-      var pathname = parseRequest(req).pathname;
-      var archKey = pathname.split('/')[1];
-      var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
+      const { arch } = request;
+      assert.strictEqual(typeof arch, "string", { arch });
 
-      if (!/^__/.test(archKey) || !_.has(archPath, archKeyCleaned)) {
-        archKey = WebApp.defaultArch;
-      } else {
-        archKey = archKeyCleaned;
+      if (! hasOwn.call(WebApp.clientPrograms, arch)) {
+        // We could come here in case we run with some architectures excluded
+        headers['Cache-Control'] = 'no-cache';
+        res.writeHead(404, headers);
+        if (Meteor.isDevelopment) {
+          res.end(`No client program found for the ${arch} architecture.`);
+        } else {
+          // Safety net, but this branch should not be possible.
+          res.end("404 Not Found");
+        }
+        return;
       }
 
-      return getBoilerplateAsync(
-        request,
-        archKey
-      ).then(boilerplate => {
-        var statusCode = res.statusCode ? res.statusCode : 200;
+      // If pauseClient(arch) has been called, program.paused will be a
+      // Promise that will be resolved when the program is unpaused.
+      await WebApp.clientPrograms[arch].paused;
+
+      return getBoilerplateAsync(request, arch).then(({
+        stream,
+        statusCode,
+        headers: newHeaders,
+      }) => {
+        if (!statusCode) {
+          statusCode = res.statusCode ? res.statusCode : 200;
+        }
+
+        if (newHeaders) {
+          Object.assign(headers, newHeaders);
+        }
+
         res.writeHead(statusCode, headers);
-        res.write(boilerplate);
-        res.end();
-      }, error => {
+
+        stream.pipe(res, {
+          // End the response when the stream ends.
+          end: true,
+        });
+
+      }).catch(error => {
         Log.error("Error running template: " + error.stack);
         res.writeHead(500, headers);
         res.end();
       });
-    });
+    }
   });
 
   // Return 404 by default, if no other handlers serve this URL.
@@ -860,7 +1127,12 @@ function runWebAppServer() {
         onListeningCallbacks.push(f);
       else
         f();
-    }
+    },
+    // This can be overridden by users who want to modify how listening works
+    // (eg, to run a proxy like Apollo Engine Proxy in front of the server).
+    startListening: function (httpServer, listenOptions, cb) {
+      httpServer.listen(listenOptions, cb);
+    },
   });
 
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
@@ -870,7 +1142,7 @@ function runWebAppServer() {
     WebAppInternals.generateBoilerplate();
 
     const startHttpServer = listenOptions => {
-      httpServer.listen(listenOptions, Meteor.bindEnvironment(() => {
+      WebApp.startListening(httpServer, listenOptions, Meteor.bindEnvironment(() => {
         if (process.env.METEOR_PRINT_ON_LISTEN) {
           console.log("LISTENING");
         }
@@ -914,10 +1186,6 @@ function runWebAppServer() {
   };
 }
 
-
-runWebAppServer();
-
-
 var inlineScriptsAllowed = true;
 
 WebAppInternals.inlineScriptsAllowed = function () {
@@ -929,6 +1197,12 @@ WebAppInternals.setInlineScriptsAllowed = function (value) {
   WebAppInternals.generateBoilerplate();
 };
 
+var sriMode;
+
+WebAppInternals.enableSubresourceIntegrity = function(use_credentials = false) {
+  sriMode = use_credentials ? 'use-credentials' : 'anonymous';
+  WebAppInternals.generateBoilerplate();
+};
 
 WebAppInternals.setBundledJsCssUrlRewriteHook = function (hookFn) {
   bundledJsCssUrlRewriteHook = hookFn;
@@ -955,3 +1229,6 @@ WebAppInternals.addStaticJs = function (contents) {
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;
 WebAppInternals.additionalStaticJs = additionalStaticJs;
+
+// Start the server!
+runWebAppServer();

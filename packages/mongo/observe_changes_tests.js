@@ -41,10 +41,11 @@ _.each ([{added: 'added', forceOrdered: true},
     c.remove(fooid);
     logger.expectResult("removed", [fooid]);
 
-    c.remove(barid);
+    logger.expectNoResult(() => {
+      c.remove(barid);
+      c.insert({noodles: "good", bacon: "bad", apples: "ok"});
+    });
 
-    c.insert({noodles: "good", bacon: "bad", apples: "ok"});
-    logger.expectNoResult();
     handle.stop();
 
     var badCursor = c.find({}, {fields: {noodles: 1, _id: false}});
@@ -195,8 +196,15 @@ if (Meteor.isServer) {
                               [fooid, {noodles: "alright", bacon: undefined}]);
 
       // Doesn't get update event, since modifies only hidden fields
-      c.update(fooid, {noodles: "alright", potatoes: "meh", apples: "ok", mac: 1, cheese: 2});
-      logger.expectNoResult();
+      logger.expectNoResult(() => {
+        c.update(fooid, {
+          noodles: "alright",
+          potatoes: "meh",
+          apples: "ok",
+          mac: 1,
+          cheese: 2
+        });
+      });
 
       c.remove(fooid);
       logger.expectResultOnly("removed", [fooid]);

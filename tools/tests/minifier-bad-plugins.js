@@ -1,7 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("minifiers can't register non-js/non-css extensions", [], function () {
+selftest.skip.define("minifiers can't register non-js/non-css extensions", [], function () {
   var s = new Sandbox();
   var run;
 
@@ -13,7 +13,7 @@ selftest.define("minifiers can't register non-js/non-css extensions", [], functi
   run.stop();
 });
 
-selftest.define("minifiers: apps can't use more than one package providing a minifier for the same extension", [], function () {
+selftest.skip.define("minifiers: apps can't use more than one package providing a minifier for the same extension", [], function () {
   var s = new Sandbox();
   var run;
 
@@ -24,4 +24,3 @@ selftest.define("minifiers: apps can't use more than one package providing a min
   run.match("local-plugin, local-plugin-2: multiple packages registered minifiers for extension \"js\".");
   run.stop();
 });
-

@@ -1,10 +1,14 @@
 {
   "env": {
     "development": {
-      "plugins": ["transform-do-expressions"]
+      "plugins": [
+        "proposal-do-expressions",
+      ]
     },
     "production": {
-      "plugins": ["transform-do-expressions"]
+      "plugins": [
+        "proposal-do-expressions",
+      ]
     }
   }
 }

@@ -7,7 +7,7 @@ var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Console = require('../console/console.js').Console;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var warehouse = require('../packaging/warehouse.js');
 var tropohouse = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
@@ -15,7 +15,8 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
-const archinfo = require('../utils/archinfo.js');
+const archinfo = require('../utils/archinfo');
+import { isEmacs } from "../utils/utils.js";
 
 var main = exports;
 
@@ -508,8 +509,6 @@ var springboard = function (rel, options) {
     }
   }
 
-  const executable = files.pathJoin(newToolsDir, "meteor");
-
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = [];
@@ -538,10 +537,20 @@ var springboard = function (rel, options) {
     process.env['METEOR_SPRINGBOARD_RELEASE'] = options.releaseOverride;
   }
 
-  if (process.platform === 'win32') {
+  // Release our connection to the sqlite catalog database for the current
+  // process, so that the springboarded process can reestablish it.
+  catalog.official.closePermanently();
+
+  const isWindows = process.platform === "win32";
+  const executable = files.pathJoin(
+    newToolsDir,
+    isWindows ? "meteor.bat" : "meteor",
+  );
+
+  if (isWindows) {
     process.exit(new Promise(function (resolve) {
-      var batPath = files.convertToOSPath(executable + ".bat");
-      var child = require("child_process").spawn(batPath, newArgv, {
+      var execPath = files.convertToOSPath(executable);
+      var child = require("child_process").spawn(execPath, newArgv, {
         env: process.env,
         stdio: 'inherit'
       }).on('exit', resolve);
@@ -560,6 +569,10 @@ var oldSpringboard = function (toolsVersion) {
   var newArgv = process.argv.slice(2);
   var cmd =
     files.pathJoin(warehouse.getToolsDir(toolsVersion), 'bin', 'meteor');
+
+  // Release our connection to the sqlite catalog database for the current
+  // process, so that the springboarded process can reestablish it.
+  catalog.official.closePermanently();
 
   // Now exec; we're not coming back.
   require('kexec')(cmd, newArgv);
@@ -583,7 +596,7 @@ Fiber(function () {
   // reversing node's normal setting of O_NONBLOCK on the evaluation
   // of process.stdin (because Node unblocks stdio when forking). This
   // fixes execution of Mongo from within Emacs shell.
-  if (process.env.EMACS == "t") {
+  if (isEmacs()) {
     process.stdin;
     var child_process = require('child_process');
     child_process.spawn('true', [], {stdio: 'inherit'});
@@ -591,18 +604,11 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.41';
+  var MIN_NODE_VERSION = 'v12.0.0';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');
     process.exit(1);
-  }
-
-  // Set up git hooks, but not on Windows because they don't work there and it;s
-  // not worth setting it up at the moment
-  if (files.inCheckout() && process.platform !== "win32") {
-    var installGitHooks = require('../tool-env/install-git-hooks.js')['default'];
-    installGitHooks();
   }
 
   // This is a bit of a hack, but: if we don't check this in the tool, then the
@@ -610,7 +616,7 @@ Fiber(function () {
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
     var parsedUrl = require('url').parse(process.env.ROOT_URL);
-    if (!parsedUrl.host) {
+    if (!parsedUrl.host || ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
       Console.error('$ROOT_URL, if specified, must be an URL.');
       process.exit(1);
     }

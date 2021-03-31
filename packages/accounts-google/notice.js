@@ -1,6 +1,6 @@
 if (Package['accounts-ui']
     && !Package['service-configuration']
-    && !Package.hasOwnProperty('google-config-ui')) {
+    && !Object.prototype.hasOwnProperty.call(Package, 'google-config-ui')) {
   console.warn(
     "Note: You're using accounts-ui and accounts-google,\n" +
     "but didn't install the configuration UI for the Google\n" +

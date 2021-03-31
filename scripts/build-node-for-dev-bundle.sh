@@ -30,17 +30,10 @@ cd node-build
 echo "Downloading Node from ${NODE_URL}"
 curl -sL "${NODE_URL}" | tar zx --strip-components 1
 
-# Build with International Components for Unicode (ICU) Support...
-# Node 4.x used 56.x. Node 8.x uses 59.x.   I believe the only
-# reliable location to find the correct version of ICU for a Node.js
-# release is to check `process.config.icu_ver_major` from an
-# official, compiled Node.js release.
-# https://github.com/nodejs/node/wiki/Intl#configure-node-with-specific-icu-source
-echo "Downloading International Components for Unicode (ICU)..."
-curl -sL https://s3.amazonaws.com/com.meteor.static/icu/icu4c-56_1-src.tgz | \
-  tar zx -C deps/
-
-node_configure_flags=()
+node_configure_flags=(
+    # Enable the ICU internationalization library.
+    '--download=icu'
+)
 
 if [ "${NODE_FROM_SRC:-}" = "debug" ]
 then

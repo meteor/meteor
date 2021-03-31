@@ -1,4 +1,5 @@
 import assert from "assert";
+import { Meteor } from "meteor/meteor";
 
 function assertDeepEqual(a, b) {
   const aWithoutDefault = Object.assign({}, a);
@@ -12,6 +13,20 @@ function assertDeepEqual(a, b) {
 
 describe("dynamic import(...)", function () {
   maybeClearDynamicImportCache();
+
+  it("ignores bad __meteor__/dynamic-import/fetch requests (#10147)", function () {
+    return fetch(Meteor.absoluteUrl("/__meteor__/dynamic-import/fetch"), {
+      // POST request with empty body.
+      method: "POST"
+    }).then(async (res) => {
+      assert.strictEqual(res.status, 400);
+      if (Meteor.isProduction) {
+        assert.strictEqual(await res.json(), "bad request");
+      } else {
+        assert.strictEqual(await res.json(), "Unexpected end of JSON input");
+      }
+    });
+  });
 
   it("import same module both statically and dynamically", function () {
     import moment from "moment";
@@ -191,7 +206,7 @@ describe("dynamic import(...)", function () {
   it("can import module.exports = {...}-style modules", () => {
     return import("./imports/module-exports-esModule").then(m => {
       assert.strictEqual(typeof m, "object");
-      assert.deepEqual(m, {});
+      assert.deepEqual(Object.keys(m), []);
     });
   });
 
@@ -215,9 +230,10 @@ describe("dynamic import(...)", function () {
   });
 
   it("should track dynamic peer imports from packages (#9187)", () => {
+    const absId = require.resolve("optimism");
     const version = require(
       "meteor/dynamic-import/dynamic-versions.js"
-    ).get("/node_modules/optimism/lib/index.js");
+    ).get(absId);
 
     if (Meteor.isClient) {
       assert.strictEqual(typeof version, "string");
@@ -231,15 +247,15 @@ describe("dynamic import(...)", function () {
   });
 
   it('should support object-valued package.json "browser" fields', () => {
-    return import("uuid").then(({ default: uuid }) => {
+    return import("uuid").then(({ v4: uuid }) => {
       const id = uuid();
       assert.strictEqual(typeof id, "string");
       assert.strictEqual(id.split("-").length, 5);
 
       if (Meteor.isClient) {
         assert.strictEqual(
-          require.resolve("uuid/lib/rng.js"),
-          "/node_modules/uuid/lib/rng-browser.js"
+          require.resolve("uuid/dist/esm-node/index.js"),
+          "/node_modules/uuid/dist/esm-browser/index.js"
         );
         const uuidPkgJsonId = ["uuid", "package.json"].join("/");
         const { browser } = require(uuidPkgJsonId);

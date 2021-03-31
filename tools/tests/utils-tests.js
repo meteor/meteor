@@ -1,7 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var utils = require('../utils/utils.js');
 
-import { sha1 } from '../fs/watch.js';
+import { sha1 } from '../fs/watch';
 import httpHelpers from '../utils/http-helpers';
 
 selftest.define('subset generator', function () {
@@ -58,6 +58,16 @@ selftest.define("url has scheme", function () {
   selftest.expectEqual(utils.hasScheme("http:/example"), false);
   selftest.expectEqual(utils.hasScheme("http:example"), false);
   selftest.expectEqual(utils.hasScheme("example_com+http://"), false);
+});
+
+
+selftest.define("isNpmUrl", function () {
+    selftest.expectTrue(utils.isNpmUrl("https://github.com/caolan/async/archive/v2.3.0.tar.gz"));
+    selftest.expectTrue(utils.isNpmUrl("http://github.com/caolan/async/archive/v2.3.0.tar.gz"));
+    selftest.expectTrue(utils.isNpmUrl("git://github.com/foo/bar"));
+    selftest.expectTrue(utils.isNpmUrl("git+ssh://github.com/foo/bar"));
+    selftest.expectTrue(utils.isNpmUrl("git+http://github.com/foo/bar"));
+    selftest.expectTrue(utils.isNpmUrl("git+https://github.com/foo/bar"));
 });
 
 selftest.define("parse url", function () {

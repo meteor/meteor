@@ -6,16 +6,17 @@
 var assert = require('assert');
 var cleanup = require('../tool-env/cleanup.js');
 var fs = require('fs');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var os = require('os');
 var _ = require('underscore');
 var httpHelpers = require('../utils/http-helpers.js');
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var runLog = require('../runners/run-log.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
+import { parse } from "semver";
 import { version as npmVersion } from 'npm';
-import { execFileAsync } from "../utils/processes.js";
+import { execFileAsync } from "../utils/processes";
 import {
   get as getRebuildArgs
 } from "../static-assets/server/npm-rebuild-args.js";
@@ -30,7 +31,7 @@ import {
   optimisticStatOrNull,
   optimisticReadJsonOrNull,
   optimisticReaddir,
-} from "../fs/optimistic.js";
+} from "../fs/optimistic";
 
 var meteorNpm = exports;
 
@@ -239,8 +240,6 @@ function recordLastRebuildVersions(pkgDir) {
 // Returns true iff isSubtreeOf(currentVersions, versions), allowing
 // valid semantic versions to differ in their patch versions.
 function versionsAreCompatible(versions) {
-  import { parse } from "semver";
-
   return isSubtreeOf(currentVersions, versions, (a, b) => {
     // Technically already handled by isSubtreeOf, but doesn't hurt.
     if (a === b) {
@@ -276,25 +275,52 @@ function rebuildVersionsAreCompatible(pkgPath) {
     optimisticReadJsonOrNull(versionFile));
 }
 
+function isDirectory(path) {
+  const stat = optimisticStatOrNull(path);
+  return !! (stat && stat.isDirectory());
+}
+
 // Rebuilds any binary dependencies in the given node_modules directory,
 // and returns true iff anything was rebuilt.
 meteorNpm.rebuildIfNonPortable =
 Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   const dirsToRebuild = [];
 
-  files.readdir(nodeModulesDir).forEach(function (pkg) {
-    const pkgPath = files.pathJoin(nodeModulesDir, pkg);
-
-    if (isPortable(pkgPath)) {
+  function scan(dir, scoped) {
+    if (! isDirectory(dir)) {
       return;
     }
 
-    if (rebuildVersionsAreCompatible(pkgPath)) {
-      return;
-    }
+    files.readdir(dir).forEach(item => {
+      if (item.startsWith(".")) {
+        // Ignore "hidden" files, such as node_modules/.bin directories.
+        return;
+      }
 
-    dirsToRebuild.push(pkgPath);
-  });
+      const path = files.pathJoin(dir, item);
+
+      if (! scoped &&
+          item.startsWith("@")) {
+        return scan(path, true);
+      }
+
+      if (! isDirectory(path)) {
+        return;
+      }
+
+      if (isPortable(path)) {
+        return;
+      }
+
+      if (rebuildVersionsAreCompatible(path)) {
+        return;
+      }
+
+      dirsToRebuild.push(path);
+    });
+  }
+
+  scan(nodeModulesDir);
 
   if (dirsToRebuild.length === 0) {
     return false;
@@ -316,21 +342,27 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
   // directory paths.
   const tempPkgDirs = {};
 
-  dirsToRebuild.forEach(function (pkgPath) {
+  dirsToRebuild.splice(0).forEach(pkgPath => {
     const tempPkgDir = tempPkgDirs[pkgPath] = files.pathJoin(
       tempNodeModules,
-      files.pathBasename(pkgPath)
+      files.pathRelative(nodeModulesDir, pkgPath)
     );
 
-    // Copy the package directory instead of renaming it, so that the
-    // original package will be left untouched if the rebuild fails. We
-    // could just run files.cp_r(pkgPath, tempPkgDir) here, except that we
-    // want to handle nested node_modules directories specially.
-    copyNpmPackageWithSymlinkedNodeModules(pkgPath, tempPkgDir);
+    // It's possible the pkgPath directory may have been deleted since we
+    // did the scan above: https://circleci.com/gh/meteor/meteor/31330
+    if (isDirectory(pkgPath)) {
+      // Copy the package directory instead of renaming it, so that the
+      // original package will be left untouched if the rebuild fails. We
+      // could just run files.cp_r(pkgPath, tempPkgDir) here, except that we
+      // want to handle nested node_modules directories specially.
+      copyNpmPackageWithSymlinkedNodeModules(pkgPath, tempPkgDir);
 
-    // Record the current process.versions so that we can avoid
-    // copying/rebuilding/renaming next time.
-    recordLastRebuildVersions(tempPkgDir);
+      // Record the current process.versions so that we can avoid
+      // copying/rebuilding/renaming next time.
+      recordLastRebuildVersions(tempPkgDir);
+
+      dirsToRebuild.push(pkgPath);
+    }
   });
 
   // The `npm rebuild` command must be run in the parent directory of the
@@ -451,8 +483,9 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
   const pkgJsonPath = files.pathJoin(dir, "package.json");
   const pkgJsonStat = optimisticStatOrNull(pkgJsonPath);
   const canCache = pkgJsonStat && pkgJsonStat.isFile();
-  const portableFile = files.pathJoin(
-    dir, ".meteor-portable-" + portableVersion + ".json");
+  const portableFile = files.convertToOSPath(
+    files.pathJoin(dir, ".meteor-portable-" + portableVersion + ".json")
+  );
 
   if (canCache) {
     // Cache previous results by writing a boolean value to a hidden file
@@ -469,7 +502,7 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
           allowSyntaxError: true
         });
 
-    if (result) {
+    if (typeof result === "boolean") {
       return result;
     }
 
@@ -514,8 +547,8 @@ const isPortable = Profile("meteorNpm.isPortable", dir => {
       },
     );
 
-    // Cache the result immediately in memory so that the asynchronous
-    // write won't confuse synchronous optimisticReadJsonOrNull calls.
+    // Cache the result immediately in memory so we don't have to wait for
+    // file change notifications to invalidate optimisticReadJsonOrNull.
     portableCache[portableFile] = result;
   }
 
@@ -920,6 +953,11 @@ function getInstalledDependenciesTree(dir) {
       const pkgDir = files.pathJoin(nodeModulesDir, item);
       const pkgJsonPath = files.pathJoin(pkgDir, "package.json");
 
+      if (item.startsWith("@")) {
+        Object.assign(result, ls(pkgDir));
+        return;
+      }
+
       let pkg;
       try {
         pkg = JSON.parse(files.readFile(pkgJsonPath));
@@ -927,15 +965,25 @@ function getInstalledDependenciesTree(dir) {
         if (! pkg) return;
       }
 
-      const info = result[item] = {
+      const name = pkg.name || item;
+
+      const info = result[name] = {
         version: pkg.version
       };
 
       const from = pkg._from || pkg.from;
-      if (from &&
-          utils.isNpmUrl(from) &&
-          ! utils.isNpmUrl(info.version)) {
-        info.version = from;
+      if (from) {
+        // Fix for https://github.com/meteor/meteor/issues/9477:
+        const prefix = name + "@";
+        let fromUrl = from;
+        if (fromUrl.startsWith(prefix)) {
+          fromUrl = fromUrl.slice(prefix.length);
+        }
+
+        if (utils.isNpmUrl(fromUrl) &&
+            ! utils.isNpmUrl(info.version)) {
+          info.version = fromUrl;
+        }
       }
 
       const resolved = pkg._resolved || pkg.resolved;
@@ -1005,20 +1053,6 @@ var getShrinkwrappedDependencies = function (dir) {
   return treeToDependencies(getShrinkwrappedDependenciesTree(dir));
 };
 
-const moduleDoesResolve = meteorNpm.moduleDoesResolve = (dep) => {
-  try {
-    require.resolve(dep);
-  } catch (e) {
-    if (e.code !== 'MODULE_NOT_FOUND') {
-      throw e;
-    }
-
-    return false;
-  }
-
-  return true;
-};
-
 const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
   const installArg = utils.isNpmUrl(version)
     ? version
@@ -1031,7 +1065,7 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
 
   if (! result.success) {
     const pkgNotFound =
-      `404 Not Found: ${utils.quotemeta(name)}@${utils.quotemeta(version)}`;
+      `404 Not Found - GET ${utils.quotemeta("https://registry.npmjs.org/"+name)}`;
 
     const versionNotFound =
       "No matching version found for " +
@@ -1045,7 +1079,7 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
         `${name} version ${version} is not available in the npm registry`);
     } else {
       buildmessage.error(
-        `couldn't install npm package ${name}@${version}: ${result.error}`);
+        `couldn\'t install npm package ${name}@${version}: ${result.error}`);
     }
 
     // Recover by returning false from updateDependencies
@@ -1132,11 +1166,10 @@ function shrinkwrap(dir) {
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
 // from npm ls --json) to just the versions we want. Returns an object that does
 // not share state with its input
-var minimizeDependencyTree = function (tree) {
-  var minimizeModule = function (module) {
+function minimizeDependencyTree(tree) {
+  function minimizeModule(module) {
     var version;
-    if (module.resolved &&
-        !module.resolved.match(/^https?:\/\/registry.npmjs.org\//)) {
+    if (module.resolved && ! isUrlFromRegistry(module.resolved)) {
       version = module.resolved;
     } else if (utils.isNpmUrl(module.from)) {
       version = module.from;
@@ -1152,14 +1185,22 @@ var minimizeDependencyTree = function (tree) {
       });
     }
     return minimized;
-  };
+  }
 
   var newTopLevelDependencies = {};
   _.each(tree.dependencies, function (module, name) {
     newTopLevelDependencies[name] = minimizeModule(module);
   });
   return {dependencies: newTopLevelDependencies};
-};
+}
+
+function isUrlFromRegistry(url) {
+  if (url.match(/^https?:\/\/registry.npmjs.org\//)) {
+    return true;
+  }
+  const NCR = process.env.NPM_CONFIG_REGISTRY;
+  return NCR && url.startsWith(NCR);
+}
 
 var logUpdateDependencies = function (packageName, npmDependencies) {
   runLog.log(packageName + ': updating npm dependencies -- ' +

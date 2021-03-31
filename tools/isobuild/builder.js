@@ -1,14 +1,17 @@
 import assert from "assert";
-import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
-import files from '../fs/files.js';
-import NpmDiscards from './npm-discards.js';
-import {Profile} from '../tool-env/profile.js';
+import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
+import files, {
+  symlinkWithOverwrite, realpath,
+} from '../fs/files';
+import NpmDiscards from './npm-discards';
+import {Profile} from '../tool-env/profile';
 import {
   optimisticReadFile,
   optimisticReaddir,
   optimisticStatOrNull,
   optimisticLStatOrNull,
-} from "../fs/optimistic.js";
+  optimisticHashOrNull,
+} from "../fs/optimistic";
 
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In
@@ -56,7 +59,15 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
 // structure; and the hashes of the contents correspond to the
 // writtenHashes data strcture.
 export default class Builder {
-  constructor({outputPath, previousBuilder}) {
+  constructor({
+    outputPath,
+    previousBuilder,
+    // Even though in-place builds are disabled by default on some
+    // platforms (Windows), they can be forcibly reenabled with this
+    // option, in cases where it's safe and/or necessary to avoid
+    // clobbering existing files.
+    forceInPlaceBuild = false,
+  }) {
     this.outputPath = outputPath;
 
     // Paths already written to. Map from canonicalized relPath (no
@@ -65,7 +76,9 @@ export default class Builder {
     this.previousUsedAsFile = {};
 
     this.writtenHashes = {};
+    this.createdSymlinks = {};
     this.previousWrittenHashes = {};
+    this.previousCreatedSymlinks = {};
 
     // foo/bar => foo/.build1234.bar
     // Should we include a random number? The advantage is that multiple
@@ -81,7 +94,8 @@ export default class Builder {
     // If we have a previous builder and we are allowed to re-use it,
     // let's keep all the older files on the file-system and replace
     // only outdated ones + write the new files in the same path
-    if (previousBuilder && ENABLE_IN_PLACE_BUILDER_REPLACEMENT) {
+    if (previousBuilder &&
+        (forceInPlaceBuild || ENABLE_IN_PLACE_BUILDER_REPLACEMENT)) {
       if (previousBuilder.outputPath !== outputPath) {
         throw new Error(
           `previousBuilder option can only be set to a builder with the same output path.
@@ -95,6 +109,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         this.previousWrittenHashes = previousBuilder.writtenHashes;
         this.previousUsedAsFile = previousBuilder.usedAsFile;
+        this.previousCreatedSymlinks = previousBuilder.createdSymlinks;
 
         resetBuildPath = false;
       } else {
@@ -133,7 +148,15 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (partial in this.previousUsedAsFile) {
           if (this.previousUsedAsFile[partial]) {
             // was previously used as file, delete it, create a directory
-            files.unlink(partial);
+            try {
+              files.unlink(partial);
+            } catch (e) {
+              // If files.unlink(partial) failed because the file does not
+              // exist, then we can just pretend the unlink succeeded.
+              if (e.code !== "ENOENT") {
+                throw e;
+              }
+            }
           } else {
             // is already a directory
             needToMkdir = false;
@@ -209,6 +232,39 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return partsOut.join(files.pathSep);
   }
 
+  // Checks if a file with the same path and hash was written by
+  // the previous builder. If it was, it adds it to the cache and makes
+  // sure the parent directories exist and are part of the cache.
+  //
+  // Returns true if the file was already written
+  usePreviousWrite(relPath, hash, sanitize) {
+    relPath = this._normalizeFilePath(relPath, sanitize);
+
+    if (this.previousWrittenHashes[relPath] === hash) {
+      this._ensureDirectory(files.pathDirname(relPath));
+      this.writtenHashes[relPath] = hash;
+      this.usedAsFile[relPath] = true;
+      return true;
+    }
+
+    return false;
+  }
+
+  _normalizeFilePath(relPath, sanitize) {
+    // Ensure no trailing slash
+    if (relPath.slice(-1) === files.pathSep) {
+      relPath = relPath.slice(0, -1);
+    }
+
+    // In sanitize mode, ensure path does not contain segments like
+    // '..', does not contain forbidden characters, and is unique.
+    if (sanitize) {
+      relPath = this._sanitize(relPath);
+    }
+
+    return relPath;
+  }
+
   // Write either a buffer or the contents of a file to `relPath` (a
   // path to a file relative to the bundle root), creating it (and any
   // enclosing directories) if it doesn't exist yet. Exactly one of
@@ -231,16 +287,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //
   // If `file` is used then it will be added to the builder's WatchSet.
   write(relPath, {data, file, hash, sanitize, executable, symlink}) {
-    // Ensure no trailing slash
-    if (relPath.slice(-1) === files.pathSep) {
-      relPath = relPath.slice(0, -1);
-    }
-
-    // In sanitize mode, ensure path does not contain segments like
-    // '..', does not contain forbidden characters, and is unique.
-    if (sanitize) {
-      relPath = this._sanitize(relPath);
-    }
+    relPath = this._normalizeFilePath(relPath, sanitize);
 
     let getData = null;
     if (data) {
@@ -266,13 +313,27 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     } else {
       hash = hash || sha1(getData());
 
-      if (this.previousWrittenHashes[relPath] !== hash) {
+      // Write is called multiple times for assets when they have multiple urls for the same file
+      if (this.previousWrittenHashes[relPath] !== hash && this.writtenHashes[relPath] !== hash) {
+
         // Builder is used to create build products, which should be read-only;
         // users shouldn't be manually editing automatically generated files and
         // expecting the results to "stick".
-        atomicallyRewriteFile(absPath, getData(), {
-          mode: executable ? 0o555 : 0o444
-        });
+        const mode = executable ? 0o555 : 0o444
+
+        if (this.buildPath === this.outputPath || this.writtenHashes[relPath]) {
+          // atomicallyRewriteFile handles overwriting files that have already been created
+          atomicallyRewriteFile(absPath, getData(), {
+              mode
+          });
+        } else {
+          // Since builder is not updating in place, and
+          // this build is only used if every file is successfully written,
+          // it is not important to write atomically.
+          files.writeFile(absPath, getData(), {
+            mode
+          })
+      }
       }
 
       this.writtenHashes[relPath] = hash;
@@ -280,6 +341,79 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     this.usedAsFile[relPath] = true;
 
     return relPath;
+  }
+
+  copyTranspiledModules(relativePaths, {
+    sourceRootDir,
+    targetRootDir = this.outputPath,
+    needToTranspile = files.inCheckout(),
+  }) {
+    if (!needToTranspile) {
+      // If these files have already been transpiled, copy the transpiled files
+      // (both .js and .js.map) directly to the builder output directory, without
+      // recompiling them.
+      relativePaths.forEach(relPath => {
+        const jsPath = jsToTs(relPath);
+        [jsPath, jsPath + ".map"].forEach(path => {
+          this.write(path, {
+            file: files.pathJoin(sourceRootDir, path),
+          });
+        });
+      });
+      return;
+    }
+
+    const babel = require("meteor-babel");
+    const commonBabelOptions = babel.getDefaultOptions({
+      nodeMajorVersion: parseInt(process.versions.node),
+      typescript: true
+    });
+    commonBabelOptions.sourceMaps = true;
+
+    const toolsDir = files.getCurrentToolsDir();
+    const babelCacheDirectory =
+      files.pathJoin(files.pathDirname(toolsDir), ".babel-cache");
+
+    relativePaths.forEach(relPath => {
+      assert.ok(!files.pathIsAbsolute(relPath), relPath);
+      const fullPath = files.pathJoin(sourceRootDir, relPath);
+      let inputFileContents = files.readFile(fullPath, "utf-8");
+
+      // If certain behavior should be disabled in the transpiled code, the
+      // #RemoveInProd comment can be added to strip out appropriate lines.
+      inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
+
+      var transpiled = babel.compile(inputFileContents, {
+        ...commonBabelOptions,
+        filename: relPath,
+        sourceFileName: "/" + relPath,
+      }, {
+        cacheDirectory: babelCacheDirectory,
+      });
+
+      // The published implementation of the meteor-tool package should
+      // contain only .js files, like any compiled TypeScript project.
+      // This design has the unfortunate consequence of forbidding
+      // explicit .ts file extensions in imported module identifier
+      // strings, but that's just how it goes with TypeScript.
+      let outputPath = jsToTs(relPath);
+
+      const sourceMapUrlComment =
+        "//# sourceMappingURL=" + files.pathBasename(outputPath + ".map");
+
+      this.write(outputPath, {
+        data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
+      });
+
+      // The babelOptions.sourceMapTarget option was deprecated in Babel
+      // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
+      const sourceMapTarget = outputPath + ".map";
+      transpiled.map.file = sourceMapTarget;
+
+      this.write(sourceMapTarget, {
+        data: Buffer.from(JSON.stringify(transpiled.map), 'utf8')
+      });
+    });
   }
 
   // Serialize `data` as JSON and write it to `relPath` (a path to a
@@ -390,6 +524,59 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return generated;
   }
 
+  // A version of copyDirectory that works better for copying node_modules
+  // directories when symlinks are involved.
+  copyNodeModulesDirectory(options) {
+    // Although the options.from directory should probably be a
+    // node_modules directory, the only essential precondition here is
+    // that the destination directory is a node_modules directory.
+    // assert.strictEqual(files.pathBasename(options.from), "node_modules");
+    assert.strictEqual(files.pathBasename(options.to), "node_modules");
+
+    if (options.symlink) {
+      // If we're going to use symlinks to speed up this copy, then we
+      // need to make sure we've reserved all directories that are not
+      // package directories, such as the node_modules directory itself,
+      // as well as node_modules/meteor and the parent directories of any
+      // scoped npm packages.
+      this._ensureAllNonPackageDirectories(
+        realpath(options.from),
+        options.to
+      );
+    }
+
+    // Call this._copyDirectory rather than this.copyDirectory so that the
+    // subBuilder hacks from Builder#enter won't apply a second time.
+    return this._copyDirectory(options);
+  }
+
+  _ensureAllNonPackageDirectories(absFromDir, relToDir) {
+    const dirStat = optimisticStatOrNull(absFromDir);
+    if (! (dirStat && dirStat.isDirectory())) {
+      return;
+    }
+
+    const absFromPackageJson =
+      files.pathJoin(absFromDir, "package.json");
+
+    const stat = optimisticStatOrNull(absFromPackageJson);
+    if (stat && stat.isFile()) {
+      // If the directory has a package.json file, it's a package
+      // directory, and we should not call this._ensureDirectory, so that
+      // the package directory can later be symlinked in copyDirectory.
+      return;
+    }
+
+    this._ensureDirectory(relToDir);
+
+    optimisticReaddir(absFromDir).forEach(item => {
+      this._ensureAllNonPackageDirectories(
+        files.pathJoin(absFromDir, item),
+        files.pathJoin(relToDir, item)
+      );
+    });
+  }
+
   // Recursively copy a directory and all of its contents into the
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.
@@ -408,7 +595,13 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //   entries that end with a slash if it's a directory.
   // - specificFiles: just copy these paths (specified as relative to 'to').
   // - symlink: true if the directory should be symlinked instead of copying
-  copyDirectory({
+  copyDirectory(options) {
+    // TODO(benjamn) Remove this wrapper when Builder#enter is no longer
+    // implemented using ridiculous hacks.
+    return this._copyDirectory(options);
+  }
+
+  _copyDirectory({
     from, to,
     ignore,
     specificFiles,
@@ -420,8 +613,6 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     if (to.slice(-1) === files.pathSep) {
       to = to.slice(0, -1);
     }
-
-    const absPathTo = files.pathJoin(this.buildPath, to);
 
     if (symlink) {
       if (specificFiles) {
@@ -446,15 +637,17 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     }
 
-    const walk = (
-      absFrom,
-      relTo,
-      _currentRealRootDir = absFrom
-    ) => {
+    const rootDir = realpath(from);
+
+    const walk = (absFrom, relTo) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
-        symlinkWithOverwrite(absFrom, absTo);
+        if (this.previousCreatedSymlinks[absFrom] !== relTo) {
+          symlinkWithOverwrite(absFrom, absTo);
+        }
+        this.usedAsFile[relTo] = false;
+        this.createdSymlinks[absFrom] = relTo;
         return;
       }
 
@@ -468,9 +661,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           return;
         }
 
-        // Returns files.realpath(thisAbsFrom), iff it is external to
-        // _currentRealRootDir, using caching because this function might
-        // be called more than once.
+        // Returns files.realpath(thisAbsFrom), if it is external to
+        // rootDir, using caching because this function might be called
+        // more than once.
         let cachedExternalPath;
         const getExternalPath = () => {
           if (typeof cachedExternalPath !== "undefined") {
@@ -478,7 +671,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           try {
-            var real = files.realpath(thisAbsFrom);
+            var real = realpath(thisAbsFrom);
           } catch (e) {
             if (e.code !== "ENOENT" &&
                 e.code !== "ELOOP") {
@@ -488,7 +681,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           const isExternal =
-            files.pathRelative(_currentRealRootDir, real).startsWith("..");
+            files.pathRelative(rootDir, real).startsWith("..");
 
           // Now cachedExternalPath is either a string or false.
           return cachedExternalPath = isExternal && real;
@@ -503,22 +696,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // external files, and this file is a symbolic link that points
           // to an external file, update fileStatus so that we copy this
           // file as a normal file rather than as a symbolic link.
-
           const externalPath = getExternalPath();
           if (externalPath) {
-            // Copy from the real path rather than the link path.
-            thisAbsFrom = externalPath;
-
             // Update fileStatus to match the actual file rather than the
             // symbolic link, thus forcing the file to be copied below.
             fileStatus = optimisticLStatOrNull(externalPath);
-
-            if (fileStatus && fileStatus.isDirectory()) {
-              // Update _currentRealRootDir so that we can judge
-              // isExternal relative to this new root directory when
-              // traversing nested directories.
-              _currentRealRootDir = externalPath;
-            }
           }
         }
 
@@ -549,7 +731,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         if (isDirectory) {
-          walk(thisAbsFrom, thisRelTo, _currentRealRootDir);
+          walk(thisAbsFrom, thisRelTo);
           return;
         }
 
@@ -576,29 +758,34 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // could not be created above.
         fileStatus = optimisticStatOrNull(thisAbsFrom);
         if (fileStatus && fileStatus.isFile()) {
-          // XXX can't really optimize this copying without reading
-          // the file into memory to calculate the hash.
-          files.writeFile(
-            files.pathResolve(this.buildPath, thisRelTo),
-            // The reason we call files.writeFile here instead of
-            // files.copyFile is so that we can read the file using
-            // optimisticReadFile instead of files.createReadStream.
-            optimisticReadFile(thisAbsFrom),
-            // Logic borrowed from files.copyFile: "Create the file as
-            // readable and writable by everyone, and executable by everyone
-            // if the original file is executably by owner. (This mode will be
-            // modified by umask.) We don't copy the mode *directly* because
-            // this function is used by 'meteor create' which is copying from
-            // the read-only tools tree into a writable app."
-            { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
-          );
+          const hash = optimisticHashOrNull(thisAbsFrom);
 
+          if (this.previousWrittenHashes[thisRelTo] !== hash) {
+            const content = optimisticReadFile(thisAbsFrom);
+
+            files.writeFile(
+              files.pathResolve(this.buildPath, thisRelTo),
+              // The reason we call files.writeFile here instead of
+              // files.copyFile is so that we can read the file using
+              // optimisticReadFile instead of files.createReadStream.
+              content,
+              // Logic borrowed from files.copyFile: "Create the file as
+              // readable and writable by everyone, and executable by everyone
+              // if the original file is executably by owner. (This mode will be
+              // modified by umask.) We don't copy the mode *directly* because
+              // this function is used by 'meteor create' which is copying from
+              // the read-only tools tree into a writable app."
+              { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
+            );
+          }
+
+          this.writtenHashes[thisRelTo] = hash;
           this.usedAsFile[thisRelTo] = true;
         }
       });
     };
 
-    walk(files.realpath(from), to);
+    walk(rootDir, to);
   }
 
   // Returns a new Builder-compatible object that works just like a
@@ -608,21 +795,31 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // The sub-builder returned does not have all Builder methods (for
   // example, complete() wouldn't make sense) and you should not rely
   // on it being instanceof Builder.
+  //
+  // TODO(benjamn) This nonsense should be ripped out by any means
+  // necessary... whenever someone has the time.
   enter(relPath) {
-    const methods = ["write", "writeJson", "reserve", "generateFilename",
-                   "copyDirectory", "enter"];
     const subBuilder = {};
     const relPathWithSep = relPath + files.pathSep;
+    const methods = [
+      "write",
+      "writeJson",
+      "reserve",
+      "generateFilename",
+      "copyDirectory",
+      "copyNodeModulesDirectory",
+      "enter",
+    ];
 
     methods.forEach(method => {
       subBuilder[method] = (...args) => {
-        if (method !== "copyDirectory") {
-          // Normal method (relPath as first argument)
-          args[0] = files.pathJoin(relPath, args[0]);
-        } else {
-          // with copyDirectory the path we have to fix up is inside
-          // an options hash
+        if (method === "copyDirectory" ||
+            method === "copyNodeModulesDirectory") {
+          // The copy methods take their relative paths via options.to.
           args[0].to = files.pathJoin(relPath, args[0].to);
+        } else {
+          // Other methods have relPath as the first argument.
+          args[0] = files.pathJoin(relPath, args[0]);
         }
 
         let ret = this[method](...args);
@@ -646,7 +843,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     // Methods that don't have to fix up arguments or return values, because
     // they are implemented purely in terms of other methods which do.
-    const passThroughMethods = ["writeToGeneratedFilename"];
+    const passThroughMethods = [
+      "writeToGeneratedFilename",
+      "copyTranspiledModules",
+    ];
     passThroughMethods.forEach(method => {
       subBuilder[method] = this[method];
     });
@@ -710,6 +910,16 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   }
 }
 
+function jsToTs(path) {
+  if (path.endsWith(".ts")) {
+    const parts = path.split(".");
+    assert.strictEqual(parts.pop(), "ts");
+    parts.push("js");
+    path = parts.join(".");
+  }
+  return path;
+}
+
 function atomicallyRewriteFile(path, data, options) {
   // create a different file with a random name and then rename over atomically
   const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
@@ -739,31 +949,15 @@ function symlinkIfPossible(source, target) {
   }
 }
 
-// create a symlink, overwriting the target link, file, or directory
-// if it exists
-function symlinkWithOverwrite(source, target) {
-  try {
-    files.symlink(source, target);
-  } catch (e) {
-    if (e.code === "EEXIST") {
-      // overwrite existing link, file, or directory
-      files.rm_recursive(target);
-      files.symlink(source, target);
-    } else if (e.code === "EPERM" &&
-               process.platform === "win32") {
-      files.rm_recursive(target);
-      // This will work only if source refers to a directory, but that's a
-      // chance worth taking.
-      files.symlink(source, target, "junction");
-    } else {
-      throw e;
-    }
-  }
-}
-
 // Wrap slow methods into Profiler calls
 const slowBuilderMethods = [
-  '_ensureDirectory', 'write', 'enter', 'copyDirectory', 'enter', 'complete'
+  "_ensureDirectory",
+  "write",
+  "enter",
+  "copyDirectory",
+  "copyNodeModulesDirectory",
+  "enter",
+  "complete",
 ];
 
 slowBuilderMethods.forEach(method => {

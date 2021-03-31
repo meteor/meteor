@@ -5,20 +5,22 @@
 
 Package.describe({
   summary: "Library for Secure Remote Password (SRP) exchanges",
-  version: "1.0.10"
+  version: "1.1.0"
 });
 
 Package.onUse(function (api) {
-  api.use(['random', 'check', 'sha'], ['client', 'server']);
-  api.use('underscore');
+  api.use([
+    'ecmascript',
+    'random',
+    'check',
+    'sha'
+  ], ['client', 'server']);
   api.export('SRP');
-  api.addFiles(['biginteger.js', 'srp.js'],
-                ['client', 'server']);
+  api.mainModule('srp.js');
 });
 
 Package.onTest(function (api) {
-  api.use('tinytest');
+  api.use(['ecmascript', 'tinytest']);
   api.use('srp', ['client', 'server']);
-  api.use('underscore');
   api.addFiles(['srp_tests.js'], ['client', 'server']);
 });

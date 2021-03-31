@@ -28,6 +28,7 @@ extractNodeFromTarGz() {
 }
 
 downloadNodeFromS3() {
+    test -n "${NODE_BUILD_NUMBER}" || return 1
     S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
     S3_TGZ="node_${UNAME}_${ARCH}_v${NODE_VERSION}.tar.gz"
     NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${S3_TGZ}"
@@ -41,21 +42,39 @@ downloadOfficialNode() {
     curl "${NODE_URL}" | tar zx --strip-components 1
 }
 
-# Try each strategy in the following order:
-extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode
+downloadReleaseCandidateNode() {
+    NODE_URL="https://nodejs.org/download/rc/v${NODE_VERSION}/${NODE_TGZ}"
+    echo "Downloading Node from ${NODE_URL}" >&2
+    curl "${NODE_URL}" | tar zx --strip-components 1
+}
 
-# Download Mongo from mongodb.com. Will download a 64-bit version of Mongo
-# by default. Will download a 32-bit version of Mongo if using a 32-bit based
-# OS.
+# Try each strategy in the following order:
+extractNodeFromTarGz || downloadNodeFromS3 || \
+  downloadOfficialNode || downloadReleaseCandidateNode
+
+# On macOS, download MongoDB from mongodb.com. On Linux, download a custom build
+# that is compatible with current distributions. If a 32-bit Linux is used,
+# download a 32-bit legacy version from mongodb.com instead.
 MONGO_VERSION=$MONGO_VERSION_64BIT
-if [ $ARCH = "i686" ]; then
-  MONGO_VERSION=$MONGO_VERSION_32BIT
+
+if [ $ARCH = "i686" ] && [ $OS = "linux" ]; then
+    MONGO_VERSION=$MONGO_VERSION_32BIT
 fi
+
+case $OS in
+    macos) MONGO_BASE_URL="https://fastdl.mongodb.org/osx" ;;
+    linux)
+        [ $ARCH = "i686" ] &&
+            MONGO_BASE_URL="https://fastdl.mongodb.org/linux" ||
+            MONGO_BASE_URL="https://github.com/meteor/mongodb-builder/releases/download/v${MONGO_VERSION}"
+        ;;
+esac
+
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 MONGO_TGZ="${MONGO_NAME}.tgz"
-MONGO_URL="http://fastdl.mongodb.org/${OS}/${MONGO_TGZ}"
+MONGO_URL="${MONGO_BASE_URL}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"
-curl "${MONGO_URL}" | tar zx
+curl -L "${MONGO_URL}" | tar zx
 
 # Put Mongo binaries in the right spot (mongodb/bin)
 mkdir -p "mongodb/bin"
@@ -96,6 +115,9 @@ ls -al "$INCLUDE_PATH"
 mkdir "${DIR}/build/npm-server-install"
 cd "${DIR}/build/npm-server-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-server-package.js" > package.json
+# XXX For no apparent reason this npm install will fail with an EISDIR
+# error if we do not help it by creating the .npm/_locks directory.
+mkdir -p "${DIR}/.npm/_locks"
 npm install
 npm shrinkwrap
 
@@ -105,19 +127,6 @@ cp -R node_modules/* "${DIR}/server-lib/node_modules/"
 
 mkdir -p "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
-
-# Fibers ships with compiled versions of its C code for a dozen platforms. This
-# bloats our dev bundle. Remove all the ones other than our
-# architecture. (Expression based on build.js in fibers source.)
-shrink_fibers () {
-    FIBERS_ARCH=$(node -p -e 'process.platform + "-" + process.arch + "-" + process.versions.modules')
-    mv $FIBERS_ARCH ..
-    rm -rf *
-    mv ../$FIBERS_ARCH .
-}
-
-cd "$DIR/server-lib/node_modules/fibers/bin"
-shrink_fibers
 
 # Now, install the npm modules which are the dependencies of the command-line
 # tool.
@@ -132,8 +141,9 @@ cp -R node_modules/.bin "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
 
-# Clean up some bulky stuff.
 cd node_modules
+
+## Clean up some bulky stuff.
 
 # Used to delete bulky subtrees. It's an error (unlike with rm -rf) if they
 # don't exist, because that might mean it moved somewhere else and we should
@@ -146,16 +156,12 @@ delete () {
     rm -rf "$1"
 }
 
-delete npm/node_modules/node-gyp
-pushd npm/node_modules
-ln -s ../../node-gyp ./
-popd
-
 # Since we install a patched version of pacote in $DIR/lib/node_modules,
 # we need to remove npm's bundled version to make it use the new one.
 if [ -d "pacote" ]
 then
     delete npm/node_modules/pacote
+    mv pacote npm/node_modules/
 fi
 
 delete sqlite3/deps
@@ -165,9 +171,6 @@ delete moment/min
 
 # Remove esprima tests to reduce the size of the dev bundle
 find . -path '*/esprima-fb/test' | xargs rm -rf
-
-cd "$DIR/lib/node_modules/fibers/bin"
-shrink_fibers
 
 # Sanity check to see if we're not breaking anything by replacing npm
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |

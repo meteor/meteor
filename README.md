@@ -13,21 +13,31 @@ With Meteor you write apps:
 * using your choice of popular open-source libraries
 
 Try a getting started tutorial:
- * [React](https://www.meteor.com/tutorials/react/creating-an-app)
+ * [React](https://react-tutorial.meteor.com)
  * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
  * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
+ * [Vue](https://www.meteor.com/tutorials/vue/creating-an-app)
+ * [Svelte](https://www.meteor.com/tutorials/svelte/creating-an-app)
 
 Next, read the [guide](https://guide.meteor.com) and the [documentation](https://docs.meteor.com/).
 
-## Quick Start
+Are you looking for examples? Check this [meteor/examples](https://github.com/meteor/examples)
 
-On Windows, the installer can be found at https://www.meteor.com/install.
+## Quick Start
 
 On Linux/macOS, use this line:
 
 ```bash
 curl https://install.meteor.com/ | sh
 ```
+
+On Windows, use this line:
+
+```bash
+npm install -g meteor
+```
+
+Visit the official [install page](https://www.meteor.com/developers/install) to learn more.
 
 Create a project:
 
@@ -46,9 +56,11 @@ meteor
 
 Building an application with Meteor?
 
-* Announcement list: sign up at http://www.meteor.com/
-* Having problems? Ask for help at: http://stackoverflow.com/questions/tagged/meteor
+* Deploy on Galaxy hosting: https://www.meteor.com/cloud
+* Announcement list: sign up at https://www.meteor.com/
 * Discussion forums: https://forums.meteor.com/
+* Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
+
 
 Interested in helping or contributing to Meteor?  These resources will help:
 
@@ -56,9 +68,6 @@ Interested in helping or contributing to Meteor?  These resources will help:
 * [Contribution guidelines](CONTRIBUTING.md)
 * [Feature requests](https://github.com/meteor/meteor-feature-requests/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
-
-We are hiring!  Visit [meteor.io/jobs](https://www.meteor.io/jobs/) to
-learn more about working full-time on the Meteor project.
 
 ## Uninstalling Meteor
 
@@ -70,4 +79,4 @@ rm -rf ~/.meteor/
 sudo rm /usr/local/bin/meteor
 ```
 
-On Windows, just run the uninstaller from your Control Panel.
+On Windows, [read here](npm-packages/meteor-installer/README.md).
