@@ -159,7 +159,7 @@ import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
-import { addToTree } from "./linker.js";
+import { addToTree, File as LinkerFile } from "./linker.js";
 
 var files = require('../fs/files');
 var archinfo = require('../utils/archinfo');
@@ -173,6 +173,7 @@ import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/meteor/define-package.js";
+import { optimisticLStatOrNull } from '../fs/optimistic';
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -486,12 +487,16 @@ export class NodeModulesDirectory {
           return true;
         }
 
-        const real = files.realpathOrNull(path);
-        if (typeof real === "string" &&
-            real !== path) {
+        const fileStatus = optimisticLStatOrNull(path);
+        if (fileStatus && fileStatus.isSymbolicLink()) {
           // If node_modules/.bin/command is a symlink, determine the
           // answer by calling isWithinProdPackage(real).
-          return isWithinProdPackage(real);
+          // guard against broken symlinks (#11241)
+          const realpath = files.realpathOrNull(path);
+          if (!realpath) {
+            throw new Error(`Broken symbolic link encountered at ${path}`);
+          }
+          return isWithinProdPackage(realpath);
         }
 
         // If node_modules/.bin/command is not a symlink, then it's hard
@@ -571,6 +576,9 @@ class File {
     // the base URL at which the target is being served (ignored if this
     // file is not intended to be served over HTTP).
     this.url = null;
+
+    // If updates to this file will be handled with HMR
+    this.replaceable = options.replaceable;
 
     // A prefix that will be prepended to this.url.
     // Prefixing is currently restricted to web.cordova URLs.
@@ -838,7 +846,7 @@ class Target {
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
-  make({packages, minifyMode, addCacheBusters, minifiers}) {
+  make({packages, minifyMode, addCacheBusters, minifiers, onJsOutputFiles = () => {}}) {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob("building for " + this.arch, () => {
@@ -853,7 +861,22 @@ class Target {
       });
 
       // Link JavaScript and set up this.js, etc.
-      this._emitResources(sourceBatches);
+      this._emitResources(sourceBatches, (outputFiles, sourceBatch, cacheKey) => {
+        function getFileOutput(file) {
+          return new LinkerFile(file).getPrelinkedOutput({});
+        };
+
+        onJsOutputFiles(
+          {
+            arch: this.arch,
+            name: sourceBatch.unibuild.pkg.name || null,
+            files: outputFiles,
+            hmrAvailable: sourceBatch.hmrAvailable,
+            cacheKey
+          },
+          getFileOutput  
+        );
+      });
 
       // Add top-level Cordova dependencies, which override Cordova
       // dependencies from packages.
@@ -1089,6 +1112,7 @@ class Target {
       unibuilds: this.unibuilds,
       arch: this.arch,
       sourceRoot: this.sourceRoot,
+      buildMode: this.buildMode,
       isopackCache: this.isopackCache,
       linkerCacheDir,
       scannerCacheDir,
@@ -1127,7 +1151,7 @@ class Target {
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
   // linker).
-  _emitResources(sourceBatches) {
+  _emitResources(sourceBatches, onJsOutputFiles = () => {}) {
     buildmessage.assertInJob();
 
     const isWeb = archinfo.matches(this.arch, 'web');
@@ -1183,6 +1207,7 @@ class Target {
       // Emit the resources
       const resources = sourceBatch.getResources(
         jsOutputFilesMap.get(name).files,
+        (linkCacheKey, jsResources) => onJsOutputFiles(jsResources, sourceBatch, linkCacheKey)
       );
 
       // First, find all the assets, so that we can associate them with each js
@@ -1261,6 +1286,7 @@ class Target {
             data: resource.data,
             hash: resource.hash,
             cacheable: false,
+            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable
           });
 
           const relPath = stripLeadingSlash(resource.servePath);
@@ -1381,16 +1407,28 @@ class Target {
     const js = [];
 
     function handle(source, dynamic) {
+      // Allows minifiers to be compatible with HMR without being
+      // updated to support it.
+      // In development most minifiers add the file to itself with no
+      // modifications, and we can safely assume that the file
+      // is replaceable if the original was. We could provide a way for
+      // minifiers to set this if they do modify the file in development
+      // and believe HMR will still update the client correctly.
+      const possiblyReplaceable = source._minifiedFiles.length === 1 && source._source.replaceable;
+
       source._minifiedFiles.forEach(file => {
-        if (typeof file.data === "string") {
+        if (typeof file.data === 'string') {
           file.data = Buffer.from(file.data, "utf8");
         }
+        const replaceable = possiblyReplaceable && 
+          file.data.equals(source._source.contents());
 
         const newFile = new File({
           info: 'minified js',
           arch,
           data: file.data,
           hash: inputHashesByJsFile.get(source),
+          replaceable
         });
 
         if (file.sourceMap) {
@@ -1684,7 +1722,8 @@ class ClientTarget extends Target {
         where: "client",
         type: type,
         cacheable: file.cacheable,
-        url: file.url
+        url: file.url,
+        replaceable: file.replaceable
       };
 
       const antiXSSIPrepend = Profile("anti-XSSI header for source-maps", function (sourceMap) {
@@ -1760,6 +1799,7 @@ class ClientTarget extends Target {
           where: manifestItem.where,
           cacheable: manifestItem.cacheable,
           hash: manifestItem.hash,
+          replaceable: manifestItem.replaceable,
         });
 
         // Now that we've written the module with a source map URL comment
@@ -2844,20 +2884,18 @@ var writeTargetToPath = Profile(
     previousBuilder = null,
     buildMode,
     minifyMode,
+    forceInPlaceBuild
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
       previousBuilder,
-      // We do not force an in-place build for individual targets like
-      // .meteor/local/build/programs/web.browser.legacy, because they
-      // tend to be written atomically, and it's important on Windows to
-      // avoid overwriting files that might be open currently in the build
-      // or server process.
-      // Server builds do use an in-place build since the server is always stopped
-      // during the build.
-      // If client in-place builds were safer on Windows, they
-      // would be much quicker than from-scratch rebuilds.
-      forceInPlaceBuild: name === 'server',
+      // We do not force an in-place build for individual targets
+      // like .meteor/local/build/programs/web.browser.legacy, because they tend
+      // to be written atomically, and it's important on Windows to avoid
+      // overwriting files that might be open currently in the server
+      // process. There are some exceptions when we know the server process
+      // is not using the files, such as during a full build when it is stopped.
+      forceInPlaceBuild
     });
 
     var targetBuild = target.write(builder, {
@@ -2910,6 +2948,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     buildMode,
     minifyMode,
     sourceRoot,
+    forceInPlaceBuild,
   }) {
 
   const builders = {};
@@ -3004,7 +3043,8 @@ Find out more about Meteor at meteor.com.
         releaseName,
         previousBuilder: previousBuilders[name] || null,
         buildMode,
-        minifyMode
+        minifyMode,
+        forceInPlaceBuild
       });
 
       builders[name] = targetBuilder;
@@ -3083,6 +3123,14 @@ Find out more about Meteor at meteor.com.
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
  *
+ *  - forceInPlaceBuild On Windows, in place builds are disabled by default
+ *    since they are only safe when the output files from the previous build
+ *    are not being used. This can be set to true when it is safe.
+ *
+ *  - onJsOutputFiles Called for each unibuild in a client arch with a list of js files
+ *    that will be linked, and a function to get their prelink output with their closure
+ *    and banner.
+ * 
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - serverWatchSet: Information about server files and paths that were
@@ -3116,7 +3164,9 @@ function bundle({
   buildOptions,
   previousBuilders = Object.create(null),
   hasCachedBundle,
+  onJsOutputFiles,
   allowDelayedClientBuilds = false,
+  forceInPlaceBuild,
 }) {
   buildOptions = buildOptions || {};
 
@@ -3184,7 +3234,8 @@ function bundle({
         packages: [app],
         minifyMode: minifyMode,
         minifiers: options.minifiers || [],
-        addCacheBusters: true
+        addCacheBusters: true,
+        onJsOutputFiles
       });
 
       return client;
@@ -3271,6 +3322,7 @@ function bundle({
       builtBy,
       releaseName,
       minifyMode,
+      forceInPlaceBuild,
     };
 
     function writeClientTarget(target) {

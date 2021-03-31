@@ -4,6 +4,11 @@ Plugin.registerCompiler({
   return new TypeScriptCompiler({
     react: true,
     typescript: true,
+  }, (babelOptions, file) => {
+    if (file.hmrAvailable() && ReactFastRefresh.babelPlugin) {
+      babelOptions.plugins = babelOptions.plugins || [];
+      babelOptions.plugins.push(ReactFastRefresh.babelPlugin);
+    }
   });
 });
 

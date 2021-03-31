@@ -3,7 +3,6 @@ var semver = require('semver');
 var os = require('os');
 var url = require('url');
 
-var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files');
@@ -44,11 +43,15 @@ exports.parseUrl = function (str, defaults) {
   // for consistency remove colon at the end of protocol
   parsed.protocol = parsed.protocol.replace(/\:$/, '');
 
-  return {
+  var ret = {
     protocol: hasScheme ? parsed.protocol : defaultProtocol,
     hostname: parsed.hostname || defaultHostname,
     port: parsed.port || defaultPort
   };
+  if (parsed.pathname !== '/' && parsed.pathname) {
+    ret.pathname = parsed.pathname;
+  }
+  return ret;
 };
 
 // 'options' is an object with 'hostname', 'port', and 'protocol' keys, such as
@@ -73,7 +76,7 @@ exports.ipAddress = function () {
     .where({ family: "IPv4", internal: false })
     .value();
 
-  if (addressEntries.length == 0) {
+  if (! addressEntries.length) {
     throw new Error(`Could not find a network interface with a non-internal IPv4 address.`);
   }
 

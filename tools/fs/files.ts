@@ -5,7 +5,7 @@
 ///
 
 import assert from "assert";
-import fs, { PathLike, Stats } from "fs";
+import fs, { PathLike, Stats, Dirent } from "fs";
 import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
@@ -135,7 +135,7 @@ export function findPackageDir(filepath: string) {
 // truly unexpected happens). The result value is a string when a Git
 // revision was successfully resolved, or undefined otherwise.
 export function findGitCommitHash(path: string) {
-  return new Promise(resolve => {
+  return new Promise<string|void>(resolve => {
     const appDir = findAppDir(path);
     if (appDir) {
       execFile("git", ["rev-parse", "HEAD"], {
@@ -330,7 +330,7 @@ export function realpathOrNull(path: string) {
 }
 
 export function rm_recursive_async(path: string) {
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     rimraf(convertToOSPath(path), (err: Error) => err
       ? reject(err)
       : resolve());
@@ -373,12 +373,12 @@ export const blankHash = "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=";
 // Returns a base64 SHA256 hash representing a tree on disk. It is not sensitive
 // to modtime, uid/gid, or any permissions bits other than the current-user-exec
 // bit on normal files.
-export function treeHash(root: string, options: {
-  ignore: (path: string) => boolean;
+export function treeHash(root: string, optionsParams: {
+  ignore?: (path: string) => boolean;
 }) {
-  options = {
+  const options = {
     ignore() { return false; },
-    ...options,
+    ...optionsParams,
   };
 
   const hash = require('crypto').createHash('sha256');
@@ -404,6 +404,8 @@ export function treeHash(root: string, options: {
       }
       hash.update('file ' + JSON.stringify(relativePath) + ' ' +
                   stat.size + ' ' + fileHash(absPath) + '\n');
+
+      // @ts-ignore
       if (stat.mode & 0o100) {
         hash.update('exec\n');
       }
@@ -537,6 +539,8 @@ export function cp_r(from: string, to: string, options: {
       // owner. (This mode will be modified by umask.) We don't copy the
       // mode *directly* because this function is used by 'meteor create'
       // which is copying from the read-only tools tree into a writable app.
+
+      // @ts-ignore
       mode: (stat.mode & 0o100) ? 0o777 : 0o666,
     });
 
@@ -727,9 +731,18 @@ export function freeTempDir(dir: string) {
   });
 }
 
+// Change the status of a dir
+export function changeTempDirStatus(dir: string, status: boolean) {
+  if (! tempDirs[dir]) {
+    throw Error("not a tracked temp dir: " + dir);
+  }
+
+  tempDirs[dir] = status;
+}
+
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function () {
-    Object.keys(tempDirs).forEach(dir => {
+    Object.entries(tempDirs).filter(([_, isTmp]) => !!isTmp).map(([dir]) => dir).forEach(dir => {
       delete tempDirs[dir];
       try {
         rm_recursive(dir);
@@ -1538,12 +1551,12 @@ export function readBufferWithLengthAndOffset(
   if (length > 0) {
     const fd = open(filename, "r");
     try {
-      var count = read(fd, data, 0, length, offset);
+      const count = read(fd, data, { position: 0, length, offset });
+      if (count !== length) {
+        throw new Error("couldn't read entire resource");
+      }
     } finally {
       close(fd);
-    }
-    if (count !== length) {
-      throw new Error("couldn't read entire resource");
     }
   }
   return data;
@@ -1689,6 +1702,8 @@ export function copyFile(from: string, to: string, flags = 0) {
     // modified by umask.) We don't copy the mode *directly* because this function
     // is used by 'meteor create' which is copying from the read-only tools tree
     // into a writable app.
+
+    // @ts-ignore
     chmod(to, (stat.mode & 0o100) ? 0o777 : 0o666);
   }
 }
@@ -1702,7 +1717,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
   const intervalMs = 50;
   const timeLimitMs = 1000;
 
-  return new Promise((resolve, reject) => {
+  return new Promise<void>((resolve, reject) => {
     function attempt() {
       try {
         // Despite previous failures, the top-level destination directory
@@ -1746,6 +1761,14 @@ wrapFsFunc<[string], string[]>("readdir", fs.readdirSync, [0], {
   modifyReturnValue(entries: string[]) {
     return entries.map(entry => convertToStandardPath(entry));
   },
+});
+
+export const readdirWithTypes = wrapFsFunc<[string], Dirent[]>("readdirWithTypes", (dir) => {
+    return fs.readdirSync(dir, {
+      withFileTypes: true
+    });
+  }, [0], {
+  cached: true
 });
 
 export const appendFile = wrapDestructiveFsFunc("appendFile", fs.appendFileSync);
