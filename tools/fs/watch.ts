@@ -1,4 +1,4 @@
-import { Stats, FSWatcher, Dirent } from "fs";
+import { Stats, BigIntStats, FSWatcher, Dirent } from "fs";
 import * as files from "./files";
 import * as safeWatcher from "./safe-watcher";
 import { createHash } from "crypto";
@@ -351,7 +351,7 @@ function readAndStatDirectory(absPath: string) {
   // Add slashes to the end of directories.
   const contentsWithSlashes: string[] = [];
   contents.forEach(entry => {
-    let stat: Dirent | Stats | null = entry;
+    let stat: Dirent | Stats | BigIntStats | null = entry;
     let name = entry.name;
 
     if (entry.isSymbolicLink()) {
@@ -428,7 +428,7 @@ export class Watcher {
     watcher: safeWatcher.SafeWatcher | null;
     // Undefined until we stat the file for the first time, then null
     // if the file is observed to be missing.
-    lastStat?: Stats | null
+    lastStat?: Stats | BigIntStats | null
   }> = Object.create(null);
 
   constructor(options: {

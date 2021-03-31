@@ -57,7 +57,7 @@ Function Invoke-Install7ZipApplication {
   Write-Host "Downloading 7-zip..." -ForegroundColor Magenta
   $7zMsiPath = Join-Path $dirTemp '7z.msi'
   # 32-bit, right now.  But this does not go in the bundle.
-  $webclient.DownloadFile("http://www.7-zip.org/a/7z1604.msi", $7zMsiPath)
+  $webclient.DownloadFile("https://www.7-zip.org/a/7z1604.msi", $7zMsiPath)
 
   Write-Host "Installing 7-zip system-wide..." -ForegroundColor Magenta
   & "msiexec.exe" /i $7zMsiPath /quiet /qn /norestart | Out-Null
@@ -69,7 +69,7 @@ Function Invoke-Install7ZipApplication {
 Function Add-7ZipTool {
   Write-Host "Downloading 7-zip 'extra'..." -ForegroundColor Magenta
   $extraArchive = Join-Path $dirTemp 'extra.7z'
-  $webclient.DownloadFile("http://www.7-zip.org/a/7z1604-extra.7z", $extraArchive)
+  $webclient.DownloadFile("https://www.7-zip.org/a/7z1604-extra.7z", $extraArchive)
 
   $pathToExtract = 'x64/7za.exe'
 

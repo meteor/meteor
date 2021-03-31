@@ -1,5 +1,5 @@
 {
-  "name": "skel",
+  "name": "~name~",
   "private": true,
   "scripts": {
     "start": "meteor run",
@@ -8,15 +8,15 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.10.5",
+    "@babel/runtime": "^7.11.2",
     "meteor-node-stubs": "^1.0.1",
-    "vue": "^2.6.11",
+    "vue": "^2.6.12",
     "vue-meteor-tracker": "^2.0.0-beta.5"
   },
   "meteor": {
     "mainModule": {
-      "client": "src/client.js",
-      "server": "src/server.js"
+      "client": "client/main.js",
+      "server": "server/main.js"
     },
     "testModule": "tests/main.js"
   }

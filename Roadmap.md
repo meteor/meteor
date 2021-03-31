@@ -1,6 +1,6 @@
 # Meteor Roadmap
 
-**Up to date as of May 21, 2020**
+**Up to date as of Jan 20, 2021**
 
 This document describes the high-level features and actions for the Meteor project in the near- to medium-term future. This roadmap was built based on community feedback and to improve areas where Meteor is already strong. The description of many items include sentences and ideas from Meteor community members.
 
@@ -10,192 +10,98 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 PRs to the roadmap are welcome. If you are willing to contribute please open a PR explaining your ideas and what you would be able to do yourself.
 
-Ideally, every item in this roadmap should have at least two leaders, leaders are people that are interested in the item and would like to help. If you are interested please open a PR including yourself and describing how do you want to help.
+## Priorities for V2
 
-## Core
+Updated at: 2021/01/20
 
-### Tree Shaking
-- Leaders: [Filipe Névola](https://github.com/filipenevola) / [Renan Castro](https://github.com/renanccastro)
-- Status: In Progress
-- PRs: -
+V2 initial release (2.0) was delivered today (2021/01/20) with Hot Module Replacement (HMR), React Fast Refresh, and Free deploy including MongoDB on [Cloud](https://www.meteor.com/cloud) and some other features. See all the changes [here](./History.md). 
 
-Implement tree shaking / dead code elimination, which involves pruning the dependency tree while scanning imports in the `ImportScanner`. We believe it should be possible to treat values like `Meteor.isProduction` and `Meteor.isServer` as constants during this process, and eliminate those branches if their conditions are false (as in https://github.com/meteor/meteor/pull/10056).
+We expect to have HMR also working for Blaze in Meteor 2.1 in the following weeks (it's currently on [beta](https://github.com/meteor/blaze/pull/313)).
 
-### Service worker build target
-- Leaders: <you?>
-- Status: -
-- PRs: -
+Other important updates that you should expect to see in Meteor 2.2, 2.3 and so on:
+- Node.js 14; [PR](https://github.com/meteor/meteor/pull/11197)
+- Cordova 10; [PR](https://github.com/meteor/meteor/pull/11208)
+- Remove deprecated code pre v1; [PR](https://github.com/meteor/meteor/pull/11226)
+- Tree-shaking; [PR](https://github.com/meteor/meteor/pull/11164)
+- Blaze HMR; [PR](https://github.com/meteor/blaze/pull/313)
+- Tutorials migration (help needed, understand [here](https://forums.meteor.com/t/new-meteor-react-tutorial-and-new-format-for-tutorials/54074));
 
-A proper service worker build target. Regular Web Workers can be built from a function.toString() but service-workers require an actual server route.
+Do you want to get involved in the items above? Talk to [Filipe Névola](https://twitter.com/filipenevola) in the [community Slack](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc)
 
-### Ultra-thin Meteor
-- Leaders: [Ruither Borba](https://github.com/delki8)
-- Status: In Progress
-- PRs:
-Autoupdate package without ddp [#11034](https://github.com/meteor/meteor/pull/11034)
+V2 minor releases are not limited by the items above, these are the ones already in progress, some of them are going to be ready in the next weeks.
 
-[Meteor 1.7](https://github.com/meteor/meteor/blob/devel/History.md#v17-2018-05-28) introduced the `meteor create --minimal` command, which generates a new application without any unnecessary Meteor packages, like `mongo` and `ddp`.
+## Priorities for V3
 
-When minified and gzip-compressed, the JS bundle for this app weighs in at less than 20kB, which is much smaller than the default `meteor create` application. Nevertheless, there is still room for improvement, using techniques like bundle visualization (`meteor npm run visualize`) and converting static `import`s to dynamic `import()`s.
+Updated at: 2021/01/20
 
-Additionally, minimal Meteor applications do not include the `autoupdate` package by default, because it is not strictly necessary for building an application, and its dependencies (`ddp` in particular, but no longer `mongo` or `minimongo`, thanks to [PR #10238](https://github.com/meteor/meteor/pull/10238)) contribute an additional 30kB to the JS bundle. The drawback of not using `autoupdate` is that instantaneous client refreshes are disabled, which can slow down development, so it would be great to find a way of making `autoupdate` less expensive, or enable it only in development.
+Meteor is accelerating! We are going release more often this year.
 
-In other words, we want minimal Meteor apps to be not only as tiny as possible, but also just as developer-friendly as a normal Meteor application.
+We expect to have new features focusing in ease app development in V3 or probably in V2 as well, the first step is to review our [feature requests](https://github.com/meteor/meteor-feature-requests) one more time and define new priorities.
 
-Related issues:
-* [MFR #31](https://github.com/meteor/meteor-feature-requests/issues/31)
-* [MFR #354](https://github.com/meteor/meteor-feature-requests/issues/354)
-* [Issue #9960](https://github.com/meteor/meteor/issues/9960)
-* [PR #8853](https://github.com/meteor/meteor/pull/8853)
-* [PR #10238](https://github.com/meteor/meteor/pull/10238)
+Maybe we should also have a new way of prioritization for new features, right now this [repository]((https://github.com/meteor/meteor-feature-requests)) with issues is not good enough in our opinion, the plan is to be even more open for feedbacks and collaboration. If we make changes in this process we are going to announce in the [Forums](https://forums.meteor.com/) and Slack as always.
 
-### Page load performance improvements
-- Leaders: [Seba Kerckhof](https://github.com/sebakerckhof)
-- Status: -
-- PRs: -
+> We are also looking for new developers to be part of our core team and of course if you are already contributing to Meteor you have a head start.
+> 
+> We don't have an official position description yet but again, contributing to Meteor in the open-source is the best way to join the core team.
 
-Make sure we are not delivering any dependency that is not used ([Issue #10701](https://github.com/meteor/meteor/issues/10701), [Issue #10702](https://github.com/meteor/meteor/issues/10702), [Issue #10704](https://github.com/meteor/meteor/issues/10704), [PR #10792](https://github.com/meteor/meteor/pull/10792))
+Maybe you are asking: Why the format of this Roadmap was changed in this update?
 
-### Improve Rebuild performance
-- Leaders: [zodern](https://github.com/zodern) / [Marcelo T Prado](https://github.com/MarceloPrado)
-- Status: -
-- PRs: -
+We believe the items here were in some part outdated so we want to have a "fresh start". You should expect a new list of items here soon. It doesn't mean that all the old items are out of question, or they aren't important, probably the opposite and you will see most of them again here soon.
 
-Explore ideas to improve rebuild time such as split main client bundle into several bundles, split the server bundle into several bundles, store less file content in memory, option to disabling the legacy build (at least in dev mode), etc
+## Recently completed
 
-### Performance improvements on Windows
-- Leaders: [zodern](https://github.com/zodern)
-- Status: In Progress
-- PRs: https://github.com/meteor/meteor/pull/10838
+### MongoDB shared hosting on Cloud
+- Leaders: Meteor Software
+- Status: shipped in January 2021
 
-Explore ideas to improve performance on Windows such as build in place.
+You can host your app on Galaxy and use our shared MongoDB for non-commercial/non-production apps. We don't recommend a shared MongoDB instance for production apps.
+
+### Free deploy on Cloud
+- Leaders: Meteor Software
+- Status: shipped in January 2021
+
+Meteor free deploy is back.
 
 ### Hot Module Replacement
 - Leaders: [zodern](https://github.com/zodern)
-- Status: In Progress
-- PRs: -
+- Status: shipped in January 2021
+- PRs: https://github.com/meteor/meteor/pull/11117
 
-Explore ideas to implement HMR in Meteor.
-
-### Transition as much as possible to NPM
-- Leaders: <you?>
-- Status: -
-- PRs: 
-  - PoC using base64 package as example [#10996](https://github.com/meteor/meteor/pull/10996)
-
-Migrate packages that do not depend on Meteor exclusive features to NPM and we also continue to encourage new packages to be published as NPM packages when possible.
-
-## Cordova
-### Cordova documentation
-- Leaders: [Filipe Névola](https://github.com/filipenevola)
-- Status: In Progress
-- PRs: https://github.com/meteor/meteor/pull/11072
-
-Provide an example with mobile native configurations already in place such as `mobile-config.js`, sample assets, Fastlane scripts, etc. Also improve docs and guide ([Forums post](https://forums.meteor.com/t/lets-create-the-ultimate-cordova-hot-code-push-faq-doc/50500)).
-
-## DB
-### Minimongo secondary index support
-- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
-- Status: -
-- PRs: -
-
-Improve index support for Minimongo to enable better performance in the client for databases with thousands of documents. ([Issue #10703](https://github.com/meteor/meteor/issues/10703))
-
-## Documentation
-### Step-by-step guide
-- Leaders: <you?>
-- Status: -
-- PRs: -
-
-Provide a nice and friendly introduction for people that are learning Meteor.
-
-### Update Angular Tutorial
-- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
-- Status: -
-- PRs: -
-
-Angular tutorial should reflect latest best practices for using Meteor and Angular together.
-
-### Update React Tutorial
-- Leaders: [Leonardo Venturini](https://github.com/leonardoventurini)
-- Status: In Progress
-- PRs: https://github.com/meteor/simple-todos-react/tree/tortilla-master
-
-React tutorial should reflect latest best practices for using Meteor and React together.
-
-### PWA documentation
-- Leaders: [Filipe Névola](https://github.com/filipenevola)
-- Status: In Progress
-- PRs: -
-
-Provide an example with PWA configurations already in place such as `manifest`, service worker, Open Graph meta tags, etc. Also improve docs and guide.
-
-### SSR documentation
-- Leaders: [Kevin Newman](https://github.com/CaptainN) / [Eric Burel](https://github.com/eric-burel)
-- Status: -
-- PRs: -
-
-Provide a skeleton with SSR configurations already in place.
-
-Relevant issues:
-- https://github.com/meteor/meteor-feature-requests/issues/174
-
-### Tests documentation
-- Leaders: [Simon Schick](https://github.com/SimonSimCity) / [Florian Bienefelt](https://github.com/Floriferous)
-- Status: -
-- PRs: -
-
-Provide samples on how to run tests in Meteor these samples should include unit tests and also cypress tests.
-
-## First-class citizen Technologies
-Consider Vue.js, Svelte, React Native, and Apollo as first-class citizen, for
-each technology we would like to have:
-- skeleton (meteor create)
-- tutorial
-- documentation (how to use)
-- examples
-
-as we already have for Blaze, React and Angular.
+HMR is avaible since Meteor 2.0
 
 ### Vue.js
 - Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
-- Status: In Progress
+- Status: shipped in August 2020
 - PRs: https://github.com/meteor/simple-todos-vue
 
-Tutorial is ready. We want a create command (--vue) yet and more docs.
+Tutorial is ready and create command meteor create --vue
 
-### Svelte
-- Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
-- Status: In Progress
-- PRs: https://github.com/meteor/simple-todos-svelte
+### Apollo
+- Leaders: [Jan Dvorak](https://github.com/StorytellerCZ)
+- Status: shipped in August 2020
+- PRs: https://github.com/meteor/meteor/pull/11119
 
-Tutorial is ready. We want a create command (--svelte) yet and more docs.
+Apollo skeleton, meteor create --apollo
+
+### Performance improvements on Windows
+- Leaders: [zodern](https://github.com/zodern)
+- Status: shipped in August 2020
+- PRs: https://github.com/meteor/meteor/pull/10838 https://github.com/meteor/meteor/pull/11114 https://github.com/meteor/meteor/pull/11115 https://github.com/meteor/meteor/pull/11102
+
+Explore ideas to improve performance on Windows such as build in place.
+
+### Update React Tutorial
+- Leaders: [Leonardo Venturini](https://github.com/leonardoventurini) / [Brian Mulhall](https://github.com/BrianMulhall)
+- Status: shipped in July 2020
+- PRs: https://github.com/meteor/simple-todos-react
 
 ### React Native
 - Leaders: [Nathaniel Dsouza](https://github.com/TheRealNate)
-- Status: In Progress
+- Status: shipped in June 2020
 - PRs: https://github.com/meteor/guide/pull/1041 https://github.com/meteor/guide/pull/1039 https://github.com/meteor/guide/pull/1035
 
-We have some docs already maybe we could have an example in the examples folder.
+Guide is ready ([check here](https://guide.meteor.com/react-native.html)).
 
-### Apollo
-- Leaders: <you?>
-- Status: -
-- PRs: -
-
-### Third-party tools with their own build steps
-
-- Leaders: <you?>
-- Status: -
-- PRs: -
-
-Remove limitations that prevent using third-party tools with their own build steps, such as Storybook or Jest.
-
-Relevant discussions:
-- https://github.com/meteor/meteor/pull/10811#issuecomment-564726713
-- https://github.com/storybookjs/storybook/issues/5975
-
-## Recently completed
 ### Update Blaze Tutorial
 - Leaders: [Jan Küster](https://github.com/jankapunkt), [Harry Adel](https://github.com/harryadelb), [Brian Mulhall](https://github.com/BrianMulhall)
 - Status: shipped in April 2020
