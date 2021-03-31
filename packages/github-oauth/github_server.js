@@ -31,20 +31,25 @@ const getAccessToken = query => {
 
   let response;
   try {
-    response = fetch(
-      "https://github.com/login/oauth/access_token", {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          "User-Agent": userAgent,
-          Authorization: `Basic ${config.clientId}:${OAuth.openSecret(config.secret)}`
-        },
-        params: {
-          code: query.code,
-          redirect_uri: OAuth._redirectUri('github', config),
-          state: query.state
-        }
+    response = Meteor.wrapAsync(async () => {
+      const content = new URLSearchParams({
+        code: query.code,
+        redirect_uri: OAuth._redirectUri('github', config),
+        state: query.state
       });
+      const request = await fetch(
+        "https://github.com/login/oauth/access_token", {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            "User-Agent": userAgent,
+            Authorization: `Basic ${config.clientId}:${OAuth.openSecret(config.secret)}`
+          },
+          body: content,
+        });
+      const data = await request.json();
+      return data;
+    });
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to complete OAuth handshake with Github. ${err.message}`),
@@ -60,11 +65,16 @@ const getAccessToken = query => {
 
 const getIdentity = accessToken => {
   try {
-    return fetch(
-      "https://api.github.com/user", {
-        method: 'GET',
-        headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
-      }).data;
+    const data = Meteor.wrapAsync(async () => {
+      const request = await fetch(
+        "https://api.github.com/user", {
+          method: 'GET',
+          headers: { Accept: 'application/json', "User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
+        });
+      const response = await request.json();
+      return response;
+    });
+    return data;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Github. ${err.message}`),
@@ -75,11 +85,16 @@ const getIdentity = accessToken => {
 
 const getEmails = accessToken => {
   try {
-    return fetch(
-      "https://api.github.com/user/emails", {
-        method: 'GET',
-        headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
-      }).data;
+    const data = Meteor.wrapAsync(async () => {
+      const request = await fetch(
+        "https://api.github.com/user/emails", {
+          method: 'GET',
+          headers: {"User-Agent": userAgent, Accept: 'application/json', "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
+        });
+      const response = await request.json();
+      return response;
+    });
+    return data;
   } catch (err) {
     return [];
   }

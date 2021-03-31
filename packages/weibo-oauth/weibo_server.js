@@ -38,9 +38,10 @@ const getTokenResponse = query => {
 
   let response;
   try {
-    response = fetch(
-      "https://api.weibo.com/oauth2/access_token", {
+    response = Meteor.wrapAsync(async () => {
+      const request = await fetch("https://api.weibo.com/oauth2/access_token", {
         method: 'POST',
+        headers: { Accept: 'application/json' },
         params: {
           code: query.code,
           client_id: config.clientId,
@@ -49,6 +50,9 @@ const getTokenResponse = query => {
           grant_type: 'authorization_code'
         }
       });
+      const data = await request.json();
+      return data;
+    });
   } catch (err) {
     throw Object.assign(new Error(`Failed to complete OAuth handshake with Weibo. ${err.message}`),
                    {response: err.response});
@@ -67,15 +71,21 @@ const getTokenResponse = query => {
 
 const getIdentity = (accessToken, userId) => {
   try {
-    return fetch(
-      "https://api.weibo.com/2/users/show.json",
-      {
-        method: 'GET',
-        params: {
-          access_token: accessToken,
-          uid: userId
-        }
-      }).data;
+    const data = Meteor.wrapAsync(async () => {
+      const request = await fetch(
+        "https://api.weibo.com/2/users/show.json",
+        {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          params: {
+            access_token: accessToken,
+            uid: userId
+          }
+        });
+      const response = await request.json();
+      return response.data;
+    });
+    return data;
   } catch (err) {
     throw Object.assign(new Error("Failed to fetch identity from Weibo. " + err.message),
                    {response: err.response});

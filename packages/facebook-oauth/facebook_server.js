@@ -61,20 +61,25 @@ const getTokenResponse = query => {
 
   let responseContent;
   try {
-
     const absoluteUrlOptions = getAbsoluteUrlOptions(query);
     const redirectUri = OAuth._redirectUri('facebook', config, undefined, absoluteUrlOptions);
     // Request an access token
-    responseContent = fetch(
-      "https://graph.facebook.com/v8.0/oauth/access_token", {
-        method: 'GET',
-        params: {
-          client_id: config.appId,
-          redirect_uri: redirectUri,
-          client_secret: OAuth.openSecret(config.secret),
-          code: query.code
-        }
-      }).data;
+    responseContent = Meteor.wrapAsync(async () => {
+      const content = new URLSearchParams({
+        client_id: config.appId,
+        redirect_uri: redirectUri,
+        client_secret: OAuth.openSecret(config.secret),
+        code: query.code
+      });
+      const request = await fetch(
+        "https://graph.facebook.com/v8.0/oauth/access_token", {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          body: content,
+        });
+      const data = await request.json();
+      return data;
+    });
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to complete OAuth handshake with Facebook. ${err.message}`),
@@ -106,14 +111,21 @@ const getIdentity = (accessToken, fields) => {
   hmac.update(accessToken);
 
   try {
-    return fetch("https://graph.facebook.com/v8.0/me", {
-      method: 'GET',
-      params: {
+    const data = Meteor.wrapAsync(async () => {
+      const content = new URLSearchParams({
         access_token: accessToken,
         appsecret_proof: hmac.digest('hex'),
         fields: fields.join(",")
-      }
-    }).data;
+      })
+      const request = await fetch("https://graph.facebook.com/v8.0/me", {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        body: content
+      });
+      const response = await request.json();
+      return response;
+    })
+    return data;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Facebook. ${err.message}`),

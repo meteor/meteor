@@ -93,17 +93,23 @@ const getTokens = query => {
 
   let response;
   try {
-    response = fetch(
-      "https://accounts.google.com/o/oauth2/token", {
-        method: 'POST',
-        params: {
-          code: query.code,
-          client_id: config.clientId,
-          client_secret: OAuth.openSecret(config.secret),
-          redirect_uri: OAuth._redirectUri('google', config),
-          grant_type: 'authorization_code'
-        }
+    response = Meteor.wrapAsync(async () => {
+      const content = new URLSearchParams({
+        code: query.code,
+        client_id: config.clientId,
+        client_secret: OAuth.openSecret(config.secret),
+        redirect_uri: OAuth._redirectUri('google', config),
+        grant_type: 'authorization_code'
       });
+      const request = await fetch(
+        "https://accounts.google.com/o/oauth2/token", {
+          method: 'POST',
+          headers: { Accept: 'application/json' },
+          body: content,
+        });
+      const data = await request.json();
+      return data;
+    });
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to complete OAuth handshake with Google. ${err.message}`),
@@ -125,12 +131,19 @@ const getTokens = query => {
 
 const getIdentity = accessToken => {
   try {
-    return fetch(
-      "https://www.googleapis.com/oauth2/v1/userinfo",
-      {
-        method: 'GET',
-        params: { access_token: accessToken }
-      }).data;
+    const data = Meteor.wrapAsync(async () => {
+      const content = new URLSearchParams({ access_token: accessToken });
+      const request = await fetch(
+        "https://www.googleapis.com/oauth2/v1/userinfo",
+        {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          body: content
+        });
+      const response = await request.json();
+      return response;
+    });
+    return data;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Google. ${err.message}`),
@@ -141,12 +154,18 @@ const getIdentity = accessToken => {
 
 const getScopes = accessToken => {
   try {
-    return fetch(
-      "https://www.googleapis.com/oauth2/v1/tokeninfo",
-      {
-        method: 'GET',
-        params: {access_token: accessToken}
-      }).data.scope.split(' ');
+    const data = Meteor.wrapAsync(async () => {
+      const content = new URLSearchParams({ access_token: accessToken });
+      const request = await fetch(
+        "https://www.googleapis.com/oauth2/v1/tokeninfo",
+        {
+          method: 'GET',
+          body: content
+        });
+      const response = await request.json();
+      return response.scope.split(' ');
+    });
+    return data;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch tokeninfo from Google. ${err.message}`),

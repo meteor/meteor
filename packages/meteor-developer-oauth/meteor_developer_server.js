@@ -37,9 +37,10 @@ const getTokens = query => {
 
   let response;
   try {
-    response = fetch(
-      MeteorDeveloperAccounts._server + "/oauth2/token", {
+    response = Meteor.wrapAsync(async () => {
+      const request = await fetch(MeteorDeveloperAccounts._server + "/oauth2/token", {
         method: 'POST',
+        headers: { Accept: 'application/json' },
         params: {
           grant_type: "authorization_code",
           code: query.code,
@@ -47,8 +48,10 @@ const getTokens = query => {
           client_secret: OAuth.openSecret(config.secret),
           redirect_uri: OAuth._redirectUri('meteor-developer', config)
         }
-      }
-    );
+      });
+      const data = await request.json();
+      return data;
+    });
   } catch (err) {
     throw Object.assign(
       new Error(
@@ -77,13 +80,17 @@ const getTokens = query => {
 
 const getIdentity = accessToken => {
   try {
-    return fetch(
+    const data = Meteor.wrapAsync(async () => {
+      const request = await fetch(
       `${MeteorDeveloperAccounts._server}/api/v1/identity`,
       {
         method: 'GET',
         headers: { Authorization: `Bearer ${accessToken}`}
-      }
-    ).data;
+      });
+      const response = await request.json();
+      return response.data;
+    });
+    return data;
   } catch (err) {
     throw Object.assign(
       new Error("Failed to fetch identity from Meteor developer accounts. " +
