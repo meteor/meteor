@@ -1167,11 +1167,20 @@ Meteor.methods({createUser: function (...args) {
   );
 }});
 
-// Create user directly on the server.
-//
-// Differently from Accounts.createUser(), this evaluates the Accounts package
-// configurations and send a verification email if the user has been registered
-// successfully.
+/**
+ * @summary Creates an user and sends an email if `options.email` is informed.
+ * Then if the `sendVerificationEmail` option from the `Accounts` package is
+ * enabled, you'll send a verification email if `options.password` is informed,
+ * otherwise you'll send an enrollment email.
+ * @locus Server
+ * @param {Object} options The options object to be passed down when creating
+ * the user
+ * @param {String} options.username A unique name for this user.
+ * @param {String} options.email The user's email address.
+ * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
+ * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @importFromPackage accounts-base
+ * */
 Accounts.createUserVerifyingEmail = (options) => {
   options = { ...options };
   // Create user. result contains id and token.
