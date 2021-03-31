@@ -1,8 +1,8 @@
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var selftest = require('../tool-testing/selftest.js');
 var testUtils = require('../tool-testing/test-utils.js');
 var Sandbox = selftest.Sandbox;
-import { host } from "../utils/archinfo.js";
+import { host } from "../utils/archinfo";
 const relBuildDir = "../build";
 const isOSX = host().split(".", 2).join(".") === "os.osx";
 
@@ -15,7 +15,7 @@ var checkMobileServer = selftest.markStack(function (s, expected) {
 
   checkIndexHtml(files.pathJoin(
     relBuildDir,
-    "android/project/assets/www/application/index.html"
+    "android/project/app/src/main/assets/www/application/index.html"
   ));
 
   if (isOSX) {

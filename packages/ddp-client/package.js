@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '2.3.3',
+  version: '2.4.0',
   documentation: null
 });
 
 Npm.depends({
-  lolex: '2.3.1'
+  lolex: '2.3.2'
 });
 
 Package.onUse((api) => {

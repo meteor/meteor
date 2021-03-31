@@ -1,4 +1,5 @@
 .DS_Store
+node_modules
 /.meteor
 *~
 /dev_bundle
@@ -24,3 +25,9 @@ npm-debug.log
 universe
 .babel-cache
 mongo-test-output
+
+# core packages shouldn't have .versions files
+packages/*/.versions
+
+# packages shouldn't have .npm on Git
+packages/**/.npm

@@ -6,12 +6,12 @@ Package.describe({
   // so bumping the version of this package will be how they get newer versions
   // of `coffeescript-compiler`. If you change this, make sure to also update
   // ../coffeescript-compiler/package.js to match.
-  version: '2.3.2_1'
+  version: '2.4.1'
 });
 
 Package.registerBuildPlugin({
   name: 'compile-coffeescript',
-  use: ['caching-compiler@1.1.12', 'ecmascript@0.11.1', 'coffeescript-compiler@2.3.2_1'],
+  use: ['caching-compiler@1.2.1', 'ecmascript@0.12.7', 'coffeescript-compiler@2.4.1'],
   sources: ['compile-coffeescript.js'],
   npmDependencies: {
     // A breaking change was introduced in @babel/runtime@7.0.0-beta.56
@@ -22,11 +22,12 @@ Package.registerBuildPlugin({
     // rather than delegating to the one installed in the application's
     // node_modules directory, so the coffeescript package can work in
     // Meteor 1.7.1 apps as well as 1.7.0.x and earlier.
-    '@babel/runtime': '7.1.2'
+    '@babel/runtime': '7.6.0'
   }
 });
 
 Package.onUse(function (api) {
+  api.versionsFrom("1.8.1");
   api.use('isobuild:compiler-plugin@1.0.0');
 
   // Because the CoffeeScript plugin now calls
@@ -35,10 +36,10 @@ Package.onUse(function (api) {
   // same runtime environment that the 'ecmascript' package provides.
   // The following api.imply calls should match those in ../../ecmascript/package.js,
   // except that coffeescript does not api.imply('modules').
-  api.imply('ecmascript-runtime@0.7.0');
-  api.imply('babel-runtime@1.2.4');
-  api.imply('promise@0.11.1');
-  api.imply('dynamic-import@0.4.1');
+  api.imply('ecmascript-runtime');
+  api.imply('babel-runtime');
+  api.imply('promise');
+  api.imply('dynamic-import');
 });
 
 Package.onTest(function (api) {

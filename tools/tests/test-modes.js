@@ -17,17 +17,17 @@ selftest.define("'meteor test --port' accepts/rejects proper values", function (
   runAddPackage.expectExit(0);
 
   run = s.run("test", "--port", "3700", "--driver-package", "tmeasday:acceptance-test-driver");
-  run.waitSecs(120);
+  run.waitSecs(30);
   run.match('App running at: http://localhost:3700/');
   run.stop();
 
   run = s.run("test", "--port", "127.0.0.1:3700", "--driver-package", "tmeasday:acceptance-test-driver");
-  run.waitSecs(120);
+  run.waitSecs(30);
   run.match('App running at: http://127.0.0.1:3700/');
   run.stop();
 
   run = s.run("test", "--port", "[::]:3700", "--driver-package", "tmeasday:acceptance-test-driver");
-  run.waitSecs(120);
+  run.waitSecs(30);
   run.match('App running at: http://[::]:3700/');
   run.stop();
 });
@@ -80,7 +80,7 @@ selftest.define("'meteor test' eagerly loads correct files", () => {
 
   // `meteor` should load app files, but not test files or app-test files
   run = s.run();
-  run.waitSecs(120);
+  run.waitSecs(30);
   run.match('index.js');
   run.stop();
   run.forbid('foo.test.js');
@@ -88,7 +88,7 @@ selftest.define("'meteor test' eagerly loads correct files", () => {
 
   // `meteor test` should load test files, but not app files or app-test files
   run = s.run('test', '--driver-package', 'tmeasday:acceptance-test-driver');
-  run.waitSecs(120);
+  run.waitSecs(30);
   run.match('foo.test.js');
   run.stop();
   run.forbid('index.js');
@@ -102,9 +102,9 @@ selftest.define("'meteor test' eagerly loads correct files", () => {
     'tmeasday:acceptance-test-driver',
     '--full-app',
   );
-  run.waitSecs(120);
+  run.waitSecs(30);
   run.match('foo.app-test.js');
   run.match('index.js');
   run.stop();
   run.forbid('foo.test.js');  
-})
+});

@@ -12,7 +12,6 @@ selftest.define('custom minifier - devel vs prod', function (options) {
     run.waitSecs(5);
     run.match('myapp');
     run.match('proxy');
-    run.match('MongoDB');
 
     run.connectClient();
     run.waitSecs(20);
@@ -26,13 +25,14 @@ selftest.define('custom minifier - devel vs prod', function (options) {
     run.match('Message (client): production_js');
 
     run.stop();
-  }, '--production');
+  }, { args: ['--production'],
+    testName: 'custom minifier - devel vs prod - part 1',
+    testFile: 'customer-minifier.js' });
 
   s.testWithAllClients(function (run) {
     run.waitSecs(5);
     run.match('myapp');
     run.match('proxy');
-    run.match('MongoDB');
 
     run.connectClient();
     run.waitSecs(20);
@@ -46,5 +46,7 @@ selftest.define('custom minifier - devel vs prod', function (options) {
     run.match('Message (client): development_js');
 
     run.stop();
-  }/*, development*/);
+  },{
+    testName:'custom minifier - devel vs prod - part 2',
+    testFile: 'custom-minifier.js'});
 });

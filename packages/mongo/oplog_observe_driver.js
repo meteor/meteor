@@ -55,7 +55,7 @@ OplogObserveDriver = function (options) {
     //                      the empty buffer in STEADY phase implies that the
     //                      everything that matches the queries selector fits
     //                      into published set.
-    // - _published - Min Heap (also implements IdMap methods)
+    // - _published - Max Heap (also implements IdMap methods)
 
     var heapOptions = { IdMap: LocalCollection._IdMap };
     self._limit = self._cursorDescription.options.limit;
@@ -504,10 +504,10 @@ _.extend(OplogObserveDriver.prototype, {
           var fut = new Future;
           // This loop is safe, because _currentlyFetching will not be updated
           // during this loop (in fact, it is never mutated).
-          self._currentlyFetching.forEach(function (cacheKey, id) {
+          self._currentlyFetching.forEach(function (op, id) {
             waiting++;
             self._mongoHandle._docFetcher.fetch(
-              self._cursorDescription.collectionName, id, cacheKey,
+              self._cursorDescription.collectionName, id, op,
               finishIfNeedToPollQuery(function (err, doc) {
                 try {
                   if (err) {
@@ -567,7 +567,7 @@ _.extend(OplogObserveDriver.prototype, {
   _handleOplogEntryQuerying: function (op) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
-      self._needToFetch.set(idForOp(op), op.ts.toString());
+      self._needToFetch.set(idForOp(op), op);
     });
   },
   _handleOplogEntrySteadyOrFetching: function (op) {
@@ -579,7 +579,7 @@ _.extend(OplogObserveDriver.prototype, {
       if (self._phase === PHASE.FETCHING &&
           ((self._currentlyFetching && self._currentlyFetching.has(id)) ||
            self._needToFetch.has(id))) {
-        self._needToFetch.set(id, op.ts.toString());
+        self._needToFetch.set(id, op);
         return;
       }
 
@@ -630,7 +630,7 @@ _.extend(OplogObserveDriver.prototype, {
             if (e.name !== "MinimongoError")
               throw e;
             // We didn't understand the modifier.  Re-fetch.
-            self._needToFetch.set(id, op.ts.toString());
+            self._needToFetch.set(id, op);
             if (self._phase === PHASE.STEADY) {
               self._fetchModifiedDocuments();
             }
@@ -640,7 +640,7 @@ _.extend(OplogObserveDriver.prototype, {
         } else if (!canDirectlyModifyDoc ||
                    self._matcher.canBecomeTrueByModifier(op.o) ||
                    (self._sorter && self._sorter.affectedByModifier(op.o))) {
-          self._needToFetch.set(id, op.ts.toString());
+          self._needToFetch.set(id, op);
           if (self._phase === PHASE.STEADY)
             self._fetchModifiedDocuments();
         }
@@ -878,6 +878,9 @@ _.extend(OplogObserveDriver.prototype, {
       // there.
       // XXX if this is slow, remove it later
       if (self._published.size() !== newResults.size()) {
+        console.error('The Mongo server and the Meteor query disagree on how ' +
+          'many documents match your query. Cursor description: ',
+          self._cursorDescription);
         throw Error(
           "The Mongo server and the Meteor query disagree on how " +
             "many documents match your query. Maybe it is hitting a Mongo " +

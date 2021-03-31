@@ -1,6 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var utils = require('../utils/utils.js');
 
 selftest.define("can import stylus across packages", function (options) {
   var s = new Sandbox({
@@ -12,7 +11,6 @@ selftest.define("can import stylus across packages", function (options) {
   s.testWithAllClients(function (run) {
     run.match("myapp");
     run.match("proxy");
-    run.match("MongoDB");
     run.match("running at");
     run.match("localhost");
 
@@ -26,5 +24,7 @@ selftest.define("can import stylus across packages", function (options) {
     run.match("true");
 
     run.stop();
-  });
+  },{
+    testName: 'can import stylus across packages',
+    testFile: 'stylus-cross-packages.js' });
 });

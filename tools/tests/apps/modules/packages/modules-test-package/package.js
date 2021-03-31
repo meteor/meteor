@@ -6,9 +6,11 @@ Package.describe({
 });
 
 Npm.depends({
+  "@wry/context": "0.4.0",
   "os-browserify": "0.2.0",
   "assert": "1.3.0",
-  "cheerio": "0.22.0"
+  "cheerio": "0.22.0",
+  "ganalytics": "3.1.2",
 });
 
 Package.onUse(function(api) {

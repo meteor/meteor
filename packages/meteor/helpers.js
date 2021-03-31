@@ -81,7 +81,12 @@ Meteor._delete = function (obj /*, arguments */) {
 
 /**
  * @memberOf Meteor
- * @summary Wrap a function that takes a callback function as its final parameter. The signature of the callback of the wrapped function should be `function(error, result){}`. On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously (when a callback is passed). On the client, a callback is always required; errors will be logged if there is no callback. If a callback is provided, the environment captured when the original function was called will be restored in the callback.
+ * @summary Wrap a function that takes a callback function as its final parameter.
+ * The signature of the callback of the wrapped function should be `function(error, result){}`.
+ * On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously
+ * (when a callback is passed). On the client, a callback is always required; errors will be logged if there is no callback.
+ * If a callback is provided, the environment captured when the original function was called will be restored in the callback.
+ * The parameters of the wrapped function must not contain any optional parameters or be undefined, as the callback function is expected to be the final, non-undefined parameter.
  * @locus Anywhere
  * @param {Function} func A function that takes a callback as its final parameter
  * @param {Object} [context] Optional `this` object against which the original function will be invoked

@@ -1,6 +1,6 @@
 This folder contains libs for printing output in response to CLI commands.
 
-`progress.js` defines the lib for printing a progress-bar, so the long
+`progress.ts` defines the lib for printing a progress-bar, so the long
 operations don't look like hanging.
 
 `console.js` exposes the `Console` singleton that should be used through-out the

@@ -1,16 +1,17 @@
 import assert from "assert";
-import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
+import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
-  symlinkWithOverwrite,
-} from '../fs/files.js';
-import NpmDiscards from './npm-discards.js';
-import {Profile} from '../tool-env/profile.js';
+  symlinkWithOverwrite, realpath,
+} from '../fs/files';
+import NpmDiscards from './npm-discards';
+import {Profile} from '../tool-env/profile';
 import {
   optimisticReadFile,
   optimisticReaddir,
   optimisticStatOrNull,
   optimisticLStatOrNull,
-} from "../fs/optimistic.js";
+  optimisticHashOrNull,
+} from "../fs/optimistic";
 
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In
@@ -75,7 +76,9 @@ export default class Builder {
     this.previousUsedAsFile = {};
 
     this.writtenHashes = {};
+    this.createdSymlinks = {};
     this.previousWrittenHashes = {};
+    this.previousCreatedSymlinks = {};
 
     // foo/bar => foo/.build1234.bar
     // Should we include a random number? The advantage is that multiple
@@ -106,6 +109,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         this.previousWrittenHashes = previousBuilder.writtenHashes;
         this.previousUsedAsFile = previousBuilder.usedAsFile;
+        this.previousCreatedSymlinks = previousBuilder.createdSymlinks;
 
         resetBuildPath = false;
       } else {
@@ -228,6 +232,39 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return partsOut.join(files.pathSep);
   }
 
+  // Checks if a file with the same path and hash was written by
+  // the previous builder. If it was, it adds it to the cache and makes
+  // sure the parent directories exist and are part of the cache.
+  //
+  // Returns true if the file was already written
+  usePreviousWrite(relPath, hash, sanitize) {
+    relPath = this._normalizeFilePath(relPath, sanitize);
+
+    if (this.previousWrittenHashes[relPath] === hash) {
+      this._ensureDirectory(files.pathDirname(relPath));
+      this.writtenHashes[relPath] = hash;
+      this.usedAsFile[relPath] = true;
+      return true;
+    }
+
+    return false;
+  }
+
+  _normalizeFilePath(relPath, sanitize) {
+    // Ensure no trailing slash
+    if (relPath.slice(-1) === files.pathSep) {
+      relPath = relPath.slice(0, -1);
+    }
+
+    // In sanitize mode, ensure path does not contain segments like
+    // '..', does not contain forbidden characters, and is unique.
+    if (sanitize) {
+      relPath = this._sanitize(relPath);
+    }
+
+    return relPath;
+  }
+
   // Write either a buffer or the contents of a file to `relPath` (a
   // path to a file relative to the bundle root), creating it (and any
   // enclosing directories) if it doesn't exist yet. Exactly one of
@@ -250,16 +287,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //
   // If `file` is used then it will be added to the builder's WatchSet.
   write(relPath, {data, file, hash, sanitize, executable, symlink}) {
-    // Ensure no trailing slash
-    if (relPath.slice(-1) === files.pathSep) {
-      relPath = relPath.slice(0, -1);
-    }
-
-    // In sanitize mode, ensure path does not contain segments like
-    // '..', does not contain forbidden characters, and is unique.
-    if (sanitize) {
-      relPath = this._sanitize(relPath);
-    }
+    relPath = this._normalizeFilePath(relPath, sanitize);
 
     let getData = null;
     if (data) {
@@ -285,13 +313,27 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     } else {
       hash = hash || sha1(getData());
 
-      if (this.previousWrittenHashes[relPath] !== hash) {
+      // Write is called multiple times for assets when they have multiple urls for the same file
+      if (this.previousWrittenHashes[relPath] !== hash && this.writtenHashes[relPath] !== hash) {
+
         // Builder is used to create build products, which should be read-only;
         // users shouldn't be manually editing automatically generated files and
         // expecting the results to "stick".
-        atomicallyRewriteFile(absPath, getData(), {
-          mode: executable ? 0o555 : 0o444
-        });
+        const mode = executable ? 0o555 : 0o444
+
+        if (this.buildPath === this.outputPath || this.writtenHashes[relPath]) {
+          // atomicallyRewriteFile handles overwriting files that have already been created
+          atomicallyRewriteFile(absPath, getData(), {
+              mode
+          });
+        } else {
+          // Since builder is not updating in place, and
+          // this build is only used if every file is successfully written,
+          // it is not important to write atomically.
+          files.writeFile(absPath, getData(), {
+            mode
+          })
+      }
       }
 
       this.writtenHashes[relPath] = hash;
@@ -299,6 +341,79 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     this.usedAsFile[relPath] = true;
 
     return relPath;
+  }
+
+  copyTranspiledModules(relativePaths, {
+    sourceRootDir,
+    targetRootDir = this.outputPath,
+    needToTranspile = files.inCheckout(),
+  }) {
+    if (!needToTranspile) {
+      // If these files have already been transpiled, copy the transpiled files
+      // (both .js and .js.map) directly to the builder output directory, without
+      // recompiling them.
+      relativePaths.forEach(relPath => {
+        const jsPath = jsToTs(relPath);
+        [jsPath, jsPath + ".map"].forEach(path => {
+          this.write(path, {
+            file: files.pathJoin(sourceRootDir, path),
+          });
+        });
+      });
+      return;
+    }
+
+    const babel = require("meteor-babel");
+    const commonBabelOptions = babel.getDefaultOptions({
+      nodeMajorVersion: parseInt(process.versions.node),
+      typescript: true
+    });
+    commonBabelOptions.sourceMaps = true;
+
+    const toolsDir = files.getCurrentToolsDir();
+    const babelCacheDirectory =
+      files.pathJoin(files.pathDirname(toolsDir), ".babel-cache");
+
+    relativePaths.forEach(relPath => {
+      assert.ok(!files.pathIsAbsolute(relPath), relPath);
+      const fullPath = files.pathJoin(sourceRootDir, relPath);
+      let inputFileContents = files.readFile(fullPath, "utf-8");
+
+      // If certain behavior should be disabled in the transpiled code, the
+      // #RemoveInProd comment can be added to strip out appropriate lines.
+      inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
+
+      var transpiled = babel.compile(inputFileContents, {
+        ...commonBabelOptions,
+        filename: relPath,
+        sourceFileName: "/" + relPath,
+      }, {
+        cacheDirectory: babelCacheDirectory,
+      });
+
+      // The published implementation of the meteor-tool package should
+      // contain only .js files, like any compiled TypeScript project.
+      // This design has the unfortunate consequence of forbidding
+      // explicit .ts file extensions in imported module identifier
+      // strings, but that's just how it goes with TypeScript.
+      let outputPath = jsToTs(relPath);
+
+      const sourceMapUrlComment =
+        "//# sourceMappingURL=" + files.pathBasename(outputPath + ".map");
+
+      this.write(outputPath, {
+        data: Buffer.from(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
+      });
+
+      // The babelOptions.sourceMapTarget option was deprecated in Babel
+      // 7.0.0-beta.41: https://github.com/babel/babel/pull/7500
+      const sourceMapTarget = outputPath + ".map";
+      transpiled.map.file = sourceMapTarget;
+
+      this.write(sourceMapTarget, {
+        data: Buffer.from(JSON.stringify(transpiled.map), 'utf8')
+      });
+    });
   }
 
   // Serialize `data` as JSON and write it to `relPath` (a path to a
@@ -425,7 +540,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       // as well as node_modules/meteor and the parent directories of any
       // scoped npm packages.
       this._ensureAllNonPackageDirectories(
-        files.realpath(options.from),
+        realpath(options.from),
         options.to
       );
     }
@@ -499,8 +614,6 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       to = to.slice(0, -1);
     }
 
-    const absPathTo = files.pathJoin(this.buildPath, to);
-
     if (symlink) {
       if (specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
@@ -524,13 +637,17 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       });
     }
 
-    const rootDir = files.realpath(from);
+    const rootDir = realpath(from);
 
     const walk = (absFrom, relTo) => {
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
-        symlinkWithOverwrite(absFrom, absTo);
+        if (this.previousCreatedSymlinks[absFrom] !== relTo) {
+          symlinkWithOverwrite(absFrom, absTo);
+        }
+        this.usedAsFile[relTo] = false;
+        this.createdSymlinks[absFrom] = relTo;
         return;
       }
 
@@ -544,7 +661,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           return;
         }
 
-        // Returns files.realpath(thisAbsFrom), iff it is external to
+        // Returns files.realpath(thisAbsFrom), if it is external to
         // rootDir, using caching because this function might be called
         // more than once.
         let cachedExternalPath;
@@ -554,7 +671,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           }
 
           try {
-            var real = files.realpath(thisAbsFrom);
+            var real = realpath(thisAbsFrom);
           } catch (e) {
             if (e.code !== "ENOENT" &&
                 e.code !== "ELOOP") {
@@ -641,23 +758,28 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // could not be created above.
         fileStatus = optimisticStatOrNull(thisAbsFrom);
         if (fileStatus && fileStatus.isFile()) {
-          // XXX can't really optimize this copying without reading
-          // the file into memory to calculate the hash.
-          files.writeFile(
-            files.pathResolve(this.buildPath, thisRelTo),
-            // The reason we call files.writeFile here instead of
-            // files.copyFile is so that we can read the file using
-            // optimisticReadFile instead of files.createReadStream.
-            optimisticReadFile(thisAbsFrom),
-            // Logic borrowed from files.copyFile: "Create the file as
-            // readable and writable by everyone, and executable by everyone
-            // if the original file is executably by owner. (This mode will be
-            // modified by umask.) We don't copy the mode *directly* because
-            // this function is used by 'meteor create' which is copying from
-            // the read-only tools tree into a writable app."
-            { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
-          );
+          const hash = optimisticHashOrNull(thisAbsFrom);
 
+          if (this.previousWrittenHashes[thisRelTo] !== hash) {
+            const content = optimisticReadFile(thisAbsFrom);
+
+            files.writeFile(
+              files.pathResolve(this.buildPath, thisRelTo),
+              // The reason we call files.writeFile here instead of
+              // files.copyFile is so that we can read the file using
+              // optimisticReadFile instead of files.createReadStream.
+              content,
+              // Logic borrowed from files.copyFile: "Create the file as
+              // readable and writable by everyone, and executable by everyone
+              // if the original file is executably by owner. (This mode will be
+              // modified by umask.) We don't copy the mode *directly* because
+              // this function is used by 'meteor create' which is copying from
+              // the read-only tools tree into a writable app."
+              { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
+            );
+          }
+
+          this.writtenHashes[thisRelTo] = hash;
           this.usedAsFile[thisRelTo] = true;
         }
       });
@@ -721,7 +843,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     // Methods that don't have to fix up arguments or return values, because
     // they are implemented purely in terms of other methods which do.
-    const passThroughMethods = ["writeToGeneratedFilename"];
+    const passThroughMethods = [
+      "writeToGeneratedFilename",
+      "copyTranspiledModules",
+    ];
     passThroughMethods.forEach(method => {
       subBuilder[method] = this[method];
     });
@@ -783,6 +908,16 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   getWatchSet() {
     return this.watchSet;
   }
+}
+
+function jsToTs(path) {
+  if (path.endsWith(".ts")) {
+    const parts = path.split(".");
+    assert.strictEqual(parts.pop(), "ts");
+    parts.push("js");
+    path = parts.join(".");
+  }
+  return path;
 }
 
 function atomicallyRewriteFile(path, data, options) {

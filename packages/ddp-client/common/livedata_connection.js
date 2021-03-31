@@ -15,9 +15,11 @@ import {
   last,
 } from "meteor/ddp-common/utils.js";
 
+let Fiber;
+let Future;
 if (Meteor.isServer) {
-  var Fiber = Npm.require('fibers');
-  var Future = Npm.require('fibers/future');
+  Fiber = Npm.require('fibers');
+  Future = Npm.require('fibers/future');
 }
 
 class MongoIDMap extends IdMap {
@@ -48,7 +50,7 @@ class MongoIDMap extends IdMap {
 // or the server migrating us).
 export class Connection {
   constructor(url, options) {
-    var self = this;
+    const self = this;
 
     this.options = options = {
       onConnected() {},
@@ -254,7 +256,7 @@ export class Connection {
       });
     }
 
-    var onDisconnect = () => {
+    const onDisconnect = () => {
       if (self._heartbeat) {
         self._heartbeat.stop();
         self._heartbeat = null;
@@ -288,32 +290,33 @@ export class Connection {
   // store. 'wrappedStore' should be an object with methods beginUpdate, update,
   // endUpdate, saveOriginals, retrieveOriginals. see Collection for an example.
   registerStore(name, wrappedStore) {
-    var self = this;
+    const self = this;
 
     if (name in self._stores) return false;
 
     // Wrap the input object in an object which makes any store method not
     // implemented by 'store' into a no-op.
-    var store = Object.create(null);
-    [ 'update',
+    const store = Object.create(null);
+    const keysOfStore = [
+      'update',
       'beginUpdate',
       'endUpdate',
       'saveOriginals',
       'retrieveOriginals',
       'getDoc',
       '_getCollection'
-    ].forEach(method => {
+    ];
+    keysOfStore.forEach((method) => {
       store[method] = (...args) => {
         if (wrappedStore[method]) {
           return wrappedStore[method](...args);
         }
       };
     });
-
     self._stores[name] = store;
 
-    var queued = self._updatesForUnknownStores[name];
-    if (queued) {
+    const queued = self._updatesForUnknownStores[name];
+    if (Array.isArray(queued)) {
       store.beginUpdate(queued.length, false);
       queued.forEach(msg => {
         store.update(msg);
@@ -342,12 +345,12 @@ export class Connection {
    * is interpreted as an `onReady` callback.
    */
   subscribe(name /* .. [arguments] .. (callback|callbacks) */) {
-    var self = this;
+    const self = this;
 
-    var params = slice.call(arguments, 1);
-    var callbacks = Object.create(null);
+    const params = slice.call(arguments, 1);
+    let callbacks = Object.create(null);
     if (params.length) {
-      var lastParam = params[params.length - 1];
+      const lastParam = params[params.length - 1];
       if (typeof lastParam === 'function') {
         callbacks.onReady = params.pop();
       } else if (lastParam && [
@@ -379,17 +382,11 @@ export class Connection {
     // We only look for one such sub; if there are N apparently-identical subs
     // being invalidated, we will require N matching subscribe calls to keep
     // them all active.
-    var existing;
-    keys(self._subscriptions).some(id => {
-      const sub = self._subscriptions[id];
-      if (sub.inactive &&
-          sub.name === name &&
-          EJSON.equals(sub.params, params)) {
-        return existing = sub;
-      }
-    });
+    const existing = Object.values(self._subscriptions).find(
+      sub => (sub.inactive && sub.name === name && EJSON.equals(sub.params, params))
+    );
 
-    var id;
+    let id;
     if (existing) {
       id = existing.id;
       existing.inactive = false; // reactivate
@@ -454,7 +451,7 @@ export class Connection {
     }
 
     // return a handle to the application.
-    var handle = {
+    const handle = {
       stop() {
         if (! hasOwn.call(self._subscriptions, id)) {
           return;
@@ -463,10 +460,10 @@ export class Connection {
       },
       ready() {
         // return false if we've unsubscribed.
-        if (! hasOwn.call(self._subscriptions, id)) {
+        if (!hasOwn.call(self._subscriptions, id)) {
           return false;
         }
-        var record = self._subscriptions[id];
+        const record = self._subscriptions[id];
         record.readyDeps.depend();
         return record.ready;
       },
@@ -480,7 +477,7 @@ export class Connection {
       // as a change to mark the subscription "inactive" so that it can
       // be reused from the rerun.  If it isn't reused, it's killed from
       // an afterFlush.
-      Tracker.onInvalidate(c => {
+      Tracker.onInvalidate((c) => {
         if (hasOwn.call(self._subscriptions, id)) {
           self._subscriptions[id].inactive = true;
         }
@@ -501,10 +498,9 @@ export class Connection {
   // - onLateError {Function(error)} called if an error was received after the ready event.
   //     (errors received before ready cause an error to be thrown)
   _subscribeAndWait(name, args, options) {
-    var self = this;
-    var f = new Future();
-    var ready = false;
-    var handle;
+    const self = this;
+    const f = new Future();
+    let ready = false;
     args = args || [];
     args.push({
       onReady() {
@@ -517,14 +513,13 @@ export class Connection {
       }
     });
 
-    handle = self.subscribe.apply(self, [name].concat(args));
+    const handle = self.subscribe.apply(self, [name].concat(args));
     f.wait();
     return handle;
   }
 
   methods(methods) {
-    keys(methods).forEach(name => {
-      const func = methods[name];
+    Object.entries(methods).forEach(([name, func]) => {
       if (typeof func !== 'function') {
         throw new Error("Method '" + name + "' must be a function");
       }
@@ -548,9 +543,11 @@ export class Connection {
   call(name /* .. [arguments] .. callback */) {
     // if it's a function, the last argument is the result callback,
     // not a parameter to the remote method.
-    var args = slice.call(arguments, 1);
-    if (args.length && typeof args[args.length - 1] === 'function')
-      var callback = args.pop();
+    const args = slice.call(arguments, 1);
+    let callback;
+    if (args.length && typeof args[args.length - 1] === 'function') {
+      callback = args.pop();
+    }
     return this.apply(name, args, callback);
   }
 
@@ -571,7 +568,7 @@ export class Connection {
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply(name, args, options, callback) {
-    var self = this;
+    const self = this;
 
     // We were passed 3 arguments. They may be either (name, args, options)
     // or (name, args, callback)
@@ -595,8 +592,8 @@ export class Connection {
     // while because of a wait method).
     args = EJSON.clone(args);
 
-    var enclosing = DDP._CurrentMethodInvocation.get();
-    var alreadyInSimulation = enclosing && enclosing.isSimulation;
+    const enclosing = DDP._CurrentMethodInvocation.get();
+    const alreadyInSimulation = enclosing && enclosing.isSimulation;
 
     // Lazily generate a randomSeed, only if it is requested by the stub.
     // The random streams only have utility if they're used on both the client
@@ -608,8 +605,8 @@ export class Connection {
     // use a random seed on the server.  In that case, we don't pass the
     // randomSeed to save bandwidth, and we don't even generate it to save a
     // bit of CPU and to avoid consuming entropy.
-    var randomSeed = null;
-    var randomSeedGenerator = () => {
+    let randomSeed = null;
+    const randomSeedGenerator = () => {
       if (randomSeed === null) {
         randomSeed = DDPCommon.makeRpcSeed(enclosing, name);
       }
@@ -628,13 +625,15 @@ export class Connection {
     // to do a RPC, so we use the return value of the stub as our return
     // value.
 
-    var stub = self._methodHandlers[name];
+    let stubReturnValue;
+    let exception;
+    const stub = self._methodHandlers[name];
     if (stub) {
-      var setUserId = userId => {
+      const setUserId = userId => {
         self.setUserId(userId);
       };
 
-      var invocation = new DDPCommon.MethodInvocation({
+      const invocation = new DDPCommon.MethodInvocation({
         isSimulation: true,
         userId: self.userId(),
         setUserId: setUserId,
@@ -648,7 +647,7 @@ export class Connection {
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        var stubReturnValue = DDP._CurrentMethodInvocation.withValue(
+        stubReturnValue = DDP._CurrentMethodInvocation.withValue(
           invocation,
           () => {
             if (Meteor.isServer) {
@@ -664,7 +663,7 @@ export class Connection {
           }
         );
       } catch (e) {
-        var exception = e;
+        exception = e;
       }
     }
 
@@ -691,7 +690,7 @@ export class Connection {
     // it is important that the stub have finished before we send the RPC, so
     // that we know we have a complete list of which local documents the stub
     // wrote.
-    var message = {
+    const message = {
       msg: 'method',
       method: name,
       params: args,
@@ -720,6 +719,7 @@ export class Connection {
     // return the value of the RPC to the caller.
 
     // If the caller didn't give a callback, decide what to do.
+    let future;
     if (!callback) {
       if (Meteor.isClient) {
         // On the client, we don't have fibers, so we can't block. The
@@ -732,7 +732,7 @@ export class Connection {
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
-        var future = new Future();
+        future = new Future();
         callback = future.resolver();
       }
     }
@@ -742,7 +742,7 @@ export class Connection {
       message.randomSeed = randomSeed;
     }
 
-    var methodInvoker = new MethodInvoker({
+    const methodInvoker = new MethodInvoker({
       methodId,
       callback: callback,
       connection: self,
@@ -791,8 +791,8 @@ export class Connection {
       this._flushBufferedWrites();
     }
 
-    keys(this._stores).forEach(storeName => {
-      this._stores[storeName].saveOriginals();
+    Object.values(this._stores).forEach((store) => {
+      store.saveOriginals();
     });
   }
 
@@ -800,14 +800,14 @@ export class Connection {
   // method 'methodId' from all stores and saves them to _serverDocuments (keyed
   // by document) and _documentsWrittenByStub (keyed by method ID).
   _retrieveAndStoreOriginals(methodId) {
-    var self = this;
+    const self = this;
     if (self._documentsWrittenByStub[methodId])
       throw new Error('Duplicate methodId in _retrieveAndStoreOriginals');
 
-    var docsWritten = [];
+    const docsWritten = [];
 
-    keys(self._stores).forEach(collection => {
-      var originals = self._stores[collection].retrieveOriginals();
+    Object.entries(self._stores).forEach(([collection, store]) => {
+      const originals = store.retrieveOriginals();
       // not all stores define retrieveOriginals
       if (! originals) return;
       originals.forEach((doc, id) => {
@@ -815,7 +815,7 @@ export class Connection {
         if (! hasOwn.call(self._serverDocuments, collection)) {
           self._serverDocuments[collection] = new MongoIDMap();
         }
-        var serverDoc = self._serverDocuments[collection].setDefault(
+        const serverDoc = self._serverDocuments[collection].setDefault(
           id,
           Object.create(null)
         );
@@ -840,8 +840,7 @@ export class Connection {
   // This is very much a private function we use to make the tests
   // take up fewer server resources after they complete.
   _unsubscribeAll() {
-    keys(this._subscriptions).forEach(id => {
-      const sub = this._subscriptions[id];
+    Object.values(this._subscriptions).forEach((sub) => {
       // Avoid killing the autoupdate subscription so that developers
       // still get hot code pushes when writing tests.
       //
@@ -934,13 +933,11 @@ export class Connection {
   // not yet invoked its user callback.
   _anyMethodsAreOutstanding() {
     const invokers = this._methodInvokers;
-    return keys(invokers).some(id => {
-      return invokers[id].sentMessage;
-    });
+    return Object.values(invokers).some((invoker) => !!invoker.sentMessage);
   }
 
   _livedata_connected(msg) {
-    var self = this;
+    const self = this;
 
     if (self._version !== 'pre1' && self._heartbeatInterval !== 0) {
       self._heartbeat = new DDPCommon.Heartbeat({
@@ -961,8 +958,9 @@ export class Connection {
     // If this is a reconnect, we'll have to reset all stores.
     if (self._lastSessionId) self._resetStores = true;
 
+    let reconnectedToPreviousSession;
     if (typeof msg.session === 'string') {
-      var reconnectedToPreviousSession = self._lastSessionId === msg.session;
+      reconnectedToPreviousSession = self._lastSessionId === msg.session;
       self._lastSessionId = msg.session;
     }
 
@@ -996,8 +994,8 @@ export class Connection {
     // XXX We should also block reconnect quiescence until unnamed subscriptions
     //     (eg, autopublish) are done re-publishing to avoid flicker!
     self._subsBeingRevived = Object.create(null);
-    keys(self._subscriptions).forEach(id => {
-      if (self._subscriptions[id].ready) {
+    Object.entries(self._subscriptions).forEach(([id, sub]) => {
+      if (sub.ready) {
         self._subsBeingRevived[id] = true;
       }
     });
@@ -1043,10 +1041,9 @@ export class Connection {
     // call the callbacks immediately.
     if (! self._waitingForQuiescence()) {
       if (self._resetStores) {
-        keys(self._stores).forEach(storeName => {
-          const s = self._stores[storeName];
-          s.beginUpdate(0, true);
-          s.endUpdate();
+        Object.values(self._stores).forEach((store) => {
+          store.beginUpdate(0, true);
+          store.endUpdate();
         });
         self._resetStores = false;
       }
@@ -1076,7 +1073,7 @@ export class Connection {
   }
 
   _livedata_data(msg) {
-    var self = this;
+    const self = this;
 
     if (self._waitingForQuiescence()) {
       self._messagesBufferedUntilQuiescence.push(msg);
@@ -1106,9 +1103,9 @@ export class Connection {
       // and apply them all at once.
 
       const bufferedMessages = self._messagesBufferedUntilQuiescence;
-      keys(bufferedMessages).forEach(id => {
+      Object.values(bufferedMessages).forEach(bufferedMessage => {
         self._processOneDataMessage(
-          bufferedMessages[id],
+          bufferedMessage,
           self._bufferedWrites
         );
       });
@@ -1122,7 +1119,7 @@ export class Connection {
     // Immediately flush writes when:
     //  1. Buffering is disabled. Or;
     //  2. any non-(added/changed/removed) message arrives.
-    var standardWrite =
+    const standardWrite =
       msg.msg === "added" ||
       msg.msg === "changed" ||
       msg.msg === "removed";
@@ -1150,7 +1147,7 @@ export class Connection {
   }
 
   _flushBufferedWrites() {
-    var self = this;
+    const self = this;
     if (self._bufferedWritesFlushHandle) {
       clearTimeout(self._bufferedWritesFlushHandle);
       self._bufferedWritesFlushHandle = null;
@@ -1160,19 +1157,19 @@ export class Connection {
     // We need to clear the buffer before passing it to
     //  performWrites. As there's no guarantee that it
     //  will exit cleanly.
-    var writes = self._bufferedWrites;
+    const writes = self._bufferedWrites;
     self._bufferedWrites = Object.create(null);
     self._performWrites(writes);
   }
 
   _performWrites(updates) {
-    var self = this;
+    const self = this;
 
     if (self._resetStores || ! isEmpty(updates)) {
       // Begin a transactional update of each store.
 
-      keys(self._stores).forEach(storeName => {
-        self._stores[storeName].beginUpdate(
+      Object.entries(self._stores).forEach(([storeName, store]) => {
+        store.beginUpdate(
           hasOwn.call(updates, storeName)
             ? updates[storeName].length
             : 0,
@@ -1182,9 +1179,8 @@ export class Connection {
 
       self._resetStores = false;
 
-      keys(updates).forEach(storeName => {
-        const updateMessages = updates[storeName];
-        var store = self._stores[storeName];
+      Object.entries(updates).forEach(([storeName, updateMessages]) => {
+        const store = self._stores[storeName];
         if (store) {
           updateMessages.forEach(updateMessage => {
             store.update(updateMessage);
@@ -1206,8 +1202,8 @@ export class Connection {
       });
 
       // End update transaction.
-      keys(self._stores).forEach(storeName => {
-        self._stores[storeName].endUpdate();
+      Object.values(self._stores).forEach((store) => {
+        store.endUpdate();
       });
     }
 
@@ -1218,10 +1214,10 @@ export class Connection {
   // relevant docs have been flushed, as well as dataVisible callbacks at
   // reconnect-quiescence time.
   _runAfterUpdateCallbacks() {
-    var self = this;
-    var callbacks = self._afterUpdateCallbacks;
+    const self = this;
+    const callbacks = self._afterUpdateCallbacks;
     self._afterUpdateCallbacks = [];
-    callbacks.forEach(c => {
+    callbacks.forEach((c) => {
       c();
     });
   }
@@ -1234,21 +1230,21 @@ export class Connection {
   }
 
   _getServerDoc(collection, id) {
-    var self = this;
+    const self = this;
     if (! hasOwn.call(self._serverDocuments, collection)) {
       return null;
     }
-    var serverDocsForCollection = self._serverDocuments[collection];
+    const serverDocsForCollection = self._serverDocuments[collection];
     return serverDocsForCollection.get(id) || null;
   }
 
   _process_added(msg, updates) {
-    var self = this;
-    var id = MongoID.idParse(msg.id);
-    var serverDoc = self._getServerDoc(msg.collection, id);
+    const self = this;
+    const id = MongoID.idParse(msg.id);
+    const serverDoc = self._getServerDoc(msg.collection, id);
     if (serverDoc) {
       // Some outstanding stub wrote here.
-      var isExisting = serverDoc.document !== undefined;
+      const isExisting = serverDoc.document !== undefined;
 
       serverDoc.document = msg.fields || Object.create(null);
       serverDoc.document._id = id;
@@ -1258,7 +1254,7 @@ export class Connection {
         // Always push an update so that document stays in the store after
         // reset. Use current version of the document for this update, so
         // that stub-written values are preserved.
-        var currentDoc = self._stores[msg.collection].getDoc(msg.id);
+        const currentDoc = self._stores[msg.collection].getDoc(msg.id);
         if (currentDoc !== undefined) msg.fields = currentDoc;
 
         self._pushUpdate(updates, msg.collection, msg);
@@ -1271,8 +1267,8 @@ export class Connection {
   }
 
   _process_changed(msg, updates) {
-    var self = this;
-    var serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id));
+    const self = this;
+    const serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id));
     if (serverDoc) {
       if (serverDoc.document === undefined)
         throw new Error('Server sent changed for nonexisting id: ' + msg.id);
@@ -1283,8 +1279,8 @@ export class Connection {
   }
 
   _process_removed(msg, updates) {
-    var self = this;
-    var serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id));
+    const self = this;
+    const serverDoc = self._getServerDoc(msg.collection, MongoID.idParse(msg.id));
     if (serverDoc) {
       // Some outstanding stub wrote here.
       if (serverDoc.document === undefined)
@@ -1300,13 +1296,12 @@ export class Connection {
   }
 
   _process_updated(msg, updates) {
-    var self = this;
+    const self = this;
     // Process "method done" messages.
 
-    msg.methods.forEach(methodId => {
-      const docs = self._documentsWrittenByStub[methodId];
-      keys(docs).forEach(id => {
-        const written = docs[id];
+    msg.methods.forEach((methodId) => {
+      const docs = self._documentsWrittenByStub[methodId] || {};
+      Object.values(docs).forEach((written) => {
         const serverDoc = self._getServerDoc(written.collection, written.id);
         if (! serverDoc) {
           throw new Error('Lost serverDoc for ' + JSON.stringify(written));
@@ -1336,7 +1331,7 @@ export class Connection {
           });
           // Call all flush callbacks.
 
-          serverDoc.flushCallbacks.forEach(c => {
+          serverDoc.flushCallbacks.forEach((c) => {
             c();
           });
 
@@ -1362,14 +1357,14 @@ export class Connection {
   }
 
   _process_ready(msg, updates) {
-    var self = this;
+    const self = this;
     // Process "sub ready" messages. "sub ready" messages don't take effect
     // until all current server documents have been flushed to the local
     // database. We can use a write fence to implement this.
 
-    msg.subs.forEach(subId => {
+    msg.subs.forEach((subId) => {
       self._runWhenAllServerDocsAreFlushed(() => {
-        var subRecord = self._subscriptions[subId];
+        const subRecord = self._subscriptions[subId];
         // Did we already unsubscribe?
         if (!subRecord) return;
         // Did we already receive a ready message? (Oops!)
@@ -1385,12 +1380,12 @@ export class Connection {
   // _serverDocuments have been written to the local cache. f will not be called
   // if the connection is lost before then!
   _runWhenAllServerDocsAreFlushed(f) {
-    var self = this;
-    var runFAfterUpdates = () => {
+    const self = this;
+    const runFAfterUpdates = () => {
       self._afterUpdateCallbacks.push(f);
     };
-    var unflushedServerDocCount = 0;
-    var onServerDocFlush = () => {
+    let unflushedServerDocCount = 0;
+    const onServerDocFlush = () => {
       --unflushedServerDocCount;
       if (unflushedServerDocCount === 0) {
         // This was the last doc to flush! Arrange to run f after the updates
@@ -1399,11 +1394,11 @@ export class Connection {
       }
     };
 
-    keys(self._serverDocuments).forEach(collection => {
-      self._serverDocuments[collection].forEach(serverDoc => {
+    Object.values(self._serverDocuments).forEach((serverDocuments) => {
+      serverDocuments.forEach((serverDoc) => {
         const writtenByStubForAMethodWithSentMessage =
           keys(serverDoc.writtenByStubs).some(methodId => {
-            var invoker = self._methodInvokers[methodId];
+            const invoker = self._methodInvokers[methodId];
             return invoker && invoker.sentMessage;
           });
 
@@ -1421,7 +1416,7 @@ export class Connection {
   }
 
   _livedata_nosub(msg) {
-    var self = this;
+    const self = this;
 
     // First pass it through _livedata_data, which only uses it to help get
     // towards quiescence.
@@ -1436,12 +1431,12 @@ export class Connection {
     }
 
     // XXX COMPAT WITH 1.0.3.1 #errorCallback
-    var errorCallback = self._subscriptions[msg.id].errorCallback;
-    var stopCallback = self._subscriptions[msg.id].stopCallback;
+    const errorCallback = self._subscriptions[msg.id].errorCallback;
+    const stopCallback = self._subscriptions[msg.id].stopCallback;
 
     self._subscriptions[msg.id].remove();
 
-    var meteorErrorFromMsg = msgArg => {
+    const meteorErrorFromMsg = msgArg => {
       return (
         msgArg &&
         msgArg.error &&
@@ -1466,7 +1461,7 @@ export class Connection {
   _livedata_result(msg) {
     // id, result or error. error has error (code), reason, details
 
-    var self = this;
+    const self = this;
 
     // Lets make sure there are no buffered writes before returning result.
     if (! isEmpty(self._bufferedWrites)) {
@@ -1479,13 +1474,13 @@ export class Connection {
       Meteor._debug('Received method result but no methods outstanding');
       return;
     }
-    var currentMethodBlock = self._outstandingMethodBlocks[0].methods;
-    var m;
-    for (var i = 0; i < currentMethodBlock.length; i++) {
-      m = currentMethodBlock[i];
-      if (m.methodId === msg.id) break;
-    }
-
+    const currentMethodBlock = self._outstandingMethodBlocks[0].methods;
+    let i;
+    const m = currentMethodBlock.find((method, idx) => {
+      const found = method.methodId === msg.id;
+      if (found) i = idx;
+      return found;
+    });
     if (!m) {
       Meteor._debug("Can't match method response to original method call", msg);
       return;
@@ -1511,14 +1506,14 @@ export class Connection {
   // the last outstanding method in the current block, runs the next block. If
   // there are no more methods, consider accepting a hot code push.
   _outstandingMethodFinished() {
-    var self = this;
+    const self = this;
     if (self._anyMethodsAreOutstanding()) return;
 
     // No methods are outstanding. This should mean that the first block of
     // methods is empty. (Or it might not exist, if this was a method that
     // half-finished before disconnect/reconnect.)
     if (! isEmpty(self._outstandingMethodBlocks)) {
-      var firstBlock = self._outstandingMethodBlocks.shift();
+      const firstBlock = self._outstandingMethodBlocks.shift();
       if (! isEmpty(firstBlock.methods))
         throw new Error(
           'No methods outstanding but nonempty block: ' +
@@ -1537,7 +1532,7 @@ export class Connection {
   // Sends messages for all the methods in the first block in
   // _outstandingMethodBlocks.
   _sendOutstandingMethods() {
-    var self = this;
+    const self = this;
 
     if (isEmpty(self._outstandingMethodBlocks)) {
       return;
@@ -1554,8 +1549,8 @@ export class Connection {
   }
 
   _callOnReconnectAndSendAppropriateOutstandingMethods() {
-    var self = this;
-    var oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
+    const self = this;
+    const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
     self._outstandingMethodBlocks = [];
 
     self.onReconnect && self.onReconnect();
@@ -1593,9 +1588,7 @@ export class Connection {
     }
 
     // Now add the rest of the original blocks on.
-    oldOutstandingMethodBlocks.forEach(block => {
-      self._outstandingMethodBlocks.push(block);
-    });
+    self._outstandingMethodBlocks.push(...oldOutstandingMethodBlocks);
   }
 
   // We can accept a hot code push if there are no methods in flight.
@@ -1606,7 +1599,7 @@ export class Connection {
   // If we were blocking a migration, see if it's now possible to continue.
   // Call whenever the set of outstanding/blocked methods shrinks.
   _maybeMigrate() {
-    var self = this;
+    const self = this;
     if (self._retryMigrate && self._readyToMigrate()) {
       self._retryMigrate();
       self._retryMigrate = null;
@@ -1614,8 +1607,9 @@ export class Connection {
   }
 
   onMessage(raw_msg) {
+    let msg;
     try {
-      var msg = DDPCommon.parseDDP(raw_msg);
+      msg = DDPCommon.parseDDP(raw_msg);
     } catch (e) {
       Meteor._debug('Exception while parsing DDP', e);
       return;
@@ -1645,7 +1639,7 @@ export class Connection {
         this._versionSuggestion = msg.version;
         this._stream.reconnect({ _force: true });
       } else {
-        var description =
+        const description =
           'DDP version negotiation failed; server requested version ' +
           msg.version;
         this._stream.disconnect({ _permanent: true, _error: description });
@@ -1674,7 +1668,7 @@ export class Connection {
     // Send a connect message at the beginning of the stream.
     // NOTE: reset is called even on the first connection, so this is
     // the only place we send this message.
-    var msg = { msg: 'connect' };
+    const msg = { msg: 'connect' };
     if (this._lastSessionId) msg.session = this._lastSessionId;
     msg.version = this._versionSuggestion || this._supportedDDPVersions[0];
     this._versionSuggestion = msg.version;
@@ -1747,8 +1741,7 @@ export class Connection {
 
     // add new subscriptions at the end. this way they take effect after
     // the handlers and we don't see flicker.
-    keys(this._subscriptions).forEach(id => {
-      const sub = this._subscriptions[id];
+    Object.entries(this._subscriptions).forEach(([id, sub]) => {
       this._send({
         msg: 'sub',
         id: id,

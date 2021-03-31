@@ -1,6 +1,7 @@
 import {types as tt} from "./tokentype"
 import {Parser} from "./state"
 import {has} from "./util"
+import {BIND_NONE, BIND_OUTSIDE, BIND_LEXICAL} from "./scopeflags"
 
 const pp = Parser.prototype
 
@@ -12,7 +13,7 @@ pp.toAssignable = function(node, isBinding, refDestructuringErrors) {
     switch (node.type) {
     case "Identifier":
       if (this.inAsync && node.name === "await")
-        this.raise(node.start, "Can not use 'await' as identifier inside an async function")
+        this.raise(node.start, "Cannot use 'await' as identifier inside an async function")
       break
 
     case "ObjectPattern":
@@ -40,7 +41,7 @@ pp.toAssignable = function(node, isBinding, refDestructuringErrors) {
       break
 
     case "Property":
-      // AssignmentProperty has type == "Property"
+      // AssignmentProperty has type === "Property"
       if (node.kind !== "init") this.raise(node.key.start, "Object pattern can't contain getter or setter")
       this.toAssignable(node.value, isBinding)
       break
@@ -69,7 +70,7 @@ pp.toAssignable = function(node, isBinding, refDestructuringErrors) {
       break
 
     case "ParenthesizedExpression":
-      this.toAssignable(node.expression, isBinding)
+      this.toAssignable(node.expression, isBinding, refDestructuringErrors)
       break
 
     case "MemberExpression":
@@ -185,9 +186,11 @@ pp.parseMaybeDefault = function(startPos, startLoc, left) {
 // 'let' indicating that the lval creates a lexical ('let' or 'const') binding
 // 'none' indicating that the binding should be checked for illegal identifiers, but not for duplicate references
 
-pp.checkLVal = function(expr, bindingType, checkClashes) {
+pp.checkLVal = function(expr, bindingType = BIND_NONE, checkClashes) {
   switch (expr.type) {
   case "Identifier":
+    if (bindingType === BIND_LEXICAL && expr.name === "let")
+      this.raiseRecoverable(expr.start, "let is disallowed as a lexically bound name")
     if (this.strict && this.reservedWordsStrictBind.test(expr.name))
       this.raiseRecoverable(expr.start, (bindingType ? "Binding " : "Assigning to ") + expr.name + " in strict mode")
     if (checkClashes) {
@@ -195,19 +198,7 @@ pp.checkLVal = function(expr, bindingType, checkClashes) {
         this.raiseRecoverable(expr.start, "Argument name clash")
       checkClashes[expr.name] = true
     }
-    if (bindingType && bindingType !== "none") {
-      if (
-        bindingType === "var" && !this.canDeclareVarName(expr.name) ||
-        bindingType !== "var" && !this.canDeclareLexicalName(expr.name)
-      ) {
-        this.raiseRecoverable(expr.start, `Identifier '${expr.name}' has already been declared`)
-      }
-      if (bindingType === "var") {
-        this.declareVarName(expr.name)
-      } else {
-        this.declareLexicalName(expr.name)
-      }
-    }
+    if (bindingType !== BIND_NONE && bindingType !== BIND_OUTSIDE) this.declareName(expr.name, bindingType, expr.start)
     break
 
   case "MemberExpression":
@@ -220,7 +211,7 @@ pp.checkLVal = function(expr, bindingType, checkClashes) {
     break
 
   case "Property":
-    // AssignmentProperty has type == "Property"
+    // AssignmentProperty has type === "Property"
     this.checkLVal(expr.value, bindingType, checkClashes)
     break
 

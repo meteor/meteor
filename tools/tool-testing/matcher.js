@@ -33,6 +33,10 @@ export default class Matcher {
     return mp;
   }
 
+  setMatchStrict(strict) {
+    this.matchStrict = strict;
+  }
+
   rejectMatch(error) {
     const mp = this.resetMatch();
     if (mp) {
@@ -72,11 +76,13 @@ export default class Matcher {
 
     let timer = null;
     if (timeout) {
+      const failure = new TestFailure('match-timeout', {
+        run: this.run,
+        pattern: this.matchPattern,
+      });
+
       timer = setTimeout(() => {
-        this.rejectMatch(new TestFailure('match-timeout', {
-          run: this.run,
-          pattern: this.matchPattern
-        }));
+        this.rejectMatch(failure);
       }, timeout * 1000);
     } else {
       return mp;
@@ -131,6 +137,8 @@ export default class Matcher {
 
     let ret = null;
 
+    Console.simpleDebug(`fullBuffer`, this.fullBuffer);
+
     if (this.matchFullBuffer) {
       // Note: this.matchStrict is ignored if this.matchFullBuffer truthy.
       if (this.matchPattern instanceof RegExp) {
@@ -182,3 +190,6 @@ export default class Matcher {
     }
   }
 }
+
+import { markThrowingMethods } from "./test-utils.js";
+markThrowingMethods(Matcher.prototype);
