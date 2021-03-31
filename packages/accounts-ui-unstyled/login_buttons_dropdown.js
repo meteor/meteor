@@ -238,8 +238,10 @@ Template._loginButtonsLoggedOutDropdown.events({
   },
 
   'keypress #forgot-password-email': event => {
-    if (event.keyCode === 13)
+    if (event.keyCode === 13) {
+      event.preventDefault();
       forgotPassword();
+    }
   },
 
   'click #login-buttons-forgot-password': forgotPassword,
@@ -335,10 +337,6 @@ Template._loginButtonsLoggedOutDropdown.events({
     if (password !== null)
       document.getElementById('login-password').value = password;
   },
-  'keypress #login-username, keypress #login-email, keypress #login-username-or-email, keypress #login-password, keypress #login-password-again': event => {
-    if (event.keyCode === 13)
-      loginOrSignup();
-  }
 });
 
 Template._loginButtonsLoggedOutDropdown.helpers({

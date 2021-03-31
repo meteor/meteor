@@ -93,8 +93,8 @@ build_machine_environment: &build_machine_environment
     SELF_TEST_TOOL_NODE_FLAGS: " "
 
     # Variables for load-balancing
-    NUM_GROUPS: 11
-    RUNNING_AVG_LENGTH: 5
+    NUM_GROUPS: 12
+    RUNNING_AVG_LENGTH: 6
 
 jobs:
   Get Ready:
@@ -153,8 +153,8 @@ jobs:
             ../meteor npx tsc --noEmit
             popd
             ./meteor --get-ready
-          # shouldn't take longer than 20 minutes
-          no_output_timeout: 20m
+          # shouldn't take longer than 60 minutes
+          no_output_timeout: 60m
       - run:
           <<: *run_save_node_bin
       - persist_to_workspace:
