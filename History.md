@@ -1,3 +1,25 @@
+## v2.1, 2021-02-24
+
+### Changes
+
+#### Highlights
+
+- Node.js security [update](https://nodejs.org/en/blog/vulnerability/february-2021-security-releases/) to 12.21.0
+
+#### Meteor Version Release
+
+* `meteor-tool@2.1`
+  - Node.js security [update](https://nodejs.org/en/blog/vulnerability/february-2021-security-releases/) to 12.21.0
+  - `meteor create my-app --plan professional` new flag `plan` to enable you to choose a plan from the deploy command.
+  
+### Breaking changes
+
+* N/A
+
+### Migration steps
+
+* N/A
+
 ## v2.0, 2021-01-20
 
 ### Changes
@@ -34,7 +56,7 @@
   - New package that updates React components using HMR. This is enabled by default in apps that have HMR enabled and use a supported React version. ([docs](https://atmospherejs.com/meteor/react-fast-refresh)) [#11117](https://github.com/meteor/meteor/pull/11117)
   
 
-* `dev-error-overly@0.1.0`
+* `dev-error-overlay@0.1.0`
   - New package that allows you to see build errors and server crashes in your browser during development. Requires the app to have HMR enabled. [#11117](https://github.com/meteor/meteor/pull/11117)
 
 
