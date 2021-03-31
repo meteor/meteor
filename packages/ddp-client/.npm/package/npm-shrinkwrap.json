@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "lolex": {
-      "version": "2.3.1",
-      "resolved": "https://registry.npmjs.org/lolex/-/lolex-2.3.1.tgz",
-      "integrity": "sha512-mQuW55GhduF3ppo+ZRUTz1PRjEh1hS5BbqU7d8D0ez2OKxHDod7StPPeAVKisZR5aLkHZjdGWSL42LSONUJsZw=="
+      "version": "2.3.2",
+      "resolved": "https://registry.npmjs.org/lolex/-/lolex-2.3.2.tgz",
+      "integrity": "sha512-A5pN2tkFj7H0dGIAM6MFvHKMJcPnjZsOMvR7ujCjfgW5TbV6H9vb1PgxLtHvjqNZTHsUolz+6/WEO0N1xNx2ng=="
     }
   }
 }

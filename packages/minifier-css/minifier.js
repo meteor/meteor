@@ -96,8 +96,13 @@ const CssTools = {
       if (! Array.isArray(rules)) {
         rules = [rules];
       }
-      return node =>
-        exclude ? !rules.includes(node.name) : rules.includes(node.name);
+      return node => {
+        // PostCSS AtRule nodes have `type: 'atrule'` and a descriptive name,
+        // e.g. 'import' or 'charset', while Comment nodes have type only.
+        const nodeMatchesRule = rules.includes(node.name || node.type);
+
+        return exclude ? !nodeMatchesRule : nodeMatchesRule;
+      }
     };
 
     // Simple concatenation of CSS files would break @import rules

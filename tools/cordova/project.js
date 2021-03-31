@@ -74,6 +74,34 @@ const pinnedPluginVersions = {
   "cordova-plugin-wkwebview-engine": "1.1.3"
 }
 
+/**
+ * To fix Cordova error: Variable(s) missing we convert the cli_variables
+ * when removing plugins we want to convert for each plugin, for instance,
+ * cordova-plugin-facebook4:
+ * commandOptions {
+ *   ...
+ *   cli_variables: {
+ *     'cordova-plugin-googleplus': {
+ *       REVERSED_CLIENT_ID: 'com.googleusercontent.apps.11111111-xxkodsuusaiusixuaix'
+ *     },
+ *     'cordova-plugin-facebook4': { APP_ID: '1111111111111111', APP_NAME: 'appname' }
+ *   }
+ * }
+ * into this
+ * commandOptions {
+ *   ...
+ *   cli_variables: { APP_ID: '1111111111111111', APP_NAME: 'appname' }
+ * }
+ *
+ * @param plugin
+ * @param commandOptions
+ */
+const getCommandOptionsForPlugin = (plugin, commandOptions = {}) => {
+  const cli_variables = commandOptions && commandOptions.cli_variables
+    && commandOptions.cli_variables[plugin] || {};
+  return {...commandOptions, cli_variables};
+}
+
 export class CordovaProject {
   constructor(projectContext, options = {}) {
 
@@ -368,7 +396,7 @@ to build apps for ${displayNameForPlatform(platform)}.`);
 
       Console.info();
       Console.info("Please follow the installation instructions in the mobile guide:");
-      Console.info(Console.url("http://guide.meteor.com/mobile.html#installing-prerequisites"));
+      Console.info(Console.url("http://guide.meteor.com/cordova.html#installing-prerequisites"));
 
       Console.info();
 
@@ -514,14 +542,15 @@ from Cordova project`, async () => {
 
   // Construct a target suitable for 'cordova plugin add' from an id and
   // version, converting or resolving a URL or path where needed.
-  targetForPlugin(id, version) {
+  targetForPlugin(id, version, { usePluginName = false } = {}) {
     assert(id);
     assert(version);
 
     buildmessage.assertInJob();
 
     if (utils.isUrlWithSha(version)) {
-      return convertToGitUrl(version);
+      return usePluginName ? convertToGitUrl(version) :
+        `${id}@${convertToGitUrl(version)}`;
     } else if (utils.isUrlWithFileScheme(version)) {
       // Strip file:// and resolve the path relative to the cordova-build
       // directory
@@ -553,25 +582,49 @@ from Cordova project`, async () => {
     }
   }
 
-  addPlugin(id, version, config = {}) {
-    const target = this.targetForPlugin(id, version);
+  addPlugin(id, version, config = {}, options = {}) {
+    const { retry = true } = options;
+    const target = this.targetForPlugin(id, version, options);
     if (target) {
       const commandOptions = _.extend(this.defaultOptions,
         { cli_variables: config, link: utils.isUrlWithFileScheme(version) });
 
-      this.runCommands(`adding plugin ${target} \
-to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target], commandOptions));
+      try {
+        this.runCommands(`adding plugin ${target} \
+to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
+          commandOptions));
+      } catch (error) {
+        if (retry && utils.isUrlWithSha(version)) {
+          Console.warn(`Cordova plugin add for ${id} failed with plugin id 
+          in the URL with hash, retrying now with plugin name. If this works you
+          can ignore the error above or you can update your plugin declaration
+          to use the id from config.xml instead of the name from package.json`);
+          this.addPlugin(id, version, config, { ...options,
+            usePluginName: true, retry: false });
+          return;
+        }
+        throw error;
+      }
     }
   }
 
   // plugins is an array of plugin IDs.
-  removePlugins(plugins) {
+  removePlugins(plugins,  config = {}) {
     if (_.isEmpty(plugins)) {
       return;
     }
 
-    this.runCommands(`removing plugins ${plugins} \
-from Cordova project`, cordova_lib.plugin.bind(undefined, 'rm', plugins, this.defaultOptions));
+    const commandOptions = _.extend(this.defaultOptions,
+      { cli_variables: config });
+
+    plugins.forEach(plugin => {
+      const commandOptionsPlugin = getCommandOptionsForPlugin(plugin,
+        commandOptions);
+
+      this.runCommands(`removing plugin ${plugin} \
+  from Cordova project`, cordova_lib.plugin.bind(undefined, 'rm --force', [plugin],
+        commandOptionsPlugin));
+    });
   }
 
   // Ensures that the Cordova plugins are synchronized with the app-level
@@ -699,7 +752,7 @@ perform cordova plugins reinstall`);
             Object.keys(installedPluginVersions));
         }
 
-        this.removePlugins(pluginsToRemove);
+        this.removePlugins(pluginsToRemove, pluginsConfiguration);
 
         let pluginVersionsToInstall;
 
@@ -735,9 +788,8 @@ perform cordova plugins reinstall`);
     // cordova-plugin-whitelist@1.3.2 => { 'cordova-plugin-whitelist': '1.3.2' }
     // com.cordova.plugin@file://.cordova-plugins/plugin => { 'com.cordova.plugin': 'file://.cordova-plugins/plugin' }
     // @scope/plugin@1.0.0 => { 'com.cordova.plugin': 'scope/plugin' }
-    const installed = this.listInstalledPluginVersions(true);
+    const installed = this.listInstalledPluginVersions();
     const installedPluginsNames = Object.keys(installed);
-    const installedPluginsVersions = Object.values(installed);
     const missingPlugins = {};
 
     Object.keys(requiredPlugins).filter(plugin => {

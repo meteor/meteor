@@ -1,3 +1,7 @@
+import { URL } from 'meteor/url';
+import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base';
+
 Meteor.methods({
   getCurrentLoginToken: function () {
     return Accounts._getLoginToken(this.connection.id);
@@ -623,3 +627,62 @@ Tinytest.add(
     Accounts._options = accountsOptions;
   }
 );
+
+Tinytest.add(
+    'accounts - verify beforeExternalLogin hook can stop user login',
+    test => {
+        // Verify user data is saved properly when not using the
+        // beforeExternalLogin hook.
+        let facebookId = Random.id();
+        const uid1 = Accounts.updateOrCreateUserFromExternalService(
+            'facebook',
+            { id: facebookId },
+            { profile: { foo: 1 } },
+        ).userId;
+        const ignoreFieldName = "bigArray";
+        const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
+        let users =
+            Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+        test.length(users, 1);
+        test.equal(users[0].profile.foo, 1);
+        test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
+
+        // Verify that when beforeExternalLogin returns false
+        // that an error throws and user is not saved
+        Accounts.beforeExternalLogin((serviceName, serviceData, user) => {
+            // Check that we get the correct data
+            test.equal(serviceName, 'facebook');
+            test.equal(serviceData, { id: facebookId });
+            test.equal(user._id, uid1);
+            return false
+        });
+
+        test.throws(() => Accounts.updateOrCreateUserFromExternalService(
+            'facebook',
+            { id: facebookId },
+            { profile: { foo: 1 } },
+        ));
+
+        // Cleanup
+        Meteor.users.remove(uid1);
+        Accounts._beforeExternalLoginHook = null;
+    }
+);
+
+if(Meteor.isServer) {
+  Tinytest.add(
+    'accounts - make sure that extra params to accounts urls are added',
+    test => {
+      // No extra params
+      const verifyEmailURL = new URL(Accounts.urls.verifyEmail('test'));
+      test.equal(verifyEmailURL.searchParams.toString(), "");
+
+      // Extra params
+      const extraParams = { test: 'success'};
+      const resetPasswordURL = new URL(Accounts.urls.resetPassword('test', extraParams));
+      test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
+      const enrollAccountURL = new URL(Accounts.urls.enrollAccount('test', extraParams));
+      test.equal(enrollAccountURL.searchParams.get('test'), extraParams.test);
+    }
+  );
+}

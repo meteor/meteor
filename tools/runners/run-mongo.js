@@ -753,7 +753,7 @@ var launchMongo = function (options) {
         initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.
-          files.writeFile(portFile, options.port);
+          files.writeFile(portFile, ''+options.port);
         }
       }
     }
@@ -854,7 +854,6 @@ _.extend(MRp, {
       // shouldn't annoy the user by telling it that we couldn't start up.
       self.suppressExitMessage = true;
     }
-
     self.handle = launchMongo({
       projectLocalDir: self.projectLocalDir,
       port: self.port,
@@ -938,6 +937,10 @@ _.extend(MRp, {
         "Looks like you are out of free disk space under .meteor/local.";
     } else if (explanation) {
       message += "\n" + explanation.longText;
+    } else if (process.platform === 'win32') {
+      message += "\n\n" +
+        "Check how to troubleshoot here " +
+        "https://docs.meteor.com/windows.html#cant-start-mongo-server";
     }
 
     if (explanation && explanation.symbol === 'EXIT_NET_ERROR') {

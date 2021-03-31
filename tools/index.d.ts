@@ -23,4 +23,14 @@ declare global {
     // func-utils.ts makes usage of this feature
     displayName?: string;
   }
+
+  type DiscardPattern = string | RegExp;
+
+  interface Discards {
+    [packageName: string]: DiscardPattern[];
+  }
+
+  interface DiscardsInput {
+    [packageName: string]: DiscardPattern[] | DiscardPattern;
+  }
 }
