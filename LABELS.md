@@ -58,5 +58,5 @@ They start with `Project:` and they are used to inform the parts of Meteor that 
 
 ## Special Labels
 
-- `good-first-issue`: Used to indicate items friendly to beginners in Meteor
+- `good first issue`: Used to indicate items friendly to beginners in Meteor
 - `hacktoberfest-accepted`: Used to indicate items accepted for [Hacktoberfest](https://hacktoberfest.digitalocean.com/hacktoberfest-update)
