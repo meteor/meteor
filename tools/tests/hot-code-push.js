@@ -93,7 +93,9 @@ jquery`);
     run.waitSecs(30);
 
     run.stop();
-  });
+  },{
+    testName: 'css hot code push',
+    testFile: 'hot-code-push.js' });
 });
 
 selftest.define("versioning hot code push", function (options) {
@@ -118,7 +120,9 @@ selftest.define("versioning hot code push", function (options) {
     run.forbidAll("Error listening");
 
     run.stop();
-  });
+  },{
+    testName: 'versioning hot code push',
+    testFile: 'hot-code-push.js' });
 });
 
 selftest.define("javascript hot code push", function (options) {
@@ -229,8 +233,8 @@ appcache`);
     run.match("client connected: 0");
     run.match("jsVar: undefined");
 
-    // XXX: Remove me.  This shouldn't be needed, but sometimes if we run too 
-    // quickly on fast (or Linux?) machines, it looks like there's a race and we 
+    // XXX: Remove me.  This shouldn't be needed, but sometimes if we run too
+    // quickly on fast (or Linux?) machines, it looks like there's a race and we
     // see a weird state. Without this line this test was failing one time on
     // every build in CircleCI, but oddly enough would succeed on the second
     // try.
@@ -262,5 +266,7 @@ session`);
     run.match("server restarted");
 
     run.stop();
-  });
+  },{
+    testName: 'javascript hot code push',
+    testFile: 'hot-code-push.js' });
 });

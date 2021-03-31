@@ -65,6 +65,7 @@ When `meteor` is run from a checkout, a `dev_bundle` is automatically downloaded
 * Node.js version
 * npm version
 * MongoDB version
+* TypeScript version
 * Packages [used by `meteor-tool`](scripts/dev-bundle-tool-package.js)
 * Packages [used by the server bundle](scripts/dev-bundle-server-package.js)
 
@@ -162,6 +163,13 @@ In a similar way to the method of specifying which tests TO run, there is a way 
 
 Simply remove the `--list` flag to actually run the matching tests.
 
+#### Avoiding retries
+
+On CI we want to retry the tests to avoid false failures but in development can take some time if you retry every time a test is failing. So to avoid retries use:
+
+    ./meteor self-test --retries 0
+
+
 #### More reading
 
 For even more details on how to run Meteor Tool "self tests", please refer to the [Testing section of the Meteor Tool README](https://github.com/meteor/meteor/blob/master/tools/README.md#testing).
@@ -182,7 +190,7 @@ Since Meteor is a free, open-source project, you can run tests in the context of
 
 To enable CircleCI for your development:
 
-1. Make sure you have an account with [CircleCI](https://circleci.com)
+0. Make sure you have an account with [CircleCI](https://circleci.com)
 0. Make sure you have [forked](https://help.github.com/articles/fork-a-repo/) [Meteor](https://github.com/meteor/meteor) into your own GitHub account.
 0. Go to the [Add Projects](https://circleci.com/add-projects) page on CircleCI.
 0. On the left, click on your GitHub username.
@@ -201,7 +209,7 @@ To enable CircleCI for your development:
 
 ## Commit messages
 
-Good commit messages are very important and you should make sure to explain what is changing and why.  The commit message should include:
+Good commit messages are very important and you should make sure to explain what is changing and why. The commit message should include:
 
 * A short and helpful commit title (maximum 80 characters).
 * A commit description which clearly explains the change if it's not super-obvious by the title.  Some description always helps!

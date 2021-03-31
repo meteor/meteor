@@ -15,7 +15,7 @@ If ($LASTEXITCODE -ne 0) {
   throw "Updating submodules failed."
 }
 
-# The `meteor --get-ready` command is susceptible to EPERM errors, so 
+# The `meteor --get-ready` command is susceptible to EPERM errors, so
 # we attempt it three times.
 $attempt = 3
 $success = $false
@@ -25,7 +25,7 @@ while ($attempt -gt 0 -and -not $success) {
   # By redirecting error to host, we avoid a shocking/false error color,
   # since --get-ready and --version can print (anything) to STDERR and
   # PowerShell will interpret that as something being terribly wrong.
-  & "$meteorBat" --get-ready 2>&1 | Write-Host -ForegroundColor Green
+  & "$meteorBat" --get-ready
 
   If ($LASTEXITCODE -eq 0) {
     $success = $true

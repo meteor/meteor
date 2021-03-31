@@ -1781,13 +1781,13 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
       fieldB: 'the bad',
       fieldC: 'the ugly',
     }],
-    setB: [{
+    setB: [null, {
       anotherA: { },
       anotherB: 'meh',
-    }, {
+    }, null, {
       anotherA: 1234,
       anotherB: 431,
-    }],
+    }, null],
   });
 
   const equalNonStrict = (a, b, desc) => {
@@ -1802,13 +1802,13 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
   testForProjection({ 'setA.fieldA': 1, 'setB.anotherB': 1, _id: 0 },
     {
       setA: [{ fieldA: 42 }, { fieldA: 'the good' }],
-      setB: [{ anotherB: 'meh' }, { anotherB: 431 }],
+      setB: [null, { anotherB: 'meh' }, null, { anotherB: 431 }, null],
     });
 
   testForProjection({ 'setA.fieldA': 0, 'setB.anotherA': 0, _id: 0 },
     {
       setA: [{fieldB: 33}, {fieldB: 'the bad', fieldC: 'the ugly'}],
-      setB: [{ anotherB: 'meh' }, { anotherB: 431 }],
+      setB: [null, { anotherB: 'meh' }, null, { anotherB: 431 }, null],
     });
 
   c.remove({});
