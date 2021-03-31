@@ -2,9 +2,6 @@ DDPServer = {};
 
 var Fiber = Npm.require('fibers');
 
-let cachedUnblock;
-function emptyFunction() {};
-
 // This file contains classes:
 // * Session - The server's connection to a single DDP client
 // * Subscription - A single subscription for a single client
@@ -243,6 +240,8 @@ var Session = function (server, version, socket, options) {
 
   self.blocked = false;
   self.workerRunning = false;
+
+  self.cachedUnblock = null;
 
   // Sub objects for active subscriptions
   self._namedSubs = new Map();
@@ -575,7 +574,7 @@ _.extend(Session.prototype, {
 
       // cacheUnblock temporarly, so we can capture it later
       // we will use unblock in current eventLoop, so this is safe
-      cachedUnblock = unblock;
+      self.cachedUnblock = unblock;
 
       // reject malformed messages
       if (typeof (msg.id) !== "string" ||
@@ -632,7 +631,7 @@ _.extend(Session.prototype, {
       self._startSubscription(handler, msg.id, msg.params, msg.name);
 
       // cleaning cached unblock
-      cachedUnblock = null;
+      self.cachedUnblock = null;
     },
 
     unsub: function (msg) {
@@ -862,11 +861,11 @@ _.extend(Session.prototype, {
     var sub = new Subscription(
       self, handler, subId, params, name);
 
-    let unblockHander = cachedUnblock;
+    let unblockHander = self.cachedUnblock;
     // _startSubscription may call from a lot places
     // so cachedUnblock might be null in somecases
     // assign the cachedUnblock
-    sub.unblock = unblockHander || emptyFunction;
+    sub.unblock = unblockHander || (() => {});
 
     if (subId)
       self._namedSubs.set(subId, sub);
@@ -1056,7 +1055,7 @@ _.extend(Subscription.prototype, {
     // blocks on). This probably slows page load in common cases.
 
     if (!this.unblock) {
-      this.unblock = emptyFunction;
+      this.unblock = () => {};
     }
 
     var self = this;
