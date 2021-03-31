@@ -224,7 +224,7 @@ Function Add-Mongo {
   # Mongo >= 3.4 no longer supports 32-bit (x86) architectures, so we package
   # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
   $mongo_filenames = @{
-    windows_x64 = "mongodb-win32-x86_64-2012plus-${MONGO_VERSION_64BIT}"
+    windows_x64 = "mongodb-windows-x86_64-${MONGO_VERSION_64BIT}"
   }
 
   $previousCwd = $PWD
@@ -232,9 +232,8 @@ Function Add-Mongo {
   cd "$DIR"
   mkdir "$DIR\mongodb"
   mkdir "$DIR\mongodb\bin"
-
   $mongo_name = $mongo_filenames.Item($PLATFORM)
-  $mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
+  $mongo_link = "https://fastdl.mongodb.org/windows/${mongo_name}.zip"
   $mongo_zip = "$DIR\mongodb\mongo.zip"
 
   Write-Host "Downloading Mongo from ${mongo_link}..." -ForegroundColor Magenta
