@@ -4,6 +4,7 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
   CONNECTION_CLOSE_DELAY_MS
 } from './accounts_common.js';
+import { URL } from 'meteor/url';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -37,6 +38,18 @@ export class AccountsServer extends AccountsCommon {
       loggedInUser: ['profile', 'username', 'emails'],
       otherUsers: ['profile', 'username']
     };
+
+    // use object to keep the reference when used in functions
+    // where _defaultPublishFields is destructured into lexical scope
+    // for publish callbacks that need `this`
+    this._defaultPublishFields = {
+      projection: {
+        profile: 1,
+        username: 1,
+        emails: 1,
+      }
+    };
+
     this._initServerPublications();
 
     // connectionId -> {connection, loginToken}
@@ -66,14 +79,25 @@ export class AccountsServer extends AccountsCommon {
 
     this._skipCaseInsensitiveChecksForTest = {};
 
-    // XXX These should probably not actually be public?
     this.urls = {
-      resetPassword: token => Meteor.absoluteUrl(`#/reset-password/${token}`),
-      verifyEmail: token => Meteor.absoluteUrl(`#/verify-email/${token}`),
-      enrollAccount: token => Meteor.absoluteUrl(`#/enroll-account/${token}`),
+      resetPassword: (token, extraParams) => this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
+      verifyEmail: (token, extraParams) => this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
+      enrollAccount: (token, extraParams) => this.buildEmailUrl(`#/enroll-account/${token}`, extraParams),
     };
 
     this.addDefaultRateLimit();
+
+    this.buildEmailUrl = (path, extraParams = {}) => {
+      const url = new URL(Meteor.absoluteUrl(path));
+      const params = Object.entries(extraParams);
+      if (params.length > 0) {
+        // Add additional parameters to the url
+        for (const [key, value] of params) {
+          url.searchParams.append(key, value);
+        }
+      }
+      return url.toString();
+    };
   }
 
   ///
@@ -691,7 +715,7 @@ export class AccountsServer extends AccountsCommon {
 
   _initServerPublications() {
     // Bring into lexical scope for publish callbacks that need `this`
-    const { users, _autopublishFields } = this;
+    const { users, _autopublishFields, _defaultPublishFields } = this;
 
     // Publish all login service configuration fields other than secret.
     this._server.publish("meteor.loginServiceConfiguration", () => {
@@ -699,22 +723,22 @@ export class AccountsServer extends AccountsCommon {
       return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
     }, {is_auto: true}); // not techincally autopublish, but stops the warning.
 
-    // Publish the current user's record to the client.
-    this._server.publish(null, function () {
-      if (this.userId) {
-        return users.find({
-          _id: this.userId
-        }, {
-          fields: {
-            profile: 1,
-            username: 1,
-            emails: 1
-          }
-        });
-      } else {
-        return null;
-      }
-    }, /*suppress autopublish warning*/{is_auto: true});
+    // Use Meteor.startup to give other packages a chance to call
+    // setDefaultPublishFields.
+    Meteor.startup(() => {
+      // Publish the current user's record to the client.
+      this._server.publish(null, function () {
+        if (this.userId) {
+          return users.find({
+            _id: this.userId
+          }, {
+            fields: _defaultPublishFields.projection,
+          });
+        } else {
+          return null;
+        }
+      }, /*suppress autopublish warning*/{is_auto: true});
+    });
 
     // Use Meteor.startup to give other packages a chance to call
     // addAutopublishFields.
@@ -760,6 +784,14 @@ export class AccountsServer extends AccountsCommon {
       this._autopublishFields.loggedInUser, opts.forLoggedInUser);
     this._autopublishFields.otherUsers.push.apply(
       this._autopublishFields.otherUsers, opts.forOtherUsers);
+  };
+
+  // Replaces the fields to be automatically
+  // published when the user logs in
+  //
+  // @param {MongoFieldSpecifier} fields Dictionary of fields to return or exclude.
+  setDefaultPublishFields(fields) {
+    this._defaultPublishFields.projection = fields;
   };
 
   ///

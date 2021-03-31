@@ -1,6 +1,6 @@
 import { ensureOnlyValidVersions } from "../utils/utils.js";
 import buildmessage from "../utils/buildmessage.js";
-import NpmDiscards from "./npm-discards.js";
+import NpmDiscards from "./npm-discards";
 
 const nodeRequire = require;
 
@@ -101,6 +101,14 @@ export class PackageNpm {
   //   Npm.strip({
   //     connect: [/*\.wmv$/],
   //     useragent: ["tests/"]
+  //   });
+  //
+  // Alternatively, a single string or regular expression can be passed
+  // instead of an array:
+  //
+  //   Npm.strip({
+  //     connect: /*\.wmv$/,
+  //     useragent: "tests/"
   //   });
   //
   // This means (1) "remove any files with the `.wmv` extension from
