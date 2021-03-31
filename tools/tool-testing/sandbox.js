@@ -113,8 +113,10 @@ export default class Sandbox {
   //   run.connectClient();
   //   // post-connection checks
   // });
-  testWithAllClients(f, ...args) {
-    args = args.filter(arg => arg);
+  testWithAllClients(f, options) {
+    const { testName, testFile, args: argsParam } = options || {};
+
+    const args = (argsParam || []).filter(arg => arg);
 
     // Lazy-populate the clients, only when this method is called.
     if (typeof this.clients === "undefined") {
@@ -140,12 +142,14 @@ export default class Sandbox {
       }
     }
 
-    console.log(`Running test with ${this.clients.length} client(s)...`);
+    const testNameAndFile = `${testFile ? `${testFile}: ` : ''}${testName ? `"${testName}" ` : ''}`;
+
+    console.log(`Running test ${testNameAndFile}with ${this.clients.length} client(s)...`);
 
     Object.keys(this.clients).forEach((clientKey, index, array) => {
       const client = this.clients[clientKey];
       console.log(
-        `(${index+1}/${array.length}) Testing with ${client.name}...`);
+        `(${index+1}/${array.length}) Testing ${testNameAndFile}with ${client.name}...`);
       const run = new Run(this.execPath, {
         sandbox: this,
         args,
