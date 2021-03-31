@@ -369,7 +369,9 @@ selftest.define("add packages client archs", function (options) {
       run.match("all clients " + (expectedLogNum++));
       run.match(clientType + " client " + (expectedLogNum++));
       run.stop();
-    }, args);
+    }, { args,
+      testName: 'add packages client archs',
+      testFile: 'package-tests.js' });
   };
 
   runTestWithArgs("browser", [], 3000);
