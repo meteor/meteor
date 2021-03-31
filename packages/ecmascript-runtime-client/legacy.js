@@ -1,16 +1,7 @@
 try {
-  require("core-js/modules/es6.symbol");
-  require("core-js/modules/es6.map");
-  require("core-js/modules/es6.set");
-
-  var core = function () {
-    try {
-      return require("core-js/modules/_core");
-    } catch (e) {
-      // Older versions of core-js had a different file layout.
-      return require("core-js/modules/$.core");
-    }
-  }();
+  Symbol = exports.Symbol = require("core-js/es/symbol");
+  Map = exports.Map = require("core-js/es/map");
+  Set = exports.Set = require("core-js/es/set");
 
 } catch (e) {
   throw new Error([
@@ -22,19 +13,15 @@ try {
   ].join("\n"));
 }
 
-Symbol = exports.Symbol = core.Symbol;
-Map = exports.Map = core.Map;
-Set = exports.Set = core.Set;
-
 // ECMAScript 2015 polyfills.
-require("core-js/es6/array");
-require("core-js/es6/function");
-require("core-js/es6/math");
-require("core-js/es6/object");
-require("core-js/es6/regexp");
-require("core-js/es6/string");
-require("core-js/es6/weak-map");
-require("core-js/es6/weak-set");
+require("core-js/es/array");
+require("core-js/es/function");
+require("core-js/es/math");
+require("core-js/es/object");
+require("core-js/es/regexp");
+require("core-js/es/string");
+require("core-js/es/weak-map");
+require("core-js/es/weak-set");
 
 // If the Reflect global namespace is missing or undefined, explicitly
 // initialize it as undefined, so that expressions like _typeof(Reflect)
@@ -43,26 +30,20 @@ if (typeof Reflect === "undefined") {
   global.Reflect = void 0;
 }
 
-// ECMAScript 2017 polyfills.
-require("core-js/es7/array");
-require("core-js/es7/object");
-require("core-js/modules/es7.string.pad-start");
-require("core-js/modules/es7.string.pad-end");
-
-// We want everything from the core-js/es6/number module except
-// es6.number.constructor.
-require('core-js/modules/es6.number.epsilon');
-require('core-js/modules/es6.number.is-finite');
-require('core-js/modules/es6.number.is-integer');
-require('core-js/modules/es6.number.is-nan');
-require('core-js/modules/es6.number.is-safe-integer');
-require('core-js/modules/es6.number.max-safe-integer');
-require('core-js/modules/es6.number.min-safe-integer');
-require('core-js/modules/es6.number.parse-float');
-require('core-js/modules/es6.number.parse-int');
+// We want everything from the core-js/es/number module except
+// es.number.constructor.
+require('core-js/modules/es.number.epsilon');
+require('core-js/modules/es.number.is-finite');
+require('core-js/modules/es.number.is-integer');
+require('core-js/modules/es.number.is-nan');
+require('core-js/modules/es.number.is-safe-integer');
+require('core-js/modules/es.number.max-safe-integer');
+require('core-js/modules/es.number.min-safe-integer');
+require('core-js/modules/es.number.parse-float');
+require('core-js/modules/es.number.parse-int');
 
 // Typed Arrays
-require('core-js/modules/es6.typed.uint8-array');
-require('core-js/modules/es6.typed.uint32-array');
+require('core-js/modules/es.typed-array.uint8-array');
+require('core-js/modules/es.typed-array.uint32-array');
 
 require("./modern.js");

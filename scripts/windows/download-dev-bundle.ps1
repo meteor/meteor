@@ -41,7 +41,7 @@ if (Test-Path $devbundle_zip) {
 
 Write-Host "Extracting $TARBALL to the dev_bundle directory"
 
-cmd /C "7z.exe x $devbundle_zip -so | 7z.exe x -aoa -si -ttar -o$CHECKOUT_DIR\dev_bundle_XXX" | out-null
+cmd /C "7z.exe x `"$devbundle_zip`" -so | 7z.exe x -aoa -si -ttar -o`"$CHECKOUT_DIR\dev_bundle_XXX`"" | out-null
 if ($LASTEXITCODE -ne 0) {
   Exit 1
 }
@@ -63,3 +63,5 @@ if ("$env:SAVE_DEV_BUNDLE_TARBALL" -ne "") {
   Write-Host "your environment."
   Remove-Item -Force $devbundle_zip
 }
+
+Write-Host "Done getting the dev_bundle for $PLATFORM version $BUNDLE_VERSION"

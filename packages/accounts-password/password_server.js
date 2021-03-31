@@ -5,7 +5,7 @@ const bcryptHash = Meteor.wrapAsync(bcrypt.hash);
 const bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
 
 // Utility for grabbing user
-const getUserById = id => Meteor.users.findOne(id);
+const getUserById = (id, options) => Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
 
 // User records have a 'services.password.bcrypt' field on them to hold
 // their hashed passwords (unless they have a 'services.password.srp'
@@ -73,6 +73,9 @@ const getRoundsFromBcryptHash = hash => {
 // properties `digest` and `algorithm` (in which case we bcrypt
 // `password.digest`).
 //
+// The user parameter needs at least user._id and user.services
+Accounts._checkPasswordUserFields = {_id: 1, services: 1};
+//
 Accounts._checkPassword = (user, password) => {
   const result = {
     userId: user._id
@@ -120,12 +123,14 @@ const handleError = (msg, throwError = true) => {
 /// LOGIN
 ///
 
-Accounts._findUserByQuery = query => {
+Accounts._findUserByQuery = (query, options) => {
   let user = null;
 
   if (query.id) {
-    user = getUserById(query.id);
+    // default field selector is added within getUserById()
+    user = getUserById(query.id, options);
   } else {
+    options = Accounts._addDefaultFieldSelector(options);
     let fieldName;
     let fieldValue;
     if (query.username) {
@@ -139,11 +144,11 @@ Accounts._findUserByQuery = query => {
     }
     let selector = {};
     selector[fieldName] = fieldValue;
-    user = Meteor.users.findOne(selector);
+    user = Meteor.users.findOne(selector, options);
     // If user is not found, try a case insensitive lookup
     if (!user) {
       selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-      const candidateUsers = Meteor.users.find(selector).fetch();
+      const candidateUsers = Meteor.users.find(selector, options).fetch();
       // No match if multiple candidates are found
       if (candidateUsers.length === 1) {
         user = candidateUsers[0];
@@ -161,11 +166,13 @@ Accounts._findUserByQuery = query => {
  * insensitive search, it returns null.
  * @locus Server
  * @param {String} username The username to look for
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
  * @returns {Object} A user if found, else null
  * @importFromPackage accounts-base
  */
-Accounts.findUserByUsername = 
-  username => Accounts._findUserByQuery({ username });
+Accounts.findUserByUsername =
+  (username, options) => Accounts._findUserByQuery({ username }, options);
 
 /**
  * @summary Finds the user with the specified email.
@@ -174,10 +181,13 @@ Accounts.findUserByUsername =
  * insensitive search, it returns null.
  * @locus Server
  * @param {String} email The email address to look for
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
  * @returns {Object} A user if found, else null
  * @importFromPackage accounts-base
  */
-Accounts.findUserByEmail = email => Accounts._findUserByQuery({ email });
+Accounts.findUserByEmail =
+  (email, options) => Accounts._findUserByQuery({ email }, options);
 
 // Generates a MongoDB selector that can be used to perform a fast case
 // insensitive lookup for the given fieldName and string. Since MongoDB does
@@ -230,7 +240,13 @@ const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, o
 
   if (fieldValue && !skipCheck) {
     const matchedUsers = Meteor.users.find(
-      selectorForFastCaseInsensitiveLookup(fieldName, fieldValue)).fetch();
+      selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
+      {
+        fields: {_id: 1},
+        // we only need a maximum of 2 users for the logic below to work
+        limit: 2,
+      }
+    ).fetch();
 
     if (matchedUsers.length > 0 &&
         // If we don't have a userId yet, any match we find is a duplicate
@@ -289,7 +305,10 @@ Accounts.registerLoginHandler("password", options => {
   });
 
 
-  const user = Accounts._findUserByQuery(options.user);
+  const user = Accounts._findUserByQuery(options.user, {fields: {
+    services: 1,
+    ...Accounts._checkPasswordUserFields,
+  }});
   if (!user) {
     handleError("User not found");
   }
@@ -358,7 +377,10 @@ Accounts.registerLoginHandler("password", options => {
     password: passwordValidator
   });
 
-  const user = Accounts._findUserByQuery(options.user);
+  const user = Accounts._findUserByQuery(options.user, {fields: {
+    services: 1,
+    ...Accounts._checkPasswordUserFields,
+  }});
   if (!user) {
     handleError("User not found");
   }
@@ -419,7 +441,9 @@ Accounts.setUsername = (userId, newUsername) => {
   check(userId, NonEmptyString);
   check(newUsername, NonEmptyString);
 
-  const user = getUserById(userId);
+  const user = getUserById(userId, {fields: {
+    username: 1,
+  }});
   if (!user) {
     handleError("User not found");
   }
@@ -465,7 +489,10 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
     throw new Meteor.Error(401, "Must be logged in");
   }
 
-  const user = getUserById(this.userId);
+  const user = getUserById(this.userId, {fields: {
+    services: 1,
+    ...Accounts._checkPasswordUserFields,
+  }});
   if (!user) {
     handleError("User not found");
   }
@@ -523,7 +550,7 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
 Accounts.setPassword = (userId, newPlaintextPassword, options) => {
   options = { logout: true , ...options };
 
-  const user = getUserById(userId);
+  const user = getUserById(userId, {fields: {_id: 1}});
   if (!user) {
     throw new Meteor.Error(403, "User not found");
   }
@@ -556,7 +583,7 @@ const pluckAddresses = (emails = []) => emails.map(email => email.address);
 Meteor.methods({forgotPassword: options => {
   check(options, {email: String});
 
-  const user = Accounts.findUserByEmail(options.email);
+  const user = Accounts.findUserByEmail(options.email, {fields: {emails: 1}});
   if (!user) {
     handleError("User not found");
   }
@@ -581,6 +608,8 @@ Meteor.methods({forgotPassword: options => {
  */
 Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
   // Make sure the user exists, and email is one of their addresses.
+  // Don't limit the fields in the user object since the user is returned
+  // by the function and some other fields might be used elsewhere.
   const user = getUserById(userId);
   if (!user) {
     handleError("Can't find user");
@@ -592,7 +621,7 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
   }
 
   // make sure we have a valid email
-  if (!email || 
+  if (!email ||
     !(pluckAddresses(user.emails).includes(email))) {
     handleError("No such email for user.");
   }
@@ -638,6 +667,8 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
  */
 Accounts.generateVerificationToken = (userId, email, extraTokenData) => {
   // Make sure the user exists, and email is one of their addresses.
+  // Don't limit the fields in the user object since the user is returned
+  // by the function and some other fields might be used elsewhere.
   const user = getUserById(userId);
   if (!user) {
     handleError("Can't find user");
@@ -654,7 +685,7 @@ Accounts.generateVerificationToken = (userId, email, extraTokenData) => {
   }
 
   // make sure we have a valid email
-  if (!email || 
+  if (!email ||
     !(pluckAddresses(user.emails).includes(email))) {
     handleError("No such email for user.");
   }
@@ -729,15 +760,19 @@ Accounts.generateOptionsForEmail = (email, user, url, reason) => {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the reset url.
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendResetPasswordEmail = (userId, email, extraTokenData) => {
+Accounts.sendResetPasswordEmail = (userId, email, extraTokenData, extraParams) => {
   const {email: realEmail, user, token} =
     Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
-  const url = Accounts.urls.resetPassword(token);
+  const url = Accounts.urls.resetPassword(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
   Email.send(options);
+  if (Meteor.isDevelopment) {
+    console.log(`\nReset password URL: ${url}`);
+  }
   return {email: realEmail, user, token, url, options};
 };
 
@@ -755,15 +790,19 @@ Accounts.sendResetPasswordEmail = (userId, email, extraTokenData) => {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the enrollment url.
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendEnrollmentEmail = (userId, email, extraTokenData) => {
+Accounts.sendEnrollmentEmail = (userId, email, extraTokenData, extraParams) => {
   const {email: realEmail, user, token} =
     Accounts.generateResetToken(userId, email, 'enrollAccount', extraTokenData);
-  const url = Accounts.urls.enrollAccount(token);
+  const url = Accounts.urls.enrollAccount(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
   Email.send(options);
+  if (Meteor.isDevelopment) {
+    console.log(`\nEnrollment email URL: ${url}`);
+  }
   return {email: realEmail, user, token, url, options};
 };
 
@@ -782,8 +821,13 @@ Meteor.methods({resetPassword: function (...args) {
       check(token, String);
       check(newPassword, passwordValidator);
 
-      const user = Meteor.users.findOne({
-        "services.password.reset.token": token});
+      const user = Meteor.users.findOne(
+        {"services.password.reset.token": token},
+        {fields: {
+          services: 1,
+          emails: 1,
+        }}
+      );
       if (!user) {
         throw new Meteor.Error(403, "Token expired");
       }
@@ -860,19 +904,24 @@ Meteor.methods({resetPassword: function (...args) {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the verification url.
+ *
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendVerificationEmail = (userId, email, extraTokenData) => {
+Accounts.sendVerificationEmail = (userId, email, extraTokenData, extraParams) => {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
   // this account.
 
   const {email: realEmail, user, token} =
     Accounts.generateVerificationToken(userId, email, extraTokenData);
-  const url = Accounts.urls.verifyEmail(token);
+  const url = Accounts.urls.verifyEmail(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
   Email.send(options);
+  if (Meteor.isDevelopment) {
+    console.log(`\nVerification email URL: ${url}`);
+  }
   return {email: realEmail, user, token, url, options};
 };
 
@@ -889,7 +938,12 @@ Meteor.methods({verifyEmail: function (...args) {
       check(token, String);
 
       const user = Meteor.users.findOne(
-        {'services.email.verificationTokens.token': token});
+        {'services.email.verificationTokens.token': token},
+        {fields: {
+          services: 1,
+          emails: 1,
+        }}
+      );
       if (!user)
         throw new Meteor.Error(403, "Verify email link expired");
 
@@ -948,7 +1002,7 @@ Accounts.addEmail = (userId, newEmail, verified) => {
     verified = false;
   }
 
-  const user = getUserById(userId);
+  const user = getUserById(userId, {fields: {emails: 1}});
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
@@ -963,7 +1017,7 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   const caseInsensitiveRegExp =
     new RegExp(`^${Meteor._escapeRegExp(newEmail)}$`, 'i');
 
-  const didUpdateOwnEmail = user.emails.reduce(
+  const didUpdateOwnEmail = (user.emails || []).reduce(
     (prev, email) => {
       if (caseInsensitiveRegExp.test(email.address)) {
         Meteor.users.update({
@@ -977,7 +1031,7 @@ Accounts.addEmail = (userId, newEmail, verified) => {
       } else {
         return prev;
       }
-    }, 
+    },
     false
   );
 
@@ -1030,7 +1084,7 @@ Accounts.removeEmail = (userId, email) => {
   check(userId, NonEmptyString);
   check(email, NonEmptyString);
 
-  const user = getUserById(userId);
+  const user = getUserById(userId, {fields: {_id: 1}});
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
@@ -1105,24 +1159,50 @@ Meteor.methods({createUser: function (...args) {
           error: new Meteor.Error(403, "Signups forbidden")
         };
 
-      // Create user. result contains id and token.
-      const userId = createUser(options);
-      // safety belt. createUser is supposed to throw on error. send 500 error
-      // instead of sending a verification email with empty userid.
-      if (! userId)
-        throw new Error("createUser failed to insert new user");
-
-      // If `Accounts._options.sendVerificationEmail` is set, register
-      // a token to verify the user's primary email, and send it to
-      // that address.
-      if (options.email && Accounts._options.sendVerificationEmail)
-        Accounts.sendVerificationEmail(userId, options.email);
+      const userId = Accounts.createUserVerifyingEmail(options);
 
       // client gets logged in as the new user afterwards.
       return {userId: userId};
     }
   );
 }});
+
+/**
+ * @summary Creates an user and sends an email if `options.email` is informed.
+ * Then if the `sendVerificationEmail` option from the `Accounts` package is
+ * enabled, you'll send a verification email if `options.password` is informed,
+ * otherwise you'll send an enrollment email.
+ * @locus Server
+ * @param {Object} options The options object to be passed down when creating
+ * the user
+ * @param {String} options.username A unique name for this user.
+ * @param {String} options.email The user's email address.
+ * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
+ * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @importFromPackage accounts-base
+ * */
+Accounts.createUserVerifyingEmail = (options) => {
+  options = { ...options };
+  // Create user. result contains id and token.
+  const userId = createUser(options);
+  // safety belt. createUser is supposed to throw on error. send 500 error
+  // instead of sending a verification email with empty userid.
+  if (! userId)
+    throw new Error("createUser failed to insert new user");
+
+  // If `Accounts._options.sendVerificationEmail` is set, register
+  // a token to verify the user's primary email, and send it to
+  // that address.
+  if (options.email && Accounts._options.sendVerificationEmail) {
+    if (options.password) {
+      Accounts.sendVerificationEmail(userId, options.email);
+    } else {
+      Accounts.sendEnrollmentEmail(userId, options.email);
+    }
+  }
+
+  return userId;
+};
 
 // Create user directly on the server.
 //
@@ -1151,6 +1231,6 @@ Accounts.createUser = (options, callback) => {
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
 Meteor.users._ensureIndex('services.email.verificationTokens.token',
-                          {unique: 1, sparse: 1});
+                          { unique: true, sparse: true });
 Meteor.users._ensureIndex('services.password.reset.token',
-                          {unique: 1, sparse: 1});
+                          { unique: true, sparse: true });

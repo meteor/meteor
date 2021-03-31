@@ -1,5 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var expectEqual = selftest.expectEqual;
 
 selftest.define("create and extract tarball with long paths", function () {

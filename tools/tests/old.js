@@ -3,7 +3,7 @@ var Future = require('fibers/future');
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var release = require('../packaging/release.js');
 
 // old tests don't get to test --release, and always run this release
@@ -27,7 +27,7 @@ var runOldTest = function (filename, extraEnv) {
   var run = new Run(files.convertToStandardPath(process.execPath), {
     // 'args' are treated as-is, so need to be converted before passing into
     // 'Run'
-    args: [files.convertToOSPath(files.pathResolve(
+    args: ['--no-wasm-code-gc', files.convertToOSPath(files.pathResolve(
       files.convertToStandardPath(__dirname), 'old', filename))],
     env: maybeFixRelease(_.extend({
       METEOR_TOOL_PATH: s.execPath
@@ -55,9 +55,9 @@ selftest.define("watch", ["slow"], function () {
   var runFuture = runOldTest.future();
   var futures = [
     // Run with pathwatcher (if possible)
-    runFuture('test-watch.js'),
+    runFuture('test-watch'),
     // Run with fs.watchFile fallback
-    runFuture('test-watch.js', {
+    runFuture('test-watch', {
       METEOR_WATCH_FORCE_POLLING: 1
     })
   ];

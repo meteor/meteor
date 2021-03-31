@@ -253,6 +253,6 @@ extends CachingCompilerBase {
     const cacheContents =
       JSON.stringify(cacheEntry.cacheKeys) + '\n' +
       this.stringifyCompileResult(cacheEntry.compileResult);
-    this._writeFileAsync(cacheFilename, cacheContents);
+    this._writeFile(cacheFilename, cacheContents);
   }
 }

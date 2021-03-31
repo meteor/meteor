@@ -2,7 +2,7 @@ var _= require('underscore');
 
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var testUtils = require('../tool-testing/test-utils.js');
 var utils = require('../utils/utils.js');
 var packageClient = require('../packaging/package-client.js');
@@ -108,8 +108,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("myapp");
   run.match("proxy");
   run.waitSecs(5);
-  run.match("MongoDB");
-  run.waitSecs(5);
   run.match("your app");
   run.waitSecs(5);
   run.match("running at");
@@ -160,7 +158,6 @@ selftest.define("change packages during hot code push", [], function () {
   run.waitSecs(5);
   run.match("myapp");
   run.match("proxy");
-  run.match("MongoDB");
   run.waitSecs(5);
   run.match("louder");  // the package actually loaded
 
@@ -364,8 +361,6 @@ selftest.define("add packages client archs", function (options) {
       run.match("myapp");
       run.match("proxy");
       run.waitSecs(5);
-      run.match("MongoDB");
-      run.waitSecs(5);
       run.match("running at");
       run.match("localhost");
 
@@ -374,7 +369,9 @@ selftest.define("add packages client archs", function (options) {
       run.match("all clients " + (expectedLogNum++));
       run.match(clientType + " client " + (expectedLogNum++));
       run.stop();
-    }, args);
+    }, { args,
+      testName: 'add packages client archs',
+      testFile: 'package-tests.js' });
   };
 
   runTestWithArgs("browser", [], 3000);
@@ -981,8 +978,6 @@ selftest.define("tilde version constraints", [], function () {
   run.match("tilde-app");
   run.match("proxy");
   run.waitSecs(10);
-  run.match("MongoDB");
-  run.waitSecs(10);
   run.match("your app");
   run.waitSecs(10);
   run.match("running at");
@@ -1136,8 +1131,6 @@ selftest.define("override version constraints", [], function () {
 
   run.match("override-app");
   run.match("proxy");
-  run.waitSecs(10);
-  run.match("MongoDB");
   run.waitSecs(10);
   run.match("your app");
   run.waitSecs(10);

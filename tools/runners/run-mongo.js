@@ -1,6 +1,7 @@
-var files = require('../fs/files.js');
+import { MongoExitCodes } from '../utils/mongo-exit-codes';
+
+var files = require('../fs/files');
 var utils = require('../utils/utils.js');
-var mongoExitCodes = require('../utils/mongo-exit-codes.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var runLog = require('./run-log.js');
 var child_process = require('child_process');
@@ -22,7 +23,7 @@ var runMongoShell = function (url) {
   var auth = mongoUrl.auth && mongoUrl.auth.split(':');
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
-  var args = ['--quiet'];
+  var args = [];
   if (ssl) {
     args.push('--ssl');
   }
@@ -55,12 +56,31 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     // initializes faster. (Not recommended for production!)
     '--oplogSize', '8',
     '--replSet', replSetName,
-    '--noauth'
+    '--noauth',
+
+    // Starting with version 4.0.8/4.1.10, MongoDB performs a step down
+    // procedure if the primary receives a SIGTERM signal
+    // (https://jira.mongodb.org/browse/SERVER-38994). During this procedure,
+    // the process doesn't shut down for up to ten seconds until a secondary
+    // becomes the new primary. Since Meteor starts a single-node replica set,
+    // this is unnecessary because there are no secondaries. The following
+    // parameter disables the step down. This will be the default for single-
+    // node replica sets in MongoDB 4.3 (relevant commit: https://git.io/JeNkT),
+    // so the parameter can be removed in the future.
+    '--setParameter', 'waitForStepDownOnNonCommandShutdown=false'
   ];
 
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
   if (process.arch === 'ia32') {
     args.push('--storageEngine', 'mmapv1', '--smallfiles');
+  } else if (process.platform !== 'linux') {
+    // MongoDB 4, which we use on 64-bit systems, displays a banner in the
+    // Mongo shell about a free monitoring service, which can be disabled
+    // with this flag. However, the custom Linux build (see MONGO_BASE_URL
+    // in scripts/generate-dev-bundle.sh) neither displays the banner nor
+    // supports the flag, so it's safe/important to avoid passing the flag
+    // to mongod on 64-bit linux.
+    args.push('--enableFreeMonitoring', 'off');
   }
 
   return child_process.spawn(mongodPath, args, {
@@ -185,12 +205,30 @@ if (process.platform === 'win32') {
         'else ps ax; fi';
     }
 
+    // If the child process output includes unicode, make sure it's
+    // handled properly.
+    const {
+      LANG = "en_US.UTF-8",
+      LC_ALL = LANG,
+      LANGUAGE = LANG,
+      // Remainder of process.env without above properties.
+      ...env
+    } = process.env;
+
+    // Make sure all three properties are set to the same value, which
+    // defaults to "en_US.UTF-8" or whatever LANG was already set to.
+    Object.assign(env, { LANG, LC_ALL, LANGUAGE });
+
     child_process.exec(
       psScript,
-      // we don't want this to randomly fail just because you're running lots of
-      // processes. 10MB should be more than ps ax will ever spit out; the default
-      // is 200K, which at least one person hit (#2158).
-      {maxBuffer: 1024 * 1024 * 10},
+      {
+        env,
+        // we don't want this to randomly fail just because you're running
+        // lots of processes. 10MB should be more than ps ax will ever
+        // spit out; the default is 200K, which at least one person hit
+        // (#2158).
+        maxBuffer: 1024 * 1024 * 10,
+      },
       function (error, stdout, stderr) {
         if (error) {
           promise.reject(
@@ -657,62 +695,29 @@ var launchMongo = function (options) {
         return;
       }
 
-      let wasJustSecondary = false;
+      let writableTimestamp = Date.now();
 
-      // XXX timeout eventually?
+      // Wait until the primary is writable. If it isn't writable after one
+      // minute, throw an error and report the replica set status.
       while (!stopped) {
-        var status = yieldingMethod(
-          db.admin(), 'command', {replSetGetStatus: 1});
+        const { ismaster } = yieldingMethod(db.admin(), "command", {
+          isMaster: 1
+        });
 
-        // See https://docs.mongodb.com/manual/reference/replica-states/
-        // for information on various states
+        if (ismaster) {
+          break;
+        } else if (Date.now() - writableTimestamp > 60000) {
+          const status = yieldingMethod(db.admin(), "command", {
+            replSetGetStatus: 1
+          });
 
-        // Are any of the members starting up or recovering?
-        if (_.any(status.members, function (member) {
-          return member.stateStr === 'STARTUP' ||
-            member.stateStr === 'STARTUP2' ||
-            member.stateStr === 'RECOVERING';
-        })) {
-          utils.sleepMs(20);
-          continue;
+          throw new Error(
+            "Primary not writable after one minute. Last replica set status: " +
+             JSON.stringify(status)
+          );
         }
 
-        const firstMemberState = status.members[0].stateStr;
-
-        // Is the intended primary currently a secondary? (It passes through
-        // that phase briefly.)
-        if (firstMemberState === 'SECONDARY') {
-          utils.sleepMs(20);
-          wasJustSecondary = true;
-          continue;
-        }
-
-        // Mongo 3.2 introduced a new heartbeatIntervalMillis property
-        // on replica sets, used during "primary" negotiation.
-        //
-        // If the first member was _just_ promoted, we'll wait until
-        // the heartbeat interval has elapsed before proceeding since
-        // the decision is not official until the heartbeat has elapsed.
-        if (firstMemberState === 'PRIMARY' && wasJustSecondary) {
-          wasJustSecondary = false;
-          utils.sleepMs(status.heartbeatIntervalMillis);
-          continue;
-        }
-
-        // Anything else for the intended primary is probably an error.
-        if (firstMemberState !== 'PRIMARY') {
-          throw Error("Unexpected Mongo status: " + JSON.stringify(status));
-        }
-
-        // Anything but secondary for the other members is probably an error.
-        for (var i = 1; i < status.members.length; ++i) {
-          if (status.members[i].stateStr !== 'SECONDARY') {
-            throw Error("Unexpected Mongo secondary status: " +
-                        JSON.stringify(status));
-          }
-        }
-
-        break;
+        utils.sleepMs(50);
       }
 
       client.close(true /* means "the app is closing the connection" */);
@@ -748,7 +753,7 @@ var launchMongo = function (options) {
         initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.
-          files.writeFile(portFile, options.port);
+          files.writeFile(portFile, ''+options.port);
         }
       }
     }
@@ -849,7 +854,6 @@ _.extend(MRp, {
       // shouldn't annoy the user by telling it that we couldn't start up.
       self.suppressExitMessage = true;
     }
-
     self.handle = launchMongo({
       projectLocalDir: self.projectLocalDir,
       port: self.port,
@@ -924,7 +928,7 @@ _.extend(MRp, {
 
     // Too many restarts, too quicky. It's dead. Print friendly
     // diagnostics and give up.
-    var explanation = mongoExitCodes.Codes[code];
+    var explanation = MongoExitCodes[code];
     var message = "Can't start Mongo server.";
 
     if (explanation && explanation.symbol === 'EXIT_UNCAUGHT' &&
@@ -933,9 +937,13 @@ _.extend(MRp, {
         "Looks like you are out of free disk space under .meteor/local.";
     } else if (explanation) {
       message += "\n" + explanation.longText;
+    } else if (process.platform === 'win32') {
+      message += "\n\n" +
+        "Check how to troubleshoot here " +
+        "https://docs.meteor.com/windows.html#cant-start-mongo-server";
     }
 
-    if (explanation === mongoExitCodes.EXIT_NET_ERROR) {
+    if (explanation && explanation.symbol === 'EXIT_NET_ERROR') {
       message += "\n\n" +
 "Check for other processes listening on port " + self.port + "\n" +
 "or other Meteor instances running in the same project.";

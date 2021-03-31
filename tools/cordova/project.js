@@ -4,20 +4,17 @@ import assert from 'assert';
 import chalk from 'chalk';
 import semver from 'semver';
 
-import files from '../fs/files.js';
+import files from '../fs/files';
 import utils from '../utils/utils.js';
 import { Console } from '../console/console.js';
-import { Profile } from '../tool-env/profile.js';
+import { Profile } from '../tool-env/profile';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
-import httpHelpers from '../utils/http-helpers.js';
-import { execFileSync, execFileAsync } from '../utils/processes.js';
+import { execFileSync } from '../utils/processes';
 
-import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
-import superspawn from 'cordova-common/src/superspawn.js';
 import PluginInfoProvider from 'cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
 import { CORDOVA_PLATFORMS, CORDOVA_PLATFORM_VERSIONS, displayNameForPlatform, displayNamesForPlatforms,
@@ -64,7 +61,7 @@ const pinnedPluginVersions = {
   "cordova-plugin-file-transfer": "1.6.3",
   "cordova-plugin-geolocation": "2.4.3",
   "cordova-plugin-globalization": "1.0.7",
-  "cordova-plugin-inappbrowser": "1.7.1",
+  "cordova-plugin-inappbrowser": "3.2.0",
   "cordova-plugin-legacy-whitelist": "1.1.2",
   "cordova-plugin-media": "3.0.1",
   "cordova-plugin-media-capture": "1.4.3",
@@ -77,6 +74,34 @@ const pinnedPluginVersions = {
   "cordova-plugin-wkwebview-engine": "1.1.3"
 }
 
+/**
+ * To fix Cordova error: Variable(s) missing we convert the cli_variables
+ * when removing plugins we want to convert for each plugin, for instance,
+ * cordova-plugin-facebook4:
+ * commandOptions {
+ *   ...
+ *   cli_variables: {
+ *     'cordova-plugin-googleplus': {
+ *       REVERSED_CLIENT_ID: 'com.googleusercontent.apps.11111111-xxkodsuusaiusixuaix'
+ *     },
+ *     'cordova-plugin-facebook4': { APP_ID: '1111111111111111', APP_NAME: 'appname' }
+ *   }
+ * }
+ * into this
+ * commandOptions {
+ *   ...
+ *   cli_variables: { APP_ID: '1111111111111111', APP_NAME: 'appname' }
+ * }
+ *
+ * @param plugin
+ * @param commandOptions
+ */
+const getCommandOptionsForPlugin = (plugin, commandOptions = {}) => {
+  const cli_variables = commandOptions && commandOptions.cli_variables
+    && commandOptions.cli_variables[plugin] || {};
+  return {...commandOptions, cli_variables};
+}
+
 export class CordovaProject {
   constructor(projectContext, options = {}) {
 
@@ -86,6 +111,9 @@ export class CordovaProject {
     this.options = options;
 
     this.pluginsDir = files.pathJoin(this.projectRoot, 'plugins');
+
+    this.buildJsonPath = files.convertToOSPath(
+      files.pathJoin(this.projectRoot, 'build.json'));
 
     this.createIfNeeded();
   }
@@ -149,6 +177,7 @@ outdated platforms`);
         this.projectContext,
         templatePath,
         { mobileServerUrl: this.options.mobileServerUrl,
+          cordovaServerPort: this.options.cordovaServerPort,
           settingsFile: this.options.settingsFile }
       );
 
@@ -182,6 +211,32 @@ outdated platforms`);
           undefined, undefined, config);
       }, undefined, null);
     }
+
+    this.writeBuildJson();
+  }
+
+  writeBuildJson() {
+    if (files.exists(this.buildJsonPath)) {
+      return;
+    }
+
+    const iosCommonOptions = {
+      // See https://github.com/apache/cordova-ios/issues/407:
+      buildFlag: [
+        "-UseModernBuildSystem=0",
+        ...(Console.verbose ? [] : ["-quiet"])
+      ]
+    };
+
+    files.writeFile(
+      this.buildJsonPath,
+      JSON.stringify({
+        ios: {
+          debug: iosCommonOptions,
+          release: iosCommonOptions,
+        }
+      }, null, 2) + "\n",
+    );
   }
 
   // Preparing
@@ -198,6 +253,7 @@ outdated platforms`);
       this.projectContext,
       this.projectRoot,
       { mobileServerUrl: this.options.mobileServerUrl,
+        cordovaServerPort: this.options.cordovaServerPort,
         settingsFile: this.options.settingsFile }
     );
 
@@ -240,8 +296,10 @@ outdated platforms`);
     delete require.cache[files.pathJoin(this.projectRoot,
       'platforms/ios/cordova/lib/prepare.js')];
 
-    const commandOptions = _.extend(this.defaultOptions,
-      { platforms: [platform] });
+    const commandOptions = {
+      ...this.defaultOptions,
+      platforms: [platform],
+    };
 
     this.runCommands(`preparing Cordova project for platform \
 ${displayNameForPlatform(platform)}`, async () => {
@@ -254,8 +312,11 @@ ${displayNameForPlatform(platform)}`, async () => {
   buildForPlatform(platform, options = {}, extraPaths) {
     assert(platform);
 
-    const commandOptions = _.extend(this.defaultOptions,
-      { platforms: [platform], options: options });
+    const commandOptions = {
+      ...this.defaultOptions,
+      platforms: [platform],
+      options,
+    };
 
     this.runCommands(`building Cordova app for platform \
 ${displayNameForPlatform(platform)}`, async () => {
@@ -266,21 +327,21 @@ ${displayNameForPlatform(platform)}`, async () => {
   // Running
 
   async run(platform, isDevice, options = [], extraPaths = []) {
+    options.push('--buildConfig', this.buildJsonPath);
     options.push(isDevice ? '--device' : '--emulator');
 
     let env = this.defaultEnvWithPathsAdded(...extraPaths);
-
-    let command = files.convertToOSPath(files.pathJoin(
-      this.projectRoot, 'platforms', platform, 'cordova', 'run'));
+    const commandOptions = {
+      ...this.defaultOptions,
+      platforms: [platform],
+      device: isDevice,
+    };
 
     this.runCommands(`running Cordova app for platform \
-${displayNameForPlatform(platform)} with options ${options}`,
-    execFileAsync(command, options, {
-      env: env,
-      cwd: this.projectRoot,
-      stdio: Console.verbose ? 'inherit' : 'pipe',
-      waitForClose: false
-    }), null, null);
+${displayNameForPlatform(platform)} with options ${options}`, async () => {
+      await cordova_lib.run(commandOptions);
+    });
+
   }
 
   // Platforms
@@ -335,7 +396,7 @@ to build apps for ${displayNameForPlatform(platform)}.`);
 
       Console.info();
       Console.info("Please follow the installation instructions in the mobile guide:");
-      Console.info(Console.url("http://guide.meteor.com/mobile.html#installing-prerequisites"));
+      Console.info(Console.url("http://guide.meteor.com/cordova.html#installing-prerequisites"));
 
       Console.info();
 
@@ -481,14 +542,15 @@ from Cordova project`, async () => {
 
   // Construct a target suitable for 'cordova plugin add' from an id and
   // version, converting or resolving a URL or path where needed.
-  targetForPlugin(id, version) {
+  targetForPlugin(id, version, { usePluginName = false } = {}) {
     assert(id);
     assert(version);
 
     buildmessage.assertInJob();
 
     if (utils.isUrlWithSha(version)) {
-      return convertToGitUrl(version);
+      return usePluginName ? convertToGitUrl(version) :
+        `${id}@${convertToGitUrl(version)}`;
     } else if (utils.isUrlWithFileScheme(version)) {
       // Strip file:// and resolve the path relative to the cordova-build
       // directory
@@ -520,25 +582,49 @@ from Cordova project`, async () => {
     }
   }
 
-  addPlugin(id, version, config = {}) {
-    const target = this.targetForPlugin(id, version);
+  addPlugin(id, version, config = {}, options = {}) {
+    const { retry = true } = options;
+    const target = this.targetForPlugin(id, version, options);
     if (target) {
       const commandOptions = _.extend(this.defaultOptions,
         { cli_variables: config, link: utils.isUrlWithFileScheme(version) });
 
-      this.runCommands(`adding plugin ${target} \
-to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target], commandOptions));
+      try {
+        this.runCommands(`adding plugin ${target} \
+to Cordova project`, cordova_lib.plugin.bind(undefined, 'add', [target],
+          commandOptions));
+      } catch (error) {
+        if (retry && utils.isUrlWithSha(version)) {
+          Console.warn(`Cordova plugin add for ${id} failed with plugin id 
+          in the URL with hash, retrying now with plugin name. If this works you
+          can ignore the error above or you can update your plugin declaration
+          to use the id from config.xml instead of the name from package.json`);
+          this.addPlugin(id, version, config, { ...options,
+            usePluginName: true, retry: false });
+          return;
+        }
+        throw error;
+      }
     }
   }
 
   // plugins is an array of plugin IDs.
-  removePlugins(plugins) {
+  removePlugins(plugins,  config = {}) {
     if (_.isEmpty(plugins)) {
       return;
     }
 
-    this.runCommands(`removing plugins ${plugins} \
-from Cordova project`, cordova_lib.plugin.bind(undefined, 'rm', plugins, this.defaultOptions));
+    const commandOptions = _.extend(this.defaultOptions,
+      { cli_variables: config });
+
+    plugins.forEach(plugin => {
+      const commandOptionsPlugin = getCommandOptionsForPlugin(plugin,
+        commandOptions);
+
+      this.runCommands(`removing plugin ${plugin} \
+  from Cordova project`, cordova_lib.plugin.bind(undefined, 'rm --force', [plugin],
+        commandOptionsPlugin));
+    });
   }
 
   // Ensures that the Cordova plugins are synchronized with the app-level
@@ -666,7 +752,7 @@ perform cordova plugins reinstall`);
             Object.keys(installedPluginVersions));
         }
 
-        this.removePlugins(pluginsToRemove);
+        this.removePlugins(pluginsToRemove, pluginsConfiguration);
 
         let pluginVersionsToInstall;
 
@@ -704,7 +790,6 @@ perform cordova plugins reinstall`);
     // @scope/plugin@1.0.0 => { 'com.cordova.plugin': 'scope/plugin' }
     const installed = this.listInstalledPluginVersions();
     const installedPluginsNames = Object.keys(installed);
-    const installedPluginsVersions = Object.values(installed);
     const missingPlugins = {};
 
     Object.keys(requiredPlugins).filter(plugin => {
@@ -760,7 +845,11 @@ convenience, but you should adjust your dependencies.`);
   // Cordova commands support
 
   get defaultOptions() {
-    return { silent: !Console.verbose, verbose: Console.verbose };
+    return {
+      silent: !Console.verbose,
+      verbose: Console.verbose,
+      buildConfig: this.buildJsonPath,
+    };
   }
 
   defaultEnvWithPathsAdded(...extraPaths) {

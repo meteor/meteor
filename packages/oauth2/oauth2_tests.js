@@ -1,6 +1,6 @@
 import http from 'http';
 
-const testPendingCredential = function (test) {
+const testPendingCredential = function (test, method) {
   const foobookId = Random.id();
   const foobookOption1 = Random.id();
   const credentialToken = Random.id();
@@ -21,13 +21,23 @@ const testPendingCredential = function (test) {
     });
 
     // simulate logging in using foobook
-    const req = {method: "POST",
-               url: `/_oauth/${serviceName}`,
-               query: {
-                 state: OAuth._generateState('popup', credentialToken),
-                 close: 1,
-                 only_credential_secret_for_test: 1
-               }};
+    const req = {
+      method,
+      url: `/_oauth/${serviceName}`
+    };
+
+    const payload = {
+      state: OAuth._generateState('popup', credentialToken),
+      close: 1,
+      only_credential_secret_for_test: 1
+    };
+
+    if (method === 'GET') {
+      req.query = payload;
+    } else {
+      req.body = payload;
+    }
+
     const res = new http.ServerResponse(req);
     const write = res.write;
     const end = res.end;
@@ -64,13 +74,15 @@ const testPendingCredential = function (test) {
 
 Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (without oauth encryption)", test => {
   OAuthEncryption.loadKey(null);
-  testPendingCredential(test);
+  testPendingCredential(test, "GET");
+  testPendingCredential(test, "POST");
 });
 
 Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", test => {
   try {
     OAuthEncryption.loadKey(Buffer.from([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
-    testPendingCredential(test);
+    testPendingCredential(test, "GET");
+    testPendingCredential(test, "POST");
   } finally {
     OAuthEncryption.loadKey(null);
   }

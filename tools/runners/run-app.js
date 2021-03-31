@@ -2,20 +2,20 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 const uuid = require("uuid");
 var fiberHelpers = require('../utils/fiber-helpers.js');
-var files = require('../fs/files.js');
-var watch = require('../fs/watch.js');
+var files = require('../fs/files');
+var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
 var buildmessage = require('../utils/buildmessage.js');
 var runLog = require('./run-log.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
 var catalog = require('../packaging/catalog/catalog.js');
-var Profile = require('../tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile').Profile;
 var release = require('../packaging/release.js');
 import { pluginVersionsFromStarManifest } from '../cordova/index.js';
 import { CordovaBuilder } from '../cordova/builder.js';
-import { closeAllWatchers } from "../fs/safe-watcher.js";
-import { eachline } from "../utils/eachline.js";
+import { closeAllWatchers } from "../fs/safe-watcher";
+import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
@@ -23,13 +23,13 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
   if (s.search("\"") !== -1 || s.search("'") !== -1) {
-    throw new Error("Meteor cannot currently handle quoted NODE_OPTIONS");
+    throw new Error("Meteor cannot currently handle quoted SERVER_NODE_OPTIONS");
   }
   return _.without(s.split(/\s+/), '');
 };
 
 var getNodeOptionsFromEnvironment = function () {
-  return bashParse(process.env.NODE_OPTIONS || "");
+  return bashParse(process.env.SERVER_NODE_OPTIONS || "");
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -72,6 +72,9 @@ var AppProcess = function (options) {
   self.inspect = options.inspect;
   self.settings = options.settings;
   self.testMetadata = options.testMetadata;
+  self.autoRestart = options.autoRestart;
+
+  self.hmrSecret = options.hmrSecret;
 
   self.proc = null;
   self.madeExitCallback = false;
@@ -197,6 +200,7 @@ _.extend(AppProcess.prototype, {
       delete env.BIND_IP;
     }
     env.APP_ID = self.projectContext.appIdentifier;
+    env.METEOR_AUTO_RESTART = self.autoRestart;
 
     // We run the server behind our own proxy, so we need to increment
     // the HTTP forwarded count.
@@ -221,6 +225,10 @@ _.extend(AppProcess.prototype, {
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
 
     env.METEOR_PRINT_ON_LISTEN = 'true';
+
+    if (self.hmrSecret) {
+      env.METEOR_HMR_SECRET = self.hmrSecret;
+    }
 
     return env;
   },
@@ -298,7 +306,7 @@ _.extend(AppProcess.prototype, {
 //   for connections.
 //
 // - Other options: port, mongoUrl, oplogUrl, buildOptions, rootUrl,
-//   settingsFile, program, proxy, recordPackageUsage
+//   settingsFile, program, proxy, recordPackageUsage, once
 //
 // To use, construct an instance of AppRunner, and then call start() to start it
 // running. To stop it, either return false from onRunEnd, or call stop().  (But
@@ -357,6 +365,7 @@ var AppRunner = function (options) {
   self.testMetadata = options.testMetadata;
   self.inspect = options.inspect;
   self.proxy = options.proxy;
+  self.autoRestart = !options.once;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
   self.onRunEnd = options.onRunEnd;
@@ -372,6 +381,9 @@ var AppRunner = function (options) {
   self.exitPromise = null;
   self.watchPromise = null;
   self._promiseResolvers = {};
+
+  self.hmrServer = options.hmrServer;
+  self.hmrSecret = options.hmrSecret;
 
   // If this promise is set with self.makeBeforeStartPromise, then for the first
   // run, we will wait on it just before self.appProcess.start() is called.
@@ -573,9 +585,14 @@ _.extend(AppRunner.prototype, {
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
           previousBuilders: self.builders,
+          onJsOutputFiles: self.hmrServer ? self.hmrServer.compare.bind(self.hmrServer) : undefined,
           // Permit delayed bundling of client architectures if the
           // console is interactive.
           allowDelayedClientBuilds: ! Console.isHeadless(),
+
+          // None of the targets are used during full rebuilds
+          // so we can safely build in place on Windows
+          forceInPlaceBuild: !cachedServerWatchSet
         });
       });
 
@@ -694,6 +711,7 @@ _.extend(AppRunner.prototype, {
     Promise.await(self.runPromise);
 
     var runPromise = self.runPromise = self._makePromise("run");
+    var listenPromise = self._makePromise("listen");
 
     // Run the program
     options.beforeRun && options.beforeRun();
@@ -717,12 +735,18 @@ _.extend(AppRunner.prototype, {
       inspect: self.inspect,
       onListen: function () {
         self.proxy.setMode("proxy");
+        if (self.hmrServer) {
+          self.hmrServer.setAppState("okay");
+        }
         options.onListen && options.onListen();
         self._resolvePromise("start");
+        self._resolvePromise("listen");
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
       settings: settings,
       testMetadata: self.testMetadata,
+      autoRestart: self.autoRestart,
+      hmrSecret: self.hmrSecret
     });
 
     if (options.firstRun && self._beforeStartPromise) {
@@ -761,6 +785,14 @@ _.extend(AppRunner.prototype, {
     var serverWatcher;
     var clientWatcher;
 
+    appProcess.proc.onMessage("shell-server", message => {
+      if (message && message.command === "reload") {
+        self._resolvePromise("run", { outcome: "changed" });
+      } else {
+        return Promise.reject("Unsupported shell command: " + message);
+      }
+    });
+
     if (self.watchForChanges) {
       serverWatcher = new watch.Watcher({
         watchSet: serverWatchSet,
@@ -768,20 +800,29 @@ _.extend(AppRunner.prototype, {
           self._resolvePromise("run", {
             outcome: 'changed'
           });
-        }
+        },
+        includePotentiallyUnusedFiles: false,
+        async: true,
       });
     }
 
     var setupClientWatcher = function () {
       clientWatcher && clientWatcher.stop();
       clientWatcher = new watch.Watcher({
-         watchSet: bundleResult.clientWatchSet,
-         onChange: function () {
-          var outcome = watch.isUpToDate(serverWatchSet)
+        watchSet: bundleResult.clientWatchSet,
+        onChange: function () {
+          // Pass false for the includePotentiallyUnusedFiles parameter (which
+          // defaults to true) to avoid restarting the server due to changes in
+          // files that were not used by the server bundle. This assumes we have
+          // already called PackageSourceBatch.computeJsOutputFilesMap and
+          // _watchOutputFiles to finalize the usage statuses of potentially
+          // unused files in serverWatchSet, which is a safe assumption here.
+          var outcome = watch.isUpToDate(serverWatchSet, false)
                       ? 'changed-refreshable' // only a client asset has changed
                       : 'changed'; // both a client and server asset changed
           self._resolvePromise('run', { outcome: outcome });
-         }
+        },
+        async: true
       });
     };
     if (self.watchForChanges && canRefreshClient) {
@@ -835,7 +876,13 @@ _.extend(AppRunner.prototype, {
 
     Console.enableProgressDisplay(false);
 
-    const postStartupResult = runPostStartupCallbacks(bundleResult);
+    const postStartupResult = Promise.race([
+      listenPromise,
+      runPromise
+    ]).then(() => {
+      return runPostStartupCallbacks(bundleResult);
+    }).await();
+
     if (postStartupResult) return postStartupResult;
 
     // Wait for either the process to exit, or (if watchForChanges) a
@@ -881,6 +928,9 @@ _.extend(AppRunner.prototype, {
       }
 
       self.proxy.setMode("hold");
+      if (self.hmrServer) {
+        self.hmrServer.setAppState("okay");
+      }
       appProcess.stop();
 
       serverWatcher && serverWatcher.stop();
@@ -892,19 +942,9 @@ _.extend(AppRunner.prototype, {
 
   _fiber: function () {
     var self = this;
-
-    var crashCount = 0;
-    var crashTimer = null;
     var firstRun = true;
 
     while (true) {
-
-      var resetCrashCount = function () {
-        crashTimer = setTimeout(function () {
-          crashCount = 0;
-        }, 8000);
-      };
-
       var runResult = self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {
@@ -912,15 +952,9 @@ _.extend(AppRunner.prototype, {
             Console.enableProgressDisplay(false);
           }
         },
-        beforeRun: resetCrashCount,
         firstRun: firstRun
       });
       firstRun = false;
-
-      clearTimeout(crashTimer);
-      if (runResult.outcome !== "terminated") {
-        crashCount = 0;
-      }
 
       var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
       if (wantExit || self.exitPromise || runResult.outcome === "stopped") {
@@ -958,11 +992,6 @@ _.extend(AppRunner.prototype, {
           // explanation should already have been logged
         }
 
-        crashCount ++;
-        if (crashCount < 3) {
-          continue;
-        }
-
         if (self.watchForChanges) {
           runLog.log("Your application is crashing. " +
                      "Waiting for file change.",
@@ -989,6 +1018,9 @@ _.extend(AppRunner.prototype, {
           }
         });
         self.proxy.setMode("errorpage");
+        if (self.hmrServer) {
+          self.hmrServer.setAppState("error");
+        }
         // If onChange wasn't called synchronously (clearing watchPromise), wait
         // on it.
         self.watchPromise && self.watchPromise.await();

@@ -1,6 +1,6 @@
 var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
-var nodemailer = Npm.require('node4mailer');
+var nodemailer = Npm.require('nodemailer');
 
 Email = {};
 EmailTest = {};
@@ -8,12 +8,12 @@ EmailTest = {};
 EmailInternals = {
   NpmModules: {
     mailcomposer: {
-      version: Npm.require('node4mailer/package.json').version,
-      module: Npm.require('node4mailer/lib/mail-composer')
+      version: Npm.require('nodemailer/package.json').version,
+      module: Npm.require('nodemailer/lib/mail-composer')
     },
     nodemailer: {
-      version: Npm.require('node4mailer/package.json').version,
-      module: Npm.require('node4mailer')
+      version: Npm.require('nodemailer/package.json').version,
+      module: Npm.require('nodemailer')
     }
   }
 };
@@ -98,15 +98,17 @@ var smtpSend = function (transport, mail) {
   transport._syncSendMail(mail);
 };
 
+var sendHooks = [];
+
 /**
- * Mock out email sending (eg, during a test.) This is private for now.
+ * @summary Hook that runs before email is sent.
+ * @locus Server
  *
- * f receives the arguments to Email.send and should return true to go
+ * @param f {function} receives the arguments to Email.send and should return true to go
  * ahead and send the email (or at least, try subsequent hooks), or
  * false to skip sending.
  */
-var sendHooks = [];
-EmailTest.hookSend = function (f) {
+Email.hookSend = function (f) {
   sendHooks.push(f);
 };
 
@@ -118,9 +120,9 @@ EmailTest.hookSend = function (f) {
  * If the `MAIL_URL` environment variable is set, actually sends the email.
  * Otherwise, prints the contents of the email to standard out.
  *
- * Note that this package is based on **mailcomposer 4**, so make sure to refer to
- * [the documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md)
- * for that version when using the `attachments` or `mailComposer` options.
+ * Note that this package is based on **nodemailer**, so make sure to refer to
+ * [the documentation](http://nodemailer.com/)
+ * when using the `attachments` or `mailComposer` options.
  *
  * @locus Server
  * @param {Object} options
@@ -136,7 +138,7 @@ EmailTest.hookSend = function (f) {
  * @param {String} [options.icalEvent] iCalendar event attachment
  * @param {Object} [options.headers] Dictionary of custom headers - e.g. `{ "header name": "header value" }`. To set an object under a header name, use `JSON.stringify` - e.g. `{ "header name": JSON.stringify({ tracking: { level: 'full' } }) }`.
  * @param {Object[]} [options.attachments] Array of attachment objects, as
- * described in the [mailcomposer documentation](https://github.com/nodemailer/mailcomposer/blob/v4.0.1/README.md#attachments).
+ * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via

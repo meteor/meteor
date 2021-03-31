@@ -2,15 +2,18 @@
 // (web.browser, web.browser.legacy, web.cordova). When a client observes
 // a change in the versions associated with its client architecture,
 // it will refresh itself, either by swapping out CSS assets or by
-// reloading the page.
+// reloading the page. Changes to the replaceable version are ignored
+// and handled by the hot-module-replacement package.
 //
-// There are three versions for any given client architecture: `version`,
-// `versionRefreshable`, and `versionNonRefreshable`. The refreshable
-// version is a hash of just the client resources that are refreshable,
-// such as CSS, while the non-refreshable version is a hash of the rest of
-// the client assets, excluding the refreshable ones: HTML, JS, and static
-// files in the `public` directory. The `version` version is a combined
-// hash of everything.
+// There are four versions for any given client architecture: `version`,
+// `versionRefreshable`, `versionNonRefreshable`, and
+// `versionReplaceable`. The refreshable version is a hash of just the
+// client resources that are refreshable, such as CSS. The replaceable
+// version is a hash of files that can be updated with HMR. The
+// non-refreshable version is a hash of the rest of the client assets,
+// excluding the refreshable ones: HTML, JS that is not replaceable, and
+// static files in the `public` directory. The `version` version is a
+// combined hash of everything.
 //
 // If the environment variable `AUTOUPDATE_VERSION` is set, it will be
 // used in place of all client versions. You can use this variable to
@@ -22,6 +25,7 @@
 // The ID of each document is the client architecture, and the fields of
 // the document are the versions described above.
 
+import { ClientVersions } from "./client_versions.js";
 var Future = Npm.require("fibers/future");
 
 export const Autoupdate = __meteor_runtime_config__.autoupdate = {
@@ -34,11 +38,8 @@ export const Autoupdate = __meteor_runtime_config__.autoupdate = {
   versions: {}
 };
 
-// The collection of acceptable client versions.
-const ClientVersions =
-  new Mongo.Collection("meteor_autoupdate_clientVersions", {
-    connection: null
-  });
+// Stores acceptable client versions.
+const clientVersions = new ClientVersions();
 
 // The client hash includes __meteor_runtime_config__, so wait until
 // all packages have loaded and have had a chance to populate the
@@ -77,6 +78,8 @@ function updateVersions(shouldReloadClientProgram) {
         WebApp.calculateClientHashRefreshable(arch),
       versionNonRefreshable: AUTOUPDATE_VERSION ||
         WebApp.calculateClientHashNonRefreshable(arch),
+      versionReplaceable: AUTOUPDATE_VERSION ||
+        WebApp.calculateClientHashReplaceable(arch)
     };
   });
 
@@ -96,11 +99,8 @@ function updateVersions(shouldReloadClientProgram) {
         ...Autoupdate.versions[arch],
         assets: WebApp.getRefreshableAssets(arch),
       };
-      if (! ClientVersions.findOne({ _id: arch })) {
-        ClientVersions.insert({ _id: arch, ...payload });
-      } else {
-        ClientVersions.update(arch, { $set: payload });
-      }
+
+      clientVersions.set(arch, payload);
     });
   });
 }
@@ -118,7 +118,13 @@ Meteor.publish(
     if (Autoupdate.appId && appId && Autoupdate.appId !== appId)
       return [];
 
-    return ClientVersions.find();
+    const stop = clientVersions.watch((version, isNew) => {
+      (isNew ? this.added : this.changed)
+        .call(this, "meteor_autoupdate_clientVersions", version._id, version);
+    });
+
+    this.onStop(() => stop());
+    this.ready();
   },
   {is_auto: true}
 );
@@ -132,8 +138,8 @@ Meteor.startup(function () {
    "version-refreshable",
    "version-cordova",
   ].forEach(_id => {
-    ClientVersions.upsert(_id, {
-      $set: { version: "outdated" }
+    clientVersions.set(_id, {
+      version: "outdated"
     });
   });
 });

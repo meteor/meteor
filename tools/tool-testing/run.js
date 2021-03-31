@@ -12,17 +12,16 @@
 // Arguments in the 'args' option are not assumed to be standard paths, so
 // calling any of the 'files.*' methods on them is not safe.
 import { spawn } from 'child_process';
-import * as files from '../fs/files.js';
+import * as files from '../fs/files';
 import {
-  markTop as parseStackMarkTop,
   parse as parseStackParse,
-} from '../utils/parse-stack.js';
+} from '../utils/parse-stack';
 import { Console } from '../console/console.js';
 import Matcher from './matcher.js';
 import OutputLog from './output-log.js';
 import { randomPort, timeoutScaleFactor, sleepMs } from '../utils/utils.js';
 import TestFailure from './test-failure.js';
-import { execFileSync } from '../utils/processes.js';
+import { execFileSync } from '../utils/processes';
 
 let runningTest = null;
 
@@ -187,6 +186,7 @@ export default class Run {
     let timeout = this.baseTimeout + this.extraTime;
     timeout *= timeoutScaleFactor;
     this.extraTime = 0;
+    Console.simpleDebug('match', pattern);
     return this.stdoutMatcher.match(pattern, timeout, _strict);
   }
 
@@ -197,13 +197,15 @@ export default class Run {
     let timeout = this.baseTimeout + this.extraTime;
     timeout *= timeoutScaleFactor;
     this.extraTime = 0;
+    Console.simpleDebug('matchErr', pattern);
     return this.stderrMatcher.match(pattern, timeout, _strict);
   }
 
   // Like match(), but won't skip ahead looking for a match. It must
   // follow immediately after the last thing we matched or read.
-  read(pattern) {
-    return this.match(pattern, true);
+  read(pattern, strict = true) {
+    Console.simpleDebug('read', pattern);
+    return this.match(pattern, strict);
   }
 
   // As read(), but for stderr instead of stdout.
@@ -222,7 +224,7 @@ export default class Run {
   //
   // Example:
   // run = s.run("--help");
-  // run.expectExit(1);  // <<-- improtant to actually run the command
+  // run.expectExit(1);  // <<-- important to actually run the command
   // run.forbidErr("unwanted string"); // <<-- important to run **after** the
   //                                   // command ran the process.
   forbid(pattern) {
@@ -272,12 +274,13 @@ export default class Run {
       this.extraTime = 0;
 
       let timer;
+      const failure = new TestFailure('exit-timeout', { run: this });
       const promise = new Promise((resolve, reject) => {
         this.exitPromiseResolvers.push(resolve);
         timer = setTimeout(() => {
           this.exitPromiseResolvers =
             this.exitPromiseResolvers.filter(r => r !== resolve);
-          reject(new TestFailure('exit-timeout', { run: this }));
+          reject(failure);
         }, timeout * 1000);
       });
 
@@ -442,45 +445,58 @@ export default class Run {
     test.durationMs = +(new Date) - startTime;
 
     if (failure) {
-      Console.error("... fail!", Console.options({ indent: 2 }));
-
-      if (options.retries > 0) {
-        Console.error(
-          "... retrying (" +
-          options.retries +
-          (options.retries === 1 ? " try" : " tries") +
-          " remaining) ...",
-          Console.options({ indent: 2 })
-        );
-
-        options.retries--;
-
-        return this.runTest(testList, test, testRunner, options);
-      }
+      Console.error(`... fail! (${test.durationMs} ms)`, Console.options({ indent: 2 }));
 
       if (failure instanceof TestFailure) {
         const frames = parseStackParse(failure).outsideFiber;
-        const relpath = files.pathRelative(files.getCurrentToolsDir(),
-                                         frames[0].file);
+        const toolsDir = files.getCurrentToolsDir();
+        let pathWithLineNumber;
+        frames.some(frame => {
+          // The parsed stack trace will typically include frame.file
+          // strings of the form "/tools/tests/whatever.js", which can be
+          // made absolute by joining them with toolsDir. If the resulting
+          // absPath exists, then we know we interpreted the frame.file
+          // correctly, and we can normalize away the leading '/'
+          // character to get a safe relative path.
+          const absPath = files.pathJoin(toolsDir, frame.file);
+          if (files.exists(absPath)) {
+            const relPath = files.pathRelative(toolsDir, absPath);
+            const parts = relPath.split("/");
+            if (parts[0] === "tools" &&
+                parts[1] === "tool-testing") {
+              // Ignore frames inside the /tools/tool-testing directory,
+              // like run.js and selftest.js.
+              return false;
+            }
+            pathWithLineNumber = `${relPath}:${frame.line}`;
+            return true;
+          }
+          // If frame.file was not joinable with toolsDir to obtain an
+          // absolute path that exists, show it to the user without trying
+          // to interpret what it means.
+          pathWithLineNumber = `${frame.file}:${frame.line}`;
+          return true;
+        });
+
         Console.rawError(
-          `  => ${failure.reason} at ${relpath}:${frames[0].line}\n`);
+          ` => Failure Reason: "${failure.reason}" at "${pathWithLineNumber}"\n`);
         if (failure.reason === 'no-match' || failure.reason === 'junk-before' ||
             failure.reason === 'match-timeout') {
-          Console.arrowError(`Pattern: ${failure.details.pattern}`, 2);
+          Console.arrowError(`Pattern: "${failure.details.pattern}"`, 2);
         }
         if (failure.reason === "wrong-exit-code") {
           const s = status => `${status.signal || status.code || "???"}`;
 
           Console.rawError(
-            `  => Expected: ${s(failure.details.expected)}` +
-            `; actual: ${s(failure.details.actual)}\n`);
+            `  => Expected: "${s(failure.details.expected)}"` +
+            `; actual: "${s(failure.details.actual)}"\n`);
         }
         if (failure.reason === 'expected-exception') {
         }
         if (failure.reason === 'not-equal') {
           Console.rawError(
-            "  => Expected: " + JSON.stringify(failure.details.expected) +
-              "; actual: " + JSON.stringify(failure.details.actual) + "\n");
+            `  => Expected: "${JSON.stringify(failure.details.expected)}"; 
+            actual: "${JSON.stringify(failure.details.actual)}"`);
         }
 
         if (failure.details.run) {
@@ -509,29 +525,27 @@ export default class Run {
         Console.rawError(`  => Test threw exception: ${failure.stack}\n`);
       }
 
+      if (options.retries > 0) {
+        Console.error(
+          "... retrying (" +
+          options.retries +
+          (options.retries === 1 ? " try" : " tries") +
+          " remaining) ...",
+          Console.options({ indent: 2 })
+        );
+
+        options.retries--;
+
+        return this.runTest(testList, test, testRunner, options);
+      }
+
       testList.notifyFailed(test, failure);
     } else {
-      Console.error(`... ok (${test.durationMs} ms)`,
+      Console.error(`... ok! (${test.durationMs} ms)`,
         Console.options({ indent: 2 }));
     }
   }
 }
 
-// `Run` class methods to wrap with `markStack`
-[
-  'expectEnd',
-  'expectExit',
-  'forbid',
-  'forbidAll',
-  'forbidErr',
-  'match',
-  'matchBeforeExit',
-  'matchErr',
-  'matchErrBeforeExit',
-  'read',
-  'readErr',
-  'stop',
-  'tellMongo',
-].forEach((functionName) => {
-  Run.prototype[functionName] = parseStackMarkTop(Run.prototype[functionName]);
-});
+import { markThrowingMethods } from "./test-utils.js";
+markThrowingMethods(Run.prototype);

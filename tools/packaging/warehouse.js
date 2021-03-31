@@ -39,7 +39,7 @@
 var os = require("os");
 var _ = require("underscore");
 
-var files = require('../fs/files.js');
+var files = require('../fs/files');
 var httpHelpers = require('../utils/http-helpers.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var utils = require('../utils/utils.js');
