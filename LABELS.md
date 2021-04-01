@@ -14,6 +14,7 @@ You can filter issues that are missing status labels using this [filter](https:/
 - `not-ready`: Something is missing, we are not able to work on this issue yet
 - `in-discussion`: We are still discussing how to solve or implement it
 - `needs-reproduction`: We can't reproduce so it's blocked
+- `invalid`: We don't need to analyze
 
 #### Stage 2
 - `ready`: We've decided how to solve or implement it
@@ -57,5 +58,5 @@ They start with `Project:` and they are used to inform the parts of Meteor that 
 
 ## Special Labels
 
-- `good-first-issue`: Used to indicate items friendly to beginners in Meteor
+- `good first issue`: Used to indicate items friendly to beginners in Meteor
 - `hacktoberfest-accepted`: Used to indicate items accepted for [Hacktoberfest](https://hacktoberfest.digitalocean.com/hacktoberfest-update)

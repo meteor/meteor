@@ -1,4 +1,4 @@
-import { FSWatcher, Stats } from "fs";
+import { FSWatcher, Stats, BigIntStats } from "fs";
 import { Profile } from "../tool-env/profile";
 import {
   statOrNull,
@@ -89,7 +89,7 @@ function acquireWatcher(absPath: string, callback: EntryCallback) {
 }
 
 function startNewWatcher(absPath: string): Entry {
-  let stat: Stats | null = null;
+  let stat: Stats | BigIntStats | null = null;
 
   if (DEDUPLICATE_BY_INO) {
     stat = statOrNull(absPath);

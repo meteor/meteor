@@ -13,7 +13,7 @@ With Meteor you write apps:
 * using your choice of popular open-source libraries
 
 Try a getting started tutorial:
- * [React](https://react-tutorial.meteor.com) - new
+ * [React](https://react-tutorial.meteor.com)
  * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
  * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
  * [Vue](https://www.meteor.com/tutorials/vue/creating-an-app)
@@ -21,15 +21,23 @@ Try a getting started tutorial:
 
 Next, read the [guide](https://guide.meteor.com) and the [documentation](https://docs.meteor.com/).
 
-## Quick Start
+Are you looking for examples? Check this [meteor/examples](https://github.com/meteor/examples)
 
-On Windows, the installer can be found at https://www.meteor.com/install.
+## Quick Start
 
 On Linux/macOS, use this line:
 
 ```bash
 curl https://install.meteor.com/ | sh
 ```
+
+On Windows, use this line:
+
+```bash
+npm install -g meteor
+```
+
+Visit the official [install page](https://www.meteor.com/developers/install) to learn more.
 
 Create a project:
 
@@ -48,11 +56,11 @@ meteor
 
 Building an application with Meteor?
 
-* Deploy on Galaxy hosting: https://www.meteor.com/hosting
+* Deploy on Galaxy hosting: https://www.meteor.com/cloud
 * Announcement list: sign up at https://www.meteor.com/
 * Discussion forums: https://forums.meteor.com/
 * Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
- 
+
 
 Interested in helping or contributing to Meteor?  These resources will help:
 
@@ -71,4 +79,4 @@ rm -rf ~/.meteor/
 sudo rm /usr/local/bin/meteor
 ```
 
-On Windows, just run the uninstaller from your Control Panel.
+On Windows, [read here](npm-packages/meteor-installer/README.md).

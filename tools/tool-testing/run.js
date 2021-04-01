@@ -186,6 +186,7 @@ export default class Run {
     let timeout = this.baseTimeout + this.extraTime;
     timeout *= timeoutScaleFactor;
     this.extraTime = 0;
+    Console.simpleDebug('match', pattern);
     return this.stdoutMatcher.match(pattern, timeout, _strict);
   }
 
@@ -196,13 +197,15 @@ export default class Run {
     let timeout = this.baseTimeout + this.extraTime;
     timeout *= timeoutScaleFactor;
     this.extraTime = 0;
+    Console.simpleDebug('matchErr', pattern);
     return this.stderrMatcher.match(pattern, timeout, _strict);
   }
 
   // Like match(), but won't skip ahead looking for a match. It must
   // follow immediately after the last thing we matched or read.
-  read(pattern) {
-    return this.match(pattern, true);
+  read(pattern, strict = true) {
+    Console.simpleDebug('read', pattern);
+    return this.match(pattern, strict);
   }
 
   // As read(), but for stderr instead of stdout.
@@ -221,7 +224,7 @@ export default class Run {
   //
   // Example:
   // run = s.run("--help");
-  // run.expectExit(1);  // <<-- improtant to actually run the command
+  // run.expectExit(1);  // <<-- important to actually run the command
   // run.forbidErr("unwanted string"); // <<-- important to run **after** the
   //                                   // command ran the process.
   forbid(pattern) {
@@ -442,21 +445,7 @@ export default class Run {
     test.durationMs = +(new Date) - startTime;
 
     if (failure) {
-      Console.error("... fail!", Console.options({ indent: 2 }));
-
-      if (options.retries > 0) {
-        Console.error(
-          "... retrying (" +
-          options.retries +
-          (options.retries === 1 ? " try" : " tries") +
-          " remaining) ...",
-          Console.options({ indent: 2 })
-        );
-
-        options.retries--;
-
-        return this.runTest(testList, test, testRunner, options);
-      }
+      Console.error(`... fail! (${test.durationMs} ms)`, Console.options({ indent: 2 }));
 
       if (failure instanceof TestFailure) {
         const frames = parseStackParse(failure).outsideFiber;
@@ -490,24 +479,24 @@ export default class Run {
         });
 
         Console.rawError(
-          `  => ${failure.reason} at ${pathWithLineNumber}\n`);
+          ` => Failure Reason: "${failure.reason}" at "${pathWithLineNumber}"\n`);
         if (failure.reason === 'no-match' || failure.reason === 'junk-before' ||
             failure.reason === 'match-timeout') {
-          Console.arrowError(`Pattern: ${failure.details.pattern}`, 2);
+          Console.arrowError(`Pattern: "${failure.details.pattern}"`, 2);
         }
         if (failure.reason === "wrong-exit-code") {
           const s = status => `${status.signal || status.code || "???"}`;
 
           Console.rawError(
-            `  => Expected: ${s(failure.details.expected)}` +
-            `; actual: ${s(failure.details.actual)}\n`);
+            `  => Expected: "${s(failure.details.expected)}"` +
+            `; actual: "${s(failure.details.actual)}"\n`);
         }
         if (failure.reason === 'expected-exception') {
         }
         if (failure.reason === 'not-equal') {
           Console.rawError(
-            "  => Expected: " + JSON.stringify(failure.details.expected) +
-              "; actual: " + JSON.stringify(failure.details.actual) + "\n");
+            `  => Expected: "${JSON.stringify(failure.details.expected)}"; 
+            actual: "${JSON.stringify(failure.details.actual)}"`);
         }
 
         if (failure.details.run) {
@@ -536,9 +525,23 @@ export default class Run {
         Console.rawError(`  => Test threw exception: ${failure.stack}\n`);
       }
 
+      if (options.retries > 0) {
+        Console.error(
+          "... retrying (" +
+          options.retries +
+          (options.retries === 1 ? " try" : " tries") +
+          " remaining) ...",
+          Console.options({ indent: 2 })
+        );
+
+        options.retries--;
+
+        return this.runTest(testList, test, testRunner, options);
+      }
+
       testList.notifyFailed(test, failure);
     } else {
-      Console.error(`... ok (${test.durationMs} ms)`,
+      Console.error(`... ok! (${test.durationMs} ms)`,
         Console.options({ indent: 2 }));
     }
   }
