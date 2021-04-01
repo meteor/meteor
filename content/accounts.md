@@ -61,7 +61,7 @@ meteor add accounts-meetup
 meteor add accounts-meteor-developer
 ```
 
-Now open your app, follow the configuration steps, and you're good to go - if you've done the [Meteor tutorial](https://www.meteor.com/tutorials/blaze/adding-user-accounts), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
+Now open your app, follow the configuration steps, and you're good to go - if you've done one of our [Meteor tutorials](https://www.meteor.com/developers/tutorials), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
 
 Here are a couple of screenshots of `accounts-ui` so you know what to expect:
 
