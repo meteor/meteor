@@ -572,7 +572,7 @@ var launchMongo = function (options) {
       // lines
       if (
         /replica set config in use/.test(data) ||
-        /\[initandlisten\] Did not find local replica set configuration document at startup/.test(
+        /Did not find local replica set configuration document at startup/.test(
           data
         ) ||
         /\[.*\] Locally stored replica set configuration does not have a valid entry for the current node/.test(
