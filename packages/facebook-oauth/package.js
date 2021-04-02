@@ -7,7 +7,7 @@ Package.onUse(api => {
   api.use('ecmascript', ['client', 'server']);
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('http', ['server']);
+  api.use('http@1.4.3', ['server']);
   api.use('random', 'client');
   api.use('service-configuration', ['client', 'server']);
 
