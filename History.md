@@ -2,8 +2,12 @@
 
 ### Changes
 
-* update MongoDB version to 4.4.4
+* Update embedded MongoDB version to 4.4.4
+  - Using useUnifiedTopology as `true` by default  to avoid the warning: `(node:59240) [MONGODB DRIVER] Warning: Current Server Discovery and Monitoring engine is deprecated, and will be removed in a future version. To use the new Server Discover and Monitoring engine, pass option { useUnifiedTopology: true } to the MongoClient constructor.
 
+* `npm-mongo@3.9.0`
+  - Update MongoDB driver version to 3.6.5
+  
 ## v2.1, 2021-02-24
 
 ### Changes
