@@ -58,14 +58,10 @@ const getTokenResponse = query => {
                    {response: err.response});
   }
 
-  // result.headers["content-type"] is 'text/plain;charset=UTF-8', so
-  // the http package doesn't automatically populate result.data
-  response.data = JSON.parse(response.content);
-
-  if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with Weibo. ${response.data.error}`);
+  if (response.error) { // if the http response was a json object with an error attribute
+    throw new Error(`Failed to complete OAuth handshake with Weibo. ${response.error}`);
   } else {
-    return response.data;
+    return response;
   }
 };
 

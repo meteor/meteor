@@ -64,10 +64,10 @@ const getAccessToken = query => {
     );
   }
 
-  if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with Meetup. ${response.data.error}`);
+  if (response.error) { // if the http response was a json object with an error attribute
+    throw new Error(`Failed to complete OAuth handshake with Meetup. ${response.error}`);
   } else {
-    return response.data;
+    return response;
   }
 };
 

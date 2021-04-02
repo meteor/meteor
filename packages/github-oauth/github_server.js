@@ -56,10 +56,10 @@ const getAccessToken = query => {
       { response: err.response },
     );
   }
-  if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with GitHub. ${response.data.error}`);
+  if (response.error) { // if the http response was a json object with an error attribute
+    throw new Error(`Failed to complete OAuth handshake with GitHub. ${response.error}`);
   } else {
-    return response.data.access_token;
+    return response.access_token;
   }
 };
 

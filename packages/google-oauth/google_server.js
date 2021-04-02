@@ -117,14 +117,14 @@ const getTokens = query => {
     );
   }
 
-  if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with Google. ${response.data.error}`);
+  if (response.error) { // if the http response was a json object with an error attribute
+    throw new Error(`Failed to complete OAuth handshake with Google. ${response.error}`);
   } else {
     return {
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
-      expiresIn: response.data.expires_in,
-      idToken: response.data.id_token
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+      expiresIn: response.expires_in,
+      idToken: response.id_token
     };
   }
 };

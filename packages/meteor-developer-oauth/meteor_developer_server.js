@@ -62,7 +62,7 @@ const getTokens = query => {
     );
   }
 
-  if (! response.data || response.data.error) {
+  if (response.error) {
     // if the http response was a json object with an error attribute
     throw new Error(
       "Failed to complete OAuth handshake with Meteor developer accounts. " +
@@ -71,9 +71,9 @@ const getTokens = query => {
     );
   } else {
     return {
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
-      expiresIn: response.data.expires_in
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+      expiresIn: response.expires_in
     };
   }
 };
