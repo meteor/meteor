@@ -46,7 +46,7 @@
   - Upgrade default Facebook API to v10 & allow overriding this value. [#11362](https://github.com/meteor/meteor/pull/11362)
 
 * `minimongo@1.6.2`
-  - Add $mul to minimongo. [#11364](https://github.com/meteor/meteor/pull/11364)
+  - Add [$mul](https://docs.mongodb.com/manual/reference/operator/update/mul/#up._S_mul) to minimongo. [#11364](https://github.com/meteor/meteor/pull/11364)
   
 * `webapp@1.10.1`
   - Fix for UNIX sockets with node cluster. [#11369](https://github.com/meteor/meteor/pull/11369)
