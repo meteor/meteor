@@ -14,7 +14,7 @@ With Meteor you write apps:
 
 Try a getting started tutorial:
  * [React](https://react-tutorial.meteor.com)
- * [Blaze](https://www.meteor.com/tutorials/blaze/creating-an-app)
+ * [Blaze](https://blaze-tutorial.meteor.com/)
  * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
  * [Vue](https://www.meteor.com/tutorials/vue/creating-an-app)
  * [Svelte](https://www.meteor.com/tutorials/svelte/creating-an-app)
