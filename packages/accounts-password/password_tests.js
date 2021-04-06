@@ -557,15 +557,59 @@ if (Meteor.isClient) (() => {
     // forgotPassword called on client with blank email
     function (test, expect) {
       Accounts.forgotPassword(
-        { email: this.email }, 
+        { email: this.email },
         expect(error => test.isTrue(error))
       );
     },
     // forgotPassword called on client with blank email and no callback.
     function (test, expect) {
       test.throws(
-        () => Accounts.forgotPassword({ email: this.email }), 
+        () => Accounts.forgotPassword({ email: this.email }),
         /Must pass options\.email/
+      );
+    },
+  ]);
+
+  testAsyncMulti("passwords - forgotPassword returns different error " +
+   "messages depending on the flag passed", [
+    function (test, expect) {
+      // setup
+      this.unregisteredEmail = `ADA-intercept@lovelace.com${this.randomSuffix}`;
+    },
+    // forgotPassword called on client with an unregistered email
+    function (test, expect) {
+      Accounts.forgotPassword(
+        { email: this.email },
+        expect(error => test.isTrue(error))
+      );
+    },
+    // forgotPassword called on client with an unregistered
+    // email and no callback with a detailed error flag
+    //set to true
+    function (test, expect) {
+      test.throws(
+        () => Accounts.forgotPassword({ email: this.email,
+           detailedErrorFlag: true }),
+        /User not found/
+      );
+    },
+
+    // when the detailedErrorFlag is set to false; it returns an
+    // ambiguous message
+    function (test, expect) {
+      test.throws(
+        () => Accounts.forgotPassword({ email: this.email,
+           detailedErrorFlag: false }),
+           /Something went wrong\. Please check your credentials/
+      );
+    },
+
+    // when detailedErrorFlag is not passed, it defaults to false
+    // and return an ambiguous error message
+    function (test, expect) {
+      test.throws(
+        () => Accounts.forgotPassword({ email: this.email}),
+        /Something went wrong\. Please check your credentials/
       );
     },
   ]);

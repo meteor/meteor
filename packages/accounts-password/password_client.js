@@ -215,12 +215,17 @@ Accounts.changePassword = (oldPassword, newPassword, callback) => {
  * @locus Client
  * @param {Object} options
  * @param {String} options.email The email address to send a password reset link.
+ * @param {Boolean} options.detailedErrorFlag optional parameter. This determines how detail the error message returned from the server should be.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
 Accounts.forgotPassword = (options, callback) => {
   if (!options.email) {
     return reportError(new Meteor.Error(400, "Must pass options.email"), callback);
+  }
+
+  if (!options.detailedErrorFlag){
+    options.detailedErrorFlag = false
   }
 
   if (callback) {

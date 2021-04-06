@@ -584,10 +584,15 @@ const pluckAddresses = (emails = []) => emails.map(email => email.address);
 // the start of the reset process.
 Meteor.methods({forgotPassword: options => {
   check(options, {email: String});
-
+  if (options.detailedErrorFlag){
+    check(options, {detailedErrorFlag: Boolean})
+  }
+  const detailedErrorFlag = options.detailedErrorFlag
   const user = Accounts.findUserByEmail(options.email, {fields: {emails: 1}});
-  if (!user) {
+  if (!user && detailedErrorFlag) {
     handleError("User not found");
+  }else if (!user && !detailedErrorFlag){
+    handleError("Something went wrong. Please check your credentials")
   }
 
   const emails = pluckAddresses(user.emails);
