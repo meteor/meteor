@@ -225,7 +225,7 @@ Accounts.forgotPassword = (options, callback) => {
   }
 
   if (!options.detailedErrorFlag){
-    options.detailedErrorFlag = false
+    options.detailedErrorFlag = false;
   }
 
   if (callback) {
