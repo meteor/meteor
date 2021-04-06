@@ -1,3 +1,25 @@
+## v2.1.1, 2021-04-06
+
+### Changes
+
+#### Highlights
+
+- Node.js security [update](https://nodejs.org/en/blog/vulnerability/april-2021-security-releases/) to 12.22.1
+
+#### Meteor Version Release
+
+* `meteor-tool@2.1.1`
+  - Node.js security [update](https://nodejs.org/en/blog/vulnerability/april-2021-security-releases/) to 12.22.1
+  - npm update to 6.14.12
+  
+### Breaking changes
+
+* N/A
+
+### Migration steps
+
+* N/A
+
 ## v2.1, 2021-02-24
 
 ### Changes
