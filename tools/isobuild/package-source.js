@@ -383,7 +383,7 @@ var PackageSource = function () {
   // Flags for Atmosphere and developers to mark if deprecated packages
   // and provide additional info.
   self.deprecated = false;
-  self.deprecatedMessage = null;
+  self.deprecatedMessage = undefined;
 };
 
 

@@ -145,7 +145,7 @@ export class PackageNamespace {
         if (typeof(value) === "string") {
           source.deprecatedMessage = value;
         }
-        source.deprecated = true;
+        source.deprecated = !!value;
       } else {
         // Do nothing. We might want to add some keys later, and we should err
         // on the side of backwards compatibility.
