@@ -1953,6 +1953,7 @@ main.registerCommand({
 
     var nonlatestDirectDeps = [];
     var nonlatestIndirectDeps = [];
+    var deprecatedDeps = [];
     projectContext.packageMap.eachPackage(function (name, info) {
       var selectedVersion = info.version;
       var catalog = projectContext.projectCatalog;
@@ -1966,6 +1967,13 @@ main.registerCommand({
           nonlatestIndirectDeps.push(rec);
         }
       }
+      if (info.packageSource && info.packageSource.deprecated) {
+        deprecatedDeps.push({
+          name: name,
+          selectedVersion: selectedVersion,
+          deprecatedMessage: info.packageSource.deprecatedMessage
+        })
+      }
     });
     var printItem = function (rec) {
       Console.info(" * " + rec.name + " " + rec.selectedVersion +
@@ -1974,12 +1982,18 @@ main.registerCommand({
     if (nonlatestDirectDeps.length) {
       Console.info("\nThe following top-level dependencies were not updated " +
                    "to the very latest version available:");
-      _.each(nonlatestDirectDeps, printItem);
+      nonlatestDirectDeps.forEach(printItem);
+    }
+    if(deprecatedDeps.length) {
+      Console.info("\nThe following packages have been DEPRECATED. Please consider finding replacements for them.");
+      deprecatedDeps.forEach(function (item) {
+        Console.info(" * " +  item.name + " " + item.selectedVersion + " " + (item.deprecatedMessage ? "(" + item.deprecatedMessage + ")" : ""));
+      })
     }
     if (nonlatestIndirectDeps.length) {
       Console.info("\nNewer versions of the following indirect dependencies" +
                    " are available:");
-      _.each(nonlatestIndirectDeps, printItem);
+      nonlatestIndirectDeps.forEach(printItem);
       Console.info([
         "These versions may not be compatible with your project.",
         "To update one or more of these packages to their latest",
