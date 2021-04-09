@@ -1133,11 +1133,14 @@ _.extend(PackageSource.prototype, {
         // Used in ResourceSlot#_isLazy (in compiler-plugin.js) to make a
         // final determination of whether the file should be lazy.
 
-        // We don't want to force lazy in this case for assets and other types
-        if (relPath.endsWith(".js") || relPath.endsWith(".ts")) {
+        // If main module is not defined we are not going to mark files as lazy
+        if (mainModule !== false &&
+          // we don't want to force lazy in this case for assets and other types
+          (relPath.endsWith(".js") || relPath.endsWith(".ts"))) {
           // We are considering lazy here otherwise it would be added to a
-          // watchSet, for example, in the server even if only used in the client
-          // and so the server would restart even when only the client is changed
+          // watchSet, for example, in the server even if only used in the
+          // client and so the server would restart even when only the client
+          // is changed.
           // Fixes the issue https://github.com/meteor/meteor/issues/10591
           fileOptions.lazy = true;
         }
