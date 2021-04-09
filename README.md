@@ -16,7 +16,7 @@ Try a getting started tutorial:
  * [React](https://react-tutorial.meteor.com)
  * [Blaze](https://blaze-tutorial.meteor.com/)
  * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
- * [Vue](https://www.meteor.com/tutorials/vue/creating-an-app)
+ * [Vue](https://vue-tutorial.meteor.com/)
  * [Svelte](https://www.meteor.com/tutorials/svelte/creating-an-app)
 
 Next, read the [guide](https://guide.meteor.com) and the [documentation](https://docs.meteor.com/).

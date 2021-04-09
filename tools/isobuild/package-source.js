@@ -74,7 +74,7 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
       return false;
 
     default:
-      throw Error(`surprising type ${classification.type} for ${filename}`);
+      throw Error(`Surprising type ${classification.type} for ${filename}`);
     }
   });
 
@@ -379,6 +379,11 @@ var PackageSource = function () {
   // specify the correct restrictions at 0.90.
   // XXX: 0.90 package versions.
   self.isCore = false;
+
+  // Flags for Atmosphere and developers to mark if deprecated packages
+  // and provide additional info.
+  self.deprecated = false;
+  self.deprecatedMessage = undefined;
 };
 
 

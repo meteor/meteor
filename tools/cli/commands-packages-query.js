@@ -762,6 +762,8 @@ _.extend(PackageQuery.prototype, {
   // - exports: a PkgExports object, representing package exports.
   // - exports: a PkgImplies object, representing package implies.
   // - dependencies: a PkgDependencies object, representing dependencies.
+  // - deprecated: If the package has been deprecated or not.
+  // - deprecatedMessage: Optional message from the deprecated package for the users.
   _displayVersion: function (data) {
     var self = this;
     Console.info(
@@ -822,6 +824,16 @@ _.extend(PackageQuery.prototype, {
         "To view its metadata, run",
         Console.command("'meteor show " + data.name + "@" + data.version + "'"),
         "from outside the project.");
+    }
+
+    // Display deprecation message
+    if (data.deprecated) {
+      Console.info();
+      if (data.deprecatedMessage) {
+        Console.info(data.deprecatedMessage);
+      } else {
+        Console.info('This packages has been DEPRECATED.');
+      }
     }
   },
   // Returns a user-friendly object from this PackageQuery to the caller.  Takes
@@ -1124,7 +1136,7 @@ _.extend(ReleaseQuery.prototype, {
       recommended: versionRecord.recommended,
       orderKey: versionRecord.orderKey,
       publishedBy: versionRecord.publishedBy["username"],
-      pubishedOn: publishDate,
+      publishedOn: publishDate,
       packages: versionRecord.packages,
       tool: versionRecord.tool
     };
