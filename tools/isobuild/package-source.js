@@ -1132,6 +1132,13 @@ _.extend(PackageSource.prototype, {
       } else {
         // Used in ResourceSlot#_isLazy (in compiler-plugin.js) to make a
         // final determination of whether the file should be lazy.
+
+        // We are considering lazy here otherwise it would be added to a
+        // watchSet, for example, in the server even if only used in the client
+        // and so the server would restart even when only the client is changed
+        // Fixes the issue https://github.com/meteor/meteor/issues/10591
+        fileOptions.lazy = true;
+
         fileOptions.mainModule = false;
       }
     }
