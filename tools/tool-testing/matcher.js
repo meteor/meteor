@@ -137,7 +137,8 @@ export default class Matcher {
 
     let ret = null;
 
-    Console.simpleDebug(`fullBuffer`, this.fullBuffer);
+    // to visualize the full buffer
+    // Console.simpleDebug(`fullBuffer`, this.fullBuffer);
 
     if (this.matchFullBuffer) {
       // Note: this.matchStrict is ignored if this.matchFullBuffer truthy.

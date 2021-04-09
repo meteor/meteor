@@ -782,7 +782,7 @@ class Console extends ConsoleBase {
     }
 
     var message = this._format(args);
-    process.stdout.write( '\n*** simpleDebug ***\n' + message + '\n*** end simpleDebug ***\n');
+    process.stdout.write( '\n' + message + '\n');
   }
 
   // By default, Console.debug automatically line wraps the output.
