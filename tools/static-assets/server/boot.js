@@ -12,6 +12,29 @@ var Profile = require('./profile').Profile;
 // This code is duplicated in tools/main.js.
 var MIN_NODE_VERSION = 'v14.0.0';
 
+const slice = (arr, start, end) => {
+
+  if (start === undefined) return arr;
+
+  if (end === undefined && start > -1) {
+    end = start - 1;
+    start = 0;
+  }
+
+  if (end === 'tail') return arr.slice(start);
+
+  if (start > -1) {
+    end = end + 1;
+  }
+
+  return arr.slice(start, end);
+};
+
+const arraygen = arr => function* gen (start, end) {
+  yield* slice(arr, start, end);
+};
+
+
 var hasOwn = Object.prototype.hasOwnProperty;
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
@@ -222,11 +245,15 @@ var specialArgPaths = {
   }
 };
 
-var loadServerBundles = Profile("Load server bundles", function () {
+var loadServerBundles = async function () {
   var infos = [];
   console.log(`serverJson`, serverJson);
 
-  for (const fileInfo of serverJson.load) {
+  for await(const fileInfo of arraygen(serverJson.load)) {
+    const {path: pathFileInfo} = fileInfo;
+    console.log(`fibers-boot path`, pathFileInfo);
+    const isWebappPackage = pathFileInfo === 'packages/webapp.js';
+
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
     var nonLocalNodeModulesPaths = [];
 
@@ -241,13 +268,11 @@ var loadServerBundles = Profile("Load server bundles", function () {
     } else if (fileInfo.node_modules) {
       Object.keys(fileInfo.node_modules).forEach(function (path) {
         const info = fileInfo.node_modules[path];
-        if (! info.local) {
+        if (!info.local) {
           addNodeModulesPath(path);
         }
       });
     }
-
-    console.log(`addNodeModulesPath`, fileInfo.path);
 
     // Add dev_bundle/server-lib/node_modules.
     addNodeModulesPath("node_modules");
@@ -297,7 +322,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
         }
 
         var resolved = require.resolve(name);
-        if (resolved === name && ! path.isAbsolute(resolved)) {
+        if (resolved === name && !path.isAbsolute(resolved)) {
           // If require.resolve(id) === id and id is not an absolute
           // identifier, it must be a built-in module like fs or http.
           return require(resolved);
@@ -311,7 +336,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
 
     var getAsset = function (assetPath, encoding, callback) {
       var fut;
-      if (! callback) {
+      if (!callback) {
         fut = new Future();
         callback = fut.resolver();
       }
@@ -320,7 +345,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
       // it doesn't call bindEnvironment if you don't pass a callback if we need
       // to.)
       var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
-        if (result && ! encoding)
+        if (result && !encoding)
           // Sadly, this copies in Node 0.10.
           result = new Uint8Array(result);
         callback(err, result);
@@ -336,7 +361,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
       // using this string elsewhere.
       assetPath = files.unicodeNormalizePath(assetPath);
 
-      if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
+      if (!fileInfo.assets || !hasOwn.call(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
         var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
@@ -365,14 +390,14 @@ var loadServerBundles = Profile("Load server bundles", function () {
         assetPath = files.unicodeNormalizePath(assetPath);
         assetPath = files.convertToStandardPath(assetPath);
 
-        if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
+        if (!fileInfo.assets || !hasOwn.call(fileInfo.assets, assetPath)) {
           throw new Error("Unknown asset: " + assetPath);
         }
 
         var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
         return files.convertToOSPath(filePath);
       },
-      getServerDir: function() {
+      getServerDir: function () {
         return serverDir;
       }
     };
@@ -391,6 +416,10 @@ var loadServerBundles = Profile("Load server bundles", function () {
     // \n is necessary in case final line is a //-comment
     wrapParts.push("){", code, "\n})");
     var wrapped = wrapParts.join("");
+    if (isWebappPackage) {
+      // console.log(wrapped);
+    }
+
 
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
@@ -404,15 +433,17 @@ var loadServerBundles = Profile("Load server bundles", function () {
     var scriptPath =
       parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
-
-    console.log(`require('vm').runInThisContext`, fileInfo.path);
-
-    var func = require('vm').runInThisContext(wrapped, {
+    if (isWebappPackage) {
+      console.log(`require('vm').runInThisContext`, fileInfo.path);
+    }
+    var func = await require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
       displayErrors: true
     });
-    console.log(`scriptPath`, scriptPath, func);
-    console.log(`[Npm, Assets]`, fileInfo.path);
+    if (isWebappPackage) {
+      console.log(`scriptPath`, scriptPath, func);
+      console.log(`[Npm, Assets]`, fileInfo.path);
+    }
     var args = [Npm, Assets];
 
     specialKeys.forEach(function (key) {
@@ -425,14 +456,18 @@ var loadServerBundles = Profile("Load server bundles", function () {
         args
       });
     } else {
-      console.log(` Profile(fileInfo.path, func).apply`, fileInfo.path);
-      const isAsync = func.constructor.name === "AsyncFunction";
-      console.log(`isAsync`, isAsync);
+      if (isWebappPackage) {
+        console.log(` Profile(fileInfo.path, func).apply`, fileInfo.path);
+        const isAsync = func.constructor.name === "AsyncFunction";
+        console.log(`isAsync`, isAsync);
+      }
 
       // Allows us to use code-coverage if the debugger is not enabled
       Profile(fileInfo.path, func).apply(global, args);
     }
-    console.log(`after Profile(fileInfo.path, func).apply(global, args)`, fileInfo.path);
+    if (isWebappPackage) {
+      console.log(`after Profile(fileInfo.path, func).apply(global, args)`, fileInfo.path);
+    }
   }
   console.log(`maybeWaitForDebuggerToAttach`);
 
@@ -442,7 +477,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
     console.log(`infos.forEach => info.fn.apply(global, info.args)`, info.path);
     info.fn.apply(global, info.args);
   });
-});
+}
 
 var callStartupHooks = Profile("Call Meteor.startup hooks", function () {
   // run the user startup hooks.  other calls to startup() during this can still
@@ -491,20 +526,23 @@ var runMain = Profile("Run main()", function () {
   }
 });
 
-console.log(`fibers::async`);
+
+// Start the server!
+(async () => {
+  console.log(`fibers::async`);
   try {
 
-    Profile.run("Server startup", function () {
       console.log(`fibers::loadServerBundles`);
 
-      loadServerBundles();
+      await loadServerBundles();
       console.log(`fibers::callStartupHooks`);
 
       callStartupHooks();
       console.log(`fibers::runMain`);
 
       runMain();
-    });
   } catch (e) {
     console.error('Error in boot',e )
   }
+})().catch(e => console.error('main error', e));
+

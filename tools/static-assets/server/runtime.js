@@ -53,18 +53,18 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
   function compileContent (content) {
     let identical = true;
 
-    try {
-      const result = reifyCompile(content, {
-        parse: reifyBabelParse,
-        generateLetDeclarations: false,
-        ast: false,
-      });
-      if (!result.identical) {
-        identical = false;
-        content = result.code;
-      }
-    } finally {
-      return { content, identical };
+    console.log(`content`, filename);
+  try {
+    const result = reifyCompile(content, {
+      parse: reifyBabelParse,
+      generateLetDeclarations: false,
+      ast: false,
+    });
+    if (!result.identical) {
+      identical = false;content = result.code;
+    }
+  } finally {
+return { content, identical };
     }
   }
 
@@ -74,7 +74,6 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
     if (!options || !options.compiledWithReify) {
       content = compileContent(content).content;
     }
-
     return _compile.call(this, content, filename);
   };
 

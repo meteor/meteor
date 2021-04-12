@@ -74,6 +74,8 @@ StreamServer = function () {
   // request handler that adjusts idle timeouts while we have an outstanding
   // request.  This compensates for the fact that sockjs removes all listeners
   // for "request" to add its own.
+  console.log(`WebApp.httpServer`, WebApp.httpServer);
+
   WebApp.httpServer.removeListener(
     'request', WebApp._timeoutAdjustmentRequestCallback);
   self.server.installHandlers(WebApp.httpServer);
