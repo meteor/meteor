@@ -4,6 +4,8 @@
 
 - MongoDB Update to 4.4.4
 - Cordova Update to 10
+- Typescript Update to 4.2.2
+- New skeleton: `meteor create myapp --svelte`
 
 ### Breaking changes
 
@@ -26,6 +28,8 @@
     - Maybe you need to install the new Visual C++ Redistributable for Visual Studio 2019 to run on Windows. [read more](https://docs.meteor.com/windows.html)
   - Fix WindowsLikeFilesystem true when release string includes case insensitive word microsoft. [#11321](https://github.com/meteor/meteor/pull/11321)
   - Fix absoluteFilePath on Windows. [#11346](https://github.com/meteor/meteor/pull/11346)
+  - New skeleton: `meteor create myapp --svelte`
+  - Update Blaze skeleton to use HMR
 
 * `npm-mongo@3.9.0`
   - Update MongoDB driver version to 3.6.5
