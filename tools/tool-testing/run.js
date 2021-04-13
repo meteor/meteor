@@ -190,6 +190,10 @@ export default class Run {
     return this.stdoutMatcher.match(pattern, timeout, _strict);
   }
 
+  getMatcherFullBuffer() {
+    return this.stdoutMatcher.getFullBuffer();
+  }
+
   // As expect(), but for stderr instead of stdout.
   matchErr(pattern, _strict) {
     this._ensureStarted();
@@ -204,7 +208,6 @@ export default class Run {
   // Like match(), but won't skip ahead looking for a match. It must
   // follow immediately after the last thing we matched or read.
   read(pattern, strict = true) {
-    Console.simpleDebug('read', pattern);
     return this.match(pattern, strict);
   }
 

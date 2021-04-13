@@ -10,21 +10,13 @@
   "dependencies": {
     "@babel/runtime": "^7.11.2",
     "meteor-node-stubs": "^1.0.1",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1"
-  },
-  "devDependencies": {
-    "@types/meteor": "^1.4.49",
-    "@types/mocha": "^8.0.3",
-    "@types/react": "^16.9.49",
-    "@types/react-dom": "^16.9.8",
-    "typescript": "^4.2.2"
+    "svelte": "^3.37.0"
   },
   "meteor": {
     "mainModule": {
-      "client": "client/main.tsx",
-      "server": "server/main.ts"
+      "client": "client/main.js",
+      "server": "server/main.js"
     },
-    "testModule": "tests/main.ts"
+    "testModule": "tests/main.js"
   }
 }
