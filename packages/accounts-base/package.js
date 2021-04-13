@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.9.0-beta220.2",
+  version: "1.9.0-beta220.3",
 });
 
 Package.onUse(api => {
