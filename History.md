@@ -1,4 +1,4 @@
-## vNEXT
+## v2.2, 2021-04-15
 
 #### Highlights
 
