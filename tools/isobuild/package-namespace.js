@@ -53,6 +53,8 @@ export class PackageNamespace {
    * will ONLY be bundled into production builds.
    * @param {Boolean} options.testOnly A package with this flag set to true
    * will ONLY be bundled as part of `meteor test`.
+   * @param {Boolean|String} options.deprecated A flag that will mark the
+   * package as deprecated. Provide string to override the default message.
    */
   describe(options) {
     const source = this._packageSource;
@@ -128,7 +130,7 @@ export class PackageNamespace {
       // * These flags CAN cause different package load orders in
       //   development and production!  We should probably fix this.
       //   Basically, packages that are excluded from the build using
-      //   these flags are also excluded fro the build order calculation,
+      //   these flags are also excluded from the build order calculation,
       //   and that's the problem
       //
       // * We should consider publicly documenting these flags, since they
@@ -139,6 +141,11 @@ export class PackageNamespace {
         source.prodOnly = !!value;
       } else if (key === "testOnly") {
         source.testOnly = !!value;
+      } else if (key === "deprecated") {
+        if (typeof(value) === "string") {
+          source.deprecatedMessage = value;
+        }
+        source.deprecated = !!value;
       } else {
         // Do nothing. We might want to add some keys later, and we should err
         // on the side of backwards compatibility.

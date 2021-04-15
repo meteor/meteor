@@ -1,7 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 const SIMPLE_WAREHOUSE = { v1: { recommended: true } };
-import { Console } from '../console/console.js';
 
 selftest.define("create main", function () {
   // We need a warehouse so the tool doesn't think we are running from checkout
