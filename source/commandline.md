@@ -87,7 +87,7 @@ Create a new Meteor project. By default, it uses [React](https://guide.meteor.co
 and makes a subdirectory named *name* and copies in the template app.
 You can pass an absolute or relative path.
 
-<h3 id="meteorcreate-flags">Flags</h2>
+<h3 id="meteorcreate-flags">Flags</h3>
 
 **Flags for default packages**
 
