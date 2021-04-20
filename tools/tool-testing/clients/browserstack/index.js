@@ -74,7 +74,7 @@ export default class BrowserStackClient extends Client {
       'browserstack.key': key,
 
       // Use the BrowserStackLocal tunnel, to allow BrowserStack to
-      // tunnel to the machine this server is runninng on.
+      // tunnel to the machine this server is running on.
       'browserstack.local': true,
 
       // Enabled the capturing of "Visual Logs" (i.e. Screenshots).
