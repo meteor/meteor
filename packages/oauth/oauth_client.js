@@ -45,8 +45,11 @@ OAuth._stateParam = (loginStyle, credentialToken, redirectUrl) => {
     isCordova: Meteor.isCordova
   };
 
-  if (loginStyle === 'redirect')
+  if (loginStyle === 'redirect' ||
+    (Meteor.settings?.public?.packages?.oauth?.setRedirectUrlWhenLoginStyleIsPopup && loginStyle === 'popup')
+  ) {
     state.redirectUrl = redirectUrl || ('' + window.location);
+  }
 
   // Encode base64 as not all login services URI-encode the state
   // parameter when they pass it back to us.

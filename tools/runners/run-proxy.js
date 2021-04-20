@@ -2,7 +2,8 @@ var Anser = require("anser");
 var _ = require('underscore');
 var runLog = require('./run-log.js');
 
-// options: listenPort, proxyToPort, proxyToHost, onFailure
+// options: listenPort, proxyToPort, proxyToHost,
+// onFailure, ignoredUrls
 var Proxy = function (options) {
   var self = this;
 
@@ -12,6 +13,7 @@ var Proxy = function (options) {
   self.proxyToPort = options.proxyToPort;
   self.proxyToHost = options.proxyToHost || '127.0.0.1';
   self.onFailure = options.onFailure || function () {};
+  self.ignoredUrls = options.ignoredUrls || [];
 
   self.mode = "hold";
   self.httpQueue = []; // keys: req, res
@@ -47,11 +49,19 @@ _.extend(Proxy.prototype, {
 
     var server = self.server = http.createServer(function (req, res) {
       // Normal HTTP request
+      if (self.ignoredUrls.includes(req.url)) {
+        return;
+      }
+
       self.httpQueue.push({ req: req, res: res });
       self._tryHandleConnections();
     });
 
     self.server.on('upgrade', function (req, socket, head) {
+      if (self.ignoredUrls.includes(req.url)) {
+        return;
+      }
+
       // Websocket connection
       self.websocketQueue.push({ req: req, socket: socket, head: head });
       self._tryHandleConnections();

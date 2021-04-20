@@ -20,7 +20,7 @@ const reportError = (error, callback) => {
 /**
  * @summary Log the user in with a password.
  * @locus Client
- * @param {Object | String} user
+ * @param {Object | String} selector
  *   Either a string interpreted as a username or an email; or an object with a
  *   single key: `email`, `username` or `id`. Username or email match in a case
  *   insensitive manner.

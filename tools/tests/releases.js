@@ -33,7 +33,7 @@ selftest.define("springboard", ['checkout', 'net', 'custom-warehouse'], function
   run.expectExit(0);
 
   // Apps are created with the latest release ...
-  run = s.run("create", "myapp");
+  run = s.run("create", "myapp", "--blaze");
   run.waitSecs(5);
   run.expectExit(0);
   s.cd('myapp', function () {
@@ -43,7 +43,7 @@ selftest.define("springboard", ['checkout', 'net', 'custom-warehouse'], function
   });
 
   // ... unless you asked for a different one.
-  run = s.run("create", "myapp2", "--release", DEFAULT_RELEASE_TRACK + "@v1").expectExit(0);
+  run = s.run("create", "myapp2", "--blaze", "--release", DEFAULT_RELEASE_TRACK + "@v1").expectExit(0);
   s.cd('myapp2', function () {
     run = s.run("--version");
     run.read('Meteor v1\n');
@@ -135,7 +135,7 @@ selftest.define("writing versions file", ['checkout', 'net', 'custom-warehouse']
   var run;
 
   // Create an app with the latest release.
-  run = s.run("create", "myapp");
+  run = s.run("create", "myapp", "--blaze");
   run.waitSecs(15);
   run.expectExit(0);
   s.cd('myapp');

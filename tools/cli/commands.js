@@ -505,6 +505,18 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 // create
 ///////////////////////////////////////////////////////////////////////////////
+const DEFAULT_SKELETON = "react";
+const AVAILABLE_SKELETONS = [
+  "apollo",
+  "bare",
+  "blaze",
+  "full",
+  "minimal",
+  DEFAULT_SKELETON,
+  "typescript",
+  "vue",
+  "svelte"
+];
 
 main.registerCommand({
   name: 'create',
@@ -516,8 +528,12 @@ main.registerCommand({
     bare: { type: Boolean },
     minimal: { type: Boolean },
     full: { type: Boolean },
+    blaze: { type: Boolean },
     react: { type: Boolean },
+    vue: { type: Boolean },
     typescript: { type: Boolean },
+    apollo: { type: Boolean },
+    svelte: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -761,20 +777,11 @@ main.registerCommand({
     toIgnore.push(/(\.html|\.js|\.css)/);
   }
 
-  let skelName = "skel";
-  if (options.minimal) {
-    skelName += "-minimal";
-  } else if (options.bare) {
-    skelName += "-bare";
-  } else if (options.full) {
-    skelName += "-full";
-  } else if (options.react) {
-    skelName += "-react";
-  } else if (options.typescript) {
-    skelName += "-typescript";
-  }
-
-  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', skelName), appPath, {
+  const skeletonExplicitOption = AVAILABLE_SKELETONS.find(skeleton =>
+    !!options[skeleton]);
+  const skeleton = skeletonExplicitOption || DEFAULT_SKELETON;
+  files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets',
+    `skel-${skeleton}`), appPath, {
     transformFilename: function (f) {
       return transform(f);
     },
@@ -877,17 +884,13 @@ main.registerCommand({
       Console.options({ indent: 2 }));
 
   Console.info("");
-  Console.info("When you’re ready to deploy and host your new Meteor application, check out Galaxy:");
+  Console.info("When you’re ready to deploy and host your new Meteor application, check out Cloud:");
   Console.info(
-    Console.url("https://www.meteor.com/hosting"),
+    Console.url("https://www.meteor.com/cloud"),
       Console.options({ indent: 2 }));
 
-  if (! options.bare &&
-      ! options.minimal &&
-      ! options.full &&
-      ! options.react &&
-      ! options.typescript) {
-    // Notify people about --bare, --minimal, --full, --react, and --typescript.
+  if (!!skeletonExplicitOption) {
+    // Notify people about the skeleton options
     Console.info([
       "",
       "To start with a different app template, try one of the following:",
@@ -898,7 +901,11 @@ main.registerCommand({
     cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
     cmd("meteor create --full       # to create a more complete scaffolded app");
     cmd("meteor create --react      # to create a basic React-based app");
+    cmd("meteor create --vue        # to create a basic Vue-based app");
+    cmd("meteor create --apollo     # to create a basic Apollo + React app");
+    cmd("meteor create --svelte     # to create a basic Svelte app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
+    cmd("meteor create --blaze      # to create an app using Blaze");
   }
 
   Console.info("");
@@ -1172,7 +1179,7 @@ ${displayNameForPlatform(platform)}` }, () => {
 `This is an auto-generated XCode project for your iOS application.
 
 Instructions for publishing your iOS app to App Store can be found at:
-https://guide.meteor.com/mobile.html#submitting-ios
+https://guide.meteor.com/cordova.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
@@ -1188,7 +1195,7 @@ https://guide.meteor.com/mobile.html#submitting-ios
 `This is an auto-generated Gradle project for your Android application.
 
 Instructions for publishing your Android app to Play Store can be found at:
-https://guide.meteor.com/mobile.html#submitting-android
+https://guide.meteor.com/cordova.html#submitting-android
 `, "utf8");
             }
         });
@@ -1259,7 +1266,6 @@ main.registerCommand({
     projectContext.prepareProjectForBuild();
   });
 
-  const bundlePath = projectContext.getProjectLocalDirectory('build');
   const bundler = require('../isobuild/bundler.js');
   const bundle = bundler.bundle({
     projectContext: projectContext,
@@ -1428,6 +1434,10 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean },
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
+    'cache-build': { type: Boolean },
+    free: { type: Boolean },
+    plan: { type: String },
+    mongo: { type: Boolean }
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1500,17 +1510,26 @@ function deployCommand(options, { rawOptions }) {
   if (options['deploy-polling-timeout']) {
     deployPollingTimeoutMs = options['deploy-polling-timeout'];
   }
+  let plan = null;
+  if (options.plan) {
+    plan = options.plan;
+  }
 
+  const isCacheBuildEnabled = !!options['cache-build'];
   const waitForDeploy = !options['no-wait'];
 
   var deployResult = deploy.bundleAndDeploy({
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
+    free: options.free,
+    mongo: options.mongo,
     buildOptions: buildOptions,
+    plan,
     rawOptions,
     deployPollingTimeoutMs,
     waitForDeploy,
+    isCacheBuildEnabled,
   });
 
   if (deployResult === 0) {
@@ -2285,6 +2304,12 @@ main.registerCommand({
     'with-tag': { type: String },
     junit: { type: String },
     retries: { type: Number, default: 2 },
+    // Skip tests, after filter
+    skip: { type: Number },
+    // Limit tests, after filter
+    limit: { type: Number },
+    // Don't run tests, just show the plan after filter, skip and limit
+    preview: { type: Boolean },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2386,7 +2411,10 @@ main.registerCommand({
     clients: clients,
     junit: options.junit && files.pathResolve(options.junit),
     'without-tag': options['without-tag'],
-    'with-tag': options['with-tag']
+    'with-tag': options['with-tag'],
+    skip: options.skip,
+    limit: options.limit,
+    preview: options.preview,
   });
 
 });

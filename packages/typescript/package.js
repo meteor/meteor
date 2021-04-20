@@ -1,19 +1,21 @@
 Package.describe({
   name: "typescript",
-  version: "3.7.6",
+  version: "4.2.2",
   summary: "Compiler plugin that compiles TypeScript and ECMAScript in .ts and .tsx files",
   documentation: "README.md"
 });
 
 Package.registerBuildPlugin({
   name: "compile-typescript",
-  use: ["babel-compiler"],
+  use: ["babel-compiler", "react-fast-refresh"],
   sources: ["plugin.js"]
 });
 
 Package.onUse(function (api) {
   api.use("isobuild:compiler-plugin@1.0.0");
   api.use("babel-compiler");
+  api.use('react-fast-refresh');
+
   // The following api.imply calls should match those in
   // ../ecmascript/package.js.
   api.imply("modules");

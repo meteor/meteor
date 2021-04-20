@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.6.0",
+  version: "1.9.0",
 });
 
 Package.onUse(api => {
@@ -13,6 +13,7 @@ Package.onUse(api => {
   api.use('ejson', 'server');
   api.use('callback-hook', ['client', 'server']);
   api.use('reactive-var', 'client');
+  api.use('url', ['client', 'server']);
 
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)
@@ -27,7 +28,7 @@ Package.onUse(api => {
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use('blaze', 'client', {weak: true});
+  api.use('blaze@2.3.4', 'client', {weak: true});
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.

@@ -1966,4 +1966,25 @@ if (Meteor.isServer) (() => {
     }
   );
 
+  Tinytest.add('passwords - extra params in email urls', (test) => {
+    const username = Random.id();
+    const email = `${username}-intercept@example.com`;
+
+    const userId = Accounts.createUser({
+      username: username,
+      email: email
+    });
+
+    const extraParams = { test: 'success' };
+    Accounts.sendEnrollmentEmail(userId, email, null, extraParams);
+
+    const enrollPasswordEmailOptions =
+      Meteor.call("getInterceptedEmails", email)[0];
+
+    const re = new RegExp(`${Meteor.absoluteUrl()}(\\S*)`);
+    const match = enrollPasswordEmailOptions.text.match(re);
+    const url = new URL(match)
+    test.equal(url.searchParams.get('test'), extraParams.test);
+  });
+
 }) ();

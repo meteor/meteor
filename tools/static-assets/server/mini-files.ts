@@ -14,7 +14,7 @@ import { release, EOL } from "os";
 // (Windows Subsystem for Linux) even if it otherwise looks like we're on Unix.
 // https://github.com/Microsoft/BashOnWindows/issues/423#issuecomment-221627364
 export function isWindowsLikeFilesystem() {
-  return process.platform === "win32" || release().indexOf("Microsoft") >= 0;
+  return process.platform === "win32" || release().toLowerCase().includes("microsoft");
 }
 
 export function toPosixPath(p: string, partialPath: boolean = false) {

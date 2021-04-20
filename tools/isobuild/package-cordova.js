@@ -20,7 +20,7 @@ export class PackageCordova {
    * [plugins.cordova.io](http://plugins.cordova.io/), so the plugins and
    * versions specified must exist there. Alternatively, the version
    * can be replaced with a GitHub tarball URL as described in the
-   * [Cordova](https://guide.meteor.com/mobile.html#cordova-plugins)
+   * [Cordova](https://guide.meteor.com/cordova.html#cordova-plugins)
    * page of the Meteor wiki on GitHub.
    * @param  {Object} dependencies An object where the keys are plugin
    * names and the values are version numbers or GitHub tarball URLs

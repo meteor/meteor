@@ -1781,13 +1781,13 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
       fieldB: 'the bad',
       fieldC: 'the ugly',
     }],
-    setB: [{
+    setB: [null, {
       anotherA: { },
       anotherB: 'meh',
-    }, {
+    }, null, {
       anotherA: 1234,
       anotherB: 431,
-    }],
+    }, null],
   });
 
   const equalNonStrict = (a, b, desc) => {
@@ -1802,13 +1802,13 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
   testForProjection({ 'setA.fieldA': 1, 'setB.anotherB': 1, _id: 0 },
     {
       setA: [{ fieldA: 42 }, { fieldA: 'the good' }],
-      setB: [{ anotherB: 'meh' }, { anotherB: 431 }],
+      setB: [null, { anotherB: 'meh' }, null, { anotherB: 431 }, null],
     });
 
   testForProjection({ 'setA.fieldA': 0, 'setB.anotherA': 0, _id: 0 },
     {
       setA: [{fieldB: 33}, {fieldB: 'the bad', fieldC: 'the ugly'}],
-      setB: [{ anotherB: 'meh' }, { anotherB: 431 }],
+      setB: [null, { anotherB: 'meh' }, null, { anotherB: 431 }, null],
     });
 
   c.remove({});
@@ -2658,6 +2658,27 @@ Tinytest.add('minimongo - modify', test => {
   modify({a: {b: 2}}, {$min: {'a.b': 1}}, {a: {b: 1}});
   modify({a: {b: 2}}, {$min: {'a.c': 10}}, {a: {b: 2, c: 10}});
   exception({}, {$min: {_id: 1}});
+
+  //$mul
+  modify({a: 1, b: 1}, {$mul: {b: 2}}, {a: 1, b: 2});
+  modify({a: 1, b: 1}, {$mul: {c: 2}}, {a: 1, b: 1, c: 0});
+  modify({a: 1, b: 2}, {$mul: {b: 2}}, {a: 1, b: 4});
+  modify({a: 1, b: 2}, {$mul: {b: 10}}, {a: 1, b: 20});
+  exception({a: 1}, {$mul: {a: '10'}});
+  exception({a: 1}, {$mul: {a: true}});
+  exception({a: 1}, {$mul: {a: [10]}});
+  exception({a: '1'}, {$mul: {a: 10}});
+  exception({a: [1]}, {$mul: {a: 10}});
+  exception({a: {}}, {$mul: {a: 10}});
+  exception({a: false}, {$mul: {a: 10}});
+  exception({a: null}, {$mul: {a: 10}});
+  exception({}, {$mul: {_id: 1}});
+  modify({a: [1, 2]}, {$mul: {'a.1': 2}}, {a: [2, 1]});
+  modify({a: [1, 2]}, {$mul: {'a.1': 3}}, {a: [3, 2]});
+  modify({a: [1, 2]}, {$mul: {'a.2': 10}}, {a: [1, 20]});
+  modify({a: [1, 2]}, {$mul: {'a.3': 10}}, {a: [1, 2, 0]});
+  modify({a: {b: 2}}, {$mul: {'a.b': 1}}, {a: {b: 2}});
+  modify({a: {b: 2}}, {$mul: {'a.c': 10}}, {a: {b: 2, c: 0}});
 
   // $max
   modify({a: 1, b: 2}, {$max: {b: 1}}, {a: 1, b: 2});

@@ -22,6 +22,10 @@ export default class Matcher {
     this._tryMatch();
   }
 
+  getFullBuffer() {
+    return this.fullBuffer;
+  }
+
   resetMatch() {
     const mp = this.matchPromise;
 
@@ -31,6 +35,10 @@ export default class Matcher {
     this.matchFullBuffer = false;
 
     return mp;
+  }
+
+  setMatchStrict(strict) {
+    this.matchStrict = strict;
   }
 
   rejectMatch(error) {

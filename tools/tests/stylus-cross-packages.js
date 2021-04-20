@@ -1,6 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var utils = require('../utils/utils.js');
 
 selftest.define("can import stylus across packages", function (options) {
   var s = new Sandbox({
@@ -25,5 +24,7 @@ selftest.define("can import stylus across packages", function (options) {
     run.match("true");
 
     run.stop();
-  });
+  },{
+    testName: 'can import stylus across packages',
+    testFile: 'stylus-cross-packages.js' });
 });

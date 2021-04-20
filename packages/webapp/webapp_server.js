@@ -20,6 +20,7 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
+import cluster from "cluster";
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -267,6 +268,7 @@ Meteor.startup(function () {
   WebApp.calculateClientHash = WebApp.clientHash = getter("version");
   WebApp.calculateClientHashRefreshable = getter("versionRefreshable");
   WebApp.calculateClientHashNonRefreshable = getter("versionNonRefreshable");
+  WebApp.calculateClientHashReplaceable = getter("versionReplaceable");
   WebApp.getRefreshableAssets = getter("refreshableAssets");
 });
 
@@ -738,7 +740,17 @@ function runWebAppServer() {
       versionRefreshable: () => WebAppHashing.calculateClientHash(
         manifest, type => type === "css", configOverrides),
       versionNonRefreshable: () => WebAppHashing.calculateClientHash(
-        manifest, type => type !== "css", configOverrides),
+        manifest, (type, replaceable) => type !== "css" && !replaceable, configOverrides),
+      versionReplaceable: () => WebAppHashing.calculateClientHash(
+        manifest, (_type, replaceable) => {
+          if (Meteor.isProduction && replaceable) {
+            throw new Error('Unexpected replaceable file in production');
+          }
+
+          return replaceable
+        },
+        configOverrides
+      ),
       cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,
       PUBLIC_SETTINGS,
     };
@@ -1144,9 +1156,13 @@ function runWebAppServer() {
     };
 
     let localPort = process.env.PORT || 0;
-    const unixSocketPath = process.env.UNIX_SOCKET_PATH;
+    let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
+      if (cluster.isWorker) {
+        const workerName = cluster.worker.process.env.name || cluster.worker.id
+        unixSocketPath += "." + workerName + ".sock";
+      }
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
       startHttpServer({ path: unixSocketPath });
