@@ -2,6 +2,8 @@ Facebook = {};
 import crypto from 'crypto';
 import { fetch } from 'meteor/fetch';
 
+const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '10.0';
+
 Facebook.handleAuthFromAccessToken = (accessToken, expiresAt) => {
   // include basic fields from facebook
   // https://developers.facebook.com/docs/facebook-login/permissions/
@@ -72,7 +74,7 @@ const getTokenResponse = query => {
         code: query.code
       });
       const request = await fetch(
-        "https://graph.facebook.com/v8.0/oauth/access_token", {
+        `https://graph.facebook.com/${API_VERSION}/oauth/access_token`, {
           method: 'GET',
           headers: { Accept: 'application/json' },
           body: content,
@@ -111,8 +113,8 @@ const getIdentity = (accessToken, fields) => {
   hmac.update(accessToken);
 
   try {
-    const data = Meteor.wrapAsync(async () => {
-      const content = new URLSearchParams({
+    return HTTP.get("https://graph.facebook.com/v8.0/me", {
+      params: {
         access_token: accessToken,
         appsecret_proof: hmac.digest('hex'),
         fields: fields.join(",")
