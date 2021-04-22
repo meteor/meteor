@@ -1,3 +1,82 @@
+## v2.2, 2021-04-15
+
+#### Highlights
+
+- MongoDB Update to 4.4.4
+- Cordova Update to 10
+- Typescript Update to 4.2.2
+- New skeleton: `meteor create myapp --svelte`
+
+### Breaking changes
+
+* N/A
+
+### Migration steps
+
+* `meteor-tool` maybe you need to install the new Visual C++ Redistributable for Visual Studio 2019 to run MongoDB 4.4.4 on Windows. [read more](https://docs.meteor.com/windows.html)
+
+* `mongo` package is now using useUnifiedTopology as `true` by default otherwise the new driver was producing a warning (see details below). It's important to test your app with this change.
+
+* `cordova` plugins and main libraries were updated from 9 to 10. It's important to test your app with these changes.
+
+* `typescript` was updated to 4.2.2, make sure your read the [breaking changes](https://devblogs.microsoft.com/typescript/announcing-typescript-4-2/#breaking-changes).
+
+#### Meteor Version Release
+
+* `meteor-tool@2.2`
+  - Update embedded MongoDB version to 4.4.4 [#11341](https://github.com/meteor/meteor/pull/11341)
+    - Maybe you need to install the new Visual C++ Redistributable for Visual Studio 2019 to run on Windows. [read more](https://docs.meteor.com/windows.html)
+  - Fix WindowsLikeFilesystem true when release string includes case insensitive word microsoft. [#11321](https://github.com/meteor/meteor/pull/11321)
+  - Fix absoluteFilePath on Windows. [#11346](https://github.com/meteor/meteor/pull/11346)
+  - New skeleton: `meteor create myapp --svelte`
+  - Update Blaze skeleton to use HMR
+
+* `npm-mongo@3.9.0`
+  - Update MongoDB driver version to 3.6.6
+
+* `mongo@1.11.0`
+  - Using useUnifiedTopology as `true` by default to avoid the warning: `(node:59240) [MONGODB DRIVER] Warning: Current Server Discovery and Monitoring engine is deprecated, and will be removed in a future version. To use the new Server Discover and Monitoring engine, pass option { useUnifiedTopology: true } to the MongoClient constructor. You can still use it as false with `Mongo._connectionOptions` or `Meteor.settings?.packages?.mongo?.options`.
+
+* `cordova@10`
+  - Update Cordova to 10.0.0 [#11208](https://github.com/meteor/meteor/pull/11208)
+
+* `typescript@4.2.2`
+  - Update Typescript to 4.2.2, make sure your read the [breaking changes](https://devblogs.microsoft.com/typescript/announcing-typescript-4-2/#breaking-changes) [#11329](https://github.com/meteor/meteor/pull/11329)
+
+* `accounts-base@1.9.0`
+  - Allow to set token expiration to be set in milliseconds. [#11366](https://github.com/meteor/meteor/pull/11366)
+
+* `facebook-oauth@1.9.0`
+  - Upgrade default Facebook API to v10 & allow overriding this value. [#11362](https://github.com/meteor/meteor/pull/11362)
+
+* `minimongo@1.6.2`
+  - Add [$mul](https://docs.mongodb.com/manual/reference/operator/update/mul/#up._S_mul) to minimongo. [#11364](https://github.com/meteor/meteor/pull/11364)
+
+* `webapp@1.10.1`
+  - Fix for UNIX sockets with node cluster. [#11369](https://github.com/meteor/meteor/pull/11369)
+
+## v2.1.1, 2021-04-06
+
+### Changes
+
+#### Highlights
+
+- Node.js security [update](https://nodejs.org/en/blog/vulnerability/april-2021-security-releases/) to 12.22.1
+
+#### Meteor Version Release
+
+* `meteor-tool@2.1.1`
+  - Node.js security [update](https://nodejs.org/en/blog/vulnerability/april-2021-security-releases/) to 12.22.1
+  - npm update to 6.14.12
+  
+### Breaking changes
+
+* N/A
+
+### Migration steps
+
+* N/A
+
 ## v2.1, 2021-02-24
 
 ### Changes
