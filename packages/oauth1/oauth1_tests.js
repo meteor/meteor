@@ -1,5 +1,6 @@
 import http from 'http';
 import { OAuth1Binding } from './oauth1_binding';
+import { OAuth } from 'meteor/oauth1';
 
 const testPendingCredential = (test, method) => {
   const twitterfooId = Random.id();
