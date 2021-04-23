@@ -224,7 +224,12 @@ Function Add-Mongo {
   # Mongo >= 3.4 no longer supports 32-bit (x86) architectures, so we package
   # the latest 3.2 version of Mongo for those builds and >= 3.4 for x64.
   $mongo_filenames = @{
-    windows_x64 = "mongodb-win32-x86_64-2012plus-${MONGO_VERSION_64BIT}"
+    windows_x64 = "mongodb-windows-x86_64-${MONGO_VERSION_64BIT}"
+  }
+
+  # the folder inside the zip still uses win32
+  $mongo_zip_filenames = @{
+    windows_x64 = "mongodb-win32-x86_64-windows-${MONGO_VERSION_64BIT}"
   }
 
   $previousCwd = $PWD
@@ -232,9 +237,9 @@ Function Add-Mongo {
   cd "$DIR"
   mkdir "$DIR\mongodb"
   mkdir "$DIR\mongodb\bin"
-
   $mongo_name = $mongo_filenames.Item($PLATFORM)
-  $mongo_link = "https://fastdl.mongodb.org/win32/${mongo_name}.zip"
+  $mongo_zip_name = $mongo_zip_filenames.Item($PLATFORM)
+  $mongo_link = "https://fastdl.mongodb.org/windows/${mongo_name}.zip"
   $mongo_zip = "$DIR\mongodb\mongo.zip"
 
   Write-Host "Downloading Mongo from ${mongo_link}..." -ForegroundColor Magenta
@@ -247,26 +252,14 @@ Function Add-Mongo {
   }
 
   Write-Host "Putting MongoDB mongod.exe in mongodb\bin" -ForegroundColor Magenta
-  cp "$DIR\mongodb\$mongo_name\bin\mongod.exe" $DIR\mongodb\bin
+  cp "$DIR\mongodb\$mongo_zip_name\bin\mongod.exe" $DIR\mongodb\bin
   Write-Host "Putting MongoDB mongo.exe in mongodb\bin" -ForegroundColor Magenta
-  cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
-
-  # https://jira.mongodb.org/browse/SERVER-19086
-  $libeay32dll = "$DIR\mongodb\$mongo_name\bin\libeay32.dll"
-  if (Test-Path $libeay32dll) {
-    Write-Host "Putting MongoDB libeay32.dll in mongodb\bin" -ForegroundColor Magenta
-    cp $libeay32dll $DIR\mongodb\bin
-  }
-  $ssleay32dll = "$DIR\mongodb\$mongo_name\bin\ssleay32.dll"
-  if (Test-Path $ssleay32dll) {
-    Write-Host "Putting MongoDB ssleay32.dll in mongodb\bin" -ForegroundColor Magenta
-    cp $ssleay32dll $DIR\mongodb\bin
-  }
+  cp "$DIR\mongodb\$mongo_zip_name\bin\mongo.exe" $DIR\mongodb\bin
 
   Write-Host "Removing the old Mongo zip..." -ForegroundColor Magenta
   rm -Recurse -Force $mongo_zip
   Write-Host "Removing the old Mongo directory..." -ForegroundColor Magenta
-  rm -Recurse -Force "$DIR\mongodb\$mongo_name"
+  rm -Recurse -Force "$DIR\mongodb\$mongo_zip_name"
 
   cd "$previousCwd"
 }

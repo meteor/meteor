@@ -161,9 +161,12 @@ export class AccountsCommon {
    * @param {Boolean} options.forbidClientAccountCreation Calls to [`createUser`](#accounts_createuser) from the client will be rejected. In addition, if you are using [accounts-ui](#accountsui), the "Create account" link will not be available.
    * @param {String | Function} options.restrictCreationByEmailDomain If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: `Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })`.
    * @param {Number} options.loginExpirationInDays The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to `null` to disable login expiration.
-   * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.
+   * @param {Number} options.loginExpiration The number of milliseconds from when a user logs in until their token expires and they are logged out, for a more granular control. If `loginExpirationInDays` is set, it takes precedent.
+   * @param {String} options.oauthSecretKey When using the `oauth-encryption` package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specified on the server.  See packages/oauth-encryption/README.md for details.
    * @param {Number} options.passwordResetTokenExpirationInDays The number of days from when a link to reset password is sent until token expires and user can't reset password with the link anymore. Defaults to 3.
-   * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set inital password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
+   * @param {Number} options.passwordResetTokenExpiration The number of milliseconds from when a link to reset password is sent until token expires and user can't reset password with the link anymore. If `passwordResetTokenExpirationInDays` is set, it takes precedent.
+   * @param {Number} options.passwordEnrollTokenExpirationInDays The number of days from when a link to set initial password is sent until token expires and user can't set password with the link anymore. Defaults to 30.
+   * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`.
    */
@@ -198,8 +201,9 @@ export class AccountsCommon {
     }
 
     // validate option keys
-    const VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpirationInDays",
-                      "restrictCreationByEmailDomain", "loginExpirationInDays", "passwordResetTokenExpirationInDays",
+    const VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpiration",
+                      "passwordEnrollTokenExpirationInDays", "restrictCreationByEmailDomain", "loginExpirationInDays",
+                      "loginExpiration", "passwordResetTokenExpirationInDays", "passwordResetTokenExpiration",
                       "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector"];
 
     Object.keys(options).forEach(key => {
@@ -295,18 +299,18 @@ export class AccountsCommon {
       (this._options.loginExpirationInDays === null)
         ? LOGIN_UNEXPIRING_TOKEN_DAYS
         : this._options.loginExpirationInDays;
-    return (loginExpirationInDays
-        || DEFAULT_LOGIN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
+    return this._options.loginExpiration || (loginExpirationInDays
+        || DEFAULT_LOGIN_EXPIRATION_DAYS) * 86400000;
   }
 
   _getPasswordResetTokenLifetimeMs() {
-    return (this._options.passwordResetTokenExpirationInDays ||
-            DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
+    return this._options.passwordResetTokenExpiration || (this._options.passwordResetTokenExpirationInDays ||
+            DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS) * 86400000;
   }
 
   _getPasswordEnrollTokenLifetimeMs() {
-    return (this._options.passwordEnrollTokenExpirationInDays ||
-        DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS) * 24 * 60 * 60 * 1000;
+    return this._options.passwordEnrollTokenExpiration || (this._options.passwordEnrollTokenExpirationInDays ||
+        DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS) * 86400000;
   }
 
   _tokenExpiration(when) {
