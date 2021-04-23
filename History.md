@@ -1,3 +1,9 @@
+## v2.2.1, UNRELEASED
+
+### Fixes
+
+* Updated `ddp-server` and `socker-stream-client` dependencies which removes Node's HTTP deprecation warning.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
