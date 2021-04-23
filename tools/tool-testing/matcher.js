@@ -22,6 +22,10 @@ export default class Matcher {
     this._tryMatch();
   }
 
+  getFullBuffer() {
+    return this.fullBuffer;
+  }
+
   resetMatch() {
     const mp = this.matchPromise;
 
@@ -136,8 +140,6 @@ export default class Matcher {
     }
 
     let ret = null;
-
-    Console.simpleDebug(`fullBuffer`, this.fullBuffer);
 
     if (this.matchFullBuffer) {
       // Note: this.matchStrict is ignored if this.matchFullBuffer truthy.

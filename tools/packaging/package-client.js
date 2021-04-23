@@ -792,6 +792,10 @@ exports.publishPackage = function (options) {
         debugOnly: packageSource.debugOnly,
         prodOnly: packageSource.prodOnly,
         testOnly: packageSource.testOnly,
+
+        deprecated: packageSource.deprecated,
+        deprecatedMessage: packageSource.deprecatedMessage,
+
         exports: packageSource.getExports(),
         releaseName: release.current.name,
         dependencies: packageDeps
