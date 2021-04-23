@@ -1,3 +1,9 @@
+## v2.2.1, UNRELEASED
+
+#### Independent Releases
+
+* Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
