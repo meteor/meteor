@@ -35,8 +35,8 @@ Tinytest.add('minimongo - modifier affects selector', test => {
   // When top-level value is an object, it is treated as a literal,
   // so when you query col.find({ a: { foo: 1, bar: 2 } })
   // it doesn't mean you are looking for anything that has 'a.foo' to be 1 and
-  // 'a.bar' to be 2, instead you are looking for 'a' to be exatly that object
-  // with exatly that order of keys. { a: { foo: 1, bar: 2, baz: 3 } } wouldn't
+  // 'a.bar' to be 2, instead you are looking for 'a' to be exactly that object
+  // with exactly that order of keys. { a: { foo: 1, bar: 2, baz: 3 } } wouldn't
   // match it. That's why in this selector 'a' would be important key, not a.foo
   // and a.bar.
   testSelectorPaths({
