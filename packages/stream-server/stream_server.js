@@ -7,11 +7,7 @@ var url = Npm.require('url');
 // configure method; see
 // https://github.com/faye/permessage-deflate-node/blob/master/README.md
 //
-// (We do this in an _.once instead of at startup, because we don't want to
-// crash the tool during isopacket load if your JSON doesn't parse. This is only
-// a problem because the tool has to load the DDP server code just in order to
-// be a DDP client; see https://github.com/meteor/meteor/issues/3452 .)
-var websocketExtensions = _.once(function () {
+var websocketExtensions = function () {
   var extensions = [];
 
   var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
@@ -23,14 +19,24 @@ var websocketExtensions = _.once(function () {
   }
 
   return extensions;
-});
+};
 
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
+/**
+ * List of stream servers
+ *
+ * DDP LiveData server will load the latest added stream server.
+ * You need place custom stream server package in `.meteor/packages`
+ * before packages `meteor-tools`, ddp` or `ddp-server`
+ * @type {(StreamServer|*)[]}
+ */
+StreamServers = [];
+
 StreamServer = function () {
   var self = this;
-  self.registration_callbacks = [];
-  self.open_sockets = [];
+  self.registration_callbacks = new Set();
+  self.open_sockets = new Set();
 
   // Because we are installing directly onto WebApp.httpServer instead of using
   // WebApp.app, we have to process the path prefix ourselves.
@@ -115,9 +121,9 @@ StreamServer = function () {
       socket.write(data);
     };
     socket.on('close', function () {
-      self.open_sockets = _.without(self.open_sockets, socket);
+      self.open_sockets.delete(socket);
     });
-    self.open_sockets.push(socket);
+    self.open_sockets.add(socket);
 
     // XXX COMPAT WITH 0.6.6. Send the old style welcome message, which
     // will force old clients to reload. Remove this once we're not
@@ -128,28 +134,22 @@ StreamServer = function () {
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
-    _.each(self.registration_callbacks, function (callback) {
+    self.registration_callbacks.forEach(function (callback) {
       callback(socket);
     });
   });
 
 };
 
-_.extend(StreamServer.prototype, {
+Object.assign(StreamServer.prototype, {
   // call my callback when a new socket connects.
   // also call it for all current connections.
   register: function (callback) {
     var self = this;
-    self.registration_callbacks.push(callback);
-    _.each(self.all_sockets(), function (socket) {
+    self.registration_callbacks.add(callback);
+    self.open_sockets.forEach(function (socket) {
       callback(socket);
     });
-  },
-
-  // get a list of all sockets
-  all_sockets: function () {
-    var self = this;
-    return _.values(self.open_sockets);
   },
 
   // Redirect /websocket to /sockjs/websocket in order to not expose
@@ -161,7 +161,7 @@ _.extend(StreamServer.prototype, {
     // (meaning prior to any connect middlewares) so we need to take
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
-    _.each(['request', 'upgrade'], function(event) {
+    ['request', 'upgrade'].map(function(event) {
       var httpServer = WebApp.httpServer;
       var oldHttpServerListeners = httpServer.listeners(event).slice(0);
       httpServer.removeAllListeners(event);
@@ -180,7 +180,7 @@ _.extend(StreamServer.prototype, {
           parsedUrl.pathname = self.prefix + '/websocket';
           request.url = url.format(parsedUrl);
         }
-        _.each(oldHttpServerListeners, function(oldListener) {
+        oldHttpServerListeners.map(function(oldListener) {
           oldListener.apply(httpServer, args);
         });
       };
@@ -188,3 +188,5 @@ _.extend(StreamServer.prototype, {
     });
   }
 });
+
+StreamServers.push(StreamServer);
