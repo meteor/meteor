@@ -1,4 +1,3 @@
-var assert = require('assert');
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo');
 var _ = require('underscore');

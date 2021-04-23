@@ -511,7 +511,8 @@ const AVAILABLE_SKELETONS = [
   "minimal",
   DEFAULT_SKELETON,
   "typescript",
-  "vue"
+  "vue",
+  "svelte"
 ];
 
 main.registerCommand({
@@ -529,6 +530,7 @@ main.registerCommand({
     vue: { type: Boolean },
     typescript: { type: Boolean },
     apollo: { type: Boolean },
+    svelte: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -898,6 +900,7 @@ main.registerCommand({
     cmd("meteor create --react      # to create a basic React-based app");
     cmd("meteor create --vue        # to create a basic Vue-based app");
     cmd("meteor create --apollo     # to create a basic Apollo + React app");
+    cmd("meteor create --svelte     # to create a basic Svelte app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
     cmd("meteor create --blaze      # to create an app using Blaze");
   }
