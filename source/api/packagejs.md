@@ -120,6 +120,35 @@ Meteor packages can include NPM packages and Cordova plugins by using
 {% apibox "Npm.require" %}
 {% apibox "PackageCordova#depends" nested: %}
 {% apibox "PackageNamespace#registerBuildPlugin" nested: %}
+
+<h2 id="options">Options</h2>
+
+In some cases we need to offer options in packages where these options are not going to change in runtime.
+
+We prefer to have these options defined in a configuration file instead of using JS code to call specific functions to define options in runtime.
+
+For example, in `quave:collections` package you can force collections to be available only in the server like this:
+
+```json
+  "packages": {
+    "quave:collections": {
+      "isServerOnly": true
+    }
+  }
+```
+
+We encourage every package author to follow this standard to offer options:
+
+1. Use the official Meteor `settings` file
+2. Inside the `settings` file read from a `Meteor`.`packages`.`<package name>`.`<your option name>`
+   > If it needs to be available in the client follow the same structure inside the `public` key.
+
+You can use [quave:settings](https://github.com/quavedev/settings) package to read options in the format above already merging the private and public options.
+
+This way we avoid having to call a specific code before another specific code in a package as the setting is stored in the settings, and the package can load it when necessary instead of relying on a specific order of calls from the developer in the app code.
+
+> We've started to adopt this standard also in core packages on Meteor 1.10.2.
+
 {% apibox "Plugin.registerSourceHandler" nested:true %}
 
 <h2 id="build-plugin-api">Build Plugins API</h2>
