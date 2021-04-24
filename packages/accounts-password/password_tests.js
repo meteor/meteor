@@ -595,7 +595,7 @@ if (Meteor.isClient) (() => {
     },
 
     // when the detailedErrorFlag is set to false; it returns an
-    // ambiguous message
+    // ambiguous message on development envinronment
     function (test, expect) {
       test.throws(
         () => Accounts.forgotPassword({ email: this.email,
@@ -612,6 +612,33 @@ if (Meteor.isClient) (() => {
         /Something went wrong\. Please check your credentials/
       );
     },
+
+    // when detailedErrorFlag is not passed and it's a production environment
+    // it returns an ambiguous error message
+    function (test, expect) {
+      Meteor.isProduction = true
+      if (Meteor.isProduction) {
+        test.throws(
+          () => Accounts.forgotPassword({ email: this.email }),
+          /Something went wrong\. Please check your credentials/
+        )
+      }
+    },
+
+    // when detailedErrorFlag is true and it's a production environment
+    // it returns a detailed error message
+    function (test, expect) {
+      Meteor.isProduction = true
+      if (Meteor.isProduction) {
+        test.throws(
+          () => Accounts.forgotPassword({
+            email: this.email,
+            detailedErrorFlag: true
+          }),
+          /User not found/
+        )
+      }
+    }
   ]);
 
   Tinytest.add(
