@@ -77,6 +77,10 @@ build plugin to be satisfied by a local package, you must use a local copy of
 the package that defines the plugin (even if you make no changes to that
 package) so that Meteor will pick up the local dependency.
 
+> In a lifecycle of a package there might come time to end the development for various reasons, or
+it gets superseded. In either case Meteor allows you to easily notify the users of the package by
+setting the deprecated flag to true: `deprecated: true` in the package description. In addition, you
+replace it with a string that tells the users where to find replacement or what to do. 
 
 Provide basic package information with `Package.describe(options)`. To publish a
 package, you must define `summary` and `version`.
