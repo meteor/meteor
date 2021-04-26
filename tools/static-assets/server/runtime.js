@@ -8,18 +8,13 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
   let cacheEntries = Object.create(null);
 
   if (cachePath) {
-    function readCache() {
+    try {
       fs.readdirSync(cachePath).forEach(name => {
         cacheEntries[name] = true;
       });
-    }
-
-    try {
-      readCache();
     } catch (e) {
       if (e.code === 'ENOENT') {
         fs.mkdirSync(cachePath);
-        readCache();
       } else {
         cacheEnabled = false;
       }
