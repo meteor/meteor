@@ -1,6 +1,6 @@
 let cacheDir;
 
-if (process.env.METEOR_TOOLS_ENABLE_REIFY_RUNTIME_CACHE === 'true') {
+if (process.env.METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE === 'true') {
   const path = require("path");
   const toolsPath = path.dirname(__dirname);
   const meteorPath = path.dirname(toolsPath);
