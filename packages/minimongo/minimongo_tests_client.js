@@ -229,6 +229,7 @@ Tinytest.add('minimongo - error - with field', test => {
 });
 
 Tinytest.add('minimongo - bulk insert', test => {
+  const c = new LocalCollection();
   const ids = c.insert([{ _id: "count1", count: 1 }, { count: 2 }, { count: 3 }]);
   test.length(ids, 3);
   test.equal(ids[0], "count1");
@@ -240,9 +241,9 @@ Tinytest.add('minimongo - bulk insert', test => {
 
   // Bulk inserts that fail partway through.
   test.throws(function () {
-    c.insert([{ count: 4 }, { _id: "count1" }, { count: 5 }])
+    c.insert([{ count: 4 }, { _id: "count1" }, { count: 5 }]);
   });
-  test.equal(c.find({ count: { $gte: 1 }}).count(), 4);
+  test.equal(c.find({ count: { $gt: 1 }}).count(), 4);
 });
 
 Tinytest.add('minimongo - cursors', test => {
