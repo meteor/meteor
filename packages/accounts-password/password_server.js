@@ -276,10 +276,7 @@ const userQueryValidator = Match.Where(user => {
   return true;
 });
 
-const passwordValidator = Match.OneOf(
-  String,
-  { digest: String, algorithm: String }
-);
+const passwordValidator = { digest: String, algorithm: String };
 
 // Handler to login with a password.
 //
@@ -396,12 +393,6 @@ Accounts.setUsername = (userId, newUsername) => {
 // Let the user change their own password if they know the old
 // password. `oldPassword` and `newPassword` should be objects with keys
 // `digest` and `algorithm` (representing the SHA256 of the password).
-//
-// UNLIKE the login method, there is no way to avoid getting SRP upgrade
-// errors thrown. The reasoning for this is that clients using this
-// method directly will need to be updated anyway because we no longer
-// support the SRP flow that they would have been doing to use this
-// method previously.
 Meteor.methods({changePassword: function (oldPassword, newPassword) {
   check(oldPassword, passwordValidator);
   check(newPassword, passwordValidator);
@@ -461,6 +452,9 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
  * @importFromPackage accounts-base
  */
 Accounts.setPassword = (userId, newPlaintextPassword, options) => {
+  check(userId, String)
+  check(newPlaintextPassword, Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256))
+  check(options, Match.Maybe({ logout: Boolean }))
   options = { logout: true , ...options };
 
   const user = getUserById(userId, {fields: {_id: 1}});
