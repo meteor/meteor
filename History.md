@@ -1,5 +1,13 @@
 ## v2.3, UNRELEASED
 
+### Changes
+
+#### Highlights
+
+* Skelets dependencies updated to latest version
+
+#### Meteor Version Release
+
 #### Independent Releases
 
 * Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
