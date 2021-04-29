@@ -360,12 +360,12 @@ var loadServerBundles = Profile("Load server bundles", function () {
         // Unicode normalize the asset path to prevent string mismatches when
         // using this string elsewhere.
         assetPath = files.unicodeNormalizePath(assetPath);
+        assetPath = files.convertToStandardPath(assetPath);
 
         if (! fileInfo.assets || ! hasOwn.call(fileInfo.assets, assetPath)) {
           throw new Error("Unknown asset: " + assetPath);
         }
 
-        assetPath = files.convertToStandardPath(assetPath);
         var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
         return files.convertToOSPath(filePath);
       },

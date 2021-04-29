@@ -277,8 +277,10 @@ const userQueryValidator = Match.Where(user => {
 });
 
 const passwordValidator = Match.OneOf(
-  String,
-  { digest: String, algorithm: String }
+  Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256), {
+    digest: Match.Where(str => Match.test(str, String) && str.length === 64),
+    algorithm: Match.OneOf('sha-256')
+  }
 );
 
 // Handler to login with a password.
