@@ -4,6 +4,8 @@
 
 * Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
 
+* Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
