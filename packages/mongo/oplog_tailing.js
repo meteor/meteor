@@ -1,7 +1,7 @@
 var Future = Npm.require('fibers/future');
 
 import { NpmModuleMongodb } from "meteor/npm-mongo";
-const { Timestamp } = NpmModuleMongodb;
+const { Long } = NpmModuleMongodb;
 
 OPLOG_COLLECTION = 'oplog.rs';
 
@@ -278,7 +278,7 @@ _.extend(OplogHandle.prototype, {
               // See https://github.com/meteor/meteor/issues/10420.
               if (!op.ts) {
                 op.ts = nextTimestamp;
-                nextTimestamp = nextTimestamp.add(Timestamp.ONE);
+                nextTimestamp = nextTimestamp.add(Long.ONE);
               }
               handleDoc(op);
             });

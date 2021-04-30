@@ -389,6 +389,10 @@ _.extend(LocalCatalog.prototype, {
             debugOnly: packageSource.debugOnly,
             prodOnly: packageSource.prodOnly,
             testOnly: packageSource.testOnly,
+
+            deprecated: packageSource.deprecated,
+            deprecatedMessage: packageSource.deprecatedMessage,
+
             containsPlugins: packageSource.containsPlugins()
           }
         };

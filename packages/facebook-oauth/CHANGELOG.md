@@ -1,4 +1,11 @@
-## Changelog
+# Changelog
+## 1.8.0 - unreleased
+### Breaking changes
+- N/A
+
+### Changes
+- Updated to use Facebook GraphAPI v10
+- You can now override the default API version by setting `Meteor.settings.public.packages.facebook-oauth.apiVersion` to for example `8.0` 
 
 ## 1.7.3 - 2020-10-05
 ### Breaking changes

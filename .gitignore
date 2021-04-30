@@ -1,4 +1,5 @@
 .DS_Store
+node_modules
 /.meteor
 *~
 /dev_bundle
