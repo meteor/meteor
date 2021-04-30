@@ -11,12 +11,17 @@ let appliedChangeSets = [];
 let removeErrorMessage = null;
 
 let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
-let enabled = arch === 'web.browser';
+const hmrSecret = __meteor_runtime_config__._hmrSecret;
+let supportedArch = arch === 'web.browser';
+const enabled = hmrSecret && supportedArch;
 
-if (!enabled) {
+if (!supportedArch) {
   console.log(`HMR is not supported in ${arch}`);
 }
 
+if (!hmrSecret) {
+  console.log('Restart Meteor to enable HMR');
+}
 
 const imported = Object.create(null);
 const importedBy = Object.create(null);
@@ -155,7 +160,7 @@ function connect() {
     return;
   }
 
-  let wsUrl = Meteor.absoluteUrl('/__meteor__hmr__/websocket');
+  let wsUrl = Meteor.absoluteUrl('__meteor__hmr__/websocket');
   const protocol = wsUrl.startsWith('https://') ? 'wss://' : 'ws://';
   wsUrl = wsUrl.replace(/^.+\/\//, protocol);
   socket = new WebSocket(wsUrl);
@@ -171,7 +176,7 @@ function connect() {
     socket.send(JSON.stringify({
       type: 'register',
       arch,
-      secret: __meteor_runtime_config__._hmrSecret,
+      secret: hmrSecret,
       appId: __meteor_runtime_config__.appId,
     }));
 
@@ -190,7 +195,12 @@ function connect() {
   socket.addEventListener('error', console.error);
 }
 
-connect();
+if (enabled) {
+  connect();
+} else {
+  // Always fall back to hot code push if HMR is disabled
+  mustReload = true;
+}
 
 function requestChanges() {
   send({
@@ -441,7 +451,7 @@ let nonRefreshableVersion = initialVersions.versionNonRefreshable;
 let replaceableVersion = initialVersions.versionReplaceable;
 
 Meteor.startup(() => {
-  if (!enabled) {
+  if (!supportedArch) {
     return;
   }
 
@@ -457,7 +467,12 @@ Meteor.startup(() => {
       pendingReload();
     } else if (doc.versionReplaceable !== replaceableVersion) {
       replaceableVersion = doc.versionReplaceable;
-      requestChanges();
+      if (enabled) {
+        requestChanges();
+      } else {
+        mustReload = true;
+        pendingReload();
+      }
     }
   });
 
