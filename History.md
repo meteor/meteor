@@ -6,6 +6,8 @@
 
 * Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
 
+* Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
