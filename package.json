@@ -45,6 +45,6 @@
     "@babel/plugin-transform-unicode-regex": "^7.12.13"
   },
   "devDependencies": {
-    "@babel/core": "7.13.16"
+    "@babel/core": "7.14.0"
   }
 }
