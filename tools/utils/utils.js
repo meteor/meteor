@@ -99,7 +99,7 @@ exports.hasScheme = function (str) {
 
 exports.isIPv4Address = function (str) {
   return str.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
-}
+};
 
 // XXX: Move to e.g. formatters.js?
 // Prints a package list in a nice format.
@@ -107,7 +107,7 @@ exports.isIPv4Address = function (str) {
 exports.printPackageList = function (items, options) {
   options = options || {};
 
-  var rows = _.map(items, function (item) {
+  var rows = items.map(item => {
     var name = item.name;
     var description = item.description || 'No description';
     return [name, description];
@@ -394,7 +394,7 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
   }
 
   // First, put together the non-prerelease part.
-  var ret = _.map(numbers, _.partial(leftPad, '0', 4)).join('.');
+  var ret = numbers.map(_.partial(leftPad, '0', 4)).join('.');
 
   if (!prereleaseTag) {
     return ret + '$';
@@ -435,7 +435,7 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
       // Change from indices into the actual elements. Note that 'elements' is
       // a newly allocated array which cb may mutate or retain.
       var elements = [];
-      _.each(chosenIndices, function (index) {
+      chosenIndices.forEach(function (index) {
         elements.push(total[index]);
       });
       if (cb(elements)) {
@@ -587,14 +587,14 @@ exports.runGitInCheckout = function (...args) {
 exports.Throttled = function (options) {
   var self = this;
 
-  options = _.extend({ interval: 150 }, options || {});
+  options = Object.assign({ interval: 150 }, options || {});
   self.interval = options.interval;
   var now = +(new Date);
 
   self.next = now;
 };
 
-_.extend(exports.Throttled.prototype, {
+Object.assign(exports.Throttled.prototype, {
   isAllowed: function () {
     var self = this;
     var now = +(new Date);
@@ -622,7 +622,7 @@ exports.ThrottledYield = function (options) {
   self._throttle = new exports.Throttled(options);
 };
 
-_.extend(exports.ThrottledYield.prototype, {
+Object.assign(exports.ThrottledYield.prototype, {
   yield: function () {
     var self = this;
     if (self._throttle.isAllowed()) {

@@ -1,13 +1,9 @@
 import _ from 'underscore';
-import util from 'util';
 import url from 'url';
-import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files';
 import { optimisticReadJsonOrNull } from "../fs/optimistic";
-import bundler from '../isobuild/bundler.js';
-import archinfo from '../utils/archinfo';
 import release from '../packaging/release.js';
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import utils from '../utils/utils.js';
@@ -393,9 +389,9 @@ export class CordovaBuilder {
   }
 
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
-    _.each(resourceFiles, resourceFile => {
+    resourceFiles.forEach(resourceFile => {
       // Copy resource files in cordova project root ./resource-files directory keeping original absolute path
-      var filepath = files.pathResolve(this.projectContext.projectDir, resourceFile.src);
+      const filepath = files.pathResolve(this.projectContext.projectDir, resourceFile.src);
       files.copyFile(
         filepath,
         files.pathJoin(this.projectRoot, "resource-files", filepath));
@@ -589,7 +585,7 @@ function createAppConfiguration(builder) {
      */
     setPreference: function (key, value, platform) {
       if (platform) {
-        if (!_.contains(['ios', 'android'], platform)) {
+        if (!['ios', 'android'].includes(platform)) {
           throw new Error(`Unknown platform in App.setPreference: ${platform}. \
 Valid platforms are: ios, android.`);
         }
@@ -657,15 +653,15 @@ Valid platforms are: ios, android.`);
      * @memberOf App
      */
     icons: function (icons) {
-      var validDevices =
-        _.keys(iconsIosSizes).concat(_.keys(iconsAndroidSizes));
+      const validDevices =
+        Object.keys(iconsIosSizes).concat(Object.keys(iconsAndroidSizes));
       _.each(icons, function (value, key) {
         if (!_.include(validDevices, key)) {
           Console.labelWarn(`${key}: unknown key in App.icons \
 configuration. The key may be deprecated.`);
         }
       });
-      _.extend(builder.imagePaths.icon, icons);
+      Object.assign(builder.imagePaths.icon, icons);
     },
 
     /**
@@ -705,8 +701,8 @@ configuration. The key may be deprecated.`);
      * @memberOf App
      */
     launchScreens: function (launchScreens) {
-      var validDevices =
-        _.keys(launchIosSizes).concat(_.keys(launchAndroidSizes));
+      const validDevices =
+        Object.keys(launchIosSizes).concat(Object.keys(launchAndroidSizes));
 
       _.each(launchScreens, function (value, key) {
         if (!_.include(validDevices, key)) {
@@ -714,7 +710,7 @@ configuration. The key may be deprecated.`);
 configuration. The key may be deprecated.`);
         }
       });
-      _.extend(builder.imagePaths.splash, launchScreens);
+      Object.assign(builder.imagePaths.splash, launchScreens);
     },
 
     /**

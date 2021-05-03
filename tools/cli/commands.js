@@ -1830,7 +1830,7 @@ function doTestCommand(options) {
     // filter out excluded packages
     var excludedPackages = options.exclude && options.exclude.split(',');
     if (excludedPackages) {
-      packagesToAdd = _.filter(packagesToAdd, function (p) {
+      packagesToAdd = packagesToAdd.filter(function (p) {
         return ! _.some(excludedPackages, function (excluded) {
           return p.replace(/^local-test:/, '') === excluded;
         });
@@ -1845,7 +1845,7 @@ function doTestCommand(options) {
     // Also, add `autoupdate` so that you don't have to manually refresh the tests
     packagesToAdd.unshift("autoupdate");
 
-    var constraintsToAdd = _.map(packagesToAdd, function (p) {
+    var constraintsToAdd = packagesToAdd.map(function (p) {
       return utils.parsePackageConstraint(p);
     });
     // Add the packages to our in-memory representation of .meteor/packages.  (We
