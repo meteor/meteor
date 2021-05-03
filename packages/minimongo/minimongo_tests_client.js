@@ -2691,10 +2691,10 @@ Tinytest.add('minimongo - modify', test => {
   exception({a: false}, {$mul: {a: 10}});
   exception({a: null}, {$mul: {a: 10}});
   exception({}, {$mul: {_id: 1}});
-  modify({a: [1, 2]}, {$mul: {'a.1': 2}}, {a: [1, 4]});
-  modify({a: [1, 2]}, {$mul: {'a.0': 3}}, {a: [3, 2]});
+  modify({a: [1, 2]}, {$mul: {'a.0': 2}}, {a: [2, 2]});
+  modify({a: [1, 2]}, {$mul: {'a.1': 3}}, {a: [1, 6]});
+  modify({a: [1, 2]}, {$mul: {'a.1': 10}}, {a: [1, 20]});
   modify({a: [1, 2]}, {$mul: {'a.2': 10}}, {a: [1, 2, 0]});
-  modify({a: [1, 2]}, {$mul: {'a.3': 10}}, {a: [1, 2, null, 0]});
   modify({a: {b: 2}}, {$mul: {'a.b': 1}}, {a: {b: 2}});
   modify({a: {b: 2}}, {$mul: {'a.c': 10}}, {a: {b: 2, c: 0}});
 
