@@ -90,8 +90,8 @@ export default class LocalCollection {
   // this in our handling of null and $exists)
   insert(document, callback) {
     const isBulkInsert = Array.isArray(document);
-    let docs = [ document ];
-    if (isBulkInsert) docs = document;
+    let docs = document;
+    if (!isBulkInsert) docs = [ document ];
     let error;
     const queriesToRecompute = new Map();
 
