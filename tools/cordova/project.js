@@ -266,9 +266,9 @@ outdated platforms`);
     builder.writeConfigXmlAndCopyResources();
     builder.copyWWW(bundlePath);
 
-    this.ensurePlatformsAreSynchronized();
     this.ensurePluginsAreSynchronized(pluginVersions,
-      builder.pluginsConfiguration);
+        builder.pluginsConfiguration);
+    this.ensurePlatformsAreSynchronized();
 
     // Temporary workaround for Cordova iOS bug until
     // https://issues.apache.org/jira/browse/CB-10885 is fixed
