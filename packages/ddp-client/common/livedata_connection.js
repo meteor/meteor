@@ -692,9 +692,9 @@ export class Connection {
     // wrote.
     const message = {
       msg: 'method',
+      id: methodId,
       method: name,
-      params: args,
-      id: methodId
+      params: args
     };
 
     // If an exception occurred in a stub, and we're ignoring it

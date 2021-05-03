@@ -12,6 +12,10 @@
 
 * Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
 
+* Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
+
+* Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
+
 * Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
 
 ## v2.2, 2021-04-15
