@@ -1,5 +1,9 @@
 # Changelog
-## 1.8.0 - unreleased
+## 1.8.1 - 2021-05-xx
+### Changes
+- Replaced deprecated `http` package with `fetch`.
+
+## 1.8.0 - 2021-04-15
 ### Breaking changes
 - N/A
 
@@ -7,11 +11,8 @@
 - Updated to use Facebook GraphAPI v10
 - You can now override the default API version by setting `Meteor.settings.public.packages.facebook-oauth.apiVersion` to for example `8.0` 
 
-## 1.7.5 -
-### Changes
-- Replaced deprecated `http` package with `fetch`.
 
-## 1.7.4 -
+## 1.7.4 - 2020-11-12
 
 ## 1.7.3 - 2020-10-05
 ### Breaking changes
