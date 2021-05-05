@@ -74,7 +74,7 @@ const getTokenResponse = query => {
         code: query.code
       });
       const request = await fetch(
-        `https://graph.facebook.com/${API_VERSION}/oauth/access_token`, {
+        `https://graph.facebook.com/v${API_VERSION}/oauth/access_token`, {
           method: 'GET',
           headers: { Accept: 'application/json' },
           body: content,
@@ -113,13 +113,13 @@ const getIdentity = (accessToken, fields) => {
   hmac.update(accessToken);
 
   try {
-    return HTTP.get("https://graph.facebook.com/v8.0/me", {
-      params: {
+    const data = Meteor.wrapAsync(async () => {
+      const content = new URLSearchParams({
         access_token: accessToken,
         appsecret_proof: hmac.digest('hex'),
         fields: fields.join(",")
       })
-      const request = await fetch("https://graph.facebook.com/v8.0/me", {
+      const request = await fetch(`https://graph.facebook.com/v${API_VERSION}/me`, {
         method: 'GET',
         headers: { Accept: 'application/json' },
         body: content
