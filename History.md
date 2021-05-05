@@ -18,6 +18,8 @@
 
 * Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
 
+* Released `static-html@1.3.1` removing `underscore` dependency.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
