@@ -1,4 +1,4 @@
-import lolex from 'lolex';
+import FakeTimers from '@sinonjs/fake-timers';
 import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
 
@@ -8,7 +8,7 @@ const newConnection = function(stream, options) {
   // change.
   return new Connection(
     stream,
-    _.extend(
+    Object.assign(
       {
         reloadWithOutstanding: true,
         bufferedWritesInterval: 0
@@ -54,7 +54,7 @@ const testGotMessage = function(test, stream, expected) {
     _.each(expected, function(v, k) {
       if (v === '*') keysWithStarValues.push(k);
     });
-    _.each(keysWithStarValues, function(k) {
+    keysWithStarValues.forEach(function(k) {
       expected[k] = got[k];
     });
   }
@@ -112,9 +112,9 @@ Tinytest.add('livedata stub - receive data', function(test) {
 });
 
 Tinytest.add('livedata stub - buffering data', function(test) {
-  // Install special setTimeout that allows tick-by-tick control in tests using sinonjs 'lolex'
+  // Install special setTimeout that allows tick-by-tick control in tests using sinonjs
   // This needs to be before the connection is instantiated.
-  const clock = lolex.install();
+  const clock = FakeTimers.install();
   const tick = timeout => clock.tick(timeout);
 
   const stream = new StubStream();
@@ -343,10 +343,10 @@ Tinytest.add('livedata stub - reactive subscribe', function(test) {
 
   test.length(stream.sent, 4);
   // The order of unsubs here is not important.
-  const unsubMessages = _.map(stream.sent, JSON.parse);
+  const unsubMessages = stream.sent.map(JSON.parse);
   stream.sent.length = 0;
-  test.equal(_.unique(_.pluck(unsubMessages, 'msg')), ['unsub']);
-  const actualIds = _.pluck(unsubMessages, 'id');
+  test.equal(_.unique(unsubMessages.map(m => m.msg)), ['unsub']);
+  const actualIds = unsubMessages.map((m) => m.id);
   const expectedIds = [idFoo2, idBar1, idCompleter, idStopperAgain];
   actualIds.sort();
   expectedIds.sort();
@@ -634,7 +634,7 @@ const observeCursor = function(test, cursor) {
     }
   });
   return {
-    stop: _.bind(handle.stop, handle),
+    stop: handle.stop.bind(handle),
     expectCallbacks: function(delta) {
       _.each(delta, function(mod, field) {
         expectedCounts[field] += mod;
@@ -1542,7 +1542,7 @@ Tinytest.add('livedata stub - reactive resub', function(test) {
   const markAllReady = function() {
     // synthesize a "ready" message in response to any "sub"
     // message with an id we haven't seen before
-    _.each(stream.sent, function(msg) {
+    stream.sent.forEach(function(msg) {
       msg = JSON.parse(msg);
       if (msg.msg === 'sub' && !_.has(readiedSubs, msg.id)) {
         stream.receive({ msg: 'ready', subs: [msg.id] });
@@ -1780,7 +1780,7 @@ addReconnectTests(
     // what we expect to be blocked. The subsequent logic to correctly
     // read the wait flag is tested separately.
     test.equal(
-      _.map(stream.sent, function(msg) {
+      stream.sent.map(function(msg) {
         return JSON.parse(msg).params[0];
       }),
       ['reconnect zero', 'reconnect one']
@@ -1788,10 +1788,10 @@ addReconnectTests(
 
     // white-box test:
     test.equal(
-      _.map(conn._outstandingMethodBlocks, function(block) {
+      conn._outstandingMethodBlocks.map(function(block) {
         return [
           block.wait,
-          _.map(block.methods, function(method) {
+          block.methods.map(function(method) {
             return method._message.params[0];
           })
         ];
@@ -1826,7 +1826,7 @@ Tinytest.add('livedata connection - ping with id', function(test) {
   testGotMessage(test, stream, { msg: 'pong', id: id });
 });
 
-_.each(DDPCommon.SUPPORTED_DDP_VERSIONS, function(version) {
+DDPCommon.SUPPORTED_DDP_VERSIONS.forEach(function(version) {
   Tinytest.addAsync('livedata connection - ping from ' + version, function(
     test,
     onComplete
@@ -2006,7 +2006,7 @@ addReconnectTests(
     // what we expect to be blocked. The subsequent logic to correctly
     // read the wait flag is tested separately.
     test.equal(
-      _.map(stream.sent, function(msg) {
+      stream.sent.map(function(msg) {
         return JSON.parse(msg).params[0];
       }),
       ['reconnect one', 'reconnect two', 'reconnect three', 'one']
@@ -2014,10 +2014,10 @@ addReconnectTests(
 
     // white-box test:
     test.equal(
-      _.map(conn._outstandingMethodBlocks, function(block) {
+      conn._outstandingMethodBlocks.map(function(block) {
         return [
           block.wait,
-          _.map(block.methods, function(method) {
+          block.methods.map(function(method) {
             return method._message.params[0];
           })
         ];
