@@ -578,8 +578,6 @@ N/A
 
 * Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
 
-### Changes
-
 * `Meteor.user()`, `Meteor.findUserByEmail()` and `Meteor.findUserByUserName()` can take a new
   `options` parameter which can be used to limit the returned fields. Useful for minimizing
   DB bandwidth on the server and avoiding unnecessary reactive UI updates on the client.
