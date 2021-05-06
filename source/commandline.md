@@ -414,6 +414,10 @@ This may cause difficulties if your app contains binary code due to,
 for example, npm packages. You can try to override that behavior
 with the `--architecture` flag.
 
+You can set optional data for the initial value of `Meteor.settings`
+in your mobile application with the `--mobile-settings` flag. A new value for
+`Meteor.settings` can be set later by the server as part of hot code push.
+
 
 <h2 id="meteorlint">meteor lint</h2>
 
