@@ -1,4 +1,12 @@
-## v2.2.1, UNRELEASED
+## v2.3, UNRELEASED
+
+### Changes
+
+#### Highlights
+
+* Skelets dependencies updated to latest version
+
+#### Meteor Version Release
 
 #### Independent Releases
 
@@ -7,6 +15,10 @@
 * Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
 
 * Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
+
+* Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
+
+* Released `static-html@1.3.1` removing `underscore` dependency.
 
 ## v2.2, 2021-04-15
 
