@@ -4,7 +4,7 @@ $DebugPreference = "Continue"
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
 
-$PYTHON_VERSION = "3.6.0" # For node-gyp
+$PYTHON_VERSION = "3.9.5" # For node-gyp
 & cmd /c 'du 2>&1'
 
 $dirCheckout = (Get-Item $PSScriptRoot).parent.FullName
