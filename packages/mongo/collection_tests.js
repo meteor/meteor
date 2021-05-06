@@ -153,3 +153,50 @@ Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs
     }).catch(error => test.fail(error.message));
   }
 );
+
+Tinytest.add('collection - calling find with a valid readPreference',
+  function(test) {
+    if (Meteor.isServer) {
+      const defaultReadPreference = 'primary';
+      const customReadPreference = 'secondaryPreferred';
+      const collection = new Mongo.Collection('readPreferenceTest1');
+      const defaultCursor = collection.find();
+      const customCursor = collection.find(
+        {},
+        { readPreference: customReadPreference }
+      );
+
+      // Trigger the creation of _synchronousCursor
+      defaultCursor.count();
+      customCursor.count();
+
+      test.equal(
+        defaultCursor._synchronousCursor._dbCursor.operation.readPreference
+          .mode,
+        defaultReadPreference
+      );
+      test.equal(
+        customCursor._synchronousCursor._dbCursor.operation.readPreference.mode,
+        customReadPreference
+      );
+    }
+  }
+);
+
+Tinytest.add('collection - calling find with an invalid readPreference',
+  function(test) {
+    if (Meteor.isServer) {
+      const invalidReadPreference = 'INVALID';
+      const collection = new Mongo.Collection('readPreferenceTest2');
+      const cursor = collection.find(
+        {},
+        { readPreference: invalidReadPreference }
+      );
+
+      test.throws(function() {
+        // Trigger the creation of _synchronousCursor
+        cursor.count();
+      }, `Invalid read preference mode ${invalidReadPreference}`);
+    }
+  }
+);
