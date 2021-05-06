@@ -88,7 +88,7 @@ export PATH="$DIR/bin:$PATH"
 cd "$DIR/lib"
 # Overwrite the bundled version with the latest version of npm.
 npm install "npm@$NPM_VERSION"
-
+npm config set python `which python3`
 which node
 which npm
 npm version
