@@ -55,6 +55,13 @@ When running your bundled application in production mode, pass a string of JSON 
 
 > In development, this is accomplished with `meteor --settings [file.json]` in order to provide full-reactivity when changing settings.  Those settings are simply passed as a string here. Please see the [Meteor.settings](http://docs.meteor.com/api/core.html#Meteor-settings) documentation for further information. 
 
+## METEOR_SQLITE_JOURNAL_MODE
+(_development_)
+
+The Meteor package catalog uses the `WAL` [SQLite Journal Mode](https://www.sqlite.org/pragma.html#pragma_journal_mode) by default.  The Journal mode for the package catalog can be modifed by setting `METEOR_SQLITE_JOURNAL_MODE`.
+
+When running multiple concurrent meteor servers on [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/) some meteor developers have seen issues with the package catalog.  Setting the environment variable `METEOR_SQLITE_JOURNAL_MODE=TRUNCATE` can overcome the issue.
+
 ## MONGO_OPLOG_URL
 (_development, production_)
 
