@@ -396,9 +396,9 @@ build artifacts:
 <ul><li>a tarball (.tar.gz) that includes everything necessary to run the application
   server (see the <code>README</code> in the tarball for details).  Using the
   `--directory` option will produce a `bundle` directory instead of the tarball.</li>
-<li>an unsigned <code>apk</code> bundle and a project source if Android is targetted as a
+<li>an unsigned <code>apk</code> bundle and a project source if Android is targeted as a
   mobile platform</li>
-<li>a directory with an Xcode project source if iOS is targetted as a mobile
+<li>a directory with an Xcode project source if iOS is targeted as a mobile
   platform</li></ul>
 
 You can use the application server bundle to host a Meteor application on your
