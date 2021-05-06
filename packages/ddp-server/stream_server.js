@@ -128,20 +128,20 @@ StreamServer = function () {
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
-    _.each(self.registration_callbacks, function (callback) {
+    self.registration_callbacks.forEach(function (callback) {
       callback(socket);
     });
   });
 
 };
 
-_.extend(StreamServer.prototype, {
+Object.assign(StreamServer.prototype, {
   // call my callback when a new socket connects.
   // also call it for all current connections.
   register: function (callback) {
     var self = this;
     self.registration_callbacks.push(callback);
-    _.each(self.all_sockets(), function (socket) {
+    self.all_sockets().forEach(function (socket) {
       callback(socket);
     });
   },
@@ -149,7 +149,7 @@ _.extend(StreamServer.prototype, {
   // get a list of all sockets
   all_sockets: function () {
     var self = this;
-    return _.values(self.open_sockets);
+    return Object.values(self.open_sockets);
   },
 
   // Redirect /websocket to /sockjs/websocket in order to not expose
@@ -161,7 +161,7 @@ _.extend(StreamServer.prototype, {
     // (meaning prior to any connect middlewares) so we need to take
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
-    _.each(['request', 'upgrade'], function(event) {
+    ['request', 'upgrade'].forEach(function(event) {
       var httpServer = WebApp.httpServer;
       var oldHttpServerListeners = httpServer.listeners(event).slice(0);
       httpServer.removeAllListeners(event);
@@ -180,7 +180,7 @@ _.extend(StreamServer.prototype, {
           parsedUrl.pathname = self.prefix + '/websocket';
           request.url = url.format(parsedUrl);
         }
-        _.each(oldHttpServerListeners, function(oldListener) {
+        oldHttpServerListeners.forEach(function(oldListener) {
           oldListener.apply(httpServer, args);
         });
       };

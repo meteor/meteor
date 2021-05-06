@@ -16,7 +16,7 @@ DDPServer._Crossbar = function (options) {
   self.factName = options.factName || null;
 };
 
-_.extend(DDPServer._Crossbar.prototype, {
+Object.assign(DDPServer._Crossbar.prototype, {
   // msg is a trigger or a notification
   _collectionForMessage: function (msg) {
     var self = this;
@@ -109,7 +109,7 @@ _.extend(DDPServer._Crossbar.prototype, {
     // because the only way that stops being true is if listenersForCollection
     // first gets reduced down to the empty object (and then never gets
     // increased again).
-    _.each(callbackIds, function (id) {
+    callbackIds.forEach(function (id) {
       if (_.has(listenersForCollection, id)) {
         listenersForCollection[id].callback(notification);
       }

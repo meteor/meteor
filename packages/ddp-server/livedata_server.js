@@ -21,7 +21,7 @@ var SessionDocumentView = function () {
 DDPServer._SessionDocumentView = SessionDocumentView;
 
 
-_.extend(SessionDocumentView.prototype, {
+Object.assign(SessionDocumentView.prototype, {
 
   getFields: function () {
     var self = this;
@@ -119,7 +119,7 @@ var SessionCollectionView = function (collectionName, sessionCallbacks) {
 DDPServer._SessionCollectionView = SessionCollectionView;
 
 
-_.extend(SessionCollectionView.prototype, {
+Object.assign(SessionCollectionView.prototype, {
 
   isEmpty: function () {
     var self = this;
@@ -129,7 +129,7 @@ _.extend(SessionCollectionView.prototype, {
   diff: function (previous) {
     var self = this;
     DiffSequence.diffMaps(previous.documents, self.documents, {
-      both: _.bind(self.diffDocument, self),
+      both: self.diffDocument.bind(self),
 
       rightOnly: function (id, nowDV) {
         self.callbacks.added(self.collectionName, id, nowDV.getFields());
@@ -322,14 +322,14 @@ var Session = function (server, version, socket, options) {
     "livedata", "sessions", 1);
 };
 
-_.extend(Session.prototype, {
+Object.assign(Session.prototype, {
 
   sendReady: function (subscriptionIds) {
     var self = this;
     if (self._isSending)
       self.send({msg: "ready", subs: subscriptionIds});
     else {
-      _.each(subscriptionIds, function (subscriptionId) {
+      subscriptionIds.forEach(function (subscriptionId) {
         self._pendingReady.push(subscriptionId);
       });
     }
@@ -365,9 +365,9 @@ _.extend(Session.prototype, {
   getSendCallbacks: function () {
     var self = this;
     return {
-      added: _.bind(self.sendAdded, self),
-      changed: _.bind(self.sendChanged, self),
-      removed: _.bind(self.sendRemoved, self)
+      added: self.sendAdded.bind(self),
+      changed: self.sendChanged.bind(self),
+      removed: self.sendRemoved.bind(self)
     };
   },
 
@@ -409,7 +409,7 @@ _.extend(Session.prototype, {
     // additional universal publishers start while we're running them (due to
     // yielding), they will run separately as part of Server.publish.
     var handlers = _.clone(self.server.universal_publish_handlers);
-    _.each(handlers, function (handler) {
+    handlers.forEach(function (handler) {
       self._startSubscription(handler);
     });
   },
@@ -451,7 +451,7 @@ _.extend(Session.prototype, {
 
       // Defer calling the close callbacks, so that the caller closing
       // the session isn't waiting for all the callbacks to complete.
-      _.each(self._closeCallbacks, function (callback) {
+      self._closeCallbacks.forEach(function (callback) {
         callback();
       });
     });
@@ -1030,7 +1030,7 @@ var Subscription = function (
     "livedata", "subscriptions", 1);
 };
 
-_.extend(Subscription.prototype, {
+Object.assign(Subscription.prototype, {
   _runHandler: function () {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
@@ -1095,7 +1095,7 @@ _.extend(Subscription.prototype, {
       // _publishCursor only returns after the initial added callbacks have run.
       // mark subscription as ready.
       self.ready();
-    } else if (_.isArray(res)) {
+    } else if (Array.isArray(res)) {
       // check all the elements are cursors
       if (! _.all(res, isCursor)) {
         self.error(new Error("Publish function returned an array of non-Cursors"));
@@ -1117,7 +1117,7 @@ _.extend(Subscription.prototype, {
       };
 
       try {
-        _.each(res, function (cur) {
+        res.forEach(function (cur) {
           cur._publishCursor(self);
         });
       } catch (e) {
@@ -1419,7 +1419,7 @@ Server = function (options) {
   });
 };
 
-_.extend(Server.prototype, {
+Object.assign(Server.prototype, {
 
   /**
    * @summary Register a callback to be called when a new DDP connection is made to the server.
@@ -1451,7 +1451,7 @@ _.extend(Server.prototype, {
     // The connect message must specify a version and an array of supported
     // versions, and it must claim to support what it is proposing.
     if (!(typeof (msg.version) === 'string' &&
-          _.isArray(msg.support) &&
+          Array.isArray(msg.support) &&
           _.all(msg.support, _.isString) &&
           _.contains(msg.support, msg.version))) {
       socket.send(DDPCommon.stringifyDDP({msg: 'failed',
@@ -1706,8 +1706,8 @@ _.extend(Server.prototype, {
 
 var calculateVersion = function (clientSupportedVersions,
                                  serverSupportedVersions) {
-  var correctVersion = _.find(clientSupportedVersions, function (version) {
-    return _.contains(serverSupportedVersions, version);
+  var correctVersion = clientSupportedVersions.find(function (version) {
+    return serverSupportedVersions.includes(version);
   });
   if (!correctVersion) {
     correctVersion = serverSupportedVersions[0];

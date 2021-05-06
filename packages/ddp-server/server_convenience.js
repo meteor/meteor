@@ -11,10 +11,9 @@ Meteor.refresh = function (notification) {
 
 // Proxy the public methods of Meteor.server so they can
 // be called directly on Meteor.
-_.each(['publish', 'methods', 'call', 'apply', 'onConnection', 'onMessage'],
-       function (name) {
-         Meteor[name] = _.bind(Meteor.server[name], Meteor.server);
-       });
+['publish', 'methods', 'call', 'apply', 'onConnection', 'onMessage'].forEach(function (name) {
+  Meteor[name] = Meteor.server[name].bind(Meteor.server);
+});
 
 // Meteor.server used to be called Meteor.default_server. Provide
 // backcompat as a courtesy even though it was never documented.
