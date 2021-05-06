@@ -14,6 +14,15 @@ See also: [`PORT`](#PORT).
 
 > In development, this can be accomplished with `meteor run --port a.b.c.d:port`.
 
+## DDP_DEFAULT_CONNECTION_URL
+(_develoment, production_)
+
+There are some situations where it is valuable for the meteor client to use a different DDP server than the `ROOT_URL` server.
+
+Setting `DDP_DEFAULT_CONNECTION_URL` when running a meteor server (development: `meteor run` or production: `node main.js`) will set the DDP server to the value in `DDP_DEFAULT_CONNECTION_URL`.
+
+Setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`)  will define the DDP server for `cordova` builds.
+
 ## DISABLE_WEBSOCKETS
 (_development, production_)
 
