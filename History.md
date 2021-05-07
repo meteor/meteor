@@ -1,13 +1,7 @@
 ## v2.3, UNRELEASED
 
 ### Changes
-* The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed.
-
-Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production:`node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.
-
-Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`). 
-
-Additionally, the environment variable is now documented.
+* The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production:`node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
 
 #### Highlights
 
