@@ -28,3 +28,5 @@ node_modules
 
 # Cache of JSON results previously compiled by Babel.
 test/.cache
+
+.idea/
