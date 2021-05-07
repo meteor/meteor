@@ -46,6 +46,10 @@ if (module._onRequire) {
 
 let pendingReload = () => Reload._reload({ immediateMigration: true });
 let mustReload = false;
+// Once an eager update fails, we stop processing future updates since they
+// might depend on the failed update. This gets reset when we re-try applying
+// the changes as non-eager updates.
+let applyEagerUpdates = true;
 
 function handleMessage(message) {
   if (message.type === 'register-failed') {
@@ -78,6 +82,16 @@ function handleMessage(message) {
     throw new Error(`Unknown HMR message type ${message.type}`);
   }
 
+  if (message.eager && !applyEagerUpdates) {
+    return;
+  } else if (!message.eager) {
+    // Now that the build has finished, we will finish handling any updates
+    // that failed while being eagerly applied. Afterwards, we will either
+    // fall back to hot code push, or be in a state where we can start handling
+    // eager updates again
+    applyEagerUpdates = true;
+  }
+
   const hasUnreloadable = message.changeSets.find(changeSet => {
     return !changeSet.reloadable;
   });
@@ -90,6 +104,9 @@ function handleMessage(message) {
     if (message.eager) {
       // This was an attempt to reload before the build finishes
       // If we can't, we will wait until the build finishes to properly handle it
+      // For now, we will disable eager updates in case future updates depended
+      // on these
+      applyEagerUpdates = false;
       return;
     }
 
@@ -118,8 +135,9 @@ function handleMessage(message) {
   });
 
   if (message.eager) {
-    // We will ignore any failures at this time
-    // and wait to handle them until the build finishes
+    // If there were any failures, we will stop applying eager updates for now
+    // and wait until after the build finishes to handle the failures
+    applyEagerUpdates = succeeded;
     return;
   }
 
