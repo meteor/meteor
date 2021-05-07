@@ -74,7 +74,7 @@ exports.compile = function (source, babelOptions, cacheOptions) {
     // Otherwise fall back to compiling without a cache.
     if (! didWarnAboutNoCache) {
       console.warn("Compiling " + babelOptions.filename +
-                  " with meteor-babel without a cache");
+                  " with @meteorjs/babel without a cache");
       console.trace();
       didWarnAboutNoCache = true;
     }

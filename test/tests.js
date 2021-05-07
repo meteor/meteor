@@ -25,7 +25,7 @@ function count(string, substring) {
   return string.split(substring).length - 1;
 }
 
-describe("meteor-babel", () => {
+describe("@meteorjs/babel", () => {
   import meteorBabel from "../index.js";
 
   it("should be able to parse non-standard syntax", () => {
