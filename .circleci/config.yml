@@ -151,7 +151,7 @@ jobs:
             pushd tools
             npm install @types/node --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
-            ../meteor npx tsc --noEmit
+            ../meteor npx tsc --noEmit --skipLibCheck
             popd
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
