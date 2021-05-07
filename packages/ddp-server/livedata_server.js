@@ -241,6 +241,8 @@ var Session = function (server, version, socket, options) {
   self.blocked = false;
   self.workerRunning = false;
 
+  self.cachedUnblock = null;
+
   // Sub objects for active subscriptions
   self._namedSubs = new Map();
   self._universalSubs = [];
@@ -567,8 +569,12 @@ _.extend(Session.prototype, {
   },
 
   protocol_handlers: {
-    sub: function (msg) {
+    sub: function (msg, unblock) {
       var self = this;
+
+      // cacheUnblock temporarly, so we can capture it later
+      // we will use unblock in current eventLoop, so this is safe
+      self.cachedUnblock = unblock;
 
       // reject malformed messages
       if (typeof (msg.id) !== "string" ||
@@ -624,6 +630,8 @@ _.extend(Session.prototype, {
 
       self._startSubscription(handler, msg.id, msg.params, msg.name);
 
+      // cleaning cached unblock
+      self.cachedUnblock = null;
     },
 
     unsub: function (msg) {
@@ -852,6 +860,13 @@ _.extend(Session.prototype, {
 
     var sub = new Subscription(
       self, handler, subId, params, name);
+
+    let unblockHander = self.cachedUnblock;
+    // _startSubscription may call from a lot places
+    // so cachedUnblock might be null in somecases
+    // assign the cachedUnblock
+    sub.unblock = unblockHander || (() => {});
+
     if (subId)
       self._namedSubs.set(subId, sub);
     else
@@ -1038,6 +1053,10 @@ _.extend(Subscription.prototype, {
     // Right now, each publish function blocks all future publishes and
     // methods waiting on data from Mongo (or whatever else the function
     // blocks on). This probably slows page load in common cases.
+
+    if (!this.unblock) {
+      this.unblock = () => {};
+    }
 
     var self = this;
     try {
