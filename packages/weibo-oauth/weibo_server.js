@@ -31,28 +31,25 @@ OAuth.registerService('weibo', 2, null, query => {
 // - uid
 // - access_token
 // - expires_in: lifetime of this token in seconds (5 years(!) right now)
-const getTokenResponse = query => {
+const getTokenResponse = async (query) => {
   const config = ServiceConfiguration.configurations.findOne({service: 'weibo'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
   let response;
   try {
-    response = Meteor.wrapAsync(async () => {
-      const request = await fetch("https://api.weibo.com/oauth2/access_token", {
-        method: 'POST',
-        headers: { Accept: 'application/json' },
-        params: {
-          code: query.code,
-          client_id: config.clientId,
-          client_secret: OAuth.openSecret(config.secret),
-          redirect_uri: OAuth._redirectUri('weibo', config, null, {replaceLocalhost: true}),
-          grant_type: 'authorization_code'
-        }
-      });
-      const data = await request.json();
-      return data;
+    const request = await fetch("https://api.weibo.com/oauth2/access_token", {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+      params: {
+        code: query.code,
+        client_id: config.clientId,
+        client_secret: OAuth.openSecret(config.secret),
+        redirect_uri: OAuth._redirectUri('weibo', config, null, {replaceLocalhost: true}),
+        grant_type: 'authorization_code'
+      }
     });
+    response = await request.json();
   } catch (err) {
     throw Object.assign(new Error(`Failed to complete OAuth handshake with Weibo. ${err.message}`),
                    {response: err.response});
@@ -65,23 +62,20 @@ const getTokenResponse = query => {
   }
 };
 
-const getIdentity = (accessToken, userId) => {
+const getIdentity = async (accessToken, userId) => {
   try {
-    const data = Meteor.wrapAsync(async () => {
-      const request = await fetch(
-        "https://api.weibo.com/2/users/show.json",
-        {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          params: {
-            access_token: accessToken,
-            uid: userId
-          }
-        });
-      const response = await request.json();
-      return response.data;
-    });
-    return data;
+    const request = await fetch(
+      "https://api.weibo.com/2/users/show.json",
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        params: {
+          access_token: accessToken,
+          uid: userId
+        }
+      });
+    const response = await request.json();
+    return response.data;
   } catch (err) {
     throw Object.assign(new Error("Failed to fetch identity from Weibo. " + err.message),
                    {response: err.response});

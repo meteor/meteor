@@ -33,30 +33,27 @@ OAuth.registerService('meetup', 2, null, query => {
   };
 });
 
-const getAccessToken = query => {
+const getAccessToken = async (query) => {
   const config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
   let response;
   try {
-    response = Meteor.wrapAsync(async () => {
-      const request = await fetch(
-        "https://secure.meetup.com/oauth2/access", {
-          method: 'POST',
-          headers: {Accept: 'application/json'},
-          params: {
-            code: query.code,
-            client_id: config.clientId,
-            client_secret: OAuth.openSecret(config.secret),
-            grant_type: 'authorization_code',
-            redirect_uri: OAuth._redirectUri('meetup', config),
-            state: query.state
-          }
-        });
-      const data = await request.json();
-      return data;
-    });
+    const request = await fetch(
+      "https://secure.meetup.com/oauth2/access", {
+        method: 'POST',
+        headers: {Accept: 'application/json'},
+        params: {
+          code: query.code,
+          client_id: config.clientId,
+          client_secret: OAuth.openSecret(config.secret),
+          grant_type: 'authorization_code',
+          redirect_uri: OAuth._redirectUri('meetup', config),
+          state: query.state
+        }
+      });
+    response = await request.json();
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to complete OAuth handshake with Meetup. ${err.message}`),
@@ -71,23 +68,20 @@ const getAccessToken = query => {
   }
 };
 
-const getIdentity = accessToken => {
+const getIdentity = async (accessToken) => {
   try {
-    const data = Meteor.wrapAsync(async () => {
-      const request = await fetch(
-        "https://api.meetup.com/2/members",
-        {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          params: {
-            member_id: 'self',
-            access_token: accessToken
-          }
-        });
-      const response = await request.json();
-      return response;
-    });
-    return data.results?[0];
+    const request = await fetch(
+      "https://api.meetup.com/2/members",
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        params: {
+          member_id: 'self',
+          access_token: accessToken
+        }
+      });
+    const response = await request.json();
+    return response.results?[0];
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Meetup. ${err.message}`),

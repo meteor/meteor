@@ -56,7 +56,7 @@ function getAbsoluteUrlOptions(query) {
 // returns an object containing:
 // - accessToken
 // - expiresIn: lifetime of token in seconds
-const getTokenResponse = query => {
+const getTokenResponse = async (query) => {
   const config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
@@ -66,22 +66,19 @@ const getTokenResponse = query => {
     const absoluteUrlOptions = getAbsoluteUrlOptions(query);
     const redirectUri = OAuth._redirectUri('facebook', config, undefined, absoluteUrlOptions);
     // Request an access token
-    responseContent = Meteor.wrapAsync(async () => {
-      const content = new URLSearchParams({
-        client_id: config.appId,
-        redirect_uri: redirectUri,
-        client_secret: OAuth.openSecret(config.secret),
-        code: query.code
-      });
-      const request = await fetch(
-        `https://graph.facebook.com/v${API_VERSION}/oauth/access_token`, {
-          method: 'GET',
-          headers: { Accept: 'application/json' },
-          body: content,
-        });
-      const data = await request.json();
-      return data;
+    const content = new URLSearchParams({
+      client_id: config.appId,
+      redirect_uri: redirectUri,
+      client_secret: OAuth.openSecret(config.secret),
+      code: query.code
     });
+    const request = await fetch(
+      `https://graph.facebook.com/v${API_VERSION}/oauth/access_token`, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        body: content,
+      });
+    responseContent = await request.json();
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to complete OAuth handshake with Facebook. ${err.message}`),
@@ -102,7 +99,7 @@ const getTokenResponse = query => {
   };
 };
 
-const getIdentity = (accessToken, fields) => {
+const getIdentity = async (accessToken, fields) => {
   const config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
@@ -113,21 +110,18 @@ const getIdentity = (accessToken, fields) => {
   hmac.update(accessToken);
 
   try {
-    const data = Meteor.wrapAsync(async () => {
-      const content = new URLSearchParams({
-        access_token: accessToken,
-        appsecret_proof: hmac.digest('hex'),
-        fields: fields.join(",")
-      })
-      const request = await fetch(`https://graph.facebook.com/v${API_VERSION}/me`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        body: content
-      });
-      const response = await request.json();
-      return response;
+    const content = new URLSearchParams({
+      access_token: accessToken,
+      appsecret_proof: hmac.digest('hex'),
+      fields: fields.join(",")
     })
-    return data;
+    const request = await fetch(`https://graph.facebook.com/v${API_VERSION}/me`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+      body: content
+    });
+    const response = await request.json();
+    return response;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Facebook. ${err.message}`),
