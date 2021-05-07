@@ -53,13 +53,9 @@ function handleMessage(message) {
       console.log('HMR: A different app is running on', Meteor.absoluteUrl());
       console.log('HMR: Once you start this app again reload the page to re-enable HMR');
     } else if (message.reason === 'wrong-secret') {
-      // TODO: we could wait until the first update to use hot code push
-      // instead of reloading the page immediately in case the user has any
-      // client state they want to keep for now.
-      console.log('HMR: Have the wrong secret, possibly because Meteor was restarted');
-      console.log('HMR: Reloading page to get new secret');
+      console.log('HMR: Have the wrong secret, probably because Meteor was restarted');
+      console.log('HMR: Will enable HMR the next time the page is loaded');
       mustReload = true;
-      pendingReload();
     } else {
       console.log(`HMR: Register failed for unknown reason`, message);
     }
@@ -477,7 +473,7 @@ Meteor.startup(() => {
       pendingReload();
     } else if (doc.versionReplaceable !== replaceableVersion) {
       replaceableVersion = doc.versionReplaceable;
-      if (enabled) {
+      if (enabled && !mustReload) {
         requestChanges();
       } else {
         mustReload = true;
