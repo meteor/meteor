@@ -1,5 +1,7 @@
 ## v2.2.1, UNRELEASED
 
+* `meteor-babel` has been update to v7.11.0 and renamed to `@meteorjs/babel`. This update includes a fix for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assingment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`. 
+
 #### Independent Releases
 
 * Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
