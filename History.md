@@ -15,9 +15,11 @@ Additionally, the environment variable is now documented.
 
 #### Meteor Version Release
 
+* Released `launch-screen@1.3.0` that remove LaunchScreen from web clients.
+
 #### Independent Releases
 
-* Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
+* Released `ddp-server@2.3.3` and `socket-stream-client@0.3.2` with updated dependencies which removes Node's HTTP deprecation warning.
 
 * Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
 
