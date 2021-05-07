@@ -130,11 +130,10 @@ const getIdentity = async (accessToken) => {
   try {
     const content = new URLSearchParams({ access_token: accessToken });
     const request = await fetch(
-      "https://www.googleapis.com/oauth2/v1/userinfo",
+      `https://www.googleapis.com/oauth2/v1/userinfo?${content.toString()}`,
       {
         method: 'GET',
-        headers: { Accept: 'application/json' },
-        body: content
+        headers: { Accept: 'application/json' }
       });
     const response = await request.json();
     return response;
@@ -150,10 +149,9 @@ const getScopes = async (accessToken) => {
   try {
     const content = new URLSearchParams({ access_token: accessToken });
     const request = await fetch(
-      "https://www.googleapis.com/oauth2/v1/tokeninfo",
+      `https://www.googleapis.com/oauth2/v1/tokeninfo?${content.toString()}`,
       {
-        method: 'GET',
-        body: content
+        method: 'GET'
       });
     const response = await request.json();
     return response.scope.split(' ');

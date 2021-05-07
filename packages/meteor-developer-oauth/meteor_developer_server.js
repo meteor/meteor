@@ -1,7 +1,9 @@
 OAuth.registerService("meteor-developer", 2, null, query => {
-  const response = getTokens(query);
+  const responseCall = Meteor.wrapAsync(getTokens);
+  const response = responseCall(query);
   const { accessToken } = response;
-  const identity = getIdentity(accessToken);
+  const identityCall = Meteor.wrapAsync(getIdentity);
+  const identity = identityCall(accessToken);
 
   const serviceData = {
     accessToken: OAuth.sealSecret(accessToken),
@@ -37,16 +39,17 @@ const getTokens = async (query) => {
 
   let response;
   try {
+    const content = new URLSearchParams({
+      grant_type: "authorization_code",
+      code: query.code,
+      client_id: config.clientId,
+      client_secret: OAuth.openSecret(config.secret),
+      redirect_uri: OAuth._redirectUri('meteor-developer', config)
+    });
     const request = await fetch(MeteorDeveloperAccounts._server + "/oauth2/token", {
       method: 'POST',
       headers: { Accept: 'application/json' },
-      params: {
-        grant_type: "authorization_code",
-        code: query.code,
-        client_id: config.clientId,
-        client_secret: OAuth.openSecret(config.secret),
-        redirect_uri: OAuth._redirectUri('meteor-developer', config)
-      }
+      body: content
     });
     response = await request.json();
   } catch (err) {

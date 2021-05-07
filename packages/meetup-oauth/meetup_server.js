@@ -1,10 +1,12 @@
 Meetup = {};
 
 OAuth.registerService('meetup', 2, null, query => {
-  const response = getAccessToken(query);
+  const responseCall = Meteor.wrapAsync(getAccessToken);
+  const response = responseCall(query);
   const accessToken = response.access_token;
   const expiresAt = (+new Date) + (1000 * response.expires_in);
-  const identity = getIdentity(accessToken);
+  const identityCall = Meteor.wrapAsync(getIdentity);
+  const identity = identityCall(accessToken);
   const {
     id,
     name,
@@ -40,18 +42,19 @@ const getAccessToken = async (query) => {
 
   let response;
   try {
+    const content = new URLSearchParams({
+      code: query.code,
+      client_id: config.clientId,
+      client_secret: OAuth.openSecret(config.secret),
+      grant_type: 'authorization_code',
+      redirect_uri: OAuth._redirectUri('meetup', config),
+      state: query.state
+    });
     const request = await fetch(
       "https://secure.meetup.com/oauth2/access", {
         method: 'POST',
         headers: {Accept: 'application/json'},
-        params: {
-          code: query.code,
-          client_id: config.clientId,
-          client_secret: OAuth.openSecret(config.secret),
-          grant_type: 'authorization_code',
-          redirect_uri: OAuth._redirectUri('meetup', config),
-          state: query.state
-        }
+        body: content
       });
     response = await request.json();
   } catch (err) {
@@ -70,15 +73,15 @@ const getAccessToken = async (query) => {
 
 const getIdentity = async (accessToken) => {
   try {
+    const search = new URLSearchParams({
+      member_id: 'self',
+      access_token: accessToken
+    });
     const request = await fetch(
-      "https://api.meetup.com/2/members",
+      `https://api.meetup.com/2/members?${search.toString()}`,
       {
         method: 'GET',
-        headers: { Accept: 'application/json' },
-        params: {
-          member_id: 'self',
-          access_token: accessToken
-        }
+        headers: { Accept: 'application/json' }
       });
     const response = await request.json();
     return response.results?[0];

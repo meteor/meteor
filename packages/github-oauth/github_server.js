@@ -2,9 +2,12 @@ Github = {};
 
 OAuth.registerService('github', 2, null, query => {
 
-  const accessToken = getAccessToken(query);
-  const identity = getIdentity(accessToken);
-  const emails = getEmails(accessToken);
+  const accessTokenCall = Meteor.wrapAsync(getAccessToken);
+  const accessToken = accessTokenCall(query);
+  const identityCall = Meteor.wrapAsync(getIdentity);
+  const identity = identityCall(accessToken);
+  const emailsCall = Meteor.wrapAsync(getEmails);
+  const emails = emailsCall(accessToken);
   const primaryEmail = emails.find(email => email.primary);
 
   return {
@@ -13,7 +16,7 @@ OAuth.registerService('github', 2, null, query => {
       accessToken: OAuth.sealSecret(accessToken),
       email: identity.email || (primaryEmail && primaryEmail.email) || '',
       username: identity.login,
-      emails,
+      emails
     },
     options: {profile: {name: identity.name}}
   };
@@ -37,14 +40,13 @@ const getAccessToken = async (query) => {
       state: query.state
     });
     const request = await fetch(
-      "https://github.com/login/oauth/access_token", {
+      `https://github.com/login/oauth/access_token?${content.toString()}`, {
         method: 'POST',
         headers: {
           Accept: 'application/json',
           "User-Agent": userAgent,
           Authorization: `Basic ${config.clientId}:${OAuth.openSecret(config.secret)}`
-        },
-        body: content,
+        }
       });
     response = await request.json();
   } catch (err) {
@@ -72,7 +74,7 @@ const getIdentity = async (accessToken) => {
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Github. ${err.message}`),
-      { response: err.response },
+      { response: err.response }
     );
   }
 };
