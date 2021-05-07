@@ -8,7 +8,6 @@ const release = require('../packaging/release.js');
 
 const Console = require('../console/console.js').Console;
 const crypto = require('crypto');
-const url = require('url');
 
 const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;
@@ -66,8 +65,8 @@ class Runner {
       });
     }
 
-    const basePath = utils.parseUrl(self.rootUrl).pathname + '/';
-    const HMRPath = url.resolve(basePath, '__meteor__hmr__/websocket');
+    const basePath = utils.parseUrl(self.rootUrl).pathname || '';
+    const HMRPath = basePath + '/__meteor__hmr__/websocket';
 
     self.proxy = new Proxy({
       listenPort,
