@@ -143,6 +143,7 @@ function handleMessage(message) {
 }
 
 let socket;
+let disconnected = false;
 let pendingMessages = [];
 
 function send(message) {
@@ -160,6 +161,9 @@ function connect() {
     return;
   }
 
+  // If we've successfully connected and then was disconnected, we avoid showing
+  // any more connection errors in the console until we've connected again
+  let logDisconnect = !disconnected;
   let wsUrl = Meteor.absoluteUrl('__meteor__hmr__/websocket');
   const protocol = wsUrl.startsWith('https://') ? 'wss://' : 'ws://';
   wsUrl = wsUrl.replace(/^.+\/\//, protocol);
@@ -167,11 +171,19 @@ function connect() {
 
   socket.addEventListener('close', function () {
     socket = null;
-    console.log('HMR: websocket closed');
+
+    if (logDisconnect) {
+      console.log('HMR: websocket closed');
+    }
+
+    disconnected = true;
     setTimeout(connect, 2000);
   });
 
   socket.addEventListener('open', function () {
+    logDisconnect = true;
+    disconnected = false;
+
     console.log('HMR: connected');
     socket.send(JSON.stringify({
       type: 'register',
@@ -191,8 +203,6 @@ function connect() {
   socket.addEventListener('message', function (event) {
     handleMessage(JSON.parse(event.data));
   });
-
-  socket.addEventListener('error', console.error);
 }
 
 if (enabled) {
