@@ -19,6 +19,8 @@
 
 * Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
 
+* Released `mongo-id@1.0.8` removing unused dependency `id-map`.
+
 * Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
 
 * Released `static-html@1.3.1` removing `underscore` dependency.
