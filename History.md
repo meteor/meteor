@@ -10,6 +10,8 @@
 
 * Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
 
+* Released `mongo-id@1.0.8` removing unused dependency `id-map`.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
