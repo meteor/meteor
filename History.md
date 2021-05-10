@@ -4,6 +4,12 @@
 
 * Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
 
+* Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
+
+* Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
+
+* Released `mongo-id@1.0.8` removing unused dependency `id-map`.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
@@ -571,8 +577,6 @@ N/A
   [PR #10345](https://github.com/meteor/meteor/pull/10345)
 
 * Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
-
-### Changes
 
 * `Meteor.user()`, `Meteor.findUserByEmail()` and `Meteor.findUserByUserName()` can take a new
   `options` parameter which can be used to limit the returned fields. Useful for minimizing
