@@ -11,6 +11,8 @@
 
 * Released `launch-screen@1.3.0` that remove LaunchScreen from web clients.
 
+* `meteor-babel` has been update to v7.11.0 and renamed to `@meteorjs/babel`. This update includes a fix for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assingment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`. 
+
 #### Independent Releases
 
 * Released `ddp-server@2.3.3` and `socket-stream-client@0.3.2` with updated dependencies which removes Node's HTTP deprecation warning.

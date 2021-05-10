@@ -4,7 +4,7 @@
 "use strict";
 
 function babelRegister() {
-  const meteorBabel = require("meteor-babel");
+  const meteorBabel = require("@meteorjs/babel");
   const path = require("path");
   const toolsPath = path.dirname(__dirname);
   const meteorPath = path.dirname(toolsPath);
@@ -18,7 +18,7 @@ function babelRegister() {
   // meteor/tools modules.
   babelOptions.sourceMaps = "inline";
 
-  require('meteor-babel/register')
+  require('@meteorjs/babel/register')
     .setCacheDirectory(cacheDir)
     .setSourceMapRootPath(meteorPath)
     .allowDirectory(toolsPath)
