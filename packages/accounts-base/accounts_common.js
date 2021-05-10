@@ -204,7 +204,7 @@ export class AccountsCommon {
     const VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpiration",
                       "passwordEnrollTokenExpirationInDays", "restrictCreationByEmailDomain", "loginExpirationInDays",
                       "loginExpiration", "passwordResetTokenExpirationInDays", "passwordResetTokenExpiration",
-                      "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector"];
+                      "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector", "useLowerCaseEmails"];
 
     Object.keys(options).forEach(key => {
       if (!VALID_KEYS.includes(key)) {
