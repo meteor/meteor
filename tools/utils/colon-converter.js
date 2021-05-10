@@ -20,16 +20,16 @@ var convertBySchema = function (val, schema) {
     return val;
   }
 
-  if (_.isArray(schema)) {
+  if (Array.isArray(schema)) {
     if (schema.length !== 1) {
       throw new Error("Expected an array with one element in schema");
     }
 
-    if (! _.isArray(val)) {
+    if (! Array.isArray(val)) {
       throw new Error("Expected an array in value, got " + typeof val);
     }
 
-    return _.map(val, function (subval) {
+    return val.map(function (subval) {
       return convertBySchema(subval, schema[0]);
     });
   }

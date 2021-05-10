@@ -417,7 +417,7 @@ export function treeHash(root: string, optionsParams: {
                   JSON.stringify(readlink(absPath)) + '\n');
     }
     // ignore anything weirder
-  };
+  }
 
   traverse('');
 
@@ -702,7 +702,7 @@ export function mkdtemp(prefix: string): string {
       }
     }
     throw new Error("failed to make temporary directory in " + tmpDir);
-  };
+  }
   const dir = make();
   tempDirs[dir] = true;
   return dir;
@@ -1208,7 +1208,7 @@ export function runJavaScript(code: string, {
       parsedSourceMaps[stackFilename] = parsedSourceMap;
     } else {
       wrapped = chunks.join('');
-    };
+    }
 
     try {
       // See #runInThisContext

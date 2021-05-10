@@ -59,7 +59,7 @@ _.extend(Job.prototype, {
     var already = {};
     indent = new Array((indent || 0) + 1).join(' ');
 
-    _.each(self.messages, function (message) {
+    self.messages.forEach(function (message) {
       var stack = message.stack || [];
 
       var line = indent;
@@ -86,7 +86,7 @@ _.extend(Job.prototype, {
       line += "\n";
 
       if (stack.length > 1) {
-        _.each(stack, function (frame) {
+        stack.forEach(function (frame) {
           // If a nontrivial stack trace (more than just the file and line
           // we already complained about), print it.
           var where = "";
@@ -138,7 +138,7 @@ var MessageSet = function (messageSet) {
   }
 };
 
-_.extend(MessageSet.prototype, {
+Object.assign(MessageSet.prototype, {
   formatMessages: function () {
     var self = this;
 
@@ -178,7 +178,7 @@ _.extend(MessageSet.prototype, {
   // MessageSet.
   merge: function (messageSet) {
     var self = this;
-    _.each(messageSet.jobs, function (j) {
+    messageSet.jobs.forEach(function (j) {
       self.jobs.push(j);
     });
   }
@@ -575,7 +575,7 @@ var mergeMessagesIntoCurrentJob = function (innerMessages) {
   if (! outerJob) {
     throw new Error("Expected to be in a buildmessage job");
   }
-  _.each(innerMessages.jobs, function (j) {
+  innerMessages.jobs.forEach(function (j) {
     outerJob.children.push(j);
   });
   outerMessages.merge(innerMessages);

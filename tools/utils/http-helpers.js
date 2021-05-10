@@ -113,7 +113,7 @@ var getUserAgent = function () {
 
 
 var httpHelpers = exports;
-_.extend(exports, {
+Object.assign(exports, {
   getUserAgent: getUserAgent,
 
   // A wrapper around request with the following improvements:
@@ -435,7 +435,7 @@ _.extend(exports, {
   // we can sometimes complete a request, even if each individual attempt fails.
   // We only use this for package downloads. In theory we could use it for
   // all requests but that seems like overkill and it isn't well tested in
-  // other scenarioes.
+  // other scenarios.
   getUrlWithResuming(urlOrOptions) {
     const options = _.isObject(urlOrOptions) ? _.clone(urlOrOptions) : {
       url: urlOrOptions,
