@@ -2234,7 +2234,7 @@ Tinytest.add('minimongo - nested array sort', test => {
   c.insert({ ab0x: 6, ab0x_g: 6, g_ab0x: 6, cdx: 8, cdx_cdy: 8, cdy_cdx: 2, n: 6 , a: { b: [{ x: 2.5 }] }, c: { d: [{x: 2, y: 2}, {x: 3}] }, g: 4 });
   c.insert({ ab0x: 7, ab0x_g: 7, g_ab0x: 7, cdx: 4, cdx_cdy: 4, cdy_cdx: 6, n: 7 , a: { b: [{ x: 5 }] }, c: { d: [{ y: 2}, { y: 3}] }, g: 5 });
   c.insert({ ab0x: 8, ab0x_g: 8, g_ab0x: 8, cdx: 5, cdx_cdy: 5, cdy_cdx: 7, n: 8 , a: { b: [{ x: 6 }, { x: 7 }] }, c: { d: [{ y: 2}, { x: 1.5, y: 2}] }, g: 6 });
-  
+
   // Test that the the documents in "cursor" contain values with the name
   // "field" running from 0 to the max value of that name in the collection.
   const testCursorMatchesField = (cursor, field) => {
@@ -2254,7 +2254,7 @@ Tinytest.add('minimongo - nested array sort', test => {
   testCursorMatchesField(c.find({}, { sort: { 'c.d.x': 1 } }), 'cdx');
   testCursorMatchesField(c.find({}, { sort: { 'c.d.x': 1, 'c.d.y': 1 } }), 'cdx_cdy');
   testCursorMatchesField(c.find({}, { sort: { 'c.d.y': 1, 'c.d.x': 1 } }), 'cdy_cdx');
- 
+
 });
 
 Tinytest.add('minimongo - sort keys', test => {
@@ -2312,7 +2312,7 @@ Tinytest.add('minimongo - sort keys', test => {
   testKeys({'a.0.x': 1},
     {a: [{x: 0}]},
     [[0]]);
-  
+
   testKeys({'a.0.x': 1},
     {a: []},
     [[undefined]]);
@@ -2673,10 +2673,10 @@ Tinytest.add('minimongo - modify', test => {
   exception({a: false}, {$mul: {a: 10}});
   exception({a: null}, {$mul: {a: 10}});
   exception({}, {$mul: {_id: 1}});
-  modify({a: [1, 2]}, {$mul: {'a.1': 2}}, {a: [2, 1]});
-  modify({a: [1, 2]}, {$mul: {'a.1': 3}}, {a: [3, 2]});
-  modify({a: [1, 2]}, {$mul: {'a.2': 10}}, {a: [1, 20]});
-  modify({a: [1, 2]}, {$mul: {'a.3': 10}}, {a: [1, 2, 0]});
+  modify({a: [1, 2]}, {$mul: {'a.0': 2}}, {a: [2, 2]});
+  modify({a: [1, 2]}, {$mul: {'a.1': 3}}, {a: [1, 6]});
+  modify({a: [1, 2]}, {$mul: {'a.1': 10}}, {a: [1, 20]});
+  modify({a: [1, 2]}, {$mul: {'a.2': 10}}, {a: [1, 2, 0]});
   modify({a: {b: 2}}, {$mul: {'a.b': 1}}, {a: {b: 2}});
   modify({a: {b: 2}}, {$mul: {'a.c': 10}}, {a: {b: 2, c: 0}});
 
