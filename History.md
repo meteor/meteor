@@ -16,6 +16,8 @@
 
 * Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
 
+* Released `mongo-id@1.0.8` removing unused dependency `id-map`.
+
 * Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
 
 ## v2.2, 2021-04-15
@@ -585,8 +587,6 @@ N/A
   [PR #10345](https://github.com/meteor/meteor/pull/10345)
 
 * Facebook OAuth has been updated to call v5 API endpoints. [PR #10738](https://github.com/meteor/meteor/pull/10738)
-
-### Changes
 
 * `Meteor.user()`, `Meteor.findUserByEmail()` and `Meteor.findUserByUserName()` can take a new
   `options` parameter which can be used to limit the returned fields. Useful for minimizing
