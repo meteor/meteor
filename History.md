@@ -1,6 +1,7 @@
 ## v2.3, UNRELEASED
 
 ### Changes
+* The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production:`node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
 
 #### Highlights
 
@@ -8,15 +9,21 @@
 
 #### Meteor Version Release
 
+* Released `launch-screen@1.3.0` that remove LaunchScreen from web clients.
+
 #### Independent Releases
 
-* Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
+* Released `ddp-server@2.3.3` and `socket-stream-client@0.3.2` with updated dependencies which removes Node's HTTP deprecation warning.
 
 * Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
 
 * Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
 
 * Released `mongo-id@1.0.8` removing unused dependency `id-map`.
+
+* Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
+
+* Released `static-html@1.3.1` removing `underscore` dependency.
 
 * Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
 
