@@ -114,7 +114,8 @@ Accounts.onLogout(() => capturedLogouts.push({ successful: true }));
 // For now, we just test the one configuration state. You can comment
 // out each configuration option and see that the tests fail.
 Accounts.config({
-  sendVerificationEmail: true
+  sendVerificationEmail: true,
+  useLowerCaseEmails: true
 });
 
 
