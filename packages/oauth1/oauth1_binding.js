@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import querystring from 'querystring';
-import urlModule from 'url';
 
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
@@ -116,37 +115,29 @@ export class OAuth1Binding {
       signingKey += this._encodeString(accessTokenSecret);
 
     return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
-  };
+  }
 
-  _call(method, url, headers = {}, params = {}, callback) {
+  async _call(method, url, headers = {}, params = {}, callback) {
     // all URLs to be functions to support parameters/customization
     if(typeof url === "function") {
       url = url(this);
     }
 
-    // Extract all query string parameters from the provided URL
-    const parsedUrl = urlModule.parse(url, true);
-    // Merge them in a way that params given to the method call have precedence
-    params = { ...parsedUrl.query, ...params };
-
-    // Reconstruct the URL back without any query string parameters
-    // (they are now in params)
-    parsedUrl.query = {};
-    parsedUrl.search = '';
-    url = urlModule.format(parsedUrl);
+    // parse URL and add in params
+    const parsedUrl = new URL(url);
+    Object.keys(params).map(key => parsedUrl.searchParams.append(key, params[key]));
 
     // Get the signature
     headers.oauth_signature =
-      this._getSignature(method, url, headers, this.accessTokenSecret, params);
+      this._getSignature(method, `${parsedUrl.origin}${parsedUrl.pathname}`, headers, this.accessTokenSecret, params);
 
     // Make a authorization string according to oauth1 spec
     const authString = this._getAuthHeaderString(headers);
 
     // Make signed request
     try {
-      const response = fetch(url, {
+      const response = await fetch(parsedUrl.toString(), {
         method,
-        params,
         headers: {
           Authorization: authString
         }
@@ -156,31 +147,32 @@ export class OAuth1Binding {
         }
         callback(error, response);
       }));
+      const data = await response.json();
       // We store nonce so that JWTs can be validated
-      if (response)
-        response.nonce = headers.oauth_nonce;
-      return response;
+      if (data)
+        data.nonce = headers.oauth_nonce;
+      return data;
     } catch (err) {
       throw Object.assign(new Error(`Failed to send OAuth1 request to ${url}. ${err.message}`),
                      {response: err.response});
     }
-  };
+  }
 
   _encodeHeader(header) {
     return Object.keys(header).reduce((memo, key) => {
       memo[this._encodeString(key)] = this._encodeString(header[key]);
       return memo;
     }, {});
-  };
+  }
 
   _encodeString(str) {
     return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
-  };
+  }
 
   _getAuthHeaderString(headers) {
     return 'OAuth ' +  Object.keys(headers).map(key =>
       `${this._encodeString(key)}="${this._encodeString(headers[key])}"`
     ).sort().join(', ');
-  };
+  }
 
-};
+}
