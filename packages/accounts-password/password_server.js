@@ -239,8 +239,18 @@ const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, o
   const skipCheck = Object.prototype.hasOwnProperty.call(Accounts._skipCaseInsensitiveChecksForTest, fieldValue);
 
   if (fieldValue && !skipCheck) {
+    let selector = {};
+    const { useLowerCaseEmails } = Accounts._options;
+    // if useLowerCaseEmails is true in Accounts.config and fieldName='emails.address'
+    // then don't run selectorForFastCaseInsensitiveLookup
+    // instead run a simple regex query for email.
+    if (useLowerCaseEmails && (fieldName === 'emails.address')) {
+      selector[fieldName] = new RegExp(`^${Meteor._escapeRegExp(fieldValue)}$`, 'i');
+    } else {
+      selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue)
+    }
     const matchedUsers = Meteor.users.find(
-      selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
+      selector,
       {
         fields: {_id: 1},
         // we only need a maximum of 2 users for the logic below to work
