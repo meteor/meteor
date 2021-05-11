@@ -12,6 +12,8 @@
 
 * Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
 
+* Released `email@2.1.0` with updated `nodemailer@6.6.0`
+
 ## v2.2, 2021-04-15
 
 #### Highlights
