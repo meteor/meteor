@@ -11,7 +11,9 @@
 
 * Released `launch-screen@1.3.0` that remove LaunchScreen from web clients.
 
-* `meteor-babel` has been update to v7.11.0 and renamed to `@meteorjs/babel`. This update includes a fix for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assingment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`. 
+* `meteor-babel` has been update to v7.11.0 and renamed to `@meteorjs/babel`. This update includes a fix for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assingment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`.
+
+* `hot-module-replacement@0.3.0` Fixing various HMR bugs and edge cases see [PR for more](https://github.com/meteor/meteor/pull/11405)
 
 #### Independent Releases
 
@@ -26,6 +28,8 @@
 * Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
 
 * Released `static-html@1.3.1` removing `underscore` dependency.
+
+* Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
 
 ## v2.2, 2021-04-15
 
