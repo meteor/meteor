@@ -2868,7 +2868,7 @@ function addSourceMappingURL(data, url, targetPath) {
 
   parts.push(
     newLineBuffer,
-    Buffer.from("//# sourceMappingURL=" + url, "utf8"),
+    Buffer.from("//# sourceMappingURL=" + (process.env.ROOT_URL || "") + url, "utf8"),
     newLineBuffer // trailing newline
   );
 
