@@ -1,4 +1,4 @@
-import lolex from 'lolex';
+import FakeTimers from '@sinonjs/fake-timers';
 import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
 
@@ -114,7 +114,7 @@ Tinytest.add('livedata stub - receive data', function(test) {
 Tinytest.add('livedata stub - buffering data', function(test) {
   // Install special setTimeout that allows tick-by-tick control in tests using sinonjs 'lolex'
   // This needs to be before the connection is instantiated.
-  const clock = lolex.install();
+  const clock = FakeTimers.install();
   const tick = timeout => clock.tick(timeout);
 
   const stream = new StubStream();
