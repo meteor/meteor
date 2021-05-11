@@ -245,7 +245,7 @@ const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, o
     // then don't run selectorForFastCaseInsensitiveLookup
     // instead run a simple regex query for email.
     if (useLowerCaseEmails && (fieldName === 'emails.address')) {
-      selector[fieldName] = new RegExp(`^${Meteor._escapeRegExp(fieldValue)}$`, 'i');
+      selector[fieldName] = {$regex: fieldValue, $options: 'i'};
     } else {
       selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue)
     }
