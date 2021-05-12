@@ -1650,7 +1650,7 @@ if (Meteor.isServer) (() => {
       test.isTrue(match);
       const enrollPasswordToken = match[1];
 
-      Meteor.users.update(userId, {$set: {"services.password.reset.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) }});
+      Meteor.users.update(userId, {$set: {"services.password.enroll.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) }});
 
       test.throws(
         () => Meteor.call("resetPassword", enrollPasswordToken, "new-password"),
@@ -1663,10 +1663,9 @@ if (Meteor.isServer) (() => {
     const userId = Accounts.createUser({email: email, password: 'password'});
 
     Accounts.sendEnrollmentEmail(userId, email);
-    test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
-
+    test.isTrue(!!Meteor.users.findOne(userId).services.password.enroll);
     Accounts._expirePasswordEnrollTokens(new Date(), userId);
-    test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
+    test.isUndefined(Meteor.users.findOne(userId).services.password.enroll);
   });
 
   Tinytest.add(
@@ -1676,11 +1675,11 @@ if (Meteor.isServer) (() => {
       const userId = Accounts.createUser({email: email, password: 'password'});
 
       Accounts.sendEnrollmentEmail(userId, email);
-      const enrollToken = Meteor.users.findOne(userId).services.password.reset;
+      const enrollToken = Meteor.users.findOne(userId).services.password.enroll;
       test.isTrue(enrollToken);
 
       Accounts._expirePasswordResetTokens(new Date(), userId);
-      test.equal(enrollToken, Meteor.users.findOne(userId).services.password.reset);
+      test.equal(enrollToken, Meteor.users.findOne(userId).services.password.enroll);
     }
   )
 
