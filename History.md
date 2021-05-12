@@ -1,4 +1,4 @@
-## v2.2.1, UNRELEASED
+## v2.3.0, UNRELEASED
 
 #### Independent Releases
 
@@ -9,6 +9,8 @@
 * Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
 
 * Released `mongo-id@1.0.8` removing unused dependency `id-map`.
+
+* Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
 
 ## v2.2, 2021-04-15
 
