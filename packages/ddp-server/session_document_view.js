@@ -6,7 +6,7 @@ export default class SessionDocumentView {
 
     static getFields(){
         let ret = {};
-        this.dataByKey.forEach(async function (precedenceList, key) {
+        this.dataByKey.forEach(function (precedenceList, key) {
           ret[key] = precedenceList[0].value;
         });
         return ret;

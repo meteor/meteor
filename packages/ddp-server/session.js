@@ -1,8 +1,4 @@
-/******************************************************************************/
-/* Session                                                                    */
-/******************************************************************************/
-
-class Session {
+export default class Session {
     constructor(server, version, socket, options){
         this.id = Random.id();
   
@@ -135,13 +131,11 @@ class Session {
   }
 
   static getCollectionView(collectionName) {
-    let ret = this.collectionViews.get(collectionName);
-    if (!ret) {
-        ret = new SessionCollectionView(collectionName,
+    return this.collectionViews?.collectionName ?? (() => {
+      new SessionCollectionView(collectionName,
         this.getSendCallbacks());
         this.collectionViews.set(collectionName, ret);
-    }
-    return ret;
+    })
   }
 
   static added(subscriptionHandle, collectionName, id, fields) {
@@ -165,7 +159,7 @@ class Session {
     // Make a shallow copy of the set of universal handlers and start them. If
     // additional universal publishers start while we're running them (due to
     // yielding), they will run separately as part of Server.publish.
-    Object.assign(this.server.universal_publish_handlers)(async function (handler) {
+    Object.assign(this.server.universal_publish_handlers)(function (handler) {
       this._startSubscription(handler);
     });
   }
@@ -205,7 +199,7 @@ class Session {
 
       // Defer calling the close callbacks, so that the caller closing
       // the session isn't waiting for all the callbacks to complete.
-      this._closeCallbacks.forEach(async function (callback) {
+      this._closeCallbacks.forEach(function (callback) {
         callback();
       });
     });
@@ -500,7 +494,7 @@ class Session {
     }  
   }
 
-  static async _eachSub(f) {
+  static _eachSub(f) {
     this._namedSubs.forEach(f);
     this._universalSubs.forEach(f);
   }
@@ -542,7 +536,7 @@ class Session {
 
     // Prevent current subs from updating our collectionViews and call their
     // stop callbacks. This may yield.
-    this._eachSub(async function (sub) {
+    this._eachSub(function (sub) {
       sub._deactivate();
     });
 
@@ -563,7 +557,7 @@ class Session {
       this._namedSubs = new Map();
       this._universalSubs = [];
 
-      this._namedSubs.forEach(async function (sub, subscriptionId) {
+      this._namedSubs.forEach(function (sub, subscriptionId) {
         var newSub = sub._recreate();
         this._namedSubs.set(subscriptionId, newSub);
         // nb: if the handler throws or calls this.error(), it will in fact
@@ -607,7 +601,7 @@ class Session {
   static _stopSubscription(subId, error) {
     let subName = null;
     if (subId) {
-      const maybeSub = this._namedSubs.get(subId);
+      const maybeSub = this._namedSubs.subId;
       if (maybeSub) {
         subName = maybeSub._name;
         maybeSub._removeAllDocuments();
@@ -631,13 +625,13 @@ class Session {
   // tear down all subscriptions. Note that this does NOT send removed or nosub
   // messages, since we assume the client is gone.
    static _deactivateAllSubscriptions() {
-    this._namedSubs.forEach(async function (sub, id) {
+    this._namedSubs.forEach(function (sub, id) {
       sub._deactivate();
     });
 
     this._namedSubs = new Map();
 
-    this._universalSubs.forEach(async function (sub) {
+    this._universalSubs.forEach(function (sub) {
       sub._deactivate();
     });
 
@@ -681,5 +675,3 @@ class Session {
   }
 
 }
-
-export default Session;
