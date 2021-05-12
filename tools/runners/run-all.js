@@ -65,7 +65,8 @@ class Runner {
       });
     }
 
-    const HMRPath = '/__meteor__hmr__/websocket';
+    const basePath = utils.parseUrl(self.rootUrl).pathname || '';
+    const HMRPath = basePath + '/__meteor__hmr__/websocket';
 
     self.proxy = new Proxy({
       listenPort,
