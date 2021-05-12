@@ -21,7 +21,7 @@ Meteor's Babel support consists of the following core packages:
 The `babel-compiler` package exports the `Babel` symbol, which exposes
 functionality provided by the
 [`meteor-babel`](https://www.npmjs.com/package/meteor-babel) NPM package,
-which is in turn implmented using the
+which is in turn implemented using the
 [`babel-core`](https://www.npmjs.com/package/babel-core) NPM package.
 Note that you can only use the `babel-compiler` package on the server.
 
