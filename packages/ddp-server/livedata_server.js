@@ -21,7 +21,7 @@ var SessionDocumentView = function () {
 DDPServer._SessionDocumentView = SessionDocumentView;
 
 
-_.extend(SessionDocumentView.prototype, {
+Object.assign(SessionDocumentView.prototype, {
 
   getFields: function () {
     var self = this;
@@ -119,7 +119,7 @@ var SessionCollectionView = function (collectionName, sessionCallbacks) {
 DDPServer._SessionCollectionView = SessionCollectionView;
 
 
-_.extend(SessionCollectionView.prototype, {
+Object.assign(SessionCollectionView.prototype, {
 
   isEmpty: function () {
     var self = this;
@@ -322,7 +322,7 @@ var Session = function (server, version, socket, options) {
     "livedata", "sessions", 1);
 };
 
-_.extend(Session.prototype, {
+Object.assign(Session.prototype, {
 
   sendReady: function (subscriptionIds) {
     var self = this;
@@ -1030,7 +1030,7 @@ var Subscription = function (
     "livedata", "subscriptions", 1);
 };
 
-_.extend(Subscription.prototype, {
+Object.assign(Subscription.prototype, {
   _runHandler: function () {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
@@ -1095,7 +1095,7 @@ _.extend(Subscription.prototype, {
       // _publishCursor only returns after the initial added callbacks have run.
       // mark subscription as ready.
       self.ready();
-    } else if (_.isArray(res)) {
+    } else if (Array.isArray(res)) {
       // check all the elements are cursors
       if (! _.all(res, isCursor)) {
         self.error(new Error("Publish function returned an array of non-Cursors"));
@@ -1117,7 +1117,7 @@ _.extend(Subscription.prototype, {
       };
 
       try {
-        _.each(res, function (cur) {
+      res.forEach(function (cur) {
           cur._publishCursor(self);
         });
       } catch (e) {
@@ -1154,7 +1154,7 @@ _.extend(Subscription.prototype, {
     // tell listeners, so they can clean up
     var callbacks = self._stopCallbacks;
     self._stopCallbacks = [];
-    _.each(callbacks, function (callback) {
+    callbacks.forEach(function (callback) {
       callback();
     });
   },
@@ -1331,7 +1331,7 @@ Server = function (options) {
   //
   // Note: Troposphere depends on the ability to mutate
   // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
-  self.options = _.defaults(options || {}, {
+  self.options = Object.create(options || {}, {
     heartbeatInterval: 15000,
     heartbeatTimeout: 15000,
     // For testing, allow responding to pings to be disabled.
@@ -1351,10 +1351,10 @@ Server = function (options) {
     debugPrintExceptions: "onMessage callback"
   });
 
-  self.publish_handlers = {};
-  self.universal_publish_handlers = [];
-
+  self.publish_handlers,
   self.method_handlers = {};
+  
+  self.universal_publish_handlers = [];
 
   self.sessions = new Map(); // map from id to session
 
@@ -1419,7 +1419,7 @@ Server = function (options) {
   });
 };
 
-_.extend(Server.prototype, {
+Object.assign(Server.prototype, {
 
   /**
    * @summary Register a callback to be called when a new DDP connection is made to the server.
@@ -1451,7 +1451,7 @@ _.extend(Server.prototype, {
     // The connect message must specify a version and an array of supported
     // versions, and it must claim to support what it is proposing.
     if (!(typeof (msg.version) === 'string' &&
-          _.isArray(msg.support) &&
+          Array.isArray(msg.support) &&
           _.all(msg.support, _.isString) &&
           _.contains(msg.support, msg.version))) {
       socket.send(DDPCommon.stringifyDDP({msg: 'failed',
@@ -1568,7 +1568,7 @@ _.extend(Server.prototype, {
       }
     }
     else{
-      _.each(name, function(value, key) {
+      Object.entries(name).forEach(function(value, key) {
         self.publish(key, value, {});
       });
     }
@@ -1588,7 +1588,7 @@ _.extend(Server.prototype, {
    */
   methods: function (methods) {
     var self = this;
-    _.each(methods, function (func, name) {
+    Object.entries(methods).forEach(function (func, name) {
       if (typeof func !== 'function')
         throw new Error("Method '" + name + "' must be a function");
       if (self.method_handlers[name])
@@ -1706,8 +1706,8 @@ _.extend(Server.prototype, {
 
 var calculateVersion = function (clientSupportedVersions,
                                  serverSupportedVersions) {
-  var correctVersion = _.find(clientSupportedVersions, function (version) {
-    return _.contains(serverSupportedVersions, version);
+  var correctVersion = clientSupportedVersions.find(function (version) {
+    return serverSupportedVersions.includes(version);
   });
   if (!correctVersion) {
     correctVersion = serverSupportedVersions[0];
