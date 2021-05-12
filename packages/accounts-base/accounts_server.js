@@ -1029,7 +1029,7 @@ export class AccountsServer extends AccountsCommon {
       (new Date(new Date() - tokenLifetimeMs));
 
     const tokenFilter = {
-      "services.password.reset.reason": "enroll"
+      "services.password.enroll.reason": "enroll"
     };
 
     expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
@@ -1461,20 +1461,42 @@ const expirePasswordToken = (
   tokenFilter,
   userId
 ) => {
+  // boolean value used to determine if this method was called from enroll account workflow
+  let isEnroll = false;
   const userFilter = userId ? {_id: userId} : {};
-  const resetRangeOr = {
+  // check if this method was called from enroll account workflow
+  if(tokenFilter['services.password.enroll.reason']) {
+    isEnroll = true;
+  } 
+  let resetRangeOr = {
     $or: [
       { "services.password.reset.when": { $lt: oldestValidDate } },
       { "services.password.reset.when": { $lt: +oldestValidDate } }
     ]
   };
+  if(isEnroll) {
+    resetRangeOr = {
+      $or: [
+        { "services.password.enroll.when": { $lt: oldestValidDate } },
+        { "services.password.enroll.when": { $lt: +oldestValidDate } }
+      ]
+    };
+  }
   const expireFilter = { $and: [tokenFilter, resetRangeOr] };
+  if(isEnroll) {
+    accounts.users.update({...userFilter, ...expireFilter}, {
+      $unset: {
+        "services.password.enroll": ""
+      }
+    }, { multi: true });
+  } else {
+    accounts.users.update({...userFilter, ...expireFilter}, {
+      $unset: {
+        "services.password.reset": ""
+      }
+    }, { multi: true });
+  }
 
-  accounts.users.update({...userFilter, ...expireFilter}, {
-    $unset: {
-      "services.password.reset": ""
-    }
-  }, { multi: true });
 };
 
 const setExpireTokensInterval = accounts => {
