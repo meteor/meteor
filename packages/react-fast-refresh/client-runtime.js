@@ -6,7 +6,7 @@ if (enabled && process.env.NODE_ENV !== 'production' && module.hot) {
   let timeout = null;
   function scheduleRefresh() {
     if (!timeout) {
-      timeout = setTimeout(() => {
+      timeout = setTimeout(function() {
         timeout = null;
         runtime.performReactRefresh();
       }, 0);
@@ -69,11 +69,13 @@ if (enabled && process.env.NODE_ENV !== 'production' && module.hot) {
 
   runtime.injectIntoGlobalHook(window);
 
-  window.$RefreshReg$ = () => { };
-  window.$RefreshSig$ = () => type => type;
+  window.$RefreshReg$ = function() { };
+  window.$RefreshSig$ = function() {
+    return function(type) { return type; };
+  };
 
   module.hot.onRequire({
-    before(module) {
+    before: function(module) {
       if (module.loaded) {
         // The module was already executed
         return;
@@ -83,18 +85,18 @@ if (enabled && process.env.NODE_ENV !== 'production' && module.hot) {
       var prevRefreshSig = window.$RefreshSig$;
 
       window.RefreshRuntime = runtime;
-      window.$RefreshReg$ = (type, _id) => {
+      window.$RefreshReg$ = function(type, _id) {
         const fullId = module.id + ' ' + _id;
         RefreshRuntime.register(type, fullId);
       }
       window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
 
       return {
-        prevRefreshReg,
-        prevRefreshSig
+        prevRefreshReg: prevRefreshReg,
+        prevRefreshSig: prevRefreshSig
       };
     },
-    after(module, beforeData) {
+    after: function(module, beforeData) {
       // TODO: handle modules with errors
       if (!beforeData) {
         return;
