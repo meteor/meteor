@@ -244,7 +244,7 @@ const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, o
     // if useLowerCaseEmails is true in Accounts.config and fieldName='emails.address'
     // then don't run selectorForFastCaseInsensitiveLookup
     // instead run a simple regex query for email.
-    if (useLowerCaseEmails && (fieldName === 'emails.address')) {
+    if (useLowerCaseEmails && fieldName === 'emails.address') {
       selector[fieldName] = {$regex: fieldValue, $options: 'i'};
     } else {
       selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue)
