@@ -91,105 +91,87 @@ class Session {
     
       Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
         "livedata", "sessions", 1);
+        this.send({ msg: 'connected', session: this.id })
     }
   
-    send(){ return { msg: 'connected', session: this.id } }
-
-
-  sendReady(subscriptionIds) {
-    
-    if (this._isSending)
-      this.send({msg: "ready", subs: subscriptionIds});
-    else {
-      _.each(subscriptionIds, function (subscriptionId) {
-        this._pendingReady.push(subscriptionId);
+  static sendReady(subscriptionIds) {
+    this._isSending ?
+      this.send({msg: "ready", subs: subscriptionIds})
+    :
+    subscriptionIds.forEach(function (subscriptionId) {
+        this._pendingReady = [...this._pendingReady, subscriptionId]
       });
-    }
   }
 
-  sendAdded(collectionName, id, fields) {
-    
-    if (this._isSending)
+  static sendAdded(collectionName, id, fields) {
+    this._isSending &&
       this.send({msg: "added", collection: collectionName, id: id, fields: fields});
   }
 
-  sendChanged(collectionName, id, fields) {
-    
+  static sendChanged(collectionName, id, fields) {
     if (_.isEmpty(fields))
       return;
 
-    if (this._isSending) {
+    this._isSending &&
       this.send({
         msg: "changed",
         collection: collectionName,
         id: id,
         fields: fields
       });
-    }
   }
 
-  sendRemoved(collectionName, id) {
-    
-    if (this._isSending)
+  static sendRemoved(collectionName, id) {
+    this._isSending &&
       this.send({msg: "removed", collection: collectionName, id: id});
   }
 
-  getSendCallbacks() {
-    
+  static getSendCallbacks() {
     return {
-      added: _.bind(this.sendAdded, this),
-      changed: _.bind(this.sendChanged, this),
-      removed: _.bind(this.sendRemoved, this)
+      added: this.sendAdded.bind(this),
+      changed: this.sendChanged.bind(this),
+      removed: this.sendRemoved.bind(this)
     };
   }
 
-  getCollectionView(collectionName) {
-    
-    var ret = this.collectionViews.get(collectionName);
+  static getCollectionView(collectionName) {
+    let ret = this.collectionViews.get(collectionName);
     if (!ret) {
-      ret = new SessionCollectionView(collectionName,
-                                        this.getSendCallbacks());
-      this.collectionViews.set(collectionName, ret);
+        ret = new SessionCollectionView(collectionName,
+        this.getSendCallbacks());
+        this.collectionViews.set(collectionName, ret);
     }
     return ret;
   }
 
-  added(subscriptionHandle, collectionName, id, fields) {
-    
-    var view = this.getCollectionView(collectionName);
-    view.added(subscriptionHandle, id, fields);
+  static added(subscriptionHandle, collectionName, id, fields) {
+    this.getCollectionView(collectionName).added(subscriptionHandle, id, fields);
   }
 
-  removed(subscriptionHandle, collectionName, id) {
-    
-    var view = this.getCollectionView(collectionName);
-    view.removed(subscriptionHandle, id);
-    if (view.isEmpty()) {
-       this.collectionViews.delete(collectionName);
-    }
+  static removed(subscriptionHandle, collectionName, id) {
+    this.getCollectionView(collectionName).removed(subscriptionHandle, id);
+    this.emptyCollectionCleanup(collectionName)
   }
 
-  changed(subscriptionHandle, collectionName, id, fields) {
-    
-    var view = this.getCollectionView(collectionName);
-    view.changed(subscriptionHandle, id, fields);
+  static emptyCollectionCleanup(collectionName){
+    this.getCollectionView(collectionName).isEmpty() && this.collectionViews.delete(collectionName);
   }
 
-  startUniversalSubs() {
-    
+  static changed(subscriptionHandle, collectionName, id, fields) { 
+    this.getCollectionView(collectionName).changed(subscriptionHandle, id, fields);
+  }
+
+  static startUniversalSubs() {
     // Make a shallow copy of the set of universal handlers and start them. If
     // additional universal publishers start while we're running them (due to
     // yielding), they will run separately as part of Server.publish.
-    var handlers = _.clone(this.server.universal_publish_handlers);
-    _.each(handlers, function (handler) {
+    Object.assign(this.server.universal_publish_handlers)(async function (handler) {
       this._startSubscription(handler);
     });
   }
 
   // Destroy this session and unregister it at the server.
-  close() {
-    
-
+  static close() {
     // Destroy this session, even if it's not registered at the
     // server. Stop all processing and tear everything down. If a socket
     // was attached, close it.
@@ -223,7 +205,7 @@ class Session {
 
       // Defer calling the close callbacks, so that the caller closing
       // the session isn't waiting for all the callbacks to complete.
-      _.each(this._closeCallbacks, function (callback) {
+      this._closeCallbacks.forEach(async function (callback) {
         callback();
       });
     });
@@ -234,8 +216,7 @@ class Session {
 
   // Send a message (doing nothing if no socket is connected right now.)
   // It should be a JSON object (it will be stringified.)
-  send(msg) {
-    
+  static send(msg) {
     if (this.socket) {
       if (Meteor._printSentDDP)
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
@@ -244,7 +225,7 @@ class Session {
   }
 
   // Send a connection error.
-  sendError(reason, offendingMessage) {
+  static sendError(reason, offendingMessage) {
     
     var msg = {msg: 'error', reason: reason};
     if (offendingMessage)
@@ -267,7 +248,7 @@ class Session {
   // way, but it's the easiest thing that's correct. (unsub needs to
   // be ordered against sub, methods need to be ordered against each
   // other.)
-  processMessage(msg_in) {
+  static processMessage(msg_in) {
     
     if (!this.inQueue) // we have been destroyed.
       return;
@@ -338,7 +319,7 @@ class Session {
     processNext();
   }
 
-  protocol_handlers(){
+  static protocol_handlers(){
     return {
         sub(msg) {
         // reject malformed messages
@@ -517,16 +498,14 @@ class Session {
         });
         }
     }  
-}
+  }
 
-  _eachSub(f) {
-    
+  static async _eachSub(f) {
     this._namedSubs.forEach(f);
     this._universalSubs.forEach(f);
   }
 
-  _diffCollectionViews(beforeCVs) {
-    
+  static _diffCollectionViews(beforeCVs) {
     DiffSequence.diffMaps(beforeCVs, this.collectionViews, {
       both(collectionName, leftValue, rightValue) {
         rightValue.diff(leftValue);
@@ -546,7 +525,7 @@ class Session {
 
   // Sets the current user id in all appropriate contexts and reruns
   // all subscriptions
-  _setUserId(userId) {
+  static _setUserId(userId) {
     if (userId !== null && typeof userId !== "string")
       throw new Error("setUserId must be called on string or null, not " +
                       typeof userId);
@@ -563,7 +542,7 @@ class Session {
 
     // Prevent current subs from updating our collectionViews and call their
     // stop callbacks. This may yield.
-    this._eachSub(function (sub) {
+    this._eachSub(async function (sub) {
       sub._deactivate();
     });
 
@@ -581,11 +560,10 @@ class Session {
     // Inside a publish function DDP._CurrentPublicationInvocation is set.
     DDP._CurrentMethodInvocation.withValue(undefined, function () {
       // Save the old named subs, and reset to having no subscriptions.
-      var oldNamedSubs = this._namedSubs;
       this._namedSubs = new Map();
       this._universalSubs = [];
 
-      oldNamedSubs.forEach(function (sub, subscriptionId) {
+      this._namedSubs.forEach(async function (sub, subscriptionId) {
         var newSub = sub._recreate();
         this._namedSubs.set(subscriptionId, newSub);
         // nb: if the handler throws or calls this.error(), it will in fact
@@ -613,24 +591,23 @@ class Session {
     });
   }
 
-  _startSubscription(handler, subId, params, name) {
-    var sub = new Subscription(
+  static _startSubscription(handler, subId, params, name) {
+    const sub = new Subscription(
       this, handler, subId, params, name);
-    if (subId)
-      this._namedSubs.set(subId, sub);
-    else
-      this._universalSubs.push(sub);
+
+    subId ?
+      this._namedSubs.set(subId, sub)
+    :
+      this._universalSubs = [...this._universalSubs, sub];
 
     sub._runHandler();
   }
 
   // tear down specified subscription
-  _stopSubscription(subId, error) {
-    
-
-    var subName = null;
+  static _stopSubscription(subId, error) {
+    let subName = null;
     if (subId) {
-      var maybeSub = this._namedSubs.get(subId);
+      const maybeSub = this._namedSubs.get(subId);
       if (maybeSub) {
         subName = maybeSub._name;
         maybeSub._removeAllDocuments();
@@ -639,7 +616,7 @@ class Session {
       }
     }
 
-    var response = {msg: 'nosub', id: subId};
+    let response = {msg: 'nosub', id: subId};
 
     if (error) {
       response.error = wrapInternalException(
@@ -653,24 +630,24 @@ class Session {
 
   // tear down all subscriptions. Note that this does NOT send removed or nosub
   // messages, since we assume the client is gone.
-  static _deactivateAllSubscriptions() {
-    this._namedSubs.forEach(function (sub, id) {
+   static _deactivateAllSubscriptions() {
+    this._namedSubs.forEach(async function (sub, id) {
       sub._deactivate();
     });
+
     this._namedSubs = new Map();
 
-    this._universalSubs.forEach(function (sub) {
+    this._universalSubs.forEach(async function (sub) {
       sub._deactivate();
     });
+
     this._universalSubs = [];
   }
 
   // Determine the remote client's IP address, based on the
   // HTTP_FORWARDED_COUNT environment variable representing how many
   // proxies the server is behind.
-    _clientAddress() {
-    
-
+  static  _clientAddress() {
     // For the reported client address for a connection to be correct,
     // the developer must set the HTTP_FORWARDED_COUNT environment
     // variable to an integer representing the number of hops they
@@ -678,12 +655,12 @@ class Session {
     // server is behind one proxy.
     //
     // This could be computed once at startup instead of every time.
-    var httpForwardedCount = parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0;
+    let httpForwardedCount = parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0;
 
     if (httpForwardedCount === 0)
       return this.socket.remoteAddress;
 
-    var forwardedFor = this.socket.headers["x-forwarded-for"];
+    let forwardedFor = this.socket.headers["x-forwarded-for"];
     if (! _.isString(forwardedFor))
       return null;
     forwardedFor = forwardedFor.trim().split(/\s*,\s*/);
