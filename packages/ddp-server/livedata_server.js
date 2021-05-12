@@ -1331,7 +1331,7 @@ Server = function (options) {
   //
   // Note: Troposphere depends on the ability to mutate
   // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
-  self.options = Object.create(options || {}, {
+  self.options = _.defaults(options || {}, {
     heartbeatInterval: 15000,
     heartbeatTimeout: 15000,
     // For testing, allow responding to pings to be disabled.
@@ -1351,7 +1351,8 @@ Server = function (options) {
     debugPrintExceptions: "onMessage callback"
   });
 
-  self.publish_handlers,
+  self.publish_handlers = {};
+
   self.method_handlers = {};
   
   self.universal_publish_handlers = [];
