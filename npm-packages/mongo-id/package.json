@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "description": "JS simulation of MongoDB ObjectIDs",
   "main": "lib/id.js",
+  "author": "harryadel",
+  "license": "MIT",
   "scripts": {
     "test": "jest --runInBand --detectOpenHandles --forceExit __tests__/*",
     "test:watch": "jest --runInBand --detectOpenHandles --forceExit --watch __tests__/*",
