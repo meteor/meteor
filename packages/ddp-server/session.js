@@ -1,3 +1,5 @@
+import SessionCollectionView from "./session_collection_view";
+
 export default class Session {
     constructor(server, version, socket, options){
         this.id = Random.id();
@@ -122,13 +124,11 @@ export default class Session {
       this.send({msg: "removed", collection: collectionName, id: id});
   }
 
-  static getSendCallbacks() {
-    return {
-      added: this.sendAdded.bind(this),
-      changed: this.sendChanged.bind(this),
-      removed: this.sendRemoved.bind(this)
-    };
-  }
+  static getSendCallbacks = () => ({
+    added: this.sendAdded.bind(this),
+    changed: this.sendChanged.bind(this),
+    removed: this.sendRemoved.bind(this)
+  })
 
   static getCollectionView(collectionName) {
     return this.collectionViews?.collectionName ?? (() => {

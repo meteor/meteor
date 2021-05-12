@@ -256,22 +256,21 @@ DiffSequence.diffMaps = function (left, right, callbacks) {
   }
 };
 
-
 DiffSequence.makeChangedFields = function (newDoc, oldDoc) {
-  var fields = {};
+  const fields = new Map();
   DiffSequence.diffObjects(oldDoc, newDoc, {
     leftOnly: function (key, value) {
-      fields[key] = undefined;
+      fields.set(key, undefined)
     },
     rightOnly: function (key, value) {
-      fields[key] = value;
+      fields.set(key, value);
     },
     both: function (key, leftValue, rightValue) {
       if (!EJSON.equals(leftValue, rightValue))
-        fields[key] = rightValue;
+        fields.set(key, rightValue);
     }
   });
-  return fields;
+  return Object.fromEntries(fields);
 };
 
 DiffSequence.applyChanges = function (doc, changeFields) {
