@@ -1,5 +1,12 @@
 import SessionDocumentView from "./session_document_view";
 
+/**
+ * Represents a client's view of a single collection
+ * @param {String} collectionName Name of the collection it represents
+ * @param {Object.<String, Function>} sessionCallbacks The callbacks for added, changed, removed
+ * @class SessionCollectionView
+ */
+
 export default class SessionCollectionView {
     constructor(collectionName, sessionCallbacks){
         this.collectionName = collectionName;
@@ -27,29 +34,19 @@ export default class SessionCollectionView {
 
   static diffDocument(id, prevDV, nowDV) { 
     const fields = DiffSequence.makeChangedFields(prevDV.getFields(), nowDV.getFields());
-    // DiffSequence.diffObjects(prevDV.getFields(), nowDV.getFields(), {
-    //   both(key, prev, now) {
-    //     if (!EJSON.equals(prev, now))
-    //       fields[key] = now;
-    //   },
-    //   rightOnly(key, now) {
-    //     fields[key] = now;
-    //   },
-    //   leftOnly: function(key, prev) {
-    //     fields[key] = undefined;
-    //   }
-    // });
     this.callbacks.changed(this.collectionName, id, fields);
   }
 
   static added(subscriptionHandle, id, fields) {
     var docView = this.documents.id;
     var added = false;
+
     if (!docView) {
       added = true;
       docView = new SessionDocumentView();
       this.documents.set(id, docView);
     }
+    
     docView.existsIn.add(subscriptionHandle);
     var changeCollector = {};
     _.each(fields, function (value, key) {

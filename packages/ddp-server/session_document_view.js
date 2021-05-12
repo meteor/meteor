@@ -1,3 +1,4 @@
+// Represents a single document in a SessionCollectionView
 export default class SessionDocumentView {
     constructor(){
         this.existsIn = new Set(); // set of subscriptionHandle

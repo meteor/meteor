@@ -1,4 +1,5 @@
 import SessionCollectionView from "./session_collection_view";
+import Subscription from "./subscription";
 
 export default class Session {
     constructor(server, version, socket, options){
