@@ -132,9 +132,9 @@ export default class Session {
 
   static getCollectionView(collectionName) {
     return this.collectionViews?.collectionName ?? (() => {
-      new SessionCollectionView(collectionName,
+      const createNewSessionCollectionView = new SessionCollectionView(collectionName,
         this.getSendCallbacks());
-        this.collectionViews.set(collectionName, ret);
+        this.collectionViews.set(collectionName, createNewSessionCollectionView);
     })
   }
 
