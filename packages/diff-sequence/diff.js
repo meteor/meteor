@@ -35,7 +35,7 @@ class DiffSequenceClass{
       if (observer.movedBefore)
         throw new Error("_diffQueryUnordered called with a movedBefore observer!");
     
-      newResults.forEach(function (newDoc, id) {
+      newResults.forEach((newDoc, id) => {
         var oldDoc = oldResults.get(id);
         if (oldDoc) {
           if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
@@ -55,7 +55,7 @@ class DiffSequenceClass{
       });
     
       if (observer.removed)
-        oldResults.forEach(function (oldDoc, id) {
+        oldResults.forEach((oldDoc, id) => {
           if (!newResults.has(id))
             observer.removed(id);
         });
@@ -67,7 +67,7 @@ class DiffSequenceClass{
       let projectionFn = options.projectionFn || EJSON.clone;
 
       let new_presence_of_id = {};
-      new_results.forEach(function (doc) {
+      new_results.forEach(doc => {
         if (new_presence_of_id[doc._id])
           Meteor._debug("Duplicate _id in new_results");
 
@@ -75,7 +75,7 @@ class DiffSequenceClass{
       });
 
       let old_index_of_id = {};
-      old_results.forEach(function (doc, i) {
+      old_results.forEach((doc, i)=> {
         if (doc._id in old_index_of_id)
           Meteor._debug("Duplicate _id in old_results");
 
@@ -165,7 +165,7 @@ class DiffSequenceClass{
       // an id of "null"
       unmoved.push(new_results.length);
 
-      old_results.forEach(function (doc) {
+      old_results.forEach(doc => {
         if (!new_presence_of_id[doc._id])
           observer.removed && observer.removed(doc._id);
       });
@@ -173,7 +173,7 @@ class DiffSequenceClass{
       // for each group of things in the new_results that is anchored by an unmoved
       // element, iterate through the things before it.
       let startOfGroup = 0;
-      unmoved.forEach(function (endOfGroup) {
+      unmoved.forEach(endOfGroup => {
         let groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
         let oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
