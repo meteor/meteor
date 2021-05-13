@@ -6,7 +6,7 @@ selftest.define("create main", function () {
   // We need a warehouse so the tool doesn't think we are running from checkout
   var s = new Sandbox({ warehouse: SIMPLE_WAREHOUSE });
   // Can we create an app? Yes!
-  var run = s.run("create", "foobar", "--blaze");
+  var run = s.run("create", "foobar");
   run.match("Created a new Meteor app in 'foobar'.");
   run.match("To run your new app");
   run.expectExit(0);
