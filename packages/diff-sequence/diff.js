@@ -48,7 +48,7 @@ class DiffSequenceClass{
           }
         } else if (observer.added) {
           var fields = projectionFn(newDoc);
-          delete fields._id;
+          fields[_id] = undefined;
           observer.added(newDoc._id, fields);
         }
       });
@@ -179,7 +179,7 @@ class DiffSequenceClass{
           newDoc = new_results[i];
           if (!hasOwn.call(old_index_of_id, newDoc._id)) {
             fields = projectionFn(newDoc);
-            delete fields._id;
+            fields[_id] = undefined;
             observer.addedBefore && observer.addedBefore(newDoc._id, fields, groupId);
             observer.added && observer.added(newDoc._id, fields);
           } else {
@@ -262,7 +262,7 @@ class DiffSequenceClass{
       Object.keys(changeFields).forEach(key => {
         const value = changeFields[key];
         if (typeof value === "undefined")
-          delete doc[key];
+          doc[key] = undefined;
         else 
           doc[key] = value;
       });
