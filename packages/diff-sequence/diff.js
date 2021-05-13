@@ -12,7 +12,7 @@ class DiffSequenceClass{
       obj ? Object.keys(Object(obj)).length === 0 : true;
     }
 
-    iffQueryChanges(ordered, oldResults, newResults,
+    diffQueryChanges(ordered, oldResults, newResults,
     observer, options) {
 
     if (ordered)
