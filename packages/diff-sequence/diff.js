@@ -12,6 +12,8 @@ class DiffSequenceClass{
       obj ? Object.keys(Object(obj)).length === 0 : true;
     }
 
+    static hasOwn = Object.prototype.hasOwnProperty
+
     diffQueryChanges(ordered, oldResults, newResults,
     observer, options) {
 
@@ -59,20 +61,22 @@ class DiffSequenceClass{
 
     diffQueryOrderedChanges(old_results, new_results,
     observer, options){
-        options = options || {};
-      var projectionFn = options.projectionFn || EJSON.clone;
+      options = options || {};
+      let projectionFn = options.projectionFn || EJSON.clone;
 
-      var new_presence_of_id = {};
+      let new_presence_of_id = {};
       new_results.forEach(function (doc) {
         if (new_presence_of_id[doc._id])
           Meteor._debug("Duplicate _id in new_results");
+
         new_presence_of_id[doc._id] = true;
       });
 
-      var old_index_of_id = {};
+      let old_index_of_id = {};
       old_results.forEach(function (doc, i) {
         if (doc._id in old_index_of_id)
           Meteor._debug("Duplicate _id in old_results");
+
         old_index_of_id[doc._id] = i;
       });
 
@@ -110,26 +114,26 @@ class DiffSequenceClass{
       //
       // unmoved: the output of the algorithm; members of the LCS,
       // in the form of indices into new_results
-      var unmoved = [];
+      let unmoved = [];
       // max_seq_len: length of LCS found so far
-      var max_seq_len = 0;
+      let max_seq_len = 0;
       // seq_ends[i]: the index into new_results of the last doc in a
       // common subsequence of length of i+1 <= max_seq_len
-      var N = new_results.length;
-      var seq_ends = new Array(N);
+      let N = new_results.length;
+      let seq_ends = new Array(N);
       // ptrs:  the common subsequence ending with new_results[n] extends
       // a common subsequence ending with new_results[ptr[n]], unless
       // ptr[n] is -1.
-      var ptrs = new Array(N);
+      let ptrs = new Array(N);
       // virtual sequence of old indices of new results
-      var old_idx_seq = function(i_new) {
+      const old_idx_seq = function(i_new) {
         return old_index_of_id[new_results[i_new]._id];
       };
       // for each item in new_results, use it to extend a common subsequence
       // of length j <= max_seq_len
       for(var i=0; i<N; i++) {
         if (old_index_of_id[new_results[i]._id] !== undefined) {
-          var j = max_seq_len;
+          let j = max_seq_len;
           // this inner loop would traditionally be a binary search,
           // but scanning backwards we will likely find a subseq to extend
           // pretty soon, bounded for example by the total number of ops.
@@ -149,7 +153,7 @@ class DiffSequenceClass{
       }
 
       // pull out the LCS/LIS into unmoved
-      var idx = (max_seq_len === 0 ? -1 : seq_ends[max_seq_len-1]);
+      let idx = (max_seq_len === 0 ? -1 : seq_ends[max_seq_len-1]);
       while (idx >= 0) {
         unmoved.push(idx);
         idx = ptrs[idx];
@@ -168,13 +172,13 @@ class DiffSequenceClass{
 
       // for each group of things in the new_results that is anchored by an unmoved
       // element, iterate through the things before it.
-      var startOfGroup = 0;
+      let startOfGroup = 0;
       unmoved.forEach(function (endOfGroup) {
-        var groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
-        var oldDoc, newDoc, fields, projectedNew, projectedOld;
+        let groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
+        let oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
           newDoc = new_results[i];
-          if (!hasOwn.call(old_index_of_id, newDoc._id)) {
+          if (!this.hasOwn.call(old_index_of_id, newDoc._id)) {
             fields = projectionFn(newDoc);
             delete fields._id;
             observer.addedBefore && observer.addedBefore(newDoc._id, fields, groupId);
@@ -208,7 +212,7 @@ class DiffSequenceClass{
     diffObjects(left, right, callbacks){
       Object.keys(left).forEach(key => {
         const leftValue = left[key];
-        if (hasOwn.call(right, key))
+        if (this.hasOwn.call(right, key))
           callbacks.both && callbacks.both(key, leftValue, right[key]);
         else
           callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
@@ -217,21 +221,21 @@ class DiffSequenceClass{
       if (callbacks.rightOnly)
         Object.keys(right).forEach(key => {
           const rightValue = right[key];
-          if (! hasOwn.call(left, key)) {
+          if (! this.hasOwn.call(left, key)) {
             callbacks.rightOnly(key, rightValue);
           }
         });
     }
 
     diffMaps(left, right, callbacks){
-      left.forEach(function (leftValue, key) {
+      left.forEach((leftValue, key) => {
         if (right.has(key))
           callbacks.both && callbacks.both(key, leftValue, right.get(key));
         else
           callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
       });
       if (callbacks.rightOnly)
-        right.forEach(function (rightValue, key) {
+        right.forEach((rightValue, key) => {
           if (!left.has(key)){
             callbacks.rightOnly(key, rightValue);
           }
@@ -241,13 +245,13 @@ class DiffSequenceClass{
     makeChangedFields(newDoc, oldDoc){
       const fields = new Map();
       this.diffObjects(oldDoc, newDoc, {
-        leftOnly: function (key, value) {
+        leftOnly: (key, value) => {
           fields.set(key, undefined)
         },
-        rightOnly: function (key, value) {
+        rightOnly: (key, value) => {
           fields.set(key, value);
         },
-        both: function (key, leftValue, rightValue) {
+        both: (key, leftValue, rightValue) => {
           if (!EJSON.equals(leftValue, rightValue))
             fields.set(key, rightValue);
         }
