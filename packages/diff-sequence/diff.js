@@ -1,20 +1,19 @@
-const hasOwn = Object.prototype.hasOwnProperty
+  const hasOwn = Object.prototype.hasOwnProperty
+
+  /**
+   * @method isObjEmpty
+   * @description helper function to determine if the passed Object is empty
+   * @param {Object} obj object
+   * @returns Boolean
+   */
+   const isObjEmpty = (obj) => obj ? Object.keys(obj).length === 0 : true;
+
 
 /**
  * @class DiffSequenceClass
  * @description old_results and new_results: collections of documents. if ordered, they are arrays. if unordered, they are IdMaps
  */
 class DiffSequenceClass{
-  /**
-   * @method _isObjEmpty
-   * @description helper function to determine if the passed Object is empty
-   * @param {Object} obj object
-   * @returns Boolean
-   */
-    _isObjEmpty(obj) {
-      obj ? Object.keys(Object(obj)).length === 0 : true;
-    }
-
     diffQueryChanges(ordered, oldResults, newResults,
     observer, options) {
 
@@ -42,7 +41,7 @@ class DiffSequenceClass{
             var projectedOld = projectionFn(oldDoc);
             var changedFields =
                   this.makeChangedFields(projectedNew, projectedOld);
-            if (! this._isObjEmpty(changedFields)) {
+            if (! isObjEmpty(changedFields)) {
               observer.changed(id, changedFields);
             }
           }
@@ -188,7 +187,7 @@ class DiffSequenceClass{
             projectedNew = projectionFn(newDoc);
             projectedOld = projectionFn(oldDoc);
             fields = this.makeChangedFields(projectedNew, projectedOld);
-            if (!this._isObjEmpty(fields)) {
+            if (!isObjEmpty(fields)) {
               observer.changed && observer.changed(newDoc._id, fields);
             }
             observer.movedBefore && observer.movedBefore(newDoc._id, groupId);
@@ -200,7 +199,7 @@ class DiffSequenceClass{
           projectedNew = projectionFn(newDoc);
           projectedOld = projectionFn(oldDoc);
           fields = this.makeChangedFields(projectedNew, projectedOld);
-          if (!this._isObjEmpty(fields)) {
+          if (!isObjEmpty(fields)) {
             observer.changed && observer.changed(newDoc._id, fields);
           }
         }
