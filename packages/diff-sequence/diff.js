@@ -4,15 +4,16 @@
  */
 class DiffSequenceClass{
   /**
+   * @method _isObjEmpty
    * @description helper function to determine if the passed Object is empty
    * @param {Object} obj object
    * @returns Boolean
    */
-    static isObjEmpty(obj) {
+    _isObjEmpty(obj) {
       obj ? Object.keys(Object(obj)).length === 0 : true;
     }
 
-    static hasOwn = Object.prototype.hasOwnProperty
+    _hasOwn = Object.prototype.hasOwnProperty
 
     diffQueryChanges(ordered, oldResults, newResults,
     observer, options) {
@@ -28,7 +29,8 @@ class DiffSequenceClass{
 
     diffQueryUnorderedChanges(oldResults, newResults, observer, options) {
       options = options || {};
-      var projectionFn = options.projectionFn || EJSON.clone;
+      let projectionFn = options.projectionFn || EJSON.clone;
+      console.log(oldResults)
     
       if (observer.movedBefore)
         throw new Error("_diffQueryUnordered called with a movedBefore observer!");
@@ -41,7 +43,7 @@ class DiffSequenceClass{
             var projectedOld = projectionFn(oldDoc);
             var changedFields =
                   this.makeChangedFields(projectedNew, projectedOld);
-            if (! this.isObjEmpty(changedFields)) {
+            if (! this._isObjEmpty(changedFields)) {
               observer.changed(id, changedFields);
             }
           }
@@ -126,9 +128,7 @@ class DiffSequenceClass{
       // ptr[n] is -1.
       let ptrs = new Array(N);
       // virtual sequence of old indices of new results
-      const old_idx_seq = function(i_new) {
-        return old_index_of_id[new_results[i_new]._id];
-      };
+      const old_idx_seq = (i_new) => old_index_of_id[new_results[i_new]._id];
       // for each item in new_results, use it to extend a common subsequence
       // of length j <= max_seq_len
       for(var i=0; i<N; i++) {
@@ -178,7 +178,7 @@ class DiffSequenceClass{
         let oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
           newDoc = new_results[i];
-          if (!this.hasOwn.call(old_index_of_id, newDoc._id)) {
+          if (!this._hasOwn.call(old_index_of_id, newDoc._id)) {
             fields = projectionFn(newDoc);
             delete fields._id;
             observer.addedBefore && observer.addedBefore(newDoc._id, fields, groupId);
@@ -189,7 +189,7 @@ class DiffSequenceClass{
             projectedNew = projectionFn(newDoc);
             projectedOld = projectionFn(oldDoc);
             fields = this.makeChangedFields(projectedNew, projectedOld);
-            if (!this.isObjEmpty(fields)) {
+            if (!this._isObjEmpty(fields)) {
               observer.changed && observer.changed(newDoc._id, fields);
             }
             observer.movedBefore && observer.movedBefore(newDoc._id, groupId);
@@ -201,7 +201,7 @@ class DiffSequenceClass{
           projectedNew = projectionFn(newDoc);
           projectedOld = projectionFn(oldDoc);
           fields = this.makeChangedFields(projectedNew, projectedOld);
-          if (!this.isObjEmpty(fields)) {
+          if (!this._isObjEmpty(fields)) {
             observer.changed && observer.changed(newDoc._id, fields);
           }
         }
@@ -212,7 +212,7 @@ class DiffSequenceClass{
     diffObjects(left, right, callbacks){
       Object.keys(left).forEach(key => {
         const leftValue = left[key];
-        if (this.hasOwn.call(right, key))
+        if (this._hasOwn.call(right, key))
           callbacks.both && callbacks.both(key, leftValue, right[key]);
         else
           callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
@@ -221,7 +221,7 @@ class DiffSequenceClass{
       if (callbacks.rightOnly)
         Object.keys(right).forEach(key => {
           const rightValue = right[key];
-          if (! this.hasOwn.call(left, key)) {
+          if (! this._hasOwn.call(left, key)) {
             callbacks.rightOnly(key, rightValue);
           }
         });
