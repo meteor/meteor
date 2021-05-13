@@ -5,7 +5,7 @@ export function connect(...connectArgs) {
   const originalUse = handlers.use;
 
   // Wrap the handlers.use method so that any provided handler functions
-  // alway run in a Fiber.
+  // always run in a Fiber.
   handlers.use = function use(...useArgs) {
     const { stack } = this;
     const originalLength = stack.length;
@@ -21,7 +21,7 @@ export function connect(...connectArgs) {
       if (originalHandle.length >= 4) {
         // If the original handle had four (or more) parameters, the
         // wrapper must also have four parameters, since connect uses
-        // handle.length to dermine whether to pass the error as the first
+        // handle.length to determine whether to pass the error as the first
         // argument to the handle function.
         entry.handle = function handle(err, req, res, next) {
           return Promise.asyncApply(originalHandle, this, arguments);
