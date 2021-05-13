@@ -6,20 +6,13 @@
    * @param {Object} obj object
    * @returns Boolean
    */
-   function isObjEmpty(obj) {
-    for (let key in Object(obj)) {
-     if (hasOwn.call(obj, key)) {
-       return false;
-     }
-   }
-    return true;
-  }
+   const isObjEmpty = obj => obj ? Object.keys(Object(obj)).length === 0 : true;
 
 /**
- * @class DiffSequenceClass
+ * @function DiffSequence
  * @description old_results and new_results: collections of documents. if ordered, they are arrays. if unordered, they are IdMaps
  */
-class DiffSequenceClass{
+export const DiffSequence = {
     diffQueryChanges(ordered, oldResults, newResults,
     observer, options) {
 
@@ -30,7 +23,7 @@ class DiffSequenceClass{
     this.diffQueryUnorderedChanges(
       oldResults, newResults, observer, options);
   
-    }
+    },
 
     diffQueryUnorderedChanges(oldResults, newResults, observer, options) {
       options = options || {};
@@ -63,7 +56,7 @@ class DiffSequenceClass{
           if (!newResults.has(id))
             observer.removed(id);
         });
-    }
+    },
 
     diffQueryOrderedChanges(old_results, new_results,
     observer, options){
@@ -211,7 +204,7 @@ class DiffSequenceClass{
         }
         startOfGroup = endOfGroup+1;
       });
-    }
+    },
 
     diffObjects(left, right, callbacks){
       Object.keys(left).forEach(key => {
@@ -229,7 +222,7 @@ class DiffSequenceClass{
             callbacks.rightOnly(key, rightValue);
           }
         });
-    }
+    },
 
     diffMaps(left, right, callbacks){
       left.forEach((leftValue, key) => {
@@ -244,7 +237,7 @@ class DiffSequenceClass{
             callbacks.rightOnly(key, rightValue);
           }
         });
-    }
+    },
 
     makeChangedFields(newDoc, oldDoc){
       const fields = new Map();
@@ -261,7 +254,7 @@ class DiffSequenceClass{
         }
       });
       return Object.fromEntries(fields);
-    }
+    },
 
     applyChanges(doc, changeFields){
       Object.keys(changeFields).forEach(key => {
@@ -271,7 +264,5 @@ class DiffSequenceClass{
         else 
           doc[key] = value;
       });
-    }
+    },
 }
-
-export const DiffSequence = new DiffSequenceClass();
