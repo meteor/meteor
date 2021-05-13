@@ -1,3 +1,5 @@
+const hasOwn = Object.prototype.hasOwnProperty
+
 /**
  * @class DiffSequenceClass
  * @description old_results and new_results: collections of documents. if ordered, they are arrays. if unordered, they are IdMaps
@@ -12,8 +14,6 @@ class DiffSequenceClass{
     _isObjEmpty(obj) {
       obj ? Object.keys(Object(obj)).length === 0 : true;
     }
-
-    _hasOwn = Object.prototype.hasOwnProperty
 
     diffQueryChanges(ordered, oldResults, newResults,
     observer, options) {
@@ -30,7 +30,6 @@ class DiffSequenceClass{
     diffQueryUnorderedChanges(oldResults, newResults, observer, options) {
       options = options || {};
       let projectionFn = options.projectionFn || EJSON.clone;
-      console.log(oldResults)
     
       if (observer.movedBefore)
         throw new Error("_diffQueryUnordered called with a movedBefore observer!");
@@ -178,7 +177,7 @@ class DiffSequenceClass{
         let oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
           newDoc = new_results[i];
-          if (!this._hasOwn.call(old_index_of_id, newDoc._id)) {
+          if (!hasOwn.call(old_index_of_id, newDoc._id)) {
             fields = projectionFn(newDoc);
             delete fields._id;
             observer.addedBefore && observer.addedBefore(newDoc._id, fields, groupId);
@@ -212,7 +211,7 @@ class DiffSequenceClass{
     diffObjects(left, right, callbacks){
       Object.keys(left).forEach(key => {
         const leftValue = left[key];
-        if (this._hasOwn.call(right, key))
+        if (hasOwn.call(right, key))
           callbacks.both && callbacks.both(key, leftValue, right[key]);
         else
           callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
@@ -221,7 +220,7 @@ class DiffSequenceClass{
       if (callbacks.rightOnly)
         Object.keys(right).forEach(key => {
           const rightValue = right[key];
-          if (! this._hasOwn.call(left, key)) {
+          if (! hasOwn.call(left, key)) {
             callbacks.rightOnly(key, rightValue);
           }
         });
