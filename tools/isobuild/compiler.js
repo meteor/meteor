@@ -2,7 +2,6 @@ var _ = require('underscore');
 
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
-var bundler = require('./bundler.js');
 var isopack = require('./isopack.js');
 var meteorNpm = require('./meteor-npm.js');
 var watch = require('../fs/watch');
@@ -13,6 +12,7 @@ var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('../tool-env/profile').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
+import { NodeModulesDirectory, buildJsImage } from './bundler.js';
 
 import {
   optimisticReadFile,
@@ -66,7 +66,7 @@ compiler.compile = Profile(function (packageSource, options) {
         "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {
-      var buildResult = bundler.buildJsImage({
+      var buildResult = buildJsImage({
         name: info.name,
         packageMap: packageMap,
         isopackCache: isopackCache,
@@ -410,7 +410,7 @@ var compileUnibuild = Profile(function (options) {
   const nodeModulesDirectories = Object.create(null);
 
   function addNodeModulesDirectory(options) {
-    const nmd = new bundler.NodeModulesDirectory(options);
+    const nmd = new NodeModulesDirectory(options);
     nodeModulesDirectories[nmd.sourcePath] = nmd;
   }
 
