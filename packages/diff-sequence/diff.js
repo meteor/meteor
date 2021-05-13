@@ -130,7 +130,7 @@ class DiffSequenceClass{
       const old_idx_seq = (i_new) => old_index_of_id[new_results[i_new]._id];
       // for each item in new_results, use it to extend a common subsequence
       // of length j <= max_seq_len
-      for(var i=0; i<N; i++) {
+      for(let i = N.length; i > 0; i--) {
         if (old_index_of_id[new_results[i]._id] !== undefined) {
           let j = max_seq_len;
           // this inner loop would traditionally be a binary search,
