@@ -67,7 +67,7 @@ Meteor free deploy is back.
 - Status: shipped in January 2021
 - PRs: https://github.com/meteor/meteor/pull/11117
 
-HMR is avaible since Meteor 2.0
+HMR is available since Meteor 2.0
 
 ### Vue.js
 - Leaders: [Brian Mulhall](https://github.com/BrianMulhall)
