@@ -6,8 +6,14 @@
    * @param {Object} obj object
    * @returns Boolean
    */
-   const isObjEmpty = (obj) => obj ? Object.keys(obj).length === 0 : true;
-
+   function isObjEmpty(obj) {
+    for (let key in Object(obj)) {
+     if (hasOwn.call(obj, key)) {
+       return false;
+     }
+   }
+    return true;
+  }
 
 /**
  * @class DiffSequenceClass
