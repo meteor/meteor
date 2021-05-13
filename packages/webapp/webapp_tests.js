@@ -157,7 +157,7 @@ Tinytest.addAsync(
     };
 
     // It's okay to set this global state because we're not going to yield
-    // before settng it back to what it was originally.
+    // before setting it back to what it was originally.
     WebAppInternals.setInlineScriptsAllowed(true);
 
     {
