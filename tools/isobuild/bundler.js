@@ -1161,7 +1161,7 @@ class Target {
       .computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
-      const { unibuild } = batch;
+      const { unibuild, sourceRoot } = batch;
 
       // Depend on the source files that produced these resources.
       this.watchSet.merge(unibuild.watchSet);
@@ -1170,6 +1170,13 @@ class Target {
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
       this.watchSet.merge(unibuild.pkg.pluginWatchSet);
+
+      unibuild.resources.forEach(resource => {
+        let absPath = files.pathJoin(sourceRoot, resource.path);
+        if (resource._dataUsed !== false) {
+          this.watchSet.addFile(absPath, resource.hash);
+        }
+      });
 
       const entry = jsOutputFilesMap.get(unibuild.pkg.name || null);
       if (entry && entry.importScannerWatchSet) {

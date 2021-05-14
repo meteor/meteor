@@ -899,7 +899,9 @@ class OutputResource {
       servePath,
       // Remember the source hash so that changes to the source that
       // disappear after compilation can still contribute to the hash.
-      _inputHash: resourceSlot.inputResource.hash,
+      // Bypassing SourceResource.hash getter so if the compiler plugin doesn't
+      // use the resource's content we don't unnecessarily mark it as used.
+      _inputHash: resourceSlot.inputResource._hash,
     });
   }
 
@@ -1518,6 +1520,7 @@ export class PackageSourceBatch {
   }
 
   static _watchOutputFiles(jsOutputFilesMap) {
+    return jsOutputFilesMap;
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
