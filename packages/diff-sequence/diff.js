@@ -6,7 +6,7 @@
    * @param {Object} obj object
    * @returns Boolean
    */
-   const isObjEmpty = obj => obj ? Object.keys(obj).length === 0 : true;
+   const isObjEmpty = function (obj) { return obj ? Object.keys(obj).length === 0 : true }
 
 /**
  * @function DiffSequence
@@ -32,7 +32,7 @@ export const DiffSequence = {
       if (observer.movedBefore)
         throw new Error("_diffQueryUnordered called with a movedBefore observer!");
     
-      newResults.forEach((newDoc, id) => {
+      newResults.forEach(function(newDoc, id) {
         var oldDoc = oldResults.get(id);
         if (oldDoc) {
           if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
@@ -52,7 +52,7 @@ export const DiffSequence = {
       });
     
       if (observer.removed)
-        oldResults.forEach((oldDoc, id) => {
+        oldResults.forEach(function(oldDoc, id) {
           if (!newResults.has(id))
             observer.removed(id);
         });
@@ -64,7 +64,7 @@ export const DiffSequence = {
       let projectionFn = options.projectionFn || EJSON.clone;
 
       let new_presence_of_id = {};
-      new_results.forEach(doc => {
+      new_results.forEach(function(doc) {
         if (new_presence_of_id[doc._id])
           Meteor._debug("Duplicate _id in new_results");
 
@@ -72,7 +72,7 @@ export const DiffSequence = {
       });
 
       let old_index_of_id = {};
-      old_results.forEach((doc, i)=> {
+      old_results.forEach(function(doc, i) {
         if (doc._id in old_index_of_id)
           Meteor._debug("Duplicate _id in old_results");
 
@@ -125,7 +125,7 @@ export const DiffSequence = {
       // ptr[n] is -1.
       let ptrs = new Array(N);
       // virtual sequence of old indices of new results
-      const old_idx_seq = (i_new) => old_index_of_id[new_results[i_new]._id];
+      const old_idx_seq = function (i_new){ old_index_of_id[new_results[i_new]._id] };
       // for each item in new_results, use it to extend a common subsequence
       // of length j <= max_seq_len
       for(let i = N.length; i > 0; i--) {
@@ -162,7 +162,7 @@ export const DiffSequence = {
       // an id of "null"
       unmoved.push(new_results.length);
 
-      old_results.forEach(doc => {
+      old_results.forEach(function(doc) {
         if (!new_presence_of_id[doc._id])
           observer.removed && observer.removed(doc._id);
       });
@@ -170,7 +170,7 @@ export const DiffSequence = {
       // for each group of things in the new_results that is anchored by an unmoved
       // element, iterate through the things before it.
       let startOfGroup = 0;
-      unmoved.forEach(endOfGroup => {
+      unmoved.forEach(function (endOfGroup) {
         let groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
         let oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
@@ -207,7 +207,7 @@ export const DiffSequence = {
     },
 
     diffObjects(left, right, callbacks){
-      Object.keys(left).forEach(key => {
+      Object.keys(left).forEach(function(key) {
         const leftValue = left[key];
         if (hasOwn.call(right, key))
           callbacks.both && callbacks.both(key, leftValue, right[key]);
@@ -216,7 +216,7 @@ export const DiffSequence = {
       });
 
       if (callbacks.rightOnly)
-        Object.keys(right).forEach(key => {
+        Object.keys(right).forEach(function (key) {
           const rightValue = right[key];
           if (! hasOwn.call(left, key)) {
             callbacks.rightOnly(key, rightValue);
@@ -225,14 +225,14 @@ export const DiffSequence = {
     },
 
     diffMaps(left, right, callbacks){
-      left.forEach((leftValue, key) => {
+      left.forEach(function (leftValue, key) {
         if (right.has(key))
           callbacks.both && callbacks.both(key, leftValue, right.get(key));
         else
           callbacks.leftOnly && callbacks.leftOnly(key, leftValue);
       });
       if (callbacks.rightOnly)
-        right.forEach((rightValue, key) => {
+        right.forEach(function (rightValue, key) {
           if (!left.has(key)){
             callbacks.rightOnly(key, rightValue);
           }
@@ -242,13 +242,13 @@ export const DiffSequence = {
     makeChangedFields(newDoc, oldDoc){
       const fields = new Map();
       this.diffObjects(oldDoc, newDoc, {
-        leftOnly: (key, value) => {
+        leftOnly: function(key, value) {
           fields.set(key, undefined)
         },
-        rightOnly: (key, value) => {
+        rightOnly: function(key, value) {
           fields.set(key, value);
         },
-        both: (key, leftValue, rightValue) => {
+        both: function(key, leftValue, rightValue) {
           if (!EJSON.equals(leftValue, rightValue))
             fields.set(key, rightValue);
         }
@@ -257,7 +257,7 @@ export const DiffSequence = {
     },
 
     applyChanges(doc, changeFields){
-      Object.keys(changeFields).forEach(key => {
+      Object.keys(changeFields).forEach(function(key) {
         const value = changeFields[key];
         if (typeof value === "undefined")
           delete doc[key];
