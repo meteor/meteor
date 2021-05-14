@@ -6,7 +6,7 @@
    * @param {Object} obj object
    * @returns Boolean
    */
-   const isObjEmpty = function (obj) { return obj ? Object.keys(obj).length === 0 : true }
+   const isObjEmpty = function (obj) { return obj ? Object.keys(Object(obj)).length === 0 : true }
 
 /**
  * @function DiffSequence
