@@ -222,7 +222,7 @@ const generateCasePermutationsForString = string => {
     permutations = [].concat(...(permutations.map(prefix => {
       const lowerCaseChar = ch.toLowerCase();
       const upperCaseChar = ch.toUpperCase();
-      // Don't add unneccesary permutations when ch is not a letter
+      // Don't add unnecessary permutations when ch is not a letter
       if (lowerCaseChar === upperCaseChar) {
         return [prefix + ch];
       } else {

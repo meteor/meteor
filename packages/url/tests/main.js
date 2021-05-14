@@ -5,5 +5,5 @@ Tinytest.add("url - sanity", function (test) {
   test.equal(typeof URLSearchParams, "function");
 });
 
-// backwards compatability
+// backwards compatibility
 require('../bc/url_tests');
