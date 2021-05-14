@@ -822,7 +822,8 @@ _.extend(AppRunner.prototype, {
                       : 'changed'; // both a client and server asset changed
           self._resolvePromise('run', { outcome: outcome });
         },
-        async: true
+        async: true,
+        includePotentiallyUnusedFiles: false,
       });
     };
     if (self.watchForChanges && canRefreshClient) {
