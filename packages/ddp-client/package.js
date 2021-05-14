@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  lolex: '2.3.2'
+  '@sinonjs/fake-timers': '7.0.5'
 });
 
 Package.onUse((api) => {
