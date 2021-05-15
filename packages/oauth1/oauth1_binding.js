@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import querystring from 'querystring';
+import { fetch } from 'meteor/fetch';
 
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
@@ -117,26 +118,10 @@ export class OAuth1Binding {
     return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
   }
 
-  async _call(method, url, headers = {}, params = {}, callback) {
-    // all URLs to be functions to support parameters/customization
-    if(typeof url === "function") {
-      url = url(this);
-    }
-
-    // parse URL and add in params
-    const parsedUrl = new URL(url);
-    Object.keys(params).map(key => parsedUrl.searchParams.append(key, params[key]));
-
-    // Get the signature
-    headers.oauth_signature =
-      this._getSignature(method, `${parsedUrl.origin}${parsedUrl.pathname}`, headers, this.accessTokenSecret, params);
-
-    // Make a authorization string according to oauth1 spec
-    const authString = this._getAuthHeaderString(headers);
-
+  async _callMethod(method, url, headers = {}, params = {}, callback, authString) {
     // Make signed request
     try {
-      const response = await fetch(parsedUrl.toString(), {
+      const response = await fetch(url.toString(), {
         method,
         headers: {
           Authorization: authString
@@ -156,6 +141,26 @@ export class OAuth1Binding {
       throw Object.assign(new Error(`Failed to send OAuth1 request to ${url}. ${err.message}`),
                      {response: err.response});
     }
+  }
+
+  _call (method, url, headers = {}, params = {}, callback) {
+    const callMethod = Meteor.wrapAsync(this._callMethod);
+    // all URLs to be functions to support parameters/customization
+    if(typeof url === "function") {
+      url = url(this);
+    }
+
+    // parse URL and add in params
+    const parsedUrl = new URL(url);
+    Object.keys(params).map(key => parsedUrl.searchParams.append(key, params[key]));
+
+    // Get the signature
+    headers.oauth_signature =
+      this._getSignature(method, `${parsedUrl.origin}${parsedUrl.pathname}`, headers, this.accessTokenSecret, params);
+
+    // Make a authorization string according to oauth1 spec
+    const authString = this._getAuthHeaderString(headers);
+    return callMethod(method, parsedUrl, headers, params, callback, authString);
   }
 
   _encodeHeader(header) {
