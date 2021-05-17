@@ -934,7 +934,8 @@ var buildCommands = {
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    platforms: { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -1014,6 +1015,19 @@ var buildCommand = function (options) {
   // _bundleOnly implies serverOnly
   const serverOnly = options._bundleOnly || !!options['server-only'];
 
+  let selectedPlatforms;
+  if (options.platforms) {
+    const platformsArray = options.platforms.trim().split(/\s*,\s*/);
+
+    platformsArray.forEach((plat) => {
+      if (!excludableWebArchs.concat(['android', 'ios']).includes(plat)) {
+        throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
+      }
+    })
+
+    selectedPlatforms = platformsArray;
+  }
+
   // options['mobile-settings'] is used to set the initial value of
   // `Meteor.settings` on mobile apps. Pass it on to options.settings,
   // which is used in this command.
@@ -1028,6 +1042,10 @@ var buildCommand = function (options) {
   let parsedCordovaServerPort;
   if (!serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+
+    if (selectedPlatforms) {
+      cordovaPlatforms = _.intersection(selectedPlatforms, cordovaPlatforms)
+    }
 
     if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
@@ -1052,6 +1070,21 @@ on an OS X system.");
     }
   } else {
     cordovaPlatforms = [];
+  }
+
+  // If we specified some platforms, we need to build what was specified. For example, if we want to build only android,
+  // there is no need to build web.browser.
+  let webArchs;
+  if (selectedPlatforms) {
+    const filteredArchs = projectContext.platformList.getWebArchs().filter((arch) => selectedPlatforms.includes(arch));
+
+    if (! _.isEmpty(cordovaPlatforms)) {
+      if (filteredArchs.indexOf("web.cordova") < 0) {
+        filteredArchs.push("web.cordova");
+      }
+    }
+
+    webArchs = filteredArchs.length ? filteredArchs : undefined;
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
@@ -1094,6 +1127,7 @@ ${Console.command("meteor build ../output")}`,
       //     packages with binary npm dependencies
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
+      webArchs,
     },
   });
   if (bundleResult.errors) {
