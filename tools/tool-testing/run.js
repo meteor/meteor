@@ -544,7 +544,7 @@ export default class Run {
 
       testList.notifyFailed(test, failure);
     } else {
-      Console.error(`... ok! (${test.durationMs} ms)`,
+      Console.success(`... ok! (${test.durationMs} ms)`,
         Console.options({ indent: 2 }));
     }
   }
