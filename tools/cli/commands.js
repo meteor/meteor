@@ -1015,19 +1015,6 @@ var buildCommand = function (options) {
   // _bundleOnly implies serverOnly
   const serverOnly = options._bundleOnly || !!options['server-only'];
 
-  let selectedPlatforms;
-  if (options.platforms) {
-    const platformsArray = options.platforms.split(",");
-
-    platformsArray.forEach((plat) => {
-      if (!excludableWebArchs.concat(['android', 'ios']).includes(plat)) {
-        throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
-      }
-    })
-
-    selectedPlatforms = platformsArray;
-  }
-
   // options['mobile-settings'] is used to set the initial value of
   // `Meteor.settings` on mobile apps. Pass it on to options.settings,
   // which is used in this command.
@@ -1036,10 +1023,22 @@ var buildCommand = function (options) {
   }
 
   const appName = files.pathBasename(options.appDir);
+  let parsedCordovaServerPort;
+  let selectedPlatforms = null;
+  if (options.platforms) {
+    const platformsArray = options.platforms.split(",");
+
+    platformsArray.forEach(plat => {
+      if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
+        throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
+      }
+    })
+
+    selectedPlatforms = platformsArray;
+  }
 
   let cordovaPlatforms;
   let parsedMobileServerUrl;
-  let parsedCordovaServerPort;
   if (!serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
@@ -1072,16 +1071,20 @@ on an OS X system.");
     cordovaPlatforms = [];
   }
 
-  // If we specified some platforms, we need to build what was specified. For example, if we want to build only android,
-  // there is no need to build web.browser.
+  // If we specified some platforms, we need to build what was specified.
+  // For example, if we want to build only android, there is no need to build
+  // web.browser.
   let webArchs;
   if (selectedPlatforms) {
-    const filteredArchs = projectContext.platformList.getWebArchs().filter((arch) => selectedPlatforms.includes(arch));
+    const filteredArchs = projectContext.platformList
+      .getWebArchs()
+      .filter(arch => selectedPlatforms.includes(arch));
 
-    if (! _.isEmpty(cordovaPlatforms)) {
-      if (filteredArchs.indexOf("web.cordova") < 0) {
-        filteredArchs.push("web.cordova");
-      }
+    if (
+      !_.isEmpty(cordovaPlatforms) &&
+      !filteredArchs.includes('web.cordova')
+    ) {
+      filteredArchs.push('web.cordova');
     }
 
     webArchs = filteredArchs.length ? filteredArchs : undefined;
