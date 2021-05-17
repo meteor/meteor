@@ -1017,7 +1017,7 @@ var buildCommand = function (options) {
 
   let selectedPlatforms;
   if (options.platforms) {
-    const platformsArray = options.platforms.trim().split(/\s*,\s*/);
+    const platformsArray = options.platforms.split(",");
 
     platformsArray.forEach((plat) => {
       if (!excludableWebArchs.concat(['android', 'ios']).includes(plat)) {
