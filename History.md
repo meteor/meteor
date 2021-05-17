@@ -7,6 +7,10 @@
 
 * Skelets dependencies updated to latest version
 
+* Typescript update to 4.2.4
+
+* New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` now set to `false` by default to enable Reify runtime cache. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
+
 #### Meteor Version Release
 
 * Released `launch-screen@1.3.0` that remove LaunchScreen from web clients.
