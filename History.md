@@ -11,6 +11,8 @@
 
 * New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` now set to `false` by default to enable Reify runtime cache. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
 
+* New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android` See [PR](https://github.com/meteor/meteor/pull/11437) for details.
+
 #### Meteor Version Release
 
 * Released `launch-screen@1.3.0` that remove LaunchScreen from web clients.
