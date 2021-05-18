@@ -280,12 +280,12 @@ class DiffSequenceClass {
       });
     }
 
-    static _memoize(cacheStore, key, value){
+    _memoize(cacheStore, key, value){
       this[cacheStore].size > 25 && this[cacheStore].clear(); 
       this[cacheStore].set(key, value);
     }
 
-    static _generateHashFromArray(array){
+    _generateHashFromArray(array){
       let objectString = "";
       for(let object in array){
         objectString.concat(EJSON.stringify(object));
