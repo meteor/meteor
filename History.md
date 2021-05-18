@@ -37,6 +37,8 @@
 
 * Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
 
+* Released `id-map@1.1.1` removing unused dependencies and modernizing the code
+
 * Released `email@2.1.0` with updated `nodemailer@6.6.0`, it now adds `charset=utf-8` to `text/plain` messages
 
 ## v2.2, 2021-04-15
