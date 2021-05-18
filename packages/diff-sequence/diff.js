@@ -124,9 +124,7 @@ export const DiffSequence = {
       // ptr[n] is -1.
       var ptrs = new Array(N);
       // virtual sequence of old indices of new results
-      var old_idx_seq = function(i_new) {
-        return old_index_of_id[new_results[i_new]._id];
-      };
+      var old_idx_seq = i_new => old_index_of_id[new_results[i_new]._id];
       // for each item in new_results, use it to extend a common subsequence
       // of length j <= max_seq_len
       for(var i=0; i<N; i++) {
