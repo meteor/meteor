@@ -21,6 +21,8 @@
 
 * `hot-module-replacement@0.3.0` Fixing various HMR bugs and edge cases see [PR for more](https://github.com/meteor/meteor/pull/11405)
 
+* `email@2.1.0` with updated `nodemailer@6.6.0`, it now adds `charset=utf-8` to `text/plain` messages by default
+
 #### Independent Releases
 
 * Released `ddp-server@2.3.3` and `socket-stream-client@0.3.2` with updated dependencies which removes Node's HTTP deprecation warning.
@@ -38,8 +40,6 @@
 * Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
 
 * Released `id-map@1.1.1` removing unused dependencies and modernizing the code
-
-* Released `email@2.1.0` with updated `nodemailer@6.6.0`, it now adds `charset=utf-8` to `text/plain` messages
 
 ## v2.2, 2021-04-15
 
