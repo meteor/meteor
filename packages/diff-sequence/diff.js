@@ -129,7 +129,7 @@ export const DiffSequence = {
       };
       // for each item in new_results, use it to extend a common subsequence
       // of length j <= max_seq_len
-      for(var i= N; i > 0; i--) {
+      for(var i=0; i<N; i++) {
         if (old_index_of_id[new_results[i]._id] !== undefined) {
           var j = max_seq_len;
           // this inner loop would traditionally be a binary search,
