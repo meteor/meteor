@@ -1,45 +1,52 @@
-  const hasOwn = Object.prototype.hasOwnProperty
+const hasOwn = Object.prototype.hasOwnProperty
 
-  /**
-   * @method isObjEmpty
-   * @description helper function to determine if the passed Object is empty
-   * @param {Object} obj object
-   * @returns Boolean
-   */
-   const isObjEmpty = function (obj) { return obj ? Object.keys(Object(obj)).length === 0 : true }
+/**
+ * @description helper function to determine if the passed Object is empty
+ * @param {Object} obj 
+ * @returns Boolean
+ */
+
+function isObjEmpty(obj) {
+  for (let key in Object(obj)) {
+    if (hasOwn.call(obj, key)) {
+      return false;
+    }
+  }
+  return true;
+}
 
 /**
  * @function DiffSequence
  * @description old_results and new_results: collections of documents. if ordered, they are arrays. if unordered, they are IdMaps
  */
+
 export const DiffSequence = {
-    diffQueryChanges(ordered, oldResults, newResults,
-    observer, options) {
+    diffQueryChanges: (ordered, oldResults, newResults,
+    observer, options) => {
 
     if (ordered)
-    this.diffQueryOrderedChanges(
+    DiffSequence.diffQueryOrderedChanges(
       oldResults, newResults, observer, options);
     else
-    this.diffQueryUnorderedChanges(
+    DiffSequence.diffQueryUnorderedChanges(
       oldResults, newResults, observer, options);
   
     },
-
-    diffQueryUnorderedChanges(oldResults, newResults, observer, options) {
+    diffQueryUnorderedChanges: (oldResults, newResults, observer, options) => {
       options = options || {};
-      let projectionFn = options.projectionFn || EJSON.clone;
+      var projectionFn = options.projectionFn || EJSON.clone;
     
       if (observer.movedBefore)
         throw new Error("_diffQueryUnordered called with a movedBefore observer!");
     
-      newResults.forEach(function(newDoc, id) {
+      newResults.forEach(function (newDoc, id) {
         var oldDoc = oldResults.get(id);
         if (oldDoc) {
           if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
             var projectedNew = projectionFn(newDoc);
             var projectedOld = projectionFn(oldDoc);
             var changedFields =
-                  this.makeChangedFields(projectedNew, projectedOld);
+                  DiffSequence.makeChangedFields(projectedNew, projectedOld);
             if (! isObjEmpty(changedFields)) {
               observer.changed(id, changedFields);
             }
@@ -52,30 +59,27 @@ export const DiffSequence = {
       });
     
       if (observer.removed)
-        oldResults.forEach(function(oldDoc, id) {
+        oldResults.forEach(function (oldDoc, id) {
           if (!newResults.has(id))
             observer.removed(id);
         });
     },
+    diffQueryOrderedChanges: (old_results, new_results,
+    observer, options) => {
+        options = options || {};
+      var projectionFn = options.projectionFn || EJSON.clone;
 
-    diffQueryOrderedChanges(old_results, new_results,
-    observer, options){
-      options = options || {};
-      let projectionFn = options.projectionFn || EJSON.clone;
-
-      let new_presence_of_id = {};
-      new_results.forEach(function(doc) {
+      var new_presence_of_id = {};
+      new_results.forEach(function (doc) {
         if (new_presence_of_id[doc._id])
           Meteor._debug("Duplicate _id in new_results");
-
         new_presence_of_id[doc._id] = true;
       });
 
-      let old_index_of_id = {};
-      old_results.forEach(function(doc, i) {
+      var old_index_of_id = {};
+      old_results.forEach(function (doc, i) {
         if (doc._id in old_index_of_id)
           Meteor._debug("Duplicate _id in old_results");
-
         old_index_of_id[doc._id] = i;
       });
 
@@ -113,24 +117,26 @@ export const DiffSequence = {
       //
       // unmoved: the output of the algorithm; members of the LCS,
       // in the form of indices into new_results
-      let unmoved = [];
+      var unmoved = [];
       // max_seq_len: length of LCS found so far
-      let max_seq_len = 0;
+      var max_seq_len = 0;
       // seq_ends[i]: the index into new_results of the last doc in a
       // common subsequence of length of i+1 <= max_seq_len
-      let N = new_results.length;
-      let seq_ends = new Array(N);
+      var N = new_results.length;
+      var seq_ends = new Array(N);
       // ptrs:  the common subsequence ending with new_results[n] extends
       // a common subsequence ending with new_results[ptr[n]], unless
       // ptr[n] is -1.
-      let ptrs = new Array(N);
+      var ptrs = new Array(N);
       // virtual sequence of old indices of new results
-      const old_idx_seq = function (i_new){ old_index_of_id[new_results[i_new]._id] };
+      var old_idx_seq = function(i_new) {
+        return old_index_of_id[new_results[i_new]._id];
+      };
       // for each item in new_results, use it to extend a common subsequence
       // of length j <= max_seq_len
-      for(let i = N.length; i > 0; i--) {
+      for(var i=0; i<N; i++) {
         if (old_index_of_id[new_results[i]._id] !== undefined) {
-          let j = max_seq_len;
+          var j = max_seq_len;
           // this inner loop would traditionally be a binary search,
           // but scanning backwards we will likely find a subseq to extend
           // pretty soon, bounded for example by the total number of ops.
@@ -150,7 +156,7 @@ export const DiffSequence = {
       }
 
       // pull out the LCS/LIS into unmoved
-      let idx = (max_seq_len === 0 ? -1 : seq_ends[max_seq_len-1]);
+      var idx = (max_seq_len === 0 ? -1 : seq_ends[max_seq_len-1]);
       while (idx >= 0) {
         unmoved.push(idx);
         idx = ptrs[idx];
@@ -162,17 +168,17 @@ export const DiffSequence = {
       // an id of "null"
       unmoved.push(new_results.length);
 
-      old_results.forEach(function(doc) {
+      old_results.forEach(function (doc) {
         if (!new_presence_of_id[doc._id])
           observer.removed && observer.removed(doc._id);
       });
 
       // for each group of things in the new_results that is anchored by an unmoved
       // element, iterate through the things before it.
-      let startOfGroup = 0;
+      var startOfGroup = 0;
       unmoved.forEach(function (endOfGroup) {
-        let groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
-        let oldDoc, newDoc, fields, projectedNew, projectedOld;
+        var groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
+        var oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
           newDoc = new_results[i];
           if (!hasOwn.call(old_index_of_id, newDoc._id)) {
@@ -185,7 +191,7 @@ export const DiffSequence = {
             oldDoc = old_results[old_index_of_id[newDoc._id]];
             projectedNew = projectionFn(newDoc);
             projectedOld = projectionFn(oldDoc);
-            fields = this.makeChangedFields(projectedNew, projectedOld);
+            fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
             if (!isObjEmpty(fields)) {
               observer.changed && observer.changed(newDoc._id, fields);
             }
@@ -197,7 +203,7 @@ export const DiffSequence = {
           oldDoc = old_results[old_index_of_id[newDoc._id]];
           projectedNew = projectionFn(newDoc);
           projectedOld = projectionFn(oldDoc);
-          fields = this.makeChangedFields(projectedNew, projectedOld);
+          fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
           if (!isObjEmpty(fields)) {
             observer.changed && observer.changed(newDoc._id, fields);
           }
@@ -205,9 +211,8 @@ export const DiffSequence = {
         startOfGroup = endOfGroup+1;
       });
     },
-
-    diffObjects(left, right, callbacks){
-      Object.keys(left).forEach(function(key) {
+    diffObjects: (left, right, callbacks) => {
+      Object.keys(left).forEach(key => {
         const leftValue = left[key];
         if (hasOwn.call(right, key))
           callbacks.both && callbacks.both(key, leftValue, right[key]);
@@ -216,15 +221,14 @@ export const DiffSequence = {
       });
 
       if (callbacks.rightOnly)
-        Object.keys(right).forEach(function (key) {
+        Object.keys(right).forEach(key => {
           const rightValue = right[key];
           if (! hasOwn.call(left, key)) {
             callbacks.rightOnly(key, rightValue);
           }
         });
     },
-
-    diffMaps(left, right, callbacks){
+    diffMaps: (left, right, callbacks) => {
       left.forEach(function (leftValue, key) {
         if (right.has(key))
           callbacks.both && callbacks.both(key, leftValue, right.get(key));
@@ -238,31 +242,29 @@ export const DiffSequence = {
           }
         });
     },
-
-    makeChangedFields(newDoc, oldDoc){
+    makeChangedFields: (newDoc, oldDoc) => {
       const fields = new Map();
-      this.diffObjects(oldDoc, newDoc, {
-        leftOnly: function(key, value) {
+      DiffSequence.diffObjects(oldDoc, newDoc, {
+        leftOnly: function (key, value) {
           fields.set(key, undefined)
         },
-        rightOnly: function(key, value) {
+        rightOnly: function (key, value) {
           fields.set(key, value);
         },
-        both: function(key, leftValue, rightValue) {
+        both: function (key, leftValue, rightValue) {
           if (!EJSON.equals(leftValue, rightValue))
             fields.set(key, rightValue);
         }
       });
       return Object.fromEntries(fields);
     },
-
-    applyChanges(doc, changeFields){
-      Object.keys(changeFields).forEach(function(key) {
+    applyChanges: (doc, changeFields) => {
+      Object.keys(changeFields).forEach(key => {
         const value = changeFields[key];
         if (typeof value === "undefined")
           delete doc[key];
         else 
           doc[key] = value;
       });
-    },
+    }
 }
