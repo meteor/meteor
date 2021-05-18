@@ -11,37 +11,38 @@ function isObjEmpty(obj) {
 }
 
 /**
- * @function DiffSequence
+ * @class DiffSequenceClass
  * @description old_results and new_results: collections of documents. if ordered, they are arrays. if unordered, they are IdMaps
  */
 
-export const DiffSequence = {
-    diffQueryChanges: (ordered, oldResults, newResults,
-    observer, options) => {
+class DiffSequenceClass {
+    diffQueryChanges(ordered, oldResults, newResults,
+    observer, options){
 
     if (ordered)
-    DiffSequence.diffQueryOrderedChanges(
+    this.diffQueryOrderedChanges(
       oldResults, newResults, observer, options);
     else
-    DiffSequence.diffQueryUnorderedChanges(
+    this.diffQueryUnorderedChanges(
       oldResults, newResults, observer, options);
   
-    },
-    diffQueryUnorderedChanges: (oldResults, newResults, observer, options) => {
+    }
+
+    diffQueryUnorderedChanges(oldResults, newResults, observer, options){
       options = options || {};
       var projectionFn = options.projectionFn || EJSON.clone;
     
       if (observer.movedBefore)
         throw new Error("_diffQueryUnordered called with a movedBefore observer!");
     
-      newResults.forEach(function (newDoc, id) {
+      newResults.forEach((newDoc, id) => {
         var oldDoc = oldResults.get(id);
         if (oldDoc) {
           if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
             var projectedNew = projectionFn(newDoc);
             var projectedOld = projectionFn(oldDoc);
             var changedFields =
-                  DiffSequence.makeChangedFields(projectedNew, projectedOld);
+                  this.makeChangedFields(projectedNew, projectedOld);
             if (! isObjEmpty(changedFields)) {
               observer.changed(id, changedFields);
             }
@@ -58,9 +59,10 @@ export const DiffSequence = {
           if (!newResults.has(id))
             observer.removed(id);
         });
-    },
-    diffQueryOrderedChanges: (old_results, new_results,
-    observer, options) => {
+    }
+
+    diffQueryOrderedChanges(old_results, new_results,
+    observer, options){
         options = options || {};
       var projectionFn = options.projectionFn || EJSON.clone;
 
@@ -169,7 +171,7 @@ export const DiffSequence = {
       // for each group of things in the new_results that is anchored by an unmoved
       // element, iterate through the things before it.
       var startOfGroup = 0;
-      unmoved.forEach(function (endOfGroup) {
+      unmoved.forEach((endOfGroup) => {
         var groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
         var oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
@@ -184,7 +186,7 @@ export const DiffSequence = {
             oldDoc = old_results[old_index_of_id[newDoc._id]];
             projectedNew = projectionFn(newDoc);
             projectedOld = projectionFn(oldDoc);
-            fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
+            fields = this.makeChangedFields(projectedNew, projectedOld);
             if (!isObjEmpty(fields)) {
               observer.changed && observer.changed(newDoc._id, fields);
             }
@@ -196,15 +198,16 @@ export const DiffSequence = {
           oldDoc = old_results[old_index_of_id[newDoc._id]];
           projectedNew = projectionFn(newDoc);
           projectedOld = projectionFn(oldDoc);
-          fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
+          fields = this.makeChangedFields(projectedNew, projectedOld);
           if (!isObjEmpty(fields)) {
             observer.changed && observer.changed(newDoc._id, fields);
           }
         }
         startOfGroup = endOfGroup+1;
       });
-    },
-    diffObjects: (left, right, callbacks) => {
+    }
+
+    diffObjects(left, right, callbacks){
       Object.keys(left).forEach(key => {
         const leftValue = left[key];
         if (hasOwn.call(right, key))
@@ -220,8 +223,9 @@ export const DiffSequence = {
             callbacks.rightOnly(key, rightValue);
           }
         });
-    },
-    diffMaps: (left, right, callbacks) => {
+    }
+
+    diffMaps(left, right, callbacks){
       left.forEach(function (leftValue, key) {
         if (right.has(key))
           callbacks.both && callbacks.both(key, leftValue, right.get(key));
@@ -234,10 +238,11 @@ export const DiffSequence = {
             callbacks.rightOnly(key, rightValue);
           }
         });
-    },
-    makeChangedFields: (newDoc, oldDoc) => {
+    }
+
+    makeChangedFields(newDoc, oldDoc){
       const fields = new Map();
-      DiffSequence.diffObjects(oldDoc, newDoc, {
+      this.diffObjects(oldDoc, newDoc, {
         leftOnly: function (key, value) {
           fields.set(key, undefined)
         },
@@ -250,8 +255,9 @@ export const DiffSequence = {
         }
       });
       return Object.fromEntries(fields);
-    },
-    applyChanges: (doc, changeFields) => {
+    }
+
+    applyChanges(doc, changeFields){
       Object.keys(changeFields).forEach(key => {
         const value = changeFields[key];
         if (typeof value === "undefined")
@@ -260,4 +266,7 @@ export const DiffSequence = {
           doc[key] = value;
       });
     }
+
 }
+
+export const DiffSequence = new DiffSequenceClass();
