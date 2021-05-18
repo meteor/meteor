@@ -1,5 +1,3 @@
-const hasOwn = Object.prototype.hasOwnProperty;
-
 export class IdMap {
   constructor(idStringify, idParse) {
     this._map = new Map();
@@ -13,22 +11,22 @@ export class IdMap {
 // set of methods that overlap between the two.)
 
   get(id) {
-    var key = this._idStringify(id);
+    const key = this._idStringify(id);
     return this._map.get(key);
   }
 
   set(id, value) {
-    var key = this._idStringify(id);
+    const key = this._idStringify(id);
     this._map.set(key, value);
   }
 
   remove(id) {
-    var key = this._idStringify(id);
+    const key = this._idStringify(id);
     this._map.delete(key);
   }
 
   has(id) {
-    var key = this._idStringify(id);
+    const key = this._idStringify(id);
     return this._map.has(key);
   }
 
@@ -44,7 +42,7 @@ export class IdMap {
   forEach(iterator) {
     // don't use _.each, because we can't break out of it.
     for (const [key, value] of this._map){
-      var breakIfFalse = iterator.call(
+      const breakIfFalse = iterator.call(
         null,
         value,
         this._idParse(key)
@@ -60,7 +58,7 @@ export class IdMap {
   }
 
   setDefault(id, def) {
-    var key = this._idStringify(id);
+    const key = this._idStringify(id);
     if (this._map.has(key)) {
       return this._map.get(key);
     }
@@ -71,7 +69,7 @@ export class IdMap {
   // Assumes that values are EJSON-cloneable, and that we don't need to clone
   // IDs (ie, that nobody is going to mutate an ObjectId).
   clone() {
-    var clone = new IdMap(this._idStringify, this._idParse);
+    const clone = new IdMap(this._idStringify, this._idParse);
     // copy directly to avoid stringify/parse overhead
     this._map.forEach(function(value, key){
       clone._map.set(key, EJSON.clone(value));
