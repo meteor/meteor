@@ -496,7 +496,7 @@ Object.assign(Mongo.Collection.prototype, {
         }
       }
       return dct;
-    }
+    };
 
     if (isBulkInsert) {
       // Clone the array
@@ -514,8 +514,7 @@ Object.assign(Mongo.Collection.prototype, {
     const chooseReturnValueFromCollectionResult = function (result, minimongo = false) {
       if (minimongo) return result;
       if (isBulkInsert) {
-        // XXX Sometimes the initial return for bulk insert is undefined for some reason.
-        if (result?.insertedIds) {
+        if (result && result.insertedIds) {
           return Object.values(result.insertedIds);
         }
         return [];

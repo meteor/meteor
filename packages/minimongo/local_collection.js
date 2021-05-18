@@ -1,3 +1,4 @@
+import { Meteor } from 'meteor/meteor';
 import Cursor from './cursor.js';
 import ObserveHandle from './observe_handle.js';
 import {

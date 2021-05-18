@@ -2,8 +2,6 @@
 /// Remote methods and access control.
 ///
 
-const hasOwn = Object.prototype.hasOwnProperty;
-
 // Restrict default mutators on collection. allow() and deny() take the
 // same options:
 //
@@ -140,18 +138,13 @@ CollectionPrototype._defineMutationMethods = function(options) {
           let generatedId = null;
           let isBulkInsert = false;
           if (method === "insert") {
-            isBulkInsert = Array.isArray(args[0]);
-            if (!isBulkInsert && !hasOwn.call(args[0], '_id')) {
-              generatedId = self._makeNewID();
-            }
-            if (isBulkInsert) {
-              generatedId = [];
-              args[0].forEach(doc => {
-                if (!hasOwn.call(doc, '_id')) {
-                  generatedId.push(self._makeNewID());
-                }
-              });
-            }
+            isBulkInsert = true;
+            generatedId = [];
+            args.forEach(doc => {
+              if (!doc.hasOwnProperty('_id')) {
+                generatedId.push(self._makeNewID());
+              }
+            });
           }
 
           if (this.isSimulation) {
@@ -161,13 +154,13 @@ CollectionPrototype._defineMutationMethods = function(options) {
               if (!isBulkInsert) {
                 args[0]._id = generatedId;
               } else {
-                args[0].forEach((doc, index) => {
+                args.forEach((doc, index) => {
                   doc._id = generatedId[index];
                 });
               }
             }
             return self._collection[method].apply(
-              self._collection, args);
+              self._collection, [args]);
           }
 
           // This is the server receiving a method call from the client.
@@ -188,13 +181,12 @@ CollectionPrototype._defineMutationMethods = function(options) {
             const validatedMethodName =
                   '_validated' + method.charAt(0).toUpperCase() + method.slice(1);
             args.unshift(this.userId);
-            method === 'insert' && !isBulkInsert && args.push(generatedId);
-            method === 'insert' && isBulkInsert && args.concat(generatedId);
+            method === 'insert' && args.concat(generatedId);
             return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
             if (generatedId !== null) {
               if (isBulkInsert) {
-                args[0].forEach((doc, index) => {
+                args.forEach((doc, index) => {
                   doc._id = generatedId[index];
                 });
               } else {
@@ -324,7 +316,7 @@ CollectionPrototype._validatedUpdate = function(
     const params = mutator[op];
     if (op.charAt(0) !== '$') {
       throw new Meteor.Error(403, noReplaceError);
-    } else if (!hasOwn.call(ALLOWED_UPDATE_OPERATIONS, op)) {
+    } else if (!ALLOWED_UPDATE_OPERATIONS.hasOwnProperty(op)) {
       throw new Meteor.Error(
         403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
     } else {
@@ -501,7 +493,7 @@ function addValidator(collection, allowOrDeny, options) {
   collection._restricted = true;
 
   ['insert', 'update', 'remove'].forEach((name) => {
-    if (hasOwn.call(options, name)) {
+    if (options.hasOwnProperty(name)) {
       if (!(options[name] instanceof Function)) {
         throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
       }
