@@ -41,7 +41,7 @@ export class IdMap {
   // Iterates over the items in the map. Return `false` to break the loop.
   forEach(iterator) {
     // don't use _.each, because we can't break out of it.
-    for (const [key, value] of this._map){
+    for (let [key, value] of this._map){
       const breakIfFalse = iterator.call(
         null,
         value,
