@@ -7,9 +7,9 @@ Package.describe({
 
 Npm.depends({
   "combined-stream2": "1.1.2",
-  "magic-string": "0.21.3",
-  "stream-to-string": "1.1.0",
-  "parse5": "3.0.2"
+  "magic-string": "0.25.7",
+  "stream-to-string": "1.2.0",
+  "parse5": "4.0.0"
 });
 
 Package.onUse(function(api) {
