@@ -25,8 +25,8 @@ var packageJson = {
   // needing to install them if they use `npm install --production`.
   devDependencies: {
     split2: "2.2.0",
-    multipipe: "2.0.1",
-    chalk: "4.1.0"
+    multipipe: "1.0.2",
+    chalk: "0.5.1"
   }
 };
 

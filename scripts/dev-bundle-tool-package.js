@@ -41,22 +41,22 @@ var packageJson = {
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.7.3",
-    chalk: "4.1.0",
-    sqlite3: "5.0.2",
+    chalk: "0.5.1",
+    sqlite3: "4.1.0",
     "http-proxy": "1.18.1",
-    "is-reachable": "5.0.0",
+    "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
     "moment": "2.29.1",
-    "rimraf": "3.0.2",
+    "rimraf": "2.6.2",
     "glob": "7.1.6",
-    ignore: "5.1.8",
+    ignore: "3.3.7",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
     "commonmark": "0.15.0",
     escope: "3.6.0",
     split2: "3.2.2",
-    multipipe: "4.0.0",
+    multipipe: "2.0.1",
     pathwatcher: "8.1.0",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
