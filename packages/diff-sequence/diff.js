@@ -1,5 +1,6 @@
-const hasOwn = Object.prototype.hasOwnProperty
+import crypto from "crypto";
 
+const hasOwn = Object.prototype.hasOwnProperty
 /**
  * @description helper function to determine if the passed Object is empty
  * @param {Object} obj 
@@ -16,6 +17,10 @@ function isObjEmpty(obj) {
  */
 
 class DiffSequenceClass {
+    constructor(){
+      this._makeChangedFieldsCache = new Map();
+    }
+
     diffQueryChanges(ordered, oldResults, newResults,
     observer, options){
 
@@ -241,20 +246,28 @@ class DiffSequenceClass {
     }
 
     makeChangedFields(newDoc, oldDoc){
-      const fields = new Map();
-      this.diffObjects(oldDoc, newDoc, {
-        leftOnly: function (key, value) {
-          fields.set(key, undefined)
-        },
-        rightOnly: function (key, value) {
-          fields.set(key, value);
-        },
-        both: function (key, leftValue, rightValue) {
-          if (!EJSON.equals(leftValue, rightValue))
-            fields.set(key, rightValue);
-        }
-      });
-      return Object.fromEntries(fields);
+      const getHash = this._generateHashFromArray([newDoc, oldDoc]);
+      if(this._makeChangedFieldsCache.has(getHash)){
+        return this._makeChangedFieldsCache.get(getHash)
+      }
+      else {
+        const fields = new Map();
+        this.diffObjects(oldDoc, newDoc, {
+          leftOnly: function (key, value) {
+            fields.set(key, undefined)
+          },
+          rightOnly: function (key, value) {
+            fields.set(key, value);
+          },
+          both: function (key, leftValue, rightValue) {
+            if (!EJSON.equals(leftValue, rightValue))
+              fields.set(key, rightValue);
+          }
+        });
+        const newObject = Object.fromEntries(fields)
+        this._memoize("_makeChangedFieldsCache", getHash, newObject)
+        return newObject; 
+      }
     }
 
     applyChanges(doc, changeFields){
@@ -265,6 +278,20 @@ class DiffSequenceClass {
         else 
           doc[key] = value;
       });
+    }
+
+    static _memoize(cacheStore, key, value){
+      this[cacheStore].size > 25 && this[cacheStore].clear(); 
+      this[cacheStore].set(key, value);
+    }
+
+    static _generateHashFromArray(array){
+      let objectString = "";
+      for(let object in array){
+        objectString.concat(EJSON.stringify(object));
+      }
+
+      return crypto.createHash('md5').update(objectString).digest('hex');
     }
 
 }
