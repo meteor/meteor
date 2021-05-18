@@ -7,12 +7,7 @@ const hasOwn = Object.prototype.hasOwnProperty
  */
 
 function isObjEmpty(obj) {
-  for (let key in Object(obj)) {
-    if (hasOwn.call(obj, key)) {
-      return false;
-    }
-  }
-  return true;
+  return obj && Object.keys(obj).length === 0 && obj.constructor === Object;
 }
 
 /**
