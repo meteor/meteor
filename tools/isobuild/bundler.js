@@ -223,7 +223,7 @@ exports._mainJsContents = [
 // Represents a node_modules directory that we need to copy into the
 // bundle or otherwise make available at runtime.
 
-export class NodeModulesDirectory {
+class NodeModulesDirectory {
   constructor({
     packageName,
     sourceRoot,
@@ -874,7 +874,7 @@ class Target {
             hmrAvailable: sourceBatch.hmrAvailable,
             cacheKey
           },
-          getFileOutput  
+          getFileOutput
         );
       });
 
@@ -1420,7 +1420,7 @@ class Target {
         if (typeof file.data === 'string') {
           file.data = Buffer.from(file.data, "utf8");
         }
-        const replaceable = possiblyReplaceable && 
+        const replaceable = possiblyReplaceable &&
           file.data.equals(source._source.contents());
 
         const newFile = new File({
@@ -3130,7 +3130,7 @@ Find out more about Meteor at meteor.com.
  *  - onJsOutputFiles Called for each unibuild in a client arch with a list of js files
  *    that will be linked, and a function to get their prelink output with their closure
  *    and banner.
- * 
+ *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - serverWatchSet: Information about server files and paths that were
@@ -3567,3 +3567,5 @@ exports.readJsImage = Profile(
   "bundler.readJsImage", function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
 });
+
+exports.NodeModulesDirectory = NodeModulesDirectory;
