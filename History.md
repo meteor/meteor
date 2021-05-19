@@ -12,6 +12,8 @@
 
 * Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
 
+* Released `id-map@1.1.1` removing unused dependencies and modernizing the code
+
 ## v2.2, 2021-04-15
 
 #### Highlights
