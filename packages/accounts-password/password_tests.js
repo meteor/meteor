@@ -574,42 +574,57 @@ if (Meteor.isClient) (() => {
    "messages depending on the flag passed", [
     function (test, expect) {
       // setup
-      this.unregisteredEmail = `ADA-intercept@lovelace.com${this.randomSuffix}`;
+      this.username = Random.id();
+      this.email = `${Random.id()}-intercept@example.com`;
+      this.randomEmail = `${Random.id()}-Ada_intercept@some.com`;
+      this.password = 'password';
+
+      Accounts.createUser(
+        { username: this.username, email: this.email, password: this.password },
+        loggedInAs(this.username, test, expect));
     },
     // forgotPassword called on client with an unregistered email
     function (test, expect) {
       Accounts.forgotPassword(
-        { email: this.email },
+        { email: this.randomEmail },
         expect(error => test.isTrue(error))
       );
     },
+
     // forgotPassword called on client with an unregistered
-    // email and no callback with a detailed error flag
+    // email with a detailed error flag
     //set to true
     function (test, expect) {
-      test.throws(
-        () => Accounts.forgotPassword({ email: this.email,
-           detailedErrorFlag: true }),
-        /User not found/
+      Accounts.forgotPassword({ email: this.randomEmail,
+      detailedErrorFlag: true },
+        expect(error => {
+         test.equal(error.error, 403);
+         test.equal(error.reason, "User not found");
+       })
       );
     },
 
     // when the detailedErrorFlag is set to false; it returns an
     // ambiguous message on development envinronment
     function (test, expect) {
-      test.throws(
-        () => Accounts.forgotPassword({ email: this.email,
-           detailedErrorFlag: false }),
-           /Something went wrong\. Please check your credentials/
+      Accounts.forgotPassword({ email: 'mike@gmail.com',
+           detailedErrorFlag: false },
+           expect(error => {
+            test.equal(error.error, 403);
+            test.equal(error.reason, "Something went wrong. Please check your credentials");
+          })
       );
     },
 
-    // when detailedErrorFlag is not passed, it defaults to false
-    // and return an ambiguous error message
+    // when detailedErrorFlag is not passed in development,
+    // it defaults to true
+    // and returns a detailed error message
     function (test, expect) {
-      test.throws(
-        () => Accounts.forgotPassword({ email: this.email}),
-        /Something went wrong\. Please check your credentials/
+      Accounts.forgotPassword({ email: this.randomEmail},
+        expect(error => {
+         test.equal(error.error, 403);
+         test.equal(error.reason, "User not found");
+       })
       );
     },
 
@@ -618,10 +633,12 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       Meteor.isProduction = true
       if (Meteor.isProduction) {
-        test.throws(
-          () => Accounts.forgotPassword({ email: this.email }),
-          /Something went wrong\. Please check your credentials/
-        )
+        Accounts.forgotPassword({ email: this.randomEmail},
+          expect(error => {
+           test.equal(error.error, 403);
+           test.equal(error.reason, "Something went wrong. Please check your credentials");
+         })
+        );
       }
     },
 
@@ -630,13 +647,13 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       Meteor.isProduction = true
       if (Meteor.isProduction) {
-        test.throws(
-          () => Accounts.forgotPassword({
-            email: this.email,
-            detailedErrorFlag: true
-          }),
-          /User not found/
-        )
+        Accounts.forgotPassword({ email: this.randomEmail,
+          detailedErrorFlag: true },
+          expect(error => {
+           test.equal(error.error, 403);
+           test.equal(error.reason, "User not found");
+         })
+        );
       }
     }
   ]);
