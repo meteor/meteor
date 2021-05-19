@@ -212,7 +212,7 @@ exports._mainJsContents = [
   "",
   "process.argv.splice(2, 0, 'program.json');",
   "process.chdir(require('path').join(__dirname, 'programs', 'server'));",
-  'require("./programs/server/runtime.js");',
+  'require("./programs/server/runtime.js")({ cachePath: process.env.METEOR_REIFY_CACHE_DIR });',
   "require('./programs/server/boot.js');",
 ].join("\n");
 
@@ -2868,7 +2868,7 @@ function addSourceMappingURL(data, url, targetPath) {
 
   parts.push(
     newLineBuffer,
-    Buffer.from("//# sourceMappingURL=" + url, "utf8"),
+    Buffer.from("//# sourceMappingURL=" + (process.env.ROOT_URL || "") + url, "utf8"),
     newLineBuffer // trailing newline
   );
 
