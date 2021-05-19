@@ -1,9 +1,11 @@
+
 var _ = require('underscore');
 var buildmessage = require('../../utils/buildmessage.js');
 var files = require('../../fs/files');
 var watch = require('../../fs/watch');
+var KNOWN_ISOBUILD_FEATURE_PACKAGES = require('../../isobuild/compiler.js').KNOWN_ISOBUILD_FEATURE_PACKAGES;
+
 var PackageSource = require('../../isobuild/package-source.js');
-import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../../isobuild/compiler.js';
 import { sync as glob } from "glob";
 import { Profile } from "../../tool-env/profile";
 import {

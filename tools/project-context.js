@@ -1,3 +1,4 @@
+
 var assert = require("assert");
 var _ = require('underscore');
 
@@ -15,7 +16,8 @@ var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
 var watch = require('./fs/watch');
 var Profile = require('./tool-env/profile').Profile;
-import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
+var KNOWN_ISOBUILD_FEATURE_PACKAGES = require('./isobuild/compiler.js').KNOWN_ISOBUILD_FEATURE_PACKAGES
+
 
 import {
   optimisticReadJsonOrNull,
