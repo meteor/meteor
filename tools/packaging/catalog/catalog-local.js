@@ -10,6 +10,10 @@ import { Profile } from "../../tool-env/profile";
 import {
   optimisticHashOrNull,
 } from "../../fs/optimistic";
+
+// This variable was duplicated due to an issue on importing it.
+// The issue only happens on node 14, and is most surely related to this: https://nodejs.org/en/blog/release/v14.0.0/
+// !!! When changing this, also change on tools/project-context.js !!!
 const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package directly calls Plugin.registerCompiler. Package authors
   // must explicitly depend on this feature package to use the API.

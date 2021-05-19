@@ -16,6 +16,10 @@ var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
 var watch = require('./fs/watch');
 var Profile = require('./tool-env/profile').Profile;
+
+// This variable was duplicated due to an issue on importing it.
+// The issue only happens on node 14, and is most surely related to this: https://nodejs.org/en/blog/release/v14.0.0/
+// !!! When changing this, also change on tools/packaging/catalog/catalog-local.js !!!
 const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package directly calls Plugin.registerCompiler. Package authors
   // must explicitly depend on this feature package to use the API.
