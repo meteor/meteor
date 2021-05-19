@@ -2,7 +2,8 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "1.0.14"
+  version: "1.0.14",
+  deprecated: true
 });
 
 Package.onUse(function (api) {
