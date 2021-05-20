@@ -46,7 +46,7 @@ called a certain method and restrict them to a certain number of calls per
 user defined time frame. So we generate a unique string key (to be used as
 keys in a counters object) to represent each specific methodName + user
 combination. Since this rule applies to multiple user, we need to concatenate
-the differnet input key names with their values. For example, if we had a rule
+the different input key names with their values. For example, if we had a rule
 with matchers as such:
 
 ```javascript
