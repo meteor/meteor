@@ -877,7 +877,7 @@ if (Meteor.isClient) (() => {
     logoutStep,
     function (test, expect) {
       // Test that Meteor.logoutOtherClients logs out a second
-      // authentcated connection while leaving Accounts.connection
+      // authenticated connection while leaving Accounts.connection
       // logged in.
       const secondConn = DDP.connect(Meteor.absoluteUrl());
       let token;
