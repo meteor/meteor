@@ -389,7 +389,7 @@ export class CordovaBuilder {
   }
 
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
-    resourceFiles.forEach(resourceFile => {
+    resourceFiles?.forEach(resourceFile => {
       // Copy resource files in cordova project root ./resource-files directory keeping original absolute path
       const filepath = files.pathResolve(this.projectContext.projectDir, resourceFile.src);
       files.copyFile(

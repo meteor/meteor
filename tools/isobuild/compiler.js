@@ -177,7 +177,7 @@ compiler.compile = Profile(function (packageSource, options) {
     isobuildFeatures
   });
 
-  packageSource.architectures.forEach(function (architecture) {
+  packageSource.architectures?.forEach(function (architecture) {
     if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
       return;
     }
@@ -218,7 +218,7 @@ compiler.lint = Profile(function (packageSource, options) {
 
   const warnings = new buildmessage._MessageSet;
   let linted = false;
-  packageSource.architectures.forEach(function (architecture) {
+  packageSource.architectures?.forEach(function (architecture) {
     // skip Cordova if not required
     if (! options.includeCordovaUnibuild
         && architecture.arch === 'web.cordova') {
@@ -265,7 +265,7 @@ compiler.getMinifiers = function (packageSource, options) {
     });
 
     if (plugins.length > 1) {
-      var packages = plugins.map(function (p) { return p.isopack.name; });
+      var packages = plugins?.map(function (p) { return p.isopack.name; }) || [];
       buildmessage.error(packages.join(', ') + ': multiple packages registered minifiers for extension "' + ext + '".');
     }
   });
@@ -475,7 +475,7 @@ var compileUnibuild = Profile(function (options) {
   }
 
   // Add all assets
-  Object.values(assets).forEach((asset) => {
+  Object.values(assets || {}).forEach((asset) => {
     const relPath = asset.relPath;
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
 
@@ -487,7 +487,7 @@ var compileUnibuild = Profile(function (options) {
   });
 
   // Add and compile all source files
-  Object.values(sources).forEach((source) => {
+  Object.values(sources || {}).forEach((source) => {
     const relPath = source.relPath;
     const fileOptions = _.clone(source.fileOptions) || {};
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
@@ -638,7 +638,7 @@ api.addAssets('${relPath}', 'client').`);
   });
 
   // *** Determine captured variables
-  var declaredExports = inputSourceArch.declaredExports.map(function (symbol) {
+  var declaredExports = inputSourceArch.declaredExports?.map(function (symbol) {
     return _.pick(symbol, ['name', 'testOnly']);
   });
 

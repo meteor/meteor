@@ -107,7 +107,7 @@ exports.isIPv4Address = function (str) {
 exports.printPackageList = function (items, options) {
   options = options || {};
 
-  var rows = items.map(item => {
+  var rows = items?.map(item => {
     var name = item.name;
     var description = item.description || 'No description';
     return [name, description];
@@ -394,7 +394,7 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
   }
 
   // First, put together the non-prerelease part.
-  var ret = numbers.map(_.partial(leftPad, '0', 4)).join('.');
+  var ret = numbers?.map(_.partial(leftPad, '0', 4)).join('.');
 
   if (!prereleaseTag) {
     return ret + '$';

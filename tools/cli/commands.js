@@ -1867,10 +1867,10 @@ function doTestCommand(options) {
     // filter out excluded packages
     var excludedPackages = options.exclude && options.exclude.split(',');
     if (excludedPackages) {
-      packagesToAdd = packagesToAdd.filter(function (p) {
+      packagesToAdd = packagesToAdd?.filter(function (p) {
         return ! _.some(excludedPackages, function (excluded) {
           return p.replace(/^local-test:/, '') === excluded;
-        });
+        }) || [];
       });
     }
 
