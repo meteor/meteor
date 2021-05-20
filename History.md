@@ -1,45 +1,78 @@
 ## v2.3, UNRELEASED
 
-### Changes
-* The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production:`node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
+### Breaking changes
+
+- As Node.js version was upgraded to a new major version we recommend that you review if your npm dependencies are compatible with Node.js 14.
+  - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
+  - We recommend that you read Node.js [release notes](https://nodejs.org/en/blog/release/v14.0.0/) though.
+
+### Migration steps
+
+- As Node.js version was upgraded we recommend that you remove your `node_modules` folder (`rm -rf node_modules`) and run `meteor reset` to be sure you compile all the binary dependencies again using the new Node.js version. 
+  - Maybe you also want to recreate your lock file.
 
 #### Highlights
 
-* Skelets dependencies updated to latest version
+* Node.js update to 14.16.1 from 12.22.1 :tada:
 
 * Typescript update to 4.2.4
 
-* New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` now set to `false` by default to enable Reify runtime cache. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
+* New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
 
-* New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android` See [PR](https://github.com/meteor/meteor/pull/11437) for details.
+* New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`.
+
+* Skeletons dependencies updated to latest version
 
 #### Meteor Version Release
 
-* Released `launch-screen@1.3.0` that remove LaunchScreen from web clients.
+* `meteor-tool@2.3`
+  - Node.js update to 14.16.1 from 12.22.1 :tada:
+    - This is a major upgrade in Node.js. See the [release notes](https://nodejs.org/en/blog/release/v14.0.0/) for more details.
+  - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` that improves restarts by caching reify data. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. By default it is disabled but you can enable it setting `true` in this env var. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
+  - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
+  - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
+  
+* `launch-screen@1.3.0`
+  - Removes LaunchScreen from web clients.
 
-* `meteor-babel` has been update to v7.11.0 and renamed to `@meteorjs/babel`. This update includes a fix for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assingment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`.
+* `meteor-babel@7.11.0 (@meteorjs/babel)`
+  - Fixes for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assingment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`.
+  - This package was renamed to `@meteorjs/babel`.
 
-* `hot-module-replacement@0.3.0` Fixing various HMR bugs and edge cases see [PR for more](https://github.com/meteor/meteor/pull/11405)
+* `hot-module-replacement@0.3.0` 
+  - Fixes various HMR bugs and edge cases see [PR for more](https://github.com/meteor/meteor/pull/11405).
 
-* `email@2.1.0` with updated `nodemailer@6.6.0`, it now adds `charset=utf-8` to `text/plain` messages by default
+* `email@2.1.0`
+  - Updates `nodemailer` to `6.6.0` and it now adds `charset=utf-8` to `text/plain` messages by default.
 
 #### Independent Releases
 
-* Released `ddp-server@2.3.3` and `socket-stream-client@0.3.2` with updated dependencies which removes Node's HTTP deprecation warning.
+* `ddp-server@2.3.3`
+  - Updates dependencies which removes Node's HTTP deprecation warning.
+  
+* `socket-stream-client@0.3.2`
+  - Updates dependencies which removes Node's HTTP deprecation warning.
 
-* Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
+* `ddp-client@2.4.1`
+  - Re-ordering fields in DDP message for better client readability.
 
-* Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
+* `mongo@1.11.1`
+  - Fixes a `Timestamp.ONE is undefined` bug.
 
-* Released `mongo-id@1.0.8` removing unused dependency `id-map`.
+* `mongo-id@1.0.8` 
+  - Removes unused dependency `id-map`.
 
-* Released `accounts-server@1.7.1` to better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`
+* `accounts-server@1.7.1` 
+  - To better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`.
 
-* Released `static-html@1.3.1` removing `underscore` dependency.
+* `static-html@1.3.1`
+  - Removes `underscore` dependency.
 
-* Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
+* `dev-error-overlay@0.1.1`
+  - Fixes sometimes page content being on top of error overlay.
 
-* Released `id-map@1.1.1` removing unused dependencies and modernizing the code
+* `id-map@1.1.1`
+  - Removes unused dependencies and modernizing the code.
 
 ## v2.2, 2021-04-15
 
