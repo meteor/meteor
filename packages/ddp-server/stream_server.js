@@ -154,7 +154,7 @@ _.extend(StreamServer.prototype, {
     // (meaning prior to any connect middlewares) so we need to take
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
-    _.each(['request', 'upgrade'], function(event) {
+    ['request', 'upgrade'].forEach(function(event) {
       var httpServer = WebApp.httpServer;
       var oldHttpServerListeners = httpServer.listeners(event).slice(0);
       httpServer.removeAllListeners(event);

@@ -1,4 +1,3 @@
-var assert = require("assert");
 var _ = require("underscore");
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');

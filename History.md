@@ -1,5 +1,36 @@
 ## v2.3.0, UNRELEASED
 
+### Breaking changes
+* Removed deprecated `mobile-port` flag
+
+* Removed deprecated `raw` name from `isobuild`
+
+* Removed deprecated package API method names `Package.on_use`, `Package.on_test`, `Package._transitional_registerBuildPlugin` and `api.add_files`, if you haven't till now, please use the current camel case versions
+
+* `accounts-base@2.0.0`
+  - Deprecated backward compatibility function `logoutOtherClients` has been removed
+  
+* `accounts-password@2.0.0`
+  - Deprecated backward compatibility functionality for `SRP`` passwords from pre-Meteor 1.0 days
+  
+* `ddp-client@2.5.0`
+  - Removed backward compatibility method names for Meteor before 1.0
+
+* `ddp-server@2.5.0`
+  - Removed backward compatibility method names for Meteor before 1.0
+
+* `meteor-base@2.0.0`
+  - Removed `livedata` dependency which was there for packages build for 0.9.0
+  
+* `minimongo@1.7.0`
+  - Removed the `rewind` method that was noop for compatibility with Meteor 0.8.1
+  
+* `mongo@1.12.0`
+  - Removed the `rewind` method that was noop for compatibility with Meteor 0.8.1
+  
+* `oauth@2.0.0`
+  - Removed `OAuth.initiateLogin` and other functionality like the addition of `?close` in return URI for deprecated OAuth flow pre Meteor 1.0
+
 #### Independent Releases
 
 * Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
@@ -16,6 +47,9 @@
 
 * `http@1.4.4`
   - Used the new deprecation package flag instead of loud console warning.
+  
+* `logic-solver@2.0.8`
+  - Fixed `package.js` to use current `api` method calls.
 
 ## v2.2, 2021-04-15
 
