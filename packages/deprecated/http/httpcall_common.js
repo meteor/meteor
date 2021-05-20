@@ -1,10 +1,6 @@
 var MAX_LENGTH = 500; // if you change this, also change the appropriate test
 var slice = Array.prototype.slice;
 
-var deprecationMessage = function() {
-  Log.debug('The http package has been deprecated, please migrate to the fetch package and new web standards.');
-};
-
 exports.makeErrorByStatus = function(statusCode, content) {
   var message = "failed [" + statusCode + "]";
 
@@ -56,7 +52,6 @@ var HTTP = exports.HTTP = {};
  * @deprecated
  */
 HTTP.get = function (/* varargs */) {
-  deprecationMessage();
   return HTTP.call.apply(this, ["GET"].concat(slice.call(arguments)));
 };
 
@@ -69,7 +64,6 @@ HTTP.get = function (/* varargs */) {
  * @deprecated
  */
 HTTP.post = function (/* varargs */) {
-  deprecationMessage();
   return HTTP.call.apply(this, ["POST"].concat(slice.call(arguments)));
 };
 
@@ -82,7 +76,6 @@ HTTP.post = function (/* varargs */) {
  * @deprecated
  */
 HTTP.put = function (/* varargs */) {
-  deprecationMessage();
   return HTTP.call.apply(this, ["PUT"].concat(slice.call(arguments)));
 };
 
@@ -95,7 +88,6 @@ HTTP.put = function (/* varargs */) {
  * @deprecated
  */
 HTTP.del = function (/* varargs */) {
-  deprecationMessage();
   return HTTP.call.apply(this, ["DELETE"].concat(slice.call(arguments)));
 };
 
@@ -108,6 +100,5 @@ HTTP.del = function (/* varargs */) {
  * @deprecated
  */
 HTTP.patch = function (/* varargs */) {
-  deprecationMessage();
   return HTTP.call.apply(this, ["PATCH"].concat(slice.call(arguments)));
 };
