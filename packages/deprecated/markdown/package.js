@@ -6,11 +6,9 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.addFiles("showdown.js");
-  api.export('Showdown');
-
+  api.use('ecmascript');
   api.use("templating@1.3.1", "client", {weak: true});
-  api.addFiles('template-integration.js', 'client');
+  api.mainModule('template-integration.js', 'client', { lazy: true });
 });
 
 Package.onTest(function (api) {
