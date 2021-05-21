@@ -19,7 +19,7 @@ function startRun(sandbox) {
   run.matchBeforeExit("Started MongoDB");
   run.waitSecs(15);
   return run;
-};
+}
 
 // Tests the actual cache logic used by coffeescript.
 selftest.define("compiler plugin caching - coffee", () => {

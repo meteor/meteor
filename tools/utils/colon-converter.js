@@ -29,7 +29,7 @@ var convertBySchema = function (val, schema) {
       throw new Error("Expected an array in value, got " + typeof val);
     }
 
-    return val.map(function (subval) {
+    return val?.map(function (subval) {
       return convertBySchema(subval, schema[0]);
     });
   }

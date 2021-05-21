@@ -638,7 +638,7 @@ api.addAssets('${relPath}', 'client').`);
   });
 
   // *** Determine captured variables
-  var declaredExports = inputSourceArch.declaredExports?.map(function (symbol) {
+  var declaredExports = inputSourceArch?.declaredExports?.map(function (symbol) {
     return _.pick(symbol, ['name', 'testOnly']);
   });
 

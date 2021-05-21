@@ -575,7 +575,7 @@ var mergeMessagesIntoCurrentJob = function (innerMessages) {
   if (! outerJob) {
     throw new Error("Expected to be in a buildmessage job");
   }
-  innerMessages.jobs?.forEach(function (j) {
+  innerMessages?.jobs?.forEach(function (j) {
     outerJob.children.push(j);
   });
   outerMessages.merge(innerMessages);
