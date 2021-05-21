@@ -1,5 +1,5 @@
 # markdown
-[Source code of released version](https://github.com/jirikrepl/meteor/tree/master/packages/deprecated/markdown) | [Source code of development version](https://github.com/jirikrepl/meteor/tree/devel/packages/deprecated/markdown)
+[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/deprecated/markdown) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/deprecated/markdown)
 ***
 
 This is an internal Meteor package. 
