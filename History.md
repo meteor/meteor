@@ -12,6 +12,11 @@
 
 * Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
 
+* Released `id-map@1.1.1` removing unused dependencies and modernizing the code
+
+* `http@1.4.4`
+  - Used the new deprecation package flag instead of loud console warning.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
