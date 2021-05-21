@@ -1087,6 +1087,7 @@ export class AccountsServer extends AccountsCommon {
     } catch (e) {
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
+      // https://jira.mongodb.org/browse/SERVER-4637
       if (!e.errmsg) throw e;
       if (e.errmsg.includes('emails.address'))
         throw new Meteor.Error(403, "Email already exists.");

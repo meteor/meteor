@@ -1,4 +1,50 @@
-## v2.3.0, UNRELEASED
+## v2.3, UNRELEASED
+
+#### Highlights
+
+* Node.js update to 14.17.0 from 12.22.1 :tada:
+
+* Typescript update to 4.2.4
+
+* New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
+
+* New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`.
+
+* Skeletons dependencies updated to latest version
+
+### Breaking changes
+
+- As Node.js version was upgraded to a new major version we recommend that you review if your npm dependencies are compatible with Node.js 14.
+  - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
+  - We recommend that you read Node.js [release notes](https://nodejs.org/en/blog/release/v14.0.0/) though.
+
+### Migration steps
+
+- As Node.js version was upgraded we recommend that you remove your `node_modules` folder (`rm -rf node_modules`) and run `meteor reset` to be sure you compile all the binary dependencies again using the new Node.js version.
+  - Maybe you also want to recreate your lock file.
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3`
+  - Node.js update to 14.17.0 from 12.22.1 :tada:
+    - This is a major upgrade in Node.js. See the [release notes](https://nodejs.org/en/blog/release/v14.0.0/) for more details.
+  - npm update to 6.14.13.
+  - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` that improves restarts by caching reify data. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. By default it is disabled but you can enable it setting `true` in this env var. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
+  - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
+  - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
+  
+* `launch-screen@1.3.0`
+  - Removes LaunchScreen from web clients.
+
+* `meteor-babel@7.11.0 (@meteorjs/babel)`
+  - Fixes for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assingment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`.
+  - This package was renamed to `@meteorjs/babel`.
+
+* `hot-module-replacement@0.3.0` 
+  - Fixes various HMR bugs and edge cases see [PR for more](https://github.com/meteor/meteor/pull/11405).
+
+* `email@2.1.0`
+  - Updates `nodemailer` to `6.6.0` and it now adds `charset=utf-8` to `text/plain` messages by default.
 
 ### Breaking changes
 * Removed deprecated `mobile-port` flag
@@ -33,17 +79,32 @@
 
 #### Independent Releases
 
-* Updated `ddp-server@2.3.3` and `socket-stream-client@0.3.2` dependencies which removes Node's HTTP deprecation warning.
+* `ddp-server@2.3.3`
+  - Updates dependencies which removes Node's HTTP deprecation warning.
+  
+* `socket-stream-client@0.3.2`
+  - Updates dependencies which removes Node's HTTP deprecation warning.
 
-* Released `ddp-client@2.4.1` re-ordering fields in DDP message for better client readability.
+* `ddp-client@2.4.1`
+  - Re-ordering fields in DDP message for better client readability.
 
-* Released `mongo@1.11.1` fixing a `Timestamp.ONE is undefined` bug.
+* `mongo@1.11.1`
+  - Fixes a `Timestamp.ONE is undefined` bug.
 
-* Released `mongo-id@1.0.8` removing unused dependency `id-map`.
+* `mongo-id@1.0.8` 
+  - Removes unused dependency `id-map`.
 
-* Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
+* `accounts-server@1.7.1` 
+  - To better test password format & limit password to 256 characters, you can change this limit by setting `Meteor.settings.packages.accounts.passwordMaxLength`.
 
-* Released `id-map@1.1.1` removing unused dependencies and modernizing the code
+* `static-html@1.3.1`
+  - Removes `underscore` dependency.
+
+* `dev-error-overlay@0.1.1`
+  - Fixes sometimes page content being on top of error overlay.
+
+* `id-map@1.1.1`
+  - Removes unused dependencies and modernizing the code.
 
 * `http@1.4.4`
   - Used the new deprecation package flag instead of loud console warning.
@@ -143,7 +204,7 @@
 * `meteor-tool@2.1`
   - Node.js security [update](https://nodejs.org/en/blog/vulnerability/february-2021-security-releases/) to 12.21.0
   - `meteor create my-app --plan professional` new flag `plan` to enable you to choose a plan from the deploy command.
-  
+
 ### Breaking changes
 
 * N/A
@@ -159,10 +220,10 @@
 #### Highlights
 
 - Free deploy on [Cloud](https://www.meteor.com/cloud): Deploy for free to Cloud with one command: `meteor deploy myapp.meteorapp.com --free`. ([docs](https://docs.meteor.com/commandline.html#meteordeploy))
-  
+
 
 - Deploy including MongoDB on [Cloud](https://www.meteor.com/cloud): Deploy including MongoDB in a shared instance for free to Cloud with one command: `meteor deploy myapp.meteorapp.com --free --mongo`. ([docs](https://docs.meteor.com/commandline.html#meteordeploy))
-  
+
 
 - Hot Module Replacement (HMR): Updates the javascript modules in a running app that were modified during a rebuild. Reduces the feedback cycle while developing so you can view and test changes quicker (it even updates the app before the build has finished). Enabled by adding the `hot-module-replacement` package to an app. React components are automatically updated by default using React Fast Refresh. Integrations with other libraries and view layers can be provided by third party packages. Support for Blaze is coming soon. This first version supports app code in the modern web architecture. ([docs](https://guide.meteor.com/build-tool.html#hot-module-replacement)) [#11117](https://github.com/meteor/meteor/pull/11117)
 
@@ -181,12 +242,12 @@
 
 * `hot-module-replacement@1.0.0`
   - New package that enables Hot Module Replacement for the Meteor app and provides an API to configure how updates are applied. HMR reduces the feedback cycle while developing by updating modified javascript modules within the running application. ([docs](https://docs.meteor.com/packages/hot-module-replacement.html)) [#11117](https://github.com/meteor/meteor/pull/11117)
-  - These packages have been updated to support HMR: `autoupdate@1.7.0`, `babel-compiler@7.6.0`, `ddp-client@2.4.0`, `dynamic-import@0.6.0`, `ecmascript@0.15.0`, `modules@0.16.0`, `modules-runtime-hot@0.13.0`, `standard-minifier-css@1.7.2`, `webapp@1.10.0`, `webapp-hashing@1.1.0` 
-  
+  - These packages have been updated to support HMR: `autoupdate@1.7.0`, `babel-compiler@7.6.0`, `ddp-client@2.4.0`, `dynamic-import@0.6.0`, `ecmascript@0.15.0`, `modules@0.16.0`, `modules-runtime-hot@0.13.0`, `standard-minifier-css@1.7.2`, `webapp@1.10.0`, `webapp-hashing@1.1.0`
+
 
 * `react-fast-refresh@0.1.0`
   - New package that updates React components using HMR. This is enabled by default in apps that have HMR enabled and use a supported React version. ([docs](https://atmospherejs.com/meteor/react-fast-refresh)) [#11117](https://github.com/meteor/meteor/pull/11117)
-  
+
 
 * `dev-error-overlay@0.1.0`
   - New package that allows you to see build errors and server crashes in your browser during development. Requires the app to have HMR enabled. [#11117](https://github.com/meteor/meteor/pull/11117)
@@ -194,7 +255,7 @@
 
 * `accounts-base@1.8.0` and `accounts-password@1.7.0`
   - Extra parameters can now be added to reset password, verify e-mail and enroll account links that are generated for account e-mails. By default, these are added as search parameters to the generated url. You can pass them as an object in the appropriate functions. E.g. `Accounts.sendEnrollmentEmail(userId, email, null, extraParams);`. [#11288](https://github.com/meteor/meteor/pull/11288)
-    
+
 
 * `logging@1.2.0`
   - Updates dependencies and make debug available for use in non production environments. [#11068](https://github.com/meteor/meteor/pull/11068)
@@ -203,7 +264,7 @@
 * `react-meteor-data@2.2.0`
   - Fix issue with useTracker and Subscriptions when using deps. [#306](https://github.com/meteor/react-packages/pull/306)
   - Remove version constraint on core TypeScript package [#308](https://github.com/meteor/react-packages/pull/308)
-  
+
 
 * `http`
     - It has been deprecated. [#11068](https://github.com/meteor/meteor/pull/11068)
@@ -239,10 +300,10 @@ N/A
 
 * `dynamic-import@0.5.5`
   - Fixes problem on IE because of modern syntax (arrow function).
-  
+
 * `meteor-babel@7.10.6`
   - Allows to disable sourceMap generation [#36](https://github.com/meteor/babel/pull/36)
-  
+
 * `babel-compiler@7.5.5`
   - Allows to disable sourceMap generation [#36](https://github.com/meteor/babel/pull/36)
 
@@ -278,7 +339,7 @@ N/A
   - adds new options for `meteor list` command (TODO pending link to updated doc). [#11165](https://github.com/meteor/meteor/pull/11165)
   - supports Cordova add plugin command working again with plugin id or plugin name in the git URL as it was before Meteor 1.11. [#11202](https://github.com/meteor/meteor/pull/11202)
   - avoids MiTM by downloading through https. [#11188](https://github.com/meteor/meteor/pull/11188)
-  
+
 * `meteor-babel@7.10.5`
   - updates TypeScript to 4.1.2 and enables decorators and metadata reflection. [#11225](https://github.com/meteor/meteor/pull/11225) and [#11255](https://github.com/meteor/meteor/pull/11255)
 

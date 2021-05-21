@@ -929,7 +929,8 @@ var buildCommands = {
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    platforms: { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -1017,12 +1018,28 @@ var buildCommand = function (options) {
   }
 
   const appName = files.pathBasename(options.appDir);
+  let parsedCordovaServerPort;
+  let selectedPlatforms = null;
+  if (options.platforms) {
+    const platformsArray = options.platforms.split(",");
+
+    platformsArray.forEach(plat => {
+      if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
+        throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
+      }
+    })
+
+    selectedPlatforms = platformsArray;
+  }
 
   let cordovaPlatforms;
   let parsedMobileServerUrl;
-  let parsedCordovaServerPort;
   if (!serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+
+    if (selectedPlatforms) {
+      cordovaPlatforms = _.intersection(selectedPlatforms, cordovaPlatforms)
+    }
 
     if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
@@ -1046,6 +1063,25 @@ on an OS X system.");
     }
   } else {
     cordovaPlatforms = [];
+  }
+
+  // If we specified some platforms, we need to build what was specified.
+  // For example, if we want to build only android, there is no need to build
+  // web.browser.
+  let webArchs;
+  if (selectedPlatforms) {
+    const filteredArchs = projectContext.platformList
+      .getWebArchs()
+      .filter(arch => selectedPlatforms.includes(arch));
+
+    if (
+      !_.isEmpty(cordovaPlatforms) &&
+      !filteredArchs.includes('web.cordova')
+    ) {
+      filteredArchs.push('web.cordova');
+    }
+
+    webArchs = filteredArchs.length ? filteredArchs : undefined;
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
@@ -1088,6 +1124,7 @@ ${Console.command("meteor build ../output")}`,
       //     packages with binary npm dependencies
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
+      webArchs,
     },
   });
   if (bundleResult.errors) {

@@ -9,10 +9,6 @@ require("./wrap-fibers.js");
 // they are available.
 require("./install-promise.js");
 
-// Enable the Reify module runtime: Module.prototype.{link,export,...}.
-// The same runtime.js code is used by server code (see boot.js).
-require("../static-assets/server/runtime.js");
-
 // Installs source map support with a hook to add functions to look for
 // source maps in custom places.
 require('./source-map-retriever-stack.js');
