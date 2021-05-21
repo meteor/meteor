@@ -7,7 +7,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('ecmascript');
-  api.use("templating@1.3.1", "client", {weak: true});
+  api.use("templating@1.4.0", "client", {weak: true});
   api.mainModule('template-integration.js', 'client', { lazy: true });
 });
 
