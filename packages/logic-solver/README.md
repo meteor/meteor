@@ -1050,7 +1050,7 @@ time-consuming operation.
 
 Finds a Solution that minimizes the value of
 `Logic.weightedSum(formulas, weights)`, and adds a requirement that
-this mininum value is obtained (in the sense of calling
+this minimum value is obtained (in the sense of calling
 `Solver#require` on this Solver).
 
 To determine this minimum value, call

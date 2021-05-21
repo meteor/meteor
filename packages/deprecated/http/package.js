@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.4.3'
+  version: '1.4.4',
+  deprecated: 'Please use fetch'
 });
 
 Package.onUse(function (api) {
@@ -8,9 +9,8 @@ Package.onUse(function (api) {
   api.use([
     'url',
     'ecmascript',
-    'modules',
     'fetch',
-    'logging' // For deprecation message
+    'modules'
   ]);
 
   api.mainModule('httpcall_client.js', 'client');
