@@ -267,6 +267,14 @@ _.extend(exports.PackageMapDelta.prototype, {
         description =
           "downgraded from " + info.oldVersion + " to " + info.newVersion;
       }
+
+      if (info.deprecated) {
+        name += ' - DEPRECATED';
+        if (info.deprecatedMessage) {
+          description += ' - ' + info.deprecatedMessage;
+        }
+      }
+
       displayItems.push({ name: name, description: description });
     });
 
