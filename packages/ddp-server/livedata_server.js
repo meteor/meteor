@@ -1063,7 +1063,7 @@ _.extend(Subscription.prototype, {
     self._publishHandlerResult(res);
   },
 
-  _publishHandlerResult: function (res) {
+  _publishHandlerResult: function (resMaybePromise) {
     // SPECIAL CASE: Instead of writing their own callbacks that invoke
     // this.added/changed/ready/etc, the user can just return a collection
     // cursor or array of cursors from the publish function; we call their
@@ -1085,53 +1085,57 @@ _.extend(Subscription.prototype, {
     var isCursor = function (c) {
       return c && c._publishCursor;
     };
-    if (isCursor(res)) {
-      try {
-        res._publishCursor(self);
-      } catch (e) {
-        self.error(e);
-        return;
-      }
-      // _publishCursor only returns after the initial added callbacks have run.
-      // mark subscription as ready.
-      self.ready();
-    } else if (_.isArray(res)) {
-      // check all the elements are cursors
-      if (! _.all(res, isCursor)) {
-        self.error(new Error("Publish function returned an array of non-Cursors"));
-        return;
-      }
-      // find duplicate collection names
-      // XXX we should support overlapping cursors, but that would require the
-      // merge box to allow overlap within a subscription
-      var collectionNames = {};
-      for (var i = 0; i < res.length; ++i) {
-        var collectionName = res[i]._getCollectionName();
-        if (_.has(collectionNames, collectionName)) {
-          self.error(new Error(
-            "Publish function returned multiple cursors for collection " +
-              collectionName));
+
+    //Supports a publish handler result from a normal or an async function
+    Promise.resolve(resMaybePromise).then(res => {
+      if (isCursor(res)) {
+        try {
+          res._publishCursor(self);
+        } catch (e) {
+          self.error(e);
           return;
         }
-        collectionNames[collectionName] = true;
-      };
+        // _publishCursor only returns after the initial added callbacks have run.
+        // mark subscription as ready.
+        self.ready();
+      } else if (_.isArray(res)) {
+        // check all the elements are cursors
+        if (! _.all(res, isCursor)) {
+          self.error(new Error("Publish function returned an array of non-Cursors"));
+          return;
+        }
+        // find duplicate collection names
+        // XXX we should support overlapping cursors, but that would require the
+        // merge box to allow overlap within a subscription
+        var collectionNames = {};
+        for (var i = 0; i < res.length; ++i) {
+          var collectionName = res[i]._getCollectionName();
+          if (_.has(collectionNames, collectionName)) {
+            self.error(new Error(
+              "Publish function returned multiple cursors for collection " +
+                collectionName));
+            return;
+          }
+          collectionNames[collectionName] = true;
+        };
 
-      try {
-        _.each(res, function (cur) {
-          cur._publishCursor(self);
-        });
-      } catch (e) {
-        self.error(e);
-        return;
+        try {
+          _.each(res, function (cur) {
+            cur._publishCursor(self);
+          });
+        } catch (e) {
+          self.error(e);
+          return;
+        }
+        self.ready();
+      } else if (res) {
+        // truthy values other than cursors or arrays are probably a
+        // user mistake (possible returning a Mongo document via, say,
+        // `coll.findOne()`).
+        self.error(new Error("Publish function can only return a Cursor or "
+                            + "an array of Cursors"));
       }
-      self.ready();
-    } else if (res) {
-      // truthy values other than cursors or arrays are probably a
-      // user mistake (possible returning a Mongo document via, say,
-      // `coll.findOne()`).
-      self.error(new Error("Publish function can only return a Cursor or "
-                           + "an array of Cursors"));
-    }
+    }, e => self.error(e));
   },
 
   // This calls all stop callbacks and prevents the handler from updating any
