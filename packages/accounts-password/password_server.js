@@ -241,13 +241,17 @@ const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, o
   if (fieldValue && !skipCheck) {
     let selector = {};
     const { useLowerCaseEmails } = Accounts._options;
-    // if useLowerCaseEmails is true in Accounts.config and fieldName='emails.address'
-    // then don't run selectorForFastCaseInsensitiveLookup
-    // instead run a simple regex query for email.
-    if (useLowerCaseEmails && fieldName === 'emails.address') {
-      selector[fieldName] = {$regex: fieldValue, $options: 'i'};
+    // if useLowerCaseEmails is false in Accounts.config and fieldName='emails.address'
+    // then run selectorForFastCaseInsensitiveLookup method
+    // else run a simple regex query for email.
+    if (fieldName === 'emails.address') {
+      if(useLowerCaseEmails === false) {
+        selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
+      } else {
+        selector[fieldName] = {$regex: fieldValue, $options: 'i'};
+      }
     } else {
-      selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue)
+      selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
     }
     const matchedUsers = Meteor.users.find(
       selector,
@@ -1029,6 +1033,11 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   const caseInsensitiveRegExp =
     new RegExp(`^${Meteor._escapeRegExp(newEmail)}$`, 'i');
 
+  const { useLowerCaseEmails } = Accounts._options;
+  if(!(useLowerCaseEmails === false)) {
+    newEmail = newEmail.toLowerCase();
+  }
+
   const didUpdateOwnEmail = (user.emails || []).reduce(
     (prev, email) => {
       if (caseInsensitiveRegExp.test(email.address)) {
@@ -1134,8 +1143,17 @@ const createUser = options => {
 
   if (username)
     user.username = username;
-  if (email)
-    user.emails = [{address: email, verified: false}];
+  if (email) {
+    const { useLowerCaseEmails } = Accounts._options;
+    // if useLowerCaseEmails is false in Accounts.config, then don't enforce lower case emails
+    // enforce lower case emails
+    if(useLowerCaseEmails === false) {
+      user.emails = [{address: email, verified: false}];
+    } else {
+      user.emails = [{address: email.toLowerCase(), verified: false}];
+    }
+  }
+   
 
   // Perform a case insensitive check before insert
   checkForCaseInsensitiveDuplicates('username', 'Username', username);
@@ -1206,6 +1224,11 @@ Accounts.createUserVerifyingEmail = (options) => {
   // a token to verify the user's primary email, and send it to
   // that address.
   if (options.email && Accounts._options.sendVerificationEmail) {
+    const { useLowerCaseEmails } = Accounts._options;
+    // check useLowerCaseEmails value
+    if(!(useLowerCaseEmails === false)) {
+      options.email = options.email.toLowerCase();
+    }  
     if (options.password) {
       Accounts.sendVerificationEmail(userId, options.email);
     } else {
