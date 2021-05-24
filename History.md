@@ -22,7 +22,7 @@
 #### Meteor Version Release
 
 * `meteor-tool@2.3`
-  - Node.js update to 14.17.0 from 12.22.1 :tada:
+  - Node.js update to 14.17.0 from 12.22.1 🎉
     - This is a major upgrade in Node.js. See the [release notes](https://nodejs.org/en/blog/release/v14.0.0/) for more details.
   - npm update to 6.14.13.
   - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` that improves restarts by caching reify data. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. By default it is disabled but you can enable it setting `true` in this env var. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
@@ -44,6 +44,9 @@
 
 * `email@2.1.0`
   - Updates `nodemailer` to `6.6.0` and it now adds `charset=utf-8` to `text/plain` messages by default.
+
+* `server-render@0.4.0`
+  - Updated npm dependencies
 
 ### Breaking changes
 * Removed deprecated `mobile-port` flag
@@ -75,6 +78,10 @@
   
 * `oauth@2.0.0`
   - Removed `OAuth.initiateLogin` and other functionality like the addition of `?close` in return URI for deprecated OAuth flow pre Meteor 1.0
+
+* `markdown@2.0.0`
+  - Use lazy imports to prevent it from being added to the initial bundle
+  - Added deprecation flag
 
 #### Independent Releases
 
