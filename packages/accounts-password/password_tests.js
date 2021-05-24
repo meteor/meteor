@@ -1,5 +1,7 @@
 Accounts._connectionCloseDelayMsForTests = 1000;
 
+const { useLowerCaseEmails } = Accounts._options;
+
 if (Meteor.isServer) {
   Accounts.removeDefaultRateLimit();
 
@@ -62,6 +64,7 @@ if (Meteor.isClient) (() => {
         test.fail(error.message);
       }
       const user = Meteor.user();
+      
       test.isTrue(user && user.emails.reduce(
         (prev, email) => prev || email.address === someEmail, 
         false
@@ -105,7 +108,7 @@ if (Meteor.isClient) (() => {
       this.username = Random.id();
       this.email = `${Random.id()}-intercept@example.com`;
       this.password = 'password';
-
+      
       Accounts.createUser(
         {username: this.username, email: this.email, password: this.password},
         loggedInAs(this.username, test, expect));
@@ -322,113 +325,113 @@ if (Meteor.isClient) (() => {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email", [
-    createUserStep,
-    logoutStep,
-    // We should be able to log in with the email in lower case
-    function (test, expect) {
-      Meteor.loginWithPassword(
-        { email: `ada-intercept@lovelace.com${this.randomSuffix}` },
-        this.password,
-        loggedInAs(this.username, test, expect));
-    }
-  ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email should " +
-      "escape regex special characters", [
-    createUserStep,
-    logoutStep,
-    // We shouldn't be able to log in with a regex expression for the email
-    function (test, expect) {
-      Meteor.loginWithPassword(
-        { email: `.+${this.randomSuffix}` },
-        this.password,
-        expectUserNotFound(test, expect));
-    }
-  ]);
-
-  testAsyncMulti("passwords - logging in with case insensitive email should " +
-     "require a match of the full string", [
-    createUserStep,
-    logoutStep,
-    // We shouldn't be able to log in with a partial match for the email
-    function (test, expect) {
-      Meteor.loginWithPassword(
-        { email: `com${this.randomSuffix}` },
-        this.password,
-        expectUserNotFound(test, expect));
-    }
-  ]);
-
-  testAsyncMulti("passwords - logging in with case insensitive email when " +
-      "there are multiple matches", [
-    createUserStep,
-    logoutStep,
-    function (test, expect) {
-      this.otherUsername = `AdaLovelace${Random.id(10)}`;
-      this.otherEmail = `ADA-intercept@lovelace.com${this.randomSuffix}`;
-      addSkipCaseInsensitiveChecksForTest(this.otherEmail, test, expect);
-    },
-    // Create another user with an email that only differs in case
-    function (test, expect) {
-      Accounts.createUser(
-        { username: this.otherUsername,
-          email: this.otherEmail,
-          password: this.password },
-        loggedInAs(this.otherUsername, test, expect));
-    },
-    function (test, expect) {
-      removeSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
-    },
-    logoutStep,
-    // We shouldn't be able to log in with the email in lower case
-    function (test, expect) {
-      Meteor.loginWithPassword(
-        { email: `ada-intercept@lovelace.com${this.randomSuffix}` },
-        this.password,
-        expectUserNotFound(test, expect));
-    },
-    // We should still be able to log in with the email in original case
-    function (test, expect) {
-      Meteor.loginWithPassword(
-        { email: this.email },
-        this.password,
-        loggedInAs(this.username, test, expect));
-    }
-  ]);
-
-  testAsyncMulti("passwords - creating users with the same case insensitive " +
-      "email", [
-    createUserStep,
-    logoutStep,
-    // Create user error without callback should throw error
-    function (test, expect) {
-      this.newUsername = `adalovelace${this.randomSuffix}`;
-      test.throws(function(){
-        Accounts.createUser({ username: this.newUsername, password: '' });
-      }, /Password may not be empty/);
-    },
-    // Attempting to create another user with an email that only differs in
-    // case should fail
-    function (test, expect) {
-      this.newEmail = `ada-intercept@lovelace.com${this.randomSuffix}`;
-      Accounts.createUser(
-        { email: this.newEmail, password: this.password },
-        expectError(
-          new Meteor.Error(403, "Email already exists."),
-          test,
-          expect));
-    },
-    // Make sure the new user has not been inserted
-    function (test, expect) {
-      Meteor.call('countUsersOnServer',
-        { 'emails.address': this.newEmail },
-        expect (function (error, result) {
-          test.equal(result, 0);
-        })
-      );
-    }
-  ]);
+  // Execute these test only when lowercase enforcement is set to false
+  if(useLowerCaseEmails === false) {
+    testAsyncMulti("passwords - logging in with case insensitive email", [
+      createUserStep,
+      logoutStep,
+      // We should be able to log in with the email in lower case
+      function (test, expect) {
+        Meteor.loginWithPassword(
+          { email: `ada-intercept@lovelace.com${this.randomSuffix}` },
+          this.password,
+          loggedInAs(this.username, test, expect));
+      }
+    ]);
+    testAsyncMulti("passwords - logging in with case insensitive email should " +
+        "escape regex special characters", [
+      createUserStep,
+      logoutStep,
+      // We shouldn't be able to log in with a regex expression for the email
+      function (test, expect) {
+        Meteor.loginWithPassword(
+          { email: `.+${this.randomSuffix}` },
+          this.password,
+          expectUserNotFound(test, expect));
+      }
+    ]);
+    testAsyncMulti("passwords - logging in with case insensitive email should " +
+      "require a match of the full string", [
+      createUserStep,
+      logoutStep,
+      // We shouldn't be able to log in with a partial match for the email
+      function (test, expect) {
+        Meteor.loginWithPassword(
+          { email: `com${this.randomSuffix}` },
+          this.password,
+          expectUserNotFound(test, expect));
+      }
+    ]);
+    testAsyncMulti("passwords - logging in with case insensitive email when " +
+        "there are multiple matches", [
+      createUserStep,
+      logoutStep,
+      function (test, expect) {
+        this.otherUsername = `AdaLovelace${Random.id(10)}`;
+        this.otherEmail = `ADA-intercept@lovelace.com${this.randomSuffix}`;
+        addSkipCaseInsensitiveChecksForTest(this.otherEmail, test, expect);
+      },
+      // Create another user with an email that only differs in case
+      function (test, expect) {
+        Accounts.createUser(
+          { username: this.otherUsername,
+            email: this.otherEmail,
+            password: this.password },
+          loggedInAs(this.otherUsername, test, expect));
+      },
+      function (test, expect) {
+        removeSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
+      },
+      logoutStep,
+      // We shouldn't be able to log in with the email in lower case
+      function (test, expect) {
+        Meteor.loginWithPassword(
+          { email: `ada-intercept@lovelace.com${this.randomSuffix}` },
+          this.password,
+          expectUserNotFound(test, expect));
+      },
+      // We should still be able to log in with the email in original case
+      function (test, expect) {
+        Meteor.loginWithPassword(
+          { email: this.email },
+          this.password,
+          loggedInAs(this.username, test, expect));
+      }
+    ]);
+    testAsyncMulti("passwords - creating users with the same case insensitive " +
+        "email", [
+      createUserStep,
+      logoutStep,
+      // Create user error without callback should throw error
+      function (test, expect) {
+        this.newUsername = `adalovelace${this.randomSuffix}`;
+        test.throws(function(){
+          Accounts.createUser({ username: this.newUsername, password: '' });
+        }, /Password may not be empty/);
+      },
+      // Attempting to create another user with an email that only differs in
+      // case should fail
+      function (test, expect) {
+        this.newEmail = `ada-intercept@lovelace.com${this.randomSuffix}`;
+        Accounts.createUser(
+          { email: this.newEmail, password: this.password },
+          expectError(
+            new Meteor.Error(403, "Email already exists."),
+            test,
+            expect));
+      },
+      // Make sure the new user has not been inserted
+      function (test, expect) {
+        Meteor.call('countUsersOnServer',
+          { 'emails.address': this.newEmail },
+          expect (function (error, result) {
+            test.equal(result, 0);
+          })
+        );
+      }
+    ]);
+  }
 
   testAsyncMulti("passwords - changing passwords", [
     function (test, expect) {
@@ -1331,10 +1334,9 @@ if (Meteor.isServer) (() => {
     'passwords - setPassword',
     test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
-
+      let email = `${username}-intercept@example.com`;
       const userId = Accounts.createUser({username: username, email: email});
-
+     
       let user = Meteor.users.findOne(userId);
       // no services yet.
       test.equal(user.services.password, undefined);
@@ -1347,6 +1349,9 @@ if (Meteor.isServer) (() => {
 
       // Send a reset password email (setting a reset token) and insert a login
       // token.
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendResetPasswordEmail(userId, email);
       Accounts._insertLoginToken(userId, Accounts._generateStampedLoginToken());
       test.isTrue(Meteor.users.findOne(userId).services.password.reset);
@@ -1440,7 +1445,7 @@ if (Meteor.isServer) (() => {
     "passwords - reset password doesn't work if email changed after email sent",
     test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      let email = `${username}-intercept@example.com`;
 
       const userId = Accounts.createUser({
         username: username,
@@ -1449,7 +1454,9 @@ if (Meteor.isServer) (() => {
       });
 
       const user = Meteor.users.findOne(userId);
-
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendResetPasswordEmail(userId, email);
 
       const resetPasswordEmailOptions =
@@ -1480,7 +1487,7 @@ if (Meteor.isServer) (() => {
     'passwords - reset password should work when token is not expired',
     (test, onComplete) => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      let email = `${username}-intercept@example.com`;
 
       const userId = Accounts.createUser({
         username: username,
@@ -1489,6 +1496,9 @@ if (Meteor.isServer) (() => {
       });
 
       const user = Meteor.users.findOne(userId);
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
 
       Accounts.sendResetPasswordEmail(userId, email);
 
@@ -1523,7 +1533,7 @@ if (Meteor.isServer) (() => {
     'passwords - reset password should not work when token is expired',
     test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      let email = `${username}-intercept@example.com`;
 
       const userId = Accounts.createUser({
         username: username,
@@ -1532,7 +1542,9 @@ if (Meteor.isServer) (() => {
       });
 
       const user = Meteor.users.findOne(userId);
-
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendResetPasswordEmail(userId, email);
 
       const resetPasswordEmailOptions =
@@ -1561,8 +1573,12 @@ if (Meteor.isServer) (() => {
   Tinytest.add(
     'passwords - reset tokens with reasons get cleaned up',
     test => {
-      const email = `${test.id}-intercept@example.com`;
+      let email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: 'password'});
+       
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendResetPasswordEmail(userId, email);
       test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
 
@@ -1574,8 +1590,12 @@ if (Meteor.isServer) (() => {
   Tinytest.add(
     'passwords - reset tokens without reasons get cleaned up',
     test => {
-      const email = `${test.id}-intercept@example.com`;
+      let email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: 'password'});
+      
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendResetPasswordEmail(userId, email);
       Meteor.users.update({_id: userId}, {$unset: {"services.password.reset.reason": 1}});
       test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
@@ -1590,7 +1610,7 @@ if (Meteor.isServer) (() => {
     'passwords - enroll password should work when token is not expired',
     (test, onComplete) => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      let email = `${username}-intercept@example.com`;
 
       const userId = Accounts.createUser({
         username: username,
@@ -1598,7 +1618,10 @@ if (Meteor.isServer) (() => {
       });
 
       const user = Meteor.users.findOne(userId);
-
+       
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendEnrollmentEmail(userId, email);
 
       const enrollPasswordEmailOptions =
@@ -1631,7 +1654,7 @@ if (Meteor.isServer) (() => {
     'passwords - enroll password should not work when token is expired',
     test => {
       const username = Random.id();
-      const email = `${username}-intercept@example.com`;
+      let email = `${username}-intercept@example.com`;
 
       const userId = Accounts.createUser({
         username: username,
@@ -1639,7 +1662,10 @@ if (Meteor.isServer) (() => {
       });
 
       const user = Meteor.users.findOne(userId);
-
+       
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendEnrollmentEmail(userId, email);
 
       const enrollPasswordEmailOptions =
@@ -1659,9 +1685,12 @@ if (Meteor.isServer) (() => {
     });
 
   Tinytest.add('passwords - enroll tokens get cleaned up', test => {
-    const email = `${test.id}-intercept@example.com`;
+    let email = `${test.id}-intercept@example.com`;
     const userId = Accounts.createUser({email: email, password: 'password'});
-
+     
+    if(!(useLowerCaseEmails === false)) {
+      email = email.toLowerCase();
+    }
     Accounts.sendEnrollmentEmail(userId, email);
     test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
 
@@ -1672,9 +1701,12 @@ if (Meteor.isServer) (() => {
   Tinytest.add(
     "passwords - enroll tokens don't get cleaned up when reset tokens are cleaned up",
     test => {
-      const email = `${test.id}-intercept@example.com`;
+      let email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: 'password'});
-
+       
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendEnrollmentEmail(userId, email);
       const enrollToken = Meteor.users.findOne(userId).services.password.reset;
       test.isTrue(enrollToken);
@@ -1687,9 +1719,12 @@ if (Meteor.isServer) (() => {
   Tinytest.add(
     "passwords - reset tokens don't get cleaned up when enroll tokens are cleaned up",
     test => {
-      const email = `${test.id}-intercept@example.com`;
+      let email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: 'password'});
-
+      
+      if(!(useLowerCaseEmails === false)) {
+        email = email.toLowerCase();
+      }
       Accounts.sendResetPasswordEmail(userId, email);
       const resetToken = Meteor.users.findOne(userId).services.password.reset;
       test.isTrue(resetToken);
@@ -1783,7 +1818,7 @@ if (Meteor.isServer) (() => {
   });
 
   Tinytest.add("passwords - add email & findUserByEmail", test => {
-    const origEmail = `${Random.id()}@turing.com`;
+    let origEmail = `${Random.id()}@turing.com`;
     const username = Random.id();
     const ignoreFieldName = "profile";
     const userId = Accounts.createUser({
@@ -1792,18 +1827,25 @@ if (Meteor.isServer) (() => {
       [ignoreFieldName]: {name: 'foo'},
     });
 
-    const newEmail = `${Random.id()}@turing.com`;
+    let newEmail = `${Random.id()}@turing.com`;
     Accounts.addEmail(userId, newEmail);
 
-    const thirdEmail = `${Random.id()}@turing.com`;
+    let thirdEmail = `${Random.id()}@turing.com`;
     Accounts.addEmail(userId, thirdEmail, true);
+
+    
+    if(!(useLowerCaseEmails === false)) {
+      origEmail = origEmail.toLowerCase();
+      newEmail = newEmail.toLowerCase();
+      thirdEmail = thirdEmail.toLowerCase();
+    }
 
     test.equal(Accounts._findUserByQuery({id: userId}).emails, [
       { address: origEmail, verified: false },
       { address: newEmail, verified: false },
       { address: thirdEmail, verified: true }
     ]);
-
+   
     // Test findUserByEmail as well while we're here
     let user = Accounts.findUserByEmail(origEmail);
     test.equal(user._id, userId);
@@ -1834,9 +1876,13 @@ if (Meteor.isServer) (() => {
       username: `user${Random.id()}`
     });
 
-    const newEmail = `${Random.id()}@turing.com`;
+    let newEmail = `${Random.id()}@turing.com`;
     Accounts.addEmail(userId, newEmail);
-
+  
+    
+    if(!(useLowerCaseEmails === false)) {
+      newEmail = newEmail.toLowerCase();
+    }
     test.equal(Accounts._findUserByQuery({id: userId}).emails, [
       { address: newEmail, verified: false },
     ]);
@@ -1849,12 +1895,17 @@ if (Meteor.isServer) (() => {
       email: origEmail
     });
 
-    const newEmail = `${Random.id()}@turing.com`;
+    let newEmail = `${Random.id()}@turing.com`;
     Accounts.addEmail(userId, newEmail);
 
-    const thirdEmail = origEmail.toUpperCase();
+    let thirdEmail = origEmail.toUpperCase();
     Accounts.addEmail(userId, thirdEmail, true);
 
+    
+    if(!(useLowerCaseEmails === false)) {
+      newEmail = newEmail.toLowerCase();
+      thirdEmail = thirdEmail.toLowerCase();
+    }
     test.equal(Accounts._findUserByQuery({id: userId}).emails, [
       { address: thirdEmail, verified: true },
       { address: newEmail, verified: false }
@@ -1863,22 +1914,29 @@ if (Meteor.isServer) (() => {
 
   Tinytest.add("passwords - add email should fail when there is an existing " +
       "user with an email only differing in case", test => {
-    const user1Email = `${Random.id()}@turing.com`;
+    let user1Email = `${Random.id()}@turing.com`;
     const userId1 = Accounts.createUser({
       email: user1Email
     });
 
-    const user2Email = `${Random.id()}@turing.com`;
+    
+    let user2Email = `${Random.id()}@turing.com`;
     const userId2 = Accounts.createUser({
       email: user2Email
     });
-
-    const dupEmail = user1Email.toUpperCase();
-    test.throws(
-      () => Accounts.addEmail(userId2, dupEmail),
-      /Email already exists/
-    );
-
+    // this test is invalid if useLowerCaseEmails flag is not false
+    if(useLowerCaseEmails === false) {
+      const dupEmail = user1Email.toUpperCase();
+      test.throws(
+        () => Accounts.addEmail(userId2, dupEmail),
+        /Email already exists/
+      );
+    }
+    
+    if(!(useLowerCaseEmails === false)) {
+      user1Email = user1Email.toLowerCase();
+      user2Email = user2Email.toLowerCase();
+    }
     test.equal(Accounts._findUserByQuery({id: userId1}).emails, [
       { address: user1Email, verified: false }
     ]);
@@ -1889,17 +1947,23 @@ if (Meteor.isServer) (() => {
   });
 
   Tinytest.add("passwords - remove email", test => {
-    const origEmail = `${Random.id()}@turing.com`;
+    let origEmail = `${Random.id()}@turing.com`;
     const userId = Accounts.createUser({
       email: origEmail
     });
 
-    const newEmail = `${Random.id()}@turing.com`;
+    let newEmail = `${Random.id()}@turing.com`;
     Accounts.addEmail(userId, newEmail);
 
-    const thirdEmail = `${Random.id()}@turing.com`;
+    let thirdEmail = `${Random.id()}@turing.com`;
     Accounts.addEmail(userId, thirdEmail, true);
 
+    
+    if(!(useLowerCaseEmails === false)) {
+      origEmail = origEmail.toLowerCase();
+      newEmail = newEmail.toLowerCase();
+      thirdEmail = thirdEmail.toLowerCase();
+    }
     test.equal(Accounts._findUserByQuery({id: userId}).emails, [
       { address: origEmail, verified: false },
       { address: newEmail, verified: false },
@@ -1968,13 +2032,17 @@ if (Meteor.isServer) (() => {
 
   Tinytest.add('passwords - extra params in email urls', (test) => {
     const username = Random.id();
-    const email = `${username}-intercept@example.com`;
+    let email = `${username}-intercept@example.com`;
 
     const userId = Accounts.createUser({
       username: username,
       email: email
     });
 
+    
+    if(!(useLowerCaseEmails === false)) {
+      email = email.toLowerCase();
+    }
     const extraParams = { test: 'success' };
     Accounts.sendEnrollmentEmail(userId, email, null, extraParams);
 
