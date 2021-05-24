@@ -36,6 +36,7 @@ Package.onTest(api => {
   api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
            'accounts-base', 'random', 'email', 'check', 'ddp', 'ecmascript']);
   api.addFiles('password_tests_setup.js', 'server');
+  api.addFiles('password_tests_config.js', ['client', 'server']);
   api.addFiles('password_tests.js', ['client', 'server']);
   api.addFiles('email_tests_setup.js', 'server');
   api.addFiles('email_tests.js', 'client');
