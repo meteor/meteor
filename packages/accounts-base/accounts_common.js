@@ -169,7 +169,7 @@ export class AccountsCommon {
    * @param {Number} options.passwordEnrollTokenExpiration The number of milliseconds from when a link to set initial password is sent until token expires and user can't set password with the link anymore. If `passwordEnrollTokenExpirationInDays` is set, it takes precedent.
    * @param {Boolean} options.ambiguousErrorMessages Return ambiguous error messages from login failures to prevent user enumeration. Defaults to false.
    * @param {MongoFieldSpecifier} options.defaultFieldSelector To exclude by default large custom fields from `Meteor.user()` and `Meteor.findUserBy...()` functions when called without a field selector, and all `onLogin`, `onLoginFailure` and `onLogout` callbacks.  Example: `Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})`.
-   * @param {Boolean} options.useLowerCaseEmails When this key is set to true and the fieldName argument, in "checkForCaseInsensitiveDuplicates" method, is "emails.address" then the "checkForCaseInsensitiveDuplicates" will not implement "selectorForFastCaseInsensitiveLookup" method instead will run a simple regex query for email search.
+   * @param {Boolean} options.useLowerCaseEmails When this key is set to false and the fieldName argument, in "checkForCaseInsensitiveDuplicates" method, is "emails.address" then the "checkForCaseInsensitiveDuplicates" will implement "selectorForFastCaseInsensitiveLookup" method for email search else it will implement a simple regex search.
    */
   config(options) {
     // We don't want users to accidentally only call Accounts.config on the
