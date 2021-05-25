@@ -1,4 +1,7 @@
 import { Tinytest } from "./tinytest.js";
+import { check, Match } from "meteor/check";
+import { Random } from "meteor/random";
+import { Meteor } from "meteor/meteor";
 import {
   ServerTestResultsSubscription,
   ServerTestResultsCollection,
