@@ -121,14 +121,14 @@ StreamServer = function () {
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
-    self.registration_callbacks.forEach((callback) => {
+    _.each(self.registration_callbacks, function (callback) {
       callback(socket);
     });
   });
 
 };
 
-_.extend(StreamServer.prototype, {
+Object.assign(StreamServer.prototype, {
   // call my callback when a new socket connects.
   // also call it for all current connections.
   register: function (callback) {
