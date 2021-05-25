@@ -83,6 +83,9 @@
   - Use lazy imports to prevent it from being added to the initial bundle
   - Added deprecation flag
 
+* `socket-stream-client@0.4.0`
+  - Remove IE8 checks
+
 #### Independent Releases
 
 * `ddp-server@2.3.3`
