@@ -117,6 +117,9 @@
   
 * `logic-solver@2.0.8`
   - Fixed `package.js` to use current `api` method calls.
+  
+* `socket-stream-client@0.3.3`
+  - Update `faye-websocket` dependency to v0.11.4. 
 
 ## v2.2, 2021-04-15
 
