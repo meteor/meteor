@@ -180,7 +180,7 @@ testAsyncMulti('stream - /websocket is a websocket endpoint', [
     //
     // Verify that /websocket and /websocket/ don't return the main page
     //
-    ['/websocket', '/websocket/'].forEach(function(path) {
+    ['/websocket', '/websocket/'].forEach((path) => {
       HTTP.get(
         Meteor._relativeToSiteRootUrl(path),
         expect(function(error, result) {
