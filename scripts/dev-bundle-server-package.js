@@ -24,7 +24,7 @@ var packageJson = {
   // These are only used in dev mode (by shell.js) so end-users can avoid
   // needing to install them if they use `npm install --production`.
   devDependencies: {
-    split2: "2.2.0",
+    split2: "3.2.2",
     multipipe: "1.0.2",
     chalk: "0.5.1"
   }
