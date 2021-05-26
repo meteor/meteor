@@ -1,6 +1,8 @@
 import assert from "assert";
-import { readFileSync } from "fs";
-import { chmodSync } from "fs";
+import {
+  readFileSync,
+  chmodSync
+} from "fs";
 import { createServer } from "http";
 import {
   join as pathJoin,
