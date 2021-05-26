@@ -81,7 +81,7 @@ Meteor.methods({
   'tinytest/clearResults'(runId) {
     check(runId, String);
 
-    handlesForRun.get(runId).forEach(handle => {
+    handlesForRun.get(runId)?.forEach(handle => {
       // XXX this doesn't actually notify the client that it has been
       // unsubscribed.
       handle.stop();

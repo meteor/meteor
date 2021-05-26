@@ -1,5 +1,3 @@
-var url = Npm.require('url');
-
 // By default, we use the permessage-deflate extension with default
 // configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
 // JSON. If it represents a falsey value, then we do not use permessage-deflate
@@ -154,7 +152,7 @@ Object.assign(StreamServer.prototype, {
     // (meaning prior to any connect middlewares) so we need to take
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
-    ['request', 'upgrade'].forEach(function(event) {
+    ['request', 'upgrade'].forEach((event) => {
       var httpServer = WebApp.httpServer;
       var oldHttpServerListeners = httpServer.listeners(event).slice(0);
       httpServer.removeAllListeners(event);
@@ -164,6 +162,9 @@ Object.assign(StreamServer.prototype, {
       var newListener = function(request /*, moreArguments */) {
         // Store arguments for use within the closure below
         var args = arguments;
+
+        // TODO replace with url package
+        var url = Npm.require('url');
 
         // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
         // preserving query string.
