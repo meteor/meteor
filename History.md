@@ -24,7 +24,29 @@
 * `meteor-tool@2.3`
   - Node.js update to 14.17.0 from 12.22.1 🎉
     - This is a major upgrade in Node.js. See the [release notes](https://nodejs.org/en/blog/release/v14.0.0/) for more details.
-  - npm update to 6.14.13.
+  - `npm` update to 6.14.13.
+  - `fibers` has been updated to v5.0.0.
+  - `promise` has been updated to v8.1.0.
+  - `underscore` has been updated to v1.11.0.
+  - `node-gyp` has been updated to v8.0.0.
+  - `node-pre-gyp` has been updated to v0.15.0.
+  - `@babel/runtime` has been updated to v7.13.17.
+  - `request` has been updated to v2.88.2.
+  - `uuid` has been updated to v3.4.0.
+  - `graceful-fs` has been updated to v4.2.6.
+  - `tar` has been updated to v2.2.2.
+  - `sqlite3` has been updated to v5.0.2.
+  - `http-proxy` has been updated to v1.18.1.
+  - `wordwrap` has been updated to v1.0.0.
+  - `moment` has been updated to v2.29.1.
+  - `glob` has been updated to v7.1.6.
+  - `split2` has been updated to v3.2.2.
+  - `optimism` has been updated to v0.12.2.
+  - `@wry/context` has been updated to v0.5.2.
+  - `lru-cache` has been updated to v4.1.5.
+  - `anser` has been updated to v2.0.1.
+  - `xmlbuilder2` has been updated to v1.8.1.
+  - `ws` has been updated to v7.4.5.
   - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` that improves restarts by caching reify data. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. By default it is disabled but you can enable it setting `true` in this env var. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
   - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
   - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
@@ -82,6 +104,9 @@
 * `markdown@2.0.0`
   - Use lazy imports to prevent it from being added to the initial bundle
   - Added deprecation flag
+  
+* `ddp-server@2.4.0`
+  - Added support for this.unblock() in Meteor.publish() context
 
 * `socket-stream-client@0.4.0`
   - Remove IE8 checks
