@@ -74,6 +74,9 @@
 * `markdown@2.0.0`
   - Use lazy imports to prevent it from being added to the initial bundle
   - Added deprecation flag
+  
+* `ddp-server@2.4.0`
+  - Added support for this.unblock() in Meteor.publish() context
 
 #### Independent Releases
 
