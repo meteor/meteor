@@ -1,12 +1,12 @@
 Package.describe({
   name: "socket-stream-client",
-  version: "0.3.2",
+  version: "0.3.3",
   summary: "Provides the ClientStream abstraction used by ddp-client",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "faye-websocket": "0.11.3",
+  "faye-websocket": "0.11.4",
   "permessage-deflate": "0.1.7"
 });
 
