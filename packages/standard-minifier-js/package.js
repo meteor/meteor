@@ -13,7 +13,7 @@ Package.registerBuildPlugin({
     'ecmascript'
   ],
   npmDependencies: {
-    "@babel/runtime": "7.9.2"
+    "@babel/runtime": "7.14.0"
   },
   sources: [
     'plugin/minify-js.js',

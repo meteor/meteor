@@ -12,7 +12,7 @@ Package.registerBuildPlugin({
     'ecmascript'
   ],
   npmDependencies: {
-    "@babel/runtime": "7.11.2",
+    "@babel/runtime": "7.14.0",
     "source-map": "0.7.3",
     "lru-cache": "6.0.0"
   },
