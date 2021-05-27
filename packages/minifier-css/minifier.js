@@ -14,7 +14,7 @@ const CssTools = {
    */
   parseCss(cssText, options = {}) {
     // This function previously used the `css-parse` npm package, which
-    // set the name of the css file being pased using  { source: 'filename' }.
+    // set the name of the css file being parsed using  { source: 'filename' }.
     // If included, we'll convert this to the `postcss` equivalent, to maintain
     // backwards compatibility.
     if (options.source) {
