@@ -117,6 +117,12 @@ StreamServer = function () {
     });
     self.open_sockets.push(socket);
 
+    // only to send a message after connection on tests, useful for
+    // socket-stream-client/server-tests.js
+    if (process.env.TEST_METADATA) {
+      socket.send(JSON.stringify({ testMessageOnConnect: true }));
+    }
+
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
     _.each(self.registration_callbacks, function (callback) {

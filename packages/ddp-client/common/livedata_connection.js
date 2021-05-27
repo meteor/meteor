@@ -1621,6 +1621,13 @@ export class Connection {
       this._heartbeat.messageReceived();
     }
 
+    if (msg === null || !msg.msg) {
+      if(!msg || !msg.testMessageOnConnect) {
+        Meteor._debug('discarding invalid livedata message', msg);
+      }
+      return;
+    }
+
     if (msg.msg === 'connected') {
       this._version = this._versionSuggestion;
       this._livedata_connected(msg);
