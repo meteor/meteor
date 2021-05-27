@@ -1,4 +1,7 @@
-Accounts.validateNewUser(user => {
+
+if(Meteor.isServer) {
+
+  Accounts.validateNewUser(user => {
   if (user.profile && user.profile.invalidAndThrowException)
     throw new Meteor.Error(403, "An exception thrown within Accounts.validateNewUser");
   return !(user.profile && user.profile.invalid);
@@ -168,4 +171,11 @@ Meteor.methods({
     if (user.services && user.services.password && ! user.services.password.srp)
       throw new Error("srp was removed");
   }
+});
+}
+
+// By default meteor will enforce lowercase emails, unless 
+// useLowerCaseEmails is explicity set to false.
+Accounts.config({
+  useLowerCaseEmails: false
 });
