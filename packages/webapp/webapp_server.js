@@ -1,9 +1,11 @@
 import assert from "assert";
 import {
   readFileSync,
-  chmodSync
+  chmodSync,
+  chownSync
 } from "fs";
 import { createServer } from "http";
+import { userInfo } from "os";
 import {
   join as pathJoin,
   dirname as pathDirname,
@@ -24,6 +26,7 @@ import {
   registerSocketFileCleanup,
 } from './socket_file.js';
 import cluster from "cluster";
+import whomst from "@vlasky/whomst";
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -1202,6 +1205,25 @@ function runWebAppServer() {
           chmodSync(unixSocketPath, parseInt(unixSocketPermissions,8));
         } else {
           throw new Error("Invalid UNIX_SOCKET_PERMISSIONS specified");
+        }
+      }
+
+      let unixSocketGroup = process.env.UNIX_SOCKET_GROUP;
+      if (unixSocketGroup) {
+        unixSocketGroup = unixSocketGroup.trim();
+
+        let uid=userInfo().uid;
+        unixSocketGid = parseInt(unixSocketGroup);
+	//If not set to a numerical gid, assume it's a group name
+        if (isNaN(unixSocketGid)) {
+          let unixSocketGroupInfo = whomst.sync.group(unixSocketGroup);
+          if (unixSocketGroupInfo === null) {
+            throw new Error("Invalid UNIX_SOCKET_GROUP name specified");
+          }
+          unixSocketGid = unixSocketGroupInfo.gid;
+          chownSync(unixSocketPath, uid, unixSocketGid);
+        } else {
+          chownSync(unixSocketPath, uid, unixSocketGid);
         }
       }
 
