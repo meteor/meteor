@@ -1,4 +1,3 @@
-var assert = require("assert");
 var _ = require("underscore");
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
@@ -622,6 +621,3 @@ export class PackageAPI {
     });
   }
 }
-
-// XXX COMPAT WITH 0.8.x
-PackageAPI.prototype.add_files = PackageAPI.prototype.addFiles;

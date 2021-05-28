@@ -1,6 +1,7 @@
 import { URL } from 'meteor/url';
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
+import { Random } from 'meteor/random';
 
 Meteor.methods({
   getCurrentLoginToken: function () {
@@ -106,6 +107,32 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test
   // make sure we *don't* lose values not passed this call to
   // updateOrCreateUserFromExternalService
   test.equal(users2[0].services.facebook.monkey, 42);
+
+  // cleanup
+  Meteor.users.remove(uid1);
+});
+
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Meteor Developer', test => {
+  const developerId = Random.id();
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'meteor-developer',
+    { id: developerId, username: 'meteor-developer' },
+    { profile: { name: 'meteor-developer' } }
+  ).id;
+  const users1 = Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.name, 'meteor-developer');
+
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'meteor-developer',
+    { id: developerId, username: 'meteor-developer' },
+    { profile: { name: 'meteor-developer', username: 'developer' } }
+  ).id;
+  test.equal(uid1, uid2);
+  const users2 = Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
+  test.length(users2, 1);
+  test.equal(users1[0].profile.name, 'meteor-developer');
+  test.equal(users1[0].profile.username, undefined);
 
   // cleanup
   Meteor.users.remove(uid1);
