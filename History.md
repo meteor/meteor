@@ -89,8 +89,9 @@
 * `ddp-client@2.5.0`
   - Removed backward compatibility method names for Meteor before 1.0
 
-* `ddp-server@2.5.0`
+* `ddp-server@2.4.0`
   - Removed backward compatibility method names for Meteor before 1.0
+  - Added support for this.unblock() in Meteor.publish() context
 
 * `meteor-base@2.0.0`
   - Removed `livedata` dependency which was there for packages build for 0.9.0
@@ -107,9 +108,6 @@
 * `markdown@2.0.0`
   - Use lazy imports to prevent it from being added to the initial bundle
   - Added deprecation flag
-  
-* `ddp-server@2.4.0`
-  - Added support for this.unblock() in Meteor.publish() context
 
 * `socket-stream-client@0.4.0`
   - Remove IE8 checks
