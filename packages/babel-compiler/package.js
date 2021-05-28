@@ -10,7 +10,7 @@ Package.describe({
 });
 
 Npm.depends({
-  '@meteorjs/babel': '7.11.0',
+  '@meteorjs/babel': '7.11.1',
   'json5': '2.1.1'
 });
 
