@@ -8,7 +8,7 @@
 
 * Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details. 
 
-### Breaking changes
+### Summary of breaking changes
 
 - As Node.js version was upgraded to a new major version we recommend that you review if your npm dependencies are compatible with Node.js 14.
   - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
@@ -83,7 +83,7 @@
   - Deprecated backward compatibility function `logoutOtherClients` has been removed
   
 * `accounts-password@2.0.0`
-  - Deprecated backward compatibility functionality for `SRP`` passwords from pre-Meteor 1.0 days
+  - Deprecated backward compatibility functionality for `SRP` passwords from pre-Meteor 1.0 days
   
 * `ddp-client@2.5.0`
   - Removed backward compatibility method names for Meteor before 1.0
