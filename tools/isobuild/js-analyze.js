@@ -1,4 +1,4 @@
-import { parse } from 'meteor-babel';
+import { parse } from '@meteorjs/babel';
 import { analyze as analyzeScope } from 'escope';
 import LRU from "lru-cache";
 

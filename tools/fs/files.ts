@@ -224,7 +224,6 @@ export function getToolsVersion() {
     );
     parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
-
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
   }
@@ -391,25 +390,25 @@ export function treeHash(root: string, optionsParams: {
     var absPath = pathJoin(root, relativePath);
     var stat = lstat(absPath);
 
-    if (stat.isDirectory()) {
+    if (stat?.isDirectory()) {
       if (relativePath) {
         hash.update('dir ' + JSON.stringify(relativePath) + '\n');
       }
       readdir(absPath).forEach(entry => {
         traverse(pathJoin(relativePath, entry));
       });
-    } else if (stat.isFile()) {
+    } else if (stat?.isFile()) {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
       hash.update('file ' + JSON.stringify(relativePath) + ' ' +
-                  stat.size + ' ' + fileHash(absPath) + '\n');
+                  stat?.size + ' ' + fileHash(absPath) + '\n');
 
       // @ts-ignore
       if (stat.mode & 0o100) {
         hash.update('exec\n');
       }
-    } else if (stat.isSymbolicLink()) {
+    } else if (stat?.isSymbolicLink()) {
       if (!relativePath) {
         throw Error("must call files.treeHash on a directory");
       }
@@ -417,7 +416,7 @@ export function treeHash(root: string, optionsParams: {
                   JSON.stringify(readlink(absPath)) + '\n');
     }
     // ignore anything weirder
-  };
+  }
 
   traverse('');
 
@@ -575,7 +574,7 @@ Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
         return convertToOSPath(path).replace(/[\/\\]$/, "")
       }
 
-      if (lstat(target).isSymbolicLink() &&
+      if (lstat(target)?.isSymbolicLink() &&
           normalizePath(readlink(target)) === normalizePath(source)) {
         // If the target already points to the desired source, we don't
         // need to do anything.
@@ -623,7 +622,7 @@ export function getPathsInDir(dir: string, options: {
 
     function pathIsDirectory(path: string) {
       var stat = lstat(path);
-      return stat.isDirectory();
+      return stat?.isDirectory() || false;
     }
 
     readdir(absoluteDir).forEach(entry => {
@@ -1236,7 +1235,7 @@ export function runJavaScript(code: string, {
       // node to run the code and parse its output. We instead run an
       // entirely different JS parser, from the Babel project, but
       // which at least has a nice API for reporting errors.
-      const { parse } = require('meteor-babel');
+      const { parse } = require('@meteorjs/babel');
       try {
         parse(wrapped, { strictMode: false });
       } catch (parseError) {
