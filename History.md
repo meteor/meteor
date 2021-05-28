@@ -82,6 +82,7 @@
   
 * `accounts-password@2.0.0`
   - Deprecated backward compatibility functionality for `SRP`` passwords from pre-Meteor 1.0 days
+  - New feature added for enroll account workflow i.e the enrollment token records are now stored in a separate db field called `services.password.enroll`. 
   
 * `ddp-client@2.5.0`
   - Removed backward compatibility method names for Meteor before 1.0
