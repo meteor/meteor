@@ -92,4 +92,13 @@ Used to generate URLs to your application by, among others, the accounts package
 Used to pass flags/variables to Node inside Meteor build. For example you can use this to pass a link to icu data: `TOOL_NODE_FLAGS="--icu-data-dir=node_modules/full-icu"`
 For full list of available flags see the [Node documentation](https://nodejs.org/dist/latest-v12.x/docs/api/cli.html).
 
+## UNIX_SOCKET_PATH
+(_production_)
+
+Configure Meteor's HTTP server to listen on a UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/meteor.sock`) instead of a TCP port. This is useful when running a local reverse proxy server like Nginx to handle client HTTP requests and direct them to your Meteor application. Leveraging UNIX domain sockets for local communication on the same host avoids the Operating System overhead required by TCP based communication and can also improve security. This UNIX socket file is created when Meteor starts and removed when Meteor exits.
+
+## UNIX_SOCKET_PERMISSIONS
+(_production_)
+
+This overrides the default UNIX file permissions on the UNIX socket file configured in `UNIX_SOCKET_PATH`. For example, `UNIX_SOCKET_PERMISSIONS=660` would set read/write permissions for both the user and group.
 
