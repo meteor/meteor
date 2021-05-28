@@ -1,6 +1,5 @@
 import { DDPCommon } from 'meteor/ddp-common';
 import { Meteor } from 'meteor/meteor';
-import { keys } from "meteor/ddp-common/utils.js";
 
 import { Connection } from './livedata_connection.js';
 

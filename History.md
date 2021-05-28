@@ -2,15 +2,11 @@
 
 #### Highlights
 
-* Node.js update to 14.17.0 from 12.22.1 :tada:
+* Node.js update to 14.17.0 from 12.22.1 🎉
 
 * Typescript update to 4.2.4
 
-* New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
-
-* New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`.
-
-* Skeletons dependencies updated to latest version
+* Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details. 
 
 ### Breaking changes
 
@@ -54,6 +50,9 @@
   - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` that improves restarts by caching reify data. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. By default it is disabled but you can enable it setting `true` in this env var. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
   - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
   - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
+  - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
+  - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`.
+  - Skeletons dependencies updated to latest version
   
 * `launch-screen@1.3.0`
   - Removes LaunchScreen from web clients.
@@ -70,13 +69,47 @@
 
 * `server-render@0.4.0`
   - Updated npm dependencies
+
+### Breaking changes
+* Removed deprecated `mobile-port` flag
+
+* Removed deprecated `raw` name from `isobuild`
+
+* Removed deprecated package API method names `Package.on_use`, `Package.on_test`, `Package._transitional_registerBuildPlugin` and `api.add_files`, if you haven't till now, please use the current camel case versions
+
+* `accounts-base@2.0.0`
+  - Deprecated backward compatibility function `logoutOtherClients` has been removed
   
+* `accounts-password@2.0.0`
+  - Deprecated backward compatibility functionality for `SRP`` passwords from pre-Meteor 1.0 days
+  
+* `ddp-client@2.5.0`
+  - Removed backward compatibility method names for Meteor before 1.0
+
+* `ddp-server@2.5.0`
+  - Removed backward compatibility method names for Meteor before 1.0
+
+* `meteor-base@2.0.0`
+  - Removed `livedata` dependency which was there for packages build for 0.9.0
+  
+* `minimongo@1.7.0`
+  - Removed the `rewind` method that was noop for compatibility with Meteor 0.8.1
+  
+* `mongo@1.12.0`
+  - Removed the `rewind` method that was noop for compatibility with Meteor 0.8.1
+  
+* `oauth@2.0.0`
+  - Removed `OAuth.initiateLogin` and other functionality like the addition of `?close` in return URI for deprecated OAuth flow pre Meteor 1.0
+
 * `markdown@2.0.0`
   - Use lazy imports to prevent it from being added to the initial bundle
   - Added deprecation flag
   
 * `ddp-server@2.4.0`
   - Added support for this.unblock() in Meteor.publish() context
+
+* `socket-stream-client@0.4.0`
+  - Remove IE8 checks
 
 #### Independent Releases
 
@@ -109,6 +142,9 @@
 
 * `http@1.4.4`
   - Used the new deprecation package flag instead of loud console warning.
+  
+* `logic-solver@2.0.8`
+  - Fixed `package.js` to use current `api` method calls.
   
 * `socket-stream-client@0.3.3`
   - Update `faye-websocket` dependency to v0.11.4. 

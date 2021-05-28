@@ -70,8 +70,7 @@ var showInvalidArchMsg = function (arch) {
 export function parseServerOptionsForRunCommand(options, runTargets) {
   const parsedServerUrl = parsePortOption(options.port);
 
-  // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
-  const mobileServerOption = options['mobile-server'] || options['mobile-port'];
+  const mobileServerOption = options['mobile-server'];
   let parsedMobileServerUrl;
   if (mobileServerOption) {
     parsedMobileServerUrl = parseMobileServerOption(mobileServerOption);
@@ -308,8 +307,6 @@ var runCommandOptions = {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
     ...inspectOptions,
@@ -927,8 +924,6 @@ var buildCommands = {
     'mobile-settings': { type: String },
     server: { type: String },
     "cordova-server-port": { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    "mobile-port": { type: String },
     // Indicates whether these build is running headless, e.g. in a
     // continuous integration building environment, where visual niceties
     // like progress bars and spinners are unimportant.
@@ -1053,8 +1048,7 @@ on an OS X system.");
     }
 
     if (!_.isEmpty(cordovaPlatforms)) {
-      // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
-      const mobileServerOption = options.server || options["mobile-port"];
+      const mobileServerOption = options.server;
       if (!mobileServerOption) {
         // For Cordova builds, require '--server'.
         // XXX better error message?
@@ -1642,8 +1636,6 @@ testCommandOptions = {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
     'debug-port': { type: String },
     ...inspectOptions,
     'no-release-check': { type: Boolean },

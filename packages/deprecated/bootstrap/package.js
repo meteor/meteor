@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Front-end framework from Twitter",
-  version: "1.0.1"
+  version: "1.0.1",
+  deprecated: true
 });
 
 Package.onUse(function (api) {

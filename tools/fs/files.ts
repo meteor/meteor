@@ -224,7 +224,6 @@ export function getToolsVersion() {
     );
     parsed = JSON.parse(readFile(unipackageJsonPath));
     return parsed.name + '@' + parsed.version;
-
   } else {
     throw new Error("Unexpected. Git checkouts don't have tools versions.");
   }

@@ -119,7 +119,7 @@ var SessionCollectionView = function (collectionName, sessionCallbacks) {
 DDPServer._SessionCollectionView = SessionCollectionView;
 
 
-_.extend(SessionCollectionView.prototype, {
+Object.assign(SessionCollectionView.prototype, {
 
   isEmpty: function () {
     var self = this;
@@ -324,7 +324,7 @@ var Session = function (server, version, socket, options) {
     "livedata", "sessions", 1);
 };
 
-_.extend(Session.prototype, {
+Object.assign(Session.prototype, {
 
   sendReady: function (subscriptionIds) {
     var self = this;
@@ -1045,7 +1045,7 @@ var Subscription = function (
     "livedata", "subscriptions", 1);
 };
 
-_.extend(Subscription.prototype, {
+Object.assign(Subscription.prototype, {
   _runHandler: function () {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
@@ -1438,7 +1438,7 @@ Server = function (options) {
   });
 };
 
-_.extend(Server.prototype, {
+Object.assign(Server.prototype, {
 
   /**
    * @summary Register a callback to be called when a new DDP connection is made to the server.
