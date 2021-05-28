@@ -92,6 +92,11 @@ Used to generate URLs to your application by, among others, the accounts package
 Used to pass flags/variables to Node inside Meteor build. For example you can use this to pass a link to icu data: `TOOL_NODE_FLAGS="--icu-data-dir=node_modules/full-icu"`
 For full list of available flags see the [Node documentation](https://nodejs.org/dist/latest-v12.x/docs/api/cli.html).
 
+## UNIX_SOCKET_GROUP
+(_production_)
+
+This overrides the default UNIX group of the socket file configured in `UNIX_SOCKET_PATH`. It can be set to a group name or a numerical gid.
+
 ## UNIX_SOCKET_PATH
 (_production_)
 
