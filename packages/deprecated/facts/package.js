@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Publish internal app statistics",
-  version: '1.0.9'
+  version: '1.0.9',
+  deprecated: true
 });
 
 Package.onUse(function (api) {

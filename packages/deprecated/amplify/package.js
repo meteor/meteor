@@ -1,6 +1,7 @@
 Package.describe({
   summary: "API for Persistent Storage, PubSub and Request",
-  version: "1.0.0"
+  version: "1.0.0",
+  deprecated: true
 });
 
 Package.onUse(function (api) {

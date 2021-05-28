@@ -78,10 +78,6 @@ const CARRIAGE_RETURN = process.platform === 'win32' &&
 const FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT &&
   process.env.METEOR_PRETTY_OUTPUT != '0';
 
-if (! process.env.METEOR_COLOR) {
-  chalk.enabled = false;
-}
-
 const STATUS_MAX_LENGTH = 40;
 
 const PROGRESS_MAX_WIDTH = 40;

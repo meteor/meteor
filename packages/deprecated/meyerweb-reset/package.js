@@ -3,7 +3,8 @@
 // encourage this pattern. Maybe another solution would be better.
 Package.describe({
   summary: "(Deprecated) reset.css v2.0 from http://meyerweb.com/eric/tools/css/reset/",
-  version: "2.0.0"
+  version: "2.0.0",
+  deprecated: true
 });
 
 Package.onUse(function (api) {

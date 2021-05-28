@@ -132,7 +132,7 @@ Isopack.knownFormats = ["unipackage-pre2", "isopack-1", "isopack-2"];
 // not semantic, and occur entirely in the isopack.json file, not in the
 // individual unibuild json files. These functions are written assuming those
 // constraints, and were not actually useful in the isopack-1/isopack-2
-// transition,where most of the changes are in the unibuild level, and there's
+// transition, where most of the changes are in the unibuild level, and there's
 // actual semantic changes involved. So they are not actually used as much as
 // they were before.
 Isopack.convertOneStepForward = function (data, fromFormat) {

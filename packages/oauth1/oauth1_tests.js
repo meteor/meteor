@@ -40,7 +40,7 @@ const testPendingCredential = (test, method) => {
     }));
 
     // simulate logging in using twitterfoo
-    Oauth._storeRequestToken(credentialToken, twitterfooAccessToken);
+    OAuth._storeRequestToken(credentialToken, twitterfooAccessToken);
 
     const req = {
       method,
