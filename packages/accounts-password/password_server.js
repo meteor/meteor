@@ -553,15 +553,27 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
 
   if (extraTokenData) {
     Object.assign(tokenRecord, extraTokenData);
+  } 
+  // if this method is called from the enroll account work-flow then
+  // store the token record in 'services.password.enroll' db field
+  // else store the token record in in 'services.password.reset' db field
+  if(reason === 'enrollAccount') {
+    Meteor.users.update({_id: user._id}, {
+      $set : {
+        'services.password.enroll': tokenRecord
+      }
+    });
+  } else {
+    Meteor.users.update({_id: user._id}, {
+      $set : {
+        'services.password.reset': tokenRecord
+      }
+    });
   }
-
-  Meteor.users.update({_id: user._id}, {$set: {
-    'services.password.reset': tokenRecord
-  }});
 
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
-
+  Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
   return {email, user, token};
 };
 
@@ -730,17 +742,38 @@ Meteor.methods({resetPassword: function (...args) {
       check(token, String);
       check(newPassword, passwordValidator);
 
-      const user = Meteor.users.findOne(
+      let user = Meteor.users.findOne(
         {"services.password.reset.token": token},
         {fields: {
           services: 1,
           emails: 1,
         }}
       );
+     
+      let isEnroll = false;
+      // if token is in services.password.reset db field implies
+      // this method is was not called from enroll account workflow
+      // else this method is called from enroll account workflow
+      if(!user) {
+        user = Meteor.users.findOne(
+          {"services.password.enroll.token": token},
+          {fields: {
+            services: 1,
+            emails: 1,
+          }}
+        );
+        isEnroll = true;
+      }
       if (!user) {
         throw new Meteor.Error(403, "Token expired");
       }
-      const { when, reason, email } = user.services.password.reset;
+      let tokenRecord = {};
+      if(isEnroll) {
+        tokenRecord = user.services.password.enroll;
+      } else {
+        tokenRecord = user.services.password.reset;
+      }
+      const { when, reason, email } = tokenRecord;
       let tokenLifetimeMs = Accounts._getPasswordResetTokenLifetimeMs();
       if (reason === "enroll") {
         tokenLifetimeMs = Accounts._getPasswordEnrollTokenLifetimeMs();
@@ -754,7 +787,7 @@ Meteor.methods({resetPassword: function (...args) {
           error: new Meteor.Error(403, "Token has invalid email address")
         };
 
-      const hashed = hashPassword(newPassword);
+      const hashed = hashPassword(newPassword);     
 
       // NOTE: We're about to invalidate tokens on the user, who we might be
       // logged in as. Make sure to avoid logging ourselves out if this
@@ -768,18 +801,33 @@ Meteor.methods({resetPassword: function (...args) {
       try {
         // Update the user record by:
         // - Changing the password to the new one
-        // - Forgetting about the reset token that was just used
+        // - Forgetting about the reset token or enroll token that was just used
         // - Verifying their email, since they got the password reset via email.
-        const affectedRecords = Meteor.users.update(
-          {
-            _id: user._id,
-            'emails.address': email,
-            'services.password.reset.token': token
-          },
-          {$set: {'services.password.bcrypt': hashed,
-                  'emails.$.verified': true},
-           $unset: {'services.password.reset': 1,
-                    'services.password.srp': 1}});
+        let affectedRecords = {};
+        // if reason is enroll then check services.password.enroll.token field for affected records
+        if(reason === 'enroll') {
+          affectedRecords = Meteor.users.update(
+            {
+              _id: user._id,
+              'emails.address': email,
+              'services.password.enroll.token': token
+            },
+            {$set: {'services.password.bcrypt': hashed,
+                    'emails.$.verified': true},
+              $unset: {'services.password.enroll': 1,
+                      'services.password.srp': 1}});
+        } else {
+          affectedRecords = Meteor.users.update(
+            {
+              _id: user._id,
+              'emails.address': email,
+              'services.password.reset.token': token
+            },
+            {$set: {'services.password.bcrypt': hashed,
+                    'emails.$.verified': true},
+              $unset: {'services.password.reset': 1,
+                      'services.password.srp': 1}});
+        }
         if (affectedRecords !== 1)
           return {
             userId: user._id,
@@ -1142,4 +1190,6 @@ Accounts.createUser = (options, callback) => {
 Meteor.users._ensureIndex('services.email.verificationTokens.token',
                           { unique: true, sparse: true });
 Meteor.users._ensureIndex('services.password.reset.token',
+                          { unique: true, sparse: true });
+Meteor.users._ensureIndex('services.password.enroll.token',
                           { unique: true, sparse: true });
