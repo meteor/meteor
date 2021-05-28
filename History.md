@@ -13,6 +13,8 @@
 - As Node.js version was upgraded to a new major version we recommend that you review if your npm dependencies are compatible with Node.js 14.
   - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
   - We recommend that you read Node.js [release notes](https://nodejs.org/en/blog/release/v14.0.0/) though.
+  
+- Accounts have undergone some major changes. See bellow for more details.
 
 ### Migration steps
 
