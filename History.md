@@ -8,11 +8,13 @@
 
 * Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details. 
 
-### Breaking changes
+### Summary of breaking changes
 
 - As Node.js version was upgraded to a new major version we recommend that you review if your npm dependencies are compatible with Node.js 14.
   - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
   - We recommend that you read Node.js [release notes](https://nodejs.org/en/blog/release/v14.0.0/) though.
+  
+- Accounts have undergone some major changes. See bellow for more details.
 
 ### Migration steps
 
@@ -81,8 +83,8 @@
   - Deprecated backward compatibility function `logoutOtherClients` has been removed
   
 * `accounts-password@2.0.0`
-  - Deprecated backward compatibility functionality for `SRP`` passwords from pre-Meteor 1.0 days
-  - New feature added for enroll account workflow i.e the enrollment token records are now stored in a separate db field called `services.password.enroll`. 
+  - Deprecated backward compatibility functionality for `SRP` passwords from pre-Meteor 1.0 days
+  - Enroll account workflow has been separated from reset password workflow (the enrollment token records are now stored in a separate db field `services.password.enroll`). 
   
 * `ddp-client@2.5.0`
   - Removed backward compatibility method names for Meteor before 1.0
