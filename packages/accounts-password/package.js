@@ -13,7 +13,6 @@ Package.onUse(api => {
 
   api.use([
     'accounts-base',
-    'srp',
     'sha',
     'ejson',
     'ddp'
