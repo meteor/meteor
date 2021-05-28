@@ -4,7 +4,7 @@
 
 * Node.js update to 14.17.0 from 12.22.1 🎉
 
-* Typescript update to 4.2.4
+* Typescript update to [4.3.2](https://devblogs.microsoft.com/typescript/announcing-typescript-4-3/)
 
 * Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details. 
 
