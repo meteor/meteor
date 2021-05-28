@@ -1,5 +1,8 @@
 import assert from "assert";
-import { readFileSync } from "fs";
+import {
+  readFileSync,
+  chmodSync
+} from "fs";
 import { createServer } from "http";
 import {
   join as pathJoin,
@@ -1190,6 +1193,18 @@ function runWebAppServer() {
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
       startHttpServer({ path: unixSocketPath });
+
+      let unixSocketPermissions = process.env.UNIX_SOCKET_PERMISSIONS;
+      if (unixSocketPermissions) {
+        unixSocketPermissions = unixSocketPermissions.trim();
+
+        if (/^[0-7]{3}$/.test(unixSocketPermissions)) {
+          chmodSync(unixSocketPath, parseInt(unixSocketPermissions,8));
+        } else {
+          throw new Error("Invalid UNIX_SOCKET_PERMISSIONS specified");
+        }
+      }
+
       registerSocketFileCleanup(unixSocketPath);
     } else {
       localPort = isNaN(Number(localPort)) ? localPort : Number(localPort);
