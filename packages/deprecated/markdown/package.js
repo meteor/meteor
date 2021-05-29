@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "2.0.0-beta230.3",
+  version: "2.0.0-beta230.4",
   deprecated: true
 });
 
