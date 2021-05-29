@@ -219,7 +219,7 @@ var updatePackageMetadata = function (packageSource, conn) {
     // Refresh, so that we actually learn about the thing we just published.
     refreshOfficialCatalogOrDie();
     return 0;
-}
+};
 
 main.registerCommand({
   name: 'publish',
@@ -2302,9 +2302,18 @@ main.registerCommand({
     var version = projectContext.packageMap.getInfo(constraint.package).version;
     var versionRecord = projectContext.projectCatalog.getVersion(
       constraint.package, version);
+    var deprecatedMessage = ""
+    if (versionRecord.deprecated) {
+      if (versionRecord.deprecatedMessage) {
+        deprecatedMessage = ` - DEPRECATED: ${versionRecord.deprecatedMessage}`
+      } else {
+        deprecatedMessage = ' - DEPRECATED'
+      }
+    }
     Console.info(
       constraint.package +
-        (versionRecord.description ? (": " + versionRecord.description) : ""));
+        (versionRecord.description ? (": " + versionRecord.description) : "") + deprecatedMessage
+    );
   });
 
   return exitCode;

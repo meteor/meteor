@@ -1,7 +1,7 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
   version: '1.4.4',
-  deprecated: 'Please use fetch'
+  deprecated: 'Migrate to fetch when possible'
 });
 
 Npm.depends({
