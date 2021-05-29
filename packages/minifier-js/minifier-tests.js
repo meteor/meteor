@@ -27,10 +27,3 @@ Tinytest.add('minifier-js - verify tersers error object has the fields we use fo
     test.isNotUndefined(err.col);
   }
 });
-
-// this feature has been reqested in this issue https://github.com/terser/terser/issues/632
-// so when we bump up the terser version in the future and this test fails we will know when
-// its been done and can remove this test :)
-Tinytest.add('minifier-js - unsupported feature test (numeric seperators)', (test) => {
-  test.throws(() => meteorJsMinify('let number = 1_000_000_000_000;\n')  );   
-});
