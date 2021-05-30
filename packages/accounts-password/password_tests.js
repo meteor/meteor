@@ -1370,7 +1370,7 @@ if (Meteor.isServer) (() => {
   Tinytest.add(
     'passwords - reset tokens with reasons get cleaned up',
     test => {
-      const email = `${test.id}-intercept@example.com`;
+      let email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: hashPassword('password')});
        
       if(!(useLowerCaseEmails === false)) {
@@ -1387,7 +1387,7 @@ if (Meteor.isServer) (() => {
   Tinytest.add(
     'passwords - reset tokens without reasons get cleaned up',
     test => {
-      const email = `${test.id}-intercept@example.com`;
+      let email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: hashPassword('password')});
       
       if(!(useLowerCaseEmails === false)) {
@@ -1482,7 +1482,7 @@ if (Meteor.isServer) (() => {
     });
 
   Tinytest.add('passwords - enroll tokens get cleaned up', test => {
-    const email = `${test.id}-intercept@example.com`;
+    let email = `${test.id}-intercept@example.com`;
     const userId = Accounts.createUser({email: email, password: hashPassword('password')});
      
     if(!(useLowerCaseEmails === false)) {
@@ -1497,7 +1497,7 @@ if (Meteor.isServer) (() => {
   Tinytest.add(
     "passwords - enroll tokens don't get cleaned up when reset tokens are cleaned up",
     test => {
-      const email = `${test.id}-intercept@example.com`;
+      let email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: hashPassword('password')});
 
       if(!(useLowerCaseEmails === false)) {
@@ -1515,7 +1515,7 @@ if (Meteor.isServer) (() => {
   Tinytest.add(
     "passwords - reset tokens don't get cleaned up when enroll tokens are cleaned up",
     test => {
-      const email = `${test.id}-intercept@example.com`;
+      let email = `${test.id}-intercept@example.com`;
       const userId = Accounts.createUser({email: email, password: hashPassword('password')});
 
       if(!(useLowerCaseEmails === false)) {

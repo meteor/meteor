@@ -136,3 +136,9 @@ Meteor.methods({
   },
   removeUser: username => Meteor.users.remove({ "username": username }),
 });
+}
+
+Accounts.config({
+  useLowerCaseEmails: false,
+});
+
