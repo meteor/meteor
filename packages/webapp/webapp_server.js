@@ -1212,9 +1212,9 @@ function runWebAppServer() {
       if (unixSocketGroup) {
         unixSocketGroup = unixSocketGroup.trim();
 
-        let uid=userInfo().uid;
-        unixSocketGid = parseInt(unixSocketGroup);
-	//If not set to a numerical gid, assume it's a group name
+        let uid = userInfo().uid;
+        let unixSocketGid = parseInt(unixSocketGroup);
+        //If not set to a numerical gid, assume it's a group name
         if (isNaN(unixSocketGid)) {
           let unixSocketGroupInfo = whomst.sync.group(unixSocketGroup);
           if (unixSocketGroupInfo === null) {
