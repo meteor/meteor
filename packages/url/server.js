@@ -21,5 +21,5 @@ setMinimumBrowserVersions({
   electron: [0, 20],
 }, module.id);
 
-// backwards compatability
+// backwards compatibility
 Object.assign(exports.URL, require('./bc/url_server'));

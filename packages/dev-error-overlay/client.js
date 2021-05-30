@@ -13,6 +13,7 @@ const styles = `
     box-shadow: inset 0 0 100px #e411111f, 0 0 20px #00000085;
     box-sizing: border-box;
     overflow-y: auto;
+    z-index: 1000000;
   }
 
   .section {
