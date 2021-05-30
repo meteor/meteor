@@ -10,5 +10,5 @@ try {
   ].join("\n"));
 }
 
-// backwards compatability
+// backwards compatibility
 require('./modern.js');
