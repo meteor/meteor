@@ -17,9 +17,9 @@
       "integrity": "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA=="
     },
     "magic-string": {
-      "version": "0.21.3",
-      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.21.3.tgz",
-      "integrity": "sha1-h+IBAJ6/3m9G3FdXMFpwr3HjFiQ="
+      "version": "0.25.7",
+      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.25.7.tgz",
+      "integrity": "sha512-4CrMT5DOHTDk4HYDlzmwu4FVCcIYI8gauveasrdCu2IKIFOJ3f0v/8MDGJCDL9oD2ppz/Av1b0Nj345H9M+XIA=="
     },
     "ms": {
       "version": "2.0.0",
@@ -27,14 +27,19 @@
       "integrity": "sha1-VgiurfwAvmwpAd9fmGF4jeDVl8g="
     },
     "parse5": {
-      "version": "3.0.2",
-      "resolved": "https://registry.npmjs.org/parse5/-/parse5-3.0.2.tgz",
-      "integrity": "sha1-Be/1fw70V3+xRKefi5qWemzERRA="
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/parse5/-/parse5-4.0.0.tgz",
+      "integrity": "sha512-VrZ7eOd3T1Fk4XWNXMgiGBK/z0MG48BWG2uQNU4I72fkQuKUTZpl+u9k+CxEG0twMVzSmXEEz12z5Fnw1jIQFA=="
     },
     "promise-polyfill": {
       "version": "1.1.6",
       "resolved": "https://registry.npmjs.org/promise-polyfill/-/promise-polyfill-1.1.6.tgz",
       "integrity": "sha1-zQTv9G9clcOn0EVZHXm14+AfEtc="
+    },
+    "sourcemap-codec": {
+      "version": "1.4.8",
+      "resolved": "https://registry.npmjs.org/sourcemap-codec/-/sourcemap-codec-1.4.8.tgz",
+      "integrity": "sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA=="
     },
     "stream-length": {
       "version": "1.0.2",
@@ -42,14 +47,9 @@
       "integrity": "sha1-gnfzy+5JpNqrz9tOL0qbXp8snwA="
     },
     "stream-to-string": {
-      "version": "1.1.0",
-      "resolved": "https://registry.npmjs.org/stream-to-string/-/stream-to-string-1.1.0.tgz",
-      "integrity": "sha1-OSELATF+ars16FRTjgEwN7ajWUA="
-    },
-    "vlq": {
-      "version": "0.2.3",
-      "resolved": "https://registry.npmjs.org/vlq/-/vlq-0.2.3.tgz",
-      "integrity": "sha512-DRibZL6DsNhIgYQ+wNdWDL2SL3bKPlVrRiBqV5yuMm++op8W4kGFtaQfCs4KEJn0wBZcHVHJ3eoywX8983k1ow=="
+      "version": "1.2.0",
+      "resolved": "https://registry.npmjs.org/stream-to-string/-/stream-to-string-1.2.0.tgz",
+      "integrity": "sha512-8drZlFIKBHSMdX9GCWv8V9AAWnQcTqw0iAI6/GC7UJ0H0SwKeFKjOoZfGY1tOU00GGU7FYZQoJ/ZCUEoXhD7yQ=="
     }
   }
 }

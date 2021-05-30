@@ -922,13 +922,6 @@ _.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) 
   };
 });
 
-// Since we don't actually have a "nextObject" interface, there's really no
-// reason to have a "rewind" interface.  All it did was make multiple calls
-// to fetch/map/forEach return nothing the second time.
-// XXX COMPAT WITH 0.8.1
-Cursor.prototype.rewind = function () {
-};
-
 Cursor.prototype.getTransform = function () {
   return this._cursorDescription.options.transform;
 };
