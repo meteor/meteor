@@ -1,4 +1,3 @@
-import { EJSON } from 'meteor/ejson';
 import { HTTP } from 'meteor/http';
 
 // URL prefix for tests to talk to
@@ -421,7 +420,7 @@ testAsyncMulti('httpcall - params', [
             const data = result.data;
             test.equal(data.method, method);
             test.equal(data.url, expect_url);
-            test.equal(data.body, expect_body, `${method} ${url} ${EJSON.stringify(params)} - expect body`);
+            test.equal(data.body, expect_body, `${method} ${url} ${JSON.stringify(params)} - expect body`);
           }
         }))
     }

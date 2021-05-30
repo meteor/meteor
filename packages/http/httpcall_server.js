@@ -1,4 +1,3 @@
-import { EJSON } from 'meteor/ejson';
 import { path } from 'path';
 import { fetch, Request } from 'meteor/fetch';
 import { URL } from 'meteor/url';
@@ -39,7 +38,7 @@ function _call (method, url, options, callback) {
   let content = options.content;
 
   if (options.data) {
-    content = EJSON.stringify(options.data);
+    content = JSON.stringify(options.data);
     headers['Content-Type'] = 'application/json';
   }
 
