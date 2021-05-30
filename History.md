@@ -12,6 +12,14 @@
 
 * Released `dev-error-overlay@0.1.1` fixing sometimes page content being on top of error overlay
 
+* Released `id-map@1.1.1` removing unused dependencies and modernizing the code
+
+* `http@1.4.4`
+  - Used the new deprecation package flag instead of loud console warning.
+  
+* `socket-stream-client@0.3.3`
+  - Update `faye-websocket` dependency to v0.11.4. 
+
 ## v2.2, 2021-04-15
 
 #### Highlights
@@ -394,7 +402,7 @@ N/A
   4.2.1 to 4.2.5.
   [PR #11020](https://github.com/meteor/meteor/pull/11020)
 
-* The `url` package now provides an isomorphic implentation of the [WHATWG `url()`
+* The `url` package now provides an isomorphic implementation of the [WHATWG `url()`
   API](https://url.spec.whatwg.org/).
   While remaining backwards compatible, you can now also import `URL` and `URLSearchParams` from `meteor/url`.
   These will work for both modern and legacy browsers as well as node.
@@ -3253,7 +3261,7 @@ N/A
   fibers unless the `METEOR_DISABLE_FS_FIBERS` environment variable is
   explicitly set to a falsy value. For larger apps, this change results in
   significant build performance improvements due to the creation of fewer
-  fibers and the avoidance of unnecessary asyncronous delays.
+  fibers and the avoidance of unnecessary asynchronous delays.
   https://github.com/meteor/meteor/pull/7975/commits/ca4baed90ae0675e55c93976411d4ed91f12dd63
 
 * Running Meteor as `root` is still discouraged, and results in a fatal
@@ -3660,7 +3668,7 @@ N/A
 * `App.appendToConfig` allows adding custom tags to config.xml.
   [#7307](https://github.com/meteor/meteor/pull/7307)
 
-* When using `ROOT_URL` with a path, relative CSS URLs are rewriten
+* When using `ROOT_URL` with a path, relative CSS URLs are rewritten
   accordingly. [#5837](https://github.com/meteor/meteor/issues/5837)
 
 * Fixed bugs:
@@ -3779,7 +3787,7 @@ N/A
 
 * Adds `defineMutationMethods` option (default: true) to `new Mongo.Collection` to override default behavior that sets up mutation methods (/collection/[insert|update...]) [PR #5778](https://github.com/meteor/meteor/pull/5778)
 
-* Allow overridding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
+* Allow overriding the default warehouse url by specifying `METEOR_WAREHOUSE_URLBASE` [PR #7054](https://github.com/meteor/meteor/pull/7054)
 
 * Allow `_id` in `$setOnInsert` in Minimongo: https://github.com/meteor/meteor/pull/7066
 
@@ -3796,7 +3804,7 @@ N/A
 * PhantomJS is no longer included in the Meteor dev bundle (#6905). If you
   previously relied on PhantomJS for local testing, the `spiderable`
   package, Velocity tests, or testing Meteor from a checkout, you should
-  now install PhantomJS yourself, by running the following commmand:
+  now install PhantomJS yourself, by running the following command:
   `meteor npm install -g phantomjs-prebuilt`
 
 * The `babel-compiler` package now looks for `.babelrc` files and
@@ -4298,7 +4306,7 @@ a shorter list of breaking changes you should be aware of when upgrading.
 * `meteor-platform` has been deprecated in favor of the smaller `meteor-base`,
   with apps listing their other dependencies explicitly.  The v1.2 upgrader
   will rewrite `meteor-platform` in existing apps.  `meteor-base` puts fewer
-  symbols in the global namepsace, so it's no longer true that all apps
+  symbols in the global namespace, so it's no longer true that all apps
   have symbols like `Random` and `EJSON` in the global namespace.
 
 * New packages: `ecmascript`, `es5-shim`, `ecmascript-collections`, `promise`,
@@ -5544,7 +5552,7 @@ will not be able to use versions of packages that use the new features.
 
 ### Other Changes
 
-* Offically support `Meteor.wrapAsync` (renamed from
+* Officially support `Meteor.wrapAsync` (renamed from
   `Meteor._wrapAsync`). Additionally, `Meteor.wrapAsync` now lets you
   pass an object to bind as `this` in the wrapped call. See
   https://docs.meteor.com/#meteor_wrapasync.
@@ -7826,7 +7834,7 @@ tmeasday, and workmad3.
 * On the client, `Meteor.apply` takes a new `wait` option, which ensures that no
   further method calls are sent to the server until this method is finished; it
   is used for login and logout methods in order to keep the user ID
-  well-defined. You can also specifiy an `onReconnect` handler which is run when
+  well-defined. You can also specify an `onReconnect` handler which is run when
   re-establishing a connection; Meteor Accounts uses this to log back in on
   reconnect.
 
