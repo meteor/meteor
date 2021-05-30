@@ -70,8 +70,7 @@ var showInvalidArchMsg = function (arch) {
 export function parseServerOptionsForRunCommand(options, runTargets) {
   const parsedServerUrl = parsePortOption(options.port);
 
-  // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
-  const mobileServerOption = options['mobile-server'] || options['mobile-port'];
+  const mobileServerOption = options['mobile-server'];
   let parsedMobileServerUrl;
   if (mobileServerOption) {
     parsedMobileServerUrl = parseMobileServerOption(mobileServerOption);
@@ -308,8 +307,6 @@ var runCommandOptions = {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
     ...inspectOptions,
@@ -927,14 +924,13 @@ var buildCommands = {
     'mobile-settings': { type: String },
     server: { type: String },
     "cordova-server-port": { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    "mobile-port": { type: String },
     // Indicates whether these build is running headless, e.g. in a
     // continuous integration building environment, where visual niceties
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    platforms: { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -1022,12 +1018,28 @@ var buildCommand = function (options) {
   }
 
   const appName = files.pathBasename(options.appDir);
+  let parsedCordovaServerPort;
+  let selectedPlatforms = null;
+  if (options.platforms) {
+    const platformsArray = options.platforms.split(",");
+
+    platformsArray.forEach(plat => {
+      if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
+        throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
+      }
+    })
+
+    selectedPlatforms = platformsArray;
+  }
 
   let cordovaPlatforms;
   let parsedMobileServerUrl;
-  let parsedCordovaServerPort;
   if (!serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+
+    if (selectedPlatforms) {
+      cordovaPlatforms = _.intersection(selectedPlatforms, cordovaPlatforms)
+    }
 
     if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
@@ -1036,8 +1048,7 @@ on an OS X system.");
     }
 
     if (!_.isEmpty(cordovaPlatforms)) {
-      // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
-      const mobileServerOption = options.server || options["mobile-port"];
+      const mobileServerOption = options.server;
       if (!mobileServerOption) {
         // For Cordova builds, require '--server'.
         // XXX better error message?
@@ -1052,6 +1063,25 @@ on an OS X system.");
     }
   } else {
     cordovaPlatforms = [];
+  }
+
+  // If we specified some platforms, we need to build what was specified.
+  // For example, if we want to build only android, there is no need to build
+  // web.browser.
+  let webArchs;
+  if (selectedPlatforms) {
+    const filteredArchs = projectContext.platformList
+      .getWebArchs()
+      .filter(arch => selectedPlatforms.includes(arch));
+
+    if (
+      !_.isEmpty(cordovaPlatforms) &&
+      !filteredArchs.includes('web.cordova')
+    ) {
+      filteredArchs.push('web.cordova');
+    }
+
+    webArchs = filteredArchs.length ? filteredArchs : undefined;
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
@@ -1094,6 +1124,7 @@ ${Console.command("meteor build ../output")}`,
       //     packages with binary npm dependencies
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
+      webArchs,
     },
   });
   if (bundleResult.errors) {
@@ -1605,8 +1636,6 @@ testCommandOptions = {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
     'debug-port': { type: String },
     ...inspectOptions,
     'no-release-check': { type: Boolean },

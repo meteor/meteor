@@ -20,8 +20,8 @@ export class ClientStream extends StreamClientCommon {
     this.client = null; // created in _launchConnection
     this.endpoint = endpoint;
 
-    this.headers = this.options.headers || Object.create(null);
-    this.npmFayeOptions = this.options.npmFayeOptions || Object.create(null);
+    this.headers = this.options.headers || {};
+    this.npmFayeOptions = this.options.npmFayeOptions || {};
 
     this._initCommon(this.options);
 
