@@ -1520,10 +1520,16 @@ export class PackageSourceBatch {
   }
 
   static _watchOutputFiles(jsOutputFilesMap) {
-    return jsOutputFilesMap;
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
+        // Output resources are not directly marked as definitely used. Instead,
+        // its input resource might be if its content was used by a build plugin.
+        // This is checked in Target#_emitResources
+        if (file instanceof OutputResource) {
+          return;
+        }
+
         const {
           sourcePath,
           absPath = sourcePath &&
@@ -1831,7 +1837,8 @@ _.each([
 
 // static methods to measure in profile
 _.each([
-  "computeJsOutputFilesMap"
+  "computeJsOutputFilesMap",
+  "_watchOutputFiles"
 ], method => {
   PackageSourceBatch[method] = Profile(
     "PackageSourceBatch." + method,

@@ -874,7 +874,7 @@ class Target {
             hmrAvailable: sourceBatch.hmrAvailable,
             cacheKey
           },
-          getFileOutput  
+          getFileOutput
         );
       });
 
@@ -1171,19 +1171,32 @@ class Target {
       // XXX assumes that this merges cleanly
       this.watchSet.merge(unibuild.pkg.pluginWatchSet);
 
-      unibuild.resources.forEach(resource => {
-        let absPath = files.pathJoin(sourceRoot, resource.path);
-        if (resource._dataUsed !== false) {
-          this.watchSet.addFile(absPath, resource.hash);
-        }
-      });
-
       const entry = jsOutputFilesMap.get(unibuild.pkg.name || null);
       if (entry && entry.importScannerWatchSet) {
         // Populated in PackageSourceBatch._watchOutputFiles, based on the
         // ImportScanner's knowledge of which modules are really imported.
         this.watchSet.merge(entry.importScannerWatchSet);
       }
+
+      // Any source resource that the content or hash was accessed for are marked
+      // as definitely used.
+      // If there are any output resources for these in the js output, they are
+      // excluded from the importScannerWatchSet so they are only marked as
+      // definitely used if their content was used, not if they are added
+      // to the built app.
+      unibuild.resources.forEach(resource => {
+        if (resource.type !== 'source' || resource._dataUsed === false) {
+          return;
+        }
+
+        assert.strictEqual(
+          typeof resource._dataUsed,
+          "boolean"
+        );
+
+        let absPath = files.pathJoin(sourceRoot, resource.path);
+        this.watchSet.addFile(absPath, resource.hash);
+      });
     });
 
     if (buildmessage.jobHasMessages()) {
