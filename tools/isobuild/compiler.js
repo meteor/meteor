@@ -598,7 +598,8 @@ api.addAssets('${relPath}', 'client').`);
       // This is source used by a new-style compiler plugin; it will be fully
       // processed later in the bundler.
       resources.push(new SourceResource({
-        classification,
+        extension: classification.extension,
+        usesDefaultSourceProcessor: !!classification.usesDefaultSourceProcessor,
         data: contents,
         path: relPath,
         hash,
@@ -1057,13 +1058,13 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   'isobuild:async-plugins': ['1.6.1'],
 };
 
-class SourceResource {
+export class SourceResource {
   type = "source";
 
-  constructor({ classification, data, path, hash, fileOptions }) {
+  constructor({ extension, usesDefaultSourceProcessor, data, path, hash, fileOptions }) {
     this.type = "source";
-    this.extension = classification.extension || null;
-    this.usesDefaultSourceProcessor = !!classification.usesDefaultSourceProcessor;
+    this.extension = extension || null;
+    this.usesDefaultSourceProcessor = usesDefaultSourceProcessor;
     this.path = path;
     this.fileOptions = fileOptions;
 
