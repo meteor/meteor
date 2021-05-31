@@ -320,7 +320,12 @@ export class Unibuild {
         return;
       }
 
-      let data = resource.type === 'source' ? resource._data : resource.data
+      let data;
+      if (resource.type === 'source') {
+        data = resource.legacyPrelink ? resource.data : resource._data;
+      } else {
+        data = resource.data;
+      }
 
       const generatedFilename =
         builder.writeToGeneratedFilename(
