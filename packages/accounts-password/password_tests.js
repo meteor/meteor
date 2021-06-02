@@ -1355,6 +1355,35 @@ if (Meteor.isServer) (() => {
         /Incorrect password/);
     });
 
+  Tinytest.add('forgotPassword - different error messages returned depending' +
+  ' on whether ambiguousErrorMessages flag is passed in Account.config',
+    test =>{
+        const username = Random.id();
+        const email = `${Random.id()}-intercept@example.com`;
+        const randomEmail = `${Random.id()}-Ada_intercept@some.com`;
+        const wrongOptions = {email: randomEmail}
+        const password = 'password';
+        const options = Accounts._options
+
+        Accounts.createUser(
+          { username: username, email: email, password: hashPassword(password) },
+          );
+
+        Accounts._options.ambiguousErrorMessages = true
+        test.throws(
+          ()=> Meteor.call('forgotPassword', wrongOptions),
+          'Something went wrong. Please check your credentials'
+        )
+
+        Accounts._options.ambiguousErrorMessages = false
+        test.throws(
+          ()=> Meteor.call('forgotPassword', wrongOptions),
+          'User not found'
+        )
+        // return accounts as it were
+        Accounts._options = options
+    });
+
   Tinytest.add(
     'passwords - reset tokens with reasons get cleaned up',
     test => {
