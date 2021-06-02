@@ -532,94 +532,6 @@ if (Meteor.isClient) (() => {
     },
   ]);
 
-  testAsyncMulti("passwords - forgotPassword returns different error " +
-   "messages depending on the flag passed", [
-    function (test, expect) {
-      // setup
-      this.username = Random.id();
-      this.email = `${Random.id()}-intercept@example.com`;
-      this.randomEmail = `${Random.id()}-Ada_intercept@some.com`;
-      this.password = 'password';
-
-      Accounts.createUser(
-        { username: this.username, email: this.email, password: this.password },
-        loggedInAs(this.username, test, expect));
-    },
-    // forgotPassword called on client with an unregistered email
-    function (test, expect) {
-      Accounts.forgotPassword(
-        { email: this.randomEmail },
-        expect(error => test.isTrue(error))
-      );
-    },
-
-    // forgotPassword called on client with an unregistered
-    // email with a detailed error flag
-    //set to true
-    function (test, expect) {
-      Accounts.forgotPassword({ email: this.randomEmail,
-      detailedErrorFlag: true },
-        expect(error => {
-         test.equal(error.error, 403);
-         test.equal(error.reason, "User not found");
-       })
-      );
-    },
-
-    // when the detailedErrorFlag is set to false; it returns an
-    // ambiguous message on development envinronment
-    function (test, expect) {
-      Accounts.forgotPassword({ email: 'mike@gmail.com',
-           detailedErrorFlag: false },
-           expect(error => {
-            test.equal(error.error, 403);
-            test.equal(error.reason, "Something went wrong. Please check your credentials");
-          })
-      );
-    },
-
-    // when detailedErrorFlag is not passed in development,
-    // it defaults to true
-    // and returns a detailed error message
-    function (test, expect) {
-      Accounts.forgotPassword({ email: this.randomEmail},
-        expect(error => {
-         test.equal(error.error, 403);
-         test.equal(error.reason, "User not found");
-       })
-      );
-    },
-
-    // when detailedErrorFlag is not passed and it's a production environment
-    // it returns an ambiguous error message
-    function (test, expect) {
-      Meteor.isProduction = true
-      if (Meteor.isProduction) {
-        Accounts.forgotPassword({ email: this.randomEmail},
-          expect(error => {
-           test.equal(error.error, 403);
-           test.equal(error.reason, "Something went wrong. Please check your credentials");
-         })
-        );
-      }
-    },
-
-    // when detailedErrorFlag is true and it's a production environment
-    // it returns a detailed error message
-    function (test, expect) {
-      Meteor.isProduction = true
-      if (Meteor.isProduction) {
-        Accounts.forgotPassword({ email: this.randomEmail,
-          detailedErrorFlag: true },
-          expect(error => {
-           test.equal(error.error, 403);
-           test.equal(error.reason, "User not found");
-         })
-        );
-      }
-    }
-  ]);
-
   Tinytest.add(
     'passwords - forgotPassword only passes callback value to forgotPassword '
     + 'Method if callback is defined (to address issue #5676)',
@@ -1441,6 +1353,35 @@ if (Meteor.isServer) (() => {
           password: hashPassword("new-password")}
         ),
         /Incorrect password/);
+    });
+
+  Tinytest.add('forgotPassword - different error messages returned depending' +
+  ' on whether ambiguousErrorMessages flag is passed in Account.config',
+    test =>{
+        const username = Random.id();
+        const email = `${Random.id()}-intercept@example.com`;
+        const randomEmail = `${Random.id()}-Ada_intercept@some.com`;
+        const wrongOptions = {email: randomEmail}
+        const password = 'password';
+        const options = Accounts._options
+
+        Accounts.createUser(
+          { username: username, email: email, password: hashPassword(password) },
+          );
+
+        Accounts._options.ambiguousErrorMessages = true
+        test.throws(
+          ()=> Meteor.call('forgotPassword', wrongOptions),
+          'Something went wrong. Please check your credentials'
+        )
+
+        Accounts._options.ambiguousErrorMessages = false
+        test.throws(
+          ()=> Meteor.call('forgotPassword', wrongOptions),
+          'User not found'
+        )
+        // return accounts as it were
+        Accounts._options = options
     });
 
   Tinytest.add(
