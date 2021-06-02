@@ -461,9 +461,10 @@ const pluckAddresses = (emails = []) => emails.map(email => email.address);
 // Method called by a user to request a password reset email. This is
 // the start of the reset process.
 Meteor.methods({forgotPassword: options => {
-  check(options, {email: String});
+  check(options, {email: String})
 
-  const user = Accounts.findUserByEmail(options.email, {fields: {emails: 1}});
+  const user = Accounts.findUserByEmail(options.email, { fields: { emails: 1 } });
+
   if (!user) {
     handleError("User not found");
   }

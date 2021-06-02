@@ -22,11 +22,11 @@ var packageJson = {
     fibers: "5.0.0",
     reify: "0.20.12",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.13.17",
+    "@babel/runtime": "7.14.0",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",
-    "@types/underscore": "1.11.1",
+    "@types/underscore": "1.11.2",
     underscore: "1.13.1",
     "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     "@types/semver": "5.4.0",
