@@ -16,6 +16,8 @@
   
 - Accounts have undergone some major changes. See bellow for more details.
 
+- All official packages that have been deprecated have now the deprecated flag and will inform you about that if you install or update them.
+
 ### Migration steps
 
 - As Node.js version was upgraded we recommend that you remove your `node_modules` folder (`rm -rf node_modules`) and run `meteor reset` to be sure you compile all the binary dependencies again using the new Node.js version.
@@ -32,7 +34,7 @@
   - `underscore` has been updated to v1.11.0.
   - `node-gyp` has been updated to v8.0.0.
   - `node-pre-gyp` has been updated to v0.15.0.
-  - `@babel/runtime` has been updated to v7.13.17.
+  - `@babel/runtime` has been updated to v7.14.0.
   - `request` has been updated to v2.88.2.
   - `uuid` has been updated to v3.4.0.
   - `graceful-fs` has been updated to v4.2.6.
@@ -49,6 +51,7 @@
   - `anser` has been updated to v2.0.1.
   - `xmlbuilder2` has been updated to v1.8.1.
   - `ws` has been updated to v7.4.5.
+  - `underscore` has been updated to v1.13.1
   - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` that improves restarts by caching reify data. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. By default it is disabled but you can enable it setting `true` in this env var. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
   - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
   - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
@@ -108,6 +111,9 @@
 * `markdown@2.0.0`
   - Use lazy imports to prevent it from being added to the initial bundle
   - Added deprecation flag
+  
+* `http@2.0.0`
+  - Internally http has been replaced by [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), should still work as previous version, but edge cases might be different. This is to aid you in transition to fetch.
 
 * `socket-stream-client@0.4.0`
   - Remove IE8 checks
