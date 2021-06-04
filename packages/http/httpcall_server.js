@@ -1,6 +1,6 @@
-import { path } from 'path';
+import { Meteor } from 'meteor/meteor';
 import { fetch, Request } from 'meteor/fetch';
-import { URL } from 'meteor/url';
+import { URL, URLSearchParams } from 'meteor/url';
 import { HTTP, makeErrorByStatus, populateData } from './httpcall_common.js';
 
 export { HTTP };
@@ -75,7 +75,7 @@ function _call (method, url, options, callback) {
   if (options.headers) {
     Object.keys(options.headers).forEach(function (key) {
       headers[key] = options.headers[key];
-    })
+    });
   }
 
   let caching;
@@ -140,7 +140,7 @@ function _call (method, url, options, callback) {
 
       // fetch headers don't allow simple read using bracket notation
       // so we iterate their entries and assign them to a new Object
-      response.headers = {}
+      response.headers = {};
       for (const entry of res.headers.entries()) {
         const [key, val] = entry;
         response.headers[key] = val;
