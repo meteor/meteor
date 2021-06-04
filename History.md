@@ -16,6 +16,9 @@
 
 * `http@1.4.4`
   - Used the new deprecation package flag instead of loud console warning.
+  
+* `socket-stream-client@0.3.3`
+  - Update `faye-websocket` dependency to v0.11.4. 
 
 ## v2.2, 2021-04-15
 
