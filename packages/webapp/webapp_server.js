@@ -1197,34 +1197,23 @@ function runWebAppServer() {
       removeExistingSocketFile(unixSocketPath);
       startHttpServer({ path: unixSocketPath });
 
-      let unixSocketPermissions = process.env.UNIX_SOCKET_PERMISSIONS;
+      const unixSocketPermissions = (process.env.UNIX_SOCKET_PERMISSIONS || "").trim();
       if (unixSocketPermissions) {
-        unixSocketPermissions = unixSocketPermissions.trim();
-
         if (/^[0-7]{3}$/.test(unixSocketPermissions)) {
-          chmodSync(unixSocketPath, parseInt(unixSocketPermissions,8));
+          chmodSync(unixSocketPath, parseInt(unixSocketPermissions, 8));
         } else {
           throw new Error("Invalid UNIX_SOCKET_PERMISSIONS specified");
         }
       }
 
-      let unixSocketGroup = process.env.UNIX_SOCKET_GROUP;
+      const unixSocketGroup = (process.env.UNIX_SOCKET_GROUP || "").trim();
       if (unixSocketGroup) {
-        unixSocketGroup = unixSocketGroup.trim();
-
-        let uid = userInfo().uid;
-        let unixSocketGid = parseInt(unixSocketGroup);
-        //If not set to a numerical gid, assume it's a group name
-        if (isNaN(unixSocketGid)) {
-          let unixSocketGroupInfo = whomst.sync.group(unixSocketGroup);
-          if (unixSocketGroupInfo === null) {
-            throw new Error("Invalid UNIX_SOCKET_GROUP name specified");
-          }
-          unixSocketGid = unixSocketGroupInfo.gid;
-          chownSync(unixSocketPath, uid, unixSocketGid);
-        } else {
-          chownSync(unixSocketPath, uid, unixSocketGid);
+        //whomst automatically handles both group names and numerical gids
+        const unixSocketGroupInfo = whomst.sync.group(unixSocketGroup);
+        if (unixSocketGroupInfo === null) {
+          throw new Error("Invalid UNIX_SOCKET_GROUP name specified");
         }
+        chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
       }
 
       registerSocketFileCleanup(unixSocketPath);
