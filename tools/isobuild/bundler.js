@@ -1374,6 +1374,7 @@ class Target {
     });
 
     // Call any plugin.afterLink callbacks defined by compiler plugins,
+    // and update the watch set's list of potentially unused files
     // now that all compilation (including lazy compilation) is finished.
     sourceBatches.forEach(batch => {
       batch.resourceSlots.forEach(slot => {
@@ -1384,7 +1385,28 @@ class Target {
           plugin.afterLink();
         }
       });
+
+      // Any source resource that the content or hash was accessed for are marked
+      // as definitely used.
+      // If there are any output resources for these in the js output, they are
+      // excluded from the importScannerWatchSet so they are only marked as
+      // definitely used if their content was used, not if they are added
+      // to the built app.
+      batch.unibuild.resources.forEach(resource => {
+        if (resource.type !== 'source' || resource._dataUsed === false) {
+          return;
+        }
+      
+        assert.strictEqual(
+          typeof resource._dataUsed,
+          "boolean"
+        );
+      
+        let absPath = files.pathJoin(batch.sourceRoot, resource.path);
+        this.watchSet.addFile(absPath, resource.hash);
+      });
     });
+
   }
 
   // Minify the JS in this target
