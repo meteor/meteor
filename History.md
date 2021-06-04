@@ -20,6 +20,9 @@
 * `socket-stream-client@0.3.3`
   - Update `faye-websocket` dependency to v0.11.4. 
 
+* `ddp-server@2.3.3`
+  - One of three different publication strategies can be selected for any Meteor publication - SERVER_MERGE, NO_MERGE and NO_MERGE_NO_HISTORY. These control the behaviour of the Meteor mergebox, providing a compromise between client-server bandwidth usage and server side memory usage.
+
 ## v2.2, 2021-04-15
 
 #### Highlights

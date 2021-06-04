@@ -2,31 +2,32 @@ DDPServer = {};
 
 var Fiber = Npm.require('fibers');
 
-// Publication strategies define how we threat data from published cursors on collection-level
+// Publication strategies define how we handle data from published cursors at the collection level
 // This allows someone to:
-// - Make a trade-off between bandwidth and memory use
-// - Have special (non-mongo) collections like volatile message queues
+// - Choose a trade-off between client-server bandwidth and server memory usage
+// - Implement special (non-mongo) collections like volatile message queues
 const publicationStrategies = {
-  // The 'no merge no history' strategy means we send all publication data 
-  // directly to the client. It does not remember what it has send
-  // So it will also not trigger removed messages when a subscription stops
-  // This should only be chosen for special use cases like send-and-forget queues
+  // SERVER_MERGE is the default strategy.
+  // When using this strategy, the server maintains a copy of all data a connection is subscribed to.
+  // This allows us to only send deltas over multiple publications.
+  SERVER_MERGE: 'server_merge',
+
+  // The NO_MERGE_NO_HISTORY strategy results in us sending all publication data 
+  // directly to the client. It does not remember what it has previously sent
+  // so it will not trigger removed messages when a subscription is stopped..
+  // This should only be chosen for special use cases like send-and-forget queues.
   NO_MERGE_NO_HISTORY: 'no_merge_no_history',
-  // No merge is similar to 'no merge no history'
-  // But it will remember the id's it has send to the client
-  // so it can remove them when a subscription stops
-  // It can be used when a collection is only used in a single publication
+
+  // NO_MERGE is similar to NO_MERGE_NO_HISTORY but it will remember the IDs it has
+  // sent to the client so it can remove them when a subscription is stopped.
+  // This strategy can be used when a collection is only used in a single publication.
   NO_MERGE: 'no_merge',
-  // XXX: We could implement client side merge
-  // By moving the session collection view to the client
-  // And sending subscription id's along the added/changed/removed messages
-  // It can be used when we want to save server memory but still have the same
+
+  // XXX: We could implement a client side merge strategy by moving the session collection view
+  // from the server to the client and sending subscription IDs alongside the added/changed/removed messages.
+  // This could be used when we want to reduce memory use on the server but still have the same
   // semantics over multiple publications of one collection
   // CLIENT_MERGE: 'client_merge',
-  // The server merge strategy is the default strategy
-  // Here we maintain a copy of all data a connection is subscribed to
-  // This allows us to only send deltas over multiple publications
-  SERVER_MERGE: 'server_merge',
 };
 
 DDPServer.publicationStrategies = publicationStrategies;
@@ -38,7 +39,7 @@ DDPServer.publicationStrategies = publicationStrategies;
 //
 // Session and Subscription are file scope. For now, until we freeze
 // the interface, Server is package scope (in the future it should be
-// exported.)
+// exported).
 
 // Represents a single document in a SessionCollectionView
 var SessionDocumentView = function () {
@@ -263,7 +264,7 @@ var Session = function (server, version, socket, options) {
   self.initialized = false;
   self.socket = socket;
 
-  // set to null when the session is destroyed. multiple places below
+  // Set to null when the session is destroyed. Multiple places below
   // use this to determine if the session is alive or not.
   self.inQueue = new Meteor._DoubleEndedQueue();
 
@@ -287,7 +288,7 @@ var Session = function (server, version, socket, options) {
   // session. The session will take care of starting it when appropriate.
   self._dontStartNewUniversalSubs = false;
 
-  // when we are rerunning subscriptions, any ready messages
+  // When we are rerunning subscriptions, any ready messages
   // we want to buffer up for when we are done rerunning subscriptions
   self._pendingReady = [];
 
@@ -331,7 +332,7 @@ var Session = function (server, version, socket, options) {
   }).run();
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
-    // We no longer need the low level timeout because we have heartbeating.
+    // We no longer need the low level timeout because we have heartbeats.
     socket.setWebsocketTimeout(0);
 
     self.heartbeat = new DDPCommon.Heartbeat({
@@ -488,7 +489,7 @@ _.extend(Session.prototype, {
       "livedata", "sessions", -1);
 
     Meteor.defer(function () {
-      // stop callbacks can yield, so we defer this on close.
+      // Stop callbacks can yield, so we defer this on close.
       // sub._isDeactivated() detects that we set inQueue to null and
       // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
       self._deactivateAllSubscriptions();
@@ -504,8 +505,8 @@ _.extend(Session.prototype, {
     self.server._removeSession(self);
   },
 
-  // Send a message (doing nothing if no socket is connected right now.)
-  // It should be a JSON object (it will be stringified.)
+  // Send a message (doing nothing if no socket is connected right now).
+  // It should be a JSON object (it will be stringified).
   send: function (msg) {
     var self = this;
     if (self.socket) {
@@ -524,21 +525,21 @@ _.extend(Session.prototype, {
     self.send(msg);
   },
 
-  // Process 'msg' as an incoming message. (But as a guard against
+  // Process 'msg' as an incoming message. As a guard against
   // race conditions during reconnection, ignore the message if
-  // 'socket' is not the currently connected socket.)
+  // 'socket' is not the currently connected socket.
   //
   // We run the messages from the client one at a time, in the order
   // given by the client. The message handler is passed an idempotent
   // function 'unblock' which it may call to allow other messages to
   // begin running in parallel in another fiber (for example, a method
-  // that wants to yield.) Otherwise, it is automatically unblocked
+  // that wants to yield). Otherwise, it is automatically unblocked
   // when it returns.
   //
   // Actually, we don't have to 'totally order' the messages in this
   // way, but it's the easiest thing that's correct. (unsub needs to
   // be ordered against sub, methods need to be ordered against each
-  // other.)
+  // other).
   processMessage: function (msg_in) {
     var self = this;
     if (!self.inQueue) // we have been destroyed.
@@ -549,7 +550,7 @@ _.extend(Session.prototype, {
     // pings, preserve the "pre1" behavior of responding with a "bad
     // request" for the unknown messages.
     //
-    // Fibers are needed because heartbeat uses Meteor.setTimeout, which
+    // Fibers are needed because heartbeats use Meteor.setTimeout, which
     // needs a Fiber. We could actually use regular setTimeout and avoid
     // these new fibers, but it is easier to just make everything use
     // Meteor.setTimeout and not think too hard.
@@ -568,7 +569,7 @@ _.extend(Session.prototype, {
       return;
     }
     if (self.version !== 'pre1' && msg_in.msg === 'pong') {
-      // Since everything is a pong, nothing to do
+      // Since everything is a pong, there is nothing to do
       return;
     }
 
@@ -679,7 +680,7 @@ _.extend(Session.prototype, {
     method: function (msg, unblock) {
       var self = this;
 
-      // reject malformed messages
+      // Reject malformed messages.
       // For now, we silently ignore unknown attributes,
       // for forwards compatibility.
       if (typeof (msg.id) !== "string" ||
@@ -692,7 +693,7 @@ _.extend(Session.prototype, {
 
       var randomSeed = msg.randomSeed || null;
 
-      // set up to mark the method as satisfied once all observers
+      // Set up to mark the method as satisfied once all observers
       // (and subscriptions) have reacted to any writes that were
       // done.
       var fence = new DDPServer._WriteFence;
@@ -707,7 +708,7 @@ _.extend(Session.prototype, {
           msg: 'updated', methods: [msg.id]});
       });
 
-      // find the handler
+      // Find the handler
       var handler = self.server.method_handlers[msg.method];
       if (!handler) {
         self.send({
@@ -830,13 +831,13 @@ _.extend(Session.prototype, {
                       typeof userId);
 
     // Prevent newly-created universal subscriptions from being added to our
-    // session; they will be found below when we call startUniversalSubs.
+    // session. They will be found below when we call startUniversalSubs.
     //
     // (We don't have to worry about named subscriptions, because we only add
     // them when we process a 'sub' message. We are currently processing a
     // 'method' message, and the method did not unblock, because it is illegal
     // to call setUserId after unblock. Thus we cannot be concurrently adding a
-    // new named subscription.)
+    // new named subscription).
     self._dontStartNewUniversalSubs = true;
 
     // Prevent current subs from updating our collectionViews and call their
@@ -904,7 +905,7 @@ _.extend(Session.prototype, {
     sub._runHandler();
   },
 
-  // tear down specified subscription
+  // Tear down specified subscription
   _stopSubscription: function (subId, error) {
     var self = this;
 
@@ -931,7 +932,7 @@ _.extend(Session.prototype, {
     self.send(response);
   },
 
-  // tear down all subscriptions. Note that this does NOT send removed or nosub
+  // Tear down all subscriptions. Note that this does NOT send removed or nosub
   // messages, since we assume the client is gone.
   _deactivateAllSubscriptions: function () {
     var self = this;
@@ -990,7 +991,7 @@ _.extend(Session.prototype, {
 /* Subscription                                                               */
 /******************************************************************************/
 
-// ctor for a sub handle: the input to each publish function
+// Ctor for a sub handle: the input to each publish function
 
 // Instance name is this because it's usually referred to as this inside a
 // publish
@@ -1016,9 +1017,9 @@ var Subscription = function (
 
   self._handler = handler;
 
-  // my subscription ID (generated by client, undefined for universal subs).
+  // My subscription ID (generated by client, undefined for universal subs).
   self._subscriptionId = subscriptionId;
-  // undefined for universal subs
+  // Undefined for universal subs
   self._name = name;
 
   self._params = params || [];
@@ -1032,17 +1033,17 @@ var Subscription = function (
     self._subscriptionHandle = 'U' + Random.id();
   }
 
-  // has _deactivate been called?
+  // Has _deactivate been called?
   self._deactivated = false;
 
-  // stop callbacks to g/c this sub.  called w/ zero arguments.
+  // Stop callbacks to g/c this sub.  called w/ zero arguments.
   self._stopCallbacks = [];
 
-  // the set of (collection, documentid) that this subscription has
-  // an opinion about
+  // The set of (collection, documentid) that this subscription has
+  // an opinion about.
   self._documents = new Map();
 
-  // remember if we are ready.
+  // Remember if we are ready.
   self._ready = false;
 
   // Part of the public API: the user of this sub.
@@ -1063,7 +1064,7 @@ var Subscription = function (
   // Later, you will be able to make this be "raw"
   // if you want to publish a collection that you know
   // just has strings for keys and no funny business, to
-  // a ddp consumer that isn't minimongo
+  // a DDP consumer that isn't minimongo.
 
   self._idFilter = {
     idStringify: MongoID.idStringify,
@@ -1140,12 +1141,12 @@ _.extend(Subscription.prototype, {
       // mark subscription as ready.
       self.ready();
     } else if (_.isArray(res)) {
-      // check all the elements are cursors
+      // Check all the elements are cursors
       if (! _.all(res, isCursor)) {
         self.error(new Error("Publish function returned an array of non-Cursors"));
         return;
       }
-      // find duplicate collection names
+      // Find duplicate collection names
       // XXX we should support overlapping cursors, but that would require the
       // merge box to allow overlap within a subscription
       var collectionNames = {};
@@ -1170,7 +1171,7 @@ _.extend(Subscription.prototype, {
       }
       self.ready();
     } else if (res) {
-      // truthy values other than cursors or arrays are probably a
+      // Truthy values other than cursors or arrays are probably a
       // user mistake (possible returning a Mongo document via, say,
       // `coll.findOne()`).
       self.error(new Error("Publish function can only return a Cursor or "
@@ -1195,7 +1196,7 @@ _.extend(Subscription.prototype, {
 
   _callStopCallbacks: function () {
     var self = this;
-    // tell listeners, so they can clean up
+    // Tell listeners, so they can clean up
     var callbacks = self._stopCallbacks;
     self._stopCallbacks = [];
     _.each(callbacks, function (callback) {
@@ -1362,7 +1363,7 @@ _.extend(Subscription.prototype, {
     if (self._isDeactivated())
       return;
     if (!self._subscriptionId)
-      return;  // unnecessary but ignored for universal sub
+      return;  // Unnecessary but ignored for universal sub
     if (!self._ready) {
       self._session.sendReady([self._subscriptionId]);
       self._ready = true;
@@ -1574,7 +1575,7 @@ _.extend(Server.prototype, {
    *  - (mostly internal) is_auto: true if generated automatically
    *    from an autopublish hook. this is for cosmetic purposes only
    *    (it lets us determine whether to print a warning suggesting
-   *    that you turn off autopublish.)
+   *    that you turn off autopublish).
    */
 
   /**
@@ -1598,12 +1599,12 @@ _.extend(Server.prototype, {
 
       if (Package.autopublish && !options.is_auto) {
         // They have autopublish on, yet they're trying to manually
-        // picking stuff to publish. They probably should turn off
+        // pick stuff to publish. They probably should turn off
         // autopublish. (This check isn't perfect -- if you create a
         // publish before you turn on autopublish, it won't catch
-        // it. But this will definitely handle the simple case where
+        // it, but this will definitely handle the simple case where
         // you've added the autopublish package to your app, and are
-        // calling publish from your app code.)
+        // calling publish from your app code).
         if (!self.warned_about_autopublish) {
           self.warned_about_autopublish = true;
           Meteor._debug(
@@ -1698,7 +1699,7 @@ _.extend(Server.prototype, {
     // do NOT block on the write fence in an analogous way to how the client
     // blocks on the relevant data being visible, so you are NOT guaranteed that
     // cursor observe callbacks have fired when your callback is invoked. (We
-    // can change this if there's a real use case.)
+    // can change this if there's a real use case).
     if (callback) {
       promise.then(
         result => callback(undefined, result),
