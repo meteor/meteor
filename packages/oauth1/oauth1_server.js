@@ -1,8 +1,8 @@
-import url from 'url';
+import { URL } from 'meteor/url';
 import { OAuth1Binding } from './oauth1_binding';
 
 OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitelistedQueryParams = []) => {
-  const redirectUrlObj = url.parse(authUrl, true);
+  const redirectUrlObj = new URL(authUrl);
 
   Object.assign(
     redirectUrlObj.query,

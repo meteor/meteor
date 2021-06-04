@@ -7,7 +7,7 @@ Package.onUse(function(api) {
   api.use('oauth1', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('random', 'client');
-  api.use('underscore', 'server');
+  api.use('underscore', 'server'); // TODO npm import for pick in server
   api.use('service-configuration', ['client', 'server']);
 
   api.addFiles('twitter_common.js', ['server', 'client']);

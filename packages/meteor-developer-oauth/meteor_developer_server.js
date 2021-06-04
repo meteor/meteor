@@ -1,9 +1,29 @@
 OAuth.registerService("meteor-developer", 2, null, query => {
   const responseCall = Meteor.wrapAsync(getTokens);
-  const response = responseCall(query);
+  let response
+  try {
+    response = responseCall(query);
+  } catch (err) {
+    throw Object.assign(
+      new Error(
+        "Failed to complete OAuth handshake with Meteor developer accounts. "
+        + err.message
+      ),
+      {response: err.response}
+    );
+  }
   const { accessToken } = response;
   const identityCall = Meteor.wrapAsync(getIdentity);
-  const identity = identityCall(accessToken);
+  let identity;
+  try {
+    identity = identityCall(accessToken);
+  } catch (err) {
+    throw Object.assign(
+      new Error("Failed to fetch identity from Meteor developer accounts. " +
+        err.message),
+      {response: err.response}
+    );
+  }
 
   const serviceData = {
     accessToken: OAuth.sealSecret(accessToken),
@@ -37,49 +57,42 @@ const getTokens = async (query) => {
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
-  let response;
-  try {
-    const content = new URLSearchParams({
-      grant_type: "authorization_code",
-      code: query.code,
-      client_id: config.clientId,
-      client_secret: OAuth.openSecret(config.secret),
-      redirect_uri: OAuth._redirectUri('meteor-developer', config)
-    });
-    const request = await fetch(MeteorDeveloperAccounts._server + "/oauth2/token", {
-      method: 'POST',
-      headers: { Accept: 'application/json' },
-      body: content
-    });
-    response = await request.json();
-  } catch (err) {
-    throw Object.assign(
-      new Error(
-        "Failed to complete OAuth handshake with Meteor developer accounts. "
-          + err.message
-      ),
-      {response: err.response}
-    );
-  }
+  const searchParams = {
+    grant_type: "authorization_code",
+    code: query.code,
+    client_id: config.clientId,
+    client_secret: OAuth.openSecret(config.secret),
+    redirect_uri: OAuth._redirectUri('meteor-developer', config)
+  };
+  const url = new URL(MeteorDeveloperAccounts._server + "/oauth2/token")
+  Object.keys(searchParams).forEach(key => {
+    url.searchParams.set(key, searchParams[key]);
+  });
+  console.log(url.toString())
+  const request = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+    redirect: 'follow',
+    mode: 'cors'
+  });
+  const data = await request.json();
 
-  if (response.error) {
+  if (data.error || Object.keys(data) === 0) {
     // if the http response was a json object with an error attribute
     throw new Error(
       "Failed to complete OAuth handshake with Meteor developer accounts. " +
-        (response.data ? response.data.error :
-         "No response data")
+        data.error || "No response data"
     );
   } else {
     return {
-      accessToken: response.access_token,
-      refreshToken: response.refresh_token,
-      expiresIn: response.expires_in
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresIn: data.expires_in
     };
   }
 };
 
 const getIdentity = async (accessToken) => {
-  try {
     const request = await fetch(
     `${MeteorDeveloperAccounts._server}/api/v1/identity`,
     {
@@ -88,13 +101,6 @@ const getIdentity = async (accessToken) => {
     });
     const response = await request.json();
     return response.data;
-  } catch (err) {
-    throw Object.assign(
-      new Error("Failed to fetch identity from Meteor developer accounts. " +
-                err.message),
-      {response: err.response}
-    );
-  }
 };
 
 MeteorDeveloperAccounts.retrieveCredential =

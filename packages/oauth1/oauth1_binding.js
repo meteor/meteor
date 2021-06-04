@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import querystring from 'querystring';
-import { fetch } from 'meteor/fetch';
+import { fetch, Headers } from 'meteor/fetch';
+import { URL } from 'meteor/url';
 
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
@@ -23,8 +24,12 @@ export class OAuth1Binding {
     const headers = this._buildHeader({
       oauth_callback: callbackUrl
     });
+    // Twitter requires oauth_callback in params and is required for OAuth 1.0a compliance
+    const params = {
+      oauth_callback: callbackUrl
+    };
 
-    const response = this._call('POST', this._urls.requestToken, headers);
+    const response = this._call('POST', this._urls.requestToken, headers, params);
     const tokens = querystring.parse(response.content);
 
     if (! tokens.oauth_callback_confirmed)
@@ -74,7 +79,6 @@ export class OAuth1Binding {
     if(! params) {
       params = {};
     }
-
     return this._call(method, url, headers, params, callback);
   }
 
@@ -87,18 +91,23 @@ export class OAuth1Binding {
   }
 
   _buildHeader(headers) {
-    return {
+    return new Headers({
+      Accept: 'application/json',
       oauth_consumer_key: this._config.consumerKey,
       oauth_nonce: Random.secret().replace(/\W/g, ''),
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: (new Date().valueOf()/1000).toFixed().toString(),
       oauth_version: '1.0',
       ...headers,
-    }
+    });
   }
 
   _getSignature(method, url, rawHeaders, accessTokenSecret, params) {
-    const headers = this._encodeHeader({ ...rawHeaders, ...params });
+    const headerData = {}
+    rawHeaders.forEach((value, key) => {
+      headerData[key] = value
+    })
+    const headers = this._encodeHeader({ ...headerData, ...params });
 
     const parameters = Object.keys(headers).map(key => `${key}=${headers[key]}`)
       .sort().join('&');
@@ -118,32 +127,25 @@ export class OAuth1Binding {
     return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
   }
 
-  async _callMethod(method, url, headers = {}, params = {}, callback, authString) {
+  async _callMethod(method, url, headers = new Headers(), params = {}) {
+    Log.info('_callMethod')
+    console.dir(headers)
     // Make signed request
-    try {
-      const response = await fetch(url.toString(), {
-        method,
-        headers: {
-          Authorization: authString
-        }
-      }, callback && ((error, response) => {
-        if (! error) {
-          response.nonce = headers.oauth_nonce;
-        }
-        callback(error, response);
-      }));
-      const data = await response.json();
-      // We store nonce so that JWTs can be validated
-      if (data)
-        data.nonce = headers.oauth_nonce;
-      return data;
-    } catch (err) {
-      throw Object.assign(new Error(`Failed to send OAuth1 request to ${url}. ${err.message}`),
-                     {response: err.response});
-    }
+    const response = await fetch(url.toString(), {
+      method,
+      headers,
+      redirect: 'follow',
+      mode: 'cors'
+    });
+    const data = await response.json();
+    Log.info('DATA')
+    console.dir(data)
+    // We store nonce so that JWTs can be validated
+    if (data) data.nonce = headers.get('oauth_nonce');
+    return data;
   }
 
-  _call (method, url, headers = {}, params = {}, callback) {
+  _call (method, url, headers = new Headers(), params = {}, callback) {
     const callMethod = Meteor.wrapAsync(this._callMethod);
     // all URLs to be functions to support parameters/customization
     if(typeof url === "function") {
@@ -153,14 +155,27 @@ export class OAuth1Binding {
     // parse URL and add in params
     const parsedUrl = new URL(url);
     Object.keys(params).map(key => parsedUrl.searchParams.append(key, params[key]));
+    console.dir(parsedUrl.toString())
 
     // Get the signature
-    headers.oauth_signature =
-      this._getSignature(method, `${parsedUrl.origin}${parsedUrl.pathname}`, headers, this.accessTokenSecret, params);
+    headers.set('oauth_signature', this._getSignature(method, url, headers, this.accessTokenSecret, params));
 
-    // Make a authorization string according to oauth1 spec
-    const authString = this._getAuthHeaderString(headers);
-    return callMethod(method, parsedUrl, headers, params, callback, authString);
+    // Make an authorization string according to oauth1 spec
+    headers.set('Authorization', this._getAuthHeaderString(headers));
+
+    let data;
+    let error = undefined;
+    try {
+      data = callMethod(method, parsedUrl, headers, params);
+    } catch (err) {
+      const errorMsg = `Failed to send OAuth1 request to ${url}. ${err.message}`;
+      if (callback) error = errorMsg;
+      throw Object.assign(new Error(errorMsg),{response: err.response});
+    } finally {
+      if (data?.errors) error = `Failed to send OAuth1 request to ${url}. ${data.errors[0].message}`;
+      if (callback) callback(error, data);
+    }
+    return data;
   }
 
   _encodeHeader(header) {
@@ -175,8 +190,12 @@ export class OAuth1Binding {
   }
 
   _getAuthHeaderString(headers) {
-    return 'OAuth ' +  Object.keys(headers).map(key =>
-      `${this._encodeString(key)}="${this._encodeString(headers[key])}"`
+    const headersEncoded = {}
+    headers.forEach((value, key) => {
+      headersEncoded[this._encodeString(key)] = this._encodeString(value);
+    })
+    return 'OAuth ' +  Object.keys(headersEncoded).map(key =>
+      `${key}="${headersEncoded[key]}"`
     ).sort().join(', ');
   }
 
