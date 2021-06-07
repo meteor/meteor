@@ -4,7 +4,8 @@
 Package.describe({
   name: "jquery-layout",
   summary: "Deprecated package for JS layout",
-  version: "1.0.3"
+  version: "1.0.3",
+  deprecated: true
 });
 
 Package.onUse(function (api) {

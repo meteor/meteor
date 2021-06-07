@@ -363,7 +363,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       return;
     }
 
-    const babel = require("meteor-babel");
+    const babel = require("@meteorjs/babel");
     const commonBabelOptions = babel.getDefaultOptions({
       nodeMajorVersion: parseInt(process.versions.node),
       typescript: true

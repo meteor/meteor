@@ -279,7 +279,7 @@ function getFilteredTests(options) {
 
   const tagsToMatch = options['with-tag'] ? [options['with-tag']] : [];
   return new TestList(allTests, tagsToSkip, tagsToMatch, testState);
-};
+}
 
 function groupTestsByFile(tests) {
   const grouped = {};
@@ -514,7 +514,7 @@ class TestList {
 
 function getTestStateFilePath() {
   return files.pathJoin(files.getHomeDir(), '.meteortest');
-};
+}
 
 function readTestState() {
   const testStateFile = getTestStateFilePath();
@@ -526,7 +526,7 @@ function readTestState() {
     testState = { version: 1, lastPassedHashes: {} };
   }
   return testState;
-};
+}
 
 function writeTestState(testState) {
   const testStateFile = getTestStateFilePath();
@@ -609,7 +609,7 @@ export function runTests(options) {
       : 'running';
     const countMessage = `(${index + 1}/${testList.filteredTests.length})`;
     const testMessage = `${test.file}.js test:${test.name} ...`;
-    Console.error(`${skipMessage} ${countMessage} ${testMessage}`);
+    Console.info(`${skipMessage} ${countMessage} ${testMessage}`);
 
     if (shouldSkip || options.preview) {
       return;

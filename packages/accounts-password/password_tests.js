@@ -1,5 +1,12 @@
 Accounts._connectionCloseDelayMsForTests = 1000;
 
+function hashPassword(password) {
+  return {
+    digest: SHA256(password),
+      algorithm: "sha-256"
+  };
+}
+
 if (Meteor.isServer) {
   Accounts.removeDefaultRateLimit();
 
@@ -63,7 +70,7 @@ if (Meteor.isClient) (() => {
       }
       const user = Meteor.user();
       test.isTrue(user && user.emails.reduce(
-        (prev, email) => prev || email.address === someEmail, 
+        (prev, email) => prev || email.address === someEmail,
         false
       ));
     });
@@ -72,15 +79,15 @@ if (Meteor.isClient) (() => {
     test.equal(actualError && actualError.error, expectedError.error);
     test.equal(actualError && actualError.reason, expectedError.reason);
   });
-  const expectUserNotFound = (test, expect) => 
+  const expectUserNotFound = (test, expect) =>
     expectError(new Meteor.Error(403, "User not found"), test, expect);
   const waitForLoggedOutStep = (test, expect) => pollUntil(
-    expect, 
-    () => Meteor.userId() === null, 
-    10 * 1000, 
+    expect,
+    () => Meteor.userId() === null,
+    10 * 1000,
     100
   );
-  const invalidateLoginsStep = (test, expect) => 
+  const invalidateLoginsStep = (test, expect) =>
     Meteor.call("testInvalidateLogins", 'fail', expect(error => {
       if (error) {
         test.fail(error.message);
@@ -156,51 +163,6 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       Meteor.loginWithPassword({email: this.email}, this.password,
                                loggedInAs(this.username, test, expect));
-    },
-    logoutStep
-  ]);
-
-
-  testAsyncMulti("passwords - plain text passwords", [
-    function (test, expect) {
-      // setup
-      this.username = Random.id();
-      this.email = `${Random.id()}-intercept@example.com`;
-      this.password = 'password';
-
-      // create user with raw password (no API, need to invoke callLoginMethod
-      // directly)
-      Accounts.callLoginMethod({
-        methodName: 'createUser',
-        methodArguments: [{username: this.username, password: this.password}],
-        userCallback: loggedInAs(this.username, test, expect)
-      });
-    },
-    logoutStep,
-    // check can login normally with this password.
-    function(test, expect) {
-      Meteor.loginWithPassword({username: this.username}, this.password,
-                               loggedInAs(this.username, test, expect));
-    },
-    logoutStep,
-    // plain text password. no API for this, have to invoke callLoginMethod
-    // directly.
-    function (test, expect) {
-      Accounts.callLoginMethod({
-        // wrong password
-        methodArguments: [{user: {username: this.username}, password: 'wrong'}],
-        userCallback: expect(function (error) {
-          test.isTrue(error);
-          test.isFalse(Meteor.user());
-        })});
-    },
-    function (test, expect) {
-      Accounts.callLoginMethod({
-        // right password
-        methodArguments: [{user: {username: this.username},
-                           password: this.password}],
-        userCallback: loggedInAs(this.username, test, expect)
-      });
     },
     logoutStep
   ]);
@@ -467,7 +429,7 @@ if (Meteor.isClient) (() => {
     // change password with blank new password
     function (test, expect) {
       test.throws(
-        () => Accounts.changePassword(this.password, ''), 
+        () => Accounts.changePassword(this.password, ''),
         /Password may not be empty/
       );
     },
@@ -513,13 +475,13 @@ if (Meteor.isClient) (() => {
     function (test, expect) {
       this.secondConn = DDP.connect(Meteor.absoluteUrl());
       this.secondConn.call('login',
-                { user: { username: this.username }, password: this.password },
+                { user: { username: this.username }, password: hashPassword(this.password) },
                 expect((err, result) => {
                   test.isFalse(err);
                   this.secondConn.setUserId(result.id);
                   test.isTrue(this.secondConn.userId());
 
-                  this.secondConn.onReconnect = () => 
+                  this.secondConn.onReconnect = () =>
                     this.secondConn.apply(
                       'login',
                       [{ resume: result.token }],
@@ -531,8 +493,8 @@ if (Meteor.isClient) (() => {
     },
     function (test, expect) {
       Accounts.changePassword(
-        this.password, 
-        this.password2, 
+        this.password,
+        this.password2,
         expect(err => test.isFalse(err))
       );
     },
@@ -540,9 +502,9 @@ if (Meteor.isClient) (() => {
     // connection gets logged out.
     function (test, expect) {
       pollUntil(
-        expect, 
-        () => this.secondConn.userId() === null, 
-        10 * 1000, 
+        expect,
+        () => this.secondConn.userId() === null,
+        10 * 1000,
         100
       );
     }
@@ -557,14 +519,14 @@ if (Meteor.isClient) (() => {
     // forgotPassword called on client with blank email
     function (test, expect) {
       Accounts.forgotPassword(
-        { email: this.email }, 
+        { email: this.email },
         expect(error => test.isTrue(error))
       );
     },
     // forgotPassword called on client with blank email and no callback.
     function (test, expect) {
       test.throws(
-        () => Accounts.forgotPassword({ email: this.email }), 
+        () => Accounts.forgotPassword({ email: this.email }),
         /Must pass options\.email/
       );
     },
@@ -607,14 +569,14 @@ if (Meteor.isClient) (() => {
     // verifyEmail called on client with blank token
     function (test, expect) {
       Accounts.verifyEmail(
-        this.token, 
+        this.token,
         expect(error => test.isTrue(error))
       );
     },
     // verifyEmail called on client with blank token and no callback.
     function (test, expect) {
       test.throws(
-        () => Accounts.verifyEmail(this.token), 
+        () => Accounts.verifyEmail(this.token),
         /Need to pass token/
       );
     },
@@ -629,8 +591,8 @@ if (Meteor.isClient) (() => {
     // resetPassword called on client with blank token
     function (test, expect) {
       Accounts.resetPassword(
-        this.token, 
-        this.newPassword, 
+        this.token,
+        this.newPassword,
         expect(error => test.isTrue(error))
       );
     },
@@ -642,8 +604,8 @@ if (Meteor.isClient) (() => {
     // resetPassword called on client with blank password
     function (test, expect) {
       Accounts.resetPassword(
-        this.token, 
-        this.newPassword, 
+        this.token,
+        this.newPassword,
         expect(error => test.isTrue(error))
       );
     },
@@ -882,10 +844,10 @@ if (Meteor.isClient) (() => {
       const secondConn = DDP.connect(Meteor.absoluteUrl());
       let token;
 
-      const expectSecondConnLoggedOut = 
+      const expectSecondConnLoggedOut =
         expect((err, result) => test.isTrue(err));
 
-      const expectAccountsConnLoggedIn = 
+      const expectAccountsConnLoggedIn =
         expect((err, result) => test.isFalse(err));
 
       const expectSecondConnLoggedIn = expect((err, result) => {
@@ -914,78 +876,6 @@ if (Meteor.isClient) (() => {
       );
     },
     logoutStep,
-
-    // The tests below this point are for the deprecated
-    // `logoutOtherClients` method.
-
-    function (test, expect) {
-      // Test that Meteor.logoutOtherClients logs out a second authenticated
-      // connection while leaving Accounts.connection logged in.
-      let token;
-      this.secondConn = DDP.connect(Meteor.absoluteUrl());
-
-      const expectLoginError = expect(err => test.isTrue(err));
-      const expectValidToken = expect((err, result) => {
-        test.isFalse(err);
-        test.isTrue(result);
-        this.tokenFromLogoutOthers = result.token;
-      });
-      const expectSecondConnLoggedIn = expect((err, result) => {
-        test.equal(result.token, token);
-        test.isFalse(err);
-        // This test will fail if an unrelated reconnect triggers before the
-        // connection is logged out. In general our tests aren't resilient to
-        // mid-test reconnects.
-        this.secondConn.onReconnect = () => {
-          this.secondConn.call("login", { resume: token }, expectLoginError);
-        };
-        Accounts.connection.call("logoutOtherClients", expectValidToken);
-      });
-
-      Meteor.loginWithPassword(this.username, this.password, expect(err => {
-        test.isFalse(err);
-        token = Accounts._storedLoginToken();
-        this.beforeLogoutOthersToken = token;
-        test.isTrue(token);
-        this.secondConn.call("login", { resume: token },
-                             expectSecondConnLoggedIn);
-      }));
-    },
-    // Test that logoutOtherClients logged out Accounts.connection and that the
-    // previous token is no longer valid.
-    waitForLoggedOutStep,
-    function (test, expect) {
-      const token = Accounts._storedLoginToken();
-      test.isFalse(token);
-      this.secondConn.close();
-      Meteor.loginWithToken(
-        this.beforeLogoutOthersToken,
-        expect(err => {
-          test.isTrue(err);
-          test.isFalse(Meteor.userId());
-        })
-      );
-    },
-    // Test that logoutOtherClients returned a new token that we can use to
-    // log in.
-    function (test, expect) {
-      Meteor.loginWithToken(
-        this.tokenFromLogoutOthers,
-        expect(err => {
-          test.isFalse(err);
-          test.isTrue(Meteor.userId());
-        })
-      );
-    },
-    logoutStep,
-    function (test, expect) {
-      // Test that deleting a user logs out that user's connections.
-      Meteor.loginWithPassword(this.username, this.password, expect(err => {
-        test.isFalse(err);
-        Accounts.connection.call("removeUser", this.username);
-      }));
-    },
-    waitForLoggedOutStep
   ]);
 
   testAsyncMulti("passwords - validateLoginAttempt", [
@@ -1208,99 +1098,6 @@ if (Meteor.isClient) (() => {
       expect(() => ({}))();
     }
   ]);
-
-  testAsyncMulti("passwords - srp to bcrypt upgrade", [
-    logoutStep,
-    // Create user with old SRP credentials in the database.
-    function (test, expect) {
-      Meteor.call("testCreateSRPUser", expect((error, result) => {
-        test.isFalse(error);
-        this.username = result;
-      }));
-    },
-    // We are able to login with the old style credentials in the database.
-    function (test, expect) {
-      Meteor.loginWithPassword(
-        this.username,
-        'abcdef',
-        expect(error => test.isFalse(error))
-      );
-    },
-    function (test, expect) {
-      Meteor.call(
-        "testSRPUpgrade",
-        this.username,
-        expect(error => test.isFalse(error))
-      );
-    },
-    logoutStep,
-    // After the upgrade to bcrypt we're still able to login.
-    function (test, expect) {
-      Meteor.loginWithPassword(
-        this.username,
-        'abcdef',
-        expect(error => test.isFalse(error))
-      );
-    },
-    logoutStep,
-    function (test, expect) {
-      Meteor.call(
-        "removeUser",
-        this.username,
-        expect(error => test.isFalse(error))
-      );
-    }
-  ]);
-
-  testAsyncMulti("passwords - srp to bcrypt upgrade via password change", [
-    logoutStep,
-    // Create user with old SRP credentials in the database.
-    function (test, expect) {
-      Meteor.call("testCreateSRPUser", expect((error, result) => {
-        test.isFalse(error);
-        this.username = result;
-      }));
-    },
-    // Log in with the plaintext password handler, which should NOT upgrade us to bcrypt.
-    function (test, expect) {
-      Accounts.callLoginMethod({
-        methodName: "login",
-        methodArguments: [ { user: { username: this.username }, password: "abcdef" } ],
-        userCallback: expect(err => test.isFalse(err))
-      });
-    },
-    function (test, expect) {
-      Meteor.call(
-        "testNoSRPUpgrade",
-        this.username,
-        expect((error) => test.isFalse(error))
-      );
-    },
-    // Changing our password should upgrade us to bcrypt.
-    function (test, expect) {
-      Accounts.changePassword(
-        "abcdef",
-        "abcdefg",
-        expect(error => test.isFalse(error))
-      );
-    },
-    function (test, expect) {
-      Meteor.call(
-        "testSRPUpgrade",
-        this.username,
-        expect(error => test.isFalse(error))
-      );
-    },
-    // And after the upgrade we should be able to change our password again.
-    function (test, expect) {
-      Accounts.changePassword(
-        "abcdefg",
-        "abcdef",
-        expect(error => test.isFalse(error))
-      );
-    },
-    logoutStep
-  ]);
 }) ();
 
 
@@ -1395,7 +1192,7 @@ if (Meteor.isServer) (() => {
       const username = Random.id();
       Accounts.createUser({
         username: username,
-        password: 'password'
+        password: hashPassword('password')
       });
 
       makeTestConnection(
@@ -1407,7 +1204,7 @@ if (Meteor.isServer) (() => {
           });
           const result = clientConn.call('login', {
             user: {username: username},
-            password: 'password'
+            password: hashPassword('password')
           });
           test.isTrue(result);
           const token = Accounts._getAccountData(serverConn.id, 'loginToken');
@@ -1445,7 +1242,7 @@ if (Meteor.isServer) (() => {
       const userId = Accounts.createUser({
         username: username,
         email: email,
-        password: "old-password"
+        password: hashPassword("old-password")
       });
 
       const user = Meteor.users.findOne(userId);
@@ -1464,15 +1261,15 @@ if (Meteor.isServer) (() => {
       Meteor.users.update(userId, {$set: {"emails.0.address": newEmail}});
 
       test.throws(
-        () => Meteor.call("resetPassword", resetPasswordToken, "new-password"), 
+        () => Meteor.call("resetPassword", resetPasswordToken, hashPassword("new-password")),
         /Token has invalid email address/
       );
       test.throws(
         () => Meteor.call(
-          "login", 
-          {user: {username: username}, 
-          password: "new-password"}
-        ), 
+          "login",
+          {user: {username: username},
+          password: hashPassword("new-password")}
+        ),
         /Incorrect password/);
     });
 
@@ -1485,7 +1282,7 @@ if (Meteor.isServer) (() => {
       const userId = Accounts.createUser({
         username: username,
         email: email,
-        password: "old-password"
+        password: hashPassword("old-password")
       });
 
       const user = Meteor.users.findOne(userId);
@@ -1506,12 +1303,12 @@ if (Meteor.isServer) (() => {
           test.isTrue(clientConn.call(
             "resetPassword",
             resetPasswordToken,
-            "new-password"
+            hashPassword("new-password")
           ));
 
           test.isTrue(clientConn.call("login", {
             user: { username },
-            password: "new-password"
+            password: hashPassword("new-password")
           }));
 
           onComplete();
@@ -1528,7 +1325,7 @@ if (Meteor.isServer) (() => {
       const userId = Accounts.createUser({
         username: username,
         email: email,
-        password: "old-password"
+        password: hashPassword("old-password")
       });
 
       const user = Meteor.users.findOne(userId);
@@ -1546,23 +1343,52 @@ if (Meteor.isServer) (() => {
       Meteor.users.update(userId, {$set: {"services.password.reset.when":  new Date(Date.now() + -5 * 24 * 3600 * 1000) }});
 
       test.throws(
-        () => Meteor.call("resetPassword", resetPasswordToken, "new-password"),
+        () => Meteor.call("resetPassword", resetPasswordToken, hashPassword("new-password")),
         /Token expired/
       );
       test.throws(
         () => Meteor.call(
           "login",
           {user: {username: username},
-          password: "new-password"}
+          password: hashPassword("new-password")}
         ),
         /Incorrect password/);
+    });
+
+  Tinytest.add('forgotPassword - different error messages returned depending' +
+  ' on whether ambiguousErrorMessages flag is passed in Account.config',
+    test =>{
+        const username = Random.id();
+        const email = `${Random.id()}-intercept@example.com`;
+        const randomEmail = `${Random.id()}-Ada_intercept@some.com`;
+        const wrongOptions = {email: randomEmail}
+        const password = 'password';
+        const options = Accounts._options
+
+        Accounts.createUser(
+          { username: username, email: email, password: hashPassword(password) },
+          );
+
+        Accounts._options.ambiguousErrorMessages = true
+        test.throws(
+          ()=> Meteor.call('forgotPassword', wrongOptions),
+          'Something went wrong. Please check your credentials'
+        )
+
+        Accounts._options.ambiguousErrorMessages = false
+        test.throws(
+          ()=> Meteor.call('forgotPassword', wrongOptions),
+          'User not found'
+        )
+        // return accounts as it were
+        Accounts._options = options
     });
 
   Tinytest.add(
     'passwords - reset tokens with reasons get cleaned up',
     test => {
       const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: 'password'});
+      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
       Accounts.sendResetPasswordEmail(userId, email);
       test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
 
@@ -1575,7 +1401,7 @@ if (Meteor.isServer) (() => {
     'passwords - reset tokens without reasons get cleaned up',
     test => {
       const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: 'password'});
+      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
       Accounts.sendResetPasswordEmail(userId, email);
       Meteor.users.update({_id: userId}, {$unset: {"services.password.reset.reason": 1}});
       test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
@@ -1615,12 +1441,12 @@ if (Meteor.isServer) (() => {
           test.isTrue(clientConn.call(
             "resetPassword",
             enrollPasswordToken,
-            "new-password"
+            hashPassword("new-password")
           ));
 
           test.isTrue(clientConn.call("login", {
             user: { username },
-            password: "new-password"
+            password: hashPassword("new-password")
           }));
 
           onComplete();
@@ -1650,37 +1476,36 @@ if (Meteor.isServer) (() => {
       test.isTrue(match);
       const enrollPasswordToken = match[1];
 
-      Meteor.users.update(userId, {$set: {"services.password.reset.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) }});
+      Meteor.users.update(userId, {$set: {"services.password.enroll.when": new Date(Date.now() + -35 * 24 * 3600 * 1000) }});
 
       test.throws(
-        () => Meteor.call("resetPassword", enrollPasswordToken, "new-password"),
+        () => Meteor.call("resetPassword", enrollPasswordToken, hashPassword("new-password")),
         /Token expired/
       );
     });
 
   Tinytest.add('passwords - enroll tokens get cleaned up', test => {
     const email = `${test.id}-intercept@example.com`;
-    const userId = Accounts.createUser({email: email, password: 'password'});
+    const userId = Accounts.createUser({email: email, password: hashPassword('password')});
 
     Accounts.sendEnrollmentEmail(userId, email);
-    test.isTrue(!!Meteor.users.findOne(userId).services.password.reset);
-
+    test.isTrue(!!Meteor.users.findOne(userId).services.password.enroll);
     Accounts._expirePasswordEnrollTokens(new Date(), userId);
-    test.isUndefined(Meteor.users.findOne(userId).services.password.reset);
+    test.isUndefined(Meteor.users.findOne(userId).services.password.enroll);
   });
 
   Tinytest.add(
     "passwords - enroll tokens don't get cleaned up when reset tokens are cleaned up",
     test => {
       const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: 'password'});
+      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
 
       Accounts.sendEnrollmentEmail(userId, email);
-      const enrollToken = Meteor.users.findOne(userId).services.password.reset;
+      const enrollToken = Meteor.users.findOne(userId).services.password.enroll;
       test.isTrue(enrollToken);
 
       Accounts._expirePasswordResetTokens(new Date(), userId);
-      test.equal(enrollToken, Meteor.users.findOne(userId).services.password.reset);
+      test.equal(enrollToken, Meteor.users.findOne(userId).services.password.enroll);
     }
   )
 
@@ -1688,7 +1513,7 @@ if (Meteor.isServer) (() => {
     "passwords - reset tokens don't get cleaned up when enroll tokens are cleaned up",
     test => {
       const email = `${test.id}-intercept@example.com`;
-      const userId = Accounts.createUser({email: email, password: 'password'});
+      const userId = Accounts.createUser({email: email, password: hashPassword('password')});
 
       Accounts.sendResetPasswordEmail(userId, email);
       const resetToken = Meteor.users.findOne(userId).services.password.reset;
@@ -1923,14 +1748,14 @@ if (Meteor.isServer) (() => {
   Tinytest.addAsync(
     'passwords - allow custom bcrypt rounds',
     (test, done) => {
-      const getUserHashRounds = user => 
+      const getUserHashRounds = user =>
         Number(user.services.password.bcrypt.substring(4, 6));
-      
+
 
       // Verify that a bcrypt hash generated for a new account uses the
       // default number of rounds.
       let username = Random.id();
-      const password = 'abc123';
+      const password = hashPassword('abc123');
       const userId1 = Accounts.createUser({ username, password });
       let user1 = Meteor.users.findOne(userId1);
       let rounds = getUserHashRounds(user1);

@@ -21,7 +21,7 @@ class NpmDiscards {
 
   shouldDiscard(candidatePath: string, isDirectory?: boolean): boolean {
     if (isDirectory === void 0) {
-      isDirectory = files.lstat(candidatePath).isDirectory();
+      isDirectory = files.lstat(candidatePath)?.isDirectory();
     }
 
     for (let currentPath = candidatePath, parentPath;
