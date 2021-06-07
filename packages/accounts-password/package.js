@@ -8,8 +8,11 @@ Package.describe({
   version: "1.7.1"
 });
 
+Npm.depends({
+  'bcrypt': '5.0.1'
+})
+
 Package.onUse(api => {
-  api.use('npm-bcrypt', 'server');
 
   api.use([
     'accounts-base',

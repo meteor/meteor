@@ -1,6 +1,5 @@
-/// BCRYPT
+import bcrypt from 'bcrypt'
 
-const bcrypt = NpmModuleBcrypt;
 const bcryptHash = Meteor.wrapAsync(bcrypt.hash);
 const bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
 
