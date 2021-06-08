@@ -111,7 +111,7 @@ ObserveSequence = {
           seqArray = result[0];
           activeObserveHandle = result[1];
         } else {
-          throw badSequenceError();
+          throw badSequenceError(seq);
         }
 
         diffArray(lastSeqArray, seqArray, callbacks);
@@ -140,14 +140,55 @@ ObserveSequence = {
     } else if (isStoreCursor(seq)) {
       return seq.fetch();
     } else {
-      throw badSequenceError();
+      throw badSequenceError(seq);
     }
   }
 };
 
-var badSequenceError = function () {
+var ellipsis = function (longStr, maxLength) {
+  if(!maxLength) maxLength = 100;
+  if(longStr.length < maxLength) return longStr;
+  return longStr.substr(0, maxLength-1) + '…';
+}
+
+var toDebugStr = function (value, maxLength) {
+  if(!maxLength) maxLength = 150;
+  var type = typeof value;
+  switch(type) {
+    case 'undefined':
+      return type;
+    case 'number':
+      return value.toString();
+    case 'string':
+      return JSON.stringify(value); // add quotes
+    case 'object':
+      if(value === null) {
+        return 'null';
+      } else if(Symbol.iterator in value) { // Map and Set are not handled by JSON.stringify
+        var out = value.constructor.name + ' [';
+        var sep = '';
+        for(var item of value) {
+          out += sep + toDebugStr(item, maxLength);
+          if(out.length > maxLength) return out;
+          sep = ', ';
+        }
+        return out + ']';
+      } else { // use JSON.stringify (sometimes toString can be better but we don't know)
+        return value.constructor.name + ' '
+             + ellipsis(JSON.stringify(value), maxLength);
+      }
+    default:
+      return type + ': ' + value.toString();
+  }
+}
+
+var badSequenceError = function (sequence) {
+  var gotValue = '';
+  try {
+    gotValue = ' Got ' + toDebugStr(sequence)
+  } catch(e) {}
   return new Error("{{#each}} currently only accepts " +
-                   "arrays, cursors or falsey values.");
+                   "arrays, cursors or falsey values." + gotValue);
 };
 
 var isStoreCursor = function (cursor) {
