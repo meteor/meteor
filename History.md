@@ -159,6 +159,9 @@
   
 * `jshint@1.1.8`
   - The package has been deprecated.
+  
+* `npm-bcrypt@0.9.4`
+  - The package has been deprecated.
 
 ## v2.2, 2021-04-15
 
