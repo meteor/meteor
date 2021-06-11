@@ -182,13 +182,18 @@ function toDebugStr(value, maxLength) {
   }
 }
 
-const badSequenceError = function (sequence) {
-  let gotValue = '';
+function sequenceGotValue(sequence) {
   try {
-    gotValue = ' Got ' + toDebugStr(sequence)
-  } catch(e) {}
+    return ' Got ' + toDebugStr(sequence);
+  } catch(e) {
+    return ''
+  }
+}
+
+const badSequenceError = function (sequence) {
   return new Error("{{#each}} currently only accepts " +
-                   "arrays, cursors or falsey values." + gotValue);
+                   "arrays, cursors or falsey values." +
+                   sequenceGotValue(sequence));
 };
 
 const isStoreCursor = function (cursor) {
