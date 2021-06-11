@@ -7,3 +7,5 @@
 meteor-base             # Packages every Meteor app needs to have
 
 ecmascript              # Enable ECMAScript2015+ syntax in app code
+partially-used
+build-plugin
