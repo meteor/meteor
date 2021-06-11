@@ -52,7 +52,7 @@
   - `xmlbuilder2` has been updated to v1.8.1.
   - `ws` has been updated to v7.4.5.
   - `underscore` has been updated to v1.13.1
-  - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` that improves restarts by caching reify data. This new cache should help with runtime performance when restarting server, but it is not yet ready for general use. By default it is disabled but you can enable it setting `true` in this env var. Learn more in the [PR](https://github.com/meteor/meteor/pull/11400).
+  - Reduced time spent by server (re)start in development by adding a cache for Reify. This optimization can be enabled in production by setting the `METEOR_REIFY_CACHE_DIR` environment variable [PR](https://github.com/meteor/meteor/pull/11400).
   - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
   - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
   - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
@@ -95,6 +95,7 @@
 * `ddp-server@2.4.0`
   - Removed backward compatibility method names for Meteor before 1.0
   - Added support for this.unblock() in Meteor.publish() context
+  - Add support in `Meteor.publish()` for async functions
 
 * `meteor-base@2.0.0`
   - Removed `livedata` dependency which was there for packages build for 0.9.0

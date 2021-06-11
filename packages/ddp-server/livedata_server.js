@@ -1060,7 +1060,7 @@ Object.assign(Subscription.prototype, {
 
     var self = this;
     try {
-      var res = DDP._CurrentPublicationInvocation.withValue(
+      var resMaybePromise = DDP._CurrentPublicationInvocation.withValue(
         self,
         () => maybeAuditArgumentChecks(
           self._handler, self, EJSON.clone(self._params),
@@ -1079,7 +1079,14 @@ Object.assign(Subscription.prototype, {
     if (self._isDeactivated())
       return;
 
-    self._publishHandlerResult(res);
+    //Both conventional and async publish handler functions are supported.
+    //If an object is returned with a then() function, it is either a promise or thenable
+    //and will be resolved asynchronously.
+    if (resMaybePromise && typeof resMaybePromise.then === "function") {
+      Promise.resolve(resMaybePromise).then(self._publishHandlerResult, e => self.error(e));
+    } else {
+      self._publishHandlerResult(resMaybePromise);
+    }
   },
 
   _publishHandlerResult: function (res) {
