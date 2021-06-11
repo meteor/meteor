@@ -1,4 +1,4 @@
-var warn = function () {
+const warn = function () {
   if (ObserveSequence._suppressWarnings) {
     ObserveSequence._suppressWarnings--;
   } else {
@@ -18,8 +18,8 @@ function isArray(arr) {
   return arr instanceof Array || _.isArray(arr);
 }
 
-var idStringify = MongoID.idStringify;
-var idParse = MongoID.idParse;
+const idStringify = MongoID.idStringify;
+const idParse = MongoID.idParse;
 
 ObserveSequence = {
   _suppressWarnings: 0,
@@ -145,15 +145,15 @@ ObserveSequence = {
   }
 };
 
-var ellipsis = function (longStr, maxLength) {
+function ellipsis(longStr, maxLength) {
   if(!maxLength) maxLength = 100;
   if(longStr.length < maxLength) return longStr;
   return longStr.substr(0, maxLength-1) + '…';
 }
 
-var toDebugStr = function (value, maxLength) {
+function toDebugStr(value, maxLength) {
   if(!maxLength) maxLength = 150;
-  var type = typeof value;
+  const type = typeof value;
   switch(type) {
     case 'undefined':
       return type;
@@ -182,8 +182,8 @@ var toDebugStr = function (value, maxLength) {
   }
 }
 
-var badSequenceError = function (sequence) {
-  var gotValue = '';
+const badSequenceError = function (sequence) {
+  let gotValue = '';
   try {
     gotValue = ' Got ' + toDebugStr(sequence)
   } catch(e) {}
@@ -191,7 +191,7 @@ var badSequenceError = function (sequence) {
                    "arrays, cursors or falsey values." + gotValue);
 };
 
-var isStoreCursor = function (cursor) {
+const isStoreCursor = function (cursor) {
   return cursor && _.isObject(cursor) &&
     _.isFunction(cursor.observe) && _.isFunction(cursor.fetch);
 };
@@ -199,7 +199,7 @@ var isStoreCursor = function (cursor) {
 // Calculates the differences between `lastSeqArray` and
 // `seqArray` and calls appropriate functions from `callbacks`.
 // Reuses Minimongo's diff algorithm implementation.
-var diffArray = function (lastSeqArray, seqArray, callbacks) {
+const diffArray = function (lastSeqArray, seqArray, callbacks) {
   var diffFn = Package['diff-sequence'].DiffSequence.diffQueryOrderedChanges;
   var oldIdObjects = [];
   var newIdObjects = [];
