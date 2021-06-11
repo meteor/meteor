@@ -1,7 +1,6 @@
 var Future = Npm.require('fibers/future');
 
-import { NpmModuleMongodb } from "meteor/npm-mongo";
-const { Long } = NpmModuleMongodb;
+import {Long} from "mongodb";
 
 OPLOG_COLLECTION = 'oplog.rs';
 

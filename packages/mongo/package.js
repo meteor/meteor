@@ -13,7 +13,8 @@ Package.describe({
 });
 
 Npm.depends({
-  "mongodb-uri": "0.9.7"
+  "mongodb-uri": "0.9.7",
+  "mongodb": "3.6.9"
 });
 
 Npm.strip({
@@ -21,7 +22,6 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
-  api.use('npm-mongo', 'server');
   api.use('allow-deny');
 
   api.use([
