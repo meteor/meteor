@@ -1,12 +1,12 @@
 Package.describe({
   name: "url",
-  version: "1.3.1",
+  version: "1.3.2",
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG URL/URLSearchParams",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "core-js": "3.5.0"
+  "core-js": "3.14.0"
 });
 
 Package.onUse(function(api) {
