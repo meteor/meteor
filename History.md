@@ -95,6 +95,7 @@
 * `ddp-server@2.4.0`
   - Removed backward compatibility method names for Meteor before 1.0
   - Added support for this.unblock() in Meteor.publish() context
+  - Add support in `Meteor.publish()` for async functions
 
 * `meteor-base@2.0.0`
   - Removed `livedata` dependency which was there for packages build for 0.9.0
