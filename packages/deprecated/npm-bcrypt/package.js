@@ -1,7 +1,8 @@
 Package.describe({
   summary: "Wrapper around the bcrypt npm package",
   version: "0.9.3",
-  documentation: null
+  documentation: null,
+  deprecated: true
 });
 
 Npm.depends({
