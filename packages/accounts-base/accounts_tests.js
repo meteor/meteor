@@ -686,11 +686,11 @@ Tinytest.add(
       let googleId = Random.id();
       const uid1 = Accounts.updateOrCreateUserFromExternalService(
           'google',
-          { id: googleId, email: "oter@test.com"}, //testEmail },
+          { id: googleId, email: testEmail },
           { profile: { foo: 1 } },
       ).userId;
 
-      test.Equal(uid0, uid1)
+      test.equal(uid0, uid1)
 
       // Cleanup
       if (uid1 !== uid0) {
