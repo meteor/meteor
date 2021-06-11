@@ -156,6 +156,9 @@
   
 * `socket-stream-client@0.3.3`
   - Update `faye-websocket` dependency to v0.11.4. 
+  
+* `jshint@1.1.8`
+  - The package has been deprecated.
 
 ## v2.2, 2021-04-15
 
