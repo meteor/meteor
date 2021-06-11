@@ -171,6 +171,9 @@
 
 * `url@1.3.2`
   - Updated `core-js` to v3.14.0
+  
+* `hot-module-replacement@0.2.1`
+  - Add missing dependency.
 
 ## v2.2, 2021-04-15
 
