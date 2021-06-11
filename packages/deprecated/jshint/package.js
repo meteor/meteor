@@ -1,8 +1,9 @@
 Package.describe({
   name: 'jshint',
-  version: '1.1.7',
+  version: '1.1.8',
   summary: 'Lint all your JavaScript files with JSHint.',
-  documentation: 'README.md'
+  documentation: 'README.md',
+  deprecated: true
 });
 
 Package.registerBuildPlugin({
