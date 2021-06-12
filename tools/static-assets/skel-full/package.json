@@ -6,7 +6,7 @@
     "test": "meteor test --once --driver-package meteortesting:mocha"
   },
   "dependencies": {
-    "@babel/runtime": "^7.13.17",
+    "@babel/runtime": "^7.14.0",
     "jquery": "^3.6.0",
     "meteor-node-stubs": "^1.0.3"
   },
