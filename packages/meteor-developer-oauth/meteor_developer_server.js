@@ -1,3 +1,6 @@
+import { URL } from 'meteor/url';
+import { fetch, Request, Headers } from 'meteor/fetch';
+
 OAuth.registerService("meteor-developer", 2, null, query => {
   const responseCall = Meteor.wrapAsync(getTokens);
   let response
@@ -66,16 +69,16 @@ const getTokens = async (query) => {
   };
   const url = new URL(MeteorDeveloperAccounts._server + "/oauth2/token")
   Object.keys(searchParams).forEach(key => {
-    url.searchParams.set(key, searchParams[key]);
+    url.searchParams.append(key, searchParams[key]);
   });
-  console.log(url.toString())
-  const request = await fetch(url.toString(), {
+  const request = new Request(url, {
     method: 'POST',
-    headers: { Accept: 'application/json' },
     redirect: 'follow',
-    mode: 'cors'
-  });
-  const data = await request.json();
+    mode: 'cors',
+    jar: false
+  })
+  const response = await fetch(request);
+  const data = await response.json();
 
   if (data.error || Object.keys(data) === 0) {
     // if the http response was a json object with an error attribute

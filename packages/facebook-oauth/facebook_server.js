@@ -77,8 +77,7 @@ const getTokenResponse = async (query) => {
     });
     const request = await fetch(
       `https://graph.facebook.com/v${API_VERSION}/oauth/access_token?${content.toString()}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' }
+        method: 'GET'
       });
     responseContent = await request.json();
   } catch (err) {

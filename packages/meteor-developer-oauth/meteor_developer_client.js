@@ -25,19 +25,19 @@ const requestCredential = (options, credentialRequestCompleteCallback) => {
   let loginUrl =
         MeteorDeveloperAccounts._server +
         "/oauth2/authorize?" +
-        `state=${OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl)}` +
+        `state=${OAuth._stateParam(loginStyle, credentialToken, options?.redirectUrl)}` +
         "&response_type=code&" +
-        `client_id=${config.clientId}${options && options.details ? `&details=${options && options.details}` : ''}`;
+        `client_id=${config.clientId}${options?.details ? `&details=${options?.details}` : ''}`;
 
   /**
    * @deprecated in 1.3.0
    */
-  if (options && options.userEmail && !options.loginHint) {
+  if (options?.userEmail && !options?.loginHint) {
     options.loginHint = options.userEmail;
     delete options.userEmail;
   }
 
-  if (options && options.loginHint) {
+  if (options?.loginHint) {
     loginUrl += `&user_email=${encodeURIComponent(options.loginHint)}`;
   }
 

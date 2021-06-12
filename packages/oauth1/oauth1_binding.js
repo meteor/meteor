@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import querystring from 'querystring';
-import { fetch, Headers } from 'meteor/fetch';
+import { fetch, Headers, Request } from 'meteor/fetch';
 import { URL } from 'meteor/url';
 
 // An OAuth1 wrapper around http calls which helps get tokens and
@@ -56,6 +56,7 @@ export class OAuth1Binding {
     });
 
     const response = this._call('POST', this._urls.accessToken, headers);
+    console.dir(response);
     const tokens = querystring.parse(response.content);
 
     if (! tokens.oauth_token || ! tokens.oauth_token_secret) {
@@ -92,7 +93,6 @@ export class OAuth1Binding {
 
   _buildHeader(headers) {
     return new Headers({
-      Accept: 'application/json',
       oauth_consumer_key: this._config.consumerKey,
       oauth_nonce: Random.secret().replace(/\W/g, ''),
       oauth_signature_method: 'HMAC-SHA1',
@@ -110,7 +110,7 @@ export class OAuth1Binding {
     const headers = this._encodeHeader({ ...headerData, ...params });
 
     const parameters = Object.keys(headers).map(key => `${key}=${headers[key]}`)
-      .sort().join('&');
+      .join('&');
 
     const signatureBase = [
       method,
@@ -128,20 +128,24 @@ export class OAuth1Binding {
   }
 
   async _callMethod(method, url, headers = new Headers(), params = {}) {
-    Log.info('_callMethod')
-    console.dir(headers)
-    // Make signed request
-    const response = await fetch(url.toString(), {
+    const request = new Request(url, {
       method,
       headers,
       redirect: 'follow',
-      mode: 'cors'
-    });
-    const data = await response.json();
-    Log.info('DATA')
-    console.dir(data)
-    // We store nonce so that JWTs can be validated
-    if (data) data.nonce = headers.get('oauth_nonce');
+      mode: 'cors',
+      jar: false
+    })
+    // Make signed request
+    const response = await fetch(request);
+    const data = {
+      headers: response.headers,
+      status: response.status,
+      statusText: response.statusText,
+      errors: response.errors,
+      // We store nonce so that JWTs can be validated
+      nonce: headers.get('oauth_nonce')
+    };
+    data.content = await response.text();
     return data;
   }
 
@@ -155,7 +159,6 @@ export class OAuth1Binding {
     // parse URL and add in params
     const parsedUrl = new URL(url);
     Object.keys(params).map(key => parsedUrl.searchParams.append(key, params[key]));
-    console.dir(parsedUrl.toString())
 
     // Get the signature
     headers.set('oauth_signature', this._getSignature(method, url, headers, this.accessTokenSecret, params));
@@ -166,7 +169,8 @@ export class OAuth1Binding {
     let data;
     let error = undefined;
     try {
-      data = callMethod(method, parsedUrl, headers, params);
+      console.log('TRY')
+      data = callMethod(method, parsedUrl, headers, params).resolve();
     } catch (err) {
       const errorMsg = `Failed to send OAuth1 request to ${url}. ${err.message}`;
       if (callback) error = errorMsg;
@@ -175,6 +179,8 @@ export class OAuth1Binding {
       if (data?.errors) error = `Failed to send OAuth1 request to ${url}. ${data.errors[0].message}`;
       if (callback) callback(error, data);
     }
+    console.log('AFTER')
+    console.dir(data)
     return data;
   }
 
