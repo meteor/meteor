@@ -9,8 +9,10 @@ Package.describe({
 Package.onUse(function (api) {
   api.use('modules');
   api.use('meteor');
+  api.use('hot-code-push', { unordered: true });
+
   api.use('dev-error-overlay', { weak: true });
-  api.imply('modules-runtime-hot@0.12.0');
+  api.imply('modules-runtime-hot@0.13.0');
   api.addFiles([
     './hot-api.js',
     './client.js'

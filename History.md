@@ -6,7 +6,7 @@
 
 * Typescript update to [4.3.2](https://devblogs.microsoft.com/typescript/announcing-typescript-4-3/)
 
-* Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details. 
+* Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details.
 
 ### Summary of breaking changes
 
@@ -14,14 +14,19 @@
   - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
   - We recommend that you read Node.js [release notes](https://nodejs.org/en/blog/release/v14.0.0/) though.
   
-- Accounts have undergone some major changes. See bellow for more details.
+- Accounts have undergone some major changes including major version bump. See bellow for more details.
 
 - All official packages that have been deprecated have now the deprecated flag and will inform you about that if you install or update them.
+
+- If you are working with enrollments in user accounts, do note that the enrollment token handling is now separate from reset password token. The token is now under `services.password.enroll`, so adjust your code accordingly if you use it.
 
 ### Migration steps
 
 - As Node.js version was upgraded we recommend that you remove your `node_modules` folder (`rm -rf node_modules`) and run `meteor reset` to be sure you compile all the binary dependencies again using the new Node.js version.
   - Maybe you also want to recreate your lock file.
+  
+- If you are maintaining a package that depends on one of the accounts packages which had a major version bump you will either need to set the new version manually or set `api.versionsFrom('2.3')`.
+  You can also have it reference its current version and 2.3 like this: `api.versionsFrom(['1.12', '2.3'])`, for specific package it can be like this: `api.use('accounts-base@1.0.1 || 2.0.0')`.
 
 #### Meteor Version Release
 
@@ -63,7 +68,7 @@
   - Removes LaunchScreen from web clients.
 
 * `meteor-babel@7.11.0 (@meteorjs/babel)`
-  - Fixes for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assingment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`.
+  - Fixes for Samsung Internet v6.2+ to be considered modern browser and addition of [logical assignment operators](https://github.com/tc39/proposal-logical-assignment) via `babel-presets-meteor`.
   - This package was renamed to `@meteorjs/babel`.
 
 * `hot-module-replacement@0.3.0` 
@@ -156,6 +161,24 @@
   
 * `socket-stream-client@0.3.3`
   - Update `faye-websocket` dependency to v0.11.4. 
+  
+* `jshint@1.1.8`
+  - The package has been deprecated.
+  
+* `npm-bcrypt@0.9.4`
+  - The package has been deprecated.
+  
+* `ecmascript-runtime-client@0.11.1`
+  - Updated `core-js` to v3.14.0
+
+* `ecmascript-runtime-server@0.11.1`
+  - Updated `core-js` to v3.14.0
+
+* `url@1.3.2`
+  - Updated `core-js` to v3.14.0
+  
+* `hot-module-replacement@0.2.1`
+  - Add missing dependency.
 
 ## v2.2, 2021-04-15
 

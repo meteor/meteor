@@ -44,7 +44,7 @@ if (module._onRequire) {
   });
 }
 
-let pendingReload = () => Reload._reload({ immediateMigration: true });
+let pendingReload = () => Package['reload'].Reload._reload({ immediateMigration: true });
 let mustReload = false;
 // Once an eager update fails, we stop processing future updates since they
 // might depend on the failed update. This gets reset when we re-try applying
