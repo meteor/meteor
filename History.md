@@ -19,6 +19,18 @@
   
 * `socket-stream-client@0.3.3`
   - Update `faye-websocket` dependency to v0.11.4. 
+  
+* `ecmascript-runtime-client@0.11.1`
+  - Updated `core-js` to v3.14.0
+
+* `ecmascript-runtime-server@0.11.1`
+  - Updated `core-js` to v3.14.0
+
+* `url@1.3.2`
+  - Updated `core-js` to v3.14.0
+  
+* `hot-module-replacement@0.2.1`
+  - Add missing dependency.
 
 ## v2.2, 2021-04-15
 
