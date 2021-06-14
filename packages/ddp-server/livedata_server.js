@@ -119,7 +119,7 @@ var SessionCollectionView = function (collectionName, sessionCallbacks) {
 DDPServer._SessionCollectionView = SessionCollectionView;
 
 
-_.extend(SessionCollectionView.prototype, {
+Object.assign(SessionCollectionView.prototype, {
 
   isEmpty: function () {
     var self = this;
@@ -241,6 +241,8 @@ var Session = function (server, version, socket, options) {
   self.blocked = false;
   self.workerRunning = false;
 
+  self.cachedUnblock = null;
+
   // Sub objects for active subscriptions
   self._namedSubs = new Map();
   self._universalSubs = [];
@@ -322,7 +324,7 @@ var Session = function (server, version, socket, options) {
     "livedata", "sessions", 1);
 };
 
-_.extend(Session.prototype, {
+Object.assign(Session.prototype, {
 
   sendReady: function (subscriptionIds) {
     var self = this;
@@ -567,8 +569,12 @@ _.extend(Session.prototype, {
   },
 
   protocol_handlers: {
-    sub: function (msg) {
+    sub: function (msg, unblock) {
       var self = this;
+
+      // cacheUnblock temporarly, so we can capture it later
+      // we will use unblock in current eventLoop, so this is safe
+      self.cachedUnblock = unblock;
 
       // reject malformed messages
       if (typeof (msg.id) !== "string" ||
@@ -624,6 +630,8 @@ _.extend(Session.prototype, {
 
       self._startSubscription(handler, msg.id, msg.params, msg.name);
 
+      // cleaning cached unblock
+      self.cachedUnblock = null;
     },
 
     unsub: function (msg) {
@@ -852,6 +860,13 @@ _.extend(Session.prototype, {
 
     var sub = new Subscription(
       self, handler, subId, params, name);
+
+    let unblockHander = self.cachedUnblock;
+    // _startSubscription may call from a lot places
+    // so cachedUnblock might be null in somecases
+    // assign the cachedUnblock
+    sub.unblock = unblockHander || (() => {});
+
     if (subId)
       self._namedSubs.set(subId, sub);
     else
@@ -1030,7 +1045,7 @@ var Subscription = function (
     "livedata", "subscriptions", 1);
 };
 
-_.extend(Subscription.prototype, {
+Object.assign(Subscription.prototype, {
   _runHandler: function () {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
@@ -1039,9 +1054,13 @@ _.extend(Subscription.prototype, {
     // methods waiting on data from Mongo (or whatever else the function
     // blocks on). This probably slows page load in common cases.
 
+    if (!this.unblock) {
+      this.unblock = () => {};
+    }
+
     var self = this;
     try {
-      var res = DDP._CurrentPublicationInvocation.withValue(
+      var resMaybePromise = DDP._CurrentPublicationInvocation.withValue(
         self,
         () => maybeAuditArgumentChecks(
           self._handler, self, EJSON.clone(self._params),
@@ -1060,7 +1079,14 @@ _.extend(Subscription.prototype, {
     if (self._isDeactivated())
       return;
 
-    self._publishHandlerResult(res);
+    //Both conventional and async publish handler functions are supported.
+    //If an object is returned with a then() function, it is either a promise or thenable
+    //and will be resolved asynchronously.
+    if (resMaybePromise && typeof resMaybePromise.then === "function") {
+      Promise.resolve(resMaybePromise).then(self._publishHandlerResult, e => self.error(e));
+    } else {
+      self._publishHandlerResult(resMaybePromise);
+    }
   },
 
   _publishHandlerResult: function (res) {
@@ -1419,7 +1445,7 @@ Server = function (options) {
   });
 };
 
-_.extend(Server.prototype, {
+Object.assign(Server.prototype, {
 
   /**
    * @summary Register a callback to be called when a new DDP connection is made to the server.

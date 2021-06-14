@@ -75,5 +75,5 @@ Error.METEOR_prepareStackTrace = Error.prepareStackTrace;
 push(sourceMapSupport.retrieveSourceMap);
 
 /* eslint-disable max-len */
-push(require('meteor-babel/register').retrieveSourceMap); // #RemoveInProd this line is removed in isopack.js
+push(require('@meteorjs/babel/register').retrieveSourceMap); // #RemoveInProd this line is removed in isopack.js
 /* eslint-enable max-len */

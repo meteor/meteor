@@ -43,27 +43,7 @@ Meteor.loginWithPassword = (selector, password, callback) => {
       password: Accounts._hashPassword(password)
     }],
     userCallback: (error, result) => {
-      if (error && error.error === 400 &&
-          error.reason === 'old password format') {
-        // The "reason" string should match the error thrown in the
-        // password login handler in password_server.js.
-
-        // XXX COMPAT WITH 0.8.1.3
-        // If this user's last login was with a previous version of
-        // Meteor that used SRP, then the server throws this error to
-        // indicate that we should try again. The error includes the
-        // user's SRP identity. We provide a value derived from the
-        // identity and the password to prove to the server that we know
-        // the password without requiring a full SRP flow, as well as
-        // SHA256(password), which the server bcrypts and stores in
-        // place of the old SRP information for this user.
-        srpUpgradePath({
-          upgradeError: error,
-          userSelector: selector,
-          plaintextPassword: password
-        }, callback);
-      }
-      else if (error) {
+      if (error) {
         reportError(error, callback);
       } else {
         callback && callback();
@@ -76,35 +56,6 @@ Accounts._hashPassword = password => ({
   digest: SHA256(password),
   algorithm: "sha-256"
 });
-
-
-// XXX COMPAT WITH 0.8.1.3
-// The server requested an upgrade from the old SRP password format,
-// so supply the needed SRP identity to login. Options:
-//   - upgradeError: the error object that the server returned to tell
-//     us to upgrade from SRP to bcrypt.
-//   - userSelector: selector to retrieve the user object
-//   - plaintextPassword: the password as a string
-const srpUpgradePath = (options, callback) => {
-  let details;
-  try {
-    details = EJSON.parse(options.upgradeError.details);
-  } catch (e) {}
-  if (!(details && details.format === 'srp')) {
-    reportError(
-      new Meteor.Error(400, "Password is old. Please reset your " +
-                       "password."), callback);
-  } else {
-    Accounts.callLoginMethod({
-      methodArguments: [{
-        user: options.userSelector,
-        srp: SHA256(`${details.identity}:${options.plaintextPassword}`),
-        password: Accounts._hashPassword(options.plaintextPassword)
-      }],
-      userCallback: callback
-    });
-  }
-};
 
 // Attempt to log in as a new user.
 
@@ -172,30 +123,10 @@ Accounts.changePassword = (oldPassword, newPassword, callback) => {
     [oldPassword ? Accounts._hashPassword(oldPassword) : null,
      Accounts._hashPassword(newPassword)],
     (error, result) => {
-      if (error || !result) {
-        if (error && error.error === 400 &&
-            error.reason === 'old password format') {
-          // XXX COMPAT WITH 0.8.1.3
-          // The server is telling us to upgrade from SRP to bcrypt, as
-          // in Meteor.loginWithPassword.
-          srpUpgradePath({
-            upgradeError: error,
-            userSelector: { id: Meteor.userId() },
-            plaintextPassword: oldPassword
-          }, err => {
-            if (err) {
-              reportError(err, callback);
-            } else {
-              // Now that we've successfully migrated from srp to
-              // bcrypt, try changing the password again.
-              Accounts.changePassword(oldPassword, newPassword, callback);
-            }
-          });
-        } else {
-          // A normal error, not an error telling us to upgrade to bcrypt
-          reportError(
-            error || new Error("No result from changePassword."), callback);
-        }
+    if (error || !result) {
+        // A normal error, not an error telling us to upgrade to bcrypt
+        reportError(
+          error || new Error("No result from changePassword."), callback);
       } else {
         callback && callback();
       }
