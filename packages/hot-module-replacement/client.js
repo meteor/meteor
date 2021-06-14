@@ -39,7 +39,7 @@ if (module._onRequire) {
   });
 }
 
-let pendingReload = () => Reload._reload({ immediateMigration: true });
+let pendingReload = () => Package['reload'].Reload._reload({ immediateMigration: true });
 let mustReload = false;
 
 function handleMessage(message) {
