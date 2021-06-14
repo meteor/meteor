@@ -18,6 +18,17 @@ function isArray(arr) {
   return arr instanceof Array || _.isArray(arr);
 }
 
+// isIterable returns trues for objects implementing iterable protocol,
+// except strings, as {{#each 'string'}} doesn't make much sense.
+// Requires ES6+ and does not work in IE (but degrades gracefully).
+// Does not support the `length` + index protocol also supported by Array.from
+function isIterable (object) {
+  const iter = typeof Symbol != 'undefined' && Symbol.iterator;
+  return iter
+    && object instanceof Object // note: returns false for strings
+    && typeof object[iter] == 'function'; // implements iterable protocol
+}
+
 var idStringify = MongoID.idStringify;
 var idParse = MongoID.idParse;
 
@@ -110,6 +121,9 @@ ObserveSequence = {
                 seqChangedToCursor(lastSeqArray, seq, callbacks);
           seqArray = result[0];
           activeObserveHandle = result[1];
+        } else if (isIterable(seq)) {
+          const array = Array.from(seq);
+          seqArray = seqChangedToArray(lastSeqArray, array, callbacks);
         } else {
           throw badSequenceError();
         }
@@ -139,6 +153,8 @@ ObserveSequence = {
       return seq;
     } else if (isStoreCursor(seq)) {
       return seq.fetch();
+    } else if (isIterable(seq)) {
+      return Array.from(seq);
     } else {
       throw badSequenceError();
     }
@@ -147,7 +163,7 @@ ObserveSequence = {
 
 var badSequenceError = function () {
   return new Error("{{#each}} currently only accepts " +
-                   "arrays, cursors or falsey values.");
+                   "arrays, cursors, iterables, or falsey values.");
 };
 
 var isStoreCursor = function (cursor) {
