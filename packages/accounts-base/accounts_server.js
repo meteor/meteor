@@ -188,13 +188,13 @@ export class AccountsServer extends AccountsCommon {
    * @summary Customize user selection on external logins
    * @locus Server
    * @param {Function} func Called whenever a user is logged in via oauth and a
-   * user is not found with the service id. Return the user or undefined. 
+   * user is not found with the service id. Return the user or undefined.
    */
    setAdditionalFindUserOnExternalLogin(func) {
-    if (this._setAdditionalFindUserOnExternalLogin) {
+    if (this._additionalFindUserOnExternalLogin) {
       throw new Error("Can only call setAdditionalFindUserOnExternalLogin once");
     }
-    this._setAdditionalFindUserOnExternalLogin = func;
+    this._additionalFindUserOnExternalLogin = func;
   }
 
   _validateLogin(connection, attempt) {
@@ -1216,8 +1216,8 @@ export class AccountsServer extends AccountsCommon {
 
     // Check to see if the developer has a custom way to find the user outside
     // of the general selectors above.
-    if (!user && this._setAdditionalFindUserOnExternalLogin) {
-      user = this._setAdditionalFindUserOnExternalLogin({serviceName, serviceData, options})
+    if (!user && this._additionalFindUserOnExternalLogin) {
+      user = this._additionalFindUserOnExternalLogin({serviceName, serviceData, options})
     }
 
     // Before continuing, run user hook to see if we should continue
@@ -1431,7 +1431,7 @@ const expirePasswordToken = (
   // check if this method was called from enroll account workflow
   if(tokenFilter['services.password.enroll.reason']) {
     isEnroll = true;
-  } 
+  }
   let resetRangeOr = {
     $or: [
       { "services.password.reset.when": { $lt: oldestValidDate } },
