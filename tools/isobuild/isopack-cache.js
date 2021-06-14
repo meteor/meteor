@@ -209,6 +209,7 @@ export class IsopackCache {
     };
 
     var packageInfo = self._packageMap.getInfo(name);
+
     if (! packageInfo) {
       throw Error("Depend on unknown package " + name + "?");
     }

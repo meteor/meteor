@@ -85,6 +85,8 @@ export class PackageAPI {
     // symbols exported
     this.exports = {};
 
+    this.sideEffects = true;
+
     // packages used and implied (keys are 'package', 'unordered', and
     // 'weak').  an "implied" package is a package that will be used by a unibuild
     // which uses us.
@@ -420,6 +422,10 @@ export class PackageAPI {
     this._addFiles("assets", paths, arch);
   }
 
+  setSideEffects(sideEffects){
+    this.sideEffects = sideEffects;
+  }
+
   /**
    * Internal method used by addFiles and addAssets.
    */
@@ -590,6 +596,10 @@ export class PackageAPI {
    */
   "export"(symbols, arch, options) {
     var self = this;
+    if(this.sideEffects === false) {
+      this.setSideEffects(true);
+      Object.defineProperty(this, "sideEffects", { configurable: false, writable: false });
+    }
 
     // Support `api.export("FooTest", {testOnly: true})` without
     // arch.

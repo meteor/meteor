@@ -581,7 +581,6 @@ _.extend(ProjectContext.prototype, {
         self.packageMap = new packageMapModule.PackageMap(solution.answer, {
           localCatalog: self.localCatalog
         });
-
         self.packageMapDelta = new packageMapModule.PackageMapDelta({
           cachedVersions: cachedVersions,
           packageMap: self.packageMap,

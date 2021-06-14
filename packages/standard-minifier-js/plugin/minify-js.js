@@ -1,4 +1,4 @@
-import { extractModuleSizesTree } from "./stats.js";
+import {extractModuleSizesTree} from "./stats.js";
 
 Plugin.registerMinifier({
   extensions: ['js'],
@@ -8,9 +8,10 @@ Plugin.registerMinifier({
   return minifier;
 });
 
-function MeteorBabelMinifier () {};
+function MeteorBabelMinifier() {
+};
 
-MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
+MeteorBabelMinifier.prototype.processFilesForBundle = function (files, options) {
   var mode = options.minifyMode;
 
   // don't minify anything for development
@@ -117,21 +118,22 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
 
   files.forEach(file => {
     // Don't reminify *.min.js.
-    if (/\.min\.js$/.test(file.getPathInBundle())) {
-      toBeAdded.data += file.getContentsAsString();
+    const content = file.getContentsAsString();
+    const filePath = file.getPathInBundle();
+    if (/\.min\.js$/.test(filePath)) {
+      toBeAdded.data += content;
     } else {
       var minified;
 
       try {
-        minified = meteorJsMinify(file.getContentsAsString());
+
+        minified = meteorJsMinify(content, options);
 
         if (!(minified && typeof minified.code === "string")) {
           throw new Error();
         }
 
       } catch (err) {
-        var filePath = file.getPathInBundle();
-
         maybeThrowMinifyErrorBySourceFile(err, file);
 
         err.message += " while minifying " + filePath;
@@ -140,10 +142,10 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
 
       const tree = extractModuleSizesTree(minified.code);
       if (tree) {
-        toBeAdded.stats[file.getPathInBundle()] =
+        toBeAdded.stats[filePath] =
           [Buffer.byteLength(minified.code), tree];
       } else {
-        toBeAdded.stats[file.getPathInBundle()] =
+        toBeAdded.stats[filePath] =
           Buffer.byteLength(minified.code);
       }
 

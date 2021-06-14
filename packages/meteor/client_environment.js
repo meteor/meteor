@@ -53,7 +53,8 @@ Meteor = {
    * @static
    * @type {Boolean}
    */
-  isModern: config.isModern
+  isModern: config.isModern,
+  ...config.GLOBAL_DEFINITIONS
 };
 
 if (config.gitCommitHash) {
