@@ -1046,7 +1046,7 @@ var Subscription = function (
 };
 
 Object.assign(Subscription.prototype, {
-  _runHandler: function () {
+  _runHandler: function() {
     // XXX should we unblock() here? Either before running the publish
     // function, or before running _publishCursor.
     //
@@ -1058,12 +1058,14 @@ Object.assign(Subscription.prototype, {
       this.unblock = () => {};
     }
 
-    var self = this;
+    const self = this;
+    let resultOrThenable = null;
     try {
-      var resMaybePromise = DDP._CurrentPublicationInvocation.withValue(
-        self,
-        () => maybeAuditArgumentChecks(
-          self._handler, self, EJSON.clone(self._params),
+      resultOrThenable = DDP._CurrentPublicationInvocation.withValue(self, () =>
+        maybeAuditArgumentChecks(
+          self._handler,
+          self,
+          EJSON.clone(self._params),
           // It's OK that this would look weird for universal subscriptions,
           // because they have no arguments so there can never be an
           // audit-argument-checks failure.
@@ -1076,16 +1078,20 @@ Object.assign(Subscription.prototype, {
     }
 
     // Did the handler call this.error or this.stop?
-    if (self._isDeactivated())
-      return;
+    if (self._isDeactivated()) return;
 
-    //Both conventional and async publish handler functions are supported.
-    //If an object is returned with a then() function, it is either a promise or thenable
-    //and will be resolved asynchronously.
-    if (resMaybePromise && typeof resMaybePromise.then === "function") {
-      Promise.resolve(resMaybePromise).then(self._publishHandlerResult, e => self.error(e));
+    // Both conventional and async publish handler functions are supported.
+    // If an object is returned with a then() function, it is either a promise
+    // or thenable and will be resolved asynchronously.
+    const isThenable =
+      resultOrThenable && typeof resultOrThenable.then === 'function';
+    if (isThenable) {
+      Promise.resolve(resultOrThenable).then(
+        (...args) => self._publishHandlerResult.bind(self)(...args),
+        e => self.error(e)
+      );
     } else {
-      self._publishHandlerResult(resMaybePromise);
+      self._publishHandlerResult(resultOrThenable);
     }
   },
 
