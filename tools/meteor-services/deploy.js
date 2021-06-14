@@ -401,9 +401,7 @@ class PollingState {
 async function pollForDeploy(pollingState, versionId, site) {
   const {
     deadline,
-    initialWaitTimeMs,
     pollIntervalMs,
-    start,
     currentMessage,
   } = pollingState;
 
@@ -486,7 +484,7 @@ export async function bundleAndDeploy(options) {
   let preflightPassword = null;
 
   if (options.isBuildOnly) {
-    Console.info('Skipping pre authentication as the option --build-only was informed.');
+    Console.info('Skipping pre authentication as the option --build-only was provded.');
   } else {
     site = options.site && canonicalizeSite(options.site)
     if (! site) {
