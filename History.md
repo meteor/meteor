@@ -63,6 +63,7 @@
   - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
   - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`.
   - Skeletons dependencies updated to latest version
+  - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-only)
   
 * `launch-screen@1.3.0`
   - Removes LaunchScreen from web clients.
@@ -498,7 +499,7 @@ N/A
 
 * `meteor create --vue` is now available thanks to [@chris-visser](https://github.com/chris-visser). PR [#11086](https://github.com/meteor/meteor/pull/11086)
 
-* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://galaxy-guide.meteor.com/deploy-guide.html#cache-build).
+* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-build).
 
 * Multiple optimizations in build performance, many of them for Windows thanks to [@zodern](https://github.com/zodern). PRs [#10838](https://github.com/meteor/meteor/pull/10838), [#11114](https://github.com/meteor/meteor/pull/11114), [#11115](https://github.com/meteor/meteor/pull/11115), [#11102](https://github.com/meteor/meteor/pull/11102), [#10839](https://github.com/meteor/meteor/pull/10839)
 
