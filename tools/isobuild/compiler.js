@@ -558,13 +558,12 @@ api.addAssets('${relPath}', 'client').`);
     const hash = optimisticHashOrNull(absPath);
     const file = { contents, hash };
 
-    if (fileOptions && ! fileOptions.lazy) {
-      watchSet.addFile(absPath, hash);
-    } else {
-      // Lazy files might not ultimately be used by the current unibuild/bundle,
-      // so we add them to the watchSet using a provisional status that may be
-      // updated later, at the end of PackageSourceBatch.computeJsOutputFilesMap.
+    // When files are handled by a new-style compiler plugin, the SourceResource
+    // class tracks if each file is actually used.
+    if (classification.isNonLegacySource()) {
       watchSet.addPotentiallyUnusedFile(absPath, hash);
+    } else {
+      watchSet.addFile(absPath, hash);
     }
 
     Console.nudge(true);
@@ -598,16 +597,14 @@ api.addAssets('${relPath}', 'client').`);
     if (classification.isNonLegacySource()) {
       // This is source used by a new-style compiler plugin; it will be fully
       // processed later in the bundler.
-      resources.push({
-        type: "source",
-        extension: classification.extension || null,
-        usesDefaultSourceProcessor:
-          !! classification.usesDefaultSourceProcessor,
+      resources.push(new SourceResource({
+        extension: classification.extension,
+        usesDefaultSourceProcessor: !!classification.usesDefaultSourceProcessor,
         data: contents,
         path: relPath,
-        hash: hash,
-        fileOptions: fileOptions
-      });
+        hash,
+        fileOptions
+      }));
       return;
     }
 
@@ -998,3 +995,33 @@ compiler.eachUsedUnibuild = function (
 export function isIsobuildFeaturePackage(packageName) {
   return packageName.startsWith('isobuild:');
 }
+
+class SourceResource {
+  type = "source";
+
+  constructor({ extension, usesDefaultSourceProcessor, data, path, hash, fileOptions }) {
+    this.type = "source";
+    this.extension = extension || null;
+    this.usesDefaultSourceProcessor = usesDefaultSourceProcessor;
+    this.path = path;
+    this.fileOptions = fileOptions;
+
+    // Is set to true if the resource's hash or data is accessed, which can be
+    // used to track if the file's content was used during the build process
+    this._dataUsed = false;
+    this._hash = hash;
+    this._data = data;
+  }
+
+  get hash () {
+    this._dataUsed = true;
+    return this._hash;
+  }
+
+  get data () {
+    this._dataUsed = true;
+    return this._data;
+  }
+}
+
+exports.SourceResource = SourceResource;

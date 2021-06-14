@@ -5,6 +5,7 @@ import files from "../fs/files";
 import { WatchSet, sha1 } from "../fs/watch";
 import { NodeModulesDirectory } from "./bundler.js";
 import * as archinfo from "../utils/archinfo";
+import { SourceResource } from './compiler';
 
 function rejectBadPath(p) {
   if (p.indexOf("..") >= 0) {
@@ -164,8 +165,7 @@ export class Unibuild {
         resources.push(prelinkResource);
 
       } else if (resource.type === "source") {
-        resources.push({
-          type: "source",
+        resources.push(new SourceResource({
           extension: resource.extension,
           usesDefaultSourceProcessor:
           !! resource.usesDefaultSourceProcessor,
@@ -173,8 +173,7 @@ export class Unibuild {
           path: resource.path,
           hash: resource.hash,
           fileOptions: resource.fileOptions
-        });
-
+        }));
       } else if (_.contains(["head", "body", "css", "js", "asset"],
                             resource.type)) {
         resources.push({
@@ -321,13 +320,20 @@ export class Unibuild {
         return;
       }
 
+      let data;
+      if (resource.type === 'source') {
+        data = resource.legacyPrelink ? resource.data : resource._data;
+      } else {
+        data = resource.data;
+      }
+
       const generatedFilename =
         builder.writeToGeneratedFilename(
           files.pathJoin(
             unibuildDir,
             resource.servePath || resource.path,
           ),
-          { data: resource.data }
+          { data }
         );
 
       if (! usesModules &&
@@ -342,13 +348,13 @@ export class Unibuild {
         type: resource.type,
         extension: resource.extension,
         file: generatedFilename,
-        length: resource.data.length,
+        length: data.length,
         offset: 0,
         usesDefaultSourceProcessor:
           resource.usesDefaultSourceProcessor || undefined,
         servePath: resource.servePath || undefined,
         path: resource.path || undefined,
-        hash: resource.hash || undefined,
+        hash: resource._hash || resource.hash || undefined,
         fileOptions: resource.fileOptions || undefined
       });
     });
