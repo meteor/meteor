@@ -669,6 +669,38 @@ Tinytest.add(
     }
 );
 
+Tinytest.add(
+  'accounts - verify setAdditionalFindUserOnExternalLogin hook can provide user',
+  test => {
+      // create test user, without a google service
+      const testEmail = "test@testdomain.com"
+      const uid0 = Accounts.createUser({email: testEmail})
+      
+      // Verify that user is found from email and service merged
+      Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
+        if (serviceName === "google") {
+          return Accounts.findUserByEmail(serviceData.email)
+        }
+      })
+      
+      let googleId = Random.id();
+      const uid1 = Accounts.updateOrCreateUserFromExternalService(
+          'google',
+          { id: googleId, email: testEmail },
+          { profile: { foo: 1 } },
+      ).userId;
+
+      test.equal(uid0, uid1)
+
+      // Cleanup
+      if (uid1 !== uid0) {
+        Meteor.users.remove(uid0)
+      }
+      Meteor.users.remove(uid1);
+      Accounts.selectCustomUserOnExternalLogin = null;
+  }
+);
+
 if(Meteor.isServer) {
   Tinytest.add(
     'accounts - make sure that extra params to accounts urls are added',
