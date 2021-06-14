@@ -4,7 +4,6 @@ var files = require('../fs/files');
 var deploy = require('../meteor-services/deploy.js');
 var buildmessage = require('../utils/buildmessage.js');
 var auth = require('../meteor-services/auth.js');
-var authClient = require('../meteor-services/auth-client.js');
 var config = require('../meteor-services/config.js');
 var runLog = require('../runners/run-log.js');
 var utils = require('../utils/utils.js');
@@ -1448,7 +1447,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'deploy',
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: 1,
   options: {
     'delete': { type: Boolean, short: 'D' },
@@ -1465,7 +1464,12 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean },
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
+    // Useful to cache the build between deploys, in some cases people deploy
+    // the same build to different hostnames
     'cache-build': { type: Boolean },
+    // Useful when you want to build first to have a cache-build and then deploy
+    // many apps
+    'build-only': { type: Boolean },
     free: { type: Boolean },
     plan: { type: String },
     mongo: { type: Boolean }
@@ -1483,7 +1487,7 @@ main.registerCommand({
 });
 
 function deployCommand(options, { rawOptions }) {
-  var site = options.args[0];
+  const site = options.args[0];
 
   if (options.delete) {
     return deploy.deleteApp(site);
@@ -1498,7 +1502,7 @@ function deployCommand(options, { rawOptions }) {
     return 1;
   }
 
-  var loggedIn = auth.isLoggedIn();
+  const loggedIn = auth.isLoggedIn();
   if (! loggedIn) {
     Console.error(
       "You must be logged in to deploy, just enter your email address.");
@@ -1509,7 +1513,7 @@ function deployCommand(options, { rawOptions }) {
   }
 
   // Override architecture iff applicable.
-  var buildArch = DEPLOY_ARCH;
+  let buildArch = DEPLOY_ARCH;
   if (options['override-architecture-with-local']) {
     Console.warn();
     Console.labelWarn(
@@ -1519,7 +1523,7 @@ function deployCommand(options, { rawOptions }) {
     buildArch = archinfo.host();
   }
 
-  var projectContext = new projectContextModule.ProjectContext({
+  const projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     serverArchitectures: _.uniq([buildArch, archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
@@ -1531,7 +1535,7 @@ function deployCommand(options, { rawOptions }) {
   });
   projectContext.packageMapDelta.displayOnConsole();
 
-  var buildOptions = {
+  const buildOptions = {
     minifyMode: options.debug ? 'development' : 'production',
     buildMode: options.debug ? 'development' : 'production',
     serverArch: buildArch
@@ -1547,11 +1551,12 @@ function deployCommand(options, { rawOptions }) {
   }
 
   const isCacheBuildEnabled = !!options['cache-build'];
+  const isBuildOnly = !!options['build-only'];
   const waitForDeploy = !options['no-wait'];
 
-  var deployResult = deploy.bundleAndDeploy({
-    projectContext: projectContext,
-    site: site,
+  const deployResult = deploy.bundleAndDeploy({
+    projectContext,
+    site,
     settingsFile: options.settings,
     free: options.free,
     mongo: options.mongo,
@@ -1561,6 +1566,7 @@ function deployCommand(options, { rawOptions }) {
     deployPollingTimeoutMs,
     waitForDeploy,
     isCacheBuildEnabled,
+    isBuildOnly,
   });
 
   if (deployResult === 0) {
