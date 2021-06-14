@@ -123,6 +123,10 @@ const getTokens = async (query) => {
   const request = await fetch(
     "https://accounts.google.com/o/oauth2/token", {
       method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
       body: content,
     });
   const response = await request.json();
@@ -161,7 +165,8 @@ const getScopes = async (accessToken) => {
   const request = await fetch(
     `https://www.googleapis.com/oauth2/v1/tokeninfo?${content.toString()}`,
     {
-      method: 'GET'
+      method: 'GET',
+      headers: { Accept: 'application/json' }
     });
   const response = await request.json();
   return response.scope.split(' ');

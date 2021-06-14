@@ -77,7 +77,10 @@ const getTokenResponse = async (query) => {
     });
     const request = await fetch(
       `https://graph.facebook.com/v${API_VERSION}/oauth/access_token?${content.toString()}`, {
-        method: 'GET'
+        method: 'GET',
+        headers: {
+          Accept: 'application/json'
+        },
       });
     responseContent = await request.json();
   } catch (err) {
@@ -118,7 +121,9 @@ const getIdentity = async (accessToken, fields) => {
     })
     const request = await fetch(`https://graph.facebook.com/v${API_VERSION}/me?${content.toString()}`, {
       method: 'GET',
-      headers: { Accept: 'application/json' }
+      headers: {
+        Accept: 'application/json'
+      },
     });
     const response = await request.json();
     return response;

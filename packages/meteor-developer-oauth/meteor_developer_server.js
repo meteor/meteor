@@ -73,6 +73,10 @@ const getTokens = async (query) => {
   });
   const request = new Request(url, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    },
+    body: searchParams,
     redirect: 'follow',
     mode: 'cors',
     jar: false
