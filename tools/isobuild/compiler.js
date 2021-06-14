@@ -996,7 +996,7 @@ export function isIsobuildFeaturePackage(packageName) {
   return packageName.startsWith('isobuild:');
 }
 
-export class SourceResource {
+class SourceResource {
   type = "source";
 
   constructor({ extension, usesDefaultSourceProcessor, data, path, hash, fileOptions }) {
@@ -1023,3 +1023,5 @@ export class SourceResource {
     return this._data;
   }
 }
+
+exports.SourceResource = SourceResource;
