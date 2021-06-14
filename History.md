@@ -89,6 +89,7 @@
 
 * `accounts-base@2.0.0`
   - Deprecated backward compatibility function `logoutOtherClients` has been removed
+  - New hook `setAdditionalFindUserOnExternalLogin` has been added which allows you to customize user selection on external logins if you want to, for example, login a user who has the same e-mail as the external account.
   
 * `accounts-password@2.0.0`
   - Deprecated backward compatibility functionality for `SRP` passwords from pre-Meteor 1.0 days
