@@ -107,7 +107,7 @@ export class AccountsServer extends AccountsCommon {
   // @override of "abstract" non-implementation in accounts_common.js
   userId() {
     // This function only works if called inside a method or a pubication.
-    // Using any of the infomation from Meteor.user() in a method or
+    // Using any of the information from Meteor.user() in a method or
     // publish function will always use the value from when the function first
     // runs. This is likely not what the user expects. The way to make this work
     // in a method or publish function is to do Meteor.find(this.userId).observe
@@ -182,6 +182,19 @@ export class AccountsServer extends AccountsCommon {
     }
 
     this._onExternalLoginHook = func;
+  }
+
+  /**
+   * @summary Customize user selection on external logins
+   * @locus Server
+   * @param {Function} func Called whenever a user is logged in via oauth and a
+   * user is not found with the service id. Return the user or undefined. 
+   */
+   setAdditionalFindUserOnExternalLogin(func) {
+    if (this._setAdditionalFindUserOnExternalLogin) {
+      throw new Error("Can only call setAdditionalFindUserOnExternalLogin once");
+    }
+    this._setAdditionalFindUserOnExternalLogin = func;
   }
 
   _validateLogin(connection, attempt) {
@@ -348,7 +361,7 @@ export class AccountsServer extends AccountsCommon {
     if (!result)
       throw new Error("result is required");
 
-    // XXX A programming error in a login handler can lead to this occuring, and
+    // XXX A programming error in a login handler can lead to this occurring, and
     // then we don't call onLogin or onLoginFailure callbacks. Should
     // tryLoginMethod catch this case and turn it into an error?
     if (!result.userId && !result.error)
@@ -721,7 +734,7 @@ export class AccountsServer extends AccountsCommon {
     this._server.publish("meteor.loginServiceConfiguration", () => {
       const { ServiceConfiguration } = Package['service-configuration'];
       return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
-    }, {is_auto: true}); // not techincally autopublish, but stops the warning.
+    }, {is_auto: true}); // not technically autopublish, but stops the warning.
 
     // Use Meteor.startup to give other packages a chance to call
     // setDefaultPublishFields.
@@ -1255,6 +1268,12 @@ export class AccountsServer extends AccountsCommon {
     }
 
     let user = this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
+
+    // Check to see if the developer has a custom way to find the user outside
+    // of the general selectors above.
+    if (!user && this._setAdditionalFindUserOnExternalLogin) {
+      user = this._setAdditionalFindUserOnExternalLogin({serviceName, serviceData, options})
+    }
 
     // Before continuing, run user hook to see if we should continue
     if (this._beforeExternalLoginHook && !this._beforeExternalLoginHook(serviceName, serviceData, user)) {

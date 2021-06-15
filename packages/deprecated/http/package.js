@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.4.3'
+  version: '1.4.4',
+  deprecated: 'Please use fetch'
 });
 
 Npm.depends({
@@ -14,8 +15,7 @@ Package.onUse(function (api) {
     // This package intentionally does not depend on ecmascript, so that
     // ecmascript and its dependencies can depend on http without creating
     // package dependency cycles.
-    'modules',
-    'logging' // For deprecation message
+    'modules'
   ]);
 
   api.mainModule('httpcall_client.js', 'client');
