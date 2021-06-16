@@ -22,7 +22,7 @@
 
 ### Migration steps
 
-- As Node.js version was upgraded we recommend that you remove your `node_modules` folder (`rm -rf node_modules`) and run `meteor reset` to be sure you compile all the binary dependencies again using the new Node.js version.
+- As Node.js version was upgraded we recommend that you remove your `node_modules` folder (`rm -rf node_modules`) and run `meteor npm i` to be sure you compile all the binary dependencies again using the new Node.js version.
   - Maybe you also want to recreate your lock file.
   
 - If you are maintaining a package that depends on one of the accounts packages which had a major version bump you will either need to set the new version manually or set `api.versionsFrom('2.3')`.
