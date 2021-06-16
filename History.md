@@ -27,6 +27,8 @@
   
 - If you are maintaining a package that depends on one of the accounts packages which had a major version bump you will either need to set the new version manually or set `api.versionsFrom('2.3')`.
   You can also have it reference its current version and 2.3 like this: `api.versionsFrom(['1.12', '2.3'])`, for specific package it can be like this: `api.use('accounts-base@1.0.1 || 2.0.0')`.
+  
+- Old API for packages definitions has been removed. The old underscore method names (e.g. `api.add_files()`) will no longer, please use the camel case method names (e.g. `api.addFiles()`).
 
 #### Meteor Version Release
 
@@ -104,7 +106,7 @@
   - Added support for this.unblock() in Meteor.publish() context
   - Add support in `Meteor.publish()` for async functions
 
-* `meteor-base@2.0.0`
+* `meteor-base@1.5.0`
   - Removed `livedata` dependency which was there for packages build for 0.9.0
   
 * `minimongo@1.7.0`
