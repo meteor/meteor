@@ -304,6 +304,11 @@ Example:
 // creating a new user.
 Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
   if (serviceName === "google") {
+     // Note: Consider security implications. If someone other than the owner
+     // gains access to the account on the third-party service they could use
+     // the e-mail set there to access the account on your app.
+     // Most often this is not an issue, but as a developer you should be aware
+     // of how bad actors could play.
     return Accounts.findUserByEmail(serviceData.email)
   }
 })
