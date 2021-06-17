@@ -152,3 +152,66 @@ onPageLoad(sink => {
   sink.renderIntoElementById("app", htmlStream);
 });
 ```
+
+### Getting data from the request
+
+In some cases you want to customize meta tags or something else in your response based in the requested URL, for example, if this is a page with a specific product if you may to include a picture and a description for [social previews](https://www.contentkingapp.com/academy/open-graph/).
+
+You can extract information from the request using the sink about.
+
+See one example:
+
+```js
+import React from "react";
+import { onPageLoad } from "meteor/server-render";
+import { renderToNodeStream } from "react-dom/server";
+import { ServerStyleSheet } from "styled-components"
+import App from "/imports/Server";
+
+const getBaseUrlFromHeaders = headers => {
+  const protocol = headers['x-forwarded-proto'];
+  const { host } = headers;
+  // we need to have '//' to findOneByHost work as expected
+  return `${protocol ? `${protocol}:` : ''}//${host}`;
+};
+
+const getContext = sink => {
+  // more details about this implementation here
+  // https://github.com/meteor/meteor/issues/9765
+  const { headers, url, browser } = sink.request;
+  // no useful data will be found for galaxybot requests
+  if (browser && browser.name === 'galaxybot') {
+    return null;
+  }
+  
+  // when we are running inside cordova we don't want to resolve meta tags
+  if (url && url.pathname && url.pathname.includes('cordova/')) {
+    return null;
+  }
+  
+  const baseUrl = getBaseUrlFromHeaders(headers);
+  const fullUrl = `${baseUrl}${url.pathname || ''}`;
+  
+  return { baseUrl, fullUrl };
+}
+
+onPageLoad(sink => {
+  const { baseUrl, fullUrl } = getContext(sink);
+  
+  // product URL contains /product on it
+  const urlParseArray = url.split('/');
+  
+  const productPosition = urlParseArray.indexOf('product');
+  const productId = productPosition !== -1 && urlParseArray[productPosition + 1].replace('?', '');
+  const product = productId && ProductsCollection.findOne(productId);
+  
+  const productTitle = product && `Buy now ${product.name}, ${product.price}`;
+  if (productTitle) {
+    sink.appendToHead(`<title>${productTitle}</title>\n`);
+    sink.appendToHead(`<meta property="og:title" content="${productTitle}">\n`);
+    if (product.imageUrl) {
+      sink.appendToHead(`<meta property="og:image" content="${product.imageUrl}">\n`);
+    }
+  }
+});
+```
