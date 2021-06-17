@@ -197,7 +197,7 @@ onPageLoad(sink => {
   const { baseUrl, fullUrl } = getContext(sink);
   
   // product URL contains /product on it
-  const urlParseArray = url.split('/');
+  const urlParseArray = fullUrl.split('/');
   
   const productPosition = urlParseArray.indexOf('product');
   const productId = productPosition !== -1 && urlParseArray[productPosition + 1].replace('?', '');
