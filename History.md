@@ -78,7 +78,7 @@
 #### Meteor Version Release
 
 * `meteor-tool@2.3`
-  - Node.js update to 14.17.0 from 12.22.1 🎉
+  - Node.js update to 14.17.1 from 12.22.1 🎉
     - This is a major upgrade in Node.js. See the [release notes](https://nodejs.org/en/blog/release/v14.0.0/) for more details.
   - `npm` update to 6.14.13.
   - `fibers` has been updated to v5.0.0.
@@ -136,7 +136,7 @@
   - Add support in `Meteor.publish()` for async functions
   
 * `webapp@1.11.0`
-  - Webapp will respond appropriately to unsupported requests instead of sending content. See [PR](https://github.com/meteor/meteor/pull/11224) for more details.
+  - Webapp will respond appropriately to unsupported requests instead of sending content, including handling for new HTTP verbs. See [PR](https://github.com/meteor/meteor/pull/11224) for more details.
 
 #### Independent Releases
 
