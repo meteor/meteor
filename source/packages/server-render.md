@@ -7,7 +7,7 @@ This package implements generic support for server-side rendering in
 Meteor apps, by providing a mechanism for injecting fragments of HTML into
 the `<head>` and/or `<body>` of the application's initial HTML response.
 
-### Usage
+## Usage
 
 This package exports a function named `onPageLoad` which takes a callback
 function that will be called at page load (on the client) or whenever a
@@ -128,7 +128,7 @@ generated during rendering to the `<head>` of the response document.
 Although these examples have all involved React, the `onPageLoad` API is
 designed to be generically useful for any kind of server-side rendering.
 
-### Streaming HTML
+## Streaming HTML
 
 React 16 introduced [`renderToNodeStream`](https://reactjs.org/docs/react-dom-server.html#rendertonodestream), which enables the reading of rendered HTML in chunks. This reduces the [TTFB](https://en.wikipedia.org/wiki/Time_to_first_byte) (time to first byte).
 
@@ -153,7 +153,7 @@ onPageLoad(sink => {
 });
 ```
 
-### Getting data from the request
+## Getting data from the request
 
 In some cases you want to customize meta tags or something else in your response based in the requested URL, for example, if this is a page with a specific product if you may to include a picture and a description for [social previews](https://www.contentkingapp.com/academy/open-graph/).
 
