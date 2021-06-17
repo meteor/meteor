@@ -155,7 +155,7 @@ onPageLoad(sink => {
 
 ## Getting data from the request
 
-In some cases you want to customize meta tags or something else in your response based in the requested URL, for example, if this is a page with a specific product if you may to include a picture and a description for [social previews](https://www.contentkingapp.com/academy/open-graph/).
+In some cases you want to customize meta tags or something else in your response based in the requested URL, for example, if your are loading a page with a specific product in your app maybe you want to include an image and a description for [social previews](https://www.contentkingapp.com/academy/open-graph/).
 
 You can extract information from the request using the `sink` object.
 
