@@ -10,6 +10,7 @@ After reading this guide, you'll know:
 2. How to secure Meteor Methods, publications, and source code.
 3. Where to store secret keys in development and production.
 4. How to follow a security checklist when auditing your app.
+5. How App Protection works in Galaxy Hosting.
 
 <h1 id="introduction">Introduction</h1>
 
@@ -694,3 +695,12 @@ This is a collection of points to check about your app that might catch common e
 1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's a nice UX feature.
 1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.
 1. Set up secure [HTTP headers](https://guide.meteor.com/security.html#httpheaders) using [Helmet](https://www.npmjs.com/package/helmet), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.
+
+<h2 id="appProtection">App Protection</h2>
+App Protection on Galaxy Hosting is a feature in our proxy server layer that sits in front of every request to your application. This means that all requests across servers are analyzed and measured against expected limits. This will help protect against DoS and DDoS attacks that aimed to overload servers and make your app unavailable for legitimate requests.
+
+If a type of request is classified as abusive (we’re not going to go into the specifics as to how we determine this), we will stop sending these requests to your app, and we start to return HTTP 429 (Too Many Requests).*
+
+Although not all attacks are preventable, our App Protection functionality, along with standard AWS protection in front of our servers, will provide a greater level of security for all applications deployed to Galaxy moving forward.
+
+For additional security, it is best to configure your app to limit the messages received via WebSockets, as our proxy servers are only acting in the first connection and not in the WebSocket messages after the connection is established. Meteor has the DDP Rate Limiter configuration already available, find out more [here](https://docs.meteor.com/api/methods.html#ddpratelimiter).
