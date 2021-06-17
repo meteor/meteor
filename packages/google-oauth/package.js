@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: "1.4.0-rc230.0",
+  version: "1.4.0-rc230.1",
 });
 
 Cordova.depends({

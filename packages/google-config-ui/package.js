@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Blaze configuration templates for Google OAuth.",
-  version: "1.0.2-rc230.0",
+  version: "1.0.2-rc230.1",
 });
 
 Package.onUse(api => {
