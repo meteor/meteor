@@ -643,7 +643,7 @@ function runWebAppServer() {
   };
 
   WebAppInternals.reloadClientPrograms = function () {
-    syncQueue.runTask(function() {
+    // syncQueue.runTask(function() {
       const staticFilesByArch = Object.create(null);
 
       const { configJson } = __meteor_bootstrap__;
@@ -659,7 +659,7 @@ function runWebAppServer() {
         Log.error("Error reloading the client program: " + e.stack);
         process.exit(1);
       }
-    });
+    // });
   };
 
   // Pause any incoming requests and make them wait for the program to be
@@ -854,10 +854,10 @@ function runWebAppServer() {
     // Meteor/Cordova for the Hot-Code Push and since the file will be served by
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
-    syncQueue.runTask(function() {
+    // syncQueue.runTask(function() {
       Object.keys(WebApp.clientPrograms)
         .forEach(generateBoilerplateForArch);
-    });
+    // });
   };
 
   function generateBoilerplateForArch(arch) {

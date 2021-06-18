@@ -80,9 +80,9 @@ EVp.withValue = function (value, func) {
 // callback, and when an exception is raised a debug message will be
 // printed with the description.
 Meteor.bindEnvironment = function (func, onException, _this) {
-  Meteor._nodeCodeMustBeInFiber();
+  // Meteor._nodeCodeMustBeInFiber();
 
-  var dynamics = Fiber.current._meteor_dynamics;
+  var dynamics = Fiber.current?._meteor_dynamics;
   var boundValues = dynamics ? dynamics.slice() : [];
 
   if (!onException || typeof(onException) === 'string') {
@@ -101,11 +101,13 @@ Meteor.bindEnvironment = function (func, onException, _this) {
     var args = Array.prototype.slice.call(arguments);
 
     var runWithEnvironment = function () {
-      var savedValues = Fiber.current._meteor_dynamics;
+      var savedValues = Fiber.current?._meteor_dynamics;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
-        Fiber.current._meteor_dynamics = boundValues.slice();
+        if(Fiber.current) {
+          Fiber.current._meteor_dynamics = boundValues.slice();
+        }
         var ret = func.apply(_this, args);
       } catch (e) {
         // note: callback-hook currently relies on the fact that if onException
@@ -113,7 +115,9 @@ Meteor.bindEnvironment = function (func, onException, _this) {
         // within a Fiber, the wrapped call throws.
         onException(e);
       } finally {
+        if(Fiber.current) {
         Fiber.current._meteor_dynamics = savedValues;
+        }
       }
       return ret;
     };

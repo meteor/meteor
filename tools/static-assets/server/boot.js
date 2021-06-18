@@ -477,10 +477,6 @@ var runMain = Profile("Run main()", function () {
   }
 });
 
-Fiber(function () {
-  Profile.run("Server startup", function () {
     loadServerBundles();
     callStartupHooks();
     runMain();
-  });
-}).run();
