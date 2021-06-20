@@ -162,13 +162,13 @@ Cordova will detect an Android SDK installed in various standard locations autom
 
 <h5>Mac</h5>
 
-- Set the `ANDROID_HOME` environment variable to the location of the Android SDK. If you've used the Android Studio setup wizard, it should be installed in `~/Library/<username>/Android/sdk` by default.
+- Set the `ANDROID_HOME` environment variable to the location of the Android SDK. If you've used the Android Studio setup wizard, it should be installed in `~/Library/Android/sdk` by default.
 - Add `$ANDROID_HOME/tools`, and `$ANDROID_HOME/platform-tools` to your `PATH`
 
 You can do this by adding these lines to your `~/.bash_profile` file (or the equivalent file for your shell environment, like `~/.zshrc`):
 ```
 # Android
-export ANDROID_HOME="$HOME/Library/<username>/Android/sdk"
+export ANDROID_HOME="$HOME/Library/Android/sdk"
 export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
 ```
 
