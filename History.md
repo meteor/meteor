@@ -28,6 +28,16 @@
 
 * `url@1.3.2`
   - Updated `core-js` to v3.14.0
+  
+* `hot-module-replacement@0.2.1`
+  - Add missing dependency.
+  
+* `observe-sequence@1.0.17`
+  - Updated dependencies
+
+* `observe-sequence@1.0.18`
+  - When `#each` argument is unsupported it will be shown
+  - Moving package under Blaze repository
 
 ## v2.2, 2021-04-15
 

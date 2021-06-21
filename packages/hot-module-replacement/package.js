@@ -1,6 +1,6 @@
 Package.describe({
   name: 'hot-module-replacement',
-  version: '0.2.0',
+  version: '0.2.1',
   summary: 'Update code in development without reloading the page',
   documentation: 'README.md',
   debugOnly: true
@@ -12,7 +12,7 @@ Package.onUse(function (api) {
   api.use('hot-code-push', { unordered: true });
 
   api.use('dev-error-overlay', { weak: true });
-  api.imply('modules-runtime-hot@0.12.0');
+  api.imply('modules-runtime-hot@0.13.0');
   api.addFiles([
     './hot-api.js',
     './client.js'

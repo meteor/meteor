@@ -184,6 +184,19 @@ export class AccountsServer extends AccountsCommon {
     this._onExternalLoginHook = func;
   }
 
+  /**
+   * @summary Customize user selection on external logins
+   * @locus Server
+   * @param {Function} func Called whenever a user is logged in via oauth and a
+   * user is not found with the service id. Return the user or undefined. 
+   */
+   setAdditionalFindUserOnExternalLogin(func) {
+    if (this._setAdditionalFindUserOnExternalLogin) {
+      throw new Error("Can only call setAdditionalFindUserOnExternalLogin once");
+    }
+    this._setAdditionalFindUserOnExternalLogin = func;
+  }
+
   _validateLogin(connection, attempt) {
     this._validateLoginHook.each(callback => {
       let ret;
@@ -1255,6 +1268,12 @@ export class AccountsServer extends AccountsCommon {
     }
 
     let user = this.users.findOne(selector, {fields: this._options.defaultFieldSelector});
+
+    // Check to see if the developer has a custom way to find the user outside
+    // of the general selectors above.
+    if (!user && this._setAdditionalFindUserOnExternalLogin) {
+      user = this._setAdditionalFindUserOnExternalLogin({serviceName, serviceData, options})
+    }
 
     // Before continuing, run user hook to see if we should continue
     if (this._beforeExternalLoginHook && !this._beforeExternalLoginHook(serviceName, serviceData, user)) {
