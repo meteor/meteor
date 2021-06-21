@@ -636,7 +636,7 @@ var launchMongo = function (options) {
       const {
         MongoClient,
         Server
-      } = loadIsopackage('npm-mongo').NpmModuleMongodb;
+      } = require('mongodb');
 
       // Connect to the intended primary and start a replset.
       const client = new MongoClient(

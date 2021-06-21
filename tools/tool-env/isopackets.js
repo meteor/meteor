@@ -57,8 +57,6 @@ export const ISOPACKETS = {
   combined: [
     // ddp
     'ddp-client',
-    // mongo
-    'npm-mongo',
     // ejson
     'ejson',
     // constraint-solver
