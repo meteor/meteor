@@ -14,6 +14,7 @@ var packageJson = {
     "meteor-promise": "0.8.7",
     promise: "8.0.2",
     reify: "0.20.12",
+    mongodb: "3.6.9",
     "@babel/parser": "7.9.4",
     "@types/underscore": "1.9.2",
     underscore: "1.9.1",
