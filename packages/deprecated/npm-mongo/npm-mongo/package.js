@@ -4,7 +4,8 @@
 Package.describe({
   summary: "Wrapper around the mongo npm package",
   version: "3.9.0",
-  documentation: null
+  documentation: null,
+  deprecated: true
 });
 
 Npm.depends({
