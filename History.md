@@ -83,7 +83,6 @@
   - `npm` update to 6.14.13.
   - `fibers` has been updated to v5.0.0.
   - `promise` has been updated to v8.1.0.
-  - `underscore` has been updated to v1.11.0.
   - `node-gyp` has been updated to v8.0.0.
   - `node-pre-gyp` has been updated to v0.15.0.
   - `@babel/runtime` has been updated to v7.14.0.
