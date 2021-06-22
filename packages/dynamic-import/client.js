@@ -1,7 +1,24 @@
 var Module = module.constructor;
 var cache = require("./cache.js");
+var Meteor = require("meteor/meteor").Meteor;
 var meteorInstall = require("meteor/modules").meteorInstall;
 var dynamicVersions = require("./dynamic-versions.js");
+
+// Fix for Safari bug https://bugs.webkit.org/show_bug.cgi?id=226547
+function idbReady() {
+  const isSafari = /Safari\//.test(navigator.userAgent) &&
+    !/Chrom(e|ium)\//.test(navigator.userAgent);
+  // No point putting other browsers through this mess.
+  if (!isSafari) return Promise.resolve();
+  let intervalId;
+  return new Promise((resolve) => {
+    const tryIdb = () => window.indexedDB.databases().finally(resolve);
+    intervalId = Meteor.setInterval(tryIdb, 100);
+    tryIdb();
+  }).finally(() => Meteor.clearInterval(intervalId));
+}
+
+idbReady.then(() => {});
 
 var dynamicImportSettings = Meteor.settings
     && Meteor.settings.public
