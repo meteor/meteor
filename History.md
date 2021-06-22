@@ -96,8 +96,6 @@
   - `moment` has been updated to v2.29.1.
   - `glob` has been updated to v7.1.6.
   - `split2` has been updated to v3.2.2.
-  - `optimism` has been updated to v0.12.2.
-  - `@wry/context` has been updated to v0.5.2.
   - `lru-cache` has been updated to v4.1.5.
   - `anser` has been updated to v2.0.1.
   - `xmlbuilder2` has been updated to v1.8.1.
