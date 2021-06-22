@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Login service for Twitter accounts",
-  version: "1.5.0-rc230.2",
+  version: "1.5.0-rc230.3",
 });
 
 Package.onUse(api => {

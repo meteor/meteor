@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Blaze configuration templates for Twitter OAuth.",
-  version: "1.0.1-rc230.2"
+  version: "1.0.1-rc230.3"
 });
 
 Package.onUse(function(api) {
