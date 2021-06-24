@@ -396,9 +396,9 @@ build artifacts:
 <ul><li>a tarball (.tar.gz) that includes everything necessary to run the application
   server (see the <code>README</code> in the tarball for details).  Using the
   `--directory` option will produce a `bundle` directory instead of the tarball.</li>
-<li>an unsigned <code>apk</code> bundle and a project source if Android is targetted as a
+<li>an unsigned <code>apk</code> bundle and a project source if Android is targeted as a
   mobile platform</li>
-<li>a directory with an Xcode project source if iOS is targetted as a mobile
+<li>a directory with an Xcode project source if iOS is targeted as a mobile
   platform</li></ul>
 
 You can use the application server bundle to host a Meteor application on your
@@ -414,9 +414,12 @@ This may cause difficulties if your app contains binary code due to,
 for example, npm packages. You can try to override that behavior
 with the `--architecture` flag.
 
+You can set optional data for the initial value of `Meteor.settings`
+in your mobile application with the `--mobile-settings` flag. A new value for
+`Meteor.settings` can be set later by the server as part of hot code push.
+
 You can also specify which platforms you want to build with the `--platforms` flag.
 Examples: `--platforms=android`, `--platforms=ios`, `--platforms=web.browser`.
-
 
 <h2 id="meteorlint">meteor lint</h2>
 
