@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '2.4.0',
+  version: '2.5.0',
   documentation: null
 });
 
 Npm.depends({
-  lolex: '2.3.2'
+  '@sinonjs/fake-timers': '7.0.5'
 });
 
 Package.onUse((api) => {
