@@ -1,6 +1,7 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.3'
   - '2.2'
   - '2.1'
   - '2.0'
@@ -58,6 +59,7 @@ sidebar_categories:
     - packages/coffeescript
     - packages/dynamic-import
     - packages/ecmascript
+    - packages/fetch
     - packages/hot-module-replacement
     - packages/less
     - packages/markdown
@@ -67,6 +69,7 @@ sidebar_categories:
     - packages/server-render
     - packages/spacebars
     - packages/underscore
+    - packages/url
     - packages/webapp
   Command Line:
     - commandline

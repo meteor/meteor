@@ -418,6 +418,8 @@ You can set optional data for the initial value of `Meteor.settings`
 in your mobile application with the `--mobile-settings` flag. A new value for
 `Meteor.settings` can be set later by the server as part of hot code push.
 
+You can also specify which platforms you want to build with the `--platforms` flag.
+Examples: `--platforms=android`, `--platforms=ios`, `--platforms=web.browser`.
 
 <h2 id="meteorlint">meteor lint</h2>
 
