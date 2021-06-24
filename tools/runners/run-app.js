@@ -80,7 +80,7 @@ var AppProcess = function (options) {
   self.madeExitCallback = false;
 };
 
-_.extend(AppProcess.prototype, {
+Object.assign(AppProcess.prototype, {
   // Call to start the process.
   start: function () {
     var self = this;
@@ -157,7 +157,7 @@ _.extend(AppProcess.prototype, {
 
   _computeEnvironment: function () {
     var self = this;
-    var env = _.extend({}, process.env);
+    var env = Object.assign({}, process.env);
 
     env.PORT = self.port;
     env.ROOT_URL = self.rootUrl;
@@ -403,7 +403,7 @@ var AppRunner = function (options) {
   self.builders = Object.create(null);
 };
 
-_.extend(AppRunner.prototype, {
+Object.assign(AppRunner.prototype, {
   // Start the app running, and restart it as necessary. Returns
   // immediately.
   start: function () {
