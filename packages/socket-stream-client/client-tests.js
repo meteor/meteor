@@ -1,3 +1,7 @@
+import { Meteor } from "meteor/meteor";
+import { Tracker } from "meteor/tracker";
+import { _ } from "meteor/underscore";
+import { HTTP } from "meteor/http";
 import { toSockjsUrl } from "./urls.js";
 import { ClientStream } from "meteor/socket-stream-client";
 
@@ -7,9 +11,6 @@ Tinytest.add('stream - status', function(test) {
   var status = Meteor.status();
   test.equal(typeof status, 'object');
   test.isTrue(status.status);
-  // Make sure backward-compatiblity names are defined.
-  test.equal(status.retryCount, status.retryCount);
-  test.equal(status.retryTime, status.retryTime);
 });
 
 testAsyncMulti('stream - reconnect', [
@@ -179,7 +180,7 @@ testAsyncMulti('stream - /websocket is a websocket endpoint', [
     //
     // Verify that /websocket and /websocket/ don't return the main page
     //
-    _.each(['/websocket', '/websocket/'], function(path) {
+    ['/websocket', '/websocket/'].forEach((path) => {
       HTTP.get(
         Meteor._relativeToSiteRootUrl(path),
         expect(function(error, result) {
@@ -207,7 +208,7 @@ testAsyncMulti('stream - /websocket is a websocket endpoint', [
         test.isNull(error);
         pageContent = result.content;
 
-        _.each(['/websockets', '/websockets/'], function(path) {
+        ['/websockets', '/websockets/'].forEach(function(path) {
           HTTP.get(Meteor._relativeToSiteRootUrl(path), wrappedCallback);
         });
       })
