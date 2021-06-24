@@ -2,7 +2,8 @@ Package.describe({
   name: "jquery-history",
   summary: "Deprecated package for HTML5 pushState",
   version: "1.0.2",
-  deprecated: true
+  deprecated: true,
+  documentation: null
 });
 
 Package.onUse(function (api) {

@@ -1,7 +1,8 @@
 Package.describe({
   summary: "Faster touch events on mobile",
   version: '1.0.13',
-  deprecated: true
+  deprecated: true,
+  documentation: null
 });
 
 Package.onUse(function (api) {
