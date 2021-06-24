@@ -1,4 +1,7 @@
-Accounts.validateNewUser(user => {
+
+if(Meteor.isServer) {
+
+  Accounts.validateNewUser(user => {
   if (user.profile && user.profile.invalidAndThrowException)
     throw new Meteor.Error(403, "An exception thrown within Accounts.validateNewUser");
   return !(user.profile && user.profile.invalid);
@@ -113,8 +116,9 @@ Accounts.onLogout(() => capturedLogouts.push({ successful: true }));
 //
 // For now, we just test the one configuration state. You can comment
 // out each configuration option and see that the tests fail.
+
 Accounts.config({
-  sendVerificationEmail: true
+  sendVerificationEmail: true,
 });
 
 
@@ -132,3 +136,9 @@ Meteor.methods({
   },
   removeUser: username => Meteor.users.remove({ "username": username }),
 });
+}
+
+Accounts.config({
+  useLowerCaseEmails: false,
+});
+
