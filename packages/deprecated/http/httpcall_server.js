@@ -1,26 +1,22 @@
-var path = require('path');
-var request = require('request');
-var url_util = require('url');
-var URL = require("meteor/url").URL;
-var common = require("./httpcall_common.js");
-var HTTP = exports.HTTP = common.HTTP;
-var hasOwn = Object.prototype.hasOwnProperty;
+import { Meteor } from 'meteor/meteor';
+import { fetch, Request } from 'meteor/fetch';
+import { URL, URLSearchParams } from 'meteor/url';
+import { HTTP, makeErrorByStatus, populateData } from './httpcall_common.js';
 
-exports.HTTPInternals = {
-  NpmModules: {
-    request: {
-      version: Npm.require('request/package.json').version,
-      module: request
-    }
-  }
-};
+export { HTTP };
+const hasOwn = Object.prototype.hasOwnProperty;
+
+/**
+ * @deprecated
+ */
+export const HTTPInternals = {};
 
 // _call always runs asynchronously; HTTP.call, defined below,
 // wraps _call and runs synchronously when no callback is provided.
-function _call(method, url, options, callback) {
+function _call (method, url, options, callback) {
   ////////// Process arguments //////////
 
-  if (! callback && typeof options === "function") {
+  if (!callback && typeof options === 'function') {
     // support (method, url, callback) argument list
     callback = options;
     options = null;
@@ -29,41 +25,51 @@ function _call(method, url, options, callback) {
   options = options || {};
 
   if (hasOwn.call(options, 'beforeSend')) {
-    throw new Error("Option beforeSend not supported on server.");
+    throw new Error('Option beforeSend not supported on server.');
   }
 
-  method = (method || "").toUpperCase();
+  method = (method || '').toUpperCase();
 
-  if (! /^https?:\/\//.test(url))
-    throw new Error("url must be absolute and start with http:// or https://");
+  if (!/^https?:\/\//.test(url)) {
+    throw new Error('url must be absolute and start with http:// or https://');
+  }
 
-  var headers = {};
+  const headers = {};
+  let content = options.content;
 
-  var content = options.content;
   if (options.data) {
     content = JSON.stringify(options.data);
     headers['Content-Type'] = 'application/json';
   }
 
+  let paramsForUrl;
+  let paramsForBody;
 
-  var paramsForUrl, paramsForBody;
-  if (content || method === "GET" || method === "HEAD")
+  if (content || method === 'GET' || method === 'HEAD') {
     paramsForUrl = options.params;
-  else
+  }
+  else {
     paramsForBody = options.params;
+  }
 
-  var newUrl = URL._constructUrl(url, options.query, paramsForUrl);
+  const newUrl = URL._constructUrl(url, options.query, paramsForUrl);
 
   if (options.auth) {
-    if (options.auth.indexOf(':') < 0)
+    if (options.auth.indexOf(':') < 0) {
       throw new Error('auth option should be of the form "username:password"');
-    headers['Authorization'] = "Basic "+
-      Buffer.from(options.auth, "ascii").toString("base64");
+    }
+
+    const base64 = Buffer.from(options.auth, 'ascii').toString('base64');
+    headers['Authorization'] = `Basic ${base64}`;
   }
 
   if (paramsForBody) {
-    content = URL._encodeParams(paramsForBody);
-    headers['Content-Type'] = "application/x-www-form-urlencoded";
+    const data = new URLSearchParams();
+    Object.entries(paramsForBody).forEach(([key, value]) => {
+      data.append(key, value);
+    });
+    content = data;
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
   }
 
   if (options.headers) {
@@ -72,60 +78,90 @@ function _call(method, url, options, callback) {
     });
   }
 
+  let caching;
+  if (options.caching) {
+    // TODO implement fetch-specific options
+  }
+
+  let corsMode;
+  if (options.mode) {
+    // TODO implement fetch-specific options
+  }
+
+  let credentials;
+
   // wrap callback to add a 'response' property on an error, in case
   // we have both (http 4xx/5xx error, which has a response payload)
-  callback = (function(callback) {
-    var called = false;
-    return function(error, response) {
-      if (! called) {
+  callback = (function (cb) {
+    let called = false;
+    return function (error, response) {
+      if (!called) {
         called = true;
         if (error && response) {
           error.response = response;
         }
-        callback(error, response);
+        cb(error, response);
       }
-    };
+    }
   })(callback);
+
+  // is false if false, otherwise always true
+  const followRedirects = options.followRedirects === false
+    ? 'manual'
+    : 'follow';
 
   ////////// Kickoff! //////////
 
   // Allow users to override any request option with the npmRequestOptions
   // option.
-  var reqOptions = Object.assign({
-    url: newUrl,
+
+  const requestOptions = {
     method: method,
-    encoding: "utf8",
+    caching: caching,
+    mode: corsMode,
+
     jar: false,
     timeout: options.timeout,
     body: content,
-    followRedirect: options.followRedirects,
-    // Follow redirects on non-GET requests
-    // also. (https://github.com/meteor/meteor/issues/2808)
-    followAllRedirects: options.followRedirects,
+    redirect: followRedirects,
+    referrer: options.referrer,
+    integrity: options.integrity,
     headers: headers
-  }, options.npmRequestOptions || null);
+  };
 
-  request(reqOptions, function(error, res, body) {
-    var response = null;
+  const request = new Request(newUrl, requestOptions);
 
-    if (! error) {
-      response = {};
-      response.statusCode = res.statusCode;
-      response.content = body;
-      response.headers = res.headers;
+  fetch(request)
+    .then(async res => {
+      const content = await res.text();
+      const response = {};
+      response.statusCode = res.status;
+      response.content = '' + content;
 
-      common.populateData(response);
+      // fetch headers don't allow simple read using bracket notation
+      // so we iterate their entries and assign them to a new Object
+      response.headers = {};
+      for (const entry of res.headers.entries()) {
+        const [key, val] = entry;
+        response.headers[key] = val;
+      }
+
+      response.ok = res.ok;
+      response.redirected = res.redirected;
+
+      populateData(response);
 
       if (response.statusCode >= 400) {
-        error = common.makeErrorByStatus(
+        const error = makeErrorByStatus(
           response.statusCode,
           response.content
         );
+        callback(error, response);
+      } else {
+        callback(undefined, response);
       }
-    }
-
-    callback(error, response);
-  });
+    })
+    .catch(err => callback(err));
 }
 
 HTTP.call = Meteor.wrapAsync(_call);

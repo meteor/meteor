@@ -401,9 +401,7 @@ class PollingState {
 async function pollForDeploy(pollingState, versionId, site) {
   const {
     deadline,
-    initialWaitTimeMs,
     pollIntervalMs,
-    start,
     currentMessage,
   } = pollingState;
 
@@ -481,45 +479,59 @@ export async function bundleAndDeploy(options) {
     options.recordPackageUsage = true;
   }
 
-  var site = canonicalizeSite(options.site);
-  if (! site) {
-    return 1;
-  }
+  // we don't need site for build-only
+  let site = null;
+  let preflightPassword = null;
 
-  // We should give a username/password prompt if the user was logged in
-  // but the credentials are expired, unless the user is logged in but
-  // doesn't have a username (in which case they should hit the email
-  // prompt -- a user without a username shouldn't be given a username
-  // prompt). There's an edge case where things happen in the following
-  // order: user creates account, user sets username, credential expires
-  // or is revoked, user comes back to deploy again. In that case,
-  // they'll get an email prompt instead of a username prompt because
-  // the command-line tool didn't have time to learn about their
-  // username before the credential was expired.
-  pollForRegistrationCompletion({
-    noLogout: true
-  });
-  var promptIfAuthFails = (loggedInUsername() !== null);
+  if (options.isBuildOnly) {
+    Console.info('Skipping pre authentication as the option --build-only was provded.');
+  } else {
+    site = options.site && canonicalizeSite(options.site)
+    if (! site) {
+      Console.error("Error deploying application: site is required.");
+      Console.error("Your deploy command should be like: meteor deploy <site>");
+      Console.error(
+        "For more help, see " + Console.command("'meteor deploy --help'") + ".");
+      return 1;
+    }
 
-  // Check auth up front, rather than after the (potentially lengthy)
-  // bundling process.
-  var preflight = authedRpc({
-    site: site,
-    preflight: true,
-    promptIfAuthFails: promptIfAuthFails,
-    qs: options.rawOptions,
-    printDeployURL: true
-  });
+    // We should give a username/password prompt if the user was logged in
+    // but the credentials are expired, unless the user is logged in but
+    // doesn't have a username (in which case they should hit the email
+    // prompt -- a user without a username shouldn't be given a username
+    // prompt). There's an edge case where things happen in the following
+    // order: user creates account, user sets username, credential expires
+    // or is revoked, user comes back to deploy again. In that case,
+    // they'll get an email prompt instead of a username prompt because
+    // the command-line tool didn't have time to learn about their
+    // username before the credential was expired.
+    pollForRegistrationCompletion({
+      noLogout: true
+    });
+    const promptIfAuthFails = (loggedInUsername() !== null);
 
-  if (preflight.errorMessage) {
-    Console.error("Error deploying application: " + preflight.errorMessage);
-    return 1;
-  }
+    // Check auth up front, rather than after the (potentially lengthy)
+    // bundling process.
+    const preflight = authedRpc({
+      site: site,
+      preflight: true,
+      promptIfAuthFails: promptIfAuthFails,
+      qs: options.rawOptions,
+      printDeployURL: true
+    });
 
-  if (preflight.protection === "account" &&
-             ! preflight.authorized) {
-    printUnauthorizedMessage();
-    return 1;
+    if (preflight.errorMessage) {
+      Console.error("Error deploying application: " + preflight.errorMessage);
+      return 1;
+    }
+
+    if (preflight.protection === "account" &&
+      !preflight.authorized) {
+      printUnauthorizedMessage();
+      return 1;
+    }
+
+    preflightPassword = preflight.preflightPassword;
   }
 
   const projectDir = options.projectContext.getProjectLocalDirectory('');
@@ -609,6 +621,13 @@ export async function bundleAndDeploy(options) {
     });
   }
 
+  if (options.isBuildOnly) {
+    Console.info(
+      '\nYour build is ready. As you used the option --build-only the process finished after the build.'
+    );
+    return 0;
+  }
+
   Console.info('Preparing to upload your app...');
   const result = buildmessage.enterJob({
     title: "uploading"
@@ -629,7 +648,7 @@ export async function bundleAndDeploy(options) {
       ),
       bodyStream: createTarGzStream(pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
-      preflightPassword: preflight.preflightPassword,
+      preflightPassword,
       // Disable the HTTP timeout for this POST request.
       timeout: null,
       waitForDeploy: options.waitForDeploy,

@@ -700,12 +700,7 @@ class ResourceSlot {
   }
 
   _isBare(options) {
-    return !! (
-      this._getOption("bare", options) ||
-      // XXX eventually get rid of backwards-compatible "raw" name
-      // XXX COMPAT WITH 0.6.4
-      this._getOption("raw", options)
-    );
+    return !! this._getOption("bare", options);
   }
 
   hmrAvailable() {
@@ -899,7 +894,9 @@ class OutputResource {
       servePath,
       // Remember the source hash so that changes to the source that
       // disappear after compilation can still contribute to the hash.
-      _inputHash: resourceSlot.inputResource.hash,
+      // Bypassing SourceResource.hash getter so if the compiler plugin doesn't
+      // use the resource's content we don't unnecessarily mark it as used.
+      _inputHash: resourceSlot.inputResource._hash,
     });
   }
 
@@ -1521,6 +1518,13 @@ export class PackageSourceBatch {
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
+        // Output resources are not directly marked as definitely used. Instead,
+        // its input resource might be if its content was used by a build plugin.
+        // This is checked in Target#_emitResources
+        if (file instanceof OutputResource) {
+          return;
+        }
+
         const {
           sourcePath,
           absPath = sourcePath &&
@@ -1828,7 +1832,8 @@ _.each([
 
 // static methods to measure in profile
 _.each([
-  "computeJsOutputFilesMap"
+  "computeJsOutputFilesMap",
+  "_watchOutputFiles"
 ], method => {
   PackageSourceBatch[method] = Profile(
     "PackageSourceBatch." + method,

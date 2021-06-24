@@ -15,8 +15,3 @@ _.each(['publish', 'methods', 'call', 'apply', 'onConnection', 'onMessage'],
        function (name) {
          Meteor[name] = _.bind(Meteor.server[name], Meteor.server);
        });
-
-// Meteor.server used to be called Meteor.default_server. Provide
-// backcompat as a courtesy even though it was never documented.
-// XXX COMPAT WITH 0.6.4
-Meteor.default_server = Meteor.server;
