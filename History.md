@@ -1,4 +1,4 @@
-## v2.3, UNRELEASED
+## v2.3, 2021-06-24
 
 #### Highlights
 
@@ -108,8 +108,11 @@
   - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
   - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
   - Skeletons dependencies updated to latest version
+  - Svelte skeleton now has HMR
   - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-only)
   - Improved watched system to properly rebuild `client` even when a file is outside of `client` or `imports` folders. See [PR](https://github.com/meteor/meteor/pull/11474) for details.
+  - Fix an issue when `App.appendToConfig` crashed Cordova build.
+  - Reify compiler now uses cache in runtime. [Read more](https://github.com/meteor/meteor/pull/11400)
   
 * `launch-screen@1.3.0`
   - Removes LaunchScreen from web clients.
@@ -199,6 +202,9 @@
 * `observe-sequence@1.0.18`
   - When `#each` argument is unsupported it will be shown
   - Moving package under Blaze repository
+  
+* `react-fast-refresh@0.1.1`
+  - Fixed the package to work in IE11
 
 ## v2.2, 2021-04-15
 

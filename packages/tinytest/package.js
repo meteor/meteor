@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Tiny testing framework",
-  version: '1.1.1-rc230.3'
+  version: '1.1.1'
 });
 
 Package.onUse(function (api) {
