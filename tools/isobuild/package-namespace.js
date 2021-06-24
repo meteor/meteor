@@ -176,13 +176,6 @@ export class PackageNamespace {
   }
 
   /**
-   * @deprecated in 0.9.0
-   */
-  on_use(f) {
-    this.onUse(f);
-  }
-
-  /**
    * @summary Define dependencies and expose package methods for unit tests.
    * @locus package.js
    * @param {Function} func A function that takes in the package control 'api' object, which keeps track of dependencies and exports.
@@ -210,13 +203,6 @@ export class PackageNamespace {
 
       this._fileAndDepLoader = f;
     }
-  }
-
-  /**
-   * @deprecated in 0.9.0
-   */
-  on_test(f) {
-    this.onTest(f);
   }
 
   // Define a plugin. A plugin extends the build process for
@@ -292,13 +278,6 @@ export class PackageNamespace {
 
     // XXX probably want further type checking
     pluginInfo[options.name] = options;
-  }
-
-  /**
-   * @deprecated in 0.9.4
-   */
-  _transitional_registerBuildPlugin(options) {
-    this.registerBuildPlugin(options);
   }
 
   includeTool() {

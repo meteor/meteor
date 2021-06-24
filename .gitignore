@@ -24,6 +24,7 @@ TAGS
 npm-debug.log
 universe
 .babel-cache
+.reify-cache
 mongo-test-output
 
 # core packages shouldn't have .versions files

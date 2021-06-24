@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Blaze configuration templates for Twitter OAuth.",
-  version: "1.0.0"
+  version: "1.0.1"
 });
 
 Package.onUse(function(api) {
-  api.use('templating@1.2.13', 'client');
+  api.use('templating@1.4.0', 'client');
 
   api.addFiles('twitter_login_button.css', 'client');
   api.addFiles(
