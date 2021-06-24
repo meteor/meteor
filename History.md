@@ -1,3 +1,8 @@
+## v3.3.0
+
+* Update dependencies
+* Made compatible with Meteor 2.3
+
 ## v3.2.3
 
 * Update dependencies
