@@ -105,3 +105,5 @@ Project:Webapp:Browser Policy:
   - packages/browser-policy-content/**/*
   - packages/browser-policy-framing/**/*
 
+Project:Examples:
+  - tools/cli/example-repositories.js
