@@ -4,6 +4,15 @@
 
 #### Independent Releases
 
+## v2.3.1, 2021-06-28
+
+#### Highlights
+* Fix windows issue when running webapp package.
+
+### Migration steps
+N/A
+### Breaking changes
+N/A
 ## v2.3, 2021-06-24
 
 #### Highlights
