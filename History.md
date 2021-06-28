@@ -21,6 +21,9 @@
 
 #### Independent Releases
 
+* `webapp@1.11.1`
+  - Remove `posix` from npm shrinkwrap, to fix a bug it causes on Windows.
+
 * `less@3.0.2`
   - Updated `@babel/runtime` to v7.14.6
   - Updated `less` to v3.11.3
