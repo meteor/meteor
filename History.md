@@ -15,8 +15,25 @@
 
 * `meteor-tool@2.3.1`
   - Node.js updated to 14.17.2
+  - `@babel/runtime` dependency updated to v7.14.6 across the tool and testing apps
+  - Skeletons dependencies updated
+  - Apollo skeleton removed `apollo-boost` dependency which is no longer needed
 
 #### Independent Releases
+
+* `webapp@1.11.1`
+  - Remove `posix` from npm shrinkwrap, to fix a bug it causes on Windows.
+
+* `less@3.0.2`
+  - Updated `@babel/runtime` to v7.14.6
+  - Updated `less` to v3.11.3
+  
+* `standard-minifiers-css@1.7.3`
+  - Updated `@babel/runtime` to v7.14.6
+
+* `standard-minifiers-js@2.6.1`
+  - Updated `@babel/runtime` to v7.14.6
+  
 
 ## v2.3, 2021-06-24
 
