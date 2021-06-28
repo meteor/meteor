@@ -8,6 +8,7 @@
 
 #### Highlights
 
+* Fix windows issue when running webapp package.
 * Node.js updated to 14.17.2, following [security release]()
 
 #### Meteor Version Release
