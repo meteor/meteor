@@ -4,6 +4,19 @@
 
 #### Independent Releases
 
+## v2.3.1, UNRELEASED
+
+#### Highlights
+
+* Node.js updated to 14.17.2, following [security release]()
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.1`
+  - Node.js updated to 14.17.2
+
+#### Independent Releases
+
 ## v2.3, 2021-06-24
 
 #### Highlights
