@@ -6,94 +6,99 @@ var dynamicVersions = require("./dynamic-versions.js");
 
 // Fix for Safari bug https://bugs.webkit.org/show_bug.cgi?id=226547
 function idbReady() {
-  const isSafari = /Safari\//.test(navigator.userAgent) &&
+  var isSafari = !navigator.userAgentData &&
+    /Safari\//.test(navigator.userAgent) &&
     !/Chrom(e|ium)\//.test(navigator.userAgent);
   // No point putting other browsers through this mess.
-  if (!isSafari) return Promise.resolve();
-  let intervalId;
-  return new Promise((resolve) => {
-    const tryIdb = () => window.indexedDB.databases().finally(resolve);
+  if (!isSafari || !indexedDB.databases) return Promise.resolve();
+  var intervalId;
+  return new Promise(function(resolve) {
+    var tryIdb = function() {
+      window.indexedDB.databases().finally(resolve);
+    };
     intervalId = Meteor.setInterval(tryIdb, 100);
     tryIdb();
-  }).finally(() => Meteor.clearInterval(intervalId));
+  }).finally(function() {
+    Meteor.clearInterval(intervalId);
+  });
 }
 
-idbReady.then(() => {});
-
 var dynamicImportSettings = Meteor.settings
-    && Meteor.settings.public
-    && Meteor.settings.public.packages
-    && Meteor.settings.public.packages['dynamic-import'] || {};
+  && Meteor.settings.public
+  && Meteor.settings.public.packages
+  && Meteor.settings.public.packages['dynamic-import'] || {};
 
-// Call module.dynamicImport(id) to fetch a module and any/all of its
+idbReady.then(function() {
+  // Call module.dynamicImport(id) to fetch a module and any/all of its
 // dependencies that have not already been fetched, and evaluate them as
 // soon as they arrive. This runtime API makes it very easy to implement
 // ECMAScript dynamic import(...) syntax.
-Module.prototype.dynamicImport = function (id) {
-  var module = this;
-  return module.prefetch(id).then(function () {
-    return getNamespace(module, id);
-  });
-};
+  Module.prototype.dynamicImport = function (id) {
+    var module = this;
+    return module.prefetch(id).then(function () {
+      return getNamespace(module, id);
+    });
+  };
 
 // Called by Module.prototype.prefetch if there are any missing dynamic
 // modules that need to be fetched.
-meteorInstall.fetch = function (ids) {
-  var tree = Object.create(null);
-  var versions = Object.create(null);
-  var missing;
+  meteorInstall.fetch = function (ids) {
+    var tree = Object.create(null);
+    var versions = Object.create(null);
+    var missing;
 
-  function addSource(id, source) {
-    addToTree(tree, id, makeModuleFunction(id, source, ids[id].options));
-  }
-
-  function addMissing(id) {
-    addToTree(missing = missing || Object.create(null), id, 1);
-  }
-
-  Object.keys(ids).forEach(function (id) {
-    var version = dynamicVersions.get(id);
-    if (version) {
-      versions[id] = version;
-    } else {
-      addMissing(id);
+    function addSource(id, source) {
+      addToTree(tree, id, makeModuleFunction(id, source, ids[id].options));
     }
-  });
 
-  return cache.checkMany(versions).then(function (sources) {
-    Object.keys(sources).forEach(function (id) {
-      var source = sources[id];
-      if (source) {
-        addSource(id, source);
+    function addMissing(id) {
+      addToTree(missing = missing || Object.create(null), id, 1);
+    }
+
+    Object.keys(ids).forEach(function (id) {
+      var version = dynamicVersions.get(id);
+      if (version) {
+        versions[id] = version;
       } else {
         addMissing(id);
       }
     });
 
-    return missing && fetchMissing(missing).then(function (results) {
-      var versionsAndSourcesById = Object.create(null);
-      var flatResults = flattenModuleTree(results);
-
-      Object.keys(flatResults).forEach(function (id) {
-        var source = flatResults[id];
-        addSource(id, source);
-
-        var version = dynamicVersions.get(id);
-        if (version) {
-          versionsAndSourcesById[id] = {
-            version: version,
-            source: source
-          };
+    return cache.checkMany(versions).then(function (sources) {
+      Object.keys(sources).forEach(function (id) {
+        var source = sources[id];
+        if (source) {
+          addSource(id, source);
+        } else {
+          addMissing(id);
         }
       });
 
-      cache.setMany(versionsAndSourcesById);
-    });
+      return missing && fetchMissing(missing).then(function (results) {
+        var versionsAndSourcesById = Object.create(null);
+        var flatResults = flattenModuleTree(results);
 
-  }).then(function () {
-    return tree;
-  });
-};
+        Object.keys(flatResults).forEach(function (id) {
+          var source = flatResults[id];
+          addSource(id, source);
+
+          var version = dynamicVersions.get(id);
+          if (version) {
+            versionsAndSourcesById[id] = {
+              version: version,
+              source: source
+            };
+          }
+        });
+
+        cache.setMany(versionsAndSourcesById);
+      });
+
+    }).then(function () {
+      return tree;
+    });
+  };
+});
 
 function flattenModuleTree(tree) {
   var parts = [""];
