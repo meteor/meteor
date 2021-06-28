@@ -4,15 +4,20 @@
 
 #### Independent Releases
 
-## v2.3.1, 2021-06-28
+## v2.3.1, UNRELEASED
 
 #### Highlights
-* Fix windows issue when running webapp package.
 
-### Migration steps
-N/A
-### Breaking changes
-N/A
+* Fix windows issue when running webapp package.
+* Node.js updated to 14.17.2, following [security release]()
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.1`
+  - Node.js updated to 14.17.2
+
+#### Independent Releases
+
 ## v2.3, 2021-06-24
 
 #### Highlights
