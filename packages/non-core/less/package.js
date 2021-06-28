@@ -15,7 +15,7 @@ Package.registerBuildPlugin({
     'plugin/compile-less.js'
   ],
   npmDependencies: {
-    "@babel/runtime": "7.9.2",
+    "@babel/runtime": "7.14.6",
     "less": "3.11.1"
   }
 });
