@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Blaze configuration templates for Facebook OAuth.",
-  version: "1.0.2",
+  version: "1.0.3",
 });
 
 Package.onUse(api => {
   api.use('ecmascript', 'client');
-  api.use('templating@1.2.13', 'client');
+  api.use('templating@1.4.0', 'client');
 
   api.addFiles('facebook_login_button.css', 'client');
   api.addFiles(
