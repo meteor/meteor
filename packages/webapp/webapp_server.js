@@ -345,8 +345,33 @@ function getBoilerplate(request, arch) {
   return getBoilerplateAsync(request, arch).await();
 }
 
+WebApp.encodeRuntimeConfig = function (rtimeConfig) {
+  return JSON.stringify(encodeURIComponent(JSON.stringify(rtimeConfig)));
+}
+
+WebApp.decodeRuntimeConfig = function (rtimeConfig) {
+  return JSON.parse(decodeURIComponent(JSON.parse(rtimeConfig)));
+}
+
+const runtimeConfig = {
+  'hooks': [],
+  'update': {}
+};
+
+WebApp.addRuntimeConfigHook = function (hook) {
+  if(typeof hook !== 'function') throw new Error('WebApp.addRuntimeConfigHook must be a function');
+  runtimeConfig.hooks.push(hook);
+}
+
 function getBoilerplateAsync(request, arch) {
-  const boilerplate = boilerplateByArch[arch];
+  let boilerplate = boilerplateByArch[arch];
+  _.each(runtimeConfig.hooks, function (hook) {
+    const meteorRuntimeConfig = hook(arch, request, boilerplate.baseData.meteorRuntimeConfig, runtimeConfig.update[arch]);
+    runtimeConfig.update[arch] = false;
+    if(!meteorRuntimeConfig) return;
+    // boilerplate.baseData.meteorRuntimeConfig
+    boilerplate.baseData = Object.assign({}, boilerplate.baseData, {meteorRuntimeConfig});
+  });
   const data = Object.assign({}, boilerplate.baseData, {
     htmlAttributes: getHtmlAttributes(request),
   }, _.pick(request, "dynamicHead", "dynamicBody"));
@@ -378,6 +403,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
+  runtimeConfig.update[arch] = true;
   const meteorRuntimeConfig = JSON.stringify(
     encodeURIComponent(JSON.stringify({
       ...__meteor_runtime_config__,
