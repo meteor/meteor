@@ -156,7 +156,7 @@ For these reasons, we strongly encourage features to be implemented as [Atmosphe
 
 Feature requests should be well specified and unambiguous to have the greatest chance of being worked on by a contributor.
 
-Finally, you can show your support for (or against!) features by using [GitHub reactions](https://github.com/blog/2119-add-reactions-to-pull-requests-issues-and-comments) or by adding meaningful details which help the feature definition become more clear.  Please do not comment with "+1" since it creates a lot of noise (e-mails, notifications, etc.).
+Finally, you can show your support for (or against!) features by up voting a discussion or by adding meaningful details which help the feature definition become more clear.  Please do not comment with "+1" since it creates a lot of noise (e-mails, notifications, etc.) or comments unrelated with the feature definition.
 
 ## Triaging issues
 
