@@ -6,7 +6,7 @@
 
 * Typescript update to [4.3.2](https://devblogs.microsoft.com/typescript/announcing-typescript-4-3/)
 
-* Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details.
+* Packages had their backward compatibility to before Meteor 1.0 removed. See below for more details.
 
 * Improved tracking of which files are used by build plugins to know when it should do a full rebuild, a faster client-only rebuild, or can completely skip rebuilding after a file is modified. This should work with any type of file in any directory, and for both files in the app and files in packages. The most noticeable improvement is when modifying a file only used on the client Meteor will only rebuild the client, even if the file is not inside `imports` or a `client` folder.
 
@@ -16,7 +16,7 @@
   - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
   - We recommend that you read Node.js [release notes](https://nodejs.org/en/blog/release/v14.0.0/) though.
   
-- Accounts have undergone some major changes including major version bump. See bellow for more details.
+- Accounts have undergone some major changes including major version bump. See below for more details.
 
 - All official packages that have been deprecated have now the deprecated flag and will inform you about that if you install or update them.
 
