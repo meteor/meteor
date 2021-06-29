@@ -140,7 +140,7 @@ for more details on proposing changes to core code.
 
 ## Feature requests
 
-Feature requests are tracked in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository, and include a label that corresponds to the Meteor subproject that they are a part of.
+Feature requests are tracked in the [Discussions](https://github.com/meteor/meteor/discussions).
 
 Meteor is a big project with [many sub-projects](https://github.com/meteor/meteor/tree/devel/packages).
 Community is welcome to help in all the sub-projects. We use our [roadmap](Roadmap.md) to communicate the high-level features we're currently prioritizing.
@@ -216,7 +216,7 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 ### Proposing your change
 
-You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://github.com/meteor/meteor/blob/devel/Roadmap.md). Start by creating a well specified feature request as a Github issue, in the [meteor/meteor-feature-requests](https://github.com/meteor/meteor-feature-requests) repository.
+You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://github.com/meteor/meteor/blob/devel/Roadmap.md). Start by creating a well specified Discussion [here](https://github.com/meteor/meteor/discussions).
 
 Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `ready` label.
 
