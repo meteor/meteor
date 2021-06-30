@@ -4,7 +4,8 @@ $DebugPreference = "Continue"
 Import-Module -Force "$PSScriptRoot\windows\dev-bundle-lib.psm1"
 $PLATFORM = Get-MeteorPlatform
 
-$PYTHON_VERSION = "2.7.14" # For node-gyp
+$PYTHON_VERSION = "3.9.5" # For node-gyp
+& cmd /c 'du 2>&1'
 
 $dirCheckout = (Get-Item $PSScriptRoot).parent.FullName
 $shCommon = Join-Path $PSScriptRoot 'build-dev-bundle-common.sh'
@@ -19,7 +20,6 @@ $BUNDLE_VERSION = Read-VariableFromShellScript "${dirCheckout}\meteor" 'BUNDLE_V
 
 # extract the major package versions from the build-dev-bundle-common script.
 $MONGO_VERSION_64BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_64BIT'
-$MONGO_VERSION_32BIT = Read-VariableFromShellScript $shCommon 'MONGO_VERSION_32BIT'
 
 $NPM_VERSION = Read-VariableFromShellScript $shCommon 'NPM_VERSION'
 

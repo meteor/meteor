@@ -398,7 +398,7 @@ wrap((absRootDir: string, relDir: string) => {
 
 const optimisticIsSymbolicLink = wrap((path: string) => {
   try {
-    return lstat(path).isSymbolicLink();
+    return lstat(path)?.isSymbolicLink();
   } catch (e) {
     if (e.code !== "ENOENT") throw e;
     dependOnParentDirectory(path);

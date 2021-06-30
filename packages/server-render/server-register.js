@@ -2,7 +2,7 @@ import { WebAppInternals } from "meteor/webapp";
 import MagicString from "magic-string";
 import { SAXParser } from "parse5";
 import { create as createStream } from "combined-stream2";
-import { ServerSink, isReadable } from "./server-sink.js";
+import { ServerSink } from "./server-sink.js";
 import { onPageLoad } from "./server.js";
 
 WebAppInternals.registerBoilerplateDataCallback(
@@ -62,7 +62,7 @@ WebAppInternals.registerBoilerplateDataCallback(
               const end = magic.slice(lastStart);
               stream.append(Buffer.from(end, "utf8"));
             }
-          })
+          });
 
           data[property] = stream;
         }

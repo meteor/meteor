@@ -177,18 +177,37 @@ export class HMRServer {
       return;
     }
 
+    // Try to do HMR without waiting for the build to finish
+    // If it fails, the client will retry after the build finishes so
+    // it can fall back to hot code push
+    const sendEagerUpdate = (changeset) => {
+      if (!this.connByArch[arch]) {
+        return;
+      }
+
+      this.connByArch[arch].forEach(conn => {
+        conn.send(JSON.stringify({
+          type: 'changes',
+          changeSets: [changeset],
+          eager: true
+        }));
+      });
+    }
+
     this.cacheKeys[`${arch}-${name}`] = cacheKey;
     const previous = this.findLastChangeset(name, arch) || {};
 
     if (!hmrAvailable) {
-      this.changeSetsByArch[arch].push({
+      let changeset = {
         name,
         reloadable: false,
         cacheKey,
         // TODO: use more accurate name
         linkedAt: Date.now()
-      });
+      };
+      this.changeSetsByArch[arch].push(changeset);
       this._trimChangeSets(arch);
+      sendEagerUpdate(changeset);
       return;
     }
 
@@ -235,19 +254,7 @@ export class HMRServer {
     this.changeSetsByArch[arch].push(result);
     this._trimChangeSets(arch);
 
-    // Try to do HMR without waiting for the build to finish
-    // If it fails, it will retry after the build finishes so
-    // it can fall back to hot code push
-    if (this.connByArch[arch]) {
-      this.connByArch[arch].forEach(conn => {
-        conn.send(JSON.stringify({
-          type: 'changes',
-          changeSets: [result],
-          eager: true
-        }));
-      });
-    }
-    return;
+    sendEagerUpdate(result);
   }
 
   _trimChangeSets(arch) {
