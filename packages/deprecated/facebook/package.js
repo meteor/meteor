@@ -1,6 +1,8 @@
 Package.describe({
   summary: "DEPRECATED - Use facebook-oauth instead - Facebook OAuth flow",
-  version: "1.3.0"
+  version: "1.3.0",
+  deprecated: 'Use facebook-oauth instead',
+  documentation: null
 });
 
 Package.onUse(function(api) {
