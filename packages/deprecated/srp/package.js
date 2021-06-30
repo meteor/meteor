@@ -6,7 +6,8 @@
 Package.describe({
   summary: "Library for Secure Remote Password (SRP) exchanges",
   version: "1.1.0",
-  deprecated: true
+  deprecated: true,
+  documentation: 'README.md'
 });
 
 Package.onUse(function (api) {

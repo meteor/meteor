@@ -1,12 +1,20 @@
-## v2.3, UNRELEASED
+## v2.4, UNRELEASED
+
+#### Meteor Version Release
+
+#### Independent Releases
+
+## v2.3, 2021-06-24
 
 #### Highlights
 
-* Node.js update to 14.17.0 from 12.22.1 🎉
+* Node.js update to 14.17.1 from 12.22.1 🎉
 
 * Typescript update to [4.3.2](https://devblogs.microsoft.com/typescript/announcing-typescript-4-3/)
 
-* Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details.
+* Packages had their backward compatibility to before Meteor 1.0 removed. See below for more details.
+
+* Improved tracking of which files are used by build plugins to know when it should do a full rebuild, a faster client-only rebuild, or can completely skip rebuilding after a file is modified. This should work with any type of file in any directory, and for both files in the app and files in packages. The most noticeable improvement is when modifying a file only used on the client Meteor will only rebuild the client, even if the file is not inside `imports` or a `client` folder.
 
 ### Summary of breaking changes
 
@@ -14,7 +22,7 @@
   - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
   - We recommend that you read Node.js [release notes](https://nodejs.org/en/blog/release/v14.0.0/) though.
   
-- Accounts have undergone some major changes including major version bump. See bellow for more details.
+- Accounts have undergone some major changes including major version bump. See below for more details.
 
 - All official packages that have been deprecated have now the deprecated flag and will inform you about that if you install or update them.
 
@@ -22,21 +30,65 @@
 
 ### Migration steps
 
-- As Node.js version was upgraded we recommend that you remove your `node_modules` folder (`rm -rf node_modules`) and run `meteor reset` to be sure you compile all the binary dependencies again using the new Node.js version.
+- As Node.js version was upgraded we recommend that you remove your `node_modules` folder (`rm -rf node_modules`) and run `meteor npm i` to be sure you compile all the binary dependencies again using the new Node.js version.
   - Maybe you also want to recreate your lock file.
+  - If you get an error try `meteor reset` which will clear caches, beware that this will also remove your local DB for your app.
   
 - If you are maintaining a package that depends on one of the accounts packages which had a major version bump you will either need to set the new version manually or set `api.versionsFrom('2.3')`.
   You can also have it reference its current version and 2.3 like this: `api.versionsFrom(['1.12', '2.3'])`, for specific package it can be like this: `api.use('accounts-base@1.0.1 || 2.0.0')`.
+  
+- Old API for packages definitions has been removed. The old underscore method names (e.g. `api.add_files()`) will no longer, please use the camel case method names (e.g. `api.addFiles()`).
+
+### Breaking changes
+* Removed deprecated `mobile-port` flag
+
+* Removed deprecated `raw` name from `isobuild`
+
+* Removed deprecated package API method names `Package.on_use`, `Package.on_test`, `Package._transitional_registerBuildPlugin` and `api.add_files`, if you haven't till now, please use the current camel case versions
+
+* `accounts-base@2.0.0`
+  - Deprecated backward compatibility function `logoutOtherClients` has been removed.
+
+* `accounts-password@2.0.0`
+  - Deprecated backward compatibility functionality for `SRP` passwords from pre-Meteor 1.0 days has been removed.
+  - Enroll account workflow has been separated from reset password workflow (the enrollment token records are now stored in a separate db field `services.password.enroll`).
+
+* `ddp-client@2.5.0`
+  - Removed deprecated backward compatibility method names for Meteor before 1.0
+
+* `ddp-server@2.4.0`
+  - Removed deprecated backward compatibility method names for Meteor before 1.0
+
+* `meteor-base@1.5.0`
+  - Removed `livedata` dependency which was there for packages build for 0.9.0
+
+* `minimongo@1.7.0`
+  - Removed the `rewind` method that was noop for compatibility with Meteor 0.8.1
+
+* `mongo@1.12.0`
+  - Removed the `rewind` method that was noop for compatibility with Meteor 0.8.1
+
+* `oauth@2.0.0`
+  - Removed deprecated `OAuth.initiateLogin` and other functionality like the addition of `?close` in return URI for deprecated OAuth flow pre Meteor 1.0
+
+* `markdown@2.0.0`
+  - Use lazy imports to prevent it from being added to the initial bundle
+  - This package is now deprecated
+
+* `http@2.0.0`
+  - Internally http has been replaced by [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), should still work as previous version, but edge cases might be different. This is to aid you in transition to fetch.
+
+* `socket-stream-client@0.4.0`
+  - Remove IE8 checks
 
 #### Meteor Version Release
 
 * `meteor-tool@2.3`
-  - Node.js update to 14.17.0 from 12.22.1 🎉
+  - Node.js update to 14.17.1 from 12.22.1 🎉
     - This is a major upgrade in Node.js. See the [release notes](https://nodejs.org/en/blog/release/v14.0.0/) for more details.
   - `npm` update to 6.14.13.
   - `fibers` has been updated to v5.0.0.
   - `promise` has been updated to v8.1.0.
-  - `underscore` has been updated to v1.11.0.
   - `node-gyp` has been updated to v8.0.0.
   - `node-pre-gyp` has been updated to v0.15.0.
   - `@babel/runtime` has been updated to v7.14.0.
@@ -50,19 +102,23 @@
   - `moment` has been updated to v2.29.1.
   - `glob` has been updated to v7.1.6.
   - `split2` has been updated to v3.2.2.
-  - `optimism` has been updated to v0.12.2.
-  - `@wry/context` has been updated to v0.5.2.
   - `lru-cache` has been updated to v4.1.5.
   - `anser` has been updated to v2.0.1.
   - `xmlbuilder2` has been updated to v1.8.1.
   - `ws` has been updated to v7.4.5.
   - `underscore` has been updated to v1.13.1
+  - `optimism` has been updated to v0.16.1
+  - `@wry/context` has been update to v0.6.0
   - Reduced time spent by server (re)start in development by adding a cache for Reify. This optimization can be enabled in production by setting the `METEOR_REIFY_CACHE_DIR` environment variable [PR](https://github.com/meteor/meteor/pull/11400).
   - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
   - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
   - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
-  - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`.
   - Skeletons dependencies updated to latest version
+  - Svelte skeleton now has HMR
+  - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-only)
+  - Improved watched system to properly rebuild `client` even when a file is outside of `client` or `imports` folders. See [PR](https://github.com/meteor/meteor/pull/11474) for details.
+  - Fix an issue when `App.appendToConfig` crashed Cordova build.
+  - Reify compiler now uses cache in runtime. [Read more](https://github.com/meteor/meteor/pull/11400)
   
 * `launch-screen@1.3.0`
   - Removes LaunchScreen from web clients.
@@ -80,49 +136,15 @@
 * `server-render@0.4.0`
   - Updated npm dependencies
 
-### Breaking changes
-* Removed deprecated `mobile-port` flag
-
-* Removed deprecated `raw` name from `isobuild`
-
-* Removed deprecated package API method names `Package.on_use`, `Package.on_test`, `Package._transitional_registerBuildPlugin` and `api.add_files`, if you haven't till now, please use the current camel case versions
-
 * `accounts-base@2.0.0`
-  - Deprecated backward compatibility function `logoutOtherClients` has been removed
-  
-* `accounts-password@2.0.0`
-  - Deprecated backward compatibility functionality for `SRP` passwords from pre-Meteor 1.0 days
-  - Enroll account workflow has been separated from reset password workflow (the enrollment token records are now stored in a separate db field `services.password.enroll`). 
-  
-* `ddp-client@2.5.0`
-  - Removed backward compatibility method names for Meteor before 1.0
+  - New hook `setAdditionalFindUserOnExternalLogin` has been added which allows you to customize user selection on external logins if you want to, for example, login a user who has the same e-mail as the external account.
 
 * `ddp-server@2.4.0`
-  - Removed backward compatibility method names for Meteor before 1.0
-  - Added support for this.unblock() in Meteor.publish() context
+  - Added support for `this.unblock()` in `Meteor.publish()` context. See [PR](https://github.com/meteor/meteor/pull/11392) for more details.
   - Add support in `Meteor.publish()` for async functions
-
-* `meteor-base@2.0.0`
-  - Removed `livedata` dependency which was there for packages build for 0.9.0
   
-* `minimongo@1.7.0`
-  - Removed the `rewind` method that was noop for compatibility with Meteor 0.8.1
-  
-* `mongo@1.12.0`
-  - Removed the `rewind` method that was noop for compatibility with Meteor 0.8.1
-  
-* `oauth@2.0.0`
-  - Removed `OAuth.initiateLogin` and other functionality like the addition of `?close` in return URI for deprecated OAuth flow pre Meteor 1.0
-
-* `markdown@2.0.0`
-  - Use lazy imports to prevent it from being added to the initial bundle
-  - Added deprecation flag
-  
-* `http@2.0.0`
-  - Internally http has been replaced by [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), should still work as previous version, but edge cases might be different. This is to aid you in transition to fetch.
-
-* `socket-stream-client@0.4.0`
-  - Remove IE8 checks
+* `webapp@1.11.0`
+  - Webapp will respond appropriately to unsupported requests instead of sending content, including handling for new HTTP verbs. See [PR](https://github.com/meteor/meteor/pull/11224) for more details.
 
 #### Independent Releases
 
@@ -179,6 +201,16 @@
   
 * `hot-module-replacement@0.2.1`
   - Add missing dependency.
+  
+* `observe-sequence@1.0.17`
+  - Updated dependencies
+
+* `observe-sequence@1.0.18`
+  - When `#each` argument is unsupported it will be shown
+  - Moving package under Blaze repository
+  
+* `react-fast-refresh@0.1.1`
+  - Fixed the package to work in IE11
 
 ## v2.2, 2021-04-15
 
@@ -498,7 +530,7 @@ N/A
 
 * `meteor create --vue` is now available thanks to [@chris-visser](https://github.com/chris-visser). PR [#11086](https://github.com/meteor/meteor/pull/11086)
 
-* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://galaxy-guide.meteor.com/deploy-guide.html#cache-build).
+* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-build).
 
 * Multiple optimizations in build performance, many of them for Windows thanks to [@zodern](https://github.com/zodern). PRs [#10838](https://github.com/meteor/meteor/pull/10838), [#11114](https://github.com/meteor/meteor/pull/11114), [#11115](https://github.com/meteor/meteor/pull/11115), [#11102](https://github.com/meteor/meteor/pull/11102), [#10839](https://github.com/meteor/meteor/pull/10839)
 

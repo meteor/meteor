@@ -1,7 +1,8 @@
 Package.describe({
   summary: 'DEPRECATED - Use github-oauth instead - GitHub OAuth flow',
   version: '1.2.0',
-  deprecated: 'Use github-oauth instead'
+  deprecated: 'Use github-oauth instead',
+  documentation: null
 });
 
 Package.onUse(function (api) {
