@@ -6,17 +6,13 @@
 # https://github.com/actions/labeler
 
 name: Labeler
-on: [pull_request]
+on:
+  - pull_request_target
 
 jobs:
   label:
-
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-
     steps:
-    - uses: actions/labeler@v2
+    - uses: actions/labeler@v3
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
