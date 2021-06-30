@@ -1,6 +1,8 @@
 Package.describe({
   summary: 'DEPRECATED - Use meteor-developer-oauth instead - Meteor developer accounts OAuth flow',
-  version: '1.2.0'
+  version: '1.2.0',
+  deprecated: 'Use meteor-developer-oauth instead',
+  documentation: 'README.md'
 });
 
 Package.onUse(function (api) {
