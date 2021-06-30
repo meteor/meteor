@@ -5,15 +5,17 @@ Package.describe({
   // 2.2.x in the future. The version was also bumped to 2.0.0 temporarily
   // during the Meteor 1.5.1 release process, so versions 2.0.0-beta.2
   // through -beta.5 and -rc.0 have already been published.
-  version: "1.7.1"
+  version: "2.0.0"
 });
 
+Npm.depends({
+  'bcrypt': '5.0.1'
+})
+
 Package.onUse(api => {
-  api.use('npm-bcrypt', 'server');
 
   api.use([
     'accounts-base',
-    'srp',
     'sha',
     'ejson',
     'ddp'
@@ -33,7 +35,7 @@ Package.onUse(api => {
 });
 
 Package.onTest(api => {
-  api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
+  api.use(['accounts-password', 'sha', 'tinytest', 'test-helpers', 'tracker',
            'accounts-base', 'random', 'email', 'check', 'ddp', 'ecmascript']);
   api.addFiles('password_tests_setup.js', 'server');
   api.addFiles('password_tests.js', ['client', 'server']);

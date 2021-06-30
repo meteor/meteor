@@ -65,7 +65,7 @@
 // Showdown namespace
 //
 // METEOR CHANGE: remove "var" so that this isn't file-local.
-Showdown = { extensions: {} };
+export const Showdown = { extensions: {} };
 
 //
 // forEach
@@ -121,7 +121,7 @@ var g_output_modifiers = [];
 if (typeof module !== 'undefined' && typeof exports !== 'undefined' && typeof require !== 'undefined') {
 	var fs = require('fs');
 
-	if (fs) {
+	if (fs && fs.readdirSync) {
 		// Search extensions folder
 		var extensions = fs.readdirSync((__dirname || '.')+'/extensions').filter(function(file){
 			return ~file.indexOf('.js');

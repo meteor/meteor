@@ -126,16 +126,6 @@ OAuth.launchLogin = options => {
   }
 };
 
-// XXX COMPAT WITH 0.7.0.1
-// Private interface but probably used by many oauth clients in atmosphere.
-OAuth.initiateLogin = (credentialToken, url, callback, dimensions) => {
-  OAuth.showPopup(
-    url,
-    callback.bind(null, credentialToken),
-    dimensions
-  );
-};
-
 // Called by the popup when the OAuth flow is completed, right before
 // the popup closes.
 OAuth._handleCredentialSecret = (credentialToken, secret) => {

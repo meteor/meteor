@@ -299,7 +299,7 @@ export function leastSpecificDescription(programs: string[]): string {
   }
 
   // Find the longest string
-  const longest = max(programs, (p: string) => p.length);
+  const longest = String(max(programs, (p: string) => p.length));
 
   // If everything else in the list is compatible with the longest,
   // then it must be the most specific, and if everything is

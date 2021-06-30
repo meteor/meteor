@@ -2,7 +2,7 @@
 * ❓ Questions?
           Start a discussion on the Meteor forums (https://forums.meteor.com/) or post a message on (Community Slack)[https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc]
 * 💡 Feature requests?
-          Visit the feature request repository (https://github.com/meteor/meteor-feature-requests).
+          Visit our Discussions page (https://github.com/meteor/meteor/discussions).
 * ❗️ Bug?
           This is the right place!
 
@@ -25,7 +25,7 @@ If you don't include a reproduction the issue is probably going to be closed.
 
 Please ensure your issue is opened in the appropriate repository:
 
-* Feature Requests: https://github.com/meteor/meteor-feature-requests
+* Feature Requests: https://github.com/meteor/meteor/discussions
 * Blaze: https://github.com/meteor/blaze/
 * Docs: https://github.com/meteor/docs/
 * Guide: https://github.com/meteor/guide/
