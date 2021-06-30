@@ -18,7 +18,7 @@ const removeTestSocketFile = () => {
 }
 
 Tinytest.add("socket file - don't remove a non-socket file", test => {
-  writeFileSync(testSocketFile);
+  writeFileSync(testSocketFile, "");
   test.throws(
     () => { removeExistingSocketFile(testSocketFile); },
     /An existing file was found/
@@ -58,7 +58,7 @@ Tinytest.add('socket file - remove socket file on exit', test => {
   const testEventEmitter = new EventEmitter();
   registerSocketFileCleanup(testSocketFile, testEventEmitter);
   ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
-    writeFileSync(testSocketFile);
+    writeFileSync(testSocketFile, "");
     test.isNotUndefined(statSync(testSocketFile));
     testEventEmitter.emit(signal);
     test.throws(
