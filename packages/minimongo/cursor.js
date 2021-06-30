@@ -345,12 +345,6 @@ export default class Cursor {
     return handle;
   }
 
-  // Since we don't actually have a "nextObject" interface, there's really no
-  // reason to have a "rewind" interface.  All it did was make multiple calls
-  // to fetch/map/forEach return nothing the second time.
-  // XXX COMPAT WITH 0.8.1
-  rewind() {}
-
   // XXX Maybe we need a version of observe that just calls a callback if
   // anything changed.
   _depend(changers, _allow_unordered) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.4.3"
+  version: "1.5.0"
 });
 
 Package.onUse(function (api) {
@@ -9,7 +9,7 @@ Package.onUse(function (api) {
     'service-configuration',
     'accounts-base',
     'ecmascript',
-    'templating@1.2.13',
+    'templating@1.4.0',
     'session',
   ], 'client');
 

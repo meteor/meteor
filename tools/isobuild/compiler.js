@@ -2,7 +2,6 @@ var _ = require('underscore');
 
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
-var bundler = require('./bundler.js');
 var isopack = require('./isopack.js');
 var meteorNpm = require('./meteor-npm.js');
 var watch = require('../fs/watch');
@@ -13,6 +12,7 @@ var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('../tool-env/profile').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
+import { NodeModulesDirectory, buildJsImage } from './bundler.js';
 
 import {
   optimisticReadFile,
@@ -66,7 +66,7 @@ compiler.compile = Profile(function (packageSource, options) {
         "` in package `" + packageSource.name + "`",
       rootPath: packageSource.sourceRoot
     }, function () {
-      var buildResult = bundler.buildJsImage({
+      var buildResult = buildJsImage({
         name: info.name,
         packageMap: packageMap,
         isopackCache: isopackCache,
@@ -410,7 +410,7 @@ var compileUnibuild = Profile(function (options) {
   const nodeModulesDirectories = Object.create(null);
 
   function addNodeModulesDirectory(options) {
-    const nmd = new bundler.NodeModulesDirectory(options);
+    const nmd = new NodeModulesDirectory(options);
     nodeModulesDirectories[nmd.sourcePath] = nmd;
   }
 
@@ -558,13 +558,12 @@ api.addAssets('${relPath}', 'client').`);
     const hash = optimisticHashOrNull(absPath);
     const file = { contents, hash };
 
-    if (fileOptions && ! fileOptions.lazy) {
-      watchSet.addFile(absPath, hash);
-    } else {
-      // Lazy files might not ultimately be used by the current unibuild/bundle,
-      // so we add them to the watchSet using a provisional status that may be
-      // updated later, at the end of PackageSourceBatch.computeJsOutputFilesMap.
+    // When files are handled by a new-style compiler plugin, the SourceResource
+    // class tracks if each file is actually used.
+    if (classification.isNonLegacySource()) {
       watchSet.addPotentiallyUnusedFile(absPath, hash);
+    } else {
+      watchSet.addFile(absPath, hash);
     }
 
     Console.nudge(true);
@@ -598,16 +597,14 @@ api.addAssets('${relPath}', 'client').`);
     if (classification.isNonLegacySource()) {
       // This is source used by a new-style compiler plugin; it will be fully
       // processed later in the bundler.
-      resources.push({
-        type: "source",
-        extension: classification.extension || null,
-        usesDefaultSourceProcessor:
-          !! classification.usesDefaultSourceProcessor,
+      resources.push(new SourceResource({
+        extension: classification.extension,
+        usesDefaultSourceProcessor: !!classification.usesDefaultSourceProcessor,
         data: contents,
         path: relPath,
-        hash: hash,
-        fileOptions: fileOptions
-      });
+        hash,
+        fileOptions
+      }));
       return;
     }
 
@@ -999,64 +996,32 @@ export function isIsobuildFeaturePackage(packageName) {
   return packageName.startsWith('isobuild:');
 }
 
-// If you update this data structure to add more feature packages, you should
-// update the wiki page here:
-// https://docs.meteor.com/api/packagejs.html#isobuild-features
-export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
-  // This package directly calls Plugin.registerCompiler. Package authors
-  // must explicitly depend on this feature package to use the API.
-  'isobuild:compiler-plugin': ['1.0.0'],
+class SourceResource {
+  type = "source";
 
-  // This package directly calls Plugin.registerMinifier. Package authors
-  // must explicitly depend on this feature package to use the API.
-  'isobuild:minifier-plugin': ['1.0.0'],
+  constructor({ extension, usesDefaultSourceProcessor, data, path, hash, fileOptions }) {
+    this.type = "source";
+    this.extension = extension || null;
+    this.usesDefaultSourceProcessor = usesDefaultSourceProcessor;
+    this.path = path;
+    this.fileOptions = fileOptions;
 
-  // This package directly calls Plugin.registerLinter. Package authors
-  // must explicitly depend on this feature package to use the API.
-  'isobuild:linter-plugin': ['1.0.0'],
+    // Is set to true if the resource's hash or data is accessed, which can be
+    // used to track if the file's content was used during the build process
+    this._dataUsed = false;
+    this._hash = hash;
+    this._data = data;
+  }
 
-  // This package is only published in the isopack-2 format, not isopack-1 or
-  // older. ie, it contains "source" files for compiler plugins, not just
-  // JS/CSS/static assets/head/body.
-  // This is implicitly added at publish time to any such package; package
-  // authors don't have to add it explicitly. It isn't relevant for local
-  // packages, which can be rebuilt if possible by the older tool.
-  //
-  // Specifically, this is to avoid the case where a package is published with a
-  // dependency like `api.use('less@1.0.0 || 2.0.0')` and the publication
-  // selects the newer compiler plugin version to generate the isopack. The
-  // published package (if this feature package wasn't implicitly included)
-  // could still be selected by the Version Solver to be used with an old
-  // Isobuild... just because less@2.0.0 depends on isobuild:compiler-plugin
-  // doesn't mean it couldn't choose less@1.0.0, which is not actually
-  // compatible with this published package.  (Constraints of the form described
-  // above are not very helpful, but at least we can prevent old Isobuilds from
-  // choking on confusing packages.)
-  //
-  // (Why not isobuild:isopack@2.0.0? Well, that would imply that Version Solver
-  // would have to choose only one isobuild:isopack feature version, which
-  // doesn't make sense here.)
-  'isobuild:isopack-2': ['1.0.0'],
+  get hash () {
+    this._dataUsed = true;
+    return this._hash;
+  }
 
-  // This package uses the `prodOnly` metadata flag, which causes it to
-  // automatically depend on the `isobuild:prod-only` feature package.
-  'isobuild:prod-only': ['1.0.0'],
+  get data () {
+    this._dataUsed = true;
+    return this._data;
+  }
+}
 
-  // This package depends on a specific version of Cordova. Package authors must
-  // explicitly depend on this feature package to indicate that they are not
-  // compatible with earlier Cordova versions, which is most likely a result of
-  // the Cordova plugins they depend on.
-  // One scenario is a package depending on a Cordova plugin or version
-  // that is only available on npm, which means downloading the plugin is not
-  // supported on versions of Cordova below 5.0.0.
-  'isobuild:cordova': ['5.4.0'],
-
-  // This package requires functionality introduced in meteor-tool@1.5.0
-  // to enable dynamic module fetching via import(...).
-  'isobuild:dynamic-import': ['1.5.0'],
-
-  // This package ensures that processFilesFor{Bundle,Target,Package} are
-  // allowed to return a Promise instead of having to await async
-  // compilation using fibers and/or futures.
-  'isobuild:async-plugins': ['1.6.1'],
-};
+exports.SourceResource = SourceResource;

@@ -448,7 +448,14 @@ export default class Run {
     test.durationMs = +(new Date) - startTime;
 
     if (failure) {
-      Console.error(`... fail! (${test.durationMs} ms)`, Console.options({ indent: 2 }));
+      let checkmark;
+      if (process.platform === "win32") {
+        checkmark = 'FAIL';
+      } else {
+        checkmark = '\u2717'; // CROSS
+      }
+
+      Console.error(`... fail! (${test.durationMs} ms)`, Console.options({ bulletPoint: `${checkmark} ` }));
 
       if (failure instanceof TestFailure) {
         const frames = parseStackParse(failure).outsideFiber;
@@ -544,8 +551,7 @@ export default class Run {
 
       testList.notifyFailed(test, failure);
     } else {
-      Console.error(`... ok! (${test.durationMs} ms)`,
-        Console.options({ indent: 2 }));
+      Console.success(`... ok! (${test.durationMs} ms)`);
     }
   }
 }

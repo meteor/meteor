@@ -17,7 +17,7 @@ var cspsEqual = function (csp1, csp2) {
   return EJSON.equals(cspToObj(csp1), cspToObj(csp2));
 };
 
-// It's important to call _reset() at the beginnning of these tests; otherwise
+// It's important to call _reset() at the beginning of these tests; otherwise
 // the headers left over at the end of the last test run will be used.
 
 Tinytest.add("browser-policy - csp", function (test) {
