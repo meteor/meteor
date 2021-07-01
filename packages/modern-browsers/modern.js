@@ -167,7 +167,7 @@ function greaterThan(a, b) {
 }
 
 function makeSource(feature) {
-  return module.id + " (" + feature + ")"
+  return module.id + " (" + feature + ")";
 }
 
 setMinimumBrowserVersions({
