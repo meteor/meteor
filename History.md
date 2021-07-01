@@ -3,6 +3,7 @@
 #### Highlights
 
 - Node.js updated to 12.22.1
+- npm updated to 6.14.13
 
 #### Meteor Version Release
 
