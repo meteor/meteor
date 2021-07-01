@@ -34,9 +34,11 @@ var dynamicImportSettings = Meteor.settings
 // ECMAScript dynamic import(...) syntax.
 Module.prototype.dynamicImport = function (id) {
   var module = this;
-  return module.prefetch(id).then(function () {
-    return getNamespace(module, id);
-  });
+  return idbReady().then(() => {
+    return module.prefetch(id).then(function () {
+      return getNamespace(module, id);
+    });
+  })
 };
 
 // Called by Module.prototype.prefetch if there are any missing dynamic
