@@ -312,7 +312,6 @@ ${displayNameForPlatform(platform)}`, async () => {
   buildForPlatform(platform, options = {}) {
     assert(platform);
 
-    console.log("PLATFORM: ", platform)
     const commandOptions = {
       ...this.defaultOptions,
       platforms: [platform],
