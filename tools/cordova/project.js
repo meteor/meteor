@@ -286,7 +286,7 @@ outdated platforms`);
     builder.copyBuildOverride();
   }
 
-  prepareForPlatform(platform) {
+  prepareForPlatform(platform, options) {
     assert(platform);
 
     // Temporary workaround for Cordova iOS bug until
@@ -309,9 +309,10 @@ ${displayNameForPlatform(platform)}`, async () => {
 
   // Building (includes prepare)
 
-  buildForPlatform(platform, options = {}, extraPaths) {
+  buildForPlatform(platform, options = {}) {
     assert(platform);
 
+    console.log("PLATFORM: ", platform)
     const commandOptions = {
       ...this.defaultOptions,
       platforms: [platform],
@@ -335,6 +336,7 @@ ${displayNameForPlatform(platform)}`, async () => {
       ...this.defaultOptions,
       platforms: [platform],
       device: isDevice,
+      options: (platform === 'android' ? {argv: ["--packageType", options.packageType || "bundle"]} : {})
     };
 
     this.runCommands(`running Cordova app for platform \
