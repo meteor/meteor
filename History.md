@@ -9,12 +9,12 @@
 #### Highlights
 
 * Fix windows issue when running webapp package.
-* Node.js updated to 14.17.2, following [security release]()
+* Node.js updated to 14.17.2, following [security release](https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/)
 
 #### Meteor Version Release
 
 * `meteor-tool@2.3.1`
-  - Node.js updated to 14.17.2
+  - Node.js updated to [14.17.2](https://nodejs.org/en/blog/release/v14.17.2/)
   - `@babel/runtime` dependency updated to v7.14.6 across the tool and testing apps
   - Skeletons dependencies updated
   - Apollo skeleton removed `apollo-boost` dependency which is no longer needed
