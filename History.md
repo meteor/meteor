@@ -2,6 +2,9 @@
 
 #### Meteor Version Release
 
+* `meteor-tool@2.4`
+  - `meteor show` now reports if a package is deprecated
+
 #### Independent Releases
 
 ## v2.3, 2021-06-24
