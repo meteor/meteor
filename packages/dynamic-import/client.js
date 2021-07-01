@@ -10,7 +10,7 @@ function idbReady() {
     /Safari\//.test(navigator.userAgent) &&
     !/Chrom(e|ium)\//.test(navigator.userAgent);
   // No point putting other browsers through this mess.
-  if (!isSafari || !window.indexedDB.databases) return Promise.resolve();
+  if (!isSafari || !window.indexedDB || !window.indexedDB.databases) return Promise.resolve();
   var intervalId;
   return new Promise(function(resolve) {
     var tryIdb = function() {
