@@ -1,6 +1,6 @@
 const path = require('path');
 
-const METEOR_LATEST_VERSION = '2.1.1';
+const METEOR_LATEST_VERSION = '2.2.1';
 
 const localAppData = process.env.LOCALAPPDATA;
 
@@ -16,4 +16,4 @@ module.exports = {
   meteorPath,
   release: process.env.INSTALL_METEOR_VERSION || METEOR_LATEST_VERSION,
   startedPath: path.resolve(localAppData, '.meteor-install-started.txt'),
-}
+};

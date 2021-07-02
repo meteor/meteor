@@ -1,3 +1,15 @@
+## v2.2.1, 2021-06-02
+
+#### Highlights
+
+- Node.js updated to [12.22.2](https://nodejs.org/en/blog/release/v12.22.2/)
+- npm updated to 6.14.13
+
+#### Meteor Version Release
+
+* `meteor-tool@2.2.1`
+  - Updated Node.js to 12.22.2 per [Node security update](https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/)
+
 ## v2.2, 2021-04-15
 
 #### Highlights
@@ -67,7 +79,7 @@
 
 * `meteor-tool@2.1.1`
   - Node.js security [update](https://nodejs.org/en/blog/vulnerability/april-2021-security-releases/) to 12.22.1
-  - npm update to 6.14.12
+  - npm update to 6.14.13
   
 ### Breaking changes
 
