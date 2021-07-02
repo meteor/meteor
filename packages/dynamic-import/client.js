@@ -3,6 +3,9 @@ var cache = require("./cache.js");
 var meteorInstall = require("meteor/modules").meteorInstall;
 var dynamicVersions = require("./dynamic-versions.js");
 
+// Fix for Safari 14 bug (https://bugs.webkit.org/show_bug.cgi?id=226547), do not delete this unused var
+var idb = global.indexedDB;
+
 var dynamicImportSettings = Meteor.settings
     && Meteor.settings.public
     && Meteor.settings.public.packages

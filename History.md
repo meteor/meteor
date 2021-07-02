@@ -36,7 +36,9 @@
 
 * `standard-minifiers-js@2.6.1`
   - Updated `@babel/runtime` to v7.14.6
-  
+
+* `dynamic-import@0.7.1`
+  - Fix [Safari 14 bug](https://bugs.webkit.org/show_bug.cgi?id=226547) with indexedDB
 
 ## v2.3, 2021-06-24
 
