@@ -7,7 +7,7 @@
 
 #### Meteor Version Release
 
-* `meteor-tool@2.2`
+* `meteor-tool@2.2.1`
   - Updated Node.js to 12.22.2 per [Node security update](https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/)
 
 ## v2.2, 2021-04-15
