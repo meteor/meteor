@@ -13,14 +13,18 @@
 
 * Fix windows issue when running webapp package.
 * Node.js updated to 14.17.2, following [security release](https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/)
+* New build flag `--packageType` to choose between apk/bundle for android builds.
 
 #### Meteor Version Release
+
+* Updated travis CI environment to use Node.js 14.17.2
 
 * `meteor-tool@2.3.1`
   - Node.js updated to [14.17.2](https://nodejs.org/en/blog/release/v14.17.2/)
   - `@babel/runtime` dependency updated to v7.14.6 across the tool and testing apps
   - Skeletons dependencies updated
   - Apollo skeleton removed `apollo-boost` dependency which is no longer needed
+  - New build flag `--packageType` to choose between apk/bundle for android builds (defaults to bundle).
 
 #### Independent Releases
 
