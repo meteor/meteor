@@ -13,8 +13,7 @@
 
 * Fix windows issue when running webapp package.
 * Node.js updated to 14.17.2, following [security release](https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/)
-* New build flag `--packageType` to choose between apk/bundle for android builds.
-* Meteor will now generate ".aab" (bundle files) by default when building for Android.
+* Meteor will now generate ".aab" (bundle files) by default when building for Android. This is the [new default format](https://android-developers.googleblog.com/2021/06/the-future-of-android-app-bundles-is.html) for Android apps. Use the new build flag `--packageType=apk` if you still need to generate APK.
 
 #### Meteor Version Release
 
