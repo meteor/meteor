@@ -396,7 +396,7 @@ build artifacts:
 <ul><li>a tarball (.tar.gz) that includes everything necessary to run the application
   server (see the <code>README</code> in the tarball for details).  Using the
   `--directory` option will produce a `bundle` directory instead of the tarball.</li>
-<li>an unsigned <code>apk</code> bundle and a project source if Android is targeted as a
+<li>an <code>aab</code> bundle and a project source if Android is targeted as a
   mobile platform</li>
 <li>a directory with an Xcode project source if iOS is targeted as a mobile
   platform</li></ul>
@@ -406,7 +406,7 @@ own server, instead of deploying to Galaxy.  You will have to deal
 with logging, monitoring, backups, load-balancing, etc, all of which we handle
 for you if you use Galaxy.
 
-The unsigned `apk` bundle and the outputted Xcode project can be used to deploy
+The `aab` bundle and the outputted Xcode project can be used to deploy
 your mobile apps to Android Play Store and Apple App Store.
 
 By default, your application is bundled for your current architecture.
@@ -420,6 +420,8 @@ in your mobile application with the `--mobile-settings` flag. A new value for
 
 You can also specify which platforms you want to build with the `--platforms` flag.
 Examples: `--platforms=android`, `--platforms=ios`, `--platforms=web.browser`.
+
+It's also possible to specify which type package you want to output in an android build, using: `--packageType=bundle`, which is the new default since Meteor 2.3.1 and will output .aab files, or `--packageType=apk` which will output apk files that needs to be signed before used.
 
 <h2 id="meteorlint">meteor lint</h2>
 
