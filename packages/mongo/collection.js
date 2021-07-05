@@ -94,7 +94,9 @@ Mongo.Collection = function Collection(name, options) {
     if (name && this._connection === Meteor.server &&
         typeof MongoInternals !== "undefined" &&
         MongoInternals.defaultRemoteCollectionDriver) {
-      options._driver = MongoInternals.defaultRemoteCollectionDriver();
+      if(!options.isAsync) {
+        options._driver = MongoInternals.defaultRemoteCollectionDriver();
+      }
     } else {
       const { LocalCollectionDriver } =
         require("./local_collection_driver.js");
@@ -102,9 +104,11 @@ Mongo.Collection = function Collection(name, options) {
     }
   }
 
-  this._collection = options._driver.open(name, this._connection);
   this._name = name;
-  this._driver = options._driver;
+  if(!options.isAsync) {
+    this._collection = options._driver.open(name, this._connection);
+    this._driver = options._driver;
+  }
 
   this._maybeSetUpReplication(name, options);
 
@@ -133,15 +137,24 @@ Mongo.Collection = function Collection(name, options) {
       is_auto: true,
     });
   }
+  console.log(`options.isAsync 2`, options.isAsync);
+
+  if(options.isAsync) {
+    this.asyncInit = async () => {
+      this._driver = await MongoInternals.defaultRemoteCollectionDriver();
+      this._collection = this._driver.open(name, this._connection);
+      return this;
+    }
+  }
 };
 
-Object.assign(Mongo.Collection.prototype, {
+const mainMethods = {
   _maybeSetUpReplication(name, {
     _suppressSameNameError = false
   }) {
     const self = this;
     if (! (self._connection &&
-           self._connection.registerStore)) {
+      self._connection.registerStore)) {
       return;
     }
 
@@ -360,24 +373,25 @@ Object.assign(Mongo.Collection.prototype, {
       this._getFindOptions(args)
     );
   }
-});
+};
+Object.assign(Mongo.Collection.prototype, mainMethods);
 
-Object.assign(Mongo.Collection, {
+const cursorMethods = {
   _publishCursor(cursor, sub, collection) {
     var observeHandle = cursor.observeChanges({
-      added: function (id, fields) {
-        sub.added(collection, id, fields);
+        added: function (id, fields) {
+          sub.added(collection, id, fields);
+        },
+        changed: function (id, fields) {
+          sub.changed(collection, id, fields);
+        },
+        removed: function (id) {
+          sub.removed(collection, id);
+        }
       },
-      changed: function (id, fields) {
-        sub.changed(collection, id, fields);
-      },
-      removed: function (id) {
-        sub.removed(collection, id);
-      }
-    },
-    // Publications don't mutate the documents
-    // This is tested by the `livedata - publish callbacks clone` test
-    { nonMutatingCallbacks: true });
+      // Publications don't mutate the documents
+      // This is tested by the `livedata - publish callbacks clone` test
+      { nonMutatingCallbacks: true });
 
     // We don't call sub.ready() here: it gets called in livedata_server, after
     // possibly calling _publishCursor on multiple returned cursors.
@@ -414,9 +428,11 @@ Object.assign(Mongo.Collection, {
 
     return selector;
   }
-});
+};
 
-Object.assign(Mongo.Collection.prototype, {
+Object.assign(Mongo.Collection, cursorMethods);
+
+const prototypeMethods = {
   // 'insert' immediately returns the inserted document's new _id.
   // The others return values immediately if you are in a stub, an in-memory
   // unmanaged collection, or a mongo-backed collection and you don't pass a
@@ -470,8 +486,8 @@ Object.assign(Mongo.Collection.prototype, {
 
     if ('_id' in doc) {
       if (! doc._id ||
-          ! (typeof doc._id === 'string' ||
-             doc._id instanceof Mongo.ObjectID)) {
+        ! (typeof doc._id === 'string' ||
+          doc._id instanceof Mongo.ObjectID)) {
         throw new Error(
           "Meteor requires document _id fields to be non-empty strings or ObjectIDs");
       }
@@ -722,7 +738,8 @@ Object.assign(Mongo.Collection.prototype, {
     }
     return self._driver.mongo.db;
   }
-});
+};
+Object.assign(Mongo.Collection.prototype, prototypeMethods);
 
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {

@@ -309,7 +309,7 @@
     return result.value;
   };
 
-  // Shuffle an array, using the modern version of the 
+  // Shuffle an array, using the modern version of the
   // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
   _.shuffle = function(obj) {
     var rand;
@@ -748,6 +748,27 @@
       if (ran) return memo;
       ran = true;
       memo = func.apply(this, arguments);
+      func = null;
+      return memo;
+    };
+  };
+
+  // Returns a function that will be executed at most one time, no matter how
+  // often you call it. Useful for lazy initialization.
+  _.onceAsync = function(func) {
+    var ran = false, memo;
+    return async function() {
+      if (ran) return memo;
+      ran = true;
+      console.log(`arguments`, arguments);
+      console.log(`func`, func.toString());
+
+      const memoPromise = func.apply(this, arguments);
+      console.log(`memoPromise`, memoPromise);
+
+      memo = await memoPromise;
+      console.log(`memo`, memo);
+
       func = null;
       return memo;
     };
