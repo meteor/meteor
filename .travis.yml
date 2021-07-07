@@ -1,6 +1,8 @@
 language: node_js
+os: linux
+dist: xenial
 node_js:
-  - "12.16.1"
+  - "14.17.1"
 cache:
   directories:
     - ".meteor"
@@ -9,7 +11,6 @@ script:
   - export TEST_PACKAGES_EXCLUDE="less"
   - export phantom=false
   - travis_retry ./packages/test-in-console/run.sh
-sudo: false
 env:
   - CXX=g++-4.8
 addons:

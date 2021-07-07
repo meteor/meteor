@@ -190,14 +190,14 @@ compiler.compile = Profile(function (packageSource, options) {
         nodeModulesPath: nodeModulesPath,
       });
 
-      _.extend(pluginProviderPackageNames,
+      Object.assign(pluginProviderPackageNames,
                unibuildResult.pluginProviderPackageNames);
     });
   });
 
   if (options.includePluginProviderPackageMap) {
     isopk.setPluginProviderPackageMap(
-      packageMap.makeSubsetMap(_.keys(pluginProviderPackageNames)));
+      packageMap.makeSubsetMap(Object.keys(pluginProviderPackageNames)));
   }
 
   return isopk;
@@ -259,9 +259,9 @@ compiler.getMinifiers = function (packageSource, options) {
 
   minifiers = _.uniq(minifiers);
   // check for extension-wise uniqness
-  _.each(['js', 'css'], function (ext) {
-    var plugins = _.filter(minifiers, function (plugin) {
-      return _.contains(plugin.extensions, ext);
+  ['js', 'css'].forEach(function (ext) {
+    var plugins = minifiers.filter(function (plugin) {
+      return plugin.extensions.includes(ext);
     });
 
     if (plugins.length > 1) {
