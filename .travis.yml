@@ -1,6 +1,6 @@
 language: node_js
 node_js:
-  - "14.17.2"
+  - "14.17.3"
 cache:
   directories:
     - ".meteor"
