@@ -1,52 +1,52 @@
+import { HTTP } from 'meteor/http';
+
 // URL prefix for tests to talk to
-var _XHR_URL_PREFIX = "/http_test_responder";
+let _XHR_URL_PREFIX = '/http_test_responder';
 
-var url_base = function () {
+const url_base = function () {
   if (Meteor.isServer) {
-    var address = WebApp.httpServer.address();
-    return "http://127.0.0.1:" + address.port;
+    const address = WebApp.httpServer.address();
+    return 'http://127.0.0.1:' + address.port;
   } else {
-    return "";
+    return '';
   }
-};
+}
 
-var url_prefix = function () {
-  if (Meteor.isServer && _XHR_URL_PREFIX.indexOf("http") !== 0) {
+const url_prefix = function () {
+  if (Meteor.isServer && _XHR_URL_PREFIX.indexOf('http') !== 0) {
     _XHR_URL_PREFIX = url_base() + _XHR_URL_PREFIX;
   }
   return _XHR_URL_PREFIX;
-};
+}
 
-
-testAsyncMulti("httpcall - basic", [
-  function(test, expect) {
-    var basic_get = function(url, options, expected_url) {
-
-      var callback = function(error, result) {
+testAsyncMulti('httpcall - basic', [
+  function (test, expect) {
+    const basic_get = function (url, options, expected_url) {
+      const callback = function (error, result) {
         test.isFalse(error);
-        if (! error) {
-          test.equal(typeof result, "object");
+        if (!error) {
+          test.equal(typeof result, 'object');
           test.equal(result.statusCode, 200);
 
-          var data = result.data;
+          const data = result.data;
 
           // allow dropping of final ? (which mobile browsers seem to do)
-          var allowed = [expected_url];
-          if (expected_url.slice(-1) === '?')
+          const allowed = [expected_url];
+          if (expected_url.slice(-1) === '?') {
             allowed.push(expected_url.slice(0, -1));
+          }
 
           test.include(allowed, expected_url);
-          test.equal(data.method, "GET");
+          test.equal(data.method, 'GET');
         }
       };
 
-
-      HTTP.call("GET", url_prefix()+url, options, expect(callback));
+      HTTP.call('GET', url_prefix() + url, options, expect(callback));
 
       if (Meteor.isServer) {
         // test sync version
         try {
-          var result = HTTP.call("GET", url_prefix()+url, options);
+          const result = HTTP.call('GET', url_prefix() + url, options);
           callback(undefined, result);
         } catch (e) {
           callback(e, e.response);
@@ -54,52 +54,66 @@ testAsyncMulti("httpcall - basic", [
       }
     };
 
-    basic_get("/foo", null, "/foo");
-    basic_get("/foo?", null, "/foo?");
-    basic_get("/foo?a=b", null, "/foo?a=b");
-    basic_get("/foo", {params: {fruit: "apple"}},
-              "/foo?fruit=apple");
-    basic_get("/foo", {params: {fruit: "apple", dog: "Spot the dog"}},
-              "/foo?fruit=apple&dog=Spot+the+dog");
-    basic_get("/foo?", {params: {fruit: "apple", dog: "Spot the dog"}},
-              "/foo?fruit=apple&dog=Spot+the+dog");
-    basic_get("/foo?bar", {params: {fruit: "apple", dog: "Spot the dog"}},
-              "/foo?bar&fruit=apple&dog=Spot+the+dog");
-    basic_get("/foo?bar", {params: {fruit: "apple", dog: "Spot the dog"},
-                           query: "baz"},
-              "/foo?baz&fruit=apple&dog=Spot+the+dog");
-    basic_get("/foo", {params: {fruit: "apple", dog: "Spot the dog"},
-                       query: "baz"},
-              "/foo?baz&fruit=apple&dog=Spot+the+dog");
-    basic_get("/foo?", {params: {fruit: "apple", dog: "Spot the dog"},
-                       query: "baz"},
-              "/foo?baz&fruit=apple&dog=Spot+the+dog");
-    basic_get("/foo?bar", {query: ""}, "/foo?");
-    basic_get("/foo?bar", {params: {fruit: "apple", dog: "Spot the dog"},
-                           query: ""},
-              "/foo?fruit=apple&dog=Spot+the+dog");
+    basic_get('/foo', null, '/foo');
+    basic_get('/foo?', null, '/foo?');
+    basic_get('/foo?a=b', null, '/foo?a=b');
+    basic_get('/foo', { params: { fruit: 'apple' } }, '/foo?fruit=apple');
+    basic_get('/foo', {
+      params: {
+        fruit: 'apple',
+        dog: 'Spot the dog'
+      }
+    }, '/foo?fruit=apple&dog=Spot+the+dog');
+    basic_get('/foo?', {
+      params: {
+        fruit: 'apple',
+        dog: 'Spot the dog'
+      }
+    }, '/foo?fruit=apple&dog=Spot+the+dog');
+    basic_get('/foo?bar', {
+      params: {
+        fruit: 'apple',
+        dog: 'Spot the dog'
+      }
+    }, '/foo?bar&fruit=apple&dog=Spot+the+dog');
+    basic_get('/foo?bar', {
+      params: { fruit: 'apple', dog: 'Spot the dog' },
+      query: 'baz'
+    }, '/foo?baz&fruit=apple&dog=Spot+the+dog');
+    basic_get('/foo', {
+      params: { fruit: 'apple', dog: 'Spot the dog' },
+      query: 'baz'
+    }, '/foo?baz&fruit=apple&dog=Spot+the+dog');
+    basic_get('/foo?', {
+      params: { fruit: 'apple', dog: 'Spot the dog' },
+      query: 'baz'
+    }, '/foo?baz&fruit=apple&dog=Spot+the+dog');
+    basic_get('/foo?bar', { query: '' }, '/foo?');
+    basic_get('/foo?bar', {
+      params: { fruit: 'apple', dog: 'Spot the dog' },
+      query: ''
+    }, '/foo?fruit=apple&dog=Spot+the+dog');
   }]);
 
-testAsyncMulti("httpcall - errors", [
-  function(test, expect) {
-
+testAsyncMulti('httpcall - errors', [
+  function (test, expect) {
     // Accessing unknown server (should fail to make any connection)
-    var unknownServerCallback = function(error, result) {
-      test.isTrue(error);
-      test.isFalse(result);
-      test.isFalse(error.response);
-    };
+    const unknownServerCallback = function (error, result) {
+      test.equal(!!error, true,'expected error');
+      test.equal(!!result, false,'expected no result');
+      test.equal(!!error.response, false, 'expected no response');
+    }
 
-    const invalidIp = "0.0.0.199";
+    const invalidIp = '0.0.0.199';
     // This is an invalid destination IP address, and thus should always give an error.
     // If your ISP is intercepting DNS misses and serving ads, an obviously
     // invalid URL (http://asdf.asdf) might produce an HTTP response.
-    HTTP.call("GET", `http://${invalidIp}/`, expect(unknownServerCallback));
+    HTTP.call('GET', `http://${invalidIp}/`, expect(unknownServerCallback));
 
     if (Meteor.isServer) {
       // test sync version
       try {
-        var unknownServerResult = HTTP.call("GET", `http://${invalidIp}/`);
+        const unknownServerResult = HTTP.call('GET', `http://${invalidIp}/`);
         unknownServerCallback(undefined, unknownServerResult);
       } catch (e) {
         unknownServerCallback(e, e.response);
@@ -107,14 +121,13 @@ testAsyncMulti("httpcall - errors", [
     }
 
     // Server serves 500
-    var error500Callback = function(error, result) {
-      test.isTrue(error);
-      test.isTrue(error.message.indexOf("500") !== -1); // message has statusCode
-      test.isTrue(error.message.indexOf(
-        error.response.content.substring(0, 10)) !== -1); // message has part of content
+    const error500Callback = function (error, result) {
+      test.equal(!!error, true, 'expect error');
+      test.equal(error.message.includes('500'), true, 'expect 500'); // message has statusCode
+      test.equal(error.message.includes(error.response.content.substring(0, 10)), true, 'expect res content in message'); // message has part of content
 
       test.isTrue(result);
-      test.isTrue(error.response);
+      test.isTrue(!!error.response);
       test.equal(result, error.response);
       test.equal(error.response.statusCode, 500);
 
@@ -123,13 +136,14 @@ testAsyncMulti("httpcall - errors", [
       // message too short, so that we can be sure we're verifying that we truncate.
       test.isTrue(error.response.content.length > 520);
       test.isTrue(error.message.length < 520); // make sure we truncate.
-    };
-    HTTP.call("GET", url_prefix()+"/fail", expect(error500Callback));
+    }
+
+    HTTP.call('GET', url_prefix() + '/fail', expect(error500Callback));
 
     if (Meteor.isServer) {
       // test sync version
       try {
-        var error500Result = HTTP.call("GET", url_prefix()+"/fail");
+        const error500Result = HTTP.call('GET', url_prefix() + '/fail');
         error500Callback(undefined, error500Result);
       } catch (e) {
         error500Callback(e, e.response);
@@ -138,25 +152,26 @@ testAsyncMulti("httpcall - errors", [
   }
 ]);
 
-testAsyncMulti("httpcall - timeout", [
-  function(test, expect) {
+
+testAsyncMulti('httpcall - timeout', [
+  function (test, expect) {
 
     // Should time out
-    var timeoutCallback = function(error, result) {
+    const timeoutCallback = function (error, result) {
       test.isTrue(error);
       test.isFalse(result);
       test.isFalse(error.response);
-    };
-    var timeoutUrl = url_prefix()+"/slow-"+Random.id();
+    }
+    const timeoutUrl = url_prefix() + '/slow-' + Random.id();
     HTTP.call(
-      "GET", timeoutUrl,
+      'GET', timeoutUrl,
       { timeout: 500 },
       expect(timeoutCallback));
 
     if (Meteor.isServer) {
       // test sync version
       try {
-        var timeoutResult = HTTP.call("GET", timeoutUrl, { timeout: 500 });
+        const timeoutResult = HTTP.call('GET', timeoutUrl, { timeout: 500 });
         timeoutCallback(undefined, timeoutResult);
       } catch (e) {
         timeoutCallback(e, e.response);
@@ -164,24 +179,22 @@ testAsyncMulti("httpcall - timeout", [
     }
 
     // Should not time out
-    var noTimeoutCallback = function(error, result) {
+    const noTimeoutCallback = function (error, result) {
       test.isFalse(error);
       test.isTrue(result);
       test.equal(result.statusCode, 200);
-      var data = result.data;
-      test.equal(data.url.substring(0, 4), "/foo");
-      test.equal(data.method, "GET");
-    };
-    var noTimeoutUrl = url_prefix()+"/foo-"+Random.id();
-    HTTP.call(
-      "GET", noTimeoutUrl,
-      { timeout: 2000 },
-      expect(noTimeoutCallback));
 
+      const data = result.data;
+      test.isTrue(!!data);
+      test.equal(data.url.substring(0, 4), '/foo');
+      test.equal(data.method, 'GET');
+    }
+    const noTimeoutUrl = url_prefix() + '/foo-' + Random.id();
+    HTTP.call('GET', noTimeoutUrl, { timeout: 2000 }, expect(noTimeoutCallback));
     if (Meteor.isServer) {
       // test sync version
       try {
-        var noTimeoutResult = HTTP.call("GET", noTimeoutUrl, { timeout: 2000 });
+        const noTimeoutResult = HTTP.call('GET', noTimeoutUrl, { timeout: 2000 });
         noTimeoutCallback(undefined, noTimeoutResult);
       } catch (e) {
         noTimeoutCallback(e, e.response);
@@ -190,130 +203,132 @@ testAsyncMulti("httpcall - timeout", [
   }
 ]);
 
-testAsyncMulti("httpcall - redirect", [
+testAsyncMulti('httpcall - redirect', [
 
-  function(test, expect) {
+  function (test, expect) {
     // Test that we follow redirects by default
-    HTTP.call("GET", url_prefix()+"/redirect", expect(
-      function(error, result) {
-        test.isFalse(error);
-        test.isTrue(result);
+    HTTP.call('GET', url_prefix() + '/redirect', expect(
+      function (error, result) {
+        test.equal(!!error, false, 'expected no error');
+        test.equal(!!result, true, 'expected result');
 
         // should be redirected transparently to /foo
         test.equal(result.statusCode, 200);
-        var data = result.data;
-        test.equal(data.url, "/foo");
-        test.equal(data.method, "GET");
-      }));
+        const data = result.data;
+        test.equal(data.url, '/foo');
+        test.equal(data.method, 'GET');
+      }))
 
     // followRedirect option; can't be false on client
-    _.each([false, true], function(followRedirects) {
-      var do_it = function(should_work) {
-        var maybe_expect = should_work ? expect : _.identity;
-        _.each(["GET", "POST"], function (method) {
+    _.each([false, true], function (followRedirects) {
+      const do_it = function (should_work) {
+        const maybe_expect = should_work ? expect : _.identity;
+        _.each(['GET', 'POST'], function (method) {
           HTTP.call(
-            method, url_prefix()+"/redirect",
-            {followRedirects: followRedirects},
-            maybe_expect(function(error, result) {
-              test.isFalse(error);
-              test.isTrue(result);
+            method, url_prefix() + '/redirect',
+            { followRedirects: followRedirects },
+            maybe_expect(function (error, result) {
+              test.equal(!!error, false, 'expected no error');
+              test.equal(!!result, true, 'expected result');
 
               if (followRedirects) {
                 // should be redirected transparently to /foo
                 test.equal(result.statusCode, 200);
-                var data = result.data;
-                test.equal(data.url, "/foo");
+                const data = result.data;
+                test.equal(data.url, '/foo');
                 // This is "GET" even when the initial request was a
                 // POST because browsers follow redirects with a GET
                 // even when the initial request was a different method.
-                test.equal(data.method, "GET");
+                test.equal(data.method, 'GET');
               } else {
                 // should see redirect
                 test.equal(result.statusCode, 301);
               }
             }));
         });
-      };
-      if (Meteor.isClient && ! followRedirects) {
+      }
+      if (Meteor.isClient && !followRedirects) {
         // not supported, should fail
         test.throws(do_it);
       } else {
         do_it(true);
       }
-    });
+    })
   }
 
-]);
+])
 
-testAsyncMulti("httpcall - methods", [
+testAsyncMulti('httpcall - methods', [
 
-  function(test, expect) {
+  function (test, expect) {
     // non-get methods
-    var test_method = function(meth, func_name) {
+    const test_method = function (meth, func_name) {
       func_name = func_name || meth.toLowerCase();
       HTTP[func_name](
-        url_prefix()+"/foo",
-        expect(function(error, result) {
+        url_prefix() + '/foo',
+        expect(function (error, result) {
           test.isFalse(error);
           test.isTrue(result);
           test.equal(result.statusCode, 200);
-          var data = result.data;
-          test.equal(data.url, "/foo");
+          const data = result.data;
+          test.equal(data.url, '/foo');
           test.equal(data.method, meth);
         }));
-    };
+    }
 
-    test_method("GET");
-    test_method("POST");
-    test_method("PUT");
-    test_method("DELETE", 'del');
-    test_method("PATCH");
+    test_method('GET');
+    test_method('POST');
+    test_method('PUT');
+    test_method('DELETE', 'del');
+    test_method('PATCH');
   },
 
-  function(test, expect) {
+  function (test, expect) {
     // contents and data
     HTTP.call(
-      "POST", url_prefix()+"/foo",
-      { content: "Hello World!" },
-      expect(function(error, result) {
+      'POST', url_prefix() + '/foo',
+      { content: 'Hello World!' },
+      expect(function (error, result) {
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
-        var data = result.data;
-        test.equal(data.body, "Hello World!");
+        const data = result.data;
+        test.equal(data.body, 'Hello World!');
       }));
 
     HTTP.call(
-      "POST", url_prefix()+"/data-test",
-      { data: {greeting: "Hello World!"} },
-      expect(function(error, result) {
+      'POST', url_prefix() + '/data-test',
+      { data: { greeting: 'Hello World!' } },
+      expect(function (error, result) {
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
-        var data = result.data;
-        test.equal(data.body, {greeting: "Hello World!"});
+        const data = result.data;
+        test.equal(data.body, { greeting: 'Hello World!' });
         // nb: some browsers include a charset here too.
         test.matches(data.headers['content-type'], /^application\/json\b/);
       }));
 
     HTTP.call(
-      "POST", url_prefix()+"/data-test-explicit",
-      { data: {greeting: "Hello World!"},
-        headers: {'Content-Type': 'text/stupid'} },
-      expect(function(error, result) {
+      'POST', url_prefix() + '/data-test-explicit',
+      {
+        data: { greeting: 'Hello World!' },
+        headers: { 'Content-Type': 'text/stupid' }
+      },
+      expect(function (error, result) {
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
-        var data = result.data;
-        test.equal(data.body, {greeting: "Hello World!"});
+        const data = result.data;
+        test.equal(data.body, { greeting: 'Hello World!' });
         // nb: some browsers include a charset here too.
         test.matches(data.headers['content-type'], /^text\/stupid\b/);
       }));
   }
 ]);
 
-testAsyncMulti("httpcall - http auth", [
-  function(test, expect) {
+testAsyncMulti('httpcall - http auth', [
+  function (test, expect) {
     // Test basic auth
 
     // Unfortunately, any failed auth will result in a browser
@@ -323,66 +338,71 @@ testAsyncMulti("httpcall - http auth", [
     // Random password breaks in Firefox, because Firefox incorrectly
     // uses cached credentials even if we supply different ones:
     // https://bugzilla.mozilla.org/show_bug.cgi?id=654348
-    var password = 'rocks';
-    //var password = Random.id().replace(/[^0-9a-zA-Z]/g, '');
+    const password = 'rocks';
+    //const password = Random.id().replace(/[^0-9a-zA-Z]/g, '');
     HTTP.call(
-      "GET", url_prefix()+"/login?"+password,
-      { auth: "meteor:"+password },
-      expect(function(error, result) {
+      'GET', url_prefix() + '/login?' + password,
+      { auth: 'meteor:' + password },
+      expect(function (error, result) {
         // should succeed
         test.isFalse(error);
         test.isTrue(result);
         test.equal(result.statusCode, 200);
-        var data = result.data;
-        test.equal(data.url, "/login?"+password);
-      }));
+        const data = result.data;
+        test.equal(data.url, '/login?' + password);
+      }))
 
     // test fail on malformed username:password
-    test.throws(function() {
+    test.throws(function () {
       HTTP.call(
-        "GET", url_prefix()+"/login?"+password,
-        { auth: "fooooo" },
-        function() { throw new Error("can't get here"); });
+        'GET', url_prefix() + '/login?' + password,
+        { auth: 'fooooo' },
+        function () { throw new Error('can\'t get here'); })
     });
   }
 ]);
 
-testAsyncMulti("httpcall - headers", [
-  function(test, expect) {
+testAsyncMulti('httpcall - headers', [
+  function (test, expect) {
     HTTP.call(
-      "GET", url_prefix()+"/foo-with-headers",
-      {headers: { "Test-header": "Value",
-                  "another": "Value2" } },
-      expect(function(error, result) {
-        test.isFalse(error);
-        test.isTrue(result);
+      'GET', url_prefix() + '/foo-with-headers',
+      {
+        headers: {
+          'Test-header': 'Value',
+          'another': 'Value2'
+        }
+      },
+      expect(function (error, result) {
+        test.equal(!!error, false);
+        test.equal(!!result, true);
 
         test.equal(result.statusCode, 200);
-        var data = result.data;
-        test.equal(data.url, "/foo-with-headers");
-        test.equal(data.method, "GET");
-        test.equal(data.headers['test-header'], "Value");
-        test.equal(data.headers['another'], "Value2");
-      }));
+
+        const data = result.data;
+        test.equal(data.url, '/foo-with-headers');
+        test.equal(data.method, 'GET');
+        test.equal(data.headers['test-header'], 'Value');
+        test.equal(data.headers['another'], 'Value2');
+      }))
 
     HTTP.call(
-      "GET", url_prefix()+"/headers",
-      expect(function(error, result) {
-        test.isFalse(error);
-        test.isTrue(result);
+      'GET', url_prefix() + '/headers',
+      expect(function (error, result) {
+        test.equal(!!error, false);
+        test.equal(!!result, true);
 
         test.equal(result.statusCode, 201);
-        test.equal(result.headers['a-silly-header'], "Tis a");
-        test.equal(result.headers['another-silly-header'], "Silly place.");
-      }));
+        test.equal(result.headers['a-silly-header'], 'Tis a');
+        test.equal(result.headers['another-silly-header'], 'Silly place.');
+      }))
   }
-]);
+])
 
-testAsyncMulti("httpcall - params", [
-  function(test, expect) {
-    var do_test = function(method, url, params, opt_opts, expect_url, expect_body) {
-      var opts = {};
-      if (typeof opt_opts === "string") {
+testAsyncMulti('httpcall - params', [
+  function (test, expect) {
+    const do_test = function (method, url, params, opt_opts, expect_url, expect_body) {
+      let opts = {};
+      if (typeof opt_opts === 'string') {
         // opt_opts omitted
         expect_body = expect_url;
         expect_url = opt_opts;
@@ -390,77 +410,51 @@ testAsyncMulti("httpcall - params", [
         opts = opt_opts;
       }
       HTTP.call(
-        method, url_prefix()+url,
+        method, url_prefix() + url,
         _.extend({ params: params }, opts),
-        expect(function(error, result) {
+        expect(function (error, result) {
           test.isFalse(error);
           test.isTrue(result);
           test.equal(result.statusCode, 200);
-          if (method !== "HEAD") {
-            var data = result.data;
+          if (method !== 'HEAD') {
+            const data = result.data;
             test.equal(data.method, method);
             test.equal(data.url, expect_url);
-            test.equal(data.body, expect_body);
+            test.equal(data.body, expect_body, `${method} ${url} ${JSON.stringify(params)} - expect body`);
           }
-      }));
-    };
-
-    do_test("GET", "/blah", {foo:"bar"}, "/blah?foo=bar", "");
-    do_test("GET", "/", {foo:"bar", fruit:"apple"}, "/?foo=bar&fruit=apple", "");
-    do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
-    do_test("POST", "/", {foo:"bar", fruit:"apple"}, "/", "foo=bar&fruit=apple");
-    do_test("GET", "/", {'foo?':"bang?"}, {}, "/?foo%3F=bang%3F", "");
-    do_test("POST", "/", {'foo?':"bang?"}, {}, "/", "foo%3F=bang%3F");
-    do_test("POST", "/", {foo:"bar", fruit:"apple"}, {
-      content: "stuff!"}, "/?foo=bar&fruit=apple", "stuff!");
-    do_test("POST", "/", {foo:"bar", greeting:"Hello World"}, {
-      content: "stuff!"}, "/?foo=bar&greeting=Hello+World", "stuff!");
-    do_test("POST", "/foo", {foo:"bar", greeting:"Hello World"},
-            "/foo", "foo=bar&greeting=Hello+World");
-    do_test("HEAD", "/head", {foo:"bar"}, "/head?foo=bar", "");
-    do_test("PUT", "/put", {foo:"bar"}, "/put", "foo=bar");
-  }
-]);
-
-testAsyncMulti("httpcall - npmRequestOptions", [
-  function (test, expect) {
-    if (Meteor.isClient) {
-      test.throws(function () {
-        HTTP.get(url_prefix() + "/",
-                 { npmRequestOptions: { encoding: null } },
-                 function () {});
-      });
-      return;
+        }))
     }
 
-    HTTP.get(
-      url_prefix() + "/",
-      { npmRequestOptions: { encoding: null } },
-      expect(function (error, result) {
-        test.isFalse(error);
-        test.isTrue(result);
-        test.equal(result.statusCode, 200);
-        test.instanceOf(result.content, Buffer);
-      })
-    );
+    do_test('GET', '/', { foo: 'bar', fruit: 'apple' }, '/?foo=bar&fruit=apple', '');
+    do_test('GET', '/', { 'foo?': 'bang?' }, {}, '/?foo%3F=bang%3F', '');
+    do_test('GET', '/blah', { foo: 'bar' }, '/blah?foo=bar', '');
+
+    do_test('POST', '/', { foo: 'bar', fruit: 'apple' }, '/', 'foo=bar&fruit=apple');
+    do_test('POST', '/', { 'foo?': 'bang?' }, {}, '/', 'foo%3F=bang%3F');
+    do_test('POST', '/', { foo: 'bar', fruit: 'apple' }, { content: 'stuff!' }, '/?foo=bar&fruit=apple', 'stuff!');
+    do_test('POST', '/', { foo: 'bar', greeting: 'Hello World' }, { content: 'stuff!' }, '/?foo=bar&greeting=Hello+World', 'stuff!');
+    do_test('POST', '/foo', { foo: 'bar', greeting: 'Hello World' }, '/foo', 'foo=bar&greeting=Hello+World');
+
+    do_test('HEAD', '/head', { foo: 'bar' }, '/head?foo=bar', '');
+
+    do_test('PUT', '/put', { foo: 'bar' }, '/put', 'foo=bar');
   }
 ]);
 
-Meteor.isClient && testAsyncMulti("httpcall - beforeSend", [
+Meteor.isClient && testAsyncMulti('httpcall - beforeSend', [
   function (test, expect) {
-    var fired = false;
-    var bSend = function(xhr){
+    let fired = false;
+    const bSend = function (xhr) {
       test.isFalse(fired);
       fired = true;
       test.isTrue(xhr instanceof XMLHttpRequest);
-    };
+    }
 
-    HTTP.get(url_prefix() + "/", {beforeSend: bSend}, expect(function () {
+    HTTP.get(url_prefix() + '/', { beforeSend: bSend }, expect(function () {
       test.isTrue(fired);
     }));
   }
 ]);
-
 
 if (Meteor.isServer) {
   // This is testing the server's static file sending code, not the http
@@ -469,55 +463,52 @@ if (Meteor.isServer) {
   //
   // client http library mangles paths before they are requested. only
   // run this test on the server.
-  testAsyncMulti("httpcall - static file serving", [
-    function(test, expect) {
+  testAsyncMulti('httpcall - static file serving', [
+    function (test, expect) {
       // Suppress error printing for this test (and for any other code that sets
       // the x-suppress-error header).
       WebApp.suppressConnectErrors();
 
-      function do_test(path, code, match) {
+      function do_test (path, code, match) {
         const prefix = Meteor.isModern
-          ? "" // No prefix for web.browser (modern).
-          : "/__browser.legacy";
+          ? '' // No prefix for web.browser (modern).
+          : '/__browser.legacy';
 
-        HTTP.get(url_base() + prefix + path, {
-          headers: {
-            "x-suppress-error": "true"
-          }
-        }, expect(function(error, result) {
-          test.equal(result.statusCode, code);
+        const options = { headers: { 'x-suppress-error': 'true' } };
+        HTTP.get(url_base() + prefix + path, options, expect(function (error, result) {
+          test.equal(result.statusCode, code, 'code');
           if (match) {
-            test.matches(result.content, match);
+            test.matches(result.content, match, 'content match');
           }
         }));
       }
 
       // existing static file
-      do_test("/packages/local-test_http/test_static.serveme", 200, /static file serving/);
+      //do_test('/packages/local-test_http/test_static.serveme', 200, /static file serving/)
 
       // no such file, so return the default app HTML.
-      var getsAppHtml = [
+      const getsAppHtml = [
         // This file doesn't exist.
-        "/nosuchfile",
+        '/nosuchfile',
 
         // Our static file serving doesn't process .. or its encoded version, so
         // any of these return the app HTML.
-        "/../nosuchfile",
-        "/%2e%2e/nosuchfile",
-        "/%2E%2E/nosuchfile",
-        "/%2d%2d/nosuchfile",
-        "/packages/http/../http/test_static.serveme",
-        "/packages/http/%2e%2e/http/test_static.serveme",
-        "/packages/http/%2E%2E/http/test_static.serveme",
-        "/packages/http/../../packages/http/test_static.serveme",
-        "/packages/http/%2e%2e/%2e%2e/packages/http/test_static.serveme",
-        "/packages/http/%2E%2E/%2E%2E/packages/http/test_static.serveme",
+        '/../nosuchfile',
+        '/%2e%2e/nosuchfile',
+        '/%2E%2E/nosuchfile',
+        '/%2d%2d/nosuchfile',
+        '/packages/http/../http/test_static.serveme',
+        '/packages/http/%2e%2e/http/test_static.serveme',
+        '/packages/http/%2E%2E/http/test_static.serveme',
+        '/packages/http/../../packages/http/test_static.serveme',
+        '/packages/http/%2e%2e/%2e%2e/packages/http/test_static.serveme',
+        '/packages/http/%2E%2E/%2E%2E/packages/http/test_static.serveme',
 
         // ... and they *definitely* shouldn't be able to escape the app bundle.
-        "/packages/http/../../../../../../packages/http/test_static.serveme",
-        "/../../../../../../../../../../../bin/ls",
-        "/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/bin/ls",
-        "/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/bin/ls"
+        '/packages/http/../../../../../../packages/http/test_static.serveme',
+        '/../../../../../../../../../../../bin/ls',
+        '/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/bin/ls',
+        '/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/%2E%2E/bin/ls'
       ];
 
       _.each(getsAppHtml, function (x) {
@@ -527,15 +518,8 @@ if (Meteor.isServer) {
   ]);
 }
 
-Meteor.isServer && Tinytest.add("httpcall - npm modules", function (test) {
-  // Make sure the version number looks like a version number. (All published
-  // request version numbers end in ".0".)
-  test.matches(HTTPInternals.NpmModules.request.version, /^2\.(\d+)\.0/);
-  test.equal(typeof(HTTPInternals.NpmModules.request.module), 'function');
-  test.isTrue(HTTPInternals.NpmModules.request.module.get);
-});
-
-// TO TEST/ADD:
+// TODO TEST/ADD:
+// - full fetch api? fetch on the client?
 // - https
 // - cookies?
 // - human-readable error reason/cause?
