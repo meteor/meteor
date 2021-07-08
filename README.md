@@ -369,7 +369,7 @@ Meteor.methods({
 
 -- **Client** --
 
-Client javascript doese not by default have access to all the same Roles functions as the server unless you publish
+Client javascript does not by default have access to all the same Roles functions as the server unless you publish
 these role-assignments. In addition, Blaze will have the addition of a `isInRole` handlebars helper which is
 automatically registered by the Roles package.
 
