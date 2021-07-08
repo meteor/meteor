@@ -7,7 +7,7 @@
 
 #### Independent Releases
 
-## v2.3.1, UNRELEASED
+## v2.3.1, 2021-07-08
 
 #### Highlights
 
