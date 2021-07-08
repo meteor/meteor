@@ -66,7 +66,7 @@ Interested in helping or contributing to Meteor?  These resources will help:
 
 * [Core development guide](DEVELOPMENT.md)
 * [Contribution guidelines](CONTRIBUTING.md)
-* [Feature requests](https://github.com/meteor/meteor-feature-requests/)
+* [Feature requests](https://github.com/meteor/meteor/discussions/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
 
 ## Uninstalling Meteor

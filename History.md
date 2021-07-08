@@ -1,3 +1,52 @@
+## v2.4, UNRELEASED
+
+#### Meteor Version Release
+
+* `meteor-tool@2.4`
+  - `meteor show` now reports if a package is deprecated
+
+#### Independent Releases
+
+## v2.3.1, 2021-07-08
+
+#### Highlights
+
+* Fix windows issue when running webapp package.
+* Node.js updated to 14.17.3, following [security release](https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/)
+
+#### Breaking Changes
+
+* Meteor will now generate ".aab" (bundle files) by default when building for Android. This is the [new default format](https://android-developers.googleblog.com/2021/06/the-future-of-android-app-bundles-is.html) for Android apps. Use the new build flag `--packageType=apk` if you still need to generate APK.
+
+#### Meteor Version Release
+
+* Updated travis CI environment to use Node.js 14.17.3
+
+* `meteor-tool@2.3.1`
+  - Node.js updated to [14.17.2](https://nodejs.org/en/blog/release/v14.17.2/) and [14.17.3](https://nodejs.org/en/blog/release/v14.17.3/)
+  - `@babel/runtime` dependency updated to v7.14.6 across the tool and testing apps
+  - Skeletons dependencies updated
+  - Apollo skeleton removed `apollo-boost` dependency which is no longer needed
+  - New build flag `--packageType` to choose between apk/bundle for android builds (defaults to bundle).
+
+#### Independent Releases
+
+* `webapp@1.11.1`
+  - Remove `posix` from npm shrinkwrap, to fix a bug it causes on Windows.
+
+* `less@3.0.2`
+  - Updated `@babel/runtime` to v7.14.6
+  - Updated `less` to v3.11.3
+  
+* `standard-minifiers-css@1.7.3`
+  - Updated `@babel/runtime` to v7.14.6
+
+* `standard-minifiers-js@2.6.1`
+  - Updated `@babel/runtime` to v7.14.6
+
+* `dynamic-import@0.7.1`
+  - Fix [Safari 14 bug](https://bugs.webkit.org/show_bug.cgi?id=226547) with indexedDB
+
 ## v2.3, 2021-06-24
 
 #### Highlights
@@ -6,7 +55,7 @@
 
 * Typescript update to [4.3.2](https://devblogs.microsoft.com/typescript/announcing-typescript-4-3/)
 
-* Packages had their backward compatibility to before Meteor 1.0 removed. See bellow for more details.
+* Packages had their backward compatibility to before Meteor 1.0 removed. See below for more details.
 
 * Improved tracking of which files are used by build plugins to know when it should do a full rebuild, a faster client-only rebuild, or can completely skip rebuilding after a file is modified. This should work with any type of file in any directory, and for both files in the app and files in packages. The most noticeable improvement is when modifying a file only used on the client Meteor will only rebuild the client, even if the file is not inside `imports` or a `client` folder.
 
@@ -16,7 +65,7 @@
   - If we receive reports from breaking changes we are going to list them here but so far we are not aware of any.
   - We recommend that you read Node.js [release notes](https://nodejs.org/en/blog/release/v14.0.0/) though.
   
-- Accounts have undergone some major changes including major version bump. See bellow for more details.
+- Accounts have undergone some major changes including major version bump. See below for more details.
 
 - All official packages that have been deprecated have now the deprecated flag and will inform you about that if you install or update them.
 
@@ -205,6 +254,18 @@
   
 * `react-fast-refresh@0.1.1`
   - Fixed the package to work in IE11
+
+## v2.2.1, 2021-06-02
+
+#### Highlights
+
+- Node.js updated to [12.22.2](https://nodejs.org/en/blog/release/v12.22.2/)
+- npm updated to 6.14.13
+
+#### Meteor Version Release
+
+* `meteor-tool@2.2.1`
+  - Updated Node.js to 12.22.2 per [Node security update](https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/)
 
 ## v2.2, 2021-04-15
 

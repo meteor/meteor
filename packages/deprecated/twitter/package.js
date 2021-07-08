@@ -1,7 +1,8 @@
 Package.describe({
   summary: "DEPRECATED - Use twitter-oauth instead - Twitter OAuth flow",
   version: '1.2.0',
-  deprecated: 'Use twitter-oauth instead'
+  deprecated: 'Use twitter-oauth instead',
+  documentation: 'README.md'
 });
 
 Package.onUse(function(api) {
