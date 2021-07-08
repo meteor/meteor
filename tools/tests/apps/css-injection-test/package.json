@@ -8,9 +8,9 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@babel/runtime": "^7.3.4",
+    "@babel/runtime": "^7.14.6",
     "jquery": "^3.5.1",
-    "meteor-node-stubs": "^0.4.1"
+    "meteor-node-stubs": "^1.0.3"
   },
   "meteor": {
     "mainModule": "css-injection-test.js"
