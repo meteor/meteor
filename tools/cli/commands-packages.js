@@ -1999,6 +1999,11 @@ main.registerCommand({
         "To update one or more of these packages to their latest",
         "compatible versions, pass their names to `meteor update`,",
         "or just run `meteor update --all-packages`.",
+        "If the packages do not upgrade after this, this could mean",
+        "that there is a newer version of Meteor which the package",
+        "requires, but it not yet recommended or that some package",
+        "dependencies are not up to date and don't allow you to get",
+        "the latest package version."
       ].join("\n"));
     }
   }
