@@ -150,7 +150,7 @@ Mongo.Collection = function Collection(name, options) {
 
 const mainMethods = {
   _maybeSetUpReplication(name, {
-    _suppressSameNameError = false
+    _suppressSameNameError = true
   }) {
     const self = this;
     if (! (self._connection &&
@@ -274,6 +274,7 @@ const mainMethods = {
 
     if (! ok) {
       const message = `There is already a collection named "${name}"`;
+
       if (_suppressSameNameError === true) {
         // XXX In theory we do not have to throw when `ok` is falsy. The
         // store is already defined for this collection name, but this

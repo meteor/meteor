@@ -36,6 +36,5 @@ MongoInternals.defaultRemoteCollectionDriver = _.onceAsync(async function () {
   if (! mongoUrl)
     throw new Error("MONGO_URL must be set in environment");
 
-  const remoteCollection = await new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
-  return remoteCollection;
+  return await new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
 });

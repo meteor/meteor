@@ -1621,10 +1621,13 @@ Object.assign(Server.prototype, {
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {
-      if (typeof func !== 'function')
+      if (typeof func !== 'function') {
         throw new Error("Method '" + name + "' must be a function");
-      if (self.method_handlers[name])
-        throw new Error("A method named '" + name + "' is already defined");
+      }
+      if (self.method_handlers[name]) {
+        console.error("A method named '" + name + "' is already defined");
+        console.trace();
+      }
       self.method_handlers[name] = func;
     });
   },

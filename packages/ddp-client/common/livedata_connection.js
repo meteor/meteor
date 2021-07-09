@@ -524,7 +524,8 @@ export class Connection {
         throw new Error("Method '" + name + "' must be a function");
       }
       if (this._methodHandlers[name]) {
-        throw new Error("A method named '" + name + "' is already defined");
+        console.error("A method named '" + name + "' is already defined");
+        console.trace();
       }
       this._methodHandlers[name] = func;
     });

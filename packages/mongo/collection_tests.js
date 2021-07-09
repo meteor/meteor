@@ -14,7 +14,7 @@ Tinytest.add('collection - call new Mongo.Collection multiple times',
 
     test.throws(
       function () {
-        new Mongo.Collection(collectionName);
+        new Mongo.Collection(collectionName, {_suppressSameNameError: false});
       },
       /There is already a collection named/
     );
@@ -27,7 +27,7 @@ Tinytest.add('collection - call new Mongo.Collection multiple times with _suppre
     new Mongo.Collection(collectionName);
 
     try {
-      new Mongo.Collection(collectionName, {_suppressSameNameError: true});
+      new Mongo.Collection(collectionName);
       test.ok();
     } catch (error) {
       console.log(error);
