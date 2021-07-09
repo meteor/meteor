@@ -386,7 +386,7 @@ builds for all platforms in this project.
 
 If you have added mobile platforms to your project with the
 'meteor add-platform' command, then the output directory will contain
-subdirectories named 'android' (with the APK bundle and Android project
+subdirectories named 'android' (with the AAB/APK bundle and Android project
 source) and/or 'ios' (with the Xcode project source).
 
 Pass `--server-only` to skip building mobile apps, but still build the
@@ -426,6 +426,7 @@ Options:
                       with the current versions, if required to satisfy all
                       package version constraints.
   --platforms         Builds only the specified platforms (when available).
+  --packageType       Choose between apk/bundle for android builds. (Defaults to bundle)
 
 
 
