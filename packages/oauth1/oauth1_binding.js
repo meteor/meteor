@@ -103,10 +103,7 @@ export class OAuth1Binding {
   }
 
   _getSignature(method, url, rawHeaders, accessTokenSecret, params) {
-    const headerData = {}
-    rawHeaders.forEach((value, key) => {
-      headerData[key] = value
-    })
+    const headerData = { ...rawHeaders }
     const headers = this._encodeHeader({ ...headerData, ...params });
 
     const parameters = Object.keys(headers).map(key => `${key}=${headers[key]}`)
@@ -169,7 +166,6 @@ export class OAuth1Binding {
     let data;
     let error = undefined;
     try {
-      console.log('TRY')
       data = callMethod(method, parsedUrl, headers, params).resolve();
     } catch (err) {
       const errorMsg = `Failed to send OAuth1 request to ${url}. ${err.message}`;
@@ -179,8 +175,6 @@ export class OAuth1Binding {
       if (data?.errors) error = `Failed to send OAuth1 request to ${url}. ${data.errors[0].message}`;
       if (callback) callback(error, data);
     }
-    console.log('AFTER')
-    console.dir(data)
     return data;
   }
 
@@ -196,12 +190,8 @@ export class OAuth1Binding {
   }
 
   _getAuthHeaderString(headers) {
-    const headersEncoded = {}
-    headers.forEach((value, key) => {
-      headersEncoded[this._encodeString(key)] = this._encodeString(value);
-    })
-    return 'OAuth ' +  Object.keys(headersEncoded).map(key =>
-      `${key}="${headersEncoded[key]}"`
+    return 'OAuth ' +  Object.keys(headers).map(key =>
+      `${this._encodeString(key)}="${this._encodeString(headers[key])}"`
     ).sort().join(', ');
   }
 
