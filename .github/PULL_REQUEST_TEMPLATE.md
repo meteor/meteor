@@ -9,7 +9,7 @@ Here are some important details to follow:
           This is especially true for feature requests!
 * 💡 Features
           Feature requests can be created and discussed by visiting:
-          https://github.com/meteor/meteor-feature-requests/issues
+          https://github.com/meteor/meteor/discussions
 * 🕷 Bug fixes
           These can be created and discussed in this repository. When fixing a bug,
           please _try_ to add a test which verifies the fix.  If you cannot, you should

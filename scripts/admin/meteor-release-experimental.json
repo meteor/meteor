@@ -1,6 +1,6 @@
 {
   "track": "METEOR",
-  "version": "2.2",
+  "version": "2.3.1-rc.1",
   "recommended": false,
   "official": false,
   "description": "Meteor"

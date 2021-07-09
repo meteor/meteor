@@ -1,6 +1,8 @@
 Package.describe({
   summary: "DEPRECATED - Use weibo-oauth instead - Weibo OAuth flow",
-  version: '1.2.0'
+  version: '1.2.0',
+  deprecated: 'Use weibo-oauth instead',
+  documentation: 'README.md'
 });
 
 Package.onUse(function(api) {

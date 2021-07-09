@@ -1,3 +1,4 @@
+import { Meteor } from "meteor/meteor";
 import { ClientStream } from "meteor/socket-stream-client";
 import Fiber from "fibers";
 

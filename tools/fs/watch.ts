@@ -351,7 +351,7 @@ function readAndStatDirectory(absPath: string) {
   // Add slashes to the end of directories.
   const contentsWithSlashes: string[] = [];
   contents.forEach(entry => {
-    let stat: Dirent | Stats | BigIntStats | null = entry;
+    let stat: Dirent | Stats | BigIntStats | null | undefined = entry;
     let name = entry.name;
 
     if (entry.isSymbolicLink()) {
