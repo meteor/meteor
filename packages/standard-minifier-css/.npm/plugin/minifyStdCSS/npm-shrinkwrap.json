@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@babel/runtime": {
-      "version": "7.11.2",
-      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.11.2.tgz",
-      "integrity": "sha512-TeWkU52so0mPtDcaCTxNBI/IHiz0pZgr8VEFqXFtZWpYD08ZB6FaSwVAS8MKRQAP3bYKiVjwysOJgMFY28o6Tw=="
+      "version": "7.14.6",
+      "resolved": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.14.6.tgz",
+      "integrity": "sha512-/PCB2uJ7oM44tz8YhC4Z/6PeOKXp4K588f+5M3clr1M4zbqztlo0XEfJ2LEzj/FgwfgGcIdl8n7YYjTCI0BYwg=="
     },
     "lru-cache": {
       "version": "6.0.0",
