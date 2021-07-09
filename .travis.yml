@@ -2,7 +2,7 @@ language: node_js
 os: linux
 dist: xenial
 node_js:
-  - "14.17.1"
+  - "14.17.3"
 cache:
   directories:
     - ".meteor"
