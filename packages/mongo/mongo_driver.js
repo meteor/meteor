@@ -204,8 +204,6 @@ MongoConnection = async function (url, options) {
   self._oplogHandle = null;
   self._docFetcher = null;
 
-
-  var connectFuture = new Future;
   const connect = util.promisify(MongoDB.connect);
   const client = await connect(
     url,
@@ -240,13 +238,11 @@ MongoConnection = async function (url, options) {
 
   // Wait for the connection to be successful (throws on failure) and assign the
   // results (`client` and `db`) to `self`.
-  console.log(`self`, self);
-
   Object.assign(self, {client, db});
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
-    // self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
-    // self._docFetcher = new DocFetcher(self);
+    self._oplogHandle = await new OplogHandle(options.oplogUrl, self.db.databaseName);
+    self._docFetcher = new DocFetcher(self);
   }
 
   return self;
