@@ -453,7 +453,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @method  insert
    * @memberof Mongo.Collection
    * @instance
-   * @param {Object|[Object]} doc The document(s) to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   * @param {Object|Object[]} doc The document(s) to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
    */
   insert(doc, callback) {
