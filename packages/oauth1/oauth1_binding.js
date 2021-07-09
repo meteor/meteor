@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import querystring from 'querystring';
 import { fetch, Headers, Request } from 'meteor/fetch';
 import { URL } from 'meteor/url';
+import { Random } from 'meteor/random';
 
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
@@ -103,11 +104,10 @@ export class OAuth1Binding {
   }
 
   _getSignature(method, url, rawHeaders, accessTokenSecret, params) {
-    const headerData = { ...rawHeaders }
-    const headers = this._encodeHeader({ ...headerData, ...params });
+    const headers = this._encodeHeader({ ...rawHeaders, ...params });
 
     const parameters = Object.keys(headers).map(key => `${key}=${headers[key]}`)
-      .join('&');
+      .sort().join('&');
 
     const signatureBase = [
       method,
@@ -186,7 +186,11 @@ export class OAuth1Binding {
   }
 
   _encodeString(str) {
-    return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
+    return encodeURIComponent(str)
+      .replace(/!/g,'%21')
+      .replace(/\*/g,'%2A')
+      .replace(/\(/g,'%28')
+      .replace(/\)/g,'%29');
   }
 
   _getAuthHeaderString(headers) {
