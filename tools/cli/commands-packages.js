@@ -2001,7 +2001,9 @@ main.registerCommand({
         "or just run `meteor update --all-packages`.",
         "If the packages do not upgrade after this, this could mean",
         "that there is a newer version of Meteor which the package",
-        "requires, but it not yet recommended."
+        "requires, but it not yet recommended or that some package",
+        "dependencies are not up to date and don't allow you to get",
+        "the latest package version."
       ].join("\n"));
     }
   }
