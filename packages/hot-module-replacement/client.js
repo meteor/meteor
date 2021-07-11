@@ -11,12 +11,17 @@ let appliedChangeSets = [];
 let removeErrorMessage = null;
 
 let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
-let enabled = arch === 'web.browser';
+const hmrSecret = __meteor_runtime_config__._hmrSecret;
+let supportedArch = arch === 'web.browser';
+const enabled = hmrSecret && supportedArch;
 
-if (!enabled) {
+if (!supportedArch) {
   console.log(`HMR is not supported in ${arch}`);
 }
 
+if (!hmrSecret) {
+  console.log('Restart Meteor to enable HMR');
+}
 
 const imported = Object.create(null);
 const importedBy = Object.create(null);
@@ -41,6 +46,10 @@ if (module._onRequire) {
 
 let pendingReload = () => Package['reload'].Reload._reload({ immediateMigration: true });
 let mustReload = false;
+// Once an eager update fails, we stop processing future updates since they
+// might depend on the failed update. This gets reset when we re-try applying
+// the changes as non-eager updates.
+let applyEagerUpdates = true;
 
 function handleMessage(message) {
   if (message.type === 'register-failed') {
@@ -48,13 +57,9 @@ function handleMessage(message) {
       console.log('HMR: A different app is running on', Meteor.absoluteUrl());
       console.log('HMR: Once you start this app again reload the page to re-enable HMR');
     } else if (message.reason === 'wrong-secret') {
-      // TODO: we could wait until the first update to use hot code push
-      // instead of reloading the page immediately in case the user has any
-      // client state they want to keep for now.
-      console.log('HMR: Have the wrong secret, possibly because Meteor was restarted');
-      console.log('HMR: Reloading page to get new secret');
+      console.log('HMR: Have the wrong secret, probably because Meteor was restarted');
+      console.log('HMR: Will enable HMR the next time the page is loaded');
       mustReload = true;
-      pendingReload();
     } else {
       console.log(`HMR: Register failed for unknown reason`, message);
     }
@@ -77,6 +82,16 @@ function handleMessage(message) {
     throw new Error(`Unknown HMR message type ${message.type}`);
   }
 
+  if (message.eager && !applyEagerUpdates) {
+    return;
+  } else if (!message.eager) {
+    // Now that the build has finished, we will finish handling any updates
+    // that failed while being eagerly applied. Afterwards, we will either
+    // fall back to hot code push, or be in a state where we can start handling
+    // eager updates again
+    applyEagerUpdates = true;
+  }
+
   const hasUnreloadable = message.changeSets.find(changeSet => {
     return !changeSet.reloadable;
   });
@@ -89,6 +104,9 @@ function handleMessage(message) {
     if (message.eager) {
       // This was an attempt to reload before the build finishes
       // If we can't, we will wait until the build finishes to properly handle it
+      // For now, we will disable eager updates in case future updates depended
+      // on these
+      applyEagerUpdates = false;
       return;
     }
 
@@ -117,8 +135,9 @@ function handleMessage(message) {
   });
 
   if (message.eager) {
-    // We will ignore any failures at this time
-    // and wait to handle them until the build finishes
+    // If there were any failures, we will stop applying eager updates for now
+    // and wait until after the build finishes to handle the failures
+    applyEagerUpdates = succeeded;
     return;
   }
 
@@ -138,6 +157,7 @@ function handleMessage(message) {
 }
 
 let socket;
+let disconnected = false;
 let pendingMessages = [];
 
 function send(message) {
@@ -155,23 +175,34 @@ function connect() {
     return;
   }
 
-  let wsUrl = Meteor.absoluteUrl('/__meteor__hmr__/websocket');
+  // If we've successfully connected and then was disconnected, we avoid showing
+  // any more connection errors in the console until we've connected again
+  let logDisconnect = !disconnected;
+  let wsUrl = Meteor.absoluteUrl('__meteor__hmr__/websocket');
   const protocol = wsUrl.startsWith('https://') ? 'wss://' : 'ws://';
   wsUrl = wsUrl.replace(/^.+\/\//, protocol);
   socket = new WebSocket(wsUrl);
 
   socket.addEventListener('close', function () {
     socket = null;
-    console.log('HMR: websocket closed');
+
+    if (logDisconnect) {
+      console.log('HMR: websocket closed');
+    }
+
+    disconnected = true;
     setTimeout(connect, 2000);
   });
 
   socket.addEventListener('open', function () {
+    logDisconnect = true;
+    disconnected = false;
+
     console.log('HMR: connected');
     socket.send(JSON.stringify({
       type: 'register',
       arch,
-      secret: __meteor_runtime_config__._hmrSecret,
+      secret: hmrSecret,
       appId: __meteor_runtime_config__.appId,
     }));
 
@@ -186,11 +217,14 @@ function connect() {
   socket.addEventListener('message', function (event) {
     handleMessage(JSON.parse(event.data));
   });
-
-  socket.addEventListener('error', console.error);
 }
 
-connect();
+if (enabled) {
+  connect();
+} else {
+  // Always fall back to hot code push if HMR is disabled
+  mustReload = true;
+}
 
 function requestChanges() {
   send({
@@ -441,7 +475,7 @@ let nonRefreshableVersion = initialVersions.versionNonRefreshable;
 let replaceableVersion = initialVersions.versionReplaceable;
 
 Meteor.startup(() => {
-  if (!enabled) {
+  if (!supportedArch) {
     return;
   }
 
@@ -457,7 +491,12 @@ Meteor.startup(() => {
       pendingReload();
     } else if (doc.versionReplaceable !== replaceableVersion) {
       replaceableVersion = doc.versionReplaceable;
-      requestChanges();
+      if (enabled && !mustReload) {
+        requestChanges();
+      } else {
+        mustReload = true;
+        pendingReload();
+      }
     }
   });
 

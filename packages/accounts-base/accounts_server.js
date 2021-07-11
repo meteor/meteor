@@ -188,13 +188,13 @@ export class AccountsServer extends AccountsCommon {
    * @summary Customize user selection on external logins
    * @locus Server
    * @param {Function} func Called whenever a user is logged in via oauth and a
-   * user is not found with the service id. Return the user or undefined. 
+   * user is not found with the service id. Return the user or undefined.
    */
    setAdditionalFindUserOnExternalLogin(func) {
-    if (this._setAdditionalFindUserOnExternalLogin) {
+    if (this._additionalFindUserOnExternalLogin) {
       throw new Error("Can only call setAdditionalFindUserOnExternalLogin once");
     }
-    this._setAdditionalFindUserOnExternalLogin = func;
+    this._additionalFindUserOnExternalLogin = func;
   }
 
   _validateLogin(connection, attempt) {
@@ -580,62 +580,6 @@ export class AccountsServer extends AccountsCommon {
       }
       accounts._successfulLogout(this.connection, this.userId);
       this.setUserId(null);
-    };
-
-    // Delete all the current user's tokens and close all open connections logged
-    // in as this user. Returns a fresh new login token that this client can
-    // use. Tests set Accounts._noConnectionCloseDelayForTest to delete tokens
-    // immediately instead of using a delay.
-    //
-    // XXX COMPAT WITH 0.7.2
-    // This single `logoutOtherClients` method has been replaced with two
-    // methods, one that you call to get a new token, and another that you
-    // call to remove all tokens except your own. The new design allows
-    // clients to know when other clients have actually been logged
-    // out. (The `logoutOtherClients` method guarantees the caller that
-    // the other clients will be logged out at some point, but makes no
-    // guarantees about when.) This method is left in for backwards
-    // compatibility, especially since application code might be calling
-    // this method directly.
-    //
-    // @returns {Object} Object with token and tokenExpires keys.
-    methods.logoutOtherClients = function () {
-      const user = accounts.users.findOne(this.userId, {
-        fields: {
-          "services.resume.loginTokens": true
-        }
-      });
-      if (user) {
-        // Save the current tokens in the database to be deleted in
-        // CONNECTION_CLOSE_DELAY_MS ms. This gives other connections in the
-        // caller's browser time to find the fresh token in localStorage. We save
-        // the tokens in the database in case we crash before actually deleting
-        // them.
-        const tokens = user.services.resume.loginTokens;
-        const newToken = accounts._generateStampedLoginToken();
-        accounts.users.update(this.userId, {
-          $set: {
-            "services.resume.loginTokensToDelete": tokens,
-            "services.resume.haveLoginTokensToDelete": true
-          },
-          $push: { "services.resume.loginTokens": accounts._hashStampedToken(newToken) }
-        });
-        Meteor.setTimeout(() => {
-          // The observe on Meteor.users will take care of closing the connections
-          // associated with `tokens`.
-          accounts._deleteSavedTokensForUser(this.userId, tokens);
-        }, accounts._noConnectionCloseDelayForTest ? 0 :
-          CONNECTION_CLOSE_DELAY_MS);
-        // We do not set the login token on this connection, but instead the
-        // observe closes the connection and the client will reconnect with the
-        // new token.
-        return {
-          token: newToken.token,
-          tokenExpires: accounts._tokenExpiration(newToken.when)
-        };
-      } else {
-        throw new Meteor.Error("You are not logged in.");
-      }
     };
 
     // Generates a new login token with the same expiration as the
@@ -1042,7 +986,7 @@ export class AccountsServer extends AccountsCommon {
       (new Date(new Date() - tokenLifetimeMs));
 
     const tokenFilter = {
-      "services.password.reset.reason": "enroll"
+      "services.password.enroll.reason": "enroll"
     };
 
     expirePasswordToken(this, oldestValidDate, tokenFilter, userId);
@@ -1156,6 +1100,7 @@ export class AccountsServer extends AccountsCommon {
     } catch (e) {
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
+      // https://jira.mongodb.org/browse/SERVER-4637
       if (!e.errmsg) throw e;
       if (e.errmsg.includes('emails.address'))
         throw new Meteor.Error(403, "Email already exists.");
@@ -1271,8 +1216,8 @@ export class AccountsServer extends AccountsCommon {
 
     // Check to see if the developer has a custom way to find the user outside
     // of the general selectors above.
-    if (!user && this._setAdditionalFindUserOnExternalLogin) {
-      user = this._setAdditionalFindUserOnExternalLogin({serviceName, serviceData, options})
+    if (!user && this._additionalFindUserOnExternalLogin) {
+      user = this._additionalFindUserOnExternalLogin({serviceName, serviceData, options})
     }
 
     // Before continuing, run user hook to see if we should continue
@@ -1480,20 +1425,42 @@ const expirePasswordToken = (
   tokenFilter,
   userId
 ) => {
+  // boolean value used to determine if this method was called from enroll account workflow
+  let isEnroll = false;
   const userFilter = userId ? {_id: userId} : {};
-  const resetRangeOr = {
+  // check if this method was called from enroll account workflow
+  if(tokenFilter['services.password.enroll.reason']) {
+    isEnroll = true;
+  }
+  let resetRangeOr = {
     $or: [
       { "services.password.reset.when": { $lt: oldestValidDate } },
       { "services.password.reset.when": { $lt: +oldestValidDate } }
     ]
   };
+  if(isEnroll) {
+    resetRangeOr = {
+      $or: [
+        { "services.password.enroll.when": { $lt: oldestValidDate } },
+        { "services.password.enroll.when": { $lt: +oldestValidDate } }
+      ]
+    };
+  }
   const expireFilter = { $and: [tokenFilter, resetRangeOr] };
+  if(isEnroll) {
+    accounts.users.update({...userFilter, ...expireFilter}, {
+      $unset: {
+        "services.password.enroll": ""
+      }
+    }, { multi: true });
+  } else {
+    accounts.users.update({...userFilter, ...expireFilter}, {
+      $unset: {
+        "services.password.reset": ""
+      }
+    }, { multi: true });
+  }
 
-  accounts.users.update({...userFilter, ...expireFilter}, {
-    $unset: {
-      "services.password.reset": ""
-    }
-  }, { multi: true });
 };
 
 const setExpireTokensInterval = accounts => {

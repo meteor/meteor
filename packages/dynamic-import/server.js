@@ -67,6 +67,8 @@ function middleware(request, response) {
 
   if (request.method === "OPTIONS") {
     const acrh = request.headers["access-control-request-headers"];
+    response.setHeader('Allow', 'OPTIONS, POST');
+    response.setHeader('Content-Length', '0');
     response.setHeader(
       "Access-Control-Allow-Headers",
       typeof acrh === "string" ? acrh : "*"
@@ -102,11 +104,13 @@ function middleware(request, response) {
     });
 
   } else {
+    const body = `method ${request.method} not allowed`;
     response.writeHead(405, {
+      Allow: "OPTIONS, POST",
+      'Content-Length': Buffer.byteLength(body),
       "Cache-Control": "no-cache"
     });
-
-    response.end(`method ${request.method} not allowed`);
+    response.end(body);
   }
 }
 

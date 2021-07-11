@@ -1,5 +1,3 @@
-var url = Npm.require('url');
-
 // By default, we use the permessage-deflate extension with default
 // configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
 // JSON. If it represents a falsey value, then we do not use permessage-deflate
@@ -119,12 +117,11 @@ StreamServer = function () {
     });
     self.open_sockets.push(socket);
 
-    // XXX COMPAT WITH 0.6.6. Send the old style welcome message, which
-    // will force old clients to reload. Remove this once we're not
-    // concerned about people upgrading from a pre-0.7.0 release. Also,
-    // remove the clause in the client that ignores the welcome message
-    // (livedata_connection.js)
-    socket.send(JSON.stringify({server_id: "0"}));
+    // only to send a message after connection on tests, useful for
+    // socket-stream-client/server-tests.js
+    if (process.env.TEST_METADATA) {
+      socket.send(JSON.stringify({ testMessageOnConnect: true }));
+    }
 
     // call all our callbacks when we get a new socket. they will do the
     // work of setting up handlers and such for specific messages.
@@ -135,7 +132,7 @@ StreamServer = function () {
 
 };
 
-_.extend(StreamServer.prototype, {
+Object.assign(StreamServer.prototype, {
   // call my callback when a new socket connects.
   // also call it for all current connections.
   register: function (callback) {
@@ -161,7 +158,7 @@ _.extend(StreamServer.prototype, {
     // (meaning prior to any connect middlewares) so we need to take
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
-    _.each(['request', 'upgrade'], function(event) {
+    ['request', 'upgrade'].forEach((event) => {
       var httpServer = WebApp.httpServer;
       var oldHttpServerListeners = httpServer.listeners(event).slice(0);
       httpServer.removeAllListeners(event);
@@ -171,6 +168,9 @@ _.extend(StreamServer.prototype, {
       var newListener = function(request /*, moreArguments */) {
         // Store arguments for use within the closure below
         var args = arguments;
+
+        // TODO replace with url package
+        var url = Npm.require('url');
 
         // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
         // preserving query string.
