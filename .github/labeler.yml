@@ -29,11 +29,11 @@ Project:HMR:
   - packages/hot-module-replacement/**/*
 
 Project:Isobuild:Minifiers:
-  - pacakges/minifier-css/**/*
-  - pacakges/minifier-js/**/*
-  - pacakges/standard-minifier-js/**/*
-  - pacakges/standard-minifier-css/**/*
-  - pacakges/standard-minifiers/**/*
+  - packages/minifier-css/**/*
+  - packages/minifier-js/**/*
+  - packages/standard-minifier-js/**/*
+  - packages/standard-minifier-css/**/*
+  - packages/standard-minifiers/**/*
 
 Project:Isobuild:
   - tools/isobuild/**/*

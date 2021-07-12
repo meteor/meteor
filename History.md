@@ -7,6 +7,9 @@
 
 #### Independent Releases
 
+* `minifier-js@2.6.1`
+  - Terser updated to [4.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v480)
+
 ## v2.3.1, 2021-07-08
 
 #### Highlights
