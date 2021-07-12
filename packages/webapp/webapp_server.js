@@ -68,7 +68,7 @@ var sha1 = function (contents) {
   return hash.digest('hex');
 };
 
- function shouldCompress(req, res) {
+function shouldCompress(req, res) {
   if (req.headers['x-no-compression']) {
     // don't compress responses with this request header
     return false;
@@ -76,7 +76,7 @@ var sha1 = function (contents) {
 
   // fallback to standard filter function
   return compress.filter(req, res);
-};
+}
 
 // #BrowserIdentification
 //
