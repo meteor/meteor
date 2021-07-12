@@ -421,7 +421,7 @@ var PackageQuery = function (options) {
       self.data = null;
       return;
     }
-    self.data =  versionRecord.local ?
+    self.data = versionRecord.local ?
       self._getLocalVersion(versionRecord) :
       self._getOfficialVersion(versionRecord);
   } else {
@@ -429,7 +429,7 @@ var PackageQuery = function (options) {
   }
 };
 
-_.extend(PackageQuery.prototype, {
+Object.assign(PackageQuery.prototype, {
   // Find and return a version record for a given version. Mark the version
   // record as local, if it is a local version of the package.
   _getVersionRecord: function (version) {
@@ -442,13 +442,13 @@ _.extend(PackageQuery.prototype, {
     // If we asked for "local" as the version number, and found any local version
     // at all, we are done.
     if (version === "local") {
-      return versionRecord && _.extend(versionRecord, { local: true });
+      return versionRecord && Object.assign(versionRecord, { local: true });
     }
 
     // We have a local record, and its version matches the version that we asked
     // for, so we are done.
     if (versionRecord && (versionRecord.version === version)) {
-      return _.extend(versionRecord, { local: true });
+      return Object.assign(versionRecord, { local: true });
     }
 
     // If we haven't found a local record, or if the local record that we found
@@ -578,7 +578,9 @@ _.extend(PackageQuery.prototype, {
         description: local.description,
         git: local.git,
         implies: local.implies,
-        exports: local.exports
+        exports: local.exports,
+        deprecated: local.deprecated,
+        deprecatedMessage: local.deprecatedMessage
       };
     } else {
       var mainlineRecord = catalog.official.getLatestMainlineVersion(self.name);
@@ -591,7 +593,9 @@ _.extend(PackageQuery.prototype, {
           description: mainlineRecord.longDescription,
           git: mainlineRecord.git,
           exports: pkgExports,
-          implies: implies
+          implies: implies,
+          deprecated: mainlineRecord.deprecated,
+          deprecatedMessage: mainlineRecord.deprecatedMessage
         };
       } else {
         data["defaultVersion"] = _.last(data.versions);
@@ -632,7 +636,9 @@ _.extend(PackageQuery.prototype, {
       versionRecord.publishedBy && versionRecord.publishedBy.username,
       publishedOn: new Date(versionRecord.published),
       git: versionRecord.git,
-      exports: versionRecord.exports
+      exports: versionRecord.exports,
+      deprecated: versionRecord.deprecated,
+      deprecatedMessage: versionRecord.deprecatedMessage
     };
 
     // Get the export and imply data, if the record has any.
@@ -707,7 +713,9 @@ _.extend(PackageQuery.prototype, {
       name: self.name,
       summary: localRecord.description,
       git: localRecord.git,
-      local: true
+      local: true,
+      deprecated: localRecord.deprecated,
+      deprecatedMessage: localRecord.deprecatedMessage
     };
 
     // Get the source directory.
@@ -772,6 +780,12 @@ _.extend(PackageQuery.prototype, {
     if (data.directory) {
       Console.info("Directory: " + Console.path(data.directory));
     }
+    if (data.deprecated) {
+      Console.error('This package is deprecated!');
+      if (data.deprecatedMessage) {
+        Console.warn(data.deprecatedMessage);
+      }
+    }
     if (data.exports && ! data.exports.isEmpty()) {
       Console.info(
         data["exports"].getConsoleStr(),
@@ -825,16 +839,6 @@ _.extend(PackageQuery.prototype, {
         Console.command("'meteor show " + data.name + "@" + data.version + "'"),
         "from outside the project.");
     }
-
-    // Display deprecation message
-    if (data.deprecated) {
-      Console.info();
-      if (data.deprecatedMessage) {
-        Console.info(data.deprecatedMessage);
-      } else {
-        Console.info('This packages has been DEPRECATED.');
-      }
-    }
   },
   // Returns a user-friendly object from this PackageQuery to the caller.  Takes
   // in a data object with the same keys as _displayVersion.
@@ -861,12 +865,13 @@ _.extend(PackageQuery.prototype, {
     var versionFields = [
       "name", "version", "description", "summary", "git", "directory",
       "publishedBy", "publishedOn", "installed", "local", "architecturesOS",
+      "deprecated", "deprecatedMessage"
     ];
     var processedData = {};
-    _.each(["exports", "implies", "dependencies"], function (key) {
+    ["exports", "implies", "dependencies"].forEach(function (key) {
       processedData[key] = data[key] ? data[key].getObject() : [];
     });
-    return _.extend(processedData, _.pick(data, versionFields));
+    return Object.assign(processedData, _.pick(data, versionFields));
   },
 
   // Displays general package data from this PackageQuery to the terminal in a
@@ -906,6 +911,12 @@ _.extend(PackageQuery.prototype, {
     var displayName = data.defaultVersion ?
       data.name + "@" + data.defaultVersion.version : data.name;
     Console.info(displayName, Console.options({ bulletPoint: "Package: " }));
+    if (data.defaultVersion.deprecated) {
+      Console.error('This package is deprecated!');
+      if (data.defaultVersion.deprecatedMessage) {
+        Console.warn(data.defaultVersion.deprecatedMessage);
+      }
+    }
     if (data.homepage) {
       Console.info(Console.url(data.homepage),
         Console.options({ bulletPoint: "Homepage: " }));
@@ -951,7 +962,7 @@ _.extend(PackageQuery.prototype, {
       var versionsHeader =
             self.showHiddenVersions ? "Versions:" : "Recent versions:";
       Console.info(versionsHeader);
-      _.each(data.versions, function (v) {
+      data.versions.forEach(function (v) {
 
         // For a local package, we don't have a published date, and we don't
         // need to show if it has already been downloaded (it is local, we don't
@@ -1037,18 +1048,19 @@ _.extend(PackageQuery.prototype, {
           [ "name", "homepage", "maintainers", "totalVersions" ];
     // Process the versions array. We only want some of the keys, and we want to
     // make sure to get the right exports object.
-    var versions = _.map(data["versions"], function (version) {
+    var versions = data.versions.map(function (version) {
       var versionFields = [
         "name", "version", "description", "summary", "git", "publishedBy",
-        "publishedOn", "installed", "local", "directory", "architecturesOS"
+        "publishedOn", "installed", "local", "directory", "architecturesOS",
+        "deprecated", "deprecatedMessage"
       ];
       var processedData = {};
-      _.each(["exports", "implies"], function (key) {
+      ["exports", "implies"].forEach(function (key) {
         processedData[key] = version[key] ? version[key].getObject() : [];
       });
-      return _.extend(processedData, _.pick(version, versionFields));
+      return Object.assign(processedData, _.pick(version, versionFields));
     });
-    return _.extend({ versions: versions }, _.pick(data, packageFields));
+    return Object.assign({ versions: versions }, _.pick(data, packageFields));
   },
 
 });
@@ -1080,7 +1092,7 @@ var ReleaseQuery = function (options) {
     self._getReleaseData();
 };
 
-_.extend(ReleaseQuery.prototype, {
+Object.assign(ReleaseQuery.prototype, {
   // Prints the data from this ReleaseQuery to the terminal. Takes the following
   // options:
   //   - ejson: Don't pretty-print the data. Return a machine-readable ejson
@@ -1209,7 +1221,6 @@ _.extend(ReleaseQuery.prototype, {
   // - tool: tool package specification for this version
   // - packages: map of packages for this release version
   _displayVersion: function (data) {
-    var self = this;
     Console.info("Release: " + data.track + "@" + data.version);
     var isRecommended = data.recommended ? "yes" : "no";
     Console.info("Recommended: " + isRecommended);
@@ -1269,11 +1280,11 @@ _.extend(ReleaseQuery.prototype, {
     var rows = [];
     if (!_.isEmpty(data.versions)) {
       Console.info("Recommended versions:");
-      _.each(data.versions, function (v) {
+      data.versions.forEach(function (v) {
         rows.push([v.version, utils.longformDate(v.publishedOn)]);
       });
       Console.printTwoColumns(rows, { indent: 2 });
-    };
+    }
 
     // Display a warning about other release versions at the bottom.
     if (data.totalVersions > rows.length) {

@@ -1103,7 +1103,7 @@ main.registerCommand({
       var fail = false;
       try {
         Console.info(
-          "Pushing git tag (this should fail if you are not from MDG)");
+          "Pushing git tag (this should fail if you are not from Meteor Software)");
         utils.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
                              'refs/tags/' + gitTag);
       } catch (err) {

@@ -1,6 +1,6 @@
 Package.describe({
   name: 'less',
-  version: '3.0.1',
+  version: '3.0.2',
   summary: 'Leaner CSS language',
   documentation: 'README.md'
 });
@@ -9,14 +9,14 @@ Package.registerBuildPlugin({
   name: "compileLessBatch",
   use: [
     "caching-compiler@1.2.2",
-    "ecmascript@0.14.3",
+    "ecmascript@0.15.1",
   ],
   sources: [
     'plugin/compile-less.js'
   ],
   npmDependencies: {
-    "@babel/runtime": "7.9.2",
-    "less": "3.11.1"
+    "@babel/runtime": "7.14.6",
+    "less": "3.11.3"
   }
 });
 

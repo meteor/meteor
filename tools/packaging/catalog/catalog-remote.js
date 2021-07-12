@@ -520,7 +520,7 @@ var RemoteCatalog = function () {
   self.db = null;
 };
 
-_.extend(RemoteCatalog.prototype, {
+Object.assign(RemoteCatalog.prototype, {
   toString: function () {
     var self = this;
     return "RemoteCatalog";
