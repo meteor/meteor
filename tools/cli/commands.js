@@ -1472,7 +1472,9 @@ main.registerCommand({
     'build-only': { type: Boolean },
     free: { type: Boolean },
     plan: { type: String },
-    mongo: { type: Boolean }
+    'deploy-token': { type: String },
+    mongo: { type: Boolean },
+    owner: { type: String }
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1503,7 +1505,7 @@ function deployCommand(options, { rawOptions }) {
   }
 
   const loggedIn = auth.isLoggedIn();
-  if (! loggedIn) {
+  if (! loggedIn && !options["deploy-token"]) {
     Console.error(
       "You must be logged in to deploy, just enter your email address.");
     Console.error();
@@ -1559,6 +1561,8 @@ function deployCommand(options, { rawOptions }) {
     site,
     settingsFile: options.settings,
     free: options.free,
+    deployToken: options['deploy-token'],
+    owner: options.owner,
     mongo: options.mongo,
     buildOptions: buildOptions,
     plan,
