@@ -15,6 +15,7 @@ var packageJson = {
     "node-gyp": "8.0.0",
     "node-pre-gyp": "0.15.0",
     typescript: "4.3.2",
+    mongodb: "3.6.9",
     "@meteorjs/babel": "7.11.1",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
