@@ -4,6 +4,7 @@
 
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
+  - Apollo skeleton now uses [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300) - [migration guide](https://www.apollographql.com/docs/apollo-server/migration/)
 
 #### Independent Releases
 
