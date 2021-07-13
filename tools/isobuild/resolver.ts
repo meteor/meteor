@@ -63,7 +63,7 @@ export default class Resolver {
   private nodeModulesPaths: string[];
   private mainFields: string[];
 
-  public statOrNull = optimisticStatOrNull as (path: string) => Stats | BigIntStats | null;
+  public statOrNull = optimisticStatOrNull as (path: string) => Stats | BigIntStats | null | undefined;
 
   constructor({
     sourceRoot,

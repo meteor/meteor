@@ -39,13 +39,11 @@ export class ClientStream extends StreamClientCommon {
     this.heartbeatTimer = null;
 
     // Listen to global 'online' event if we are running in a browser.
-    // (IE8 does not support addEventListener)
-    if (typeof window !== 'undefined' && window.addEventListener)
-      window.addEventListener(
-        'online',
-        this._online.bind(this),
-        false /* useCapture. make FF3.6 happy. */
-      );
+    window.addEventListener(
+      'online',
+      this._online.bind(this),
+      false /* useCapture */
+    );
 
     //// Kickoff!
     this._launchConnection();
@@ -196,7 +194,7 @@ export class ClientStream extends StreamClientCommon {
       const { lastError } = this;
       this.lastError = error;
       if (lastError) return;
-      console.log(
+      console.error(
         'stream error',
         error,
         new Date().toDateString()

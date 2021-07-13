@@ -496,7 +496,7 @@ export class CordovaBuilder {
       ROOT_URL: mobileServerUrl,
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: parsedUrl.pathname.replace(/\/$/,"") || '',
-      DDP_DEFAULT_CONNECTION_URL: mobileServerUrl,
+      DDP_DEFAULT_CONNECTION_URL: process.env.DDP_DEFAULT_CONNECTION_URL || mobileServerUrl,
       autoupdate: {
         versions: {
           "web.cordova": {

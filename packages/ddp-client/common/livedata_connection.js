@@ -160,7 +160,7 @@ export class Connection {
     // documents written by a given method's stub. keys are associated with
     // methods whose stub wrote at least one document, and whose data-done message
     // has not yet been received.
-    self._documentsWrittenByStub = Object.create(null);
+    self._documentsWrittenByStub = {};
     // collection -> IdMap of "server document" object. A "server document" has:
     // - "document": the version of the document according the
     //   server (ie, the snapshot before a stub wrote it, amended by any changes
@@ -168,7 +168,7 @@ export class Connection {
     //   It is undefined if we think the document does not exist
     // - "writtenByStubs": a set of method IDs whose stubs wrote to the document
     //   whose "data done" messages have not yet been processed
-    self._serverDocuments = Object.create(null);
+    self._serverDocuments = {};
 
     // Array of callbacks to be called after the next update of the local
     // cache. Used for:
@@ -197,16 +197,16 @@ export class Connection {
     // Map from method ID -> true. Methods are removed from this when their
     // "data done" message is received, and we will not quiesce until it is
     // empty.
-    self._methodsBlockingQuiescence = Object.create(null);
+    self._methodsBlockingQuiescence = {};
     // map from sub ID -> true for subs that were ready (ie, called the sub
     // ready callback) before reconnect but haven't become ready again yet
-    self._subsBeingRevived = Object.create(null); // map from sub._id -> true
+    self._subsBeingRevived = {}; // map from sub._id -> true
     // if true, the next data update should reset all stores. (set during
     // reconnect.)
     self._resetStores = false;
 
     // name -> array of updates for (yet to be created) collections
-    self._updatesForUnknownStores = Object.create(null);
+    self._updatesForUnknownStores = {};
     // if we're blocking a migration, the retry func
     self._retryMigrate = null;
 
@@ -216,7 +216,7 @@ export class Connection {
       self
     );
     // Collection name -> array of messages.
-    self._bufferedWrites = Object.create(null);
+    self._bufferedWrites = {};
     // When current buffer of updates must be flushed at, in ms timestamp.
     self._bufferedWritesFlushAt = null;
     // Timeout handle for the next processing of all pending writes
@@ -236,7 +236,7 @@ export class Connection {
     //                    an error, XXX COMPAT WITH 1.0.3.1)
     //   - stopCallback (an optional callback to call when the sub terminates
     //     for any reason, with an error argument if an error triggered the stop)
-    self._subscriptions = Object.create(null);
+    self._subscriptions = {};
 
     // Reactive userId.
     self._userId = null;
@@ -1622,11 +1622,10 @@ export class Connection {
     }
 
     if (msg === null || !msg.msg) {
-      // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
-      // compat.  Remove this 'if' once the server stops sending welcome
-      // messages (stream_server.js).
-      if (!(msg && msg.server_id))
+      if(!msg || !msg.testMessageOnConnect) {
+        if (Object.keys(msg).length === 1 && msg.server_id) return;
         Meteor._debug('discarding invalid livedata message', msg);
+      }
       return;
     }
 

@@ -42,7 +42,7 @@ Tinytest.add("email - fully customizable", function (test) {
     test.equal(canonicalize(stream.getContentsAsString("utf8")),
                "====== BEGIN MAIL #0 ======\n" +
                devWarningBanner +
-               "Content-Type: text/plain\r\n" +
+               "Content-Type: text/plain; charset=utf-8\r\n" +
                "X-Meteor-Test: a custom header\r\n" +
                "Date: dummy\r\n" +
                "From: foo@example.com\r\n" +
@@ -116,7 +116,7 @@ Tinytest.add("email - using mail composer", function (test) {
     test.equal(canonicalize(stream.getContentsAsString("utf8")),
                "====== BEGIN MAIL #0 ======\n" +
                devWarningBanner +
-               "Content-Type: text/plain\r\n" +
+               "Content-Type: text/plain; charset=utf-8\r\n" +
                "From: a@b.com\r\n" +
                "Message-ID: <...>\r\n" +
                "Content-Transfer-Encoding: 7bit\r\n" +
@@ -160,7 +160,7 @@ Tinytest.add("email - long lines", function (test) {
     test.equal(canonicalize(stream.getContentsAsString("utf8")),
                "====== BEGIN MAIL #0 ======\n" +
                devWarningBanner +
-               "Content-Type: text/plain\r\n" +
+               "Content-Type: text/plain; charset=utf-8\r\n" +
                "From: foo@example.com\r\n" +
                "To: bar@example.com\r\n" +
                "Subject: This is a very very very very very very very very " +
@@ -225,12 +225,12 @@ Tinytest.add("email - text and html", function (test) {
                "MIME-Version: 1.0\r\n" +
                "\r\n" +
                "----...-Part_1\r\n" +
-               "Content-Type: text/plain\r\n" +
+               "Content-Type: text/plain; charset=utf-8\r\n" +
                "Content-Transfer-Encoding: 7bit\r\n" +
                "\r\n" +
                "*Cool*, man\r\n" +
                "----...-Part_1\r\n" +
-               "Content-Type: text/html\r\n" +
+               "Content-Type: text/html; charset=utf-8\r\n" +
                "Content-Transfer-Encoding: 7bit\r\n" +
                "\r\n" +
                "<i>Cool</i>, man\r\n" +
