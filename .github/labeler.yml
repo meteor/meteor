@@ -12,6 +12,8 @@ Project:Accounts:UI:
 
 Project:CSS:
   - packages/non-core/less/**/*
+  - packages/minifier-css/**/*
+  - packages/standard-minifier-css/**/*
 
 Project:DDP:
   - packages/ddp-common/**/*
