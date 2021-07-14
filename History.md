@@ -9,6 +9,16 @@
 
 * `minifier-js@2.6.1`
   - Terser updated to [4.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v480)
+    
+* `routepolicy@1.1.1`
+  - Removed `underscore` dependency since it was not used in the package
+  
+## v2.3.2, 2021-07-13
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.2`
+  - fixes a bug that makes `meteor run android` run with the new aab package flag
 
 ## v2.3.1, 2021-07-08
 
