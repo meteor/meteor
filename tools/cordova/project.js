@@ -286,7 +286,7 @@ outdated platforms`);
     builder.copyBuildOverride();
   }
 
-  prepareForPlatform(platform) {
+  prepareForPlatform(platform, options) {
     assert(platform);
 
     // Temporary workaround for Cordova iOS bug until
@@ -309,7 +309,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
   // Building (includes prepare)
 
-  buildForPlatform(platform, options = {}, extraPaths) {
+  buildForPlatform(platform, options = {}) {
     assert(platform);
 
     const commandOptions = {

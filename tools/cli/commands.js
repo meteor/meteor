@@ -917,6 +917,7 @@ var buildCommands = {
   requiresApp: true,
   options: {
     debug: { type: Boolean },
+    packageType: { type: String },
     directory: { type: Boolean },
     architecture: { type: String },
     "server-only": { type: Boolean },
@@ -1195,7 +1196,7 @@ ${displayNameForPlatform(platform)}` }, () => {
             if (platform === 'ios') {
               cordovaProject.prepareForPlatform(platform, buildOptions);
             } else if (platform === 'android') {
-              cordovaProject.buildForPlatform(platform, buildOptions);
+              cordovaProject.buildForPlatform(platform, {...buildOptions, argv: ["--packageType", options.packageType || "bundle"]});
             }
 
             // Once prepared, copy the bundle to the final location.
@@ -1212,12 +1213,16 @@ Instructions for publishing your iOS app to App Store can be found at:
 https://guide.meteor.com/cordova.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
-              const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
-                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
+              const packageType = options.packageType || "bundle"
+              const packageExtension = packageType === 'bundle' ? 'aab' : 'apk';
+              const packageName = packageType === 'bundle' ? `app-release` : `app-release-unsigned`;
+              const apkPath = files.pathJoin(buildPath, `app/build/outputs/${packageType}/${options.debug ? 'debug' : 'release'}`,
+                options.debug ? `app-debug.${packageExtension}` : `${packageName}.${packageExtension}`);
 
+              console.log(apkPath)
               if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
-                options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+                options.debug ? `app-debug.${packageExtension}` : `${packageName}.${packageExtension}`));
               }
 
               files.writeFile(
