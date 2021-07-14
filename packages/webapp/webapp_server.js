@@ -68,7 +68,7 @@ var sha1 = function (contents) {
   return hash.digest('hex');
 };
 
- function shouldCompress(req, res) {
+function shouldCompress(req, res) {
   if (req.headers['x-no-compression']) {
     // don't compress responses with this request header
     return false;
@@ -76,7 +76,7 @@ var sha1 = function (contents) {
 
   // fallback to standard filter function
   return compress.filter(req, res);
-};
+}
 
 // #BrowserIdentification
 //
@@ -345,8 +345,47 @@ function getBoilerplate(request, arch) {
   return getBoilerplateAsync(request, arch).await();
 }
 
+WebApp.encodeRuntimeConfig = function (rtimeConfig) {
+  return JSON.stringify(encodeURIComponent(JSON.stringify(rtimeConfig)));
+}
+
+WebApp.decodeRuntimeConfig = function (rtimeConfig) {
+  return JSON.parse(decodeURIComponent(JSON.parse(rtimeConfig)));
+}
+
+ const runtimeConfig = {
+  // hooks will contain the callback functions
+  // set by the caller to addRuntimeConfigHook
+  hooks: [],
+  // isUpdatedByArch is an object containing fields for each arch 
+  // that this server supports.
+  // - Each field will be true when the server updates the runtimeConfig for that arch.
+  // - When the hook callback is called the update field in the callback object will be
+  // set to isUpdatedByArch[arch].
+  // = isUpdatedyByArch[arch] is reset to false after the callback.
+  // This enables the caller to cache data efficiently so they do not need to
+  // decode & update data on every callback when the runtimeConfig is not changing.
+  isUpdatedByArch: {}
+};
+
+WebApp.addRuntimeConfigHook = function (hook) {
+  if(typeof hook !== 'function') throw new Error('WebApp.addRuntimeConfigHook must be a function');
+  runtimeConfig.hooks.push(hook);
+}
+
 function getBoilerplateAsync(request, arch) {
-  const boilerplate = boilerplateByArch[arch];
+  let boilerplate = boilerplateByArch[arch];
+  runtimeConfig.hooks.forEach((hook) => {
+    const meteorRuntimeConfig = hook({
+      arch,
+      request,
+      encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
+      updated: runtimeConfig.isUpdatedByArch[arch]
+    });
+    runtimeConfig.isUpdatedByArch[arch] = false;
+    if(!meteorRuntimeConfig) return;
+    boilerplate.baseData = Object.assign({}, boilerplate.baseData, {meteorRuntimeConfig});
+  });
   const data = Object.assign({}, boilerplate.baseData, {
     htmlAttributes: getHtmlAttributes(request),
   }, _.pick(request, "dynamicHead", "dynamicBody"));
@@ -378,6 +417,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
+  runtimeConfig.isUpdatedByArch[arch] = true;
   const meteorRuntimeConfig = JSON.stringify(
     encodeURIComponent(JSON.stringify({
       ...__meteor_runtime_config__,
