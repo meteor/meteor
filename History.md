@@ -5,6 +5,15 @@
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
   - `reify` update to v0.22.0 which bring optimizations for imports, [read more](https://github.com/benjamn/reify/pull/246)
+    
+* `webapp@1.12`
+  - npm dependencies have been updated
+  - Added option to change runtime config in your app, [read more](https://github.com/meteor/meteor/pull/11506)
+    
+* `minifier-css@1.6.0`
+  - Updated dependencies
+    - `postcss@8.3.5`
+    - `cssnano@4.1.11`
 
 #### Independent Releases
 
