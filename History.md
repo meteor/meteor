@@ -5,6 +5,7 @@
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
   - `reify` update to v0.22.0 which bring optimizations for imports, [read more](https://github.com/benjamn/reify/pull/246)
+  - Apollo skeleton now uses [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300) - [migration guide](https://www.apollographql.com/docs/apollo-server/migration/)
     
 * `webapp@1.12`
   - npm dependencies have been updated
