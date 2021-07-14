@@ -9,6 +9,9 @@
 
 * `minifier-js@2.6.1`
   - Terser updated to [4.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v480)
+    
+* `routepolicy@1.1.1`
+  - Removed `underscore` dependency since it was not used in the package
   
 ## v2.3.2, 2021-07-13
 
