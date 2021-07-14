@@ -119,3 +119,60 @@ We're reading the contents of index.html using the [Assets](https://docs.meteor.
 We're using the [connect-route](https://www.npmjs.com/package/connect-route) NPM package to simplify WebApp route processing. But you can use any package you want to understand what is being requested.
 
 And finally, if you decide to use this technique you'll want to make sure you understand how conflicting client side routing will affect user experience.
+
+### Dynamic Runtime Configuration
+
+In some cases it is valuable to be able to control the __meteor_runtime_config__ variable that initializes Meteor at runtime.
+
+#### Example
+There are occasions when a single Meteor server would like to serve multiple cordova applications that have each have a unique `ROOT_URL`.  But there are 2 problems:
+1. The Meteor server can only be configured to serve a single `ROOT_URL`.
+2. The `cordova` applications are build time configured with a specific `ROOT_URL`.
+
+These 2 conditions break `autoupdate` for the cordova applications. `cordova-plugin-meteor-webapp` will fail the update if the `ROOT_URL` from the server does not match the build time configured `ROOT_URL` of the cordova application.
+
+To remedy this problem `webapp` has a hook for dynamically configuring `__meteor_runtime_config__` on the server.
+
+#### Dynamic Runtime Configuration Hook
+```js
+WebApp.addRuntimeConfigHook(({arch, request, encodedCurrentConfig, updated}) => {
+ // check the request to see if this is a request that requires
+ // modifying the runtime configuration
+  if(req.headers.domain === 'calling.domain') {
+    // make changes to the config for this domain
+    // decode the current runtime config string into an object
+    const config = WebApp.decodeRuntimeConfig(current);
+    // make your changes
+    config.newVar = 'some value';
+    config.oldVar = 'new value';
+    // encode the modified object to the runtime config string
+    // and return it
+    return WebApp.encodeRuntimeConfig(config);
+  }
+  // Not modifying other domains so return undefined
+  return undefined;
+})
+```
+
+`WebApp.addRuntimeConfigHook(handler)` has one argument:
+
+**handler** - The `handler` is called on each request for the root page which has `__meteor_runtime_config__` defined in it. The handler takes a single options argument with the following properties:
+
+- **arch** - _String_. the architecture being responded to.  This can be one of `web.browser`, `web.browser.legacy` or `web.cordova`.
+- **request** - a Node.js
+[IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
+object with some extra properties. This argument can be used to get information
+about the incoming request.
+- **encodedCurrentConfig** - _String_. the current configuration object encoded as a string for inclusion in the root html.
+- **updated** - _Boolean_. `true` if the config for this architecture been updated since last called, otherwise `false`. This flag can be leveraged to cache the decoding/encoding for each architecture.
+
+If the handler returns a _falsy_ value the hook will not modify the runtime configuration.
+
+If the handler returns a _String_ the hook will substitute the string for the encoded configuration string.  **Warning:** the hook does not check the return value at all it is the responsibility of the caller to get the formatting correct using the helper functions.
+
+Additionally, 2 helper functions are available to decode the runtime config string and encode the runtime config object.
+
+`WebApp.decodeRuntimeConfig(encoded_config_string)`: returns a config object from an encoded config string.
+`WebApp.encodeRuntimeConfig(config_object)`: returns an encoded string from a config object that is ready for the root page.
+
+The expected usage is to decode the runtime config string, operate on the object and then return the encoded runtime configuration.
