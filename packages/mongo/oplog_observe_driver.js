@@ -112,23 +112,26 @@ OplogObserveDriver = function (options) {
   ));
 
   forEachTrigger(self._cursorDescription, function (trigger) {
-    self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
-      trigger, function (notification) {
+    self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntries(
+      trigger, function (notifications) {
         Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
-          var op = notification.op;
-          if (notification.dropCollection || notification.dropDatabase) {
-            // Note: this call is not allowed to block on anything (especially
-            // on waiting for oplog entries to catch up) because that will block
-            // onOplogEntry!
-            self._needToPollQuery();
-          } else {
-            // All other operators should be handled depending on phase
-            if (self._phase === PHASE.QUERYING) {
-              self._handleOplogEntryQuerying(op);
+          notifications.forEach(function(notification) {
+            var op = notification.op;
+
+            if (notification.dropCollection || notification.dropDatabase) {
+              // Note: this call is not allowed to block on anything (especially
+              // on waiting for oplog entries to catch up) because that will block
+              // onOplogEntry!
+              self._needToPollQuery();
             } else {
-              self._handleOplogEntrySteadyOrFetching(op);
+              // All other operators should be handled depending on phase
+              if (self._phase === PHASE.QUERYING) {
+                self._handleOplogEntryQuerying(op);
+              } else {
+                self._handleOplogEntrySteadyOrFetching(op);
+              }
             }
-          }
+          });
         }));
       }
     ));
@@ -486,6 +489,11 @@ _.extend(OplogObserveDriver.prototype, {
       // but fetch() yields.
       Meteor.defer(finishIfNeedToPollQuery(function () {
         while (!self._stopped && !self._needToFetch.empty()) {
+          // If we need to fetch more than a thousand documents, re-running is probably quicker
+          if (self._needToFetch.size() >= 1000) {
+            self._needToPollQuery();
+          }
+
           if (self._phase === PHASE.QUERYING) {
             // While fetching, we decided to go into QUERYING mode, and then we
             // saw another oplog entry, so _needToFetch is not empty. But we

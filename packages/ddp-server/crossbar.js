@@ -6,12 +6,21 @@ DDPServer._Crossbar = function (options) {
   var self = this;
   options = options || {};
 
-  self.nextId = 1;
+  self.listenerId = 1;
+  self.bufferId = 1;
   // map from collection name (string) -> listener id -> object. each object has
   // keys 'trigger', 'callback'.  As a hack, the empty string means "no
   // collection".
   self.listenersByCollection = {};
   self.listenersByCollectionCount = {};
+  // An object which holds the buffered changes per collection
+  self.buffersPerCollection = {};
+  // Buffer changes to the same collection which happen within x ms
+  self.bufferInterval = 5;
+  // Maximum age of the buffer
+  self.bufferMaxAge = 500;
+  // Maximum amount of notifications to store in the buffer before flushing
+  self.bufferMaxSize = 1000;
   self.factPackage = options.factPackage || "livedata";
   self.factName = options.factName || null;
 };
@@ -43,7 +52,7 @@ _.extend(DDPServer._Crossbar.prototype, {
   // callback?
   listen: function (trigger, callback) {
     var self = this;
-    var id = self.nextId++;
+    var id = self.listenerId++;
 
     var collection = self._collectionForMessage(trigger);
     var record = {trigger: EJSON.clone(trigger), callback: callback};
@@ -87,31 +96,125 @@ _.extend(DDPServer._Crossbar.prototype, {
     var self = this;
 
     var collection = self._collectionForMessage(notification);
+    var listenersForCollection = self.listenersByCollection[collection];
+    var bufferForCollection = self.buffersPerCollection[collection];
 
-    if (! _.has(self.listenersByCollection, collection)) {
-      return;
+     if (listenersForCollection) {
+      var callbackIds = [];
+
+      _.each(listenersForCollection, function (listener, id) {
+        if (self._matches(notification, listener.trigger)) {
+          callbackIds.push(id);
+        }
+      });
+  
+      // Listener callbacks can yield, so we need to first find all the ones that
+      // match in a single iteration over self.listenersByCollection (which can't
+      // be mutated during this iteration), and then invoke the matching
+      // callbacks, checking before each call to ensure they haven't stopped.
+      // Note that we don't have to check that
+      // self.listenersByCollection[collection] still === listenersForCollection,
+      // because the only way that stops being true is if listenersForCollection
+      // first gets reduced down to the empty object (and then never gets
+      // increased again).
+      _.each(callbackIds, function (id) {
+        if (_.has(listenersForCollection, id)) {
+          listenersForCollection[id].callback(notification);
+        }
+      });
     }
 
-    var listenersForCollection = self.listenersByCollection[collection];
-    var callbackIds = [];
-    _.each(listenersForCollection, function (l, id) {
-      if (self._matches(notification, l.trigger)) {
-        callbackIds.push(id);
+    if (bufferForCollection) {
+      // Add the callback to the bufferedCalls
+      bufferForCollection.notifications.push(notification);
+      
+      if (bufferForCollection.flushAt === null) {
+        bufferForCollection.flushAt = new Date().valueOf() + self.bufferMaxAge;
       }
-    });
 
-    // Listener callbacks can yield, so we need to first find all the ones that
-    // match in a single iteration over self.listenersByCollection (which can't
-    // be mutated during this iteration), and then invoke the matching
-    // callbacks, checking before each call to ensure they haven't stopped.
-    // Note that we don't have to check that
-    // self.listenersByCollection[collection] still === listenersForCollection,
-    // because the only way that stops being true is if listenersForCollection
-    // first gets reduced down to the empty object (and then never gets
-    // increased again).
-    _.each(callbackIds, function (id) {
-      if (_.has(listenersForCollection, id)) {
-        listenersForCollection[id].callback(notification);
+      if (
+        bufferForCollection.notifications.length >= self.bufferMaxSize
+        || self.flushAt < new Date().valueOf()
+      ) {
+        self.flush(collection);
+        return;
+      }
+
+      if (bufferForCollection.handle) {
+        clearTimeout(bufferForCollection.handle);
+      }
+
+      bufferForCollection.handle = setTimeout(
+        self.flush.bind(self, [collection]),
+        self.bufferInterval
+      );
+    }
+  },
+
+  buffer: function(trigger, callback) {
+    var self = this;
+    var id = self.bufferId++;
+
+    var collection = self._collectionForMessage(trigger);
+    var listener = {trigger: EJSON.clone(trigger), callback: callback};
+
+    self.buffersPerCollection[collection] = self.buffersPerCollection[collection] || {
+      listeners: [],
+      notifications: [],
+      handle: null,
+      flushAt: null
+    };
+
+    self.buffersPerCollection[collection].listeners[id] = listener;
+
+    return {
+      stop: function () {
+        delete self.buffersPerCollection[collection].listeners[id];
+
+        if (_.isEmpty(self.buffersPerCollection[collection].listeners)) {
+          clearTimeout(self.buffersPerCollection[collection].handle);
+
+          delete self.buffersPerCollection[collection];
+        }
+      }
+    };
+  },
+
+  flush(collection) {
+    var self = this;
+    var bufferForCollection = self.buffersPerCollection[collection];
+
+    if (bufferForCollection.handle) {
+      clearTimeout(bufferForCollection.handle);
+
+      delete bufferForCollection.handle;
+    }
+
+    bufferForCollection.flushAt = null;
+
+    var notifications = bufferForCollection.notifications;
+
+    bufferForCollection.notifications = [];
+
+    var filteredBuffers = {};
+
+    // Determine which notifications we should send to each listener
+    _.each(bufferForCollection.listeners, function (listener, id) {
+      var triggerString = listener.trigger.toString();
+      var filteredNotifications = filteredBuffers[triggerString] || [];
+
+        // If did not already filter for the same trigger
+      if (filteredNotifications.length === 0) {
+        // Iterate over the buffered notifications
+        _.each(notifications, function(notification) {
+          if (self._matches(notification, listener.trigger)) {
+            filteredNotifications.push(notification);
+          }
+        })
+      }
+
+      if (_.has(bufferForCollection.listeners, id)) {
+        bufferForCollection.listeners[id].callback(filteredNotifications);
       }
     });
   },
