@@ -45,6 +45,8 @@ find() doesn't support the min and max parameters.
 
 findAndModify isn't supported.
 
+replaceOne isn't supported.
+
 The aggregate functions distinct(), and group() aren't supported. Map/reduce
 isn't supported.
 

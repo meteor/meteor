@@ -1,4 +1,4 @@
-var Fiber = Npm.require('fibers');
+const Fiber = Npm.require('fibers');
 
 export class DocFetcher {
   constructor(mongoConnection) {
@@ -34,10 +34,10 @@ export class DocFetcher {
 
     Fiber(function () {
       try {
-        var doc = self._mongoConnection.findOne(
+        const doc = self._mongoConnection.findOne(
           collectionName, {_id: id}) || null;
         // Return doc to all relevant callbacks. Note that this array can
-        // continue to grow during callback excecution.
+        // continue to grow during callback execution.
         while (callbacks.length > 0) {
           // Clone the document so that the various calls to fetch don't return
           // objects that are intertwingled with each other. Clone before

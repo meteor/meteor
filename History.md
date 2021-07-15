@@ -548,6 +548,8 @@ N/A
 * `facebook-oauth@1.7.3`
   - is now using Facebook GraphAPI v8. [#11160](https://github.com/meteor/meteor/pull/11160)
 
+* MongoDB & Minimongo now accept bulk entries: `collection.insert([{ doo: 1 }, { doo: 2 }])`
+
 ## v1.11.1, 2020-09-16
 
 ### Breaking changes
