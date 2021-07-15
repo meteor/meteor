@@ -1,4 +1,5 @@
 import { extractModuleSizesTree } from "./stats.js";
+var Concat = Npm.require('concat-with-sourcemaps');
 
 Plugin.registerMinifier({
   extensions: ['js'],
@@ -110,20 +111,31 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
     }
   }
 
+  const minifiedResults = [];
   const toBeAdded = {
     data: "",
     stats: Object.create(null)
   };
 
+  var concat = new Concat(true, '', '\n\n');
+
   files.forEach(file => {
     // Don't reminify *.min.js.
+    // FIXME: this still minifies .min.js app files since they were all combined into app.js
     if (/\.min\.js$/.test(file.getPathInBundle())) {
-      toBeAdded.data += file.getContentsAsString();
+      minifiedResults.push({
+        code: file.getContentsAsString(),
+        map: file.getSourceMap()
+      });
     } else {
       var minified;
 
       try {
-        minified = meteorJsMinify(file.getContentsAsString());
+        minified = meteorJsMinify(
+          file.getContentsAsString(),
+          file.getSourceMap(),
+          file.getPathInBundle()
+        );
 
         if (!(minified && typeof minified.code === "string")) {
           throw new Error();
@@ -147,15 +159,23 @@ MeteorBabelMinifier.prototype.processFilesForBundle = function(files, options) {
           Buffer.byteLength(minified.code);
       }
 
-      toBeAdded.data += minified.code;
+      minifiedResults.push({
+        file: file.getPathInBundle(),
+        code: minified.code,
+        map: minified.sourcemap
+      });
     }
+    Plugin.nudge();
+  });
 
-    toBeAdded.data += '\n\n';
-
+  minifiedResults.forEach(function (result) {
+    concat.add(result.file, result.code, result.map);
     Plugin.nudge();
   });
 
   if (files.length) {
+    toBeAdded.data = concat.content.toString();
+    toBeAdded.sourceMap = concat.sourceMap;
     files[0].addJavaScript(toBeAdded);
   }
 };

@@ -1,13 +1,16 @@
 var terser;
 
-meteorJsMinify = function (source) {
+meteorJsMinify = function (source, sourcemap, path) {
   var result = {};
   var NODE_ENV = process.env.NODE_ENV || "development";
+  var sourcemap = sourcemap || undefined;
 
   terser = terser || Npm.require("terser");
 
   try {
-    var terserResult = terser.minify(source, {
+    var terserResult = terser.minify({
+     [path]: source 
+    }, {
       compress: {
         drop_debugger: false,
         unused: false,
@@ -20,10 +23,14 @@ meteorJsMinify = function (source) {
       // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
       // And fix terser issue #117: https://github.com/terser-js/terser/issues/117
       safari10: true,
+      sourceMap: {
+        content: sourcemap
+      }
     });
 
     if (typeof terserResult.code === "string") {
       result.code = terserResult.code;
+      result.sourcemap = terserResult.map;
       result.minifier = 'terser';
     } else {
       throw terserResult.error ||
@@ -34,10 +41,14 @@ meteorJsMinify = function (source) {
     // Although Babel.minify can handle a wider variety of ECMAScript
     // 2015+ syntax, it is substantially slower than UglifyJS/terser, so
     // we use it only as a fallback.
-    var options = Babel.getMinifierOptions({
-      inlineNodeEnv: NODE_ENV
+    var babelResult = Babel.minify(source, {
+      sourceMaps: true,
+      inputSourceMap: sourcemap,
+      sourceFileName: path
     });
-    result.code = Babel.minify(source, options).code;
+
+    result.code = babelResult.code;
+    result.sourcemap = babelResult.map;
     result.minifier = 'babel-minify';
   }
 
