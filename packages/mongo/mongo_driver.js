@@ -8,8 +8,19 @@
  */
 
 const path = require("path");
+const NpmModuleMongodbVersion = require("mongodb/package.json").version;
+const oldNoDeprecationValue = process.noDeprecation;
+let MongoDB = null;
 
-var MongoDB = NpmModuleMongodb;
+try {
+  // Silence deprecation warnings introduced in a patch update to mongodb:
+  // https://github.com/meteor/meteor/pull/9942#discussion_r218564879
+  process.noDeprecation = true;
+  MongoDB = require("mongodb");
+} finally {
+  process.noDeprecation = oldNoDeprecationValue;
+}
+
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
 
