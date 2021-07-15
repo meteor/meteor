@@ -165,10 +165,9 @@
   - `underscore` has been updated to v1.13.1
   - `optimism` has been updated to v0.16.1
   - `@wry/context` has been update to v0.6.0
-  - Reduced time spent by server (re)start in development by adding a cache for Reify. This optimization can be enabled in production by setting the `METEOR_REIFY_CACHE_DIR` environment variable [PR](https://github.com/meteor/meteor/pull/11400).
+  - Reduced time spent by server (re)start in development by adding a cache for Reify. This optimization is on by default in development. Set the new `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` and `METEOR_REIFY_CACHE_DIR` environment variables to adjust it or turn it on for production [read more in the PR](https://github.com/meteor/meteor/pull/11400).
   - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
   - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
-  - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
   - Skeletons dependencies updated to latest version
   - Svelte skeleton now has HMR
   - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-only)
