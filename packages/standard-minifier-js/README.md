@@ -5,7 +5,27 @@
 Standard Minifier for JS
 ===
 
-This package provides a minifier plugin used for Meteor apps by default.
+This package provides a minifier plugin used for Meteor apps by default. 
 
-The JS minifier uses UglifyJS2. The options include name-mangling and other
-commonly used options.
+The behavior of this plugin in development and production modes are depicted below
+in the table.
+
+
+|               | DEV   | PROD   |
+|---------------|:-----:|:------:|
+| Minified      |   N   |    Y   | 
+| Concatenated  |   N   |    Y   | 
+| Source Maps   |   Y   |    N   | 
+
+
+
+The options that are set that differ from the default settings used by terser are the following:
+
+```
+drop_debugger: false
+unused:        false 
+safari10:       true
+```
+
+It should also be noted that by default terser will make only one pass while compressing the source code, 
+but additional passes could be configured to increase compression of the output during a production build.
