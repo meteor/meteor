@@ -382,10 +382,10 @@ function getBoilerplateAsync(request, arch) {
       encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
       updated: runtimeConfig.isUpdatedByArch[arch]
     });
-    runtimeConfig.isUpdatedByArch[arch] = false;
     if(!meteorRuntimeConfig) return;
     boilerplate.baseData = Object.assign({}, boilerplate.baseData, {meteorRuntimeConfig});
   });
+  runtimeConfig.isUpdatedByArch[arch] = false;
   const data = Object.assign({}, boilerplate.baseData, {
     htmlAttributes: getHtmlAttributes(request),
   }, _.pick(request, "dynamicHead", "dynamicBody"));
