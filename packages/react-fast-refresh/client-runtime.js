@@ -59,8 +59,18 @@ if (enabled && process.env.NODE_ENV !== 'production' && module.hot) {
         return false;
       }
 
-      if (!runtime.isLikelyComponentType(moduleExports[key])) {
-        onlyExportComponents = false;
+      try {
+        if (!runtime.isLikelyComponentType(moduleExports[key])) {
+          onlyExportComponents = false;
+        }
+      } catch (e) {
+          if (e.name === 'SecurityError') {
+            // Not a component. Could be a cross-origin object or something else
+            // we don't have access to
+            return false;
+          }
+
+          throw e;
       }
     }
 
