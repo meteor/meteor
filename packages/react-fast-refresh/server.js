@@ -19,9 +19,15 @@ if (typeof __meteor_runtime_config__ === 'object') {
   __meteor_runtime_config__.reactFastRefreshEnabled = enabled;
 }
 
-const babelPlugin = enabled ?
-  require('react-refresh/babel') :
-  null;
+let babelPlugin = null;
+if (enabled) {
+  let originalPlugin = require('react-refresh/babel');
+  let defaultOptions = { skipEnvCheck: true };
+
+  babelPlugin = function (babel, options = defaultOptions) {
+    return originalPlugin(babel, options);
+  };
+}
 
 ReactFastRefresh = {
   babelPlugin,
