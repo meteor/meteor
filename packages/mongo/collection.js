@@ -803,3 +803,21 @@ function popCallbackFromArgs(args) {
     return args.pop();
   }
 }
+
+const collections = {};
+
+Mongo.createAsyncCollection = async (collectionName) => {
+  try {
+    if (collections[collectionName]) {
+      return collections[collectionName];
+    }
+
+    const collectionDefinition = new Mongo.Collection(collectionName, { isAsync: true });
+    const collection = await collectionDefinition.asyncInit();
+    collections[collectionName] = collection;
+    return collection;
+  } catch (e) {
+    console.error(`Error creating ${collectionName} async collection`, e);
+    throw e;
+  }
+}
