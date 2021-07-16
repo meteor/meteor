@@ -15,9 +15,9 @@ Package.onUse(function(api) {
   api.use("modern-browsers");
   api.use("retry"); // TODO Try to remove this.
 
-  api.addFiles("sockjs-0.3.4.js", "legacy");
   api.mainModule("browser.js", "client", { lazy: true });
 
+  api.addFiles("sockjs-1.5.1.js", "legacy");
   api.addFiles("server.js", "server");
   api.mainModule("node.js", "server", { lazy: true });
 });
