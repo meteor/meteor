@@ -6,7 +6,6 @@ Package.describe({
 });
 
 Npm.depends({
-  "sockjs-client": "1.0.0",
   "faye-websocket": "0.11.4",
   "permessage-deflate": "0.1.7"
 });
@@ -18,6 +17,7 @@ Package.onUse(function(api) {
 
   api.mainModule("browser.js", "client", { lazy: true });
 
+  api.addFiles("sockjs-1.5.1.js", "legacy");
   api.addFiles("server.js", "server");
   api.mainModule("node.js", "server", { lazy: true });
 });
