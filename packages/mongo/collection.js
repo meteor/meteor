@@ -178,6 +178,33 @@ Object.assign(Mongo.Collection.prototype, {
         var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection._docs.get(mongoId);
 
+        //When the server's mergebox is disabled for a collection, the client must gracefully handle it when:
+        // *We receive an added message for a document that is already there. Instead, it will be changed
+        // *We reeive a change message for a document that is not there. Instead, it will be added
+        // *We receive a removed messsage for a document that is not there. Instead, noting wil happen.
+
+        //Code is derived from client-side code originally in peerlibrary:control-mergebox
+        //https://github.com/peerlibrary/meteor-control-mergebox/blob/master/client.coffee
+
+        //For more information, refer to discussion "Initial support for publication strategies in livedata server":
+        //https://github.com/meteor/meteor/pull/11151
+        if (Meteor.isClient) {
+          if (msg.msg === 'added' && doc) {
+            msg.msg = 'changed';
+          } else if (msg.msg === 'removed' && !doc) {
+            return;
+          } else if (msg.msg === 'changed' && !doc) {
+            msg.msg = 'added';
+            _ref = msg.fields;
+            for (field in _ref) {
+              value = _ref[field];
+              if (value === void 0) {
+                delete msg.fields[field];
+              }
+            }
+          }
+        }
+
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
         // value meaning "remove it".)
