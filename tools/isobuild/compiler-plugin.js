@@ -1116,7 +1116,7 @@ export class PackageSourceBatch {
         "hot-module-replacement",
         self.unibuild.arch
       );
-    const supportedArch = self.unibuild.arch === 'web.browser';
+    const supportedArch = archinfo.matches(self.unibuild.arch, 'web');
 
     self.hmrAvailable = self.useMeteorInstall && isDevelopment
       && usesHMRPackage && supportedArch;
