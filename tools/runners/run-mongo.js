@@ -90,7 +90,7 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     // they aren't set already. If these few aren't good enough, we'll at least
     // detect the locale error and print a link to #4019 (look for
     // `detectedErrors.badLocale` below).
-    env: _.extend({
+    env: Object.assign({
       LANG: 'en_US.UTF-8',
       LC_ALL: 'en_US.UTF-8'
     }, process.env)
@@ -123,7 +123,7 @@ if (process.platform === 'win32') {
         } else {
           // Find the pids of all mongod processes
           var mongo_pids = [];
-          _.each(stdout.split('\n'), function (line) {
+          stdout.split('\n').forEach(function (line) {
             var m = line.match(/^mongod.exe\s+(\d+) /);
             if (m) {
               mongo_pids[m[1]] = true;
@@ -143,7 +143,7 @@ if (process.platform === 'win32') {
               return;
             } else {
               var pids = [];
-              _.each(stdout.split('\n'), function (line) {
+              stdout.split('\n').forEach(function (line) {
                 var m = line.match(/^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/);
                 if (m) {
                   var found_pid =  parseInt(m[2], 10);
@@ -240,7 +240,7 @@ if (process.platform === 'win32') {
         }
 
         var ret = [];
-        _.each(stdout.split('\n'), function (line) {
+        stdout.split('\n').forEach(function (line) {
           // Matches mongos we start. Note that this matches
           // 'fake-mongod' (our mongod stub for automated tests) as well
           // as 'mongod'.
@@ -323,7 +323,7 @@ if (process.platform === 'win32') {
       });
       client.on('error', () => resolve(null));
     }).catch(() => null).await();
-  }
+  };
 }
 
 
@@ -805,7 +805,7 @@ var MongoRunner = function (options) {
 
 var MRp = MongoRunner.prototype;
 
-_.extend(MRp, {
+Object.assign(MRp, {
   // Blocks (yields) until the server has started for the first time and
   // is accepting connections. (It might subsequently die and be
   // restarted; we won't tell you about that.)

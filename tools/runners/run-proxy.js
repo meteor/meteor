@@ -1,5 +1,4 @@
 var Anser = require("anser");
-var _ = require('underscore');
 var runLog = require('./run-log.js');
 
 // options: listenPort, proxyToPort, proxyToHost,
@@ -23,7 +22,7 @@ var Proxy = function (options) {
   self.server = null;
 };
 
-_.extend(Proxy.prototype, {
+Object.assign(Proxy.prototype, {
   // Start the proxy server, block (yield) until it is ready to go
   // (actively listening on outer and proxying to inner), and then
   // return.
@@ -173,13 +172,13 @@ _.extend(Proxy.prototype, {
     self.proxy = null;
 
     // Drop any held connections.
-    _.each(self.httpQueue, function (c) {
+    self.httpQueue?.forEach(function (c) {
       c.res.statusCode = 500;
       c.res.end();
     });
     self.httpQueue = [];
 
-    _.each(self.websocketQueue, function (c) {
+    self.websocketQueue?.forEach(function (c) {
       c.socket.destroy();
     });
     self.websocketQueue = [];
@@ -270,7 +269,7 @@ function showErrorPage(res) {
 
     <pre>`);
 
-      _.each(runLog.getLog(), function (item) {
+  runLog.getLog().forEach(function (item) {
         res.write(Anser.ansiToHtml(Anser.escapeForHtml(item.message)) + "\n");
       });
 

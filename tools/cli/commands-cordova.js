@@ -8,6 +8,7 @@ import {
   ensureDevBundleDependencies,
   filterPlatforms,
 } from '../cordova/index.js';
+import {PlatformList} from "../project-context";
 
 function createProjectContext(appDir) {
   import { ProjectContext } from '../project-context.js';
@@ -34,9 +35,9 @@ function doAddPlatform(options) {
 
   main.captureAndExit('', 'adding platforms', () => {
     for (var platform of platformsToAdd) {
-      if (_.contains(installedPlatforms, platform)) {
+      if (installedPlatforms.includes(platform)) {
         buildmessage.error(`${platform}: platform is already added`);
-      } else if (!_.contains(CORDOVA_PLATFORMS, platform)) {
+      } else if (!CORDOVA_PLATFORMS.includes(platform)) {
         buildmessage.error(`${platform}: no such platform`);
       }
     }
@@ -61,7 +62,7 @@ function doAddPlatform(options) {
 
     for (var platform of platformsToAdd) {
       Console.info(`${platform}: added platform`);
-      if (_.contains(cordovaPlatforms, platform)) {
+      if (cordovaPlatforms.includes(platform)) {
         cordovaProject.checkPlatformRequirements(platform);
       }
     }
@@ -80,10 +81,10 @@ function doRemovePlatform(options) {
   main.captureAndExit('', 'removing platforms', () => {
     for (platform of platformsToRemove) {
       // Explain why we can't remove server or browser platforms
-      if (_.contains(PlatformList.DEFAULT_PLATFORMS, platform)) {
+      if (PlatformList.DEFAULT_PLATFORMS.includes(platform)) {
         buildmessage.error(`${platform}: cannot remove platform in this \
 version of Meteor`);
-      } else if (!_.contains(installedPlatforms, platform)) {
+      } else if (!installedPlatforms.includes(platform)) {
         buildmessage.error(`${platform}: platform is not in this project`);
       }
     }

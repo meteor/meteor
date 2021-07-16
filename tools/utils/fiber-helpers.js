@@ -58,7 +58,7 @@ exports.EnvironmentVariable = function (defaultValue) {
   self.defaultValue = defaultValue;
 };
 
-_.extend(exports.EnvironmentVariable.prototype, {
+Object.assign(exports.EnvironmentVariable.prototype, {
   get() {
     var self = this;
     exports.nodeCodeMustBeInFiber();

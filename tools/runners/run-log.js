@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
 
@@ -29,7 +28,7 @@ function getLoggingPackage() {
   _Log.outputFormat = 'colored-text';
 
   return _Log;
-};
+}
 
 var RunLog = function () {
   var self = this;
@@ -51,7 +50,7 @@ var RunLog = function () {
   self.temporaryMessageLength = null;
 };
 
-_.extend(RunLog.prototype, {
+Object.assign(RunLog.prototype, {
   _record: function (msg) {
     var self = this;
 
@@ -222,9 +221,8 @@ _.extend(RunLog.prototype, {
 // Create a singleton instance of RunLog. Expose its public methods on the
 // object you get with require('./run-log.js').
 var runLogInstance = new RunLog;
-_.each(
-  ['log', 'logTemporary', 'logRestart', 'logClientRestart', 'logAppOutput',
-   'setRawLogs', 'finish', 'clearLog', 'getLog'],
+['log', 'logTemporary', 'logRestart', 'logClientRestart', 'logAppOutput',
+  'setRawLogs', 'finish', 'clearLog', 'getLog'].forEach(
   function (method) {
-    exports[method] = _.bind(runLogInstance[method], runLogInstance);
+    exports[method] = runLogInstance[method].bind(runLogInstance);
   });

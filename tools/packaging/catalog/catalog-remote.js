@@ -38,7 +38,7 @@ var Mutex = function () {
   self._resolvers = [];
 };
 
-_.extend(Mutex.prototype, {
+Object.assign(Mutex.prototype, {
   lock: function () {
     var self = this;
 
@@ -77,7 +77,7 @@ var Txn = function (db) {
   self.started = false;
 };
 
-_.extend(Txn.prototype, {
+Object.assign(Txn.prototype, {
   // Runs a SQL query and returns the rows
   query: function (sql, params) {
     var self = this;
@@ -151,11 +151,11 @@ var Db = function (dbFile, options) {
   });
 };
 
-_.extend(Db.prototype, {
+Object.assign(Db.prototype, {
 
   // TODO: Move to utils?
   _retry: function (f, options) {
-    options = _.extend({ maxAttempts: 3, delay: 500}, options || {});
+    options = Object.assign({ maxAttempts: 3, delay: 500}, options || {});
 
     for (var attempt = 1; attempt <= options.maxAttempts; attempt++) {
       try {
@@ -424,7 +424,7 @@ var Table = function (name, jsonFields, options) {
   self._buildStatements();
 };
 
-_.extend(Table.prototype, {
+Object.assign(Table.prototype, {
   _buildStatements: function () {
     var self = this;
 

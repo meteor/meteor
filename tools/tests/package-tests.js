@@ -342,7 +342,7 @@ selftest.define("add package with both debugOnly and prodOnly", [], function () 
 selftest.define("add packages client archs", function (options) {
   var runTestWithArgs = function (clientType, args, port) {
     var s = new Sandbox({
-      clients: _.extend(options.clients, { port: port })
+      clients: Object.assign(options.clients, { port: port })
     });
 
     // Starting a run
@@ -867,9 +867,9 @@ selftest.define("show readme excerpt",  function () {
         "You should not see this line!";
   s.write("README.md", readme);
   testShowPackage(
-    s, name, _.extend({ description: "foobar1" }, basePackageInfo));
+    s, name, Object.assign({ description: "foobar1" }, basePackageInfo));
   testShowPackageVersion(
-    s, _.extend({ description: "foobar1" }, baseVersionInfo));
+    s, Object.assign({ description: "foobar1" }, baseVersionInfo));
 
   // Another example -- we have hidden the excerpt under a different subheading.
   readme =
@@ -881,9 +881,9 @@ selftest.define("show readme excerpt",  function () {
     "You should not see this line!";
   s.write("README.md", readme);
   testShowPackage(
-    s, name, _.extend({ description: "foobar2" }, basePackageInfo));
+    s, name, Object.assign({ description: "foobar2" }, basePackageInfo));
   testShowPackageVersion(
-    s, _.extend({ description: "foobar2" }, baseVersionInfo));
+    s, Object.assign({ description: "foobar2" }, baseVersionInfo));
 
   // Generally, people skip a line between the header and the text, and
   // sometimes, even between headers. (It is part of markdown, in fact.) Let's
@@ -897,9 +897,9 @@ selftest.define("show readme excerpt",  function () {
     "You should not see this line!";
   s.write("README.md", readme);
   testShowPackage(
-    s, name, _.extend({ description: "foobaz" }, basePackageInfo));
+    s, name, Object.assign({ description: "foobaz" }, basePackageInfo));
   testShowPackageVersion(
-    s, _.extend({ description: "foobaz" }, baseVersionInfo));
+    s, Object.assign({ description: "foobaz" }, baseVersionInfo));
 
   // Some formatting in the text.
   var excerpt =
@@ -914,9 +914,9 @@ selftest.define("show readme excerpt",  function () {
     "You should not see this line!";
   s.write("README.md", readme);
   testShowPackage(
-    s, name, _.extend({ description: excerpt }, basePackageInfo));
+    s, name, Object.assign({ description: excerpt }, basePackageInfo));
   testShowPackageVersion(
-    s, _.extend({ description: excerpt }, baseVersionInfo));
+    s, Object.assign({ description: excerpt }, baseVersionInfo));
 
   // Now, let's try different file specifications for the documentation.
   var git = "https:ilovegit.git";
@@ -950,9 +950,9 @@ selftest.define("show readme excerpt",  function () {
   readme = "A special Readme, just for Meteor.";
   s.write("Meteor-Readme.md", "Title\n==\n" + readme);
   testShowPackageVersion(s,
-    _.extend({ description: readme }, baseVersionInfo));
+    Object.assign({ description: readme }, baseVersionInfo));
   testShowPackage(s, name,
-    _.extend({ description: readme }, basePackageInfo));
+    Object.assign({ description: readme }, basePackageInfo));
 
   // If we specify a non-existent file, tell us.
   s.write("package.js",

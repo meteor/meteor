@@ -183,7 +183,7 @@ var BasePkgDatum = function () {
   var self = this;
   self.data = null;
 };
-_.extend(BasePkgDatum.prototype, {
+Object.assign(BasePkgDatum.prototype, {
   // Throws if data has not been initialized.
   _checkInitialized: function () {
     var self = this;
@@ -222,7 +222,7 @@ var PkgExports = function (pkgExports) {
     // Replace 'os' (what we store) with 'server' (what you would put in a
     // package.js file). That's more user friendly, and avoids confusing this
     // with different OS arches used in binary packages.
-    if ( _.indexOf(arches, "os") !== -1) {
+    if ( arches.indexOf("os") !== -1) {
       arches = _.without(arches, "os");
       arches.push("server");
     }
@@ -236,7 +236,7 @@ var PkgExports = function (pkgExports) {
 // Extend BasePkgDatum.
 PkgExports.prototype = new BasePkgDatum();
 
-_.extend(PkgExports.prototype, {
+Object.assign(PkgExports.prototype, {
   // Convert package exports into a pretty, Console non-wrappable string. If an
   // export is only declared for certain architectures, mentions those
   // architectures in a user-friendly format.
@@ -291,7 +291,7 @@ var PkgImplies = function (pkgDeps) {
 // Extend BasePkgDatum.
 PkgImplies.prototype = new BasePkgDatum();
 
-_.extend(PkgImplies.prototype, {
+Object.assign(PkgImplies.prototype, {
   // Convert package exports into a pretty, Console non-wrappable string. If an
   // export is only declared for certain architectures, mentions those
   // architectures in a user-friendly format.
@@ -340,7 +340,7 @@ var PkgDependencies = function (pkgDeps) {
 // Extend BasePkgDatum.
 PkgDependencies.prototype = new BasePkgDatum();
 
-_.extend(PkgDependencies.prototype, {
+Object.assign(PkgDependencies.prototype, {
   // Convert package exports into a pretty, Console non-wrappable string. If an
   // export is only declared for certain architectures, mentions those
   // architectures in a user-friendly format.

@@ -382,7 +382,7 @@ export function bundleBuild(isopack, isopackCache) {
     ignore: function (relativePath) {
       var pieces = relativePath.split(files.pathSep);
       return pieces.length && _.last(pieces) === 'package.json'
-        && _.contains(pieces, 'npm');
+        && pieces.includes('npm');
     }
   });
 

@@ -1,5 +1,3 @@
-var _ = require('underscore');
-
 var files = require('../fs/files');
 var catalog = require('./catalog/catalog.js');
 
@@ -21,7 +19,7 @@ var Release = function (options) {
   }
 };
 
-_.extend(Release.prototype, {
+Object.assign(Release.prototype, {
   // True if an actual, proper, "released" release. If so, this.name
   // will have the name of the release, eg, "1.0".
   isProperRelease: function () {

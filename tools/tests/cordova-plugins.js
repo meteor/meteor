@@ -71,7 +71,7 @@ var checkCordovaPluginExists = selftest.markStack(function(sand, plugin) {
       return line.split(' ')[0];
     }
   });
-  selftest.expectTrue(_.contains(cordovaPlugins, plugin));
+  selftest.expectTrue(cordovaPlugins.includes(plugin));
 });
 
 // Given a sandbox, that has the app as its cwd, read the cordova plugins

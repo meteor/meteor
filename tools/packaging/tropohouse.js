@@ -145,7 +145,7 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
   return targetDirectory;
 };
 
-_.extend(exports.Tropohouse.prototype, {
+Object.assign(exports.Tropohouse.prototype, {
   // Returns the load path where one can expect to find the package, at a given
   // version, if we have already downloaded from the package server. Does not
   // check for contents.
@@ -393,7 +393,7 @@ _.extend(exports.Tropohouse.prototype, {
       version: version
     });
 
-    var archesToDownload = _.filter(options.architectures, function (requiredArch) {
+    var archesToDownload = options.architectures.filter(function (requiredArch) {
       return !archinfo.mostSpecificMatch(requiredArch, downloadedArches);
     });
 

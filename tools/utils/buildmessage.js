@@ -32,7 +32,7 @@ var Job = function (options) {
   self.children = [];
 };
 
-_.extend(Job.prototype, {
+Object.assign(Job.prototype, {
   // options may include type ("error"), message, func, file, line,
   // column, stack (in the format returned by parseStack.parse())
   addMessage: function (options) {
@@ -138,7 +138,7 @@ var MessageSet = function (messageSet) {
   }
 };
 
-_.extend(MessageSet.prototype, {
+Object.assign(MessageSet.prototype, {
   formatMessages: function () {
     var self = this;
 
@@ -472,7 +472,7 @@ var error = function (message, options) {
     return;
   }
 
-  var info = _.extend({
+  var info = Object.assign({
     message: message
   }, options);
 
@@ -643,7 +643,7 @@ var forkJoin = function (options, iterable, fn) {
 
 
 var buildmessage = exports;
-_.extend(exports, {
+Object.assign(exports, {
   capture: capture,
   enterJob: enterJob,
   markBoundary: markBoundary,

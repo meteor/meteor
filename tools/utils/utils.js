@@ -587,14 +587,14 @@ exports.runGitInCheckout = function (...args) {
 exports.Throttled = function (options) {
   var self = this;
 
-  options = _.extend({ interval: 150 }, options || {});
+  options = Object.assign({ interval: 150 }, options || {});
   self.interval = options.interval;
   var now = +(new Date);
 
   self.next = now;
 };
 
-_.extend(exports.Throttled.prototype, {
+Object.assign(exports.Throttled.prototype, {
   isAllowed: function () {
     var self = this;
     var now = +(new Date);
@@ -622,7 +622,7 @@ exports.ThrottledYield = function (options) {
   self._throttle = new exports.Throttled(options);
 };
 
-_.extend(exports.ThrottledYield.prototype, {
+Object.assign(exports.ThrottledYield.prototype, {
   yield: function () {
     var self = this;
     if (self._throttle.isAllowed()) {

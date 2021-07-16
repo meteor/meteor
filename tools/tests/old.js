@@ -29,7 +29,7 @@ var runOldTest = function (filename, extraEnv) {
     // 'Run'
     args: ['--no-wasm-code-gc', files.convertToOSPath(files.pathResolve(
       files.convertToStandardPath(__dirname), 'old', filename))],
-    env: maybeFixRelease(_.extend({
+    env: maybeFixRelease(Object.assign({
       METEOR_TOOL_PATH: s.execPath
     }, extraEnv))
   });

@@ -174,8 +174,7 @@ export class Unibuild {
           hash: resource.hash,
           fileOptions: resource.fileOptions
         }));
-      } else if (_.contains(["head", "body", "css", "js", "asset"],
-                            resource.type)) {
+      } else if (["head", "body", "css", "js", "asset"].includes(resource.type)) {
         resources.push({
           type: resource.type,
           data: data,
@@ -277,7 +276,7 @@ export class Unibuild {
     const offset = { head: 0, body: 0 };
 
     _.each(unibuild.resources, function (resource) {
-      if (_.contains(["head", "body"], resource.type)) {
+      if (["head", "body"].includes(resource.type)) {
         if (concat[resource.type].length) {
           concat[resource.type].push(Buffer.from("\n", "utf8"));
           offset[resource.type]++;
@@ -315,7 +314,7 @@ export class Unibuild {
 
     // Output other resources each to their own file
     _.each(unibuild.resources, function (resource) {
-      if (_.contains(["head", "body"], resource.type)) {
+      if (["head", "body"].includes(resource.type)) {
         // already did this one
         return;
       }

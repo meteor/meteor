@@ -58,7 +58,7 @@ var Module = function (options) {
   self.combinedServePath = options.combinedServePath;
 };
 
-_.extend(Module.prototype, {
+Object.assign(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
@@ -361,7 +361,7 @@ _.extend(Module.prototype, {
 
       } else if (_.isObject(t)) {
         chunks.push("{");
-        const keys = _.keys(t);
+        const keys = Object.keys(t);
         _.each(keys, (key, i) => {
           chunks.push(JSON.stringify(key), ":");
           walk(t[key]);
@@ -531,7 +531,7 @@ var writeSymbolTree = function (symbolTree, indent) {
     if (typeof node === "string") {
       return node;
     }
-    if (_.keys(node).length === 0) {
+    if (Object.keys(node).length === 0) {
       return '{}';
     }
     var spacing = new Array(indent + 1).join(' ');
@@ -625,7 +625,7 @@ function getNonDynamicDeps(inputFileDeps) {
   return Object.keys(nonDynamicDeps);
 }
 
-_.extend(File.prototype, {
+Object.assign(File.prototype, {
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
@@ -645,7 +645,7 @@ _.extend(File.prototype, {
     }
 
     try {
-      return _.keys(findAssignedGlobals(self.source, self._inputHash));
+      return Object.keys(findAssignedGlobals(self.source, self._inputHash));
     } catch (e) {
       if (!e.$ParseError) {
         throw e;

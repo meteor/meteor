@@ -18,7 +18,7 @@ exports.SourceProcessor = function (options) {
   self.id = `${ options.isopack.displayName() }#${ nextId++ }`;
   self.userPlugin = null;
 };
-_.extend(exports.SourceProcessor.prototype, {
+Object.assign(exports.SourceProcessor.prototype, {
   // Call the user's factory function to get the actual build plugin object.
   // Note that we're supposed to have one userPlugin per project, so this
   // assumes that each Isopack object is specific to a project.  We don't run

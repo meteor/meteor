@@ -340,7 +340,7 @@ export class IsopackCache {
           // about.)
           isopack.setPluginProviderPackageMap(
             self._packageMap.makeSubsetMap(
-              _.keys(isopackBuildInfoJson.pluginProviderPackageMap)));
+              Object.keys(isopackBuildInfoJson.pluginProviderPackageMap)));
           // Because we don't save linter messages to disk, we have to relint
           // this package.
           // XXX save linter messages to disk?

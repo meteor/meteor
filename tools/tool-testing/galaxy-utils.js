@@ -120,7 +120,7 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
   if (! options.useOldSettings) {
     // Add all the settings together and write them out. Let user settings
     // override ours.
-    var allSettings = _.extend(galaxySettings, settings);
+    var allSettings = Object.assign(galaxySettings, settings);
     var settingsFile = "settings-" + appName + ".json";
     sandbox.write(settingsFile, JSON.stringify(allSettings));
 
@@ -204,7 +204,7 @@ exports.getAppRecordByName = selftest.markStack(function (appName) {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.hostname === appName) {
-        appRecord = _.extend({ _id: msg.id }, msg.fields);
+        appRecord = Object.assign({ _id: msg.id }, msg.fields);
       }
     }
   });
@@ -230,7 +230,7 @@ exports.getAppContainerStatuses = selftest.markStack(function (appId, appName) {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.appId === appId) {
-        containers.push(_.extend({ _id: msg.id }, msg.fields));
+        containers.push(Object.assign({ _id: msg.id }, msg.fields));
       }
     }
   });

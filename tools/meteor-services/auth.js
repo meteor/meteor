@@ -205,7 +205,7 @@ var ensureSessionType = function (session, type) {
     // OK since this should never happen in normal operation. (It
     // would happen if the Meteor Accounts server mode somewhere else
     // and a Galaxy was deployed at its old address, for example).
-    _.each(_.keys(session), function (key) {
+    Object.keys(session).forEach(function (key) {
       delete session[key];
     });
     session.type = type;
@@ -290,7 +290,7 @@ var removePendingRevoke = function (domain, tokenIds) {
 //  - connection: an open connection to the accounts server. If not
 //    provided, this function will open one itself.
 var tryRevokeOldTokens = function (options) {
-  options = _.extend({
+  options = Object.assign({
     timeout: 5000
   }, options || {});
 
@@ -547,7 +547,7 @@ exports.doUsernamePasswordLogin = function (options) {
     }).trim();
   } while (username.length === 0);
 
-  return doInteractivePasswordLogin(_.extend({}, options, {
+  return doInteractivePasswordLogin(Object.assign({}, options, {
     username: username
   }));
 };

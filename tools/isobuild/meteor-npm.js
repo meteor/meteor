@@ -1204,5 +1204,5 @@ function isUrlFromRegistry(url) {
 
 var logUpdateDependencies = function (packageName, npmDependencies) {
   runLog.log(packageName + ': updating npm dependencies -- ' +
-             _.keys(npmDependencies).join(', ') + '...');
+             Object.keys(npmDependencies).join(', ') + '...');
 };

@@ -49,7 +49,7 @@ var utils = require('../utils/utils.js');
 var WAREHOUSE_URLBASE = process.env.METEOR_WAREHOUSE_URLBASE || 'https://warehouse.meteor.com';
 
 var warehouse = exports;
-_.extend(warehouse, {
+Object.assign(warehouse, {
   // An exception meaning that you asked for a release that doesn't
   // exist.
   NoSuchReleaseError: function () {
@@ -252,7 +252,7 @@ _.extend(warehouse, {
       }
       if (!_.isEmpty(newPieces.packages)) {
         console.log(warehouse._packageUpdatesMessage(
-          _.keys(newPieces.packages).sort()));
+          Object.keys(newPieces.packages).sort()));
       }
       console.log();
     }

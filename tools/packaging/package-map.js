@@ -43,7 +43,7 @@ exports.PackageMap = function (versions, options) {
   });
 };
 
-_.extend(exports.PackageMap.prototype, {
+Object.assign(exports.PackageMap.prototype, {
   eachPackage: function (iterator) {
     var self = this;
     _.each(self._map, function (info, packageName) {
@@ -175,7 +175,7 @@ exports.PackageMapDelta = function (options) {
   });
 };
 
-_.extend(exports.PackageMapDelta.prototype, {
+Object.assign(exports.PackageMapDelta.prototype, {
   _storeAddOrChange: function (packageName, newInfo, oldVersion,
                                anticipatedPrereleases,
                                neededToUseUnanticipatedPrereleases) {
@@ -225,7 +225,7 @@ _.extend(exports.PackageMapDelta.prototype, {
 
   displayOnConsole: function (options) {
     var self = this;
-    options = _.extend({
+    options = Object.assign({
       title: "Changes to your project's package version selections:"
     }, options);
 

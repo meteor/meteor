@@ -124,7 +124,7 @@ exports.printReport = function () {
   _.each(times, function (item) {
     var line = (item.time * 1000).toFixed(2) + " " + item.name;
     if (! item.ours) {
-      line += " [via " + _.keys(item.via).join(", ") + "]";
+      line += " [via " + Object.keys(item.via).join(", ") + "]";
     }
     console.log(line);
     if (item.ours) {
