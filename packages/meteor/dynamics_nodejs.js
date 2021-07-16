@@ -80,8 +80,10 @@ EVp.withValue = function (value, func) {
 // callback, and when an exception is raised a debug message will be
 // printed with the description.
 Meteor.bindEnvironment = function (func, onException, _this) {
+  // TODO [fiber-free] Just making Fiber optional temporarily
   // Meteor._nodeCodeMustBeInFiber();
 
+  // TODO [fiber-free] Just making Fiber optional temporarily
   var dynamics = Fiber.current?._meteor_dynamics;
   var boundValues = dynamics ? dynamics.slice() : [];
 
@@ -101,11 +103,15 @@ Meteor.bindEnvironment = function (func, onException, _this) {
     var args = Array.prototype.slice.call(arguments);
 
     var runWithEnvironment = function () {
+
+      // TODO [fiber-free] Just making Fiber optional temporarily
       var savedValues = Fiber.current?._meteor_dynamics;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
-        if(Fiber.current) {
+
+        // TODO [fiber-free] Just making Fiber optional temporarily
+        if (Fiber.current) {
           Fiber.current._meteor_dynamics = boundValues.slice();
         }
         var ret = func.apply(_this, args);
@@ -115,8 +121,10 @@ Meteor.bindEnvironment = function (func, onException, _this) {
         // within a Fiber, the wrapped call throws.
         onException(e);
       } finally {
-        if(Fiber.current) {
-        Fiber.current._meteor_dynamics = savedValues;
+
+        // TODO [fiber-free] Just making Fiber optional temporarily
+        if (Fiber.current) {
+          Fiber.current._meteor_dynamics = savedValues;
         }
       }
       return ret;

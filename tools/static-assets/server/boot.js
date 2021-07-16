@@ -477,6 +477,9 @@ var runMain = Profile("Run main()", function () {
   }
 });
 
-    loadServerBundles();
-    callStartupHooks();
-    runMain();
+
+// TODO [fiber-free] temporarily removing profile
+// Profile.run("Server startup", function () {
+loadServerBundles();
+callStartupHooks();
+runMain();

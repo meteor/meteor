@@ -643,6 +643,9 @@ function runWebAppServer() {
   };
 
   WebAppInternals.reloadClientPrograms = function () {
+
+    // TODO [fiber-free] temporarily removing syncQueue but it should be
+    // necessary
     // syncQueue.runTask(function() {
       const staticFilesByArch = Object.create(null);
 
@@ -854,6 +857,9 @@ function runWebAppServer() {
     // Meteor/Cordova for the Hot-Code Push and since the file will be served by
     // the device's server, it is important to set the DDP url to the actual
     // Meteor server accepting DDP connections and not the device's file server.
+
+    // TODO [fiber-free] temporarily removing syncQueue but it should be
+    // necessary
     // syncQueue.runTask(function() {
       Object.keys(WebApp.clientPrograms)
         .forEach(generateBoilerplateForArch);

@@ -94,7 +94,10 @@ Mongo.Collection = function Collection(name, options) {
     if (name && this._connection === Meteor.server &&
         typeof MongoInternals !== "undefined" &&
         MongoInternals.defaultRemoteCollectionDriver) {
-      if(!options.isAsync) {
+
+      // TODO [fiber-free] initializing driver in the old way if standard async
+      // is not used
+      if (!options.isAsync) {
         options._driver = MongoInternals.defaultRemoteCollectionDriver();
       }
     } else {
@@ -105,7 +108,10 @@ Mongo.Collection = function Collection(name, options) {
   }
 
   this._name = name;
-  if(!options.isAsync) {
+
+  // TODO [fiber-free] initializing driver in the old way if standard async
+  // is not used
+  if (!options.isAsync) {
     this._collection = options._driver.open(name, this._connection);
     this._driver = options._driver;
   }
@@ -139,7 +145,9 @@ Mongo.Collection = function Collection(name, options) {
   }
   console.log(`options.isAsync 2`, options.isAsync);
 
-  if(options.isAsync) {
+  // TODO [fiber-free] initializing driver in a different way if standard
+  // async is used
+  if (options.isAsync) {
     this.asyncInit = async () => {
       this._driver = await MongoInternals.defaultRemoteCollectionDriver();
       this._collection = this._driver.open(name, this._connection);
@@ -148,9 +156,9 @@ Mongo.Collection = function Collection(name, options) {
   }
 };
 
-const mainMethods = {
+Object.assign(Mongo.Collection.prototype, {
   _maybeSetUpReplication(name, {
-    _suppressSameNameError = true
+    _suppressSameNameError = false
   }) {
     const self = this;
     if (! (self._connection &&
@@ -274,7 +282,6 @@ const mainMethods = {
 
     if (! ok) {
       const message = `There is already a collection named "${name}"`;
-
       if (_suppressSameNameError === true) {
         // XXX In theory we do not have to throw when `ok` is falsy. The
         // store is already defined for this collection name, but this
@@ -374,10 +381,9 @@ const mainMethods = {
       this._getFindOptions(args)
     );
   }
-};
-Object.assign(Mongo.Collection.prototype, mainMethods);
+});
 
-const cursorMethods = {
+Object.assign(Mongo.Collection, {
   _publishCursor(cursor, sub, collection) {
     var observeHandle = cursor.observeChanges({
         added: function (id, fields) {
@@ -429,11 +435,9 @@ const cursorMethods = {
 
     return selector;
   }
-};
+});
 
-Object.assign(Mongo.Collection, cursorMethods);
-
-const prototypeMethods = {
+Object.assign(Mongo.Collection.prototype, {
   // 'insert' immediately returns the inserted document's new _id.
   // The others return values immediately if you are in a stub, an in-memory
   // unmanaged collection, or a mongo-backed collection and you don't pass a
@@ -739,8 +743,7 @@ const prototypeMethods = {
     }
     return self._driver.mongo.db;
   }
-};
-Object.assign(Mongo.Collection.prototype, prototypeMethods);
+});
 
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {
@@ -795,8 +798,8 @@ function popCallbackFromArgs(args) {
   // Pull off any callback (or perhaps a 'callback' variable that was passed
   // in undefined, like how 'upsert' does it).
   if (args.length &&
-      (args[args.length - 1] === undefined ||
-       args[args.length - 1] instanceof Function)) {
+    (args[args.length - 1] === undefined ||
+      args[args.length - 1] instanceof Function)) {
     return args.pop();
   }
 }

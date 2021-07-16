@@ -4,6 +4,8 @@ import { create as createStream } from "combined-stream2";
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
 
+// TODO [fiber-free] Review if this change is ok in terms of performance or
+// maybe we could read it once in production
 // Copied from webapp_server
 const readUtf8FileSync = filename => readFileSync(filename, 'utf8');
 

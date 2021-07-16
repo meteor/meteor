@@ -1624,6 +1624,9 @@ Object.assign(Server.prototype, {
       if (typeof func !== 'function') {
         throw new Error("Method '" + name + "' must be a function");
       }
+
+      // TODO [fiber-free] is it ok to ignore it or is it better to avoid adding
+      // again?
       if (self.method_handlers[name]) {
         console.error("A method named '" + name + "' is already defined");
         console.trace();
