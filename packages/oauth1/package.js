@@ -8,12 +8,10 @@ Package.onUse(api => {
   api.use('random');
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use([
-    'check',
-    'http'
-  ], 'server');
+  api.use('check', 'server');
 
   api.use('mongo');
+  api.use(['fetch', 'url']);
 
   api.export('OAuth1Binding', 'server');
   api.export('OAuth1Test', 'server', {testOnly: true});

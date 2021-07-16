@@ -1,4 +1,5 @@
 import bodyParser from 'body-parser';
+import { Log } from 'meteor/logging';
 
 OAuth = {};
 OAuthTest = {};

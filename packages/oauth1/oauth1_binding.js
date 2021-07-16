@@ -1,6 +1,8 @@
 import crypto from 'crypto';
 import querystring from 'querystring';
-import urlModule from 'url';
+import { fetch, Headers, Request } from 'meteor/fetch';
+import { URL } from 'meteor/url';
+import { Random } from 'meteor/random';
 
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
@@ -23,8 +25,12 @@ export class OAuth1Binding {
     const headers = this._buildHeader({
       oauth_callback: callbackUrl
     });
+    // Twitter requires oauth_callback in params and is required for OAuth 1.0a compliance
+    const params = {
+      oauth_callback: callbackUrl
+    };
 
-    const response = this._call('POST', this._urls.requestToken, headers);
+    const response = this._call('POST', this._urls.requestToken, headers, params);
     const tokens = querystring.parse(response.content);
 
     if (! tokens.oauth_callback_confirmed)
@@ -51,6 +57,7 @@ export class OAuth1Binding {
     });
 
     const response = this._call('POST', this._urls.accessToken, headers);
+    console.dir(response);
     const tokens = querystring.parse(response.content);
 
     if (! tokens.oauth_token || ! tokens.oauth_token_secret) {
@@ -74,7 +81,6 @@ export class OAuth1Binding {
     if(! params) {
       params = {};
     }
-
     return this._call(method, url, headers, params, callback);
   }
 
@@ -87,14 +93,14 @@ export class OAuth1Binding {
   }
 
   _buildHeader(headers) {
-    return {
+    return new Headers({
       oauth_consumer_key: this._config.consumerKey,
       oauth_nonce: Random.secret().replace(/\W/g, ''),
       oauth_signature_method: 'HMAC-SHA1',
       oauth_timestamp: (new Date().valueOf()/1000).toFixed().toString(),
       oauth_version: '1.0',
       ...headers,
-    }
+    });
   }
 
   _getSignature(method, url, rawHeaders, accessTokenSecret, params) {
@@ -116,70 +122,81 @@ export class OAuth1Binding {
       signingKey += this._encodeString(accessTokenSecret);
 
     return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
-  };
+  }
 
-  _call(method, url, headers = {}, params = {}, callback) {
+  async _callMethod(method, url, headers = new Headers(), params = {}) {
+    const request = new Request(url, {
+      method,
+      headers,
+      redirect: 'follow',
+      mode: 'cors',
+      jar: false
+    })
+    // Make signed request
+    const response = await fetch(request);
+    const data = {
+      headers: response.headers,
+      status: response.status,
+      statusText: response.statusText,
+      errors: response.errors,
+      // We store nonce so that JWTs can be validated
+      nonce: headers.get('oauth_nonce')
+    };
+    data.content = await response.text();
+    return data;
+  }
+
+  _call (method, url, headers = new Headers(), params = {}, callback) {
+    const callMethod = Meteor.wrapAsync(this._callMethod);
     // all URLs to be functions to support parameters/customization
     if(typeof url === "function") {
       url = url(this);
     }
 
-    // Extract all query string parameters from the provided URL
-    const parsedUrl = urlModule.parse(url, true);
-    // Merge them in a way that params given to the method call have precedence
-    params = { ...parsedUrl.query, ...params };
-
-    // Reconstruct the URL back without any query string parameters
-    // (they are now in params)
-    parsedUrl.query = {};
-    parsedUrl.search = '';
-    url = urlModule.format(parsedUrl);
+    // parse URL and add in params
+    const parsedUrl = new URL(url);
+    Object.keys(params).map(key => parsedUrl.searchParams.append(key, params[key]));
 
     // Get the signature
-    headers.oauth_signature =
-      this._getSignature(method, url, headers, this.accessTokenSecret, params);
+    headers.set('oauth_signature', this._getSignature(method, url, headers, this.accessTokenSecret, params));
 
-    // Make a authorization string according to oauth1 spec
-    const authString = this._getAuthHeaderString(headers);
+    // Make an authorization string according to oauth1 spec
+    headers.set('Authorization', this._getAuthHeaderString(headers));
 
-    // Make signed request
+    let data;
+    let error = undefined;
     try {
-      const response = HTTP.call(method, url, {
-        params,
-        headers: {
-          Authorization: authString
-        }
-      }, callback && ((error, response) => {
-        if (! error) {
-          response.nonce = headers.oauth_nonce;
-        }
-        callback(error, response);
-      }));
-      // We store nonce so that JWTs can be validated
-      if (response)
-        response.nonce = headers.oauth_nonce;
-      return response;
+      data = callMethod(method, parsedUrl, headers, params).resolve();
     } catch (err) {
-      throw Object.assign(new Error(`Failed to send OAuth1 request to ${url}. ${err.message}`),
-                     {response: err.response});
+      const errorMsg = `Failed to send OAuth1 request to ${url}. ${err.message}`;
+      if (callback) error = errorMsg;
+      throw Object.assign(new Error(errorMsg),{response: err.response});
+    } finally {
+      if (data?.errors) error = `Failed to send OAuth1 request to ${url}. ${data.errors[0].message}`;
+      if (callback) callback(error, data);
     }
-  };
+    return data;
+  }
 
   _encodeHeader(header) {
     return Object.keys(header).reduce((memo, key) => {
       memo[this._encodeString(key)] = this._encodeString(header[key]);
       return memo;
     }, {});
-  };
+  }
 
   _encodeString(str) {
-    return encodeURIComponent(str).replace(/[!'()]/g, escape).replace(/\*/g, "%2A");
-  };
+    return encodeURIComponent(str)
+      .replace(/!/g,'%21')
+      .replace(/\*/g,'%2A')
+      .replace(/\(/g,'%28')
+      .replace(/\)/g,'%29');
+  }
 
   _getAuthHeaderString(headers) {
     return 'OAuth ' +  Object.keys(headers).map(key =>
       `${this._encodeString(key)}="${this._encodeString(headers[key])}"`
     ).sort().join(', ');
-  };
+  }
 
-};
+}

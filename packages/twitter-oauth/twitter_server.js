@@ -12,7 +12,7 @@ var urls = {
   }
 };
 
-// https://dev.twitter.com/docs/api/1.1/get/account/verify_credentials
+// https://developer.twitter.com/en/docs/twitter-api/v1/accounts-and-users/manage-account-settings/api-reference/get-account-verify_credentials
 Twitter.whitelistedFields = ['profile_image_url', 'profile_image_url_https', 'lang', 'email'];
 
 OAuth.registerService('twitter', 1, urls, function(oauthBinding) {
@@ -27,7 +27,7 @@ OAuth.registerService('twitter', 1, urls, function(oauthBinding) {
 
   // include helpful fields from twitter
   var fields = _.pick(identity, Twitter.whitelistedFields);
-  _.extend(serviceData, fields);
+  Object.assign(serviceData, fields);
 
   return {
     serviceData: serviceData,
