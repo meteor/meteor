@@ -30,7 +30,7 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
        * @instance
        * @name accept
        */
-      accept() {
+      accept: function () {
         if (arguments.length > 0) {
           console.warn('hot.accept does not support any arguments.');
         }
@@ -44,7 +44,7 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
         * @instance
         * @name decline
         */
-      decline() {
+      decline: function () {
         if (arguments.length > 0) {
           throw new Error('hot.decline does not support any arguments.');
         }
@@ -59,7 +59,7 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
         * @name dispose
         * @param {module.hot.DisposeFunction} callback Called before replacing the old module.
         */
-      dispose(cb) {
+      dispose: function (cb) {
         hotState._disposeHandlers.push(cb);
       },
       /**
@@ -71,10 +71,10 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
         * @param {Object} callbacks Can have before and after methods, called before a module is required,
         * and after it finished being evaluated
         */
-      onRequire(callbacks) {
+      onRequire: function (callbacks) {
         return module._onRequire(callbacks);
       },
-      _canAcceptUpdate() {
+      _canAcceptUpdate: function () {
         return hotState._hotAccepts;
       },
       /**
@@ -88,5 +88,5 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
       data: hotState.data
     }
   },
-  set() { }
+  set: function () { }
 });
