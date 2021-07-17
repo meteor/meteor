@@ -335,7 +335,6 @@ ${displayNameForPlatform(platform)}`, async () => {
       ...this.defaultOptions,
       platforms: [platform],
       device: isDevice,
-      options: (platform === 'android' ? {argv: ["--packageType", options.packageType || "bundle"]} : {})
     };
 
     this.runCommands(`running Cordova app for platform \
