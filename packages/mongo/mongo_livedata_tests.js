@@ -179,7 +179,7 @@ var Dog = function (name, color, actions) {
   self.name = name;
   self.actions = actions || [{name: "wag"}, {name: "swim"}];
 };
-_.extend(Dog.prototype, {
+Object.assign(Dog.prototype, {
   getName: function () { return this.name;},
   getColor: function () { return this.name;},
   equals: function (other) { return other.name === this.name &&
@@ -1372,8 +1372,13 @@ testAsyncMulti('mongo-livedata - bulk insert empty documents, ' + idGeneration, 
   }, function (test, expect) {
     const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
-    const res = coll.insert([{}, {}, {}]);
-    test.equal(res.length, 3);
+    coll.insert([{}, {}, {}], expect((err, ids) => {
+      test.isFalse(err);
+      test.isTrue(ids);
+      test.equal(ids.length, 3);
+      const cursor = coll.find();
+      test.equal(cursor.count(), 3);
+    }));
   }
 ]);
 
