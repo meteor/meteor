@@ -1282,7 +1282,7 @@ if (Meteor.isServer) {
     };
 
     var ids = {};
-    _.each([2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5], function (x, i) {
+    [2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5].forEach(function (x, i) {
       ids[i] = ins({ x: x, y: i });
     });
 
@@ -1372,13 +1372,8 @@ testAsyncMulti('mongo-livedata - bulk insert empty documents, ' + idGeneration, 
   }, function (test, expect) {
     const coll = new Mongo.Collection(this.collectionName, collectionOptions);
 
-    coll.insert([{}, {}, {}], expect(function (err, ids) {
-      test.isFalse(err);
-      test.isTrue(ids);
-      test.equal(ids.length, 3);
-      const cursor = coll.find();
-      test.equal(cursor.count(), 3);
-    }));
+    const res = coll.insert([{}, {}, {}]);
+    test.equal(res.length, 3);
   }
 ]);
 
