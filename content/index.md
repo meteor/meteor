@@ -53,15 +53,15 @@ meteor
 
 1. The place to get started with Meteor is the [tutorials page](https://www.meteor.com/developers/tutorials).
 
-2. [Stack Overflow](http://stackoverflow.com/questions/tagged/meteor) is the best place to ask (and answer!) technical questions. Be sure to add the meteor tag to your question.
+1. [Meteor Examples](https://github.com/meteor/examples) is a list of examples using Meteor. You can also include your example with Meteor.
+   
+1. Once you are familiar with the basics, the [Meteor Guide](http://guide.meteor.com) covers intermediate material on how to use Meteor in a larger scale app.
 
-3. Visit the [Meteor discussion forums](https://forums.meteor.com) to announce projects, get help, talk about the community, or discuss changes to core.
+1. Visit the [Meteor discussion forums](https://forums.meteor.com) to announce projects, get help, talk about the community, or discuss changes to core.
+   
+1. [Meteor Slack Community](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc) is the best place to ask (and answer!) technical questions and also meet Meteor developers.
 
-4. The [Meteor docs](https://docs.meteor.com) is the best place to find the core API documentation of the platform.
-
-5. [Atmosphere](https://atmospherejs.com) is the repository of community packages designed especially for Meteor.
-
-6. [Awesome Meteor](https://github.com/Urigo/awesome-meteor) is a community-curated list of [packages](https://github.com/Urigo/awesome-meteor#getting-started) and [resources](https://github.com/Urigo/awesome-meteor#resources).
+1. [Atmosphere](https://atmospherejs.com) is the repository of community packages designed especially for Meteor.
 
 <h2 id="what-is-it">What is the Meteor Guide?</h2>
 
