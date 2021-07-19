@@ -17,7 +17,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 <h2 id="learning-more">Meteor resources</h2>
 
-1. The place to get started with Meteor is the [official tutorial](https://www.meteor.com/tutorials).
+1. The place to get started with Meteor is the [tutorials page](https://www.meteor.com/developers/tutorials).
 
 1. [Meteor Examples](https://github.com/meteor/examples) is a list of examples using Meteor. You can also include your example with Meteor.
    
