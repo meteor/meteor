@@ -1,3 +1,3 @@
 # Meteor Guide
 
-[Read the guide!](http://guide.meteor.com/)
+[Read the guide!!](http://guide.meteor.com/)
