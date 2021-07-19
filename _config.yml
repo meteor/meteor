@@ -62,6 +62,7 @@ sidebar_categories:
     - packages/fetch
     - packages/hot-module-replacement
     - packages/less
+    - packages/logging
     - packages/markdown
     - packages/modules
     - packages/oauth-encryption
