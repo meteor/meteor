@@ -1,11 +1,14 @@
-var Future = Npm.require('fibers/future');
-var urlModule = Npm.require('url');
-var nodemailer = Npm.require('nodemailer');
+import { Meteor } from 'meteor/meteor';
+import { Log } from 'meteor/logging';
 
-Email = {};
-EmailTest = {};
+const Future = Npm.require('fibers/future');
+const urlModule = Npm.require('url');
+const nodemailer = Npm.require('nodemailer');
 
-EmailInternals = {
+export const Email = {};
+export const EmailTest = {};
+
+export const EmailInternals = {
   NpmModules: {
     mailcomposer: {
       version: Npm.require('nodemailer/package.json').version,
@@ -18,10 +21,12 @@ EmailInternals = {
   }
 };
 
-var MailComposer = EmailInternals.NpmModules.mailcomposer.module;
+const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-var makeTransport = function (mailUrlString) {
-  var mailUrl = urlModule.parse(mailUrlString, true);
+const makeTransport = function (mailUrlString) {
+  // TODO check for
+
+  const mailUrl = urlModule.parse(mailUrlString, true);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
     throw new Error("Email protocol in $MAIL_URL (" +
@@ -29,9 +34,9 @@ var makeTransport = function (mailUrlString) {
   }
 
   if (mailUrl.protocol === 'smtp:' && mailUrl.port === '465') {
-    Meteor._debug("The $MAIL_URL is 'smtp://...:465'.  " +
-                  "You probably want 'smtps://' (The 's' enables TLS/SSL) " +
-                  "since '465' is typically a secure port.");
+    Log.debug("The $MAIL_URL is 'smtp://...:465'.  " +
+              "You probably want 'smtps://' (The 's' enables TLS/SSL) " +
+              "since '465' is typically a secure port.");
   }
 
   // Allow overriding pool setting, but default to true.
@@ -43,27 +48,27 @@ var makeTransport = function (mailUrlString) {
     mailUrl.query.pool = 'true';
   }
 
-  var transport = nodemailer.createTransport(
+  const transport = nodemailer.createTransport(
     urlModule.format(mailUrl));
 
   transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
   return transport;
 };
 
-var getTransport = function() {
+const getTransport = function() {
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
-  var url = process.env.MAIL_URL;
+  const url = process.env.MAIL_URL;
   if (this.cacheKey === undefined || this.cacheKey !== url) {
     this.cacheKey = url;
     this.cache = url ? makeTransport(url) : null;
   }
   return this.cache;
-}
+};
 
-var nextDevModeMailId = 0;
-var output_stream = process.stdout;
+let nextDevModeMailId = 0;
+let output_stream = process.stdout;
 
 // Testing hooks
 EmailTest.overrideOutputStream = function (stream) {
@@ -75,18 +80,18 @@ EmailTest.restoreOutputStream = function () {
   output_stream = process.stdout;
 };
 
-var devModeSend = function (mail) {
-  var devModeMailId = nextDevModeMailId++;
+const devModeSend = function (mail) {
+  let devModeMailId = nextDevModeMailId++;
 
-  var stream = output_stream;
+  const stream = output_stream;
 
   // This approach does not prevent other writers to stdout from interleaving.
   stream.write("====== BEGIN MAIL #" + devModeMailId + " ======\n");
   stream.write("(Mail not sent; to enable sending, set the MAIL_URL " +
                "environment variable.)\n");
-  var readStream = new MailComposer(mail).compile().createReadStream();
+  const readStream = new MailComposer(mail).compile().createReadStream();
   readStream.pipe(stream, {end: false});
-  var future = new Future;
+  const future = new Future;
   readStream.on('end', function () {
     stream.write("====== END MAIL #" + devModeMailId + " ======\n");
     future.return();
@@ -94,11 +99,11 @@ var devModeSend = function (mail) {
   future.wait();
 };
 
-var smtpSend = function (transport, mail) {
+const smtpSend = function (transport, mail) {
   transport._syncSendMail(mail);
 };
 
-var sendHooks = [];
+const sendHooks = [];
 
 /**
  * @summary Hook that runs before email is sent.
@@ -145,7 +150,7 @@ Email.hookSend = function (f) {
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.send = function (options) {
-  for (var i = 0; i < sendHooks.length; i++)
+  for (let i = 0; i < sendHooks.length; i++)
     if (! sendHooks[i](options))
       return;
 
@@ -153,7 +158,7 @@ Email.send = function (options) {
     options = options.mailComposer.mail;
   }
 
-  var transport = getTransport();
+  const transport = getTransport();
   if (transport) {
     smtpSend(transport, options);
   } else {

@@ -1,6 +1,6 @@
-var streamBuffers = Npm.require('stream-buffers');
+const streamBuffers = Npm.require('stream-buffers');
 
-var devWarningBanner = "(Mail not sent; to enable " +
+const devWarningBanner = "(Mail not sent; to enable " +
   "sending, set the MAIL_URL environment variable.)\n";
 
 function smokeEmailTest(testFunction) {
@@ -83,7 +83,7 @@ Tinytest.add("email - multiple e-mails same stream", function (test) {
       text: "This is the body\nof the message\nFrom us.",
     });
 
-    var contents;
+    let contents;
 
     contents = canonicalize(stream.getContentsAsString("utf8"));
     test.matches(contents, /^====== BEGIN MAIL #0 ======$/m);
@@ -108,7 +108,7 @@ Tinytest.add("email - multiple e-mails same stream", function (test) {
 Tinytest.add("email - using mail composer", function (test) {
   smokeEmailTest(function (stream) {
     // Test direct MailComposer usage.
-    var mc = new EmailInternals.NpmModules.mailcomposer.module({
+    const mc = new EmailInternals.NpmModules.mailcomposer.module({
       from: "a@b.com",
       text: "body"
     });

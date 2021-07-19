@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Send email messages",
-  version: "2.1.1"
+  version: "2.2.0"
 });
 
 Npm.depends({
@@ -9,9 +9,10 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
+  api.use(['ecmascript', 'logging'], 'server');
+  api.mainModule('email.js', 'server');
   api.export(['Email', 'EmailInternals'], 'server');
   api.export('EmailTest', 'server', {testOnly: true});
-  api.addFiles('email.js', 'server');
 });
 
 Package.onTest(function (api) {
