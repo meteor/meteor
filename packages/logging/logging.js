@@ -100,16 +100,14 @@ Log._getCallerDetails = () => {
 
   const stack = getStack();
 
-  if (!stack) {
-    return {};
-  }
+  if (!stack) return {};
 
   // looking for the first line outside the logging package (or an
   // eval if we find that first)
   let line;
   const lines = stack.split('\n').slice(1);
   for (line of lines) {
-    if (line.match(/^\s*at eval \(eval/)) {
+    if (line.match(/^\s*(at eval \(eval)|(eval:)/)) {
       return {file: "eval"};
     }
 
@@ -303,7 +301,7 @@ Log.format = (obj, options = {}) => {
 
   const prettify = function (line, color) {
     return (options.color && Meteor.isServer && color) ?
-      require('cli-color')[color](line) : line;
+      require('chalk')[color](line) : line;
   };
 
   return prettify(metaPrefix, platformColor(options.metaColor || META_COLOR)) +
