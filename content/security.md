@@ -1,6 +1,5 @@
 ---
 title: "Security"
-order: 40
 description: How to secure your Meteor app.
 discourseTopicId: 19667
 ---
@@ -11,6 +10,7 @@ After reading this guide, you'll know:
 2. How to secure Meteor Methods, publications, and source code.
 3. Where to store secret keys in development and production.
 4. How to follow a security checklist when auditing your app.
+5. How App Protection works in Galaxy Hosting.
 
 <h1 id="introduction">Introduction</h1>
 
@@ -82,7 +82,7 @@ If someone comes along and passes a non-ID selector like `{}`, they will end up 
 
 <h3 id="validated-method">mdg:validated-method</h3>
 
-To help you write good Methods that exhaustively validate their arguments, we've written a simple wrapper package for Methods that enforces argument validation. Read more about how to use it in the [Methods article](methods.html#validated-method). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
+To help you write good Methods that exhaustively validate their arguments, we've written a wrapper package for Methods that enforces argument validation. Read more about how to use it in the [Methods article](methods.html#validated-method). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
 
 <h3 id="user-id-client">Don't pass userId from the client</h3>
 
@@ -113,7 +113,7 @@ The _only_ times you should be passing any user ID as an argument are the follow
 
 <h3 id="specific-action">One Method per action</h3>
 
-The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can easily look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
+The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
 
 ```js
 export const makePrivate = new ValidatedMethod({
@@ -143,12 +143,12 @@ export const makePrivate = new ValidatedMethod({
 });
 ```
 
-You can see that this Method does a _very specific thing_ - it just makes a single list private. An alternative would have been to have a Method called `setPrivacy`, which could set the list to private or public, but it turns out that in this particular app the security considerations for the two related operations - `makePrivate` and `makePublic` - are very different. By splitting our operations into different Methods, we make each one much clearer. It's obvious from the above Method definition which arguments we accept, what security checks we perform, and what operations we do on the database.
+You can see that this Method does a _very specific thing_ - it makes a single list private. An alternative would have been to have a Method called `setPrivacy`, which could set the list to private or public, but it turns out that in this particular app the security considerations for the two related operations - `makePrivate` and `makePublic` - are very different. By splitting our operations into different Methods, we make each one much clearer. It's obvious from the above Method definition which arguments we accept, what security checks we perform, and what operations we do on the database.
 
 However, this doesn't mean you can't have any flexibility in your Methods. Let's look at an example:
 
 ```js
-const Meteor.users.methods.setUserData = new ValidatedMethod({
+Meteor.users.methods.setUserData = new ValidatedMethod({
   name: 'Meteor.users.methods.setUserData',
   validate: new SimpleSchema({
     fullName: { type: String, optional: true },
@@ -170,7 +170,7 @@ You might run into a situation where many Methods in your app have the same secu
 
 <h3 id="rate-limiting">Rate limiting</h3>
 
-Just like REST endpoints, Meteor Methods can easily be called from anywhere - a malicious program, script in the browser console, etc. It is easy to fire many Method calls in a very short amount of time. This means it can be easy for an attacker to test lots of different inputs to find one that works. Meteor has built-in rate limiting for password login to stop password brute-forcing, but it's up to you to define rate limits for your other Methods.
+Like REST endpoints, Meteor Methods can be called from anywhere - a malicious program, script in the browser console, etc. It is easy to fire many Method calls in a very short amount of time. This means it can be easy for an attacker to test lots of different inputs to find one that works. Meteor has built-in rate limiting for password login to stop password brute-forcing, but it's up to you to define rate limits for your other Methods.
 
 In the Todos example app, we use the following code to set a basic rate limit on all Methods:
 
@@ -185,17 +185,22 @@ const LISTS_METHODS = _.pluck([
 ], 'name');
 
 // Only allow 5 list operations per connection per second
-DDPRateLimiter.addRule({
-  name(name) {
-    return _.contains(LISTS_METHODS, name);
-  },
 
-  // Rate limit per connection ID
-  connectionId() { return true; }
-}, 5, 1000);
+if (Meteor.isServer) {
+  DDPRateLimiter.addRule({
+    name(name) {
+      return _.contains(LISTS_METHODS, name);
+    },
+
+    // Rate limit per connection ID
+    connectionId() { return true; }
+  }, 5, 1000);
+}
 ```
 
 This will make every Method only callable 5 times per second per connection. This is a rate limit that shouldn't be noticeable by the user at all, but will prevent a malicious script from totally flooding the server with requests. You will need to tune the limit parameters to match your app's needs.
+
+If you're using validated methods, there's an available [ddp-rate-limiter-mixin](https://github.com/nlhuykhang/ddp-rate-limiter-mixin).
 
 <h2 id="publications">Publications</h2>
 
@@ -203,13 +208,13 @@ Publications are the primary way a Meteor server can make data available to a cl
 
 #### You can't do security at the rendering layer
 
-In a server-side-rendered framework like Ruby on Rails, it's sufficient to simply not display sensitive data in the returned HTML response. In Meteor, since the rendering is done on the client, an `if` statement in your HTML template is not secure; you need to do security at the data level to make sure that data is never sent in the first place.
+In a server-side-rendered framework like Ruby on Rails, it's sufficient to not display sensitive data in the returned HTML response. In Meteor, since the rendering is done on the client, an `if` statement in your HTML template is not secure; you need to do security at the data level to make sure that data is never sent in the first place.
 
 <h3 id="method-rules">Rules about Methods still apply</h3>
 
 All of the points above about Methods apply to publications as well:
 
-1. Validate all arguments using `check` or `aldeed:simple-schema`.
+1. Validate all arguments using `check` or npm `simpl-schema`.
 1. Never pass the current user ID as an argument.
 1. Don't take generic arguments; make sure you know exactly what your publication is getting from the client.
 1. Use rate limiting to stop people from spamming you with subscriptions.
@@ -274,7 +279,7 @@ Meteor.publish('list', function (listId) {
 
   const list = Lists.findOne(listId);
 
-  if (! list.userId === this.userId) {
+  if (list.userId !== this.userId) {
     throw new Meteor.Error('list.unauthorized',
       'This list doesn\'t belong to you.');
   }
@@ -336,8 +341,8 @@ Secret business logic in your app should be located in code that is only loaded 
 If you have a Meteor Method in your app that has secret business logic, you might want to split the Method into two functions - the optimistic UI part that will run on the client, and the secret part that runs on the server. Most of the time, putting the entire Method on the server doesn't result in the best user experience. Let's look at an example, where you have a secret algorithm for calculating someone's MMR (ranking) in a game:
 
 ```js
-// In a server-only file
-MMR = {
+// In a server-only file, for example /imports/server/mmr.js
+export const MMR = {
   updateWithSecretAlgorithm(userId) {
     // your secret code here
   }
@@ -346,13 +351,14 @@ MMR = {
 
 ```js
 // In a file loaded on client and server
-const Meteor.users.methods.updateMMR = new ValidatedMethod({
+Meteor.users.methods.updateMMR = new ValidatedMethod({
   name: 'Meteor.users.methods.updateMMR',
   validate: null,
   run() {
     if (this.isSimulation) {
       // Simulation code for the client (optional)
     } else {
+      const { MMR } = require('/imports/server/mmr.js');
       MMR.updateWithSecretAlgorithm(this.userId);
     }
   }
@@ -387,7 +393,7 @@ Here's what a settings file with some API keys might look like:
 ```js
 {
   "facebook": {
-    "clientId": "12345",
+    "appId": "12345",
     "secret": "1234567"
   }
 }
@@ -418,7 +424,7 @@ ServiceConfiguration.configurations.upsert({
   service: "facebook"
 }, {
   $set: {
-    clientId: Meteor.settings.facebook.clientId,
+    appId: Meteor.settings.facebook.appId,
     loginStyle: "popup",
     secret: Meteor.settings.facebook.secret
   }
@@ -433,16 +439,246 @@ This is a very short section, but it deserves its own place in the table of cont
 
 **Every production Meteor app that handles user data should run with SSL.**
 
-For the uninitiated, this means all of your HTTP requests should go over HTTPS, and all websocket data should be sent over WSS.
-
-Yes, Meteor does hash your password or login token on the client before sending it over the wire, but that only prevents an attacker from figuring out your password - it doesn't prevent them from logging in as you, since they could just send the hashed password to the server to log in! No matter how you slice it, logging in requires the client to send sensitive data  to the server, and the only way to secure that transfer is by using SSL. Note that the same issue is present when using cookies for authentication in a normal HTTP web application, so any app that needs to reliably identify users should be running on SSL.
-
-You can ensure that any unsecured connection to your app redirects to a secure connection by adding the `force-ssl` package.
+Yes, Meteor does hash your password or login token on the client before sending it over the wire, but that only prevents an attacker from figuring out your password - it doesn't prevent them from logging in as you, since they could send the hashed password to the server to log in! No matter how you slice it, logging in requires the client to send sensitive data  to the server, and the only way to secure that transfer is by using SSL. Note that the same issue is present when using cookies for authentication in a normal HTTP web application, so any app that needs to reliably identify users should be running on SSL.
 
 #### Setting up SSL
 
-1. On [Galaxy](deployment.html#galaxy), most things are set up for you, but you need to add a certificate. [See the help article about SSL on Galaxy](https://galaxy.meteor.com/help/using-ssl).
-2. If you are running on your own [infrastructure](deployment.html#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
+* On [Galaxy](deployment.html#galaxy), configuration of SSL is automatic. [See the help article about SSL on Galaxy](http://galaxy-guide.meteor.com/encryption.html).
+* If you are running on your own [infrastructure](deployment.html#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
+
+#### Forcing SSL
+
+Generally speaking, all production HTTP requests should go over HTTPS, and all WebSocket data should be sent over WSS.
+
+It's best to handle the redirection from HTTP to HTTPS on the platform which handles the SSL certificates and termination.
+
+* On [Galaxy](deployment.html#galaxy), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
+* Other deployments *may* have control panel options or may need to be manually configured on the the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
+
+In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
+
+<h2 id="httpheaders">HTTP Headers</h2>
+
+HTTP headers can be used to improve the security of apps, although these are not a silver bullet, they will assist users in mitigating more common attacks.  
+
+<h4 id="helmet">Recommended: Helmet</h4>
+
+Although there are many great open source solutions for setting HTTP headers, Meteor recommends [Helmet](https://helmetjs.github.io/). Helmet is a collection of 12 smaller middleware functions that set HTTP headers.
+
+First, install helmet.
+
+```js
+  meteor npm install helmet --save
+```
+
+By default, Helmet can be used to set various HTTP headers (see link above). These are a good starting point for mitigating common attacks. To use the default headers, users should use the following code anywhere in their server side meteor startup code.     
+
+> Note: Meteor has not extensively tested each header for compatibility with Meteor. Only headers listed below have been tested.
+
+```js
+// With other import statements
+import helmet from "helmet";
+
+// Within server side Meter.startup()
+WebApp.connectHandlers.use(helmet())
+```
+
+At a minimum, Meteor recommends users to set the following headers. Note that code examples shown below are specific to Helmet.
+
+<h3 id="csp">Content Security Policy</h3>
+
+> Note: Content Security Policy is not configured using Helmet's default header configuration.
+
+From MDN, Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks. These attacks are used for everything from data theft to site defacement or distribution of malware.
+
+It is recommended  that users use CSP to protect their apps from access by third parties. CSP assists to control how resources are loaded into your application.
+
+By default, Meteor recommends unsafe inline scripts and styles are allowed, since many apps typically use them for analytics, etc. Unsafe eval is disallowed, and the only allowable content source is same origin or data, except for connect which allows anything (since meteor apps make websocket connections to a lot of different origins). Browsers will also be told not to sniff content types away from declared content types.
+
+```js
+// With other import statements
+import helmet from "helmet";
+
+// Within server side Meter.startup()
+WebApp.connectHandlers.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["*"],
+      imgSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+    },
+    browserSniff: false
+  })
+);
+```
+
+Helmet supports a large number of directives, users should further customise their CSP based on their needs. For more detail please read the following guide: [Content Security Policy](https://helmetjs.github.io/docs/csp/). CSP can be complex, so in addition there are some excellent tools out there to help, including [Google's CSP Evaluator](https://csp-evaluator.withgoogle.com/), [Report-URI's CSP Builder](https://report-uri.com/home/generate), [CSP documentation](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) from Mozilla and [CSPValidator](https://cspvalidator.org/).
+
+The following example presents a potential CSP and other Security Headers used in a Production Meteor Application.
+This configuration may require customization, depending on your setup and use-cases.
+
+```javascript
+/* global __meteor_runtime_config__ */
+import { Meteor } from 'meteor/meteor'
+import { WebApp } from 'meteor/webapp'
+import { Autoupdate } from 'meteor/autoupdate'
+import { check } from 'meteor/check'
+import crypto from 'crypto'
+import helmet from 'helmet'
+
+const self = '\'self\''
+const data = 'data:'
+const unsafeEval = '\'unsafe-eval\''
+const unsafeInline = '\'unsafe-inline\''
+const allowedOrigins = Meteor.settings.allowedOrigins
+
+// create the default connect source for our current domain in
+// a multi-protocol compatible way (http/ws or https/wss)
+const url = Meteor.absoluteUrl()
+const domain = url.replace(/http(s)*:\/\//, '').replace(/\/$/, '')
+const s = url.match(/(?!=http)s(?=:\/\/)/) ? 's' : ''
+const usesHttps = s.length > 0
+const connectSrc = [
+  self,
+  `http${s}://${domain}`,
+  `ws${s}://${domain}`
+]
+
+// Prepare runtime config for generating the sha256 hash
+// It is important, that the hash meets exactly the hash of the
+// script in the client bundle.
+// Otherwise the app would not be able to start, since the runtimeConfigScript
+// is rejected __meteor_runtime_config__ is not available, causing
+// a cascade of follow-up errors.
+const runtimeConfig = Object.assign(__meteor_runtime_config__, Autoupdate, {
+  // the following lines may depend on, whether you called Accounts.config
+  // and whether your Meteor app is a "newer" version
+  accountsConfigCalled: true,
+  isModern: true
+})
+
+// add client versions to __meteor_runtime_config__
+Object.keys(WebApp.clientPrograms).forEach(arch => {
+  __meteor_runtime_config__.versions[arch] = {
+    version: Autoupdate.autoupdateVersion || WebApp.clientPrograms[arch].version(),
+    versionRefreshable: Autoupdate.autoupdateVersion || WebApp.clientPrograms[arch].versionRefreshable(),
+    versionNonRefreshable: Autoupdate.autoupdateVersion || WebApp.clientPrograms[arch].versionNonRefreshable(),
+    // comment the following line if you use Meteor < 2.0
+    versionReplaceable: Autoupdate.autoupdateVersion || WebApp.clientPrograms[arch].versionReplaceable()
+  }
+})
+
+const runtimeConfigScript = `__meteor_runtime_config__ = JSON.parse(decodeURIComponent("${encodeURIComponent(JSON.stringify(runtimeConfig))}"))`
+const runtimeConfigHash = crypto.createHash('sha256').update(runtimeConfigScript).digest('base64')
+
+const helpmentOptions = {
+  contentSecurityPolicy: {
+    blockAllMixedContent: true,
+    directives: {
+      defaultSrc: [self],
+      scriptSrc: [
+        self,
+        // Remove / comment out unsafeEval if you do not use dynamic imports
+        // to tighten security. However, if you use dynamic imports this line
+        // must be kept in order to make them work.
+        unsafeEval,
+        `'sha256-${runtimeConfigHash}'`
+      ],
+      childSrc: [self],
+      // If you have external apps, that should be allowed as sources for
+      // connections or images, your should add them here
+      // Call helmetOptions() without args if you have no external sources
+      // Note, that this is just an example and you may configure this to your needs
+      connectSrc: connectSrc.concat(allowedOrigins),
+      fontSrc: [self, data],
+      formAction: [self],
+      frameAncestors: [self],
+      frameSrc: ['*'],
+      // This is an example to show, that we can define to show images only
+      // from our self, browser data/blob and a defined set of hosts.
+      // Configure to your needs.
+      imgSrc: [self, data, 'blob:'].concat(allowedOrigins),
+      manifestSrc: [self],
+      mediaSrc: [self],
+      objectSrc: [self],
+      // these are just examples, configure to your needs, see
+      // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/sandbox
+      sandbox: [
+        // allow-downloads-without-user-activation // experimental
+        'allow-forms',
+        'allow-modals',
+        // 'allow-orientation-lock',
+        // 'allow-pointer-lock',
+        // 'allow-popups',
+        // 'allow-popups-to-escape-sandbox',
+        // 'allow-presentation',
+        'allow-same-origin',
+        'allow-scripts',
+        // 'allow-storage-access-by-user-activation ', // experimental
+        // 'allow-top-navigation',
+        // 'allow-top-navigation-by-user-activation'
+      ],
+      styleSrc: [self, unsafeInline],
+      workerSrc: [self, 'blob:']
+    }
+  },
+  // see the helmet documentation to get a better understanding of
+  // the following configurations and settings
+  strictTransportSecurity: {
+    maxAge: 15552000,
+    includeSubDomains: true,
+    preload: false
+  },
+  referrerPolicy: {
+    policy: 'no-referrer'
+  },
+  expectCt: {
+    enforce: true,
+    maxAge: 604800
+  },
+  frameguard: {
+    action: 'sameorigin'
+  },
+  dnsPrefetchControl: {
+    allow: false
+  },
+  permittedCrossDomainPolicies: {
+    permittedPolicies: 'none'
+  }
+}
+
+// We assume, that we are working on a localhost when there is no https
+// connection available.
+// Run your project with --production flag to simulate script-src hashing
+if (!usesHttps && Meteor.isDevelopment) {
+  delete opt.contentSecurityPolicy.directives.blockAllMixedContent
+  opt.contentSecurityPolicy.directives.scriptSrc = [self, unsafeEval, unsafeInline]
+}
+
+// finally pass the options to helmet to make them apply
+helmet(helpmentOptions)
+``` 
+
+<h3 id="xframeoptions">X-Frame-Options</h3>
+
+> Note: The X-Frame Options header is configured using Helmet's default header configuration.
+
+From MDN, the X-Frame-Options HTTP response header can be used to indicate whether or not a browser should be allowed to render a page in a `<frame>`, `<iframe>` or `<object>`. Sites can use this to avoid clickjacking attacks, by ensuring that their content is not embedded into other sites.
+
+Meteor recommend users configure the X-Frame-Options header for same origin only. This tells browsers to prevent your webpage from being put in an iframe. By using this config, you will set your policy where only web pages on the same origin as your app can frame your app.
+
+With Helmet, Frameguard sets the X-Frame-Options header.
+
+```js
+// With other import statements
+import helmet from "helmet";
+
+// Within server side Meter.startup()
+WebApp.connectHandlers.use(helmet.frameguard());  // defaults to sameorigin
+```
+For more detail please read the following guide: [Frameguard](https://helmetjs.github.io/docs/frameguard/).
 
 <h2 id="checklist">Security checklist</h2>
 
@@ -450,11 +686,21 @@ This is a collection of points to check about your app that might catch common e
 
 1. Make sure your app doesn't have the `insecure` or `autopublish` packages.
 1. Validate all Method and publication arguments, and include the `audit-argument-checks` to check this automatically.
+1. Apply rate limiting to your application to prevent DDoS attacks.
 1. [Deny writes to the `profile` field on user documents.](accounts.html#dont-use-profile)
 1. [Use Methods instead of client-side insert/update/remove and allow/deny.](security.html#allow-deny)
 1. Use specific selectors and [filter fields](http://guide.meteor.com/security.html#fields) in publications.
-1. Don't use [raw HTML inclusion in Blaze](blaze.html#rendering-html) unless you really know what you are doing.
+1. Don't use [raw HTML inclusion in Blaze](http://blazejs.org/guide/spacebars.html#Rendering-raw-HTML) unless you really know what you are doing.
 1. [Make sure secret API keys and passwords aren't in your source code.](security.html#api-keys)
-1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's just a nice UX feature.
+1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's a nice UX feature.
 1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.
-1. Set up [browser policy](https://atmospherejs.com/meteor/browser-policy), but know that not all browsers support it so it just provides an extra layer of security to users with modern browsers.
+1. Set up secure [HTTP headers](https://guide.meteor.com/security.html#httpheaders) using [Helmet](https://www.npmjs.com/package/helmet), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.
+
+<h2 id="appProtection">App Protection</h2>
+App Protection on Galaxy Hosting is a feature in our proxy server layer that sits in front of every request to your application. This means that all requests across servers are analyzed and measured against expected limits. This will help protect against DoS and DDoS attacks that aimed to overload servers and make your app unavailable for legitimate requests.
+
+If a type of request is classified as abusive (we’re not going to go into the specifics as to how we determine this), we will stop sending these requests to your app, and we start to return HTTP 429 (Too Many Requests).*
+
+Although not all attacks are preventable, our App Protection functionality, along with standard AWS protection in front of our servers, will provide a greater level of security for all applications deployed to Galaxy moving forward.
+
+For additional security, it is best to configure your app to limit the messages received via WebSockets, as our proxy servers are only acting in the first connection and not in the WebSocket messages after the connection is established. Meteor has the DDP Rate Limiter configuration already available, find out more [here](https://docs.meteor.com/api/methods.html#ddpratelimiter).

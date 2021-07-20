@@ -1,6 +1,5 @@
 ---
 title: "URLs and Routing"
-order: 20
 description: How to drive your Meteor app's UI using URLs with FlowRouter.
 discourseTopicId: 19663
 ---
@@ -10,7 +9,8 @@ After reading this guide, you'll know:
 1. The role URLs play in a client-rendered app, and how it's different from a traditional server-rendered app.
 2. How to define client and server routes for your app using Flow Router.
 3. How to have your app display different content depending on the URL.
-4. How to construct links to routes and go to routes programmatically.
+4. How to dynamically load application modules depending on the URL.
+5. How to construct links to routes and go to routes programmatically.
 
 <h2 id="client-side">Client-side Routing</h2>
 
@@ -22,19 +22,29 @@ In a web application, _routing_ is the process of using URLs to drive the user i
 
 In a traditional web application stack, where the server renders HTML one page at a time, the URL is the fundamental entry point for the user to access the application. Users navigate an application by clicking through URLs, which are sent to the server via HTTP, and the server responds appropriately via a server-side router.
 
-In contrast, Meteor operates on the principle of _data on the wire_, where the server doesn’t think in terms of URLs or HTML pages. The client application communicates with the server over DDP. Typically as an application loads, it initializes a series of _subscriptions_ which fetch the data required to render the application. As the user interacts with the application, different subscriptions may load, but there’s no technical need for URLs to be involved in this process - you could easily have a Meteor app where the URL never changes.
+In contrast, Meteor operates on the principle of _data on the wire_, where the server doesn’t think in terms of URLs or HTML pages. The client application communicates with the server over DDP. Typically as an application loads, it initializes a series of _subscriptions_ which fetch the data required to render the application. As the user interacts with the application, different subscriptions may load, but there’s no technical need for URLs to be involved in this process - you could have a Meteor app where the URL never changes.
 
-However, most of the user-facing features of URLs listed above are still relevant for typical Meteor applications. Since the server is not URL-driven, the URL just becomes a useful representation of the client-side state the user is currently looking at. However, unlike in a server-rendered application, it does not need to describe the entirety of the user’s current state; it simply needs to contain the parts that you want to be linkable. For example, the URL should contain any search filters applied on a page, but not necessarily the state of a dropdown menu or popup.
+However, most of the user-facing features of URLs listed above are still relevant for typical Meteor applications. Since the server is not URL-driven, the URL becomes a useful representation of the client-side state the user is currently looking at. However, unlike in a server-rendered application, it does not need to describe the entirety of the user’s current state; it needs to contain the parts that you want to be linkable. For example, the URL should contain any search filters applied on a page, but not necessarily the state of a dropdown menu or popup.
 
 <h2 id="flow-router">Using Flow Router</h2>
 
-To add routing to your app, install the [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) package:
+To add routing to your app, install the [`ostrio:flow-router-extra`](https://atmospherejs.com/ostrio/flow-router-extra) package:
 
 ```
-meteor add kadira:flow-router
+meteor add ostrio:flow-router-extra
 ```
 
-Flow Router is a community routing package for Meteor. At the time of writing this guide, it is at version 2.x. For detailed information about all of the features Flow Router has to offer, refer to the [Kadira Meteor routing guide](https://kadira.io/academy/meteor-routing-guide).
+Flow Router is a community routing package for Meteor. 
+
+<h2 id="flow-router-extra">Using Flow Router Extra</h2>
+
+Flow Router Extra is carefully extended `flow-router` package by `kadira` with waitOn and template context. Flow Router Extra shares original "Flow Router" API including flavoring for extra features like `waitOn`, template context and build in `.render()`. Note: `arillo:flow-router-helpers` and `zimme:active-route` already build into Flow Router Extra and updated to support latest Meteor release.
+
+To add routing to your app, install the [`ostrio:flow-router-extra`](https://github.com/VeliovGroup/flow-router) package:
+
+```
+meteor add ostrio:flow-router-extra
+```
 
 <h2 id="defining-routes">Defining a simple route</h2>
 
@@ -99,12 +109,6 @@ In our example of the list page from the Todos app, we access the current list's
 <h3 id="active-route">Highlighting the active route</h3>
 
 One situation where it is sensible to access the global `FlowRouter` singleton to access the current route's information deeper in the component hierarchy is when rendering links via a navigation component. It's often required to highlight the "active" route in some way (this is the route or section of the site that the user is currently looking at).
-
-A convenient package for this is [`zimme:active-route`](https://atmospherejs.com/zimme/active-route):
-
-```bash
-meteor add zimme:active-route
-```
 
 In the Todos example app, we link to each list the user knows about in the `App_body` template:
 
@@ -248,9 +252,9 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 </template>
 ```
 
-Of course, we might find that we need to share this functionality between multiple pages of our app that require access control. We can easily share functionality between templates by wrapping them in a wrapper "layout" component which includes the behavior we want.
+Of course, we might find that we need to share this functionality between multiple pages of our app that require access control. We can share functionality between templates by wrapping them in a wrapper "layout" component which includes the behavior we want.
 
-You can create wrapper components by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html#block-helpers)). Here's how we could write an authorization template:
+You can create wrapper components by using the "template as block helper" ability of Blaze (see the [Blaze Article](http://blazejs.org/guide/spacebars.html#Block-Helpers)). Here's how we could write an authorization template:
 
 ```html
 <template name="App_forceLoggedIn">
@@ -262,7 +266,7 @@ You can create wrapper components by using the "template as block helper" abilit
 </template>
 ```
 
-Once that template exists, we can simply wrap our `Lists_show_page`:
+Once that template exists, we can wrap our `Lists_show_page`:
 
 ```html
 <template name="Lists_show_page">
@@ -282,14 +286,7 @@ Multiple behaviors of this type can be composed by wrapping a template in multip
 
 <h2 id="changing-routes">Changing Routes</h2>
 
-Rendering an updated UI when a user reaches a new route is not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using `FlowRouter.pathFor`, but it is more convenient to use the [`arillo:flow-router-helpers`](https://github.com/arillo/meteor-flow-router-helpers/) package that defines some helpers for you:
-
-
-```
-meteor add arillo:flow-router-helpers
-```
-
-Now that you have this package, you can use helpers in your templates to display a link to a certain route. For example, in the Todos example app, our nav links look like:
+Rendering an updated UI when a user reaches a new route is not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using helpers such as `FlowRouter.pathFor` to display a link to a certain route. For example, in the Todos example app, our nav links look like:
 
 
 ```html
@@ -322,7 +319,7 @@ Of course, calling `FlowRouter.go()`, will always work, so unless you are trying
 
 <h3 id="storing-data-in-the-url">Storing data in the URL</h3>
 
-As we discussed in the introduction, the URL is really just a serialization of some part of the client-side state the user is looking at. Although parameters can only be strings, it's possible to convert any type of data to a string by serializing it.
+As we discussed in the introduction, the URL is really a serialization of some part of the client-side state the user is looking at. Although parameters can only be strings, it's possible to convert any type of data to a string by serializing it.
 
 In general if you want to store arbitrary serializable data in a URL param, you can use [`EJSON.stringify()`](http://docs.meteor.com/#/full/ejson_stringify) to turn it into a string. You'll need to URL-encode the string using [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) to remove any characters that have meaning in a URL:
 
@@ -342,7 +339,7 @@ Sometimes, your users will end up on a page that isn't a good place for them to 
 
 Usually, we can redirect in response to a user's action by calling `FlowRouter.go()` and friends, like in our list creation example above, but if a user browses directly to a URL that doesn't exist, it's useful to know how to redirect immediately.
 
-If a URL is simply out-of-date (sometimes you might change the URL scheme of an application), you can redirect inside the `action` function of the route:
+If a URL is out-of-date (sometimes you might change the URL scheme of an application), you can redirect inside the `action` function of the route:
 
 ```js
 FlowRouter.route('/old-list-route/:_id', {
@@ -365,10 +362,10 @@ FlowRouter.route('/', {
 });
 ```
 
-The `App_rootRedirector` component is rendered inside the `App_body` layout, which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-component, and we are guaranteed there is at least one such list. This means that if the `App_rootRedirector` ends up being created, there'll be a list loaded, so we can simply do:
+The `App_rootRedirector` component is rendered inside the `App_body` layout, which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-component, and we are guaranteed there is at least one such list. This means that if the `App_rootRedirector` ends up being created, there'll be a list loaded, so we can do:
 
 ```js
-Template.App_rootRedirector.onCreated(() => {
+Template.App_rootRedirector.onCreated(function rootRedirectorOnCreated() {
   // We need to set a timeout here so that we don't redirect from inside a redirection
   //   which is a limitation of the current version of FR.
   Meteor.setTimeout(() => {
@@ -380,7 +377,7 @@ Template.App_rootRedirector.onCreated(() => {
 If you need to wait on specific data that you aren't already subscribed to at creation time, you can use an `autorun` and `subscriptionsReady()` to wait on that subscription:
 
 ```js
-Template.App_rootRedirector.onCreated(() => {
+Template.App_rootRedirector.onCreated(function rootRedirectorOnCreated() {
   // If we needed to open this subscription here
   this.subscribe('lists.public');
 
@@ -416,9 +413,53 @@ You will also want to show some kind of indication that the method is working in
 
 <h2 id="advanced">Advanced Routing</h2>
 
+<h3 id="dynamic-module-loading">Dynamically load modules</h3>
+
+[Dynamic imports](https://blog.meteor.com/dynamic-imports-in-meteor-1-5-c6130419c3cd) was fist introduced in [Meteor 1.5](https://github.com/meteor/meteor/blob/devel/History.md#v15-2017-05-30). This technique allows to dramatically reduce *Client's* bundle size, and load modules and dependencies dynamically upon request, in this case based on the current URI.
+
+Assume we have `index.html` and `index.js` with code for `index` template and this is only place in the application where it depend on large `moment` package. This means `moment` package is not needed in the other parts of our app, and it will only waste bandwidth and slow load time.
+
+```html
+<!-- /imports/client/index.html -->
+<template name="index">
+  <h1>Current time is: {{time}}</h1>
+</template>
+```
+
+```js
+// /imports/client/index.js
+import moment       from 'moment';
+import { Template } from 'meteor/templating';
+import './index.html';
+
+Template.index.helpers({
+  time() {
+    return moment().format('LTS');
+  }
+});
+```
+
+```js
+// /imports/lib/routes.js
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
+
+FlowRouter.route('/', {
+  name: 'index',
+  waitOn() {
+    // Wait for index.js load over the wire
+    return import('/imports/client/index.js');
+  },
+  action() {
+    BlazeLayout.render('App_body', {main: 'index'});
+  }
+};
+```
+
+For more info and examples see [this thread](https://forums.meteor.com/t/flow-router-meteor-1-5-per-route-dynamic-import/36870)
+
 <h3 id="404s">Missing pages</h3>
 
-If a user types an incorrect URL, chances are you want to show them some kind of amusing not found page. There are actually two categories of "not found" pages. The first is when the URL typed in doesn't match any of your route definitions. You can use `FlowRouter.notFound` to handle this:
+If a user types an incorrect URL, chances are you want to show them some kind of amusing not-found page. There are actually two categories of not-found pages. The first is when the URL typed in doesn't match any of your route definitions. You can use `FlowRouter.notFound` to handle this:
 
 ```js
 // the App_notFound template is used for unknown routes and missing lists
@@ -429,7 +470,7 @@ FlowRouter.notFound = {
 };
 ```
 
-The second is when the URL is valid, but doesn't actually match any data. In this case, the URL matches a route, but once the route has successfully subscribed, it discovers there is no data. It usually makes sense in this case for the page component (which subscribes and fetches the data) to render a not found template instead of the usual template for the page:
+The second is when the URL is valid, but doesn't actually match any data. In this case, the URL matches a route, but once the route has successfully subscribed, it discovers there is no data. It usually makes sense in this case for the page component (which subscribes and fetches the data) to render a not-found template instead of the usual template for the page:
 
 ```html
 <template name="Lists_show_page">
@@ -451,7 +492,7 @@ As we've discussed, Meteor is a framework for client rendered applications, but 
 
 <h4 id="server-side-apis">Server Routing for API access</h4>
 
-Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if you all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html#publications-as-rest) and [Methods](methods.html) articles for more information.
+Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this. See the [Data Loading](data-loading.html#publications-as-rest) and [Methods](methods.html) articles for more information.
 
 If you need more control, you can use the comprehensive [`nimble:restivus`](https://atmospherejs.com/nimble/restivus) package to create more or less whatever you need in whatever ontology you require.
 
@@ -459,4 +500,4 @@ If you need more control, you can use the comprehensive [`nimble:restivus`](http
 
 The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you use Blaze. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
 
-Although Flow Router can be used to render React components more or less as we've described above for Blaze, at the time of this writing Flow Router's support for SSR is [still experimental](https://kadira.io/blog/meteor/meteor-ssr-support-using-flow-router-and-react). However, it's probably the best approach right now if you want to use SSR for Meteor.
+Although Flow Router can be used to render React components more or less as we've described above for Blaze, at the time of this writing Flow Router's support for SSR is still experimental. However, it's probably the best approach right now if you want to use SSR for Meteor.

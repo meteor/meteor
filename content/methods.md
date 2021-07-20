@@ -1,6 +1,5 @@
 ---
 title: "Methods"
-order: 12
 description: How to use Methods, Meteor's remote procedure call system, to write to the database.
 discourseTopicId: 19662
 ---
@@ -16,7 +15,7 @@ After reading this article, you'll know:
 
 Methods are Meteor's remote procedure call (RPC) system, used to save user input events and data that come from the client. If you're familiar with REST APIs or HTTP, you can think of them like POST requests to your server, but with many nice features optimized for building a modern web application. Later on in this article, we'll go into detail about some of the benefits you get from Methods that you wouldn't get from an HTTP endpoint.
 
-At its core, a Method is an API endpoint for your server; you can define a Method on the server and its counterpart on the client, then call it with some data, write to the database, and get the return value in a callback. Meteor Methods are also tightly integrated with the pub/sub and data loading systems of Meteor to allow for [Optimistic UI](http://info.meteor.com/blog/optimistic-ui-with-meteor-latency-compensation) - the ability to simulate server-side actions on the client to make your app feel faster than it actually is.
+At its core, a Method is an API endpoint for your server; you can define a Method on the server and its counterpart on the client, then call it with some data, write to the database, and get the return value in a callback. Meteor Methods are also tightly integrated with the pub/sub and data loading systems of Meteor to allow for [Optimistic UI](http://info.meteor.com/blog/optimistic-ui-with-meteor-latency-compensation)—the ability to simulate server-side actions on the client to make your app feel faster than it actually is.
 
 We'll be referring to Meteor Methods with a capital M to differentiate them from class methods in JavaScript.
 
@@ -24,15 +23,17 @@ We'll be referring to Meteor Methods with a capital M to differentiate them from
 
 <h3 id="basic">Basic Method</h3>
 
-In a basic app, defining a Meteor Method is as simple as defining a function. In a complex app, you want a few extra features to make Methods more powerful and easily testable. First, we're going to go over how to define a Method using the Meteor core API, and in a later section we'll go over how to use a helpful wrapper package we've created to enable a more powerful Method workflow.
+In a basic app, defining a Meteor Method is as simple as defining a function. In a complex app, you want a few extra features to make Methods more powerful and testable. First, we're going to go over how to define a Method using the Meteor core API, and in a later section we'll go over how to use a helpful wrapper package we've created to enable a more powerful Method workflow.
 
 <h4 id="basic-defining">Defining</h4>
 
 Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI. If you have some secret code in your Method, consult the [Security article](security.html#secret-code) for how to hide it from the client.
 
-This example uses the `aldeed:simple-schema` package, which is recommended in several other articles, to validate the Method arguments.
+This example uses the [simpl-schema](https://www.npmjs.com/package/simpl-schema) npm package, which is recommended in several other articles, to validate the Method arguments.
 
 ```js
+import SimpleSchema from 'simpl-schema';
+
 Meteor.methods({
   'todos.updateText'({ todoId, newText }) {
     new SimpleSchema({
@@ -82,8 +83,8 @@ Meteor Methods have several features which aren't immediately obvious, but every
 Here's some of the functionality an ideal Method would have:
 
 1. Run validation code by itself without running the Method body.
-2. Easily override the Method for testing.
-3. Easily call the Method with a custom user ID, especially in tests (as recommended by the [Discover Meteor two-tiered methods pattern](https://www.discovermeteor.com/blog/meteor-pattern-two-tiered-methods/)).
+2. Override the Method for testing.
+3. Call the Method with a custom user ID, especially in tests (as recommended by the [Discover Meteor two-tiered methods pattern](https://www.discovermeteor.com/blog/meteor-pattern-two-tiered-methods/)).
 4. Refer to the Method via JS module rather than a magic string.
 5. Get the Method simulation return value to get IDs of inserted documents.
 6. Avoid calling the server-side Method if the client-side validation failed, so we don't waste server resources.
@@ -91,7 +92,7 @@ Here's some of the functionality an ideal Method would have:
 <h4 id="advanced-boilerplate-defining">Defining</h4>
 
 ```js
-export default updateText = {
+export const updateText = {
   name: 'todos.updateText',
 
   // Factor out validation so that it can be run independently (1)
@@ -168,13 +169,15 @@ updateText.run.call({ userId: 'abcd' }, {
 });
 ```
 
-As you can see, this approach to calling Methods results in a better development workflow - you can more easily deal with the different parts of the Method separately and test your code more easily without having to deal with Meteor internals. But this approach requires you to write a lot of boilerplate on the Method definition side.
+As you can see, this approach to calling Methods results in a better development workflow - you can more easily deal with the different parts of the Method separately and test your code without having to deal with Meteor internals. But this approach requires you to write a lot of boilerplate on the Method definition side.
 
 <h3 id="validated-method">Advanced Methods with mdg:validated-method</h3>
 
 To alleviate some of the boilerplate that's involved in correct Method definitions, we've published a wrapper package called `mdg:validated-method` that does most of this for you. Here's the same Method as above, but defined with the package:
 
 ```js
+import { ValidatedMethod } from 'meteor/mdg:validated-method';
+
 export const updateText = new ValidatedMethod({
   name: 'todos.updateText',
   validate: new SimpleSchema({
@@ -196,7 +199,7 @@ export const updateText = new ValidatedMethod({
 });
 ```
 
-You call it the same way you call the advanced Method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced.
+You call it the same way you call the advanced Method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced. Validated methods only accept a single argument and a callback function.
 
 <h2 id="errors">Error handling</h2>
 
@@ -222,9 +225,9 @@ When the server was not able to complete the user's desired action because of a 
 
 <h4 id="validation-error">ValidationError for argument validation errors</h4>
 
-When a Method call fails because the arguments are of the wrong type, it's good to throw a `ValidationError`. This works just like `Meteor.Error`, but is a custom constructor that enforces a standard error format that can be read by different form and validation libraries. In particular, if you are calling this Method from a form, throwing a `ValidationError` will make it easy to display nice error messages next to particular fields in the form.
+When a Method call fails because the arguments are of the wrong type, it's good to throw a `ValidationError`. This works like `Meteor.Error`, but is a custom constructor that enforces a standard error format that can be read by different form and validation libraries. In particular, if you are calling this Method from a form, throwing a `ValidationError` will make it possible to display nice error messages next to particular fields in the form.
 
-When you use `mdg:validated-method` with `aldeed:simple-schema` as demonstrated above, this type of error is thrown for you.
+When you use `mdg:validated-method` with `simpl-schema` as demonstrated above, this type of error is thrown for you.
 
 Read more about the error format in the [`mdg:validation-error` docs](https://atmospherejs.com/mdg/validation-error).
 
@@ -270,7 +273,7 @@ if (!this.isSimulation) {
 
 <h2 id="method-form">Calling a Method from a form</h2>
 
-The main thing enabled by the `ValidationError` convention is simple integration between Methods and the forms that call them. In general, your app is likely to have a one-to-one mapping of forms in the UI to Methods. First, let's define a Method for our business logic:
+The main thing enabled by the `ValidationError` convention is integration between Methods and the forms that call them. In general, your app is likely to have a one-to-one mapping of forms in the UI to Methods. First, let's define a Method for our business logic:
 
 ```js
 // This Method encodes the form validation requirements.
@@ -297,7 +300,7 @@ export const insert = new ValidatedMethod({
 });
 ```
 
-Let's define a simple HTML form:
+Let's define an HTML form:
 
 ```html
 <template name="Invoices_newInvoice">
@@ -334,14 +337,12 @@ Template.Invoices_newInvoice.onCreated(function() {
 
 Template.Invoices_newInvoice.helpers({
   errors(fieldName) {
-    return this.errors.get(fieldName);
+    return Template.instance().errors.get(fieldName);
   }
 });
 
 Template.Invoices_newInvoice.events({
-  'submit .Invoices_newInvoice'(event) {
-    const instance = Template.instance();
-
+  'submit .Invoices_newInvoice'(event, instance) {
     const data = {
       email: event.target.email.value,
       description: event.target.description.value,
@@ -373,13 +374,13 @@ Template.Invoices_newInvoice.events({
 });
 ```
 
-As you can see, there is a fair amount of boilerplate to handle errors nicely in a form, but most of it can be easily abstracted by an off-the-shelf form framework or a simple application-specific wrapper of your own design.
+As you can see, there is a fair amount of boilerplate to handle errors nicely in a form, but most of it can be abstracted by an off-the-shelf form framework or an application-specific wrapper of your own design.
 
 <h2 id="loading-data">Loading data with Methods</h2>
 
 Since Methods can work as general purpose RPCs, they can also be used to fetch data instead of publications. There are some advantages and some disadvantages to this approach compared with loading data through publications, and at the end of the day we recommend always using publications to load data.
 
-Methods can be useful to fetch the result of a complex computation from the server that doesn't need to update when the server data changes. The biggest disadvantage of fetching data through Methods is that the data won't be automatically loaded into Minimongo, Meteor's client-side data cache, so you'll need to manage the lifecycle of that data manually.
+Methods can be useful to fetch the result of a complex computation from the server that doesn't need to update when the server data changes. The biggest disadvantage of fetching data through Methods is that the data won't be automatically loaded into Minimongo, Meteor's client-side data cache, so you'll need to manage the lifecycle of that data manually. Another disadvantage is that database queries are not shared between clients like publication cursors often are—the Method (and any queries it contains) will run once for each client that calls it.
 
 <h4 id="local-collection">Using a local collection to store and display data fetched from a Method</h4>
 
@@ -415,7 +416,7 @@ We can now use the data from the local collection `ScoreAverages` inside a UI co
 
 <h2 id="advanced">Advanced concepts</h2>
 
-While you can easily use Methods in a simple app by following the Meteor introductory tutorial, it's important to understand exactly how they work to use them effectively in a production app. One of the downsides of using a framework like Meteor that does a lot for you under the hood is that you don't always understand what is going on, so it's good to learn some of the core concepts.
+While you can use Methods in an app by following the Meteor introductory tutorial, it's important to understand exactly how they work to use them effectively in a production app. One of the downsides of using a framework like Meteor that does a lot for you under the hood is that you don't always understand what is going on, so it's good to learn some of the core concepts.
 
 <h3 id="call-lifecycle">Method call lifecycle</h3>
 
@@ -496,4 +497,4 @@ Many Method operations are idempotent by default. Inserts will throw an error if
 
 The Meteor core API includes an alternative to Methods for manipulating data from the client. Instead of explicitly defining Methods with specific arguments, you can instead call `insert`, `update`, and `remove` directly from the client and specify security rules with [`allow`](http://docs.meteor.com/#/full/allow) and [`deny`](http://docs.meteor.com/#/full/deny). In the Meteor Guide, we are taking a strong position that this feature should be avoided and Methods used instead. Read more about the problems with allow/deny in the [Security article](security.html#allow-deny).
 
-Historically, there have been some misconceptions about the features of Meteor Methods as compared with the allow/deny feature, including that it was more difficult to achieve Optimistic UI when using Methods. However, the client-side `insert`, `update`, and `remove` feature is actually implemented _on top of_ Methods, so Methods are strictly more powerful. You get great default Optimistic UI just by defining your Method code on the client and the server, as described in the Method lifecycle section above.
+Historically, there have been some misconceptions about the features of Meteor Methods as compared with the allow/deny feature, including that it was more difficult to achieve Optimistic UI when using Methods. However, the client-side `insert`, `update`, and `remove` feature is actually implemented _on top of_ Methods, so Methods are strictly more powerful. You get great default Optimistic UI by defining your Method code on the client and the server, as described in the Method lifecycle section above.

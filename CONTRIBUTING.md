@@ -8,7 +8,7 @@ Please submit clarifications and improvements to the Guide! If it's just a small
 
 ### Using the change log
 
-If you are adding significant new content, please take a moment to include an update to the [changelog](CHANGELOG.md) in your PR.
+If you are adding significant new content, please take a moment to include an update to the [changelog](changelog.html) in your PR.
 
 ### Writing tips
 
@@ -16,7 +16,7 @@ Things to be aware of:
 
 #### Always use specific IDs on headers so that we can change them later:
 
-```
+```markdown
 // bad
 ## Using schemas with collections
 
@@ -32,7 +32,7 @@ Article titles are `Title Case`, and headers are `Sentence case`.
 
 Otherwise, the following paragraph isn't parsed correctly.
 
-```
+```markdown
 // bad
 <h2 id="schemas-with-collections">Using schemas with collections</h2>
 This is some text
@@ -47,7 +47,7 @@ This is some text
 
 Note: you don't need to escape things in fenced/multiline code snippets, only in inline ones.
 
-```
+```markdown
 // will break
 Render multiple items in your template with `{{#each}}`
 
@@ -57,11 +57,11 @@ Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}`
 
 ### Running the static site generator locally
 
-The site is built using hexo, a static site generator. You'll need to `npm install -g hexo-cli`, then
+The site is built using hexo, a static site generator.  To run it locally, perform the following steps:
 
-```
+```shell
 git submodule update --init --recursive
 cd site
 npm install
-hexo server
+npm start
 ```

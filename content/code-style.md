@@ -1,6 +1,5 @@
 ---
 title: Code Style
-order: 1
 description: Suggested style guidelines for your code.
 discourseTopicId: 20189
 ---
@@ -42,7 +41,7 @@ secondStatement();
 
 <h3 id="automatic-error-checking">Automatic error checking</h3>
 
-Having a consistent style means that it's easier to adopt standard tools for error checking. For example, if you adopt a convention that you must always use `let` or `const` instead of `var`, you can now use a tool to ensure all of your variables are scoped the way you expect. That means you can avoid bugs where variables act in unexpected ways. Also, by enforcing that all variables are declared before use, you can easily catch typos before even running any code!
+Having a consistent style means that it's easier to adopt standard tools for error checking. For example, if you adopt a convention that you must always use `let` or `const` instead of `var`, you can now use a tool to ensure all of your variables are scoped the way you expect. That means you can avoid bugs where variables act in unexpected ways. Also, by enforcing that all variables are declared before use, you can catch typos before even running any code!
 
 <h3 id="deeper-understanding">Deeper understanding</h3>
 
@@ -56,11 +55,13 @@ Here at Meteor, we strongly believe that JavaScript is the best language to buil
 
 ![](images/ben-es2015-demo.gif)
 
+> An example of refactoring from JavaScript to ES2015
+
 <h3 id="ecmascript">Use the `ecmascript` package</h3>
 
 ECMAScript, the language standard on which every browser's JavaScript implementation is based, has moved to yearly standards releases. The newest complete standard is ES2015, which includes some long-awaited and very significant improvements to the JavaScript language. Meteor's `ecmascript` package compiles this standard down to regular JavaScript that all browsers can understand using the [popular Babel compiler](https://babeljs.io/). It's fully backwards compatible to "regular" JavaScript, so you don't have to use any new features if you don't want to. We've put a lot of effort into making advanced browser features like source maps work great with this package, so that you can debug your code using your favorite developer tools without having to see any of the compiled output.
 
-The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://docs.meteor.com/#/full/supportedes2015features).
+The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://docs.meteor.com/packages/ecmascript.html#Supported-ES2015-Features).
 
 To get the full experience, you should also use the `es5-shim` package which is included in all new apps by default. This means you can rely on runtime features like `Array#forEach` without worrying about which browsers support them.
 
@@ -80,14 +81,14 @@ We recommend choosing and sticking to a JavaScript style guide and enforcing it 
 
 We recommend using the [Airbnb eslint configuration](https://github.com/airbnb/javascript/tree/master/packages/eslint-config-airbnb) which verifies the Airbnb styleguide.
 
-Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's the fastest and easiest way to identify typos and small errors.
+Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's an automated way to identify typos and small errors.
 
 <h3 id="eslint-installing">Installing and running ESLint</h3>
 
 To setup ESLint in your application, you can install the following [npm](https://docs.npmjs.com/getting-started/what-is-npm) packages:
 
 ```
-meteor npm install --save-dev eslint eslint-plugin-react eslint-plugin-meteor eslint-config-airbnb
+meteor npm install --save-dev babel-eslint eslint-config-airbnb eslint-plugin-import eslint-plugin-meteor eslint-plugin-react eslint-plugin-jsx-a11y eslint-import-resolver-meteor eslint @meteorjs/eslint-config-meteor
 ```
 
 > Meteor comes with npm bundled so that you can type meteor npm without worrying about installing it yourself. If you like, you can also use a globally installed npm command.
@@ -102,63 +103,22 @@ You can also add a `eslintConfig` section to your `package.json` to specify that
     "pretest": "npm run lint --silent"
   },
   "eslintConfig": {
-    "plugins": [
-      "meteor"
-    ],
-    "extends": [
-      "airbnb/base",
-      "plugin:meteor/recommended"
-    ],
-    "rules": {}
+    "extends": "@meteorjs/eslint-config-meteor"
   }
 }
 ```
 
-Use `"airbnb/base"` for a normal ecmascript-based config and `"airbnb"` in a React project.
-
-To run the linter, you can now simply type:
+To run the linter, you can now type:
 
 ```bash
 meteor npm run lint
 ```
 
-If you get errors from the default `meteor create myapp` such as:
-
-```bash
-/opt/www/sites/me/myapp/client/main.js
-   1:26  error  Unable to resolve path to module 'meteor/templating'    import/no-unresolved
-   2:29  error  Unable to resolve path to module 'meteor/reactive-var'  import/no-unresolved
-  18:25  error  Invalid parameter name, use "templateInstance" instead  meteor/eventmap-params
-
-/opt/www/sites/me/myapp/server/main.js
-  1:24  error  Unable to resolve path to module 'meteor/meteor'  import/no-unresolved
-```
-
-then you can quiet them by adding to `rules` in `eslintConfig`, for instance:
-
-```
-{
-  ...
-  "eslintConfig": {
-   ...
-    "rules": {
-      "meteor/eventmap-params": [
-        2, { "templateInstanceParamName": "instance" }
-      ],
-      "import/no-unresolved": [
-        2, { "ignore": ["^meteor/"] }
-      ]
-    }
-  }
-}
-```
-
-
 For more details, read the [Getting Started](http://eslint.org/docs/user-guide/getting-started) directions from the ESLint website.
 
 <h3 id="eslint-editor">Integrating with your editor</h3>
 
-Linting is the fastest way to find potential bugs in your code. Running a linter is usually faster than running your app or your unit tests, so it's a good idea to run it all the time. Setting up linting in your editor can seem annoying at first since it will complain often when you save poorly-formatted code, but over time you'll develop the muscle memory to just write well-formatted code in the first place. Here are some directions for setting up ESLint in different editors:
+Linting is the fastest way to find potential bugs in your code. Running a linter is usually faster than running your app or your unit tests, so it's a good idea to run it all the time. Setting up linting in your editor can seem annoying at first since it will complain often when you save poorly-formatted code, but over time you'll develop the muscle memory to write well-formatted code in the first place. Here are some directions for setting up ESLint in different editors:
 
 
 <h4 id="eslint-sublime">Sublime Text</h4>
@@ -175,7 +135,7 @@ A side note for Emmet users: You can use *\<ctrl-e\>* to expand HTML tags in .js
 
 <h4 id="eslint-atom">Atom</h4>
 
-Using ESLint with Atom is simple. Just install these three packages:
+Install these three packages to use ESLint with Atom: 
 
 ```bash
 apm install language-babel
@@ -188,24 +148,32 @@ Then **restart** (or **reload** by pressing Ctrl+Alt+R / Cmd+Opt+R) Atom to acti
 
 <h4 id="eslint-webstorm">WebStorm</h4>
 
-WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `package.json`, just enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
+WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `package.json`, enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
 
 ![Enable ESLint here.](images/webstorm-configuration.png)
 
 Linting can be activated on WebStorm on a project-by-project basis, or you can set ESLint as a default under Editor > Inspections, choosing the Default profile, checking "ESLint", and applying.
 
+<h4 id="eslint-vscode">Visual Studio Code</h4>
+
+Using ESLint in VS Code requires installation of the 3rd party [ESLint](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) extension.  In order to install the extension, follow these steps:
+
+1. Launch VS Code and open the quick open menu by typing `Ctrl+P`
+2. Paste `ext install vscode-eslint` in the command window and press `Enter`
+3. Restart VS Code
+
 
 <h2 id="meteor-features">Meteor code style</h2>
 
-The section above talked about JavaScript code in general - you can easily apply it in any JavaScript application, not just with Meteor apps. However, there are some style questions that are Meteor-specific, in particular how to name and structure all of the different components of your app.
+The section above talked about JavaScript code in general - you can apply it in any JavaScript application, not just with Meteor apps. However, there are some style questions that are Meteor-specific, in particular how to name and structure all of the different components of your app.
 
 <h3 id="collections">Collections</h3>
 
-Collections should be named as a plural noun, in PascalCase. The name of the collection in the database (the first argument to the collection constructor) should be the same as the name of the JavaScript symbol.
+Collections should be named as a plural noun, in [PascalCase](https://en.wikipedia.org/wiki/PascalCase). The name of the collection in the database (the first argument to the collection constructor) should be the same as the name of the JavaScript symbol.
 
 ```js
 // Defining a collection
-Lists = new Mongo.Collection('Lists');
+Lists = new Mongo.Collection('lists');
 ```
 
 Fields in the database should be camelCased just like your JavaScript variable names.
@@ -243,7 +211,7 @@ Meteor.publish('lists.public', function listsPublic() {
 
 <h3 id="files-and-exports">Files, exports, and packages</h3>
 
-You should use the ES2015 `import` and `export` features to manage your code. This will let you better understand the dependencies between different parts of your code, and it will be easy to know where to look if you need to read the source code of a dependency.
+You should use the ES2015 `import` and `export` features to manage your code. This will let you better understand the dependencies between different parts of your code, and it will help you navigate to the source code of a dependency.
 
 Each file in your app should represent one logical module. Avoid having catch-all utility modules that export a variety of unrelated functions and symbols. Often, this can mean that it's good to have one class, UI component, or collection per file, but there are cases where it is OK to make an exception, for example if you have a UI component with a small sub-component that isn't used outside of that file.
 
@@ -264,7 +232,7 @@ Note that imports use relative paths, and include the file extension at the end 
 For [Atmosphere packages](using-packages.html), as the older pre-1.3 `api.export` syntax allowed more than one export per package, you'll tend to see non-default exports used for symbols. For instance:
 
 ```js
-// You'll need to deconstruct here, as Meteor could export more symbols
+// You'll need to destructure here, as Meteor could export more symbols
 import { Meteor } from 'meteor/meteor';
 
 // This will not work
@@ -273,7 +241,7 @@ import Meteor from 'meteor/meteor';
 
 <h3 id="templates-and-components">Templates and components</h3>
 
-Since Spacebars templates are always global, can't be imported and exported as modules, and need to have names that are completely unique across the whole app, we recommend naming your Blaze templates with the full path to the namespace, separated by underscores. Underscores are a great choice in this case because then you can easily type the name of the template as one symbol in JavaScript.
+Since Spacebars templates are always global, can't be imported and exported as modules, and need to have names that are completely unique across the whole app, we recommend naming your Blaze templates with the full path to the namespace, separated by underscores. Underscores are a great choice in this case because then you can type the name of the template as one symbol in JavaScript.
 
 ```html
 <template name="Lists_show">
@@ -298,6 +266,6 @@ show.js
 show.less
 ```
 
-The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure [above](structure.html#javascript-structure).
+The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure [below](structure.html#javascript-structure).
 
 If you are writing your UI in React, you don't need to use the underscore-split names because you can import and export your components using the JavaScript module system.

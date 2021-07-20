@@ -1,6 +1,5 @@
 ---
 title: Writing npm Packages
-order: 31
 discourseTopicId: 20194
 ---
 

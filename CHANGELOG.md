@@ -3,7 +3,24 @@ title: Changelog
 order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
-
+- 2020/09/13: Removed the section about crosswalk from the Cordova guide
+- 2020/08/08: Added "Hot Code Push" guide
+- 2020/04/26: Added "React Native" section to build, and renamed "Mobile" to "Cordova"
+- 2020/02/03: Added "Preventing unnecessary data retrieval" section to Accounts
+- 2018/10/23: Added VueJS SSR Rendering for Meteor guide
+- 2018/10/14: Added VueJS Integration guide
+- 2018/03/03: Added HTTP Headers to the production security section and made Helmet the official recommendation. Update Mobile section to refer to HTTP header section for CSP instead of Browser Policy package. [#750](https://github.com/meteor/guide/pull/750)
+- 2017/10/28: Removed mention of `react-addons-pure-render-mixin` package from "Using Meteor's data system" section as it is no longer needed.
+- 2017/09/08: Updated "Using Meteor's data system" section to describe the new `withTracker` function as it now replaces `createContainer`.
+- 2017/03/22: Added Docker section within Deployment and Monitoring.
+- 2017/03/05: Updated "Testing" to use the replacement `dispatch:mocha` package instead of the previous suggestions from `dispatch:*`. [PR#618](https://github.com/meteor/guide/pull/618) [PR#614](https://github.com/meteor/guide/pull/614)
+- 2017/02/08: Updated MongoDb hosting services with more details and recommendations. [PR#609](https://github.com/meteor/guide/pull/609)
+- 2017/01/19: Updated recommendations for forcing SSL to avoid the `force-ssl` package when possible.
+- 2017/01/07: Created new section "TypeScript".
+- 2017/01/04: Changed "Testing" section to reference `dburles:factory` in the same spirit as the `meteor/todos` app [PR #598](https://github.com/meteor/guide/pull/598)
+- 2016/07/02: Created new section in ui-ux on use of i18n with React.
+- 2016/05/28: Created new section "A simple React unit test" [PR #466](https://github.com/meteor/guide/pull/466).
+- 2016/05/22: Created new section "Testing publications" for separated `publication-collector` package (as [discussed here](https://github.com/meteor/todos/issues/119)).
 - 2016/05/05: Changed Build Section organization to separate Atmosphere and npm.  [Discussed here](https://github.com/meteor/guide/pull/390#issuecomment-212577341). [PR #410](https://github.com/meteor/guide/pull/410)
 - 2016/04/16: Switch order of Code Style and Application structure sections. [PR #383](https://github.com/meteor/guide/pull/383)
 - 2016/04/16: Added [Writing Packages - Creating an npm package](https://guide.meteor.com/writing-packages.html#creating-npm) and [Using Packages - Overriding packages - npm](https://guide.meteor.com/using-packages.html#npm-overriding). [PR #381](https://github.com/meteor/guide/pull/381)
