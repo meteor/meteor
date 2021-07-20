@@ -504,4 +504,6 @@ Although Flow Router can be used to render React components more or less as we'v
 
 <h4 id="server-side-resources">Server Routing for additional resources</h4>
 
+There might be additional resources that you want to make available on your server or receive web hooks. If you need anything more complicated with dynamic parts of the URL you might want to implement [Picker](https://atmospherejs.com/communitypackages/picker) which is a simple server-side router that handles dynamic routes.
+
 If you need to authenticate the user when providing additional server-side resources such as PDF documents or XLSX spreadsheets, you can use [`mhagmajer:server-router`](https://atmospherejs.com/mhagmajer/server-router) package to do this easily. There is a [blog article](https://blog.hagmajer.com/server-side-routing-with-authentication-in-meteor-6625ed832a94) that describes this in more detail.
