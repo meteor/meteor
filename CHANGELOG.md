@@ -3,6 +3,7 @@ title: Changelog
 order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
+- 2021/07/20: Added "Apollo" article
 - 2020/09/13: Removed the section about crosswalk from the Cordova guide
 - 2020/08/08: Added "Hot Code Push" guide
 - 2020/04/26: Added "React Native" section to build, and renamed "Mobile" to "Cordova"
