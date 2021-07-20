@@ -130,8 +130,8 @@ To depend on another Atmosphere package, use [`api.use`](http://docs.meteor.com/
 
 ```js
 Package.onUse(function(api) {
-  // This package depends on 1.3.3 or above of simple-schema
-  api.use('aldeed:simple-schema@1.3.3');
+  // This package depends on 1.2.0 or above of validated-method
+  api.use('mdg:validated-method@1.2.0');
 });
 ```
 
@@ -151,7 +151,7 @@ api.use([
   'check',
 
   // Still need to specify versions of non-core packages
-  'aldeed:simple-schema@1.3.3',
+  'mdg:validated-method@1.2.0',
   'mdg:validation-error@0.1.0'
 ]);
 ```
@@ -162,7 +162,7 @@ The above code snippet is equivalent to the code below, which specifies all of t
 api.use([
   'ecmascript@0.1.6',
   'check@1.1.0',
-  'aldeed:simple-schema@1.3.3',
+  'mdg:validated-method@1.2.0',
   'mdg:validation-error@0.1.0'
 ]);
 ```

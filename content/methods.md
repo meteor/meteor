@@ -29,9 +29,11 @@ In a basic app, defining a Meteor Method is as simple as defining a function. In
 
 Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI. If you have some secret code in your Method, consult the [Security article](security.html#secret-code) for how to hide it from the client.
 
-This example uses the `aldeed:simple-schema` package, which is recommended in several other articles, to validate the Method arguments.
+This example uses the [simpl-schema](https://www.npmjs.com/package/simpl-schema) npm package, which is recommended in several other articles, to validate the Method arguments.
 
 ```js
+import SimpleSchema from 'simpl-schema';
+
 Meteor.methods({
   'todos.updateText'({ todoId, newText }) {
     new SimpleSchema({
@@ -225,7 +227,7 @@ When the server was not able to complete the user's desired action because of a 
 
 When a Method call fails because the arguments are of the wrong type, it's good to throw a `ValidationError`. This works like `Meteor.Error`, but is a custom constructor that enforces a standard error format that can be read by different form and validation libraries. In particular, if you are calling this Method from a form, throwing a `ValidationError` will make it possible to display nice error messages next to particular fields in the form.
 
-When you use `mdg:validated-method` with `aldeed:simple-schema` as demonstrated above, this type of error is thrown for you.
+When you use `mdg:validated-method` with `simpl-schema` as demonstrated above, this type of error is thrown for you.
 
 Read more about the error format in the [`mdg:validation-error` docs](https://atmospherejs.com/mdg/validation-error).
 

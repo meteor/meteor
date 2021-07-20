@@ -462,9 +462,8 @@ import StubCollections from 'meteor/hwillson:stub-collections';
 import { Template } from 'meteor/templating';
 import { _ } from 'meteor/underscore';
 import { $ } from 'meteor/jquery';
-import { FlowRouter } from 'meteor/kadira:flow-router';
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
 import sinon from 'sinon';
-
 
 import { withRenderedTemplate } from '../../test-helpers.js';
 import '../lists-show-page.js';
@@ -540,8 +539,9 @@ In the [Todos](https://github.com/meteor/todos) example application, we have a i
 import { Meteor } from 'meteor/meteor';
 import { Tracker } from 'meteor/tracker';
 import { DDP } from 'meteor/ddp-client';
-import { FlowRouter } from 'meteor/kadira:flow-router';
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
 import { assert } from 'chai';
+
 import { Promise } from 'meteor/promise';
 import { $ } from 'meteor/jquery';
 
@@ -806,7 +806,7 @@ Now we can run the tests with `meteor npm test`.
 
 <h3 id="using-circle-ci">CircleCI</h3>
 
-[CircleCI](https://circleci.com) is a great continuous integration service that allows us to run (possibly time consuming) tests on every push to a repository like GitHub. To use it with the commandline test we've defined above, we can follow their standard [getting started tutorial](https://circleci.com/docs/getting-started) and use a `circle.yml` file similar to this:
+[CircleCI](https://circleci.com) is a great continuous integration service that allows us to run (possibly time consuming) tests on every push to a repository like GitHub. To use it with the commandline test we've defined above, we can follow their standard [getting started tutorial](https://circleci.com/docs/2.0/getting-started/#section=getting-started) and use a `circle.yml` file similar to this:
 
 ```
 machine:

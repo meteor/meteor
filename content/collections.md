@@ -84,11 +84,13 @@ A local collection is a convenient way to use the full power of the Minimongo li
 
 Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constrain the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read data more often than you write it*, and so it's usually easier, and less buggy to use a schema when writing.
 
-In Meteor, the pre-eminent schema package is [aldeed:simple-schema](https://atmospherejs.com/aldeed/simple-schema). It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
+In Meteor, the pre-eminent schema package is the npm [simpl-schema](https://www.npmjs.com/package/simpl-schema) package. It's an expressive, MongoDB based schema that's used to insert and update documents. Another alternative is [jagi:astronomy](https://atmospherejs.com/jagi/astronomy) which is a full Object Model (OM) layer offering schema definition, server/client side validators, object methods and event handlers.
 
-Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simple-schema`, you can create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
+Let's assume that we have a `Lists` collection.  To define a schema for this collection using `simpl-schema`, you can create a new instance of the `SimpleSchema` class and attach it to the `Lists` object:
 
 ```js
+import SimpleSchema from 'simpl-schema';
+
 Lists.schema = new SimpleSchema({
   name: {type: String},
   incompleteCount: {type: Number, defaultValue: 0},
@@ -104,7 +106,7 @@ This example from the Todos app defines a schema with a few simple rules:
 
 We attach the schema to the namespace of `Lists` directly, which allows us to check objects against this schema directly whenever we want, such as in a form or [Method](methods.html). In the [next section](#schemas-on-write) we'll see how to use this schema automatically when writing to the collection.
 
-You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [Simple Schema docs](http://atmospherejs.com/aldeed/simple-schema).
+You can see that with relatively little code we've managed to restrict the format of a list significantly. You can read more about more complex things that can be done with schemas in the [Simple Schema docs](https://www.npmjs.com/package/simpl-schema).
 
 <h3 id="validating-schemas">Validating against a schema</h3>
 
@@ -143,7 +145,7 @@ What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's
 
 Now that you are familiar with the basic API of Simple Schema, it's worth considering a few of the constraints of the Meteor data system that can influence the design of your data schema. Although generally speaking you can build a Meteor data schema much like any MongoDB data schema, there are some important details to keep in mind.
 
-The most important consideration is related to the way DDP, Meteor's data loading protocol, communicates documents over the wire. The key thing to realize is that DDP sends changes to documents at the level of top-level document *fields*. What this means is that if you have large and complex subfields on document that change often, DDP can send unnecessary changes over the wire.
+The most important consideration is related to the way DDP, Meteor's data loading protocol, communicates documents over the wire. The key thing to realize is that DDP sends changes to documents at the level of top-level document *fields*. What this means is that if you have large and complex subfields on a document that change often, DDP can send unnecessary changes over the wire.
 
 For instance, in "pure" MongoDB you might design the schema so that each list document had a field called `todos` which was an array of todo items:
 
@@ -190,7 +192,7 @@ What this means is that now every time we call `Lists.insert()`, `Lists.update()
 
 <h3 id="default-value">`defaultValue` and data cleaning</h3>
 
-One thing that Collection2 does is ["clean" the data](https://github.com/aldeed/meteor-simple-schema#cleaning-data) before sending it to the database. This includes but is not limited to:
+One thing that Collection2 does is ["clean" the data](https://www.npmjs.com/package/simpl-schema#cleaning-objects) before sending it to the database. This includes but is not limited to:
 
 1. Coercing types - converting strings to numbers
 2. Removing attributes not in the schema
@@ -208,7 +210,7 @@ class ListsCollection extends Mongo.Collection {
       list.name = `List ${nextLetter}`;
 
       while (!!this.findOne({name: list.name})) {
-        // not going to be too smart here, can go past Z
+        // not going to be too smart here, can't go past Z
         nextLetter = String.fromCharCode(nextLetter.charCodeAt(0) + 1);
         list.name = `List ${nextLetter}`;
       }
@@ -342,7 +344,7 @@ If your migration needs to change a lot of data, and especially if you need to s
 
 The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that if your migration is complex (which it usually is if you can't do an `.update(.., .., {multi: true})`), it can take a significant amount of time to prepare the bulk update.
 
-What this means is if users are accessing the site whilst the update is being prepared, it will likely go out of date! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user experience if it takes a while. For these reason, you often need to stop your server and let your users know you are performing maintenance while the update is happening.
+What this means is if users are accessing the site whilst the update is being prepared, it will likely go out of service! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user experience if it takes a while. For these reason, you often need to stop your server and let your users know you are performing maintenance while the update is happening.
 
 We could write our above migration like so (note that you must be on MongoDB 2.6 or later for the bulk update operations to exist). We can access the native MongoDB API via [`Collection#rawCollection()`](http://docs.meteor.com/api/collections.html#Mongo-Collection-rawCollection):
 
@@ -393,7 +395,7 @@ To run a migration against your production database, run your app locally in pro
 
 A good way to do the above is to spin up a virtual machine close to your database that has Meteor installed and SSH access (a special EC2 instance that you start and stop for the purpose is a reasonable option), and running the command after shelling into it. That way any latencies between your machine and the database will be eliminated, but you still can be very careful about how the migration is run.
 
-**Note that you should always take a database backup before running any migration!**
+**Note that you should always make a database backup before running any migration!**
 
 <h3 id="breaking-changes">Breaking schema changes</h3>
 

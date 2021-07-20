@@ -151,9 +151,11 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 <h3 id="mup">Meteor Up</h3>
 
-[Meteor Up](http://meteor-up.com), often referred to as "mup", is a third-party open-source tool that can be used to deploy Meteor application to any online server over SSH. It handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly.  It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
+[Meteor Up](https://meteor-up.com), often referred to as "mup", is a third-party, open-source tool that can be used to deploy Meteor applications to any online server over SSH. It's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server. It also handles setting up the servers, including installing any dependencies, and setting up load balancing and SSL. Although it takes care of many of the details, it can be more work than using a hosting provider.
 
-You can obtain a server running Ubuntu or Debian from many generic hosting providers and Meteor Up can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
+You can obtain a server running Ubuntu or Debian from many generic hosting providers and Meteor Up can SSH into your server with the keys you provide in the config. You can get started with the [tutorial](https://meteor-up.com/getting-started.html).
+
+One of its plugins, [mup-aws-beanstalk](https://github.com/zodern/mup-aws-beanstalk/) deploys Meteor Apps to [AWS Elastic Beanstalk](https://aws.amazon.com/elasticbeanstalk/) instead of a server. It supports autoscaling, load balancing, and zero downtime deploys while taking care of many of the challenges with using Meteor and Elastic Beanstalk.
 
 <h3 id="docker">Docker</h3>
 
@@ -205,7 +207,6 @@ When you deploy your Meteor server, you need a `MONGO_URL` that points to your M
 
 There are a variety of services out there, and we recommend that you select one of the below services depending on your requirements:
 
-* [mLab](https://www.mlab.com)
 * [Compose](https://www.compose.io)
 * [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 
@@ -315,6 +316,43 @@ Although a host of tools exist to monitor the performance of HTTP, request-respo
 Galaxy's UI provides a detailed logging system, which can be invaluable to determine which action it is causing that extra load, or to generally debug other application issues:
 
 <img src="images/galaxy-logs.png">
+
+<h3 id="meteor-apm">APM</h3>
+
+If you really want to understand the ins and outs of running your Meteor application, you should use an Application Performance Monitoring (APM) service. There are multiple services designed for Meteor apps:
+
+- [Meteor APM](https://www.meteor.com/cloud)
+- [Monti APM](https://montiapm.com/)
+- [Meteor Elastic APM](https://github.com/Meteor-Community-Packages/meteor-elastic-apm)
+
+These APM's operate by taking regular client and server side observations of your application's performance as it conducts various activities and reporting them back to a master server.
+
+When you visit the APM, you can view current and past behavior of your application over various useful metrics. The APM's have documentation on how to fully use the data to improve your app, but we'll discuss a few key areas here. The screenshots are similar to what you would see in Meteor APM or Monti APM.
+
+<h4 id="apm-method-pub">Method and Publication Latency</h4>
+
+Rather than monitoring HTTP response times, in a Meteor app it makes far more sense to consider DDP response times. The two actions your client will wait for in terms of DDP are *method calls* and *publication subscriptions*. APM's include tools to help you discover which of your methods and publications are slow and resource intensive.
+
+<img src="images/kadira-method-latency.png">
+
+In the above screenshot you can see the response time breakdown of the various methods commonly called by the Atmosphere application. The median time of 56ms and 99th percentile time of 200ms seems pretty reasonable, and doesn't seem like too much of a concern
+
+You can also use the "traces" section to discover particular cases of the method call that are particular slow:
+
+<img src="images/kadira-method-trace.png">
+
+In the above screenshot we're looking at a slower example of a method call (which takes 214ms), which, when we drill in further we see is mostly taken up waiting on other actions on the user's connection (principally waiting on the `searches/top` and `counts` publications). So we could consider looking to speed up the initial time of those subscriptions as they are slowing down searches a little in some cases.
+
+
+<h4 id="apm-livequery">Livequery Monitoring</h4>
+
+A key performance characteristic of Meteor is driven by the behavior of livequery, the key technology that allows your publications to push changing data automatically in realtime. In order to achieve this, livequery needs to monitor your MongoDB instance for changes (by tailing the oplog) and decide if a given change is relevant for the given publication.
+
+If the publication is used by a lot of users, or there are a lot of changes to be compared, then these livequery observers can do a lot of work. So it's immensely useful that Kadira can tell you some statistics about your livequery usage:
+
+<img src="images/kadira-observer-usage.png">
+
+In this screenshot we can see that observers are fairly steadily created and destroyed, with a pretty low amount of reuse over time, although in general they don't survive for all that long. This would be consistent with the fact that we are looking at the `package` publication of Atmosphere which is started everytime a user visits a particular package's page. The behavior is more or less what we would expect so we probably wouldn't be too concerned by this information.
 
 <h2 id="seo">Enabling SEO</h2>
 

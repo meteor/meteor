@@ -9,7 +9,8 @@ After reading this guide, you'll know:
 1. The role URLs play in a client-rendered app, and how it's different from a traditional server-rendered app.
 2. How to define client and server routes for your app using Flow Router.
 3. How to have your app display different content depending on the URL.
-4. How to construct links to routes and go to routes programmatically.
+4. How to dynamically load application modules depending on the URL.
+5. How to construct links to routes and go to routes programmatically.
 
 <h2 id="client-side">Client-side Routing</h2>
 
@@ -27,13 +28,23 @@ However, most of the user-facing features of URLs listed above are still relevan
 
 <h2 id="flow-router">Using Flow Router</h2>
 
-To add routing to your app, install the [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) package:
+To add routing to your app, install the [`ostrio:flow-router-extra`](https://atmospherejs.com/ostrio/flow-router-extra) package:
 
 ```
-meteor add kadira:flow-router
+meteor add ostrio:flow-router-extra
 ```
 
 Flow Router is a community routing package for Meteor. 
+
+<h2 id="flow-router-extra">Using Flow Router Extra</h2>
+
+Flow Router Extra is carefully extended `flow-router` package by `kadira` with waitOn and template context. Flow Router Extra shares original "Flow Router" API including flavoring for extra features like `waitOn`, template context and build in `.render()`. Note: `arillo:flow-router-helpers` and `zimme:active-route` already build into Flow Router Extra and updated to support latest Meteor release.
+
+To add routing to your app, install the [`ostrio:flow-router-extra`](https://github.com/VeliovGroup/flow-router) package:
+
+```
+meteor add ostrio:flow-router-extra
+```
 
 <h2 id="defining-routes">Defining a simple route</h2>
 
@@ -98,12 +109,6 @@ In our example of the list page from the Todos app, we access the current list's
 <h3 id="active-route">Highlighting the active route</h3>
 
 One situation where it is sensible to access the global `FlowRouter` singleton to access the current route's information deeper in the component hierarchy is when rendering links via a navigation component. It's often required to highlight the "active" route in some way (this is the route or section of the site that the user is currently looking at).
-
-A convenient package for this is [`zimme:active-route`](https://atmospherejs.com/zimme/active-route):
-
-```bash
-meteor add zimme:active-route
-```
 
 In the Todos example app, we link to each list the user knows about in the `App_body` template:
 
@@ -281,14 +286,7 @@ Multiple behaviors of this type can be composed by wrapping a template in multip
 
 <h2 id="changing-routes">Changing Routes</h2>
 
-Rendering an updated UI when a user reaches a new route is not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using `FlowRouter.pathFor`, but it is more convenient to use the [`arillo:flow-router-helpers`](https://github.com/arillo/meteor-flow-router-helpers/) package that defines some helpers for you:
-
-
-```
-meteor add arillo:flow-router-helpers
-```
-
-Now that you have this package, you can use helpers in your templates to display a link to a certain route. For example, in the Todos example app, our nav links look like:
+Rendering an updated UI when a user reaches a new route is not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using helpers such as `FlowRouter.pathFor` to display a link to a certain route. For example, in the Todos example app, our nav links look like:
 
 
 ```html
@@ -414,6 +412,50 @@ Template.App_body.events({
 You will also want to show some kind of indication that the method is working in between their click of the button and the redirect completing.  Don't forget to provide feedback if the method is returning an error.
 
 <h2 id="advanced">Advanced Routing</h2>
+
+<h3 id="dynamic-module-loading">Dynamically load modules</h3>
+
+[Dynamic imports](https://blog.meteor.com/dynamic-imports-in-meteor-1-5-c6130419c3cd) was fist introduced in [Meteor 1.5](https://github.com/meteor/meteor/blob/devel/History.md#v15-2017-05-30). This technique allows to dramatically reduce *Client's* bundle size, and load modules and dependencies dynamically upon request, in this case based on the current URI.
+
+Assume we have `index.html` and `index.js` with code for `index` template and this is only place in the application where it depend on large `moment` package. This means `moment` package is not needed in the other parts of our app, and it will only waste bandwidth and slow load time.
+
+```html
+<!-- /imports/client/index.html -->
+<template name="index">
+  <h1>Current time is: {{time}}</h1>
+</template>
+```
+
+```js
+// /imports/client/index.js
+import moment       from 'moment';
+import { Template } from 'meteor/templating';
+import './index.html';
+
+Template.index.helpers({
+  time() {
+    return moment().format('LTS');
+  }
+});
+```
+
+```js
+// /imports/lib/routes.js
+import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
+
+FlowRouter.route('/', {
+  name: 'index',
+  waitOn() {
+    // Wait for index.js load over the wire
+    return import('/imports/client/index.js');
+  },
+  action() {
+    BlazeLayout.render('App_body', {main: 'index'});
+  }
+};
+```
+
+For more info and examples see [this thread](https://forums.meteor.com/t/flow-router-meteor-1-5-per-route-dynamic-import/36870)
 
 <h3 id="404s">Missing pages</h3>
 

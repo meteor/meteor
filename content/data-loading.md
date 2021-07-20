@@ -681,7 +681,7 @@ To solve this issue, you can use the [`cultofcoders:redis-oplog`](https://github
 
 The caveats:
 1. You may not need it, if your application is smaller or your data doesn't change a lot.
-2. You'll have to maintain another database (Redis)[https://redis.io/].
+2. You'll have to maintain another database [Redis](https://redis.io/).
 3. Changes that happen outside Meteor instance, must be [manually submitted to Redis](https://github.com/cult-of-coders/redis-oplog/blob/master/docs/outside_mutations.md).
 
 The benefits:

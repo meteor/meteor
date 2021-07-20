@@ -11,7 +11,7 @@ There are a few ways to search for Meteor packages published to Atmosphere:
 2. Use `meteor search` from the command line.
 3. Use a community package search website like [Fastosphere](http://fastosphere.meteor.com/).
 
-The main Atmosphere website provides additional curation features like trending packages, package stars, and flags, but some of the other options can be faster if you're trying to find a specific package. For example, you can use `meteor show kadira:flow-router` from the command line to see the description of that package and different available versions.
+The main Atmosphere website provides additional curation features like trending packages, package stars, and flags, but some of the other options can be faster if you're trying to find a specific package. For example, you can use `meteor show ostrio:flow-router-extra` from the command line to see the description of that package and different available versions.
 
 <h3 id="atmosphere-naming">Package naming</h3>
 
@@ -22,12 +22,12 @@ You may notice that, with the exception of Meteor platform packages, all package
 To install an Atmosphere package, you run `meteor add`:
 
 ```bash
-meteor add kadira:flow-router
+meteor add ostrio:flow-router-extra
 ```
 
-This will add the newest version of the desired package that is compatible with the other packages in your app. If you want to specify a particular version, you can specify it by adding a suffix to the package name like: `meteor add kadira:flow-router@2.10.0`.
+This will add the newest version of the desired package that is compatible with the other packages in your app. If you want to specify a particular version, you can specify it by adding a suffix to the package name like: `meteor add ostrio:flow-router-extra@3.5.0`.
 
-Regardless of how you add the package to your app, its actual version will be tracked in the file at `.meteor/versions`. This means that anybody collaborating with you on the same app is guaranteed to have the same package versions as you. If you want to update to a newer version of a package after installing it, use `meteor update`. You can run `meteor update` without any arguments to update all packages and Meteor itself to their latest versions, or pass a specific package to update just that one, for example `meteor update kadira:flow-router`.
+Regardless of how you add the package to your app, its actual version will be tracked in the file at `.meteor/versions`. This means that anybody collaborating with you on the same app is guaranteed to have the same package versions as you. If you want to update to a newer version of a package after installing it, use `meteor update`. You can run `meteor update` without any arguments to update all packages and Meteor itself to their latest versions, or pass a specific package to update just that one, for example `meteor update ostrio:flow-router-extra`.
 
 If your app is running when you add a new package, Meteor will automatically download it and restart your app for you.
 
@@ -42,7 +42,7 @@ meteor list
 To remove an unwanted Atmosphere package run:
 
 ```bash
-meteor remove kadira:flow-router
+meteor remove ostrio:flow-router-extra
 ```
 
 You can get more details on all the package commands in the [Meteor Command line documentation](http://docs.meteor.com/#/full/meteorhelp).
@@ -52,7 +52,7 @@ You can get more details on all the package commands in the [Meteor Command line
 To use an Atmosphere Package in your app you can import it with the `meteor/` prefix:
 
 ```js
-import { SimpleSchema } from 'meteor/aldeed:simple-schema';
+import { Mongo } from "meteor/mongo";
 ```
 
 Typically a package will export one or more symbols, which you'll need to reference with the destructuring syntax. You can find these exported symbols by either looking in that package's `package.js` file for [`api.export`](http://docs.meteor.com/#/full/pack_export) calls or by looking in that package's main JavaScript file for ES2015 `export ` calls like `export const packageName = 'package-name';`.

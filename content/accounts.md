@@ -61,7 +61,7 @@ meteor add accounts-meetup
 meteor add accounts-meteor-developer
 ```
 
-Now open your app, follow the configuration steps, and you're good to go - if you've done the [Meteor tutorial](https://www.meteor.com/tutorials/blaze/adding-user-accounts), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
+Now open your app, follow the configuration steps, and you're good to go - if you've done one of our [Meteor tutorials](https://www.meteor.com/developers/tutorials), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
 
 Here are a couple of screenshots of `accounts-ui` so you know what to expect:
 
@@ -169,7 +169,7 @@ AccountsTemplates.configureRoute('resetPwd', {
 
 Note that we have specified a password reset route. Normally, we would have to configure Meteor's accounts system to send this route in password reset emails, but the `useraccounts:flow-routing` package does it for us. [Read more about configuring email flows below.](#email-flows)
 
-Now that the routes are setup on the server, they can be accessed from the browser (e.g. `example.com/reset-password`).  To create links to these routes in a template, it's best to use a helper method provided by the router.  For Flow Router, the [`arillo:flow-router-helpers`](https://github.com/arillo/meteor-flow-router-helpers/) package provides a `pathFor` helper for this purpose.  Once installed, the following is possible in a template:
+Now that the routes are setup on the server, they can be accessed from the browser (e.g. `example.com/reset-password`).  To create links to these routes in a template, it's best to use a helper method provided by the router.  For Flow Router, the [`ostrio:flow-router-extra`](https://atmospherejs.com/ostrio/flow-router-extra/) package provides a `pathFor` helper for just this purpose.  Once installed, the following is possible in a template:
 
 ```html
 <div class="btns-group">
@@ -336,7 +336,7 @@ As you can see, we can use the ES2015 template string functionality to generate 
 
 <h4 id="html-emails">HTML emails</h4>
 
-If you've ever needed to deal with sending pretty HTML emails from an app, you know that it can quickly become a nightmare. Compatibility of popular email clients with basic HTML features like CSS is notoriously spotty, so it is hard to author something that works at all. Start with a [responsive email template](https://github.com/leemunroe/responsive-html-email-template) or [framework](http://foundation.zurb.com/emails/email-templates.html), and then use a tool to convert your email content into something that is compatible with all email clients. [This blog post by Mailgun covers some of the main issues with HTML email.](http://blog.mailgun.com/transactional-html-email-templates/) In theory, a community package could extend Meteor's build system to do the email compilation for you, but at the time of writing we were not aware of any such packages.
+If you've ever needed to deal with sending pretty HTML emails from an app, you know that it can quickly become a nightmare. Compatibility of popular email clients with basic HTML features like CSS is notoriously spotty, so it is hard to author something that works at all. Start with a [responsive email template](https://github.com/leemunroe/responsive-html-email-template) or [framework](https://get.foundation/emails), and then use a tool to convert your email content into something that is compatible with all email clients. [This blog post by Mailgun covers some of the main issues with HTML email.](http://blog.mailgun.com/transactional-html-email-templates/) In theory, a community package could extend Meteor's build system to do the email compilation for you, but at the time of writing we were not aware of any such packages.
 
 <h2 id="oauth">OAuth login</h2>
 
@@ -649,6 +649,51 @@ Meteor.publish('Meteor.users.initials', function ({ userIds }) {
 ```
 
 This publication will let the client pass an array of user IDs it's interested in, and get the initials for all of those users.
+
+<h3 id="prevent-unnecessary-data-retrival">Preventing unnecessary data retrieval</h3>
+
+Take care storing lots of custom data on the user document, particularly data which grows indefinitely, because by default the entire user document is fetched from the database whenever a user tries to log in or out. Plus any calls to (e.g.) `Meteor.user().profile.name` on the server will fetch the entire user document from the database even though may you only need their name. If you have stored lots of custom data on the user documents this could significantly waste server resources (RAM and CPU).
+
+On the client, creating a reactive property based on (e.g.) `Meteor.user().profile.name` will cause any dependent DOM to update whenever **any** user data changes, not just their name, because the entire user document is being fetched from minimongo and becomes a reactive dependency for that property.
+
+Meteor 1.10 introduced a solution to these problems.  A new `options` parameter was added to some methods which retrieves a user document. This parameter can include a [mongo field specifier](https://docs.meteor.com/api/collections.html#fieldspecifiers) to include or omit specific fields from the query.  The methods which have this new parameter, and some examples of their usage are:
+
+```js
+// fetch only the user's name from the database:
+const name = Meteor.user({fields: {"profile.name": 1}}).profile.name;
+
+// check if an email exists without fetching their entire document from the database:
+const userExists = !!Accounts.findUserByEmail(email, {fields: {_id: 1}});
+
+// get the user id from a userName:
+const userId = Accounts.findUserByUsername(userName, {fields: {_id: 1}})?._id;
+```
+
+However, you may not have control over 3rd party package code or Meteor-core code which makes use of these functions. Nor does Meteor know which user fields are needed by callbacks registered with `Accounts.onLogin()`, `Accounts.onLogout()`, `Accounts.onLoginFailure()` and `Accounts.validateLoginAttempt()`. To solve this problem Meteor 1.10 also introduced a new [`Accounts.config({defaultFieldSelector: {...})`](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config) option to include or omit specific user fields by default.
+
+You could use this to include (white-list) the standard fields as used by [the Accounts system](http://docs.meteor.com/api/accounts.html#Meteor-users):
+
+```js
+Accounts.config({
+  defaultFieldSelector: {
+    username: 1,
+    emails: 1
+    createdAt: 1,
+    profile: 1,
+    services: 1
+  }
+});
+```
+However, this may introduce bugs into any 3rd party or your own callbacks which expect non-standard fields to be present.  Alternatively you could omit (black-list) any of your own fields which include large amounts of data, e.g.:
+```js
+Accounts.config({ defaultFieldSelector: { myBigArray: 0 }})
+```
+
+To ensure backwards compatibility, if you don't define `defaultFieldSelector` then the entire user document will be fetched as with earlier versions of Meteor.
+
+If you define a `defaultFieldSelector`, then you can override it by passing an `options` parameter, e.g. `Meteor.user({fields: {myBigArray: 1}})`.  If you want to fetch the entire user document you can use an empty field specifier: `Meteor.user({fields: {}})`.
+
+The `defaultFieldSelector` is not used within direct `Meteor.users` collection operations - e.g. `Meteor.users.findOne(Meteor.userId())` will still fetch the entire user document.
 
 <h2 id="roles-and-permissions">Roles and permissions</h2>
 
