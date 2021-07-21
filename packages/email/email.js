@@ -24,7 +24,7 @@ export const EmailInternals = {
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
 const makeTransport = function (mailUrlString) {
-  // TODO check for
+  const mailUrl = urlModule.parse(mailUrlString, true);
 
   const mailUrl = urlModule.parse(mailUrlString, true);
 

@@ -4,6 +4,10 @@
 
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
+  
+* `email@2.2`
+  - Modernized package code
+  - 
 
 #### Independent Releases
 
