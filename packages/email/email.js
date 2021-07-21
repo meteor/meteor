@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Log } from 'meteor/logging';
+import { Hook } from 'meteor/callback-hook';
 
 const Future = Npm.require('fibers/future');
 const urlModule = Npm.require('url');
@@ -24,8 +25,6 @@ export const EmailInternals = {
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
 const makeTransport = function (mailUrlString) {
-  const mailUrl = urlModule.parse(mailUrlString, true);
-
   const mailUrl = urlModule.parse(mailUrlString, true);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
@@ -103,7 +102,7 @@ const smtpSend = function (transport, mail) {
   transport._syncSendMail(mail);
 };
 
-const sendHooks = [];
+const sendHooks = new Hook();
 
 /**
  * @summary Hook that runs before email is sent.
@@ -114,8 +113,16 @@ const sendHooks = [];
  * false to skip sending.
  */
 Email.hookSend = function (f) {
-  sendHooks.push(f);
+  sendHooks.register(f);
 };
+
+/**
+ * @summary
+ * @locus Server
+ * @param f {function} function that will receive options from the send function and under `settings` will
+ * include the package settings from Meteor.settings.packages.email for your custom transport to access.
+ */
+Email.customTransport = undefined;
 
 /**
  * @summary Send an email. Throws an `Error` on failure to contact mail server
@@ -150,17 +157,24 @@ Email.hookSend = function (f) {
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.send = function (options) {
-  for (let i = 0; i < sendHooks.length; i++)
-    if (! sendHooks[i](options))
-      return;
-
   if (options.mailComposer) {
     options = options.mailComposer.mail;
   }
 
-  const transport = getTransport();
+  let send = true;
+  sendHooks.each(hook => {
+    send = hook(options);
+    return send;
+  });
+  if (!send) return;
+
+  const customTransport = Email.customTransport;
+  const transport = customTransport ? getTransport() : false;
   if (transport) {
     smtpSend(transport, options);
+  } else if (customTransport) {
+    const packageSettings = Meteor.settings.packages?.email || {};
+    customTransport({ settings: { ...packageSettings }, ...options, });
   } else {
     devModeSend(options);
   }

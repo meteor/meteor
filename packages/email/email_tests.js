@@ -238,3 +238,62 @@ Tinytest.add("email - text and html", function (test) {
                "====== END MAIL #0 ======\n");
   });
 });
+
+Tinytest.add("email - alternate API is used for sending gets data", function(test) {
+  smokeEmailTest(function(stream) {
+    Email.customTransport = (options) => {
+      test.equal(options.from, 'foo@example.com');
+    };
+    Email.send({
+      from: "foo@example.com",
+      to: "bar@example.com",
+      text: "*Cool*, man",
+      html: "<i>Cool</i>, man",
+    });
+    test.equal(stream.getContentsAsString("utf8"), false);
+  });
+
+  smokeEmailTest(function(stream) {
+    Meteor.settings.packages = { email: { service: '1on1', user: 'test', password: 'pwd' } };
+    Email.customTransport = (options) => {
+      test.equal(options.from, 'foo@example.com');
+      test.equal(options.settings?.service, '1on1');
+    };
+
+    Email.send({
+      from: "foo@example.com",
+      to: "bar@example.com",
+      text: "*Cool*, man",
+      html: "<i>Cool</i>, man",
+    });
+
+    test.equal(stream.getContentsAsString("utf8"), false);
+  });
+});
+
+Tinytest.add("email - hooks stop the sending", function(test) {
+  // Register hooks
+  Email.hookSend((options) => {
+    // Test that we get options through
+    test.equal(options.from, 'foo@example.com');
+    console.log('EXECUTE');
+    return true;
+  });
+  Email.hookSend(() => {
+    console.log('STOP');
+    return false;
+  });
+  Email.hookSend(() => {
+    console.log('FAIL');
+  });
+  smokeEmailTest(function(stream) {
+    Email.send({
+      from: "foo@example.com",
+      to: "bar@example.com",
+      text: "*Cool*, man",
+      html: "<i>Cool</i>, man",
+    });
+
+    test.equal(stream.getContentsAsString("utf8"), false);
+  });
+});

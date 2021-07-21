@@ -7,7 +7,7 @@
   
 * `email@2.2`
   - Modernized package code
-  - 
+  - Add alternative API function that you can hook into to utilize your own sending method. `Email.customTransport`
 
 #### Independent Releases
 
