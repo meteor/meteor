@@ -54,14 +54,41 @@ const makeTransport = function (mailUrlString) {
   return transport;
 };
 
+// List of all supported services: https://github.com/nodemailer/nodemailer/blob/master/lib/well-known/services.json
+const knownHosts = ["1und1", "AOL", "DebugMail", "DynectEmail", "Ethereal", "FastMail", "GandiMail",
+  "Gmail", "Godaddy", "GodaddyAsia", "GodaddyEurope", "hot.ee", "Hotmail", "iCloud", "mail.ee", "Mail.ru",
+  "Maildev", "Mailgun", "Mailjet", "Mailosaur", "Mailtrap", "Mandrill", "Naver", "One", "OpenMailBox", "Outlook365",
+  "OhMySMTP", "Postmark", "qiye.aliyun", "QQ", "QQex", "SendCloud", "SendGrid", "SendinBlue", "SendPulse", "SES",
+  "SES-US-EAST-1", "SES-US-WEST-2", "SES-EU-WEST-1", "Sparkpost", "Tipimail", "Yahoo", "Yandex", "Zoho", "126", "163"];
+
+// More info: https://nodemailer.com/smtp/well-known/
+const knownHostsTransport = function(settings) {
+  const transport = nodemailer.createTransport({
+    service: settings.service,
+    auth: {
+      user: settings.user,
+      pass: settings.password
+    }
+  });
+
+  transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
+  return transport;
+};
+
 const getTransport = function() {
+  const packageSettings = Meteor.settings.packages?.email;
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
   if (this.cacheKey === undefined || this.cacheKey !== url) {
-    this.cacheKey = url;
-    this.cache = url ? makeTransport(url) : null;
+    if (packageSettings?.service && knownHosts.includes(packageSettings)) {
+      this.cacheKey = packageSettings.service || 'settings';
+      this.cache = knownHostsTransport(packageSettings);
+    } else {
+      this.cacheKey = url;
+      this.cache = url ? makeTransport(url) : null;
+    }
   }
   return this.cache;
 };
