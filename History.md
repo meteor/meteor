@@ -16,6 +16,10 @@
 * `email@2.1.1`
   - Updated `nodemailer` to v6.6.3
   
+* `callback-hook@1.3.1`
+  - Modernized the code
+  - Fixed a variable assignment bug in `dontBindEnvironment` function
+  
 ## v2.3.2, 2021-07-13
 
 #### Meteor Version Release
