@@ -16,6 +16,9 @@
 * `email@2.1.1`
   - Updated `nodemailer` to v6.6.3
   
+* `mongo@1.12.1`
+  - Add `_createIndex` as a collection function. This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0.
+  
 ## v2.3.2, 2021-07-13
 
 #### Meteor Version Release

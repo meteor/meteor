@@ -829,7 +829,7 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-MongoConnection.prototype._ensureIndex = function (collectionName, index,
+MongoConnection.prototype._createIndex = function (collectionName, index,
                                                    options) {
   var self = this;
 
@@ -840,6 +840,9 @@ MongoConnection.prototype._ensureIndex = function (collectionName, index,
   var indexName = collection.ensureIndex(index, options, future.resolver());
   future.wait();
 };
+
+MongoCollection.prototype._ensureIndex = MongoConnection.prototype._createIndex;
+
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
 

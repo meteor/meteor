@@ -674,6 +674,13 @@ Object.assign(Mongo.Collection.prototype, {
     self._collection._ensureIndex(index, options);
   },
 
+  _createIndex(index, options) {
+    var self = this;
+    if (!self._collection._createIndex)
+      throw new Error("Can only call _createIndex on server collections");
+    self._collection._createIndex(index, options);
+  },
+
   _dropIndex(index) {
     var self = this;
     if (!self._collection._dropIndex)
