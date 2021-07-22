@@ -16,6 +16,10 @@
 * `email@2.1.1`
   - Updated `nodemailer` to v6.6.3
   
+* `callback-hook@1.3.1`
+  - Modernized the code
+  - Fixed a variable assignment bug in `dontBindEnvironment` function
+  
 * `mongo@1.12.1`
   - Add `_createIndex` as a collection function. This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0.
   
