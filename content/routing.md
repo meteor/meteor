@@ -488,7 +488,7 @@ It's common to want to know which pages of your app are most commonly visited, a
 
 <h3 id="server-side">Server Side Routing</h3>
 
-As we've discussed, Meteor is a framework for client rendered applications, but this doesn't always remove the requirement for server rendered routes. There are two main use cases for server-side routing.
+As we've discussed, Meteor is a framework for client rendered applications, but this doesn't always remove the requirement for server rendered routes. There are three main use cases for server-side routing.
 
 <h4 id="server-side-apis">Server Routing for API access</h4>
 
@@ -501,3 +501,7 @@ If you need more control, you can use the comprehensive [`nimble:restivus`](http
 The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you use Blaze. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
 
 Although Flow Router can be used to render React components more or less as we've described above for Blaze, at the time of this writing Flow Router's support for SSR is still experimental. However, it's probably the best approach right now if you want to use SSR for Meteor.
+
+<h4 id="server-side-resources">Server Routing for additional resources</h4>
+
+There might be additional resources that you want to make available on your server or receive web hooks. If you need anything more complicated with dynamic parts of the URL you might want to implement [Picker](https://atmospherejs.com/communitypackages/picker) which is a simple server-side router that handles dynamic routes.
