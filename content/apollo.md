@@ -7,7 +7,7 @@ discourseTopicId: TODO
 
 <h2 id="introduction">Introduction</h2>
 
-Apollo is Meteor's next-generation data stack, built with GraphQL. While it doesn't yet have all the features that Meteor's pub/sub system has, it provides a way to get data from any database – not just MongoDB.
+Apollo is a GraphQL client/server for transporting data. While it doesn't yet have all the features that Meteor's pub/sub system has, it provides a way to get data from any database – not just MongoDB.
 
 - [Apollo docs](https://www.apollographql.com/docs/)
 
@@ -24,7 +24,7 @@ meteor create apollo-app --apollo
 
 Instead of calling `Meteor.subscribe`, you will use [queries](https://www.apollographql.com/docs/react/data/queries/) to get data.
 
-The main different with subscriptions is that queries get called only once (by default) and don't get updated data like a subscription would. This is great for data that doesn't change often and where you don't need reactivity. 
+The main difference with subscriptions is that queries get called only once (by default) and don't get updated data like a subscription would. This is great for data that doesn't change often and where you don't need reactivity. 
 
 <h4 id="changing-data">Changing data</h4>
 
@@ -60,7 +60,7 @@ GraphQL is a query language for apps to get the data they want. Instead of the s
 
 <h4 id="latency">Latency</h4>
 
-Meteor publications are blocking, whereas multiple GraphQL queries are executed in parallel. Publications stream data to the client as it arrives, whereas all the resolvers in a GraphQL query have to return before the data is sent to the client. (Although GraphQL is discussing adding the ability to stream results to the client as they come in.)
+Meteor publications are blocking by default, whereas multiple GraphQL queries are executed in parallel. Publications stream data to the client as it arrives, whereas all the resolvers in a GraphQL query have to return before the data is sent to the client. (Although GraphQL is discussing adding the ability to stream results to the client as they come in.)
 
 <h3>Meteor specific</h3>
 
@@ -100,3 +100,12 @@ This will make user data available (if user is logged in) as the option in the q
   }
 }
 ```
+
+There are many other community packages that provide additional features or makes the initial setup easier, here is an incomplete list of some of them:
+
+* [quave:graphql](https://atmospherejs.com/quave/graphql) - Utility package to create GraphQL setup in a standard way.
+* [cultofcoders:apollo](https://atmospherejs.com/cultofcoders/apollo) - Meteor & Apollo integration.
+* [cultofcoders:graphql-loader](https://atmospherejs.com/cultofcoders/graphql-loader) - Easily load your GraphQL schema in your Meteor app!
+* [cultofcoders:apollo-accounts](https://atmospherejs.com/cultofcoders/apollo-accounts) - Meteor accounts in GraphQL
+* [swydo:blaze-apollo](https://atmospherejs.com/swydo/blaze-apollo) - Blaze integration for the Apollo Client
+* [swydo:ddp-apollo](https://atmospherejs.com/swydo/ddp-apollo) - DDP link and server for Apollo. 
