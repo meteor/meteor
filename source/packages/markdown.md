@@ -3,6 +3,8 @@ title: markdown
 description: Documentation of Meteor's `markdown` package.
 ---
 
+> Note: This package has been deprecated.
+
 This package lets you use Markdown in your templates.
 
 ### Installation
