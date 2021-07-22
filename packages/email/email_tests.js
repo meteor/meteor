@@ -271,6 +271,13 @@ Tinytest.add("email - alternate API is used for sending gets data", function(tes
   });
 });
 
+Tinytest.add("email - URL string for known hosts", function(test) {
+  test.equal(EmailTest.knowHostsTransport({ service: '1on1', user: 'test', password: 'pwd' }).transporter.auth.type, 'LOGIN');
+  test.equal(EmailTest.knowHostsTransport({ service: '1on1', user: 'test', password: 'pwd' }).transporter.auth.user, 'test');
+  test.equal(EmailTest.knowHostsTransport(null, 'AOL://test:pwd@aol.com').transporter.auth.user, 'test');
+  test.equal(EmailTest.knowHostsTransport(null, 'AOL://test:pwd@aol.com').transporter.auth.type, 'LOGIN');
+});
+
 Tinytest.add("email - hooks stop the sending", function(test) {
   // Register hooks
   Email.hookSend((options) => {

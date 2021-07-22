@@ -3,7 +3,7 @@ import { Log } from 'meteor/logging';
 import { Hook } from 'meteor/callback-hook';
 
 const Future = Npm.require('fibers/future');
-const urlModule = Npm.require('url');
+const url = Npm.require('url');
 const nodemailer = Npm.require('nodemailer');
 
 export const Email = {};
@@ -25,7 +25,7 @@ export const EmailInternals = {
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
 const makeTransport = function (mailUrlString) {
-  const mailUrl = urlModule.parse(mailUrlString, true);
+  const mailUrl = new URL(mailUrlString);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
     throw new Error("Email protocol in $MAIL_URL (" +
@@ -47,47 +47,58 @@ const makeTransport = function (mailUrlString) {
     mailUrl.query.pool = 'true';
   }
 
-  const transport = nodemailer.createTransport(
-    urlModule.format(mailUrl));
+  const transport = nodemailer.createTransport(url.format(mailUrl));
 
   transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
   return transport;
 };
 
 // List of all supported services: https://github.com/nodemailer/nodemailer/blob/master/lib/well-known/services.json
-const knownHosts = ["1und1", "AOL", "DebugMail", "DynectEmail", "Ethereal", "FastMail", "GandiMail",
+export const knownHosts = ["1und1", "AOL", "DebugMail", "DynectEmail", "Ethereal", "FastMail", "GandiMail",
   "Gmail", "Godaddy", "GodaddyAsia", "GodaddyEurope", "hot.ee", "Hotmail", "iCloud", "mail.ee", "Mail.ru",
   "Maildev", "Mailgun", "Mailjet", "Mailosaur", "Mailtrap", "Mandrill", "Naver", "One", "OpenMailBox", "Outlook365",
   "OhMySMTP", "Postmark", "qiye.aliyun", "QQ", "QQex", "SendCloud", "SendGrid", "SendinBlue", "SendPulse", "SES",
   "SES-US-EAST-1", "SES-US-WEST-2", "SES-EU-WEST-1", "Sparkpost", "Tipimail", "Yahoo", "Yandex", "Zoho", "126", "163"];
 
 // More info: https://nodemailer.com/smtp/well-known/
-const knownHostsTransport = function(settings) {
+const knownHostsTransport = function(settings = {}, url = undefined) {
+  let service, user, password;
+  if (url) {
+    const host = url?.split(':')[0];
+    const urlObject = new URL(url);
+    if (knownHosts.includes(host)) {
+      service = host;
+      user = urlObject.username;
+      password = urlObject.password;
+    }
+  }
+
   const transport = nodemailer.createTransport({
-    service: settings.service,
+    service: settings?.service || service,
     auth: {
-      user: settings.user,
-      pass: settings.password
+      user: settings?.user || user,
+      pass: settings?.password || password
     }
   });
 
   transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
   return transport;
 };
+EmailTest.knowHostsTransport = knownHostsTransport;
 
 const getTransport = function() {
-  const packageSettings = Meteor.settings.packages?.email;
+  const packageSettings = Meteor.settings.packages?.email || {};
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
   if (this.cacheKey === undefined || this.cacheKey !== url) {
-    if (packageSettings?.service && knownHosts.includes(packageSettings)) {
+    if ((packageSettings?.service && knownHosts.includes(packageSettings)) || knownHosts.includes(url?.split(':')[0])) {
       this.cacheKey = packageSettings.service || 'settings';
-      this.cache = knownHostsTransport(packageSettings);
+      this.cache = knownHostsTransport(packageSettings, url);
     } else {
       this.cacheKey = url;
-      this.cache = url ? makeTransport(url) : null;
+      this.cache = url ? makeTransport(url, packageSettings) : null;
     }
   }
   return this.cache;
