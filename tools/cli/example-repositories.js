@@ -16,5 +16,11 @@ export const EXAMPLE_REPOSITORIES = {
   },
   'angular-boilerplate': {
     repo: 'https://github.com/Urigo/angular-meteor-base.git'
-  }
+  },
+  simpletasks: { repo: 'https://github.com/fredmaiaarantes/simpletasks' },
+  chakraui: { repo: 'https://github.com/meteor/examples/blob/main/chakra-ui' },
+  tailwindcss: { repo: 'https://github.com/meteor/examples/blob/main/tailwindcss' },
+  wantch: { repo: 'https://github.com/filipenevola/wantch' },
+  doubleapp: { repo: 'https://github.com/denihs/double-app/' },
+
 };

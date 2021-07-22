@@ -297,9 +297,9 @@ export class CordovaBuilder {
       if (type === 'intent') {
         config.ele('allow-intent', { href: pattern });
       } else if (type === 'navigation') {
-        config.ele('allow-navigation', _.extend({ href: pattern }, options));
+        config.ele('allow-navigation', Object.assign({ href: pattern }, options));
       } else {
-        config.ele('access', _.extend({ origin: pattern }, options));
+        config.ele('access', Object.assign({ origin: pattern }, options));
       }
     });
 
@@ -576,7 +576,7 @@ function createAppConfiguration(builder) {
         }
       });
 
-      _.extend(builder.metadata, options);
+      Object.assign(builder.metadata, options);
     },
     /**
      * @summary Add a preference for your build as described in the
@@ -589,7 +589,7 @@ function createAppConfiguration(builder) {
      */
     setPreference: function (key, value, platform) {
       if (platform) {
-        if (!_.contains(['ios', 'android'], platform)) {
+        if (!['ios', 'android'].includes(platform)) {
           throw new Error(`Unknown platform in App.setPreference: ${platform}. \
 Valid platforms are: ios, android.`);
         }
@@ -658,14 +658,14 @@ Valid platforms are: ios, android.`);
      */
     icons: function (icons) {
       var validDevices =
-        _.keys(iconsIosSizes).concat(_.keys(iconsAndroidSizes));
+        Object.keys(iconsIosSizes).concat(Object.keys(iconsAndroidSizes));
       _.each(icons, function (value, key) {
         if (!_.include(validDevices, key)) {
           Console.labelWarn(`${key}: unknown key in App.icons \
 configuration. The key may be deprecated.`);
         }
       });
-      _.extend(builder.imagePaths.icon, icons);
+      Object.assign(builder.imagePaths.icon, icons);
     },
 
     /**
@@ -706,7 +706,7 @@ configuration. The key may be deprecated.`);
      */
     launchScreens: function (launchScreens) {
       var validDevices =
-        _.keys(launchIosSizes).concat(_.keys(launchAndroidSizes));
+        Object.keys(launchIosSizes).concat(Object.keys(launchAndroidSizes));
 
       _.each(launchScreens, function (value, key) {
         if (!_.include(validDevices, key)) {
@@ -714,7 +714,7 @@ configuration. The key may be deprecated.`);
 configuration. The key may be deprecated.`);
         }
       });
-      _.extend(builder.imagePaths.splash, launchScreens);
+      Object.assign(builder.imagePaths.splash, launchScreens);
     },
 
     /**
