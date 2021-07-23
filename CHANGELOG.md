@@ -3,6 +3,7 @@ title: Changelog
 order: 1001
 description: A log of significant changes to the Meteor Guide.
 ---
+- 2021/07/21: Added "Apollo" article
 - 2021/07/20: Tweaked VueJS navigation structure and updated some information. Mention Picker in server-side routing.
 - 2020/09/13: Removed the section about crosswalk from the Cordova guide
 - 2020/08/08: Added "Hot Code Push" guide
