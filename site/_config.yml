@@ -37,6 +37,7 @@ sidebar_categories:
     - methods
     - accounts
     - testing
+    - apollo
   View:
     - routing
     - ui-ux
