@@ -8,6 +8,7 @@
  */
 
 const path = require("path");
+const util = require("util");
 
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
@@ -133,7 +134,7 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-MongoConnection = function (url, options) {
+MongoConnection = async function (url, options) {
   var self = this;
   options = options || {};
   self._observeMultiplexers = {};
@@ -203,59 +204,48 @@ MongoConnection = function (url, options) {
   self._oplogHandle = null;
   self._docFetcher = null;
 
-
-  var connectFuture = new Future;
-  MongoDB.connect(
+  const connect = util.promisify(MongoDB.connect);
+  const client = await connect(
     url,
-    mongoOptions,
-    Meteor.bindEnvironment(
-      function (err, client) {
-        if (err) {
-          throw err;
+    mongoOptions);
+
+  var db = client.db();
+
+  // First, figure out what the current primary is, if any.
+  if (db.serverConfig.isMasterDoc) {
+    self._primary = db.serverConfig.isMasterDoc.primary;
+  }
+
+  db.serverConfig.on(
+    'joined', Meteor.bindEnvironment(function (kind, doc) {
+      if (kind === 'primary') {
+        if (doc.primary !== self._primary) {
+          self._primary = doc.primary;
+          self._onFailoverHook.each(function (callback) {
+            callback();
+            return true;
+          });
         }
-
-        var db = client.db();
-
-        // First, figure out what the current primary is, if any.
-        if (db.serverConfig.isMasterDoc) {
-          self._primary = db.serverConfig.isMasterDoc.primary;
-        }
-
-        db.serverConfig.on(
-          'joined', Meteor.bindEnvironment(function (kind, doc) {
-            if (kind === 'primary') {
-              if (doc.primary !== self._primary) {
-                self._primary = doc.primary;
-                self._onFailoverHook.each(function (callback) {
-                  callback();
-                  return true;
-                });
-              }
-            } else if (doc.me === self._primary) {
-              // The thing we thought was primary is now something other than
-              // primary.  Forget that we thought it was primary.  (This means
-              // that if a server stops being primary and then starts being
-              // primary again without another server becoming primary in the
-              // middle, we'll correctly count it as a failover.)
-              self._primary = null;
-            }
-          }));
-
-        // Allow the constructor to return.
-        connectFuture['return']({ client, db });
-      },
-      connectFuture.resolver()  // onException
-    )
-  );
+      } else if (doc.me === self._primary) {
+        // The thing we thought was primary is now something other than
+        // primary.  Forget that we thought it was primary.  (This means
+        // that if a server stops being primary and then starts being
+        // primary again without another server becoming primary in the
+        // middle, we'll correctly count it as a failover.)
+        self._primary = null;
+      }
+    }));
 
   // Wait for the connection to be successful (throws on failure) and assign the
   // results (`client` and `db`) to `self`.
-  Object.assign(self, connectFuture.wait());
+  Object.assign(self, { client, db });
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
-    self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
+    self._oplogHandle = await new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
+
+  return self;
 };
 
 MongoConnection.prototype.close = function() {
@@ -787,6 +777,7 @@ _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], functio
     return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
   };
 });
+
 
 // XXX MongoConnection.upsert() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
