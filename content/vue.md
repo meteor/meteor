@@ -16,10 +16,7 @@ Vue already has an excellent guide with many advanced topics already covered. So
 This documentation is purely focused on integrating it with Meteor.
 
 > Meteor has a Vue skeleton which will prepare for you a basic Vue Meteor app.
-> You can create one like this:
-> ```shell
-> meteor create vue-meteor-app --vue
-> ```
+> You can create one by running `meteor create vue-meteor-app --vue`
 > There is also a [Vue tutorial](https://vue-tutorial.meteor.com/) which covers the basics of this section. 
 
 <h2 id="introduction">Introduction</h2>
