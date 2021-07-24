@@ -217,9 +217,18 @@ _.extend(AppProcess.prototype, {
     var shellDir = self.projectContext.getMeteorShellDirectory();
     files.mkdir_p(shellDir);
 
+    var reifyCacheVersion = watch.sha1(
+      self.projectContext.releaseFile.fullReleaseName,
+    );
+    var reifyCacheDir = self.projectContext.getProjectLocalDirectory(
+      `server-cache/reify/${reifyCacheVersion}`
+    );
+    files.mkdir_p(reifyCacheDir);
+
     // We need to convert to OS path here because the running app doesn't
     // have access to path translation functions
     env.METEOR_SHELL_DIR = files.convertToOSPath(shellDir);
+    env.METEOR_REIFY_CACHE_DIR = files.convertToOSPath(reifyCacheDir);
 
     env.METEOR_PARENT_PID =
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
@@ -822,7 +831,8 @@ _.extend(AppRunner.prototype, {
                       : 'changed'; // both a client and server asset changed
           self._resolvePromise('run', { outcome: outcome });
         },
-        async: true
+        async: true,
+        includePotentiallyUnusedFiles: false,
       });
     };
     if (self.watchForChanges && canRefreshClient) {

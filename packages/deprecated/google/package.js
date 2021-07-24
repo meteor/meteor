@@ -1,6 +1,8 @@
 Package.describe({
   summary: "DEPRECATED - Use google-oauth instead - Google OAuth flow",
-  version: "1.2.0"
+  version: "1.2.0",
+  deprecated: 'Use google-oauth instead',
+  documentation: null
 });
 
 Package.onUse(function(api) {

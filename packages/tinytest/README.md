@@ -317,6 +317,24 @@ Call this to fail the test with an exception that occurs inside asynchronous cal
 - the test doesn't call its callback (onComplete function).
 - the test function doesn't directly raise an exception.
 
+### fail
+
+`test.fail(doc);`
+
+Can be used to output a detailed message about a failure with path and value.
+
+Example call:
+```js
+test.fail({
+          type: 'match-error-path',
+          message: "The path of Match.Error doesn't match.",
+          pattern: JSON.stringify(pattern),
+          value: JSON.stringify(value),
+          path: err.path,
+          expectedPath,
+        });
+```        
+
 #### expect_fail
 
 `test.expect_fail();`

@@ -111,8 +111,8 @@ jobs:
           command: (git submodule sync && git submodule update --init --recursive) || (rm -fr .git/config .git/modules && git submodule deinit -f . && git submodule update --init --recursive)
       - restore_cache:
           keys:
-            - v1-dev-bundle-cache-{{ checksum "meteor" }}
-            - v1-dev-bundle-cache-
+            - v3-dev-bundle-cache-{{ checksum "meteor" }}
+            - v3-dev-bundle-cache-
       - run:
           name: Combine NPM Shrinkwrap Files
           command: |
@@ -120,21 +120,21 @@ jobs:
             for d in packages/*/.npm/plugin/*; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
       - restore_cache:
           keys:
-            - package-npm-deps-cache-group1-v1-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group1-v1-
+            - package-npm-deps-cache-group1-v3-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group1-v3-
       - restore_cache:
           keys:
-            - package-npm-deps-cache-group2-v3-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group2-v3-
+            - package-npm-deps-cache-group2-v5-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group2-v5-
       - restore_cache:
           keys:
-            - v5-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
-            - v5-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
-            - v5-other-deps-cache-{{ .Branch }}-
+            - v7-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+            - v7-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
+            - v7-other-deps-cache-{{ .Branch }}-
       - restore_cache:
           keys:
-            - v1-test-groups-{{ .Branch }}
-            - v1-test-groups-
+            - v4-test-groups-{{ .Branch }}
+            - v4-test-groups-
       - run:
           name: Create Test Results Directory
           command: |
@@ -149,8 +149,9 @@ jobs:
           command: |
             eval $PRE_TEST_COMMANDS;
             pushd tools
+            npm install @types/node@14.17.4 --save-dev
             # Ensure that meteor/tools has no TypeScript errors.
-            ../meteor npx tsc --noEmit
+            ../meteor npx tsc --noEmit --skipLibCheck
             popd
             ./meteor --get-ready
           # shouldn't take longer than 60 minutes
@@ -706,14 +707,14 @@ jobs:
             - ./tmp/test-groups
           when: on_success
       - save_cache:
-          key: v1-dev-bundle-cache-{{ checksum "meteor" }}
+          key: v3-dev-bundle-cache-{{ checksum "meteor" }}
           paths:
             - "dev_bundle"
       # The package npm dependencies are split into two caches to avoid an AWS
       # `MetadataTooLarge` error that consistently appears if we put all of
       # these folders in the same cache
       - save_cache:
-          key: package-npm-deps-cache-group1-v1-{{ checksum "shrinkwraps.txt" }}
+          key: package-npm-deps-cache-group1-v3-{{ checksum "shrinkwraps.txt" }}
           paths:
             - packages/meteor/.npm/package/node_modules
             - packages/modules-runtime/.npm/package/node_modules
@@ -729,7 +730,7 @@ jobs:
             - packages/package-version-parser/.npm/package/node_modules
             - packages/boilerplate-generator/.npm/package/node_modules
       - save_cache:
-          key: package-npm-deps-cache-group2-v3-{{ checksum "shrinkwraps.txt" }}
+          key: package-npm-deps-cache-group2-v5-{{ checksum "shrinkwraps.txt" }}
           paths:
             - packages/xmlbuilder/.npm/package/node_modules
             - packages/logging/.npm/package/node_modules
@@ -756,7 +757,7 @@ jobs:
             - packages/fetch/.npm/package/node_modules
             - packages/non-core/mongo-decimal/.npm/package/node_modules
       - save_cache:
-          key: v5-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+          key: v7-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
           paths:
             - ".babel-cache"
             - ".meteor"

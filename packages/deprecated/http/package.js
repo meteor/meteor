@@ -1,20 +1,14 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.4.4',
-  deprecated: 'Please use fetch'
-});
-
-Npm.depends({
-  request: "2.88.0"
+  version: '2.0.0',
+  deprecated: 'Please use the fetch package'
 });
 
 Package.onUse(function (api) {
-  api.versionsFrom('1.12.1');
   api.use([
     'url',
-    // This package intentionally does not depend on ecmascript, so that
-    // ecmascript and its dependencies can depend on http without creating
-    // package dependency cycles.
+    'ecmascript',
+    'fetch',
     'modules'
   ]);
 

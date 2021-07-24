@@ -1,3 +1,5 @@
+import { Showdown } from './showdown';
+
 if (Package.templating) {
   var Template = Package.templating.Template;
   var Blaze = Package.blaze.Blaze; // implied by `templating`

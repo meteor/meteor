@@ -4,7 +4,6 @@ var files = require('../fs/files');
 var deploy = require('../meteor-services/deploy.js');
 var buildmessage = require('../utils/buildmessage.js');
 var auth = require('../meteor-services/auth.js');
-var authClient = require('../meteor-services/auth-client.js');
 var config = require('../meteor-services/config.js');
 var runLog = require('../runners/run-log.js');
 var utils = require('../utils/utils.js');
@@ -70,8 +69,7 @@ var showInvalidArchMsg = function (arch) {
 export function parseServerOptionsForRunCommand(options, runTargets) {
   const parsedServerUrl = parsePortOption(options.port);
 
-  // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
-  const mobileServerOption = options['mobile-server'] || options['mobile-port'];
+  const mobileServerOption = options['mobile-server'];
   let parsedMobileServerUrl;
   if (mobileServerOption) {
     parsedMobileServerUrl = parseMobileServerOption(mobileServerOption);
@@ -308,8 +306,6 @@ var runCommandOptions = {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
     'app-port': { type: String },
     'debug-port': { type: String },
     ...inspectOptions,
@@ -921,20 +917,20 @@ var buildCommands = {
   requiresApp: true,
   options: {
     debug: { type: Boolean },
+    packageType: { type: String },
     directory: { type: Boolean },
     architecture: { type: String },
     "server-only": { type: Boolean },
     'mobile-settings': { type: String },
     server: { type: String },
     "cordova-server-port": { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    "mobile-port": { type: String },
     // Indicates whether these build is running headless, e.g. in a
     // continuous integration building environment, where visual niceties
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    platforms: { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -1022,12 +1018,28 @@ var buildCommand = function (options) {
   }
 
   const appName = files.pathBasename(options.appDir);
+  let parsedCordovaServerPort;
+  let selectedPlatforms = null;
+  if (options.platforms) {
+    const platformsArray = options.platforms.split(",");
+
+    platformsArray.forEach(plat => {
+      if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
+        throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
+      }
+    })
+
+    selectedPlatforms = platformsArray;
+  }
 
   let cordovaPlatforms;
   let parsedMobileServerUrl;
-  let parsedCordovaServerPort;
   if (!serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+
+    if (selectedPlatforms) {
+      cordovaPlatforms = _.intersection(selectedPlatforms, cordovaPlatforms)
+    }
 
     if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
@@ -1036,8 +1048,7 @@ on an OS X system.");
     }
 
     if (!_.isEmpty(cordovaPlatforms)) {
-      // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
-      const mobileServerOption = options.server || options["mobile-port"];
+      const mobileServerOption = options.server;
       if (!mobileServerOption) {
         // For Cordova builds, require '--server'.
         // XXX better error message?
@@ -1052,6 +1063,25 @@ on an OS X system.");
     }
   } else {
     cordovaPlatforms = [];
+  }
+
+  // If we specified some platforms, we need to build what was specified.
+  // For example, if we want to build only android, there is no need to build
+  // web.browser.
+  let webArchs;
+  if (selectedPlatforms) {
+    const filteredArchs = projectContext.platformList
+      .getWebArchs()
+      .filter(arch => selectedPlatforms.includes(arch));
+
+    if (
+      !_.isEmpty(cordovaPlatforms) &&
+      !filteredArchs.includes('web.cordova')
+    ) {
+      filteredArchs.push('web.cordova');
+    }
+
+    webArchs = filteredArchs.length ? filteredArchs : undefined;
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
@@ -1094,6 +1124,7 @@ ${Console.command("meteor build ../output")}`,
       //     packages with binary npm dependencies
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
+      webArchs,
     },
   });
   if (bundleResult.errors) {
@@ -1165,7 +1196,7 @@ ${displayNameForPlatform(platform)}` }, () => {
             if (platform === 'ios') {
               cordovaProject.prepareForPlatform(platform, buildOptions);
             } else if (platform === 'android') {
-              cordovaProject.buildForPlatform(platform, buildOptions);
+              cordovaProject.buildForPlatform(platform, {...buildOptions, argv: ["--packageType", options.packageType || "bundle"]});
             }
 
             // Once prepared, copy the bundle to the final location.
@@ -1182,12 +1213,16 @@ Instructions for publishing your iOS app to App Store can be found at:
 https://guide.meteor.com/cordova.html#submitting-ios
 `, "utf8");
             } else if (platform === 'android') {
-              const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
-                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
+              const packageType = options.packageType || "bundle"
+              const packageExtension = packageType === 'bundle' ? 'aab' : 'apk';
+              const packageName = packageType === 'bundle' ? `app-release` : `app-release-unsigned`;
+              const apkPath = files.pathJoin(buildPath, `app/build/outputs/${packageType}/${options.debug ? 'debug' : 'release'}`,
+                options.debug ? `app-debug.${packageExtension}` : `${packageName}.${packageExtension}`);
 
+              console.log(apkPath)
               if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
-                options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+                options.debug ? `app-debug.${packageExtension}` : `${packageName}.${packageExtension}`));
               }
 
               files.writeFile(
@@ -1417,7 +1452,7 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'deploy',
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: 1,
   options: {
     'delete': { type: Boolean, short: 'D' },
@@ -1434,7 +1469,12 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean },
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
+    // Useful to cache the build between deploys, in some cases people deploy
+    // the same build to different hostnames
     'cache-build': { type: Boolean },
+    // Useful when you want to build first to have a cache-build and then deploy
+    // many apps
+    'build-only': { type: Boolean },
     free: { type: Boolean },
     plan: { type: String },
     mongo: { type: Boolean }
@@ -1452,7 +1492,7 @@ main.registerCommand({
 });
 
 function deployCommand(options, { rawOptions }) {
-  var site = options.args[0];
+  const site = options.args[0];
 
   if (options.delete) {
     return deploy.deleteApp(site);
@@ -1467,7 +1507,7 @@ function deployCommand(options, { rawOptions }) {
     return 1;
   }
 
-  var loggedIn = auth.isLoggedIn();
+  const loggedIn = auth.isLoggedIn();
   if (! loggedIn) {
     Console.error(
       "You must be logged in to deploy, just enter your email address.");
@@ -1478,7 +1518,7 @@ function deployCommand(options, { rawOptions }) {
   }
 
   // Override architecture iff applicable.
-  var buildArch = DEPLOY_ARCH;
+  let buildArch = DEPLOY_ARCH;
   if (options['override-architecture-with-local']) {
     Console.warn();
     Console.labelWarn(
@@ -1488,7 +1528,7 @@ function deployCommand(options, { rawOptions }) {
     buildArch = archinfo.host();
   }
 
-  var projectContext = new projectContextModule.ProjectContext({
+  const projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     serverArchitectures: _.uniq([buildArch, archinfo.host()]),
     allowIncompatibleUpdate: options['allow-incompatible-update']
@@ -1500,7 +1540,7 @@ function deployCommand(options, { rawOptions }) {
   });
   projectContext.packageMapDelta.displayOnConsole();
 
-  var buildOptions = {
+  const buildOptions = {
     minifyMode: options.debug ? 'development' : 'production',
     buildMode: options.debug ? 'development' : 'production',
     serverArch: buildArch
@@ -1516,11 +1556,12 @@ function deployCommand(options, { rawOptions }) {
   }
 
   const isCacheBuildEnabled = !!options['cache-build'];
+  const isBuildOnly = !!options['build-only'];
   const waitForDeploy = !options['no-wait'];
 
-  var deployResult = deploy.bundleAndDeploy({
-    projectContext: projectContext,
-    site: site,
+  const deployResult = deploy.bundleAndDeploy({
+    projectContext,
+    site,
     settingsFile: options.settings,
     free: options.free,
     mongo: options.mongo,
@@ -1530,6 +1571,7 @@ function deployCommand(options, { rawOptions }) {
     deployPollingTimeoutMs,
     waitForDeploy,
     isCacheBuildEnabled,
+    isBuildOnly,
   });
 
   if (deployResult === 0) {
@@ -1605,8 +1647,6 @@ testCommandOptions = {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     'cordova-server-port': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
     'debug-port': { type: String },
     ...inspectOptions,
     'no-release-check': { type: Boolean },

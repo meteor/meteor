@@ -24,7 +24,7 @@ can run Meteor directly from a Git checkout using these steps:
     >
     >     $ git submodule update --init --recursive
 
-0. **Run a Meteor command to install dependencies**
+2. **Run a Meteor command to install dependencies**
 
     > If you did not compile dependencies above, this will also download the binaries.
 
@@ -33,7 +33,7 @@ can run Meteor directly from a Git checkout using these steps:
     $ ./meteor --help
     ```
 
-0. **Ready to Go!**
+3. **Ready to Go!**
 
     Your local Meteor checkout is now ready to use!  You can use this `./meteor`
     anywhere you would normally call the system `meteor`.  For example,:
