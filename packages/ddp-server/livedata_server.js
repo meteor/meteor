@@ -10,24 +10,25 @@ const publicationStrategies = {
   // SERVER_MERGE is the default strategy.
   // When using this strategy, the server maintains a copy of all data a connection is subscribed to.
   // This allows us to only send deltas over multiple publications.
-  SERVER_MERGE: 'server_merge',
-
-  // The NO_MERGE_NO_HISTORY strategy results in us sending all publication data 
+  SERVER_MERGE: {
+    useCollectionView: true,
+    doAccountingForCollection: true,
+  },
+  // The NO_MERGE_NO_HISTORY strategy results in the server sending all publication data
   // directly to the client. It does not remember what it has previously sent
   // so it will not trigger removed messages when a subscription is stopped..
   // This should only be chosen for special use cases like send-and-forget queues.
-  NO_MERGE_NO_HISTORY: 'no_merge_no_history',
-
-  // NO_MERGE is similar to NO_MERGE_NO_HISTORY but it will remember the IDs it has
+  NO_MERGE_NO_HISTORY: {
+    useCollectionView: false,
+    doAccountingForCollection: false,
+  },
+  // NO_MERGE is similar to NO_MERGE_NO_HISTORY but the server will remember the IDs it has
   // sent to the client so it can remove them when a subscription is stopped.
   // This strategy can be used when a collection is only used in a single publication.
-  NO_MERGE: 'no_merge',
-
-  // XXX: We could implement a client side merge strategy by moving the session collection view
-  // from the server to the client and sending subscription IDs alongside the added/changed/removed messages.
-  // This could be used when we want to reduce memory use on the server but still have the same
-  // semantics over multiple publications of one collection
-  // CLIENT_MERGE: 'client_merge',
+  NO_MERGE: {
+    useCollectionView: false,
+    doAccountingForCollection: true,
+  }
 };
 
 DDPServer.publicationStrategies = publicationStrategies;
@@ -367,12 +368,8 @@ Object.assign(Session.prototype, {
     }
   },
 
-  _useCollectionView(collectionName) {
-    return this.server.getPublicationStrategy(collectionName) === publicationStrategies.SERVER_MERGE;
-  },
-
   _canSend(collectionName) {
-    return this._isSending || !this._useCollectionView(collectionName);
+    return this._isSending || !this.server.getPublicationStrategy(collectionName).useCollectionView;
   },
 
 
@@ -421,7 +418,7 @@ Object.assign(Session.prototype, {
   },
 
   added(subscriptionHandle, collectionName, id, fields) {
-    if (this._useCollectionView(collectionName)) {
+    if (this.server.getPublicationStrategy(collectionName).useCollectionView) {
       const view = this.getCollectionView(collectionName);
       view.added(subscriptionHandle, id, fields);
     } else {
@@ -430,7 +427,7 @@ Object.assign(Session.prototype, {
   },
 
   removed(subscriptionHandle, collectionName, id) {
-    if (this._useCollectionView(collectionName)) {
+    if (this.server.getPublicationStrategy(collectionName).useCollectionView) {
       const view = this.getCollectionView(collectionName);
       view.removed(subscriptionHandle, id);
       if (view.isEmpty()) {
@@ -442,7 +439,7 @@ Object.assign(Session.prototype, {
   },
 
   changed(subscriptionHandle, collectionName, id, fields) {
-    if (this._useCollectionView(collectionName)) {
+    if (this.server.getPublicationStrategy(collectionName).useCollectionView) {
       const view = this.getCollectionView(collectionName);
       view.changed(subscriptionHandle, id, fields);
     } else {
@@ -1316,10 +1313,6 @@ Object.assign(Subscription.prototype, {
     return self._deactivated || self._session.inQueue === null;
   },
 
-  _doAccountingForCollection(collectionName) {
-    return this._session.server.getPublicationStrategy(collectionName) !== publicationStrategies.NO_MERGE_NO_HISTORY;
-  },
-
   /**
    * @summary Call inside the publish function.  Informs the subscriber that a document has been added to the record set.
    * @locus Server
@@ -1334,7 +1327,7 @@ Object.assign(Subscription.prototype, {
       return;
     id = this._idFilter.idStringify(id);
 
-    if (this._doAccountingForCollection(collectionName)) {
+    if (this._session.server.getPublicationStrategy(collectionName).doAccountingForCollection) {
       let ids = this._documents.get(collectionName);
       if (ids == null) {
         ids = new Set();
@@ -1375,7 +1368,7 @@ Object.assign(Subscription.prototype, {
       return;
     id = this._idFilter.idStringify(id);
 
-    if (this._doAccountingForCollection(collectionName)) {
+    if (this._session.server.getPublicationStrategy(collectionName).doAccountingForCollection) {
       // We don't bother to delete sets of things in a collection if the
       // collection is empty.  It could break _removeAllDocuments.
       this._documents.get(collectionName).delete(id);
