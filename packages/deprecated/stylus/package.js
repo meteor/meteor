@@ -1,6 +1,8 @@
 Package.describe({
   summary: 'Expressive, dynamic, robust CSS',
-  version: "2.513.15"
+  version: "2.513.15",
+  deprecated: true,
+  documentation: 'README.md'
 });
 
 Package.registerBuildPlugin({

@@ -570,13 +570,23 @@ var launchMongo = function (options) {
     var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
-      if (/\[initandlisten\] Did not find local replica set configuration document at startup/.test(data) ||
-          /\[.*\] Locally stored replica set configuration does not have a valid entry for the current node/.test(data)) {
+      if (
+        /replica set config in use/.test(data) ||
+        /Did not find local replica set configuration document at startup/.test(
+          data
+        ) ||
+        /\[.*\] Locally stored replica set configuration does not have a valid entry for the current node/.test(
+          data
+        )
+      ) {
         replSetReadyToBeInitiated = true;
         maybeReadyToTalk();
       }
 
-      if (/ \[.*\] waiting for connections on port/.test(data)) {
+      if (
+        /Waiting for connections/.test(data) ||
+        / \[.*\] waiting for connections on port/.test(data)
+      ) {
         listening = true;
         maybeReadyToTalk();
       }
@@ -753,7 +763,7 @@ var launchMongo = function (options) {
         initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.
-          files.writeFile(portFile, options.port);
+          files.writeFile(portFile, ''+options.port);
         }
       }
     }
@@ -854,7 +864,6 @@ _.extend(MRp, {
       // shouldn't annoy the user by telling it that we couldn't start up.
       self.suppressExitMessage = true;
     }
-
     self.handle = launchMongo({
       projectLocalDir: self.projectLocalDir,
       port: self.port,
@@ -938,6 +947,10 @@ _.extend(MRp, {
         "Looks like you are out of free disk space under .meteor/local.";
     } else if (explanation) {
       message += "\n" + explanation.longText;
+    } else if (process.platform === 'win32') {
+      message += "\n\n" +
+        "Check how to troubleshoot here " +
+        "https://docs.meteor.com/windows.html#cant-start-mongo-server";
     }
 
     if (explanation && explanation.symbol === 'EXIT_NET_ERROR') {

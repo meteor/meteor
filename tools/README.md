@@ -126,7 +126,7 @@ variable `SELF_TEST_TOOL_NODE_FLAGS` could be used the same way
 `TOOL_NODE_FLAGS` is used. If you are setting the env variable
 `SELF_TEST_TOOL_NODE_FLAGS` with `TOOL_NODE_FLAGS`, consider specifying a
 custom port, as they could collide trying to listen to the same port.
-To set a custom port, you could set the variable in the followind manner
+To set a custom port, you could set the variable in the following manner
 `SELF_TEST_TOOL_NODE_FLAGS="--debug-brk=5859"` and the debugger will
 listen to the port 5859 and not the default 5858.
 

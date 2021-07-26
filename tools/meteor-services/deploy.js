@@ -9,6 +9,9 @@ import {
   createTarGzStream,
   getSettings,
   mkdtemp,
+  changeTempDirStatus,
+  exists,
+  findGitCommitHash,
 } from '../fs/files';
 import { request } from '../utils/http-helpers.js';
 import buildmessage from '../utils/buildmessage.js';
@@ -398,9 +401,7 @@ class PollingState {
 async function pollForDeploy(pollingState, versionId, site) {
   const {
     deadline,
-    initialWaitTimeMs,
     pollIntervalMs,
-    start,
     currentMessage,
   } = pollingState;
 
@@ -469,6 +470,8 @@ async function pollForDeploy(pollingState, versionId, site) {
 // - buildOptions: the 'buildOptions' argument to the bundler
 // - rawOptions: any unknown options that were passed to the command line tool
 // - waitForDeploy: whether to poll Galaxy after upload for deploy status
+// - isCacheBuildEnabled: Reuses the build already created if the git commit
+//   hash is the same
 // - deployPollingTimeoutMs: user overridden timeout for polling Galaxy
 //   for deploy status
 export async function bundleAndDeploy(options) {
@@ -476,51 +479,104 @@ export async function bundleAndDeploy(options) {
     options.recordPackageUsage = true;
   }
 
-  var site = canonicalizeSite(options.site);
-  if (! site) {
-    return 1;
+  // we don't need site for build-only
+  let site = null;
+  let preflightPassword = null;
+
+  if (options.isBuildOnly) {
+    Console.info('Skipping pre authentication as the option --build-only was provded.');
+  } else {
+    site = options.site && canonicalizeSite(options.site)
+    if (! site) {
+      Console.error("Error deploying application: site is required.");
+      Console.error("Your deploy command should be like: meteor deploy <site>");
+      Console.error(
+        "For more help, see " + Console.command("'meteor deploy --help'") + ".");
+      return 1;
+    }
+
+    // We should give a username/password prompt if the user was logged in
+    // but the credentials are expired, unless the user is logged in but
+    // doesn't have a username (in which case they should hit the email
+    // prompt -- a user without a username shouldn't be given a username
+    // prompt). There's an edge case where things happen in the following
+    // order: user creates account, user sets username, credential expires
+    // or is revoked, user comes back to deploy again. In that case,
+    // they'll get an email prompt instead of a username prompt because
+    // the command-line tool didn't have time to learn about their
+    // username before the credential was expired.
+    pollForRegistrationCompletion({
+      noLogout: true
+    });
+    const promptIfAuthFails = (loggedInUsername() !== null);
+
+    // Check auth up front, rather than after the (potentially lengthy)
+    // bundling process.
+    const preflight = authedRpc({
+      site: site,
+      preflight: true,
+      promptIfAuthFails: promptIfAuthFails,
+      qs: options.rawOptions,
+      printDeployURL: true
+    });
+
+    if (preflight.errorMessage) {
+      Console.error("Error deploying application: " + preflight.errorMessage);
+      return 1;
+    }
+
+    if (preflight.protection === "account" &&
+      !preflight.authorized) {
+      printUnauthorizedMessage();
+      return 1;
+    }
+
+    preflightPassword = preflight.preflightPassword;
   }
 
-  // We should give a username/password prompt if the user was logged in
-  // but the credentials are expired, unless the user is logged in but
-  // doesn't have a username (in which case they should hit the email
-  // prompt -- a user without a username shouldn't be given a username
-  // prompt). There's an edge case where things happen in the following
-  // order: user creates account, user sets username, credential expires
-  // or is revoked, user comes back to deploy again. In that case,
-  // they'll get an email prompt instead of a username prompt because
-  // the command-line tool didn't have time to learn about their
-  // username before the credential was expired.
-  pollForRegistrationCompletion({
-    noLogout: true
-  });
-  var promptIfAuthFails = (loggedInUsername() !== null);
+  const projectDir = options.projectContext.getProjectLocalDirectory('');
+  const gitCommitHash = process.env.METEOR_GIT_COMMIT_HASH || findGitCommitHash(projectDir);
 
-  // Check auth up front, rather than after the (potentially lengthy)
-  // bundling process.
-  var preflight = authedRpc({
-    site: site,
-    preflight: true,
-    promptIfAuthFails: promptIfAuthFails,
-    qs: options.rawOptions,
-    printDeployURL: true
-  });
-
-  if (preflight.errorMessage) {
-    Console.error("Error deploying application: " + preflight.errorMessage);
-    return 1;
+  const buildCache = options.projectContext.getBuildCache();
+  let isCacheBuildValid = options.isCacheBuildEnabled;
+  if (options.isCacheBuildEnabled) {
+    if (!buildCache ||
+      !exists(buildCache.buildDir) ||
+      !exists(buildCache.bundlePath) ||
+      !buildCache.gitCommitHash ||
+      !gitCommitHash ||
+      buildCache.gitCommitHash !== gitCommitHash) {
+      Console.warn(`We don't have a valid build cache so a new build will be performed.`);
+      isCacheBuildValid = false;
+    }
   }
 
-  if (preflight.protection === "account" &&
-             ! preflight.authorized) {
-    printUnauthorizedMessage();
-    return 1;
+  function getBuildDirAndBundlePath() {
+    if (isCacheBuildValid) {
+      return buildCache;
+    }
+
+    const buildDir = mkdtemp('build_tar');
+    if (options.isCacheBuildEnabled) {
+      changeTempDirStatus(buildDir, false);
+      Console.info(`The --cache-build was used so the build folder (${buildDir}) will not be deleted on exit...`);
+    }
+    const bundlePath = pathJoin(buildDir, 'bundle');
+    return { buildDir, bundlePath };
   }
 
-  var buildDir = mkdtemp('build_tar');
-  var bundlePath = pathJoin(buildDir, 'bundle');
+  const {buildDir, bundlePath} = getBuildDirAndBundlePath();
 
-  Console.info('Preparing to deploy your app...');
+  if (options.isCacheBuildEnabled) {
+    Console.info('Saving build in cache (--cache-build)...');
+    options.projectContext.saveBuildCache({
+      buildDir,
+      bundlePath,
+      gitCommitHash
+    });
+  }
+
+  Console.info('Preparing to build your app...');
 
   var settings = null;
   var messages = buildmessage.capture({
@@ -533,16 +589,21 @@ export async function bundleAndDeploy(options) {
   });
 
   if (! messages.hasMessages()) {
-    var bundler = require('../isobuild/bundler.js');
 
-    var bundleResult = bundler.bundle({
-      projectContext: options.projectContext,
-      outputPath: bundlePath,
-      buildOptions: options.buildOptions,
-    });
+    if(isCacheBuildValid) {
+      Console.info('Skipping build (--cache-build)...');
+    } else {
+      const bundler = require('../isobuild/bundler.js');
 
-    if (bundleResult.errors) {
-      messages = bundleResult.errors;
+      const bundleResult = bundler.bundle({
+        projectContext: options.projectContext,
+        outputPath: bundlePath,
+        buildOptions: options.buildOptions,
+      });
+
+      if (bundleResult.errors) {
+        messages = bundleResult.errors;
+      }
     }
   }
 
@@ -560,6 +621,14 @@ export async function bundleAndDeploy(options) {
     });
   }
 
+  if (options.isBuildOnly) {
+    Console.info(
+      '\nYour build is ready. As you used the option --build-only the process finished after the build.'
+    );
+    return 0;
+  }
+
+  Console.info('Preparing to upload your app...');
   const result = buildmessage.enterJob({
     title: "uploading"
   }, Profile("upload bundle", function () {
@@ -567,10 +636,19 @@ export async function bundleAndDeploy(options) {
       method: 'POST',
       operation: 'deploy',
       site: site,
-      qs: Object.assign({}, options.rawOptions, settings !== null ? {settings: settings} : {}),
+      qs: Object.assign(
+        {},
+        options.rawOptions,
+        settings !== null ? {settings: settings} : {},
+        {
+          free: options.free,
+          plan: options.plan,
+          mongo: options.mongo
+        },
+      ),
       bodyStream: createTarGzStream(pathJoin(buildDir, 'bundle')),
       expectPayload: ['url'],
-      preflightPassword: preflight.preflightPassword,
+      preflightPassword,
       // Disable the HTTP timeout for this POST request.
       timeout: null,
       waitForDeploy: options.waitForDeploy,
@@ -593,6 +671,7 @@ export async function bundleAndDeploy(options) {
   // build / deploy succeed. We indicate that Meteor should poll for version
   // status by including a newVersionId in the payload.
   if (options.waitForDeploy && result.payload.newVersionId) {
+    Console.info('Waiting for deployment updates from Galaxy...');
     return await pollForDeploymentSuccess(
       result.payload.newVersionId,
       options.deployPollingTimeoutMs,

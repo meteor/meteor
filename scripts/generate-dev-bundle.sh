@@ -66,7 +66,7 @@ case $OS in
     linux)
         [ $ARCH = "i686" ] &&
             MONGO_BASE_URL="https://fastdl.mongodb.org/linux" ||
-            MONGO_BASE_URL="https://github.com/meteor/mongodb-builder/releases/download/${MONGO_VERSION}"
+            MONGO_BASE_URL="https://github.com/meteor/mongodb-builder/releases/download/v${MONGO_VERSION}"
         ;;
 esac
 
@@ -88,7 +88,7 @@ export PATH="$DIR/bin:$PATH"
 cd "$DIR/lib"
 # Overwrite the bundled version with the latest version of npm.
 npm install "npm@$NPM_VERSION"
-
+npm config set python `which python3`
 which node
 which npm
 npm version
@@ -176,7 +176,7 @@ find . -path '*/esprima-fb/test' | xargs rm -rf
 INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
 xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
 if [ "$INSTALLED_NPM_VERSION" != "$NPM_VERSION" ]; then
-  echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
+  echo "Error: Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
   echo "Update this check if you know what you're doing."
   exit 1
 fi

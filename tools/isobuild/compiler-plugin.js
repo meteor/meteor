@@ -113,6 +113,7 @@ export class CompilerPluginProcessor {
     unibuilds,
     arch,
     sourceRoot,
+    buildMode,
     isopackCache,
     linkerCacheDir,
     scannerCacheDir,
@@ -122,6 +123,7 @@ export class CompilerPluginProcessor {
       unibuilds,
       arch,
       sourceRoot,
+      buildMode,
       isopackCache,
       linkerCacheDir,
       scannerCacheDir,
@@ -290,6 +292,12 @@ class InputFile extends buildPluginModule.InputFile {
     // resources might not have this property.
     const { inputResource } = this._resourceSlot;
     return inputResource.fileOptions || (inputResource.fileOptions = {});
+  }
+
+  hmrAvailable() {
+    const fileOptions = this.getFileOptions() || {};
+
+    return this._resourceSlot.hmrAvailable() && !fileOptions.bare;
   }
 
   readAndWatchFileWithHash(path) {
@@ -692,12 +700,11 @@ class ResourceSlot {
   }
 
   _isBare(options) {
-    return !! (
-      this._getOption("bare", options) ||
-      // XXX eventually get rid of backwards-compatible "raw" name
-      // XXX COMPAT WITH 0.6.4
-      this._getOption("raw", options)
-    );
+    return !! this._getOption("bare", options);
+  }
+
+  hmrAvailable() {
+    return this.packageSourceBatch.hmrAvailable;
   }
 
   addStylesheet(options, lazyFinalizer) {
@@ -887,7 +894,9 @@ class OutputResource {
       servePath,
       // Remember the source hash so that changes to the source that
       // disappear after compilation can still contribute to the hash.
-      _inputHash: resourceSlot.inputResource.hash,
+      // Bypassing SourceResource.hash getter so if the compiler plugin doesn't
+      // use the resource's content we don't unnecessarily mark it as used.
+      _inputHash: resourceSlot.inputResource._hash,
     });
   }
 
@@ -1099,6 +1108,18 @@ export class PackageSourceBatch {
         "modules",
         self.unibuild.arch
       );
+
+    const isDevelopment = self.processor.buildMode === 'development';
+    const usesHMRPackage = self.unibuild.pkg.name !== "hot-module-replacement" &&
+      self.processor.isopackCache.uses(
+        self.unibuild.pkg,
+        "hot-module-replacement",
+        self.unibuild.arch
+      );
+    const supportedArch = self.unibuild.arch === 'web.browser';
+
+    self.hmrAvailable = self.useMeteorInstall && isDevelopment
+      && usesHMRPackage && supportedArch;
 
     // These are the options that should be passed as the second argument
     // to meteorInstall when modules in this source batch are installed.
@@ -1497,6 +1518,13 @@ export class PackageSourceBatch {
     // Watch all output files produced by computeJsOutputFilesMap.
     jsOutputFilesMap.forEach(entry => {
       entry.files.forEach(file => {
+        // Output resources are not directly marked as definitely used. Instead,
+        // its input resource might be if its content was used by a build plugin.
+        // This is checked in Target#_emitResources
+        if (file instanceof OutputResource) {
+          return;
+        }
+
         const {
           sourcePath,
           absPath = sourcePath &&
@@ -1624,7 +1652,7 @@ export class PackageSourceBatch {
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources(jsResources) {
+  getResources(jsResources, onCacheKey) {
     buildmessage.assertInJob();
 
     const resources = [];
@@ -1633,12 +1661,12 @@ export class PackageSourceBatch {
       resources.push(...slot.outputResources);
     });
 
-    resources.push(...this._linkJS(jsResources));
+    resources.push(...this._linkJS(jsResources, onCacheKey));
 
     return resources;
   }
 
-  _linkJS(jsResources) {
+  _linkJS(jsResources, onCacheKey = () => {}) {
     const self = this;
     buildmessage.assertInJob();
 
@@ -1687,6 +1715,7 @@ export class PackageSourceBatch {
       fileHashes
     }));
     const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
+    onCacheKey(cacheKey, jsResources);
 
     if (LINKER_CACHE.has(cacheKey)) {
       if (CACHE_DEBUG) {
@@ -1714,7 +1743,7 @@ export class PackageSourceBatch {
     if (cacheFilename) {
       let diskCached = null;
       try {
-        diskCached = optimisticReadJsonOrNull(cacheFilename);
+        diskCached = files.readJSONOrNull(cacheFilename);
       } catch (e) {
         // Ignore JSON parse errors; pretend there was no cache.
         if (!(e instanceof SyntaxError)) {
@@ -1803,7 +1832,8 @@ _.each([
 
 // static methods to measure in profile
 _.each([
-  "computeJsOutputFilesMap"
+  "computeJsOutputFilesMap",
+  "_watchOutputFiles"
 ], method => {
   PackageSourceBatch[method] = Profile(
     "PackageSourceBatch." + method,

@@ -45,8 +45,11 @@ OAuth._stateParam = (loginStyle, credentialToken, redirectUrl) => {
     isCordova: Meteor.isCordova
   };
 
-  if (loginStyle === 'redirect')
+  if (loginStyle === 'redirect' ||
+    (Meteor.settings?.public?.packages?.oauth?.setRedirectUrlWhenLoginStyleIsPopup && loginStyle === 'popup')
+  ) {
     state.redirectUrl = redirectUrl || ('' + window.location);
+  }
 
   // Encode base64 as not all login services URI-encode the state
   // parameter when they pass it back to us.
@@ -121,16 +124,6 @@ OAuth.launchLogin = options => {
   } else {
     throw new Error('invalid login style');
   }
-};
-
-// XXX COMPAT WITH 0.7.0.1
-// Private interface but probably used by many oauth clients in atmosphere.
-OAuth.initiateLogin = (credentialToken, url, callback, dimensions) => {
-  OAuth.showPopup(
-    url,
-    callback.bind(null, credentialToken),
-    dimensions
-  );
 };
 
 // Called by the popup when the OAuth flow is completed, right before

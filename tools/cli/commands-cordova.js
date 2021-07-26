@@ -162,7 +162,7 @@ main.registerCommand({
   Console.setVerbose(!!options.verbose);
 
   Console.info("Please follow the installation instructions in the mobile guide:");
-  Console.info(Console.url("http://guide.meteor.com/mobile.html#installing-prerequisites"));
+  Console.info(Console.url("http://guide.meteor.com/cordova.html#installing-prerequisites"));
 
   return 0;
 });

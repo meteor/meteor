@@ -46,6 +46,7 @@ module.exports = [
     selenium: {
       platform: "MAC",
       browserName: "safari",
+      version: "11",
     },
   },
   {

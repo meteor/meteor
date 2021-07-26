@@ -146,9 +146,11 @@ MongoConnection = function (url, options) {
 
   var mongoOptions = Object.assign({
     ignoreUndefined: true,
-    // See https://github.com/meteor/meteor/issues/10925 for discussion of
-    // why this option is not the default.
-    useUnifiedTopology: !!options.useUnifiedTopology,
+    // (node:59240) [MONGODB DRIVER] Warning: Current Server Discovery and
+    // Monitoring engine is deprecated, and will be removed in a future version.
+    // To use the new Server Discover and Monitoring engine, pass option
+    // { useUnifiedTopology: true } to the MongoClient constructor.
+    useUnifiedTopology: true,
   }, userOptions);
 
   // The autoReconnect and reconnectTries options are incompatible with
@@ -920,13 +922,6 @@ _.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) 
   };
 });
 
-// Since we don't actually have a "nextObject" interface, there's really no
-// reason to have a "rewind" interface.  All it did was make multiple calls
-// to fetch/map/forEach return nothing the second time.
-// XXX COMPAT WITH 0.8.1
-Cursor.prototype.rewind = function () {
-};
-
 Cursor.prototype.getTransform = function () {
   return this._cursorDescription.options.transform;
 };
@@ -990,7 +985,8 @@ MongoConnection.prototype._createSynchronousCursor = function(
     sort: cursorOptions.sort,
     limit: cursorOptions.limit,
     skip: cursorOptions.skip,
-    projection: cursorOptions.fields
+    projection: cursorOptions.fields,
+    readPreference: cursorOptions.readPreference
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?

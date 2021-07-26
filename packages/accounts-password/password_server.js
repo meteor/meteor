@@ -1,6 +1,5 @@
-/// BCRYPT
+import bcrypt from 'bcrypt'
 
-const bcrypt = NpmModuleBcrypt;
 const bcryptHash = Meteor.wrapAsync(bcrypt.hash);
 const bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
 
@@ -8,9 +7,7 @@ const bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
 const getUserById = (id, options) => Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
 
 // User records have a 'services.password.bcrypt' field on them to hold
-// their hashed passwords (unless they have a 'services.password.srp'
-// field, in which case they will be upgraded to bcrypt the next time
-// they log in).
+// their hashed passwords.
 //
 // When the client sends a password to the server, it can either be a
 // string (the plaintext password) or an object with keys 'digest' and
@@ -74,7 +71,7 @@ const getRoundsFromBcryptHash = hash => {
 // `password.digest`).
 //
 // The user parameter needs at least user._id and user.services
-Accounts._checkPasswordUserFields = {_id: 1, services: 1},
+Accounts._checkPasswordUserFields = {_id: 1, services: 1};
 //
 Accounts._checkPassword = (user, password) => {
   const result = {
@@ -186,7 +183,7 @@ Accounts.findUserByUsername =
  * @returns {Object} A user if found, else null
  * @importFromPackage accounts-base
  */
-Accounts.findUserByEmail = 
+Accounts.findUserByEmail =
   (email, options) => Accounts._findUserByQuery({ email }, options);
 
 // Generates a MongoDB selector that can be used to perform a fast case
@@ -222,7 +219,7 @@ const generateCasePermutationsForString = string => {
     permutations = [].concat(...(permutations.map(prefix => {
       const lowerCaseChar = ch.toLowerCase();
       const upperCaseChar = ch.toUpperCase();
-      // Don't add unneccesary permutations when ch is not a letter
+      // Don't add unnecessary permutations when ch is not a letter
       if (lowerCaseChar === upperCaseChar) {
         return [prefix + ch];
       } else {
@@ -277,8 +274,10 @@ const userQueryValidator = Match.Where(user => {
 });
 
 const passwordValidator = Match.OneOf(
-  String,
-  { digest: String, algorithm: String }
+  Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256), {
+    digest: Match.Where(str => Match.test(str, String) && str.length === 64),
+    algorithm: Match.OneOf('sha-256')
+  }
 );
 
 // Handler to login with a password.
@@ -296,7 +295,7 @@ const passwordValidator = Match.OneOf(
 // Note that neither password option is secure without SSL.
 //
 Accounts.registerLoginHandler("password", options => {
-  if (! options.password || options.srp)
+  if (!options.password)
     return undefined; // don't handle
 
   check(options, {
@@ -314,35 +313,8 @@ Accounts.registerLoginHandler("password", options => {
   }
 
   if (!user.services || !user.services.password ||
-      !(user.services.password.bcrypt || user.services.password.srp)) {
+      !user.services.password.bcrypt) {
     handleError("User has no password set");
-  }
-
-  if (!user.services.password.bcrypt) {
-    if (typeof options.password === "string") {
-      // The client has presented a plaintext password, and the user is
-      // not upgraded to bcrypt yet. We don't attempt to tell the client
-      // to upgrade to bcrypt, because it might be a standalone DDP
-      // client doesn't know how to do such a thing.
-      const verifier = user.services.password.srp;
-      const newVerifier = SRP.generateVerifier(options.password, {
-        identity: verifier.identity, salt: verifier.salt});
-
-      if (verifier.verifier !== newVerifier.verifier) {
-        return {
-          userId: Accounts._options.ambiguousErrorMessages ? null : user._id,
-          error: handleError("Incorrect password", false)
-        };
-      }
-
-      return {userId: user._id};
-    } else {
-      // Tell the client to use the SRP upgrade process.
-      throw new Meteor.Error(400, "old password format", EJSON.stringify({
-        format: 'srp',
-        identity: user.services.password.srp.identity
-      }));
-    }
   }
 
   return checkPassword(
@@ -350,79 +322,6 @@ Accounts.registerLoginHandler("password", options => {
     options.password
   );
 });
-
-// Handler to login using the SRP upgrade path. To use this login
-// handler, the client must provide:
-//   - srp: H(identity + ":" + password)
-//   - password: a string or an object with properties 'digest' and 'algorithm'
-//
-// We use `options.srp` to verify that the client knows the correct
-// password without doing a full SRP flow. Once we've checked that, we
-// upgrade the user to bcrypt and remove the SRP information from the
-// user document.
-//
-// The client ends up using this login handler after trying the normal
-// login handler (above), which throws an error telling the client to
-// try the SRP upgrade path.
-//
-// XXX COMPAT WITH 0.8.1.3
-Accounts.registerLoginHandler("password", options => {
-  if (!options.srp || !options.password) {
-    return undefined; // don't handle
-  }
-
-  check(options, {
-    user: userQueryValidator,
-    srp: String,
-    password: passwordValidator
-  });
-
-  const user = Accounts._findUserByQuery(options.user, {fields: {
-    services: 1,
-    ...Accounts._checkPasswordUserFields,
-  }});
-  if (!user) {
-    handleError("User not found");
-  }
-
-  // Check to see if another simultaneous login has already upgraded
-  // the user record to bcrypt.
-  if (user.services && user.services.password && user.services.password.bcrypt) {
-    return checkPassword(user, options.password);
-  }
-
-  if (!(user.services && user.services.password && user.services.password.srp)) {
-    handleError("User has no password set");
-  }
-
-  const v1 = user.services.password.srp.verifier;
-  const v2 = SRP.generateVerifier(
-    null,
-    {
-      hashedIdentityAndPassword: options.srp,
-      salt: user.services.password.srp.salt
-    }
-  ).verifier;
-  if (v1 !== v2) {
-    return {
-      userId: Accounts._options.ambiguousErrorMessages ? null : user._id,
-      error: handleError("Incorrect password", false)
-    };
-  }
-
-  // Upgrade to bcrypt on successful login.
-  const salted = hashPassword(options.password);
-  Meteor.users.update(
-    user._id,
-    {
-      $unset: { 'services.password.srp': 1 },
-      $set: { 'services.password.bcrypt': salted }
-    }
-  );
-
-  return {userId: user._id};
-});
-
 
 ///
 /// CHANGING
@@ -469,18 +368,6 @@ Accounts.setUsername = (userId, newUsername) => {
 // Let the user change their own password if they know the old
 // password. `oldPassword` and `newPassword` should be objects with keys
 // `digest` and `algorithm` (representing the SHA256 of the password).
-//
-// XXX COMPAT WITH 0.8.1.3
-// Like the login method, if the user hasn't been upgraded from SRP to
-// bcrypt yet, then this method will throw an 'old password format'
-// error. The client should call the SRP upgrade login handler and then
-// retry this method again.
-//
-// UNLIKE the login method, there is no way to avoid getting SRP upgrade
-// errors thrown. The reasoning for this is that clients using this
-// method directly will need to be updated anyway because we no longer
-// support the SRP flow that they would have been doing to use this
-// method previously.
 Meteor.methods({changePassword: function (oldPassword, newPassword) {
   check(oldPassword, passwordValidator);
   check(newPassword, passwordValidator);
@@ -497,16 +384,8 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
     handleError("User not found");
   }
 
-  if (!user.services || !user.services.password ||
-      (!user.services.password.bcrypt && !user.services.password.srp)) {
+  if (!user.services || !user.services.password || !user.services.password.bcrypt) {
     handleError("User has no password set");
-  }
-
-  if (! user.services.password.bcrypt) {
-    throw new Meteor.Error(400, "old password format", EJSON.stringify({
-      format: 'srp',
-      identity: user.services.password.srp.identity
-    }));
   }
 
   const result = checkPassword(user, oldPassword);
@@ -548,6 +427,9 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
  * @importFromPackage accounts-base
  */
 Accounts.setPassword = (userId, newPlaintextPassword, options) => {
+  check(userId, String)
+  check(newPlaintextPassword, Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256))
+  check(options, Match.Maybe({ logout: Boolean }))
   options = { logout: true , ...options };
 
   const user = getUserById(userId, {fields: {_id: 1}});
@@ -557,7 +439,6 @@ Accounts.setPassword = (userId, newPlaintextPassword, options) => {
 
   const update = {
     $unset: {
-      'services.password.srp': 1, // XXX COMPAT WITH 0.8.1.3
       'services.password.reset': 1
     },
     $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)}
@@ -581,9 +462,10 @@ const pluckAddresses = (emails = []) => emails.map(email => email.address);
 // Method called by a user to request a password reset email. This is
 // the start of the reset process.
 Meteor.methods({forgotPassword: options => {
-  check(options, {email: String});
+  check(options, {email: String})
 
-  const user = Accounts.findUserByEmail(options.email, {fields: {emails: 1}});
+  const user = Accounts.findUserByEmail(options.email, { fields: { emails: 1 } });
+
   if (!user) {
     handleError("User not found");
   }
@@ -644,15 +526,27 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
 
   if (extraTokenData) {
     Object.assign(tokenRecord, extraTokenData);
+  } 
+  // if this method is called from the enroll account work-flow then
+  // store the token record in 'services.password.enroll' db field
+  // else store the token record in in 'services.password.reset' db field
+  if(reason === 'enrollAccount') {
+    Meteor.users.update({_id: user._id}, {
+      $set : {
+        'services.password.enroll': tokenRecord
+      }
+    });
+  } else {
+    Meteor.users.update({_id: user._id}, {
+      $set : {
+        'services.password.reset': tokenRecord
+      }
+    });
   }
-
-  Meteor.users.update({_id: user._id}, {$set: {
-    'services.password.reset': tokenRecord
-  }});
 
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
-
+  Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
   return {email, user, token};
 };
 
@@ -760,15 +654,19 @@ Accounts.generateOptionsForEmail = (email, user, url, reason) => {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the reset url.
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendResetPasswordEmail = (userId, email, extraTokenData) => {
+Accounts.sendResetPasswordEmail = (userId, email, extraTokenData, extraParams) => {
   const {email: realEmail, user, token} =
     Accounts.generateResetToken(userId, email, 'resetPassword', extraTokenData);
-  const url = Accounts.urls.resetPassword(token);
+  const url = Accounts.urls.resetPassword(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'resetPassword');
   Email.send(options);
+  if (Meteor.isDevelopment) {
+    console.log(`\nReset password URL: ${url}`);
+  }
   return {email: realEmail, user, token, url, options};
 };
 
@@ -786,15 +684,19 @@ Accounts.sendResetPasswordEmail = (userId, email, extraTokenData) => {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the enrollment url.
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendEnrollmentEmail = (userId, email, extraTokenData) => {
+Accounts.sendEnrollmentEmail = (userId, email, extraTokenData, extraParams) => {
   const {email: realEmail, user, token} =
     Accounts.generateResetToken(userId, email, 'enrollAccount', extraTokenData);
-  const url = Accounts.urls.enrollAccount(token);
+  const url = Accounts.urls.enrollAccount(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'enrollAccount');
   Email.send(options);
+  if (Meteor.isDevelopment) {
+    console.log(`\nEnrollment email URL: ${url}`);
+  }
   return {email: realEmail, user, token, url, options};
 };
 
@@ -813,17 +715,38 @@ Meteor.methods({resetPassword: function (...args) {
       check(token, String);
       check(newPassword, passwordValidator);
 
-      const user = Meteor.users.findOne(
+      let user = Meteor.users.findOne(
         {"services.password.reset.token": token},
         {fields: {
           services: 1,
           emails: 1,
         }}
       );
+     
+      let isEnroll = false;
+      // if token is in services.password.reset db field implies
+      // this method is was not called from enroll account workflow
+      // else this method is called from enroll account workflow
+      if(!user) {
+        user = Meteor.users.findOne(
+          {"services.password.enroll.token": token},
+          {fields: {
+            services: 1,
+            emails: 1,
+          }}
+        );
+        isEnroll = true;
+      }
       if (!user) {
         throw new Meteor.Error(403, "Token expired");
       }
-      const { when, reason, email } = user.services.password.reset;
+      let tokenRecord = {};
+      if(isEnroll) {
+        tokenRecord = user.services.password.enroll;
+      } else {
+        tokenRecord = user.services.password.reset;
+      }
+      const { when, reason, email } = tokenRecord;
       let tokenLifetimeMs = Accounts._getPasswordResetTokenLifetimeMs();
       if (reason === "enroll") {
         tokenLifetimeMs = Accounts._getPasswordEnrollTokenLifetimeMs();
@@ -837,7 +760,7 @@ Meteor.methods({resetPassword: function (...args) {
           error: new Meteor.Error(403, "Token has invalid email address")
         };
 
-      const hashed = hashPassword(newPassword);
+      const hashed = hashPassword(newPassword);     
 
       // NOTE: We're about to invalidate tokens on the user, who we might be
       // logged in as. Make sure to avoid logging ourselves out if this
@@ -851,18 +774,31 @@ Meteor.methods({resetPassword: function (...args) {
       try {
         // Update the user record by:
         // - Changing the password to the new one
-        // - Forgetting about the reset token that was just used
+        // - Forgetting about the reset token or enroll token that was just used
         // - Verifying their email, since they got the password reset via email.
-        const affectedRecords = Meteor.users.update(
-          {
-            _id: user._id,
-            'emails.address': email,
-            'services.password.reset.token': token
-          },
-          {$set: {'services.password.bcrypt': hashed,
-                  'emails.$.verified': true},
-           $unset: {'services.password.reset': 1,
-                    'services.password.srp': 1}});
+        let affectedRecords = {};
+        // if reason is enroll then check services.password.enroll.token field for affected records
+        if(reason === 'enroll') {
+          affectedRecords = Meteor.users.update(
+            {
+              _id: user._id,
+              'emails.address': email,
+              'services.password.enroll.token': token
+            },
+            {$set: {'services.password.bcrypt': hashed,
+                    'emails.$.verified': true},
+              $unset: {'services.password.enroll': 1 }});
+        } else {
+          affectedRecords = Meteor.users.update(
+            {
+              _id: user._id,
+              'emails.address': email,
+              'services.password.reset.token': token
+            },
+            {$set: {'services.password.bcrypt': hashed,
+                    'emails.$.verified': true},
+              $unset: {'services.password.reset': 1 }});
+        }
         if (affectedRecords !== 1)
           return {
             userId: user._id,
@@ -896,19 +832,24 @@ Meteor.methods({resetPassword: function (...args) {
  * @param {String} userId The id of the user to send email to.
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first unverified email in the list.
  * @param {Object} [extraTokenData] Optional additional data to be added into the token record.
+ * @param {Object} [extraParams] Optional additional params to be added to the verification url.
+ *
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendVerificationEmail = (userId, email, extraTokenData) => {
+Accounts.sendVerificationEmail = (userId, email, extraTokenData, extraParams) => {
   // XXX Also generate a link using which someone can delete this
   // account if they own said address but weren't those who created
   // this account.
 
   const {email: realEmail, user, token} =
     Accounts.generateVerificationToken(userId, email, extraTokenData);
-  const url = Accounts.urls.verifyEmail(token);
+  const url = Accounts.urls.verifyEmail(token, extraParams);
   const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
   Email.send(options);
+  if (Meteor.isDevelopment) {
+    console.log(`\nVerification email URL: ${url}`);
+  }
   return {email: realEmail, user, token, url, options};
 };
 
@@ -1146,24 +1087,50 @@ Meteor.methods({createUser: function (...args) {
           error: new Meteor.Error(403, "Signups forbidden")
         };
 
-      // Create user. result contains id and token.
-      const userId = createUser(options);
-      // safety belt. createUser is supposed to throw on error. send 500 error
-      // instead of sending a verification email with empty userid.
-      if (! userId)
-        throw new Error("createUser failed to insert new user");
-
-      // If `Accounts._options.sendVerificationEmail` is set, register
-      // a token to verify the user's primary email, and send it to
-      // that address.
-      if (options.email && Accounts._options.sendVerificationEmail)
-        Accounts.sendVerificationEmail(userId, options.email);
+      const userId = Accounts.createUserVerifyingEmail(options);
 
       // client gets logged in as the new user afterwards.
       return {userId: userId};
     }
   );
 }});
+
+/**
+ * @summary Creates an user and sends an email if `options.email` is informed.
+ * Then if the `sendVerificationEmail` option from the `Accounts` package is
+ * enabled, you'll send a verification email if `options.password` is informed,
+ * otherwise you'll send an enrollment email.
+ * @locus Server
+ * @param {Object} options The options object to be passed down when creating
+ * the user
+ * @param {String} options.username A unique name for this user.
+ * @param {String} options.email The user's email address.
+ * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
+ * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @importFromPackage accounts-base
+ * */
+Accounts.createUserVerifyingEmail = (options) => {
+  options = { ...options };
+  // Create user. result contains id and token.
+  const userId = createUser(options);
+  // safety belt. createUser is supposed to throw on error. send 500 error
+  // instead of sending a verification email with empty userid.
+  if (! userId)
+    throw new Error("createUser failed to insert new user");
+
+  // If `Accounts._options.sendVerificationEmail` is set, register
+  // a token to verify the user's primary email, and send it to
+  // that address.
+  if (options.email && Accounts._options.sendVerificationEmail) {
+    if (options.password) {
+      Accounts.sendVerificationEmail(userId, options.email);
+    } else {
+      Accounts.sendEnrollmentEmail(userId, options.email);
+    }
+  }
+
+  return userId;
+};
 
 // Create user directly on the server.
 //
@@ -1194,4 +1161,6 @@ Accounts.createUser = (options, callback) => {
 Meteor.users._ensureIndex('services.email.verificationTokens.token',
                           { unique: true, sparse: true });
 Meteor.users._ensureIndex('services.password.reset.token',
+                          { unique: true, sparse: true });
+Meteor.users._ensureIndex('services.password.enroll.token',
                           { unique: true, sparse: true });

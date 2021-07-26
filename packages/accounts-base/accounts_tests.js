@@ -1,3 +1,8 @@
+import { URL } from 'meteor/url';
+import { Meteor } from 'meteor/meteor';
+import { Accounts } from 'meteor/accounts-base';
+import { Random } from 'meteor/random';
+
 Meteor.methods({
   getCurrentLoginToken: function () {
     return Accounts._getLoginToken(this.connection.id);
@@ -102,6 +107,32 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test
   // make sure we *don't* lose values not passed this call to
   // updateOrCreateUserFromExternalService
   test.equal(users2[0].services.facebook.monkey, 42);
+
+  // cleanup
+  Meteor.users.remove(uid1);
+});
+
+Tinytest.add('accounts - updateOrCreateUserFromExternalService - Meteor Developer', test => {
+  const developerId = Random.id();
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'meteor-developer',
+    { id: developerId, username: 'meteor-developer' },
+    { profile: { name: 'meteor-developer' } }
+  ).id;
+  const users1 = Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.name, 'meteor-developer');
+
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'meteor-developer',
+    { id: developerId, username: 'meteor-developer' },
+    { profile: { name: 'meteor-developer', username: 'developer' } }
+  ).id;
+  test.equal(uid1, uid2);
+  const users2 = Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
+  test.length(users2, 1);
+  test.equal(users1[0].profile.name, 'meteor-developer');
+  test.equal(users1[0].profile.username, undefined);
 
   // cleanup
   Meteor.users.remove(uid1);
@@ -623,3 +654,94 @@ Tinytest.add(
     Accounts._options = accountsOptions;
   }
 );
+
+Tinytest.add(
+    'accounts - verify beforeExternalLogin hook can stop user login',
+    test => {
+        // Verify user data is saved properly when not using the
+        // beforeExternalLogin hook.
+        let facebookId = Random.id();
+        const uid1 = Accounts.updateOrCreateUserFromExternalService(
+            'facebook',
+            { id: facebookId },
+            { profile: { foo: 1 } },
+        ).userId;
+        const ignoreFieldName = "bigArray";
+        const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
+        let users =
+            Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+        test.length(users, 1);
+        test.equal(users[0].profile.foo, 1);
+        test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
+
+        // Verify that when beforeExternalLogin returns false
+        // that an error throws and user is not saved
+        Accounts.beforeExternalLogin((serviceName, serviceData, user) => {
+            // Check that we get the correct data
+            test.equal(serviceName, 'facebook');
+            test.equal(serviceData, { id: facebookId });
+            test.equal(user._id, uid1);
+            return false
+        });
+
+        test.throws(() => Accounts.updateOrCreateUserFromExternalService(
+            'facebook',
+            { id: facebookId },
+            { profile: { foo: 1 } },
+        ));
+
+        // Cleanup
+        Meteor.users.remove(uid1);
+        Accounts._beforeExternalLoginHook = null;
+    }
+);
+
+Tinytest.add(
+  'accounts - verify setAdditionalFindUserOnExternalLogin hook can provide user',
+  test => {
+      // create test user, without a google service
+      const testEmail = "test@testdomain.com"
+      const uid0 = Accounts.createUser({email: testEmail})
+      
+      // Verify that user is found from email and service merged
+      Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
+        if (serviceName === "google") {
+          return Accounts.findUserByEmail(serviceData.email)
+        }
+      })
+      
+      let googleId = Random.id();
+      const uid1 = Accounts.updateOrCreateUserFromExternalService(
+          'google',
+          { id: googleId, email: testEmail },
+          { profile: { foo: 1 } },
+      ).userId;
+
+      test.equal(uid0, uid1)
+
+      // Cleanup
+      if (uid1 !== uid0) {
+        Meteor.users.remove(uid0)
+      }
+      Meteor.users.remove(uid1);
+      Accounts.selectCustomUserOnExternalLogin = null;
+  }
+);
+
+if(Meteor.isServer) {
+  Tinytest.add(
+    'accounts - make sure that extra params to accounts urls are added',
+    test => {
+      // No extra params
+      const verifyEmailURL = new URL(Accounts.urls.verifyEmail('test'));
+      test.equal(verifyEmailURL.searchParams.toString(), "");
+
+      // Extra params
+      const extraParams = { test: 'success'};
+      const resetPasswordURL = new URL(Accounts.urls.resetPassword('test', extraParams));
+      test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
+      const enrollAccountURL = new URL(Accounts.urls.enrollAccount('test', extraParams));
+      test.equal(enrollAccountURL.searchParams.get('test'), extraParams.test);
+    }
+  );
+}

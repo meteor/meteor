@@ -14,7 +14,7 @@ const CssTools = {
    */
   parseCss(cssText, options = {}) {
     // This function previously used the `css-parse` npm package, which
-    // set the name of the css file being pased using  { source: 'filename' }.
+    // set the name of the css file being parsed using  { source: 'filename' }.
     // If included, we'll convert this to the `postcss` equivalent, to maintain
     // backwards compatibility.
     if (options.source) {
@@ -96,8 +96,13 @@ const CssTools = {
       if (! Array.isArray(rules)) {
         rules = [rules];
       }
-      return node =>
-        exclude ? !rules.includes(node.name) : rules.includes(node.name);
+      return node => {
+        // PostCSS AtRule nodes have `type: 'atrule'` and a descriptive name,
+        // e.g. 'import' or 'charset', while Comment nodes have type only.
+        const nodeMatchesRule = rules.includes(node.name || node.type);
+
+        return exclude ? !nodeMatchesRule : nodeMatchesRule;
+      }
     };
 
     // Simple concatenation of CSS files would break @import rules

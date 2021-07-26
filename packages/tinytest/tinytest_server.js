@@ -1,4 +1,7 @@
 import { Tinytest } from "./tinytest.js";
+import { check, Match } from "meteor/check";
+import { Random } from "meteor/random";
+import { Meteor } from "meteor/meteor";
 import {
   ServerTestResultsSubscription,
   ServerTestResultsCollection,
@@ -78,7 +81,7 @@ Meteor.methods({
   'tinytest/clearResults'(runId) {
     check(runId, String);
 
-    handlesForRun.get(runId).forEach(handle => {
+    handlesForRun.get(runId)?.forEach(handle => {
       // XXX this doesn't actually notify the client that it has been
       // unsubscribed.
       handle.stop();

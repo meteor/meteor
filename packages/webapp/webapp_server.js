@@ -1,6 +1,11 @@
 import assert from "assert";
-import { readFileSync } from "fs";
+import {
+  readFileSync,
+  chmodSync,
+  chownSync
+} from "fs";
 import { createServer } from "http";
+import { userInfo } from "os";
 import {
   join as pathJoin,
   dirname as pathDirname,
@@ -20,6 +25,8 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
+import cluster from "cluster";
+import whomst from "@vlasky/whomst";
 
 var SHORT_SOCKET_TIMEOUT = 5*1000;
 var LONG_SOCKET_TIMEOUT = 120*1000;
@@ -267,6 +274,7 @@ Meteor.startup(function () {
   WebApp.calculateClientHash = WebApp.clientHash = getter("version");
   WebApp.calculateClientHashRefreshable = getter("versionRefreshable");
   WebApp.calculateClientHashNonRefreshable = getter("versionNonRefreshable");
+  WebApp.calculateClientHashReplaceable = getter("versionReplaceable");
   WebApp.getRefreshableAssets = getter("refreshableAssets");
 });
 
@@ -426,10 +434,6 @@ WebAppInternals.staticFilesMiddleware = async function (
   res,
   next,
 ) {
-  if ('GET' != req.method && 'HEAD' != req.method && 'OPTIONS' != req.method) {
-    next();
-    return;
-  }
   var pathname = parseRequest(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
@@ -439,11 +443,21 @@ WebAppInternals.staticFilesMiddleware = async function (
   }
 
   var serveStaticJs = function (s) {
-    res.writeHead(200, {
-      'Content-type': 'application/javascript; charset=UTF-8'
-    });
-    res.write(s);
-    res.end();
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      res.writeHead(200, {
+        'Content-type': 'application/javascript; charset=UTF-8',
+        'Content-Length': Buffer.byteLength(s),
+      });
+      res.write(s);
+      res.end();
+    } else {
+      const status = req.method === 'OPTIONS' ? 200 : 405;
+      res.writeHead(status, {
+        'Allow': 'OPTIONS, GET, HEAD',
+        'Content-Length': '0',
+      });
+      res.end();
+    }
   };
 
   if (_.has(additionalStaticJs, pathname) &&
@@ -474,6 +488,16 @@ WebAppInternals.staticFilesMiddleware = async function (
   const info = getStaticFileInfo(staticFilesByArch, pathname, path, arch);
   if (! info) {
     next();
+    return;
+  }
+  // "send" will handle HEAD & GET requests
+  if (req.method !== 'HEAD' && req.method !== 'GET') {
+    const status = req.method === 'OPTIONS' ? 200 : 405;
+    res.writeHead(status, {
+      'Allow': 'OPTIONS, GET, HEAD',
+      'Content-Length': '0',
+    })
+    res.end();
     return;
   }
 
@@ -522,6 +546,7 @@ WebAppInternals.staticFilesMiddleware = async function (
   }
 
   if (info.content) {
+    res.setHeader('Content-Length', Buffer.byteLength(info.content));
     res.write(info.content);
     res.end();
   } else {
@@ -738,7 +763,17 @@ function runWebAppServer() {
       versionRefreshable: () => WebAppHashing.calculateClientHash(
         manifest, type => type === "css", configOverrides),
       versionNonRefreshable: () => WebAppHashing.calculateClientHash(
-        manifest, type => type !== "css", configOverrides),
+        manifest, (type, replaceable) => type !== "css" && !replaceable, configOverrides),
+      versionReplaceable: () => WebAppHashing.calculateClientHash(
+        manifest, (_type, replaceable) => {
+          if (Meteor.isProduction && replaceable) {
+            throw new Error('Unexpected replaceable file in production');
+          }
+
+          return replaceable
+        },
+        configOverrides
+      ),
       cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,
       PUBLIC_SETTINGS,
     };
@@ -961,6 +996,13 @@ function runWebAppServer() {
     if (! appUrl(req.url)) {
       return next();
 
+    } else if (req.method !== 'HEAD' && req.method !== 'GET') {
+      const status = req.method === 'OPTIONS' ? 200 : 405;
+      res.writeHead(status, {
+        'Allow': 'OPTIONS, GET, HEAD',
+        'Content-Length': '0',
+      })
+      res.end();
     } else {
       var headers = {
         'Content-Type': 'text/html; charset=utf-8'
@@ -1144,12 +1186,36 @@ function runWebAppServer() {
     };
 
     let localPort = process.env.PORT || 0;
-    const unixSocketPath = process.env.UNIX_SOCKET_PATH;
+    let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
+      if (cluster.isWorker) {
+        const workerName = cluster.worker.process.env.name || cluster.worker.id
+        unixSocketPath += "." + workerName + ".sock";
+      }
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
       startHttpServer({ path: unixSocketPath });
+
+      const unixSocketPermissions = (process.env.UNIX_SOCKET_PERMISSIONS || "").trim();
+      if (unixSocketPermissions) {
+        if (/^[0-7]{3}$/.test(unixSocketPermissions)) {
+          chmodSync(unixSocketPath, parseInt(unixSocketPermissions, 8));
+        } else {
+          throw new Error("Invalid UNIX_SOCKET_PERMISSIONS specified");
+        }
+      }
+
+      const unixSocketGroup = (process.env.UNIX_SOCKET_GROUP || "").trim();
+      if (unixSocketGroup) {
+        //whomst automatically handles both group names and numerical gids
+        const unixSocketGroupInfo = whomst.sync.group(unixSocketGroup);
+        if (unixSocketGroupInfo === null) {
+          throw new Error("Invalid UNIX_SOCKET_GROUP name specified");
+        }
+        chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+      }
+
       registerSocketFileCleanup(unixSocketPath);
     } else {
       localPort = isNaN(Number(localPort)) ? localPort : Number(localPort);

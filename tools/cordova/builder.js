@@ -1,5 +1,6 @@
 import _ from 'underscore';
 import util from 'util';
+import url from 'url';
 import path from 'path';
 import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
@@ -487,13 +488,15 @@ export class CordovaBuilder {
 
     const mobileServerUrl = this.options.mobileServerUrl;
 
+    const parsedUrl = url.parse(mobileServerUrl);
+
     const runtimeConfig = {
       meteorRelease: meteorRelease,
       gitCommitHash: process.env.METEOR_GIT_COMMIT_HASH || files.findGitCommitHash(applicationPath),
       ROOT_URL: mobileServerUrl,
       // XXX propagate it from this.options?
-      ROOT_URL_PATH_PREFIX: '',
-      DDP_DEFAULT_CONNECTION_URL: mobileServerUrl,
+      ROOT_URL_PATH_PREFIX: parsedUrl.pathname.replace(/\/$/,"") || '',
+      DDP_DEFAULT_CONNECTION_URL: process.env.DDP_DEFAULT_CONNECTION_URL || mobileServerUrl,
       autoupdate: {
         versions: {
           "web.cordova": {

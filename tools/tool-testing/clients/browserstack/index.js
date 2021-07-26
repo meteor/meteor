@@ -20,6 +20,8 @@ const NPM_DEPENDENCIES = {
   'browserstack-local': '1.3.0',
 };
 
+const USER = 'dev1141';
+
 // A memoized key from BrowserStackClient._getBrowserStackKey.
 let browserStackKey;
 
@@ -68,11 +70,11 @@ export default class BrowserStackClient extends Client {
 
     const capabilities = {
       // Authentication
-      'browserstack.user': 'meteoropensource1',
+      'browserstack.user': USER,
       'browserstack.key': key,
 
       // Use the BrowserStackLocal tunnel, to allow BrowserStack to
-      // tunnel to the machine this server is runninng on.
+      // tunnel to the machine this server is running on.
       'browserstack.local': true,
 
       // Enabled the capturing of "Visual Logs" (i.e. Screenshots).
@@ -124,15 +126,18 @@ export default class BrowserStackClient extends Client {
 
     // Try to get the credentials from S3 with the s3cmd tool.
     const outputDir = pathJoin(mkdtemp(), "key");
+      const browserstackKey = "s3://meteor-browserstack-keys/browserstack-key";
     try {
       execFileSync("s3cmd", ["get",
-        "s3://meteor-browserstack-keys/browserstack-key",
+        browserstackKey,
         outputDir
       ]);
 
       return (browserStackKey = readFile(outputDir, "utf8").trim());
     } catch (e) {
       // A failure is acceptable here; it was just a try.
+      console.warn(`Failed to load browserstack key from 
+        ${browserstackKey}`, e);
     }
 
     return (browserStackKey = null);

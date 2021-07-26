@@ -1,5 +1,5 @@
 // Log all uncaught errors so they can be printed to the developer.
-// But since Android's adb catlog already prints the uncaught exceptions, we
+// But since Android's adb catalog already prints the uncaught exceptions, we
 // can disable it for Android.
 if (! /Android/i.test(navigator.userAgent)) {
   window.onerror = function (msg, url, line) {
