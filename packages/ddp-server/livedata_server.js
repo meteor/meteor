@@ -1508,7 +1508,12 @@ _.extend(Server.prototype, {
     // Note: Troposphere depends on the ability to mutate
     // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
     const existingSession = self.sessions.get(msg.session);
-    if (existingSession && existingSession.sentCount === msg.receivedCount) {
+
+    // we've found a session with:
+    // the right ID
+    // a matching sent/received count
+    // was disconnected and hasn't been reconnected to yet.
+    if (existingSession && existingSession.sentCount === msg.receivedCount && existingSession._removeTimeoutHandle) {
       Meteor.clearTimeout(existingSession._removeTimeoutHandle);
       delete existingSession._removeTimeoutHandle;
       socket._meteorSession = existingSession;
