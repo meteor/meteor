@@ -841,7 +841,7 @@ MongoConnection.prototype._createIndex = function (collectionName, index,
   future.wait();
 };
 
-MongoCollection.prototype._ensureIndex = MongoConnection.prototype._createIndex;
+MongoConnection.prototype._ensureIndex = MongoConnection.prototype._createIndex;
 
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
   var self = this;
