@@ -4,6 +4,9 @@
 
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
+  
+* `allow-deny@`, `minimongo@`, `mongo@`
+  - MongoDB & Minimongo now accept bulk entries: `collection.insert([{ doo: 1 }, { doo: 2 }])`
 
 #### Independent Releases
 
@@ -554,8 +557,6 @@ N/A
 #### Independent Releases
 * `facebook-oauth@1.7.3`
   - is now using Facebook GraphAPI v8. [#11160](https://github.com/meteor/meteor/pull/11160)
-
-* MongoDB & Minimongo now accept bulk entries: `collection.insert([{ doo: 1 }, { doo: 2 }])`
 
 ## v1.11.1, 2020-09-16
 
