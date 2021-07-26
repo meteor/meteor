@@ -816,7 +816,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
   }
 
   return self.update(collectionName, selector, mod,
-                     _.extend({}, options, {
+                    Object.assign({}, options, {
                        upsert: true,
                        _returnObject: true
                      }), callback);
@@ -1060,7 +1060,7 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   self._visitedIds = new LocalCollection._IdMap;
 };
 
-_.extend(SynchronousCursor.prototype, {
+Object.assign(SynchronousCursor.prototype, {
   // Returns a Promise for the next object from the underlying cursor (before
   // the Mongo->Meteor type replacement).
   _rawNextObjectPromise: function () {
@@ -1421,10 +1421,10 @@ forEachTrigger = function (cursorDescription, triggerCallback) {
   var specificIds = LocalCollection._idsMatchedBySelector(
     cursorDescription.selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
-      triggerCallback(_.extend({id: id}, key));
+    specificIds.forEach(function (id) {
+      triggerCallback(Object.assign({id: id}, key));
     });
-    triggerCallback(_.extend({dropCollection: true, id: null}, key));
+    triggerCallback(Object.assign({dropCollection: true, id: null}, key));
   } else {
     triggerCallback(key);
   }
