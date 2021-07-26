@@ -3,9 +3,9 @@ import { DDPCommon } from 'meteor/ddp-common';
 import { Tracker } from 'meteor/tracker';
 import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
-import { Hook } from 'meteor/callback-hook';
 import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
+import { Log } from 'meteor/logging';
 import MethodInvoker from './MethodInvoker.js';
 import {
   hasOwn,
@@ -55,7 +55,7 @@ export class Connection {
     this.options = options = {
       onConnected() {},
       onDDPVersionNegotiationFailure(description) {
-        Meteor._debug(description);
+        Log.error(description);
       },
       heartbeatInterval: 17500,
       heartbeatTimeout: 15000,
@@ -708,7 +708,7 @@ export class Connection {
       if (options.throwStubExceptions) {
         throw exception;
       } else if (!exception._expectedByTest) {
-        Meteor._debug(
+        Log.warn(
           "Exception while simulating the effect of invoking '" + name + "'",
           exception
         );
@@ -727,7 +727,7 @@ export class Connection {
         // result of the RPC. If an error occurred then print the error
         // to the console.
         callback = err => {
-          err && Meteor._debug("Error invoking Method '" + name + "'", err);
+          err && Log.error("Error invoking Method '" + name + "'", err);
         };
       } else {
         // On the server, make the function synchronous. Throw on
@@ -1068,7 +1068,7 @@ export class Connection {
     } else if (messageType === 'nosub') {
       // ignore this
     } else {
-      Meteor._debug('discarding unknown livedata data message type', msg);
+      Log.debug('discarding unknown livedata data message type', msg);
     }
   }
 
@@ -1471,7 +1471,7 @@ export class Connection {
     // find the outstanding request
     // should be O(1) in nearly all realistic use cases
     if (isEmpty(self._outstandingMethodBlocks)) {
-      Meteor._debug('Received method result but no methods outstanding');
+      Log.warn('Received method result but no methods outstanding');
       return;
     }
     const currentMethodBlock = self._outstandingMethodBlocks[0].methods;
@@ -1482,7 +1482,7 @@ export class Connection {
       return found;
     });
     if (!m) {
-      Meteor._debug("Can't match method response to original method call", msg);
+      Log.error("Can't match method response to original method call", msg);
       return;
     }
 
@@ -1544,8 +1544,8 @@ export class Connection {
   }
 
   _livedata_error(msg) {
-    Meteor._debug('Received error from server: ', msg.reason);
-    if (msg.offendingMessage) Meteor._debug('For: ', msg.offendingMessage);
+    Log.error('Received error from server: ', msg.reason);
+    if (msg.offendingMessage) Log.error('For: ', msg.offendingMessage);
   }
 
   _callOnReconnectAndSendAppropriateOutstandingMethods() {
@@ -1611,7 +1611,7 @@ export class Connection {
     try {
       msg = DDPCommon.parseDDP(raw_msg);
     } catch (e) {
-      Meteor._debug('Exception while parsing DDP', e);
+      Log.error('Exception while parsing DDP', e);
       return;
     }
 
@@ -1624,7 +1624,7 @@ export class Connection {
     if (msg === null || !msg.msg) {
       if(!msg || !msg.testMessageOnConnect) {
         if (Object.keys(msg).length === 1 && msg.server_id) return;
-        Meteor._debug('discarding invalid livedata message', msg);
+        Log.debug('discarding invalid livedata message', msg);
       }
       return;
     }
@@ -1659,7 +1659,7 @@ export class Connection {
     } else if (msg.msg === 'error') {
       this._livedata_error(msg);
     } else {
-      Meteor._debug('discarding unknown livedata message type', msg);
+      Log.debug('discarding unknown livedata message type', msg);
     }
   }
 

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '2.5.0',
+  version: '2.5.1',
   documentation: null
 });
 
@@ -21,6 +21,7 @@ Package.onUse((api) => {
     'ddp-common',
     'reload',
     'socket-stream-client',
+    'logging',
 
     // we depend on _diffObjects, _applyChanges,
     'diff-sequence',

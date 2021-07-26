@@ -1,5 +1,6 @@
 import { DDP } from '../common/namespace.js';
 import { Meteor } from 'meteor/meteor';
+import { Log } from 'meteor/logging';
 
 // Meteor.refresh can be called on the client (if you're in common code) but it
 // only has an effect on the server.
@@ -26,7 +27,7 @@ const ddpUrl = runtimeConfig.DDP_DEFAULT_CONNECTION_URL || '/';
 const retry = new Retry();
 
 function onDDPVersionNegotiationFailure(description) {
-  Meteor._debug(description);
+  Log.error(description);
   if (Package.reload) {
     const migrationData = Package.reload.Reload._migrationData('livedata') || Object.create(null);
     let failures = migrationData.DDPVersionNegotiationFailures || 0;
