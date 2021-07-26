@@ -93,7 +93,7 @@ const getTransport = function() {
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
   if (this.cacheKey === undefined || this.cacheKey !== url) {
-    if ((packageSettings?.service && knownHosts.includes(packageSettings)) || knownHosts.includes(url?.split(':')[0])) {
+    if ((packageSettings?.service && knownHosts.includes(packageSettings.service)) || knownHosts.includes(url?.split(':')[0])) {
       this.cacheKey = packageSettings.service || 'settings';
       this.cache = knownHostsTransport(packageSettings, url);
     } else {
@@ -149,9 +149,10 @@ const sendHooks = new Hook();
  * @param f {function} receives the arguments to Email.send and should return true to go
  * ahead and send the email (or at least, try subsequent hooks), or
  * false to skip sending.
+ * @returns {{ stop: function, callback: function }}
  */
 Email.hookSend = function (f) {
-  sendHooks.register(f);
+  return sendHooks.register(f);
 };
 
 /**

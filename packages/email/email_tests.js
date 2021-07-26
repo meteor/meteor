@@ -8,7 +8,7 @@ function smokeEmailTest(testFunction) {
   if (process.env.MAIL_URL) return;
 
   try {
-    var stream = new streamBuffers.WritableStreamBuffer;
+    const stream = new streamBuffers.WritableStreamBuffer;
     EmailTest.overrideOutputStream(stream);
 
     testFunction(stream);
@@ -269,6 +269,7 @@ Tinytest.add("email - alternate API is used for sending gets data", function(tes
 
     test.equal(stream.getContentsAsString("utf8"), false);
   });
+  Email.customTransport = undefined;
 });
 
 Tinytest.add("email - URL string for known hosts", function(test) {
@@ -280,17 +281,17 @@ Tinytest.add("email - URL string for known hosts", function(test) {
 
 Tinytest.add("email - hooks stop the sending", function(test) {
   // Register hooks
-  Email.hookSend((options) => {
+  const hook1 = Email.hookSend((options) => {
     // Test that we get options through
     test.equal(options.from, 'foo@example.com');
     console.log('EXECUTE');
     return true;
   });
-  Email.hookSend(() => {
+  const hook2 = Email.hookSend(() => {
     console.log('STOP');
     return false;
   });
-  Email.hookSend(() => {
+  const hook3 = Email.hookSend(() => {
     console.log('FAIL');
   });
   smokeEmailTest(function(stream) {
@@ -303,4 +304,7 @@ Tinytest.add("email - hooks stop the sending", function(test) {
 
     test.equal(stream.getContentsAsString("utf8"), false);
   });
+  hook1.stop();
+  hook2.stop();
+  hook3.stop();
 });
