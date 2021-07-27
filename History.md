@@ -11,6 +11,7 @@
 * `webapp@1.12`
   - npm dependencies have been updated
   - Added option to change runtime config in your app, [read more](https://github.com/meteor/meteor/pull/11506)
+  - `@vlasky/whomst@0.1.7`
     
 * `minifier-css@1.6.0`
   - Updated dependencies

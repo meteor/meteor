@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@vlasky/whomst": {
-      "version": "0.1.6",
-      "resolved": "https://registry.npmjs.org/@vlasky/whomst/-/whomst-0.1.6.tgz",
-      "integrity": "sha512-M5yGFGBMHSI6JWx4VJFs5Tw+BrVgboPmT3zinhWSvQXpOMevkvNRu/wdAZL5LdtqdsqnJDmZ1fsWunFMNOKLmg=="
+      "version": "0.1.7",
+      "resolved": "https://registry.npmjs.org/@vlasky/whomst/-/whomst-0.1.7.tgz",
+      "integrity": "sha512-rwJApvgTsws9LHJwskPSVfe9zmXu/Ownhoq2hX4CcVTL+aWH6bZxW34ycXWAdEuX+c/oYxhmovlAMpoMGOxaSg=="
     },
     "accepts": {
       "version": "1.3.7",
@@ -171,9 +171,9 @@
       "integrity": "sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ=="
     },
     "is-stream": {
-      "version": "2.0.0",
-      "resolved": "https://registry.npmjs.org/is-stream/-/is-stream-2.0.0.tgz",
-      "integrity": "sha512-XCoy+WlUr7d1+Z8GgSuXmpuUFC9fOhRXglJMx+dwLKTkL44Cjd4W1Z5P+BQZpr+cR93aGP4S/s7Ftw6Nd/kiEw=="
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/is-stream/-/is-stream-2.0.1.tgz",
+      "integrity": "sha512-hFoiJiTl63nn+kstHGBtewWSKnQLpyb155KHheA1l39uvtO9nWIop1p3udqPcUd/xbF1VLMO4n7OI6p7RbngDg=="
     },
     "isexe": {
       "version": "2.0.0",

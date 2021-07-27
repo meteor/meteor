@@ -13,7 +13,7 @@ Npm.depends({"basic-auth-connect": "1.0.0",
              "stream-to-string": "1.2.0",
              "qs": "6.10.1",
              useragent: "2.3.0",
-             "@vlasky/whomst": "0.1.6"});
+             "@vlasky/whomst": "0.1.7"});
 
 Npm.strip({
   multiparty: ["test/"],
