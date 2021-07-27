@@ -60,7 +60,7 @@ export class Hook {
   }
 
   register(callback) {
-    var exceptionHandler = this.exceptionHandler || function (exception) {
+    const exceptionHandler = this.exceptionHandler || function (exception) {
       // Note: this relies on the undocumented fact that if bindEnvironment's
       // onException throws, and you are invoking the callback either in the
       // browser or from within a Fiber in Node, the exception is propagated.
@@ -73,7 +73,7 @@ export class Hook {
       callback = dontBindEnvironment(callback, exceptionHandler);
     }
 
-    var id = this.nextCallbackId++;
+    const id = this.nextCallbackId++;
     this.callbacks[id] = callback;
 
     return {
@@ -100,12 +100,12 @@ export class Hook {
     // propagated), so we need to be in a Fiber.
     Meteor._nodeCodeMustBeInFiber();
 
-    var ids = Object.keys(this.callbacks);
-    for (var i = 0;  i < ids.length;  ++i) {
-      var id = ids[i];
+    const ids = Object.keys(this.callbacks);
+    for (let i = 0;  i < ids.length;  ++i) {
+      const id = ids[i];
       // check to see if the callback was removed during iteration
       if (hasOwn.call(this.callbacks, id)) {
-        var callback = this.callbacks[id];
+        const callback = this.callbacks[id];
         if (! iterator(callback)) {
           break;
         }
@@ -117,7 +117,7 @@ export class Hook {
 // Copied from Meteor.bindEnvironment and removed all the env stuff.
 function dontBindEnvironment(func, onException, _this) {
   if (!onException || typeof(onException) === 'string') {
-    var description = onException || "callback of async function";
+    const description = onException || "callback of async function";
     onException = function (error) {
       Meteor._debug(
         "Exception in " + description,
@@ -127,8 +127,9 @@ function dontBindEnvironment(func, onException, _this) {
   }
 
   return function (...args) {
+    let ret;
     try {
-      var ret = func.apply(_this, args);
+      ret = func.apply(_this, args);
     } catch (e) {
       onException(e);
     }
