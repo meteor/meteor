@@ -6,6 +6,7 @@
   - `meteor show` now reports if a package is deprecated
   - `reify` update to v0.22.0 which bring optimizations for imports, [read more](https://github.com/benjamn/reify/pull/246)
   - Apollo skeleton now uses [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300) - [migration guide](https://www.apollographql.com/docs/apollo-server/migration/)
+  - Upgraded `chalk` to v4.1.1
     
 * `webapp@1.12`
   - npm dependencies have been updated
@@ -15,6 +16,11 @@
   - Updated dependencies
     - `postcss@8.3.5`
     - `cssnano@4.1.11`
+  
+* `logging@1.3.0`
+  - Switch from `cli-color` to `chalk` to have the same dependency as meteor-tool
+  - Fix detecting eval
+  - Copy over code from `Meteor._debug` to `Log.debug` which will be deprecated in the future
   
 * `email@2.2`
   - Modernized package code
