@@ -82,6 +82,8 @@ change permissions later for the whole role, just add or remove children roles. 
 with:
 
 ```javascript
+import { Roles } from 'meteor/alanning:roles';
+
 Roles.createRole('user');
 Roles.createRole('admin');
 Roles.createRole('USERS_VIEW');
@@ -245,6 +247,8 @@ users.forEach(function (user) {
   });
 
   if (Meteor.roleAssignment.find({ 'user._id': id }).count() === 0) {
+    import { Roles } from 'meteor/alanning:roles';
+    
     user.roles.forEach(function (role) {
       Roles.createRole(role, {unlessExists: true});
     });
@@ -267,6 +271,7 @@ This SO answer gives more detail: http://stackoverflow.com/a/22650399/219238
 Check user roles before publishing sensitive data:
 ```js
 // server/publish.js
+import { Roles } from 'meteor/alanning:roles'
 
 // Give authorized users access to sensitive data by scope
 Meteor.publish('secrets', function (scope) {
@@ -291,6 +296,8 @@ Meteor.publish('secrets', function (scope) {
 Prevent non-authorized users from creating new users:
 ```js
 Accounts.validateNewUser(function (user) {
+  import { Roles } from 'meteor/alanning:roles'
+  
   var loggedInUser = Meteor.user();
 
   if (Roles.userIsInRole(loggedInUser, ['admin','manage-users'])) {
@@ -306,6 +313,7 @@ Accounts.validateNewUser(function (user) {
 Prevent access to certain functionality, such as deleting a user:
 ```js
 // server/userMethods.js
+import { Roles } from 'meteor/alanning:roles'
 
 Meteor.methods({
   /**
@@ -338,6 +346,7 @@ Meteor.methods({
 Manage a user's roles:
 ```js
 // server/userMethods.js
+import { Roles } from 'meteor/alanning:roles'
 
 Meteor.methods({
   /**
