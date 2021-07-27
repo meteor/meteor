@@ -30,3 +30,4 @@ If you use a node version manager that uses a separate global `node_modules` fol
 |-------------|------------------------|
 | 2.3.1       | 2.2.1                  |
 | 2.3.2       | 2.3.1                  |
+| 2.3.3       | 2.3.2                  |

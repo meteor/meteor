@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Send email messages",
-  version: "2.1.0"
+  version: "2.1.1"
 });
 
 Npm.depends({
-  nodemailer: "6.6.0",
+  nodemailer: "6.6.3",
   "stream-buffers": "3.0.2"
 });
 
