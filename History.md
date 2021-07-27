@@ -2,6 +2,8 @@
 
 #### Meteor Version Release
 
+* Skeletons dependencies updated
+
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
   - `reify` update to v0.22.0 which bring optimizations for imports, [read more](https://github.com/benjamn/reify/pull/246)
