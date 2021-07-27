@@ -112,9 +112,6 @@ function _call (method, url, options, callback) {
 
   ////////// Kickoff! //////////
 
-  // Allow users to override any request option with the npmRequestOptions
-  // option.
-
   const requestOptions = {
     method: method,
     caching: caching,
