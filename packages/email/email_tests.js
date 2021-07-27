@@ -273,10 +273,17 @@ Tinytest.add("email - alternate API is used for sending gets data", function(tes
 });
 
 Tinytest.add("email - URL string for known hosts", function(test) {
-  test.equal(EmailTest.knowHostsTransport({ service: '1on1', user: 'test', password: 'pwd' }).transporter.auth.type, 'LOGIN');
-  test.equal(EmailTest.knowHostsTransport({ service: '1on1', user: 'test', password: 'pwd' }).transporter.auth.user, 'test');
+  const oneService = { service: '1und1', user: 'test', password: 'pwd' };
+  const falseService = { service: '1on1', user: 'test', password: 'pwd' };
+  const errorMsg = 'Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.'
+  test.equal(EmailTest.knowHostsTransport(oneService).transporter.auth.type, 'LOGIN');
+  test.equal(EmailTest.knowHostsTransport(oneService).transporter.auth.user, 'test');
   test.equal(EmailTest.knowHostsTransport(null, 'AOL://test:pwd@aol.com').transporter.auth.user, 'test');
   test.equal(EmailTest.knowHostsTransport(null, 'AOL://test:pwd@aol.com').transporter.auth.type, 'LOGIN');
+  test.equal(EmailTest.knowHostsTransport(null, 'https://test:pwd@aol.com').transporter.auth.user, 'test');
+  test.equal(EmailTest.knowHostsTransport(null, 'https://test:pwd@aol.com').transporter.auth.type, 'LOGIN');
+  test.throws(() => EmailTest.knowHostsTransport(falseService), errorMsg);
+  test.throws(() => EmailTest.knowHostsTransport(null, 'smtp://bbb:bb@bb.com'), errorMsg);
 });
 
 Tinytest.add("email - hooks stop the sending", function(test) {

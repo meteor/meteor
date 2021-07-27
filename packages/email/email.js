@@ -5,6 +5,7 @@ import { Hook } from 'meteor/callback-hook';
 const Future = Npm.require('fibers/future');
 const url = Npm.require('url');
 const nodemailer = Npm.require('nodemailer');
+const wellKnow = Npm.require('nodemailer/lib/well-known');
 
 export const Email = {};
 export const EmailTest = {};
@@ -53,24 +54,32 @@ const makeTransport = function (mailUrlString) {
   return transport;
 };
 
-// List of all supported services: https://github.com/nodemailer/nodemailer/blob/master/lib/well-known/services.json
-export const knownHosts = ["1und1", "AOL", "DebugMail", "DynectEmail", "Ethereal", "FastMail", "GandiMail",
-  "Gmail", "Godaddy", "GodaddyAsia", "GodaddyEurope", "hot.ee", "Hotmail", "iCloud", "mail.ee", "Mail.ru",
-  "Maildev", "Mailgun", "Mailjet", "Mailosaur", "Mailtrap", "Mandrill", "Naver", "One", "OpenMailBox", "Outlook365",
-  "OhMySMTP", "Postmark", "qiye.aliyun", "QQ", "QQex", "SendCloud", "SendGrid", "SendinBlue", "SendPulse", "SES",
-  "SES-US-EAST-1", "SES-US-WEST-2", "SES-EU-WEST-1", "Sparkpost", "Tipimail", "Yahoo", "Yandex", "Zoho", "126", "163"];
-
 // More info: https://nodemailer.com/smtp/well-known/
-const knownHostsTransport = function(settings = {}, url = undefined) {
+const knownHostsTransport = function(settings = undefined, url = undefined) {
   let service, user, password;
-  if (url) {
-    const host = url?.split(':')[0];
+  if (url && !settings) {
+    let host = url?.split(':')[0];
     const urlObject = new URL(url);
-    if (knownHosts.includes(host)) {
-      service = host;
+    if (host === 'http' || 'https') {
+      // Look to hostname for service
+      host = urlObject.hostname;
       user = urlObject.username;
       password = urlObject.password;
+    } else {
+      // We need to disect the URL ourselves to get the data
+      // First get rid of the leading '//' and split to username and the rest
+      const temp = urlObject.pathname.substring(2).split(':');
+      user = temp[0];
+      // Now we split by '@' to get password and hostname
+      const temp2 = temp[1].split('@');
+      password = temp2[0];
+      host = temp2[1];
     }
+    service = host;
+  }
+
+  if (!wellKnow(settings?.service || service)) {
+    throw new Error('Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.');
   }
 
   const transport = nodemailer.createTransport({
@@ -92,8 +101,8 @@ const getTransport = function() {
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
-  if (this.cacheKey === undefined || this.cacheKey !== url) {
-    if ((packageSettings?.service && knownHosts.includes(packageSettings.service)) || knownHosts.includes(url?.split(':')[0])) {
+  if (this.cacheKey === undefined || (this.cacheKey !== url || this.cacheKey !== packageSettings?.service || 'settings')) {
+    if ((packageSettings?.service && wellKnow(packageSettings.service)) || (url && wellKnow(new URL(url).hostname) || wellKnow(url?.split(':')[0] || ''))) {
       this.cacheKey = packageSettings.service || 'settings';
       this.cache = knownHostsTransport(packageSettings, url);
     } else {
