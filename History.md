@@ -31,6 +31,21 @@
 * `mongo@1.13.0`
   - Add `createIndex` as a collection function (in MongoDB since MongoDB v3). This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0. Use of `_ensureIndex` will show a deprecation warning on development.
 
+* `accounts-base@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `accounts-password@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `oauth@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `oauth1@1.5.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `service-configuration@1.5.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
 #### Independent Releases
 
 * `minifier-js@2.6.1`
