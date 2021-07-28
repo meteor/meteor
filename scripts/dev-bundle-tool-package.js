@@ -20,7 +20,7 @@ var packageJson = {
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.9.0",
     fibers: "5.0.0",
-    reify: "0.20.12",
+    reify: "0.22.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.14.6",
     // For backwards compatibility with isopackets that still depend on
@@ -41,7 +41,7 @@ var packageJson = {
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.7.3",
-    chalk: "0.5.1",
+    chalk: "4.1.1",
     sqlite3: "5.0.2",
     "http-proxy": "1.18.1",
     "is-reachable": "3.1.0",
