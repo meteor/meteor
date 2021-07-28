@@ -53,37 +53,41 @@ var upgradersByName = {
 
      if (files.exists(smartJsonPath)) {
        // Meteorite apps:
-       console.log(
-"0.9.0: Welcome to the new Meteor package system! You can now add any Meteor\n" +
-"       package to your app (from more than 1800 packages available on the\n" +
-"       Meteor Package Server) just by typing 'meteor add <packagename>', no\n" +
-"       Meteorite required.\n" +
-"\n" +
-"       It looks like you have been using Meteorite with this project. To\n" +
-"       migrate your project automatically to the new system:\n" +
-"         (1) upgrade your Meteorite with 'npm install -g meteorite', then\n" +
-"         (2) run 'mrt migrate-app' inside the project.\n" +
-"       Having done this, you no longer need 'mrt' and can just use 'meteor'.\n");
+       Console.info(
+         "Welcome to the new Meteor package system! You can now add any Meteor\n",
+         "package to your app (from more than 1800 packages available on the\n",
+         "Meteor Package Server) just by typing 'meteor add <packagename>', no\n",
+         "Meteorite required.\n\n",
+         "It looks like you have been using Meteorite with this project. To\n",
+         "migrate your project automatically to the new system:\n",
+         "(1) upgrade your Meteorite with 'npm install -g meteorite', then\n",
+         "(2) run 'mrt migrate-app' inside the project.\n",
+         "Having done this, you no longer need 'mrt' and can just use 'meteor'.\n",
+         Console.options({ bulletPoint: "0.9.1: " })
+       );
      } else {
        // Non-Meteorite apps:
-       console.log(
-"0.9.0: Welcome to the new Meteor package system! You can now add any Meteor\n" +
-"       package to your app (from more than 1800 packages available on the\n" +
-"       Meteor Package Server) just by typing 'meteor add <packagename>'. Check\n" +
-"       out the available packages by typing 'meteor search <term>' or by\n" +
-"       visiting atmospherejs.com.\n");
+       Console.info(
+         "Welcome to the new Meteor package system! You can now add any Meteor\n",
+         "package to your app (from more than 1800 packages available on the\n",
+         "Meteor Package Server) just by typing 'meteor add <packagename>'. Check\n",
+         "out the available packages by typing 'meteor search <term>' or by\n",
+         "visiting atmospherejs.com.\n", Console.options({ bulletPoint: "0.9.0: " })
+       );
      }
-    console.log();
+    Console.info();
   },
 
   "notices-for-0.9.1": function () {
     maybePrintNoticeHeader();
-    console.log(
-"0.9.1: Meteor 0.9.1 includes changes to the Blaze API, in preparation for 1.0.\n" +
-"       Many previously undocumented APIs are now public and documented. Most\n" +
-"       changes are backwards compatible, except that templates can no longer\n" +
-"       be named \"body\" or \"instance\".\n");
-    console.log();
+    Console.info(
+      "Meteor 0.9.1 includes changes to the Blaze API, in preparation for 1.0.\n",
+      "Many previously undocumented APIs are now public and documented. Most\n",
+      "changes are backwards compatible, except that templates can no longer\n",
+      "be named \"body\" or \"instance\".\n",
+      Console.options({ bulletPoint: "0.9.1: " })
+    );
+    Console.info();
   },
 
   // In 0.9.4, the platforms file contains "server" and "browser" as platforms,
@@ -355,7 +359,7 @@ exports.upgradersToRun = function (projectContext) {
   var finishedUpgraders = projectContext.finishedUpgraders.readUpgraders();
   // This relies on the fact that Node guarantees object iteration ordering.
   _.each(upgradersByName, function (func, name) {
-    if (! _.contains(finishedUpgraders, name)) {
+    if (! finishedUpgraders.includes(name)) {
       ret.push(name);
     }
   });
@@ -363,5 +367,5 @@ exports.upgradersToRun = function (projectContext) {
 };
 
 exports.allUpgraders = function () {
-  return _.keys(upgradersByName);
+  return Object.keys(upgradersByName);
 };

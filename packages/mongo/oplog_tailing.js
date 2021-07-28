@@ -85,7 +85,7 @@ OplogHandle = function (oplogUrl, dbName) {
   self._startTailing();
 };
 
-_.extend(OplogHandle.prototype, {
+Object.assign(OplogHandle.prototype, {
   stop: function () {
     var self = this;
     if (self._stopped)
