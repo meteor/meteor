@@ -15,7 +15,7 @@ Package.registerBuildPlugin({
     'plugin/compile-less.js'
   ],
   npmDependencies: {
-    "@babel/runtime": "7.14.6",
+    "@babel/runtime": "7.14.8",
     "less": "4.1.1"
   }
 });
@@ -32,7 +32,7 @@ Package.onTest(function(api) {
                 'tests/dir/in-dir.import.less',
                 'tests/dir/in-dir2.import.less',
                 'tests/dir/root.less',
-                'tests/dir/subdir/in-subdir.import.less']);
+                'tests/dir/subdir/in-subdir.import.less'], 'client');
 
   api.addFiles('tests/imports/not-included.less', 'client', {
     lazy: true
