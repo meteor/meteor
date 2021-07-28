@@ -306,6 +306,9 @@
 * `meteor-tool@2.2.1`
   - Updated Node.js to 12.22.2 per [Node security update](https://nodejs.org/en/blog/vulnerability/july-2021-security-releases/)
 
+* `ddp-server@2.3.3`
+  - One of three different publication strategies can be selected for any Meteor publication - SERVER_MERGE, NO_MERGE and NO_MERGE_NO_HISTORY. These control the behaviour of the Meteor mergebox, providing a compromise between client-server bandwidth usage and server side memory usage.
+
 ## v2.2, 2021-04-15
 
 #### Highlights
