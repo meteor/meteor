@@ -28,6 +28,9 @@
 * `ddp-server@2.5.0`
   - One of three different publication strategies can be selected for any Meteor publication - SERVER_MERGE, NO_MERGE and NO_MERGE_NO_HISTORY. These control the behaviour of the Meteor mergebox, providing a compromise between client-server bandwidth usage and server side memory usage. [See PR for more details](https://github.com/meteor/meteor/pull/11368) 
 
+* `mongo@1.13.0`
+  - Add `createIndex` as a collection function (in MongoDB since MongoDB v3). This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0. Use of `_ensureIndex` will show a deprecation warning on development.
+
 #### Independent Releases
 
 * `minifier-js@2.6.1`
