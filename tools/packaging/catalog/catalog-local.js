@@ -113,7 +113,7 @@ var LocalCatalog = function (options) {
   self._nextId = 1;
 };
 
-_.extend(LocalCatalog.prototype, {
+Object.assign(LocalCatalog.prototype, {
   toString: function () {
     var self = this;
     return "LocalCatalog [localPackageSearchDirs=" +
@@ -197,7 +197,7 @@ _.extend(LocalCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    return _.keys(self.packages);
+    return Object.keys(self.packages);
   },
 
   // Return an array with the names of all of the non-test packages that we know

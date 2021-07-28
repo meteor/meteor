@@ -526,7 +526,7 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
 
   if (extraTokenData) {
     Object.assign(tokenRecord, extraTokenData);
-  } 
+  }
   // if this method is called from the enroll account work-flow then
   // store the token record in 'services.password.enroll' db field
   // else store the token record in in 'services.password.reset' db field
@@ -722,7 +722,7 @@ Meteor.methods({resetPassword: function (...args) {
           emails: 1,
         }}
       );
-     
+
       let isEnroll = false;
       // if token is in services.password.reset db field implies
       // this method is was not called from enroll account workflow
@@ -760,7 +760,7 @@ Meteor.methods({resetPassword: function (...args) {
           error: new Meteor.Error(403, "Token has invalid email address")
         };
 
-      const hashed = hashPassword(newPassword);     
+      const hashed = hashPassword(newPassword);
 
       // NOTE: We're about to invalidate tokens on the user, who we might be
       // logged in as. Make sure to avoid logging ourselves out if this
@@ -1158,9 +1158,9 @@ Accounts.createUser = (options, callback) => {
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
-Meteor.users._ensureIndex('services.email.verificationTokens.token',
+Meteor.users.createIndex('services.email.verificationTokens.token',
                           { unique: true, sparse: true });
-Meteor.users._ensureIndex('services.password.reset.token',
+Meteor.users.createIndex('services.password.reset.token',
                           { unique: true, sparse: true });
-Meteor.users._ensureIndex('services.password.enroll.token',
+Meteor.users.createIndex('services.password.enroll.token',
                           { unique: true, sparse: true });

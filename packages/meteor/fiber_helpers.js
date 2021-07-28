@@ -13,7 +13,7 @@ Meteor._noYieldsAllowed = function (f) {
   }
 };
 
-Meteor._DoubleEndedQueue = Npm.require('meteor-deque');
+Meteor._DoubleEndedQueue = Npm.require('double-ended-queue');
 
 // Meteor._SynchronousQueue is a queue which runs task functions serially.
 // Tasks are assumed to be synchronous: ie, it's assumed that they are

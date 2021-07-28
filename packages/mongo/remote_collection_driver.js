@@ -4,14 +4,13 @@ MongoInternals.RemoteCollectionDriver = function (
   self.mongo = new MongoConnection(mongo_url, options);
 };
 
-_.extend(MongoInternals.RemoteCollectionDriver.prototype, {
+Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
-    _.each(
-      ['find', 'findOne', 'insert', 'update', 'upsert',
-       'remove', '_ensureIndex', '_dropIndex', '_createCappedCollection',
-       'dropCollection', 'rawCollection'],
+    ['find', 'findOne', 'insert', 'update', 'upsert',
+      'remove', '_ensureIndex', 'createIndex', '_dropIndex', '_createCappedCollection',
+      'dropCollection', 'rawCollection'].forEach(
       function (m) {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });

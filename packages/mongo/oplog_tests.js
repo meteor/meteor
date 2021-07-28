@@ -59,7 +59,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       var self = this;
       self.collectionName = Random.id();
       self.collection = new Mongo.Collection(self.collectionName);
-      self.collection._ensureIndex({species: 1});
+      self.collection.createIndex({species: 1});
 
       // Fill collection with lots of irrelevant objects (red cats) and some
       // relevant ones (blue dogs).
