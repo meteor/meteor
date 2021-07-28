@@ -394,6 +394,8 @@ Meteor.startup(() => {
 });
 ```
 
+{% apibox "Mongo.Collection#createIndex" %}
+
 {% apibox "Mongo.Collection#allow" %}
 
 {% pullquote warning %}
