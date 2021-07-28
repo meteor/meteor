@@ -178,6 +178,33 @@ Object.assign(Mongo.Collection.prototype, {
         var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection._docs.get(mongoId);
 
+        //When the server's mergebox is disabled for a collection, the client must gracefully handle it when:
+        // *We receive an added message for a document that is already there. Instead, it will be changed
+        // *We reeive a change message for a document that is not there. Instead, it will be added
+        // *We receive a removed messsage for a document that is not there. Instead, noting wil happen.
+
+        //Code is derived from client-side code originally in peerlibrary:control-mergebox
+        //https://github.com/peerlibrary/meteor-control-mergebox/blob/master/client.coffee
+
+        //For more information, refer to discussion "Initial support for publication strategies in livedata server":
+        //https://github.com/meteor/meteor/pull/11151
+        if (Meteor.isClient) {
+          if (msg.msg === 'added' && doc) {
+            msg.msg = 'changed';
+          } else if (msg.msg === 'removed' && !doc) {
+            return;
+          } else if (msg.msg === 'changed' && !doc) {
+            msg.msg = 'added';
+            _ref = msg.fields;
+            for (field in _ref) {
+              value = _ref[field];
+              if (value === void 0) {
+                delete msg.fields[field];
+              }
+            }
+          }
+        }
+
         // Is this a "replace the whole doc" message coming from the quiescence
         // of method writes to an object? (Note that 'undefined' is a valid
         // value meaning "remove it".)
@@ -671,7 +698,33 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection._ensureIndex)
       throw new Error("Can only call _ensureIndex on server collections");
-    self._collection._ensureIndex(index, options);
+    if (self._collection.createIndex) {
+      import { Log } from 'meteor/logging';
+
+      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead, index name: ${options?.name}`)
+      self._collection.createIndex(index, options);
+    } else {
+      self._collection._ensureIndex(index, options);
+    }
+  },
+
+  /**
+   * @summary Creates the specified index on the collection.
+   * @locus server
+   * @method createIndex
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#std-label-ensureIndex-options)
+   * @param {String} options.name Name of the index
+   * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
+   * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
+   */
+  createIndex(index, options) {
+    var self = this;
+    if (!self._collection.createIndex)
+      throw new Error("Can only call createIndex on server collections");
+    self._collection.createIndex(index, options);
   },
 
   _dropIndex(index) {

@@ -2,6 +2,8 @@
 
 #### Meteor Version Release
 
+* Skeletons dependencies updated
+
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
   - `reify` update to v0.22.0 which bring optimizations for imports, [read more](https://github.com/benjamn/reify/pull/246)
@@ -11,6 +13,7 @@
 * `webapp@1.12`
   - npm dependencies have been updated
   - Added option to change runtime config in your app, [read more](https://github.com/meteor/meteor/pull/11506)
+  - `@vlasky/whomst@0.1.7`
     
 * `minifier-css@1.6.0`
   - Updated dependencies
@@ -25,6 +28,27 @@
 * `email@2.2`
   - Modernized package code
   - Add alternative API function that you can hook into to utilize your own sending method. `Email.customTransport`
+
+* `ddp-server@2.5.0`
+  - One of three different publication strategies can be selected for any Meteor publication - SERVER_MERGE, NO_MERGE and NO_MERGE_NO_HISTORY. These control the behaviour of the Meteor mergebox, providing a compromise between client-server bandwidth usage and server side memory usage. [See PR for more details](https://github.com/meteor/meteor/pull/11368) 
+
+* `mongo@1.13.0`
+  - Add `createIndex` as a collection function (in MongoDB since MongoDB v3). This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0. Use of `_ensureIndex` will show a deprecation warning on development.
+
+* `accounts-base@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `accounts-password@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `oauth@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `oauth1@1.5.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `service-configuration@1.5.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
 
 #### Independent Releases
 
