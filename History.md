@@ -6,7 +6,7 @@
   - `meteor show` now reports if a package is deprecated
 
 * `mongo@1.13.0`
-  - Add `createIndex` as a collection function. This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0. Use of `_ensureIndex` will show a deprecation warning on development.
+  - Add `createIndex` as a collection function (in MongoDB since MongoDB v3). This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0. Use of `_ensureIndex` will show a deprecation warning on development.
 
 #### Independent Releases
 
