@@ -5,6 +5,9 @@
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
 
+* `mongo@1.13.0`
+  - Add `createIndex` as a collection function. This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0. Use of `_ensureIndex` will show a deprecation warning on development.
+
 #### Independent Releases
 
 * `minifier-js@2.6.1`
@@ -19,9 +22,6 @@
 * `callback-hook@1.3.1`
   - Modernized the code
   - Fixed a variable assignment bug in `dontBindEnvironment` function
-  
-* `mongo@1.12.1`
-  - Add `_createIndex` as a collection function. This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0.
   
 ## v2.3.2, 2021-07-13
 

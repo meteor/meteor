@@ -9,7 +9,7 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
     var self = this;
     var ret = {};
     ['find', 'findOne', 'insert', 'update', 'upsert',
-      'remove', '_ensureIndex', '_createIndex', '_dropIndex', '_createCappedCollection',
+      'remove', '_ensureIndex', 'createIndex', '_dropIndex', '_createCappedCollection',
       'dropCollection', 'rawCollection'].forEach(
       function (m) {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);

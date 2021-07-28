@@ -671,14 +671,21 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection._ensureIndex)
       throw new Error("Can only call _ensureIndex on server collections");
-    self._collection._ensureIndex(index, options);
+    if (self._collection.createIndex) {
+      import { Log } from 'logging';
+
+      Log.debug('_ensureIndex has been deprecated, please use the new `createIndex` instead')
+      self._collection.createIndex(index, options);
+    } else {
+      self._collection._ensureIndex(index, options);
+    }
   },
 
-  _createIndex(index, options) {
+  createIndex(index, options) {
     var self = this;
-    if (!self._collection._createIndex)
-      throw new Error("Can only call _createIndex on server collections");
-    self._collection._createIndex(index, options);
+    if (!self._collection.createIndex)
+      throw new Error("Can only call createIndex on server collections");
+    self._collection.createIndex(index, options);
   },
 
   _dropIndex(index) {
