@@ -167,13 +167,84 @@ You can also use traditional CommonJS syntax with CoffeeScript.
 
 ## Modular application structure
 
+Use in your application `package.json` file the section `meteor`.
+
+> This is available since Meteor 1.7
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    }
+  }
+}
+```
+
+When specified, these entry points will define in which files Meteor is going to start the evaluation process for each architecture (client and server).
+
+This way Meteor is not going to eager load any other files.
+
+In addition to `meteor.mainModule`, the `meteor` section of `package.json` may also specify `meteor.testModule` to control which test modules are loaded by `meteor test` or `meteor test --full-app`:
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "testModule": "tests.js"
+  }
+}
+```
+
+If your client and server test files are different, you can expand the testModule configuration using the same syntax as mainModule:
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "testModule": {
+      "client": "client/tests.js",
+      "server": "server/tests.js"
+    }
+  }
+}
+```
+
+The same test module will be loaded whether or not you use the `--full-app` option. 
+
+Any tests that need to detect `--full-app` should check `Meteor.isAppTest`. 
+
+The module(s) specified by `meteor.testModule` can import other test modules at runtime, so you can still distribute test files across your codebase; just make sure you import the ones you want to run.
+
+To disable eager loading of modules on a given architecture, simply provide a mainModule value of false:
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": false,
+      "server": "server/main.js"
+    }
+  }
+}
+```
+
+### Historic behind Modular application structure
+
+If you want to understand how Meteor works without `meteor.mainModule` on `package.json` keep reading this section, but we don't recommend this approach anymore.
+
 Before the release of Meteor 1.3, the only way to share values between files in an application was to assign them to global variables or communicate through shared variables like `Session` (variables which, while not technically global, sure do feel syntactically identical to global variables). With the introduction of modules, one module can refer precisely to the exports of any other specific module, so global variables are no longer necessary.
 
 If you are familiar with modules in Node, you might expect modules not to be evaluated until the first time you import them. However, because earlier versions of Meteor evaluated all of your code when the application started, and we care about backwards compatibility, eager evaluation is still the default behavior.
 
 If you would like a module to be evaluated *lazily* (in other words: on demand, the first time you import it, just like Node does it), then you should put that module in an `imports/` directory (anywhere in your app, not just the root directory), and include that directory when you import the module: `import {stuff} from './imports/lazy'`. Note: files contained by `node_modules/` directories will also be evaluated lazily (more on that below).
-
-Lazy evaluation will very likely become the default behavior in a future version of Meteor, but if you want to embrace it as fully as possible in the meantime, we recommend putting all your modules inside either `client/imports/` or `server/imports/` directories, with just a single entry point for each architecture: `client/main.js` and `server/main.js`. The `main.js` files will be evaluated eagerly, giving your application a chance to import modules from the `imports/` directories.
 
 ## Modular package structure
 
