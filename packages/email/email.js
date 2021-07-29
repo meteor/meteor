@@ -218,7 +218,7 @@ Email.send = function (options) {
   if (!send) return;
 
   const customTransport = Email.customTransport;
-  const transport = customTransport ? getTransport() : false;
+  const transport = customTransport ? false : getTransport();
   if (transport) {
     smtpSend(transport, options);
   } else if (customTransport) {
