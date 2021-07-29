@@ -1,6 +1,6 @@
-var streamBuffers = Npm.require('stream-buffers');
+const streamBuffers = Npm.require('stream-buffers');
 
-var devWarningBanner = "(Mail not sent; to enable " +
+const devWarningBanner = "(Mail not sent; to enable " +
   "sending, set the MAIL_URL environment variable.)\n";
 
 function smokeEmailTest(testFunction) {
@@ -8,7 +8,7 @@ function smokeEmailTest(testFunction) {
   if (process.env.MAIL_URL) return;
 
   try {
-    var stream = new streamBuffers.WritableStreamBuffer;
+    const stream = new streamBuffers.WritableStreamBuffer;
     EmailTest.overrideOutputStream(stream);
 
     testFunction(stream);
@@ -83,7 +83,7 @@ Tinytest.add("email - multiple e-mails same stream", function (test) {
       text: "This is the body\nof the message\nFrom us.",
     });
 
-    var contents;
+    let contents;
 
     contents = canonicalize(stream.getContentsAsString("utf8"));
     test.matches(contents, /^====== BEGIN MAIL #0 ======$/m);
@@ -108,7 +108,7 @@ Tinytest.add("email - multiple e-mails same stream", function (test) {
 Tinytest.add("email - using mail composer", function (test) {
   smokeEmailTest(function (stream) {
     // Test direct MailComposer usage.
-    var mc = new EmailInternals.NpmModules.mailcomposer.module({
+    const mc = new EmailInternals.NpmModules.mailcomposer.module({
       from: "a@b.com",
       text: "body"
     });
@@ -237,4 +237,81 @@ Tinytest.add("email - text and html", function (test) {
                "----...-Part_1--\r\n" +
                "====== END MAIL #0 ======\n");
   });
+});
+
+Tinytest.add("email - alternate API is used for sending gets data", function(test) {
+  smokeEmailTest(function(stream) {
+    Email.customTransport = (options) => {
+      test.equal(options.from, 'foo@example.com');
+    };
+    Email.send({
+      from: "foo@example.com",
+      to: "bar@example.com",
+      text: "*Cool*, man",
+      html: "<i>Cool</i>, man",
+    });
+    test.equal(stream.getContentsAsString("utf8"), false);
+  });
+
+  smokeEmailTest(function(stream) {
+    Meteor.settings.packages = { email: { service: '1on1', user: 'test', password: 'pwd' } };
+    Email.customTransport = (options) => {
+      test.equal(options.from, 'foo@example.com');
+      test.equal(options.settings?.service, '1on1');
+    };
+
+    Email.send({
+      from: "foo@example.com",
+      to: "bar@example.com",
+      text: "*Cool*, man",
+      html: "<i>Cool</i>, man",
+    });
+
+    test.equal(stream.getContentsAsString("utf8"), false);
+  });
+  Email.customTransport = undefined;
+});
+
+Tinytest.add("email - URL string for known hosts", function(test) {
+  const oneService = { service: '1und1', user: 'test', password: 'pwd' };
+  const falseService = { service: '1on1', user: 'test', password: 'pwd' };
+  const errorMsg = 'Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.'
+  test.equal(EmailTest.knowHostsTransport(oneService).transporter.auth.type, 'LOGIN');
+  test.equal(EmailTest.knowHostsTransport(oneService).transporter.auth.user, 'test');
+  test.equal(EmailTest.knowHostsTransport(null, 'AOL://test:pwd@aol.com').transporter.auth.user, 'test');
+  test.equal(EmailTest.knowHostsTransport(null, 'AOL://test:pwd@aol.com').transporter.auth.type, 'LOGIN');
+  test.equal(EmailTest.knowHostsTransport(null, 'https://test:pwd@aol.com').transporter.auth.user, 'test');
+  test.equal(EmailTest.knowHostsTransport(null, 'https://test:pwd@aol.com').transporter.auth.type, 'LOGIN');
+  test.throws(() => EmailTest.knowHostsTransport(falseService), errorMsg);
+  test.throws(() => EmailTest.knowHostsTransport(null, 'smtp://bbb:bb@bb.com'), errorMsg);
+});
+
+Tinytest.add("email - hooks stop the sending", function(test) {
+  // Register hooks
+  const hook1 = Email.hookSend((options) => {
+    // Test that we get options through
+    test.equal(options.from, 'foo@example.com');
+    console.log('EXECUTE');
+    return true;
+  });
+  const hook2 = Email.hookSend(() => {
+    console.log('STOP');
+    return false;
+  });
+  const hook3 = Email.hookSend(() => {
+    console.log('FAIL');
+  });
+  smokeEmailTest(function(stream) {
+    Email.send({
+      from: "foo@example.com",
+      to: "bar@example.com",
+      text: "*Cool*, man",
+      html: "<i>Cool</i>, man",
+    });
+
+    test.equal(stream.getContentsAsString("utf8"), false);
+  });
+  hook1.stop();
+  hook2.stop();
+  hook3.stop();
 });

@@ -24,6 +24,10 @@
   - Switch from `cli-color` to `chalk` to have the same dependency as meteor-tool
   - Fix detecting eval
   - Copy over code from `Meteor._debug` to `Log.debug` which will be deprecated in the future
+  
+* `email@2.2`
+  - Modernized package code
+  - Add alternative API function that you can hook into to utilize your own sending method. `Email.customTransport`
 
 * `ddp-server@2.5.0`
   - One of three different publication strategies can be selected for any Meteor publication - SERVER_MERGE, NO_MERGE and NO_MERGE_NO_HISTORY. These control the behaviour of the Meteor mergebox, providing a compromise between client-server bandwidth usage and server side memory usage. [See PR for more details](https://github.com/meteor/meteor/pull/11368) 
