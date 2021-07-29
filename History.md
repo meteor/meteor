@@ -60,6 +60,10 @@
 * `callback-hook@1.3.1`
   - Modernized the code
   - Fixed a variable assignment bug in `dontBindEnvironment` function
+
+* `less@4.0.0`
+  - Updated `less` to v4.1.1
+  - Fixed tests
   
 ## v2.3.2, 2021-07-13
 
