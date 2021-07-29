@@ -536,17 +536,18 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
         'services.password.enroll': tokenRecord
       }
     });
+    // before passing to template, update user object with new token
+    Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
   } else {
     Meteor.users.update({_id: user._id}, {
       $set : {
         'services.password.reset': tokenRecord
       }
     });
+    // before passing to template, update user object with new token
+    Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
   }
 
-  // before passing to template, update user object with new token
-  Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
-  Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
   return {email, user, token};
 };
 
