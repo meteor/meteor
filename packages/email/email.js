@@ -167,6 +167,7 @@ Email.hookSend = function (f) {
 /**
  * @summary Overrides sending function with your own.
  * @locus Server
+ * @since 2.2
  * @param f {function} function that will receive options from the send function and under `settings` will
  * include the package settings from Meteor.settings.packages.email for your custom transport to access.
  */
