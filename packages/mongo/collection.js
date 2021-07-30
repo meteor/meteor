@@ -45,7 +45,6 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
   }
 
   const collectionInstance = getCollectionInstanceOrNull({name, isAsync: optionsParam.isAsync});
-  console.log(`collectionInstance for ${name}, isAsync=${optionsParam.isAsync} already exists?`, !!collectionInstance);
 
   if (collectionInstance) {
     return collectionInstance;

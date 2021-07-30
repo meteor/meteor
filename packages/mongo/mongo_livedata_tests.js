@@ -565,7 +565,7 @@ if (Meteor.isServer) {
     function error() {
       throw new Meteor.Error('unsafe object mutation');
     }
-    
+
     const denyModifications = {
       get(target, key) {
         const type = Object.prototype.toString.call(target[key]);
@@ -579,7 +579,7 @@ if (Meteor.isServer) {
       deleteProperty: error,
       defineProperty: error,
     };
-    
+
     // Object.freeze only throws in silent mode
     // So we make our own version that always throws.
     function freeze(obj) {
@@ -591,7 +591,7 @@ if (Meteor.isServer) {
       // Make sure that if anything touches the original object, this will throw
       return origApplyCallback.call(this, callback, freeze(args));
     }
-    
+
     const run = test.runId();
     const coll = new Mongo.Collection(`livedata_test_scribble_collection_${run}`, collectionOptions);
     const expectMutatable = (o) => {
@@ -625,7 +625,7 @@ if (Meteor.isServer) {
       coll.insert({run, a: [ {c: 1} ]});
       coll.update({run}, { $set: { 'a.0.c': 2 } });
     });
- 
+
     handle.stop();
     handle2.stop();
 
@@ -2233,7 +2233,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 });  // end idGeneration parametrization
 
 Tinytest.add('mongo-livedata - rewrite selector', function (test) {
- 
+
   test.equal(Mongo.Collection._rewriteSelector('foo'),
              {_id: 'foo'});
 
@@ -3175,7 +3175,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 
 var waitUntilOplogCaughtUp = function () {
   var oplogHandle =
-        MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+        Promise.await(MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle;
   if (oplogHandle)
     oplogHandle.waitUntilCaughtUp();
 };
