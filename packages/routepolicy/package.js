@@ -1,10 +1,10 @@
 Package.describe({
   summary: "route policy declarations",
-  version: '1.1.0'
+  version: '1.1.1'
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'ecmascript'], 'server');
+  api.use('ecmascript', 'server');
   // Resolve circular dependency with webapp. We can only use WebApp via
   // Package.webapp and only after initial load.
   api.use('webapp', 'server', {unordered: true});
