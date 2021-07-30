@@ -97,8 +97,11 @@ Mongo.Collection = function Collection(name, options) {
 
   // default, used in the client for example
   this.asyncInit = async () => {
+    this.isAsyncInitialized = true;
     return this;
   }
+  this.isAsync = options.isAsync;
+  this.isAsyncInitialized = false;
 
   if (!options._driver) {
     // XXX This check assumes that webapp is loaded so that Meteor.server !==
@@ -112,13 +115,15 @@ Mongo.Collection = function Collection(name, options) {
       MongoInternals.defaultRemoteCollectionDriver
     ) {
 
-      if (options.isAsync) {
+      if (this.isAsync) {
         this.asyncInit = async () => {
           this._driver = await MongoInternals.defaultRemoteCollectionDriver();
           this.openDriver();
+          this.isAsyncInitialized = true;
           return this;
         }
       } else {
+        // TODO [fiber removal]
         // Promise.await here is ok as this is to keep compatibility for sync
         // collections
         this._driver = Promise.await(MongoInternals.defaultRemoteCollectionDriver());
@@ -397,10 +402,6 @@ Object.assign(Mongo.Collection.prototype, {
       this._getFindSelector(args),
       this._getFindOptions(args)
     );
-  },
-
-  async findAsync(...args) {
-    return Promise.resolve(this.find(...args));
   },
 
   /**
@@ -832,16 +833,6 @@ const collectionImplementation = {
 
 Object.assign(Mongo.Collection.prototype, collectionImplementation);
 
-Object.keys(collectionImplementation)
-  .forEach(method => {
-    const asyncName = `${method}Async`.replace('_', '');
-    Mongo.Collection.prototype[asyncName] = async function(...args) {
-      const self = this;
-
-      return Promise.resolve(self[method].apply(self, arguments));
-    };
-});
-
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {
   return (
@@ -903,18 +894,33 @@ function popCallbackFromArgs(args) {
   }
 }
 
+['find', ...Object.keys(collectionImplementation)]
+  .forEach(method => {
+    const asyncName = `${method}Async`.replace('_', '');
+    Mongo.Collection.prototype[asyncName] = async function(...args) {
+      if (!this.isAsync) {
+        throw new Error(
+          `It is only allowed to use ${asyncName} method in async collections. Use "Mongo.createAsyncCollection" to create async collections.`);
+      }
+      if (!this.isAsyncInitialized) {
+        collections[this._name] = await this.pendingPromise;
+      }
+      const coll = collections[this._name];
+      return Promise.resolve(coll[method].apply(coll, arguments));
+    };
+  });
+
 const collections = {};
 
-Mongo.createAsyncCollection = async (collectionName) => {
+Mongo.createAsyncCollection = (collectionName) => {
   try {
     if (collections[collectionName]) {
       return collections[collectionName];
     }
 
     const collectionDefinition = new Mongo.Collection(collectionName, { isAsync: true });
-    const collection = await collectionDefinition.asyncInit();
-    collections[collectionName] = collection;
-    return collection;
+    collectionDefinition.pendingPromise = collectionDefinition.asyncInit();
+    return collectionDefinition;
   } catch (e) {
     console.error(`Error creating ${collectionName} async collection`, e);
     throw e;
