@@ -2973,11 +2973,11 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", f
   var mongodbUri = Npm.require('mongodb-uri');
   var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
   parsedUri.database = 'dropDB' + Random.id();
-  var driver = new MongoInternals.RemoteCollectionDriver(
+  var driver = Promise.await(new MongoInternals.RemoteCollectionDriver(
     mongodbUri.format(parsedUri), {
       oplogUrl: process.env.MONGO_OPLOG_URL
     }
-  );
+  ));
 
   var collName = "dropCollection" + Random.id();
   var coll = new Mongo.Collection(collName, { _driver: driver });
@@ -3301,7 +3301,7 @@ Meteor.isServer && Tinytest.add(
   "mongo-livedata - connection failure throws",
   function (test) {
     test.throws(function () {
-      new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+      Promise.await(new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf'));
     });
   }
 );
