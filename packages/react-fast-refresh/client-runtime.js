@@ -47,6 +47,13 @@ if (enabled && process.env.NODE_ENV !== 'production' && module.hot) {
       return false;
     }
 
+    // Is a DOM element. If we iterate its properties, we might cause the
+    // browser to show warnings when accessing depreciated getters on its
+    // prototype
+    if (moduleExports instanceof Element) {
+      return false;
+    }
+
     var hasExports = false;
     var onlyExportComponents = true;
 
