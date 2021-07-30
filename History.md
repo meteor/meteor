@@ -10,6 +10,10 @@
 * `minifier-js@2.6.1`
   - Terser updated to [4.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v480)
   
+## v2.3.3, 2021-07-30
+
+* Security patch of Node.js to [14.17.4](https://nodejs.org/en/blog/release/v14.17.4/)
+
 ## v2.3.2, 2021-07-13
 
 #### Meteor Version Release
