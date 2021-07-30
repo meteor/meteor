@@ -2,7 +2,7 @@ var OplogCollection = new Mongo.Collection("oplog-" + Random.id());
 
 Tinytest.add("mongo-livedata - oplog - cursorSupported", function (test) {
   var oplogEnabled =
-        !!MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+        !!Promise.await(MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle;
 
   var supported = function (expected, selector, options) {
     var cursor = OplogCollection.find(selector, options);
@@ -68,7 +68,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       // possible to make this test fail with TOO_FAR_BEHIND = 2000.
       // The documents waiting to be processed would hardly go beyond 1000
       // using mongo 3.2 with WiredTiger
-      MongoInternals.defaultRemoteCollectionDriver()
+      Promise.await(MongoInternals.defaultRemoteCollectionDriver())
         .mongo._oplogHandle._defineTooFarBehind(500);
 
       self.IRRELEVANT_SIZE = 15000;
@@ -131,7 +131,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       test.isFalse(gotSpot);
 
       self.skipped = false;
-      self.skipHandle = MongoInternals.defaultRemoteCollectionDriver()
+      self.skipHandle = Promise.await(MongoInternals.defaultRemoteCollectionDriver())
         .mongo._oplogHandle.onSkippedEntries(function () {
           self.skipped = true;
         });
@@ -154,7 +154,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       test.isTrue(self.skipped);
 
       //This gets the TOO_FAR_BEHIND back to its initial value
-      MongoInternals.defaultRemoteCollectionDriver()
+      Promise.await(MongoInternals.defaultRemoteCollectionDriver())
         .mongo._oplogHandle._resetTooFarBehind();
 
       self.skipHandle.stop();

@@ -2873,7 +2873,7 @@ if (Meteor.isServer) {
 Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", function (test) {
   var collName = Random.id();
   var coll = new Mongo.Collection(collName);
-  if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
+  if (Promise.await(MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle) {
     var observeWithOplog = coll.find({x: 5})
           .observeChanges({added: function () {}});
     test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
@@ -3504,7 +3504,7 @@ if (Meteor.isServer) {
 
 if (Meteor.isServer) {
   Tinytest.addAsync("mongo-livedata - transaction", function (test, onComplete) {
-    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
+    const { client } = Promise.await(MongoInternals.defaultRemoteCollectionDriver()).mongo;
 
     const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
     const rawCollection = Collection.rawCollection();
