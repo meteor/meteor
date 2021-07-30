@@ -24,7 +24,9 @@ if (enabled) {
   let originalPlugin = require('react-refresh/babel');
   let defaultOptions = { skipEnvCheck: true };
 
-  babelPlugin = function (babel, options = defaultOptions) {
+  babelPlugin = function (babel, options) {
+    options = Object.assign({}, defaultOptions, options);
+
     return originalPlugin(babel, options);
   };
 }
