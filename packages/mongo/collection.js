@@ -1,5 +1,9 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
+import {
+  getCollectionInstanceOrNull,
+  setCollectionInstance
+} from "./collectionsInstances";
 
 /**
  * @summary Namespace for MongoDB-related items
@@ -24,7 +28,7 @@ The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
  * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
  */
-Mongo.Collection = function Collection(name, options) {
+Mongo.Collection = function Collection(name, optionsParam = {}) {
   if (!name && name !== null) {
     Meteor._debug(
       'Warning: creating anonymous collection. It will not be ' +
@@ -40,25 +44,20 @@ Mongo.Collection = function Collection(name, options) {
     );
   }
 
-  if (options && options.methods) {
-    // Backwards compatibility hack with original signature (which passed
-    // "connection" directly instead of in options. (Connections must have a "methods"
-    // method.)
-    // XXX remove before 1.0
-    options = { connection: options };
-  }
-  // Backwards compatibility: "connection" used to be called "manager".
-  if (options && options.manager && !options.connection) {
-    options.connection = options.manager;
+  const collectionInstance = getCollectionInstanceOrNull({name, isAsync: optionsParam.isAsync});
+  console.log(`collectionInstance for ${name}, isAsync=${optionsParam.isAsync} already exists?`, !!collectionInstance);
+
+  if (collectionInstance) {
+    return collectionInstance;
   }
 
-  options = {
+  const options = {
     connection: undefined,
     idGeneration: 'STRING',
     transform: null,
     _driver: undefined,
     _preventAutopublish: false,
-    ...options,
+    ...optionsParam,
   };
 
   switch (options.idGeneration) {
@@ -97,7 +96,6 @@ Mongo.Collection = function Collection(name, options) {
 
   // default, used in the client for example
   this.asyncInit = async () => {
-    this.isAsyncInitialized = true;
     return this;
   }
   this.isAsync = options.isAsync;
@@ -119,7 +117,6 @@ Mongo.Collection = function Collection(name, options) {
         this.asyncInit = async () => {
           this._driver = await MongoInternals.defaultRemoteCollectionDriver();
           this.openDriver();
-          this.isAsyncInitialized = true;
           return this;
         }
       } else {
@@ -168,6 +165,10 @@ Mongo.Collection = function Collection(name, options) {
     this._connection.publish(null, () => this.find(), {
       is_auto: true,
     });
+  }
+
+  if (!this.isAsync) {
+    setCollectionInstance({name: this._name, isAsync: this.isAsync, instance: this});
   }
 };
 
@@ -902,27 +903,33 @@ function popCallbackFromArgs(args) {
         throw new Error(
           `It is only allowed to use ${asyncName} method in async collections. Use "Mongo.createAsyncCollection" to create async collections.`);
       }
+      console.log(`this.isAsyncInitialized`, this.isAsyncInitialized);
+
       if (!this.isAsyncInitialized) {
-        collections[this._name] = await this.pendingPromise;
+        const instance = await this.pendingPromise;
+        setCollectionInstance({name: this._name, isAsync: this.isAsync, instance});
+        this.isAsyncInitialized = true;
       }
-      const coll = collections[this._name];
-      return Promise.resolve(coll[method].apply(coll, arguments));
+      const collectionInstance = getCollectionInstanceOrNull({name: this._name, isAsync: this.isAsync});
+      return Promise.resolve(collectionInstance[method].apply(collectionInstance, arguments));
     };
   });
 
-const collections = {};
-
-Mongo.createAsyncCollection = (collectionName) => {
+createAsyncCollection = (name, optionsParam = {}) => {
   try {
-    if (collections[collectionName]) {
-      return collections[collectionName];
+    const options = {...optionsParam, isAsync: true};
+    const collectionInstance = getCollectionInstanceOrNull({name: name, isAsync: options.isAsync});
+    if (collectionInstance) {
+      return collectionInstance;
     }
 
-    const collectionDefinition = new Mongo.Collection(collectionName, { isAsync: true });
+    const collectionDefinition = new Mongo.Collection(name, options);
     collectionDefinition.pendingPromise = collectionDefinition.asyncInit();
     return collectionDefinition;
   } catch (e) {
-    console.error(`Error creating ${collectionName} async collection`, e);
+    console.error(`Error creating ${name} async collection`, e);
     throw e;
   }
 }
+
+Mongo.createAsyncCollection = createAsyncCollection;

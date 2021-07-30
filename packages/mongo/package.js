@@ -72,6 +72,7 @@ Package.onUse(function (api) {
   api.export('MongoInternals', 'server');
 
   api.export("Mongo");
+  api.export("createAsyncCollection");
   api.export('ObserveMultiplexer', 'server', {testOnly: true});
 
   api.addFiles(['mongo_driver.js', 'oplog_tailing.js',
