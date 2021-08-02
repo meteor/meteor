@@ -27,6 +27,8 @@ Mongo = {};
 The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
  * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
+ * @param {Boolean} options.isAsync Set to `true` to create an async collection but this is not recommended, you should use `createAsyncCollection` instead. Default `undefined`.
+ * @param {Boolean} options.namespace Set a string if you want to have different instances for the same collection name. Default `undefined`.
  */
 Mongo.Collection = function Collection(name, optionsParam = {}) {
   if (!name && name !== null) {
@@ -43,13 +45,6 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
       'First argument to new Mongo.Collection must be a string or null'
     );
   }
-
-  const collectionInstance = getCollectionInstanceOrNull({name, isAsync: optionsParam.isAsync});
-
-  if (collectionInstance) {
-    return collectionInstance;
-  }
-
   const options = {
     connection: undefined,
     idGeneration: 'STRING',
@@ -58,6 +53,12 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
     _preventAutopublish: false,
     ...optionsParam,
   };
+
+  const collectionInstance = getCollectionInstanceOrNull({name, options});
+
+  if (collectionInstance) {
+    return collectionInstance;
+  }
 
   switch (options.idGeneration) {
     case 'MONGO':
@@ -99,6 +100,7 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
   }
   this.isAsync = options.isAsync;
   this.isAsyncInitialized = false;
+  this.namespace = options.namespace;
 
   if (options._driver) {
     this.openDriver(options._driver);
@@ -169,7 +171,7 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
   }
 
   if (!this.isAsync) {
-    setCollectionInstance({name: this._name, isAsync: this.isAsync, instance: this});
+    setCollectionInstance({name: this._name, instance: this, options});
   }
 };
 
@@ -907,10 +909,10 @@ function popCallbackFromArgs(args) {
 
       if (!this.isAsyncInitialized) {
         const instance = await this.pendingPromise;
-        setCollectionInstance({name: this._name, isAsync: this.isAsync, instance});
+        setCollectionInstance({name: this._name, isAsync: this.isAsync, namespace: this.namespace, instance});
         this.isAsyncInitialized = true;
       }
-      const collectionInstance = getCollectionInstanceOrNull({name: this._name, isAsync: this.isAsync});
+      const collectionInstance = getCollectionInstanceOrNull({name: this._name, isAsync: this.isAsync, namespace: this.namespace});
       return Promise.resolve(collectionInstance[method].apply(collectionInstance, arguments));
     };
   });
@@ -918,7 +920,7 @@ function popCallbackFromArgs(args) {
 createAsyncCollection = (name, optionsParam = {}) => {
   try {
     const options = {...optionsParam, isAsync: true};
-    const collectionInstance = getCollectionInstanceOrNull({name: name, isAsync: options.isAsync});
+    const collectionInstance = getCollectionInstanceOrNull({name: name, options});
     if (collectionInstance) {
       return collectionInstance;
     }

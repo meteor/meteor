@@ -2540,7 +2540,12 @@ if (Meteor.isServer) {
       var self = this;
       if (self.conn.status().connected) {
         self.miniC = new Mongo.Collection("ServerMinimongo_" + self.id, {
-          connection: self.conn
+          connection: self.conn,
+          // as we are creating two collections under the same name in the server
+          // but this is just a "fake" minimongo we don't want to use the same
+          // instance
+          namespace: 'minimongo',
+          _suppressSameNameError: true,
         });
         var exp = expect(function (err) {
           test.isFalse(err);
@@ -2552,7 +2557,7 @@ if (Meteor.isServer) {
       }
     },
 
-    function (test, expect) {
+    function (test) {
       var self = this;
       if (self.miniC) {
         var contents = self.miniC.find().fetch();
@@ -2561,10 +2566,12 @@ if (Meteor.isServer) {
       }
     },
 
-    function (test, expect) {
+    function (test) {
       var self = this;
       if (!self.miniC)
         return;
+      const contentsNoFilter = self.miniC.find({}).fetch();
+      test.equal(contentsNoFilter.length, 2);
       self.miniC.insert({a:0, b:3});
       var contents = self.miniC.find({b:3}).fetch();
       test.equal(contents.length, 1);
