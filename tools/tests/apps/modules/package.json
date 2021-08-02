@@ -4,9 +4,9 @@
   "description": "Test app exercising many aspects of the Meteor module system.",
   "private": true,
   "dependencies": {
-    "@babel/core": "^7.14.6",
+    "@babel/core": "^7.14.8",
     "@babel/plugin-proposal-do-expressions": "^7.8.3",
-    "@babel/runtime": "^7.14.9",
+    "@babel/runtime": "^7.14.8",
     "@polymer/lit-element": "0.7.1",
     "@wry/context": "^0.4.0",
     "acorn": "file:imports/links/acorn",
