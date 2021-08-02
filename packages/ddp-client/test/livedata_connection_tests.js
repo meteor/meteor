@@ -77,7 +77,7 @@ const SESSION_ID = '17';
 
 Tinytest.add('livedata stub - receive data', function(test) {
   const stream = new StubStream();
-  const conn = newConnection(stream);
+  const connection = newConnection(stream);
 
   startAndConnect(test, stream);
 
@@ -90,14 +90,14 @@ Tinytest.add('livedata stub - receive data', function(test) {
     fields: { a: 1 }
   });
   // break throught the black box and test internal state
-  test.length(conn._updatesForUnknownStores[coll_name], 1);
+  test.length(connection._updatesForUnknownStores[coll_name], 1);
 
   // XXX: Test that the old signature of passing manager directly instead of in
   // options works.
-  const coll = new Mongo.Collection(coll_name, conn);
+  const coll = new Mongo.Collection(coll_name, { connection });
 
   // queue has been emptied and doc is in db.
-  test.isUndefined(conn._updatesForUnknownStores[coll_name]);
+  test.isUndefined(connection._updatesForUnknownStores[coll_name]);
   test.equal(coll.find({}).fetch(), [{ _id: '1234', a: 1 }]);
 
   // second message. applied directly to the db.
@@ -108,7 +108,7 @@ Tinytest.add('livedata stub - receive data', function(test) {
     fields: { a: 2 }
   });
   test.equal(coll.find({}).fetch(), [{ _id: '1234', a: 2 }]);
-  test.isUndefined(conn._updatesForUnknownStores[coll_name]);
+  test.isUndefined(connection._updatesForUnknownStores[coll_name]);
 });
 
 Tinytest.add('livedata stub - buffering data', function(test) {
@@ -118,7 +118,7 @@ Tinytest.add('livedata stub - buffering data', function(test) {
   const tick = timeout => clock.tick(timeout);
 
   const stream = new StubStream();
-  const conn = newConnection(stream, {
+  const connection = newConnection(stream, {
     bufferedWritesInterval: 10,
     bufferedWritesMaxAge: 40
   });
@@ -126,7 +126,7 @@ Tinytest.add('livedata stub - buffering data', function(test) {
   startAndConnect(test, stream);
 
   const coll_name = Random.id();
-  const coll = new Mongo.Collection(coll_name, conn);
+  const coll = new Mongo.Collection(coll_name, { connection });
 
   const testDocCount = count => test.equal(coll.find({}).count(), count);
 
