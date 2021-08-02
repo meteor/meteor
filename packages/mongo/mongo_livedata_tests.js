@@ -638,7 +638,7 @@ Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, f
   var run = Random.id();
   var coll;
   if (Meteor.isClient) {
-    coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
+    coll = new Mongo.Collection(null, {...collectionOptions, namespace: 'minimongo'}); // local, unmanaged
   } else {
     coll = new Mongo.Collection("stopHandleInCallback-"+run, collectionOptions);
   }
