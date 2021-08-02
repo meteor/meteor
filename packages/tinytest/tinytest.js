@@ -454,7 +454,6 @@ export const TestManager = new (class TestManager {
         }
         return acc;
       }, {});
-      console.log(`this.tests`, this.tests);
 
       this.ordered_tests = this.ordered_tests.map(test => {
         if (this.onlyTestsNames.includes(test.name)) {
@@ -462,8 +461,6 @@ export const TestManager = new (class TestManager {
         }
         return null;
       }).filter(Boolean);
-      console.log(`this.ordered_tests`, this.ordered_tests);
-
     }
   }
 
