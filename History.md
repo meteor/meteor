@@ -27,6 +27,10 @@
 ## v2.3.3, 2021-08-02
 
 * Security patch of Node.js to [14.17.4](https://nodejs.org/en/blog/release/v14.17.4/)
+* App skeletons had the following dependencies updated:
+  - `meteor-node-stubs@1.1.0`
+  - `@babel/runtime@7.14.9`
+* `babel/parser@7.14.9` for server dev bundle
 
 ## v2.3.2, 2021-07-13
 
