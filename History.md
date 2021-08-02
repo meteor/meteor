@@ -1,3 +1,9 @@
+## v2.2.2, 2021-08-02
+
+#### Highlights
+
+- Security update to Node.js [12.22.4](https://nodejs.org/en/blog/release/v12.22.4/)
+
 ## v2.2.1, 2021-06-02
 
 #### Highlights
