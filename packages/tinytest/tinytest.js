@@ -427,9 +427,10 @@ export const TestManager = new (class TestManager {
     this.tests = {};
     this.ordered_tests = [];
     this.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
+    this.onlyTestsNames = [];
   }
 
-  addCase(test) {
+  addCase(test, options = {}) {
     if (test.name in this.tests)
       throw new Error(
         "Every test needs a unique name, but there are two tests named '" +
@@ -438,8 +439,32 @@ export const TestManager = new (class TestManager {
         test.name.indexOf(__meteor_runtime_config__.tinytestFilter) === -1) {
       return;
     }
+
+    if (options.isOnly) {
+      this.onlyTestsNames.push(test.name);
+    }
+
     this.tests[test.name] = test;
     this.ordered_tests.push(test);
+
+    if (this.onlyTestsNames.length){
+      this.tests = Object.entries(this.tests).reduce((acc, [key, value]) => {
+        if(this.onlyTestsNames.includes(key)){
+          return {...acc, [key]: value};
+        }
+        return acc;
+      }, {});
+      console.log(`this.tests`, this.tests);
+
+      this.ordered_tests = this.ordered_tests.map(test => {
+        if (this.onlyTestsNames.includes(test.name)) {
+          return test;
+        }
+        return null;
+      }).filter(Boolean);
+      console.log(`this.ordered_tests`, this.ordered_tests);
+
+    }
   }
 
   createRun(onReport, pathPrefix) {
@@ -619,15 +644,23 @@ export class TestRun {
 
 export const Tinytest = {};
 
-Tinytest.addAsync = function (name, func) {
-  TestManager.addCase(new TestCase(name, func));
+Tinytest.addAsync = function (name, func, options) {
+  TestManager.addCase(new TestCase(name, func), options);
 };
 
-Tinytest.add = function (name, func) {
+Tinytest.onlyAsync = function (name, func) {
+  Tinytest.addAsync(name, func, { isOnly: true });
+};
+
+Tinytest.add = function (name, func, options) {
   Tinytest.addAsync(name, function (test, onComplete) {
     func(test);
     onComplete();
-  });
+  }, options);
+};
+
+Tinytest.only = function (name, func) {
+  Tinytest.add(name, func, { isOnly: true });
 };
 
 // Run every test, asynchronously. Runs the test in the current
