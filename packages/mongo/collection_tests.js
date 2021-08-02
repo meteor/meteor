@@ -12,16 +12,16 @@ Tinytest.add('collection - call new Mongo.Collection multiple times',
     var collectionName = 'multiple_times_1_' + test.id;
     new Mongo.Collection(collectionName);
 
-    test.throws(
-      function () {
-        new Mongo.Collection(collectionName, {_suppressSameNameError: false});
-      },
-      /There is already a collection named/
+    // as we reuse the same instance they should be equals
+    test.equal(
+      new Mongo.Collection(collectionName, {_suppressSameNameError: false})
+      === new Mongo.Collection(collectionName, {_suppressSameNameError: false}),
+      true
     );
   }
 );
 
-Tinytest.add('collection - call new Mongo.Collection multiple times with _suppressSameNameError=true',
+Tinytest.add('collection - call new Mongo.Collection multiple times should be ok',
   function (test) {
     var collectionName = 'multiple_times_2_' + test.id;
     new Mongo.Collection(collectionName);
