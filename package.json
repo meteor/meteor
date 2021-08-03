@@ -1,7 +1,7 @@
 {
   "name": "@meteorjs/babel",
   "author": "Meteor <dev@meteor.com>",
-  "version": "7.11.1",
+  "version": "7.12.0",
   "license": "MIT",
   "description": "Babel wrapper package for use with Meteor",
   "keywords": [
@@ -30,32 +30,32 @@
     "url": "https://github.com/meteor/babel/issues"
   },
   "dependencies": {
-    "@babel/core": "^7.14.3",
-    "@babel/parser": "^7.14.3",
-    "@babel/plugin-proposal-class-properties": "^7.13.0",
+    "@babel/core": "^7.14.8",
+    "@babel/parser": "^7.14.9",
+    "@babel/plugin-proposal-class-properties": "^7.14.5",
     "@babel/plugin-syntax-dynamic-import": "^7.8.3",
-    "@babel/plugin-transform-modules-commonjs": "^7.14.0",
-    "@babel/plugin-transform-runtime": "^7.14.3",
-    "@babel/preset-react": "^7.13.13",
-    "@babel/runtime": "^7.14.0",
-    "@babel/template": "^7.12.13",
-    "@babel/traverse": "^7.14.2",
-    "@babel/types": "^7.14.2",
+    "@babel/plugin-transform-modules-commonjs": "^7.14.5",
+    "@babel/plugin-transform-runtime": "^7.14.5",
+    "@babel/preset-react": "^7.14.5",
+    "@babel/runtime": "^7.14.8",
+    "@babel/template": "^7.14.5",
+    "@babel/traverse": "^7.14.9",
+    "@babel/types": "^7.14.9",
     "babel-preset-meteor": "^7.10.0",
     "babel-preset-minify": "^0.5.1",
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.21",
     "meteor-babel-helpers": "0.0.3",
-    "reify": "^0.20.12",
-    "typescript": "^4.3.2"
+    "reify": "^0.22.0",
+    "typescript": "^4.3.5"
   },
   "devDependencies": {
-    "@babel/plugin-proposal-decorators": "7.14.2",
-    "@babel/plugin-syntax-decorators": "7.12.13",
+    "@babel/plugin-proposal-decorators": "7.14.5",
+    "@babel/plugin-syntax-decorators": "7.14.5",
     "d3": "4.13.0",
     "fibers": "5.0.0",
-    "meteor-promise": "0.8.7",
-    "mocha": "6.1.4",
+    "meteor-promise": "0.9.0",
+    "mocha": "6.2.3",
     "promise": "8.1.0",
     "source-map": "0.6.1"
   }
