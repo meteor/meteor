@@ -24,6 +24,10 @@
   - Updated `less` to v4.1.1
   - Fixed tests
   
+## v2.3.4, 2021-08-03
+
+* Fix an issue in `bare` and `vue` skeletons
+
 ## v2.3.3, 2021-08-02
 
 * Security patch of Node.js to [14.17.4](https://nodejs.org/en/blog/release/v14.17.4/)

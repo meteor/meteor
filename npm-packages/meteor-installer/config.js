@@ -1,6 +1,6 @@
 const path = require('path');
 
-const METEOR_LATEST_VERSION = '2.3.3';
+const METEOR_LATEST_VERSION = '2.3.4';
 
 const localAppData = process.env.LOCALAPPDATA;
 
