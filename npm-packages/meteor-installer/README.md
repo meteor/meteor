@@ -1,6 +1,6 @@
 ## Windows Meteor Installer
 
-Requires [Node.js](https://nodejs.org/) 8 or newer.
+Requires [Node.js](https://nodejs.org/) 12 or newer.
 
 Install Meteor on Windows by running:
 
@@ -26,7 +26,9 @@ If you use a node version manager that uses a separate global `node_modules` fol
 
 ### Meteor version relationship
 
-| NPM Package | Meteor Oficial Release |
-|-------------|------------------------|
-| 2.3.1       | 2.2.1                  |
-| 2.3.2       | 2.3.1                  |
+| NPM Package | Meteor Official Release |
+|-------------|-------------------------|
+| 2.3.1       | 2.2.1                   |
+| 2.3.2       | 2.3.1                   |
+| 2.3.3       | 2.3.2                   |
+| 2.3.4       | 2.3.4                   |
