@@ -806,7 +806,7 @@ if (Meteor.isClient) {
 // with the client..
 if (Meteor.isServer) {
   Tinytest.add("collection - allow and deny validate options", function (test) {
-    var collection = new Mongo.Collection(Random.id());
+    var collection = new Mongo.Collection(null);
 
     test.throws(function () {
       collection.allow({invalidOption: true});
@@ -865,7 +865,7 @@ if (Meteor.isServer) {
   });
 
   Tinytest.add("collection - calling allow restricts", function (test) {
-    var collection = new Mongo.Collection(Random.id());
+    var collection = new Mongo.Collection(null);
     test.equal(collection._restricted, false);
     collection.allow({
       insert: function() {}
@@ -879,7 +879,7 @@ if (Meteor.isServer) {
     var insecurePackage = Package.insecure;
 
     Package.insecure = {};
-    var collection = new Mongo.Collection(Random.id());
+    var collection = new Mongo.Collection(null);
     test.equal(collection._isInsecure(), true);
 
     Package.insecure = undefined;

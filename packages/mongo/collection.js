@@ -1,6 +1,7 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 import {
+  _removeAllCollectionsInstances,
   getCollectionInstanceOrNull,
   setCollectionInstance
 } from "./collectionsInstances";
@@ -29,6 +30,7 @@ The default id generation technique is `'STRING'`.
  * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
  * @param {Boolean} options.isAsync Set to `true` to create an async collection but this is not recommended, you should use `createAsyncCollection` instead. Default `undefined`.
  * @param {Boolean} options.namespace Set a string if you want to have different instances for the same collection name. Default `undefined`.
+ * @param {Boolean} options.ignoreInstanceReuse EXPERIMENTAL Set to `true` if you really know what you are doing. Default `undefined`.
  */
 Mongo.Collection = function Collection(name, optionsParam = {}) {
   if (!name && name !== null) {
@@ -54,7 +56,7 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
     ...optionsParam,
   };
 
-  const collectionInstance = getCollectionInstanceOrNull({name, options});
+  const collectionInstance = options.ignoreInstanceReuse ? null : getCollectionInstanceOrNull({name, options});
 
   if (collectionInstance) {
     return collectionInstance;
@@ -935,3 +937,7 @@ createAsyncCollection = (name, optionsParam = {}) => {
 }
 
 Mongo.createAsyncCollection = createAsyncCollection;
+
+Mongo._resetCollectionInstances = () => {
+  _removeAllCollectionsInstances();
+};

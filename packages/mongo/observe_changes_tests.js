@@ -420,5 +420,5 @@ if (Meteor.isServer) {
       });
       c.insert({ type: { name: 'foobar' } });
     }
-  );  
+  );
 }

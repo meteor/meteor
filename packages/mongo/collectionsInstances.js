@@ -8,6 +8,9 @@ export const getCollectionInstanceOrNull = ({
   name,
   options: { isAsync, namespace } = {},
 }) => {
+  if (name === null) {
+    return null;
+  }
   const isAsyncBoolean = !!isAsync;
   const scope = getScope({name, namespace});
   const collectionsInstancesByScope = collectionsInstances[scope];
@@ -18,6 +21,10 @@ export const getCollectionInstanceOrNull = ({
 };
 
 export const setCollectionInstance = ({name, instance, options: {isAsync, namespace} = {}}) =>{
+  if (name === null) {
+    return instance;
+  }
+
   const isAsyncBoolean = !!isAsync;
 
   const scope = getScope({name, namespace});
@@ -32,4 +39,9 @@ export const setCollectionInstance = ({name, instance, options: {isAsync, namesp
   collectionsInstances[scope][isAsyncBoolean] = instance;
 
   return instance;
+}
+
+export const _removeAllCollectionsInstances = () => {
+  console.warn('_removeAllCollectionsInstances (or Mongo._resetCollectionInstances) should be used only in test environment.');
+  Object.keys(collectionsInstances).forEach(key => delete collectionsInstances[key]);
 }
