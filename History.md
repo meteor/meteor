@@ -9,6 +9,7 @@
   - `reify` update to v0.22.0 which bring optimizations for imports, [read more](https://github.com/benjamn/reify/pull/246)
   - Apollo skeleton now uses [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300) - [migration guide](https://www.apollographql.com/docs/apollo-server/migration/)
   - Upgraded `chalk` to v4.1.1
+  - Typescript updated to [4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
     
 * `webapp@1.12`
   - npm dependencies have been updated
@@ -49,6 +50,18 @@
 
 * `service-configuration@1.5.0`
   - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `ecmascript@0.15.3`
+  - Typescript and Babel version bump
+
+* `ecmascript-runtime-client@0.12.0`
+  - `core-js@3.16.0`
+
+* `ecmascript-runtime-server@0.11.0`
+  - `core-js@3.16.0`
+
+* `ecmascript-runtime@0.8.0`
+  - Version bump to ensure changes from server & client runtime get propagated.
 
 #### Independent Releases
 
