@@ -267,8 +267,8 @@ var Session = function (server, version, socket, options) {
   // List of callbacks to call when this connection is closed.
   self._closeCallbacks = [];
 
-  // DDP clients with version 2 and up should support batching of DDP messages
-  var allowBuffering = version >= 2;
+  // Whether we want to enable batching of DDP messages for all Clients
+  var allowBuffering = DDPCommon.ALLOW_BUFFERING || false;
 
   // When updates are coming within this ms interval, batch them together.
   self._bufferedMessagesInterval = allowBuffering ? options.bufferedMessagesInterval || 10 : 0;

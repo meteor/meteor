@@ -38,7 +38,9 @@ export function last(array, n, guard) {
   return slice.call(array, Math.max(array.length - n, 0));
 }
 
-DDPCommon.SUPPORTED_DDP_VERSIONS = [ '2', '1', 'pre2', 'pre1' ];
+DDPCommon.ALLOW_BUFFERING = false;
+
+DDPCommon.SUPPORTED_DDP_VERSIONS = [ '1', 'pre2', 'pre1' ];
 
 DDPCommon.parseDDP = function (stringMessage) {
   try {
@@ -86,7 +88,15 @@ DDPCommon.parseDDP = function (stringMessage) {
     });
   }
 
-  return messages;
+  const messagesLength = messages.length;
+
+  if (messagesLength === 0) {
+    return null;
+  } else if (messagesLength === 1) {
+    return messages[0];
+  } else {
+    return messages;
+  }
 };
 
 DDPCommon.stringifyDDP = function (messages) {
@@ -135,5 +145,11 @@ DDPCommon.stringifyDDP = function (messages) {
     clonedMessages.push(copy);
   }
 
-  return JSON.stringify(clonedMessages);
+  const messagesLength = clonedMessages.length;
+
+  if (messagesLength === 1) {
+    return JSON.stringify(clonedMessages[0]);
+  } else {
+    return JSON.stringify(clonedMessages);
+  }
 };
