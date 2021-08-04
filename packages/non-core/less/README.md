@@ -7,6 +7,10 @@ handles the compilation of `*.less` files to CSS.
 
 ## Changelog
 
+### 4.0.0
+
+- Updated less to 4.1.1
+
 ### 3.0.0
 
 - Updated less to 3.11.1.
