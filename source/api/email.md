@@ -39,6 +39,10 @@ you can setup the sending options in your app settings like this:
 ```
 The package will take care of the rest.
 
+> If you use a supported service the package will try to match to supported service and use the stored settings instead.
+> You can force this by switching protocol like `smtp` to the name of the service.
+> Though you should only use this as a stop-gap measure and instead set the settings properly.
+
 If neither option is set, `Email.send` outputs the message to standard output
 instead.
 
@@ -101,6 +105,17 @@ comes in. If you set this function all sending events will be passed to it
 function with addition of `settings` key which will pass in package settings
 set in your app settings (if any). It is up to you what you do in that function
 as it will override the original sending function.
+
+Example:
+```javascript
+import { Email } from 'meteor/email'
+
+Email.customTransport = (options) => {
+  // `options.settings` are settings from `Meteor.settings.packages.email`
+  // The rest of the options are from Email.send options
+  customApi.send({ from: options.settings.fromOverride || options.from, to: options.to, message: options.html || options.text });
+}
+```
 
 > Note that this also overrides the development display of messages in console
 > so you might want to differentiate between production and development for 
