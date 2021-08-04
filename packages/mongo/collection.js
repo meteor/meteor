@@ -1,8 +1,9 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 import {
-  _removeAllCollectionsInstances,
   getCollectionInstanceOrNull,
+  hasCollectionStatus,
+  markCollectionAsInitializing,
   setCollectionInstance
 } from "./collectionsInstances";
 
@@ -60,6 +61,11 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
 
   if (collectionInstance) {
     return collectionInstance;
+  }
+
+  const hasCollectionStatusAlready = hasCollectionStatus({name});
+  if (!hasCollectionStatusAlready) {
+    markCollectionAsInitializing({name});
   }
 
   switch (options.idGeneration) {
@@ -140,36 +146,39 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
 
   this._name = name;
 
-  this._maybeSetUpReplication(name, options);
+  // we can have two collections instances for the same collection, one async
+  // and another sync but we don't want to setup replication, mutations methods
+  // and auto publish twice
+  if (!hasCollectionStatusAlready) {
+    this._maybeSetUpReplication(name, options);
 
-  // XXX don't define these until allow or deny is actually used for this
-  // collection. Could be hard if the security rules are only defined on the
-  // server.
-  if (options.defineMutationMethods !== false) {
-    try {
-      this._defineMutationMethods({
-        useExisting: options._suppressSameNameError === true,
-      });
-    } catch (error) {
-      // Throw a more understandable error on the server for same collection name
-      if (
+    // XXX don't define these until allow or deny is actually used for this
+    // collection. Could be hard if the security rules are only defined on the
+    // server.
+    if (options.defineMutationMethods !== false) {
+      try {
+        this._defineMutationMethods({
+          useExisting: options._suppressSameNameError === true,
+        });
+      } catch (error) {
+        // Throw a more understandable error on the server for same collection name
+        if (
         error.message === `A method named '/${name}/insert' is already defined`
       )
-        throw new Error(`There is already a collection named "${name}"`);
-      throw error;
+          throw new Error(`There is already a collection named "${name}"`);
+        throw error;
+      }
     }
-  }
 
-  // autopublish
-  if (
-    Package.autopublish &&
-    !options._preventAutopublish &&
-    this._connection &&
-    this._connection.publish
-  ) {
-    this._connection.publish(null, () => this.find(), {
-      is_auto: true,
-    });
+    // autopublish
+    if (Package.autopublish &&
+        ! options._preventAutopublish &&
+        this._connection &&
+        this._connection.publish) {
+      this._connection.publish(null, () => this.find(), {
+        is_auto: true,
+      });
+    }
   }
 
   if (!this.isAsync) {
@@ -909,12 +918,13 @@ function popCallbackFromArgs(args) {
           `It is only allowed to use ${asyncName} method in async collections. Use "Mongo.createAsyncCollection" to create async collections.`);
       }
 
+      const options = { isAsync: this.isAsync, namespace: this.namespace };
       if (!this.isAsyncInitialized) {
         const instance = await this.pendingPromise;
-        setCollectionInstance({name: this._name, isAsync: this.isAsync, namespace: this.namespace, instance});
+        setCollectionInstance({name: this._name, instance, options});
         this.isAsyncInitialized = true;
       }
-      const collectionInstance = getCollectionInstanceOrNull({name: this._name, isAsync: this.isAsync, namespace: this.namespace});
+      const collectionInstance = getCollectionInstanceOrNull({name: this._name, options});
       return Promise.resolve(collectionInstance[method].apply(collectionInstance, arguments));
     };
   });
@@ -937,7 +947,3 @@ createAsyncCollection = (name, optionsParam = {}) => {
 }
 
 Mongo.createAsyncCollection = createAsyncCollection;
-
-Mongo._resetCollectionInstances = () => {
-  _removeAllCollectionsInstances();
-};

@@ -5,10 +5,10 @@ export const onceAsync = func => {
   let memo = undefined;
   return async function executeOnce() {
     if (ran) return memo;
-    ran = true;
     const memoPromise = func.apply(this, arguments);
     memo = await memoPromise;
     func = null;
+    ran = true;
     return memo;
   };
 };
