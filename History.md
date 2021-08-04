@@ -94,6 +94,9 @@
 * `less@4.0.0`
   - Updated `less` to v4.1.1
   - Fixed tests
+
+* `npm-mongo@3.9.1`
+  - `mongodb@3.6.10`
   
 ## v2.3.4, 2021-08-03
 

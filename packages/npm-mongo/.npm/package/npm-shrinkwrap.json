@@ -37,14 +37,14 @@
       "integrity": "sha512-ZS4Bp4r/Zoeq6+NLJpP+0Zzm0pR8whtGPf1XExKLJBAczGMnSi3It14OiNCStjQjM6NU1okjQGSxgEZN8eBYKg=="
     },
     "mongodb": {
-      "version": "3.6.6",
-      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.6.6.tgz",
-      "integrity": "sha512-WlirMiuV1UPbej5JeCMqE93JRfZ/ZzqE7nJTwP85XzjAF4rRSeq2bGCb1cjfoHLOF06+HxADaPGqT0g3SbVT1w=="
+      "version": "3.6.10",
+      "resolved": "https://registry.npmjs.org/mongodb/-/mongodb-3.6.10.tgz",
+      "integrity": "sha512-fvIBQBF7KwCJnDZUnFFy4WqEFP8ibdXeFANnylW19+vOwdjOAvqIzPdsNCEMT6VKTHnYu4K64AWRih0mkFms6Q=="
     },
     "optional-require": {
-      "version": "1.0.3",
-      "resolved": "https://registry.npmjs.org/optional-require/-/optional-require-1.0.3.tgz",
-      "integrity": "sha512-RV2Zp2MY2aeYK5G+B/Sps8lW5NHAzE5QClbFP15j+PWmP+T9PxlJXBOOLoSAdgwFvS4t0aMR4vpedMkbHfh0nA=="
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/optional-require/-/optional-require-1.1.1.tgz",
+      "integrity": "sha512-EnUe33GTAltyZlIsQ2l93KzBC9zi8BsxLvKP3wxALOsz/YIakVojyuZsv5PFFk8y8e6r+SbaPIsNmyPoSK0OHw=="
     },
     "process-nextick-args": {
       "version": "2.0.1",
@@ -62,6 +62,11 @@
           "integrity": "sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g=="
         }
       }
+    },
+    "require-at": {
+      "version": "1.0.6",
+      "resolved": "https://registry.npmjs.org/require-at/-/require-at-1.0.6.tgz",
+      "integrity": "sha512-7i1auJbMUrXEAZCOQ0VNJgmcT2VOKPRl2YGJwgpHpC9CE91Mv4/4UYIUm4chGJaI381ZDq1JUicFii64Hapd8g=="
     },
     "safe-buffer": {
       "version": "5.2.1",
