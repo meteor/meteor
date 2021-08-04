@@ -1,8 +1,9 @@
-import terser from "terser";
+let terser;
 
-const meteorJsMinify = function (source) {  
-  var result = {};
+const meteorJsMinify = function (source) {
+  const result = {};
   const NODE_ENV = process.env.NODE_ENV || "development";
+  terser = terser || Npm.require("terser");
 
   const options = {
     compress: {
@@ -20,14 +21,14 @@ const meteorJsMinify = function (source) {
   };
 
   const terserResult = terser.minify(source, options);
-  
+
   // the terser api doesnt throw exceptions, so we throw one ourselves
   if (terserResult.error) throw terserResult.error;
-  
+
   // this is kept to maintain backwards compatability
   result.code = terserResult.code;
   result.minifier = 'terser';
-  
+
   return result;
 };
 
