@@ -3,11 +3,11 @@ import { extractModuleSizesTree } from "./stats.js";
 Plugin.registerMinifier({
     extensions: ['js'],
     archMatching: 'web',
-  }, 
-  () => new MeteorBabelMinifier()
+  },
+  () => new MeteorMinifier()
 );
 
-class MeteorBabelMinifier {
+class MeteorMinifier {
 
   processFilesForBundle (files, options) {
     const mode = options.minifyMode;
@@ -28,15 +28,15 @@ class MeteorBabelMinifier {
     // that the error being reported was located inside of
     function maybeThrowMinifyErrorBySourceFile(error, file) {
 
-      const lines = file.getContentsAsString().split(/\n/);    
+      const lines = file.getContentsAsString().split(/\n/);
       const lineContent = lines[error.line - 1];
-      
+
       let originalSourceFileLineNumber = 0;
 
       // Count backward from the failed line to find the oringal filename
       for (let i = (error.line - 1); i >= 0; i--) {
           let currentLine = lines[i];
-          
+
           // If the line is a boatload of slashes (8 or more), we're in the right place.
           if (/^\/\/\/{6,}$/.test(currentLine)) {
 
@@ -47,8 +47,8 @@ class MeteorBabelMinifier {
                   let originalFilePath = lines[i - 2].substring(3).replace(/\s+\/\//, "");
 
                   throw new Error(
-                      `terser minification error (${error.name}:${error.message})\n` + 
-                      `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` + 
+                      `terser minification error (${error.name}:${error.message})\n` +
+                      `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` +
                       `Line content: ${lineContent}\n`);
               }
           }
@@ -56,7 +56,7 @@ class MeteorBabelMinifier {
       }
     }
 
-    // this object will collect all the minified code in the 
+    // this object will collect all the minified code in the
     // data field and post-minfiication file sizes in the stats field
     const toBeAdded = {
       data: "",
@@ -73,10 +73,10 @@ class MeteorBabelMinifier {
         try {
           minified = meteorJsMinify(file.getContentsAsString());
         }
-        catch (err) {          
+        catch (err) {
           maybeThrowMinifyErrorBySourceFile(err, file);
 
-          throw new Error(`terser minification error (${err.name}:${err.message})\n` + 
+          throw new Error(`terser minification error (${err.name}:${err.message})\n` +
                           `Bundled file: ${file.getPathInBundle()}  (${err.line}:${err.col})\n`);
         }
 
@@ -96,7 +96,7 @@ class MeteorBabelMinifier {
       Plugin.nudge();
     });
 
-    // this is where the minified code gets added to one 
+    // this is where the minified code gets added to one
     // JS file that is delivered to the client
     if (files.length) {
       files[0].addJavaScript(toBeAdded);

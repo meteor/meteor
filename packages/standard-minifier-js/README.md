@@ -27,5 +27,4 @@ unused:        false
 safari10:       true
 ```
 
-It should also be noted that by default terser will make only one pass while compressing the source code, 
-but additional passes could be configured to increase compression of the output during a production build.
+It should also be noted that by default terser will make only one pass while compressing the source code.
