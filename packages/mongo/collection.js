@@ -30,7 +30,6 @@ The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
  * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
  * @param {Boolean} options.isAsync Set to `true` to create an async collection but this is not recommended, you should use `createAsyncCollection` instead. Default `undefined`.
- * @param {Boolean} options.namespace Set a string if you want to have different instances for the same collection name. Default `undefined`.
  * @param {Boolean} options.ignoreInstanceReuse EXPERIMENTAL Set to `true` if you really know what you are doing. Default `undefined`.
  */
 Mongo.Collection = function Collection(name, optionsParam = {}) {
@@ -108,7 +107,6 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
   }
   this.isAsync = options.isAsync;
   this.isAsyncInitialized = false;
-  this.namespace = options.namespace;
 
   if (options._driver) {
     this.openDriver(options._driver);
@@ -918,7 +916,7 @@ function popCallbackFromArgs(args) {
           `It is only allowed to use ${asyncName} method in async collections. Use "Mongo.createAsyncCollection" to create async collections.`);
       }
 
-      const options = { isAsync: this.isAsync, namespace: this.namespace };
+      const options = { isAsync: this.isAsync };
       if (!this.isAsyncInitialized) {
         const instance = await this.pendingPromise;
         setCollectionInstance({name: this._name, instance, options});

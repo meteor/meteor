@@ -5,32 +5,40 @@ const collectionsInstances = {};
 // auto publish
 const collectionsStatusByName = {};
 
-export const markCollectionAsInitializing = ({name}) => {
+export const markCollectionAsInitializing = ({ name }) => {
+  if (name === null) {
+    return;
+  }
   collectionsStatusByName[name] = 'initializing';
-}
+};
 
-const getScope = ({ name, namespace }) =>
-  `${namespace ? `${namespace}__` : ''}${name}`;
+export const hasCollectionStatus = ({ name }) => {
+  if (name === null) {
+    return false;
+  }
+  return !!collectionsStatusByName[name];
+};
+
+const getScope = ({ name }) =>
+  name;
 
 const getCollectionInstancesByScope = ({
   name,
-  options: { namespace } = {},
 }) => {
   if (name === null) {
     return null;
   }
-  const scope = getScope({ name, namespace });
+  const scope = getScope({ name });
   return collectionsInstances[scope];
 };
 
 export const getCollectionInstanceOrNull = ({
   name,
-  options: { isAsync, namespace } = {},
+  options: { isAsync } = {},
 }) => {
   const isAsyncBoolean = !!isAsync;
   const collectionsInstancesByScope = getCollectionInstancesByScope({
     name,
-    options: { namespace },
   });
   if (collectionsInstancesByScope) {
     return collectionsInstancesByScope[isAsyncBoolean] || null;
@@ -38,16 +46,10 @@ export const getCollectionInstanceOrNull = ({
   return null;
 };
 
-export const hasCollectionStatus = ({
-  name,
-}) => {
-  return !!collectionsStatusByName[name];
-};
-
 export const setCollectionInstance = ({
   name,
   instance,
-  options: { isAsync, namespace } = {},
+  options: { isAsync } = {},
 }) => {
   if (name === null) {
     return instance;
@@ -56,16 +58,14 @@ export const setCollectionInstance = ({
 
   const isAsyncBoolean = !!isAsync;
 
-  const scope = getScope({ name, namespace });
+  const scope = getScope({ name });
   if (!collectionsInstances[scope]) {
     collectionsInstances[scope] = {};
   }
 
   if (collectionsInstances[scope][isAsyncBoolean]) {
     throw new Error(
-      `There is already a collection named "${name}"${
-        namespace ? ` namespace ${namespace}` : ''
-      } is duplicated for type "${
+      `There is already a collection named "${name}" for type "${
         isAsyncBoolean ? 'async' : 'sync'
       }". Each collection can be defined only once for each type (async or sync).`
     );
@@ -75,4 +75,3 @@ export const setCollectionInstance = ({
 
   return instance;
 };
-
