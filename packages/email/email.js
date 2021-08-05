@@ -218,12 +218,12 @@ Email.send = function (options) {
   if (!send) return;
 
   const customTransport = Email.customTransport;
-  const transport = customTransport ? false : getTransport();
-  if (transport) {
-    smtpSend(transport, options);
-  } else if (customTransport) {
+  if (customTransport) {
     const packageSettings = Meteor.settings.packages?.email || {};
-    customTransport({ settings: { ...packageSettings }, ...options, });
+    customTransport({ packageSettings: { ...packageSettings }, ...options, });
+  } else if (Meteor.isProduction) {
+    const transport = getTransport();
+    smtpSend(transport, options);
   } else {
     devModeSend(options);
   }
