@@ -113,7 +113,7 @@ import { Email } from 'meteor/email'
 Email.customTransport = (options) => {
   // `options.settings` are settings from `Meteor.settings.packages.email`
   // The rest of the options are from Email.send options
-  customApi.send({ from: options.settings.fromOverride || options.from, to: options.to, message: options.html || options.text });
+  customApi.send({ from: options.packageSettings.fromOverride || options.from, to: options.to, message: options.html || options.text });
 }
 ```
 
