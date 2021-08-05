@@ -2,10 +2,10 @@ import { Meteor } from 'meteor/meteor';
 import { Log } from 'meteor/logging';
 import { Hook } from 'meteor/callback-hook';
 
-const Future = Npm.require('fibers/future');
-const url = Npm.require('url');
-const nodemailer = Npm.require('nodemailer');
-const wellKnow = Npm.require('nodemailer/lib/well-known');
+import Future from 'fibers/future';
+import url from 'url';
+import nodemailer from 'nodemailer';
+import wellKnow from 'nodemailer/lib/well-known';
 
 export const Email = {};
 export const EmailTest = {};
