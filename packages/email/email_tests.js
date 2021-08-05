@@ -1,4 +1,4 @@
-const streamBuffers = Npm.require('stream-buffers');
+import streamBuffers from 'stream-buffers';
 
 const devWarningBanner = "(Mail not sent; to enable " +
   "sending, set the MAIL_URL environment variable.)\n";
@@ -83,9 +83,7 @@ Tinytest.add("email - multiple e-mails same stream", function (test) {
       text: "This is the body\nof the message\nFrom us.",
     });
 
-    let contents;
-
-    contents = canonicalize(stream.getContentsAsString("utf8"));
+    const contents = canonicalize(stream.getContentsAsString("utf8"));
     test.matches(contents, /^====== BEGIN MAIL #0 ======$/m);
     test.matches(contents, /^From: foo@example.com$/m);
     test.matches(contents, /^To: bar@example.com$/m);
@@ -97,10 +95,10 @@ Tinytest.add("email - multiple e-mails same stream", function (test) {
       text: "This is another message\nFrom Qux.",
     });
 
-    contents = canonicalize(stream.getContentsAsString("utf8"));
-    test.matches(contents, /^====== BEGIN MAIL #1 ======$/m);
-    test.matches(contents, /^From: qux@example.com$/m);
-    test.matches(contents, /^To: baz@example.com$/m);
+    const contents2 = canonicalize(stream.getContentsAsString("utf8"));
+    test.matches(contents2, /^====== BEGIN MAIL #1 ======$/m);
+    test.matches(contents2, /^From: qux@example.com$/m);
+    test.matches(contents2, /^To: baz@example.com$/m);
 
   });
 });

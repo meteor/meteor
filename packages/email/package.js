@@ -17,6 +17,6 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use('email', 'server');
-  api.use('tinytest');
+  api.use(['tinytest', 'ecmascript']);
   api.addFiles('email_tests.js', 'server');
 });
