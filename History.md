@@ -1,3 +1,7 @@
+## v3.4.0
+
+* Use the new `createIndex` instead of `_ensureIndex`
+
 ## v3.3.0
 
 * Update dependencies
