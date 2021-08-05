@@ -76,6 +76,9 @@
 * `test-helpers@1.3.0`
   - Support for `Tinytest.only` and `Tinytest.onlyAsync`
 
+* `modules@0.17.0`
+  - Update `reify` to `0.22.0`
+
 #### Independent Releases
 
 * `minifier-js@2.6.1`
