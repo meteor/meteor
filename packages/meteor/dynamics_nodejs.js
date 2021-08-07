@@ -15,7 +15,7 @@ Meteor._nodeCodeMustBeInFiber = function () {
 /**
  * @memberOf Meteor
  * @summary Constructor for EnvironmentVariable
- * @locus server
+ * @locus Anywhere
  * @class
  */
 Meteor.EnvironmentVariable = function () {
@@ -26,7 +26,7 @@ var EVp = Meteor.EnvironmentVariable.prototype;
 
 /**
  * @summary Return value of environment variable if available
- * @locus server
+ * @locus Anywhere
  * @method get
  * @memberof Meteor.EnvironmentVariable
  */
@@ -58,7 +58,7 @@ EVp.getOrNullIfOutsideFiber = function () {
 
 /**
  * @summary Set the environment variable to the given value while a function is run
- * @locus server
+ * @locus Anywhere
  * @method withValue
  * @memberof Meteor.EnvironmentVariable
  * @param {Any} value Value the environment variable should be set to
@@ -101,9 +101,10 @@ EVp.withValue = function (value, func) {
 // callback, and when an exception is raised a debug message will be
 // printed with the description.
 /**
- * @summary Stores the current Meteor environment variables and wraps the
- * function to run in a fiber with the environment variables restored
- * @locus server
+ * @summary Stores the current Meteor environment variables, and wraps the
+ * function to run with the environment variables restored. On the server, the
+ * function is wrapped within a fiber.
+ * @locus Anywhere
  * @memberOf Meteor
  * @param {Function} func Function that is wrapped
  * @param {Function} onException 
