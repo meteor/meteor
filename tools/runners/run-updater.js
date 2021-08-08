@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var Fiber = require('fibers');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var Console = require('../console/console.js').Console;
@@ -11,7 +10,7 @@ var Updater = function () {
 // XXX make it take a runLog?
 // XXX need to deal with updater writing messages (bypassing old
 // stdout interception.. maybe it should be global after all..)
-_.extend(Updater.prototype, {
+Object.assign(Updater.prototype, {
   start: function () {
     var self = this;
 

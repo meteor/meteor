@@ -47,9 +47,9 @@
       "integrity": "sha512-Key5NIsUxdqKg3vIsdw9dSuXpPCQ297y6wBjL30edxwPgt2E44WcWBZey/ZvUc6sERLTxKdyCu4gZFmUbk1Q7A==",
       "dependencies": {
         "type": {
-          "version": "2.0.0",
-          "resolved": "https://registry.npmjs.org/type/-/type-2.0.0.tgz",
-          "integrity": "sha512-KBt58xCHry4Cejnc2ISQAF7QY+ORngsWfxezO68+12hKV6lQY8P/psIkcbjeHWn7MqcgciWJyCCevFMJdIXpow=="
+          "version": "2.5.0",
+          "resolved": "https://registry.npmjs.org/type/-/type-2.5.0.tgz",
+          "integrity": "sha512-180WMDQaIMm3+7hGXWf12GtdniDEy7nYcyFMKJn/eZz/6tSLXrUN9V0wKSbMjej0I1WHWbpREDEKHtqPQa9NNw=="
         }
       }
     },
@@ -64,9 +64,16 @@
       "integrity": "sha1-Jzi9nw089PhEkMVzbEhpmsYyzaM="
     },
     "memoizee": {
-      "version": "0.4.14",
-      "resolved": "https://registry.npmjs.org/memoizee/-/memoizee-0.4.14.tgz",
-      "integrity": "sha512-/SWFvWegAIYAO4NQMpcX+gcra0yEZu4OntmUdrBaWrJncxOqAziGFlHxc7yjKVK2uu3lpPW27P27wkR82wA8mg=="
+      "version": "0.4.15",
+      "resolved": "https://registry.npmjs.org/memoizee/-/memoizee-0.4.15.tgz",
+      "integrity": "sha512-UBWmJpLZd5STPm7PMUlOw/TSy972M+z8gcyQ5veOnSDRREz/0bmpyTfKt3/51DhEBqCZQn1udM/5flcSPYhkdQ==",
+      "dependencies": {
+        "next-tick": {
+          "version": "1.1.0",
+          "resolved": "https://registry.npmjs.org/next-tick/-/next-tick-1.1.0.tgz",
+          "integrity": "sha512-CXdUiJembsNjuToQvxayPZF9Vqht7hewsvy2sOWafLvi2awflj9mOC6bHIg50orX8IJvWKY9wYQ/zB2kogPslQ=="
+        }
+      }
     },
     "next-tick": {
       "version": "1.0.0",

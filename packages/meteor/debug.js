@@ -46,9 +46,6 @@ Meteor._debug = function (/* arguments */) {
         // IE9
         var log = Function.prototype.bind.call(console.log, console);
         log.apply(console, arguments);
-      } else {
-        // IE8
-        Function.prototype.call.call(console.log, console, Array.prototype.slice.call(arguments));
       }
     }
   }
