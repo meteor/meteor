@@ -65,10 +65,15 @@ const knownHostsTransport = function(settings = undefined, url = undefined) {
       host = urlObject.hostname;
       user = urlObject.username;
       password = urlObject.password;
+    } else if (urlObject.protocol && urlObject.username && urlObject.password) {
+      // We have some data from urlObject
+      host = urlObject.protocol.split(':')[0];
+      user = urlObject.username;
+      password = urlObject.password;
     } else {
       // We need to disect the URL ourselves to get the data
       // First get rid of the leading '//' and split to username and the rest
-      const temp = urlObject.pathname.substring(2).split(':');
+      const temp = urlObject.pathname.substring(2)?.split(':');
       user = temp[0];
       // Now we split by '@' to get password and hostname
       const temp2 = temp[1].split('@');

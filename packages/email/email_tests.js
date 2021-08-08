@@ -255,7 +255,7 @@ Tinytest.add("email - alternate API is used for sending gets data", function(tes
     Meteor.settings.packages = { email: { service: '1on1', user: 'test', password: 'pwd' } };
     Email.customTransport = (options) => {
       test.equal(options.from, 'foo@example.com');
-      test.equal(options.settings?.service, '1on1');
+      test.equal(options.packageSettings?.service, '1on1');
     };
 
     Email.send({
@@ -283,13 +283,13 @@ Tinytest.add("email - URL string for known hosts", function(test) {
   const outlookTransport2 = EmailTest.knowHostsTransport(undefined, 'Outlook365://firstname.lastname@hotmail.com:password@hotmail.com');
   test.equal(outlookTransport.transporter.auth.user, 'firstname.lastname%40hotmail.com');
   test.equal(outlookTransport.options.auth.user, 'firstname.lastname%40hotmail.com');
-  test.equal(outlookTransport.transporter.options.service, 'hotmail.com');
+  test.equal(outlookTransport.transporter.options.service, 'outlook365');
   test.equal(outlookTransport2.transporter.auth.user, 'firstname.lastname%40hotmail.com');
-  test.equal(outlookTransport2.transporter.options.service, 'hotmail.com');
+  test.equal(outlookTransport2.transporter.options.service, 'outlook365');
 
   const hotmailTransport = EmailTest.knowHostsTransport(undefined, 'Hotmail://firstname.lastname@hotmail.com:password@hotmail.com');
   console.dir(hotmailTransport);
-  test.equal(hotmailTransport.transporter.options.service, 'hotmail.com');
+  test.equal(hotmailTransport.transporter.options.service, 'hotmail');
 
   const falseService = { service: '1on1', user: 'test', password: 'pwd' };
   const errorMsg = 'Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.';
