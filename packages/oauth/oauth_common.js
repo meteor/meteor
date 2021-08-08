@@ -46,10 +46,12 @@ OAuth._redirectUri = (serviceName, config, params, absoluteUrlOptions) => {
     };
   }
 
-  const constructedUrl = new URL(Meteor.absoluteUrl(`_oauth/${serviceName}`, absoluteUrlOptions))
-  Object.keys(params).forEach(key => {
-    constructedUrl.searchParams.append(key, params[key]);
-  });
+  const constructedUrl = new URL(Meteor.absoluteUrl(`_oauth/${serviceName}`, absoluteUrlOptions));
+  if (params) {
+    Object.keys(params).forEach(key => {
+      constructedUrl.searchParams.append(key, params[key]);
+    });
+  }
 
   return constructedUrl.toString();
 };
