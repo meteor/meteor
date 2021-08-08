@@ -131,7 +131,7 @@ export class OAuth1Binding {
       redirect: 'follow',
       mode: 'cors',
       jar: false
-    })
+    });
     // Make signed request
     const response = await fetch(request);
     const data = {

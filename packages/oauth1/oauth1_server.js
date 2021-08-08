@@ -1,19 +1,17 @@
 import { URL } from 'meteor/url';
 import { OAuth1Binding } from './oauth1_binding';
+import { ServiceConfiguration } from 'meteor/service-configuration';
 
 OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitelistedQueryParams = []) => {
   const redirectUrlObj = new URL(authUrl);
 
-  Object.assign(
-    redirectUrlObj.query,
-    whitelistedQueryParams.reduce((prev, param) => 
-      params.query[param] ? { ...prev, param: params.query[param] } : prev,
-      {}
-    ),
-    {
-      oauth_token: oauthBinding.requestToken,
+  whitelistedQueryParams.forEach(allowedParam => {
+    if(params.query[allowedParam]) {
+      redirectUrlObj.searchParams.append(allowedParam, params.query[allowedParam]);
     }
-  );
+  });
+
+  redirectUrlObj.searchParams.append('oauth_token', oauthBinding.requestToken);
 
   // Clear the `search` so it is rebuilt by Node's `url` from the `query` above.
   // Using previous versions of the Node `url` module, this was just set to ""
@@ -21,7 +19,7 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
   delete redirectUrlObj.search;
 
   // Reconstruct the URL back with provided query parameters merged with oauth_token
-  return url.format(redirectUrlObj);
+  return redirectUrlObj.toString();
 };
 
 // connect middleware

@@ -1,3 +1,6 @@
+import { Meteor } from 'meteor/meteor';
+import { Log } from 'meteor/logging';
+
 // Cordova specific code for the OAuth package.
 
 // Open a popup window, centered on the screen, and call a callback when it
@@ -9,8 +12,8 @@
 // @param dimensions {optional Object(width, height)} The dimensions of
 //   the popup. If not passed defaults to something sane.
 OAuth.showPopup = (url, callback, dimensions) => {
-  const fail = err => 
-    Meteor._debug(`Error from OAuth popup: ${JSON.stringify(err)}`);
+  const fail = err =>
+    Log.error(`Error from OAuth popup: ${JSON.stringify(err)}`);
 
   // When running on an android device, we sometimes see the
   // `pageLoaded` callback fire twice for the final page in the OAuth

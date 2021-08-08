@@ -4,9 +4,9 @@ Package.describe({
 });
 
 Package.onUse(api => {
-  api.use(['check', 'ecmascript', 'localstorage', 'url']);
+  api.use(['check', 'ecmascript', 'localstorage', 'url', 'logging']);
 
-  api.use(['routepolicy', 'webapp', 'mongo', 'service-configuration', 'logging'], 'server');
+  api.use(['routepolicy', 'webapp', 'mongo', 'service-configuration'], 'server');
 
   api.use(['reload', 'base64'], 'client');
 

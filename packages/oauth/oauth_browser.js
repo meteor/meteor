@@ -68,6 +68,6 @@ const openCenteredPopup = function(url, width, height) {
 
   if (newwindow.focus)
     newwindow.focus();
-  
+
   return newwindow;
 };

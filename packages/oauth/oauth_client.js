@@ -1,3 +1,5 @@
+import { Meteor } from 'meteor/meteor';
+
 // credentialToken -> credentialSecret. You must provide both the
 // credentialToken and the credentialSecret to retrieve an access token from
 // the _pendingCredentials collection.
@@ -63,6 +65,8 @@ OAuth._stateParam = (loginStyle, credentialToken, redirectUrl) => {
 // in the reload migration data.
 //
 OAuth.saveDataForRedirect = (loginService, credentialToken) => {
+  import { Reload } from 'meteor/reload';
+
   Reload._onMigrate('oauth', () => [true, { loginService, credentialToken }]);
   Reload._migrate(null, {immediateMigration: true});
 };
