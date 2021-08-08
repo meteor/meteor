@@ -7,6 +7,45 @@
 
 #### Independent Releases
 
+* `minifier-js@2.6.1`
+  - Terser updated to [4.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v480)
+    
+* `routepolicy@1.1.1`
+  - Removed `underscore` dependency since it was not used in the package
+  
+* `email@2.1.1`
+  - Updated `nodemailer` to v6.6.3
+  
+* `callback-hook@1.3.1`
+  - Modernized the code
+  - Fixed a variable assignment bug in `dontBindEnvironment` function
+
+* `less@4.0.0`
+  - Updated `less` to v4.1.1
+  - Fixed tests
+
+* `npm-mongo@3.9.1`
+  - `mongodb@3.6.10`
+  
+## v2.3.4, 2021-08-03
+
+* Fix an issue in `bare` and `vue` skeletons
+
+## v2.3.3, 2021-08-02
+
+* Security patch of Node.js to [14.17.4](https://nodejs.org/en/blog/release/v14.17.4/)
+* App skeletons had the following dependencies updated:
+  - `meteor-node-stubs@1.1.0`
+  - `@babel/runtime@7.14.8`
+* `babel/parser@7.14.9` for server dev bundle
+
+## v2.3.2, 2021-07-13
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.2`
+  - fixes a bug that makes `meteor run android` run with the new aab package flag
+
 ## v2.3.1, 2021-07-08
 
 #### Highlights
@@ -119,7 +158,7 @@
   - This package is now deprecated
 
 * `http@2.0.0`
-  - Internally http has been replaced by [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), should still work as previous version, but edge cases might be different. This is to aid you in transition to fetch.
+  - Internally http has been replaced by [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), should still work as previous version, but edge cases might be different. This is to aid you in transition to fetch. Note that this means that the `npmRequestOptions` parameter to `HTTP.call` has been removed, as `request` is no longer used internally.
 
 * `socket-stream-client@0.4.0`
   - Remove IE8 checks
@@ -152,10 +191,9 @@
   - `underscore` has been updated to v1.13.1
   - `optimism` has been updated to v0.16.1
   - `@wry/context` has been update to v0.6.0
-  - Reduced time spent by server (re)start in development by adding a cache for Reify. This optimization can be enabled in production by setting the `METEOR_REIFY_CACHE_DIR` environment variable [PR](https://github.com/meteor/meteor/pull/11400).
+  - Reduced time spent by server (re)start in development by adding a cache for Reify. This optimization is on by default in development. Set the new `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` and `METEOR_REIFY_CACHE_DIR` environment variables to adjust it or turn it on for production [read more in the PR](https://github.com/meteor/meteor/pull/11400).
   - New flag `--platforms` has been added to the `build` command to specify the platform you want to build for. `meteor build . --platforms=android`. This is useful for example when you are not using a MacOS and you want to build your app only for Android. Also to save time on CI not building all the platforms all the time. See [PR](https://github.com/meteor/meteor/pull/11437) for details.
   - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
-  - New env variable `METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE` to improve runtime performance on restarts.
   - Skeletons dependencies updated to latest version
   - Svelte skeleton now has HMR
   - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-only)
@@ -254,6 +292,12 @@
   
 * `react-fast-refresh@0.1.1`
   - Fixed the package to work in IE11
+
+## v2.2.2, 2021-08-02
+
+#### Highlights
+
+- Security update to Node.js [12.22.4](https://nodejs.org/en/blog/release/v12.22.4/)
 
 ## v2.2.1, 2021-06-02
 
