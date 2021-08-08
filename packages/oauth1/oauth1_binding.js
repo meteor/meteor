@@ -57,7 +57,6 @@ export class OAuth1Binding {
     });
 
     const response = this._call('POST', this._urls.accessToken, headers);
-    console.dir(response);
     const tokens = querystring.parse(response.content);
 
     if (! tokens.oauth_token || ! tokens.oauth_token_secret) {
@@ -147,7 +146,6 @@ export class OAuth1Binding {
   }
 
   _call (method, url, headers = new Headers(), params = {}, callback) {
-    const callMethod = Meteor.wrapAsync(this._callMethod);
     // all URLs to be functions to support parameters/customization
     if(typeof url === "function") {
       url = url(this);
@@ -166,7 +164,7 @@ export class OAuth1Binding {
     let data;
     let error = undefined;
     try {
-      data = callMethod(method, parsedUrl, headers, params).resolve();
+      data = this._callMethod(method, parsedUrl, headers, params).await();
     } catch (err) {
       const errorMsg = `Failed to send OAuth1 request to ${url}. ${err.message}`;
       if (callback) error = errorMsg;

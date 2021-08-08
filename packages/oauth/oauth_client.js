@@ -12,8 +12,6 @@ OAuth.showPopup = (url, callback, dimensions) => {
 };
 
 // Determine the login style (popup or redirect) for this login flow.
-//
-//
 OAuth._loginStyle = (service, config, options) => {
 
   if (Meteor.isCordova) {

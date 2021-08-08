@@ -16,7 +16,7 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
   // Clear the `search` so it is rebuilt by Node's `url` from the `query` above.
   // Using previous versions of the Node `url` module, this was just set to ""
   // However, Node 6 docs seem to indicate that this should be `undefined`.
-  delete redirectUrlObj.search;
+  // delete redirectUrlObj.search;
 
   // Reconstruct the URL back with provided query parameters merged with oauth_token
   return redirectUrlObj.toString();
@@ -55,7 +55,7 @@ OAuth._requestHandlers['1'] = (service, query, res) => {
     let redirectUrl;
     const authParams = { query };
 
-    if(typeof urls.authenticate === "function") {
+    if (typeof urls.authenticate === "function") {
       redirectUrl = urls.authenticate(oauthBinding, authParams);
     } else {
       redirectUrl = OAuth._queryParamsWithAuthTokenUrl(
