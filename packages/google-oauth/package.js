@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: "1.4.0",
+  version: "1.4.1",
 });
 
 Cordova.depends({
@@ -11,7 +11,7 @@ Package.onUse(api => {
   api.use("ecmascript");
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('http', ['server']);
+  api.use('http@1.4.4 || 2.0.0', ['server']);
   api.use('service-configuration');
   api.use('random', 'client');
 
