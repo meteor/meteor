@@ -365,8 +365,13 @@ Object.assign(Roles, {
   _backwardMigrate2: function (assignmentSelector) {
     assignmentSelector = assignmentSelector || {}
 
-    Meteor.users.createIndex({ 'roles._id': 1, 'roles.scope': 1 })
-    Meteor.users.createIndex({ 'roles.scope': 1 })
+    if (Meteor.users.createIndex) {
+      Meteor.users.createIndex({ 'roles._id': 1, 'roles.scope': 1 })
+      Meteor.users.createIndex({ 'roles.scope': 1 })
+    } else {
+      Meteor.users._ensureIndex({ 'roles._id': 1, 'roles.scope': 1 })
+      Meteor.users._ensureIndex({ 'roles.scope': 1 })
+    }
 
     Meteor.roleAssignment.find(assignmentSelector).forEach(r => {
       const roles = Meteor.users.findOne({ _id: r.user._id }).roles || []
