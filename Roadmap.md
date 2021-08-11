@@ -36,17 +36,9 @@ Updated at: 2021/01/20
 
 Meteor is accelerating! We are going release more often this year.
 
-We expect to have new features focusing in ease app development in V3 or probably in V2 as well, the first step is to review our [feature requests](https://github.com/meteor/meteor-feature-requests) one more time and define new priorities.
+We expect to have new features focusing in ease app development in V3 or probably in V2 as well.
 
-Maybe we should also have a new way of prioritization for new features, right now this [repository]((https://github.com/meteor/meteor-feature-requests)) with issues is not good enough in our opinion, the plan is to be even more open for feedbacks and collaboration. If we make changes in this process we are going to announce in the [Forums](https://forums.meteor.com/) and Slack as always.
-
-> We are also looking for new developers to be part of our core team and of course if you are already contributing to Meteor you have a head start.
-> 
-> We don't have an official position description yet but again, contributing to Meteor in the open-source is the best way to join the core team.
-
-Maybe you are asking: Why the format of this Roadmap was changed in this update?
-
-We believe the items here were in some part outdated so we want to have a "fresh start". You should expect a new list of items here soon. It doesn't mean that all the old items are out of question, or they aren't important, probably the opposite and you will see most of them again here soon.
+See feature requests and other discussions [here](https://github.com/meteor/meteor/discussions)
 
 ## Recently completed
 

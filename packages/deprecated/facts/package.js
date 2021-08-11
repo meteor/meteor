@@ -1,6 +1,8 @@
 Package.describe({
   summary: "Publish internal app statistics",
-  version: '1.0.9'
+  version: '1.0.9',
+  deprecated: 'Use facts-ui or facts-base instead.',
+  documentation: null
 });
 
 Package.onUse(function (api) {
