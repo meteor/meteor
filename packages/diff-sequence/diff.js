@@ -47,7 +47,7 @@ class DiffSequenceClass {
             var projectedNew = projectionFn(newDoc);
             var projectedOld = projectionFn(oldDoc);
             var changedFields =
-                  DiffSequence.makeChangedFields(projectedNew, projectedOld);
+                  this.makeChangedFields(projectedNew, projectedOld);
             if (! isObjEmpty(changedFields)) {
               observer.changed(id, changedFields);
             }
@@ -191,7 +191,7 @@ class DiffSequenceClass {
             oldDoc = old_results[old_index_of_id[newDoc._id]];
             projectedNew = projectionFn(newDoc);
             projectedOld = projectionFn(oldDoc);
-            fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
+            fields = this.makeChangedFields(projectedNew, projectedOld);
             if (!isObjEmpty(fields)) {
               observer.changed && observer.changed(newDoc._id, fields);
             }
@@ -203,7 +203,7 @@ class DiffSequenceClass {
           oldDoc = old_results[old_index_of_id[newDoc._id]];
           projectedNew = projectionFn(newDoc);
           projectedOld = projectionFn(oldDoc);
-          fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
+          fields = this.makeChangedFields(projectedNew, projectedOld);
           if (!isObjEmpty(fields)) {
             observer.changed && observer.changed(newDoc._id, fields);
           }

@@ -1,6 +1,6 @@
-import { DiffSequence} from "../diff-sequence/diff"
 DDPServer = {};
 
+import { DiffSequence} from "../diff-sequence/diff"
 
 var Fiber = Npm.require('fibers');
 
