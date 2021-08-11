@@ -29,7 +29,33 @@
 
 * `accounts-base@2.0.1`
   - Create index on `services.password.enroll.when`
-  - Blaze weak dependency updated to v2.5.0 
+  - Blaze weak dependency updated to v2.5.0
+
+## v2.3.5, 2021-08-11
+
+#### Highlights
+
+* Node.js updated to [`v14.`]()
+* Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.5`
+  - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+  - `@meteorjs/babel@7.12.0`
+
+
+* `@meteorjs/babel@7.12.0` && `@meteorjs/babel@7.13.0`
+  - Dependencies updated to their latest versions
+
+* `babel-compile@7.7.0`
+  - `@meteorjs/babel@7.12.0`
+
+* `ecmascript@0.15.3`
+  - Typescript and Babel version bump
+
+* `typescript@4.3.5`
+  - [`typescript@4.3.5`](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
   
 ## v2.3.4, 2021-08-03
 
