@@ -4,7 +4,6 @@ Package.describe({
 });
 
 Package.onUse(api => {
-  api.versionsFrom('2.3');
   api.use('ecmascript', ['client', 'server']);
   api.use('ddp-rate-limiter');
   api.use('localstorage', 'client');
