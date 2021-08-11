@@ -106,6 +106,10 @@
 
 * `npm-mongo@3.9.1`
   - `mongodb@3.6.10`
+
+* `accounts-base@2.0.1`
+  - Create index on `services.password.enroll.when`
+  - Blaze weak dependency updated to v2.5.0 
   
 ## v2.3.4, 2021-08-03
 
