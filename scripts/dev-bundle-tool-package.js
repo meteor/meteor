@@ -22,7 +22,7 @@ var packageJson = {
     fibers: "5.0.0",
     reify: "0.22.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
-    "@babel/runtime": "7.14.8",
+    "@babel/runtime": "7.15.3",
     // For backwards compatibility with isopackets that still depend on
     // babel-runtime rather than @babel/runtime.
     "babel-runtime": "7.0.0-beta.3",

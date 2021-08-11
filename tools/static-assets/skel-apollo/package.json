@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@apollo/client": "^3.3.21",
-    "@babel/runtime": "^7.14.6",
+    "@babel/runtime": "^7.15.3",
     "apollo-server-express": "^3.0.0",
     "express": "^4.17.1",
     "graphql": "^15.5.1",

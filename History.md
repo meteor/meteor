@@ -79,6 +79,12 @@
 * `modules@0.17.0`
   - Update `reify` to `0.22.0`
 
+* `standard-minifier-js@2.6.2`
+  - `@babel/runtime@7.15.3`
+
+* `standard-minifier-css@1.7.4`
+  - `@babel/runtime@7.15.3`
+
 #### Independent Releases
 
 * `minifier-js@2.6.1`
