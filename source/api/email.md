@@ -102,7 +102,7 @@ There are scenarios when you have your own transport set up, be it an SDK
 for your mailing service or something else. This is where `customTransport` 
 comes in. If you set this function all sending events will be passed to it
 (after `hookSend` is run) with an object of the options passed into `send` 
-function with addition of `settings` key which will pass in package settings
+function with addition of `packageSettings` key which will pass in package settings
 set in your app settings (if any). It is up to you what you do in that function
 as it will override the original sending function.
 
@@ -111,7 +111,7 @@ Example:
 import { Email } from 'meteor/email'
 
 Email.customTransport = (options) => {
-  // `options.settings` are settings from `Meteor.settings.packages.email`
+  // `options.packageSettings` are settings from `Meteor.settings.packages.email`
   // The rest of the options are from Email.send options
   customApi.send({ from: options.packageSettings.fromOverride || options.from, to: options.to, message: options.html || options.text });
 }
