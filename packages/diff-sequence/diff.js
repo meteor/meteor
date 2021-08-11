@@ -21,7 +21,7 @@ class DiffSequenceClass {
       this._makeChangedFieldsCache = new Map();
     }
 
-    diffQueryChanges(ordered, oldResults, newResults,
+    static diffQueryChanges(ordered, oldResults, newResults,
     observer, options){
 
     if (ordered)
@@ -33,7 +33,7 @@ class DiffSequenceClass {
   
     }
 
-    diffQueryUnorderedChanges(oldResults, newResults, observer, options){
+    static diffQueryUnorderedChanges(oldResults, newResults, observer, options){
       options = options || {};
       var projectionFn = options.projectionFn || EJSON.clone;
     
@@ -66,7 +66,7 @@ class DiffSequenceClass {
         });
     }
 
-    diffQueryOrderedChanges(old_results, new_results,
+    static diffQueryOrderedChanges(old_results, new_results,
     observer, options){
         options = options || {};
       var projectionFn = options.projectionFn || EJSON.clone;
@@ -212,7 +212,7 @@ class DiffSequenceClass {
       });
     }
 
-    diffObjects(left, right, callbacks){
+    static diffObjects(left, right, callbacks){
       Object.keys(left).forEach(key => {
         const leftValue = left[key];
         if (hasOwn.call(right, key))
@@ -230,7 +230,7 @@ class DiffSequenceClass {
         });
     }
 
-    diffMaps(left, right, callbacks){
+   static diffMaps(left, right, callbacks){
       left.forEach(function (leftValue, key) {
         if (right.has(key))
           callbacks.both && callbacks.both(key, leftValue, right.get(key));
@@ -245,7 +245,7 @@ class DiffSequenceClass {
         });
     }
 
-    makeChangedFields(newDoc, oldDoc){
+    static makeChangedFields(newDoc, oldDoc){
       const getHash = this._generateHashFromArray([newDoc, oldDoc]);
       if(this._makeChangedFieldsCache.has(getHash)){
         return this._makeChangedFieldsCache.get(getHash)
@@ -270,7 +270,7 @@ class DiffSequenceClass {
       }
     }
 
-    applyChanges(doc, changeFields){
+    static applyChanges(doc, changeFields){
       Object.keys(changeFields).forEach(key => {
         const value = changeFields[key];
         if (typeof value === "undefined")
@@ -280,12 +280,12 @@ class DiffSequenceClass {
       });
     }
 
-    _memoize(cacheStore, key, value){
+    static _memoize(cacheStore, key, value){
       this[cacheStore].size > 25 && this[cacheStore].clear(); 
       this[cacheStore].set(key, value);
     }
 
-    _generateHashFromArray(array){
+    static _generateHashFromArray(array){
       let objectString = "";
       for(let object in array){
         objectString.concat(EJSON.stringify(object));
@@ -296,4 +296,4 @@ class DiffSequenceClass {
 
 }
 
-export const DiffSequence = new DiffSequenceClass;
+export const DiffSequence = new DiffSequenceClass();
