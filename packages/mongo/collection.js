@@ -6,6 +6,7 @@ import {
   markCollectionAsInitializing,
   setCollectionInstance
 } from "./collectionsInstances";
+import { getAsyncMethodName } from "./mongoUtils";
 
 /**
  * @summary Namespace for MongoDB-related items
@@ -907,13 +908,20 @@ function popCallbackFromArgs(args) {
   }
 }
 
+// some methods don't need to be async
+const EXCLUDE_FROM_ASYNC_WRAPPER = ['_isRemoteCollection'];
+
+// "find" is necessary here because we are already delaying the collection
+// connection after the creation so we need to wait it at this point
 ['find', ...Object.keys(collectionImplementation)]
+  .filter(method => !EXCLUDE_FROM_ASYNC_WRAPPER.includes(method))
   .forEach(method => {
-    const asyncName = `${method}Async`.replace('_', '');
+    const asyncName = getAsyncMethodName(method);
+
     Mongo.Collection.prototype[asyncName] = async function(...args) {
       if (!this.isAsync) {
         throw new Error(
-          `It is only allowed to use ${asyncName} method in async collections. Use "Mongo.createAsyncCollection" to create async collections.`);
+          `It is only allowed to use "${asyncName}" method in async collections like "${this._name}". Use "Mongo.createAsyncCollection" to create async collections.`);
       }
 
       const options = { isAsync: this.isAsync };

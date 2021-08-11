@@ -1,3 +1,5 @@
+
+
 /**
  * Provide a synchronous Collection API using fibers, backed by
  * MongoDB.  This is only for use on the server, and mostly identical
@@ -13,6 +15,10 @@ const util = require("util");
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
+import {
+  getCollectionInstanceOrNull,
+} from "./collectionsInstances";
+import { getAsyncMethodName } from "./mongoUtils";
 
 MongoInternals = {};
 
@@ -798,6 +804,8 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
 };
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {
+
+  console.log(`find 2 - find mongo driver`, collectionName, selector);
   var self = this;
 
   if (arguments.length === 1)
@@ -893,28 +901,64 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) {
+// TODO [fiber-free-api] implement async iterator for Cursor
+const cursorMethods = ['forEach', 'map', 'fetch', 'count'];
+
+const setupSynchronousCursor = (cursor, method) => {
+  // You can only observe a tailable cursor.
+  if (cursor._cursorDescription.options.tailable)
+    throw new Error('Cannot call ' + method + ' on a tailable cursor');
+
+  if (!cursor._synchronousCursor) {
+    cursor._synchronousCursor = cursor._mongo._createSynchronousCursor(
+      cursor._cursorDescription,
+      {
+        // Make sure that the "cursor" argument to forEach/map callbacks is the
+        // Cursor, not the SynchronousCursor.
+        selfForIteration: cursor,
+        useTransform: true,
+      }
+    );
+  }
+};
+
+_.each([...cursorMethods, Symbol.iterator], function (method) {
   Cursor.prototype[method] = function () {
     var self = this;
 
-    // You can only observe a tailable cursor.
-    if (self._cursorDescription.options.tailable)
-      throw new Error("Cannot call " + method + " on a tailable cursor");
-
-    if (!self._synchronousCursor) {
-      self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription, {
-          // Make sure that the "self" argument to forEach/map callbacks is the
-          // Cursor, not the SynchronousCursor.
-          selfForIteration: self,
-          useTransform: true
-        });
-    }
+    setupSynchronousCursor(self, method);
 
     return self._synchronousCursor[method].apply(
-      self._synchronousCursor, arguments);
+      self._synchronousCursor,
+      arguments
+    );
   };
 });
+
+cursorMethods
+  .forEach(method => {
+    const asyncName = getAsyncMethodName(method);
+    Cursor.prototype[asyncName] = async function(...args) {
+      setupSynchronousCursor(this, method);
+
+      const collectionName = this._cursorDescription.collectionName;
+
+      const options = { isAsync: true };
+      const collectionInstance = getCollectionInstanceOrNull({name: collectionName, options});
+
+      if (!collectionInstance) {
+        throw new Error(
+          `It is only allowed to use "${asyncName}" cursor method in async collections like "${collectionName}". Use "Mongo.createAsyncCollection" to create async collections.`);
+      }
+      if (!collectionInstance.isAsyncInitialized) {
+        throw new Error(
+          `There is something wrong in Meteor because "${collectionName}" should be initialized at this point to run the cursor method "${asyncName}". Please open an issue.`);
+      }
+
+      return Promise.resolve(this._synchronousCursor[method].apply(
+        this._synchronousCursor, args));
+    };
+  });
 
 Cursor.prototype.getTransform = function () {
   return this._cursorDescription.options.transform;

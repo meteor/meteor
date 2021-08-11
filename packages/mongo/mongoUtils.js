@@ -12,3 +12,8 @@ export const onceAsync = func => {
     return memo;
   };
 };
+
+const MONGO_ASYNC_SUFFIX = 'Async';
+
+export const getAsyncMethodName = method =>
+  `${method}${MONGO_ASYNC_SUFFIX}`.replace('_', '');
