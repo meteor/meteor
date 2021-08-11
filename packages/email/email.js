@@ -228,10 +228,5 @@ Email.send = function (options) {
     smtpSend(transport, options);
     return;
   }
-  if (customTransport) {
-    const packageSettings = Meteor.settings.packages?.email || {};
-    customTransport({ settings: { ...packageSettings }, ...options, });
-    return;
-  }
   devModeSend(options);
 };
