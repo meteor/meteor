@@ -40,7 +40,7 @@ Tinytest.add("ecmascript - transpilation - class methods", (test) => {
   test.isTrue(contains(output, 'Foo.staticMethod = function staticMethod('));
   test.isTrue(contains(output,
                        '.prototypeMethod = function prototypeMethod('));
-  test.isTrue(contains(output, '[computedMethod] = function ('));
+  test.isTrue(contains(output, '[_computedMethod] = function ('));
   test.isFalse(contains(output, 'createClass'));
 });
 
