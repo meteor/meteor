@@ -12,11 +12,11 @@ function isObjEmpty(obj) {
 }
 
 /**
- * @function DiffSequenceConstructor
+ * @function DiffSequence
  * @description old_results and new_results: collections of documents. if ordered, they are arrays. if unordered, they are IdMaps
  */
 
-const DiffSequenceConstructor = function(){
+export const DiffSequence = function(){
     this._makeChangedFieldsCache = new Map();
 
     this.diffQueryChanges = function(ordered, oldResults, newResults,
@@ -296,5 +296,3 @@ const DiffSequenceConstructor = function(){
     }
 
 }
-
-export const DiffSequence = new DiffSequenceConstructor()
