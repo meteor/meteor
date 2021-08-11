@@ -12,28 +12,29 @@ function isObjEmpty(obj) {
 }
 
 /**
- * @class DiffSequenceClass
+ * @function DiffSequenceConstructor
  * @description old_results and new_results: collections of documents. if ordered, they are arrays. if unordered, they are IdMaps
  */
 
-class DiffSequenceClass {
-    constructor(){
+const DiffSequenceConstructor = function(){
       this._makeChangedFieldsCache = new Map();
-    }
 
-    static diffQueryChanges(ordered, oldResults, newResults,
+    this.diffQueryChanges = function(ordered, oldResults, newResults,
     observer, options){
 
-    if (ordered)
-    this.diffQueryOrderedChanges(
-      oldResults, newResults, observer, options);
-    else
-    this.diffQueryUnorderedChanges(
-      oldResults, newResults, observer, options);
-  
+    if (ordered){
+      this.diffQueryOrderedChanges(
+        oldResults, newResults, observer, options);
+    }
+    else {
+      this.diffQueryUnorderedChanges(
+        oldResults, newResults, observer, options);
+    
     }
 
-    static diffQueryUnorderedChanges(oldResults, newResults, observer, options){
+    }
+
+    this.diffQueryUnorderedChanges = function(oldResults, newResults, observer, options){
       options = options || {};
       var projectionFn = options.projectionFn || EJSON.clone;
     
@@ -66,7 +67,7 @@ class DiffSequenceClass {
         });
     }
 
-    static diffQueryOrderedChanges(old_results, new_results,
+    this.diffQueryOrderedChanges = function(old_results, new_results,
     observer, options){
         options = options || {};
       var projectionFn = options.projectionFn || EJSON.clone;
@@ -212,7 +213,7 @@ class DiffSequenceClass {
       });
     }
 
-    static diffObjects(left, right, callbacks){
+    this.diffObjects = function(left, right, callbacks){
       Object.keys(left).forEach(key => {
         const leftValue = left[key];
         if (hasOwn.call(right, key))
@@ -230,7 +231,7 @@ class DiffSequenceClass {
         });
     }
 
-   static diffMaps(left, right, callbacks){
+    this.diffMaps = function(left, right, callbacks){
       left.forEach(function (leftValue, key) {
         if (right.has(key))
           callbacks.both && callbacks.both(key, leftValue, right.get(key));
@@ -245,7 +246,7 @@ class DiffSequenceClass {
         });
     }
 
-    static makeChangedFields(newDoc, oldDoc){
+    this.makeChangedFields = function(newDoc, oldDoc){
       const getHash = this._generateHashFromArray([newDoc, oldDoc]);
       if(this._makeChangedFieldsCache.has(getHash)){
         return this._makeChangedFieldsCache.get(getHash)
@@ -270,7 +271,7 @@ class DiffSequenceClass {
       }
     }
 
-    static applyChanges(doc, changeFields){
+    this.applyChanges = function(doc, changeFields){
       return Object.keys(changeFields).forEach(function(key){
         if (typeof changeFields[key] === "undefined"){
           delete doc[key];
@@ -280,12 +281,12 @@ class DiffSequenceClass {
       });
     }
 
-    static _memoize(cacheStore, key, value){
+    this._memoize = function(cacheStore, key, value){
       this[cacheStore].size > 25 && this[cacheStore].clear(); 
       this[cacheStore].set(key, value);
     }
 
-    static _generateHashFromArray(array){
+    this._generateHashFromArray = function(array){
       let objectString = "";
       for(let object in array){
         objectString.concat(EJSON.stringify(object));
@@ -296,4 +297,4 @@ class DiffSequenceClass {
 
 }
 
-export const DiffSequence = new DiffSequenceClass();
+export const DiffSequence = new DiffSequenceConstructor()
