@@ -17,7 +17,7 @@ function isObjEmpty(obj) {
  */
 
 const DiffSequenceConstructor = function(){
-      this._makeChangedFieldsCache = new Map();
+    this._makeChangedFieldsCache = new Map();
 
     this.diffQueryChanges = function(ordered, oldResults, newResults,
     observer, options){
@@ -272,7 +272,7 @@ const DiffSequenceConstructor = function(){
     }
 
     this.applyChanges = function(doc, changeFields){
-      return Object.keys(changeFields).forEach(function(key){
+      Object.keys(changeFields).forEach(function(key){
         if (typeof changeFields[key] === "undefined"){
           delete doc[key];
          } else { 
