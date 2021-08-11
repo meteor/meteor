@@ -168,7 +168,7 @@ Email.hookSend = function (f) {
  * @summary Overrides sending function with your own.
  * @locus Server
  * @since 2.2
- * @param f {function} function that will receive options from the send function and under `settings` will
+ * @param f {function} function that will receive options from the send function and under `packageSettings` will
  * include the package settings from Meteor.settings.packages.email for your custom transport to access.
  */
 Email.customTransport = undefined;
@@ -221,13 +221,17 @@ Email.send = function (options) {
   if (customTransport) {
     const packageSettings = Meteor.settings.packages?.email || {};
     customTransport({ packageSettings, ...options });
-  } else if (Meteor.isProduction) {
+    return;
+  }
+  if (Meteor.isProduction) {
     const transport = getTransport();
     smtpSend(transport, options);
-  } else if (customTransport) {
+    return;
+  }
+  if (customTransport) {
     const packageSettings = Meteor.settings.packages?.email || {};
     customTransport({ settings: { ...packageSettings }, ...options, });
-  } else {
-    devModeSend(options);
+    return;
   }
+  devModeSend(options);
 };
