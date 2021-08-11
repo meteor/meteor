@@ -271,12 +271,12 @@ class DiffSequenceClass {
     }
 
     static applyChanges(doc, changeFields){
-      Object.keys(changeFields).forEach(key => {
-        const value = changeFields[key];
-        if (typeof value === "undefined")
+      return Object.keys(changeFields).forEach(function(key){
+        if (typeof changeFields[key] === "undefined"){
           delete doc[key];
-        else 
-          doc[key] = value;
+         } else { 
+          doc[key] = changeFields[key];
+         }
       });
     }
 
