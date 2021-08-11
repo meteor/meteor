@@ -58,9 +58,9 @@ const makeTransport = function (mailUrlString) {
 const knownHostsTransport = function(settings = undefined, url = undefined) {
   let service, user, password;
   if (url && !settings) {
-    let host = url?.split(':')[0];
+    let host = url.split(':')[0];
     const urlObject = new URL(url);
-    if (host === 'http' || 'https') {
+    if (host === 'http' || host === 'https') {
       // Look to hostname for service
       host = urlObject.hostname;
       user = urlObject.username;
@@ -218,8 +218,11 @@ Email.send = function (options) {
   if (!send) return;
 
   const customTransport = Email.customTransport;
-  const transport = customTransport ? false : getTransport();
-  if (transport) {
+  if (customTransport) {
+    const packageSettings = Meteor.settings.packages?.email || {};
+    customTransport({ packageSettings, ...options });
+  } else if (Meteor.isProduction) {
+    const transport = getTransport();
     smtpSend(transport, options);
   } else if (customTransport) {
     const packageSettings = Meteor.settings.packages?.email || {};
