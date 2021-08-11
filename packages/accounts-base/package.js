@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "2.0.0",
+  version: "2.0.1",
 });
 
 Package.onUse(api => {
@@ -28,7 +28,7 @@ Package.onUse(api => {
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use('blaze@2.3.4', 'client', {weak: true});
+  api.use('blaze@2.5.0', 'client', {weak: true});
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.
