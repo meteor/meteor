@@ -68,6 +68,7 @@
   - Node.js updated to [v14.17.5](https://nodejs.org/en/blog/release/v14.17.5/)
   - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
   - `@meteorjs/babel@7.12.0`
+  - Fix broken source maps in VSCode - [PR](https://github.com/meteor/meteor/pull/11584)
   
 ## v2.3.4, 2021-08-03
 
