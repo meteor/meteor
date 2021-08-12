@@ -15,26 +15,25 @@ function isObjEmpty(obj) {
  * @function DiffSequence
  * @description old_results and new_results: collections of documents. if ordered, they are arrays. if unordered, they are IdMaps
  */
+export const DiffSequence = {
+    _makeChangedFieldsCache: new Map(),
 
-export const DiffSequence = function(){
-    this._makeChangedFieldsCache = new Map();
-
-    this.diffQueryChanges = function(ordered, oldResults, newResults,
+    diffQueryChanges: function(ordered, oldResults, newResults,
     observer, options){
 
     if (ordered){
-      this.diffQueryOrderedChanges(
+      DiffSequence.diffQueryOrderedChanges(
         oldResults, newResults, observer, options);
     }
     else {
-      this.diffQueryUnorderedChanges(
+      DiffSequence.diffQueryUnorderedChanges(
         oldResults, newResults, observer, options);
     
     }
 
-    }
+    },
 
-    this.diffQueryUnorderedChanges = function(oldResults, newResults, observer, options){
+    diffQueryUnorderedChanges: function(oldResults, newResults, observer, options){
       options = options || {};
       var projectionFn = options.projectionFn || EJSON.clone;
     
@@ -48,7 +47,7 @@ export const DiffSequence = function(){
             var projectedNew = projectionFn(newDoc);
             var projectedOld = projectionFn(oldDoc);
             var changedFields =
-                  this.makeChangedFields(projectedNew, projectedOld);
+                  DiffSequence.makeChangedFields(projectedNew, projectedOld);
             if (! isObjEmpty(changedFields)) {
               observer.changed(id, changedFields);
             }
@@ -65,9 +64,9 @@ export const DiffSequence = function(){
           if (!newResults.has(id))
             observer.removed(id);
         });
-    }
+    },
 
-    this.diffQueryOrderedChanges = function(old_results, new_results,
+    diffQueryOrderedChanges: function(old_results, new_results,
     observer, options){
         options = options || {};
       var projectionFn = options.projectionFn || EJSON.clone;
@@ -192,7 +191,7 @@ export const DiffSequence = function(){
             oldDoc = old_results[old_index_of_id[newDoc._id]];
             projectedNew = projectionFn(newDoc);
             projectedOld = projectionFn(oldDoc);
-            fields = this.makeChangedFields(projectedNew, projectedOld);
+            fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
             if (!isObjEmpty(fields)) {
               observer.changed && observer.changed(newDoc._id, fields);
             }
@@ -204,16 +203,16 @@ export const DiffSequence = function(){
           oldDoc = old_results[old_index_of_id[newDoc._id]];
           projectedNew = projectionFn(newDoc);
           projectedOld = projectionFn(oldDoc);
-          fields = this.makeChangedFields(projectedNew, projectedOld);
+          fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
           if (!isObjEmpty(fields)) {
             observer.changed && observer.changed(newDoc._id, fields);
           }
         }
         startOfGroup = endOfGroup+1;
       });
-    }
+    },
 
-    this.diffObjects = function(left, right, callbacks){
+    diffObjects: function(left, right, callbacks){
       Object.keys(left).forEach(key => {
         const leftValue = left[key];
         if (hasOwn.call(right, key))
@@ -229,9 +228,9 @@ export const DiffSequence = function(){
             callbacks.rightOnly(key, rightValue);
           }
         });
-    }
+    },
 
-    this.diffMaps = function(left, right, callbacks){
+    diffMaps: function(left, right, callbacks){
       left.forEach(function (leftValue, key) {
         if (right.has(key))
           callbacks.both && callbacks.both(key, leftValue, right.get(key));
@@ -244,16 +243,16 @@ export const DiffSequence = function(){
             callbacks.rightOnly(key, rightValue);
           }
         });
-    }
+    },
 
-    this.makeChangedFields = function(newDoc, oldDoc){
-      const getHash = this._generateHashFromArray([newDoc, oldDoc]);
-      if(this._makeChangedFieldsCache.has(getHash)){
-        return this._makeChangedFieldsCache.get(getHash)
+    makeChangedFields: function(newDoc, oldDoc){
+      const getHash = DiffSequence._generateHashFromArray([newDoc, oldDoc]);
+      if(DiffSequence._makeChangedFieldsCache.has(getHash)){
+        return DiffSequence._makeChangedFieldsCache.get(getHash)
       }
       else {
         const fields = new Map();
-        this.diffObjects(oldDoc, newDoc, {
+        DiffSequence.diffObjects(oldDoc, newDoc, {
           leftOnly: function (key, value) {
             fields.set(key, undefined)
           },
@@ -266,12 +265,12 @@ export const DiffSequence = function(){
           }
         });
         const newObject = Object.fromEntries(fields)
-        this._memoize("_makeChangedFieldsCache", getHash, newObject)
+        DiffSequence._memoize("_makeChangedFieldsCache", getHash, newObject)
         return newObject; 
       }
-    }
+    },
 
-    this.applyChanges = function(doc, changeFields){
+    applyChanges: function(doc, changeFields){
       Object.keys(changeFields).forEach(function(key){
         if (typeof changeFields[key] === "undefined"){
           delete doc[key];
@@ -279,14 +278,14 @@ export const DiffSequence = function(){
           doc[key] = changeFields[key];
          }
       });
-    }
+    },
 
-    this._memoize = function(cacheStore, key, value){
+    _memoize: function(cacheStore, key, value){
       this[cacheStore].size > 25 && this[cacheStore].clear(); 
       this[cacheStore].set(key, value);
-    }
+    },
 
-    this._generateHashFromArray = function(array){
+    _generateHashFromArray: function(array){
       let objectString = "";
       for(let object in array){
         objectString.concat(EJSON.stringify(object));
