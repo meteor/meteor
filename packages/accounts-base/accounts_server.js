@@ -1610,4 +1610,5 @@ const setupUsersCollection = users => {
   users._ensureIndex("services.resume.loginTokens.when", { sparse: true });
   // For expiring password tokens
   users._ensureIndex('services.password.reset.when', { sparse: true });
+  users._ensureIndex('services.password.enroll.when', { sparse: true });
 };
