@@ -110,7 +110,28 @@
 
 * `accounts-base@2.0.1`
   - Create index on `services.password.enroll.when`
-  - Blaze weak dependency updated to v2.5.0 
+  - Blaze weak dependency updated to v2.5.0
+
+* `facebook-oauth@1.9.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `github-oauth@1.3.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `google-oauth@1.3.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `meetup-oauth@1.1.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `meteor-developer-oauth@1.3.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `weibo-oauth@1.3.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `oauth1@1.4.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
   
 ## v2.3.4, 2021-08-03
 
