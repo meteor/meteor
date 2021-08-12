@@ -111,8 +111,8 @@ jobs:
           command: (git submodule sync && git submodule update --init --recursive) || (rm -fr .git/config .git/modules && git submodule deinit -f . && git submodule update --init --recursive)
       - restore_cache:
           keys:
-            - v1-1-dev-bundle-cache-{{ checksum "meteor" }}
-            - v1-1-dev-bundle-cache-
+            - v1-2-dev-bundle-cache-{{ checksum "meteor" }}
+            - v1-2-dev-bundle-cache-
       - run:
           name: Combine NPM Shrinkwrap Files
           command: |
@@ -120,21 +120,21 @@ jobs:
             for d in packages/*/.npm/plugin/*; do cat $d/npm-shrinkwrap.json >> shrinkwraps.txt; done
       - restore_cache:
           keys:
-            - package-npm-deps-cache-group1-v1-1-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group1-v1-1-
+            - package-npm-deps-cache-group1-v1-2-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group1-v1-2-
       - restore_cache:
           keys:
-            - package-npm-deps-cache-group2-v3-1-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group2-v3-1-
+            - package-npm-deps-cache-group2-v3-2-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group2-v3-2-
       - restore_cache:
           keys:
-            - v5-1-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
-            - v5-1-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
-            - v5-1-other-deps-cache-{{ .Branch }}-
+            - v5-2-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}
+            - v5-2-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-
+            - v5-2-other-deps-cache-{{ .Branch }}-
       - restore_cache:
           keys:
-            - v1-1-test-groups-{{ .Branch }}
-            - v1-1-test-groups-
+            - v1-2-test-groups-{{ .Branch }}
+            - v1-2-test-groups-
       - run:
           name: Create Test Results Directory
           command: |

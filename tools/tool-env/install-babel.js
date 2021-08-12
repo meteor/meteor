@@ -4,7 +4,7 @@
 "use strict";
 
 function babelRegister() {
-  const meteorBabel = require("meteor-babel");
+  const meteorBabel = require("@meteorjs/babel");
   const path = require("path");
   const toolsPath = path.dirname(__dirname);
   const meteorPath = path.dirname(toolsPath);
@@ -18,13 +18,13 @@ function babelRegister() {
   // meteor/tools modules.
   babelOptions.sourceMaps = "inline";
 
-  require('meteor-babel/register')
+  require('@meteorjs/babel/register')
     .setCacheDirectory(cacheDir)
     .setSourceMapRootPath(meteorPath)
     .allowDirectory(toolsPath)
     .setBabelOptions(babelOptions)
     // Exclude files that are imported before we configure
-    // meteor-babel/register (including this very file).
+    // @meteorjs/babel/register (including this very file).
     .excludeFile(path.join(toolsPath, "index.js"))
     .excludeFile(path.join(__dirname, "install-promise.js"))
     .excludeFile(path.join(__dirname, "wrap-fibers.js"))
