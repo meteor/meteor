@@ -53,7 +53,7 @@
   - Allow usage of `http` package both v1 and v2 for backward compatibility
   - Blaze weak dependency updated to v2.5.0
 
-## v2.3.5, 2021-08-11
+## v2.3.5, 2021-08-12
 
 #### Highlights
 
@@ -336,13 +336,12 @@
 * `react-fast-refresh@0.1.1`
   - Fixed the package to work in IE11
 
-## v2.2.3, 2021-08-11
+## v2.2.3, 2021-08-12
 
 #### Highlights
 
 * Security update to Node.js [12.22.5](https://nodejs.org/en/blog/release/v12.22.5/)
 * Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
-* This release includes a backport of upgrade from `meteor-babel` to `@meteorjs/babel`
 
 #### Meteor Version Release
 
