@@ -2834,7 +2834,8 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   }
 
   if (options && options.sourceMapUrl) {
-    data = addSourceMappingURL(data, options.sourceMapUrl);
+    const url = (process.env.ROOT_URL || "") + options.sourceMapUrl;
+    data = addSourceMappingURL(data, url);
   } else if (!options || !options.leaveSourceMapUrls) {
     // If we do not have an options.sourceMapUrl to append, then we still
     // want to remove any existing //# sourceMappingURL comments.
@@ -2890,7 +2891,7 @@ function addSourceMappingURL(data, url, targetPath) {
 
   parts.push(
     newLineBuffer,
-    Buffer.from("//# sourceMappingURL=" + (process.env.ROOT_URL || "") + url, "utf8"),
+    Buffer.from("//# sourceMappingURL=" + url, "utf8"),
     newLineBuffer // trailing newline
   );
 
