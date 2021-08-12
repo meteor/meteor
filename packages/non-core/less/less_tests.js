@@ -5,7 +5,13 @@ Tinytest.add("less - imports", function (test) {
   try {
     var t = function (className, style) {
       div.className = className;
-      test.equal(getStyleProperty(div, 'border-style'), style, className);
+
+      // Computed styles don't fills the main border-style which was used,
+      // but instead computes the style for each side and fills those.
+      test.equal(getStyleProperty(div, 'border-top-style'), style, className);
+      test.equal(getStyleProperty(div, 'border-bottom-style'), style, className);
+      test.equal(getStyleProperty(div, 'border-right-style'), style, className);
+      test.equal(getStyleProperty(div, 'border-left-style'), style, className);
     };
     t('el1', 'dotted');
     t('el2', 'dashed');
