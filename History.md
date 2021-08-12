@@ -1,10 +1,9 @@
-## v2.2.3, 2021-08-11
+## v2.2.3, 2021-08-12
 
 #### Highlights
 
 * Security update to Node.js [12.22.5](https://nodejs.org/en/blog/release/v12.22.5/)
 * Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
-* This release includes a backport of upgrade from `meteor-babel` to `@meteorjs/babel`
 
 #### Meteor Version Release
 
