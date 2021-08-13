@@ -507,3 +507,23 @@ export default class Cursor {
     );
   }
 }
+
+// Duplicated from mongo package
+const MONGO_ASYNC_SUFFIX = 'Async';
+
+// Duplicated from mongo package
+export const getAsyncMethodName = method =>
+  `${method}${MONGO_ASYNC_SUFFIX}`.replace('_', '');
+
+// Duplicated from mongo package
+const cursorMethods = ['forEach', 'map', 'fetch', 'count'];
+
+// Implements async version of cursor methods to keep collections isomorphic
+cursorMethods
+  .forEach(method => {
+    const asyncName = getAsyncMethodName(method);
+    Cursor.prototype[asyncName] = async function(...args) {
+      return Promise.resolve(this[method].apply(
+        this, args));
+    };
+  });

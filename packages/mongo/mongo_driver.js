@@ -901,9 +901,6 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-// TODO [fiber-free-api] implement async iterator for Cursor
-const cursorMethods = ['forEach', 'map', 'fetch', 'count'];
-
 const setupSynchronousCursor = (cursor, method) => {
   // You can only observe a tailable cursor.
   if (cursor._cursorDescription.options.tailable)
@@ -921,6 +918,11 @@ const setupSynchronousCursor = (cursor, method) => {
     );
   }
 };
+
+
+// TODO [fiber-free-api] implement async iterator for Cursor
+// Duplicated on minimongo package in cursor.js
+const cursorMethods = ['forEach', 'map', 'fetch', 'count'];
 
 _.each([...cursorMethods, Symbol.iterator], function (method) {
   Cursor.prototype[method] = function () {

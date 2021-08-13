@@ -13,7 +13,9 @@ export const onceAsync = func => {
   };
 };
 
+// Duplicated on minimongo package in cursor.js
 const MONGO_ASYNC_SUFFIX = 'Async';
 
+// Duplicated on minimongo package in cursor.js
 export const getAsyncMethodName = method =>
   `${method}${MONGO_ASYNC_SUFFIX}`.replace('_', '');
