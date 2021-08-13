@@ -470,13 +470,13 @@ function applyChangeset(options) {
   return true;
 }
 
-const initialVersions = (__meteor_runtime_config__.autoupdate.versions || {})['web.browser'];
+const initialVersions = __meteor_runtime_config__.autoupdate.versions[arch];
 let nonRefreshableVersion = initialVersions.versionNonRefreshable;
 let replaceableVersion = initialVersions.versionReplaceable;
 
 Meteor.startup(function () {
   Package['autoupdate'].Autoupdate._clientVersions.watch(function (doc) {
-    if (doc._id !== 'web.browser') {
+    if (doc._id !== arch) {
       return;
     }
 
