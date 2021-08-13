@@ -94,7 +94,7 @@ export class Hook {
   // The iteration is stopped if the iterator function returns a falsy
   // value or throws an exception.
   //
-  each(iterator) {
+  forEach(iterator) {
     // Invoking bindEnvironment'd callbacks outside of a Fiber in Node doesn't
     // run them to completion (and exceptions thrown from onException are not
     // propagated), so we need to be in a Fiber.
@@ -111,6 +111,14 @@ export class Hook {
         }
       }
     }
+  }
+
+  /**
+   * @deprecated use forEach
+   * @param iterator
+   */
+  each(iterator) {
+    return this.forEach(iterator);
   }
 }
 
