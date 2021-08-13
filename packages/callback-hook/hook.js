@@ -113,6 +113,10 @@ export class Hook {
     }
   }
 
+  /**
+   * @deprecated use forEach
+   * @param iterator
+   */
   each(iterator) {
     return this.forEach(iterator);
   }
