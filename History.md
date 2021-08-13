@@ -13,6 +13,75 @@
 * `routepolicy@1.1.1`
   - Removed `underscore` dependency since it was not used in the package
   
+* `email@2.1.1`
+  - Updated `nodemailer` to v6.6.3
+  
+* `callback-hook@1.3.1`
+  - Modernized the code
+  - Fixed a variable assignment bug in `dontBindEnvironment` function
+
+* `less@4.0.0`
+  - Updated `less` to v4.1.1
+  - Fixed tests
+
+* `npm-mongo@3.9.1`
+  - `mongodb@3.6.10`
+
+* `accounts-base@2.0.1`
+  - Create index on `services.password.enroll.when`
+  - Blaze weak dependency updated to v2.5.0
+
+* `facebook-oauth@1.9.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `github-oauth@1.3.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `google-oauth@1.3.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `meetup-oauth@1.1.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `meteor-developer-oauth@1.3.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `weibo-oauth@1.3.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+
+* `oauth1@1.4.1`
+  - Allow usage of `http` package both v1 and v2 for backward compatibility
+  - Blaze weak dependency updated to v2.5.0
+
+## v2.3.5, 2021-08-12
+
+#### Highlights
+
+* Updated Node.js per the [August security release](https://nodejs.org/en/blog/vulnerability/aug-2021-security-releases/)
+* Includes same improvements as in Meteor v2.2.3
+  - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+  - `@meteorjs/babel@7.12.0`
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.5`
+  - Node.js updated to [v14.17.5](https://nodejs.org/en/blog/release/v14.17.5/)
+  - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+  - `@meteorjs/babel@7.12.0`
+  - Fix broken source maps in VSCode - [PR](https://github.com/meteor/meteor/pull/11584)
+  
+## v2.3.4, 2021-08-03
+
+* Fix an issue in `bare` and `vue` skeletons
+
+## v2.3.3, 2021-08-02
+
+* Security patch of Node.js to [14.17.4](https://nodejs.org/en/blog/release/v14.17.4/)
+* App skeletons had the following dependencies updated:
+  - `meteor-node-stubs@1.1.0`
+  - `@babel/runtime@7.14.8`
+* `babel/parser@7.14.9` for server dev bundle
+
 ## v2.3.2, 2021-07-13
 
 #### Meteor Version Release
@@ -132,7 +201,7 @@
   - This package is now deprecated
 
 * `http@2.0.0`
-  - Internally http has been replaced by [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), should still work as previous version, but edge cases might be different. This is to aid you in transition to fetch.
+  - Internally http has been replaced by [fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API), should still work as previous version, but edge cases might be different. This is to aid you in transition to fetch. Note that this means that the `npmRequestOptions` parameter to `HTTP.call` has been removed, as `request` is no longer used internally.
 
 * `socket-stream-client@0.4.0`
   - Remove IE8 checks
@@ -266,6 +335,38 @@
   
 * `react-fast-refresh@0.1.1`
   - Fixed the package to work in IE11
+
+## v2.2.3, 2021-08-12
+
+#### Highlights
+
+* Security update to Node.js [12.22.5](https://nodejs.org/en/blog/release/v12.22.5/)
+* Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.3`
+  - Updated Node.js to 12.22.5 per [Node security update](https://nodejs.org/en/blog/vulnerability/aug-2021-security-releases/)
+  - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+  - `@meteorjs/babel@7.12.0`
+
+* `@meteorjs/babel@7.12.0` && `@meteorjs/babel@7.13.0`
+  - Dependencies updated to their latest versions
+
+* `babel-compile@7.7.0`
+  - `@meteorjs/babel@7.12.0`
+
+* `ecmascript@0.15.3`
+  - Typescript and Babel version bump
+
+* `typescript@4.3.5`
+  - [`typescript@4.3.5`](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+
+## v2.2.2, 2021-08-02
+
+#### Highlights
+
+- Security update to Node.js [12.22.4](https://nodejs.org/en/blog/release/v12.22.4/)
 
 ## v2.2.1, 2021-06-02
 
