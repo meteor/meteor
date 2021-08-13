@@ -59,9 +59,6 @@
 * `service-configuration@1.5.0`
   - Migrated usage of `_ensureIndex` to `createIndex`
 
-* `ecmascript@0.15.3`
-  - Typescript and Babel version bump
-
 * `ecmascript-runtime-client@0.12.0`
   - `core-js@3.16.0`
 
