@@ -83,6 +83,9 @@
 * `standard-minifier-css@1.7.4`
   - `@babel/runtime@7.15.3`
 
+* `callback-hook@1.4.0`
+  - Added `forEach` iterator to be more in-line with the ES use for iterations. `each` is now deprecated, but will remain supported.
+
 #### Independent Releases
 
 * `minifier-js@2.6.1`
