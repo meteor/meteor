@@ -23,11 +23,6 @@
   - npm dependencies have been updated
   - Added option to change runtime config in your app, [read more](https://github.com/meteor/meteor/pull/11506)
   - `@vlasky/whomst@0.1.7`
-    
-* `minifier-css@1.6.0`
-  - Updated dependencies
-    - `postcss@8.3.5`
-    - `cssnano@4.1.11`
   
 * `logging@1.3.0`
   - Switch from `cli-color` to `chalk` to have the same dependency as meteor-tool
@@ -77,11 +72,22 @@
 * `modules@0.17.0`
   - Update `reify` to `0.22.0`
 
-* `standard-minifier-js@2.6.2`
+* `standard-minifier-js@2.7.0`
   - `@babel/runtime@7.15.3`
+  - Code modernization
+  - Improved error handling
+
+* `minifier-js@2.7.0`
+  - Added tests
+  - Code modernization
 
 * `standard-minifier-css@1.7.4`
   - `@babel/runtime@7.15.3`
+
+* `minifier-css@1.6.0`
+  - Updated dependencies
+    - `postcss@8.3.5`
+    - `cssnano@4.1.11`
 
 * `callback-hook@1.4.0`
   - Added `forEach` iterator to be more in-line with the ES use for iterations. `each` is now deprecated, but will remain supported.
