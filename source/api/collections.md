@@ -396,6 +396,18 @@ Meteor.startup(() => {
 
 {% apibox "Mongo.Collection#createIndex" %}
 
+For efficient and performant queries you will sometimes need to define indexes other than the default `_id` field.
+You should add indexes to fields (or combinations of fields) you use to lookup documents in a collection.
+This is where `createIndex` comes into play. It takes in 2 objects. First is the key and index type specification (which field and how they should be indexed) and second are options like the index name.
+For details on how indexes work read the [MongoDB documentation](https://docs.mongodb.com/manual/indexes/).
+
+> Note that indexes only apply to server and MongoDB collection. They are not implemented for Minimongo at this time.
+
+Example defining a simple index on Players collection in Meteor:
+```js
+Players.createIndex({ userId: 1 }, { name: 'user reference on players' });
+```
+
 {% apibox "Mongo.Collection#allow" %}
 
 {% pullquote warning %}
