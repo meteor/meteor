@@ -14,6 +14,15 @@ See also: [`PORT`](#PORT).
 
 > In development, this can be accomplished with `meteor run --port a.b.c.d:port`.
 
+## DDP_DEFAULT_CONNECTION_URL
+(_develoment, production_)
+
+There are some situations where it is valuable for the meteor client to use a different DDP server than the `ROOT_URL` server.
+
+Setting `DDP_DEFAULT_CONNECTION_URL` when running a meteor server (development: `meteor run` or production: `node main.js`) will set the DDP server to the value in `DDP_DEFAULT_CONNECTION_URL`.
+
+Setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`)  will define the DDP server for `cordova` builds.
+
 ## DISABLE_WEBSOCKETS
 (_development, production_)
 
@@ -38,6 +47,11 @@ When running `meteor build` or `meteor deploy` you can set `METEOR_DISABLE_OPTIM
 
 Since optimistic in-memory caching is one of the more memory-intensive parts of the build system, setting the environment variable `METEOR_DISABLE_OPTIMISTIC_CACHING=1` can help improve memory usage during meteor build, which seems to improve the total build times. This configuration is perfectly safe because the whole point of optimistic caching is to keep track of previous results for future rebuilds, but in the case of meteor `build` or `deploy` there's only ever one initial build, so the extra bookkeeping is unnecessary.
 
+## METEOR_PROFILE
+(_development_)
+
+In development, you may need to diagnose what has made builds start taking a long time. To get the callstack and times during builds, you can run `METEOR_PROFILE=1 meteor`.
+
 ## METEOR_PACKAGE_DIRS
 (_development, production_)
 
@@ -49,6 +63,13 @@ Colon-delimited list of local package directories to look in, outside your norma
 When running your bundled application in production mode, pass a string of JSON containing your settings with `METEOR_SETTINGS='{ "server_only_setting": "foo", "public": { "client_and_server_setting": "bar" } }'`.
 
 > In development, this is accomplished with `meteor --settings [file.json]` in order to provide full-reactivity when changing settings.  Those settings are simply passed as a string here. Please see the [Meteor.settings](http://docs.meteor.com/api/core.html#Meteor-settings) documentation for further information. 
+
+## METEOR_SQLITE_JOURNAL_MODE
+(_development_)
+
+The Meteor package catalog uses the `WAL` [SQLite Journal Mode](https://www.sqlite.org/pragma.html#pragma_journal_mode) by default.  The Journal mode for the package catalog can be modifed by setting `METEOR_SQLITE_JOURNAL_MODE`.
+
+When running multiple concurrent meteor servers on [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/) some meteor developers have seen issues with the package catalog.  Setting the environment variable `METEOR_SQLITE_JOURNAL_MODE=TRUNCATE` can overcome the issue.
 
 ## MONGO_OPLOG_URL
 (_development, production_)
@@ -80,4 +101,18 @@ Used to generate URLs to your application by, among others, the accounts package
 Used to pass flags/variables to Node inside Meteor build. For example you can use this to pass a link to icu data: `TOOL_NODE_FLAGS="--icu-data-dir=node_modules/full-icu"`
 For full list of available flags see the [Node documentation](https://nodejs.org/dist/latest-v12.x/docs/api/cli.html).
 
+## UNIX_SOCKET_GROUP
+(_production_)
+
+This overrides the default UNIX group of the socket file configured in `UNIX_SOCKET_PATH`. It can be set to a group name or a numerical gid.
+
+## UNIX_SOCKET_PATH
+(_production_)
+
+Configure Meteor's HTTP server to listen on a UNIX socket file path (e.g. `UNIX_SOCKET_PATH=/tmp/meteor.sock`) instead of a TCP port. This is useful when running a local reverse proxy server like Nginx to handle client HTTP requests and direct them to your Meteor application. Leveraging UNIX domain sockets for local communication on the same host avoids the Operating System overhead required by TCP based communication and can also improve security. This UNIX socket file is created when Meteor starts and removed when Meteor exits.
+
+## UNIX_SOCKET_PERMISSIONS
+(_production_)
+
+This overrides the default UNIX file permissions on the UNIX socket file configured in `UNIX_SOCKET_PATH`. For example, `UNIX_SOCKET_PERMISSIONS=660` would set read/write permissions for both the user and group.
 

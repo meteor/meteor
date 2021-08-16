@@ -83,15 +83,17 @@ option to other `meteor` tool commands, such as `meteor run` and `meteor test-pa
 
 <h2 id="meteorcreate">meteor create <i>name</i></h2>
 
-Create a new Meteor project. By default, makes a subdirectory named *name*
-and copies in the template app. You can pass an absolute or relative
-path.
+Create a new Meteor project. By default, it uses [React](https://guide.meteor.com/react) 
+and makes a subdirectory named *name* and copies in the template app.
+You can pass an absolute or relative path.
 
-**Flags**
+<h3 id="meteorcreate-flags">Flags</h3>
+
+**Flags for default packages**
 
 `--bare`
 
-Creates a basic, empty project.
+Creates a basic, blaze project.
 
 `--full`
 
@@ -109,37 +111,63 @@ Creates a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
-`--react`
+`--typescript`
 
-Creates a react-based project with minimal packages to run react out-of-the-box. Specifically includes `react-meteor-data`.
+Create a basic [Typescript](https://guide.meteor.com/build-tool.html#typescript) 
+React-based app. Can be combined with other flags to use a different UI than 
+React.
+
+`--apollo`
+
+Create a basic [Apollo + Reac](https://www.apollographql.com/) app.
+
+**Flags for default UI libraries / frameworks**
+
+`--blaze`
+
+`--vue`
+
+Create a basic vue-based app. See the [Vue guide](https://guide.meteor.com/vue.html) 
+for more information.
+
+`--svelte`
+
+Create a basic [Svelte](https://svelte.dev/) app.
 
 **Packages**
 
-|| Default | `--bare`  | `--full`  | `--minimal` | `--react` |
-|--------------------|--------|---|---|---|---|
-|[autopublish](https://atmospherejs.com/meteor/autopublish)|X| | | |X|
-|[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)|X| |X| | |
-|[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|X|X|
-|[es5-shim](https://atmospherejs.com/meteor/es5-shim)|X|X|X|X|X|
-|[insecure](https://atmospherejs.com/meteor/insecure)|X| | | |X|
-|[johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook:publication-collector)| | |X| | |
-|[kadira:blaze-layout](https://atmospherejs.com/meteor/kadira:blaze-layout)| | |X| | |
-|[kadira:flow-router](https://atmospherejs.com/meteor/kadira:flow-router)| | |X|| |
-|[less](https://atmospherejs.com/meteor/less)| | |X| | |
-|[meteor](https://atmospherejs.com/meteor/meteor)| | | |X| |
-|[meteor-base](https://atmospherejs.com/meteor/meteor-base)|X|X|X||X|
-|[mobile-experience](https://atmospherejs.com/meteor/mobile-experience)|X|X|X| |X|
-|[mongo](https://atmospherejs.com/meteor/mongo)|X|X|X| |X|
-|[practicalmeteor:mocha](https://atmospherejs.com/meteor/practicalmeteor:mocha)| | |X| | |
-|[reactive-var](https://atmospherejs.com/meteor/reactive-var)|X|X|X| |X|
-|[server-render](https://atmospherejs.com/meteor/server-render)| | | |X| |
-|[shell-server](https://atmospherejs.com/meteor/shell-server)|X|X| |X| |
-|[standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)|X|X|X|X|X|
-|[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|X|X|
-|[static-html](https://atmospherejs.com/meteor/static-html)| |X| |X|X| |
-|[tracker](https://atmospherejs.com/meteor/tracker)|X|X|X| | |
-|[webapp](https://atmospherejs.com/meteor/webapp)| | | |X| |
-|[react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)| | | | |X|
+|   | Default (`--react`) | `--bare`  | `--full`  | `--minimal` | `--blaze`| `--apollo` | `--vue` | `--svelte` |
+|---|:-------------------:|:---------:|:---------:|:-----------:|:--------:|:----------:|:-------:|:----------:|
+|[autopublish](https://atmospherejs.com/meteor/autopublish)|X| | | |X| | |X|
+|[akryum:vue-component](https://atmospherejs.com/akryum/vue-component)| | | | | | |X| |
+|[apollo](https://atmospherejs.com/meteor/apollo)| | | | | |X| | |
+|[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)| | |X| |X| | | |
+|[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|X|X|X|X|X|
+|[es5-shim](https://atmospherejs.com/meteor/es5-shim)|X|X|X|X|X|X|X|X|
+|[hot-module-replacement](https://atmospherejs.com/meteor/hot-module-replacement)|X| | | |X|X| | |
+|[insecure](https://atmospherejs.com/meteor/insecure)|X| | | |X| | |X|
+|[johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook/publication-collector)| | |X| | |X| |
+|[jquery](https://atmospherejs.com/meteor/jquery)| | |X| |X| | |
+|[ostrio:flow-router-extra](https://atmospherejs.com/meteor/ostrio/flow-router-extra)| | |X|| | | | |
+|[less](https://atmospherejs.com/meteor/less)| | |X| | | | | |
+|[meteor](https://atmospherejs.com/meteor/meteor)| | | |X| | | | |
+|[meteor-base](https://atmospherejs.com/meteor/meteor-base)|X|X|X| |X|X|X|X|
+|[mobile-experience](https://atmospherejs.com/meteor/mobile-experience)|X|X|X| |X|X|X|X|
+|[mongo](https://atmospherejs.com/meteor/mongo)|X|X|X| |X|X|X|X|
+|[meteortesting:mocha](https://atmospherejs.com/meteortesting/mocha)| | |X| | | |X|
+|[reactive-var](https://atmospherejs.com/meteor/reactive-var)|X|X|X| |X|X|X|X|
+|[rdb:svelte-meteor-data](https://atmospherejs.com/rdb/svelte-meteor-data)| | | | | | | |X|
+|[server-render](https://atmospherejs.com/meteor/server-render)| | | |X| |X|X| |
+|[shell-server](https://atmospherejs.com/meteor/shell-server)| |X| |X|X|X|X|X
+|[standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)|X|X|X|X|X|X|X|X|
+|[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|X|X|X|X|X|
+|[static-html](https://atmospherejs.com/meteor/static-html)| |X| |X| |X|X|X|
+|[svelte:compiler](https://atmospherejs.com/svelte/compiler)| | | | | | | |X|
+|[swydo:graphql](https://atmospherejs.com/swydo/graphql)| | | | | |X| | |
+|[tracker](https://atmospherejs.com/meteor/tracker)| |X|X| |X| |X| |
+|[typescript](https://atmospherejs.com/meteor/typescript)|X|X|X|X|X|X|X|X|
+|[webapp](https://atmospherejs.com/meteor/webapp)| | | |X| | | | |
+|[react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)|X| | | | | | | |
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
@@ -180,6 +208,40 @@ Settings are persistent.  When you redeploy your app, the old value will be
 preserved unless you explicitly pass new settings using the `--settings` option.
 To unset `Meteor.settings`, pass an empty settings file.
 
+{% pullquote warning %}
+`free` and `mongo` options were introduced in Meteor 2.0
+{% endpullquote %}
+
+You can run your app for free using the option `--free`. But, there are some limitations. The first one is that you cannot use a custom domain to run a free app. Your domain must contain a Meteor domain name (`.meteorapp.com` to US region, `.au.meteorapp.com` to Asia region, or `.eu.meteorapp.com` to Europe region). Second thing you must know is that your free apps have Cold Start enabled. Cold Start means that your app will stop if it has no connection for 10 minutes, and it will go automatically up when someone tries to connect to it. The third thing you must know is that free apps run on one, and just one, Tiny container. This is important to know, because Tiny containers are NOT meant to production environment, so even small apps can crash with a lot of connections. To keep your app on free, you always need to provide this option.
+
+With the option `--mongo` you can deploy your app without having to pay for a MongoDB provider. By providing this option, Galaxy will create a database for you in our shared cluster and inject the mongo URL on your settings. So with this, you don't even need to provide the settings file anymore (if your settings files just have the mongo URL of course). This is great to test apps, but it shouldn't be used in a production environment, as you will be running in a shared Cluster with limited space. The rules behind this option are: If it is the first deploy of the app, and you provided the option `--mongo`, after the deploy is finished you will receive your mongo URL on your console (you can also see your URL on Galaxy in your app's version). You can put that URL on your settings file if want to. If you try to do a second without the option `--mongo` and without providing a mongo URL on your settings, your deploy will fail as usual. If you provide the option `--mongo` and a mongo URL, the mongo URL on your settings file is the one that will be used by Galaxy to connect your app to a MongoDB. One last thing, you need to have at least one document in your database so Meteor is really going to instantiate it. Then you will be able to access it using any MongoDB client with the provided URI.
+
+Use the options `--mongo` and `--free` to easily deploy a free app already with a mongo database connected to it.
+
+{% pullquote warning %}
+Free apps and MongoDB shared hosting: Meteor Software reserves the right to stop or remove applications we deem to be abusing the free plan offering at any time. Please be advised that the free plan offering is not recommended for production applications. The shared MongoDB cluster that comes configured with the free plan does not provide backups or restoration resources.
+{% endpullquote %}
+
+{% pullquote warning %}
+If you want to connect to your free MongoDB shared cluster using your on settings make sure you include this option in your settings in the Mongo package configuration section:
+```
+packages: {
+  mongo: {
+    options: { 
+        tlsAllowInvalidCertificates: true,
+    },
+  },
+}
+```
+This is necessary as our database provider does not have certificates installed on every machine and we don't want to force apps to have this certificate. More about this option [here](https://docs.meteor.com/api/collections.html#mongo_connection_options_settings)
+{% endpullquote %}
+
+
+You can change the app plan by providing argument `--plan` with one of the following values: professional, essentials, or free. Be aware that this argument overwrites the `--free` argument.
+
+{% pullquote warning %}
+The `plan` option is available to Meteor 2.1+
+{% endpullquote %}
 
 <h2 id="meteorupdate">meteor update</h2>
 
@@ -249,6 +311,30 @@ Lists all the packages that you have added to your project. For each package,
 lists the version that you are using. Lets you know if a newer version of that
 package is available.
 
+**Flags**
+
+Flags are optional and can be used to format the output. The default output
+requires no flags whatsoever. The following flags are supported:
+
+`--tree`
+
+Outputs a tree showing how packages are referenced.
+
+`--json`
+
+Outputs an unformatted JSON String, showing how packages are referenced.
+
+`--weak`
+
+Show weakly referenced dependencies in the tree.
+Only functional in combination with `--tree` or `--json`.
+
+`--details`
+
+Adds more package details to the JSON output.
+Only functional in combination with `--json`.
+
+
 <h2 id="meteoraddplatform">meteor add-platform <i>platform</i></h2>
 
 Adds platforms to your Meteor project. You can add multiple
@@ -310,9 +396,9 @@ build artifacts:
 <ul><li>a tarball (.tar.gz) that includes everything necessary to run the application
   server (see the <code>README</code> in the tarball for details).  Using the
   `--directory` option will produce a `bundle` directory instead of the tarball.</li>
-<li>an unsigned <code>apk</code> bundle and a project source if Android is targetted as a
+<li>an unsigned <code>apk</code> bundle and a project source if Android is targeted as a
   mobile platform</li>
-<li>a directory with an Xcode project source if iOS is targetted as a mobile
+<li>a directory with an Xcode project source if iOS is targeted as a mobile
   platform</li></ul>
 
 You can use the application server bundle to host a Meteor application on your
@@ -328,6 +414,12 @@ This may cause difficulties if your app contains binary code due to,
 for example, npm packages. You can try to override that behavior
 with the `--architecture` flag.
 
+You can set optional data for the initial value of `Meteor.settings`
+in your mobile application with the `--mobile-settings` flag. A new value for
+`Meteor.settings` can be set later by the server as part of hot code push.
+
+You can also specify which platforms you want to build with the `--platforms` flag.
+Examples: `--platforms=android`, `--platforms=ios`, `--platforms=web.browser`.
 
 <h2 id="meteorlint">meteor lint</h2>
 
@@ -362,6 +454,9 @@ upload the build to the architecture that you were using to publish it. You can
 use `publish-for-arch` to upload a build to a different architecture from a
 different machine.
 
+If you have already published a package but need to update it's metadata 
+(the content of `Package.describe`) or the README you can actually achieve this
+via `meteor publish --update`.
 
 <h2 id="meteorpublishforarch">meteor publish-for-arch</h2>
 

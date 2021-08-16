@@ -264,6 +264,55 @@ You should return a `Boolean` value, `true` if the login/registration should
 proceed or `false` if it should terminate. In case of termination
 the login attempt will throw an error `403`, with the message: `Login forbidden`.
 
+{% apibox "AccountsServer#setAdditionalFindUserOnExternalLogin" %}
+
+When allowing your users to authenticate with an external service, the process will
+eventually call `Accounts.updateOrCreateUserFromExternalService`. By default, this
+will search for a user with the `service.<servicename>.id`, and if not found will
+create a new user. As that is not always desirable, you can use this hook as an
+escape hatch to look up a user with a different selector, probably by `emails.address` or `username`. Note the function will only be called if no user was found with the
+`service.<servicename>.id` selector.
+
+The function will be called with a single argument, the info object:
+
+<dl class="objdesc">
+{% dtdd name:"serviceName" type:"String" %}
+  The external service name, such as "google" or "twitter".
+{% enddtdd %}
+
+{% dtdd name:"serviceData" type:"Object" %}
+  The data returned by the service oauth request.
+{% enddtdd %}
+
+{% dtdd name:"options" type:"Exception" %}
+  An optional arugment passed down from the oauth service that may contain
+  additional user profile information. As the data in `options` comes from an
+  external source, make sure you validate any values you read from it.
+{% enddtdd %}
+</dl>
+
+The function should return either a user document or `undefined`. Returning a user
+will result in the populating the `service.<servicename>` in your user document,
+while returning `undefined` will result in a new user account being created.
+If you would prefer that a new account not be created, you could throw an error
+instead of returning.
+
+Example:
+```js
+// If a user has already been created, and used their Google email, this will 
+// allow them to sign in with the Meteor.loginWithGoogle method later, without
+// creating a new user.
+Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
+  if (serviceName === "google") {
+     // Note: Consider security implications. If someone other than the owner
+     // gains access to the account on the third-party service they could use
+     // the e-mail set there to access the account on your app.
+     // Most often this is not an issue, but as a developer you should be aware
+     // of how bad actors could play.
+    return Accounts.findUserByEmail(serviceData.email)
+  }
+})
+```
 
 <h2 id="accounts_rate_limit">Rate Limiting</h2>
 

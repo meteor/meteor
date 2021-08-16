@@ -45,6 +45,8 @@ Instead of modifying documents in the [`Meteor.users`](#meteor_users) collection
 directly, use these convenience functions which correctly check for case
 insensitive duplicates before updates.
 
+{% apibox "Accounts.createUserVerifyingEmail" %}
+
 {% apibox "Accounts.setUsername" %}
 
 {% apibox "Accounts.addEmail" %}

@@ -1,6 +1,11 @@
 title: Meteor API Docs
 subtitle: API Docs
 versions:
+  - '2.3'
+  - '2.2'
+  - '2.1'
+  - '2.0'
+  - '1.12'
   - '1.11'
   - '1.10'
   - '1.9'
@@ -12,6 +17,11 @@ versions:
   - '1.3'
 versioned-netlify-redirects:
   netlify_site_id: meteor-docs
+
+logo:
+  title:
+  subtitle: Docs
+
 sidebar_categories:
   null:
     - index
@@ -50,7 +60,10 @@ sidebar_categories:
     - packages/coffeescript
     - packages/dynamic-import
     - packages/ecmascript
+    - packages/fetch
+    - packages/hot-module-replacement
     - packages/less
+    - packages/logging
     - packages/markdown
     - packages/modules
     - packages/oauth-encryption
@@ -58,6 +71,7 @@ sidebar_categories:
     - packages/server-render
     - packages/spacebars
     - packages/underscore
+    - packages/url
     - packages/webapp
   Command Line:
     - commandline

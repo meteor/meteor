@@ -8,7 +8,7 @@
   "devDependencies": {
     "canonical-json": "0.0.4",
     "chexo": "1.0.7",
-    "handlebars": "4.4.3",
+    "handlebars": "4.7.7",
     "hexo": "3.9.0",
     "hexo-prism-plus": "1.1.0",
     "hexo-renderer-ejs": "1.0.0",
@@ -17,10 +17,10 @@
     "hexo-server": "1.0.0",
     "hexo-versioned-netlify-redirects": "1.1.0",
     "jsdoc": "3.5.5",
-    "meteor-hexo-config": "1.0.10",
-    "meteor-theme-hexo": "2.0.1",
-    "showdown": "1.9.0",
-    "underscore": "1.9.1"
+    "meteor-hexo-config": "1.0.12",
+    "meteor-theme-hexo": "2.0.2",
+    "showdown": "1.9.1",
+    "underscore": "1.13.1"
   },
   "scripts": {
     "build": "jsdoc/jsdoc.sh && chexo meteor-hexo-config -- generate",

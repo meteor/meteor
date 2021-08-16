@@ -77,6 +77,10 @@ build plugin to be satisfied by a local package, you must use a local copy of
 the package that defines the plugin (even if you make no changes to that
 package) so that Meteor will pick up the local dependency.
 
+> In a lifecycle of a package there might come time to end the development for various reasons, or
+it gets superseded. In either case Meteor allows you to easily notify the users of the package by
+setting the deprecated flag to true: `deprecated: true` in the package description. In addition, you
+replace it with a string that tells the users where to find replacement or what to do. 
 
 Provide basic package information with `Package.describe(options)`. To publish a
 package, you must define `summary` and `version`.
@@ -116,6 +120,35 @@ Meteor packages can include NPM packages and Cordova plugins by using
 {% apibox "Npm.require" %}
 {% apibox "PackageCordova#depends" nested: %}
 {% apibox "PackageNamespace#registerBuildPlugin" nested: %}
+
+<h2 id="options">Options</h2>
+
+In some cases we need to offer options in packages where these options are not going to change in runtime.
+
+We prefer to have these options defined in a configuration file instead of using JS code to call specific functions to define options in runtime.
+
+For example, in `quave:collections` package you can force collections to be available only in the server like this:
+
+```json
+  "packages": {
+    "quave:collections": {
+      "isServerOnly": true
+    }
+  }
+```
+
+We encourage every package author to follow this standard to offer options:
+
+1. Use the official Meteor `settings` file
+2. Inside the `settings` file read from a `Meteor`.`packages`.`<package name>`.`<your option name>`
+   > If it needs to be available in the client follow the same structure inside the `public` key.
+
+You can use [quave:settings](https://github.com/quavedev/settings) package to read options in the format above already merging the private and public options.
+
+This way we avoid having to call a specific code before another specific code in a package as the setting is stored in the settings, and the package can load it when necessary instead of relying on a specific order of calls from the developer in the app code.
+
+> We've started to adopt this standard also in core packages on Meteor 1.10.2.
+
 {% apibox "Plugin.registerSourceHandler" nested:true %}
 
 <h2 id="build-plugin-api">Build Plugins API</h2>
@@ -275,6 +308,11 @@ methods are available:
    `Assets.getText` or `Assets.getBinary`.
  - `addHtml` - Works in web targets only. Add markup to the `head` or `body`
    section of the document.
+ - `hmrAvailable` - Returns true if the file can be updated with HMR. Among other things,
+   it checks if HMR supports the current architecture and build mode, and that the unibuild
+   uses the `hot-module-replacement` package. There are rare situations where `hmrAvailable`
+   returns true, but when more information is available later in the build process Meteor
+   decides the file can not be updated with HMR.
 
 Meteor implements a couple of compilers as Core packages, good examples would be
 the
@@ -355,6 +393,13 @@ Right now, Meteor Core ships with the `standard-minifiers` package that can be
 replaced with a custom one. The
 [source](https://github.com/meteor/meteor/tree/devel/packages/standard-minifiers)
 of the package is a good example how to build your own minification plugin.
+
+In development builds, minifiers must meet these requirements to not prevent hot module replacement:
+
+- Call `addJavasScript` once for each file to add the file's contents
+- The contents of the files are not modified
+
+In the future Meteor will allow minifiers to concatenate or modify files in development without affected hot module replacement.
 
 <h3 id="build-plugin-caching">Caching</h3>
 
