@@ -21,7 +21,7 @@ Tinytest is specifically designed for *unit testing*. From [wikipedia](https://e
 
 > ... Intuitively, one can view a unit as the smallest testable part of an application. In procedural programming, a unit could be an entire module, but it is more commonly an individual function or procedure. In object-oriented programming, a unit is often an entire interface, such as a class, but could be an individual method.
 
-> ... Ideally, each test case is independent from the others. Substitutes such as method stubs, mock objects, fakes, and test harnesses can be used to assist testing a module in isolation.
+> ... Ideally, each test case is independent of the others. Substitutes such as method stubs, mock objects, fakes, and test harnesses can be used to assist testing a module in isolation.
 
 The object of a unit test is to prove functionality you have written. It is not to prove third-party or other package or library code which may form a part of your codebase. This may require that you head up your tests with *stubs, mocks/spies* or *fakes* which satisfy the demands of your code, but are non-functional (or have limited functionality). Alternatively, instead of placing the stubs in your test file, you could put them into a separate `stubs.js` file, which you `api.addFiles`, or even create and add a stubs package which you then `api.use`.
 
@@ -93,31 +93,12 @@ Synchronous tests are more common, but asynchronous tests are useful occasionall
 ### Synchronous Tests
 
 ```javascript
-Tinytest.add(name, function(test) {
-  // test body
-});
-```
-
-ES6/2015 (recommended):
-
-```javascript
 Tinytest.add(name, (test) => {
   // test body
 });
 ```
 
 ### Asynchronous Tests
-
-```javascript
-Tinytest.addAsync(name, function(test, onComplete) {
-  someAsyncRequest(function(error, result) {
-    // test body
-    onComplete(); // invoke when async function completes.
-  }
-});
-```
-
-ES6/2015 (recommended):
 
 ```javascript
 Tinytest.addAsync(name, (test, onComplete) => {
@@ -149,6 +130,12 @@ Tests are executed by running the (development) application with the `test-packa
 `meteor test-packages her:package his:package` runs tests only on `her:package` and `his:package`.
 
 The results are presented on the browser (port 3000) as usual. When run as shown, the file watcher runs, so code may be edited and the tests will be re-run automatically. If this is undesirable, you may add the `--run-once` switch.
+
+### Executing only specific tests
+
+You can replace temporarily `Tinytest.add` or `Tinytest.addAsync` by `Tinytest.only` or `Tinytest.onlyAsync` so only the tests added using `only*` are going to be executed. 
+
+This is helpful when only a few tests are failing, so you can focus on them.
 
 ## Assertions
 

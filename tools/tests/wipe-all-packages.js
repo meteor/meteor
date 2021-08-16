@@ -136,7 +136,7 @@ selftest.define("wipe all packages", ['slow', 'custom-warehouse'], function () {
     }
 
     // check that the version is either the running one, or the latest one
-    selftest.expectTrue(_.contains(['33.0.1', '33.0.3'], f));
+    selftest.expectTrue(['33.0.1', '33.0.3'].includes(f));
   });
 
   // Check that all other packages are wiped

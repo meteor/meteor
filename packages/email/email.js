@@ -1,11 +1,16 @@
-var Future = Npm.require('fibers/future');
-var urlModule = Npm.require('url');
-var nodemailer = Npm.require('nodemailer');
+import { Meteor } from 'meteor/meteor';
+import { Log } from 'meteor/logging';
+import { Hook } from 'meteor/callback-hook';
 
-Email = {};
-EmailTest = {};
+import Future from 'fibers/future';
+import url from 'url';
+import nodemailer from 'nodemailer';
+import wellKnow from 'nodemailer/lib/well-known';
 
-EmailInternals = {
+export const Email = {};
+export const EmailTest = {};
+
+export const EmailInternals = {
   NpmModules: {
     mailcomposer: {
       version: Npm.require('nodemailer/package.json').version,
@@ -18,10 +23,10 @@ EmailInternals = {
   }
 };
 
-var MailComposer = EmailInternals.NpmModules.mailcomposer.module;
+const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-var makeTransport = function (mailUrlString) {
-  var mailUrl = urlModule.parse(mailUrlString, true);
+const makeTransport = function (mailUrlString) {
+  const mailUrl = new URL(mailUrlString);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
     throw new Error("Email protocol in $MAIL_URL (" +
@@ -29,9 +34,9 @@ var makeTransport = function (mailUrlString) {
   }
 
   if (mailUrl.protocol === 'smtp:' && mailUrl.port === '465') {
-    Meteor._debug("The $MAIL_URL is 'smtp://...:465'.  " +
-                  "You probably want 'smtps://' (The 's' enables TLS/SSL) " +
-                  "since '465' is typically a secure port.");
+    Log.debug("The $MAIL_URL is 'smtp://...:465'.  " +
+              "You probably want 'smtps://' (The 's' enables TLS/SSL) " +
+              "since '465' is typically a secure port.");
   }
 
   // Allow overriding pool setting, but default to true.
@@ -43,27 +48,78 @@ var makeTransport = function (mailUrlString) {
     mailUrl.query.pool = 'true';
   }
 
-  var transport = nodemailer.createTransport(
-    urlModule.format(mailUrl));
+  const transport = nodemailer.createTransport(url.format(mailUrl));
 
   transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
   return transport;
 };
 
-var getTransport = function() {
+// More info: https://nodemailer.com/smtp/well-known/
+const knownHostsTransport = function(settings = undefined, url = undefined) {
+  let service, user, password;
+  if (url && !settings) {
+    let host = url.split(':')[0];
+    const urlObject = new URL(url);
+    if (host === 'http' || host === 'https') {
+      // Look to hostname for service
+      host = urlObject.hostname;
+      user = urlObject.username;
+      password = urlObject.password;
+    } else if (urlObject.protocol && urlObject.username && urlObject.password) {
+      // We have some data from urlObject
+      host = urlObject.protocol.split(':')[0];
+      user = urlObject.username;
+      password = urlObject.password;
+    } else {
+      // We need to disect the URL ourselves to get the data
+      // First get rid of the leading '//' and split to username and the rest
+      const temp = urlObject.pathname.substring(2)?.split(':');
+      user = temp[0];
+      // Now we split by '@' to get password and hostname
+      const temp2 = temp[1].split('@');
+      password = temp2[0];
+      host = temp2[1];
+    }
+    service = host;
+  }
+
+  if (!wellKnow(settings?.service || service)) {
+    throw new Error('Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.');
+  }
+
+  const transport = nodemailer.createTransport({
+    service: settings?.service || service,
+    auth: {
+      user: settings?.user || user,
+      pass: settings?.password || password
+    }
+  });
+
+  transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
+  return transport;
+};
+EmailTest.knowHostsTransport = knownHostsTransport;
+
+const getTransport = function() {
+  const packageSettings = Meteor.settings.packages?.email || {};
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
-  var url = process.env.MAIL_URL;
-  if (this.cacheKey === undefined || this.cacheKey !== url) {
-    this.cacheKey = url;
-    this.cache = url ? makeTransport(url) : null;
+  const url = process.env.MAIL_URL;
+  if (this.cacheKey === undefined || (this.cacheKey !== url || this.cacheKey !== packageSettings?.service || 'settings')) {
+    if ((packageSettings?.service && wellKnow(packageSettings.service)) || (url && wellKnow(new URL(url).hostname) || wellKnow(url?.split(':')[0] || ''))) {
+      this.cacheKey = packageSettings.service || 'settings';
+      this.cache = knownHostsTransport(packageSettings, url);
+    } else {
+      this.cacheKey = url;
+      this.cache = url ? makeTransport(url, packageSettings) : null;
+    }
   }
   return this.cache;
-}
+};
 
-var nextDevModeMailId = 0;
-var output_stream = process.stdout;
+let nextDevModeMailId = 0;
+let output_stream = process.stdout;
 
 // Testing hooks
 EmailTest.overrideOutputStream = function (stream) {
@@ -75,18 +131,18 @@ EmailTest.restoreOutputStream = function () {
   output_stream = process.stdout;
 };
 
-var devModeSend = function (mail) {
-  var devModeMailId = nextDevModeMailId++;
+const devModeSend = function (mail) {
+  let devModeMailId = nextDevModeMailId++;
 
-  var stream = output_stream;
+  const stream = output_stream;
 
   // This approach does not prevent other writers to stdout from interleaving.
   stream.write("====== BEGIN MAIL #" + devModeMailId + " ======\n");
   stream.write("(Mail not sent; to enable sending, set the MAIL_URL " +
                "environment variable.)\n");
-  var readStream = new MailComposer(mail).compile().createReadStream();
+  const readStream = new MailComposer(mail).compile().createReadStream();
   readStream.pipe(stream, {end: false});
-  var future = new Future;
+  const future = new Future;
   readStream.on('end', function () {
     stream.write("====== END MAIL #" + devModeMailId + " ======\n");
     future.return();
@@ -94,11 +150,11 @@ var devModeSend = function (mail) {
   future.wait();
 };
 
-var smtpSend = function (transport, mail) {
+const smtpSend = function (transport, mail) {
   transport._syncSendMail(mail);
 };
 
-var sendHooks = [];
+const sendHooks = new Hook();
 
 /**
  * @summary Hook that runs before email is sent.
@@ -107,10 +163,20 @@ var sendHooks = [];
  * @param f {function} receives the arguments to Email.send and should return true to go
  * ahead and send the email (or at least, try subsequent hooks), or
  * false to skip sending.
+ * @returns {{ stop: function, callback: function }}
  */
 Email.hookSend = function (f) {
-  sendHooks.push(f);
+  return sendHooks.register(f);
 };
+
+/**
+ * @summary Overrides sending function with your own.
+ * @locus Server
+ * @since 2.2
+ * @param f {function} function that will receive options from the send function and under `packageSettings` will
+ * include the package settings from Meteor.settings.packages.email for your custom transport to access.
+ */
+Email.customTransport = undefined;
 
 /**
  * @summary Send an email. Throws an `Error` on failure to contact mail server
@@ -145,18 +211,27 @@ Email.hookSend = function (f) {
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.send = function (options) {
-  for (var i = 0; i < sendHooks.length; i++)
-    if (! sendHooks[i](options))
-      return;
-
   if (options.mailComposer) {
     options = options.mailComposer.mail;
   }
 
-  var transport = getTransport();
-  if (transport) {
-    smtpSend(transport, options);
-  } else {
-    devModeSend(options);
+  let send = true;
+  sendHooks.each(hook => {
+    send = hook(options);
+    return send;
+  });
+  if (!send) return;
+
+  const customTransport = Email.customTransport;
+  if (customTransport) {
+    const packageSettings = Meteor.settings.packages?.email || {};
+    customTransport({ packageSettings, ...options });
+    return;
   }
+  if (Meteor.isProduction) {
+    const transport = getTransport();
+    smtpSend(transport, options);
+    return;
+  }
+  devModeSend(options);
 };

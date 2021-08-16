@@ -1,10 +1,10 @@
 Package.describe({
   summary: 'Logging facility.',
-  version: '1.2.0'
+  version: '1.3.0-beta240.11'
 });
 
 Npm.depends({
-  'cli-color': '2.0.0'
+  'chalk': '4.1.1'
 });
 
 Npm.strip({
