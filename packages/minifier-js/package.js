@@ -8,7 +8,15 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
   api.use('babel-compiler');
-  api.export(['meteorJsMinify']);
-  api.addFiles(['minifier.js'], 'server');
+  api.mainModule('minifier.js', 'server');
+  api.export('meteorJsMinify');
+});
+
+Package.onTest(function (api) {
+  api.use('ecmascript');
+  api.use('tinytest');
+  api.use('minifier-js');
+  api.mainModule('minifier-tests.js', 'server');
 });

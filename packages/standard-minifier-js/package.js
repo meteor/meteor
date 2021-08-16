@@ -9,7 +9,6 @@ Package.registerBuildPlugin({
   name: "minifyStdJS",
   use: [
     'minifier-js',
-    'babel-compiler',
     'ecmascript'
   ],
   npmDependencies: {
@@ -18,7 +17,6 @@ Package.registerBuildPlugin({
   sources: [
     'plugin/minify-js.js',
     'plugin/stats.js',
-    'plugin/utils.js',
   ],
 });
 
