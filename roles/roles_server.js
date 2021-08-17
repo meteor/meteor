@@ -1,12 +1,21 @@
 /* global Meteor, Roles */
+if (Meteor.roles.createIndex) {
+  Meteor.roleAssignment.createIndex({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
+  Meteor.roleAssignment.createIndex({ 'user._id': 1, 'role._id': 1, scope: 1 })
+  Meteor.roleAssignment.createIndex({ 'role._id': 1 })
+  Meteor.roleAssignment.createIndex({ scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }) // Adding userId and roleId might speed up other queries depending on the first index
+  Meteor.roleAssignment.createIndex({ 'inheritedRoles._id': 1 })
 
-Meteor.roleAssignment._ensureIndex({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
-Meteor.roleAssignment._ensureIndex({ 'user._id': 1, 'role._id': 1, scope: 1 })
-Meteor.roleAssignment._ensureIndex({ 'role._id': 1 })
-Meteor.roleAssignment._ensureIndex({ scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }) // Adding userId and roleId might speed up other queries depending on the first index
-Meteor.roleAssignment._ensureIndex({ 'inheritedRoles._id': 1 })
+  Meteor.roles.createIndex({ 'children._id': 1 })
+} else {
+  Meteor.roleAssignment._ensureIndex({ 'user._id': 1, 'inheritedRoles._id': 1, scope: 1 })
+  Meteor.roleAssignment._ensureIndex({ 'user._id': 1, 'role._id': 1, scope: 1 })
+  Meteor.roleAssignment._ensureIndex({ 'role._id': 1 })
+  Meteor.roleAssignment._ensureIndex({ scope: 1, 'user._id': 1, 'inheritedRoles._id': 1 }) // Adding userId and roleId might speed up other queries depending on the first index
+  Meteor.roleAssignment._ensureIndex({ 'inheritedRoles._id': 1 })
 
-Meteor.roles._ensureIndex({ 'children._id': 1 })
+  Meteor.roles._ensureIndex({ 'children._id': 1 })
+}
 
 /*
  * Publish logged-in user's roles so client-side checks can work.
@@ -356,8 +365,13 @@ Object.assign(Roles, {
   _backwardMigrate2: function (assignmentSelector) {
     assignmentSelector = assignmentSelector || {}
 
-    Meteor.users._ensureIndex({ 'roles._id': 1, 'roles.scope': 1 })
-    Meteor.users._ensureIndex({ 'roles.scope': 1 })
+    if (Meteor.users.createIndex) {
+      Meteor.users.createIndex({ 'roles._id': 1, 'roles.scope': 1 })
+      Meteor.users.createIndex({ 'roles.scope': 1 })
+    } else {
+      Meteor.users._ensureIndex({ 'roles._id': 1, 'roles.scope': 1 })
+      Meteor.users._ensureIndex({ 'roles.scope': 1 })
+    }
 
     Meteor.roleAssignment.find(assignmentSelector).forEach(r => {
       const roles = Meteor.users.findOne({ _id: r.user._id }).roles || []
