@@ -5,7 +5,9 @@ description: Documentation of Meteor's Method (Remote Procedure Call) API.
 
 Methods are remote functions that Meteor clients can invoke with [`Meteor.call`](#Meteor-call).
 
-If you prefer video watch [Meteor Methods 101](https://www.youtube.com/watch?v=2uoeBq8SF9E) in our [YouTube Channel](https://www.youtube.com/channel/UC3fBiJrFFMhKlsWM46AsAYw).
+If you prefer to watch the video, click below. 
+
+{% youtube 2uoeBq8SF9E %}
 
 {% apibox "Meteor.methods" %}
 
