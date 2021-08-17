@@ -22,10 +22,10 @@ Package.onUse(function (api) {
 
   api.use(['blaze@2.5.0'], 'client', { weak: true })
 
-  api.export('Roles')
+  api.export(['Roles', 'RolesCollection', 'RoleAssignmentCollection'])
 
   api.addFiles('roles/roles_common.js', both)
-  api.addFiles('roles/roles_server.js', 'server')
+  api.mainModule('roles/roles_server.js', 'server')
   api.addFiles([
     'roles/client/debug.js',
     'roles/client/uiHelpers.js',

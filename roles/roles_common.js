@@ -27,10 +27,12 @@
 if (!Meteor.roles) {
   Meteor.roles = new Mongo.Collection('roles')
 }
+export const RolesCollection = Meteor.roles
 
 if (!Meteor.roleAssignment) {
   Meteor.roleAssignment = new Mongo.Collection('role-assignment')
 }
+export const RoleAssignmentCollection = Meteor.roleAssignment
 
 /**
  * @class Roles
