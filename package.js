@@ -45,7 +45,7 @@ Package.onTest(function (api) {
     'chai': '4.2.0'
   })
 
-  api.versionsFrom('2.4')
+  api.versionsFrom('2.3')
 
   var both = ['client', 'server']
 
