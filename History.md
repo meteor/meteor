@@ -249,14 +249,14 @@
 - If you are maintaining a package that depends on one of the accounts packages which had a major version bump you will either need to set the new version manually or set `api.versionsFrom('2.3')`.
   You can also have it reference its current version and 2.3 like this: `api.versionsFrom(['1.12', '2.3'])`, for specific package it can be like this: `api.use('accounts-base@1.0.1 || 2.0.0')`.
   
-- Old API for packages definitions has been removed. The old underscore method names (e.g. `api.add_files()`) will no longer, please use the camel case method names (e.g. `api.addFiles()`).
+- Old API for packages definitions has been removed. The old underscore method names (e.g. `api.add_files()`) will no longer work, please use the camel case method names (e.g. `api.addFiles()`).
 
 ### Breaking changes
 * Removed deprecated `mobile-port` flag
 
 * Removed deprecated `raw` name from `isobuild`
 
-* Removed deprecated package API method names `Package.on_use`, `Package.on_test`, `Package._transitional_registerBuildPlugin` and `api.add_files`, if you haven't till now, please use the current camel case versions
+* Removed deprecated package API method names `Package.on_use`, `Package.on_test`, `Package._transitional_registerBuildPlugin` and `api.add_files`, if you haven't till now, please use the current camel case versions.
 
 * `accounts-base@2.0.0`
   - Deprecated backward compatibility function `logoutOtherClients` has been removed.
