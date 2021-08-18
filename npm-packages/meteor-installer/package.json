@@ -18,7 +18,6 @@
     "tmp": "^0.1.0"
   },
   "bin": {
-    "meteor": "meteor.bat",
     "meteor-installer": "cli.js"
   }
 }

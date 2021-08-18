@@ -3,6 +3,7 @@ const sevenBin = require('7zip-bin');
 const Seven = require('node-7z');
 const fs = require('fs');
 const { resolve, dirname } = require('path');
+const child_process = require('child_process');
 
 function extractWith7Zip (tarPath, destination, onProgress) {
   return new Promise((resolve, reject) => {
@@ -17,7 +18,7 @@ function extractWith7Zip (tarPath, destination, onProgress) {
     stream.on('error', function (err) {
       return reject(err);
     });
-  
+
     stream.on('end', function () {
       return resolve();
     });
@@ -44,6 +45,10 @@ function createSymlinks(symlinks, baseDir) {
       throw new Error('Unable to create symlink');
     }
   })
+}
+
+function extractWithNativeTar (tarPath, destination, onProgress) {
+  child_process.execSync(`tar -xzf "${tarPath}" -C "${destination}" -o`)
 }
 
 function extractWithTar (tarPath, destination, onProgress) {
@@ -107,4 +112,5 @@ function extractWithTar (tarPath, destination, onProgress) {
 module.exports = {
   extractWithTar,
   extractWith7Zip,
+  extractWithNativeTar
 }

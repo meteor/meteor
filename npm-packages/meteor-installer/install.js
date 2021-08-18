@@ -4,20 +4,17 @@ const Seven = require('node-7z');
 const path = require('path');
 const sevenBin = require('7zip-bin');
 const fs = require('fs');
+const child_process = require('child_process');
+const fsPromises = fs.promises;
 const tmp = require('tmp');
 const os = require('os');
 const { meteorPath, release, startedPath, extractPath } = require('./config.js');
 const { uninstall } = require('./uninstall');
-const { extractWithTar, extractWith7Zip } = require('./extract.js');
+const { extractWithTar, extractWith7Zip, extractWithNativeTar } = require('./extract.js');
 
 process.on('unhandledRejection', (err) => {
   throw err;
 });
-
-if (os.platform() !== 'win32') {
-  console.error('Can only install on Windows');
-  process.exit(1);
-}
 
 if (os.arch() !== 'x64') {
   console.error('The current architecture is not supported:', os.arch());
@@ -35,10 +32,6 @@ if (fs.existsSync(startedPath)) {
   console.log('It seems the previous installation of Meteor did not succeed.');
   uninstall();
   console.log('');
-} else if (fs.existsSync(meteorPath) ) {
-  console.log('Meteor is already installed at', meteorPath);
-  console.log('If you want to reinstall, delete that folder and run this command again');
-  process.exit();
 }
 
 // Creating symlinks requires running as an administrator or
@@ -63,7 +56,6 @@ try {
     console.log('Assuming unable to create symlinks');
   }
 }
-
 download();
 
 function download() {
@@ -74,7 +66,9 @@ function download() {
   }, cliProgress.Presets.shades_classic);
   downloadProgress.start(100, 0);
 
-  const url = `https://packages.meteor.com/bootstrap-link?arch=os.windows.x86_64&release=${release}`
+  const url = os.platform() === 'linux' || os.platform() === 'darwin' ?
+      `https://s3.amazonaws.com/com.meteor.static/packages-bootstrap/${release}/meteor-bootstrap-os.${os.platform()}.x86_64.tar.gz` :
+      `https://packages.meteor.com/bootstrap-link?arch=os.${os.platform()}.x86_64&release=${release}`
   const dl = new DownloaderHelper(url, tempPath, {
     retry: { maxRetries: 5, delay: 5000 },
     override: true,
@@ -95,7 +89,24 @@ function download() {
       throw new Error('meteor.tar.gz does not exist');
     }
 
-    decompress();
+    if(os.platform() === 'linux' || os.platform() === 'darwin'){
+      fs.writeFileSync(startedPath, 'Meteor install started');
+      const decompressProgress = new cliProgress.SingleBar({
+        format: 'Decompressing |{bar}| {percentage}%',
+        clearOnComplete: true,
+      }, cliProgress.Presets.shades_classic);
+      decompressProgress.start(100, 0);
+      const start = Date.now();
+      extractWithNativeTar(path.resolve(tempPath, tarGzName), extractPath);
+      const end = Date.now();
+      decompressProgress.update(100);
+      decompressProgress.stop();
+      console.log(`=> Meteor Decompressed in ${(end - start) / 1000}s`);
+
+      setup();
+    }else {
+      decompress();
+    }
   });
 
   dl.start();
@@ -155,8 +166,21 @@ async function extract() {
   decompressProgress.stop();
   const end = Date.now();
   console.log(`=> Meteor Extracted ${(end - start) / 1000}s`);
+  await setup();
+}
+async function setup(){
   fs.unlinkSync(startedPath);
+  await setupExecPath()
   showGettingStarted();
+}
+async function setupExecPath(){
+  if(os.platform() === 'darwin' || os.platform() === 'linux') {
+    const bashrcFile = process.env.SHELL && process.env.SHELL.includes("zsh") ? ".zshrc" : ".bashrc";
+    await fsPromises.appendFile(`${os.homedir()}/${bashrcFile}`, `export PATH=$PATH:${meteorPath}\n`);
+    return;
+  }
+
+  await child_process.execSync(`setx path "%path%;${meteorPath}`);
 }
 
 function showGettingStarted() {
@@ -164,6 +188,8 @@ function showGettingStarted() {
 ***************************************
 
 Meteor has been installed!
+
+*You might need to open a new terminal windows to have access to the meteor command.*
 
 To get started fast:
 
