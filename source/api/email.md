@@ -106,14 +106,23 @@ function with addition of `packageSettings` key which will pass in package setti
 set in your app settings (if any). It is up to you what you do in that function
 as it will override the original sending function.
 
-Example:
+Here is a simple example with Mailgun:
 ```javascript
 import { Email } from 'meteor/email'
+import { Log } from 'meteor/logging'
+import Mailgun from 'mailgun-js'
 
-Email.customTransport = (options) => {
+Email.customTransport = (data) => {
   // `options.packageSettings` are settings from `Meteor.settings.packages.email`
   // The rest of the options are from Email.send options
-  customApi.send({ from: options.packageSettings.fromOverride || options.from, to: options.to, message: options.html || options.text });
+  const mailgun = Mailgun({ apiKey: data.packageSettings.mailgun.privateKey, domain: 'mg.mygreatapp.com' })
+  
+  // Since the data object that we recieve already includes the correct key names for sending
+  // we can just pass it to the mailgun sending message.
+  mailgun.messages().send(data, (error, body) => {
+    if (error) Log.error(error)
+    if (body) Log.info(body)
+  })
 }
 ```
 
