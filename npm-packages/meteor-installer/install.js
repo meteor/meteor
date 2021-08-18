@@ -32,7 +32,12 @@ if (fs.existsSync(startedPath)) {
   console.log('It seems the previous installation of Meteor did not succeed.');
   uninstall();
   console.log('');
+} else if (fs.existsSync(meteorPath) ) {
+  console.log('Meteor is already installed at', meteorPath);
+  console.log('If you want to reinstall, delete that folder and run this command again');
+  process.exit();
 }
+
 
 // Creating symlinks requires running as an administrator or
 // for developer mode to be enabled
@@ -95,6 +100,7 @@ function download() {
 
     if(os.platform() === 'linux' || os.platform() === 'darwin'){
       fs.writeFileSync(startedPath, 'Meteor install started');
+      console.log("=> Extracting the tarball, this may take some time")
       const decompressProgress = new cliProgress.SingleBar({
         format: 'Decompressing |{bar}| {percentage}%',
         clearOnComplete: true,
@@ -105,7 +111,7 @@ function download() {
       const end = Date.now();
       decompressProgress.update(100);
       decompressProgress.stop();
-      console.log(`=> Meteor Decompressed in ${(end - start) / 1000}s`);
+      console.log(`=> Meteor extracted in ${(end - start) / 1000}s`);
 
       setup();
     }else {
