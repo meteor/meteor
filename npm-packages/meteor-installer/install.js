@@ -66,9 +66,13 @@ function download() {
   }, cliProgress.Presets.shades_classic);
   downloadProgress.start(100, 0);
 
-  const url = os.platform() === 'linux' || os.platform() === 'darwin' ?
-      `https://s3.amazonaws.com/com.meteor.static/packages-bootstrap/${release}/meteor-bootstrap-os.${os.platform()}.x86_64.tar.gz` :
-      `https://packages.meteor.com/bootstrap-link?arch=os.${os.platform()}.x86_64&release=${release}`
+  const downloadPlatform = {
+    "win32" : "windows",
+    "darwin": "osx",
+    "linux": "linux"
+  }
+
+  const url = `https://packages.meteor.com/bootstrap-link?arch=os.${downloadPlatform[os.platform()]}.x86_64&release=${release}`
   const dl = new DownloaderHelper(url, tempPath, {
     retry: { maxRetries: 5, delay: 5000 },
     override: true,
@@ -180,7 +184,7 @@ async function setupExecPath(){
     return;
   }
 
-  await child_process.execSync(`setx path "%path%;${meteorPath}`);
+  child_process.execSync(`setx path "${meteorPath}/;%path%`);
 }
 
 function showGettingStarted() {
