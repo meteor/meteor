@@ -230,7 +230,7 @@ async function setupExecPath() {
   }
   // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
   const user = process.env.SUDO_USER;
-  child_process.execSync(`chown -R "${meteorPath}" ${user}`);
+  child_process.execSync(`chown -R ${user} "${meteorPath}"`);
 }
 
 function showGettingStarted() {
