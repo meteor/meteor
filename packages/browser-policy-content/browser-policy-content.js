@@ -56,12 +56,12 @@ BrowserPolicy.content = {};
 var parseCsp = function (csp) {
   var policies = csp.split("; ");
   cspSrcs = {};
-  _.each(policies, function (policy) {
+  policies.forEach(function (policy) {
     if (policy[policy.length - 1] === ";")
       policy = policy.substring(0, policy.length - 1);
     var srcs = policy.split(" ");
     var directive = srcs[0];
-    if (_.indexOf(srcs, keywords.none) !== -1)
+    if (srcs.indexOf(keywords.none) !== -1)
       cspSrcs[directive] = null;
     else
       cspSrcs[directive] = srcs.slice(1);
@@ -100,7 +100,7 @@ var prepareForCspDirective = function (directive) {
 // - Trim trailing slashes from `src`, since some browsers interpret
 //   "foo.com/" as "foo.com" and some don't.
 var addSourceForDirective = function (directive, src) {
-  if (_.contains(_.values(keywords), src)) {
+  if (_.contains(Object.values(keywords), src)) {
     cspSrcs[directive].push(src);
   } else {
     var toAdd = [];
@@ -123,7 +123,7 @@ var addSourceForDirective = function (directive, src) {
       }
     }
 
-    _.each(toAdd, function (s) {
+    toAdd.forEach(function (s) {
       cspSrcs[directive].push(s);
     });
   }
@@ -148,7 +148,7 @@ var setWebAppInlineScripts = function (value) {
     WebAppInternals.setInlineScriptsAllowed(value);
 };
 
-_.extend(BrowserPolicy.content, {
+Object.assign(BrowserPolicy.content, {
   allowContentTypeSniffing: function () {
     contentSniffingAllowed = true;
   },
@@ -228,7 +228,7 @@ _.extend(BrowserPolicy.content, {
   },
   allowOriginForAll: function (origin) {
     prepareForCspDirective("default-src");
-    _.each(_.keys(cspSrcs), function (directive) {
+    Object.keys(cspSrcs).forEach(function (directive) {
       addSourceForDirective(directive, origin);
     });
   },
@@ -260,12 +260,12 @@ var resources = [
   { methodResource: "Frame", directive: "frame-src" },
   { methodResource: "FrameAncestors", directive: "frame-ancestors" }
 ];
-_.each(resources,  function (resource) {
-  var directive = resource.directive; 
-  var methodResource = resource.methodResource; 
+resources.forEach(function (resource) {
+  var directive = resource.directive;
+  var methodResource = resource.methodResource;
   var allowMethodName = "allow" + methodResource + "Origin";
   var disallowMethodName = "disallow" + methodResource;
-  var allowDataMethodName = "allow" + methodResource + "DataUrl"; 
+  var allowDataMethodName = "allow" + methodResource + "DataUrl";
   var allowBlobMethodName = "allow" + methodResource + "BlobUrl";
   var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
 
