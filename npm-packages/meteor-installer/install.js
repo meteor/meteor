@@ -53,12 +53,13 @@ if (fs.existsSync(startedPath)) {
   console.log('It seems the previous installation of Meteor did not succeed.');
   uninstall();
   console.log('');
-} else if (fs.existsSync(meteorPath) ) {
+} else if (fs.existsSync(meteorPath)) {
   console.log('Meteor is already installed at', meteorPath);
-  console.log('If you want to reinstall, delete that folder and run this command again');
+  console.log(
+    'If you want to reinstall, delete that folder and run this command again'
+  );
   process.exit();
 }
-
 
 // Creating symlinks requires running as an administrator or
 // for developer mode to be enabled
@@ -121,7 +122,8 @@ function download() {
     }
 
     fs.writeFileSync(startedPath, 'Meteor install started');
-    console.log("=> Extracting the tarball, this may take some time")const decompressProgress = new cliProgress.SingleBar(
+    console.log('=> Extracting the tarball, this may take some time');
+    const decompressProgress = new cliProgress.SingleBar(
       {
         format: 'Decompressing |{bar}| {percentage}%',
         clearOnComplete: true,
@@ -228,8 +230,7 @@ async function setupExecPath() {
   }
   // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
   const user = process.env.SUDO_USER;
-  child_process.execSync(`chown -R "${meteorPath}" ${user}` );
-
+  child_process.execSync(`chown -R "${meteorPath}" ${user}`);
 }
 
 function showGettingStarted() {
