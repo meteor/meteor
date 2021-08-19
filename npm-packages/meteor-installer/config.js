@@ -4,10 +4,13 @@ const os = require('os');
 const METEOR_LATEST_VERSION = '2.3.5';
 
 const localAppData = process.env.LOCALAPPDATA;
-const PLATFORM = os.platform();
-const rootPath = PLATFORM === 'win32' ? localAppData : os.homedir();
+const isWindows = () => os.platform === 'win32';
+const rootPath = isWindows() ? localAppData : os.homedir();
+function isRoot() {
+  return process.getuid && process.getuid() === 0;
+}
 
-if (PLATFORM === 'win32' && !localAppData) {
+if (isWindows() && !localAppData) {
   throw new Error('LOCALAPPDATA env var is not set.');
 }
 
@@ -19,4 +22,6 @@ module.exports = {
   meteorPath,
   release: process.env.INSTALL_METEOR_VERSION || METEOR_LATEST_VERSION,
   startedPath: path.resolve(rootPath, '.meteor-install-started.txt'),
-}
+  isWindows,
+  isRoot,
+};

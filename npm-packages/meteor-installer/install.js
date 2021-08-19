@@ -8,11 +8,22 @@ const child_process = require('child_process');
 const fsPromises = fs.promises;
 const tmp = require('tmp');
 const os = require('os');
-const { meteorPath, release, startedPath, extractPath } = require('./config.js');
+const {
+  meteorPath,
+  release,
+  startedPath,
+  extractPath,
+  isWindows,
+} = require('./config.js');
 const { uninstall } = require('./uninstall');
-const { extractWithTar, extractWith7Zip, extractWithNativeTar } = require('./extract.js');
+const {
+  extractWithTar,
+  extractWith7Zip,
+  extractWithNativeTar,
+} = require('./extract.js');
+const { isRoot } = require('./config');
 
-process.on('unhandledRejection', (err) => {
+process.on('unhandledRejection', err => {
   throw err;
 });
 
@@ -20,6 +31,16 @@ if (os.arch() !== 'x64') {
   console.error('The current architecture is not supported:', os.arch());
   process.exit(1);
 }
+
+const downloadPlatform = {
+  win32: 'windows',
+  darwin: 'osx',
+  linux: 'linux',
+};
+
+const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
+  downloadPlatform[os.platform()]
+}.x86_64&release=${release}`;
 
 const tempPath = tmp.dirSync().name;
 const tarGzName = 'meteor.tar.gz';
@@ -49,8 +70,8 @@ try {
   fs.writeFileSync(target, '');
   fs.symlinkSync(target, symlinkPath, 'file');
 
-  fs.unlinkSync(symlinkPath)
-  fs.unlinkSync(target)
+  fs.unlinkSync(symlinkPath);
+  fs.unlinkSync(target);
   canCreateSymlinks = true;
 } catch (e) {
   if (e.code === 'EPERM') {
@@ -65,27 +86,23 @@ download();
 
 function download() {
   const start = Date.now();
-  const downloadProgress = new cliProgress.SingleBar({
-    format: 'Downloading |{bar}| {percentage}%',
-    clearOnComplete: true,
-  }, cliProgress.Presets.shades_classic);
+  const downloadProgress = new cliProgress.SingleBar(
+    {
+      format: 'Downloading |{bar}| {percentage}%',
+      clearOnComplete: true,
+    },
+    cliProgress.Presets.shades_classic
+  );
   downloadProgress.start(100, 0);
 
-  const downloadPlatform = {
-    "win32" : "windows",
-    "darwin": "osx",
-    "linux": "linux"
-  }
-
-  const url = `https://packages.meteor.com/bootstrap-link?arch=os.${downloadPlatform[os.platform()]}.x86_64&release=${release}`
   const dl = new DownloaderHelper(url, tempPath, {
     retry: { maxRetries: 5, delay: 5000 },
     override: true,
-    fileName: tarGzName
+    fileName: tarGzName,
   });
 
   dl.on('progress', ({ progress }) => {
-    downloadProgress.update(progress)
+    downloadProgress.update(progress);
   });
   dl.on('end', () => {
     downloadProgress.update(100);
@@ -93,30 +110,34 @@ function download() {
     const end = Date.now();
     console.log(`=> Meteor Downloaded in ${(end - start) / 1000}s`);
 
-    const exists = fs.existsSync(path.resolve(tempPath, tarGzName))
+    const exists = fs.existsSync(path.resolve(tempPath, tarGzName));
     if (!exists) {
       throw new Error('meteor.tar.gz does not exist');
     }
 
-    if(os.platform() === 'linux' || os.platform() === 'darwin'){
-      fs.writeFileSync(startedPath, 'Meteor install started');
-      console.log("=> Extracting the tarball, this may take some time")
-      const decompressProgress = new cliProgress.SingleBar({
+    if (isWindows()) {
+      decompress();
+      return;
+    }
+
+    fs.writeFileSync(startedPath, 'Meteor install started');
+    console.log("=> Extracting the tarball, this may take some time")const decompressProgress = new cliProgress.SingleBar(
+      {
         format: 'Decompressing |{bar}| {percentage}%',
         clearOnComplete: true,
-      }, cliProgress.Presets.shades_classic);
-      decompressProgress.start(100, 0);
-      const start = Date.now();
-      extractWithNativeTar(path.resolve(tempPath, tarGzName), extractPath);
-      const end = Date.now();
-      decompressProgress.update(100);
-      decompressProgress.stop();
-      console.log(`=> Meteor extracted in ${(end - start) / 1000}s`);
-
-      setup();
-    }else {
-      decompress();
-    }
+      },
+      cliProgress.Presets.shades_classic
+    );
+    decompressProgress.start(100, 0);
+    const extractStart = Date.now();
+    extractWithNativeTar(path.resolve(tempPath, tarGzName), extractPath);
+    const extractEnd = Date.now();
+    decompressProgress.update(100);
+    decompressProgress.stop();
+    console.log(
+      `=> Meteor extracted in ${(extractEnd - extractStart) / 1000}s`
+    );
+    setup();
   });
 
   dl.start();
@@ -124,21 +145,24 @@ function download() {
 
 function decompress() {
   const start = Date.now();
-  const decompressProgress = new cliProgress.SingleBar({
-    format: 'Decompressing |{bar}| {percentage}%',
-    clearOnComplete: true,
-  }, cliProgress.Presets.shades_classic);
+  const decompressProgress = new cliProgress.SingleBar(
+    {
+      format: 'Decompressing |{bar}| {percentage}%',
+      clearOnComplete: true,
+    },
+    cliProgress.Presets.shades_classic
+  );
   decompressProgress.start(100, 0);
 
   const myStream = Seven.extract(path.resolve(tempPath, tarGzName), tempPath, {
     $progress: true,
     $bin: sevenBin.path7za,
   });
-  myStream.on('progress', function (progress) {
-    decompressProgress.update(progress.percent)
+  myStream.on('progress', function(progress) {
+    decompressProgress.update(progress.percent);
   });
 
-  myStream.on('end', function () {
+  myStream.on('end', function() {
     decompressProgress.update(100);
     decompressProgress.stop();
     const end = Date.now();
@@ -151,12 +175,15 @@ async function extract() {
   const start = Date.now();
   fs.writeFileSync(startedPath, 'Meteor install started');
 
-  const decompressProgress = new cliProgress.SingleBar({
-    format: 'Extracting |{bar}| {percentage}% - {fileCount} files completed',
-    clearOnComplete: true,
-  }, cliProgress.Presets.shades_classic);
+  const decompressProgress = new cliProgress.SingleBar(
+    {
+      format: 'Extracting |{bar}| {percentage}% - {fileCount} files completed',
+      clearOnComplete: true,
+    },
+    cliProgress.Presets.shades_classic
+  );
   decompressProgress.start(100, 0, {
-    fileCount: 0
+    fileCount: 0,
   });
 
   let tarPath = path.resolve(tempPath, tarName);
@@ -165,11 +192,11 @@ async function extract() {
   // is done in extractWithTar
   if (canCreateSymlinks) {
     await extractWith7Zip(tarPath, extractPath, ({ percent, fileCount }) => {
-      decompressProgress.update(percent, { fileCount })
+      decompressProgress.update(percent, { fileCount });
     });
   } else {
     await extractWithTar(tarPath, extractPath, ({ percent, fileCount }) => {
-      decompressProgress.update(percent, { fileCount })
+      decompressProgress.update(percent, { fileCount });
     });
   }
 
@@ -178,19 +205,31 @@ async function extract() {
   console.log(`=> Meteor Extracted ${(end - start) / 1000}s`);
   await setup();
 }
-async function setup(){
+async function setup() {
   fs.unlinkSync(startedPath);
-  await setupExecPath()
+  await setupExecPath();
   showGettingStarted();
 }
-async function setupExecPath(){
-  if(os.platform() === 'darwin' || os.platform() === 'linux') {
-    const bashrcFile = process.env.SHELL && process.env.SHELL.includes("zsh") ? ".zshrc" : ".bashrc";
-    await fsPromises.appendFile(`${os.homedir()}/${bashrcFile}`, `export PATH=$PATH:${meteorPath}\n`);
+async function setupExecPath() {
+  if (isWindows()) {
+    child_process.execSync(`setx path "${meteorPath}/;%path%`);
     return;
   }
+  const bashrcFile =
+    process.env.SHELL && process.env.SHELL.includes('zsh')
+      ? '.zshrc'
+      : '.bashrc';
+  await fsPromises.appendFile(
+    `${os.homedir()}/${bashrcFile}`,
+    `export PATH=$PATH:${meteorPath}\n`
+  );
+  if (!isRoot()) {
+    return;
+  }
+  // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
+  const user = process.env.SUDO_USER;
+  child_process.execSync(`chown -R "${meteorPath}" ${user}` );
 
-  child_process.execSync(`setx path "${meteorPath}/;%path%`);
 }
 
 function showGettingStarted() {
