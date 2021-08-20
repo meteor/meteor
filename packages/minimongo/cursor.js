@@ -1,5 +1,6 @@
 import LocalCollection from './local_collection.js';
 import { hasOwn } from './common.js';
+import { CURSOR_METHODS, getAsyncMethodName } from "./constants";
 
 // Cursor: a specification for a particular subset of documents, w/ a defined
 // order, limit, and offset.  creating a Cursor with LocalCollection.find(),
@@ -105,6 +106,15 @@ export default class Cursor {
         }
 
         return {done: true};
+      }
+    };
+  }
+
+  [Symbol.asyncIterator]() {
+    const syncResult = this[Symbol.iterator]();
+    return {
+      async next() {
+        return Promise.resolve(syncResult.next());
       }
     };
   }
@@ -508,18 +518,8 @@ export default class Cursor {
   }
 }
 
-// Duplicated from mongo package
-const MONGO_ASYNC_SUFFIX = 'Async';
-
-// Duplicated from mongo package
-export const getAsyncMethodName = method =>
-  `${method}${MONGO_ASYNC_SUFFIX}`.replace('_', '');
-
-// Duplicated from mongo package
-const cursorMethods = ['forEach', 'map', 'fetch', 'count'];
-
 // Implements async version of cursor methods to keep collections isomorphic
-cursorMethods
+CURSOR_METHODS
   .forEach(method => {
     const asyncName = getAsyncMethodName(method);
     Cursor.prototype[asyncName] = async function(...args) {

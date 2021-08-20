@@ -1,4 +1,4 @@
-import { onceAsync } from './mongoUtils';
+import { onceAsync } from './mongoAsyncUtils';
 
 MongoInternals.RemoteCollectionDriver = async function (
   mongo_url, options) {

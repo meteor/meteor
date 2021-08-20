@@ -6,7 +6,7 @@ import {
   markCollectionAsInitializing,
   setCollectionInstance
 } from "./collectionsInstances";
-import { getAsyncMethodName } from "./mongoUtils";
+import { getAsyncMethodName } from "meteor/minimongo/constants";
 
 /**
  * @summary Namespace for MongoDB-related items

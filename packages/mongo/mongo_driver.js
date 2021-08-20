@@ -18,7 +18,7 @@ import { DocFetcher } from "./doc_fetcher.js";
 import {
   getCollectionInstanceOrNull,
 } from "./collectionsInstances";
-import { getAsyncMethodName } from "./mongoUtils";
+import { getAsyncMethodName, CURSOR_METHODS } from "meteor/minimongo/constants";
 
 MongoInternals = {};
 
@@ -804,8 +804,6 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
 };
 
 MongoConnection.prototype.find = function (collectionName, selector, options) {
-
-  console.log(`find 2 - find mongo driver`, collectionName, selector);
   var self = this;
 
   if (arguments.length === 1)
@@ -919,25 +917,22 @@ const setupSynchronousCursor = (cursor, method) => {
   }
 };
 
+_.each([...CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator],
+  function (method) {
+    Cursor.prototype[method] = function () {
+      var self = this;
 
-// TODO [fiber-free-api] implement async iterator for Cursor
-// Duplicated on minimongo package in cursor.js
-const cursorMethods = ['forEach', 'map', 'fetch', 'count'];
+      setupSynchronousCursor(self, method);
 
-_.each([...cursorMethods, Symbol.iterator], function (method) {
-  Cursor.prototype[method] = function () {
-    var self = this;
+      return self._synchronousCursor[method].apply(
+        self._synchronousCursor,
+        arguments
+      );
+    };
+  }
+);
 
-    setupSynchronousCursor(self, method);
-
-    return self._synchronousCursor[method].apply(
-      self._synchronousCursor,
-      arguments
-    );
-  };
-});
-
-cursorMethods
+CURSOR_METHODS
   .forEach(method => {
     const asyncName = getAsyncMethodName(method);
     Cursor.prototype[asyncName] = async function(...args) {
@@ -1243,6 +1238,15 @@ SynchronousCursor.prototype[Symbol.iterator] = function () {
     }
   };
 };
+
+SynchronousCursor.prototype[Symbol.asyncIterator] = function () {
+  const syncResult = this[Symbol.iterator]();
+  return {
+    async next() {
+      return Promise.resolve(syncResult.next());
+    }
+  };
+}
 
 // Tails the cursor described by cursorDescription, most likely on the
 // oplog. Calls docCallback with each document found. Ignores errors and just
