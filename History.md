@@ -6,6 +6,7 @@
 * Email package now allows setting `Email.customTransport` to override sending method.
 * Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming. 
 * Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
+* `reify` has been updated to v0.22.0 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. [read more](https://github.com/benjamn/reify/pull/246)
 
 #### Meteor Version Release
 
