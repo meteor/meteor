@@ -140,6 +140,9 @@
   - Allow usage of `http` package both v1 and v2 for backward compatibility
   - Blaze weak dependency updated to v2.5.0
 
+* `ddp-server@2.4.1`
+  - Fix a bug where `testMessageOnConnect` has always been sent
+
 ## v2.3.5, 2021-08-12
 
 #### Highlights
