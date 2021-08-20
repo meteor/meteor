@@ -55,6 +55,7 @@ Package.onTest(function (api) {
   api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo', 'reactive-var']);
 
   api.addFiles('livedata_server_tests.js', 'server');
+  api.addFiles('livedata_server_async_tests.js', 'server');
   api.addFiles('session_view_tests.js', ['server']);
   api.addFiles('crossbar_tests.js', ['server']);
 });
