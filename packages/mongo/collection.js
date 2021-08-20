@@ -110,6 +110,13 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
   this.isAsyncInitialized = false;
 
   if (options._driver) {
+    if (typeof options._driver.open !== 'function') {
+      throw new Error('If you are creating the driver manually using new ' +
+        'MongoInternals.RemoteCollectionDriver then you need to use ' +
+        'Promise.await() or await on it. Since it is async in recent ' +
+        'versions of Meteor. ' +
+        'Read more https://docs.meteor.com/changelog.html.');
+    }
     this.openDriver(options._driver);
   } else {
     // XXX This check assumes that webapp is loaded so that Meteor.server !==
