@@ -1,4 +1,4 @@
-import {getDefaultOptions, parse} from 'meteor-babel';
+import {getDefaultOptions, parse} from '@meteorjs/babel';
 import generate from '@babel/generator';
 import {analyze as analyzeScope} from 'escope';
 import LRU from "lru-cache";

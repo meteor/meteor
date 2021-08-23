@@ -2,15 +2,16 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "1.0.14"
+  version: "2.0.0",
+  deprecated: true,
+  documentation: 'README.md'
 });
 
 Package.onUse(function (api) {
-  api.addFiles("showdown.js");
-  api.export('Showdown');
-
-  api.use("templating@1.3.1", "client", {weak: true});
-  api.addFiles('template-integration.js', 'client');
+  api.versionsFrom('2.2');
+  api.use('ecmascript');
+  api.use("templating@1.4.0", "client", {weak: true});
+  api.mainModule('template-integration.js', 'client', { lazy: true });
 });
 
 Package.onTest(function (api) {

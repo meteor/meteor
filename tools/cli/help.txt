@@ -386,7 +386,7 @@ builds for all platforms in this project.
 
 If you have added mobile platforms to your project with the
 'meteor add-platform' command, then the output directory will contain
-subdirectories named 'android' (with the APK bundle and Android project
+subdirectories named 'android' (with the AAB/APK bundle and Android project
 source) and/or 'ios' (with the Xcode project source).
 
 Pass `--server-only` to skip building mobile apps, but still build the
@@ -425,6 +425,9 @@ Options:
                       downgraded to versions that are potentially incompatible
                       with the current versions, if required to satisfy all
                       package version constraints.
+  --platforms         Builds only the specified platforms (when available).
+  --packageType       Choose between apk/bundle for android builds. (Defaults to bundle)
+
 
 
 >>> lint
@@ -501,7 +504,7 @@ You can deploy to any available name under 'meteorapp.com'
 without any additional configuration, for example,
 'myapp.meteorapp.com'. If you deploy to a custom domain, such as
 'myapp.mydomain.com', then you'll also need to configure your domain's
-DNS records. See the Meteor / Galaxy docs (http://galaxy-guide.meteor.com/dns.html) for details.
+DNS records. See the Meteor / Galaxy docs (http://cloud-guide.meteor.com/dns.html) for details.
 
 The --settings flag can be used to pass deploy-specific information to
 the application. It will be available at runtime in Meteor.settings, but only

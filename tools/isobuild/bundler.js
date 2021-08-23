@@ -215,7 +215,7 @@ exports._mainJsContents = [
   "",
   "process.argv.splice(2, 0, 'program.json');",
   "process.chdir(require('path').join(__dirname, 'programs', 'server'));",
-  'require("./programs/server/runtime.js");',
+  'require("./programs/server/runtime.js")({ cachePath: process.env.METEOR_REIFY_CACHE_DIR });',
   "require('./programs/server/boot.js');",
 ].join("\n");
 
@@ -226,7 +226,7 @@ exports._mainJsContents = [
 // Represents a node_modules directory that we need to copy into the
 // bundle or otherwise make available at runtime.
 
-export class NodeModulesDirectory {
+class NodeModulesDirectory {
   constructor({
     packageName,
     sourceRoot,
@@ -877,7 +877,7 @@ class Target {
             hmrAvailable: sourceBatch.hmrAvailable,
             cacheKey
           },
-          getFileOutput  
+          getFileOutput
         );
       });
 
@@ -1168,7 +1168,7 @@ class Target {
     } = compilerPluginModule.PackageSourceBatch.computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
-      const { unibuild } = batch;
+      const { unibuild, sourceRoot } = batch;
 
       // Depend on the source files that produced these resources.
       this.watchSet.merge(unibuild.watchSet);
@@ -1446,6 +1446,7 @@ class Target {
     });
 
     // Call any plugin.afterLink callbacks defined by compiler plugins,
+    // and update the watch set's list of potentially unused files
     // now that all compilation (including lazy compilation) is finished.
     sourceBatches.forEach(batch => {
       batch.resourceSlots.forEach(slot => {
@@ -1456,7 +1457,28 @@ class Target {
           plugin.afterLink();
         }
       });
+
+      // Any source resource that the content or hash was accessed for are marked
+      // as definitely used.
+      // If there are any output resources for these in the js output, they are
+      // excluded from the importScannerWatchSet so they are only marked as
+      // definitely used if their content was used, not if they are added
+      // to the built app.
+      batch.unibuild.resources.forEach(resource => {
+        if (resource.type !== 'source' || resource._dataUsed === false) {
+          return;
+        }
+      
+        assert.strictEqual(
+          typeof resource._dataUsed,
+          "boolean"
+        );
+      
+        let absPath = files.pathJoin(batch.sourceRoot, resource.path);
+        this.watchSet.addFile(absPath, resource.hash);
+      });
     });
+
   }
 
   // Minify the JS in this target
@@ -1512,7 +1534,7 @@ class Target {
         if (typeof file.data === 'string') {
           file.data = Buffer.from(file.data, "utf8");
         }
-        const replaceable = possiblyReplaceable && 
+        const replaceable = possiblyReplaceable &&
           file.data.equals(source._source.contents());
 
         const newFile = new File({
@@ -2904,7 +2926,8 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
   }
 
   if (options && options.sourceMapUrl) {
-    data = addSourceMappingURL(data, options.sourceMapUrl);
+    const url = (process.env.ROOT_URL || "") + options.sourceMapUrl;
+    data = addSourceMappingURL(data, url);
   } else if (!options || !options.leaveSourceMapUrls) {
     // If we do not have an options.sourceMapUrl to append, then we still
     // want to remove any existing //# sourceMappingURL comments.
@@ -3222,7 +3245,7 @@ Find out more about Meteor at meteor.com.
  *  - onJsOutputFiles Called for each unibuild in a client arch with a list of js files
  *    that will be linked, and a function to get their prelink output with their closure
  *    and banner.
- * 
+ *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - serverWatchSet: Information about server files and paths that were
@@ -3659,3 +3682,5 @@ exports.readJsImage = Profile(
   "bundler.readJsImage", function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
 });
+
+exports.NodeModulesDirectory = NodeModulesDirectory;

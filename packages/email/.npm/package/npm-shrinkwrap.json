@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "nodemailer": {
-      "version": "6.4.6",
-      "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-6.4.6.tgz",
-      "integrity": "sha512-/kJ+FYVEm2HuUlw87hjSqTss+GU35D4giOpdSfGp7DO+5h6RlJj7R94YaYHOkoxu1CSaM0d3WRBtCzwXrY6MKA=="
+      "version": "6.6.3",
+      "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-6.6.3.tgz",
+      "integrity": "sha512-faZFufgTMrphYoDjvyVpbpJcYzwyFnbAMmQtj1lVBYAUSm3SOy2fIdd9+Mr4UxPosBa0JRw9bJoIwQn+nswiew=="
     },
     "stream-buffers": {
       "version": "3.0.2",

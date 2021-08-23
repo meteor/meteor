@@ -1,6 +1,8 @@
 Package.describe({
   summary: "A minimalist client-side MVC framework",
-  version: "1.0.0"
+  version: "1.0.0",
+  deprecated: true,
+  documentation: null
 });
 
 Package.onUse(function (api) {

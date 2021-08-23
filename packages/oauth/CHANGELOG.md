@@ -1,5 +1,9 @@
 ## Changelog
 
+## 2.0.0
+### Breaking changes
+- Removed compatibility code for before Meteor v1
+
 ## 1.3.2 - 2020-09-30
 ### Breaking changes
 - N/A
