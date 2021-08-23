@@ -228,7 +228,7 @@ Email.send = function (options) {
     customTransport({ packageSettings, ...options });
     return;
   }
-  if (Meteor.isProduction) {
+  if (Meteor.isProduction || process.env.MAIL_URL) {
     const transport = getTransport();
     smtpSend(transport, options);
     return;
