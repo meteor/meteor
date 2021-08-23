@@ -56,6 +56,9 @@
 * `ddp-server@2.4.1`
   - Fix a bug where `testMessageOnConnect` has always been sent
 
+* `accounts-password@2.0.1`
+  - Fix use of `isEnroll` in reset password
+
 ## v2.3.5, 2021-08-12
 
 #### Highlights
