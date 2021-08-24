@@ -43,6 +43,9 @@
 * `accounts-base@2.1.0`
   - Migrated usage of `_ensureIndex` to `createIndex`
 
+* `accounts-oauth@1.4.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
 * `accounts-password@2.1.0`
   - Migrated usage of `_ensureIndex` to `createIndex`
 
