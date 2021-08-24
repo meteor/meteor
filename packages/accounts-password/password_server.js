@@ -747,9 +747,9 @@ Meteor.methods({resetPassword: function (...args) {
       } else {
         tokenRecord = user.services.password.reset;
       }
-      const { when, reason, email } = tokenRecord;
+      const { when, email } = tokenRecord;
       let tokenLifetimeMs = Accounts._getPasswordResetTokenLifetimeMs();
-      if (reason === "enroll") {
+      if (isEnroll) {
         tokenLifetimeMs = Accounts._getPasswordEnrollTokenLifetimeMs();
       }
       const currentTimeMs = Date.now();
@@ -779,7 +779,7 @@ Meteor.methods({resetPassword: function (...args) {
         // - Verifying their email, since they got the password reset via email.
         let affectedRecords = {};
         // if reason is enroll then check services.password.enroll.token field for affected records
-        if(reason === 'enroll') {
+        if(isEnroll) {
           affectedRecords = Meteor.users.update(
             {
               _id: user._id,

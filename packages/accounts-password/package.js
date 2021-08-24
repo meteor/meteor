@@ -10,7 +10,7 @@ Package.describe({
 
 Npm.depends({
   'bcrypt': '5.0.1'
-})
+});
 
 Package.onUse(api => {
 
