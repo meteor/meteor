@@ -1,7 +1,5 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
-const uuid = require("uuid");
-var fiberHelpers = require('../utils/fiber-helpers.js');
 var files = require('../fs/files');
 var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
@@ -13,7 +11,6 @@ var catalog = require('../packaging/catalog/catalog.js');
 var Profile = require('../tool-env/profile').Profile;
 var release = require('../packaging/release.js');
 import { pluginVersionsFromStarManifest } from '../cordova/index.js';
-import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
@@ -172,18 +169,16 @@ Object.assign(AppProcess.prototype, {
     }
     if (self.settings) {
       env.METEOR_SETTINGS = self.settings;
-    } else {
+    } else if (env.METEOR_SETTINGS && env.NODE_ENV === 'development') {
       // Warn the developer that we are not going to use their environment var.
-      if (env.METEOR_SETTINGS) {
-        runLog.log(
-          "WARNING: The 'METEOR_SETTINGS' environment variable is ignored " +
-          "when running in development (as you are doing now).  Instead, use " +
-          "the '--settings settings.json' option to see reactive changes " +
-          "when settings are changed.  For more information, see the " +
-          "documentation for 'Meteor.settings': " +
-          "https://docs.meteor.com/api/core.html#Meteor-settings" +
-          "\n");
-      }
+      runLog.log(
+        "WARNING: The 'METEOR_SETTINGS' environment variable is ignored " +
+        "when running in development (as you are doing now).  Instead, use " +
+        "the '--settings settings.json' option to see reactive changes " +
+        "when settings are changed.  For more information, see the " +
+        "documentation for 'Meteor.settings': " +
+        "https://docs.meteor.com/api/core.html#Meteor-settings" +
+        "\n");
 
       // To provide a consistent, reactive experience in development, do
       // not use settings provided via the environment variable.

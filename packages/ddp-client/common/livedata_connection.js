@@ -1624,7 +1624,6 @@ export class Connection {
     if (msg === null || !msg.msg) {
       if(!msg || !msg.testMessageOnConnect) {
         if (Object.keys(msg).length === 1 && msg.server_id) return;
-        console.dir(msg)
         Meteor._debug('discarding invalid livedata message', msg);
       }
       return;

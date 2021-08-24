@@ -119,7 +119,7 @@ StreamServer = function () {
 
     // only to send a message after connection on tests, useful for
     // socket-stream-client/server-tests.js
-    if (process.env.TEST_METADATA) {
+    if (process.env.TEST_METADATA && process.env.TEST_METADATA !== "{}") {
       socket.send(JSON.stringify({ testMessageOnConnect: true }));
     }
 
