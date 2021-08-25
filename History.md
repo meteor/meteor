@@ -150,6 +150,12 @@
 * `accounts-password@2.0.1`
   - Fix use of `isEnroll` in reset password
 
+* `mdg:geolocation@1.3.1`
+  - Fixed API to work with Meteor 2.3+
+
+* `mdg:reload-on-resume@1.0.5`
+  - Fixed API to work with Meteor 2.3+
+
 ## v2.3.5, 2021-08-12
 
 #### Highlights
