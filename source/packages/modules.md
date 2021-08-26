@@ -3,7 +3,22 @@ title: modules
 description: Documentation of Meteor's `modules` package.
 ---
 
-Though Meteor 1.2 introduced support for [many new ECMAScript 2015 features](https://github.com/meteor/meteor/blob/devel/packages/ecmascript/README.md#supported-es2015-features), one of the most notable omissions was [ES2015 `import` and `export` syntax](http://exploringjs.com/es6/ch_modules.html). Meteor 1.3 fills that gap with a fully standards-compliant module system that works on both the client and the server, solves multiple long-standing problems for Meteor applications (such as controlling file load order), and yet maintains full backwards compatibility with existing Meteor code. This document explains the usage and key features of the new module system.
+This document explains the usage and key features of the module system used by Meteor.
+
+> Meteor 1.2 introduced support for [many new ECMAScript 2015 features](https://github.com/meteor/meteor/blob/devel/packages/ecmascript/README.md#supported-es2015-features), one of the most notable omissions was [ES2015 `import` and `export` syntax](http://exploringjs.com/es6/ch_modules.html). 
+
+> Meteor 1.3 filled the gap with a fully standards-compliant module system that works on both the client and the server.
+
+> Meteor 1.7 introduced `meteor.mainModule` and `meteor.testModule` to `package.json` so Meteor doesn't need special folders anymore for js resources. Also doesn't need to eager load js resources.
+
+By design, `meteor.mainModule` only affect js resources. For non-js resources, there are still some things that can only be done within imports:
+
+- only stylesheets within imports can be dynamically imported
+- you can only control the load order of stylesheets by importing them in js if the stylesheets are within imports
+
+Any non-js resource outside of imports (and some other special folders) are still eagerly loaded. 
+
+> You can read more about these differences in this [comment](https://github.com/meteor/meteor/pull/11381#issuecomment-818816052).
 
 ## Enabling modules
 
@@ -167,13 +182,86 @@ You can also use traditional CommonJS syntax with CoffeeScript.
 
 ## Modular application structure
 
+Use in your application `package.json` file the section `meteor`.
+
+> This is available since Meteor 1.7
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    }
+  }
+}
+```
+
+When specified, these entry points will define in which files Meteor is going to start the evaluation process for each architecture (client and server).
+
+This way Meteor is not going to eager load any other js files.
+
+There is also an architecture for the `legacy` client, which is useful if you want to load polyfills or other code for old browsers before importing the main module for the modern client.
+
+In addition to `meteor.mainModule`, the `meteor` section of `package.json` may also specify `meteor.testModule` to control which test modules are loaded by `meteor test` or `meteor test --full-app`:
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "testModule": "tests.js"
+  }
+}
+```
+
+If your client and server test files are different, you can expand the testModule configuration using the same syntax as mainModule:
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "testModule": {
+      "client": "client/tests.js",
+      "server": "server/tests.js"
+    }
+  }
+}
+```
+
+The same test module will be loaded whether or not you use the `--full-app` option. 
+
+Any tests that need to detect `--full-app` should check `Meteor.isAppTest`. 
+
+The module(s) specified by `meteor.testModule` can import other test modules at runtime, so you can still distribute test files across your codebase; just make sure you import the ones you want to run.
+
+To disable eager loading of modules on a given architecture, simply provide a mainModule value of false:
+
+```json
+{
+  "meteor": {
+    "mainModule": {
+      "client": false,
+      "server": "server/main.js"
+    }
+  }
+}
+```
+
+### Historic behind Modular application structure
+
+If you want to understand how Meteor works without `meteor.mainModule` on `package.json` keep reading this section, but we don't recommend this approach anymore.
+
 Before the release of Meteor 1.3, the only way to share values between files in an application was to assign them to global variables or communicate through shared variables like `Session` (variables which, while not technically global, sure do feel syntactically identical to global variables). With the introduction of modules, one module can refer precisely to the exports of any other specific module, so global variables are no longer necessary.
 
 If you are familiar with modules in Node, you might expect modules not to be evaluated until the first time you import them. However, because earlier versions of Meteor evaluated all of your code when the application started, and we care about backwards compatibility, eager evaluation is still the default behavior.
 
 If you would like a module to be evaluated *lazily* (in other words: on demand, the first time you import it, just like Node does it), then you should put that module in an `imports/` directory (anywhere in your app, not just the root directory), and include that directory when you import the module: `import {stuff} from './imports/lazy'`. Note: files contained by `node_modules/` directories will also be evaluated lazily (more on that below).
-
-Lazy evaluation will very likely become the default behavior in a future version of Meteor, but if you want to embrace it as fully as possible in the meantime, we recommend putting all your modules inside either `client/imports/` or `server/imports/` directories, with just a single entry point for each architecture: `client/main.js` and `server/main.js`. The `main.js` files will be evaluated eagerly, giving your application a chance to import modules from the `imports/` directories.
 
 ## Modular package structure
 
