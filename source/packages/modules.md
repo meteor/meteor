@@ -22,7 +22,9 @@ Any non-js resource outside of imports (and some other special folders) are stil
 
 ## Enabling modules
 
-We think you’re going to love the new module system, and that's why it will be installed by default for all new apps and packages. Nevertheless, the `modules` package is totally optional, and it will be up to you to add it to existing apps and/or packages.
+It is installed by default for all new apps and packages. Nevertheless, the `modules` package is totally optional.
+
+If you want to add it to existent apps or packages:
 
 For apps, this is as easy as `meteor add modules`, or (even better) `meteor add ecmascript`, since the `ecmascript` package *implies* the `modules` package.
 
@@ -30,7 +32,7 @@ For packages, you can enable `modules` by adding `api.use('modules')` to the `Pa
 
 Now, you might be wondering what good the `modules` package is without the `ecmascript` package, since `ecmascript` enables `import` and `export` syntax. By itself, the `modules` package provides the CommonJS `require` and `exports` primitives that may be familiar if you’ve ever written Node code, and the `ecmascript` package simply compiles `import` and `export` statements to CommonJS. The `require` and `export` primitives also allow Node modules to run within Meteor application code without modification. Furthermore, keeping `modules` separate allows us to use `require` and `exports` in places where using `ecmascript` is tricky, such as the implementation of the `ecmascript` package itself.
 
-While the `modules` package is useful by itself, we very much encourage using the `ecmascript` package (and thus `import` and `export`) instead of using `require` and `exports` directly. If you need convincing, here’s a presentation that explains the differences: http://benjamn.github.io/empirenode-2015
+While the `modules` package is useful by itself, we very much encourage using the `ecmascript` package (and thus `import` and `export`) instead of using `require` and `exports` directly. If you need convincing, here's a [presentation](http://benjamn.github.io/empirenode-2015) that explains the differences.
 
 ## Basic syntax
 
