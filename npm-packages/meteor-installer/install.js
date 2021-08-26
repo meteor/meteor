@@ -58,7 +58,11 @@ if (fs.existsSync(startedPath)) {
 } else if (fs.existsSync(meteorPath)) {
   console.log('Meteor is already installed at', meteorPath);
   console.log(
-    'If you want to reinstall, delete that folder and run this command again'
+`If you want to reinstall it, run:
+
+  $ meteor-installer uninstall
+  $ meteor-installer install
+`
   );
   process.exit();
 }
