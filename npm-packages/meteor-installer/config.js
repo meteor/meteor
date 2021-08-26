@@ -8,6 +8,7 @@ function isRoot() {
 }
 const localAppData = process.env.LOCALAPPDATA;
 const isWindows = () => os.platform() === 'win32';
+const isMac = () => os.platform() === 'darwin';
 const rootPath = isWindows()
   ? localAppData
   : `${isRoot() ? `/home/${sudoUser}` : os.homedir()}`;
@@ -27,5 +28,6 @@ module.exports = {
   sudoUser,
   startedPath: path.resolve(rootPath, '.meteor-install-started.txt'),
   isWindows,
+  isMac,
   isRoot,
 };

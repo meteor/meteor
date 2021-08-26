@@ -4,77 +4,80 @@ const Seven = require('node-7z');
 const fs = require('fs');
 const { resolve, dirname } = require('path');
 const child_process = require('child_process');
+const { isMac } = require('./config.js')
 
-function extractWith7Zip (tarPath, destination, onProgress) {
+function extractWith7Zip(tarPath, destination, onProgress) {
   return new Promise((resolve, reject) => {
     const stream = Seven.extractFull(tarPath, destination, {
       $progress: true,
       $bin: sevenBin.path7za,
     });
-    stream.on('progress', function (progress) {
+    stream.on('progress', function(progress) {
       onProgress(progress);
     });
 
-    stream.on('error', function (err) {
+    stream.on('error', function(err) {
       return reject(err);
     });
 
-    stream.on('end', function () {
+    stream.on('end', function() {
       return resolve();
     });
-  })
+  });
 }
 
 function createSymlinks(symlinks, baseDir) {
   symlinks.forEach(({ path, linkPath }) => {
     try {
-      let resolveBase = resolve(baseDir, dirname(path))
+      let resolveBase = resolve(baseDir, dirname(path));
       const result = fs.statSync(resolve(resolveBase, linkPath));
 
       if (result.isDirectory()) {
         fs.symlinkSync(linkPath, path, 'junction');
       } else {
-        fs.copyFileSync(
-          resolve(resolveBase, linkPath),
-          resolve(baseDir, path),
-        )
+        fs.copyFileSync(resolve(resolveBase, linkPath), resolve(baseDir, path));
       }
     } catch (e) {
       console.log(path, linkPath);
       console.error(e);
       throw new Error('Unable to create symlink');
     }
-  })
+  });
 }
 
-function extractWithNativeTar (tarPath, destination, onProgress) {
-  child_process.execSync(`tar -xf "${tarPath}" --checkpoint-action=ttyout="#%u: %T \r" -C "${destination}"`,  {
-    cwd: process.cwd(),
-    env: process.env,
-    stdio: [process.stdin, process.stdout, process.stderr],
-    encoding: 'utf-8'
-  })
-
+function extractWithNativeTar(tarPath, destination, onProgress) {
+  child_process.execSync(
+    `tar -xf "${tarPath}" ${
+      !isMac() ? `--checkpoint-action=ttyout="#%u: %T \r"` : ``
+    } -C "${destination}"`,
+    {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: [process.stdin, process.stdout, process.stderr],
+      encoding: 'utf-8',
+    }
+  );
 }
 
-function extractWithTar (tarPath, destination, onProgress) {
-    let symlinks = [];
+function extractWithTar(tarPath, destination, onProgress) {
+  let symlinks = [];
 
-    let total = 0;
-    // This takes a few seconds, but lets us show the progress
-    tar.t({
-      sync: true,
-      file: tarPath,
-      onentry() {
-        total += 1;
-      }
-    });
+  let total = 0;
+  // This takes a few seconds, but lets us show the progress
+  tar.t({
+    sync: true,
+    file: tarPath,
+    onentry() {
+      total += 1;
+    },
+  });
 
-    let started = 0;
-    let timeout = null;
+  let started = 0;
+  let timeout = null;
 
-    return new Promise((resolve, reject) => {
-      tar.x({
+  return new Promise((resolve, reject) => {
+    tar.x(
+      {
         file: tarPath,
         preservePaths: true,
         cwd: destination,
@@ -101,8 +104,9 @@ function extractWithTar (tarPath, destination, onProgress) {
               });
             }, 300);
           }
-        }
-      }, (err) => {
+        },
+      },
+      err => {
         if (timeout) {
           clearTimeout(timeout);
         }
@@ -112,12 +116,13 @@ function extractWithTar (tarPath, destination, onProgress) {
         }
         createSymlinks(symlinks, destination);
         resolve();
-      });
-    });
+      }
+    );
+  });
 }
 
 module.exports = {
   extractWithTar,
   extractWith7Zip,
-  extractWithNativeTar
-}
+  extractWithNativeTar,
+};
