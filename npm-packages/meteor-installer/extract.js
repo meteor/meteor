@@ -48,7 +48,13 @@ function createSymlinks(symlinks, baseDir) {
 }
 
 function extractWithNativeTar (tarPath, destination, onProgress) {
-  child_process.execSync(`tar -xzf "${tarPath}" -C "${destination}" -o`)
+  child_process.execSync(`tar -xf "${tarPath}" --checkpoint-action=ttyout="#%u: %T \r" -C "${destination}"`,  {
+    cwd: process.cwd(),
+    env: process.env,
+    stdio: [process.stdin, process.stdout, process.stderr],
+    encoding: 'utf-8'
+  })
+
 }
 
 function extractWithTar (tarPath, destination, onProgress) {
@@ -70,6 +76,7 @@ function extractWithTar (tarPath, destination, onProgress) {
     return new Promise((resolve, reject) => {
       tar.x({
         file: tarPath,
+        preservePaths: true,
         cwd: destination,
         filter(path, entry) {
           if (entry.type === 'SymbolicLink') {

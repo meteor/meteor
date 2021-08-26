@@ -14,6 +14,9 @@ const {
   startedPath,
   extractPath,
   isWindows,
+  isRoot,
+  rootPath,
+  sudoUser,
 } = require('./config.js');
 const { uninstall } = require('./uninstall');
 const {
@@ -21,7 +24,6 @@ const {
   extractWith7Zip,
   extractWithNativeTar,
 } = require('./extract.js');
-const { isRoot } = require('./config');
 
 process.on('unhandledRejection', err => {
   throw err;
@@ -105,7 +107,7 @@ function download() {
   dl.on('progress', ({ progress }) => {
     downloadProgress.update(progress);
   });
-  dl.on('end', () => {
+  dl.on('end', async () => {
     downloadProgress.update(100);
     downloadProgress.stop();
     const end = Date.now();
@@ -123,23 +125,13 @@ function download() {
 
     fs.writeFileSync(startedPath, 'Meteor install started');
     console.log('=> Extracting the tarball, this may take some time');
-    const decompressProgress = new cliProgress.SingleBar(
-      {
-        format: 'Decompressing |{bar}| {percentage}%',
-        clearOnComplete: true,
-      },
-      cliProgress.Presets.shades_classic
-    );
-    decompressProgress.start(100, 0);
     const extractStart = Date.now();
-    extractWithNativeTar(path.resolve(tempPath, tarGzName), extractPath);
+    await extractWithNativeTar(path.resolve(tempPath, tarGzName), extractPath);
     const extractEnd = Date.now();
-    decompressProgress.update(100);
-    decompressProgress.stop();
     console.log(
       `=> Meteor extracted in ${(extractEnd - extractStart) / 1000}s`
     );
-    setup();
+    await setup();
   });
 
   dl.start();
@@ -222,15 +214,14 @@ async function setupExecPath() {
       ? '.zshrc'
       : '.bashrc';
   await fsPromises.appendFile(
-    `${os.homedir()}/${bashrcFile}`,
-    `export PATH=$PATH:${meteorPath}\n`
+    `${rootPath}/${bashrcFile}`,
+    `export PATH=${meteorPath}:$PATH\n`
   );
   if (!isRoot()) {
     return;
   }
   // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
-  const user = process.env.SUDO_USER;
-  child_process.execSync(`chown -R ${user} "${meteorPath}"`);
+  child_process.execSync(`chown -R ${sudoUser} "${meteorPath}"`);
 }
 
 function showGettingStarted() {
