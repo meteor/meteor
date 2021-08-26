@@ -9,7 +9,16 @@ This document explains the usage and key features of the module system used by M
 
 > Meteor 1.3 filled the gap with a fully standards-compliant module system that works on both the client and the server.
 
-> Meteor 1.7 introduced `meteor.mainModule` and `meteor.testModule` to `package.json` so Meteor doesn't need special folders anymore, like imports. Also doesn't need to eager load files.
+> Meteor 1.7 introduced `meteor.mainModule` and `meteor.testModule` to `package.json` so Meteor doesn't need special folders anymore for js resources. Also doesn't need to eager load js resources.
+
+By design, `meteor.mainModule` only affect js resources. For non-js resources, there are still some things that can only be done within imports:
+
+- only stylesheets within imports can be dynamically imported
+- you can only control the load order of stylesheets by importing them in js if the stylesheets are within imports
+
+Any non-js resource outside of imports (and some other special folders) are still eagerly loaded. 
+
+> You can read more about these differences in this [comment](https://github.com/meteor/meteor/pull/11381#issuecomment-818816052).
 
 ## Enabling modules
 
@@ -190,7 +199,9 @@ Use in your application `package.json` file the section `meteor`.
 
 When specified, these entry points will define in which files Meteor is going to start the evaluation process for each architecture (client and server).
 
-This way Meteor is not going to eager load any other files.
+This way Meteor is not going to eager load any other js files.
+
+There is also an architecture for the `legacy` client, which is useful if you want to load polyfills or other code for old browsers before importing the main module for the modern client.
 
 In addition to `meteor.mainModule`, the `meteor` section of `package.json` may also specify `meteor.testModule` to control which test modules are loaded by `meteor test` or `meteor test --full-app`:
 
