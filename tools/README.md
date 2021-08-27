@@ -140,8 +140,7 @@ The entry-point of the tools code is in `index.js`.
 The Meteor Tool code has two modes of running:
 
 - from local checkout for development
-- from a production release installed by running
-`curl -L https://install.meteor.com | sh` or a Windows installer.
+- from a production release installed by running `npm install -g meteor`.
 
 There are two different `meteor` / `meteor.bat` starting scripts in development
 and production. The production one is written by the packaging code.
