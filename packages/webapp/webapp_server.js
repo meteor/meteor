@@ -412,17 +412,32 @@ function getBoilerplateAsync(request, arch) {
   }));
 }
 
+// Notification hook whenever the runtime configuration is updated
+// hook will pass an object with the following fields:
+// - arch
+// - manifest
+// - runtimeConfig
+WebApp.addUpdatedNotifyHook = function(hook) {
+  if(typeof hook !== 'function') throw new Error('WebApp.addUpdatedNotifyHook must be a function');
+  runtimeConfig.updateHooks.push(hook);
+}
+
 WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         manifest,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
   runtimeConfig.isUpdatedByArch[arch] = true;
+  const rtimeConfig = {
+    ...__meteor_runtime_config__,
+    ...(additionalOptions.runtimeConfigOverrides || {})
+  };
+  runtimeConfig.updateHooks.forEach((cb) => {
+    cb({arch, manifest, runtimeConfig: rtimeConfig});
+  });
+
   const meteorRuntimeConfig = JSON.stringify(
-    encodeURIComponent(JSON.stringify({
-      ...__meteor_runtime_config__,
-      ...(additionalOptions.runtimeConfigOverrides || {})
-    }))
+    encodeURIComponent(JSON.stringify(rtimeConfig))
   );
 
   return new Boilerplate(arch, manifest, _.extend({
