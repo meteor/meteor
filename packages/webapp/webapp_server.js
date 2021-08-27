@@ -357,6 +357,9 @@ WebApp.decodeRuntimeConfig = function (rtimeConfig) {
   // hooks will contain the callback functions
   // set by the caller to addRuntimeConfigHook
   hooks: [],
+  // updateHooks will contain the callback functions
+  // set by the caller to addUpdatedConfigHook
+  updateHooks: [],
   // isUpdatedByArch is an object containing fields for each arch 
   // that this server supports.
   // - Each field will be true when the server updates the runtimeConfig for that arch.
