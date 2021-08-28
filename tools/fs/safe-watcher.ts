@@ -10,12 +10,6 @@ import {
 
 const watchLibrary = require("pathwatcher");
 
-// Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
-// force the use of files.watchFile instead of watchLibrary.watch.
-var WATCHER_ENABLED = ! JSON.parse(
-  process.env.METEOR_WATCH_FORCE_POLLING || "false"
-);
-
 // Default to prioritizing changed files, but disable that behavior (and
 // thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
 // is explicitly set to a string that parses to a falsy value.
@@ -39,6 +33,12 @@ const WATCHER_CLEANUP_DELAY_MS = 30000;
 // two files with the same stat.ino number but different paths on linux, so we have
 // to deduplicate files by ino.
 const DEDUPLICATE_BY_INO = process.platform !== "win32";
+
+// Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
+// force the use of files.watchFile instead of watchLibrary.watch.
+let watcherEnabled = ! JSON.parse(
+  process.env.METEOR_WATCH_FORCE_POLLING || "false"
+);
 
 const entriesByIno = new Map;
 
@@ -132,7 +132,7 @@ function startNewWatcher(absPath: string): Entry {
       return NO_WATCHER_POLLING_INTERVAL;
     }
 
-    if (WATCHER_ENABLED || PRIORITIZE_CHANGED) {
+    if (watcherEnabled || PRIORITIZE_CHANGED) {
       // As long as native file watching is enabled (even if it doesn't
       // work correctly) and the developer hasn't explicitly opted out of
       // the file watching priority system, poll unchanged files at a
@@ -350,7 +350,7 @@ function statWatch(
 }
 
 function watchLibraryWatch(absPath: string, callback: EntryCallback) {
-  if (WATCHER_ENABLED) {
+  if (watcherEnabled) {
     try {
       return watchLibrary.watch(convertToOSPath(absPath), callback);
     } catch (e) {
@@ -410,3 +410,10 @@ export const watch = Profile(
     } as SafeWatcher;
   }
 );
+
+// On Windows, pathwatcher can sometimes cause Meteor to get stuck. If we
+// don't need native watching for a command, we can disable it.
+// This is a temporary fix until pathwatcher is fixed or we replace it.
+export function disableNativeWatcher () {
+  watcherEnabled = false;
+} 
