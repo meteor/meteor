@@ -23,6 +23,7 @@ var packageMapModule = require('../packaging/package-map.js');
 var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
 
+import { disableNativeWatcher } from '../fs/safe-watcher';
 import {
   ensureDevBundleDependencies,
   newPluginId,
@@ -95,6 +96,8 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean }
   }
 }, function (options) {
+  disableNativeWatcher();
+
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
   var projectContext = new projectContextModule.ProjectContext({
