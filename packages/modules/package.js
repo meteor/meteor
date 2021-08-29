@@ -6,7 +6,7 @@ Package.describe({
 });
 
 Npm.depends({
-  reify: "0.22.0",
+  reify: "0.22.1",
   "meteor-babel-helpers": "0.0.3"
 });
 
