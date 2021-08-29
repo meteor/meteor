@@ -6,7 +6,7 @@
 * Email package now allows setting `Email.customTransport` to override sending method.
 * Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming. 
 * Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
-* `reify` has been updated to v0.22.0 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. [read more](https://github.com/benjamn/reify/pull/246)
+* `reify` has been updated to v0.22.1 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
 
 #### Meteor Version Release
 
@@ -14,7 +14,7 @@
 
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
-  - `reify` update to v0.22.1 which bring optimizations for imports, PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
+  - `reify` update to v0.22.1 which bring optimizations for imports. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
   - Apollo skeleton now uses [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300) - [migration guide](https://www.apollographql.com/docs/apollo-server/migration/)
   - Upgraded `chalk` to v4.1.1
   - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
