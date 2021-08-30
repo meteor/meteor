@@ -134,11 +134,12 @@ These 2 conditions break `autoupdate` for the cordova applications. `cordova-plu
 To remedy this problem `webapp` has a hook for dynamically configuring `__meteor_runtime_config__` on the server.
 
 #### Dynamic Runtime Configuration Hook
+Register a callback when the meteor runtime configuration, `__meteor_runtime_config__` is being sent to the client.
 ```js
 WebApp.addRuntimeConfigHook(({arch, request, encodedCurrentConfig, updated}) => {
  // check the request to see if this is a request that requires
  // modifying the runtime configuration
-  if(req.headers.domain === 'calling.domain') {
+  if(request.headers.domain === 'calling.domain') {
     // make changes to the config for this domain
     // decode the current runtime config string into an object
     const config = WebApp.decodeRuntimeConfig(current);
@@ -176,3 +177,26 @@ Additionally, 2 helper functions are available to decode the runtime config stri
 `WebApp.encodeRuntimeConfig(config_object)`: returns an encoded string from a config object that is ready for the root page.
 
 The expected usage is to decode the runtime config string, operate on the object and then return the encoded runtime configuration.
+
+### Updated Runtime Configuration Hook
+Register a callback on updates to the configuration runtime.
+```js
+const autoupdateCache;
+// Get a notification when the runtime configuration is updated
+WebApp.addUpdatedConfigHook(({arch, manifest, runtimeConfig}) => {
+  // Example, see if runtimeConfig.autoupdate has changed and if so
+  // do something
+  if(!_.isEqual(autoupdateCache, runtimeConfig.autoupdate)) {
+    autoupdateCache = runtimeConfig.autoupdate;
+    // do something...
+  }
+})
+```
+
+`WebApp.addUpdatedConfigHook(handler)` has one argument:
+
+**handler** - The `handler` is called on every change to an `arch` runtime configuration. The handler takes a single options argument with the following properties:
+
+- **arch** - _String_. the architecture being responded to.  This can be one of `web.browser`, `web.browser.legacy` or `web.cordova`.
+- **manifest** - _Object_. the manifest object.
+- **runtimeConfig** - _Object_. the new updated configuration object for this `arch`.
