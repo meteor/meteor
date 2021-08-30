@@ -23,4 +23,5 @@ Package.onUse(api => {
   api.addFiles('email_templates.js', 'server');
   api.addFiles('passwordless_server.js', 'server');
   api.addFiles('passwordless_client.js', 'client');
+  api.addFiles('server_utils.js', 'server');
 });
