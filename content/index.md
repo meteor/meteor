@@ -18,15 +18,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 <h2 id="quickstart">Quick start</h2>
 
-Meteor supports [OS X, Windows, and Linux](https://www.meteor.com/install).
-
-On Windows, OS X and Linux, install the latest official Meteor release from your terminal:
-
-```bash
-npm install -g meteor
-```
-
-If your user don't have permission to install global binaries and you need to use sudo, it's necessary to append --unsafe-perm to the above command.
+Install the latest official Meteor release [following the steps in our docs](https://docs.meteor.com/install.html).
 
 Once you've installed Meteor, open a new terminal window and create a project:
 
