@@ -25,19 +25,19 @@ Are you looking for examples? Check this [meteor/examples](https://github.com/me
 
 ## Quick Start
 
-On Linux/macOS, use this line:
-
-```bash
-curl https://install.meteor.com/ | sh
-```
-
-On Windows, use this line:
+On Linux/macOS/Windows, use this line:
 
 ```bash
 npm install -g meteor
 ```
 
 Visit the official [install page](https://www.meteor.com/developers/install) to learn more.
+
+Alternatively, on macOS and Linux you can use:
+
+```bash
+curl https://install.meteor.com/ | sh
+```
 
 Create a project:
 
