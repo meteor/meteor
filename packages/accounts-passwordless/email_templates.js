@@ -5,9 +5,6 @@
  */
 Accounts.emailTemplates = {
   ...(Accounts.emailTemplates || {}),
-  from: "Accounts Example <no-reply@example.com>",
-  siteName: Meteor.absoluteUrl().replace(/^https?:\/\//, '').replace(/\/$/, ''),
-
   sendLoginToken: {
     subject: () => `Your login token on ${Accounts.emailTemplates.siteName}`,
     text: (token, url) => {

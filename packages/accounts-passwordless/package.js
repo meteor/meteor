@@ -1,16 +1,10 @@
 Package.describe({
-  summary: "No-password login/sign-up support for accounts",
-  version: "0.0.1"
+  summary: 'No-password login/sign-up support for accounts',
+  version: '0.0.1',
 });
 
 Package.onUse(api => {
-
-  api.use([
-    'accounts-base',
-    'sha',
-    'ejson',
-    'ddp'
-  ], ['client', 'server']);
+  api.use(['accounts-base', 'sha', 'ejson', 'ddp'], ['client', 'server']);
 
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);

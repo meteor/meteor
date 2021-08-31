@@ -1,5 +1,7 @@
 import {Accounts} from "meteor/accounts-base";
 
+export const getUserById = (id, options) => Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
+
 export const handleError = (msg, throwError = true) => {
     const error = new Meteor.Error(
         403,
