@@ -1521,7 +1521,7 @@ Object.assign(Server.prototype, {
    * @locus Server
    * @param publicationName {String}
    * @param strategy {{useCollectionView: boolean, doAccountingForCollection: boolean}}
-   * @memberOf Meteor
+   * @memberOf Meteor.server
    * @importFromPackage meteor
    */
   setPublicationStrategy(publicationName, strategy) {
@@ -1536,7 +1536,7 @@ Object.assign(Server.prototype, {
    * @summary Gets the publication strategy for the requested publication.
    * @locus Server
    * @param publicationName {String}
-   * @memberOf Meteor
+   * @memberOf Meteor.server
    * @importFromPackage meteor
    * @return {{useCollectionView: boolean, doAccountingForCollection: boolean}}
    */
