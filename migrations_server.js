@@ -159,6 +159,14 @@ Migrations._migrateTo = function(version, rerun) {
   var control = this._getControl(); // Side effect: upserts control document.
   var currentVersion = control.version;
 
+  //Avoid unneeded locking, check if migration actually is going to run
+  if (!rerun && currentVersion === version) {
+    if (Migrations.options.logIfLatest) {
+      log.info('Not migrating, already at version ' + version);
+    }
+    return;
+  }
+
   if (lock() === false) {
     log.info('Not migrating, control is locked.');
     return;
@@ -168,14 +176,6 @@ Migrations._migrateTo = function(version, rerun) {
     log.info('Rerunning version ' + version);
     migrate('up', this._findIndexByVersion(version));
     log.info('Finished migrating.');
-    unlock();
-    return;
-  }
-
-  if (currentVersion === version) {
-    if (Migrations.options.logIfLatest) {
-      log.info('Not migrating, already at version ' + version);
-    }
     unlock();
     return;
   }
