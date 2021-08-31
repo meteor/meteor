@@ -7,6 +7,7 @@
 * Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming. 
 * Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
 * `reify` has been updated to v0.22.1 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
+* Meteor NPM installer is [now available for all platforms](https://github.com/meteor/meteor/pull/11590).
 
 #### Meteor Version Release
 
@@ -24,6 +25,7 @@
   - npm dependencies have been updated
   - Added option to change runtime config in your app, [read more](https://github.com/meteor/meteor/pull/11506)
   - `@vlasky/whomst@0.1.7`
+  - Added `addUpdateNotifyHook` that gets called when runtime configuration is updated
   
 * `logging@1.3.0`
   - Switch from `cli-color` to `chalk` to have the same dependency as meteor-tool
@@ -54,6 +56,9 @@
 
 * `oauth1@1.5.0`
   - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `facebook-oauth@1.10.0`
+  - Added login handler hook, like in the Google package for easier management in React Native and similar apps. [PR](https://github.com/meteor/meteor/pull/11603)
 
 * `service-configuration@1.5.0`
   - Migrated usage of `_ensureIndex` to `createIndex`

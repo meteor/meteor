@@ -1335,7 +1335,7 @@ Object.assign(Subscription.prototype, {
       }
       ids.add(id);
     }
- 
+
     this._session.added(this._subscriptionHandle, collectionName, id, fields);
   },
 
@@ -1516,16 +1516,32 @@ Object.assign(Server.prototype, {
     return self.onConnectionHook.register(fn);
   },
 
-  setPublicationStrategy(collectionName, strategy) {
+  /**
+   * @summary Set publication strategy for the given publication. Publications strategies are available from `DDPServer.publicationStrategies`
+   * @locus Server
+   * @param publicationName {String}
+   * @param strategy {{useCollectionView: boolean, doAccountingForCollection: boolean}}
+   * @memberOf Meteor
+   * @importFromPackage meteor
+   */
+  setPublicationStrategy(publicationName, strategy) {
     if (!Object.values(publicationStrategies).includes(strategy)) {
       throw new Error(`Invalid merge strategy: ${strategy} 
-        for collection ${collectionName}`);
+        for collection ${publicationName}`);
     }
-    this._publicationStrategies[collectionName] = strategy;
+    this._publicationStrategies[publicationName] = strategy;
   },
 
-  getPublicationStrategy(collectionName) {
-    return this._publicationStrategies[collectionName]
+  /**
+   * @summary Gets the publication strategy for the requested publication.
+   * @locus Server
+   * @param publicationName {String}
+   * @memberOf Meteor
+   * @importFromPackage meteor
+   * @return {{useCollectionView: boolean, doAccountingForCollection: boolean}}
+   */
+  getPublicationStrategy(publicationName) {
+    return this._publicationStrategies[publicationName]
       || this.options.defaultPublicationStrategy;
   },
 
