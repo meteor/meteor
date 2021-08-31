@@ -16,7 +16,7 @@ const publicationStrategies = {
   },
   // The NO_MERGE_NO_HISTORY strategy results in the server sending all publication data
   // directly to the client. It does not remember what it has previously sent
-  // so it will not trigger removed messages when a subscription is stopped..
+  // to it will not trigger removed messages when a subscription is stopped.
   // This should only be chosen for special use cases like send-and-forget queues.
   NO_MERGE_NO_HISTORY: {
     useCollectionView: false,
@@ -1519,6 +1519,7 @@ Object.assign(Server.prototype, {
   /**
    * @summary Set publication strategy for the given publication. Publications strategies are available from `DDPServer.publicationStrategies`
    * @locus Server
+   * @alias setPublicationStrategy
    * @param publicationName {String}
    * @param strategy {{useCollectionView: boolean, doAccountingForCollection: boolean}}
    * @memberOf Meteor.server
@@ -1535,6 +1536,7 @@ Object.assign(Server.prototype, {
   /**
    * @summary Gets the publication strategy for the requested publication.
    * @locus Server
+   * @alias getPublicationStrategy
    * @param publicationName {String}
    * @memberOf Meteor.server
    * @importFromPackage meteor
