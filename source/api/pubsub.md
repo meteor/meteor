@@ -260,3 +260,36 @@ messages. When you change rooms by calling `Session.set('currentRoom',
 'newRoom')`, Meteor will subscribe to the new room's chat messages,
 unsubscribe from the original room's chat messages, and continue to
 stay subscribed to your private messages.
+
+## Publication strategies
+
+Once you start scaling your application you might want to have more control on how the data from publications is being handled on the client.
+There are three publications strategies:
+
+#### SERVER_MERGE
+`SERVER_MERGE` is the default strategy. When using this strategy, the server maintains a copy of all data a connection is subscribed to.
+This allows us to only send deltas over multiple publications.
+
+#### NO_MERGE_NO_HISTORY
+The `NO_MERGE_NO_HISTORY` strategy results in the server sending all publication data directly to the client.
+It does not remember what it has previously sent to it will not trigger removed messages when a subscription is stopped.
+This should only be chosen for special use cases like send-and-forget queues.
+
+#### NO_MERGE
+`NO_MERGE` is similar to `NO_MERGE_NO_HISTORY` but the server will remember the IDs it has
+sent to the client so it can remove them when a subscription is stopped.
+This strategy can be used when a collection is only used in a single publication.
+
+You can import the publication strategies from `DDPServer`.
+
+```js
+import { DDPServer } from 'meteor/ddp-server'
+
+const { SERVER_MERGE, NO_MERGE_NO_HISTORY, NO_MERGE } = DDPServer.publicationStrategies
+```
+
+You can use the following methods to set or get the publication strategy for publications:
+
+{% apibox "setPublicationStrategy" %}
+
+{% apibox "getPublicationStrategy" %}
