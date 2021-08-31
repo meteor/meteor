@@ -65,6 +65,17 @@
 * `mdg:reload-on-resume@1.0.5`
   - Fixed API to work with Meteor 2.3+
 
+## v2.3.6, 2021-09-01
+
+#### Highlights
+
+* Updated Node.js per [August 31st security release](https://nodejs.org/en/blog/vulnerability/aug-2021-security-releases2/)
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.6`
+  - Node.js updated to [v14.17.6](https://nodejs.org/en/blog/release/v14.17.6/)
+
 ## v2.3.5, 2021-08-12
 
 #### Highlights
