@@ -3,6 +3,10 @@ title: Core
 description: Documentation of core Meteor functions.
 ---
 
+If you prefer to watch the video, click below. 
+
+{% youtube 6RRVU0-Vvm8 %}
+
 {% apibox "Meteor.isClient" %}
 {% apibox "Meteor.isServer" %}
 
