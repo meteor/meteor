@@ -4,25 +4,45 @@ const Seven = require('node-7z');
 const path = require('path');
 const sevenBin = require('7zip-bin');
 const fs = require('fs');
+const child_process = require('child_process');
+const fsPromises = fs.promises;
 const tmp = require('tmp');
 const os = require('os');
-const { meteorPath, release, startedPath, extractPath } = require('./config.js');
+const {
+  meteorPath,
+  release,
+  startedPath,
+  extractPath,
+  isWindows,
+  isRoot,
+  rootPath,
+  sudoUser,
+} = require('./config.js');
 const { uninstall } = require('./uninstall');
-const { extractWithTar, extractWith7Zip } = require('./extract.js');
+const {
+  extractWithTar,
+  extractWith7Zip,
+  extractWithNativeTar,
+} = require('./extract.js');
 
-process.on('unhandledRejection', (err) => {
+process.on('unhandledRejection', err => {
   throw err;
 });
-
-if (os.platform() !== 'win32') {
-  console.error('Can only install on Windows');
-  process.exit(1);
-}
 
 if (os.arch() !== 'x64') {
   console.error('The current architecture is not supported:', os.arch());
   process.exit(1);
 }
+
+const downloadPlatform = {
+  win32: 'windows',
+  darwin: 'osx',
+  linux: 'linux',
+};
+
+const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
+  downloadPlatform[os.platform()]
+}.x86_64&release=${release}`;
 
 const tempPath = tmp.dirSync().name;
 const tarGzName = 'meteor.tar.gz';
@@ -35,9 +55,15 @@ if (fs.existsSync(startedPath)) {
   console.log('It seems the previous installation of Meteor did not succeed.');
   uninstall();
   console.log('');
-} else if (fs.existsSync(meteorPath) ) {
+} else if (fs.existsSync(meteorPath)) {
   console.log('Meteor is already installed at', meteorPath);
-  console.log('If you want to reinstall, delete that folder and run this command again');
+  console.log(
+`If you want to reinstall it, run:
+
+  $ meteor-installer uninstall
+  $ meteor-installer install
+`
+  );
   process.exit();
 }
 
@@ -51,8 +77,8 @@ try {
   fs.writeFileSync(target, '');
   fs.symlinkSync(target, symlinkPath, 'file');
 
-  fs.unlinkSync(symlinkPath)
-  fs.unlinkSync(target)
+  fs.unlinkSync(symlinkPath);
+  fs.unlinkSync(target);
   canCreateSymlinks = true;
 } catch (e) {
   if (e.code === 'EPERM') {
@@ -63,39 +89,53 @@ try {
     console.log('Assuming unable to create symlinks');
   }
 }
-
 download();
 
 function download() {
   const start = Date.now();
-  const downloadProgress = new cliProgress.SingleBar({
-    format: 'Downloading |{bar}| {percentage}%',
-    clearOnComplete: true,
-  }, cliProgress.Presets.shades_classic);
+  const downloadProgress = new cliProgress.SingleBar(
+    {
+      format: 'Downloading |{bar}| {percentage}%',
+      clearOnComplete: true,
+    },
+    cliProgress.Presets.shades_classic
+  );
   downloadProgress.start(100, 0);
 
-  const url = `https://packages.meteor.com/bootstrap-link?arch=os.windows.x86_64&release=${release}`
   const dl = new DownloaderHelper(url, tempPath, {
     retry: { maxRetries: 5, delay: 5000 },
     override: true,
-    fileName: tarGzName
+    fileName: tarGzName,
   });
 
   dl.on('progress', ({ progress }) => {
-    downloadProgress.update(progress)
+    downloadProgress.update(progress);
   });
-  dl.on('end', () => {
+  dl.on('end', async () => {
     downloadProgress.update(100);
     downloadProgress.stop();
     const end = Date.now();
     console.log(`=> Meteor Downloaded in ${(end - start) / 1000}s`);
 
-    const exists = fs.existsSync(path.resolve(tempPath, tarGzName))
+    const exists = fs.existsSync(path.resolve(tempPath, tarGzName));
     if (!exists) {
       throw new Error('meteor.tar.gz does not exist');
     }
 
-    decompress();
+    if (isWindows()) {
+      decompress();
+      return;
+    }
+
+    fs.writeFileSync(startedPath, 'Meteor install started');
+    console.log('=> Extracting the tarball, this may take some time');
+    const extractStart = Date.now();
+    await extractWithNativeTar(path.resolve(tempPath, tarGzName), extractPath);
+    const extractEnd = Date.now();
+    console.log(
+      `=> Meteor extracted in ${(extractEnd - extractStart) / 1000}s`
+    );
+    await setup();
   });
 
   dl.start();
@@ -103,21 +143,24 @@ function download() {
 
 function decompress() {
   const start = Date.now();
-  const decompressProgress = new cliProgress.SingleBar({
-    format: 'Decompressing |{bar}| {percentage}%',
-    clearOnComplete: true,
-  }, cliProgress.Presets.shades_classic);
+  const decompressProgress = new cliProgress.SingleBar(
+    {
+      format: 'Decompressing |{bar}| {percentage}%',
+      clearOnComplete: true,
+    },
+    cliProgress.Presets.shades_classic
+  );
   decompressProgress.start(100, 0);
 
   const myStream = Seven.extract(path.resolve(tempPath, tarGzName), tempPath, {
     $progress: true,
     $bin: sevenBin.path7za,
   });
-  myStream.on('progress', function (progress) {
-    decompressProgress.update(progress.percent)
+  myStream.on('progress', function(progress) {
+    decompressProgress.update(progress.percent);
   });
 
-  myStream.on('end', function () {
+  myStream.on('end', function() {
     decompressProgress.update(100);
     decompressProgress.stop();
     const end = Date.now();
@@ -130,12 +173,15 @@ async function extract() {
   const start = Date.now();
   fs.writeFileSync(startedPath, 'Meteor install started');
 
-  const decompressProgress = new cliProgress.SingleBar({
-    format: 'Extracting |{bar}| {percentage}% - {fileCount} files completed',
-    clearOnComplete: true,
-  }, cliProgress.Presets.shades_classic);
+  const decompressProgress = new cliProgress.SingleBar(
+    {
+      format: 'Extracting |{bar}| {percentage}% - {fileCount} files completed',
+      clearOnComplete: true,
+    },
+    cliProgress.Presets.shades_classic
+  );
   decompressProgress.start(100, 0, {
-    fileCount: 0
+    fileCount: 0,
   });
 
   let tarPath = path.resolve(tempPath, tarName);
@@ -144,19 +190,42 @@ async function extract() {
   // is done in extractWithTar
   if (canCreateSymlinks) {
     await extractWith7Zip(tarPath, extractPath, ({ percent, fileCount }) => {
-      decompressProgress.update(percent, { fileCount })
+      decompressProgress.update(percent, { fileCount });
     });
   } else {
     await extractWithTar(tarPath, extractPath, ({ percent, fileCount }) => {
-      decompressProgress.update(percent, { fileCount })
+      decompressProgress.update(percent, { fileCount });
     });
   }
 
   decompressProgress.stop();
   const end = Date.now();
   console.log(`=> Meteor Extracted ${(end - start) / 1000}s`);
+  await setup();
+}
+async function setup() {
   fs.unlinkSync(startedPath);
+  await setupExecPath();
   showGettingStarted();
+}
+async function setupExecPath() {
+  if (isWindows()) {
+    child_process.execSync(`setx path "${meteorPath}/;%path%`);
+    return;
+  }
+  const bashrcFile =
+    process.env.SHELL && process.env.SHELL.includes('zsh')
+      ? '.zshrc'
+      : '.bashrc';
+  await fsPromises.appendFile(
+    `${rootPath}/${bashrcFile}`,
+    `export PATH=${meteorPath}:$PATH\n`
+  );
+  if (!isRoot()) {
+    return;
+  }
+  // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
+  child_process.execSync(`chown -R ${sudoUser} "${meteorPath}"`);
 }
 
 function showGettingStarted() {
@@ -164,6 +233,8 @@ function showGettingStarted() {
 ***************************************
 
 Meteor has been installed!
+
+*You might need to open a new terminal windows to have access to the meteor command.*
 
 To get started fast:
 

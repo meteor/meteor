@@ -526,7 +526,7 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
 
   if (extraTokenData) {
     Object.assign(tokenRecord, extraTokenData);
-  } 
+  }
   // if this method is called from the enroll account work-flow then
   // store the token record in 'services.password.enroll' db field
   // else store the token record in in 'services.password.reset' db field
@@ -722,7 +722,7 @@ Meteor.methods({resetPassword: function (...args) {
           emails: 1,
         }}
       );
-     
+
       let isEnroll = false;
       // if token is in services.password.reset db field implies
       // this method is was not called from enroll account workflow
@@ -746,9 +746,9 @@ Meteor.methods({resetPassword: function (...args) {
       } else {
         tokenRecord = user.services.password.reset;
       }
-      const { when, reason, email } = tokenRecord;
+      const { when, email } = tokenRecord;
       let tokenLifetimeMs = Accounts._getPasswordResetTokenLifetimeMs();
-      if (reason === "enroll") {
+      if (isEnroll) {
         tokenLifetimeMs = Accounts._getPasswordEnrollTokenLifetimeMs();
       }
       const currentTimeMs = Date.now();
@@ -760,7 +760,7 @@ Meteor.methods({resetPassword: function (...args) {
           error: new Meteor.Error(403, "Token has invalid email address")
         };
 
-      const hashed = hashPassword(newPassword);     
+      const hashed = hashPassword(newPassword);
 
       // NOTE: We're about to invalidate tokens on the user, who we might be
       // logged in as. Make sure to avoid logging ourselves out if this
@@ -778,7 +778,7 @@ Meteor.methods({resetPassword: function (...args) {
         // - Verifying their email, since they got the password reset via email.
         let affectedRecords = {};
         // if reason is enroll then check services.password.enroll.token field for affected records
-        if(reason === 'enroll') {
+        if(isEnroll) {
           affectedRecords = Meteor.users.update(
             {
               _id: user._id,
