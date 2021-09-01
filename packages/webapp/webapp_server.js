@@ -356,10 +356,10 @@ WebApp.decodeRuntimeConfig = function (rtimeConfig) {
  const runtimeConfig = {
   // hooks will contain the callback functions
   // set by the caller to addRuntimeConfigHook
-  hooks: [],
+  hooks: new Hook(),
   // updateHooks will contain the callback functions
-  // set by the caller to addUpdatedConfigHook
-  updateHooks: [],
+  // set by the caller to addUpdatedNotifyHook
+  updateHooks: new Hook(),
   // isUpdatedByArch is an object containing fields for each arch 
   // that this server supports.
   // - Each field will be true when the server updates the runtimeConfig for that arch.
@@ -372,13 +372,12 @@ WebApp.decodeRuntimeConfig = function (rtimeConfig) {
 };
 
 WebApp.addRuntimeConfigHook = function (hook) {
-  if(typeof hook !== 'function') throw new Error('WebApp.addRuntimeConfigHook must be a function');
-  runtimeConfig.hooks.push(hook);
+  return runtimeConfig.hooks.register(hook);
 }
 
 function getBoilerplateAsync(request, arch) {
   let boilerplate = boilerplateByArch[arch];
-  runtimeConfig.hooks.forEach((hook) => {
+  runtimeConfig.hooks.each((hook) => {
     const meteorRuntimeConfig = hook({
       arch,
       request,
@@ -421,8 +420,7 @@ function getBoilerplateAsync(request, arch) {
 // - manifest
 // - runtimeConfig
 WebApp.addUpdatedNotifyHook = function(hook) {
-  if(typeof hook !== 'function') throw new Error('WebApp.addUpdatedNotifyHook must be a function');
-  runtimeConfig.updateHooks.push(hook);
+  return runtimeConfig.updateHooks.register(hook);
 }
 
 WebAppInternals.generateBoilerplateInstance = function (arch,
@@ -435,7 +433,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     ...__meteor_runtime_config__,
     ...(additionalOptions.runtimeConfigOverrides || {})
   };
-  runtimeConfig.updateHooks.forEach((cb) => {
+  runtimeConfig.updateHooks.each((cb) => {
     cb({arch, manifest, runtimeConfig: rtimeConfig});
   });
 
