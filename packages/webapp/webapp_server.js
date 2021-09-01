@@ -377,7 +377,7 @@ WebApp.addRuntimeConfigHook = function (hook) {
 
 function getBoilerplateAsync(request, arch) {
   let boilerplate = boilerplateByArch[arch];
-  runtimeConfig.hooks.each((hook) => {
+  runtimeConfig.hooks.forEach((hook) => {
     const meteorRuntimeConfig = hook({
       arch,
       request,
@@ -433,7 +433,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     ...__meteor_runtime_config__,
     ...(additionalOptions.runtimeConfigOverrides || {})
   };
-  runtimeConfig.updateHooks.each((cb) => {
+  runtimeConfig.updateHooks.forEach((cb) => {
     cb({arch, manifest, runtimeConfig: rtimeConfig});
   });
 
