@@ -263,6 +263,8 @@ stay subscribed to your private messages.
 
 ## Publication strategies
 
+> The following features are available from Meteor 2.4 or `ddp-server@2.5.0`
+
 Once you start scaling your application you might want to have more control on how the data from publications is being handled on the client.
 There are three publications strategies:
 
@@ -279,6 +281,13 @@ This should only be chosen for special use cases like send-and-forget queues.
 `NO_MERGE` is similar to `NO_MERGE_NO_HISTORY` but the server will remember the IDs it has
 sent to the client so it can remove them when a subscription is stopped.
 This strategy can be used when a collection is only used in a single publication.
+
+When `NO_MERGE` is selected the client will be handling gracefully duplicate events without throwing an exception.
+Specifically:
+
+* When we receive an added message for a document that is already present in the client's collection, it will be changed.
+* When we receive a change message for a document that is not in the client's collection, it will be added.
+* When we receive a removed message for a document that is not in the client's collection, nothing will happen.
 
 You can import the publication strategies from `DDPServer`.
 
