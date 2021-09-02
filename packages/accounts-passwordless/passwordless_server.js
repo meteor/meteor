@@ -9,7 +9,7 @@ import { Random } from 'meteor/random';
 
 Accounts.constructor.prototype._onCreateLoginTokenHook = () => true;
 
-Accounts.constructor.prototype.Accounts._checkToken = ({ user, token }) => {
+Accounts.constructor.prototype._checkToken = ({ user, token }) => {
   const result = {
     userId: user._id,
   };
@@ -88,7 +88,7 @@ Meteor.methods({
     const sequence = Random.hexString(
       Accounts._options.tokenSequenceLength || 6
     );
-    Meteor.users.update({
+    Meteor.users.update(user._id, {
       $set: {
         'services.passwordless': {
           createdAt: new Date(),
@@ -104,9 +104,9 @@ Meteor.methods({
     const emails = pluckAddresses(user.emails);
 
     if (shouldContinue) {
-      for (const email of emails) {
+      emails.forEach(email => {
         Accounts.sendLoginTokenEmail({ userId: user._id, sequence, email });
-      }
+      });
     }
   },
 });
@@ -121,7 +121,7 @@ Meteor.methods({
  */
 Accounts.sendLoginTokenEmail = ({ userId, sequence, email }) => {
   const user = getUserById(userId);
-  const url = Accounts.urls.loginToken(token, extraParams);
+  const url = Accounts.urls.loginToken(sequence);
   const options = Accounts.generateOptionsForEmail(
     email,
     user,
