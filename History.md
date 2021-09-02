@@ -5,6 +5,11 @@
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
 
+#### Independent Releases
+
+* `modern-browsers@0.1.6`
+  - Added `mobileSafariUI` as an alias for Mobile Safari
+
 ## v2.3.6, 2021-09-02
 
 #### Highlights
@@ -75,9 +80,6 @@
 
 * `mdg:reload-on-resume@1.0.5`
   - Fixed API to work with Meteor 2.3+
-
-* `modern-browsers@0.1.6`
-  - Added `mobileSafariUI` as an alias for Mobile Safari
 
 ## v2.3.5, 2021-08-12
 
