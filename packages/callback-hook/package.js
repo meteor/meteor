@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Register callbacks on a hook",
-  version: '1.4.0-rc240.3'
+  version: '1.4.0-rc240.4'
 });
 
 Package.onUse(function (api) {
