@@ -120,41 +120,6 @@ const handleError = (msg, throwError = true) => {
 /// LOGIN
 ///
 
-Accounts._findUserByQuery = (query, options) => {
-  let user = null;
-
-  if (query.id) {
-    // default field selector is added within getUserById()
-    user = getUserById(query.id, options);
-  } else {
-    options = Accounts._addDefaultFieldSelector(options);
-    let fieldName;
-    let fieldValue;
-    if (query.username) {
-      fieldName = 'username';
-      fieldValue = query.username;
-    } else if (query.email) {
-      fieldName = 'emails.address';
-      fieldValue = query.email;
-    } else {
-      throw new Error("shouldn't happen (validation missed something)");
-    }
-    let selector = {};
-    selector[fieldName] = fieldValue;
-    user = Meteor.users.findOne(selector, options);
-    // If user is not found, try a case insensitive lookup
-    if (!user) {
-      selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-      const candidateUsers = Meteor.users.find(selector, options).fetch();
-      // No match if multiple candidates are found
-      if (candidateUsers.length === 1) {
-        user = candidateUsers[0];
-      }
-    }
-  }
-
-  return user;
-};
 
 /**
  * @summary Finds the user with the specified username.
@@ -186,50 +151,6 @@ Accounts.findUserByUsername =
 Accounts.findUserByEmail =
   (email, options) => Accounts._findUserByQuery({ email }, options);
 
-// Generates a MongoDB selector that can be used to perform a fast case
-// insensitive lookup for the given fieldName and string. Since MongoDB does
-// not support case insensitive indexes, and case insensitive regex queries
-// are slow, we construct a set of prefix selectors for all permutations of
-// the first 4 characters ourselves. We first attempt to matching against
-// these, and because 'prefix expression' regex queries do use indexes (see
-// http://docs.mongodb.org/v2.6/reference/operator/query/regex/#index-use),
-// this has been found to greatly improve performance (from 1200ms to 5ms in a
-// test with 1.000.000 users).
-const selectorForFastCaseInsensitiveLookup = (fieldName, string) => {
-  // Performance seems to improve up to 4 prefix characters
-  const prefix = string.substring(0, Math.min(string.length, 4));
-  const orClause = generateCasePermutationsForString(prefix).map(
-    prefixPermutation => {
-      const selector = {};
-      selector[fieldName] =
-        new RegExp(`^${Meteor._escapeRegExp(prefixPermutation)}`);
-      return selector;
-    });
-  const caseInsensitiveClause = {};
-  caseInsensitiveClause[fieldName] =
-    new RegExp(`^${Meteor._escapeRegExp(string)}$`, 'i')
-  return {$and: [{$or: orClause}, caseInsensitiveClause]};
-}
-
-// Generates permutations of all case variations of a given string.
-const generateCasePermutationsForString = string => {
-  let permutations = [''];
-  for (let i = 0; i < string.length; i++) {
-    const ch = string.charAt(i);
-    permutations = [].concat(...(permutations.map(prefix => {
-      const lowerCaseChar = ch.toLowerCase();
-      const upperCaseChar = ch.toUpperCase();
-      // Don't add unnecessary permutations when ch is not a letter
-      if (lowerCaseChar === upperCaseChar) {
-        return [prefix + ch];
-      } else {
-        return [prefix + lowerCaseChar, prefix + upperCaseChar];
-      }
-    })));
-  }
-  return permutations;
-}
-
 const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, ownUserId) => {
   // Some tests need the ability to add users with the same case insensitive
   // value, hence the _skipCaseInsensitiveChecksForTest check
@@ -237,7 +158,7 @@ const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, o
 
   if (fieldValue && !skipCheck) {
     const matchedUsers = Meteor.users.find(
-      selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
+      Accounts._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
       {
         fields: {_id: 1},
         // we only need a maximum of 2 users for the logic below to work
@@ -611,40 +532,6 @@ Accounts.generateVerificationToken = (userId, email, extraTokenData) => {
   return {email, user, token};
 };
 
-/**
- * @summary Creates options for email sending for reset password and enroll account emails.
- * You can use this function when customizing a reset password or enroll account email sending.
- * @locus Server
- * @param {Object} email Which address of the user's to send the email to.
- * @param {Object} user The user object to generate options for.
- * @param {String} url URL to which user is directed to confirm the email.
- * @param {String} reason `resetPassword` or `enrollAccount`.
- * @returns {Object} Options which can be passed to `Email.send`.
- * @importFromPackage accounts-base
- */
-Accounts.generateOptionsForEmail = (email, user, url, reason) => {
-  const options = {
-    to: email,
-    from: Accounts.emailTemplates[reason].from
-      ? Accounts.emailTemplates[reason].from(user)
-      : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates[reason].subject(user)
-  };
-
-  if (typeof Accounts.emailTemplates[reason].text === 'function') {
-    options.text = Accounts.emailTemplates[reason].text(user, url);
-  }
-
-  if (typeof Accounts.emailTemplates[reason].html === 'function') {
-    options.html = Accounts.emailTemplates[reason].html(user, url);
-  }
-
-  if (typeof Accounts.emailTemplates.headers === 'object') {
-    options.headers = Accounts.emailTemplates.headers;
-  }
-
-  return options;
-};
 
 // send the user an email with a link that when opened allows the user
 // to set a new password, without the old password.

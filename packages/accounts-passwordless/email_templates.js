@@ -7,11 +7,11 @@ Accounts.emailTemplates = {
   ...(Accounts.emailTemplates || {}),
   sendLoginToken: {
     subject: () => `Your login token on ${Accounts.emailTemplates.siteName}`,
-    text: (token, url) => {
+    text: (user, url, { sequence }) => {
       return `Hello!
 
 Type the following token in our login webpage to be logged in:
-${token}
+${sequence}
 If you want, you can click the following link to be automatically logged in:
 ${url}
 
