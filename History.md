@@ -5,17 +5,28 @@
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
 
+## v2.3.6, 2021-09-02
+
+#### Highlights
+
+* Updated Node.js per [August 31st security release](https://nodejs.org/en/blog/vulnerability/aug-2021-security-releases2/)
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.6`
+  - Node.js updated to [v14.17.6](https://nodejs.org/en/blog/release/v14.17.6/)
+
 #### Independent Releases
 
 * `minifier-js@2.6.1`
   - Terser updated to [4.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v480)
-    
+
 * `routepolicy@1.1.1`
   - Removed `underscore` dependency since it was not used in the package
-  
+
 * `email@2.1.1`
   - Updated `nodemailer` to v6.6.3
-  
+
 * `callback-hook@1.3.1`
   - Modernized the code
   - Fixed a variable assignment bug in `dontBindEnvironment` function
