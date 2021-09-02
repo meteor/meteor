@@ -8,6 +8,12 @@
 * Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
 * `reify` has been updated to v0.22.1 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
 * Meteor NPM installer is [now available for all platforms](https://github.com/meteor/meteor/pull/11590).
+* DDP server now allows you to set publication strategies for your publications to control mergebox behavior
+
+#### Migration steps
+
+1. Replace all usage of `collection._ensureIndex` with `collection.createIndex`. You only need to rename the method as the functionality is the same.
+2. If you are using a [well known service](https://nodemailer.com/smtp/well-known/) for the email package switch to using `Meteor.settings.pacakges.email` settings instead of `MAIL_URL` env variable. Alternatively you can utilize the new `Email.customTransport` function to override the default package behavior and use your own. [Read the email docs](https://docs.meteor.com/api/email.html) for implementation details.
 
 #### Meteor Version Release
 
@@ -34,10 +40,11 @@
   
 * `email@2.2`
   - Modernized package code
-  - Add alternative API function that you can hook into to utilize your own sending method: `Email.customTransport`
+  - Add alternative API function that you can hook into to utilize your own sending method: `Email.customTransport`. [Read the docs](https://docs.meteor.com/api/email.html#Email-customTransport)
+  - Use `Meteor.settings` for easy setup to sending email via [known providers](https://nodemailer.com/smtp/well-known/). [Read the docs](https://docs.meteor.com/api/email.html)
 
 * `ddp-server@2.5.0`
-  - One of three different publication strategies can be selected for any Meteor publication - SERVER_MERGE, NO_MERGE and NO_MERGE_NO_HISTORY. These control the behaviour of the Meteor mergebox, providing a compromise between client-server bandwidth usage and server side memory usage. [See PR for more details](https://github.com/meteor/meteor/pull/11368) 
+  - One of three different publication strategies can be selected for any Meteor publication - SERVER_MERGE, NO_MERGE and NO_MERGE_NO_HISTORY. These control the behaviour of the Meteor mergebox, providing a compromise between client-server bandwidth usage and server side memory usage. [See PR](https://github.com/meteor/meteor/pull/11368) or [the documentation](https://docs.meteor.com/api/pubsub.html#Publication-strategies) for more details.
 
 * `mongo@1.13.0`
   - Add `createIndex` as a collection function (in MongoDB since MongoDB v3). This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0. Use of `_ensureIndex` will show a deprecation warning on development.
@@ -100,6 +107,8 @@
 
 * `callback-hook@1.4.0`
   - Added `forEach` iterator to be more in-line with the ES use for iterations. `each` is now deprecated, but will remain supported.
+
+#### Independent Releases
 
 ## v2.3.6, 2021-09-02
 

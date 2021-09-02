@@ -1517,7 +1517,7 @@ Object.assign(Server.prototype, {
   },
 
   /**
-   * @summary Set publication strategy for the given publication. Publications strategies are available from `DDPServer.publicationStrategies`
+   * @summary Set publication strategy for the given publication. Publications strategies are available from `DDPServer.publicationStrategies`. You call this method from `Meteor.server`, like `Meteor.server.setPublicationStrategy()`
    * @locus Server
    * @alias setPublicationStrategy
    * @param publicationName {String}
@@ -1534,7 +1534,7 @@ Object.assign(Server.prototype, {
   },
 
   /**
-   * @summary Gets the publication strategy for the requested publication.
+   * @summary Gets the publication strategy for the requested publication. You call this method from `Meteor.server`, like `Meteor.server.getPublicationStrategy()`
    * @locus Server
    * @alias getPublicationStrategy
    * @param publicationName {String}
