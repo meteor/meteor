@@ -1,10 +1,12 @@
+import { Tracker } from "meteor/tracker";
+
 // Used in the various functions below to handle errors consistently
 const reportError = (error, callback) => {
-  if (callback) {
-    callback(error);
-  } else {
-    throw error;
-  }
+    if (callback) {
+        callback(error);
+    } else {
+        throw error;
+    }
 };
 
 // Attempt to log in with a token.
@@ -27,20 +29,20 @@ const reportError = (error, callback) => {
  * @importFromPackage meteor
  */
 Meteor.loginWithToken = (token, callback) => {
-  Accounts.callLoginMethod({
-    methodArguments: [
-      {
-        token,
-      },
-    ],
-    userCallback: error => {
-      if (error) {
-        reportError(error, callback);
-      } else {
-        callback && callback();
-      }
-    },
-  });
+    Accounts.callLoginMethod({
+        methodArguments: [
+            {
+                token,
+            },
+        ],
+        userCallback: error => {
+            if (error) {
+                reportError(error, callback);
+            } else {
+                callback && callback();
+            }
+        },
+    });
 };
 /**
  * @summary Request a forgot password email.
@@ -51,45 +53,45 @@ Meteor.loginWithToken = (token, callback) => {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.requestLoginTokenForUser = ({ selector, userObject }, callback) => {
-  if (!selector) {
-    return reportError(new Meteor.Error(400, 'Must pass selector'), callback);
-  }
+Accounts.requestLoginTokenForUser = ({selector, userObject}, callback) => {
+    if (!selector) {
+        return reportError(new Meteor.Error(400, 'Must pass selector'), callback);
+    }
 
-  Accounts.connection.call(
-    'requestLoginTokenForUser',
-    { selector, userObject },
-    callback
-  );
+    Accounts.connection.call(
+        'requestLoginTokenForUser',
+        {selector, userObject},
+        callback
+    );
 };
 
-const checkToken = ({ token }) => {
-  if (!token) {
-    return;
-  }
+const checkToken = ({token}) => {
+    if (!token) {
+        return;
+    }
 
-  const userId = Tracker.nonreactive(Meteor.userId);
+    const userId = Tracker.nonreactive(Meteor.userId);
 
-  if (!userId) {
-    Meteor.loginWithToken(token, () => {
-      // Make it look clean by removing the authToken from the URL
-      if (window.history) {
-        const url = window.location.href.split('?')[0];
+    if (!userId) {
+        Meteor.loginWithToken(token, () => {
+            // Make it look clean by removing the authToken from the URL
+            if (window.history) {
+                const url = window.location.href.split('?')[0];
 
-        window.history.pushState(null, null, url);
-      }
-    });
-  }
+                window.history.pushState(null, null, url);
+            }
+        });
+    }
 };
 /**
  * Parse querystring for token argument, if found use it to auto-login
  */
-Accounts.autoLoginWithToken = function() {
-  Meteor.startup(function() {
-    const params = new URL(window.location.search).searchParams;
+Accounts.autoLoginWithToken = function () {
+    Meteor.startup(function () {
+        const params = new URL(window.location.href).searchParams;
 
-    if (params.loginToken) {
-      checkToken(params.loginToken);
-    }
-  });
+        if (params.get("loginToken")) {
+            checkToken({token: params.get("loginToken")});
+        }
+    });
 };

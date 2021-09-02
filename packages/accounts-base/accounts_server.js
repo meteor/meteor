@@ -22,7 +22,6 @@ export class AccountsServer extends AccountsCommon {
   constructor(server) {
     super();
 
-    this._onCreateLoginTokenHook = () => true;
     this._server = server || Meteor.server;
     // Set up the server's methods, as if by calling Meteor.methods.
     this._initServerMethods();
@@ -83,7 +82,7 @@ export class AccountsServer extends AccountsCommon {
       verifyEmail: (token, extraParams) =>
         this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
       loginToken: (token, extraParams) =>
-        this.buildEmailUrl(`#/?loginToken=${token}`, extraParams),
+        this.buildEmailUrl(`/?loginToken=${token}`, extraParams),
       enrollAccount: (token, extraParams) =>
         this.buildEmailUrl(`#/enroll-account/${token}`, extraParams),
     };
@@ -270,6 +269,66 @@ export class AccountsServer extends AccountsCommon {
       callback({ user, connection });
       return true;
     });
+  }
+  // Generates a MongoDB selector that can be used to perform a fast case
+  // insensitive lookup for the given fieldName and string. Since MongoDB does
+  // not support case insensitive indexes, and case insensitive regex queries
+  // are slow, we construct a set of prefix selectors for all permutations of
+  // the first 4 characters ourselves. We first attempt to matching against
+  // these, and because 'prefix expression' regex queries do use indexes (see
+  // http://docs.mongodb.org/v2.6/reference/operator/query/regex/#index-use),
+  // this has been found to greatly improve performance (from 1200ms to 5ms in a
+  // test with 1.000.000 users).
+  _selectorForFastCaseInsensitiveLookup = (fieldName, string) => {
+    // Performance seems to improve up to 4 prefix characters
+    const prefix = string.substring(0, Math.min(string.length, 4));
+    const orClause = generateCasePermutationsForString(prefix).map(
+        prefixPermutation => {
+          const selector = {};
+          selector[fieldName] =
+              new RegExp(`^${Meteor._escapeRegExp(prefixPermutation)}`);
+          return selector;
+        });
+    const caseInsensitiveClause = {};
+    caseInsensitiveClause[fieldName] =
+        new RegExp(`^${Meteor._escapeRegExp(string)}$`, 'i')
+    return {$and: [{$or: orClause}, caseInsensitiveClause]};
+  }
+
+  _findUserByQuery = (query, options) => {
+    let user = null;
+
+    if (query.id) {
+      // default field selector is added within getUserById()
+      user = Meteor.users.findOne(query.id, this._addDefaultFieldSelector(options));
+    } else {
+      options = this._addDefaultFieldSelector(options);
+      let fieldName;
+      let fieldValue;
+      if (query.username) {
+        fieldName = 'username';
+        fieldValue = query.username;
+      } else if (query.email) {
+        fieldName = 'emails.address';
+        fieldValue = query.email;
+      } else {
+        throw new Error("shouldn't happen (validation missed something)");
+      }
+      let selector = {};
+      selector[fieldName] = fieldValue;
+      user = Meteor.users.findOne(selector, options);
+      // If user is not found, try a case insensitive lookup
+      if (!user) {
+        selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
+        const candidateUsers = Meteor.users.find(selector, options).fetch();
+        // No match if multiple candidates are found
+        if (candidateUsers.length === 1) {
+          user = candidateUsers[0];
+        }
+      }
+    }
+
+    return user;
   }
 
   ///
@@ -1374,6 +1433,41 @@ export class AccountsServer extends AccountsCommon {
       );
     }
   }
+  /**
+   * @summary Creates options for email sending for reset password and enroll account emails.
+   * You can use this function when customizing a reset password or enroll account email sending.
+   * @locus Server
+   * @param {Object} email Which address of the user's to send the email to.
+   * @param {Object} user The user object to generate options for.
+   * @param {String} url URL to which user is directed to confirm the email.
+   * @param {String} reason `resetPassword` or `enrollAccount`.
+   * @returns {Object} Options which can be passed to `Email.send`.
+   * @importFromPackage accounts-base
+   */
+  generateOptionsForEmail(email, user, url, reason, extra = {}){
+    const options = {
+      to: email,
+      from: this.emailTemplates[reason].from
+          ? this.emailTemplates[reason].from(user)
+          : this.emailTemplates.from,
+      subject: this.emailTemplates[reason].subject(user)
+    };
+
+    if (typeof this.emailTemplates[reason].text === 'function') {
+      options.text = this.emailTemplates[reason].text(user, url, extra);
+    }
+
+    if (typeof this.emailTemplates[reason].html === 'function') {
+      options.html = this.emailTemplates[reason].html(user, url, extra);
+    }
+
+    if (typeof this.emailTemplates.headers === 'object') {
+      options.headers = this.emailTemplates.headers;
+    }
+
+    return options;
+  };
+
 }
 
 // Give each login hook callback a fresh cloned copy of the attempt
@@ -1721,3 +1815,24 @@ const setupUsersCollection = users => {
   users.createIndex('services.password.reset.when', { sparse: true });
   users.createIndex('services.password.enroll.when', { sparse: true });
 };
+
+
+// Generates permutations of all case variations of a given string.
+const generateCasePermutationsForString = string => {
+  let permutations = [''];
+  for (let i = 0; i < string.length; i++) {
+    const ch = string.charAt(i);
+    permutations = [].concat(...(permutations.map(prefix => {
+      const lowerCaseChar = ch.toLowerCase();
+      const upperCaseChar = ch.toUpperCase();
+      // Don't add unnecessary permutations when ch is not a letter
+      if (lowerCaseChar === upperCaseChar) {
+        return [prefix + ch];
+      } else {
+        return [prefix + lowerCaseChar, prefix + upperCaseChar];
+      }
+    })));
+  }
+  return permutations;
+}
+

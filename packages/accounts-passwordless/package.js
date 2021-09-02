@@ -9,6 +9,7 @@ Package.onUse(api => {
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
 
+  api.use('tracker', 'client');
   api.use('email', 'server');
   api.use('random', 'server');
   api.use('check', 'server');
