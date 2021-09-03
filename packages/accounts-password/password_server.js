@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt'
+import {Accounts} from "meteor/accounts-base";
 
 const bcryptHash = Meteor.wrapAsync(bcrypt.hash);
 const bcryptCompare = Meteor.wrapAsync(bcrypt.compare);
@@ -83,7 +84,7 @@ Accounts._checkPassword = (user, password) => {
   const hashRounds = getRoundsFromBcryptHash(hash);
 
   if (! bcryptCompare(formattedPassword, hash)) {
-    result.error = handleError("Incorrect password", false);
+    result.error = Accounts._handleError("Incorrect password", false);
   } else if (hash && Accounts._bcryptRounds() != hashRounds) {
     // The password checks out, but the user's bcrypt hash needs to be updated.
     Meteor.defer(() => {
@@ -99,22 +100,6 @@ Accounts._checkPassword = (user, password) => {
   return result;
 };
 const checkPassword = Accounts._checkPassword;
-
-///
-/// ERROR HANDLER
-///
-const handleError = (msg, throwError = true) => {
-  const error = new Meteor.Error(
-    403,
-    Accounts._options.ambiguousErrorMessages
-      ? "Something went wrong. Please check your credentials."
-      : msg
-  );
-  if (throwError) {
-    throw error;
-  }
-  return error;
-};
 
 ///
 /// LOGIN
@@ -150,32 +135,6 @@ Accounts.findUserByUsername =
  */
 Accounts.findUserByEmail =
   (email, options) => Accounts._findUserByQuery({ email }, options);
-
-const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, ownUserId) => {
-  // Some tests need the ability to add users with the same case insensitive
-  // value, hence the _skipCaseInsensitiveChecksForTest check
-  const skipCheck = Object.prototype.hasOwnProperty.call(Accounts._skipCaseInsensitiveChecksForTest, fieldValue);
-
-  if (fieldValue && !skipCheck) {
-    const matchedUsers = Meteor.users.find(
-      Accounts._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
-      {
-        fields: {_id: 1},
-        // we only need a maximum of 2 users for the logic below to work
-        limit: 2,
-      }
-    ).fetch();
-
-    if (matchedUsers.length > 0 &&
-        // If we don't have a userId yet, any match we find is a duplicate
-        (!ownUserId ||
-        // Otherwise, check to see if there are multiple matches or a match
-        // that is not us
-        (matchedUsers.length > 1 || matchedUsers[0]._id !== ownUserId))) {
-      handleError(`${displayName} already exists.`);
-    }
-  }
-};
 
 // XXX maybe this belongs in the check package
 const NonEmptyString = Match.Where(x => {
@@ -230,12 +189,12 @@ Accounts.registerLoginHandler("password", options => {
     ...Accounts._checkPasswordUserFields,
   }});
   if (!user) {
-    handleError("User not found");
+    Accounts._handleError("User not found");
   }
 
   if (!user.services || !user.services.password ||
       !user.services.password.bcrypt) {
-    handleError("User has no password set");
+    Accounts._handleError("User has no password set");
   }
 
   return checkPassword(
@@ -265,20 +224,22 @@ Accounts.setUsername = (userId, newUsername) => {
     username: 1,
   }});
   if (!user) {
-    handleError("User not found");
+    Accounts._handleError("User not found");
   }
 
   const oldUsername = user.username;
 
   // Perform a case insensitive check for duplicates before update
-  checkForCaseInsensitiveDuplicates('username', 'Username', newUsername, user._id);
+  Accounts._checkForCaseInsensitiveDuplicates('username',
+    'Username', newUsername, user._id);
 
   Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
 
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    checkForCaseInsensitiveDuplicates('username', 'Username', newUsername, user._id);
+    Accounts._checkForCaseInsensitiveDuplicates('username',
+      'Username', newUsername, user._id);
   } catch (ex) {
     // Undo update if the check fails
     Meteor.users.update({_id: user._id}, {$set: {username: oldUsername}});
@@ -302,11 +263,11 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
     ...Accounts._checkPasswordUserFields,
   }});
   if (!user) {
-    handleError("User not found");
+    Accounts._handleError("User not found");
   }
 
   if (!user.services || !user.services.password || !user.services.password.bcrypt) {
-    handleError("User has no password set");
+    Accounts._handleError("User has no password set");
   }
 
   const result = checkPassword(user, oldPassword);
@@ -388,7 +349,7 @@ Meteor.methods({forgotPassword: options => {
   const user = Accounts.findUserByEmail(options.email, { fields: { emails: 1 } });
 
   if (!user) {
-    handleError("User not found");
+    Accounts._handleError("User not found");
   }
 
   const emails = pluckAddresses(user.emails);
@@ -415,7 +376,7 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
   // by the function and some other fields might be used elsewhere.
   const user = getUserById(userId);
   if (!user) {
-    handleError("Can't find user");
+    Accounts._handleError("Can't find user");
   }
 
   // pick the first email if we weren't passed an email.
@@ -426,7 +387,7 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
   // make sure we have a valid email
   if (!email ||
     !(pluckAddresses(user.emails).includes(email))) {
-    handleError("No such email for user.");
+    Accounts._handleError("No such email for user.");
   }
 
   const token = Random.secret();
@@ -487,7 +448,7 @@ Accounts.generateVerificationToken = (userId, email, extraTokenData) => {
   // by the function and some other fields might be used elsewhere.
   const user = getUserById(userId);
   if (!user) {
-    handleError("Can't find user");
+    Accounts._handleError("Can't find user");
   }
 
   // pick the first unverified email if we weren't passed an email.
@@ -496,14 +457,14 @@ Accounts.generateVerificationToken = (userId, email, extraTokenData) => {
     email = (emailRecord || {}).address;
 
     if (!email) {
-      handleError("That user has no unverified email addresses.");
+      Accounts._handleError("That user has no unverified email addresses.");
     }
   }
 
   // make sure we have a valid email
   if (!email ||
     !(pluckAddresses(user.emails).includes(email))) {
-    handleError("No such email for user.");
+    Accounts._handleError("No such email for user.");
   }
 
   const token = Random.secret();
@@ -863,7 +824,8 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   }
 
   // Perform a case insensitive check for duplicates before update
-  checkForCaseInsensitiveDuplicates('emails.address', 'Email', newEmail, user._id);
+  Accounts._checkForCaseInsensitiveDuplicates('emails.address',
+    'Email', newEmail, user._id);
 
   Meteor.users.update({
     _id: user._id
@@ -879,7 +841,8 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    checkForCaseInsensitiveDuplicates('emails.address', 'Email', newEmail, user._id);
+    Accounts._checkForCaseInsensitiveDuplicates('emails.address',
+      'Email', newEmail, user._id);
   } catch (ex) {
     // Undo update if the check fails
     Meteor.users.update({_id: user._id},
@@ -936,27 +899,7 @@ const createUser = options => {
     user.services.password = { bcrypt: hashed };
   }
 
-  if (username)
-    user.username = username;
-  if (email)
-    user.emails = [{address: email, verified: false}];
-
-  // Perform a case insensitive check before insert
-  checkForCaseInsensitiveDuplicates('username', 'Username', username);
-  checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
-
-  const userId = Accounts.insertUserDoc(options, user);
-  // Perform another check after insert, in case a matching user has been
-  // inserted in the meantime
-  try {
-    checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
-    checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
-  } catch (ex) {
-    // Remove inserted user if the check fails
-    Meteor.users.remove(userId);
-    throw ex;
-  }
-  return userId;
+  Accounts._createUserCheckingDuplicates({ user, email, username, options })
 };
 
 // method for create user. Requests come from the client.

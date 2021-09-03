@@ -1,38 +1,8 @@
 import { Accounts } from 'meteor/accounts-base';
-import {
-  getUserById,
-  handleError,
-  tokenValidator,
-  userQueryValidator,
-} from './server_utils';
+import { getUserById, tokenValidator } from './server_utils';
 import { Random } from 'meteor/random';
 
-
-const checkForCaseInsensitiveDuplicates = (fieldName, displayName, fieldValue, ownUserId) => {
-  // Some tests need the ability to add users with the same case insensitive
-  // value, hence the _skipCaseInsensitiveChecksForTest check
-  const skipCheck = Object.prototype.hasOwnProperty.call(Accounts._skipCaseInsensitiveChecksForTest, fieldValue);
-
-  if (fieldValue && !skipCheck) {
-    const matchedUsers = Meteor.users.find(
-        Accounts._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
-        {
-          fields: {_id: 1},
-          // we only need a maximum of 2 users for the logic below to work
-          limit: 2,
-        }
-    ).fetch();
-
-    if (matchedUsers.length > 0 &&
-        // If we don't have a userId yet, any match we find is a duplicate
-        (!ownUserId ||
-            // Otherwise, check to see if there are multiple matches or a match
-            // that is not us
-            (matchedUsers.length > 1 || matchedUsers[0]._id !== ownUserId))) {
-      handleError(`${displayName} already exists.`);
-    }
-  }
-};
+const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
 
 const checkToken = ({ user }) => {
   const result = {
@@ -43,16 +13,16 @@ const checkToken = ({ user }) => {
   const { createdAt } = userStoredToken;
 
   if (
-      new Date(
-          createdAt.getTime() +
-          Accounts._options.loginTokenExpirationHours * 60 * 60 * 1000
-      ) >= new Date()
+    new Date(
+      createdAt.getTime() +
+        Accounts._options.loginTokenExpirationHours * ONE_HOUR_IN_MILLISECONDS
+    ) >= new Date()
   ) {
-    result.error = handleError('Expired token', false);
+    result.error = Accounts._handleError('Expired token', false);
   }
 
   Meteor.users.update(user._id, {
-    $unset:       {'services.passwordless':1},
+    $unset: { 'services.passwordless': 1 },
   });
 
   return result;
@@ -66,64 +36,63 @@ Accounts.registerLoginHandler('passwordless', options => {
     token: tokenValidator(),
   });
 
-  const user = Meteor.users.findOne({"services.passwordless.sequence": options.token}, {fields: {
-      services: 1,
-    },
-  })
+  // TODO [accounts-passwordless] add unique index
+  const user = Meteor.users.findOne(
+    { 'services.passwordless.sequence': options.token },
+    {
+      fields: {
+        services: 1,
+      },
+    }
+  );
   if (!user) {
-    handleError('User not found');
+    Accounts._handleError('User not found');
   }
 
-  if (
-    !user.services ||
-    !user.services.passwordless
-  ) {
-    handleError('User has no token set');
+  if (!user.services || !user.services.passwordless) {
+    Accounts._handleError('User has no token set');
   }
 
-  return checkToken({ user });
+  const result = checkToken({ user });
+
+  if (!result.error) {
+    // TODO [accounts-passwordless] verify the email
+    // TODO [accounts-passwordless] remove isNewUser
+  }
+
+  return result;
 });
 
 // Utility for plucking addresses from emails
 const pluckAddresses = (emails = []) => emails.map(email => email.address);
-const createUser = (userObject) => {
-
+const createUser = userObject => {
   const { username, email } = userObject;
   if (!username && !email) {
-    throw new Meteor.Error(400, "Need to set a username or email");
+    throw new Meteor.Error(400, 'Need to set a username or email');
   }
-  const user = {services: {}};
-  if (username)
-    user.username = username;
-  if (email)
-    user.emails = [{address: email, verified: false}];
+  const user = { services: {} };
+  Accounts._createUserCheckingDuplicates({
+    user,
+    username,
+    email,
+    options: userObject,
+  });
+};
 
-  // Perform a case insensitive check before insert
-  checkForCaseInsensitiveDuplicates('username', 'Username', username);
-  checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
-
-  const userId = Accounts.insertUserDoc(userObject, user);
-  // Perform another check after insert, in case a matching user has been
-  // inserted in the meantime
-  try {
-    checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
-    checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
-  } catch (ex) {
-    // Remove inserted user if the check fails
-    Meteor.users.remove(userId);
-    throw ex;
-  }
-  return userId;
-}
 Meteor.methods({
-  requestLoginTokenForUser: ({ selector, userObject }) => {
+  requestLoginTokenForUser: ({ selector, userObject, options = {} }) => {
     let user = Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
 
-    if (!user && !userObject) {
-      handleError('User not found');
+    // TODO [accounts-passwordless] document userCreationDisabled
+    if (!user && options.userCreationDisabled) {
+      Accounts._handleError('User not found');
     }
+
+    // useful to customize messages
+    const isNewUser = !user;
+
     if (!user) {
       createUser(userObject);
       user = Accounts._findUserByQuery(selector, {
@@ -132,7 +101,7 @@ Meteor.methods({
     }
 
     if (!user) {
-      handleError('User could not be created');
+      Accounts._handleError('User could not be created');
     }
 
     const sequence = Random.hexString(
@@ -143,21 +112,32 @@ Meteor.methods({
         'services.passwordless': {
           createdAt: new Date(),
           sequence,
+          ...(isNewUser ? { isNewUser } : {}),
         },
       },
     });
-    const shouldContinue = Accounts._onCreateLoginTokenHook ? Accounts._onCreateLoginTokenHook({
-      token: sequence,
-      userId: user._id,
-    }) : true;
 
-    const emails = pluckAddresses(user.emails);
+    const result = {
+      selector,
+      userObject,
+      isNewUser,
+    };
 
-    if (shouldContinue) {
-      emails.forEach(email => {
+    const shouldSendLoginTokenEmail = Accounts._onCreateLoginTokenHook
+      ? Accounts._onCreateLoginTokenHook({
+          token: sequence,
+          userId: user._id,
+        })
+      : true;
+
+    if (shouldSendLoginTokenEmail) {
+      pluckAddresses(user.emails).forEach(email => {
+        // TODO [accounts-passwordless] we should send a different sequence for each email so we can verify the email on first login
         Accounts.sendLoginTokenEmail({ userId: user._id, sequence, email });
       });
     }
+
+    return result;
   },
 });
 
@@ -178,7 +158,7 @@ Accounts.sendLoginTokenEmail = ({ userId, sequence, email }) => {
     user,
     url,
     'sendLoginToken',
-    {sequence}
+    { sequence }
   );
   Email.send(options);
   if (Meteor.isDevelopment) {
