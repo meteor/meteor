@@ -25,26 +25,8 @@ WebApp.connectHandlers.use('/hello', (req, res, next) => {
 });
 ```
 
-`WebApp.connectHandlers.use([path], handler)` has two arguments:
-
-**path** - an optional path field.
-This handler will only be called on paths that match
-
-this string. The match has to border on a `/` or a `.`. For example, `/hello`
-will match `/hello/world` and `/hello.world`, but not `/hello_world`.
-
-**handler** - this is a function that takes three arguments:
-
-- **req** - a Node.js
-[IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
-object with some extra properties. This argument can be used to get information
-about the incoming request.
-- **res** - a Node.js
-[ServerResponse](http://nodejs.org/api/http.html#http_class_http_serverresponse)
-object. Use this to write data that should be sent in response to the
-request, and call `res.end()` when you are done.
-- **next** - a function. Calling this function will pass on the handling of
-this request to the next relevant handler.
+{% apibox "WebApp.connectHandlers" %}
+{% apibox "connectHandlersCallback(req, res, next)" %}
 
 ### Serving a Static Landing Page
 
@@ -125,7 +107,7 @@ And finally, if you decide to use this technique you'll want to make sure you un
 In some cases it is valuable to be able to control the __meteor_runtime_config__ variable that initializes Meteor at runtime.
 
 #### Example
-There are occasions when a single Meteor server would like to serve multiple cordova applications that have each have a unique `ROOT_URL`.  But there are 2 problems:
+There are occasions when a single Meteor server would like to serve multiple cordova applications that each have a unique `ROOT_URL`.  But there are 2 problems:
 1. The Meteor server can only be configured to serve a single `ROOT_URL`.
 2. The `cordova` applications are build time configured with a specific `ROOT_URL`.
 
@@ -134,7 +116,6 @@ These 2 conditions break `autoupdate` for the cordova applications. `cordova-plu
 To remedy this problem `webapp` has a hook for dynamically configuring `__meteor_runtime_config__` on the server.
 
 #### Dynamic Runtime Configuration Hook
-Register a callback when the meteor runtime configuration, `__meteor_runtime_config__` is being sent to the client.
 ```js
 WebApp.addRuntimeConfigHook(({arch, request, encodedCurrentConfig, updated}) => {
  // check the request to see if this is a request that requires
@@ -154,36 +135,20 @@ WebApp.addRuntimeConfigHook(({arch, request, encodedCurrentConfig, updated}) => 
   return undefined;
 })
 ```
-
-`WebApp.addRuntimeConfigHook(handler)` has one argument:
-
-**handler** - The `handler` is called on each request for the root page which has `__meteor_runtime_config__` defined in it. The handler takes a single options argument with the following properties:
-
-- **arch** - _String_. the architecture being responded to.  This can be one of `web.browser`, `web.browser.legacy` or `web.cordova`.
-- **request** - a Node.js
-[IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
-object with some extra properties. This argument can be used to get information
-about the incoming request.
-- **encodedCurrentConfig** - _String_. the current configuration object encoded as a string for inclusion in the root html.
-- **updated** - _Boolean_. `true` if the config for this architecture been updated since last called, otherwise `false`. This flag can be leveraged to cache the decoding/encoding for each architecture.
-
-If the handler returns a _falsy_ value the hook will not modify the runtime configuration.
-
-If the handler returns a _String_ the hook will substitute the string for the encoded configuration string.  **Warning:** the hook does not check the return value at all it is the responsibility of the caller to get the formatting correct using the helper functions.
+{% apibox "WebApp.addRuntimeConfigHook" %}
+{% apibox "addRuntimeConfigHookCallback(options)" %}
 
 Additionally, 2 helper functions are available to decode the runtime config string and encode the runtime config object.
 
-`WebApp.decodeRuntimeConfig(encoded_config_string)`: returns a config object from an encoded config string.
-`WebApp.encodeRuntimeConfig(config_object)`: returns an encoded string from a config object that is ready for the root page.
-
-The expected usage is to decode the runtime config string, operate on the object and then return the encoded runtime configuration.
+{% apibox "WebApp.decodeRuntimeConfig" %}
+{% apibox "WebApp.encodeRuntimeConfig" %}
 
 ### Updated Runtime Configuration Hook
-Register a callback on updates to the configuration runtime.
 ```js
 const autoupdateCache;
 // Get a notification when the runtime configuration is updated
-WebApp.addUpdatedConfigHook(({arch, manifest, runtimeConfig}) => {
+// for each arch
+WebApp.addUpdatedNotifyHook(({arch, manifest, runtimeConfig}) => {
   // Example, see if runtimeConfig.autoupdate has changed and if so
   // do something
   if(!_.isEqual(autoupdateCache, runtimeConfig.autoupdate)) {
@@ -193,10 +158,5 @@ WebApp.addUpdatedConfigHook(({arch, manifest, runtimeConfig}) => {
 })
 ```
 
-`WebApp.addUpdatedConfigHook(handler)` has one argument:
-
-**handler** - The `handler` is called on every change to an `arch` runtime configuration. The handler takes a single options argument with the following properties:
-
-- **arch** - _String_. the architecture being responded to.  This can be one of `web.browser`, `web.browser.legacy` or `web.cordova`.
-- **manifest** - _Object_. the manifest object.
-- **runtimeConfig** - _Object_. the new updated configuration object for this `arch`.
+{% apibox "WebApp.addUpdatedNotifyHook" %}
+{% apibox "addUpdatedNotifyHookCallback(options)" %}
