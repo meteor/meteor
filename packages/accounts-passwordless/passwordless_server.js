@@ -71,7 +71,7 @@ const createUser = userObject => {
     throw new Meteor.Error(400, 'Need to set a username or email');
   }
   const user = { services: {} };
-  Accounts._createUserCheckingDuplicates({
+  return Accounts._createUserCheckingDuplicates({
     user,
     username,
     email,
@@ -94,8 +94,8 @@ Meteor.methods({
     const isNewUser = !user;
 
     if (!user) {
-      createUser(userObject);
-      user = Accounts._findUserByQuery(selector, {
+      const userId = createUser(userObject);
+      user = Accounts._findUserByQuery(userId, {
         fields: { emails: 1 },
       });
     }
