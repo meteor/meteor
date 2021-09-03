@@ -941,6 +941,7 @@ main.registerCommand({
   name: "build",
   ...buildCommands,
 }, async function (options) {
+  disableNativeWatcher();
   return Profile.run(
     "meteor build",
     () => Promise.await(buildCommand(options))
