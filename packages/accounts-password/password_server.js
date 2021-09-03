@@ -899,7 +899,7 @@ const createUser = options => {
     user.services.password = { bcrypt: hashed };
   }
 
-  Accounts._createUserCheckingDuplicates({ user, email, username, options })
+  return Accounts._createUserCheckingDuplicates({ user, email, username, options })
 };
 
 // method for create user. Requests come from the client.
