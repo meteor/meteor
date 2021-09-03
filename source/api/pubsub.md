@@ -274,7 +274,7 @@ This allows us to only send deltas over multiple publications.
 
 #### NO_MERGE_NO_HISTORY
 The `NO_MERGE_NO_HISTORY` strategy results in the server sending all publication data directly to the client.
-It does not remember what it has previously sent to it will not trigger removed messages when a subscription is stopped.
+It does not remember what it has previously sent to client and will not trigger removed messages when a subscription is stopped.
 This should only be chosen for special use cases like send-and-forget queues.
 
 #### NO_MERGE
@@ -300,5 +300,12 @@ const { SERVER_MERGE, NO_MERGE_NO_HISTORY, NO_MERGE } = DDPServer.publicationStr
 You can use the following methods to set or get the publication strategy for publications:
 
 {% apibox "setPublicationStrategy" %}
+
+For publication `foo`, you can set `NO_MERGE` strategy as shown:
+
+```js
+import { DDPServer } from "meteor/ddp-server";
+Meteor.server.setPublicationStrategy('foo', DDPServer.publicationStrategies.NO_MERGE);
+```
 
 {% apibox "getPublicationStrategy" %}
