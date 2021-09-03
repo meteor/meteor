@@ -48,7 +48,7 @@
     if (entry.meta && entry.meta.path) {
       var packagesFolder = 'packages/';
       var index = entry.meta.path.indexOf(packagesFolder);
-      if (index != -1) {
+      if (index != -1 && !entry.isprototype) {
         var fullFilePath = entry.meta.path.substr(index + packagesFolder.length) + '/' + entry.meta.filename;
         entry.filepath = fullFilePath;
         entry.lineno = entry.meta.lineno;
