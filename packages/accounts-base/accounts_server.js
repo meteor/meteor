@@ -4,6 +4,7 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+import {Accounts} from "meteor/accounts-base";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -1467,6 +1468,82 @@ export class AccountsServer extends AccountsCommon {
 
     return options;
   };
+
+  _checkForCaseInsensitiveDuplicates(
+    fieldName,
+    displayName,
+    fieldValue,
+    ownUserId
+  ) {
+    // Some tests need the ability to add users with the same case insensitive
+    // value, hence the _skipCaseInsensitiveChecksForTest check
+    const skipCheck = Object.prototype.hasOwnProperty.call(
+      Accounts._skipCaseInsensitiveChecksForTest,
+      fieldValue
+    );
+
+    if (fieldValue && !skipCheck) {
+      const matchedUsers = Meteor.users
+        .find(
+          this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
+          {
+            fields: { _id: 1 },
+            // we only need a maximum of 2 users for the logic below to work
+            limit: 2,
+          }
+        )
+        .fetch();
+
+      if (
+        matchedUsers.length > 0 &&
+        // If we don't have a userId yet, any match we find is a duplicate
+        (!ownUserId ||
+          // Otherwise, check to see if there are multiple matches or a match
+          // that is not us
+          matchedUsers.length > 1 || matchedUsers[0]._id !== ownUserId)
+      ) {
+        Accounts._handleError(`${displayName} already exists.`);
+      }
+    }
+  };
+
+  _createUserCheckingDuplicates({ user, email, username, options }) {
+    const newUser = {
+      ...user,
+      ...(username ? { username } : {}),
+      ...(email ? { emails: [{ address: email, verified: false }] } : {}),
+    };
+
+    // Perform a case insensitive check before insert
+    this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
+    this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
+
+    const userId = this.insertUserDoc(options, newUser);
+    // Perform another check after insert, in case a matching user has been
+    // inserted in the meantime
+    try {
+      this._checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
+      this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
+    } catch (ex) {
+      // Remove inserted user if the check fails
+      Meteor.users.remove(userId);
+      throw ex;
+    }
+    return userId;
+  }
+
+  _handleError = (msg, throwError = true) => {
+    const error = new Meteor.Error(
+      403,
+      Accounts._options.ambiguousErrorMessages
+        ? "Something went wrong. Please check your credentials."
+        : msg
+    );
+    if (throwError) {
+      throw error;
+    }
+    return error;
+  }
 
 }
 

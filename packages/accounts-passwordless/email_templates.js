@@ -16,7 +16,18 @@ If you want, you can click the following link to be automatically logged in:
 ${url}
 
 Thanks.
-`
+`;
+    },
+    html: (user, url, { sequence }) => {
+      return `Hello!<br/>
+
+Type the following token in our login webpage to be logged in:<br/><br/>
+${sequence}<br/><br/>
+If you want, you can click the following link to be automatically logged in:<br/><br/>
+${url}<br/>
+
+Thanks.
+`;
     },
   },
 };
