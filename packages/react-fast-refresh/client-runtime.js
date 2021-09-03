@@ -1,6 +1,11 @@
-const enabled = __meteor_runtime_config__.reactFastRefreshEnabled;
+let initialized = false;
 
-if (enabled && process.env.NODE_ENV !== 'production' && module.hot) {
+window.___INIT_METEOR_FAST_REFRESH = function init() {
+  if (initialized) {
+    return;
+  }
+  initialized = true;
+
   const runtime = require('react-refresh/runtime');
 
   let timeout = null;
@@ -112,4 +117,11 @@ if (enabled && process.env.NODE_ENV !== 'production' && module.hot) {
       }
     }
   });
+}
+
+if (
+  __meteor_runtime_config__ &&
+  __meteor_runtime_config__.reactFastRefreshEnabled
+) {
+  window.___INIT_METEOR_FAST_REFRESH();
 }
