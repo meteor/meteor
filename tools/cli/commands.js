@@ -503,7 +503,7 @@ main.registerCommand({
 // create
 ///////////////////////////////////////////////////////////////////////////////
 const DEFAULT_SKELETON = "react";
-const AVAILABLE_SKELETONS = [
+export const AVAILABLE_SKELETONS = [
   "apollo",
   "bare",
   "blaze",
