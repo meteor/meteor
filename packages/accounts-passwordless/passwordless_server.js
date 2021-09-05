@@ -21,10 +21,6 @@ const checkToken = ({ user }) => {
     result.error = Accounts._handleError('Expired token', false);
   }
 
-  Meteor.users.update(user._id, {
-    $unset: { 'services.passwordless': 1 },
-  });
-
   return result;
 };
 
@@ -36,12 +32,13 @@ Accounts.registerLoginHandler('passwordless', options => {
     token: tokenValidator(),
   });
 
-  // TODO [accounts-passwordless] add unique index
+  const sequence = options.token.toUpperCase();
   const user = Meteor.users.findOne(
-    { 'services.passwordless.sequence': options.token },
+    { 'services.passwordless.tokens.sequence': sequence },
     {
       fields: {
         services: 1,
+        emails: 1,
       },
     }
   );
@@ -56,8 +53,18 @@ Accounts.registerLoginHandler('passwordless', options => {
   const result = checkToken({ user });
 
   if (!result.error) {
-    // TODO [accounts-passwordless] verify the email
-    // TODO [accounts-passwordless] remove isNewUser
+    const verifiedEmail = user.services.passwordless.tokens.find(
+      token => token.sequence === sequence
+    ).email;
+    Meteor.users.update(
+      { _id: user._id, 'emails.address': verifiedEmail },
+      {
+        $set: {
+          'emails.$.verified': true,
+        },
+        $unset: { 'services.passwordless': 1 },
+      }
+    );
   }
 
   return result;
@@ -95,27 +102,17 @@ Meteor.methods({
 
     if (!user) {
       const userId = createUser(userObject);
-      user = Accounts._findUserByQuery(userId, {
-        fields: { emails: 1 },
-      });
+      user = Accounts._findUserByQuery(
+        { id: userId },
+        {
+          fields: { emails: 1 },
+        }
+      );
     }
 
     if (!user) {
       Accounts._handleError('User could not be created');
     }
-
-    const sequence = Random.hexString(
-      Accounts._options.tokenSequenceLength || 6
-    ).toUpperCase();
-    Meteor.users.update(user._id, {
-      $set: {
-        'services.passwordless': {
-          createdAt: new Date(),
-          sequence,
-          ...(isNewUser ? { isNewUser } : {}),
-        },
-      },
-    });
 
     const result = {
       selector,
@@ -123,17 +120,37 @@ Meteor.methods({
       isNewUser,
     };
 
+    const emails = pluckAddresses(user.emails);
+    const tokens = emails.map(email => {
+      const sequence = Random.hexString(
+        Accounts._options.tokenSequenceLength || 6
+      ).toUpperCase();
+      return { email, sequence };
+    });
+    Meteor.users.update(user._id, {
+      $set: {
+        'services.passwordless': {
+          createdAt: new Date(),
+          tokens,
+          ...(isNewUser ? { isNewUser } : {}),
+        },
+      },
+    });
+
     const shouldSendLoginTokenEmail = Accounts._onCreateLoginTokenHook
       ? Accounts._onCreateLoginTokenHook({
-          token: sequence,
+          tokens,
           userId: user._id,
         })
       : true;
 
     if (shouldSendLoginTokenEmail) {
-      pluckAddresses(user.emails).forEach(email => {
-        // TODO [accounts-passwordless] we should send a different sequence for each email so we can verify the email on first login
-        Accounts.sendLoginTokenEmail({ userId: user._id, sequence, email });
+      tokens.forEach(({ email, sequence }) => {
+        Accounts.sendLoginTokenEmail({
+          userId: user._id,
+          sequence,
+          email,
+        });
       });
     }
 
@@ -166,3 +183,12 @@ Accounts.sendLoginTokenEmail = ({ userId, sequence, email }) => {
   }
   return { email, user, token: sequence, url, options };
 };
+
+const setupUsersCollection = () => {
+  Meteor.users.createIndex('services.passwordless.tokens.sequence', {
+    unique: true,
+    sparse: true,
+  });
+};
+
+Meteor.startup(() => setupUsersCollection());
