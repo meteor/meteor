@@ -2,6 +2,7 @@
 title: Install
 ---
 Meteor currently supports **OS X, Windows, and Linux**. Only 64-bit is supported.
+Apple M1 is only supported through Rosetta at this moment.
 
 ### Prerequisites and useful information
 
@@ -29,6 +30,17 @@ We strongly discourage the usage of Node.js or Meteor with root permissions.
 Only run the above command with sudo if you know what you are doing.
 
 If you only use sudo because of a distribution default permission system, [check this link for fixing it](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally).
+
+For Apple M1 computers, you can append Rosetta prefix as following:
+
+```bash
+
+arch -x86_64 npm install -g meteor
+
+```
+
+or select Terminal in the Applications folder, press CMD(⌘)+I and check the "Open using Rosetta" option.
+
 
 ### Legacy Installation Method
 
