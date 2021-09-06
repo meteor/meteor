@@ -156,6 +156,7 @@ var importName = function(doc) {
   const noImportNeeded = !doc.module
     || doc.scope === 'instance'
     || doc.ishelper
+    || doc.isprototype
     || doc.istemplate;
 
   // override the above we've explicitly decided to (i.e. Template.foo.X)
