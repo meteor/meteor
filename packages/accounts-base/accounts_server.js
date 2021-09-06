@@ -82,8 +82,8 @@ export class AccountsServer extends AccountsCommon {
         this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
       verifyEmail: (token, extraParams) =>
         this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
-      loginToken: (token, extraParams) =>
-        this.buildEmailUrl(`/?loginToken=${token}`, extraParams),
+      loginToken: (selector, token, extraParams) =>
+        this.buildEmailUrl(`/?loginToken=${token}&selector=${selector}`, extraParams),
       enrollAccount: (token, extraParams) =>
         this.buildEmailUrl(`#/enroll-account/${token}`, extraParams),
     };
