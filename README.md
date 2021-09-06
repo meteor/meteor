@@ -34,7 +34,7 @@ Ensure you've run `npm install`. Then simply `npm start`.
 
 ### Developing with local meteor source
 
-When developing jsdoc documenation within the meteor code you will
+When developing jsdoc documentation within the meteor code you will
 need to make some local modifications to get the documentation to work locally for testing.
 
 1. Modify `url` in `_config.yml` so links within `localhost:4000` will not jump out to `https://docs.meteor.com`
