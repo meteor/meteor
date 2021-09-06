@@ -25,7 +25,7 @@
   - Apollo skeleton now uses [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300) - [migration guide](https://www.apollographql.com/docs/apollo-server/migration/)
   - Upgraded `chalk` to v4.1.1
   - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
-  - `METEOR_SETTINGS` will now be only ignored in development mode and passed on in every other circumstances
+  - `METEOR_SETTINGS` is now accepted an all modes
     
 * `webapp@1.12`
   - npm dependencies have been updated
