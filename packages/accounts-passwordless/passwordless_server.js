@@ -1,16 +1,20 @@
 import { Accounts } from 'meteor/accounts-base';
-import { getUserById, tokenValidator } from './server_utils';
+import {
+  getUserById,
+  tokenValidator,
+  userQueryValidator,
+} from './server_utils';
 import { Random } from 'meteor/random';
 
 const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
 
-const checkToken = ({ user }) => {
+const checkToken = ({ user, sequence, selector }) => {
   const result = {
     userId: user._id,
   };
 
   const userStoredToken = user.services.passwordless;
-  const { createdAt } = userStoredToken;
+  const { createdAt, token: userToken } = userStoredToken;
 
   if (
     new Date(
@@ -21,27 +25,50 @@ const checkToken = ({ user }) => {
     result.error = Accounts._handleError('Expired token', false);
   }
 
+  if (selector.email) {
+    const foundTokenEmail = user.services.passwordless.tokens.find(
+      ({ email: tokenEmail, token }) =>
+        token.sequence === token && selector.email === tokenEmail
+    );
+    if (foundTokenEmail)
+      return { ...result, verifiedEmail: foundTokenEmail.email };
+  }
+  if (sequence && SHA256(user._id + sequence) === userToken) return result;
+
+  result.error = Accounts._handleError('Expired token', false);
+
   return result;
 };
-
+const findUserWithOptions = ({ selector }) => {
+  if (!selector) {
+    Accounts._handleError('A selector is necessary');
+  }
+  if (email) {
+    return Meteor.users.findOne(
+      selector ? selector : { 'emails.address': email },
+      {
+        fields: {
+          services: 1,
+          emails: 1,
+        },
+      }
+    );
+  }
+};
 // Handler to login with an ott.
 Accounts.registerLoginHandler('passwordless', options => {
   if (!options.token) return undefined; // don't handle
 
   check(options, {
     token: tokenValidator(),
+    selector: userQueryValidator(),
   });
 
   const sequence = options.token.toUpperCase();
-  const user = Meteor.users.findOne(
-    { 'services.passwordless.tokens.sequence': sequence },
-    {
-      fields: {
-        services: 1,
-        emails: 1,
-      },
-    }
-  );
+  const { selector } = options;
+
+  const user = findUserWithOptions(options);
+
   if (!user) {
     Accounts._handleError('User not found');
   }
@@ -50,12 +77,14 @@ Accounts.registerLoginHandler('passwordless', options => {
     Accounts._handleError('User has no token set');
   }
 
-  const result = checkToken({ user });
+  const result = checkToken({
+    user,
+    selector,
+    sequence,
+  });
+  const { verifiedEmail, error } = result;
 
-  if (!result.error) {
-    const verifiedEmail = user.services.passwordless.tokens.find(
-      token => token.sequence === sequence
-    ).email;
+  if (!error && verifiedEmail) {
     Meteor.users.update(
       { _id: user._id, 'emails.address': verifiedEmail },
       {
@@ -85,6 +114,12 @@ const createUser = userObject => {
     options: userObject,
   });
 };
+
+function generateSequence() {
+  return Random.hexString(
+    Accounts._options.tokenSequenceLength || 6
+  ).toUpperCase();
+}
 
 Meteor.methods({
   requestLoginTokenForUser: ({ selector, userObject, options = {} }) => {
@@ -121,17 +156,21 @@ Meteor.methods({
     };
 
     const emails = pluckAddresses(user.emails);
+    const userSequence = generateSequence();
+
     const tokens = emails.map(email => {
-      const sequence = Random.hexString(
-        Accounts._options.tokenSequenceLength || 6
-      ).toUpperCase();
+      const sequence = generateSequence();
       return { email, sequence };
     });
     Meteor.users.update(user._id, {
       $set: {
         'services.passwordless': {
           createdAt: new Date(),
-          tokens,
+          token: SHA256(user._id + userSequence),
+          tokens: tokens.map(({ email, sequence }) => ({
+            email,
+            token: SHA256(email + sequence),
+          })),
           ...(isNewUser ? { isNewUser } : {}),
         },
       },
@@ -139,7 +178,7 @@ Meteor.methods({
 
     const shouldSendLoginTokenEmail = Accounts._onCreateLoginTokenHook
       ? Accounts._onCreateLoginTokenHook({
-          tokens,
+          token: userSequence,
           userId: user._id,
         })
       : true;
@@ -169,7 +208,7 @@ Meteor.methods({
  */
 Accounts.sendLoginTokenEmail = ({ userId, sequence, email }) => {
   const user = getUserById(userId);
-  const url = Accounts.urls.loginToken(sequence);
+  const url = Accounts.urls.loginToken(email, sequence);
   const options = Accounts.generateOptionsForEmail(
     email,
     user,

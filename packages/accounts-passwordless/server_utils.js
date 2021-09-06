@@ -9,3 +9,13 @@ export const tokenValidator = () => {
     str => Match.test(str, String) && str.length <= tokenLength
   );
 };
+export const userQueryValidator = Match.Where(user => {
+  check(user, {
+    id: Match.Optional(NonEmptyString),
+    username: Match.Optional(NonEmptyString),
+    email: Match.Optional(NonEmptyString)
+  });
+  if (Object.keys(user).length !== 1)
+    throw new Match.Error("User property must have exactly one field");
+  return true;
+});

@@ -47,20 +47,28 @@ Meteor.loginWithToken = (token, callback) => {
 /**
  * @summary Request a forgot password email.
  * @locus Client
+ * @param selector
+ * @param userObject
  * @param {Object} options
  * @param {String} options.selector The email address to get a token for.
  * @param {String} options.userObject If userObject is set, create an user containing this data if selector produces no result
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.requestLoginTokenForUser = ({ selector, userObject }, callback) => {
+Accounts.requestLoginTokenForUser = ({ selector, userObject, options }, callback) => {
   if (!selector) {
     return reportError(new Meteor.Error(400, 'Must pass selector'), callback);
   }
 
+  if (typeof selector === 'string')
+    if (!selector.includes('@'))
+      selector = {username: selector};
+    else
+      selector = {email: selector};
+
   Accounts.connection.call(
     'requestLoginTokenForUser',
-    { selector, userObject },
+    { selector, userObject, options },
     callback
   );
 };
