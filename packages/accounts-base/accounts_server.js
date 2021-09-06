@@ -8,6 +8,12 @@ import {Accounts} from "meteor/accounts-base";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
+// XXX maybe this belongs in the check package
+const NonEmptyString = Match.Where(x => {
+  check(x, String);
+  return x.length > 0;
+});
+
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
  * @locus Server
@@ -1544,6 +1550,17 @@ export class AccountsServer extends AccountsCommon {
     }
     return error;
   }
+
+  _userQueryValidator = Match.Where(user => {
+    check(user, {
+      id: Match.Optional(NonEmptyString),
+      username: Match.Optional(NonEmptyString),
+      email: Match.Optional(NonEmptyString)
+    });
+    if (Object.keys(user).length !== 1)
+      throw new Match.Error("User property must have exactly one field");
+    return true;
+  });
 
 }
 
