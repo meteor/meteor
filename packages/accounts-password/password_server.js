@@ -142,17 +142,6 @@ const NonEmptyString = Match.Where(x => {
   return x.length > 0;
 });
 
-const userQueryValidator = Match.Where(user => {
-  check(user, {
-    id: Match.Optional(NonEmptyString),
-    username: Match.Optional(NonEmptyString),
-    email: Match.Optional(NonEmptyString)
-  });
-  if (Object.keys(user).length !== 1)
-    throw new Match.Error("User property must have exactly one field");
-  return true;
-});
-
 const passwordValidator = Match.OneOf(
   Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256), {
     digest: Match.Where(str => Match.test(str, String) && str.length === 64),
@@ -179,7 +168,7 @@ Accounts.registerLoginHandler("password", options => {
     return undefined; // don't handle
 
   check(options, {
-    user: userQueryValidator,
+    user: Accounts._userQueryValidator,
     password: passwordValidator
   });
 

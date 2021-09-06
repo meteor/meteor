@@ -1,9 +1,5 @@
 import { Accounts } from 'meteor/accounts-base';
-import {
-  getUserById,
-  tokenValidator,
-  userQueryValidator,
-} from './server_utils';
+import { getUserById, tokenValidator } from './server_utils';
 import { Random } from 'meteor/random';
 
 const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
@@ -13,8 +9,7 @@ const checkToken = ({ user, sequence, selector }) => {
     userId: user._id,
   };
 
-  const userStoredToken = user.services.passwordless;
-  const { createdAt, token: userToken } = userStoredToken;
+  const { createdAt, token: userToken } = user.services.passwordless;
 
   if (
     new Date(
@@ -28,14 +23,22 @@ const checkToken = ({ user, sequence, selector }) => {
   if (selector.email) {
     const foundTokenEmail = user.services.passwordless.tokens.find(
       ({ email: tokenEmail, token }) =>
-        token.sequence === token && selector.email === tokenEmail
+        SHA256(selector.email + sequence) === token &&
+        selector.email === tokenEmail
     );
-    if (foundTokenEmail)
+    if (foundTokenEmail) {
       return { ...result, verifiedEmail: foundTokenEmail.email };
-  }
-  if (sequence && SHA256(user._id + sequence) === userToken) return result;
+    }
 
-  result.error = Accounts._handleError('Expired token', false);
+    result.error = Accounts._handleError('Email or token mismatch', false);
+    return result;
+  }
+
+  if (sequence && SHA256(user._id + sequence) === userToken) {
+    return result;
+  }
+
+  result.error = Accounts._handleError('Token mismatch', false);
 
   return result;
 };
@@ -43,17 +46,16 @@ const findUserWithOptions = ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
   }
-  if (email) {
-    return Meteor.users.findOne(
-      selector ? selector : { 'emails.address': email },
-      {
-        fields: {
-          services: 1,
-          emails: 1,
-        },
-      }
-    );
-  }
+  const { email, ...rest } = selector;
+  return Meteor.users.findOne(
+    { ...rest, ...(email ? { 'emails.address': selector.email } : {}) },
+    {
+      fields: {
+        services: 1,
+        emails: 1,
+      },
+    }
+  );
 };
 // Handler to login with an ott.
 Accounts.registerLoginHandler('passwordless', options => {
@@ -61,7 +63,7 @@ Accounts.registerLoginHandler('passwordless', options => {
 
   check(options, {
     token: tokenValidator(),
-    selector: userQueryValidator(),
+    selector: Accounts._userQueryValidator,
   });
 
   const sequence = options.token.toUpperCase();
@@ -127,7 +129,6 @@ Meteor.methods({
       fields: { emails: 1 },
     });
 
-    // TODO [accounts-passwordless] document userCreationDisabled
     if (!user && options.userCreationDisabled) {
       Accounts._handleError('User not found');
     }

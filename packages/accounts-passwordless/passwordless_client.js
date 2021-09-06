@@ -9,6 +9,18 @@ const reportError = (error, callback) => {
   }
 };
 
+const transformSelector = selector => {
+  if (typeof selector !== 'string') {
+    return selector;
+  }
+
+  if (selector.includes('@')) {
+    return { email: selector };
+  }
+
+  return { username: selector };
+};
+
 // Attempt to log in with a token.
 //
 // @param selector {String|Object} One of the following:
@@ -28,10 +40,11 @@ const reportError = (error, callback) => {
  *   on failure.
  * @importFromPackage meteor
  */
-Meteor.loginWithToken = (token, callback) => {
+Meteor.loginWithToken = (selector, token, callback) => {
   Accounts.callLoginMethod({
     methodArguments: [
       {
+        selector: transformSelector(selector),
         token,
       },
     ],
@@ -44,36 +57,35 @@ Meteor.loginWithToken = (token, callback) => {
     },
   });
 };
+
 /**
  * @summary Request a forgot password email.
  * @locus Client
  * @param selector
  * @param userObject
  * @param {Object} options
- * @param {String} options.selector The email address to get a token for.
- * @param {String} options.userObject If userObject is set, create an user containing this data if selector produces no result
+ * @param {String} options.selector The email address to get a token for or username or a mongo selector.
+ * @param {String} options.userObject When creating an user use this data if selector produces no result
+ * @param {String} options.options. For example userCreationDisabled.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.requestLoginTokenForUser = ({ selector, userObject, options }, callback) => {
+Accounts.requestLoginTokenForUser = (
+  { selector, userObject, options },
+  callback
+) => {
   if (!selector) {
     return reportError(new Meteor.Error(400, 'Must pass selector'), callback);
   }
 
-  if (typeof selector === 'string')
-    if (!selector.includes('@'))
-      selector = {username: selector};
-    else
-      selector = {email: selector};
-
   Accounts.connection.call(
     'requestLoginTokenForUser',
-    { selector, userObject, options },
+    { selector: transformSelector(selector), userObject, options },
     callback
   );
 };
 
-const checkToken = ({ token }) => {
+const checkToken = ({ selector, token }) => {
   if (!token) {
     return;
   }
@@ -81,7 +93,7 @@ const checkToken = ({ token }) => {
   const userId = Tracker.nonreactive(Meteor.userId);
 
   if (!userId) {
-    Meteor.loginWithToken(token, () => {
+    Meteor.loginWithToken(selector, token, () => {
       // Make it look clean by removing the authToken from the URL
       if (window.history) {
         const url = window.location.href.split('?')[0];
@@ -99,7 +111,13 @@ Accounts.autoLoginWithToken = function() {
     const params = new URL(window.location.href).searchParams;
 
     if (params.get('loginToken')) {
-      checkToken({ token: params.get('loginToken') });
+      const rawSelector = params.get('selector');
+      checkToken({
+        selector: rawSelector.startsWith('{')
+          ? JSON.parse(rawSelector)
+          : rawSelector,
+        token: params.get('loginToken'),
+      });
     }
   });
 };
