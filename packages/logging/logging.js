@@ -309,7 +309,7 @@ Log.format = (obj, options = {}) => {
 
   const prettify = function (line, color) {
     return (options.color && Meteor.isServer && color) ?
-      require('chalk')[color](line) : line;
+      require('cli-color')[color](line) : line;
   };
 
   return prettify(metaPrefix, platformColor(options.metaColor || META_COLOR)) +

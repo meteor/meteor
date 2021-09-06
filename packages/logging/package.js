@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'chalk': '1.1.3'
+  'cli-color': '2.0.0'
 });
 
 Npm.strip({
