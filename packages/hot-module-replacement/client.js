@@ -1,7 +1,20 @@
+let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
+const hmrSecret = __meteor_runtime_config__._hmrSecret;
+let supportedArch = arch === 'web.browser';
+const enabled = hmrSecret && supportedArch;
+
+if (!supportedArch) {
+  console.log('HMR is not supported in ' + arch);
+}
+
+if (!hmrSecret) {
+  console.log('Restart Meteor to enable HMR');
+}
+
 // TODO: add an api to Reify to update cached exports for a module
 const ReifyEntry = require('/node_modules/meteor/modules/node_modules/reify/lib/runtime/entry.js')
 
-const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
+const SOURCE_URL_PREFIX = 'meteor://\u{1f4bb}app';
 
 // Due to the bundler and proxy running in the same node process
 // this could possibly be ran after the next build finished
@@ -9,19 +22,6 @@ const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 let lastUpdated = Date.now();
 let appliedChangeSets = [];
 let removeErrorMessage = null;
-
-let arch = __meteor_runtime_config__.isModern ? 'web.browser' : 'web.browser.legacy';
-const hmrSecret = __meteor_runtime_config__._hmrSecret;
-let supportedArch = arch === 'web.browser';
-const enabled = hmrSecret && supportedArch;
-
-if (!supportedArch) {
-  console.log(`HMR is not supported in ${arch}`);
-}
-
-if (!hmrSecret) {
-  console.log('Restart Meteor to enable HMR');
-}
 
 const imported = Object.create(null);
 const importedBy = Object.create(null);
