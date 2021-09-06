@@ -35,6 +35,7 @@ Package.onUse(function (api) {
     'boilerplate-generator',
     'webapp-hashing',
     'inter-process-messaging',
+    'callback-hook'
   ], 'server');
 
   // At response serving time, webapp uses browser-policy if it is loaded. If

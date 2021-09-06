@@ -29,7 +29,8 @@
     
 * `webapp@1.12`
   - npm dependencies have been updated
-  - Added option to change runtime config in your app, [read more](https://github.com/meteor/meteor/pull/11506)
+  - Added hook to change runtime config delivered to the client app, [read more](https://github.com/meteor/meteor/pull/11506)
+  - Added hook to get notified when the app is updated, [read more](https://github.com/meteor/meteor/pull/11607)
   - `@vlasky/whomst@0.1.7`
   - Added `addUpdateNotifyHook` that gets called when runtime configuration is updated
   
