@@ -28,7 +28,7 @@ const importedBy = Object.create(null);
 
 if (module._onRequire) {
   module._onRequire({
-    before(importedModule, parentId) {
+    before: function(importedModule, parentId) {
       if (parentId === module.id) {
         // While applying updates we import modules to re-run them.
         // Don't track those imports since we don't want them to affect
@@ -44,7 +44,7 @@ if (module._onRequire) {
   });
 }
 
-let pendingReload = () => Package['reload'].Reload._reload({ immediateMigration: true });
+let pendingReload = function() { return Package['reload'].Reload._reload({ immediateMigration: true });}
 let mustReload = false;
 // Once an eager update fails, we stop processing future updates since they
 // might depend on the failed update. This gets reset when we re-try applying
@@ -61,7 +61,7 @@ function handleMessage(message) {
       console.log('HMR: Will enable HMR the next time the page is loaded');
       mustReload = true;
     } else {
-      console.log(`HMR: Register failed for unknown reason`, message);
+      console.log('HMR: Register failed for unknown reason', message);
     }
     return;
   } else if (message.type === 'app-state') {
@@ -79,7 +79,7 @@ function handleMessage(message) {
   }
 
   if (message.type !== 'changes') {
-    throw new Error(`Unknown HMR message type ${message.type}`);
+    throw new Error('Unknown HMR message type ' + message.type);
   }
 
   if (message.eager && !applyEagerUpdates) {
@@ -92,7 +92,7 @@ function handleMessage(message) {
     applyEagerUpdates = true;
   }
 
-  const hasUnreloadable = message.changeSets.find(changeSet => {
+  const hasUnreloadable = message.changeSets.find(function(changeSet) {
     return !changeSet.reloadable;
   });
 
@@ -119,9 +119,9 @@ function handleMessage(message) {
   // In case the user changed how a module works with HMR
   // in one of the earlier change sets, we want to apply each
   // change set one at a time in order.
-  const succeeded = message.changeSets.filter(changeSet => {
-    return !appliedChangeSets.includes(changeSet.id)
-  }).every(changeSet => {
+  const succeeded = message.changeSets.filter(function (changeSet) {
+    return !appliedChangeSets.includes(changeSet.id);
+  }).every(function(changeSet) {
     const applied = applyChangeset(changeSet, message.eager);
 
     // We don't record if a module is unreplaceable
@@ -201,7 +201,7 @@ function connect() {
     console.log('HMR: connected');
     socket.send(JSON.stringify({
       type: 'register',
-      arch,
+      arch: arch,
       secret: hmrSecret,
       appId: __meteor_runtime_config__.appId,
     }));
@@ -209,7 +209,7 @@ function connect() {
     const toSend = pendingMessages.slice();
     pendingMessages = [];
 
-    toSend.forEach(message => {
+    toSend.forEach(function(message) {
       send(message);
     });
   });
@@ -229,7 +229,7 @@ if (enabled) {
 function requestChanges() {
   send({
     type: 'request-changes',
-    arch,
+    arch: arch,
     after: lastUpdated
   });
 }
@@ -303,7 +303,7 @@ function checkModuleAcceptsUpdate(moduleId, checked) {
 
   // The module did not accept the update. If the update is accepted depends
   // on if the modules that imported this module accept the update.
-  importedBy[moduleId].forEach(depId => {
+  importedBy[moduleId].forEach(function(depId) {
     if (depId === '/' && importedBy[moduleId].size > 1) {
       // This module was eagerly required by Meteor.
       // Meteor won't know if the module can be updated
@@ -327,13 +327,13 @@ function checkModuleAcceptsUpdate(moduleId, checked) {
 }
 
 function addFiles(addedFiles) {
-  addedFiles.forEach(file => {
+  addedFiles.forEach(function(file) {
     const tree = {};
     const segments = file.path.split('/').slice(1);
     const fileName = segments.pop();
 
     let previous = tree;
-    segments.forEach(segment => {
+    segments.forEach(function(segment) {
       previous[segment] = previous[segment] || {}
       previous = previous[segment]
     });
@@ -354,7 +354,7 @@ module.constructor.prototype._reset = function (id) {
   const hotState = file.module._hotState;
 
   const hotData = {};
-  hotState._disposeHandlers.forEach(cb => {
+  hotState._disposeHandlers.forEach(function(cb) {
     cb(hotData);
   });
 
@@ -370,14 +370,14 @@ module.constructor.prototype._reset = function (id) {
   entry.getters = {};
   entry.setters = {};
   entry.module = null;
-  Object.keys(entry.namespace).forEach(key => {
+  Object.keys(entry.namespace).forEach(function(key) {
     if (key !== '__esModule') {
       delete entry.namespace[key];
     }
   });
 
   if (imported[moduleId]) {
-    imported[moduleId].forEach(depId => {
+    imported[moduleId].forEach(function(depId) {
       importedBy[depId].delete(moduleId);
     });
     imported[moduleId] = new Set();
@@ -412,14 +412,14 @@ module.constructor.prototype._replaceModule = function (id, contents) {
   }
 }
 
-function applyChangeset({
-  changedFiles,
-  addedFiles
-}) {
+function applyChangeset(changeSet) {
+  const changedFiles = changeSet.changedFiles;
+  const addedFiles = changeSet.addedFiles;
   let canApply = true;
   let toRerun = new Set();
 
-  changedFiles.forEach(({ path }) => {
+  changedFiles.forEach(function(changedFile) {
+    const path = changedFile.path;
     const file = findFile(path);
 
     // Check if the file has been imported. If it hasn't been,
@@ -430,7 +430,7 @@ function applyChangeset({
 
       if (canApply) {
         canApply = accepts;
-        checked.forEach(moduleId => {
+        checked.forEach(function(moduleId) {
           toRerun.add(moduleId);
         });
       }
@@ -442,15 +442,15 @@ function applyChangeset({
   }
 
 
-  changedFiles.forEach(({ content, path }) => {
-    module._replaceModule(path, content);
+  changedFiles.forEach(function(changedFile) {
+    module._replaceModule(changedFile.path, changedFile.content);
   });
 
   if (addedFiles.length > 0) {
     addFiles(addedFiles);
   }
 
-  toRerun.forEach(moduleId => {
+  toRerun.forEach(function(moduleId) {
     const file = findFile(moduleId);
     // clear module caches and hot state
     file.module._reset();
@@ -458,7 +458,7 @@ function applyChangeset({
   });
 
   try {
-    toRerun.forEach(moduleId => {
+    toRerun.forEach(function(moduleId) {
       require(moduleId);
     });
   } catch (error) {
@@ -466,7 +466,7 @@ function applyChangeset({
   }
 
   const updateCount = changedFiles.length + addedFiles.length;
-  console.log(`HMR: updated ${updateCount} ${updateCount === 1 ? 'file' : 'files'}`);
+  console.log('HMR: updated ' + updateCount + ' ' + updateCount === 1 ? 'file' : 'files');
   return true;
 }
 
@@ -474,12 +474,12 @@ const initialVersions = (__meteor_runtime_config__.autoupdate.versions || {})['w
 let nonRefreshableVersion = initialVersions.versionNonRefreshable;
 let replaceableVersion = initialVersions.versionReplaceable;
 
-Meteor.startup(() => {
+Meteor.startup(function() {
   if (!supportedArch) {
     return;
   }
 
-  Package['autoupdate'].Autoupdate._clientVersions.watch((doc) => {
+  Package['autoupdate'].Autoupdate._clientVersions.watch(function(doc) {
     if (doc._id !== 'web.browser') {
       return;
     }
@@ -502,7 +502,7 @@ Meteor.startup(() => {
 
   // We disable hot code push for js until there were
   // changes that can not be applied through HMR.
-  Package['reload'].Reload._onMigrate((tryReload) => {
+  Package['reload'].Reload._onMigrate(function(tryReload) {
     if (mustReload) {
       return [true];
     }
