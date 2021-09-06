@@ -35,7 +35,7 @@
   - Added `addUpdateNotifyHook` that gets called when runtime configuration is updated
   
 * `logging@1.3.0`
-  - Switch from `cli-color` to `chalk` to have the same dependency as meteor-tool
+  - Switch from `cli-color` to `chalk` to have the same dependency as meteor-tool, using v1.1.3 for IE11 compatibility
   - Fix detecting eval
   - Copy over code from `Meteor._debug` to `Log.debug` which will be deprecated in the future
   

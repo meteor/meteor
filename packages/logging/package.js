@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'chalk': '4.1.1'
+  'chalk': '1.1.3'
 });
 
 Npm.strip({
