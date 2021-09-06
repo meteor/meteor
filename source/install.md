@@ -41,7 +41,7 @@ arch -x86_64 npm install -g meteor
 
 or select Terminal in the Applications folder, press CMD(⌘)+I and check the "Open using Rosetta" option.
 
-We currently don't support Apple M1, as the latest meteor release uses Node.js 14, which doesn't have support for it until now. More info in our repository, [here](https://github.com/meteor/meteor/issues/11249#issuecomment-734327204).
+We currently don't support Apple M1 native binaries as the latest meteor release uses Node.js 14 which doesn't have support for it until now. More info in our repository, [here](https://github.com/meteor/meteor/issues/11249#issuecomment-734327204).
 
 
 ### Legacy Installation Method
