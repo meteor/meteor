@@ -1,0 +1,8 @@
+{
+  "name": "logging",
+  "version": "1.0.0",
+  "description": "[Source code of released version](https://github.com/meteor/meteor/tree/master/packages/logging) | [Source code of development version](https://github.com/meteor/meteor/tree/devel/packages/logging) ***",
+  "dependencies": {
+    "chalk": "^4.1.2"
+  }
+}

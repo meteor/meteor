@@ -3,9 +3,6 @@ Package.describe({
   version: '1.3.0-rc240.5'
 });
 
-Npm.depends({
-  'chalk': '4.1.1'
-});
 
 Npm.strip({
   'es5-ext': ['test/']
