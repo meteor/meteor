@@ -23,7 +23,6 @@ var packageMapModule = require('../packaging/package-map.js');
 var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
 
-import { disableNativeWatcher } from '../fs/safe-watcher';
 import {
   ensureDevBundleDependencies,
   newPluginId,
