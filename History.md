@@ -9,6 +9,7 @@
 * `reify` has been updated to v0.22.2 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
 * Meteor NPM installer is [now available for all platforms](https://github.com/meteor/meteor/pull/11590).
 * DDP server now allows you to set publication strategies for your publications to control mergebox behavior
+* On Windows Meteor should no longer be hanging on commands
 
 #### Migration steps
 
@@ -26,6 +27,7 @@
   - Upgraded `chalk` to v4.1.1
   - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
   - `METEOR_SETTINGS` is now accepted an all modes
+  - Native file watchers are now disabled on Windows for file intesive actions (like, `create`, `update`, `build` etc.), this solves an issue with hanging Meteor commands on Windows
     
 * `webapp@1.12`
   - npm dependencies have been updated
