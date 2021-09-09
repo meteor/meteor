@@ -1,0 +1,16 @@
+====================================================================
+For the license for Meteor itself, see LICENSE.txt in the root of
+the repository.  This file contains the licenses for externally
+maintained libraries.
+====================================================================
+
+
+
+
+----------
+strong-data-uri: https://github.com/strongloop/strong-data-uri
+----------
+
+Redistributed under the terms of the Artistic License, version 2.0.
+
+http://opensource.org/licenses/Artistic-2.0

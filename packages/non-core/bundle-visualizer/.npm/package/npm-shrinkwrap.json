@@ -1,0 +1,65 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "d3-collection": {
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/d3-collection/-/d3-collection-1.0.4.tgz",
+      "integrity": "sha1-NC39EoN8kJdPM/HMCnha6lcNzcI="
+    },
+    "d3-color": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/d3-color/-/d3-color-1.0.3.tgz",
+      "integrity": "sha1-vHZD/KjlOoNH4vva/6I2eWtYUJs="
+    },
+    "d3-dispatch": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/d3-dispatch/-/d3-dispatch-1.0.3.tgz",
+      "integrity": "sha1-RuFJHqqbWMNY/OW+TovtYm54cfg="
+    },
+    "d3-ease": {
+      "version": "1.0.3",
+      "resolved": "https://registry.npmjs.org/d3-ease/-/d3-ease-1.0.3.tgz",
+      "integrity": "sha1-aL+8NJM4o4DETYrMT7wzBKotjA4="
+    },
+    "d3-hierarchy": {
+      "version": "1.1.4",
+      "resolved": "https://registry.npmjs.org/d3-hierarchy/-/d3-hierarchy-1.1.4.tgz",
+      "integrity": "sha1-lsOULz8hz5l6EbTt8A3eKne0xtA="
+    },
+    "d3-interpolate": {
+      "version": "1.1.5",
+      "resolved": "https://registry.npmjs.org/d3-interpolate/-/d3-interpolate-1.1.5.tgz",
+      "integrity": "sha1-aeCZ/zkhRxblY8muw+qdHqS4p58="
+    },
+    "d3-path": {
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/d3-path/-/d3-path-1.0.5.tgz",
+      "integrity": "sha1-JB6xhJvZ6egCHA0KeZ+KDo5EF2Q="
+    },
+    "d3-selection": {
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/d3-selection/-/d3-selection-1.0.5.tgz",
+      "integrity": "sha1-lIxztBpE4o0XQq4v8gfCrryic0s="
+    },
+    "d3-shape": {
+      "version": "1.0.6",
+      "resolved": "https://registry.npmjs.org/d3-shape/-/d3-shape-1.0.6.tgz",
+      "integrity": "sha1-sJ4wXPDHxrmpjJDmtC9i2sS8/Vs="
+    },
+    "d3-timer": {
+      "version": "1.0.7",
+      "resolved": "https://registry.npmjs.org/d3-timer/-/d3-timer-1.0.7.tgz",
+      "integrity": "sha512-vMZXR88XujmG/L5oB96NNKH5lCWwiLM/S2HyyAQLcjWJCloK5shxta4CwOFYLZoY3AWX73v8Lgv4cCAdWtRmOA=="
+    },
+    "d3-transition": {
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/d3-transition/-/d3-transition-1.0.4.tgz",
+      "integrity": "sha1-4anrrjhpqdnCh0qwCEH6gxOuXeU="
+    },
+    "pretty-bytes": {
+      "version": "4.0.2",
+      "resolved": "https://registry.npmjs.org/pretty-bytes/-/pretty-bytes-4.0.2.tgz",
+      "integrity": "sha1-sr+C5zUNZcbDOqlaqlpPYyf2HNk="
+    }
+  }
+}

@@ -1,0 +1,16 @@
+As of Meteor 0.9.0, Meteor supports packages with OS-specific builds (such as
+packages that use binary npm modules). This allows you to deploy apps from one
+platform to another, as long as the package has already published to the package
+server in the appropriate target architecture.
+
+However, this only works if the package can be loaded from the server at all; it
+does not work if the package is only available as local source code in your app,
+or in the main meteor tree if you're running meteor from a git checkout.
+
+Specifically, this means that packages *in the Meteor core* which have
+OS-specific dependencies will prevent apps from being deployed, if meteor is
+being run from the git checkout. To simplify this, we're taking the OS-specific
+dependencies of core packages and moving them to these packages, which are *NOT*
+in "the core". In order to run meteor from a checkout, these packages must be
+already published to the server.  Fortunately, they won't change very
+frequently.

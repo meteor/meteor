@@ -1,0 +1,382 @@
+====================================================================
+For the license for Meteor itself, see LICENSE.txt in the root of
+the repository.  This file contains the licenses for externally
+maintained libraries.
+====================================================================
+
+
+
+----------
+jsdoc: https://github.com/jsdoc3/jsdoc
+----------
+
+# License #
+
+JSDoc 3 is free software, licensed under the Apache License, Version 2.0 (the
+"License"). Commercial and non-commercial use are permitted in compliance with
+the License.
+
+Copyright (c) 2011-2014 Michael Mathews <micmath@gmail.com> and the
+[contributors to JSDoc](https://github.com/jsdoc3/jsdoc/graphs/contributors).
+All rights reserved.
+
+You may obtain a copy of the License at:
+http://www.apache.org/licenses/LICENSE-2.0
+
+In addition, a copy of the License is included with this distribution.
+
+As stated in Section 7, "Disclaimer of Warranty," of the License:
+
+> Licensor provides the Work (and each Contributor provides its Contributions)
+> on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+> express or implied, including, without limitation, any warranties or
+> conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+> PARTICULAR PURPOSE. You are solely responsible for determining the
+> appropriateness of using or redistributing the Work and assume any risks
+> associated with Your exercise of permissions under this License.
+
+The source code for JSDoc 3 is available at:
+https://github.com/jsdoc3/jsdoc
+
+# Third-Party Software #
+
+JSDoc 3 includes or depends upon the following third-party software, either in
+whole or in part. Each third-party software package is provided under its own
+license.
+
+## MIT License ##
+
+Several of the following software packages are distributed under the MIT
+license, which is reproduced below:
+
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
+
+## Acorn ##
+
+Portions of the Acorn source code are incorporated into the following files:
+
+- `lib/jsdoc/src/walker.js`
+
+Acorn is distributed under the MIT license, which is reproduced above.
+
+Copyright (C) 2012 Marijn Haverbeke <marijnh@gmail.com>.
+
+The source code for Acorn is available at:
+https://github.com/marijnh/acorn
+
+## Async.js ##
+
+Async.js is distributed under the MIT license, which is reproduced above.
+
+Copyright (c) 2010 Caolan McMahon.
+
+The source code for Async.js is available at:
+https://github.com/caolan/async
+
+## Catharsis ##
+
+Catharsis is distributed under the MIT license, which is reproduced above.
+
+Copyright (c) 2012-2014 Jeff Williams.
+
+The source code for Catharsis is available at:
+https://github.com/hegemonic/catharsis
+
+## crypto-browserify ##
+
+crypto-browserify is distributed under the MIT license, which is reproduced
+above.
+
+Copyright (c) 2013 Dominic Tarr.
+
+The source code for crypto-browserify is available at:
+https://github.com/dominictarr/crypto-browserify
+
+## escape-string-regexp ##
+
+escape-string-regexp is distributed under the MIT License, which is reproduced
+above.
+
+Copyright (c) Sindre Sorhus <sindresorhus@gmail.com>.
+
+The source code for escape-string-regexp is available at:
+https://github.com/sindresorhus/escape-string-regexp
+
+## Esprima ##
+
+Esprima is distributed under the BSD 2-clause license:
+
+> Redistribution and use in source and binary forms, with or without
+> modification, are permitted provided that the following conditions are met:
+>
+> - Redistributions of source code must retain the above copyright notice,
+>   this list of conditions and the following disclaimer.
+> - Redistributions in binary form must reproduce the above copyright notice,
+>   this list of conditions and the following disclaimer in the documentation
+>   and/or other materials provided with the distribution.
+>
+> THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+> AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+> IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+> ARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY
+> DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+> (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+> LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+> ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+> (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+> THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Copyright (c) 2011-2013 Ariya Hidayat and other Esprima contributors.
+
+The source code for Esprima is available at:
+https://github.com/ariya/esprima
+
+## events ##
+
+Portions of the events source code are incorporated into the following files:
+
++ `rhino/events.js`
+
+events is distributed under the MIT license, which is reproduced above.
+
+Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+
+The source code for events is available at:
+https://github.com/Gozala/events
+
+## github-flavored-markdown ##
+
+github-flavored-markdown is distributed under the BSD 3-clause license:
+
+> Copyright (c) 2007, John Fraser <http://www.attacklab.net/> All rights
+> reserved.
+>
+> Original Markdown copyright (c) 2004, John Gruber <http://daringfireball.net/>
+> All rights reserved.
+>
+> Redistribution and use in source and binary forms, with or without
+> modification, are permitted provided that the following conditions are met:
+>
+> - Redistributions of source code must retain the above copyright notice,
+>   this list of conditions and the following disclaimer.
+>
+> - Redistributions in binary form must reproduce the above copyright notice,
+>   this list of conditions and the following disclaimer in the documentation
+>   and/or other materials provided with the distribution.
+
+> - Neither the name "Markdown" nor the names of its contributors may be used
+>   to endorse or promote products derived from this software without specific
+>   prior written permission.
+>
+> This software is provided by the copyright holders and contributors "as is"
+> and any express or implied warranties, including, but not limited to, the
+> implied warranties of merchantability and fitness for a particular purpose are
+> disclaimed. In no event shall the copyright owner or contributors be liable
+> for any direct, indirect, incidental, special, exemplary, or consequential
+> damages (including, but not limited to, procurement of substitute goods or
+> services; loss of use, data, or profits; or business interruption) however
+> caused and on any theory of liability, whether in contract, strict liability,
+> or tort (including negligence or otherwise) arising in any way out of the use
+> of this software, even if advised of the possibility of such damage.
+
+The source code for github-flavored-markdown is available at:
+https://github.com/hegemonic/github-flavored-markdown
+
+## Google Code Prettify ##
+
+Google Code Prettify is distributed under the Apache License 2.0, which is
+included with this package.
+
+Copyright (c) 2006 Google Inc.
+
+The source code for Google Code Prettify is available at:
+https://code.google.com/p/google-code-prettify/
+
+## Jasmine ##
+
+Jasmine is distributed under the MIT license, which is reproduced above.
+
+Copyright (c) 2008-2011 Pivotal Labs.
+
+The source code for Jasmine is available at:
+https://github.com/pivotal/jasmine
+
+## jasmine-node ##
+
+jasmine-node is distributed under the MIT license, which is reproduced above.
+
+Copyright (c) 2010 Adam Abrons and Misko Hevery (http://getangular.com).
+
+The source code for jasmine-node is available at:
+https://github.com/mhevery/jasmine-node
+
+## js2xmlparser ##
+
+js2xmlparser is distributed under the MIT license, which is reproduced above.
+
+Copyright (c) 2012 Michael Kourlas.
+
+The source code for js2xmlparser is available at:
+https://github.com/michaelkourlas/node-js2xmlparser
+
+## Node.js ##
+
+Portions of the Node.js source code are incorporated into the following files:
+
+- `rhino/fs.js`
+- `rhino/path.js`
+- `rhino/querystring.js`
+- `rhino/util.js`
+
+Node.js is distributed under the MIT license, which is reproduced above.
+
+Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+
+The source code for Node.js is available at:
+https://github.com/joyent/node
+
+## node-browser-builtins ##
+
+Portions of the node-browser-builtins source code are incorporated into the
+following files:
+
+- `rhino/assert.js`
+- `rhino/rhino-shim.js`
+
+node-browser-builtins is distributed under the MIT license, which is reproduced
+above.
+
+The source code for node-browser-builtins is available at:
+https://github.com/alexgorbatchev/node-browser-builtins
+
+## Requizzle ##
+
+Requizzle is distributed under the MIT license, which is reproduced above.
+
+Copyright (c) 2014 Google Inc. All rights reserved.
+Copyright (c) 2012-2013 Johannes Ewald.
+
+The source code for Requizzle is available at:
+https://github.com/hegemonic/requizzle
+
+## Rhino ##
+
+Rhino is distributed under the following licenses:
+
+### MPL 2.0 License ###
+The majority of the source code for Rhino is available under the Mozilla Public
+License (MPL) 2.0, which is included in this distribution.
+
+### License for portions of the Rhino debugger ###
+Additionally, some files are available under the BSD 3-clause license:
+
+> Copyright 1997, 1998 Sun Microsystems, Inc.  All Rights Reserved.
+>
+> Redistribution and use in source and binary forms, with or without
+> modification, are permitted provided that the following conditions are met:
+>
+> - Redistributions of source code must retain the above copyright notice,
+>   this list of conditions and the following disclaimer.
+> - Redistributions in binary form must reproduce the above copyright
+>   notice, this list of conditions and the following disclaimer in the
+>   documentation and/or other materials provided with the distribution.
+> - Neither the name of Sun Microsystems nor the names of its contributors
+>   may be used to endorse or promote products derived from this software
+>   without specific prior written permission.
+>
+> THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+> AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+> IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+> DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE
+> FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+> DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+> SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+> CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+> OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+> OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+### Source Code ###
+The source code for Rhino is available at:
+https://github.com/jsdoc3/rhino
+
+## TaffyDB ##
+
+TaffyDB is distributed under a modified BSD license:
+
+> All rights reserved.
+>
+> Redistribution and use of this software in source and binary forms, with or
+> without modification, are permitted provided that the following condition is
+> met:
+>
+> Redistributions of source code must retain the above copyright notice, this
+> list of conditions and the following disclaimer.
+>
+> THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+> AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+> IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+> ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+> LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+> CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+> SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+> INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+> CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+> ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+> POSSIBILITY OF SUCH DAMAGE.
+
+The source code for TaffyDB is available at:
+https://github.com/hegemonic/taffydb
+
+## Tomorrow Theme for Google Code Prettify ##
+
+License information for the Tomorrow Theme for Google Code Prettify is not
+available. It is assumed that the package is distributed under an open source
+license that is compatible with the Apache License 2.0.
+
+Copyright (c) Yoshihide Jimbo.
+
+The source code for the Tomorrow Theme is available at:
+https://github.com/jmblog/color-themes-for-google-code-prettify
+
+## tv4 ##
+
+tv4 is in the public domain. It is also distributed under the MIT license, which
+is reproduced above.
+
+The source code for tv4 is available at:
+https://github.com/geraintluff/tv4
+
+## Underscore.js ##
+
+Underscore.js is distributed under the MIT license, which is reproduced above.
+
+Copyright (c) 2009-2014 Jeremy Ashkenas, DocumentCloud and Investigative
+Reporters & Editors.
+
+The source code for Underscore.js is available at:
+https://github.com/jashkenas/underscore
+
+## wrench-js ##
+
+wrench-js is distributed under the MIT license, which is reproduced above.
+
+Copyright (c) 2010 Ryan McGrath.
+
+The source code for wrench-js is available at:
+https://github.com/ryanmcgrath/wrench-js

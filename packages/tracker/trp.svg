@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 603.7 118.7" enable-background="new 0 0 603.7 118.7" xml:space="preserve">
+<path fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" d="M136.7,110H16c-4.1,0-7.3-3.2-7.3-7.2V15.5c0-4,3.3-7.2,7.3-7.2
+	h120.6c4.1,0,7.3,3.2,7.3,7.2v87.3C144,106.8,140.7,110,136.7,110z"/>
+<rect x="8.7" y="9.3" fill="none" width="135.3" height="100.7"/>
+<text transform="matrix(0.885 0 0 1 36.7485 51.6449)"><tspan x="0" y="0" stroke="#000000" stroke-miterlimit="10" font-family="'HelveticaNeue'" font-size="21">Database</tspan><tspan x="2" y="24" stroke="#000000" stroke-miterlimit="10" font-family="'HelveticaNeue-Thin'" font-size="11">Provides Reactivity</tspan></text>
+<path fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" d="M586.3,110H421.5c-5.5,0-10-3.2-10-7.1V16.4c0-3.9,4.5-7.1,10-7.1
+	h164.8c5.5,0,10,3.2,10,7.1v86.5C596.3,106.8,591.8,110,586.3,110z"/>
+<rect x="411.5" y="8.3" fill="none" width="184.8" height="101.7"/>
+<text transform="matrix(1 0 0 1 421.4615 50.645)"><tspan x="0" y="0" stroke="#000000" stroke-miterlimit="10" font-family="'HelveticaNeue'" font-size="21">Front-End Library</tspan><tspan x="34.4" y="26.4" stroke="#000000" stroke-miterlimit="10" font-family="'HelveticaNeue-Thin'" font-size="11">Consumes Reactivity</tspan></text>
+<path fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" d="M368.7,110H188.6c-6.1,0-11-3.2-11-7.1V16.4c0-3.9,4.9-7.1,11-7.1
+	h180.1c6.1,0,11,3.2,11,7.1v86.5C379.7,106.8,374.8,110,368.7,110z"/>
+<rect x="177.7" y="8.3" fill="none" width="202" height="100"/>
+<text transform="matrix(0.885 0 0 1 206.9035 50.6449)"><tspan x="0" y="0" stroke="#000000" stroke-miterlimit="10" font-family="'HelveticaNeue'" font-size="21">Application Code</tspan><tspan x="29.5" y="24" stroke="#000000" stroke-miterlimit="10" font-family="'HelveticaNeue-Thin'" font-size="11">Transparently Reactive</tspan><tspan x="-7" y="37.2" stroke="#000000" stroke-miterlimit="10" font-family="'HelveticaNeue-Thin'" font-size="11">(doesn’t need to know about reactivity)</tspan></text>
+<line stroke="#000000" stroke-miterlimit="10" x1="176.3" y1="59" x2="144" y2="59"/>
+<line stroke="#000000" stroke-miterlimit="10" x1="411.5" y1="60" x2="379.2" y2="60"/>
+</svg>

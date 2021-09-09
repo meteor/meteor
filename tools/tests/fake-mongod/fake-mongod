@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# Get the path to this script in SCRIPT_DIR, preserving cwd
+ORIG_DIR=$(pwd)
+cd "$(dirname "$0")"
+SCRIPT_DIR=$(pwd -P)
+cd "$ORIG_DIR"
+
+# Find the top of the tools tree (not to be confused with the 'tools'
+# directory in that tree)
+TOOLS_DIR="$SCRIPT_DIR/../../.."
+
+# Find our binary dependencies (node).
+DEV_BUNDLE="$TOOLS_DIR/dev_bundle"
+
+# Have at it!
+export NODE_PATH="$DEV_BUNDLE/lib/node_modules"
+exec "$DEV_BUNDLE/bin/node" "$SCRIPT_DIR/fake-mongod.js" "$@"
