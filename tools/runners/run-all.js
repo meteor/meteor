@@ -34,6 +34,7 @@ class Runner {
     selenium,
     seleniumBrowser,
     noReleaseCheck,
+    cordovaServerPort,
     ...optionsForAppRunner
   }) {
     const self = this;
@@ -121,7 +122,8 @@ class Runner {
         proxy: self.proxy,
         hmrPath: HMRPath,
         secret: hmrSecret,
-        projectContext: self.projectContext
+        projectContext: self.projectContext,
+        cordovaServerPort 
       });
     }
 
