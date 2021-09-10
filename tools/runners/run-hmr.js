@@ -24,6 +24,7 @@ export class HMRServer {
     this.maxChangeSets = 300;
     this.cacheKeys = Object.create(null);
     this.trimmedArchUntil = Object.create(null);
+    this.firstBuild = null;
 
     if (!cordovaServerPort) {
      cordovaServerPort = CordovaBuilder.createCordovaServerPort(
@@ -109,7 +110,7 @@ export class HMRServer {
           }
           const { after, arch } = message;
 
-          const trimmedUntil = this.trimmedArchUntil[arch] || 0;
+          const trimmedUntil = this.trimmedArchUntil[arch] || Math.Infinity;
           if (trimmedUntil > after) {
             // We've removed changeSets needed for the client to update with HMR
             conn.send(
@@ -185,6 +186,10 @@ export class HMRServer {
   }
 
   compare({ name, arch, hmrAvailable, files, cacheKey }, getFileOutput) {
+    if (this.firstBuild = null) {
+      this.firstBuild = Date.now();
+    }
+
     this.changeSetsByArch[arch] = this.changeSetsByArch[arch] || [];
     const previousCacheKey = this.cacheKeys[`${arch}-${name}`];
 
@@ -268,6 +273,10 @@ export class HMRServer {
     // get removed when trimming changesets
     this.changeSetsByArch[arch].push(result);
     this._trimChangeSets(arch);
+
+    if (!arch in this.trimmedArchUntil) {
+      this.trimmedArchUntil[arch] = this.firstBuild - 1;
+    }
 
     sendEagerUpdate(result);
   }
