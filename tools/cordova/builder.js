@@ -500,7 +500,17 @@ export class CordovaBuilder {
 
     program.versionNonRefreshable = AUTOUPDATE_VERSION ||
       WebAppHashing.calculateClientHash(
-        program.manifest, type => type !== "css", configDummy);
+        program.manifest,
+        (type, replaceable) => type !== "css" && !replaceable,
+        configDummy
+      );
+
+    program.versionReplaceable = AUTOUPDATE_VERSION ||
+      WebAppHashing.calculateClientHash(
+        program.manifest,
+        (_type, replaceable) => replaceable,
+        configDummy
+      );
   }
 
   generateBootstrapPage(applicationPath, program, publicSettings) {
