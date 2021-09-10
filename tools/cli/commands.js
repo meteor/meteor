@@ -407,6 +407,7 @@ function doRunCommand(options) {
     }
   }
   webArchs = filterWebArchs(webArchs, options['exclude-archs']);
+  const buildMode = options.production ? 'production' : 'development'
 
   let cordovaRunner;
   if (!_.isEmpty(runTargets)) {
@@ -418,7 +419,9 @@ function doRunCommand(options) {
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
-          cordovaServerPort: parsedCordovaServerPort });
+          cordovaServerPort: parsedCordovaServerPort,
+          buildMode
+        });
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
@@ -441,7 +444,7 @@ function doRunCommand(options) {
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
-      buildMode: options.production ? 'production' : 'development',
+      buildMode,
       webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,

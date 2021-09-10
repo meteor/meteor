@@ -178,7 +178,8 @@ outdated platforms`);
         templatePath,
         { mobileServerUrl: this.options.mobileServerUrl,
           cordovaServerPort: this.options.cordovaServerPort,
-          settingsFile: this.options.settingsFile }
+          settingsFile: this.options.settingsFile,
+          buildMode: this.options.buildMode }
       );
 
       builder.processControlFile();
@@ -254,7 +255,8 @@ outdated platforms`);
       this.projectRoot,
       { mobileServerUrl: this.options.mobileServerUrl,
         cordovaServerPort: this.options.cordovaServerPort,
-        settingsFile: this.options.settingsFile }
+        settingsFile: this.options.settingsFile,
+        buildMode: this.options.buildMode }
     );
 
     builder.processControlFile();

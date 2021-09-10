@@ -776,6 +776,7 @@ function runWebAppServer() {
       ),
       cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,
       PUBLIC_SETTINGS,
+      hmrVersion: programJson.hmrVersion,
     };
 
     // Expose program details as a string reachable via the following URL.

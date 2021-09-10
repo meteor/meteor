@@ -1884,6 +1884,10 @@ class ClientTarget extends Target {
       program.cordovaCompatibilityVersions = cordovaCompatibilityVersions;
     }
 
+    if (buildMode === 'development') {
+      program.hmrVersion = Date.now();
+    }
+
     builder.writeJson('program.json', program);
 
     return {
