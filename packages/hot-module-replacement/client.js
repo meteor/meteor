@@ -3,15 +3,14 @@ const ReifyEntry = require('/node_modules/meteor/modules/node_modules/reify/lib/
 
 const SOURCE_URL_PREFIX = "meteor://\ud83d\udcbbapp";
 
-// Due to the bundler and proxy running in the same node process
-// this could possibly be ran after the next build finished
-// TODO: the builder should inject a build timestamp in the bundle
-let lastUpdated = Date.now();
 let appliedChangeSets = [];
 let removeErrorMessage = null;
 
 const arch = Meteor.isCordova ? "web.cordova" :
   Meteor.isModern ? "web.browser" : "web.browser.legacy";
+
+const initialVersions = __meteor_runtime_config__.autoupdate.versions[arch];
+let lastUpdated = initialVersions.versionHmr;
 const hmrSecret = __meteor_runtime_config__._hmrSecret;
 
 // Cordova doesn't need the hmrSecret, though cordova is also unable to tell
@@ -43,11 +42,9 @@ if (module._onRequire) {
   });
 }
 
-let pendingReload = function () {
-  Package['reload'].Reload._reload({ immediateMigration: true });
-};
-
+let pendingReload;
 let mustReload = false;
+
 // Once an eager update fails, we stop processing future updates since they
 // might depend on the failed update. This gets reset when we re-try applying
 // the changes as non-eager updates.
@@ -112,7 +109,7 @@ function handleMessage(message) {
       return;
     }
 
-    console.log('HMR: Unable to do HMR. Falling back to hot code push.')
+    console.log('HMR: Unable to do HMR. Falling back to hot code push.');
     // Complete hot code push if we can not do hot module reload
     mustReload = true;
     return pendingReload();
@@ -144,13 +141,14 @@ function handleMessage(message) {
   }
 
   if (!succeeded) {
+    console.log('HMR: Some changes can not be applied with HMR. Using hot code push.')
+    mustReload = true;
+
     if (pendingReload) {
-      console.log('HMR: Some changes can not be applied with HMR. Using hot code push.')
-      mustReload = true;
-      return pendingReload();
+      pendingReload();
     }
 
-    throw new Error('HMR failed and unable to fallback to hot code push?');
+    return;
   }
 
   if (message.changeSets.length > 0) {
@@ -473,11 +471,14 @@ function applyChangeset(options) {
   return true;
 }
 
-const initialVersions = __meteor_runtime_config__.autoupdate.versions[arch];
 let nonRefreshableVersion = initialVersions.versionNonRefreshable;
 let replaceableVersion = initialVersions.versionReplaceable;
 
 Meteor.startup(function () {
+  if (!enabled) {
+    return;
+  }
+
   Package['autoupdate'].Autoupdate._clientVersions.watch(function (doc) {
     if (doc._id !== arch) {
       return;
@@ -487,14 +488,20 @@ Meteor.startup(function () {
       nonRefreshableVersion = doc.versionNonRefreshable;
       console.log('HMR: Some changes can not be applied with HMR. Using hot code push.')
       mustReload = true;
-      pendingReload();
+      if (pendingReload) {
+        pendingReload();
+      }
     } else if (doc.versionReplaceable !== replaceableVersion) {
       replaceableVersion = doc.versionReplaceable;
-      if (enabled && !mustReload) {
-        requestChanges();
+      if (!mustReload) {
+        if (pendingReload) {
+          requestChanges();
+        }
       } else {
         mustReload = true;
-        pendingReload();
+        if (pendingReload) {
+          pendingReload();
+        }
       }
     }
   });
