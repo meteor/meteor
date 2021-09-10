@@ -3,9 +3,12 @@ import runLog from './run-log.js';
 import crypto from 'crypto';
 import { AssertionError } from 'assert';
 import Anser from "anser";
+import { CordovaBuilder } from '../cordova/builder.js';
 
 export class HMRServer {
-  constructor({ proxy, hmrPath, secret, projectContext }) {
+  constructor({
+    proxy, hmrPath, secret, projectContext, cordovaServerPort
+}) {
     this.proxy = proxy;
     this.projectContext = projectContext;
 
@@ -22,7 +25,13 @@ export class HMRServer {
     this.cacheKeys = Object.create(null);
     this.trimmedArchUntil = Object.create(null);
 
-    this.started = false;
+    if (!cordovaServerPort) {
+     cordovaServerPort = CordovaBuilder.createCordovaServerPort(
+          projectContext.appIdentifier
+        );
+    }
+
+    this.cordovaOrigin = `http://localhost:${cordovaServerPort}`;
   }
 
   start() {
@@ -36,7 +45,7 @@ export class HMRServer {
     this.proxy.server.on('upgrade', (req, res, head) => {
       if (req.url === this.hmrPath) {
         this.wsServer.handleUpgrade(req, res, head, (conn) => {
-          this._handleWsConn(conn);
+          this._handleWsConn(conn, req);
         });
       }
     });
@@ -49,9 +58,11 @@ export class HMRServer {
     this.connByArch = Object.create(null);
   }
 
-  _handleWsConn(conn) {
+  _handleWsConn(conn, req) {
     let registered = false;
     let connArch = null;
+    let fromCordova = this.cordovaOrigin && req.headers.origin === this.cordovaOrigin;
+
     conn.on('message', (_message) => {
       const message = JSON.parse(_message);
 
@@ -66,9 +77,13 @@ export class HMRServer {
               reason: 'wrong-app'
             }));
           }
+
+          let secretsMatch = secret.length === this.secret.length &&
+            crypto.timingSafeEqual(Buffer.from(secret), Buffer.from(this.secret));
+
           if (
-            secret.length !== this.secret.length ||
-            !crypto.timingSafeEqual(Buffer.from(secret), Buffer.from(this.secret))
+            !fromCordova &&
+            !secretsMatch
           ) {
             conn.send(JSON.stringify({
               type: 'register-failed',

@@ -13,7 +13,10 @@ let removeErrorMessage = null;
 const arch = Meteor.isCordova ? "web.cordova" :
   Meteor.isModern ? "web.browser" : "web.browser.legacy";
 const hmrSecret = __meteor_runtime_config__._hmrSecret;
-const enabled = !!hmrSecret;
+
+// Cordova doesn't need the hmrSecret, though cordova is also unable to tell
+// if Meteor needs to be restarted to enable HMR;
+const enabled = Meteor.isCordova || !!hmrSecret;
 
 if (!enabled) {
   console.log('Restart Meteor to enable HMR');
