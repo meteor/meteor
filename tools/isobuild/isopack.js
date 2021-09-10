@@ -48,6 +48,7 @@ var Isopack = function () {
 
   // These have the same meaning as in PackageSource.
   self.name = null;
+  self.sideEffects = true;
   self.metadata = {};
   self.version = null;
   self.isTest = false;
@@ -255,6 +256,7 @@ _.extend(Isopack.prototype, {
     var self = this;
     self.name = options.name;
     self.metadata = options.metadata;
+    self.sideEffects = options.sideEffects;
     self.version = options.version;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
@@ -887,6 +889,7 @@ _.extend(Isopack.prototype, {
       };
       self.version = mainJson.version;
       self.isTest = mainJson.isTest;
+      self.sideEffects = mainJson.sideEffects;
       self.debugOnly = !!mainJson.debugOnly;
       self.prodOnly = !!mainJson.prodOnly;
       self.testOnly = !!mainJson.testOnly;
@@ -943,6 +946,7 @@ _.extend(Isopack.prototype, {
     });
 
     self.cordovaDependencies = mainJson.cordovaDependencies || null;
+    self.sideEffects = mainJson.sideEffects !== false;
 
     _.each(mainJson.tools, function (toolMeta) {
       toolMeta.rootDir = dir;
@@ -1024,6 +1028,7 @@ _.extend(Isopack.prototype, {
         summary: self.metadata.summary,
         version: self.version,
         isTest: self.isTest,
+        sideEffects: self.sideEffects,
         builds: [],
         plugins: []
       };

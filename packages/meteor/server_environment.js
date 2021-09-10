@@ -26,6 +26,9 @@ Meteor.settings = {};
 if (process.env.METEOR_SETTINGS) {
   try {
     Meteor.settings = JSON.parse(process.env.METEOR_SETTINGS);
+    if(Meteor.settings.globalDefinitions){
+      Object.assign(Meteor, Meteor.settings.globalDefinitions);
+    }
   } catch (e) {
     throw new Error("METEOR_SETTINGS are not valid JSON.");
   }
@@ -44,6 +47,7 @@ if (! Meteor.settings.public) {
 // settings will be sent to the client.
 if (config) {
   config.PUBLIC_SETTINGS = Meteor.settings.public;
+  config.GLOBAL_DEFINITIONS = Meteor.settings.globalDefinitions ? Meteor.settings.globalDefinitions : {};
 }
 
 if (config && config.gitCommitHash) {
