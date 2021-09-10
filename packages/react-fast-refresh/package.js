@@ -15,6 +15,6 @@ Package.onUse(function (api) {
   api.export('ReactFastRefresh');
   api.use('modules');
   api.addFiles('server.js', 'server');
-  api.addFiles('client-runtime.js', 'client');
+  api.addFiles('client.js', 'client');
   api.use('hot-module-replacement', { weak: true });
 });
