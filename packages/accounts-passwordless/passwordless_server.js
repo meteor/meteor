@@ -225,7 +225,11 @@ Accounts.sendLoginTokenEmail = ({ userId, sequence, email }) => {
 };
 
 const setupUsersCollection = () => {
-  Meteor.users.createIndex('services.passwordless.tokens.sequence', {
+  Meteor.users.createIndex('services.passwordless.tokens.token', {
+    unique: true,
+    sparse: true,
+  });
+  Meteor.users.createIndex('services.passwordless.token', {
     unique: true,
     sparse: true,
   });
