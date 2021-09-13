@@ -11,6 +11,7 @@ Apple M1 is only supported through Rosetta at this moment.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
 - For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
 - iOS development requires the latest Xcode.
+- **Do not install meteor npm in your project's package.json by any means, the npm library is only an installer.**
 
 ### Installation
 
