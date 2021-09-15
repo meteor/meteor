@@ -68,7 +68,7 @@ var sha1 = function (contents) {
   return hash.digest('hex');
 };
 
- function shouldCompress(req, res) {
+function shouldCompress(req, res) {
   if (req.headers['x-no-compression']) {
     // don't compress responses with this request header
     return false;
@@ -76,7 +76,7 @@ var sha1 = function (contents) {
 
   // fallback to standard filter function
   return compress.filter(req, res);
-};
+}
 
 // #BrowserIdentification
 //
@@ -345,8 +345,110 @@ function getBoilerplate(request, arch) {
   return getBoilerplateAsync(request, arch).await();
 }
 
+/**
+ * @summary Takes a runtime configuration object and
+ * returns an encoded runtime string.
+ * @locus Server
+ * @param {Object} rtimeConfig
+ * @returns {String}
+*/
+WebApp.encodeRuntimeConfig = function (rtimeConfig) {
+  return JSON.stringify(encodeURIComponent(JSON.stringify(rtimeConfig)));
+}
+
+/**
+ * @summary Takes an encoded runtime string and returns
+ * a runtime configuration object.
+ * @locus Server
+ * @param {String} rtimeConfigString
+ * @returns {Object}
+*/
+WebApp.decodeRuntimeConfig = function (rtimeConfigStr) {
+  return JSON.parse(decodeURIComponent(JSON.parse(rtimeConfigStr)));
+}
+
+ const runtimeConfig = {
+  // hooks will contain the callback functions
+  // set by the caller to addRuntimeConfigHook
+  hooks: new Hook(),
+  // updateHooks will contain the callback functions
+  // set by the caller to addUpdatedNotifyHook
+  updateHooks: new Hook(),
+  // isUpdatedByArch is an object containing fields for each arch 
+  // that this server supports.
+  // - Each field will be true when the server updates the runtimeConfig for that arch.
+  // - When the hook callback is called the update field in the callback object will be
+  // set to isUpdatedByArch[arch].
+  // = isUpdatedyByArch[arch] is reset to false after the callback.
+  // This enables the caller to cache data efficiently so they do not need to
+  // decode & update data on every callback when the runtimeConfig is not changing.
+  isUpdatedByArch: {}
+};
+
+/**
+ * @name addRuntimeConfigHookCallback(options)
+ * @locus Server
+ * @isprototype true
+ * @summary Callback for `addRuntimeConfigHook`.
+ * 
+ * If the handler returns a _falsy_ value the hook will not
+ * modify the runtime configuration.
+ * 
+ * If the handler returns a _String_ the hook will substitute
+ * the string for the encoded configuration string.
+ * 
+ * **Warning:** the hook does not check the return value at all it is
+ * the responsibility of the caller to get the formatting correct using
+ * the helper functions.
+ * 
+ * `addRuntimeConfigHookCallback` takes only one `Object` argument
+ * with the following fields:
+ * @param {Object} options
+ * @param {String} options.arch The architecture of the client
+ * requesting a new runtime configuration. This can be one of
+ * `web.browser`, `web.browser.legacy` or `web.cordova`.
+ * @param {Object} options.request
+ * A NodeJs [IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
+ * https://nodejs.org/api/http.html#http_class_http_incomingmessage
+ * `Object` that can be used to get information about the incoming request.
+ * @param {String} options.encodedCurrentConfig The current configuration object
+ * encoded as a string for inclusion in the root html.
+ * @param {Boolean} options.updated `true` if the config for this architecture
+ * has been updated since last called, otherwise `false`. This flag can be used
+ * to cache the decoding/encoding for each architecture.
+ */
+
+/**
+ * @summary Hook that calls back when the meteor runtime configuration,
+ * `__meteor_runtime_config__` is being sent to any client.
+ * 
+ * **returns**: <small>_Object_</small> `{ stop: function, callback: function }`
+ * - `stop` <small>_Function_</small> Call `stop()` to stop getting callbacks.
+ * - `callback` <small>_Function_</small> The passed in `callback`.
+ * @locus Server
+ * @param {addRuntimeConfigHookCallback} callback
+ * See `addRuntimeConfigHookCallback` description.
+ * @returns {Object} {{ stop: function, callback: function }}
+ * Call the returned `stop()` to stop getting callbacks.
+ * The passed in `callback` is returned also.
+*/
+WebApp.addRuntimeConfigHook = function (callback) {
+  return runtimeConfig.hooks.register(callback);
+}
+
 function getBoilerplateAsync(request, arch) {
-  const boilerplate = boilerplateByArch[arch];
+  let boilerplate = boilerplateByArch[arch];
+  runtimeConfig.hooks.forEach((hook) => {
+    const meteorRuntimeConfig = hook({
+      arch,
+      request,
+      encodedCurrentConfig: boilerplate.baseData.meteorRuntimeConfig,
+      updated: runtimeConfig.isUpdatedByArch[arch]
+    });
+    if(!meteorRuntimeConfig) return;
+    boilerplate.baseData = Object.assign({}, boilerplate.baseData, {meteorRuntimeConfig});
+  });
+  runtimeConfig.isUpdatedByArch[arch] = false;
   const data = Object.assign({}, boilerplate.baseData, {
     htmlAttributes: getHtmlAttributes(request),
   }, _.pick(request, "dynamicHead", "dynamicBody"));
@@ -373,16 +475,50 @@ function getBoilerplateAsync(request, arch) {
   }));
 }
 
+/**
+ * @name addUpdatedNotifyHookCallback(options)
+ * @summary callback handler for `addupdatedNotifyHook`
+ * @isprototype true
+ * @locus Server
+ * @param {Object} options
+ * @param {String} options.arch The architecture that is being updated.
+ * This can be one of `web.browser`, `web.browser.legacy` or `web.cordova`.
+ * @param {Object} options.manifest The new updated manifest object for
+ * this `arch`.
+ * @param {Object} options.runtimeConfig The new updated configuration
+ * object for this `arch`.
+ */
+
+
+/**
+ * @summary Hook that runs when the meteor runtime configuration
+ * is updated.  Typically the configuration only changes during development mode.
+ * @locus Server
+ * @param {addUpdatedNotifyHookCallback} handler 
+ * The `handler` is called on every change to an `arch` runtime configuration.
+ * See `addUpdatedNotifyHookCallback`.
+ * @returns {Object} {{ stop: function, callback: function }}
+*/
+WebApp.addUpdatedNotifyHook = function(handler) {
+  return runtimeConfig.updateHooks.register(handler);
+}
+
 WebAppInternals.generateBoilerplateInstance = function (arch,
                                                         manifest,
                                                         additionalOptions) {
   additionalOptions = additionalOptions || {};
 
+  runtimeConfig.isUpdatedByArch[arch] = true;
+  const rtimeConfig = {
+    ...__meteor_runtime_config__,
+    ...(additionalOptions.runtimeConfigOverrides || {})
+  };
+  runtimeConfig.updateHooks.forEach((cb) => {
+    cb({arch, manifest, runtimeConfig: rtimeConfig});
+  });
+
   const meteorRuntimeConfig = JSON.stringify(
-    encodeURIComponent(JSON.stringify({
-      ...__meteor_runtime_config__,
-      ...(additionalOptions.runtimeConfigOverrides || {})
-    }))
+    encodeURIComponent(JSON.stringify(rtimeConfig))
   );
 
   return new Boilerplate(arch, manifest, _.extend({
@@ -974,6 +1110,44 @@ function runWebAppServer() {
   // other handlers added by package and application code.
   app.use(WebAppInternals.meteorInternalHandlers = connect());
 
+
+  /**
+   * @name connectHandlersCallback(req, res, next)
+   * @locus Server
+   * @isprototype true
+   * @summary callback handler for `WebApp.connectHandlers`
+   * @param {Object} req
+   * a Node.js
+   * [IncomingMessage](https://nodejs.org/api/http.html#http_class_http_incomingmessage)
+   * object with some extra properties. This argument can be used
+   *  to get information about the incoming request.
+   * @param {Object} res
+   * a Node.js
+   * [ServerResponse](http://nodejs.org/api/http.html#http_class_http_serverresponse)
+   * object. Use this to write data that should be sent in response to the
+   * request, and call `res.end()` when you are done.
+   * @param {Function} next
+   * Calling this function will pass on the handling of
+   * this request to the next relevant handler.
+   * 
+   */
+
+  /**
+   * @method connectHandlers
+   * @memberof WebApp
+   * @locus Server
+   * @summary Register a handler for all HTTP requests.
+   * @param {String} [path]
+   * This handler will only be called on paths that match
+   * this string. The match has to border on a `/` or a `.`.
+   * 
+   * For example, `/hello` will match `/hello/world` and
+   * `/hello.world`, but not `/hello_world`.
+   * @param {connectHandlersCallback} handler
+   * A handler function that will be called on HTTP requests.
+   * See `connectHandlersCallback`
+   * 
+   */
   // Packages and apps can add handlers to this via WebApp.connectHandlers.
   // They are inserted before our default handler.
   var packageAndAppHandlers = connect();

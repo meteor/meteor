@@ -1,7 +1,5 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
-const uuid = require("uuid");
-var fiberHelpers = require('../utils/fiber-helpers.js');
 var files = require('../fs/files');
 var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
@@ -13,7 +11,6 @@ var catalog = require('../packaging/catalog/catalog.js');
 var Profile = require('../tool-env/profile').Profile;
 var release = require('../packaging/release.js');
 import { pluginVersionsFromStarManifest } from '../cordova/index.js';
-import { CordovaBuilder } from '../cordova/builder.js';
 import { closeAllWatchers } from "../fs/safe-watcher";
 import { eachline } from "../utils/eachline";
 import { loadIsopackage } from '../tool-env/isopackets.js';
@@ -80,7 +77,7 @@ var AppProcess = function (options) {
   self.madeExitCallback = false;
 };
 
-_.extend(AppProcess.prototype, {
+Object.assign(AppProcess.prototype, {
   // Call to start the process.
   start: function () {
     var self = this;
@@ -157,7 +154,7 @@ _.extend(AppProcess.prototype, {
 
   _computeEnvironment: function () {
     var self = this;
-    var env = _.extend({}, process.env);
+    var env = Object.assign({}, process.env);
 
     env.PORT = self.port;
     env.ROOT_URL = self.rootUrl;
@@ -172,22 +169,16 @@ _.extend(AppProcess.prototype, {
     }
     if (self.settings) {
       env.METEOR_SETTINGS = self.settings;
-    } else {
+    } else if (env.METEOR_SETTINGS && env.NODE_ENV === 'development') {
       // Warn the developer that we are not going to use their environment var.
-      if (env.METEOR_SETTINGS) {
-        runLog.log(
-          "WARNING: The 'METEOR_SETTINGS' environment variable is ignored " +
-          "when running in development (as you are doing now).  Instead, use " +
-          "the '--settings settings.json' option to see reactive changes " +
-          "when settings are changed.  For more information, see the " +
-          "documentation for 'Meteor.settings': " +
-          "https://docs.meteor.com/api/core.html#Meteor-settings" +
-          "\n");
-      }
-
-      // To provide a consistent, reactive experience in development, do
-      // not use settings provided via the environment variable.
-      delete env.METEOR_SETTINGS;
+      runLog.log(
+        "WARNING: The 'METEOR_SETTINGS' environment variable is set " +
+        "while running in development. This means that settings are not reactive. " +
+        "Use the '--settings settings.json' option to see reactive changes " +
+        "when settings are changed.  For more information, see the " +
+        "documentation for 'Meteor.settings': " +
+        "https://docs.meteor.com/api/core.html#Meteor-settings" +
+        "\n");
     }
     if (self.testMetadata) {
       env.TEST_METADATA = JSON.stringify(self.testMetadata);
@@ -403,7 +394,7 @@ var AppRunner = function (options) {
   self.builders = Object.create(null);
 };
 
-_.extend(AppRunner.prototype, {
+Object.assign(AppRunner.prototype, {
   // Start the app running, and restart it as necessary. Returns
   // immediately.
   start: function () {
