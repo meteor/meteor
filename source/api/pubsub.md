@@ -6,7 +6,9 @@ description: Documentation of Meteor's publication and subscription API.
 These functions control how Meteor servers publish sets of records and
 how clients can subscribe to those sets.
 
-If you prefer video watch [Meteor Publications 101](https://www.youtube.com/watch?v=RH2RxKgkPJY) in our [YouTube Channel](https://www.youtube.com/channel/UC3fBiJrFFMhKlsWM46AsAYw).
+If you prefer to watch the video, click below. 
+
+{% youtube RH2RxKgkPJY %}
 
 {% apibox "Meteor.publish" %}
 
