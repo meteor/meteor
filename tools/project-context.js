@@ -134,11 +134,11 @@ var STAGE = {
   SAVE_CHANGED_METADATA: 'DONE'
 };
 
-_.extend(ProjectContext.prototype, {
+Object.assign(ProjectContext.prototype, {
   reset: function (moreOptions, resetOptions) {
     var self = this;
     // Allow overriding some options until the next call to reset;
-    var options = _.extend({}, self.originalOptions, moreOptions);
+    var options = Object.assign({}, self.originalOptions, moreOptions);
     // This is options that are actually directed at reset itself.
     resetOptions = resetOptions || {};
 
@@ -486,12 +486,11 @@ _.extend(ProjectContext.prototype, {
     // post-constraint-solve).
     var self = this;
     var watchSet = new watch.WatchSet;
-    _.each(
-      [self.releaseFile, self.projectConstraintsFile, self.packageMapFile,
-       self.platformList, self.cordovaPluginsFile],
+    [self.releaseFile, self.projectConstraintsFile, self.packageMapFile,
+      self.platformList, self.cordovaPluginsFile].forEach(
       function (metadataFile) {
         metadataFile && watchSet.merge(metadataFile.watchSet);
-      });
+    });
 
     if (self.localCatalog) {
       watchSet.merge(self.localCatalog.packageLocationWatchSet);
@@ -578,7 +577,7 @@ _.extend(ProjectContext.prototype, {
 
     if (self.explicitlyAddedPackageNames.length) {
       cachedVersions = _.clone(cachedVersions);
-      _.each(self.explicitlyAddedPackageNames, function (p) {
+      self.explicitlyAddedPackageNames.forEach(function (p) {
         delete cachedVersions[p];
       });
     }
@@ -1001,7 +1000,7 @@ exports.ProjectConstraintsFile = function (options) {
   self._readFile();
 };
 
-_.extend(exports.ProjectConstraintsFile.prototype, {
+Object.assign(exports.ProjectConstraintsFile.prototype, {
   _readFile: function () {
     var self = this;
     buildmessage.assertInCapture();
@@ -1077,7 +1076,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       self._constraintMap[lineRecord.constraint.package] = lineRecord;
     });
 
-    _.each(_.keys(extraConstraintMap), function (key) {
+    Object.keys(extraConstraintMap).forEach(function (key) {
       var lineRecord = extraConstraintMap[key];
       self._constraintLines.push(lineRecord);
       self._constraintMap[lineRecord.constraint.package] = lineRecord;
@@ -1198,10 +1197,10 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   // of project preparation.
   removePackages: function (packagesToRemove) {
     var self = this;
-    self._constraintLines = _.filter(
-      self._constraintLines, function (lineRecord) {
+    self._constraintLines = self._constraintLines.filter(
+      function (lineRecord) {
         return ! (lineRecord.constraint &&
-                  _.contains(packagesToRemove, lineRecord.constraint.package));
+          packagesToRemove.includes(lineRecord.constraint.package));
       });
     _.each(packagesToRemove, function (p) {
       delete self._constraintMap[p];
@@ -1237,7 +1236,7 @@ exports.PackageMapFile = function (options) {
   self._readFile();
 };
 
-_.extend(exports.PackageMapFile.prototype, {
+Object.assign(exports.PackageMapFile.prototype, {
   _readFile: function () {
     var self = this;
 
@@ -1295,7 +1294,7 @@ _.extend(exports.PackageMapFile.prototype, {
       return;
 
     self._versions = newVersions;
-    var packageNames = _.keys(self._versions);
+    var packageNames = Object.keys(self._versions);
     packageNames.sort();
     var lines = [];
     _.each(packageNames, function (packageName) {
@@ -1328,7 +1327,7 @@ exports.PlatformList = function (options) {
 // These platforms are always present and can be neither added or removed
 exports.PlatformList.DEFAULT_PLATFORMS = ['browser', 'server'];
 
-_.extend(exports.PlatformList.prototype, {
+Object.assign(exports.PlatformList.prototype, {
   _readFile: function () {
     var self = this;
 
@@ -1416,7 +1415,7 @@ exports.CordovaPluginsFile = function (options) {
   self._readFile();
 };
 
-_.extend(exports.CordovaPluginsFile.prototype, {
+Object.assign(exports.CordovaPluginsFile.prototype, {
   _readFile: function () {
     var self = this;
     buildmessage.assertInCapture();
@@ -1464,7 +1463,7 @@ _.extend(exports.CordovaPluginsFile.prototype, {
 
   write: function (plugins) {
     var self = this;
-    var pluginNames = _.keys(plugins);
+    var pluginNames = Object.keys(plugins);
     pluginNames.sort();
     var lines = _.map(pluginNames, function (pluginName) {
       return pluginName + '@' + plugins[pluginName] + '\n';
@@ -1505,7 +1504,7 @@ exports.ReleaseFile = function (options) {
   self._readFile();
 };
 
-_.extend(exports.ReleaseFile.prototype, {
+Object.assign(exports.ReleaseFile.prototype, {
   fileMissing: function () {
     var self = this;
     return self.unnormalizedReleaseName === null;
@@ -1648,7 +1647,7 @@ exports.FinishedUpgraders = function (options) {
     options.projectDir, '.meteor', '.finished-upgraders');
 };
 
-_.extend(exports.FinishedUpgraders.prototype, {
+Object.assign(exports.FinishedUpgraders.prototype, {
   readUpgraders: function () {
     var self = this;
     var upgraders = [];

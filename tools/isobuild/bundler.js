@@ -899,8 +899,8 @@ class Target {
       if (this instanceof ClientTarget) {
         var minifiersByExt = {};
         ['js', 'css'].forEach(function (ext) {
-          minifiersByExt[ext] = _.find(minifiers, function (minifier) {
-            return minifier && _.contains(minifier.extensions, ext);
+          minifiersByExt[ext] = minifiers.find(function (minifier) {
+            return minifier && minifier.extensions.includes(ext);
           });
         });
 
@@ -1093,7 +1093,7 @@ class Target {
     if (this instanceof ClientTarget) {
       ["js", "css"].forEach(ext => {
         minifiers.some(minifier => {
-          if (_.contains(minifier.extensions, ext)) {
+          if (minifier.extensions.includes(ext)) {
             return minifiersByExt[ext] = minifier;
           }
         });
@@ -1269,7 +1269,7 @@ class Target {
           return;
         }
 
-        if (_.contains(['js', 'css'], resource.type)) {
+        if (['js', 'css'].includes(resource.type)) {
           if (resource.type === 'css' && ! isWeb) {
             // XXX might be nice to throw an error here, but then we'd
             // have to make it so that package.js ignores css files
@@ -1322,7 +1322,7 @@ class Target {
           return;
         }
 
-        if (_.contains(['head', 'body'], resource.type)) {
+        if (['head', 'body'].includes(resource.type)) {
           if (! isWeb) {
             throw new Error('HTML segments can only go to the client');
           }
@@ -1376,12 +1376,12 @@ class Target {
         if (resource.type !== 'source' || resource._dataUsed === false) {
           return;
         }
-      
+
         assert.strictEqual(
           typeof resource._dataUsed,
           "boolean"
         );
-      
+
         let absPath = files.pathJoin(batch.sourceRoot, resource.path);
         this.watchSet.addFile(absPath, resource.hash);
       });
@@ -2116,7 +2116,7 @@ class JsImage {
         return;
       }
 
-      var env = _.extend({
+      var env = Object.assign({
         Package: ret,
         Npm: {
           require: Profile(function (name) {
@@ -2593,7 +2593,7 @@ class JsImage {
 
       let nodeModulesDirectories;
       if (item.node_modules) {
-        _.extend(
+        Object.assign(
           ret.nodeModulesDirectories,
           nodeModulesDirectories =
             NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
@@ -3234,7 +3234,7 @@ function bundle({
     throw new Error("running wrong release for app?");
   }
 
-  if (! _.contains(['development', 'production', 'test'], buildMode)) {
+  if (! ['development', 'production', 'test'].includes(buildMode)) {
     throw new Error('Unrecognized build mode: ' + buildMode);
   }
 
@@ -3327,7 +3327,7 @@ function bundle({
     }
 
     var minifiers = null;
-    if (! _.contains(['development', 'production'], minifyMode)) {
+    if (! ['development', 'production'].includes(minifyMode)) {
       throw new Error('Unrecognized minification mode: ' + minifyMode);
     }
     minifiers = compiler.getMinifiers(packageSource, {
@@ -3583,7 +3583,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
   return {
     image: target.toJsImage(),
     watchSet: target.getWatchSet(),
-    usedPackageNames: _.keys(target.usedPackages)
+    usedPackageNames: Object.keys(target.usedPackages)
   };
 });
 

@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.9.3'
+  version: '1.10.0'
 });
 
 Package.registerBuildPlugin({
@@ -11,7 +11,7 @@ Package.registerBuildPlugin({
 });
 
 Npm.depends({
-  "meteor-deque": "2.1.0"
+  "double-ended-queue": "2.1.0-0"
 });
 
 Package.onUse(function (api) {
@@ -40,7 +40,7 @@ Package.onUse(function (api) {
   api.addFiles('debug.js', ['client', 'server']);
   api.addFiles('string_utils.js', ['client', 'server']);
   api.addFiles('test_environment.js', ['client', 'server']);
-  
+
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?
   api.addFiles('dynamics_browser.js', 'client');

@@ -1,5 +1,6 @@
 import Visitor from "reify/lib/visitor.js";
 import { findPossibleIndexes } from "reify/lib/utils.js";
+import { Babel } from "meteor/babel-compiler";
 
 // This RegExp will be used to scan the source for calls to meteorInstall,
 // taking into consideration that the function name may have been mangled
@@ -9,7 +10,7 @@ const meteorInstallRegExp = new RegExp([
   // we should be looking for in the AST.
   /\b(meteorInstall)\(\{/,
   // If the meteorInstall function name has been minified, we can figure
-  // out its mangled name by examining the import assingment.
+  // out its mangled name by examining the import assignment.
   /\b(\w+)=Package\.modules\.meteorInstall\b/,
   /\b(\w+)=Package\["modules-runtime"\].meteorInstall\b/,
   // Sometimes uglify-es will inline (0,Package.modules.meteorInstall) as
