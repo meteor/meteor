@@ -1,3 +1,14 @@
+## v2.5, UNRELEASED
+
+#### Highlights
+
+#### Meteor Version Release
+
+#### Independent Releases
+
+* `modern-browsers@0.1.6`
+  - Added `mobileSafariUI` as an alias for Mobile Safari
+
 ## v2.4, 2021-09-15
 
 #### Highlights
@@ -110,8 +121,6 @@
 
 * `callback-hook@1.4.0`
   - Added `forEach` iterator to be more in-line with the ES use for iterations. `each` is now deprecated, but will remain supported.
-
-#### Independent Releases
 
 ## v2.3.6, 2021-09-02
 

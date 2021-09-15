@@ -30,7 +30,7 @@ const browserAliases = {
 
   // The webapp package converts browser names to camel case, so
   // mobile_safari and mobileSafari should be synonymous.
-  mobile_safari: ["mobileSafari"],
+  mobile_safari: ["mobileSafari", "mobileSafariUI", "mobileSafariUI/WKWebView"],
 };
 
 // Expand the given minimum versions by reusing chrome versions for
@@ -167,7 +167,7 @@ function greaterThan(a, b) {
 }
 
 function makeSource(feature) {
-  return module.id + " (" + feature + ")"
+  return module.id + " (" + feature + ")";
 }
 
 setMinimumBrowserVersions({
