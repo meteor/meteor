@@ -1,6 +1,6 @@
 Package.describe({
   name: 'standard-minifier-css',
-  version: '1.7.3',
+  version: '1.7.4',
   summary: 'Standard css minifier used with Meteor apps by default.',
   documentation: 'README.md'
 });
@@ -12,7 +12,7 @@ Package.registerBuildPlugin({
     'ecmascript'
   ],
   npmDependencies: {
-    "@babel/runtime": "7.14.6",
+    "@babel/runtime": "7.15.3",
     "source-map": "0.7.3",
     "lru-cache": "6.0.0"
   },

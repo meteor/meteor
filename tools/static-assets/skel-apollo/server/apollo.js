@@ -6,8 +6,8 @@ import typeDefs from '/imports/apollo/schema.graphql';
 
 const resolvers = {
   Query: {
-    getLink: (obj, { id }) => LinksCollection.findOne(id),
-    getLinks: () => LinksCollection.find().fetch()
+    getLink: async (obj, { id }) => LinksCollection.findOne(id),
+    getLinks: async () => LinksCollection.find().fetch()
   }
 };
 
@@ -19,7 +19,12 @@ const server = new ApolloServer({
   })
 });
 
-server.applyMiddleware({
-  app: WebApp.connectHandlers,
-  cors: true
-});
+export async function startApolloServer() {
+  await server.start();
+  const app = WebApp.connectHandlers;
+
+  server.applyMiddleware({
+    app,
+    cors: true
+  });
+}

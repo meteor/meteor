@@ -58,7 +58,6 @@
 import { createInterface } from "readline";
 import { format as utilFormat }  from "util";
 import { getRootProgress } from "../utils/buildmessage.js";
-// XXX: Are we happy with chalk (and its sub-dependencies)?
 import chalk from "chalk";
 import { onExit as cleanupOnExit } from "../tool-env/cleanup.js";
 import wordwrap from "wordwrap";
