@@ -3,6 +3,10 @@ title: Server Connections
 description: Documentation on how to use Meteor's client-server connection.
 ---
 
+If you prefer to watch the video, click below.
+
+{% youtube 9VXkxjDIKCg %}
+
 These functions manage and inspect the network connection between the
 Meteor client and server.
 
