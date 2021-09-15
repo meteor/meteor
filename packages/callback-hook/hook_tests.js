@@ -7,7 +7,7 @@ Tinytest.add("callback-hook - binds to registrar's env by default", function (te
     });
   });
   envVar.withValue("invoker's value", function() {
-    hook.each(function(callback) {
+    hook.forEach(function(callback) {
       callback();
     });
   });
@@ -33,7 +33,7 @@ Tinytest.add("callback-hook - exceptions unhandled with {bindEnvironment: false}
   hook.register(function() {
     throw new Error("Test error");
   });
-  hook.each(function(callback) {
+  hook.forEach(function(callback) {
     test.throws(callback, "Test error");
   });
 });

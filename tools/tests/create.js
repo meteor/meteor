@@ -1,4 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
+const { AVAILABLE_SKELETONS } = require("../cli/commands");
 var Sandbox = selftest.Sandbox;
 const SIMPLE_WAREHOUSE = { v1: { recommended: true } };
 
@@ -44,16 +45,9 @@ selftest.define("create main", function () {
   run.read('Available');
   run.match('leaderboard');
   run.expectExit(0);
-  // XXX test that --list always gives you the examples of the current
-  // release!
-
-  // XXX XXX more more
 });
 
-["bare",
- "minimal",
- "full",
-].forEach(template => {
+AVAILABLE_SKELETONS.forEach(template => {
   selftest.define("create --" + template, function () {
     const s = new Sandbox;
 
