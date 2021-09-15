@@ -209,7 +209,7 @@ var getExcerptFromReadme = function (text) {
   }
   var excerpt = textLines.slice(start, stop).join("\n");
 
-  // Strip the preceeding and trailing new lines.
+  // Strip the preceding and trailing new lines.
   return excerpt.replace(/^\n+|\n+$/g, "");
 };
 
@@ -387,7 +387,7 @@ var PackageSource = function () {
 };
 
 
-_.extend(PackageSource.prototype, {
+Object.assign(PackageSource.prototype, {
   // Make a dummy (empty) packageSource that contains nothing of interest.
   // XXX: Do we need this
   initEmpty: function (name) {
@@ -474,7 +474,7 @@ _.extend(PackageSource.prototype, {
     });
 
     if (options.localNodeModulesDirs) {
-      _.extend(sourceArch.localNodeModulesDirs,
+      Object.assign(sourceArch.localNodeModulesDirs,
                options.localNodeModulesDirs);
     }
 
@@ -1569,7 +1569,7 @@ _.extend(PackageSource.prototype, {
         }
       });
     });
-    return _.keys(packages);
+    return Object.keys(packages);
   },
 
   // Returns an array of objects, representing this package's public

@@ -536,17 +536,18 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
         'services.password.enroll': tokenRecord
       }
     });
+    // before passing to template, update user object with new token
+    Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
   } else {
     Meteor.users.update({_id: user._id}, {
       $set : {
         'services.password.reset': tokenRecord
       }
     });
+    // before passing to template, update user object with new token
+    Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
   }
 
-  // before passing to template, update user object with new token
-  Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
-  Meteor._ensure(user, 'services', 'password').enroll = tokenRecord;
   return {email, user, token};
 };
 
@@ -1158,9 +1159,9 @@ Accounts.createUser = (options, callback) => {
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
-Meteor.users._ensureIndex('services.email.verificationTokens.token',
+Meteor.users.createIndex('services.email.verificationTokens.token',
                           { unique: true, sparse: true });
-Meteor.users._ensureIndex('services.password.reset.token',
+Meteor.users.createIndex('services.password.reset.token',
                           { unique: true, sparse: true });
-Meteor.users._ensureIndex('services.password.enroll.token',
+Meteor.users.createIndex('services.password.enroll.token',
                           { unique: true, sparse: true });

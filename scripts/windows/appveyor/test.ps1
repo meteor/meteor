@@ -5,6 +5,7 @@ $tests = @(
   '^assets'
   '^autoupdate'
   '^dynamic import.*development'
+  'client refresh for application code'
 ) -Join '|'
 
 Write-Host "Running: $tests" -ForegroundColor Yellow

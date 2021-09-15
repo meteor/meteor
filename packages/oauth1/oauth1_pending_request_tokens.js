@@ -25,8 +25,8 @@ OAuth._pendingRequestTokens = new Mongo.Collection(
     _preventAutopublish: true
   });
 
-OAuth._pendingRequestTokens._ensureIndex('key', { unique: true });
-OAuth._pendingRequestTokens._ensureIndex('createdAt');
+OAuth._pendingRequestTokens.createIndex('key', { unique: true });
+OAuth._pendingRequestTokens.createIndex('createdAt');
 
 
 

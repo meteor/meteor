@@ -126,6 +126,14 @@ full test-suite (including the tests you added) to ensure you haven't broken any
 
 Exactly in the same way that [`test-packages` works in standalone Meteor apps](https://guide.meteor.com/writing-atmosphere-packages.html#testing), the `test-packages` command will start up a Meteor app with [TinyTest](./packages/tinytest/README.md).  To view the results, just connect to `http://localhost:3000`.
 
+If you want to see results in the console you can use:
+
+    PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
+
+> [PUPPETEER_DOWNLOAD_PATH](https://github.com/dfernandez79/puppeteer/blob/main/README.md#q-chromium-gets-downloaded-on-every-npm-ci-run-how-can-i-cache-the-download) is optional but this is useful to skip Downloading Chromium on every run
+
+> We run our tests on Travis like above.
+
 #### Running specific tests
 
 Specific package tests can be run by passing a `<package name>` or `<package path>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
@@ -136,6 +144,7 @@ For more fine-grained control, if you're interested in running only the specific
 
     TINYTEST_FILTER="collection - call new Mongo.Collection" ./meteor test-packages
 
+You can also provide the same filters for `./packages/test-in-console/run.sh` explained above.
 
 ### Running Meteor Tool self-tests
 

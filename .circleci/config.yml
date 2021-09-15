@@ -124,8 +124,8 @@ jobs:
             - package-npm-deps-cache-group1-v3-
       - restore_cache:
           keys:
-            - package-npm-deps-cache-group2-v5-{{ checksum "shrinkwraps.txt" }}
-            - package-npm-deps-cache-group2-v5-
+            - package-npm-deps-cache-group2-v6-{{ checksum "shrinkwraps.txt" }}
+            - package-npm-deps-cache-group2-v6-
       - restore_cache:
           keys:
             - v7-other-deps-cache-{{ .Branch }}-{{ checksum "meteor" }}-{{ .Revision }}

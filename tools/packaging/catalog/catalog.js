@@ -13,7 +13,7 @@ catalog.Refresh = {};
 // Refresh strategy: once at program start
 catalog.Refresh.OnceAtStart = function (options) {
   var self = this;
-  self.options = _.extend({}, options);
+  self.options = Object.assign({}, options);
 };
 
 catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
@@ -33,7 +33,7 @@ catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
 // Refresh strategy: never (we don't use the package catalog)
 catalog.Refresh.Never = function (options) {
   var self = this;
-  self.options = _.extend({}, options);
+  self.options = Object.assign({}, options);
 };
 
 // Refreshes the catalog. Returns true on success.
@@ -165,7 +165,7 @@ var LayeredCatalog = function (localCatalog, otherCatalog) {
   self.otherCatalog = otherCatalog;
 };
 
-_.extend(LayeredCatalog.prototype, {
+Object.assign(LayeredCatalog.prototype, {
   toString: function () {
     var self = this;
     return "LayeredCatalog []";
@@ -223,7 +223,7 @@ _.extend(LayeredCatalog.prototype, {
 
     var versions = self.getSortedVersions(name);
     versions.reverse();
-    var latest = _.find(versions, function (version) {
+    var latest = versions.find(function (version) {
       return !/-/.test(version);
     });
     if (!latest)

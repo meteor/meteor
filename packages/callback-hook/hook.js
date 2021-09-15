@@ -84,17 +84,18 @@ export class Hook {
     };
   }
 
-  // For each registered callback, call the passed iterator function
-  // with the callback.
-  //
-  // The iterator function can choose whether or not to call the
-  // callback.  (For example, it might not call the callback if the
-  // observed object has been closed or terminated).
-  //
-  // The iteration is stopped if the iterator function returns a falsy
-  // value or throws an exception.
-  //
-  each(iterator) {
+  /**
+   * For each registered callback, call the passed iterator function with the callback.
+   *
+   * The iterator function can choose whether or not to call the
+   * callback.  (For example, it might not call the callback if the
+   * observed object has been closed or terminated).
+   * The iteration is stopped if the iterator function returns a falsy
+   * value or throws an exception.
+   *
+   * @param iterator
+   */
+  forEach(iterator) {
     // Invoking bindEnvironment'd callbacks outside of a Fiber in Node doesn't
     // run them to completion (and exceptions thrown from onException are not
     // propagated), so we need to be in a Fiber.
@@ -111,6 +112,14 @@ export class Hook {
         }
       }
     }
+  }
+
+  /**
+   * @deprecated use forEach
+   * @param iterator
+   */
+  each(iterator) {
+    return this.forEach(iterator);
   }
 }
 
