@@ -4,6 +4,12 @@
 
 #### Meteor Version Release
 
+* `npm-mongo@3.10.0`
+  - The package has been deprecated
+
+* `mongo@1.14.0`
+  - Instead of getting `mongo` through the `npm-mongo` package we are now getting `mongo` directly from NPM
+
 #### Independent Releases
 
 * `modern-browsers@0.1.6`
