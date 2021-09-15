@@ -31,3 +31,37 @@ To generate the api boxes, the site uses a file `data/data.js` which is generate
 #### Starting hexo
 
 Ensure you've run `npm install`. Then simply `npm start`.
+
+### Developing with local meteor source
+
+When developing jsdoc documentation within the meteor code you will
+need to make some local modifications to get the documentation to work locally for testing.
+
+1. Modify `url` in `_config.yml` so links within `localhost:4000` will not jump out to `https://docs.meteor.com`
+```diff
+- url: http://docs.meteor.com/
++ url: http://localhost:4000/
+```
+2. reconnect the meteor submodule in `/code` to your local meteor folder.
+```bash
+# REMOVE submodule
+# Remove the submodule entry from .git/config
+git submodule deinit -f code
+
+# Remove the submodule directory from the superproject's
+# .git/modules directory
+rm -rf .git/modules/code
+
+# Remove the entry in .gitmodules and remove the submodule directory
+# located at path/to/submodule
+git rm -f code
+
+# ADD your local meteor submodule
+git submodule add /path/to/local/meteor code
+```
+
+3. Hexo builds if you are just changing md files in sources then
+hexo will watch for changes and update.  If you are making changes
+in the `/code` folder then you will need to `npm clean && npm start`.
+
+Of course, do not commit any of these changes.

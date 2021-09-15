@@ -26,6 +26,7 @@ sidebar_categories:
   null:
     - index
     - changelog
+    - install
   API:
     - api/core
     - api/pubsub
@@ -49,6 +50,7 @@ sidebar_categories:
     - api/assets
     - api/packagejs
     - api/mobile-config
+    - api/environment
   Packages:
     - packages/accounts-ui
     - packages/appcache
