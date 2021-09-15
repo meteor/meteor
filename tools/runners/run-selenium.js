@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var Fiber = require('fibers');
 var files = require('../fs/files');
 var runLog = require('./run-log.js');
@@ -33,7 +32,7 @@ var MAGIC_PREFIX = '##_meteor_magic##';
 // that's not necessary for this to work, but it keeps the output clean for users.
 var DUMMY_FLUSH = MAGIC_PREFIX + "flush: flush";
 
-_.extend(Selenium.prototype, {
+Object.assign(Selenium.prototype, {
   // Start the selenium server, block (yield) until it is ready to go
   // (actively listening on outer and proxying to inner), and then
   // return.
@@ -148,8 +147,8 @@ _.extend(Selenium.prototype, {
     var self = this;
 
     self._flushLogs();
-    var logs = self._getLogs();
-    _.each(logs, function (log) {
+    var logs = self._getLogs() || [];
+    logs.forEach(function (log) {
       var msg = log.message;
       var regex = /([^\s]*)\s*([^\s]*)\s*(.*)/i;
       var match = regex.exec(msg);

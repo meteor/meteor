@@ -58,7 +58,7 @@ var qualifySitename = function (site) {
 var showInvalidArchMsg = function (arch) {
   Console.info("Invalid architecture: " + arch);
   Console.info("The following are valid Meteor architectures:");
-  _.each(_.keys(archinfo.VALID_ARCHITECTURES), function (va) {
+  Object.keys(archinfo.VALID_ARCHITECTURES).forEach(function (va) {
     Console.info(
       Console.command(va),
       Console.options({ indent: 2 }));
@@ -331,7 +331,7 @@ var runCommandOptions = {
   catalogRefresh: new catalog.Refresh.Never()
 };
 
-main.registerCommand(_.extend(
+main.registerCommand(Object.assign(
   { name: 'run' },
   runCommandOptions
 ), doRunCommand);
@@ -460,7 +460,7 @@ function doRunCommand(options) {
 // debug
 ///////////////////////////////////////////////////////////////////////////////
 
-main.registerCommand(_.extend(
+main.registerCommand(Object.assign(
   { name: 'debug' },
   runCommandOptions
 ), function (options) {
@@ -759,7 +759,7 @@ main.registerCommand({
 
       // Check against our file extension white list
       var ext = files.pathExtname(filePath);
-      if (ext == '' || _.contains(nonCodeFileExts, ext)) {
+      if (ext == '' || nonCodeFileExts.includes(ext)) {
         return false;
       }
 
@@ -941,6 +941,7 @@ main.registerCommand({
   name: "build",
   ...buildCommands,
 }, async function (options) {
+  disableNativeWatcher();
   return Profile.run(
     "meteor build",
     () => Promise.await(buildCommand(options))
@@ -1043,7 +1044,7 @@ var buildCommand = function (options) {
       cordovaPlatforms = _.intersection(selectedPlatforms, cordovaPlatforms)
     }
 
-    if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
+    if (process.platform !== 'darwin' && cordovaPlatforms.includes('ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
       Console.warn("Currently, it is only possible to build iOS apps \
 on an OS X system.");
@@ -1615,7 +1616,7 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
 
-  if (_.keys(_.pick(options, 'add', 'remove', 'transfer', 'list')).length > 1) {
+  if (Object.keys(_.pick(options, 'add', 'remove', 'transfer', 'list')).length > 1) {
     Console.error(
       "Sorry, you can only perform one authorization operation at a time.");
     return 1;
@@ -1718,7 +1719,7 @@ testCommandOptions = {
   }
 };
 
-main.registerCommand(_.extend({
+main.registerCommand(Object.assign({
   name: 'test',
   requiresApp: true
 }, testCommandOptions), function (options) {
@@ -1726,7 +1727,7 @@ main.registerCommand(_.extend({
   return doTestCommand(options);
 });
 
-main.registerCommand(_.extend(
+main.registerCommand(Object.assign(
   { name: 'test-packages' },
   testCommandOptions
 ), function (options) {
@@ -1985,7 +1986,7 @@ function doTestCommand(options) {
 
   options.cordovaRunner = cordovaRunner;
 
-  return runTestAppForPackages(projectContext, _.extend(
+  return runTestAppForPackages(projectContext, Object.assign(
     options,
     {
       mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
@@ -2149,7 +2150,7 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  return auth.loginCommand(_.extend({
+  return auth.loginCommand(Object.assign({
     overwriteExistingToken: true
   }, options));
 });

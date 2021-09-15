@@ -1,6 +1,8 @@
 language: node_js
+os: linux
+dist: xenial
 node_js:
-  - "14.17.3"
+  - "14.17.6"
 cache:
   directories:
     - ".meteor"
@@ -12,7 +14,6 @@ script:
   # https://github.com/dfernandez79/puppeteer/blob/main/README.md#q-chromium-gets-downloaded-on-every-npm-ci-run-how-can-i-cache-the-download
   - export PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
   - travis_retry ./packages/test-in-console/run.sh
-sudo: false
 env:
   - CXX=g++-4.8
 addons:
