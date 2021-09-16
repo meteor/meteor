@@ -9,6 +9,12 @@
 * `modern-browsers@0.1.6`
   - Added `mobileSafariUI` as an alias for Mobile Safari
 
+* `minifier-js@2.7.1`
+  - Updated `terser` to [v5.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v580) to fix various bugs
+
+* `standard-minifier-js@2.7.1`
+  - Updated `@babel/runtime` to [v7.15.4](https://github.com/babel/babel/releases/tag/v7.15.4)
+
 ## v2.4, 2021-09-15
 
 #### Highlights
