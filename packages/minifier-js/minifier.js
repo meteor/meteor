@@ -36,7 +36,6 @@ export const meteorJsMinify = function (source) {
   try {
     terserResult = terserJsMinify(source, options);
   } catch (e) {
-    // the terser api doesnt throw exceptions, so we throw one ourselves
     throw e;
   }
 
