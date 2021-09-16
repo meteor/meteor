@@ -4,9 +4,11 @@ const terserMinify = async (source, options, callback) => {
   terser = terser || Npm.require("terser");
   try {
     const result = await terser.minify(source, options);
-    return callback(null, result);
+    callback(null, result);
+    return result;
   } catch (e) {
-    return callback(e);
+    callback(e);
+    return e;
   }
 };
 
