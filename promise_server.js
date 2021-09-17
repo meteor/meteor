@@ -191,20 +191,28 @@ function shallowClone(value) {
     return value.slice(0);
   }
 
-  if (value && typeof value === "object") {
-    var copy = Object.create(Object.getPrototypeOf(value));
-    var keys = Object.keys(value);
-    var keyCount = keys.length;
-
-    for (var i = 0; i < keyCount; ++i) {
-      var key = keys[i];
-      copy[key] = value[key];
-    }
-
-    return copy;
+  if (!value || typeof value !== "object") {
+    return value;
   }
 
-  return value;
+  if (value instanceof Map) {
+    return new Map(value);
+  }
+
+  if (value instanceof Set) {
+    return new Set(value);
+  }
+
+  const copy = Object.create(Object.getPrototypeOf(value));
+  const keys = Object.keys(value);
+  const keyCount = keys.length;
+
+  for (var i = 0; i < keyCount; ++i) {
+    const key = keys[i];
+    copy[key] = value[key];
+  }
+
+  return copy;
 }
 
 // Invoke method with args against object in a try-catch block,
