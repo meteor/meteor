@@ -63,11 +63,6 @@ This will scaffold all required files for the new rule. Add the implementation, 
 After implementation, the rule has to be exported from `lib/index.js`.
 Recommended options for the rule should be set as well (also in `lib/index.js`).
 
-## Give back
-
-After making sure all tests pass and the test-coverage is at 100%, please send a PR to [dferber90/eslint-plugin-meteor](https://github.com/dferber90/eslint-plugin-meteor).
-Git commits messages must follow the [conventional changelog](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md#-git-commit-guidelines) format. This is important as we're releasing automatically and the next version is determined upon the commit messages.
-
 ## Essential Development Resources
 
 These specs and tools help enormously when developing new rules.
