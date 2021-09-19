@@ -159,10 +159,16 @@ Meteor.methods({
     const emails = pluckAddresses(user.emails);
     const userSequence = generateSequence();
 
-    const tokens = emails.map(email => {
-      const sequence = generateSequence();
-      return { email, sequence };
-    });
+    const tokens = emails
+      .map(email => {
+        // if the email was informed we will notify only this email
+        if (selector.email && selector.email !== email) {
+          return null;
+        }
+        const sequence = generateSequence();
+        return { email, sequence };
+      })
+      .filter(Boolean);
     Meteor.users.update(user._id, {
       $set: {
         'services.passwordless': {
