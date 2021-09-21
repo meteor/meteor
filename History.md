@@ -32,6 +32,11 @@
 
 1. Replace all usage of `collection._ensureIndex` with `collection.createIndex`. You only need to rename the method as the functionality is the same.
 2. If you are using a [well known service](https://nodemailer.com/smtp/well-known/) for the email package switch to using `Meteor.settings.pacakges.email` settings instead of `MAIL_URL` env variable. Alternatively you can utilize the new `Email.customTransport` function to override the default package behavior and use your own. [Read the email docs](https://docs.meteor.com/api/email.html) for implementation details.
+3. If you install new universal NPM installer on an existing Unix/Mac system you might need add the following line to your bash profile `~/.bash_profile` file:
+```
+#meteor
+export PATH=$PATH:$HOME/.meteor
+```
 
 #### Meteor Version Release
 
