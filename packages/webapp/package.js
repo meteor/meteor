@@ -20,9 +20,9 @@ Npm.strip({
   useragent: ["test/"]
 });
 
+// whitelist plugin is now included in the core
 Cordova.depends({
-  'cordova-plugin-whitelist': '1.3.4',
-  'cordova-plugin-meteor-webapp': '1.9.1'
+  'cordova-plugin-meteor-webapp': '2.0.0-beta.0'
 });
 
 Package.onUse(function (api) {
