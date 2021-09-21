@@ -262,3 +262,52 @@ messages. When you change rooms by calling `Session.set('currentRoom',
 'newRoom')`, Meteor will subscribe to the new room's chat messages,
 unsubscribe from the original room's chat messages, and continue to
 stay subscribed to your private messages.
+
+## Publication strategies
+
+> The following features are available from Meteor 2.4 or `ddp-server@2.5.0`
+
+Once you start scaling your application you might want to have more control on how the data from publications is being handled on the client.
+There are three publications strategies:
+
+#### SERVER_MERGE
+`SERVER_MERGE` is the default strategy. When using this strategy, the server maintains a copy of all data a connection is subscribed to.
+This allows us to only send deltas over multiple publications.
+
+#### NO_MERGE_NO_HISTORY
+The `NO_MERGE_NO_HISTORY` strategy results in the server sending all publication data directly to the client.
+It does not remember what it has previously sent to client and will not trigger removed messages when a subscription is stopped.
+This should only be chosen for special use cases like send-and-forget queues.
+
+#### NO_MERGE
+`NO_MERGE` is similar to `NO_MERGE_NO_HISTORY` but the server will remember the IDs it has
+sent to the client so it can remove them when a subscription is stopped.
+This strategy can be used when a collection is only used in a single publication.
+
+When `NO_MERGE` is selected the client will be handling gracefully duplicate events without throwing an exception.
+Specifically:
+
+* When we receive an added message for a document that is already present in the client's collection, it will be changed.
+* When we receive a change message for a document that is not in the client's collection, it will be added.
+* When we receive a removed message for a document that is not in the client's collection, nothing will happen.
+
+You can import the publication strategies from `DDPServer`.
+
+```js
+import { DDPServer } from 'meteor/ddp-server'
+
+const { SERVER_MERGE, NO_MERGE_NO_HISTORY, NO_MERGE } = DDPServer.publicationStrategies
+```
+
+You can use the following methods to set or get the publication strategy for publications:
+
+{% apibox "setPublicationStrategy" %}
+
+For publication `foo`, you can set `NO_MERGE` strategy as shown:
+
+```js
+import { DDPServer } from "meteor/ddp-server";
+Meteor.server.setPublicationStrategy('foo', DDPServer.publicationStrategies.NO_MERGE);
+```
+
+{% apibox "getPublicationStrategy" %}
