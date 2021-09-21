@@ -74,7 +74,7 @@ Project:Mongo Driver:
   - packages/non-core/mongo-decimal/**/*
 
 Project:NPM:
-  - npm-packages/*
+  - npm-packages/**/*
 
 Project:Release Process:
   - scripts/**/*
