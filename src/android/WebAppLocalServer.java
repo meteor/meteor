@@ -5,10 +5,16 @@ import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.net.Uri;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
+import android.webkit.WebResourceResponse;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.webkit.WebViewAssetLoader;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.Config;
 import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.CordovaPluginPathHandler;
 import org.apache.cordova.CordovaResourceApi;
 import org.apache.cordova.LOG;
 import org.apache.cordova.PluginResult;
@@ -479,6 +485,32 @@ public class WebAppLocalServer extends CordovaPlugin implements AssetBundleManag
                 } else {
                     return null;
                 }
+            }
+        });
+    }
+
+
+    @Override
+    public CordovaPluginPathHandler getPathHandler() {
+        return new CordovaPluginPathHandler(new androidx.webkit.WebViewAssetLoader.PathHandler() {
+            @Nullable
+            @Override
+            public WebResourceResponse handle(@NonNull String path) {
+                Uri remappedUri = null;
+                for (WebResourceHandler handler : resourceHandlers) {
+                    remappedUri = handler.remapUri(Uri.parse("/" + path));
+                    if (remappedUri != null) break;
+                }
+                if(remappedUri != null){
+                    InputStream stream = null;
+                    try {
+                        stream = resourceApi.openForRead(remappedUri, true).inputStream;
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    return new WebResourceResponse(resourceApi.getMimeType(remappedUri), "utf-8", stream);
+                }
+                return null;
             }
         });
     }
