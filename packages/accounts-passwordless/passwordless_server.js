@@ -196,6 +196,7 @@ Meteor.methods({
           userId: user._id,
           sequence,
           email,
+          ...(options.extra ? { extra: options.extra } : {}),
         });
       });
     }
@@ -210,10 +211,11 @@ Meteor.methods({
  * @param {String} userId The id of the user to send email to.
  * @param sequence
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @param {Object} [extra] Optional. Extra properties
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendLoginTokenEmail = ({ userId, sequence, email }) => {
+Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
   const user = getUserById(userId);
   const url = Accounts.urls.loginToken(email, sequence);
   const options = Accounts.generateOptionsForEmail(
@@ -221,9 +223,9 @@ Accounts.sendLoginTokenEmail = ({ userId, sequence, email }) => {
     user,
     url,
     'sendLoginToken',
-    { sequence }
+    { ...extra, sequence }
   );
-  Email.send(options);
+  Email.send({ ...options, extra });
   if (Meteor.isDevelopment) {
     console.log(`\nLogin Token url: ${url}`);
   }

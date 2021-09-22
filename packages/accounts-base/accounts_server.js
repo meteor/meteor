@@ -1457,7 +1457,7 @@ export class AccountsServer extends AccountsCommon {
       from: this.emailTemplates[reason].from
           ? this.emailTemplates[reason].from(user)
           : this.emailTemplates.from,
-      subject: this.emailTemplates[reason].subject(user)
+      subject: this.emailTemplates[reason].subject(user, url, extra),
     };
 
     if (typeof this.emailTemplates[reason].text === 'function') {
