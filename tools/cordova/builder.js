@@ -115,7 +115,7 @@ export class CordovaBuilder {
       author: 'A Meteor Developer',
       email: 'n/a',
       website: 'n/a',
-      contentUrl: `http://localhost/`
+      contentUrl: `http://localhost:${cordovaServerPort}/`
     };
 
     // Set some defaults different from the Cordova defaults
@@ -130,6 +130,10 @@ export class CordovaBuilder {
         ios: {},
         android: {
           "AndroidXEnabled": true,
+          // we still use a port based on appId on iOS to avoid conflits on local webserver
+          // we dont need it on android, but the contentUrl can only be one, and we set this
+          // here to be able to intercept these calls
+          "hostname": `localhost:${cordovaServerPort}`,
           "AndroidInsecureFileModeEnabled": true
         }
       }
@@ -322,14 +326,15 @@ export class CordovaBuilder {
       });
     });
 
-    // allow http communication
-    // TODO: remove it when building for production
-    platformElement.android.ele("edit-config")
-        .att("file", "app/src/main/AndroidManifest.xml")
-        .att("mode", "merge")
-        .att("target", "/manifest/application")
+    // allow http communication only in development mode
+    if(process.env.NODE_ENV !== 'production') {
+      platformElement.android.ele("edit-config")
+          .att("file", "app/src/main/AndroidManifest.xml")
+          .att("mode", "merge")
+          .att("target", "/manifest/application")
           .ele("application")
           .att("android:usesCleartextTraffic", "true");
+    }
     if (shouldCopyResources) {
       // Prepare the resources folder
       files.rm_recursive(this.resourcesPath);
