@@ -14,6 +14,7 @@ Package.onUse(function (api) {
   });
 
   api.addFiles("modern.js", "modern");
+  api.addFiles("legacy.js", "legacy");
   api.export("meteorInstall", "client");
 });
 
