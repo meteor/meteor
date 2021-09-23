@@ -128,7 +128,14 @@ export class CordovaBuilder {
       },
       platform: {
         ios: {},
-        android: {}
+        android: {
+          "AndroidXEnabled": true,
+          // we still use a port based on appId on iOS to avoid conflits on local webserver
+          // we dont need it on android, but the contentUrl can only be one, and we set this
+          // here to be able to intercept these calls
+          "hostname": `localhost:${cordovaServerPort}`,
+          "AndroidInsecureFileModeEnabled": true
+        }
       }
     };
 
@@ -259,7 +266,8 @@ export class CordovaBuilder {
       'android-versionCode': this.metadata.buildNumber,
       'ios-CFBundleVersion': this.metadata.buildNumber,
       xmlns: 'http://www.w3.org/ns/widgets',
-      'xmlns:cdv': 'http://cordova.apache.org/ns/1.0'
+      'xmlns:cdv': 'http://cordova.apache.org/ns/1.0',
+      'xmlns:android': 'http://schemas.android.com/apk/res/android'
     }, (value, key) => {
       if (value) {
         config.att(key, value);
@@ -318,6 +326,15 @@ export class CordovaBuilder {
       });
     });
 
+    // allow http communication only in development mode
+    if(process.env.NODE_ENV !== 'production') {
+      platformElement.android.ele("edit-config")
+          .att("file", "app/src/main/AndroidManifest.xml")
+          .att("mode", "merge")
+          .att("target", "/manifest/application")
+          .ele("application")
+          .att("android:usesCleartextTraffic", "true");
+    }
     if (shouldCopyResources) {
       // Prepare the resources folder
       files.rm_recursive(this.resourcesPath);
