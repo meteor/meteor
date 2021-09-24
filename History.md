@@ -31,7 +31,7 @@
 #### Migration steps
 
 1. Replace all usage of `collection._ensureIndex` with `collection.createIndex`. You only need to rename the method as the functionality is the same.
-2. If you are using a [well known service](https://nodemailer.com/smtp/well-known/) for the email package switch to using `Meteor.settings.pacakges.email` settings instead of `MAIL_URL` env variable. Alternatively you can utilize the new `Email.customTransport` function to override the default package behavior and use your own. [Read the email docs](https://docs.meteor.com/api/email.html) for implementation details.
+2. If you are using a [well known service](https://nodemailer.com/smtp/well-known/) for the email package switch to using `Meteor.settings.packages.email` settings instead of `MAIL_URL` env variable. Alternatively you can utilize the new `Email.customTransport` function to override the default package behavior and use your own. [Read the email docs](https://docs.meteor.com/api/email.html) for implementation details.
 
 #### Meteor Version Release
 
