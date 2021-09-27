@@ -206,14 +206,13 @@ Meteor.methods({
 });
 
 /**
- * @summary Send an email with a link the user can use to reset their password.
+ * @summary Send an email with a link the user can use to login with token.
  * @locus Server
  * @param {String} userId The id of the user to send email to.
- * @param sequence
- * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ * @param {String} sequence The token to be provided
+ * @param {String} email. Which address of the user's to send the email to.
  * @param {Object} [extra] Optional. Extra properties
  * @returns {Object} Object with {email, user, token, url, options} values.
- * @importFromPackage accounts-base
  */
 Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
   const user = getUserById(userId);
