@@ -1,3 +1,11 @@
+import { Meteor } from 'meteor/meteor';
+
+// config option keys
+const VALID_CONFIG_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpiration",
+  "passwordEnrollTokenExpirationInDays", "restrictCreationByEmailDomain", "loginExpirationInDays",
+  "loginExpiration", "passwordResetTokenExpirationInDays", "passwordResetTokenExpiration",
+  "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector"];
+
 /**
  * @summary Super-constructor for AccountsClient and AccountsServer.
  * @locus Anywhere
@@ -66,6 +74,27 @@ export class AccountsCommon {
       const { ServiceConfiguration } = Package['service-configuration'];
       this.loginServiceConfiguration = ServiceConfiguration.configurations;
       this.ConfigError = ServiceConfiguration.ConfigError;
+
+      if(Meteor.settings?.packages?.accounts) {
+        const settings = Meteor.settings.packages.accounts;
+        if(settings.oauthSecretKey) {
+          if (! Package["oauth-encryption"]) {
+            throw new Error("The oauth-encryption package must be loaded to set oauthSecretKey");
+          }
+          Package["oauth-encryption"].OAuthEncryption.loadKey(settings.oauthSecretKey);
+          delete settings.oauthSecretKey;
+        }
+        // Validate config options keys
+        Object.keys(settings).forEach(key => {
+          if (!VALID_CONFIG_KEYS.includes(key)) {
+            // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
+            throw new Meteor.Error(`Accounts configuration: Invalid key: ${key}`);
+          } else {
+            // set values in Accounts._options
+            this._options[key] = settings[key];
+          }
+        });
+      }
     });
   }
 
@@ -105,7 +134,7 @@ export class AccountsCommon {
         ...options.fields,
         ...this._options.defaultFieldSelector,
       }
-    }
+    };
   }
 
   /**
@@ -154,7 +183,7 @@ export class AccountsCommon {
   //     to store passwords.
 
   /**
-   * @summary Set global accounts options.
+   * @summary Set global accounts options. You can also set these in `Meteor.settings.packages.accounts` without the need to call this function.
    * @locus Anywhere
    * @param {Object} options
    * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
@@ -200,23 +229,18 @@ export class AccountsCommon {
       delete options.oauthSecretKey;
     }
 
-    // validate option keys
-    const VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpiration",
-                      "passwordEnrollTokenExpirationInDays", "restrictCreationByEmailDomain", "loginExpirationInDays",
-                      "loginExpiration", "passwordResetTokenExpirationInDays", "passwordResetTokenExpiration",
-                      "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector"];
-
+    // Validate config options keys
     Object.keys(options).forEach(key => {
-      if (!VALID_KEYS.includes(key)) {
-        throw new Error(`Accounts.config: Invalid key: ${key}`);
+      if (!VALID_CONFIG_KEYS.includes(key)) {
+        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
       }
     });
 
     // set values in Accounts._options
-    VALID_KEYS.forEach(key => {
+    VALID_CONFIG_KEYS.forEach(key => {
       if (key in options) {
         if (key in this._options) {
-          throw new Error(`Can't set \`${key}\` more than once`);
+          throw new Meteor.Error(`Can't set \`${key}\` more than once`);
         }
         this._options[key] = options[key];
       }
