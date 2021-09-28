@@ -1,0 +1,1 @@
+export jsx from "./child";

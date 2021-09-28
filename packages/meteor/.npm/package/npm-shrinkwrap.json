@@ -1,0 +1,10 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "double-ended-queue": {
+      "version": "2.1.0-0",
+      "resolved": "https://registry.npmjs.org/double-ended-queue/-/double-ended-queue-2.1.0-0.tgz",
+      "integrity": "sha1-ED01J/0xUo9AGIEwyEHv3XgmTlw="
+    }
+  }
+}
