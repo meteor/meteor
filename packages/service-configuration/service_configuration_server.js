@@ -1,3 +1,5 @@
+import { Meteor } from 'meteor/meteor';
+
 // Only one configuration should ever exist for each service.
 // A unique index helps avoid various race conditions which could
 // otherwise lead to an inconsistent database state (when there are multiple
@@ -28,3 +30,17 @@ try {
     );
     throw err;
 }
+
+Meteor.startup(() => {
+    if (!Meteor.settings?.packages?.['service-configuration']) return;
+    const settings = Meteor.settings?.packages?.['service-configuration']
+    Object.keys(settings).forEach((key) => {
+        // TODO siteUrl which requirements differ for example between google and meteor-developer or we can leave it to the users
+        ServiceConfiguration.configurations.upsert(
+          { service: key },
+          {
+              $set: settings[key]
+          }
+        );
+    });
+});
