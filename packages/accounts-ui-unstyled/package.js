@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.5.0"
+  version: "1.5.1"
 });
 
 Package.onUse(function (api) {
@@ -42,7 +42,7 @@ Package.onUse(function (api) {
   // this package doesn't actually apply these styles; they need to be
   // `@import`ed from some non-import less file.  The accounts-ui package does
   // that for you, or you can do it in your app.
-  api.use('less');
+  api.use('less@3.0.2 || 4.0.0');
   api.addFiles('login_buttons.import.less');
 });
 

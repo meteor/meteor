@@ -15,6 +15,12 @@
 * `standard-minifier-js@2.7.1`
   - Updated `@babel/runtime` to [v7.15.4](https://github.com/babel/babel/releases/tag/v7.15.4)
 
+* `accounts-ui@1.4.1`
+  - Update compatibility range with `less` from 3.0.2 to 4.0.0
+
+* `accounts-ui-unstyled@1.5.1`
+  - Update compatibility range with `less` from 3.0.2 to 4.0.0
+
 ## v2.4, 2021-09-15
 
 #### Highlights
