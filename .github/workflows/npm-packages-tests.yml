@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
-      - run: npm test
+      - run: npm run test
   eslint-plugin-meteor:
     name: Test eslint-plugin-meteor
     runs-on: ubuntu-latest
