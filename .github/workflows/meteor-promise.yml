@@ -1,0 +1,7 @@
+- name: Test meteor-promise
+  uses: ktomk/run-travis-yml@v1.7.0
+  defaults:
+    run:
+      working-directory: npm-packages/meteor-promise
+  with:
+    file: .travis.yml
