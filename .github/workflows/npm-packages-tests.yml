@@ -1,0 +1,8 @@
+name: NPM packages tests
+on: [push, pull_request]
+jobs:
+  meteor-promise:
+    steps:
+      - working-directory: npm-packages/meteor-promise
+      - uses: ktomk/run-travis-yml@v1.7.0
+
