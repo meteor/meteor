@@ -75,8 +75,8 @@ export class AccountsCommon {
       this.loginServiceConfiguration = ServiceConfiguration.configurations;
       this.ConfigError = ServiceConfiguration.ConfigError;
 
-      if(Meteor.settings?.packages?.accounts) {
-        const settings = Meteor.settings.packages.accounts;
+      const settings = Meteor.settings?.packages?.['accounts-base'];
+      if(settings) {
         if(settings.oauthSecretKey) {
           if (! Package["oauth-encryption"]) {
             throw new Error("The oauth-encryption package must be loaded to set oauthSecretKey");
