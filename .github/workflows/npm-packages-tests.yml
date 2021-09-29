@@ -1,8 +1,44 @@
 name: NPM packages tests
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - 'npm-packages/**'
+  pull_request:
+    paths:
+      - 'npm-packages/**'
 jobs:
   meteor-promise:
+    name: Test meteor-promise
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: npm-packages/meteor-promise
+    strategy:
+      matrix:
+        node-version: [ 12.x, 14.x ]
     steps:
-      - working-directory: npm-packages/meteor-promise
-      - uses: ktomk/run-travis-yml@v1.7.0
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm test
+  eslint-plugin-meteor:
+    name: Test eslint-plugin-meteor
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: npm-packages/eslint-plugin-meteor
+    strategy:
+      matrix:
+        node-version: [ 12.x, 14.x ]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
+      - run: npm test
 
