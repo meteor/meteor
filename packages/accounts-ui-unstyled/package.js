@@ -9,7 +9,7 @@ Package.onUse(function (api) {
     'service-configuration',
     'accounts-base',
     'ecmascript',
-    'templating@1.4.0',
+    'templating@1.4.1',
     'session',
   ], 'client');
 
