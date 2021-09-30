@@ -1,0 +1,10 @@
+os: osx
+osx_image: xcode11.2
+git:
+  depth: 2
+node_js:
+  - 12
+install:
+  - npm install
+script:
+  - npm test
