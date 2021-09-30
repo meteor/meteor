@@ -79,6 +79,7 @@ sidebar_categories:
     - commandline
     - environment-variables
   Troubleshooting:
+    - expired-certificate
     - windows
 github_repo: 'meteor/docs'
 
