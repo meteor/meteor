@@ -15,7 +15,7 @@ Vue already has an excellent guide with many advanced topics already covered. So
 
 This documentation is purely focused on integrating it with Meteor.
 
-> Meteor has a Vue skeleton which will prepare for you a basic Vue Meteor app.
+> Meteor has a Vue skeleton which will prepare a basic Vue Meteor app for you.
 > You can create one by running `meteor create vue-meteor-app --vue`
 > There is also a [Vue tutorial](https://vue-tutorial.meteor.com/) which covers the basics of this section. 
 
@@ -34,7 +34,7 @@ Vue has an excellent [guide and documentation](https://vuejs.org/v2/guide/). Thi
 
 Vue is a frontend library, like React, Blaze and Angular. 
 
-Some really nice frameworks are built around Vue. [Nuxt.js](https://nuxtjs.org) for example, aims to create a framework flexible enough that you can use it as a main project base or in addition to your current project based on Node.js.  Though Nuxt.js is full-stack and very pluggable. It lacks the an API to communicate data from and to the server. Also unlike Meteor, Nuxt still relies on a configuration file. 
+Some really nice frameworks are built around Vue. [Nuxt.js](https://nuxtjs.org) for example, aims to create a framework flexible enough that you can use it as a main project base or in addition to your current project based on Node.js. Though Nuxt.js is full-stack and very pluggable, it lacks an API to communicate data from and to the server. Also unlike Meteor, Nuxt still relies on a configuration file. 
 
 Meteor's build tool and Pub/Sub API (or Apollo) provides Vue with this API that you would normally have to integrate yourself, greatly reducing the amount of boilerplate code you have to write.
 
