@@ -4,6 +4,9 @@
 
 #### Meteor Version Release
 
+* `accounts-base@2.2.0`
+  - You can now apply all the settings for `Accounts.config` in `Meteor.settings.pacakges.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
+
 #### Independent Releases
 
 * `modern-browsers@0.1.6`
