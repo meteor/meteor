@@ -52,3 +52,5 @@ sudo certbot certonly --manual --preferred-chain "ISRG Root X1" --preferred-chal
 ```
 
 More info can be obtained [here](https://letsencrypt.org/certificates).
+
+If you are using Galaxy, you need to follow the requirements and steps [here](https://galaxy-guide.meteor.com/encryption.html#Custom%20certificate) after generating the certificate. Galaxy only accepts custom certs in .pem format, the same as nginx uses.
