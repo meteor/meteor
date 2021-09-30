@@ -41,7 +41,7 @@ If your server is accessing external let’s encrypt resources with an old Meteo
 
 As stated before, Galaxy issues Let's Encrypt certificates automatically for all clients. This is source of confusion, as if you are depending on older clients being able to access your website, this won't work.
 
-If Let's encrypt certificates are not good for your clients you would need to acquire other certificate from a different provide and upload your custom certificate into Galaxy.
+If Let's encrypt certificates are not good for your clients you would need to acquire other certificate from a different provider and upload your custom certificate into Galaxy.
 
 You can also generate a Let's Encrypt certificate manually and upload to Galaxy, but specifying an alternative preferred chain on certbot:
 
