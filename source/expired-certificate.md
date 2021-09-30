@@ -3,7 +3,7 @@ title: Expired Certificates
 description: Troubleshooting Expired Certificates Issues
 ---
 
-<h2 id="certificates-issue">Can't start Meteor due to certificate issues</h2>
+<h2 id="commands">Can't run Meteor commands</h2>
 
 Galaxy and all Meteor servers uses Let's Encrypt, which announced a change in May in this [post](https://letsencrypt.org/docs/dst-root-ca-x3-expiration-september-2021) about DST Root CA X3 expiring on September 30, 2021.
 
@@ -23,7 +23,12 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 meteor deploy
 
 Also note that if you are running old distributions, like Ubuntu 16 and before, locally, or in any of your CI pipelines you may also face this issue. In this case, we do recommend updating your distribution, or your local repository of root certificates (the how-to of this varies based on your distribution).
 
-If your server is accessing external let’s encrypt resources with an old Meteor version, you will also need to add NODE_TLS_REJECT_UNAUTHORIZED to your container env vars. If you are using Galaxy, it's simple as using your settings file:
+
+<h2 id="server-requests">Requests failing</h2>
+
+If your server is accessing external resources where the target host is using Let's Encrypt certificates and your app is running an old Meteor version, you will also need to add `NODE_TLS_REJECT_UNAUTHORIZED` to your server environment variables. 
+
+If you are using Galaxy, it's as simple as adding this to your settings file:
 
 ```json
 {
@@ -35,9 +40,9 @@ If your server is accessing external let’s encrypt resources with an old Meteo
 }
 ```
 
-***Please note:*** We don't recommend continued use of this workaround, as any SSL certificate is going to be authorized and you are exposing your application to serious security issues. The best option is to update Meteor to latest version, or a supported one.
+***Please note:*** We don't recommend continued use of this workaround, as any SSL certificate is going to be authorized and you are exposing your application to serious security issues. The best option is to update Meteor to latest version, or at least Meteor 1.9 as it is the first using Node.js 12.
 
-You can check our list of supported Meteor versions [here](https://github.com/meteor/meteor/blob/devel/SECURITY.md#supported-versions). If your applications is not in one of them, you should migrate asap.
+You can check our list of supported Meteor versions [here](https://github.com/meteor/meteor/blob/devel/SECURITY.md#supported-versions). If your applications is not in one of them, you should migrate as soon as possible.
 
 <h2 id="client-compatibility">Client Compatibility</h2>
 
