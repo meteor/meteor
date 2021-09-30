@@ -37,6 +37,8 @@ If your server is accessing external let’s encrypt resources with an old Meteo
 
 ***Please note:*** We don't recommend continued use of this workaround, as any SSL certificate is going to be authorized and you are exposing your application to serious security issues. The best option is to update Meteor to latest version, or a supported one.
 
+You can check our list of supported Meteor versions [here](https://github.com/meteor/meteor/blob/devel/SECURITY.md#supported-versions). If your applications is not in one of them, you should migrate asap.
+
 <h2 id="client-compatibility">Client Compatibility</h2>
 
 As stated before, Galaxy issues Let's Encrypt certificates automatically for all clients. This is source of confusion, as if you are depending on older clients being able to access your website, this won't work.
