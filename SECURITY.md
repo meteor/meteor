@@ -2,11 +2,11 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 2.x.y   | ✅ |
-| 1.12.x   | 🚧 |
-| < 1.11.x   | ❌                |
+| Version | Support Status
+| ------- | --------------
+| 2.x.y   | ✅  all security issues
+| 1.12.x   | 🚧  only critical security issues
+| <= 1.11.x   | ❌  no longer supportted
 
 ## Reporting a Vulnerability
 
