@@ -35,7 +35,6 @@ Meteor.startup(() => {
   const settings = Meteor.settings?.packages?.['service-configuration'];
   if (!settings) return;
   Object.keys(settings).forEach(key => {
-    // TODO siteUrl which requirements differ for example between google and meteor-developer or we can leave it to the users
     ServiceConfiguration.configurations.upsert(
       { service: key },
       {
