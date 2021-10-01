@@ -9,17 +9,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-      defaults:
-        run:
-          working-directory: guide/site/
-      steps:
-        - uses: actions/checkout@v2
-        - name: Test build
-          uses: actions/setup-node@v1
-            with:
-              node-version: 12.x
-        - run: npm ci
-        - run: npm build
+    defaults:
+      run:
+        working-directory: guide/site/
+    steps:
+      - uses: actions/checkout@v2
+      - name: Test build
+        uses: actions/setup-node@v1
+          with:
+            node-version: 12.x
+      - run: npm ci
+      - run: npm build
   deploy:
     runs-on: ubuntu-latest
     defaults:
