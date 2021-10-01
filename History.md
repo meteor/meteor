@@ -2,10 +2,47 @@
 
 #### Highlights
 
+* Cordova 10
+* HMR now works on all architectures and legacy browsers
+* `Accounts.config()` and third-party login services can now be configured from Meteor settings
+
 #### Meteor Version Release
 
+* CircleCI testing image was updated to include Android 30 and Node 14 
+
+* `meteor-tool@2.5`
+  - Cordova upgraded to v10
+  - HMR improvements related to `hot-module-replacement@0.4.0`
+
 * `accounts-base@2.2.0`
-  - You can now apply all the settings for `Accounts.config` in `Meteor.settings.pacakges.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
+  - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
+
+* `service-configuration@1.3.0`
+  - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.
+
+* `autoupdate@1.8.0`
+  - Updated to work with HMR
+
+* `ecmascript@0.16.0`
+  - HMR improvements
+
+* `hot-module-replacement@0.4.0`
+  - Provides polyfills needed by Meteor.absoluteUrl in legacy browsers
+  - Improvements for HMR to work in all architectures and legacy browsers
+
+* `module-runtime@0.14.0`
+  - Improvements for legacy browsers
+
+* `react-fast-refrest@0.2.0`
+  - 
+
+* `typescript@4.4.0`
+  * HMR improvements
+
+* `webapp@1.13.0`
+  - Update `cordova-plugin-meteor-webapp` to v2
+  - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
+
 
 #### Independent Releases
 
