@@ -1,0 +1,11 @@
+Package.describe({
+  summary: "Library for manipulating documents based on data",
+  version: "1.0.0",
+  deprecated: true,
+  documentation: null
+});
+
+Package.onUse(function (api) {
+  api.export('d3', 'client');
+  api.addFiles('d3.v3.js', 'client');
+});

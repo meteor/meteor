@@ -1,0 +1,3 @@
+.tern-*
+/rollup.config.*
+/src

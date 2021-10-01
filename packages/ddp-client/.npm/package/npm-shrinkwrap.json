@@ -1,0 +1,20 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "@sinonjs/commons": {
+      "version": "1.8.3",
+      "resolved": "https://registry.npmjs.org/@sinonjs/commons/-/commons-1.8.3.tgz",
+      "integrity": "sha512-xkNcLAn/wZaX14RPlwizcKicDk9G3F8m2nU3L7Ukm5zBgTwiT0wsoFAHx9Jq56fJA1z/7uKGtCRu16sOUCLIHQ=="
+    },
+    "@sinonjs/fake-timers": {
+      "version": "7.0.5",
+      "resolved": "https://registry.npmjs.org/@sinonjs/fake-timers/-/fake-timers-7.0.5.tgz",
+      "integrity": "sha512-fUt6b15bjV/VW93UP5opNXJxdwZSbK1EdiwnhN7XrQrcpaOhMJpZ/CjwFpM3THpxwA+YviBUJKSuEqKlCK5alw=="
+    },
+    "type-detect": {
+      "version": "4.0.8",
+      "resolved": "https://registry.npmjs.org/type-detect/-/type-detect-4.0.8.tgz",
+      "integrity": "sha512-0fr/mIH1dlO+x7TlcMy+bIDqKPsw/70tVyeHW787goQjhmqaZe10uwLujubK9q9Lg6Fiho1KUKDYz0Z7k7g5/g=="
+    }
+  }
+}

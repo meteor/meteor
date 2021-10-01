@@ -1,0 +1,25 @@
+<template name="configureLoginServiceDialogForWeibo">
+  <p>
+    First, you'll need to register your app on Weibo. Follow these steps:
+  </p>
+  <ol>
+    <li>
+      Visit <a href="http://open.weibo.com/development" target="_blank">http://open.weibo.com/development</a> (Google Chrome's automatic translation works well here)
+    </li>
+    <li>
+      Click the orange "立即创建微连接" button
+    </li>
+    <li>
+      Select the third option, APP / 网页应用 (Web Applications)
+    </li>
+    <li>
+      Complete the registration process. An email confirmation will be send. No SMS confirmation required.
+    </li>
+    <li>
+      Open 应用信息 (Application) -> 高级信息 (Advanced Information)
+    </li>
+    <li>
+      Set OAuth2.0 授权回调页 (authorized callback page) to: <span class="url">{{siteUrl}}_oauth/weibo</span>
+    </li>
+  </ol>
+</template>

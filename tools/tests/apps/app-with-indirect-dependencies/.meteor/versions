@@ -1,0 +1,11 @@
+babel-compiler@6.9.0
+babel-runtime@0.1.10
+ecmascript@0.5.7
+ecmascript-runtime@0.3.13
+meteor@1.2.16
+modules@0.7.5
+modules-runtime@0.7.5
+promise@0.8.3
+tmeasday:direct-dependency@1.0.0
+tmeasday:indirect-dependency@1.0.0
+underscore@1.0.9
