@@ -538,7 +538,7 @@ export default class ImportScanner {
     }
 
     let relativePath = pathRelative(this.sourceRoot, absPath);
-    if (relativePath.startsWith("..")) {
+    if (relativePath.startsWith("..") || relativePath.startsWith('/')) {
       // If the absPath is outside this.sourceRoot, assume it's real.
       return this.realPathCache[absPath] = absPath;
     }
