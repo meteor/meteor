@@ -1,0 +1,50 @@
+name: Meteor Guide
+on:
+  push:
+    paths:
+      - 'guide/**/*'
+  pull_request:
+    paths:
+      - 'guide/**/*'
+jobs:
+  test:
+    runs-on: ubuntu-latest
+      defaults:
+        run:
+          working-directory: guide/site/
+      steps:
+        - uses: actions/checkout@v2
+        - name: Test build
+          uses: actions/setup-node@v1
+            with:
+              node-version: 12.x
+        - run: npm ci
+        - run: npm build
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: guide/
+    needs: [test]
+    if:
+      contains('
+      refs/heads/devel
+      refs/heads/master
+      ', github.ref)
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build Guide
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v1.2.2
+        with:
+          publish-dir: './site/dist'
+          production-branch: devel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions"
+          netlify-config-path: './netlify.toml'
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_GUIDE_SITE_ID }}
