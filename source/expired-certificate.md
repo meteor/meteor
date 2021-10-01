@@ -59,3 +59,13 @@ sudo certbot certonly --manual --preferred-chain "ISRG Root X1" --preferred-chal
 More info can be obtained [here](https://letsencrypt.org/certificates).
 
 If you are using Galaxy, you need to follow the requirements and steps [here](https://galaxy-guide.meteor.com/encryption.html#Custom%20certificate) after generating the certificate. Galaxy only accepts custom certs in .pem format, the same as nginx uses.
+
+<h2 id="clients-not-working">Clients Known to be not working</h2>
+
+Here is a succinct list of known to be not working clients:
+
+- Mac OS X prior to 10.12.1. Any browser, except firefox that bundles root chains, won't work.
+- Node.JS HTTP requests prior to v10. This includes any Meteor version prior to 1.9(except).
+- Any client using OpenSSL 1.0.2 and before.
+
+Please note that this is not an exhaustive list, but based on our reports and experience. This is not a Meteor or Galaxy issue, but it's a change in the Let's Encrypt certificate you are using.
