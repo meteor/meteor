@@ -1,17 +1,17 @@
 Package.describe({
   name: 'react-fast-refresh',
-  version: '0.2.0-beta250.0',
+  version: '0.2.0-beta250.1',
   summary: 'Automatically update React components with HMR',
   documentation: 'README.md',
-  devOnly: true
+  devOnly: true,
 });
 
 Npm.depends({
   'react-refresh': '0.9.0',
-   semver: '7.3.4'
+  semver: '7.3.4',
 });
 
-Package.onUse(function (api) {
+Package.onUse(function(api) {
   api.export('ReactFastRefresh');
   api.use('modules');
   api.addFiles('server.js', 'server');
