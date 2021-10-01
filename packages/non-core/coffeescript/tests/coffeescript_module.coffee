@@ -1,0 +1,1 @@
+export testingForNativeImportedModule123456789 = true

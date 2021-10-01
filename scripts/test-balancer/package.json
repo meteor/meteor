@@ -1,0 +1,10 @@
+{
+  "name": "test-balancer",
+  "version": "0.0.1",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "xml2js": "^0.4.19"
+  }
+}

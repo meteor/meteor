@@ -1,0 +1,52 @@
+<template name="configureLoginServiceDialogForFacebook">
+  <p>
+    First, you'll need to register your app on Facebook. Follow these steps:
+  </p>
+  <ol>
+    <li>
+      Visit <a href="https://developers.facebook.com/apps" target="_blank">https://developers.facebook.com/apps</a>
+    </li>
+    <li>
+      Click "Add a New App".
+    </li>
+    <li>
+      Add a "Display Name" for your app and click on "Create App ID".
+    </li>
+    <li>
+      Answer the "Security Check" CAPTCHA and click on "Submit".
+    </li>
+    <li>
+      When the new app dashboard loads, click on "Settings" in the left hand menu.
+    </li>
+    <li>
+      From the top of the "Basic" settings page, note down your "App ID" and "App Secret" (you will be asked for them at the bottom of this popup).
+    </li>
+    <li>
+      Click on the "Add Platform" button, and select "Website".
+    </li>
+    <li>
+      In the "Website" section, set the "Site URL" to <span class="url">{{siteUrl}}</span> and click on "Save Changes".
+    </li>
+    <li>
+      Click on "Add Product" in the left hand menu.
+    </li>
+    <li>
+      Hover over "Facebook Login", click on "Set Up".
+    </li>
+    <li>
+      Click on "Facebook Login > Settings" from the left hand menu.
+    </li>
+    <li>
+      Set "Valid OAuth redirect URIs" to <span class="url">{{siteUrl}}_oauth/facebook</span> and click on "Save Changes".
+    </li>
+    <li>
+      Select "App Review" from the left hand menu.
+    </li>
+    <li>
+      Toggle the "Make app public" switch to "Yes".
+    </li>
+    <li>
+      Select a "Category" in the "Make app public" popup and click on "Confirm".
+    </li>
+  </ol>
+</template>

@@ -1,0 +1,14 @@
+# Meteor packages used by this project, one per line.
+# Check this file (and the other files in this directory) into your repository.
+#
+# 'meteor add' and 'meteor remove' will edit this file for you,
+# but you can also edit it by hand.
+
+meteor-base             # Packages every Meteor app needs to have
+static-html             # Define static page content in .html files
+standard-minifier-css   # CSS minifier run for production mode
+standard-minifier-js    # JS minifier run for production mode
+es5-shim                # ECMAScript 5 compatibility for older browsers
+ecmascript              # Enable ECMAScript2015+ syntax in app code
+shell-server            # Server-side component of the `meteor shell` command
+less                    # Support .less files for defining CSS styles

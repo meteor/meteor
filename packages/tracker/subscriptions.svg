@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 18.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 viewBox="0 0 954.9 624.4" enable-background="new 0 0 954.9 624.4" xml:space="preserve">
+<rect x="36.1" y="188.5" fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" width="257.7" height="95.3"/>
+<rect x="36.1" y="188.5" fill="none" width="257.7" height="95.3"/>
+<text transform="matrix(1.0297 0 0 1 73.5326 225.4261)"><tspan x="0" y="0" font-family="'HelveticaNeue'" font-size="16.0835">`currentInterest` changes</tspan><tspan x="-18" y="19.3" font-family="'HelveticaNeue'" font-size="16.0835">from “fashion” to “celebrities”</tspan></text>
+<rect x="350" y="188.5" fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" width="257.7" height="95.3"/>
+<rect x="350" y="188.5" fill="none" width="257.7" height="95.3"/>
+<text transform="matrix(1.0297 0 0 1 360.3138 244.7264)" font-family="'HelveticaNeue'" font-size="16.0835">subscription autorun invalidated</text>
+<rect x="663.9" y="188.5" fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" width="257.7" height="95.3"/>
+<rect x="663.9" y="188.5" fill="none" width="257.7" height="95.3"/>
+<text transform="matrix(1.0297 0 0 1 725.3367 214.3973)"><tspan x="0" y="0" font-family="'HelveticaNeue'" font-size="16.0835">onInvalidate() runs</tspan><tspan x="-52.8" y="19.3" font-family="'HelveticaNeue'" font-size="16.0835">- “Cosmo” subscription stops; its</tspan><tspan x="-52.8" y="38.6" font-family="'HelveticaNeue'" font-size="16.0835">`references` property is now 0</tspan><tspan x="65.5" y="57.9" font-family="'HelveticaNeue'" font-size="16.0835"> </tspan></text>
+<rect x="27.3" y="344.6" fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" width="275.3" height="95.3"/>
+<rect x="28" y="344.6" fill="none" width="273.9" height="95.3"/>
+<text transform="matrix(1.0297 0 0 1 63.0905 381.4888)"><tspan x="0" y="0" font-family="'HelveticaNeue'" font-size="16.0835">subscription autorun reruns</tspan><tspan x="-27.3" y="19.3" font-family="'HelveticaNeue'" font-size="16.0835">- new “People” subscription made, </tspan><tspan x="-27.3" y="38.6" font-family="'HelveticaNeue'" font-size="16.0835">with `references` property of 1</tspan></text>
+<rect x="30.5" y="500.5" fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" width="274.4" height="95.3"/>
+<rect x="27.3" y="500.5" fill="none" width="274.6" height="95.3"/>
+<text transform="matrix(1.0297 0 0 1 105.2577 537.4227)"><tspan x="0" y="0" font-family="'HelveticaNeue'" font-size="16.0835">afterFlush() runs</tspan><tspan x="-63" y="19.3" font-family="'HelveticaNeue'" font-size="16.0835">- “Cosmo” subscription removed,</tspan><tspan x="-67.2" y="38.6" font-family="'HelveticaNeue'" font-size="16.0835">because it is unused (references 0)</tspan></text>
+<path fill="none" d="M478.9,236.2"/>
+<path fill="none" d="M164.9,236.2"/>
+<line fill="none" x1="174.6" y1="236.2" x2="155.3" y2="236.2"/>
+<path fill="none" d="M164.9,236.2"/>
+<path fill="none" d="M164.9,236.2"/>
+<path stroke="#000000" stroke-miterlimit="10" d="M164.9,236.2"/>
+<path stroke="#000000" stroke-miterlimit="10" d="M164.9,236.2"/>
+<line stroke="#000000" stroke-miterlimit="10" x1="164.9" y1="344.5" x2="164.9" y2="283.8"/>
+<line stroke="#000000" stroke-miterlimit="10" x1="164.9" y1="236.2" x2="164.9" y2="236.2"/>
+<line stroke="#000000" stroke-miterlimit="10" x1="350" y1="236.2" x2="293.8" y2="236.2"/>
+<line stroke="#000000" stroke-miterlimit="10" x1="164.9" y1="500.5" x2="164.9" y2="439.9"/>
+<line stroke="#000000" stroke-miterlimit="10" x1="663.9" y1="236.2" x2="607.7" y2="236.2"/>
+<rect x="36.1" y="32.6" fill="#FFFFFF" stroke="#000000" stroke-miterlimit="10" width="257.7" height="95.3"/>
+<rect x="36.1" y="32.6" fill="none" width="257.7" height="95.3"/>
+<text transform="matrix(1.0297 0 0 1 49.2875 58.4639)"><tspan x="0" y="0" font-family="'HelveticaNeue'" font-size="16.0835">user is subscribed to “Cosmo”,</tspan><tspan x="23.4" y="19.3" font-family="'HelveticaNeue'" font-size="16.0835">with a `currentInterest` of </tspan><tspan x="79.4" y="38.6" font-family="'HelveticaNeue'" font-size="16.0835">“fashion”</tspan></text>
+<line stroke="#000000" stroke-miterlimit="10" x1="164.9" y1="188.5" x2="164.9" y2="127.9"/>
+</svg>

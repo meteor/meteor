@@ -1,0 +1,40 @@
+{
+  "lockfileVersion": 1,
+  "dependencies": {
+    "acorn": {
+      "version": "6.4.2",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-6.4.2.tgz",
+      "integrity": "sha512-XtGIhXwF8YM8bJhGxG5kXgjkEuNGLTkoYqVE+KMR+aspr4KGYmKYg7yUe3KghyQ9yheNwLnjmzh/7+gfDBmHCQ=="
+    },
+    "acorn-dynamic-import": {
+      "version": "4.0.0",
+      "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
+      "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
+    },
+    "magic-string": {
+      "version": "0.25.7",
+      "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.25.7.tgz",
+      "integrity": "sha512-4CrMT5DOHTDk4HYDlzmwu4FVCcIYI8gauveasrdCu2IKIFOJ3f0v/8MDGJCDL9oD2ppz/Av1b0Nj345H9M+XIA=="
+    },
+    "meteor-babel-helpers": {
+      "version": "0.0.3",
+      "resolved": "https://registry.npmjs.org/meteor-babel-helpers/-/meteor-babel-helpers-0.0.3.tgz",
+      "integrity": "sha1-8uXZ+HlvvS6JAQI9dpnlsgLqn7A="
+    },
+    "reify": {
+      "version": "0.22.2",
+      "resolved": "https://registry.npmjs.org/reify/-/reify-0.22.2.tgz",
+      "integrity": "sha512-XJ1/k44E7JXZ6E3sZtT1k4OPiwiTDQnNdH3ive/6npOOymuF8TehAIUiLSHkinhww1HItaDbK4SKhSQsQQOjmA=="
+    },
+    "semver": {
+      "version": "5.7.1",
+      "resolved": "https://registry.npmjs.org/semver/-/semver-5.7.1.tgz",
+      "integrity": "sha512-sauaDf/PZdVgrLTNYHRtpXa1iRiKcaebiKQ1BJdpQlWH2lCvexQdX55snPFyK7QzpudqbCI0qXFfOasHdyNDGQ=="
+    },
+    "sourcemap-codec": {
+      "version": "1.4.8",
+      "resolved": "https://registry.npmjs.org/sourcemap-codec/-/sourcemap-codec-1.4.8.tgz",
+      "integrity": "sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA=="
+    }
+  }
+}

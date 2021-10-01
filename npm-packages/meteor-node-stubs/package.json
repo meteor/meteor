@@ -1,0 +1,84 @@
+{
+  "name": "meteor-node-stubs",
+  "author": "Ben Newman <ben@meteor.com>",
+  "description": "Stub implementations of Node built-in modules, a la Browserify",
+  "version": "1.1.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "prepare": "node scripts/build-deps.js"
+  },
+  "dependencies": {
+    "assert": "^2.0.0",
+    "browserify-zlib": "^0.2.0",
+    "buffer": "^6.0.3",
+    "console-browserify": "^1.2.0",
+    "constants-browserify": "^1.0.0",
+    "crypto-browserify": "^3.12.0",
+    "domain-browser": "^4.19.0",
+    "elliptic": "^6.5.4",
+    "events": "^3.3.0",
+    "https-browserify": "^1.0.0",
+    "os-browserify": "^0.3.0",
+    "path-browserify": "^1.0.0",
+    "process": "^0.11.10",
+    "punycode": "^2.1.1",
+    "querystring-es3": "^0.2.1",
+    "readable-stream": "^3.6.0",
+    "stream-browserify": "^3.0.0",
+    "stream-http": "^3.2.0",
+    "string_decoder": "^1.3.0",
+    "timers-browserify": "^2.0.12",
+    "tty-browserify": "0.0.1",
+    "url": "^0.11.0",
+    "util": "^0.12.4",
+    "vm-browserify": "^1.1.2"
+  },
+  "bundledDependencies": [
+    "assert",
+    "browserify-zlib",
+    "buffer",
+    "console-browserify",
+    "constants-browserify",
+    "crypto-browserify",
+    "domain-browser",
+    "events",
+    "https-browserify",
+    "os-browserify",
+    "path-browserify",
+    "process",
+    "punycode",
+    "querystring-es3",
+    "readable-stream",
+    "stream-browserify",
+    "stream-http",
+    "string_decoder",
+    "timers-browserify",
+    "tty-browserify",
+    "url",
+    "util",
+    "vm-browserify"
+  ],
+  "devDependencies": {
+    "rimraf": "^2.5.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meteor/node-stubs.git"
+  },
+  "keywords": [
+    "stubs",
+    "shims",
+    "node",
+    "builtins",
+    "core",
+    "modules",
+    "browserify",
+    "webpack",
+    "meteor"
+  ],
+  "bugs": {
+    "url": "https://github.com/meteor/node-stubs/issues"
+  },
+  "homepage": "https://github.com/meteor/node-stubs#readme"
+}
