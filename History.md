@@ -21,6 +21,9 @@
 * `accounts-ui-unstyled@1.5.1`
   - Update compatibility range with `less` from 3.0.2 to 4.0.0
 
+* `google-config-ui@1.0.3`
+  - Deliver siteUrl in the same way as other config-ui packages
+
 ## v2.4, 2021-09-15
 
 #### Highlights
