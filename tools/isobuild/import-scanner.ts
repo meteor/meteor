@@ -1442,7 +1442,10 @@ export default class ImportScanner {
     this.nodeModulesPaths.some(path => {
       const relPathWithinNodeModules = pathRelative(path, absPath);
 
-      if (relPathWithinNodeModules.startsWith("..")) {
+      if (
+        relPathWithinNodeModules.startsWith("..") ||
+        relPathWithinNodeModules.startsWith('/')
+      ) {
         // absPath is not a subdirectory of path.
         return false;
       }
