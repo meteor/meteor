@@ -1,3 +1,0 @@
-[submodule "site/themes/meteor"]
-	path = site/themes/meteor
-	url = https://github.com/meteor/hexo-theme-meteor.git
