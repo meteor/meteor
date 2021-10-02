@@ -5,6 +5,7 @@
 * Cordova 10
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
+* HMR now works on all arch's
 
 #### Meteor Version Release
 
@@ -13,6 +14,8 @@
 * `meteor-tool@2.5`
   - Cordova upgraded to v10
   - HMR improvements related to `hot-module-replacement@0.4.0`
+  - Fix finding local packages on Windows located on drives other than C
+  - Fix infinite loop in import scanner when file is on a different drive than source root
 
 * `accounts-base@2.2.0`
   - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
@@ -21,10 +24,10 @@
   - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.
 
 * `autoupdate@1.8.0`
-  - Updated to work with HMR
+  - Enable HMR for all web arch's
 
 * `ecmascript@0.16.0`
-  - HMR improvements
+  - Enable HMR for all web arch's
 
 * `hot-module-replacement@0.4.0`
   - Provides polyfills needed by Meteor.absoluteUrl in legacy browsers
@@ -34,10 +37,10 @@
   - Improvements for legacy browsers
 
 * `react-fast-refrest@0.2.0`
-  - 
+  - Enable HMR for all web arch's
 
 * `typescript@4.4.0`
-  * HMR improvements
+  - Enable HMR for all web arch's
 
 * `webapp@1.13.0`
   - Update `cordova-plugin-meteor-webapp` to v2
