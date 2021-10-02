@@ -1,0 +1,62 @@
+{
+  "name": "@meteorjs/babel",
+  "author": "Meteor <dev@meteor.com>",
+  "version": "7.13.0",
+  "license": "MIT",
+  "description": "Babel wrapper package for use with Meteor",
+  "keywords": [
+    "meteor",
+    "babel",
+    "es6",
+    "es7",
+    "transpiler",
+    "transpilation",
+    "compilation",
+    "transform",
+    "syntax",
+    "ast"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "test": "test/run.sh",
+    "update-versions": "bash scripts/update-versions"
+  },
+  "homepage": "https://github.com/meteor/babel",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meteor/babel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meteor/babel/issues"
+  },
+  "dependencies": {
+    "@babel/core": "^7.15.0",
+    "@babel/parser": "^7.15.3",
+    "@babel/plugin-proposal-class-properties": "^7.14.5",
+    "@babel/plugin-syntax-dynamic-import": "^7.8.3",
+    "@babel/plugin-transform-modules-commonjs": "^7.15.0",
+    "@babel/plugin-transform-runtime": "^7.15.0",
+    "@babel/preset-react": "^7.14.5",
+    "@babel/runtime": "^7.15.3",
+    "@babel/template": "^7.14.5",
+    "@babel/traverse": "^7.15.0",
+    "@babel/types": "^7.15.0",
+    "babel-preset-meteor": "^7.10.0",
+    "babel-preset-minify": "^0.5.1",
+    "convert-source-map": "^1.6.0",
+    "lodash": "^4.17.21",
+    "meteor-babel-helpers": "0.0.3",
+    "reify": "^0.22.0",
+    "typescript": "^4.3.5"
+  },
+  "devDependencies": {
+    "@babel/plugin-proposal-decorators": "7.14.5",
+    "@babel/plugin-syntax-decorators": "7.14.5",
+    "d3": "4.13.0",
+    "fibers": "5.0.0",
+    "meteor-promise": "0.9.0",
+    "mocha": "6.2.3",
+    "promise": "8.1.0",
+    "source-map": "0.6.1"
+  }
+}
