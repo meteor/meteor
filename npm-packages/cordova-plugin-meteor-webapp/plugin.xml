@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+  id="cordova-plugin-meteor-webapp"
+  version="1.6.5">
+  <name>Meteor Webapp</name>
+  <description>Cordova plugin that serves a Meteor web app through a local server and implements hot code push</description>
+  <keywords>cordova,meteor</keywords>
+  <author>Meteor Development Group</author>
+  <license>MIT</license>
+  <repo>https://github.com/meteor/cordova-plugin-meteor-webapp.git</repo>
+
+  <engines>
+    <engine name="cordova" version=">=5.4.1" />
+    <engine name="cordova-ios" version=">=4.0.0" />
+    <engine name="apple-ios" version=">=8.0" />
+    <engine name="apple-xcode" version=">=7.2" />
+  </engines>
+
+  <js-module src="www/webapp_local_server.js" name="WebAppLocalServer">
+    <merges target="WebAppLocalServer" />
+  </js-module>
+
+  <platform name="ios">
+    <hook type="after_plugin_install" src="scripts/iosAddBridgingHeader.js" />
+
+    <config-file target="config.xml" parent="/*">
+      <feature name="WebAppLocalServer">
+        <param name="ios-package" value="METWebAppLocalServer"/>
+        <param name="onload" value="true"/>
+      </feature>
+    </config-file>
+
+    <header-file src="src/ios/cordova-plugin-meteor-webapp-Bridging-Header.h" />
+
+    <source-file src="src/ios/WebAppLocalServer.swift" />
+    <source-file src="src/ios/WebAppConfiguration.swift" />
+    <source-file src="src/ios/AssetBundleManager.swift" />
+    <source-file src="src/ios/AssetBundle.swift" />
+    <source-file src="src/ios/Asset.swift" />
+    <source-file src="src/ios/AssetBundleDownloader.swift" />
+    <source-file src="src/ios/AssetManifest.swift" />
+    <source-file src="src/ios/Errors.swift" />
+    <source-file src="src/ios/Utility.swift" />
+
+    <header-file src="src/ios/METPlugin.h" />
+    <header-file src="src/ios/METTimer.h" />
+    <header-file src="src/ios/METRetryStrategy.h" />
+    <header-file src="src/ios/METNetworkReachabilityManager.h" />
+    <header-file src="src/ios/METRandomValueGenerator.h" />
+    <source-file src="src/ios/METPlugin.m" />
+    <source-file src="src/ios/METTimer.m" />
+    <source-file src="src/ios/METRetryStrategy.m" />
+    <source-file src="src/ios/METNetworkReachabilityManager.m" />
+    <source-file src="src/ios/METRandomValueGenerator.m" />
+
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServer.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerConnection.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerFunctions.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerHTTPStatusCodes.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerPrivate.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerRequest.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerResponse.h" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServer.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerConnection.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerFunctions.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerRequest.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerResponse.m" />
+
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Requests/GCDWebServerDataRequest.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Requests/GCDWebServerFileRequest.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Requests/GCDWebServerMultiPartFormRequest.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Requests/GCDWebServerURLEncodedFormRequest.h" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Requests/GCDWebServerDataRequest.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Requests/GCDWebServerFileRequest.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Requests/GCDWebServerMultiPartFormRequest.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Requests/GCDWebServerURLEncodedFormRequest.m" />
+
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Responses/GCDWebServerDataResponse.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Responses/GCDWebServerErrorResponse.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Responses/GCDWebServerFileResponse.h" />
+    <header-file src="src/ios/GCDWebServer/GCDWebServer/Responses/GCDWebServerStreamedResponse.h" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Responses/GCDWebServerDataResponse.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Responses/GCDWebServerErrorResponse.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Responses/GCDWebServerFileResponse.m" />
+    <source-file src="src/ios/GCDWebServer/GCDWebServer/Responses/GCDWebServerStreamedResponse.m" />
+
+    <framework src="AssetsLibrary.framework" />
+    <framework src="MobileCoreServices.framework" />
+    <framework src="CFNetwork.framework" />
+    <framework src="libz.dylib" />
+  </platform>
+
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="WebAppLocalServer" >
+        <param name="android-package" value="com.meteor.webapp.WebAppLocalServer" />
+        <param name="onload" value="true" />
+      </feature>
+    </config-file>
+
+    <source-file src="src/android/WebAppLocalServer.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/WebAppConfiguration.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/WebResourceHandler.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/AssetManagerCache.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/AssetBundle.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/AssetBundleManager.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/AssetBundleDownloader.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/DownloadFailureException.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/AssetManifest.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/IOUtils.java" target-dir="src/com/meteor/webapp" />
+
+    <framework src="src/android/build-extras.gradle" custom="true" type="gradleReference" />
+    <framework src="androidx.webkit:webkit:1.3.0" type="gradleReference" />
+    <framework src="com.squareup.okhttp3:okhttp:3.9.1" />
+  </platform>
+</plugin>
