@@ -1,0 +1,34 @@
+.DS_Store
+node_modules
+/.meteor
+*~
+/dev_bundle
+/dev_bundle.xxx
+/dev_bundle_XXX
+/dev_bundle*.tar.gz
+/android_bundle
+/android_bundle*.tar.gz
+/node_*.tar.gz
+/mongo_*.tar.gz
+/dist
+\#*\#
+.\#*
+.idea
+*.iml
+*.sublime-project
+*.sublime-workspace
+/.vscode/
+TAGS
+*.log
+*.out
+npm-debug.log
+universe
+.babel-cache
+.reify-cache
+mongo-test-output
+
+# core packages shouldn't have .versions files
+packages/*/.versions
+
+# packages shouldn't have .npm on Git
+packages/**/.npm
