@@ -50,4 +50,8 @@ cdvPluginPostBuildExtras.add({
     newTask.outputs.file outFile
     def preBuildTask = tasks["preBuild"]
     preBuildTask.dependsOn(newTask)
+    
+    // Add the Google Service check here.
+    apply plugin: 'com.google.gms.google-services'
+    googleServices.disableVersionCheck = true
 })
