@@ -21,6 +21,9 @@
 * `accounts-ui-unstyled@1.5.1`
   - Update compatibility range with `less` from 3.0.2 to 4.0.0
 
+* `ecmascript-runtime-client@0.12.1`
+  - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
+
 ## v2.4, 2021-09-15
 
 #### Highlights
