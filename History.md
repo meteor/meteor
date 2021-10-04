@@ -6,6 +6,7 @@
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
 * HMR now works on all arch's
+* Typescript updated to [v4.4.3](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-4.html)
 
 #### Meteor Version Release
 
@@ -39,8 +40,9 @@
 * `react-fast-refrest@0.2.0`
   - Enable HMR for all web arch's
 
-* `typescript@4.4.0`
+* `typescript@4.4.3`
   - Enable HMR for all web arch's
+  - Typescript [4.4.3](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-4.html)
 
 * `webapp@1.13.0`
   - Update `cordova-plugin-meteor-webapp` to v2
