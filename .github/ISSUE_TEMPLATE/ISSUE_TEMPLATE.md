@@ -1,11 +1,11 @@
+---
+name: 🐛 Bug
+about: Create a report to help us improve Meteor
+title: ''
+labels: ''
+assignees: ''
+---
 <!--
-* ❓ Questions?
-          Start a discussion on the Meteor forums (https://forums.meteor.com/) or post a message on (Community Slack)[https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc]
-* 💡 Feature requests?
-          Visit our Discussions page (https://github.com/meteor/meteor/discussions).
-* ❗️ Bug?
-          This is the right place!
-
 Before reporting a bug, please check for existing or closed issues
 first and read the instructions for filing a bug report:
 https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#reporting-a-bug-in-meteor
