@@ -1,6 +1,6 @@
 Package.describe({
-  summary: "A user account system",
-  version: "2.1.0",
+  summary: 'A user account system',
+  version: '2.2.0-beta250.1',
 });
 
 Package.onUse(api => {
@@ -28,13 +28,13 @@ Package.onUse(api => {
 
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
-  api.use('blaze@2.5.0', 'client', {weak: true});
+  api.use('blaze@2.5.0', 'client', { weak: true });
 
   // Allow us to detect 'autopublish', and publish some Meteor.users fields if
   // it's loaded.
-  api.use('autopublish', 'server', {weak: true});
+  api.use('autopublish', 'server', { weak: true });
 
-  api.use('oauth-encryption', 'server', {weak: true});
+  api.use('oauth-encryption', 'server', { weak: true });
 
   // Though this "Accounts" symbol is the only official Package export for
   // the accounts-base package, modules that import accounts-base will
@@ -59,7 +59,7 @@ Package.onTest(api => {
     'test-helpers',
     'oauth-encryption',
     'ddp',
-    'accounts-password'
+    'accounts-password',
   ]);
 
   api.addFiles('accounts_tests_setup.js', 'server');

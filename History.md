@@ -2,7 +2,50 @@
 
 #### Highlights
 
+* Cordova 10
+* HMR now works on all architectures and legacy browsers
+* `Accounts.config()` and third-party login services can now be configured from Meteor settings
+* HMR now works on all arch's
+
 #### Meteor Version Release
+
+* CircleCI testing image was updated to include Android 30 and Node 14 
+
+* `meteor-tool@2.5`
+  - Cordova upgraded to v10
+  - HMR improvements related to `hot-module-replacement@0.4.0`
+  - Fix finding local packages on Windows located on drives other than C
+  - Fix infinite loop in import scanner when file is on a different drive than source root
+
+* `accounts-base@2.2.0`
+  - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
+
+* `service-configuration@1.3.0`
+  - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.
+
+* `autoupdate@1.8.0`
+  - Enable HMR for all web arch's
+
+* `ecmascript@0.16.0`
+  - Enable HMR for all web arch's
+
+* `hot-module-replacement@0.4.0`
+  - Provides polyfills needed by Meteor.absoluteUrl in legacy browsers
+  - Improvements for HMR to work in all architectures and legacy browsers
+
+* `module-runtime@0.14.0`
+  - Improvements for legacy browsers
+
+* `react-fast-refrest@0.2.0`
+  - Enable HMR for all web arch's
+
+* `typescript@4.4.0`
+  - Enable HMR for all web arch's
+
+* `webapp@1.13.0`
+  - Update `cordova-plugin-meteor-webapp` to v2
+  - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
+
 
 #### Independent Releases
 
@@ -14,6 +57,15 @@
 
 * `standard-minifier-js@2.7.1`
   - Updated `@babel/runtime` to [v7.15.4](https://github.com/babel/babel/releases/tag/v7.15.4)
+
+* `accounts-ui@1.4.1`
+  - Update compatibility range with `less` from 3.0.2 to 4.0.0
+
+* `accounts-ui-unstyled@1.5.1`
+  - Update compatibility range with `less` from 3.0.2 to 4.0.0
+
+* `ecmascript-runtime-client@0.12.1`
+  - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
 
 ## v2.4, 2021-09-15
 
