@@ -52,7 +52,6 @@
 * `babel-compiler@7.8.0`
   - `@meteorjs/babel@7.14.0` 
 
-
 #### Independent Releases
 
 * `modern-browsers@0.1.6`
@@ -72,6 +71,10 @@
 
 * `ecmascript-runtime-client@0.12.1`
   - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
+
+#### NPM packages
+* `@meteorjs/babel@7.14.0`
+  - Typescript updated to [v4.4.3](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-4.html)
 
 ## v2.4, 2021-09-15
 
