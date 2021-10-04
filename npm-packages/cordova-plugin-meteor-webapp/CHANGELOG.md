@@ -1,5 +1,8 @@
 # CHANGELOG
 
+## v2.0.0, 2020-10-04
+Use WebViewAssetLoader on Android with newest cordova AndroidX webview usage
+
 ## v1.9.1, 2020-03-05
 Removes hook to set Swift version
 
