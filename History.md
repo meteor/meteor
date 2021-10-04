@@ -17,6 +17,7 @@
   - HMR improvements related to `hot-module-replacement@0.4.0`
   - Fix finding local packages on Windows located on drives other than C
   - Fix infinite loop in import scanner when file is on a different drive than source root
+  - `@meteorjs/babel@7.14.0`
 
 * `accounts-base@2.2.0`
   - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
@@ -47,6 +48,9 @@
 * `webapp@1.13.0`
   - Update `cordova-plugin-meteor-webapp` to v2
   - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
+
+* `babel-compiler@7.8.0`
+  - `@meteorjs/babel@7.14.0` 
 
 
 #### Independent Releases
