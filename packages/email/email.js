@@ -215,7 +215,7 @@ Email.send = function (options) {
     options = options.mailComposer.mail;
   }
   if (!/^\S+@\S+$/.test(options.from)) {
-    throw new Error("Email options passed to send function must contain a valid 'from' address");
+    throw new Meteor.Error("invalid-mail-options", "Email options passed to send function must contain a valid 'from' address");
   }
   let send = true;
   sendHooks.each(hook => {
