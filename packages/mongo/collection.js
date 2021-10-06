@@ -716,9 +716,13 @@ Object.assign(Mongo.Collection.prototype, {
    * @instance
    * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
    * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#std-label-ensureIndex-options)
+   * @param {Integer} options.expireAfterSeconds Define a value in seconds to control how long MongoDB retains documents in this collection.
+   * @param {Boolean} options.hidden Define that the index is hidden from the query planner, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-hidden/)
    * @param {String} options.name Name of the index
-   * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
+   * @param {Object} options.partialFilterExpression If specified, the index only references documents that match the filter expression, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-partial/)
    * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
+   * @param {Object} options.storageEngine Define the storage engine configuration.  
+   * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
    */
   createIndex(index, options) {
     var self = this;
