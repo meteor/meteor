@@ -129,7 +129,7 @@ Meteor.methods({
       fields: { emails: 1 },
     });
 
-    if (!user && options.userCreationDisabled) {
+    if (!user && (options.userCreationDisabled || Accounts._options.forbidClientAccountCreation)) {
       Accounts._handleError('User not found');
     }
 
