@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { Log } from 'meteor/logging';
 import { Hook } from 'meteor/callback-hook';
+import { check } from 'meteor/check';
 
 import Future from 'fibers/future';
 import url from 'url';
@@ -214,9 +215,11 @@ Email.send = function (options) {
   if (options.mailComposer) {
     options = options.mailComposer.mail;
   }
-  if (!/^\S+@\S+$/.test(options.from)) {
+  check(options.from, String);
+  if (!options.from.includes('@')) {
     throw new Meteor.Error("invalid-mail-options", "Email options passed to send function must contain a valid 'from' address");
   }
+
   let send = true;
   sendHooks.each(hook => {
     send = hook(options);
