@@ -105,7 +105,7 @@
   - Upgraded `chalk` to v4.1.1
   - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
   - `METEOR_SETTINGS` is now accepted an all modes
-  - Native file watchers are now disabled on Windows for many file-intesive actions (like, `create`, `update`, `build` etc.), this solves an issue with hanging Meteor commands on Windows
+  - Native file watchers are now disabled on Windows for many file-intensive actions (like, `create`, `update`, `build` etc.), this solves an issue with hanging Meteor commands on Windows
     
 * `webapp@1.12`
   - npm dependencies have been updated
