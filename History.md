@@ -2,7 +2,7 @@
 
 #### Highlights
 
-* Cordova 10
+* Cordova Android v10
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
 * HMR now works on all arch's
@@ -12,7 +12,7 @@
 * CircleCI testing image was updated to include Android 30 and Node 14 
 
 * `meteor-tool@2.5`
-  - Cordova upgraded to v10
+  - Cordova Android upgraded to v10
   - HMR improvements related to `hot-module-replacement@0.4.0`
   - Fix finding local packages on Windows located on drives other than C
   - Fix infinite loop in import scanner when file is on a different drive than source root
@@ -45,7 +45,7 @@
 * `webapp@1.13.0`
   - Update `cordova-plugin-meteor-webapp` to v2
   - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
-
+  - Cordova Meteor plugin is now using AndroidX
 
 #### Independent Releases
 
