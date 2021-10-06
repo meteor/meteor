@@ -2,6 +2,7 @@
 
 #### Highlights
 
+* New package: `accounts-passwordless`
 * Cordova Android v10
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
@@ -17,8 +18,15 @@
   - Fix finding local packages on Windows located on drives other than C
   - Fix infinite loop in import scanner when file is on a different drive than source root
 
+* `accounts-passwordless@1.0.0`
+  - New accounts package to provide passwordless authentication.
+  
+* `accounts-password@2.2.0`
+  - Changes to reuse code between passwordless and password packages.
+   
 * `accounts-base@2.2.0`
   - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
+  - Changes to reuse code between passwordless and password packages.
 
 * `service-configuration@1.3.0`
   - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.
