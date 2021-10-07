@@ -26,6 +26,10 @@
 
 ## v2.4, 2021-09-15
 
+### Summary of breaking changes
+
+* Older Meteor apps might experience issues with using the new MongoDB indexes. Index creation now also checks the options of the index. For old Meteor apps, running since 2015, this could mean that you will receive errors like `MongoError: Index with name: username_1 already exists with different options`, in this case most likely your index has the `"safe" : true,` option set on the index, which was removed back in [#4340](https://github.com/meteor/meteor/pull/4340). The easiest way to fix these issues is to remove the indexes and allow Meteor to re-create them.
+
 #### Highlights
 
 * Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
