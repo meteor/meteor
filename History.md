@@ -2,7 +2,8 @@
 
 #### Highlights
 
-* Cordova 10
+* New package: `accounts-passwordless`
+* Cordova Android v10
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
 * HMR now works on all arch's
@@ -12,13 +13,21 @@
 * CircleCI testing image was updated to include Android 30 and Node 14 
 
 * `meteor-tool@2.5`
-  - Cordova upgraded to v10
+  - Cordova Android upgraded to v10
   - HMR improvements related to `hot-module-replacement@0.4.0`
   - Fix finding local packages on Windows located on drives other than C
   - Fix infinite loop in import scanner when file is on a different drive than source root
+  - Skeletons had their dependencies updated
 
+* `accounts-passwordless@1.0.0`
+  - New accounts package to provide passwordless authentication.
+  
+* `accounts-password@2.2.0`
+  - Changes to reuse code between passwordless and password packages.
+   
 * `accounts-base@2.2.0`
   - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
+  - Changes to reuse code between passwordless and password packages.
 
 * `service-configuration@1.3.0`
   - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.
@@ -45,7 +54,7 @@
 * `webapp@1.13.0`
   - Update `cordova-plugin-meteor-webapp` to v2
   - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
-
+  - Cordova Meteor plugin is now using AndroidX
 
 #### Independent Releases
 
@@ -96,7 +105,7 @@
   - Upgraded `chalk` to v4.1.1
   - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
   - `METEOR_SETTINGS` is now accepted an all modes
-  - Native file watchers are now disabled on Windows for many file-intesive actions (like, `create`, `update`, `build` etc.), this solves an issue with hanging Meteor commands on Windows
+  - Native file watchers are now disabled on Windows for many file-intensive actions (like, `create`, `update`, `build` etc.), this solves an issue with hanging Meteor commands on Windows
     
 * `webapp@1.12`
   - npm dependencies have been updated
