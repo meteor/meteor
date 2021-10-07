@@ -54,6 +54,7 @@
   - Update `cordova-plugin-meteor-webapp` to v2
   - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
   - Cordova Meteor plugin is now using AndroidX
+  - Added new settings option `Meteor.settings.packages.webapp.alwaysReturnContent` that will always return content on requests like `POST`, essentially enabling behavior prior to Meteor 2.3.1.
 
 #### Independent Releases
 
