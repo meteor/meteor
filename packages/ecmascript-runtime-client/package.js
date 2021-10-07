@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript-runtime-client',
-  version: '0.12.1',
+  version: '0.12.2',
   summary: 'Polyfills for new ECMAScript 2015 APIs like Map and Set',
   git:
     'https://github.com/meteor/meteor/tree/devel/packages/ecmascript-runtime-client',
@@ -8,7 +8,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'core-js': '3.15.2',
+  'core-js': '3.18.1',
 });
 
 Package.onUse(function(api) {
