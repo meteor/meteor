@@ -28,7 +28,7 @@ const browserAliases = {
   // that logic, because there is no IE12. #9818 #9839
   edge: ['ie'],
 
-  firefox: ['firefox', 'firefoxMobile'],
+  firefox: ['firefoxMobile'],
 
   // The webapp package converts browser names to camel case, so
   // mobile_safari and mobileSafari should be synonymous.
@@ -117,7 +117,6 @@ function getCaller(calleeName) {
       return true;
     }
   });
-  console.log(caller);
   return caller;
 }
 
