@@ -117,7 +117,7 @@ const getTransport = function() {
     this.cacheKey === undefined ||
     this.cacheKey !== url ||
     this.cacheKey !== packageSettings?.service ||
-    'settings'
+    this.cacheKey !== 'settings'
   ) {
     if (
       (packageSettings?.service && wellKnow(packageSettings.service)) ||
