@@ -123,4 +123,4 @@ Accounts.autoLoginWithToken = function() {
 };
 
 // Run check for login token on page load
-document.addEventListener('DOMContentLoaded', () => Accounts.autoLoginWithToken())
+Meteor.startup(() => Accounts.autoLoginWithToken());
