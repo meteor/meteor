@@ -33,7 +33,6 @@ jobs:
       ', github.ref)
     steps:
       - uses: actions/checkout@v2
-      - name: Build Guide
         uses: actions/setup-node@v1
         with:
           node-version: 12.x
