@@ -2,10 +2,10 @@ name: Meteor Docs
 on:
   push:
     paths:
-      - 'guide/**/*'
+      - 'docs/**/*'
   pull_request:
     paths:
-      - 'guide/**/*'
+      - 'docs/**/*'
 jobs:
   test:
     runs-on: ubuntu-latest
