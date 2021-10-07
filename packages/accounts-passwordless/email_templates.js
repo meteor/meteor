@@ -1,17 +1,14 @@
-// Accounts.emailTemplates need to be in Meteor.startup or they will be undefined nad what is added here will be overridden
-// once they get instantiated.
-Meteor.startup(() => {
-  /**
-   * @summary Options to customize emails sent from the Accounts system.
-   * @locus Server
-   * @importFromPackage accounts-base
-   */
-  Accounts.emailTemplates = {
-    ...(Accounts.emailTemplates || {}),
-    sendLoginToken: {
-      subject: () => `Your login token for ${Accounts.emailTemplates.siteName}`,
-      text: (user, url, { sequence }) => {
-        return `Hello!
+/**
+ * @summary Options to customize emails sent from the Accounts system.
+ * @locus Server
+ * @importFromPackage accounts-base
+ */
+Accounts.emailTemplates = {
+  ...(Accounts.emailTemplates || {}),
+  sendLoginToken: {
+    subject: () => `Your login token for ${Accounts.emailTemplates.siteName}`,
+    text: (user, url, { sequence }) => {
+      return `Hello!
 
 Type the following token in our login form to get logged in:
 ${sequence}
@@ -20,9 +17,9 @@ ${url}
 
 Thank you!
 `;
-      },
-      html: (user, url, { sequence }) => {
-        return `Hello!<br/>
+    },
+    html: (user, url, { sequence }) => {
+      return `Hello!<br/>
 
 Type the following token in our login form to get logged in:<br/><br/>
 ${sequence}<br/><br/>
@@ -31,7 +28,6 @@ ${url}<br/>
 
 Thank you!
 `;
-      },
     },
-  };
-})
+  },
+};
