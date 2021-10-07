@@ -24,6 +24,9 @@
 * `ecmascript-runtime-client@0.12.1`
   - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
 
+* `email@2.2.1`
+  - Added checking that `to` and `from` email params are present if not using MailComposer object and throw error early
+
 ## v2.4, 2021-09-15
 
 #### Highlights
