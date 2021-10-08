@@ -249,7 +249,7 @@ Here is a list of the Babel transformers that are currently enabled:
 
 The ECMAScript 2015 standard library has grown to include new APIs and
 data structures, some of which can be implemented ("polyfilled") using
-JavaScript that runs in all engines and browsers today. Here are three new
+JavaScript that runs in all engines and browsers today. Here are four new
 constructors that are guaranteed to be available when the `ecmascript`
 package is installed:
 
