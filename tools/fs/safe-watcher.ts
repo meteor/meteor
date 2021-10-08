@@ -2,7 +2,6 @@ import { FSWatcher, Stats, BigIntStats } from "fs";
 import { Profile } from "../tool-env/profile";
 import {
   statOrNull,
-  pathResolve,
   convertToOSPath,
   watchFile,
   unwatchFile,
@@ -321,9 +320,11 @@ function statWatch(
     const newStat = watchFile(absPath, {
       persistent: false, // never persistent
       interval,
-    }, (oldStat, newStat) => {
-      statWatcher.changeListeners.forEach(listener => {
-        listener(oldStat, newStat);
+    }, (newStat, oldStat) => {
+      statWatcher.changeListeners.forEach((
+        listener: (newStat: Stats, oldStat: Stats) => void
+      ) => {
+          listener(newStat, oldStat);
       });
     });
 
