@@ -24,6 +24,9 @@
 * `ecmascript-runtime-client@0.12.1`
   - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
 
+* `modern-browsers@0.1.7`
+  - Added `firefoxMobile` as an alias for `firefox`
+
 ## v2.4, 2021-09-15
 
 #### Highlights
