@@ -468,10 +468,3 @@ export function addWatchRoot(absPath: string) {
     watcher.start()
   });
 }
-
-// On Windows, pathwatcher can sometimes cause Meteor to get stuck. If we
-// don't need native watching for a command, we can disable it.
-// This is a temporary fix until pathwatcher is fixed or we replace it.
-export function disableNativeWatcher () {
-  watcherEnabled = false;
-}
