@@ -6,9 +6,15 @@ import {
   convertToOSPath,
   watchFile,
   unwatchFile,
+  toPosixPath
 } from "./files";
 
-const watchLibrary = require("pathwatcher");
+import {
+  join as nativeJoin
+} from 'path';
+
+import pathwatcher from "pathwatcher";
+import nsfw from 'vscode-nsfw';
 
 // Default to prioritizing changed files, but disable that behavior (and
 // thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
@@ -29,11 +35,17 @@ var NO_WATCHER_POLLING_INTERVAL =
 // file watchers, but it's to our advantage if they survive restarts.
 const WATCHER_CLEANUP_DELAY_MS = 30000;
 
+// Since linux doesn't have recursive file watching, nsfw has to walk the
+// watched folder and create a separate watcher for each subfolder. Until it has a
+// way for us to filter which folders it walks we will continue to use
+// pathwatcher to avoid having too many watchers.
+let watcherLibrary = process.env.METEOR_WATCHER_LIBRARY || 
+  (process.platform === 'linux' ? 'pathwatcher' : 'nsfw');
+
 // Pathwatcher complains (using console.error, ugh) if you try to watch
 // two files with the same stat.ino number but different paths on linux, so we have
 // to deduplicate files by ino.
-const DEDUPLICATE_BY_INO = process.platform !== "win32";
-
+const DEDUPLICATE_BY_INO = watcherLibrary === 'pathwatcher';
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of watchLibrary.watch.
 let watcherEnabled = ! JSON.parse(
@@ -41,7 +53,6 @@ let watcherEnabled = ! JSON.parse(
 );
 
 const entriesByIno = new Map;
-
 
 export type SafeWatcher = {
   close: () => void;
@@ -53,9 +64,13 @@ interface Entry extends SafeWatcher {
   callbacks: Set<EntryCallback>;
   rewatch: () => void;
   release: (callback: EntryCallback) => void;
+  _fire: (event: string) => void;
 }
 
 const entries: Record<string, Entry | null> = Object.create(null);
+
+// Folders that are watched recursively
+let watchRoots = new Set<string>();
 
 // Set of paths for which a change event has been fired, watched with
 // watchLibrary.watch if available. This could be an LRU cache, but in
@@ -264,7 +279,8 @@ function startNewWatcher(absPath: string): Entry {
       safeUnwatch();
 
       unwatchFile(absPath, watchFileWrapper);
-    }
+    },
+    _fire: fire
   };
 
   if (stat && stat.ino > 0) {
@@ -350,9 +366,9 @@ function statWatch(
 }
 
 function watchLibraryWatch(absPath: string, callback: EntryCallback) {
-  if (watcherEnabled) {
+  if (watcherEnabled && watcherLibrary === 'pathwatcher') {
     try {
-      return watchLibrary.watch(convertToOSPath(absPath), callback);
+      return pathwatcher.watch(convertToOSPath(absPath), callback);
     } catch (e) {
       maybeSuggestRaisingWatchLimit(e);
       // ... ignore the error.  We'll still have watchFile, which is good
@@ -411,9 +427,51 @@ export const watch = Profile(
   }
 );
 
+const fireNames = {
+  [nsfw.actions.CREATED]: 'change',
+  [nsfw.actions.MODIFIED]: 'change',
+  [nsfw.actions.DELETED]: 'delete'
+}
+
+export function addWatchRoot(absPath: string) {
+  if (watchRoots.has(absPath) || watcherLibrary !== 'nsfw' || !watcherEnabled) {
+    return;
+  }
+
+  watchRoots.add(absPath);
+  nsfw(
+    convertToOSPath(absPath),
+    (events) => {
+      events.forEach(event => {
+        if(event.action === nsfw.actions.RENAMED) {
+          let oldPath = nativeJoin(event.directory, event.oldFile);
+          let oldEntry = entries[toPosixPath(oldPath)];
+          if (oldEntry) {
+            oldEntry._fire('rename');
+          }
+
+          let path = nativeJoin(event.newDirectory, event.newFile);
+          let newEntry = entries[toPosixPath(path)];
+          if (newEntry) {
+            newEntry._fire('change');
+          }
+        } else {
+            let path = nativeJoin(event.directory, event.file);
+            let entry = entries[toPosixPath(path)];
+            if (entry) {
+              entry._fire(fireNames[event.action]);
+            }
+        }
+      })
+    }
+  ).then(watcher => {
+    watcher.start()
+  });
+}
+
 // On Windows, pathwatcher can sometimes cause Meteor to get stuck. If we
 // don't need native watching for a command, we can disable it.
 // This is a temporary fix until pathwatcher is fixed or we replace it.
 export function disableNativeWatcher () {
   watcherEnabled = false;
-} 
+}
