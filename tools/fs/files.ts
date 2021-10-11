@@ -45,14 +45,9 @@ import {
   pathResolve,
   pathSep,
 } from '../static-assets/server/mini-files';
+import { isErrnoException } from '../utils/ts-utils';
 
 const { hasOwnProperty } = Object.prototype;
-import { NodeJS } from '@types/node';
-
-function isErrnoException(e: unknown): e is NodeJS.ErrnoException {
-  if ('code' in (e as any)) return true;
-  else return false;
-}
 
 const parsedSourceMaps: Record<string, any> = {};
 let nextStackFilenameCounter = 1;

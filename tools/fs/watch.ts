@@ -1,18 +1,15 @@
-import { Stats, BigIntStats, FSWatcher, Dirent } from "fs";
-import * as files from "./files";
-import * as safeWatcher from "./safe-watcher";
-import { createHash } from "crypto";
-import { coalesce } from "../utils/func-utils";
-import { Profile } from "../tool-env/profile";
-import {
-  optimisticHashOrNull,
-  optimisticStatOrNull,
-} from "./optimistic";
+import { Stats, BigIntStats, FSWatcher, Dirent } from 'fs';
+import * as files from './files';
+import * as safeWatcher from './safe-watcher';
+import { createHash } from 'crypto';
+import { coalesce } from '../utils/func-utils';
+import { Profile } from '../tool-env/profile';
+import { optimisticHashOrNull, optimisticStatOrNull } from './optimistic';
+import { isErrnoException } from '../utils/ts-utils';
 
-const _ = require("underscore");
+const _ = require('underscore');
 
-const WATCH_COALESCE_MS =
-  +(process.env.METEOR_FILE_WATCH_COALESCE_MS || 100);
+const WATCH_COALESCE_MS = +(process.env.METEOR_FILE_WATCH_COALESCE_MS || 100);
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -76,7 +73,7 @@ type DirectoryEntry = {
   exclude: RegExp[];
   names: string[];
   contents: string[] | null;
-}
+};
 
 export class WatchSet {
   // Set this to true if any Watcher built on this WatchSet must immediately
@@ -144,7 +141,7 @@ export class WatchSet {
   private potentiallyUnusedFiles = new Set<string>();
 
   public isDefinitelyUsed(filePath: string): boolean {
-    return this.hasFile(filePath) && ! this.isPotentiallyUnused(filePath);
+    return this.hasFile(filePath) && !this.isPotentiallyUnused(filePath);
   }
 
   public isPotentiallyUnused(filePath: string): boolean {
@@ -154,7 +151,7 @@ export class WatchSet {
   public addPotentiallyUnusedFile(filePath: string, hash: string | null) {
     const alreadyUsed = this.isDefinitelyUsed(filePath);
     this.addFile(filePath, hash);
-    if (! alreadyUsed) {
+    if (!alreadyUsed) {
       this.potentiallyUnusedFiles.add(filePath);
     }
   }
@@ -263,7 +260,7 @@ export class WatchSet {
         include: d.include.map(reToJSON),
         exclude: d.exclude.map(reToJSON),
         names: d.names,
-        contents: d.contents
+        contents: d.contents,
       })),
     };
   }
@@ -271,7 +268,7 @@ export class WatchSet {
   static fromJSON(json: any) {
     const watchSet = new WatchSet();
 
-    if (! json) {
+    if (!json) {
       return watchSet;
     }
 
@@ -304,7 +301,7 @@ export class WatchSet {
         exclude: d.exclude.map(reFromJSON),
         names: d.names,
         contents: d.contents,
-      })
+      });
     });
 
     return watchSet;
@@ -316,21 +313,24 @@ export function readFile(absPath: string) {
     return files.readFile(absPath);
   } catch (e) {
     // Rethrow most errors.
-    if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR')) {
+    if (
+      !e ||
+      (isErrnoException(e) && e.code !== 'ENOENT' && e.code !== 'EISDIR')
+    ) {
       throw e;
     }
     // File does not exist (or is a directory).
     return null;
   }
-};
+}
 
-export const sha1 = Profile("sha1", function (...args: (string | Buffer)[]) {
+export const sha1 = Profile('sha1', function(...args: (string | Buffer)[]) {
   const hash = createHash('sha1');
   args.forEach(arg => hash.update(arg));
   return hash.digest('hex');
 });
 
-export const sha512 = Profile("sha512", function (...args: (string | Buffer)[]) {
+export const sha512 = Profile('sha512', function(...args: (string | Buffer)[]) {
   const hash = createHash('sha512');
   args.forEach(arg => hash.update(arg));
   return hash.digest('base64');
@@ -342,7 +342,11 @@ function readAndStatDirectory(absPath: string) {
     var contents = files.readdirWithTypes(absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
-    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
+    if (
+      e &&
+      isErrnoException(e) &&
+      (e.code === 'ENOENT' || e.code === 'ENOTDIR')
+    ) {
       return null;
     }
     throw e;
@@ -359,7 +363,7 @@ function readAndStatDirectory(absPath: string) {
       // directories just like directories themselves.
       stat = optimisticStatOrNull(files.pathJoin(absPath, entry.name));
     }
-    if (! stat) {
+    if (!stat) {
       // Disappeared after the readdir (or a dangling symlink)?
       // Eh, pretend it was never there in the first place.
       return;
@@ -375,43 +379,57 @@ function readAndStatDirectory(absPath: string) {
   return contentsWithSlashes;
 }
 
-function filterDirectoryContents(contents: string[], {
+function filterDirectoryContents(
+  contents: string[],
+  {
+    include,
+    exclude,
+    names,
+  }: {
+    include?: RegExp[];
+    exclude?: RegExp[];
+    names?: string[];
+  }
+) {
+  // Filter based on regexps.
+  return contents
+    .filter(entry => {
+      // Is it one of the names we explicitly requested?
+      if (names && names.indexOf(entry) !== -1) {
+        return true;
+      }
+      // Is it ruled out by an exclude rule?
+      if (exclude && exclude.some(re => re.test(entry))) {
+        return false;
+      }
+      // Is it ruled in by an include rule?
+      if (include && include.some(re => re.test(entry))) {
+        return true;
+      }
+      return false;
+    })
+    .sort();
+}
+
+export function readDirectory({
+  absPath,
   include,
   exclude,
   names,
 }: {
-  include?: RegExp[],
-  exclude?: RegExp[],
-  names?: string[],
-}) {
-  // Filter based on regexps.
-  return contents.filter(entry => {
-    // Is it one of the names we explicitly requested?
-    if (names && names.indexOf(entry) !== -1) {
-      return true;
-    }
-    // Is it ruled out by an exclude rule?
-    if (exclude && exclude.some(re => re.test(entry))) {
-      return false;
-    }
-    // Is it ruled in by an include rule?
-    if (include && include.some(re => re.test(entry))) {
-      return true;
-    }
-    return false;
-  }).sort();
-}
-
-export function readDirectory({ absPath, include, exclude, names }: {
   absPath: string;
-  include?: RegExp[],
-  exclude?: RegExp[],
-  names?: string[],
+  include?: RegExp[];
+  exclude?: RegExp[];
+  names?: string[];
 }) {
   const contents = readAndStatDirectory(absPath);
-  return contents ? filterDirectoryContents(contents, {
-    include, exclude, names
-  }) : [];
+  return contents
+    ? filterDirectoryContents(contents, {
+        include,
+        exclude,
+        names,
+      })
+    : [];
 }
 
 // All fields are private.
@@ -423,13 +441,16 @@ export class Watcher {
   private async = false;
   private includePotentiallyUnusedFiles = true;
 
-  private watches: Record<string, {
-    // Null until safeWatcher.watch succeeds in watching the file.
-    watcher: safeWatcher.SafeWatcher | null;
-    // Undefined until we stat the file for the first time, then null
-    // if the file is observed to be missing.
-    lastStat?: Stats | BigIntStats | null
-  }> = Object.create(null);
+  private watches: Record<
+    string,
+    {
+      // Null until safeWatcher.watch succeeds in watching the file.
+      watcher: safeWatcher.SafeWatcher | null;
+      // Undefined until we stat the file for the first time, then null
+      // if the file is observed to be missing.
+      lastStat?: Stats | BigIntStats | null;
+    }
+  > = Object.create(null);
 
   constructor(options: {
     watchSet: WatchSet;
@@ -438,10 +459,10 @@ export class Watcher {
     justCheckOnce?: boolean;
     includePotentiallyUnusedFiles?: boolean;
   }) {
-    this.async = !! options.async;
+    this.async = !!options.async;
     this.watchSet = options.watchSet;
     this.onChange = options.onChange;
-    this.justCheckOnce = !! options.justCheckOnce;
+    this.justCheckOnce = !!options.justCheckOnce;
     if (options.includePotentiallyUnusedFiles === false) {
       this.includePotentiallyUnusedFiles = false;
     }
@@ -462,15 +483,15 @@ export class Watcher {
     }
 
     if (
-      ! this.includePotentiallyUnusedFiles &&
+      !this.includePotentiallyUnusedFiles &&
       this.watchSet.isPotentiallyUnused(absPath)
     ) {
       return false;
     }
 
     const oldHash = this.watchSet.files[absPath];
-    if (typeof oldHash === "undefined") {
-      throw new Error("Checking unknown file " + absPath);
+    if (typeof oldHash === 'undefined') {
+      throw new Error('Checking unknown file ' + absPath);
     }
 
     const newHash = optimisticHashOrNull(absPath);
@@ -512,7 +533,7 @@ export class Watcher {
       const newContents = filterDirectoryContents(contents || [], info);
 
       // If the directory has changed (including being deleted or created).
-      if (! _.isEqual(info.contents, newContents)) {
+      if (!_.isEqual(info.contents, newContents)) {
         this.fire();
         return true;
       }
@@ -526,7 +547,7 @@ export class Watcher {
 
     // Set up a watch for each file
     this.processBatches(keys, absPath => {
-      if (! this.justCheckOnce) {
+      if (!this.justCheckOnce) {
         this.watchFileOrDirectory(absPath, true);
       }
 
@@ -537,12 +558,12 @@ export class Watcher {
   }
 
   private watchFileOrDirectory(absPath: string, skipCheck = false) {
-    if (! _.has(this.watches, absPath)) {
+    if (!_.has(this.watches, absPath)) {
       this.watches[absPath] = {
         watcher: null,
         // Initially undefined (instead of null) to indicate we have never
         // called files.stat on this file before.
-        lastStat: undefined
+        lastStat: undefined,
       };
     }
 
@@ -568,7 +589,6 @@ export class Watcher {
       } else {
         this.updateStatForWatch(absPath);
       }
-
     } else {
       if (this.mustBeAFile(absPath)) {
         this.fire();
@@ -577,7 +597,7 @@ export class Watcher {
 
       const parentDir = files.pathDirname(absPath);
       if (parentDir === absPath) {
-        throw new Error("Unable to watch parent directory of " + absPath);
+        throw new Error('Unable to watch parent directory of ' + absPath);
       }
 
       this.watchFileOrDirectory(parentDir);
@@ -614,13 +634,14 @@ export class Watcher {
           // XXX #3335 We probably should check again in a second, due to low
           // filesystem modtime resolution.
         }
-
       } else if (stat.isDirectory()) {
         try {
           var dirFiles = files.readdir(absPath);
         } catch (err) {
-          if (err.code === "ENOENT" ||
-              err.code === "ENOTDIR") {
+          if (
+            isErrnoException(err) &&
+            (err.code === 'ENOENT' || err.code === 'ENOTDIR')
+          ) {
             // The directory was removed or changed type since we called
             // this._updateStatForWatch, so we fire unconditionally.
             this.fire();
@@ -646,7 +667,9 @@ export class Watcher {
 
         // If this.watchSet.directories contains any entries for the
         // directory we are examining, call this._fireIfDirectoryChanged.
-        const infos = this.watchSet.directories.filter(info => info.absPath === absPath );
+        const infos = this.watchSet.directories.filter(
+          info => info.absPath === absPath
+        );
         if (infos.length) {
           this.fireIfDirectoryChanged(infos);
         }
@@ -703,19 +726,16 @@ export class Watcher {
       // We have not checked for this file before, so just record the new
       // stat object.
       entry.lastStat = stat;
-
     } else if (stat && stat.isFile()) {
       entry.lastStat = stat;
-      if (! lastStat || ! lastStat.isFile()) {
+      if (!lastStat || !lastStat.isFile()) {
         this.fire();
       }
-
     } else if (stat && stat.isDirectory()) {
       entry.lastStat = stat;
-      if (! lastStat || ! lastStat.isDirectory()) {
+      if (!lastStat || !lastStat.isDirectory()) {
         this.fire();
       }
-
     } else {
       entry.lastStat = stat = null;
       if (lastStat) {
@@ -729,10 +749,7 @@ export class Watcher {
   // Iterates over the array, calling handleItem for each item
   // When this._async is true, it pauses ocassionally to avoid blocking for too long
   // Stops iterating after watcher is stopped
-  private processBatches<T>(
-    array: T[],
-    handleItem: (item: T) => any,
-  ) {
+  private processBatches<T>(array: T[], handleItem: (item: T) => any) {
     let index = 0;
 
     const processBatch = () => {
@@ -754,28 +771,30 @@ export class Watcher {
           processBatch();
         }
       }
-    }
+    };
 
     processBatch();
   }
 
   private checkDirectories() {
-    const dirs = Object.values(this.watchSet.directories.reduce((result, dir) => {
-      const dirs = result[dir.absPath];
-      if (dirs) {
-        dirs.push(dir);
-      } else {
-        result[dir.absPath] = [dir];
-      }
-      return result;
-    }, {} as Record<string, DirectoryEntry[]>));
+    const dirs = Object.values(
+      this.watchSet.directories.reduce((result, dir) => {
+        const dirs = result[dir.absPath];
+        if (dirs) {
+          dirs.push(dir);
+        } else {
+          result[dir.absPath] = [dir];
+        }
+        return result;
+      }, {} as Record<string, DirectoryEntry[]>)
+    );
 
     if (this.stopped) {
       return;
     }
 
     this.processBatches(dirs, entries => {
-      if (! this.justCheckOnce) {
+      if (!this.justCheckOnce) {
         this.watchFileOrDirectory(entries[0].absPath, true);
       }
 
@@ -794,7 +813,7 @@ export class Watcher {
   stop() {
     this.stopped = true;
     // Clean up file watches
-    _.each(this.watches, function (entry: { watcher: FSWatcher | null }) {
+    _.each(this.watches, function(entry: { watcher: FSWatcher | null }) {
       if (entry.watcher) {
         entry.watcher.close();
         entry.watcher = null;
@@ -830,7 +849,7 @@ export function isUpToDate(
 // Options should have absPath/include/exclude/names.
 export function readAndWatchDirectory(
   watchSet: WatchSet,
-  options: DirectoryEntry,
+  options: DirectoryEntry
 ) {
   const contents = readDirectory(options);
   watchSet.addDirectory({
@@ -859,12 +878,12 @@ export function readAndWatchFileWithHash(watchSet: WatchSet, absPath: string) {
   try {
     result.contents = files.readFile(absPath);
   } catch (e) {
-    if (e && e.code === "EISDIR") {
+    if (e && isErrnoException(e) && e.code === 'EISDIR') {
       // Avoid adding directories to the watchSet as files.
       return result;
     }
 
-    if (e && e.code === "ENOENT") {
+    if (e && isErrnoException(e) && e.code === 'ENOENT') {
       // Continue, leaving result.{contents,hash} both null.
     } else {
       // Throw all other errors.

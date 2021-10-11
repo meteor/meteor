@@ -1,29 +1,34 @@
-import { FSWatcher, Stats, BigIntStats } from "fs";
-import { Profile } from "../tool-env/profile";
+import { FSWatcher, Stats, BigIntStats } from 'fs';
+import { Profile } from '../tool-env/profile';
 import {
   statOrNull,
   pathResolve,
   convertToOSPath,
   watchFile,
   unwatchFile,
-} from "./files";
+} from './files';
+import { isErrnoException } from '../utils/ts-utils';
 
-const watchLibrary = require("pathwatcher");
+const watchLibrary = require('pathwatcher');
 
 // Default to prioritizing changed files, but disable that behavior (and
 // thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
 // is explicitly set to a string that parses to a falsy value.
 var PRIORITIZE_CHANGED = true;
-if (process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
-    ! JSON.parse(process.env.METEOR_WATCH_PRIORITIZE_CHANGED)) {
+if (
+  process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
+  !JSON.parse(process.env.METEOR_WATCH_PRIORITIZE_CHANGED)
+) {
   PRIORITIZE_CHANGED = false;
 }
 
-var DEFAULT_POLLING_INTERVAL =
-  +(process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000);
+var DEFAULT_POLLING_INTERVAL = +(
+  process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000
+);
 
-var NO_WATCHER_POLLING_INTERVAL =
-  +(process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 500);
+var NO_WATCHER_POLLING_INTERVAL = +(
+  process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 500
+);
 
 // This may seems like a long time to wait before actually closing the
 // file watchers, but it's to our advantage if they survive restarts.
@@ -32,20 +37,19 @@ const WATCHER_CLEANUP_DELAY_MS = 30000;
 // Pathwatcher complains (using console.error, ugh) if you try to watch
 // two files with the same stat.ino number but different paths on linux, so we have
 // to deduplicate files by ino.
-const DEDUPLICATE_BY_INO = process.platform !== "win32";
+const DEDUPLICATE_BY_INO = process.platform !== 'win32';
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of watchLibrary.watch.
-let watcherEnabled = ! JSON.parse(
-  process.env.METEOR_WATCH_FORCE_POLLING || "false"
+let watcherEnabled = !JSON.parse(
+  process.env.METEOR_WATCH_FORCE_POLLING || 'false'
 );
 
-const entriesByIno = new Map;
-
+const entriesByIno = new Map();
 
 export type SafeWatcher = {
   close: () => void;
-}
+};
 
 type EntryCallback = (event: string) => void;
 
@@ -60,21 +64,19 @@ const entries: Record<string, Entry | null> = Object.create(null);
 // Set of paths for which a change event has been fired, watched with
 // watchLibrary.watch if available. This could be an LRU cache, but in
 // practice it should never grow large enough for that to matter.
-const changedPaths = new Set;
+const changedPaths = new Set();
 
 function hasPriority(absPath: string) {
   // If we're not prioritizing changed files, then all files have
   // priority, which means they should be watched with native file
   // watchers if the platform supports them. If we are prioritizing
   // changed files, then only changed files get priority.
-  return PRIORITIZE_CHANGED
-    ? changedPaths.has(absPath)
-    : true;
+  return PRIORITIZE_CHANGED ? changedPaths.has(absPath) : true;
 }
 
 function acquireWatcher(absPath: string, callback: EntryCallback) {
-  const entry = entries[absPath] || (
-    entries[absPath] = startNewWatcher(absPath));
+  const entry =
+    entries[absPath] || (entries[absPath] = startNewWatcher(absPath));
 
   // Watches successfully established in the past may have become invalid
   // because the watched file was deleted or renamed, so we need to make
@@ -149,7 +151,7 @@ function startNewWatcher(absPath: string): Entry {
   }
 
   function fire(event: string) {
-    if (event !== "change") {
+    if (event !== 'change') {
       // When we receive a "delete" or "rename" event, the watcher is
       // probably not going to generate any more notifications for this
       // file, so we close and nullify the watcher to ensure that
@@ -161,7 +163,6 @@ function startNewWatcher(absPath: string): Entry {
       // "delete" or "rename" event, since it is now our only reliable
       // source of file change notifications.
       lastWatcherEventTime = 0;
-
     } else {
       changedPaths.add(absPath);
       rewatch();
@@ -207,9 +208,11 @@ function startNewWatcher(absPath: string): Entry {
   }
 
   function watchFileWrapper(newStat: Stats, oldStat: Stats) {
-    if (newStat.ino === 0 &&
-        oldStat.ino === 0 &&
-        +newStat.mtime === +oldStat.mtime) {
+    if (
+      newStat.ino === 0 &&
+      oldStat.ino === 0 &&
+      +newStat.mtime === +oldStat.mtime
+    ) {
       // Node calls the watchFile listener once with bogus identical stat
       // objects, which should not trigger a file change event.
       return;
@@ -218,7 +221,7 @@ function startNewWatcher(absPath: string): Entry {
     // If a watcher event fired in the last polling interval, ignore
     // this event.
     if (Date.now() - lastWatcherEventTime > getPollingInterval()) {
-      fire("change");
+      fire('change');
     }
   }
 
@@ -227,7 +230,7 @@ function startNewWatcher(absPath: string): Entry {
     rewatch,
 
     release(callback: EntryCallback) {
-      if (! entries[absPath]) {
+      if (!entries[absPath]) {
         return;
       }
 
@@ -264,7 +267,7 @@ function startNewWatcher(absPath: string): Entry {
       safeUnwatch();
 
       unwatchFile(absPath, watchFileWrapper);
-    }
+    },
   };
 
   if (stat && stat.ino > 0) {
@@ -288,22 +291,22 @@ const statWatchers = Object.create(null);
 function statWatch(
   absPath: string,
   interval: number,
-  callback: (current: Stats, previous: Stats) => void,
+  callback: (current: Stats, previous: Stats) => void
 ) {
   const oldWatcher = statWatchers[absPath];
 
   while (oldWatcher) {
     // Make sure this callback no longer appears among the listeners for
     // this StatWatcher.
-    const countBefore = oldWatcher.stat.listenerCount("change");
+    const countBefore = oldWatcher.stat.listenerCount('change');
 
     // This removes at most one occurrence of the callback from the
     // listeners list...
-    oldWatcher.stat.removeListener("change", callback);
+    oldWatcher.stat.removeListener('change', callback);
 
     // ... so we have to keep calling it until the first time
     // it removes nothing.
-    if (oldWatcher.stat.listenerCount("change") === countBefore) {
+    if (oldWatcher.stat.listenerCount('change') === countBefore) {
       break;
     }
   }
@@ -312,24 +315,28 @@ function statWatch(
   // watcher for this file, so it won't change any interval previously
   // specified. In the rare event that the interval needs to change, we
   // manually stop and restart the StatWatcher below.
-  const newStat = watchFile(absPath, {
-    persistent: false, // never persistent
-    interval,
-  }, callback);
+  const newStat = watchFile(
+    absPath,
+    {
+      persistent: false, // never persistent
+      interval,
+    },
+    callback
+  );
 
-  if (! oldWatcher) {
+  if (!oldWatcher) {
     const newWatcher = {
       stat: newStat,
       interval,
     };
 
-    newStat.on("stop", () => {
+    newStat.on('stop', () => {
       if (statWatchers[absPath] === newWatcher) {
         delete statWatchers[absPath];
       }
     });
 
-    return statWatchers[absPath] = newWatcher;
+    return (statWatchers[absPath] = newWatcher);
   }
 
   // These should be identical at this point, but just in case.
@@ -342,7 +349,7 @@ function statWatch(
     oldWatcher.stat.start(
       convertToOSPath(pathResolve(absPath)),
       false, // never persistent
-      oldWatcher.interval = interval,
+      (oldWatcher.interval = interval)
     );
   }
 
@@ -367,46 +374,52 @@ let suggestedRaisingWatchLimit = false;
 
 // This function is async so that archinfo.host() (which may call
 // utils.execFileSync) will run in a Fiber.
-async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
+async function maybeSuggestRaisingWatchLimit(
+  error: unknown | (Error & { errno: number })
+) {
   var constants = require('constants');
   var archinfo = require('../utils/archinfo');
-  if (! suggestedRaisingWatchLimit &&
-      // Note: the not-super-documented require('constants') maps from
-      // strings to SYSTEM errno values. System errno values aren't the same
-      // as the numbers used internally by libuv! Once we're upgraded
-      // to Node 0.12, we'll have the system errno as a string (on 'code'),
-      // but the support for that wasn't in Node 0.10's uv.
-      // See our PR https://github.com/atom/node-pathwatcher/pull/53
-      // (and make sure to read the final commit message, not the original
-      // proposed PR, which had a slightly different interface).
-      error.errno === constants.ENOSPC &&
-      // The only suggestion we currently have is for Linux.
-      archinfo.matches(archinfo.host(), 'os.linux')) {
-
+  if (
+    !suggestedRaisingWatchLimit &&
+    // Note: the not-super-documented require('constants') maps from
+    // strings to SYSTEM errno values. System errno values aren't the same
+    // as the numbers used internally by libuv! Once we're upgraded
+    // to Node 0.12, we'll have the system errno as a string (on 'code'),
+    // but the support for that wasn't in Node 0.10's uv.
+    // See our PR https://github.com/atom/node-pathwatcher/pull/53
+    // (and make sure to read the final commit message, not the original
+    // proposed PR, which had a slightly different interface).
+    error.errno === constants.ENOSPC &&
+    // The only suggestion we currently have is for Linux.
+    archinfo.matches(archinfo.host(), 'os.linux')
+  ) {
     // Check suggestedRaisingWatchLimit again because archinfo.host() may
     // have yielded.
     if (suggestedRaisingWatchLimit) return;
     suggestedRaisingWatchLimit = true;
 
     var Console = require('../console/console.js').Console;
-    if (! Console.isHeadless()) {
+    if (!Console.isHeadless()) {
       Console.arrowWarn(
         "It looks like a simple tweak to your system's configuration will " +
-          "make many tools (including this Meteor command) more efficient. " +
-          "To learn more, see " +
-          Console.url("https://github.com/meteor/docs/blob/master/long-form/file-change-watcher-efficiency.md"));
+          'make many tools (including this Meteor command) more efficient. ' +
+          'To learn more, see ' +
+          Console.url(
+            'https://github.com/meteor/docs/blob/master/long-form/file-change-watcher-efficiency.md'
+          )
+      );
     }
   }
 }
 
 export const watch = Profile(
-  "safeWatcher.watch",
+  'safeWatcher.watch',
   (absPath: string, callback: EntryCallback) => {
     const entry = acquireWatcher(absPath, callback);
     return {
       close() {
         entry.release(callback);
-      }
+      },
     } as SafeWatcher;
   }
 );
@@ -414,6 +427,6 @@ export const watch = Profile(
 // On Windows, pathwatcher can sometimes cause Meteor to get stuck. If we
 // don't need native watching for a command, we can disable it.
 // This is a temporary fix until pathwatcher is fixed or we replace it.
-export function disableNativeWatcher () {
+export function disableNativeWatcher() {
   watcherEnabled = false;
-} 
+}

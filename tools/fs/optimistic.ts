@@ -1,9 +1,9 @@
-import assert from "assert";
-import { wrap, OptimisticWrapperFunction, dep } from "optimism";
-import ignore from "ignore";
-import { Profile } from "../tool-env/profile";
-import { watch, SafeWatcher } from "./safe-watcher";
-import { sha1 } from "./watch";
+import assert from 'assert';
+import { wrap, OptimisticWrapperFunction, dep } from 'optimism';
+import ignore from 'ignore';
+import { Profile } from '../tool-env/profile';
+import { watch, SafeWatcher } from './safe-watcher';
+import { sha1 } from './watch';
 import {
   pathSep,
   pathBasename,
@@ -16,66 +16,69 @@ import {
   readdir,
   dependOnPath,
   findAppDir,
-} from "./files";
+} from './files';
+import { isErrnoException } from '../utils/ts-utils';
 
 // When in doubt, the optimistic caching system can be completely disabled
 // by setting this environment variable.
-const ENABLED = ! process.env.METEOR_DISABLE_OPTIMISTIC_CACHING;
+const ENABLED = !process.env.METEOR_DISABLE_OPTIMISTIC_CACHING;
 
-function makeOptimistic<
-  TArgs extends any[],
-  TResult,
->(
+function makeOptimistic<TArgs extends any[], TResult>(
   name: string,
-  fn: (...args: TArgs) => TResult,
+  fn: (...args: TArgs) => TResult
 ): OptimisticWrapperFunction<TArgs, TResult> {
-  fn = Profile("optimistic " + name, fn);
+  fn = Profile('optimistic ' + name, fn);
 
-  const wrapper = wrap(ENABLED ? function (this: any) {
-    maybeDependOnPath(arguments[0]);
-    return fn.apply(this, arguments as any);
-  } as typeof fn : fn, {
-    makeCacheKey(...args: TArgs) {
-      if (! ENABLED) {
-        // Cache nothing when the optimistic caching system is disabled.
-        return;
-      }
-
-      const path = args[0];
-      if (! pathIsAbsolute(path)) {
-        return;
-      }
-
-      if (! args.every(arg => typeof arg === "string")) {
-        // If any of the arguments is not a string, then we won't cache the
-        // result of the corresponding file.* method invocation.
-        return;
-      }
-
-      return args.join("\0");
-    },
-
-    subscribe(...args: TArgs) {
-      const path = args[0];
-
-      if (! shouldWatch(path)) {
-        return;
-      }
-
-      assert.ok(pathIsAbsolute(path));
-
-      let watcher: SafeWatcher | null = watch(path, () => {
-        wrapper.dirty(...args);
-      });
-
-      return () => {
-        if (watcher) {
-          watcher.close();
-          watcher = null;
+  const wrapper = wrap(
+    ENABLED
+      ? (function(this: any) {
+          maybeDependOnPath(arguments[0]);
+          return fn.apply(this, arguments as any);
+        } as typeof fn)
+      : fn,
+    {
+      makeCacheKey(...args: TArgs) {
+        if (!ENABLED) {
+          // Cache nothing when the optimistic caching system is disabled.
+          return;
         }
-      };
+
+        const path = args[0];
+        if (!pathIsAbsolute(path)) {
+          return;
+        }
+
+        if (!args.every(arg => typeof arg === 'string')) {
+          // If any of the arguments is not a string, then we won't cache the
+          // result of the corresponding file.* method invocation.
+          return;
+        }
+
+        return args.join('\0');
+      },
+
+      subscribe(...args: TArgs) {
+        const path = args[0];
+
+        if (!shouldWatch(path)) {
+          return;
+        }
+
+        assert.ok(pathIsAbsolute(path));
+
+        let watcher: SafeWatcher | null = watch(path, () => {
+          wrapper.dirty(...args);
+        });
+
+        return () => {
+          if (watcher) {
+            watcher.close();
+            watcher = null;
+          }
+        };
+      },
     }
-  });
+  );
 
   return wrapper;
 }
@@ -85,104 +88,105 @@ function makeOptimistic<
 // subscribing to file changes.
 const optimisticFindAppDir = wrap(findAppDir);
 
-const shouldWatch = wrap(Profile("shouldWatch", (path: string) => {
-  const parts = path.split(pathSep);
-  const nmi = parts.indexOf("node_modules");
+const shouldWatch = wrap(
+  Profile('shouldWatch', (path: string) => {
+    const parts = path.split(pathSep);
+    const nmi = parts.indexOf('node_modules');
 
-  if (nmi < 0) {
-    // Watch everything not in a node_modules directory.
-    return true;
-  }
+    if (nmi < 0) {
+      // Watch everything not in a node_modules directory.
+      return true;
+    }
 
-  const dotMeteorIndex = parts.lastIndexOf(".meteor", nmi);
-  if (dotMeteorIndex >= 0) {
-    // Watch nothing inside of .meteor, at least for the purposes of the
-    // optimistic caching system. Meteor watches files inside .meteor/local
-    // via the WatchSet abstraction, unrelatedly.
-    return false;
-  }
-
-  if (nmi < parts.length - 1) {
-    const nmi2 = parts.indexOf("node_modules", nmi + 1);
-    if (nmi2 > nmi) {
-      // If this path is nested inside more than one node_modules
-      // directory, then it isn't part of a linked npm package, so we
-      // should not watch it.
+    const dotMeteorIndex = parts.lastIndexOf('.meteor', nmi);
+    if (dotMeteorIndex >= 0) {
+      // Watch nothing inside of .meteor, at least for the purposes of the
+      // optimistic caching system. Meteor watches files inside .meteor/local
+      // via the WatchSet abstraction, unrelatedly.
       return false;
     }
 
-    const parentDirParts = parts.slice(0, nmi);
-    const parentDir = parentDirParts.join(pathSep);
-    const appDir = optimisticFindAppDir(parentDir);
-    if (
-      appDir &&
-      parentDir.startsWith(appDir) &&
-      appDir.split(pathSep).length < parentDirParts.length
-    ) {
-      // If the given path is contained by the Meteor application directory,
-      // but the node_modules directory we're considering is not directly
-      // contained by the root application directory, watch the file. See
-      // discussion in issue https://github.com/meteor/meteor/issues/10664
-      return true;
+    if (nmi < parts.length - 1) {
+      const nmi2 = parts.indexOf('node_modules', nmi + 1);
+      if (nmi2 > nmi) {
+        // If this path is nested inside more than one node_modules
+        // directory, then it isn't part of a linked npm package, so we
+        // should not watch it.
+        return false;
+      }
+
+      const parentDirParts = parts.slice(0, nmi);
+      const parentDir = parentDirParts.join(pathSep);
+      const appDir = optimisticFindAppDir(parentDir);
+      if (
+        appDir &&
+        parentDir.startsWith(appDir) &&
+        appDir.split(pathSep).length < parentDirParts.length
+      ) {
+        // If the given path is contained by the Meteor application directory,
+        // but the node_modules directory we're considering is not directly
+        // contained by the root application directory, watch the file. See
+        // discussion in issue https://github.com/meteor/meteor/issues/10664
+        return true;
+      }
+
+      const packageDirParts = parts.slice(0, nmi + 2);
+
+      if (parts[nmi + 1].startsWith('@')) {
+        // For linked @scoped npm packages, the symlink is nested inside the
+        // @scoped directory (which is a child of node_modules).
+        packageDirParts.push(parts[nmi + 2]);
+      }
+
+      const packageDir = packageDirParts.join(pathSep);
+      if (optimisticIsSymbolicLink(packageDir)) {
+        // If this path is in a linked npm package, then it might be under
+        // active development, so we should watch it.
+        return true;
+      }
     }
 
-    const packageDirParts = parts.slice(0, nmi + 2);
-
-    if (parts[nmi + 1].startsWith("@")) {
-      // For linked @scoped npm packages, the symlink is nested inside the
-      // @scoped directory (which is a child of node_modules).
-      packageDirParts.push(parts[nmi + 2]);
-    }
-
-    const packageDir = packageDirParts.join(pathSep);
-    if (optimisticIsSymbolicLink(packageDir)) {
-      // If this path is in a linked npm package, then it might be under
-      // active development, so we should watch it.
-      return true;
-    }
-  }
-
-  // Starting a watcher for every single file contained within a
-  // node_modules directory would be prohibitively expensive, so
-  // instead we rely on dependOnNodeModules to tell us when files in
-  // node_modules directories might have changed.
-  return false;
-}));
+    // Starting a watcher for every single file contained within a
+    // node_modules directory would be prohibitively expensive, so
+    // instead we rely on dependOnNodeModules to tell us when files in
+    // node_modules directories might have changed.
+    return false;
+  })
+);
 
 function maybeDependOnPath(path: string) {
-  if (typeof path === "string") {
+  if (typeof path === 'string') {
     dependOnPath(path);
     maybeDependOnNodeModules(path);
   }
 }
 
 function maybeDependOnNodeModules(path: string) {
-  if (typeof path !== "string") {
+  if (typeof path !== 'string') {
     return;
   }
 
   const parts = path.split(pathSep);
 
   while (true) {
-    const index = parts.lastIndexOf("node_modules");
+    const index = parts.lastIndexOf('node_modules');
     if (index < 0) {
       return;
     }
 
     parts.length = index + 1;
     dependOnNodeModules(parts.join(pathSep));
-    assert.strictEqual(parts.pop(), "node_modules");
+    assert.strictEqual(parts.pop(), 'node_modules');
   }
 }
 
 const dependOnDirectory = dep({
   subscribe(dir: string) {
-    let watcher: SafeWatcher | null = watch(
-      dir,
-      () => dependOnDirectory.dirty(dir),
+    let watcher: SafeWatcher | null = watch(dir, () =>
+      dependOnDirectory.dirty(dir)
     );
 
-    return function () {
+    return function() {
       if (watcher) {
         watcher.close();
         watcher = null;
@@ -212,7 +216,7 @@ function dependOnParentDirectory(path: string) {
 // care about is adding or removing npm packages.
 function dependOnNodeModules(nodeModulesDir: string) {
   assert(pathIsAbsolute(nodeModulesDir), nodeModulesDir);
-  assert(nodeModulesDir.endsWith(pathSep + "node_modules"));
+  assert(nodeModulesDir.endsWith(pathSep + 'node_modules'));
   dependOnDirectory(nodeModulesDir);
 }
 
@@ -223,9 +227,9 @@ export function dirtyNodeModulesDirectory(nodeModulesDir: string) {
 }
 
 function makeCheapPathFunction<TResult>(
-  pathFunction: (path: string) => TResult,
+  pathFunction: (path: string) => TResult
 ): typeof pathFunction {
-  if (! ENABLED) {
+  if (!ENABLED) {
     return pathFunction;
   }
   const wrapper = wrap(pathFunction, {
@@ -235,118 +239,110 @@ function makeCheapPathFunction<TResult>(
     // this limit to Infinity, increasing it by 16x comes close enough.
     max: Math.pow(2, 20),
     subscribe(path) {
-      let watcher: SafeWatcher | null = watch(
-        path,
-        () => wrapper.dirty(path),
-      );
-      return function () {
+      let watcher: SafeWatcher | null = watch(path, () => wrapper.dirty(path));
+      return function() {
         if (watcher) {
           watcher.close();
           watcher = null;
         }
       };
-    }
+    },
   });
   return wrapper;
 }
 
-export const optimisticStatOrNull = makeCheapPathFunction(
-  (path: string) => {
-    const result = statOrNull(path);
-    if (result === null) {
-      dependOnParentDirectory(path);
-    }
-    return result;
-  },
-);
-
-export const optimisticLStat = makeOptimistic("lstat", lstat);
-export const optimisticLStatOrNull = makeCheapPathFunction(
-  (path: string) => {
-    try {
-      return optimisticLStat(path);
-    } catch (e) {
-      if (e.code !== "ENOENT") throw e;
-      dependOnParentDirectory(path);
-      return null;
-    }
-  },
-);
-
-export const optimisticReadFile = makeOptimistic("readFile", readFile);
-export const optimisticReaddir = makeOptimistic("readdir", readdir);
-export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
-  path: string,
-  options?: Parameters<typeof optimisticReadFile>[1],
-) => {
-  try {
-    return sha1(optimisticReadFile(path, options)) as string;
-
-  } catch (e) {
-    if (e.code !== "EISDIR" &&
-        e.code !== "ENOENT") {
-      throw e;
-    }
+export const optimisticStatOrNull = makeCheapPathFunction((path: string) => {
+  const result = statOrNull(path);
+  if (result === null) {
+    dependOnParentDirectory(path);
   }
-
-  dependOnParentDirectory(path);
-
-  return null;
+  return result;
 });
+
+export const optimisticLStat = makeOptimistic('lstat', lstat);
+export const optimisticLStatOrNull = makeCheapPathFunction((path: string) => {
+  try {
+    return optimisticLStat(path);
+  } catch (e) {
+    if (isErrnoException(e) && e.code !== 'ENOENT') throw e;
+    dependOnParentDirectory(path);
+    return null;
+  }
+});
+
+export const optimisticReadFile = makeOptimistic('readFile', readFile);
+export const optimisticReaddir = makeOptimistic('readdir', readdir);
+export const optimisticHashOrNull = makeOptimistic(
+  'hashOrNull',
+  (path: string, options?: Parameters<typeof optimisticReadFile>[1]) => {
+    try {
+      return sha1(optimisticReadFile(path, options)) as string;
+    } catch (e) {
+      if (isErrnoException(e) && e.code !== 'EISDIR' && e.code !== 'ENOENT') {
+        throw e;
+      }
+    }
+
+    dependOnParentDirectory(path);
+
+    return null;
+  }
+);
 
 const riskyJsonWhitespacePattern =
   // Turns out a lot of weird characters technically count as /\s/ characters.
   // This is all of them except for " ", "\n", and "\r", which are safe:
   /[\t\b\f\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000\ufeff]+/g;
 
-export const optimisticReadJsonOrNull =
-makeOptimistic("readJsonOrNull", (
-  path: string,
-  options?: Parameters<typeof optimisticReadFile>[1] & {
-    allowSyntaxError?: boolean;
-  },
-): Record<string, any> | null => {
-  let contents: string | Buffer;
-  try {
-    contents = optimisticReadFile(path, options);
-  } catch (e) {
-    if (e.code === "ENOENT") {
-      dependOnParentDirectory(path);
-      return null;
+export const optimisticReadJsonOrNull = makeOptimistic(
+  'readJsonOrNull',
+  (
+    path: string,
+    options?: Parameters<typeof optimisticReadFile>[1] & {
+      allowSyntaxError?: boolean;
     }
-    throw e;
+  ): Record<string, any> | null => {
+    let contents: string | Buffer;
+    try {
+      contents = optimisticReadFile(path, options);
+    } catch (e) {
+      if (isErrnoException(e) && e.code === 'ENOENT') {
+        dependOnParentDirectory(path);
+        return null;
+      }
+      throw e;
+    }
+
+    try {
+      return JSON.parse(contents);
+    } catch (e) {
+      if (e instanceof SyntaxError && options && options.allowSyntaxError) {
+        return null;
+      }
+
+      const stringContents: string = contents.toString('utf8');
+      // Replace any risky whitespace characters with spaces, to address issue
+      // https://github.com/meteor/meteor/issues/10688
+      const cleanContents = stringContents.replace(
+        riskyJsonWhitespacePattern,
+        ' '
+      );
+      if (cleanContents !== stringContents) {
+        // Try one last time to parse cleanContents before throwing.
+        return JSON.parse(cleanContents);
+      }
+
+      throw e;
+    }
   }
-
-  try {
-    return JSON.parse(contents);
-  } catch (e) {
-    if (e instanceof SyntaxError &&
-        options && options.allowSyntaxError) {
-      return null;
-    }
-
-    const stringContents: string = contents.toString("utf8");
-    // Replace any risky whitespace characters with spaces, to address issue
-    // https://github.com/meteor/meteor/issues/10688
-    const cleanContents = stringContents.replace(riskyJsonWhitespacePattern, " ");
-    if (cleanContents !== stringContents) {
-      // Try one last time to parse cleanContents before throwing.
-      return JSON.parse(cleanContents);
-    }
-
-    throw e;
-  }
-});
+);
 
 export const optimisticReadMeteorIgnore = wrap((dir: string) => {
-  const meteorIgnorePath = pathJoin(dir, ".meteorignore");
+  const meteorIgnorePath = pathJoin(dir, '.meteorignore');
   const meteorIgnoreStat = optimisticStatOrNull(meteorIgnorePath);
 
-  if (meteorIgnoreStat &&
-      meteorIgnoreStat.isFile()) {
-    return ignore().add(
-      optimisticReadFile(meteorIgnorePath).toString("utf8")
-    );
+  if (meteorIgnoreStat && meteorIgnoreStat.isFile()) {
+    return ignore().add(optimisticReadFile(meteorIgnorePath).toString('utf8'));
   }
 
   return null;
@@ -360,61 +356,67 @@ type LookupPkgJsonType = OptimisticWrapperFunction<
 // Returns an array of package.json objects encountered in any directory
 // between relDir and absRootDir. If a package.json with a "name" property
 // is found, it will always be the first object in the array.
-export const optimisticLookupPackageJsonArray: LookupPkgJsonType =
-wrap((absRootDir: string, relDir: string) => {
-  const absPkgJsonPath = pathJoin(absRootDir, relDir, "package.json");
-  const pkgJson = optimisticReadJsonOrNull(absPkgJsonPath);
+export const optimisticLookupPackageJsonArray: LookupPkgJsonType = wrap(
+  (absRootDir: string, relDir: string) => {
+    const absPkgJsonPath = pathJoin(absRootDir, relDir, 'package.json');
+    const pkgJson = optimisticReadJsonOrNull(absPkgJsonPath);
 
-  // Named package.json files always terminate the search. This
-  // restriction was first introduced to fix #10547, before this function
-  // was updated to return an array instead of a single object, but
-  // returning here is still an important base case.
-  if (pkgJson && typeof pkgJson.name === "string") {
-    return [pkgJson];
+    // Named package.json files always terminate the search. This
+    // restriction was first introduced to fix #10547, before this function
+    // was updated to return an array instead of a single object, but
+    // returning here is still an important base case.
+    if (pkgJson && typeof pkgJson.name === 'string') {
+      return [pkgJson];
+    }
+
+    const relParentDir = pathDirname(relDir);
+    if (relParentDir === relDir) {
+      return [];
+    }
+
+    // Stop searching if an ancestor node_modules directory is encountered.
+    if (pathBasename(relParentDir) === 'node_modules') {
+      return [];
+    }
+
+    const parentArray = optimisticLookupPackageJsonArray(
+      absRootDir,
+      relParentDir
+    );
+
+    if (pkgJson) {
+      // If an intermediate package.json file was found, add its object to
+      // the array. Since these arrays are cached, we don't want to modify
+      // them using parentArray.push(pkgJson), hence concat.
+      return parentArray.concat(pkgJson);
+    }
+
+    return parentArray;
   }
+);
 
-  const relParentDir = pathDirname(relDir);
-  if (relParentDir === relDir) {
-    return [];
+const optimisticIsSymbolicLink = wrap(
+  (path: string) => {
+    try {
+      return lstat(path)?.isSymbolicLink();
+    } catch (e) {
+      if (isErrnoException(e) && e.code !== 'ENOENT') throw e;
+      dependOnParentDirectory(path);
+      return false;
+    }
+  },
+  {
+    subscribe(path) {
+      let watcher: SafeWatcher | null = watch(path, () => {
+        optimisticIsSymbolicLink.dirty(path);
+      });
+
+      return function() {
+        if (watcher) {
+          watcher.close();
+          watcher = null;
+        }
+      };
+    },
   }
-
-  // Stop searching if an ancestor node_modules directory is encountered.
-  if (pathBasename(relParentDir) === "node_modules") {
-    return [];
-  }
-
-  const parentArray =
-    optimisticLookupPackageJsonArray(absRootDir, relParentDir);
-
-  if (pkgJson) {
-    // If an intermediate package.json file was found, add its object to
-    // the array. Since these arrays are cached, we don't want to modify
-    // them using parentArray.push(pkgJson), hence concat.
-    return parentArray.concat(pkgJson);
-  }
-
-  return parentArray;
-});
-
-const optimisticIsSymbolicLink = wrap((path: string) => {
-  try {
-    return lstat(path)?.isSymbolicLink();
-  } catch (e) {
-    if (e.code !== "ENOENT") throw e;
-    dependOnParentDirectory(path);
-    return false;
-  }
-}, {
-  subscribe(path) {
-    let watcher: SafeWatcher | null = watch(path, () => {
-      optimisticIsSymbolicLink.dirty(path);
-    });
-
-    return function () {
-      if (watcher) {
-        watcher.close();
-        watcher = null;
-      }
-    };
-  }
-});
+);
