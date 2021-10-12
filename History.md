@@ -1,3 +1,10 @@
+## v2.0.1, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.0.1`
+  - Patch to make 2.0.1 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
+
 ## v2.0, 2021-01-20
 
 ### Changes
