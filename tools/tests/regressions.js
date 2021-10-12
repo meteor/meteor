@@ -1,6 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-// import { getUrl } from '../utils/http-helpers.js';
 
 selftest.define('regressions - web.browser.legacy', function() {
   const s = new Sandbox();
@@ -31,8 +30,3 @@ selftest.define('regressions - web.browser.legacy', function() {
     run.expectExit(0);
   });
 });
-
-// function checkModernAndLegacyUrls(test) {
-//   test(getUrl("http://localhost:3000"));
-//   test(getUrl("http://localhost:3000/__browser.legacy"));
-//  }
