@@ -35,7 +35,7 @@ hexo.extend.tag.register('apibox', function(args) {
     nested: name.indexOf('#') !== -1,
     instanceDelimiter: '#'
   };
-  var data = _.extend({}, defaults, options, dataFromApi);
+  var data = Object.assign({}, defaults, options, dataFromApi);
 
   data.id = data.longname.replace(/[.#]/g, "-");
 

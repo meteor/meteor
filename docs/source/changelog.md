@@ -2,4 +2,4 @@
 title: Meteor Changelog
 ---
 
-{%- changelog 'code/History.md' %}
+{%- changelog '../History.md' %}

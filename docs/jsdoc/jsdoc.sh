@@ -3,7 +3,7 @@
 INFINITY=10000
 
 TOPDIR=$(pwd)
-METEOR_DIR="./code"
+METEOR_DIR="../"
 cd "$METEOR_DIR"
 
 # Ensure that jsdoc failure actually makes this script fail.

@@ -22,7 +22,7 @@ var idsToPages = {};
 runList = (dir, as) => {
   _.each(as, a => {
     var aId;
-    if (!_.isArray(a) && _.isObject(a)){
+    if (!Array.isArray(a) && _.isObject(a)){
       aId = a.id;
       a = a.name;
     }
@@ -37,7 +37,7 @@ runList = (dir, as) => {
     } else {
       addIds = (ids) => {
         _.each(ids, (id) => {
-          if (_.isArray(id)) {
+          if (Array.isArray(id)) {
             addIds(id);
           } else {
             if (_.isObject(id)) {
