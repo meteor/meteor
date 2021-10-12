@@ -1437,6 +1437,12 @@ main.registerCommand({
     'deploy-polling-timeout': { type: Number },
     'no-wait': { type: Boolean },
     'cache-build': { type: Boolean },
+    free: { type: Boolean },
+    plan: { type: String },
+    'container-size': { type: String },
+    'deploy-token': { type: String },
+    mongo: { type: Boolean },
+    owner: { type: String }
   },
   allowUnrecognizedOptions: true,
   requiresApp: function (options) {
@@ -1466,8 +1472,8 @@ function deployCommand(options, { rawOptions }) {
     return 1;
   }
 
-  var loggedIn = auth.isLoggedIn();
-  if (! loggedIn) {
+  const loggedIn = auth.isLoggedIn();
+  if (! loggedIn && !options["deploy-token"]) {
     Console.error(
       "You must be logged in to deploy, just enter your email address.");
     Console.error();
@@ -1509,6 +1515,14 @@ function deployCommand(options, { rawOptions }) {
   if (options['deploy-polling-timeout']) {
     deployPollingTimeoutMs = options['deploy-polling-timeout'];
   }
+  let plan = null;
+  if (options.plan) {
+    plan = options.plan;
+  }
+  let containerSize = null;
+  if (options['container-size']) {
+    containerSize = options['container-size'];
+  }
 
   const isCacheBuildEnabled = !!options['cache-build'];
   const waitForDeploy = !options['no-wait'];
@@ -1517,7 +1531,13 @@ function deployCommand(options, { rawOptions }) {
     projectContext: projectContext,
     site: site,
     settingsFile: options.settings,
+    free: options.free,
+    deployToken: options['deploy-token'],
+    owner: options.owner,
+    mongo: options.mongo,
     buildOptions: buildOptions,
+    plan,
+    containerSize,
     rawOptions,
     deployPollingTimeoutMs,
     waitForDeploy,
