@@ -114,4 +114,4 @@ Project:Dynamic Import:
   - packages/dynamic-import/**/*
 
 Project:Docs:
-  - package/docs/**/*
+  - docs/**/*

@@ -7,32 +7,18 @@ on:
     paths:
       - 'docs/**/*'
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: docs/
-    steps:
-      - uses: actions/checkout@v2
-      - name: Test build
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12.x
-      - run: npm ci
-      - run: npm build
   preview:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: docs/
-    needs: [ test ]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
         with:
           node-version: 12.x
-      - name: Build the Guide
-        run: npm ci && npm run build
+      - run: npm ci
+      - run: npm run build
       - name: Deploy to Netlify for preview
         uses: nwtgck/actions-netlify@v1.2.2
         with:
@@ -50,7 +36,6 @@ jobs:
     defaults:
       run:
         working-directory: guide/site/
-    needs: [ test ]
     if:
       contains('
       refs/heads/release-
@@ -79,7 +64,6 @@ jobs:
     defaults:
       run:
         working-directory: guide/site/
-    needs: [ test ]
     if:
       contains('
       refs/heads/devel
