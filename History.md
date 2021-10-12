@@ -5,6 +5,13 @@
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
 
+## v2.3.7, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.7`
+  - Patch to make 2.3.7 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
+  
 ## v2.3.6, 2021-09-02
 
 #### Highlights

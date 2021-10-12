@@ -1477,6 +1477,7 @@ main.registerCommand({
     'build-only': { type: Boolean },
     free: { type: Boolean },
     plan: { type: String },
+    'container-size': { type: String },
     'deploy-token': { type: String },
     mongo: { type: Boolean },
     owner: { type: String }
@@ -1556,6 +1557,10 @@ function deployCommand(options, { rawOptions }) {
   if (options.plan) {
     plan = options.plan;
   }
+  let containerSize = null;
+  if (options['container-size']) {
+    containerSize = options['container-size'];
+  }
 
   const isCacheBuildEnabled = !!options['cache-build'];
   const isBuildOnly = !!options['build-only'];
@@ -1571,6 +1576,7 @@ function deployCommand(options, { rawOptions }) {
     mongo: options.mongo,
     buildOptions: buildOptions,
     plan,
+    containerSize,
     rawOptions,
     deployPollingTimeoutMs,
     waitForDeploy,
