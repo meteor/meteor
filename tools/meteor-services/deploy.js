@@ -660,6 +660,7 @@ export async function bundleAndDeploy(options) {
         {
           free: options.free,
           plan: options.plan,
+          containerSize: options.containerSize,
           mongo: options.mongo,
           ...deployWithTokenProps,
         },

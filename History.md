@@ -1,10 +1,17 @@
-## v2.4, UNRELEASED
+## v2.4.1, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.4.1`
+  - Patch to make 2.4.1 compatible with Push to Deploy feature in Galaxy (Meteor Cloud) 
+
+## v2.4, 2021-09-15
 
 #### Highlights
 
 * Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
 * Email package now allows setting `Email.customTransport` to override sending method.
-* Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming. 
+* Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming.
 * Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
 * `reify` has been updated to v0.22.2 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
 * Meteor NPM installer is [now available for all platforms](https://github.com/meteor/meteor/pull/11590).
@@ -14,7 +21,7 @@
 #### Migration steps
 
 1. Replace all usage of `collection._ensureIndex` with `collection.createIndex`. You only need to rename the method as the functionality is the same.
-2. If you are using a [well known service](https://nodemailer.com/smtp/well-known/) for the email package switch to using `Meteor.settings.pacakges.email` settings instead of `MAIL_URL` env variable. Alternatively you can utilize the new `Email.customTransport` function to override the default package behavior and use your own. [Read the email docs](https://docs.meteor.com/api/email.html) for implementation details.
+2. If you are using a [well known service](https://nodemailer.com/smtp/well-known/) for the email package switch to using `Meteor.settings.packages.email` settings instead of `MAIL_URL` env variable. Alternatively you can utilize the new `Email.customTransport` function to override the default package behavior and use your own. [Read the email docs](https://docs.meteor.com/api/email.html) for implementation details.
 
 #### Meteor Version Release
 
@@ -27,20 +34,20 @@
   - Upgraded `chalk` to v4.1.1
   - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
   - `METEOR_SETTINGS` is now accepted an all modes
-  - Native file watchers are now disabled on Windows for many file-intesive actions (like, `create`, `update`, `build` etc.), this solves an issue with hanging Meteor commands on Windows
-    
+  - Native file watchers are now disabled on Windows for many file-intensive actions (like, `create`, `update`, `build` etc.), this solves an issue with hanging Meteor commands on Windows
+
 * `webapp@1.12`
   - npm dependencies have been updated
   - Added hook to change runtime config delivered to the client app, [read more](https://github.com/meteor/meteor/pull/11506)
   - Added hook to get notified when the app is updated, [read more](https://github.com/meteor/meteor/pull/11607)
   - `@vlasky/whomst@0.1.7`
   - Added `addUpdateNotifyHook` that gets called when runtime configuration is updated
-  
+
 * `logging@1.3.0`
   - Switch from `cli-color` to `chalk` to have the same dependency as meteor-tool
   - Fix detecting eval
   - Copy over code from `Meteor._debug` to `Log.debug` which will be deprecated in the future
-  
+
 * `email@2.2`
   - Modernized package code
   - Add alternative API function that you can hook into to utilize your own sending method: `Email.customTransport`. [Read the docs](https://docs.meteor.com/api/email.html#Email-customTransport)
@@ -110,8 +117,6 @@
 
 * `callback-hook@1.4.0`
   - Added `forEach` iterator to be more in-line with the ES use for iterations. `each` is now deprecated, but will remain supported.
-
-#### Independent Releases
 
 ## v2.3.6, 2021-09-02
 
