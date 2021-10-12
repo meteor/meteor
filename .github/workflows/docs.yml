@@ -14,9 +14,10 @@ jobs:
         working-directory: docs/
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2
         with:
           node-version: 12.x
+          cache: npm
       - run: npm ci
       - run: npm run build
       - name: Deploy to Netlify for preview
@@ -42,9 +43,10 @@ jobs:
       ', github.ref)
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2
         with:
           node-version: 12.x
+          cache: npm
       - name: Build the Guide
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
@@ -71,9 +73,10 @@ jobs:
       ', github.ref)
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v2
         with:
           node-version: 12.x
+          cache: npm
       - name: Build the Guide
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
