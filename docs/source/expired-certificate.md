@@ -3,6 +3,10 @@ title: Expired Certificates
 description: Troubleshooting Expired Certificates Issues
 ---
 
+Let's Encrypt Root Certificate expired on September 30th and this change is causing some issues. We explain the possible problems below and also how to solve them.
+
+This is not an issue with Meteor or Galaxy, but a natural process if you are using Let's Encrypt's generated certificates.
+
 <h2 id="commands">Can't run Meteor commands</h2>
 
 Galaxy and all Meteor servers uses Let's Encrypt, which announced a change in May in this [post](https://letsencrypt.org/docs/dst-root-ca-x3-expiration-september-2021) about DST Root CA X3 expiring on September 30, 2021.
@@ -23,6 +27,7 @@ NODE_TLS_REJECT_UNAUTHORIZED=0 meteor deploy
 
 Also note that if you are running old distributions, like Ubuntu 16 and before, locally, or in any of your CI pipelines you may also face this issue. In this case, we do recommend updating your distribution, or your local repository of root certificates (the how-to of this varies based on your distribution).
 
+This is not a Meteor or Galaxy issue, but it's a change in the Let's Encrypt certificate in our resources that you are accessing.
 
 <h2 id="server-requests">Requests failing</h2>
 
@@ -44,6 +49,8 @@ If you are using Galaxy, it's as simple as adding this to your settings file:
 
 You can check our list of supported Meteor versions [here](https://github.com/meteor/meteor/blob/devel/SECURITY.md#supported-versions). If your applications is not in one of them, you should migrate as soon as possible.
 
+This is not a Meteor or Galaxy issue, but it's a change in the Let's Encrypt certificate in the external resource that you are accessing.
+
 <h2 id="client-compatibility">Client Compatibility</h2>
 
 As stated before, Galaxy issues Let's Encrypt certificates automatically for all clients. This is source of confusion, as if you are depending on older clients being able to access your website, this won't work.
@@ -58,7 +65,9 @@ sudo certbot certonly --manual --preferred-chain "ISRG Root X1" --preferred-chal
 
 More info can be obtained [here](https://letsencrypt.org/certificates).
 
-If you are using Galaxy, you need to follow the requirements and steps [here](https://galaxy-guide.meteor.com/encryption.html#Custom%20certificate) after generating the certificate. Galaxy only accepts custom certs in .pem format, the same as nginx uses.
+If you are using Galaxy, you need to follow the requirements and steps [here](https://galaxy-guide.meteor.com/encryption.html#Custom%20certificate) after generating the certificate. Galaxy only accepts custom certs in `.pem` format, the same as nginx uses.
+
+This is not a Meteor or Galaxy issue, but it's a change in the Let's Encrypt certificate you are using.
 
 <h2 id="clients-not-working">Clients Known to be not working</h2>
 
@@ -68,4 +77,6 @@ Here is a succinct list of known to be not working clients:
 - Node.JS HTTP requests prior to v10. This includes any Meteor version prior to 1.9(except).
 - Any client using OpenSSL 1.0.2 and before.
 
-Please note that this is not an exhaustive list, but based on our reports and experience. This is not a Meteor or Galaxy issue, but it's a change in the Let's Encrypt certificate you are using.
+Please note that this is not an exhaustive list, but based on our reports and experience. 
+
+This is not a Meteor or Galaxy issue, but it's a change in the Let's Encrypt certificate you are using.

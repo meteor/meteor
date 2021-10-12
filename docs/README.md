@@ -62,6 +62,6 @@ git submodule add /path/to/local/meteor code
 
 3. Hexo builds if you are just changing md files in sources then
 hexo will watch for changes and update.  If you are making changes
-in the `/code` folder then you will need to `npm clean && npm start`.
+in the `/code` folder then you will need to `npm run clean && npm start`.
 
 Of course, do not commit any of these changes.
