@@ -935,4 +935,6 @@ createAsyncCollection = (name, optionsParam = {}) => {
 
 Mongo.createAsyncCollection = createAsyncCollection;
 
-Promise.await(MongoInternals.defaultRemoteCollectionDriver());
+if (Meteor.isServer) {
+  Promise.await(MongoInternals.defaultRemoteCollectionDriver());
+}
