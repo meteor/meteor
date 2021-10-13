@@ -102,12 +102,7 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
     this._collection = this._driver.open(name, this._connection);
   }
 
-  // default, used in the client for example
-  this.asyncInit = async () => {
-    return this;
-  }
   this.isAsync = options.isAsync;
-  this.isAsyncInitialized = false;
 
   if (options._driver) {
     if (typeof options._driver.open !== 'function') {
@@ -129,20 +124,8 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
       typeof MongoInternals !== 'undefined' &&
       MongoInternals.defaultRemoteCollectionDriver
     ) {
-
-      if (this.isAsync) {
-        this.asyncInit = async () => {
-          const driver = await MongoInternals.defaultRemoteCollectionDriver();
-          this.openDriver(driver);
-          return this;
-        }
-      } else {
-        // TODO [fiber removal]
-        // Promise.await here is ok as this is to keep compatibility for sync
-        // collections
-        const driver = Promise.await(MongoInternals.defaultRemoteCollectionDriver());
-        this.openDriver(driver);
-      }
+      const driver = MongoInternals.getDefaultRemoteCollectionDriver();
+      this.openDriver(driver);
     } else {
       const { LocalCollectionDriver } = require('./local_collection_driver.js');
       const driver = LocalCollectionDriver;
@@ -187,9 +170,7 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
     }
   }
 
-  if (!this.isAsync) {
-    setCollectionInstance({name: this._name, instance: this, options});
-  }
+  setCollectionInstance({name: this._name, instance: this, options});
 };
 
 Object.assign(Mongo.Collection.prototype, {
@@ -920,7 +901,7 @@ const EXCLUDE_FROM_ASYNC_WRAPPER = ['_isRemoteCollection'];
 
 // "find" is necessary here because we are already delaying the collection
 // connection after the creation so we need to wait it at this point
-['find', ...Object.keys(collectionImplementation)]
+[...Object.keys(collectionImplementation)]
   .filter(method => !EXCLUDE_FROM_ASYNC_WRAPPER.includes(method))
   .forEach(method => {
     const asyncName = getAsyncMethodName(method);
@@ -932,11 +913,6 @@ const EXCLUDE_FROM_ASYNC_WRAPPER = ['_isRemoteCollection'];
       }
 
       const options = { isAsync: this.isAsync };
-      if (!this.isAsyncInitialized) {
-        const instance = await this.pendingPromise;
-        setCollectionInstance({name: this._name, instance, options});
-        this.isAsyncInitialized = true;
-      }
       const collectionInstance = getCollectionInstanceOrNull({name: this._name, options});
       return Promise.resolve(collectionInstance[method].apply(collectionInstance, arguments));
     };
@@ -950,9 +926,7 @@ createAsyncCollection = (name, optionsParam = {}) => {
       return collectionInstance;
     }
 
-    const collectionDefinition = new Mongo.Collection(name, options);
-    collectionDefinition.pendingPromise = collectionDefinition.asyncInit();
-    return collectionDefinition;
+    return new Mongo.Collection(name, options);
   } catch (e) {
     console.error(`Error creating ${name} async collection`, e);
     throw e;
@@ -960,3 +934,5 @@ createAsyncCollection = (name, optionsParam = {}) => {
 }
 
 Mongo.createAsyncCollection = createAsyncCollection;
+
+Promise.await(MongoInternals.defaultRemoteCollectionDriver());

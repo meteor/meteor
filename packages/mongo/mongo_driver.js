@@ -947,10 +947,6 @@ CURSOR_METHODS
         throw new Error(
           `It is only allowed to use "${asyncName}" cursor method in async collections like "${collectionName}". Use "Mongo.createAsyncCollection" to create async collections.`);
       }
-      if (!collectionInstance.isAsyncInitialized) {
-        throw new Error(
-          `There is something wrong in Meteor because "${collectionName}" should be initialized at this point to run the cursor method "${asyncName}". Please open an issue.`);
-      }
 
       return Promise.resolve(this._synchronousCursor[method].apply(
         this._synchronousCursor, args));

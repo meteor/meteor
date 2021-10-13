@@ -1,5 +1,6 @@
 import { onceAsync } from './mongoAsyncUtils';
 
+let defaultRemoteCollectionDriver = null;
 MongoInternals.RemoteCollectionDriver = async function (
   mongo_url, options) {
   var self = this;
@@ -18,7 +19,7 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });
     return ret;
-  }
+  },
 });
 
 // Create the singleton RemoteCollectionDriver only on demand, so we
@@ -36,5 +37,13 @@ MongoInternals.defaultRemoteCollectionDriver = onceAsync(async function () {
   if (! mongoUrl)
     throw new Error("MONGO_URL must be set in environment");
 
-  return await new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
+  defaultRemoteCollectionDriver = await new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
+  return defaultRemoteCollectionDriver;
 });
+
+MongoInternals.getDefaultRemoteCollectionDriver = function() {
+  if (!defaultRemoteCollectionDriver) {
+    throw new Meteor.Error('getDefaultRemoteCollectionDriver should be called only after mongo package evaluation, make sure your package is declared after mongo in .meteor/packages file.');
+  }
+  return defaultRemoteCollectionDriver;
+}
