@@ -17,6 +17,7 @@
   - HMR improvements related to `hot-module-replacement@0.4.0`
   - Fix finding local packages on Windows located on drives other than C
   - Fix infinite loop in import scanner when file is on a different drive than source root
+  - Node updated to [v14.18.1](https://nodejs.org/en/blog/release/v14.18.1/), following [October 12th 2021 security release](https://nodejs.org/en/blog/vulnerability/oct-2021-security-releases/)
 
 * `accounts-passwordless@1.0.0`
   - New accounts package to provide passwordless authentication.
