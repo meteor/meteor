@@ -853,8 +853,8 @@ export function readAndWatchDirectory(
 ) {
   const contents = readDirectory(options);
   watchSet.addDirectory({
-    contents,
     ...options,
+    contents,
   });
   return contents;
 }
