@@ -1,0 +1,20 @@
+root: true # ignore config in main folder
+
+parserOptions:
+  ecmaVersion: 6
+  sourceType: module
+
+extends:
+  - prettier
+
+env:
+  node: true
+  mocha: true
+
+plugins:
+  - prettier
+
+rules:
+  prettier/prettier: ['error', { 'trailingComma': 'es5', 'singleQuote': true }]
+  semi: ['error', 'always']
+  global-require: 0

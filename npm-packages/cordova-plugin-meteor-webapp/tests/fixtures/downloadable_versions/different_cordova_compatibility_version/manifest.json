@@ -1,0 +1,150 @@
+{
+  "format": "web-program-pre1",
+  "version": "different_cordova_compatibility_version",
+  "cordovaCompatibilityVersions": {
+    "android": "f9d1e65c341c1b68740d41d35250e6a8e9503236",
+    "ios": "9a02a7998ece3cf17379eec42582b3618825dc91"
+  },
+  "manifest": [
+    {
+      "path": "packages/meteor.js",
+      "where": "client",
+      "type": "js",
+      "cacheable": true,
+      "url": "/packages/meteor.js?57d11a30155349aa5106f8150cee35eac5f4764c",
+      "sourceMap": "packages/meteor.js.map",
+      "sourceMapUrl": "/packages/57d11a30155349aa5106f8150cee35eac5f4764c.map",
+      "size": 113991,
+      "hash": "57d11a30155349aa5106f8150cee35eac5f4764c"
+    },
+    {
+      "path": "app/template.mobileapp.js",
+      "where": "client",
+      "type": "js",
+      "cacheable": true,
+      "url": "/app/template.mobileapp.js?979b20f66caf126704c250fbd29ce253c6cb490e",
+      "sourceMap": "app/template.mobileapp.js.map",
+      "sourceMapUrl": "/app/979b20f66caf126704c250fbd29ce253c6cb490e.map",
+      "size": 578,
+      "hash": "979b20f66caf126704c250fbd29ce253c6cb490e"
+    },
+    {
+      "path": "app/mobileapp.js",
+      "where": "client",
+      "type": "js",
+      "cacheable": true,
+      "url": "/app/mobileapp.js?6db9763f3e0f4e4cbf78111f73823043ab08e3e7",
+      "sourceMap": "app/mobileapp.js.map",
+      "sourceMapUrl": "/app/6db9763f3e0f4e4cbf78111f73823043ab08e3e7.map",
+      "size": 2275,
+      "hash": "6db9763f3e0f4e4cbf78111f73823043ab08e3e7"
+    },
+    {
+      "path": "merged-stylesheets.css",
+      "where": "client",
+      "type": "css",
+      "cacheable": true,
+      "url": "/merged-stylesheets.css?20ae2c8d51b2507244e598844414ecdec2615ce3",
+      "sourceMap": "merged-stylesheets.css.map",
+      "sourceMapUrl": "/20ae2c8d51b2507244e598844414ecdec2615ce3.map",
+      "size": 30,
+      "hash": "20ae2c8d51b2507244e598844414ecdec2615ce3"
+    },
+    {
+      "path": "app/some-data.json",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-data.json",
+      "size": 15,
+      "hash": "3edc8875bc0dd76d9f5fce5e823dca6f17a26da7"
+    },
+    {
+      "path": "app/some-file",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-file",
+      "size": 10,
+      "hash": "23300652a57f3e819038d9a268ba36af0e25d33b"
+    },
+    {
+      "path": "app/some-font.woff",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-font.woff",
+      "size": 15,
+      "hash": "6ec7e1e1c0199bfb5bcd6877de9fe7abefd26df8"
+    },
+    {
+      "path": "app/some-image.jpg",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-image.jpg",
+      "size": 15,
+      "hash": "13f1d459365d5604dbf2b64b203fa583c1c7fc3f"
+    },
+    {
+      "path": "app/some-image.png",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-image.png",
+      "size": 15,
+      "hash": "06b05b4c2720cd9ff733d21c594eac4e865a6e73"
+    },
+    {
+      "path": "app/some-javascript.js",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-javascript.js",
+      "size": 19,
+      "hash": "51a3422f25ddf466a35e00e327d5f4ca90eee8f4"
+    },
+    {
+      "path": "app/some-page.html",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-page.html",
+      "size": 15,
+      "hash": "5dc6878863a1fd4f7f69713b4c072280932255af"
+    },
+    {
+      "path": "app/some-stylesheet.css",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-stylesheet.css",
+      "size": 20,
+      "hash": "b33cc1bdaa963ae1cec9afd4c833d80caf7641a2"
+    },
+    {
+      "path": "app/some-text.txt",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-text.txt",
+      "size": 14,
+      "hash": "bb874a02400d28518a3d0f7a4c7fd8970735bea1"
+    },
+    {
+      "path": "app/some-video.mp4",
+      "where": "client",
+      "type": "asset",
+      "cacheable": false,
+      "url": "/some-video.mp4",
+      "size": 15,
+      "hash": "45e892d4c7ce693f5cd551fcd671cf227ff1ae3a"
+    },
+    {
+      "path": "head.html",
+      "where": "internal",
+      "type": "head",
+      "hash": "2ce23f770b76d2f1cb0d71f4a43fbbb61afb25be"
+    }
+  ]
+}
