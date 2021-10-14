@@ -22,7 +22,7 @@ import {
   writeFileAtomically,
   readFile,
 } from '../fs/files';
-import { isErrnoException } from '../utils/ts-utils';
+import { isErrnoException, isParserError } from '../utils/ts-utils';
 
 const { SourceNode, SourceMapConsumer } = require('source-map');
 
@@ -1088,7 +1088,7 @@ export default class ImportScanner {
     try {
       file.deps = file.deps || this.findImportedModuleIdentifiers(file);
     } catch (e) {
-      if (e.$ParseError) {
+      if (isParserError(e)) {
         (buildmessage as any).error(e.message, {
           file: file.sourcePath,
           line: e.loc.line,

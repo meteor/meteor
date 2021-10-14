@@ -45,7 +45,7 @@ import {
   pathResolve,
   pathSep,
 } from '../static-assets/server/mini-files';
-import { isErrnoException } from '../utils/ts-utils';
+import { isErrnoException, isParserError } from '../utils/ts-utils';
 
 const { hasOwnProperty } = Object.prototype;
 
@@ -1301,7 +1301,7 @@ export function runJavaScript(
       try {
         parse(wrapped, { strictMode: false });
       } catch (parseError) {
-        if (typeof parseError.loc !== 'object') {
+        if (!isParserError(parseError)) {
           throw parseError;
         }
 
@@ -1310,10 +1310,10 @@ export function runJavaScript(
 
         if (parsedSourceMap) {
           // XXX this duplicates code in computeGlobalReferences
-          var consumer2 = Promise.await(
+          const consumer2 = Promise.await(
             new sourcemap.SourceMapConsumer(parsedSourceMap)
           );
-          var original = consumer2.originalPositionFor(parseError.loc);
+          const original = consumer2.originalPositionFor(parseError.loc);
           consumer2.destroy();
           if (original.source) {
             err.file = original.source;

@@ -7,7 +7,7 @@ import {
   watchFile,
   unwatchFile,
 } from './files';
-import { isErrnoException } from '../utils/ts-utils';
+import { isErrorWithErrno } from '../utils/ts-utils';
 
 const watchLibrary = require('pathwatcher');
 
@@ -361,7 +361,9 @@ function watchLibraryWatch(absPath: string, callback: EntryCallback) {
     try {
       return watchLibrary.watch(convertToOSPath(absPath), callback);
     } catch (e) {
-      maybeSuggestRaisingWatchLimit(e);
+      if (isErrorWithErrno(e)) {
+        maybeSuggestRaisingWatchLimit(e);
+      }
       // ... ignore the error.  We'll still have watchFile, which is good
       // enough.
     }
@@ -374,9 +376,7 @@ let suggestedRaisingWatchLimit = false;
 
 // This function is async so that archinfo.host() (which may call
 // utils.execFileSync) will run in a Fiber.
-async function maybeSuggestRaisingWatchLimit(
-  error: unknown | (Error & { errno: number })
-) {
+async function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
   var constants = require('constants');
   var archinfo = require('../utils/archinfo');
   if (

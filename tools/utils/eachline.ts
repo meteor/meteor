@@ -1,9 +1,11 @@
-const split = require("split2");
-const pipe = require("multipipe");
+import { isErrnoException } from './ts-utils';
 
-import { Transform, Stream } from "stream";
+const split = require('split2');
+const pipe = require('multipipe');
 
-type LineTransformer = (line: string) => string | Promise<string>
+import { Transform, Stream } from 'stream';
+
+type LineTransformer = (line: string) => string | Promise<string>;
 
 export function eachline(stream: Stream, callback: LineTransformer) {
   stream.pipe(transform(callback));
@@ -11,24 +13,22 @@ export function eachline(stream: Stream, callback: LineTransformer) {
 
 export function transform(callback: LineTransformer) {
   const splitStream = split(/\r?\n/, null, {
-    trailing: false
+    trailing: false,
   });
 
   const transform = new Transform();
 
-  transform._transform = async function (chunk, _encoding, done) {
-    let line = chunk.toString("utf8");
+  transform._transform = async function(chunk, _encoding, done) {
+    let line = chunk.toString('utf8');
     try {
       line = await callback(line);
     } catch (error) {
+      if (!isErrnoException(error)) return;
       done(error);
       return;
     }
     done(null, line);
   };
 
-  return pipe(
-    splitStream,
-    transform,
-  );
+  return pipe(splitStream, transform);
 }
