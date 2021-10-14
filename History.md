@@ -54,6 +54,7 @@
   - Update `cordova-plugin-meteor-webapp` to v2
   - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
   - Cordova Meteor plugin is now using AndroidX
+  - Added new settings option `Meteor.settings.packages.webapp.alwaysReturnContent` that will always return content on requests like `POST`, essentially enabling behavior prior to Meteor 2.3.1.
 
 #### Independent Releases
 
@@ -74,6 +75,16 @@
 
 * `ecmascript-runtime-client@0.12.1`
   - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
+
+* `modern-browsers@0.1.7`
+  - Added `firefoxMobile` as an alias for `firefox`
+
+## v2.4.1, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.4.1`
+  - Patch to make 2.4.1 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
 
 ## v2.4, 2021-09-15
 
@@ -187,6 +198,13 @@
 
 * `callback-hook@1.4.0`
   - Added `forEach` iterator to be more in-line with the ES use for iterations. `each` is now deprecated, but will remain supported.
+  
+## v2.3.7, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.7`
+  - Patch to make 2.3.7 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
 
 ## v2.3.6, 2021-09-02
 
@@ -541,6 +559,13 @@
   
 * `react-fast-refresh@0.1.1`
   - Fixed the package to work in IE11
+  
+## v2.2.4, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.2.4`
+  - Patch to make 2.2.4 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
 
 ## v2.2.3, 2021-08-12
 
@@ -643,6 +668,14 @@
 * `webapp@1.10.1`
   - Fix for UNIX sockets with node cluster. [#11369](https://github.com/meteor/meteor/pull/11369)
 
+
+## v2.1.2, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.1.2`
+  - Patch to make 2.1.2 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
+
 ## v2.1.1, 2021-04-06
 
 ### Changes
@@ -686,6 +719,13 @@
 ### Migration steps
 
 * N/A
+
+## v2.0.1, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.0.1`
+  - Patch to make 2.0.1 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
 
 ## v2.0, 2021-01-20
 
@@ -752,6 +792,13 @@
 Simple run `meteor update` in your app.
 
 Great new features and no breaking changes (except one package deprecation). You can always check our [Roadmap](./Roadmap.md) to understand what is next.
+
+## v1.12.2, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@1.12.2`
+  - Patch to make 1.12.2 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
 
 ## v1.12.1, 2021-01-06
 
