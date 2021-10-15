@@ -8,13 +8,12 @@ import {
   toPosixPath,
   pathRelative
 } from "./files";
-
 import {
   join as nativeJoin
 } from 'path';
-
-import pathwatcher from "pathwatcher";
 import nsfw from 'vscode-nsfw';
+
+const pathwatcher = require('pathwatcher');
 
 // Default to prioritizing changed files, but disable that behavior (and
 // thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
