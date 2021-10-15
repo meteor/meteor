@@ -50,20 +50,20 @@ ReactFastRefresh = {
   get babelPlugin() {
     if (!deprecationWarned) {
       console.warn(
-        'ReactFastRefresh.babelPlugin is deprecated and is incompatible with HMR on Cordova. Use ReactFastRefresh.getBabelPlugins() instead.'
+        'ReactFastRefresh.babelPlugin is deprecated and is incompatible with HMR on Cordova. Use ReactFastRefresh.getBabelPluginConfig() instead.'
       );
       deprecationWarned = true;
     }
 
     return babelPlugin;
   },
-  getBabelPlugins() {
+  getBabelPluginConfig() {
     if (!babelPlugin) {
       return [];
     }
 
     return [
-      babelPlugin,
+      [babelPlugin, { skipEnvCheck: true }],
       enableReactRefreshBabelPlugin,
     ]
   }
