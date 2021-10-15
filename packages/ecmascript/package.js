@@ -40,4 +40,5 @@ Package.onTest(function(api) {
   api.addFiles('bare-test-file.js', ['client', 'server'], {
     bare: true,
   });
+  api.addFiles('runtime-tests-client.js', ['client', 'web.browser.legacy']);
 });

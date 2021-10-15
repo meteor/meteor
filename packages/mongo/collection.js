@@ -25,16 +25,19 @@ The default id generation technique is `'STRING'`.
  * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
  */
 Mongo.Collection = function Collection(name, options) {
-  if (!name && (name !== null)) {
-    Meteor._debug("Warning: creating anonymous collection. It will not be " +
-                  "saved or synchronized over the network. (Pass null for " +
-                  "the collection name to turn off this warning.)");
+  if (!name && name !== null) {
+    Meteor._debug(
+      'Warning: creating anonymous collection. It will not be ' +
+        'saved or synchronized over the network. (Pass null for ' +
+        'the collection name to turn off this warning.)'
+    );
     name = null;
   }
 
-  if (name !== null && typeof name !== "string") {
+  if (name !== null && typeof name !== 'string') {
     throw new Error(
-      "First argument to new Mongo.Collection must be a string or null");
+      'First argument to new Mongo.Collection must be a string or null'
+    );
   }
 
   if (options && options.methods) {
@@ -42,7 +45,7 @@ Mongo.Collection = function Collection(name, options) {
     // "connection" directly instead of in options. (Connections must have a "methods"
     // method.)
     // XXX remove before 1.0
-    options = {connection: options};
+    options = { connection: options };
   }
   // Backwards compatibility: "connection" used to be called "manager".
   if (options && options.manager && !options.connection) {
@@ -55,49 +58,52 @@ Mongo.Collection = function Collection(name, options) {
     transform: null,
     _driver: undefined,
     _preventAutopublish: false,
-      ...options,
+    ...options,
   };
 
   switch (options.idGeneration) {
-  case 'MONGO':
-    this._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
-      return new Mongo.ObjectID(src.hexString(24));
-    };
-    break;
-  case 'STRING':
-  default:
-    this._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
-      return src.id();
-    };
-    break;
+    case 'MONGO':
+      this._makeNewID = function() {
+        var src = name
+          ? DDP.randomStream('/collection/' + name)
+          : Random.insecure;
+        return new Mongo.ObjectID(src.hexString(24));
+      };
+      break;
+    case 'STRING':
+    default:
+      this._makeNewID = function() {
+        var src = name
+          ? DDP.randomStream('/collection/' + name)
+          : Random.insecure;
+        return src.id();
+      };
+      break;
   }
 
   this._transform = LocalCollection.wrapTransform(options.transform);
 
-  if (! name || options.connection === null)
+  if (!name || options.connection === null)
     // note: nameless collections never have a connection
     this._connection = null;
-  else if (options.connection)
-    this._connection = options.connection;
-  else if (Meteor.isClient)
-    this._connection = Meteor.connection;
-  else
-    this._connection = Meteor.server;
+  else if (options.connection) this._connection = options.connection;
+  else if (Meteor.isClient) this._connection = Meteor.connection;
+  else this._connection = Meteor.server;
 
   if (!options._driver) {
     // XXX This check assumes that webapp is loaded so that Meteor.server !==
     // null. We should fully support the case of "want to use a Mongo-backed
     // collection from Node code without webapp", but we don't yet.
     // #MeteorServerNull
-    if (name && this._connection === Meteor.server &&
-        typeof MongoInternals !== "undefined" &&
-        MongoInternals.defaultRemoteCollectionDriver) {
+    if (
+      name &&
+      this._connection === Meteor.server &&
+      typeof MongoInternals !== 'undefined' &&
+      MongoInternals.defaultRemoteCollectionDriver
+    ) {
       options._driver = MongoInternals.defaultRemoteCollectionDriver();
     } else {
-      const { LocalCollectionDriver } =
-        require("./local_collection_driver.js");
+      const { LocalCollectionDriver } = require('./local_collection_driver.js');
       options._driver = LocalCollectionDriver;
     }
   }
@@ -114,21 +120,25 @@ Mongo.Collection = function Collection(name, options) {
   if (options.defineMutationMethods !== false) {
     try {
       this._defineMutationMethods({
-        useExisting: options._suppressSameNameError === true
+        useExisting: options._suppressSameNameError === true,
       });
     } catch (error) {
       // Throw a more understandable error on the server for same collection name
-      if (error.message === `A method named '/${name}/insert' is already defined`)
+      if (
+        error.message === `A method named '/${name}/insert' is already defined`
+      )
         throw new Error(`There is already a collection named "${name}"`);
       throw error;
     }
   }
 
   // autopublish
-  if (Package.autopublish &&
-      ! options._preventAutopublish &&
-      this._connection &&
-      this._connection.publish) {
+  if (
+    Package.autopublish &&
+    !options._preventAutopublish &&
+    this._connection &&
+    this._connection.publish
+  ) {
     this._connection.publish(null, () => this.find(), {
       is_auto: true,
     });
@@ -136,12 +146,9 @@ Mongo.Collection = function Collection(name, options) {
 };
 
 Object.assign(Mongo.Collection.prototype, {
-  _maybeSetUpReplication(name, {
-    _suppressSameNameError = false
-  }) {
+  _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
     const self = this;
-    if (! (self._connection &&
-           self._connection.registerStore)) {
+    if (!(self._connection && self._connection.registerStore)) {
       return;
     }
 
@@ -165,11 +172,9 @@ Object.assign(Mongo.Collection.prototype, {
         // stage), and so that a re-sorting of a query can take advantage of the
         // full _diffQuery moved calculation instead of applying change one at a
         // time.
-        if (batchSize > 1 || reset)
-          self._collection.pauseObservers();
+        if (batchSize > 1 || reset) self._collection.pauseObservers();
 
-        if (reset)
-          self._collection.remove({});
+        if (reset) self._collection.remove({});
       },
 
       // Apply an update.
@@ -211,8 +216,7 @@ Object.assign(Mongo.Collection.prototype, {
         if (msg.msg === 'replace') {
           var replace = msg.replace;
           if (!replace) {
-            if (doc)
-              self._collection.remove(mongoId);
+            if (doc) self._collection.remove(mongoId);
           } else if (!doc) {
             self._collection.insert(replace);
           } else {
@@ -222,16 +226,19 @@ Object.assign(Mongo.Collection.prototype, {
           return;
         } else if (msg.msg === 'added') {
           if (doc) {
-            throw new Error("Expected not to find a document already present for an add");
+            throw new Error(
+              'Expected not to find a document already present for an add'
+            );
           }
           self._collection.insert({ _id: mongoId, ...msg.fields });
         } else if (msg.msg === 'removed') {
           if (!doc)
-            throw new Error("Expected to find a document already present for removed");
+            throw new Error(
+              'Expected to find a document already present for removed'
+            );
           self._collection.remove(mongoId);
         } else if (msg.msg === 'changed') {
-          if (!doc)
-            throw new Error("Expected to find a document to change");
+          if (!doc) throw new Error('Expected to find a document to change');
           const keys = Object.keys(msg.fields);
           if (keys.length > 0) {
             var modifier = {};
@@ -240,7 +247,7 @@ Object.assign(Mongo.Collection.prototype, {
               if (EJSON.equals(doc[key], value)) {
                 return;
               }
-              if (typeof value === "undefined") {
+              if (typeof value === 'undefined') {
                 if (!modifier.$unset) {
                   modifier.$unset = {};
                 }
@@ -283,10 +290,10 @@ Object.assign(Mongo.Collection.prototype, {
       // To be able to get back to the collection from the store.
       _getCollection() {
         return self;
-      }
+      },
     });
 
-    if (! ok) {
+    if (!ok) {
       const message = `There is already a collection named "${name}"`;
       if (_suppressSameNameError === true) {
         // XXX In theory we do not have to throw when `ok` is falsy. The
@@ -308,10 +315,8 @@ Object.assign(Mongo.Collection.prototype, {
   ///
 
   _getFindSelector(args) {
-    if (args.length == 0)
-      return {};
-    else
-      return args[0];
+    if (args.length == 0) return {};
+    else return args[0];
   },
 
   _getFindOptions(args) {
@@ -319,12 +324,19 @@ Object.assign(Mongo.Collection.prototype, {
     if (args.length < 2) {
       return { transform: self._transform };
     } else {
-      check(args[1], Match.Optional(Match.ObjectIncluding({
-        fields: Match.Optional(Match.OneOf(Object, undefined)),
-        sort: Match.Optional(Match.OneOf(Object, Array, Function, undefined)),
-        limit: Match.Optional(Match.OneOf(Number, undefined)),
-        skip: Match.Optional(Match.OneOf(Number, undefined))
-      })));
+      check(
+        args[1],
+        Match.Optional(
+          Match.ObjectIncluding({
+            fields: Match.Optional(Match.OneOf(Object, undefined)),
+            sort: Match.Optional(
+              Match.OneOf(Object, Array, Function, undefined)
+            ),
+            limit: Match.Optional(Match.OneOf(Number, undefined)),
+            skip: Match.Optional(Match.OneOf(Number, undefined)),
+          })
+        )
+      );
 
       return {
         transform: self._transform,
@@ -386,31 +398,33 @@ Object.assign(Mongo.Collection.prototype, {
       this._getFindSelector(args),
       this._getFindOptions(args)
     );
-  }
+  },
 });
 
 Object.assign(Mongo.Collection, {
   _publishCursor(cursor, sub, collection) {
-    var observeHandle = cursor.observeChanges({
-      added: function (id, fields) {
-        sub.added(collection, id, fields);
+    var observeHandle = cursor.observeChanges(
+      {
+        added: function(id, fields) {
+          sub.added(collection, id, fields);
+        },
+        changed: function(id, fields) {
+          sub.changed(collection, id, fields);
+        },
+        removed: function(id) {
+          sub.removed(collection, id);
+        },
       },
-      changed: function (id, fields) {
-        sub.changed(collection, id, fields);
-      },
-      removed: function (id) {
-        sub.removed(collection, id);
-      }
-    },
-    // Publications don't mutate the documents
-    // This is tested by the `livedata - publish callbacks clone` test
-    { nonMutatingCallbacks: true });
+      // Publications don't mutate the documents
+      // This is tested by the `livedata - publish callbacks clone` test
+      { nonMutatingCallbacks: true }
+    );
 
     // We don't call sub.ready() here: it gets called in livedata_server, after
     // possibly calling _publishCursor on multiple returned cursors.
 
     // register stop callback (expects lambda w/ no args).
-    sub.onStop(function () {
+    sub.onStop(function() {
       observeHandle.stop();
     });
 
@@ -425,8 +439,7 @@ Object.assign(Mongo.Collection, {
   // instead.
   _rewriteSelector(selector, { fallbackId } = {}) {
     // shorthand -- scalars match _id
-    if (LocalCollection._selectorIsId(selector))
-      selector = {_id: selector};
+    if (LocalCollection._selectorIsId(selector)) selector = { _id: selector };
 
     if (Array.isArray(selector)) {
       // This is consistent with the Mongo console itself; if we don't do this
@@ -434,13 +447,13 @@ Object.assign(Mongo.Collection, {
       throw new Error("Mongo selector can't be an array.");
     }
 
-    if (!selector || (('_id' in selector) && !selector._id)) {
+    if (!selector || ('_id' in selector && !selector._id)) {
       // can't match anything
       return { _id: fallbackId || Random.id() };
     }
 
     return selector;
-  }
+  },
 });
 
 Object.assign(Mongo.Collection.prototype, {
@@ -486,7 +499,7 @@ Object.assign(Mongo.Collection.prototype, {
   insert(doc, callback) {
     // Make sure we were passed a document to insert
     if (!doc) {
-      throw new Error("insert requires an argument");
+      throw new Error('insert requires an argument');
     }
 
     // Make a shallow clone of the document, preserving its prototype.
@@ -496,11 +509,13 @@ Object.assign(Mongo.Collection.prototype, {
     );
 
     if ('_id' in doc) {
-      if (! doc._id ||
-          ! (typeof doc._id === 'string' ||
-             doc._id instanceof Mongo.ObjectID)) {
+      if (
+        !doc._id ||
+        !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
+      ) {
         throw new Error(
-          "Meteor requires document _id fields to be non-empty strings or ObjectIDs");
+          'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
+        );
       }
     } else {
       let generateId = true;
@@ -522,7 +537,7 @@ Object.assign(Mongo.Collection.prototype, {
 
     // On inserts, always return the id that we generated; on all other
     // operations, just return the result from the collection.
-    var chooseReturnValueFromCollectionResult = function (result) {
+    var chooseReturnValueFromCollectionResult = function(result) {
       if (doc._id) {
         return doc._id;
       }
@@ -536,10 +551,12 @@ Object.assign(Mongo.Collection.prototype, {
     };
 
     const wrappedCallback = wrapCallback(
-      callback, chooseReturnValueFromCollectionResult);
+      callback,
+      chooseReturnValueFromCollectionResult
+    );
 
     if (this._isRemoteCollection()) {
-      const result = this._callMutatorMethod("insert", [doc], wrappedCallback);
+      const result = this._callMutatorMethod('insert', [doc], wrappedCallback);
       return chooseReturnValueFromCollectionResult(result);
     }
 
@@ -584,8 +601,13 @@ Object.assign(Mongo.Collection.prototype, {
     if (options && options.upsert) {
       // set `insertedId` if absent.  `insertedId` is a Meteor extension.
       if (options.insertedId) {
-        if (!(typeof options.insertedId === 'string' || options.insertedId instanceof Mongo.ObjectID))
-          throw new Error("insertedId must be string or ObjectID");
+        if (
+          !(
+            typeof options.insertedId === 'string' ||
+            options.insertedId instanceof Mongo.ObjectID
+          )
+        )
+          throw new Error('insertedId must be string or ObjectID');
         insertedId = options.insertedId;
       } else if (!selector || !selector._id) {
         insertedId = this._makeNewID();
@@ -594,19 +616,16 @@ Object.assign(Mongo.Collection.prototype, {
       }
     }
 
-    selector =
-      Mongo.Collection._rewriteSelector(selector, { fallbackId: insertedId });
+    selector = Mongo.Collection._rewriteSelector(selector, {
+      fallbackId: insertedId,
+    });
 
     const wrappedCallback = wrapCallback(callback);
 
     if (this._isRemoteCollection()) {
-      const args = [
-        selector,
-        modifier,
-        options
-      ];
+      const args = [selector, modifier, options];
 
-      return this._callMutatorMethod("update", args, wrappedCallback);
+      return this._callMutatorMethod('update', args, wrappedCallback);
     }
 
     // it's my collection.  descend into the collection object
@@ -616,7 +635,11 @@ Object.assign(Mongo.Collection.prototype, {
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
       return this._collection.update(
-        selector, modifier, options, wrappedCallback);
+        selector,
+        modifier,
+        options,
+        wrappedCallback
+      );
     } catch (e) {
       if (callback) {
         callback(e);
@@ -641,7 +664,7 @@ Object.assign(Mongo.Collection.prototype, {
     const wrappedCallback = wrapCallback(callback);
 
     if (this._isRemoteCollection()) {
-      return this._callMutatorMethod("remove", [selector], wrappedCallback);
+      return this._callMutatorMethod('remove', [selector], wrappedCallback);
     }
 
     // it's my collection.  descend into the collection object
@@ -680,16 +703,21 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
    */
   upsert(selector, modifier, options, callback) {
-    if (! callback && typeof options === "function") {
+    if (!callback && typeof options === 'function') {
       callback = options;
       options = {};
     }
 
-    return this.update(selector, modifier, {
-      ...options,
-      _returnObject: true,
-      upsert: true,
-    }, callback);
+    return this.update(
+      selector,
+      modifier,
+      {
+        ...options,
+        _returnObject: true,
+        upsert: true,
+      },
+      callback
+    );
   },
 
   // We'll actually design an index API later. For now, we just pass through to
@@ -697,7 +725,7 @@ Object.assign(Mongo.Collection.prototype, {
   _ensureIndex(index, options) {
     var self = this;
     if (!self._collection._ensureIndex || !self._collection.createIndex)
-      throw new Error("Can only call createIndex on server collections");
+      throw new Error('Can only call createIndex on server collections');
     // TODO enable this message a release before we will remove this function
     // import { Log } from 'meteor/logging';
     // Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
@@ -715,7 +743,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @memberof Mongo.Collection
    * @instance
    * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
-   * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#std-label-ensureIndex-options)
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#options)
    * @param {String} options.name Name of the index
    * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
    * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
@@ -723,28 +751,30 @@ Object.assign(Mongo.Collection.prototype, {
   createIndex(index, options) {
     var self = this;
     if (!self._collection.createIndex)
-      throw new Error("Can only call createIndex on server collections");
+      throw new Error('Can only call createIndex on server collections');
     self._collection.createIndex(index, options);
   },
 
   _dropIndex(index) {
     var self = this;
     if (!self._collection._dropIndex)
-      throw new Error("Can only call _dropIndex on server collections");
+      throw new Error('Can only call _dropIndex on server collections');
     self._collection._dropIndex(index);
   },
 
   _dropCollection() {
     var self = this;
     if (!self._collection.dropCollection)
-      throw new Error("Can only call _dropCollection on server collections");
+      throw new Error('Can only call _dropCollection on server collections');
     self._collection.dropCollection();
   },
 
   _createCappedCollection(byteSize, maxDocuments) {
     var self = this;
     if (!self._collection._createCappedCollection)
-      throw new Error("Can only call _createCappedCollection on server collections");
+      throw new Error(
+        'Can only call _createCappedCollection on server collections'
+      );
     self._collection._createCappedCollection(byteSize, maxDocuments);
   },
 
@@ -756,8 +786,8 @@ Object.assign(Mongo.Collection.prototype, {
    */
   rawCollection() {
     var self = this;
-    if (! self._collection.rawCollection) {
-      throw new Error("Can only call rawCollection on server collections");
+    if (!self._collection.rawCollection) {
+      throw new Error('Can only call rawCollection on server collections');
     }
     return self._collection.rawCollection();
   },
@@ -770,24 +800,27 @@ Object.assign(Mongo.Collection.prototype, {
    */
   rawDatabase() {
     var self = this;
-    if (! (self._driver.mongo && self._driver.mongo.db)) {
-      throw new Error("Can only call rawDatabase on server collections");
+    if (!(self._driver.mongo && self._driver.mongo.db)) {
+      throw new Error('Can only call rawDatabase on server collections');
     }
     return self._driver.mongo.db;
-  }
+  },
 });
 
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {
-  return callback && function (error, result) {
-    if (error) {
-      callback(error);
-    } else if (typeof convertResult === "function") {
-      callback(error, convertResult(result));
-    } else {
-      callback(error, result);
+  return (
+    callback &&
+    function(error, result) {
+      if (error) {
+        callback(error);
+      } else if (typeof convertResult === 'function') {
+        callback(error, convertResult(result));
+      } else {
+        callback(error, result);
+      }
     }
-  };
+  );
 }
 
 /**
@@ -821,17 +854,16 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
 Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
-Object.assign(
-  Meteor.Collection.prototype,
-  AllowDeny.CollectionPrototype
-);
+Object.assign(Meteor.Collection.prototype, AllowDeny.CollectionPrototype);
 
 function popCallbackFromArgs(args) {
   // Pull off any callback (or perhaps a 'callback' variable that was passed
   // in undefined, like how 'upsert' does it).
-  if (args.length &&
-      (args[args.length - 1] === undefined ||
-       args[args.length - 1] instanceof Function)) {
+  if (
+    args.length &&
+    (args[args.length - 1] === undefined ||
+      args[args.length - 1] instanceof Function)
+  ) {
     return args.pop();
   }
 }
