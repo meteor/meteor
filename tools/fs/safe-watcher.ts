@@ -6,7 +6,8 @@ import {
   convertToOSPath,
   watchFile,
   unwatchFile,
-  toPosixPath
+  toPosixPath,
+  pathRelative
 } from "./files";
 
 import {
@@ -439,6 +440,23 @@ export function addWatchRoot(absPath: string) {
   }
 
   watchRoots.add(absPath);
+  
+  // If there already is a watcher for a parent directory, there is no need
+  // to create this watcher.
+  for (const path of watchRoots) {
+    let relativePath = pathRelative(path, absPath);
+    if (
+      path !== absPath &&
+      !relativePath.startsWith('..') &&
+      !relativePath.startsWith('/')
+    ) {
+      return;
+    }
+  }
+
+  // TODO: check if there are any existing watchers that are children of this
+  // watcher and stop them
+
   nsfw(
     convertToOSPath(absPath),
     (events) => {
