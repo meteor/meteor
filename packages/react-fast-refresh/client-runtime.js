@@ -44,6 +44,13 @@ function isReactRefreshBoundary(moduleExports) {
     return false;
   }
 
+  // Is a DOM element. If we iterate its properties, we might cause the
+  // browser to show warnings when accessing depreciated getters on its
+  // prototype
+  if (moduleExports instanceof Element) {
+    return false;
+  }
+
   var hasExports = false;
   var onlyExportComponents = true;
 
@@ -56,8 +63,18 @@ function isReactRefreshBoundary(moduleExports) {
       return false;
     }
 
-    if (!runtime.isLikelyComponentType(moduleExports[key])) {
-      onlyExportComponents = false;
+    try {
+      if (!runtime.isLikelyComponentType(moduleExports[key])) {
+        onlyExportComponents = false;
+      }
+    } catch (e) {
+      if (e.name === 'SecurityError') {
+        // Not a component. Could be a cross-origin object or something else
+        // we don't have access to
+        return false;
+      }
+
+      throw e;
     }
   }
 
