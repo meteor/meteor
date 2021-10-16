@@ -17,7 +17,6 @@ var release = require('../packaging/release.js');
 
 const { Profile } = require("../tool-env/profile");
 
-import { disableNativeWatcher } from '../fs/safe-watcher';
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
@@ -537,8 +536,6 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  disableNativeWatcher();
-
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
@@ -944,7 +941,6 @@ main.registerCommand({
   name: "build",
   ...buildCommands,
 }, async function (options) {
-  disableNativeWatcher();
   return Profile.run(
     "meteor build",
     () => Promise.await(buildCommand(options))
