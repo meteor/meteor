@@ -17,6 +17,9 @@
   - HMR improvements related to `hot-module-replacement@0.4.0`
   - Fix finding local packages on Windows located on drives other than C
   - Fix infinite loop in import scanner when file is on a different drive than source root
+  - Fix Meteor sometimes not detecting changes to a file after the first time it is modified
+  - Fixes Meteor sometimes hanging on Windows. Reverts the temporary fix in Meteor 2.4 of disabling native file watchers for some commands
+  - Uses recursive file watchers on Windows and macOS. In most situations removes the up to 5 seconds delay before detecting the first change to a file, and is more efficient.
 
 * `accounts-passwordless@1.0.0`
   - New accounts package to provide passwordless authentication.
