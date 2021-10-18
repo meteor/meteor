@@ -17,6 +17,9 @@
   - HMR improvements related to `hot-module-replacement@0.4.0`
   - Fix finding local packages on Windows located on drives other than C
   - Fix infinite loop in import scanner when file is on a different drive than source root
+  - Fix Meteor sometimes not detecting changes to a file after the first time it is modified
+  - Fixes Meteor sometimes hanging on Windows. Reverts the temporary fix in Meteor 2.4 of disabling native file watchers for some commands
+  - Uses recursive file watchers on Windows and macOS. In most situations removes the up to 5 seconds delay before detecting the first change to a file, and is more efficient.
   - Node updated to [v14.18.1](https://nodejs.org/en/blog/release/v14.18.1/), following [October 12th 2021 security release](https://nodejs.org/en/blog/vulnerability/oct-2021-security-releases/)
 
 * `accounts-passwordless@1.0.0`
@@ -28,6 +31,9 @@
 * `accounts-base@2.2.0`
   - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
   - Changes to reuse code between passwordless and password packages.
+
+* `accounts-ui-unstyled@1.6.0`
+  - Add support for `accounts-passwordless`.
 
 * `service-configuration@1.3.0`
   - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.
@@ -73,6 +79,9 @@
 
 * `accounts-ui-unstyled@1.5.1`
   - Update compatibility range with `less` from 3.0.2 to 4.0.0
+
+* `google-config-ui@1.0.3`
+  - Deliver siteUrl in the same way as other config-ui packages
 
 * `ecmascript-runtime-client@0.12.1`
   - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
