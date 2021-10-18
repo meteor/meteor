@@ -16,7 +16,8 @@ const VALID_OPTIONS = new Set()
   .add('passwordSignupFields')
   .add('requestPermissions')
   .add('requestOfflineToken')
-  .add('forceApprovalPrompt');
+  .add('forceApprovalPrompt')
+  .add('passwordlessSignupFields');
 
 const VALID_PASSWORD_SIGNUP_FIELDS = new Set()
   .add("USERNAME_AND_EMAIL")
@@ -28,6 +29,14 @@ function isValidPasswordSignupField(field) {
   return VALID_PASSWORD_SIGNUP_FIELDS.has(field);
 }
 
+const VALID_PASSWORDLESS_SIGNUP_FIELDS = new Set()
+  .add("USERNAME_AND_EMAIL")
+  .add("EMAIL_ONLY")
+
+function isValidPasswordlessSignupField(field) {
+  return VALID_PASSWORDLESS_SIGNUP_FIELDS.has(field);
+}
+
 /**
  * @summary Configure the behavior of [`{{> loginButtons}}`](#accountsui).
  * @locus Client
@@ -36,6 +45,7 @@ function isValidPasswordSignupField(field) {
  * @param {Object} options.requestOfflineToken To ask the user for permission to act on their behalf when offline, map the relevant external service to `true`. Currently only supported with Google. See [Meteor.loginWithExternalService](#meteor_loginwithexternalservice) for more details.
  * @param {Object} options.forceApprovalPrompt If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google.
  * @param {String} options.passwordSignupFields Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`USERNAME_AND_OPTIONAL_EMAIL`', '`USERNAME_ONLY`', or '`EMAIL_ONLY`' (default).
+ * @param {String} options.passwordlessSignupFields Which fields to display in the user creation form. One of '`USERNAME_AND_EMAIL`', '`EMAIL_ONLY`' (default).
  * @importFromPackage accounts-base
  */
 Accounts.ui.config = options => {
@@ -46,10 +56,37 @@ Accounts.ui.config = options => {
   });
 
   handlePasswordSignupFields(options);
+  handlePasswordlessSignupFields(options);
   handleRequestPermissions(options);
   handleRequestOfflineToken(options);
   handleForceApprovalPrompt(options);
 };
+
+function handlePasswordlessSignupFields(options) {
+  let { passwordlessSignupFields } = options;
+
+  if (passwordlessSignupFields) {
+    const reportInvalid = () => {
+      throw new Error(`Accounts.ui.config: Invalid option for \`passwordlessSignupFields\`: ${passwordlessSignupFields}`);
+    };
+
+    if (typeof passwordlessSignupFields === "string") {
+      passwordlessSignupFields = [passwordlessSignupFields];
+    } else if (!Array.isArray(passwordlessSignupFields)) {
+      reportInvalid();
+    }
+
+    if (passwordlessSignupFields.every(isValidPasswordlessSignupField)) {
+      if (Accounts.ui._options.passwordlessSignupFields) {
+        throw new Error("Accounts.ui.config: Can't set `passwordlessSignupFields` more than once");
+      }
+      Object.assign(Accounts.ui._options, { passwordlessSignupFields });
+      return;
+    }
+
+    reportInvalid();
+  }
+}
 
 function handlePasswordSignupFields(options) {
   let { passwordSignupFields } = options;
@@ -86,6 +123,20 @@ export function passwordSignupFields() {
 
   if (typeof passwordSignupFields === 'string') {
     return [passwordSignupFields];
+  }
+
+  return ["EMAIL_ONLY"];
+}
+
+export function passwordlessSignupFields() {
+  const { passwordlessSignupFields } = Accounts.ui._options;
+
+  if (Array.isArray(passwordlessSignupFields)) {
+    return passwordlessSignupFields;
+  }
+
+  if (typeof passwordlessSignupFields === 'string') {
+    return [passwordlessSignupFields];
   }
 
   return ["EMAIL_ONLY"];

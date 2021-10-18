@@ -1,14 +1,8 @@
 Template.configureLoginServiceDialogForGoogle.helpers({
-  siteUrl: () => {
-    let url = Meteor.absoluteUrl();
-    if (url.slice(-1) === "/") {
-      url = url.slice(0,-1)
-    }
-    return url;
-  }
+  siteUrl: () => Meteor.absoluteUrl(),
 });
 
 Template.configureLoginServiceDialogForGoogle.fields = () => [
-  {property: 'clientId', label: 'Client ID'},
-  {property: 'secret', label: 'Client secret'}
+  { property: 'clientId', label: 'Client ID' },
+  { property: 'secret', label: 'Client secret' },
 ];
