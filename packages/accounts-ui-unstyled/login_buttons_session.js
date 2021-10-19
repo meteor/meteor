@@ -6,6 +6,8 @@ const VALID_KEYS = [
   'inForgotPasswordFlow',
   'inChangePasswordFlow',
   'inMessageOnlyFlow',
+  'inPasswordlessConfirmation',
+  'passwordlessCodeEmail',
 
   'errorMessage',
   'infoMessage',

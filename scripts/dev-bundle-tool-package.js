@@ -57,11 +57,12 @@ var packageJson = {
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
-    commonmark: '0.15.0',
-    escope: '3.6.0',
-    split2: '3.2.2',
-    multipipe: '2.0.1',
-    pathwatcher: '8.1.0',
+    "commonmark": "0.15.0",
+    escope: "3.6.0",
+    split2: "3.2.2",
+    multipipe: "2.0.1",
+    pathwatcher: "8.1.0",
+    "vscode-nsfw": "2.1.8",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: '0.16.1',

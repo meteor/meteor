@@ -1921,10 +1921,9 @@ export const watchFile = wrapFsFunc(
   [0]
 );
 
-export const unwatchFile = wrapFsFunc(
-  'unwatchFile',
-  (filename: string, listener: StatListener) => {
-    return fs.unwatchFile(filename, listener);
-  },
-  [0]
-);
+export const unwatchFile = wrapFsFunc("unwatchFile", (
+  filename: string,
+  listener?: StatListener,
+) => {
+  return fs.unwatchFile(filename, listener);
+}, [0]);
