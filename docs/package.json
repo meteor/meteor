@@ -1,0 +1,33 @@
+{
+  "name": "hexo-site",
+  "version": "0.0.0",
+  "private": true,
+  "hexo": {
+    "version": "3.9.0"
+  },
+  "devDependencies": {
+    "canonical-json": "0.0.4",
+    "chexo": "1.0.7",
+    "handlebars": "4.7.7",
+    "hexo": "3.9.0",
+    "hexo-prism-plus": "1.1.0",
+    "hexo-renderer-ejs": "1.0.0",
+    "hexo-renderer-less": "0.2.0",
+    "hexo-renderer-marked": "2.0.0",
+    "hexo-server": "1.0.0",
+    "hexo-versioned-netlify-redirects": "1.1.0",
+    "jsdoc": "3.5.5",
+    "meteor-hexo-config": "1.0.12",
+    "meteor-theme-hexo": "2.0.3",
+    "showdown": "1.9.1",
+    "underscore": "1.13.1"
+  },
+  "scripts": {
+    "build": "jsdoc/jsdoc.sh && chexo meteor-hexo-config -- generate",
+    "clean": "hexo clean; rm data/data.js data/names.json",
+    "test": "npm run clean; npm run build",
+    "predeploy": "npm run build",
+    "deploy": "hexo-s3-deploy",
+    "start": "npm run build && chexo meteor-hexo-config -- server"
+  }
+}
