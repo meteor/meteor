@@ -90,6 +90,9 @@
 * `modern-browsers@0.1.7`
   - Added `firefoxMobile` as an alias for `firefox`
 
+* `dynamic-import@0.7.2`
+  - Fixes 404 in dynamic-import/fetch when ROOT_URL is set with a custom path. [see issue](https://github.com/meteor/meteor/issues/11701)
+
 ## v2.4.1, 2021-10-12
 
 #### Meteor Version Release
