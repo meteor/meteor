@@ -21,6 +21,7 @@
   - Fixes Meteor sometimes hanging on Windows. Reverts the temporary fix in Meteor 2.4 of disabling native file watchers for some commands
   - Uses recursive file watchers on Windows and macOS. In most situations removes the up to 5 seconds delay before detecting the first change to a file, and is more efficient.
   - Node updated to [v14.18.1](https://nodejs.org/en/blog/release/v14.18.1/), following [October 12th 2021 security release](https://nodejs.org/en/blog/vulnerability/oct-2021-security-releases/)
+  - Skeletons had their dependencies updated
 
 * `accounts-passwordless@1.0.0`
   - New accounts package to provide passwordless authentication.
