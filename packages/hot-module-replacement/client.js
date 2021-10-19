@@ -186,7 +186,7 @@ function connect() {
   socket.addEventListener('close', function () {
     socket = null;
 
-    if (logDisconnect) {
+    if (logDisconnect && !mustReload) {
       console.log('HMR: websocket closed');
     }
 

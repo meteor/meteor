@@ -6,7 +6,7 @@ Plugin.registerCompiler({
   }, (babelOptions, file) => {
     if (file.hmrAvailable()) {
       babelOptions.plugins = babelOptions.plugins || [];
-      babelOptions.plugins.push(...ReactFastRefresh.getBabelPlugins());
+      babelOptions.plugins.push(...ReactFastRefresh.getBabelPluginConfig());
     }
   });
 });
