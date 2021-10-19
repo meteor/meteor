@@ -28,7 +28,7 @@ mkdir node-build
 cd node-build
 
 echo "Downloading Node from ${NODE_URL}"
-curl -sL "${NODE_URL}" | tar zx --strip-components 1
+curl -sL "${NODE_URL}" | tar -xz --strip 1
 
 node_configure_flags=(
     # Enable the ICU internationalization library.
