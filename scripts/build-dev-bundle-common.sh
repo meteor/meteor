@@ -26,18 +26,20 @@ if [ "$UNAME" == "Linux" ] ; then
         strip --remove-section=.comment --remove-section=.note $1
     }
 elif [ "$UNAME" == "Darwin" ] ; then
-    SYSCTL_64BIT=$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)
-    if [ "$ARCH" == "i386" -a "1" != "$SYSCTL_64BIT" ] ; then
-        # some older macos returns i386 but can run 64 bit binaries.
-        # Probably should distribute binaries built on these machines,
-        # but it should be OK for users to run.
-        ARCH="x86_64"
-    fi
+    if [ "$ARCH" != "arm64" ] ; then
+      SYSCTL_64BIT=$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)
+      if [ "$ARCH" == "i386" -a "1" != "$SYSCTL_64BIT" ] ; then
+          # some older macos returns i386 but can run 64 bit binaries.
+          # Probably should distribute binaries built on these machines,
+          # but it should be OK for users to run.
+          ARCH="x86_64"
+      fi
 
-    if [ "$ARCH" != "x86_64" ] ; then
-        echo "Unsupported architecture: $ARCH"
-        echo "Meteor only supports x86_64 for now."
-        exit 1
+      if [ "$ARCH" != "x86_64" ] ; then
+          echo "Unsupported architecture: $ARCH"
+          echo "Meteor only supports x86_64 for now."
+          exit 1
+      fi
     fi
 
     OS="macos"
@@ -69,7 +71,9 @@ then
     fi
 elif [ "$UNAME" == "Darwin" ]
 then
-    NODE_TGZ="node-v${NODE_VERSION}-darwin-x64.tar.gz"
+    if [ "$ARCH" != "arm64" ] ; then
+        NODE_TGZ="node-v${NODE_VERSION}-darwin-x64.tar.gz"
+    fi
 else
     echo "Unknown architecture: $UNAME $ARCH"
     exit 1
