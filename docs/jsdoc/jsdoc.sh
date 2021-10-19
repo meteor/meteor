@@ -16,4 +16,5 @@ git grep -ialE "@(summary|borrows|namespace|memberof|alias)" | xargs -L ${INFINI
     "$TOPDIR/node_modules/.bin/jsdoc" \
     -t "$TOPDIR/jsdoc/docdata-jsdoc-template" \
     -c "$TOPDIR/jsdoc/jsdoc-conf.json" \
+    --verbose --debug \
     2>&1 | grep -v 'WARNING: JSDoc does not currently handle'

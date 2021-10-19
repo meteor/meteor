@@ -14,9 +14,7 @@
       "tools/node_modules",
       "tools/skel-pack/package.js",
       "docs",
-      "guide",
-      "npm-packages",
-      "**/node_modules"
+      "guide"
     ]
   }
 }

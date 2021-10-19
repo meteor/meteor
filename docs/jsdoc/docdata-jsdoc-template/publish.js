@@ -125,7 +125,7 @@
       // `options.foo,bar` will create an option named `foo, bar`
       // (representing two options in the docs).  We process pipes so
       // that `options.foo|bar` also results in `foo, bar`.
-      func.params?.forEach(function (param) {
+      (func.params || []).forEach(function (param) {
         param.name = param.name.replace(/,|\|/g, ", ");
 
         var splitName = param.name.split(".");
