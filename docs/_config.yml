@@ -82,6 +82,8 @@ sidebar_categories:
     - expired-certificate
     - windows
 github_repo: 'meteor/meteor'
+edit_branch: 'devel'
+edit_path: 'docs'
 
 nav_links:
   'API Docs':
