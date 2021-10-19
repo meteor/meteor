@@ -81,7 +81,7 @@ sidebar_categories:
   Troubleshooting:
     - expired-certificate
     - windows
-github_repo: 'meteor/docs'
+github_repo: 'meteor/meteor'
 
 nav_links:
   'API Docs':
