@@ -36,7 +36,6 @@ jobs:
     defaults:
       run:
         working-directory: guide/site/
-    needs: [ test ]
     if:
       contains('
       refs/heads/release-
@@ -56,7 +55,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deploy-message: "Deploy from GitHub Actions"
           netlify-config-path: './guide/netlify.toml'
-          alias: deploy-preview-${{ github.head_ref }}
+          alias: ${{ github.head_ref }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_GUIDE_SITE_ID }}
