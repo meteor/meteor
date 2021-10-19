@@ -7,7 +7,7 @@
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
 * HMR now works on all arch's
-* Typescript updated to [v4.4.3](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-4.html)
+* Typescript updated to [v4.4.4](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-4.html)
 #### Meteor Version Release
 
 * CircleCI testing image was updated to include Android 30 and Node 14 
@@ -56,7 +56,7 @@
 
 * `typescript@4.4.3`
   - Enable HMR for all web arch's
-  - Typescript [4.4.3](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-4.html)
+  - Typescript [4.4.4](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-4.html)
 
 * `webapp@1.13.0`
   - Update `cordova-plugin-meteor-webapp` to v2
