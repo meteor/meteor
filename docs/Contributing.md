@@ -2,11 +2,7 @@
 
 Thanks for considering contributing to Meteor documentation. We really appreciate your assistance.
 
-The simplest way to contribute to a project is to open an issue or pull request (PR) on the relevant GitHub issue tracker:
-
- - Meteor API Docs: https://github.com/meteor/docs/issues
- - Meteor Guide: https://github.com/meteor/guide/issues
- - Meteor Tutorials : https://github.com/meteor/tutorials/issues
+The simplest way to contribute to a project is to open an issue or pull request (PR) on GitHub issue [tracker](https://github.com/meteor/meteor/issues).
 
 ## Issues
 
