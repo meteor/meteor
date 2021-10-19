@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'No-password login/sign-up support for accounts',
-  version: '1.0.0-rc250.0',
+  version: '1.0.0-rc250.1',
 });
 
 Package.onUse(api => {
