@@ -27,7 +27,5 @@ Please ensure your issue is opened in the appropriate repository:
 
 * Feature Requests: https://github.com/meteor/meteor/discussions
 * Blaze: https://github.com/meteor/blaze/
-* Docs: https://github.com/meteor/docs/
-* Guide: https://github.com/meteor/guide/
 * Galaxy Guide: https://github.com/meteor/galaxy-docs/
 -->
