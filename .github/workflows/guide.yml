@@ -7,24 +7,11 @@ on:
     paths:
       - 'guide/**/*'
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: guide/site/
-    steps:
-      - uses: actions/checkout@v2
-      - name: Test build
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12.x
-      - run: npm ci && npm run build
   preview:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: guide/site/
-    needs: [ test ]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
