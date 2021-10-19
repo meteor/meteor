@@ -8,6 +8,10 @@
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
 * HMR now works on all arch's
 
+#### Breaking Changes
+
+* Cordova Android v10 now enables AndroidX. If you use any cordova-plugin that depends or uses any old support library, you need to include the cordova-plugin-androidx-adapter cordova-plugin, otherwise you will get build errors.
+
 #### Meteor Version Release
 
 * CircleCI testing image was updated to include Android 30 and Node 14 
