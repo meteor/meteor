@@ -51,7 +51,8 @@ make -j "$(sysctl -n hw.ncpu)" install \
   CONFIG_FLAGS="${node_configure_flags[@]+"${node_configure_flags[@]}"}"
 
 TARBALL_PATH="${CHECKOUT_DIR}/${TARBALL_NAME}.tar.gz"
-tar vcfz node.tar.gz "${INSTALL_DIR}/*"
+cd "$INSTALL_DIR"
+tar vcfz node.tar.gz .
 mv node.tar.gz "${TARBALL_PATH}"
 
 cd "$DIR"
