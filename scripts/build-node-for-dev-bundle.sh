@@ -41,7 +41,8 @@ then
 fi
 
 TARBALL_NAME="node_${PLATFORM}_v${NODE_VERSION}"
-./configure --prefix="${DIR}/node-build/${TARBALL_NAME}"
+INSTALL_DIR="${DIR}/node-build/${TARBALL_NAME}"
+./configure --prefix="${INSTALL_DIR}"
 # Unsetting BUILD_DOWNLOAD_FLAGS allows the ICU download above to work.
 # -j8 from sysctl -n hw.ncpu
 make -j "$(sysctl -n hw.ncpu)" install \
@@ -50,7 +51,7 @@ make -j "$(sysctl -n hw.ncpu)" install \
   CONFIG_FLAGS="${node_configure_flags[@]+"${node_configure_flags[@]}"}"
 
 TARBALL_PATH="${CHECKOUT_DIR}/${TARBALL_NAME}.tar.gz"
-tar -czf node.tar.gz "$TARBALL_NAME/*"
+tar -czf node.tar.gz "${INSTALL_DIR}/*"
 mv node.tar.gz "${TARBALL_PATH}"
 
 cd "$DIR"
