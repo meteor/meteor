@@ -28,7 +28,7 @@ jobs:
           publish-dir: './docs/public'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: "Deploy from GitHub Actions"
+          deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
           netlify-config-path: './docs/netlify.toml'
           enable-pull-request-comment: false
           enable-commit-comment: false
