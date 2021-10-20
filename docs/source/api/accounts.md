@@ -240,7 +240,20 @@ ServiceConfiguration.configurations.upsert(
 );
 ```
 
-Since Meteor 2.5 you no longer need to manually set the configuration and instead can use Meteor settings by setting your services under `Meteor.settings.packages.service-configuration.<service>`. All the properties can be set under the service and will be added to the database as is, so make sure that they are correct.
+Since Meteor 2.5 you no longer need to manually set the configuration and instead can use Meteor settings by setting your services under `Meteor.settings.packages.service-configuration.<service>`. All the properties can be set under the service and will be added to the database as is, so make sure that they are correct. For the example above, the settings would look like:
+```json
+{
+  "packages": {
+    "service-configuration": {
+      "weibo": {
+        "loginStyle": "popup",
+        "clientId": "1292962797",
+        "secret": "75a730b58f5691de5522789070c319bc"
+      }
+    }
+  }
+}
+```
 
 The correct property name to use for the API identifier (i.e. `clientId` in the above example) depends on the login service being used, so be sure to use the correct one:
 
