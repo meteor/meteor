@@ -40,9 +40,8 @@ then
     node_configure_flags+=('--debug')
 fi
 
-# "make binary" includes DESTDIR and PORTABLE=1 options.
 # Unsetting BUILD_DOWNLOAD_FLAGS allows the ICU download above to work.
-make -j4 binary \
+make -j4 \
   BUILD_DOWNLOAD_FLAGS= \
   RELEASE_URLBASE=https://nodejs.org/download/release/ \
   CONFIG_FLAGS="${node_configure_flags[@]+"${node_configure_flags[@]}"}"
