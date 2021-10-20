@@ -84,6 +84,7 @@ cd "$SCRIPTS_DIR/.."
 CHECKOUT_DIR=$(pwd)
 
 DIR=$(mktemp -d -t generate-dev-bundle-XXXXXXXX)
+trap 'rm -rf "$DIR" >/dev/null 2>&1' 0
 
 cd "$DIR"
 chmod 755 .
