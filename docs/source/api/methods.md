@@ -216,7 +216,7 @@ Custom rules can be added by calling `DDPRateLimiter.addRule`. The rate
 limiter is called on every method and subscription invocation.
 
 A rate limit is reached when a bucket has surpassed the rule's predefined
-capactiy, at which point errors will be returned for that input until the
+capacity, at which point errors will be returned for that input until the
 buckets are reset. Buckets are regularly reset after the end of a time
 interval.
 
