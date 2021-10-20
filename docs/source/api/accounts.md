@@ -240,7 +240,9 @@ ServiceConfiguration.configurations.upsert(
 );
 ```
 
-The correct property name to use for the API identifier (i.e. `clientId` in the above example) depends on the the login service being used, so be sure to use the correct one:
+Since Meteor 2.5 you no longer need to manually set the configuration and instead can use Meteor settings by setting your services under `Meteor.settings.packages.service-configuration.<service>`. All the properties can be set under the service and will be added to the database as is, so make sure that they are correct.
+
+The correct property name to use for the API identifier (i.e. `clientId` in the above example) depends on the login service being used, so be sure to use the correct one:
 
 | Property Name | Services |
 |---|---|
