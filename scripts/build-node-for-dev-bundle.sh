@@ -40,6 +40,7 @@ then
     node_configure_flags+=('--debug')
 fi
 
+./configure
 # Unsetting BUILD_DOWNLOAD_FLAGS allows the ICU download above to work.
 make -j4 \
   BUILD_DOWNLOAD_FLAGS= \
