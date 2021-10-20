@@ -40,15 +40,18 @@ then
     node_configure_flags+=('--debug')
 fi
 
-./configure
+TARBALL_NAME="node_${PLATFORM}_v${NODE_VERSION}"
+./configure --prefix="${DIR}/node-build/${TARBALL_NAME}"
 # Unsetting BUILD_DOWNLOAD_FLAGS allows the ICU download above to work.
-make -j4 \
+# -j8 from sysctl -n hw.ncpu
+make -j "$(sysctl -n hw.ncpu)" install \
   BUILD_DOWNLOAD_FLAGS= \
   RELEASE_URLBASE=https://nodejs.org/download/release/ \
   CONFIG_FLAGS="${node_configure_flags[@]+"${node_configure_flags[@]}"}"
 
-TARBALL_PATH="${CHECKOUT_DIR}/node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
-mv node-*.tar.gz "${TARBALL_PATH}"
+TARBALL_PATH="${CHECKOUT_DIR}/${TARBALL_NAME}.tar.gz"
+tar -czf node.tar.gz "$TARBALL_NAME/*"
+mv node.tar.gz "${TARBALL_PATH}"
 
 cd "$DIR"
 rm -rf node-build
