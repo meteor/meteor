@@ -39,6 +39,7 @@
 
 * `accounts-ui-unstyled@1.6.0`
   - Add support for `accounts-passwordless`.
+  - `Accounts.ui.config` can now be set via `Meteor.settings.public.packages.accounts-ui-unstyled`.
 
 * `service-configuration@1.3.0`
   - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.

@@ -317,3 +317,5 @@ Accounts.ui.config({
   passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
 });
 ```
+
+Since Meteor 2.5 you can configure these in your Meteor settings under `Meteor.settings.public.packages.accounts-ui-unstyled`.
