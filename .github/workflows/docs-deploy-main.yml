@@ -1,4 +1,4 @@
-name: Meteor Docs
+name: Meteor Docs Devel
 on:
   push:
     paths:
@@ -12,7 +12,6 @@ jobs:
     if:
       contains('
       refs/heads/devel
-      refs/heads/master
       ', github.ref)
     steps:
       - uses: actions/checkout@v2
@@ -20,7 +19,7 @@ jobs:
         with:
           node-version: 12.x
           cache: npm
-      - name: Build the Guide
+      - name: Build the Docs
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
         uses: nwtgck/actions-netlify@v1.2.2
