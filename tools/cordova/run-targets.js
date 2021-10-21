@@ -118,15 +118,14 @@ export class AndroidRunTarget extends CordovaRunTarget {
     // Unfortunately, this is intertwined with checking requirements, so the
     // only way to get access to this functionality is to run check_reqs and
     // let it modify process.env
-    var check_reqs_path = files.pathJoin(
-      cordovaProject.projectRoot, 'platforms', this.platform,
-      'cordova', 'lib', 'check_reqs');
-    check_reqs_path = files.convertToOSPath(check_reqs_path);
-    let check_reqs = require(check_reqs_path);
+    // cordova-android 10 and beyond will not include the API files in the project
+    // so we need to load it from the dev bundle
+    const projectPath = files.pathJoin(
+        cordovaProject.projectRoot, 'platforms', this.platform);
+    const check_reqs = require("cordova-android/lib/check_reqs");
     // We can't use check_reqs.run() because that will print the values of
     // JAVA_HOME and ANDROID_HOME to stdout.
-    await Promise.all([check_reqs.check_java(),
-      check_reqs.check_android().then(check_reqs.check_android_target)]);
+    await check_reqs.check_all(projectPath);
   }
 
   async tailLogs(cordovaProject, target) {

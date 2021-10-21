@@ -1820,7 +1820,7 @@ export const watchFile = wrapFsFunc("watchFile", (
 
 export const unwatchFile = wrapFsFunc("unwatchFile", (
   filename: string,
-  listener: StatListener,
+  listener?: StatListener,
 ) => {
   return fs.unwatchFile(filename, listener);
 }, [0]);

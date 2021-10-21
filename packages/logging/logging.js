@@ -307,13 +307,9 @@ Log.format = (obj, options = {}) => {
     sourceInfo,
     stderrIndicator].join('');
 
-  const prettify = function (line, color) {
-    return (options.color && Meteor.isServer && color) ?
-      require('chalk')[color](line) : line;
-  };
 
-  return prettify(metaPrefix, platformColor(options.metaColor || META_COLOR)) +
-    prettify(message, platformColor(LEVEL_COLORS[level]));
+  return Formatter.prettify(metaPrefix, options.color && platformColor(options.metaColor || META_COLOR)) +
+      Formatter.prettify(message, options.color && platformColor(LEVEL_COLORS[level]));
 };
 
 // Turn a line of text into a loggable object.

@@ -1,0 +1,24 @@
+{
+  "name": "cordova-plugin-meteor-webapptests",
+  "version": "1.3.1",
+  "cordova": {
+    "id": "cordova-plugin-meteor-webapp-tests",
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meteor/cordova-plugin-meteor-webapp"
+  },
+  "keywords": [
+    "cordova",
+    "meteor",
+    "ecosystem:cordova",
+    "cordova-android",
+    "cordova-ios"
+  ],
+  "author": "Meteor Development Group",
+  "license": "MIT"
+}

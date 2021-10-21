@@ -1699,7 +1699,7 @@ class ClientTarget extends Target {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the target
-  write(builder, {minifyMode}) {
+  write(builder, {minifyMode, buildMode}) {
     builder.reserve("program.json");
 
     // Helper to iterate over all resources that we serve over HTTP.
@@ -1882,6 +1882,10 @@ class ClientTarget extends Target {
           return [platform, hash];
         }));
       program.cordovaCompatibilityVersions = cordovaCompatibilityVersions;
+    }
+
+    if (buildMode === 'development') {
+      program.hmrVersion = Date.now();
     }
 
     builder.writeJson('program.json', program);

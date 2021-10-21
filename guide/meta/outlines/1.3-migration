@@ -1,0 +1,31 @@
+1. Breaking changes (as we'd normally do this)
+
+2. Recommended changes : Modules [link to app structure guide]
+  1. Applications: Move all files to imports, initialize in one spot, link via `import`
+  2. Import *all* symbols from packages, including meteor core packages.
+  3. No longer use `api.exports()` in packages (?), publish to npm if not Meteor specific (?)
+  4. Install npm packages directly, instead of using wrapper packages (unless the wrapper package adds a synchronous API).
+  5. Install React from npm (remove `react` package?), see React guide for more.
+
+3. Recommended changes: Testing [link to testing guide]
+  1. Integration testing: Migrating from velocity
+    1. You can move your tests alongside your modules with the `*.tests.*` naming convention.
+    2. Depending on your testing library, you may need to upgrade or replace your test package (link to libraries)
+    3. Run integration tests with `meteor test-app --integration`
+  2. Unit testing: Migrating from package tests
+    1. If you were using in-app packages for testing, you can now use the unit test mode to test your modules.
+    2. If you were using tinytest, you will need to migrate your test code (Mocha is recommended)
+    3. If you were using Mocha/Jasmine/..?, you can now place your tests in the imports folder alongside the unit to test and they'll automatically be added to your unit test suite.
+    4. Run unit tests with `meteor test-app --unit`
+
+4. Recommended changes: Mobile [link to mobile guide]
+  1. Are there any things people should do differently?
+
+
+5. What's new in the 1.3 guide:
+  1. App structure article
+  2. Testing article
+  3. React article
+  4. Angular article
+  5. Mobile article (?)
+  6. i18n section of UI guide (?)

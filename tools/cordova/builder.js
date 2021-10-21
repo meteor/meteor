@@ -92,18 +92,24 @@ export class CordovaBuilder {
     this.initalizeDefaults();
   }
 
+  static createCordovaServerPort(appIdentifier) {
+    // Convert the appId (a base 36 string) to a number
+    const appIdAsNumber = parseInt(appIdentifier, 36);
+    // We use the appId to choose a local server port between 12000-13000.
+    // This range should be large enough to avoid collisions with other
+    // Meteor apps, and has also been chosen to avoid collisions
+    // with other apps or services on the device (although this can never be
+    // guaranteed).
+    return 12000 + (appIdAsNumber % 1000);
+  }
+
   initalizeDefaults() {
     let { cordovaServerPort } = this.options;
     // if --cordova-server-port is not present on run command
     if (!cordovaServerPort) {
-      // Convert the appId (a base 36 string) to a number
-      const appIdAsNumber = parseInt(this.projectContext.appIdentifier, 36);
-      // We use the appId to choose a local server port between 12000-13000.
-      // This range should be large enough to avoid collisions with other
-      // Meteor apps, and has also been chosen to avoid collisions
-      // with other apps or services on the device (although this can never be
-      // guaranteed).
-      cordovaServerPort = 12000 + (appIdAsNumber % 1000);
+      cordovaServerPort = CordovaBuilder.createCordovaServerPort(
+        this.projectContext.appIdentifier
+      );
     }
 
     this.metadata = {
@@ -128,7 +134,14 @@ export class CordovaBuilder {
       },
       platform: {
         ios: {},
-        android: {}
+        android: {
+          "AndroidXEnabled": true,
+          // we still use a port based on appId on iOS to avoid conflits on local webserver
+          // we dont need it on android, but the contentUrl can only be one, and we set this
+          // here to be able to intercept these calls
+          "hostname": `localhost:${cordovaServerPort}`,
+          "AndroidInsecureFileModeEnabled": true
+        }
       }
     };
 
@@ -259,7 +272,8 @@ export class CordovaBuilder {
       'android-versionCode': this.metadata.buildNumber,
       'ios-CFBundleVersion': this.metadata.buildNumber,
       xmlns: 'http://www.w3.org/ns/widgets',
-      'xmlns:cdv': 'http://cordova.apache.org/ns/1.0'
+      'xmlns:cdv': 'http://cordova.apache.org/ns/1.0',
+      'xmlns:android': 'http://schemas.android.com/apk/res/android'
     }, (value, key) => {
       if (value) {
         config.att(key, value);
@@ -318,6 +332,15 @@ export class CordovaBuilder {
       });
     });
 
+    // allow http communication only in development mode
+    if(process.env.NODE_ENV !== 'production') {
+      platformElement.android.ele("edit-config")
+          .att("file", "app/src/main/AndroidManifest.xml")
+          .att("mode", "merge")
+          .att("target", "/manifest/application")
+          .ele("application")
+          .att("android:usesCleartextTraffic", "true");
+    }
     if (shouldCopyResources) {
       // Prepare the resources folder
       files.rm_recursive(this.resourcesPath);
@@ -477,12 +500,24 @@ export class CordovaBuilder {
 
     program.versionNonRefreshable = AUTOUPDATE_VERSION ||
       WebAppHashing.calculateClientHash(
-        program.manifest, type => type !== "css", configDummy);
+        program.manifest,
+        (type, replaceable) => type !== "css" && !replaceable,
+        configDummy
+      );
+
+    program.versionReplaceable = AUTOUPDATE_VERSION ||
+      WebAppHashing.calculateClientHash(
+        program.manifest,
+        (_type, replaceable) => replaceable,
+        configDummy
+      );
   }
 
   generateBootstrapPage(applicationPath, program, publicSettings) {
     const meteorRelease =
       release.current.isCheckout() ? "none" : release.current.name;
+    const hmrVersion =
+      this.options.buildMode === 'development' ? Date.now() : undefined
 
     const manifest = program.manifest;
 
@@ -502,7 +537,9 @@ export class CordovaBuilder {
           "web.cordova": {
             version: program.version,
             versionRefreshable: program.versionRefreshable,
-            versionNonRefreshable: program.versionNonRefreshable
+            versionNonRefreshable: program.versionNonRefreshable,
+            versionReplaceable: program.versionReplaceable,
+            versionHmr: hmrVersion
           }
         }
       },

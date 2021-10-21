@@ -213,14 +213,20 @@ async function setupExecPath() {
     child_process.execSync(`setx path "${meteorPath}/;%path%`);
     return;
   }
-  const bashrcFile =
-    process.env.SHELL && process.env.SHELL.includes('zsh')
-      ? '.zshrc'
-      : '.bashrc';
-  await fsPromises.appendFile(
-    `${rootPath}/${bashrcFile}`,
-    `export PATH=${meteorPath}:$PATH\n`
-  );
+  const appendPathToFile = async (file) => {
+    return fsPromises.appendFile(
+        `${rootPath}/${file}`,
+        `export PATH=${meteorPath}:$PATH\n`
+    );
+
+  }
+  if(process.env.SHELL && process.env.SHELL.includes('zsh')){
+    await appendPathToFile('.zshrc');
+  }else {
+    await appendPathToFile('.bashrc');
+    await appendPathToFile('.bash_profile');
+  }
+
   if (!isRoot()) {
     return;
   }

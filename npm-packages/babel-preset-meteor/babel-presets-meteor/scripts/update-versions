@@ -1,0 +1,15 @@
+#!/usr/bin/env bash -eux
+
+cd $(dirname $0)/..
+
+npm i $(node -p 'Object.keys(require("./package.json").dependencies).map(d => d + "@latest").join(" ")')
+npm i --save-dev --save-exact @babel/core@latest
+
+git add package.json
+git commit -m "Update eligible dependencies to latest versions."
+
+git rm -f package-lock.json
+rm -rf node_modules
+npm i
+git add package-lock.json
+git commit -m "Update package-lock.json."
