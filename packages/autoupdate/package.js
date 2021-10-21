@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Update the client when new client code is available',
-  version: '1.8.0-rc250.1',
+  version: '1.8.0',
 });
 
 Package.onUse(function(api) {
