@@ -33,6 +33,10 @@
 * `dynamic-import@0.7.2`
   - Fixes 404 in dynamic-import/fetch when ROOT_URL is set with a custom path. [see issue](https://github.com/meteor/meteor/issues/11701)
 
+* `email@2.2.1`
+  - Fix email logic resolution in `getTransport` & account for more edge cases
+  - Increase tests coverage
+
 ## v2.4.1, 2021-10-12
 
 #### Meteor Version Release

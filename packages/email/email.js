@@ -57,7 +57,7 @@ const makeTransport = function (mailUrlString) {
 // More info: https://nodemailer.com/smtp/well-known/
 const knownHostsTransport = function(settings = undefined, url = undefined) {
   let service, user, password;
-  if (url && !settings) {
+  if (url && (!settings || Object.keys(settings).length === 0)) {
     let host = url.split(':')[0];
     const urlObject = new URL(url);
     if (host === 'http' || host === 'https') {
@@ -83,7 +83,7 @@ const knownHostsTransport = function(settings = undefined, url = undefined) {
     service = host;
   }
 
-  if (!wellKnow(settings?.service || service)) {
+  if (!wellKnow(settings?.service || service || '')) {
     throw new Error('Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.');
   }
 
@@ -106,8 +106,18 @@ const getTransport = function() {
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
-  if (this.cacheKey === undefined || (this.cacheKey !== url || this.cacheKey !== packageSettings?.service || 'settings')) {
-    if ((packageSettings?.service && wellKnow(packageSettings.service)) || (url && wellKnow(new URL(url).hostname) || wellKnow(url?.split(':')[0] || ''))) {
+  if (
+    this.cacheKey === undefined
+    || (
+      this.cacheKey !== url
+      || this.cacheKey !== packageSettings?.service
+      || this.cacheKey !== 'settings')
+  ) {
+    if (
+      (packageSettings?.service && wellKnow(packageSettings.service))
+      || (url && wellKnow(new URL(url).hostname)
+        || wellKnow(url?.split(':')[0] || ''))
+    ) {
       this.cacheKey = packageSettings.service || 'settings';
       this.cache = knownHostsTransport(packageSettings, url);
     } else {
@@ -117,6 +127,8 @@ const getTransport = function() {
   }
   return this.cache;
 };
+
+EmailTest.getTransport = getTransport;
 
 let nextDevModeMailId = 0;
 let output_stream = process.stdout;
@@ -230,6 +242,7 @@ Email.send = function (options) {
   }
   if (Meteor.isProduction || process.env.MAIL_URL || Meteor.settings.packages?.email) {
     const transport = getTransport();
+    if (!transport) throw new Meteor.Error(500, 'Was unable to create an email transport, please check that you have configured it correctly.')
     smtpSend(transport, options);
     return;
   }

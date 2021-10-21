@@ -252,7 +252,7 @@ Tinytest.add("email - alternate API is used for sending gets data", function(tes
   });
 
   smokeEmailTest(function(stream) {
-    Meteor.settings.packages = { email: { service: '1on1', user: 'test', password: 'pwd' } };
+    Meteor.settings = { packages: { email: { service: '1on1', user: 'test', password: 'pwd' } }};
     Email.customTransport = (options) => {
       test.equal(options.from, 'foo@example.com');
       test.equal(options.packageSettings?.service, '1on1');
@@ -268,7 +268,7 @@ Tinytest.add("email - alternate API is used for sending gets data", function(tes
     test.equal(stream.getContentsAsString("utf8"), false);
   });
   Email.customTransport = undefined;
-  Meteor.settings.packages = undefined;
+  Meteor.settings = {};
 });
 
 Tinytest.add("email - URL string for known hosts", function(test) {
@@ -289,7 +289,6 @@ Tinytest.add("email - URL string for known hosts", function(test) {
   test.equal(outlookTransport2.transporter.options.service, 'outlook365');
 
   const hotmailTransport = EmailTest.knowHostsTransport(undefined, 'Hotmail://firstname.lastname@hotmail.com:password@hotmail.com');
-  console.dir(hotmailTransport);
   test.equal(hotmailTransport.transporter.options.service, 'hotmail');
 
   const falseService = { service: '1on1', user: 'test', password: 'pwd' };
@@ -298,20 +297,49 @@ Tinytest.add("email - URL string for known hosts", function(test) {
   test.throws(() => EmailTest.knowHostsTransport(null, 'smtp://bbb:bb@bb.com'), errorMsg);
 });
 
+Tinytest.add("email - getTransport - MAIL_URL", function(test) {
+  // Test MAIL_URL
+  process.env.MAIL_URL = 'smtps://username:password@mailgun.com:625';
+  const t1 = EmailTest.getTransport();
+  test.equal(t1.transporter?.name, 'SMTP');
+  test.equal(t1.transporter.options.service, undefined);
+  const t2 = EmailTest.getTransport();
+  test.equal(t2.transporter?.name, t1.transporter?.name);
+  test.equal(t2.transporter.options.service, t1.transporter.options.service);
+  process.env.MAIL_URL = 'Outlook365://firstname.lastname%40hotmail.com:password@hotmail.com';
+  const t3 = EmailTest.getTransport();
+  test.equal(t3.transporter.options.service, 'outlook365');
+  process.env.MAIL_URL = undefined;
+});
+
+Tinytest.add("email - getTransport - knowHosts resolution", function(test) {
+  Meteor.settings = {
+    packages: {
+      email: {
+        service: 'mailgun',
+        user: 'user',
+        password: 'psw'
+      }
+    }
+  };
+  const t1 = EmailTest.getTransport();
+  test.equal(t1.transporter.options.service, 'mailgun');
+  Meteor.settings = {};
+});
+
+
 Tinytest.add("email - hooks stop the sending", function(test) {
   // Register hooks
   const hook1 = Email.hookSend((options) => {
     // Test that we get options through
     test.equal(options.from, 'foo@example.com');
-    console.log('EXECUTE');
     return true;
   });
   const hook2 = Email.hookSend(() => {
-    console.log('STOP');
     return false;
   });
   const hook3 = Email.hookSend(() => {
-    console.log('FAIL');
+    // fail
   });
   smokeEmailTest(function(stream) {
     Email.send({
