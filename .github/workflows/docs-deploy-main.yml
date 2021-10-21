@@ -18,16 +18,15 @@ jobs:
       - uses: actions/setup-node@v2
         with:
           node-version: 12.x
-          cache: npm
       - name: Build the Docs
         run: npm ci && npm run build
-      - name: Deploy to Netlify for preview
+      - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v1.2.2
         with:
           publish-dir: './docs/public'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
+          deploy-message: Deploy from GitHub Actions devel
           netlify-config-path: './docs/netlify.toml'
           enable-pull-request-comment: false
           enable-commit-comment: false
