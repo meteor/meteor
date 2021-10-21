@@ -33,7 +33,7 @@ downloadNodeFromS3() {
     S3_TGZ="node_${UNAME}_${ARCH}_v${NODE_VERSION}.tar.gz"
     NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${S3_TGZ}"
     echo "Downloading Node from ${NODE_URL}" >&2
-    curl "${NODE_URL}" | tar zx --strip-components 1
+    curl "${NODE_URL}" | tar zx --strip 1
 }
 
 downloadOfficialNode() {
