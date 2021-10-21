@@ -71,7 +71,9 @@ then
     fi
 elif [ "$UNAME" == "Darwin" ]
 then
-    if [ "$ARCH" != "arm64" ] ; then
+    if [ "$ARCH" == "arm64" ] ; then
+        NODE_TGZ="node-v${NODE_VERSION}-darwin-arm64.tar.gz"
+    else
         NODE_TGZ="node-v${NODE_VERSION}-darwin-x64.tar.gz"
     fi
 else
