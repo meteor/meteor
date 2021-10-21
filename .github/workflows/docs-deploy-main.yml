@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: guide/site/
+        working-directory: docs/
     if:
       contains('
       refs/heads/devel
