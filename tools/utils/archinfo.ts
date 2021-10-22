@@ -160,7 +160,7 @@ export function host() {
       // return other values.
       const arch = run('uname', '-p');
 
-      if ((arch !== "i386" && arch !== "arm64") ||
+      if ((arch !== "i386" && arch !== "arm") ||
           run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel and M1 processors are supported on OS X");
       }
