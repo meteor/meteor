@@ -17,6 +17,8 @@ const {
   isRoot,
   rootPath,
   sudoUser,
+  isMac,
+  METEOR_LATEST_VERSION
 } = require('./config.js');
 const { uninstall } = require('./uninstall');
 const {
@@ -24,14 +26,18 @@ const {
   extractWith7Zip,
   extractWithNativeTar,
 } = require('./extract.js');
+const semver = require('semver')
 
 process.on('unhandledRejection', err => {
   throw err;
 });
 
 if (os.arch() !== 'x64') {
-  console.error('The current architecture is not supported:', os.arch());
-  process.exit(1);
+  const isValidM1Version = semver.gte(METEOR_LATEST_VERSION, '2.5.1');
+  if(os.arch() !== 'arm64' || !isMac() || !isValidM1Version){
+    console.error('The current architecture is not supported:', os.arch());
+    process.exit(1);
+  }
 }
 
 const downloadPlatform = {
@@ -42,7 +48,7 @@ const downloadPlatform = {
 
 const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
   downloadPlatform[os.platform()]
-}.x86_64&release=${release}`;
+}.${os.arch() === 'arm64' ? 'arm64' : 'x86_64'}&release=${release}`;
 
 const tempPath = tmp.dirSync().name;
 const tarGzName = 'meteor.tar.gz';
