@@ -21,6 +21,7 @@ const meteorLocalFolder = '.meteor';
 const meteorPath = path.resolve(rootPath, meteorLocalFolder);
 
 module.exports = {
+  METEOR_LATEST_VERSION,
   extractPath: rootPath,
   meteorPath,
   release: process.env.INSTALL_METEOR_VERSION || METEOR_LATEST_VERSION,
