@@ -240,7 +240,7 @@ Email.send = function (options) {
     customTransport({ packageSettings, ...options });
     return;
   }
-  if (Meteor.isProduction || process.env.MAIL_URL || Meteor.settings.packages?.email) {
+  if (Meteor.isProduction && process.env.MAIL_URL || Meteor.settings.packages?.email) {
     const transport = getTransport();
     if (!transport) throw new Meteor.Error(500, 'Was unable to create an email transport, please check that you have configured it correctly.')
     smtpSend(transport, options);
