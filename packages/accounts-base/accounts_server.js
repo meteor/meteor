@@ -2,11 +2,16 @@ import crypto from 'crypto';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
-  CONNECTION_CLOSE_DELAY_MS
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
 
 const hasOwn = Object.prototype.hasOwnProperty;
+
+// XXX maybe this belongs in the check package
+const NonEmptyString = Match.Where(x => {
+  check(x, String);
+  return x.length > 0;
+});
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
@@ -82,6 +87,8 @@ export class AccountsServer extends AccountsCommon {
     this.urls = {
       resetPassword: (token, extraParams) => this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
       verifyEmail: (token, extraParams) => this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
+      loginToken: (selector, token, extraParams) =>
+        this.buildEmailUrl(`/?loginToken=${token}&selector=${selector}`, extraParams),
       enrollAccount: (token, extraParams) => this.buildEmailUrl(`#/enroll-account/${token}`, extraParams),
     };
 
@@ -159,6 +166,20 @@ export class AccountsServer extends AccountsCommon {
   ///
 
   /**
+   * @summary Customize login token creation.
+   * @locus Server
+   * @param {Function} func Called whenever a new token is created.
+   * Return the sequence and the user object. Return true to keep sending the default email, or false to override the behavior.
+   */
+  onCreateLoginToken = function(func) {
+    if (this._onCreateLoginTokenHook) {
+      throw new Error('Can only call onCreateLoginToken once');
+    }
+
+    this._onCreateLoginTokenHook = func;
+  };
+
+  /**
    * @summary Customize new user creation.
    * @locus Server
    * @param {Function} func Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation.
@@ -190,7 +211,7 @@ export class AccountsServer extends AccountsCommon {
    * @param {Function} func Called whenever a user is logged in via oauth and a
    * user is not found with the service id. Return the user or undefined.
    */
-   setAdditionalFindUserOnExternalLogin(func) {
+  setAdditionalFindUserOnExternalLogin(func) {
     if (this._additionalFindUserOnExternalLogin) {
       throw new Error("Can only call setAdditionalFindUserOnExternalLogin once");
     }
@@ -246,6 +267,67 @@ export class AccountsServer extends AccountsCommon {
       return true;
     });
   };
+
+  // Generates a MongoDB selector that can be used to perform a fast case
+  // insensitive lookup for the given fieldName and string. Since MongoDB does
+  // not support case insensitive indexes, and case insensitive regex queries
+  // are slow, we construct a set of prefix selectors for all permutations of
+  // the first 4 characters ourselves. We first attempt to matching against
+  // these, and because 'prefix expression' regex queries do use indexes (see
+  // http://docs.mongodb.org/v2.6/reference/operator/query/regex/#index-use),
+  // this has been found to greatly improve performance (from 1200ms to 5ms in a
+  // test with 1.000.000 users).
+  _selectorForFastCaseInsensitiveLookup = (fieldName, string) => {
+    // Performance seems to improve up to 4 prefix characters
+    const prefix = string.substring(0, Math.min(string.length, 4));
+    const orClause = generateCasePermutationsForString(prefix).map(
+        prefixPermutation => {
+          const selector = {};
+          selector[fieldName] =
+              new RegExp(`^${Meteor._escapeRegExp(prefixPermutation)}`);
+          return selector;
+        });
+    const caseInsensitiveClause = {};
+    caseInsensitiveClause[fieldName] =
+        new RegExp(`^${Meteor._escapeRegExp(string)}$`, 'i')
+    return {$and: [{$or: orClause}, caseInsensitiveClause]};
+  }
+
+  _findUserByQuery = (query, options) => {
+    let user = null;
+
+    if (query.id) {
+      // default field selector is added within getUserById()
+      user = Meteor.users.findOne(query.id, this._addDefaultFieldSelector(options));
+    } else {
+      options = this._addDefaultFieldSelector(options);
+      let fieldName;
+      let fieldValue;
+      if (query.username) {
+        fieldName = 'username';
+        fieldValue = query.username;
+      } else if (query.email) {
+        fieldName = 'emails.address';
+        fieldValue = query.email;
+      } else {
+        throw new Error("shouldn't happen (validation missed something)");
+      }
+      let selector = {};
+      selector[fieldName] = fieldValue;
+      user = Meteor.users.findOne(selector, options);
+      // If user is not found, try a case insensitive lookup
+      if (!user) {
+        selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
+        const candidateUsers = Meteor.users.find(selector, options).fetch();
+        // No match if multiple candidates are found
+        if (candidateUsers.length === 1) {
+          user = candidateUsers[0];
+        }
+      }
+    }
+
+    return user;
+  }
 
   ///
   /// LOGIN METHODS
@@ -1151,8 +1233,8 @@ export class AccountsServer extends AccountsCommon {
       this.users.find({
         "services.resume.haveLoginTokensToDelete": true
       }, {fields: {
-        "services.resume.loginTokensToDelete": 1
-      }}).forEach(user => {
+          "services.resume.loginTokensToDelete": 1
+        }}).forEach(user => {
         this._deleteSavedTokensForUser(
           user._id,
           user.services.resume.loginTokensToDelete
@@ -1288,6 +1370,128 @@ export class AccountsServer extends AccountsCommon {
     }
   };
 
+  /**
+   * @summary Creates options for email sending for reset password and enroll account emails.
+   * You can use this function when customizing a reset password or enroll account email sending.
+   * @locus Server
+   * @param {Object} email Which address of the user's to send the email to.
+   * @param {Object} user The user object to generate options for.
+   * @param {String} url URL to which user is directed to confirm the email.
+   * @param {String} reason `resetPassword` or `enrollAccount`.
+   * @returns {Object} Options which can be passed to `Email.send`.
+   * @importFromPackage accounts-base
+   */
+  generateOptionsForEmail(email, user, url, reason, extra = {}){
+    const options = {
+      to: email,
+      from: this.emailTemplates[reason].from
+        ? this.emailTemplates[reason].from(user)
+        : this.emailTemplates.from,
+      subject: this.emailTemplates[reason].subject(user, url, extra),
+    };
+
+    if (typeof this.emailTemplates[reason].text === 'function') {
+      options.text = this.emailTemplates[reason].text(user, url, extra);
+    }
+
+    if (typeof this.emailTemplates[reason].html === 'function') {
+      options.html = this.emailTemplates[reason].html(user, url, extra);
+    }
+
+    if (typeof this.emailTemplates.headers === 'object') {
+      options.headers = this.emailTemplates.headers;
+    }
+
+    return options;
+  };
+
+  _checkForCaseInsensitiveDuplicates(
+    fieldName,
+    displayName,
+    fieldValue,
+    ownUserId
+  ) {
+    // Some tests need the ability to add users with the same case insensitive
+    // value, hence the _skipCaseInsensitiveChecksForTest check
+    const skipCheck = Object.prototype.hasOwnProperty.call(
+      this._skipCaseInsensitiveChecksForTest,
+      fieldValue
+    );
+
+    if (fieldValue && !skipCheck) {
+      const matchedUsers = Meteor.users
+        .find(
+          this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
+          {
+            fields: { _id: 1 },
+            // we only need a maximum of 2 users for the logic below to work
+            limit: 2,
+          }
+        )
+        .fetch();
+
+      if (
+        matchedUsers.length > 0 &&
+        // If we don't have a userId yet, any match we find is a duplicate
+        (!ownUserId ||
+          // Otherwise, check to see if there are multiple matches or a match
+          // that is not us
+          matchedUsers.length > 1 || matchedUsers[0]._id !== ownUserId)
+      ) {
+        this._handleError(`${displayName} already exists.`);
+      }
+    }
+  };
+
+  _createUserCheckingDuplicates({ user, email, username, options }) {
+    const newUser = {
+      ...user,
+      ...(username ? { username } : {}),
+      ...(email ? { emails: [{ address: email, verified: false }] } : {}),
+    };
+
+    // Perform a case insensitive check before insert
+    this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
+    this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
+
+    const userId = this.insertUserDoc(options, newUser);
+    // Perform another check after insert, in case a matching user has been
+    // inserted in the meantime
+    try {
+      this._checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
+      this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
+    } catch (ex) {
+      // Remove inserted user if the check fails
+      Meteor.users.remove(userId);
+      throw ex;
+    }
+    return userId;
+  }
+
+  _handleError = (msg, throwError = true) => {
+    const error = new Meteor.Error(
+      403,
+      this._options.ambiguousErrorMessages
+        ? "Something went wrong. Please check your credentials."
+        : msg
+    );
+    if (throwError) {
+      throw error;
+    }
+    return error;
+  }
+
+  _userQueryValidator = Match.Where(user => {
+    check(user, {
+      id: Match.Optional(NonEmptyString),
+      username: Match.Optional(NonEmptyString),
+      email: Match.Optional(NonEmptyString)
+    });
+    if (Object.keys(user).length !== 1)
+      throw new Match.Error("User property must have exactly one field");
+    return true;
+  });
+
 }
 
 // Give each login hook callback a fresh cloned copy of the attempt
@@ -1343,13 +1547,13 @@ const defaultResumeLoginHandler = (accounts, options) => {
     // client connection logging in simultaneously might have already
     // converted the token.
     user = accounts.users.findOne({
-      $or: [
-        {"services.resume.loginTokens.hashedToken": hashedToken},
-        {"services.resume.loginTokens.token": options.resume}
-      ]
-    },
-    // Note: Cannot use ...loginTokens.$ positional operator with $or query.
-    {fields: {"services.resume.loginTokens": 1}});
+        $or: [
+          {"services.resume.loginTokens.hashedToken": hashedToken},
+          {"services.resume.loginTokens.token": options.resume}
+        ]
+      },
+      // Note: Cannot use ...loginTokens.$ positional operator with $or query.
+      {fields: {"services.resume.loginTokens": 1}});
   }
 
   if (! user)
@@ -1612,3 +1816,24 @@ const setupUsersCollection = users => {
   users.createIndex('services.password.reset.when', { sparse: true });
   users.createIndex('services.password.enroll.when', { sparse: true });
 };
+
+
+// Generates permutations of all case variations of a given string.
+const generateCasePermutationsForString = string => {
+  let permutations = [''];
+  for (let i = 0; i < string.length; i++) {
+    const ch = string.charAt(i);
+    permutations = [].concat(...(permutations.map(prefix => {
+      const lowerCaseChar = ch.toLowerCase();
+      const upperCaseChar = ch.toUpperCase();
+      // Don't add unnecessary permutations when ch is not a letter
+      if (lowerCaseChar === upperCaseChar) {
+        return [prefix + ch];
+      } else {
+        return [prefix + lowerCaseChar, prefix + upperCaseChar];
+      }
+    })));
+  }
+  return permutations;
+}
+

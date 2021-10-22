@@ -1,4 +1,4 @@
-name: Meteor Guide main deploy
+name: Meteor Guide Devel
 on:
   push:
     paths:
@@ -12,7 +12,6 @@ jobs:
     if:
       contains('
       refs/heads/devel
-      refs/heads/master
       ', github.ref)
     steps:
       - uses: actions/checkout@v2
@@ -30,7 +29,6 @@ jobs:
     if:
       contains('
       refs/heads/devel
-      refs/heads/master
       ', github.ref)
     steps:
       - uses: actions/checkout@v2
@@ -39,13 +37,13 @@ jobs:
           node-version: 12.x
       - name: Build the Guide
         run: npm ci && npm run build
-      - name: Deploy to Netlify for preview
+      - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v1.2.2
         with:
           publish-dir: './guide/site/public'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: "Deploy from GitHub Actions"
+          deploy-message: Deploy from GitHub Actions devel
           netlify-config-path: './guide/netlify.toml'
           enable-pull-request-comment: false
           enable-commit-comment: false

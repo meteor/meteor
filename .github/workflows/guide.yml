@@ -1,8 +1,5 @@
 name: Meteor Guide PR
 on:
-  push:
-    paths:
-      - 'guide/**/*'
   pull_request:
     paths:
       - 'guide/**/*'
@@ -25,7 +22,7 @@ jobs:
           publish-dir: './guide/site/public'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: "Deploy from GitHub Actions"
+          deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
           netlify-config-path: './guide/netlify.toml'
           alias: deploy-preview-${{ github.event.number }}
           enable-pull-request-comment: false
@@ -55,7 +52,7 @@ jobs:
           publish-dir: './guide/site/public'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: "Deploy from GitHub Actions"
+          deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
           netlify-config-path: './guide/netlify.toml'
           alias: ${{ github.head_ref }}
           enable-pull-request-comment: false

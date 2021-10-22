@@ -28,7 +28,6 @@ import {
   newPluginId,
   splitPluginsAndPackages,
 } from '../cordova/index.js';
-import { disableNativeWatcher } from '../fs/safe-watcher';
 import { updateMeteorToolSymlink } from "../packaging/updater.js";
 
 // For each release (or package), we store a meta-record with its name,
@@ -96,7 +95,6 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean }
   }
 }, function (options) {
-  disableNativeWatcher();
 
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
@@ -1160,8 +1158,6 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
-  disableNativeWatcher();
-
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
@@ -1773,8 +1769,6 @@ main.registerCommand({
   maxArgs: Infinity,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
-  disableNativeWatcher();
-
   // If you are specifying packages individually, you probably don't want to
   // update the release.
   if (options.args.length > 0) {
@@ -2137,8 +2131,6 @@ main.registerCommand({
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
-  disableNativeWatcher();
-
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
@@ -2347,8 +2339,6 @@ main.registerCommand({
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  disableNativeWatcher();
-
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
