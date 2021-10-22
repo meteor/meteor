@@ -35,6 +35,11 @@ var runMongoShell = function (url) {
   }
   args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
+  // run with rosetta on mac m1
+  if(process.platform === 'darwin' && process.arch === "arm64"){
+    mongoPath = `arch -x86_64 ${mongoPath}`
+  }
+
   child_process.spawn(files.convertToOSPath(mongoPath),
     args, { stdio: 'inherit' });
 };
@@ -83,6 +88,10 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     args.push('--enableFreeMonitoring', 'off');
   }
 
+  // run with rosetta on mac m1
+  if(process.platform === 'darwin' && process.arch === "arm64"){
+    mongodPath = `arch -x86_64 ${mongodPath}`
+  }
   return child_process.spawn(mongodPath, args, {
     // Apparently in some contexts, Mongo crashes if your locale isn't set up
     // right. I wasn't able to reproduce it, but many people on #4019

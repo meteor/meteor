@@ -71,6 +71,11 @@ case $OS in
 esac
 
 MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
+
+if [ "$OS" == "osx" ] && [ "$ARCH" == "amd64" ] ; then
+  MONGO_NAME="mongodb-${OS}-x86_64-${MONGO_VERSION}"
+fi
+
 MONGO_TGZ="${MONGO_NAME}.tgz"
 MONGO_URL="${MONGO_BASE_URL}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"
