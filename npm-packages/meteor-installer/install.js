@@ -35,7 +35,7 @@ process.on('unhandledRejection', err => {
 if (os.arch() !== 'x64') {
   const isValidM1Version = semver.gte(METEOR_LATEST_VERSION, '2.5.1');
   if(os.arch() !== 'arm64' || !isMac() || !isValidM1Version){
-    console.error('The current architecture is not supported:', os.arch());
+    console.error('The current architecture is not supported in this version: ', os.arch(), '. Try Meteor 2.5.1 or above.');
     process.exit(1);
   }
 }
