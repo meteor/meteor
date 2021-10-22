@@ -70,10 +70,11 @@ case $OS in
         ;;
 esac
 
-MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 
-if [ $OS = "macos" ] && [ $ARCH = "arm64" ] ; then
+if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
   MONGO_NAME="mongodb-${OS}-x86_64-${MONGO_VERSION}"
+else
+  MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 fi
 
 MONGO_TGZ="${MONGO_NAME}.tgz"
