@@ -132,7 +132,6 @@ Migrations.config({
 });
 
 Migrations.add({ name: 'Test Job', ... });
-Migrations.start();
 ```
 
 The `opts` object passed to `MyLogger` above includes `level`, `message`, and `tag`.
