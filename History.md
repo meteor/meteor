@@ -1,4 +1,4 @@
-## v2.5, UNRELEASED
+## v2.5, 2021-10-21
 
 #### Highlights
 

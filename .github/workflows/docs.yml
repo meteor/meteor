@@ -1,4 +1,4 @@
-name: Meteor Docs
+name: Meteor Docs PR
 on:
   pull_request:
     paths:
