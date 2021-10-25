@@ -1,6 +1,7 @@
 Facebook = {};
 import { Meteor } from 'meteor/meteor';
 import crypto from 'crypto';
+import { Accounts } from 'meteor/accounts-base';
 import { fetch } from 'meteor/fetch';
 
 const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '10.0';
@@ -27,6 +28,14 @@ Facebook.handleAuthFromAccessToken = (accessToken, expiresAt) => {
     options: {profile: {name: identity.name}}
   };
 };
+
+Accounts.registerLoginHandler(request => {
+  if (request.facebookSignIn !== true) {
+    return;
+  }
+  const facebookData = Facebook.handleAuthFromAccessToken(request.accessToken, (+new Date) + (1000 * request.expirationTime));
+  return Accounts.updateOrCreateUserFromExternalService('facebook', facebookData.serviceData, facebookData.options);
+});
 
 OAuth.registerService('facebook', 2, null, query => {
   const responseCall = Meteor.wrapAsync(getTokenResponse);

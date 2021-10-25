@@ -209,7 +209,7 @@ var getExcerptFromReadme = function (text) {
   }
   var excerpt = textLines.slice(start, stop).join("\n");
 
-  // Strip the preceeding and trailing new lines.
+  // Strip the preceding and trailing new lines.
   return excerpt.replace(/^\n+|\n+$/g, "");
 };
 

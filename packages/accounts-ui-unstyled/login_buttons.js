@@ -55,13 +55,18 @@ export const getLoginServices = () => {
   if (hasPasswordService())
     services.push('password');
 
+  if (hasPasswordlessService())
+    services.push('passwordless');
+
   return services.map(name => ({ name }));
 };
 
 export const hasPasswordService = () => !!Package['accounts-password'];
 
-export const dropdown = () => 
-  hasPasswordService() || getLoginServices().length > 1;
+export const hasPasswordlessService = () => !!Package['accounts-passwordless'];
+
+export const dropdown = () =>
+  hasPasswordService() || hasPasswordlessService() || getLoginServices().length > 1;
 
 // XXX improve these. should this be in accounts-password instead?
 //

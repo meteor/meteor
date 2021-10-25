@@ -16,7 +16,7 @@ const publicationStrategies = {
   },
   // The NO_MERGE_NO_HISTORY strategy results in the server sending all publication data
   // directly to the client. It does not remember what it has previously sent
-  // so it will not trigger removed messages when a subscription is stopped..
+  // to it will not trigger removed messages when a subscription is stopped.
   // This should only be chosen for special use cases like send-and-forget queues.
   NO_MERGE_NO_HISTORY: {
     useCollectionView: false,
@@ -1335,7 +1335,7 @@ Object.assign(Subscription.prototype, {
       }
       ids.add(id);
     }
- 
+
     this._session.added(this._subscriptionHandle, collectionName, id, fields);
   },
 
@@ -1516,16 +1516,34 @@ Object.assign(Server.prototype, {
     return self.onConnectionHook.register(fn);
   },
 
-  setPublicationStrategy(collectionName, strategy) {
+  /**
+   * @summary Set publication strategy for the given publication. Publications strategies are available from `DDPServer.publicationStrategies`. You call this method from `Meteor.server`, like `Meteor.server.setPublicationStrategy()`
+   * @locus Server
+   * @alias setPublicationStrategy
+   * @param publicationName {String}
+   * @param strategy {{useCollectionView: boolean, doAccountingForCollection: boolean}}
+   * @memberOf Meteor.server
+   * @importFromPackage meteor
+   */
+  setPublicationStrategy(publicationName, strategy) {
     if (!Object.values(publicationStrategies).includes(strategy)) {
       throw new Error(`Invalid merge strategy: ${strategy} 
-        for collection ${collectionName}`);
+        for collection ${publicationName}`);
     }
-    this._publicationStrategies[collectionName] = strategy;
+    this._publicationStrategies[publicationName] = strategy;
   },
 
-  getPublicationStrategy(collectionName) {
-    return this._publicationStrategies[collectionName]
+  /**
+   * @summary Gets the publication strategy for the requested publication. You call this method from `Meteor.server`, like `Meteor.server.getPublicationStrategy()`
+   * @locus Server
+   * @alias getPublicationStrategy
+   * @param publicationName {String}
+   * @memberOf Meteor.server
+   * @importFromPackage meteor
+   * @return {{useCollectionView: boolean, doAccountingForCollection: boolean}}
+   */
+  getPublicationStrategy(publicationName) {
+    return this._publicationStrategies[publicationName]
       || this.options.defaultPublicationStrategy;
   },
 

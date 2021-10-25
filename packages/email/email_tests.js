@@ -268,6 +268,7 @@ Tinytest.add("email - alternate API is used for sending gets data", function(tes
     test.equal(stream.getContentsAsString("utf8"), false);
   });
   Email.customTransport = undefined;
+  Meteor.settings.packages = undefined;
 });
 
 Tinytest.add("email - URL string for known hosts", function(test) {

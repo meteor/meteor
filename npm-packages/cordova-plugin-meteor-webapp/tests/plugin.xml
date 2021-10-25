@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+  id="cordova-plugin-meteor-webapp-tests"
+  version="1.3.1">
+  <name>Meteor Webapp Tests</name>
+  <author>Meteor Development Group</author>
+  <license>MIT</license>
+
+  <js-module src="www/tests.js" name="tests">
+  </js-module>
+  <js-module src="www/fetch.js" name="fetch">
+    <runs/>
+  </js-module>
+  <js-module src="www/underscore.js" name="underscore">
+  </js-module>
+
+  <js-module src="www/webapp_mock_remote_server.js" name="WebAppMockRemoteServer">
+    <clobbers target="WebAppMockRemoteServer" />
+  </js-module>
+
+  <js-module src="www/webapp_local_server_testing.js" name="WebAppLocalServerTesting">
+    <merges target="WebAppLocalServer" />
+  </js-module>
+
+  <asset src="fixtures/bundled_www" target="." />
+  <asset src="fixtures/downloadable_versions" target="downloadable_versions" />
+  <asset src="fixtures/partially_downloaded_versions" target="partially_downloaded_versions" />
+
+  <config-file target="config.xml" parent="/*">
+    <preference name="WebAppLocalServerPort" value="12000" />
+  </config-file>
+
+  <platform name="ios">
+    <hook type="after_plugin_install" src="../cordova-plugin-meteor-webapp/scripts/iosAddBridgingHeader.js" />
+
+    <config-file target="config.xml" parent="/*">
+      <feature name="WebAppMockRemoteServer">
+        <param name="ios-package" value="METWebAppMockRemoteServer" />
+        <param name="onload" value="true"/>
+      </feature>
+    </config-file>
+
+    <header-file src="src/ios/cordova-plugin-meteor-webapp-tests-Bridging-Header.h" />
+
+    <source-file src="src/ios/WebAppMockRemoteServer.swift" />
+    <source-file src="src/ios/WebAppLocalServer+Testing.swift" />
+
+    <header-file src="src/ios/GCDWebServer+Testing.h" />
+    <source-file src="src/ios/GCDWebServer+Testing.m" />
+  </platform>
+
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="WebAppMockRemoteServer" >
+        <param name="android-package" value="com.meteor.webapp.WebAppMockRemoteServer" />
+        <param name="onload" value="true" />
+      </feature>
+    </config-file>
+
+    <source-file src="src/android/WebAppMockRemoteServer.java" target-dir="src/com/meteor/webapp" />
+
+    <framework src="com.squareup.okhttp3:mockwebserver:3.9.1" />
+  </platform>
+</plugin>

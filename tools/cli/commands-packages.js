@@ -95,6 +95,7 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean }
   }
 }, function (options) {
+
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
   var projectContext = new projectContextModule.ProjectContext({

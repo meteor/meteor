@@ -1,3 +1,21 @@
+import { Meteor } from 'meteor/meteor';
+
+// config option keys
+const VALID_CONFIG_KEYS = [
+  'sendVerificationEmail',
+  'forbidClientAccountCreation',
+  'passwordEnrollTokenExpiration',
+  'passwordEnrollTokenExpirationInDays',
+  'restrictCreationByEmailDomain',
+  'loginExpirationInDays',
+  'loginExpiration',
+  'passwordResetTokenExpirationInDays',
+  'passwordResetTokenExpiration',
+  'ambiguousErrorMessages',
+  'bcryptRounds',
+  'defaultFieldSelector',
+];
+
 /**
  * @summary Super-constructor for AccountsClient and AccountsServer.
  * @locus Anywhere
@@ -20,25 +38,25 @@ export class AccountsCommon {
 
     // There is an allow call in accounts_server.js that restricts writes to
     // this collection.
-    this.users = new Mongo.Collection("users", {
+    this.users = new Mongo.Collection('users', {
       _preventAutopublish: true,
-      connection: this.connection
+      connection: this.connection,
     });
 
     // Callback exceptions are printed with Meteor._debug and ignored.
     this._onLoginHook = new Hook({
       bindEnvironment: false,
-      debugPrintExceptions: "onLogin callback"
+      debugPrintExceptions: 'onLogin callback',
     });
 
     this._onLoginFailureHook = new Hook({
       bindEnvironment: false,
-      debugPrintExceptions: "onLoginFailure callback"
+      debugPrintExceptions: 'onLoginFailure callback',
     });
 
     this._onLogoutHook = new Hook({
       bindEnvironment: false,
-      debugPrintExceptions: "onLogout callback"
+      debugPrintExceptions: 'onLogout callback',
     });
 
     // Expose for testing.
@@ -48,12 +66,11 @@ export class AccountsCommon {
     // Thrown when the user cancels the login process (eg, closes an oauth
     // popup, declines retina scan, etc)
     const lceName = 'Accounts.LoginCancelledError';
-    this.LoginCancelledError = Meteor.makeErrorType(
-      lceName,
-      function (description) {
-        this.message = description;
-      }
-    );
+    this.LoginCancelledError = Meteor.makeErrorType(lceName, function(
+      description
+    ) {
+      this.message = description;
+    });
     this.LoginCancelledError.prototype.name = lceName;
 
     // This is used to transmit specific subclass errors over the wire. We
@@ -66,6 +83,33 @@ export class AccountsCommon {
       const { ServiceConfiguration } = Package['service-configuration'];
       this.loginServiceConfiguration = ServiceConfiguration.configurations;
       this.ConfigError = ServiceConfiguration.ConfigError;
+
+      const settings = Meteor.settings?.packages?.['accounts-base'];
+      if (settings) {
+        if (settings.oauthSecretKey) {
+          if (!Package['oauth-encryption']) {
+            throw new Error(
+              'The oauth-encryption package must be loaded to set oauthSecretKey'
+            );
+          }
+          Package['oauth-encryption'].OAuthEncryption.loadKey(
+            settings.oauthSecretKey
+          );
+          delete settings.oauthSecretKey;
+        }
+        // Validate config options keys
+        Object.keys(settings).forEach(key => {
+          if (!VALID_CONFIG_KEYS.includes(key)) {
+            // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
+            throw new Meteor.Error(
+              `Accounts configuration: Invalid key: ${key}`
+            );
+          } else {
+            // set values in Accounts._options
+            this._options[key] = settings[key];
+          }
+        });
+      }
     });
   }
 
@@ -74,7 +118,7 @@ export class AccountsCommon {
    * @locus Anywhere
    */
   userId() {
-    throw new Error("userId method not implemented");
+    throw new Error('userId method not implemented');
   }
 
   // merge the defaultFieldSelector with an existing options object
@@ -83,10 +127,11 @@ export class AccountsCommon {
     if (!this._options.defaultFieldSelector) return options;
 
     // if no field selector then just use defaultFieldSelector
-    if (!options.fields) return {
-      ...options,
-      fields: this._options.defaultFieldSelector,
-    };
+    if (!options.fields)
+      return {
+        ...options,
+        fields: this._options.defaultFieldSelector,
+      };
 
     // if empty field selector then the full user object is explicitly requested, so obey
     const keys = Object.keys(options.fields);
@@ -99,13 +144,15 @@ export class AccountsCommon {
     // The requested fields are -ve.
     // If the defaultFieldSelector is +ve then use requested fields, otherwise merge them
     const keys2 = Object.keys(this._options.defaultFieldSelector);
-    return this._options.defaultFieldSelector[keys2[0]] ? options : {
-      ...options,
-      fields: {
-        ...options.fields,
-        ...this._options.defaultFieldSelector,
-      }
-    }
+    return this._options.defaultFieldSelector[keys2[0]]
+      ? options
+      : {
+          ...options,
+          fields: {
+            ...options.fields,
+            ...this._options.defaultFieldSelector,
+          },
+        };
   }
 
   /**
@@ -116,7 +163,9 @@ export class AccountsCommon {
    */
   user(options) {
     const userId = this.userId();
-    return userId ? this.users.findOne(userId, this._addDefaultFieldSelector(options)) : null;
+    return userId
+      ? this.users.findOne(userId, this._addDefaultFieldSelector(options))
+      : null;
   }
 
   // Set up config for the accounts system. Call this on both the client
@@ -154,7 +203,7 @@ export class AccountsCommon {
   //     to store passwords.
 
   /**
-   * @summary Set global accounts options.
+   * @summary Set global accounts options. You can also set these in `Meteor.settings.packages.accounts` without the need to call this function.
    * @locus Anywhere
    * @param {Object} options
    * @param {Boolean} options.sendVerificationEmail New users with an email address will receive an address verification email.
@@ -181,8 +230,10 @@ export class AccountsCommon {
     } else if (!__meteor_runtime_config__.accountsConfigCalled) {
       // XXX would be nice to "crash" the client and replace the UI with an error
       // message, but there's no trivial way to do this.
-      Meteor._debug("Accounts.config was called on the client but not on the " +
-                    "server; some configuration options may not take effect.");
+      Meteor._debug(
+        'Accounts.config was called on the client but not on the ' +
+          'server; some configuration options may not take effect.'
+      );
     }
 
     // We need to validate the oauthSecretKey option at the time
@@ -190,33 +241,34 @@ export class AccountsCommon {
     // oauthSecretKey in Accounts._options.
     if (Object.prototype.hasOwnProperty.call(options, 'oauthSecretKey')) {
       if (Meteor.isClient) {
-        throw new Error("The oauthSecretKey option may only be specified on the server");
+        throw new Error(
+          'The oauthSecretKey option may only be specified on the server'
+        );
       }
-      if (! Package["oauth-encryption"]) {
-        throw new Error("The oauth-encryption package must be loaded to set oauthSecretKey");
+      if (!Package['oauth-encryption']) {
+        throw new Error(
+          'The oauth-encryption package must be loaded to set oauthSecretKey'
+        );
       }
-      Package["oauth-encryption"].OAuthEncryption.loadKey(options.oauthSecretKey);
+      Package['oauth-encryption'].OAuthEncryption.loadKey(
+        options.oauthSecretKey
+      );
       options = { ...options };
       delete options.oauthSecretKey;
     }
 
-    // validate option keys
-    const VALID_KEYS = ["sendVerificationEmail", "forbidClientAccountCreation", "passwordEnrollTokenExpiration",
-                      "passwordEnrollTokenExpirationInDays", "restrictCreationByEmailDomain", "loginExpirationInDays",
-                      "loginExpiration", "passwordResetTokenExpirationInDays", "passwordResetTokenExpiration",
-                      "ambiguousErrorMessages", "bcryptRounds", "defaultFieldSelector"];
-
+    // Validate config options keys
     Object.keys(options).forEach(key => {
-      if (!VALID_KEYS.includes(key)) {
-        throw new Error(`Accounts.config: Invalid key: ${key}`);
+      if (!VALID_CONFIG_KEYS.includes(key)) {
+        throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
       }
     });
 
     // set values in Accounts._options
-    VALID_KEYS.forEach(key => {
+    VALID_CONFIG_KEYS.forEach(key => {
       if (key in options) {
         if (key in this._options) {
-          throw new Error(`Can't set \`${key}\` more than once`);
+          throw new Meteor.Error(`Can't set \`${key}\` more than once`);
         }
         this._options[key] = options[key];
       }
@@ -260,7 +312,7 @@ export class AccountsCommon {
   }
 
   _initConnection(options) {
-    if (! Meteor.isClient) {
+    if (!Meteor.isClient) {
       return;
     }
 
@@ -275,8 +327,10 @@ export class AccountsCommon {
       this.connection = options.connection;
     } else if (options.ddpUrl) {
       this.connection = DDP.connect(options.ddpUrl);
-    } else if (typeof __meteor_runtime_config__ !== "undefined" &&
-               __meteor_runtime_config__.ACCOUNTS_CONNECTION_URL) {
+    } else if (
+      typeof __meteor_runtime_config__ !== 'undefined' &&
+      __meteor_runtime_config__.ACCOUNTS_CONNECTION_URL
+    ) {
       // Temporary, internal hook to allow the server to point the client
       // to a different authentication server. This is for a very
       // particular use case that comes up when implementing a oauth
@@ -284,8 +338,9 @@ export class AccountsCommon {
       //
       // We will eventually provide a general way to use account-base
       // against any DDP connection, not just one special one.
-      this.connection =
-        DDP.connect(__meteor_runtime_config__.ACCOUNTS_CONNECTION_URL);
+      this.connection = DDP.connect(
+        __meteor_runtime_config__.ACCOUNTS_CONNECTION_URL
+      );
     } else {
       this.connection = Meteor.connection;
     }
@@ -296,36 +351,44 @@ export class AccountsCommon {
     // number of days (LOGIN_UNEXPIRABLE_TOKEN_DAYS) to simulate an
     // unexpiring token.
     const loginExpirationInDays =
-      (this._options.loginExpirationInDays === null)
+      this._options.loginExpirationInDays === null
         ? LOGIN_UNEXPIRING_TOKEN_DAYS
         : this._options.loginExpirationInDays;
-    return this._options.loginExpiration || (loginExpirationInDays
-        || DEFAULT_LOGIN_EXPIRATION_DAYS) * 86400000;
+    return (
+      this._options.loginExpiration ||
+      (loginExpirationInDays || DEFAULT_LOGIN_EXPIRATION_DAYS) * 86400000
+    );
   }
 
   _getPasswordResetTokenLifetimeMs() {
-    return this._options.passwordResetTokenExpiration || (this._options.passwordResetTokenExpirationInDays ||
-            DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS) * 86400000;
+    return (
+      this._options.passwordResetTokenExpiration ||
+      (this._options.passwordResetTokenExpirationInDays ||
+        DEFAULT_PASSWORD_RESET_TOKEN_EXPIRATION_DAYS) * 86400000
+    );
   }
 
   _getPasswordEnrollTokenLifetimeMs() {
-    return this._options.passwordEnrollTokenExpiration || (this._options.passwordEnrollTokenExpirationInDays ||
-        DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS) * 86400000;
+    return (
+      this._options.passwordEnrollTokenExpiration ||
+      (this._options.passwordEnrollTokenExpirationInDays ||
+        DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS) * 86400000
+    );
   }
 
   _tokenExpiration(when) {
     // We pass when through the Date constructor for backwards compatibility;
     // `when` used to be a number.
-    return new Date((new Date(when)).getTime() + this._getTokenLifetimeMs());
+    return new Date(new Date(when).getTime() + this._getTokenLifetimeMs());
   }
 
   _tokenExpiresSoon(when) {
-    let minLifetimeMs = .1 * this._getTokenLifetimeMs();
+    let minLifetimeMs = 0.1 * this._getTokenLifetimeMs();
     const minLifetimeCapMs = MIN_TOKEN_LIFETIME_CAP_SECS * 1000;
     if (minLifetimeMs > minLifetimeCapMs) {
       minLifetimeMs = minLifetimeCapMs;
     }
-    return new Date() > (new Date(when) - minLifetimeMs);
+    return new Date() > new Date(when) - minLifetimeMs;
   }
 
   // No-op on the server, overridden on the client.
@@ -349,7 +412,7 @@ Meteor.userId = () => Accounts.userId();
  * @param {Object} [options]
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
  */
-Meteor.user = (options) => Accounts.user(options);
+Meteor.user = options => Accounts.user(options);
 
 // how long (in days) until a login token expires
 const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;

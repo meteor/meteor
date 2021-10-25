@@ -228,7 +228,7 @@ Email.send = function (options) {
     customTransport({ packageSettings, ...options });
     return;
   }
-  if (Meteor.isProduction || process.env.MAIL_URL) {
+  if (Meteor.isProduction || process.env.MAIL_URL || Meteor.settings.packages?.email) {
     const transport = getTransport();
     smtpSend(transport, options);
     return;

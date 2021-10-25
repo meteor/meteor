@@ -1,8 +1,9 @@
-import { passwordSignupFields } from './accounts_ui.js';
+import {passwordlessSignupFields, passwordSignupFields} from './accounts_ui.js';
 import {
   displayName,
   getLoginServices,
   hasPasswordService,
+  hasPasswordlessService,
   validateUsername,
   validateEmail,
   validatePassword,
@@ -37,6 +38,50 @@ const loginOrSignup = () => {
   else
     login();
 };
+
+const loginOrSignupPasswordless = () => {
+  loginButtonsSession.resetMessages();
+
+  if (loginButtonsSession.get('inPasswordlessConfirmation')) {
+    const token = trimmedElementValueById('login-code-passwordless');
+    Meteor.loginWithToken({ email: loginButtonsSession.get('passwordlessCodeEmail') }, token, (error) => {
+      if (error) {
+        loginButtonsSession.errorMessage(error.reason || "Unknown error");
+      } else {
+        loginButtonsSession.set('inPasswordlessConfirmation', false);
+        loginButtonsSession.set('passwordlessCodeEmail', null);
+      }
+    });
+
+    return;
+  }
+
+  const email = trimmedElementValueById('login-email-passwordless');
+  const username = trimmedElementValueById('login-username-passwordless');
+
+  if (!email.includes('@')) {
+    loginButtonsSession.errorMessage("Invalid email");
+    return;
+  }
+  if (Accounts._options.forbidClientAccountCreation) {
+    loginButtonsSession.errorMessage("Action not allowed");
+    return;
+  }
+
+  if (username !== null && !validateUsername(username)) {
+    return;
+  }
+
+  Accounts.requestLoginTokenForUser({ selector: email, userData: { email, username } }, (error, result) => {
+    if (error) {
+      loginButtonsSession.errorMessage(error.reason || "Unknown error");
+    } else {
+      loginButtonsSession.set('inPasswordlessConfirmation', true);
+      loginButtonsSession.set('inSignupFlow', false);
+      loginButtonsSession.set('passwordlessCodeEmail', result?.selector?.email);
+    }
+  });
+}
 
 const login = () => {
   loginButtonsSession.resetMessages();
@@ -187,6 +232,19 @@ const isInPasswordSignupFields = (fieldOrFields) => {
   return signupFields.includes(fieldOrFields);
 };
 
+const isInPasswordlessSignupFields = (fieldOrFields) => {
+  const signupFields = passwordlessSignupFields();
+
+  if (Array.isArray(fieldOrFields)) {
+    return signupFields.reduce(
+      (prev, field) => prev && fieldOrFields.includes(field),
+      true,
+    )
+  }
+
+  return signupFields.includes(fieldOrFields);
+}
+
 // events shared between loginButtonsLoggedOutDropdown and
 // loginButtonsLoggedInDropdown
 Template.loginButtons.events({
@@ -221,6 +279,7 @@ Template._loginButtonsLoggedInDropdownActions.helpers({
     // and it'd be preferable not to send down the entire service.password document.
     //
     // instead we use the heuristic: if the user has a username or email set.
+    if (!Package['accounts-password']) return false;
     const user = Meteor.user();
     return user.username || (user.emails && user.emails[0] && user.emails[0].address);
   }
@@ -235,6 +294,11 @@ Template._loginButtonsLoggedOutDropdown.events({
   'click #login-buttons-password': event => {
     event.preventDefault();
     loginOrSignup();
+  },
+
+  'click #login-buttons-passwordless': event => {
+    event.preventDefault();
+    loginOrSignupPasswordless();
   },
 
   'keypress #forgot-password-email': event => {
@@ -307,6 +371,10 @@ Template._loginButtonsLoggedOutDropdown.events({
         document.getElementById('forgot-password-email').value = usernameOrEmail;
 
   },
+  'click #resend-passwordless-code': () => {
+    loginButtonsSession.set('inPasswordlessConfirmation', false);
+    loginButtonsSession.set('passwordlessCodeEmail', null);
+  },
   'click #back-to-login-link': () => {
     loginButtonsSession.resetMessages();
 
@@ -342,7 +410,7 @@ Template._loginButtonsLoggedOutDropdown.events({
 Template._loginButtonsLoggedOutDropdown.helpers({
   // additional classes that can be helpful in styling the dropdown
   additionalClasses: () => {
-    if (!hasPasswordService()) {
+    if (!hasPasswordService() || !hasPasswordlessService()) {
       return false;
     } else {
       if (loginButtonsSession.get('inSignupFlow')) {
@@ -358,6 +426,7 @@ Template._loginButtonsLoggedOutDropdown.helpers({
   dropdownVisible: () => loginButtonsSession.get('dropdownVisible'),
 
   hasPasswordService,
+  hasPasswordlessService,
 });
 
 // return all login services, with password last
@@ -366,9 +435,60 @@ Template._loginButtonsLoggedOutAllServices.helpers({
   isPasswordService: function () {
     return this.name === 'password';
   },
-  hasOtherServices: () => getLoginServices().length > 1,
+  isPasswordlessService: function () {
+    return this.name === 'passwordless';
+  },
+  hasOtherServices: () => {
+    let count = 0;
+    if (hasPasswordlessService()) count++;
+    if (hasPasswordService()) count++;
+    return getLoginServices().length > count;
+  },
+  displaySeparatorForPasswordless: () => {
+    return hasPasswordService() || getLoginServices().length > 1;
+  },
+  isInternalService: function () {
+    return this.name === 'password' || this.name === 'passwordless'
+  },
+  hasInternalService: () => hasPasswordService() || hasPasswordlessService(),
   hasPasswordService,
+  hasPasswordlessService,
 });
+
+Template._loginButtonsLoggedOutPasswordlessService.helpers({
+  fields: () => [
+    {
+      fieldName: 'email-passwordless',
+      fieldLabel: 'Email',
+      autocomplete: 'email',
+      inputType: 'email',
+      visible: () => !loginButtonsSession.get('inPasswordlessConfirmation'),
+    },
+    {
+      fieldName: 'username-passwordless',
+      fieldLabel: 'Username',
+      autocomplete: 'username',
+      inputType: 'text',
+      visible: () => isInPasswordlessSignupFields('USERNAME_AND_EMAIL') && loginButtonsSession.get('inSignupFlow')
+    },
+    {
+      fieldName: 'code-passwordless',
+      fieldLabel: 'Code',
+      inputType: 'text',
+      visible: () => loginButtonsSession.get('inPasswordlessConfirmation')
+    }
+  ],
+  inForgotPasswordFlow: () => loginButtonsSession.get('inForgotPasswordFlow'),
+  inPasswordlessConfirmation: () => loginButtonsSession.get('inPasswordlessConfirmation'),
+
+  inLoginFlow: () =>
+    !loginButtonsSession.get('inSignupFlow') &&
+    !loginButtonsSession.get('inForgotPasswordFlow'),
+
+  inSignupFlow: () => loginButtonsSession.get('inSignupFlow'),
+
+  showCreateAccountLink: () => !Accounts._options.forbidClientAccountCreation,
+})
 
 Template._loginButtonsLoggedOutPasswordService.helpers({
   fields: () => {

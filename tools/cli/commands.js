@@ -407,6 +407,7 @@ function doRunCommand(options) {
     }
   }
   webArchs = filterWebArchs(webArchs, options['exclude-archs']);
+  const buildMode = options.production ? 'production' : 'development'
 
   let cordovaRunner;
   if (!_.isEmpty(runTargets)) {
@@ -418,7 +419,9 @@ function doRunCommand(options) {
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
-          cordovaServerPort: parsedCordovaServerPort });
+          cordovaServerPort: parsedCordovaServerPort,
+          buildMode
+        });
         if (buildmessage.jobHasMessages()) return;
 
         cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
@@ -441,7 +444,7 @@ function doRunCommand(options) {
     settingsFile: options.settings,
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
-      buildMode: options.production ? 'production' : 'development',
+      buildMode,
       webArchs: webArchs
     },
     rootUrl: process.env.ROOT_URL,
@@ -502,7 +505,7 @@ main.registerCommand({
 // create
 ///////////////////////////////////////////////////////////////////////////////
 const DEFAULT_SKELETON = "react";
-const AVAILABLE_SKELETONS = [
+export const AVAILABLE_SKELETONS = [
   "apollo",
   "bare",
   "blaze",
@@ -533,7 +536,6 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
@@ -1477,6 +1479,7 @@ main.registerCommand({
     'build-only': { type: Boolean },
     free: { type: Boolean },
     plan: { type: String },
+    'container-size': { type: String },
     'deploy-token': { type: String },
     mongo: { type: Boolean },
     owner: { type: String }
@@ -1556,6 +1559,10 @@ function deployCommand(options, { rawOptions }) {
   if (options.plan) {
     plan = options.plan;
   }
+  let containerSize = null;
+  if (options['container-size']) {
+    containerSize = options['container-size'];
+  }
 
   const isCacheBuildEnabled = !!options['cache-build'];
   const isBuildOnly = !!options['build-only'];
@@ -1571,6 +1578,7 @@ function deployCommand(options, { rawOptions }) {
     mongo: options.mongo,
     buildOptions: buildOptions,
     plan,
+    containerSize,
     rawOptions,
     deployPollingTimeoutMs,
     waitForDeploy,

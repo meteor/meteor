@@ -172,17 +172,13 @@ Object.assign(AppProcess.prototype, {
     } else if (env.METEOR_SETTINGS && env.NODE_ENV === 'development') {
       // Warn the developer that we are not going to use their environment var.
       runLog.log(
-        "WARNING: The 'METEOR_SETTINGS' environment variable is ignored " +
-        "when running in development (as you are doing now).  Instead, use " +
-        "the '--settings settings.json' option to see reactive changes " +
+        "WARNING: The 'METEOR_SETTINGS' environment variable is set " +
+        "while running in development. This means that settings are not reactive. " +
+        "Use the '--settings settings.json' option to see reactive changes " +
         "when settings are changed.  For more information, see the " +
         "documentation for 'Meteor.settings': " +
         "https://docs.meteor.com/api/core.html#Meteor-settings" +
         "\n");
-
-      // To provide a consistent, reactive experience in development, do
-      // not use settings provided via the environment variable.
-      delete env.METEOR_SETTINGS;
     }
     if (self.testMetadata) {
       env.TEST_METADATA = JSON.stringify(self.testMetadata);

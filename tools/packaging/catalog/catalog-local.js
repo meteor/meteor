@@ -150,18 +150,8 @@ Object.assign(LocalCatalog.prototype, {
         patterns.forEach(pattern => {
           if (process.platform === "win32") {
             pattern = files.convertToOSPath(pattern);
-
-            if (pattern.charAt(1) === ":") {
-              // Get rid of drive prefix, e.g. C:
-              pattern = pattern.slice(2);
-            }
-
-            // Convert to /forward/slash/path without /C
-            pattern = files.convertToPosixPath(pattern, true);
           }
 
-          // Note: glob expects POSIX-style paths, even on Windows.
-          // https://github.com/isaacs/node-glob/blob/master/README.md#windows
           glob(pattern).forEach(
             p => list.push(files.pathResolve(p))
           );
