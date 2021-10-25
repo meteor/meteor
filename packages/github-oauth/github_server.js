@@ -2,9 +2,12 @@ Github = {};
 
 OAuth.registerService('github', 2, null, query => {
 
-  const accessToken = getAccessToken(query);
-  const identity = getIdentity(accessToken);
-  const emails = getEmails(accessToken);
+  const accessTokenCall = Meteor.wrapAsync(getAccessToken);
+  const accessToken = accessTokenCall(query);
+  const identityCall = Meteor.wrapAsync(getIdentity);
+  const identity = identityCall(accessToken);
+  const emailsCall = Meteor.wrapAsync(getEmails);
+  const emails = emailsCall(accessToken);
   const primaryEmail = emails.find(email => email.primary);
 
   return {
@@ -13,7 +16,7 @@ OAuth.registerService('github', 2, null, query => {
       accessToken: OAuth.sealSecret(accessToken),
       email: identity.email || (primaryEmail && primaryEmail.email) || '',
       username: identity.login,
-      emails,
+      emails
     },
     options: {profile: {name: identity.name}}
   };
@@ -24,60 +27,67 @@ let userAgent = "Meteor";
 if (Meteor.release)
   userAgent += `/${Meteor.release}`;
 
-const getAccessToken = query => {
+const getAccessToken = async (query) => {
   const config = ServiceConfiguration.configurations.findOne({service: 'github'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
   let response;
   try {
-    response = HTTP.post(
-      "https://github.com/login/oauth/access_token", {
+    const content = new URLSearchParams({
+      code: query.code,
+      redirect_uri: OAuth._redirectUri('github', config),
+      state: query.state
+    });
+    const request = await fetch(
+      `https://github.com/login/oauth/access_token?${content.toString()}`, {
+        method: 'POST',
         headers: {
           Accept: 'application/json',
-          "User-Agent": userAgent
-        },
-        params: {
-          code: query.code,
-          client_id: config.clientId,
-          client_secret: OAuth.openSecret(config.secret),
-          redirect_uri: OAuth._redirectUri('github', config),
-          state: query.state
+          "User-Agent": userAgent,
+          Authorization: `Basic ${config.clientId}:${OAuth.openSecret(config.secret)}`
         }
       });
+    response = await request.json();
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to complete OAuth handshake with Github. ${err.message}`),
       { response: err.response },
     );
   }
-  if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with GitHub. ${response.data.error}`);
+  if (response.error) { // if the http response was a json object with an error attribute
+    throw new Error(`Failed to complete OAuth handshake with GitHub. ${response.error}`);
   } else {
-    return response.data.access_token;
+    return response.access_token;
   }
 };
 
-const getIdentity = accessToken => {
+const getIdentity = async (accessToken) => {
   try {
-    return HTTP.get(
+    const request = await fetch(
       "https://api.github.com/user", {
-        headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
-      }).data;
+        method: 'GET',
+        headers: { Accept: 'application/json', "User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
+      });
+    const response = await request.json();
+    return response;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Github. ${err.message}`),
-      { response: err.response },
+      { response: err.response }
     );
   }
 };
 
-const getEmails = accessToken => {
+const getEmails = async (accessToken) => {
   try {
-    return HTTP.get(
+    const request = await fetch(
       "https://api.github.com/user/emails", {
-        headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
-      }).data;
+        method: 'GET',
+        headers: {"User-Agent": userAgent, Accept: 'application/json', "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
+      });
+    const response = await request.json();
+    return response;
   } catch (err) {
     return [];
   }
