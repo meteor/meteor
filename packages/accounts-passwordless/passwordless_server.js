@@ -210,7 +210,7 @@ Meteor.methods({
  * @locus Server
  * @param {String} userId The id of the user to send email to.
  * @param {String} sequence The token to be provided
- * @param {String} email. Which address of the user's to send the email to.
+ * @param {String} email Which address of the user's to send the email to.
  * @param {Object} [extra] Optional. Extra properties
  * @returns {Object} Object with {email, user, token, url, options} values.
  */
