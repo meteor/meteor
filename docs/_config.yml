@@ -55,6 +55,7 @@ sidebar_categories:
     - api/environment
   Packages:
     - packages/accounts-ui
+    - packages/accounts-passwordless
     - packages/appcache
     - packages/audit-argument-checks
     - packages/autoupdate
