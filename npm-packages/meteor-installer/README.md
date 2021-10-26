@@ -38,4 +38,5 @@ If you use a node version manager that uses a separate global `node_modules` fol
 | 2.3.7       | 2.3.6                   |
 | 2.4.0       | 2.4                     |
 | 2.4.1       | 2.4                     |
+| 2.5.0       | 2.5                     |
 
