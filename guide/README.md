@@ -30,7 +30,9 @@ The static site theme is `meteor`, loaded from an npm package, is responsible fo
 
 - To make a branch available in the site's version selection dropdown, make sure to add it to the `versions` list in `_config.yaml`!
 
-- Any other branch is ignored by default. If you want to enable auto-deploy for a branch, you should edit [the branch field in the deployment section of `circle.yml`](https://github.com/meteor/guide/blob/master/circle.yml#L18) to match the name of the branch. The branch will be then be deployed with the `branch-` prefix automatically. For example, branch `test` will be deployed under the `branch-test` folder.
+- Pull Requests will generate deploy previews.
+
+- All other branches are ignored.
 
 ### Manual Deployment
 
