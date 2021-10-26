@@ -1,22 +1,23 @@
-name: Meteor Docs version
+name: Meteor Guide Branch
 on:
   push:
     paths:
-      - 'docs/**/*'
+      - 'guide/**/*'
     branches:
       - 'version-**'
 jobs:
-  deploy-versioned:
+  deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: docs/
+        working-directory: guide/site/
+    needs: [test]
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v2
+      - uses: actions/setup-node@v1
         with:
           node-version: 12.x
-      - name: Build the Docs
+      - name: Build the Guide
         run: npm ci && npm run build
       - name: Get version
         run: |
@@ -26,15 +27,15 @@ jobs:
       - name: Deploy to Netlify
         uses: nwtgck/actions-netlify@v1.2.2
         with:
-          publish-dir: './docs/public'
+          publish-dir: './guide/site/public'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deploy-message: Deploy from GitHub Actions devel
-          netlify-config-path: './docs/netlify.toml'
+          netlify-config-path: './guide/netlify.toml'
           enable-pull-request-comment: false
           enable-commit-comment: false
           alias: ${{ env.BRANCH }}
           github-deployment-environment: 'branch'
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DOCS_SITE_ID }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_GUIDE_SITE_ID }}

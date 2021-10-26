@@ -3,33 +3,15 @@ on:
   push:
     paths:
       - 'guide/**/*'
+    branches:
+      - 'devel'
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: guide/site/
-    if:
-      contains('
-      refs/heads/devel
-      ', github.ref)
-    steps:
-      - uses: actions/checkout@v2
-      - name: Test build
-        uses: actions/setup-node@v1
-        with:
-          node-version: 12.x
-      - run: npm ci && npm run build
   deploy:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: guide/site/
     needs: [test]
-    if:
-      contains('
-      refs/heads/devel
-      ', github.ref)
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
