@@ -1,4 +1,4 @@
-name: Meteor Guide Devel
+name: Meteor Guide Production
 on:
   push:
     paths:

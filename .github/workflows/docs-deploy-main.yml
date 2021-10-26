@@ -1,10 +1,10 @@
-name: Meteor Docs Devel
+name: Meteor Docs Production
 on:
   push:
     paths:
       - 'docs/**/*'
 jobs:
-  deploy:
+  deploy-main:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -12,6 +12,36 @@ jobs:
     if:
       contains('
       refs/heads/devel
+      ', github.ref)
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 12.x
+      - name: Build the Docs
+        run: npm ci && npm run build
+      - name: Deploy to Netlify
+        uses: nwtgck/actions-netlify@v1.2.2
+        with:
+          publish-dir: './docs/public'
+          production-branch: devel
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: Deploy from GitHub Actions devel
+          netlify-config-path: './docs/netlify.toml'
+          enable-pull-request-comment: false
+          enable-commit-comment: false
+          production-deploy: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DOCS_SITE_ID }}
+  deploy-versioned:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs/
+    if:
+      contains('
+      refs/heads/version-
       ', github.ref)
     steps:
       - uses: actions/checkout@v2

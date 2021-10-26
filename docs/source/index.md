@@ -5,6 +5,8 @@ title: Meteor API Docs
 <!--  XXX: note that this content is somewhat duplicated on the guide, and should be updated in parallel -->
 <h2 id="what-is-meteor">What is Meteor?</h2>
 
+version-2.4
+
 Meteor is a full-stack JavaScript platform for developing modern web and mobile applications. Meteor includes a key set of technologies for building connected-client reactive applications, a build tool, and a curated set of packages from the Node.js and general JavaScript community.
 
 - Meteor allows you to develop in **one language**, JavaScript, in all environments: application server, web browser, and mobile device.
