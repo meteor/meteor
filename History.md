@@ -1,4 +1,4 @@
-## v2.5, UNRELEASED
+## v2.5, 2021-10-21
 
 #### Highlights
 
@@ -6,8 +6,11 @@
 * Cordova Android v10
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
-* HMR now works on all arch's
-* Typescript updated to [v4.4.4](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-4-4.html)
+
+#### Breaking Changes
+
+* Cordova Android v10 now enables AndroidX. If you use any cordova-plugin that depends or uses any old support library, you need to include the cordova-plugin-androidx-adapter cordova-plugin, otherwise you will get build errors.
+
 #### Meteor Version Release
 
 * CircleCI testing image was updated to include Android 30 and Node 14 
@@ -21,6 +24,7 @@
   - Fixes Meteor sometimes hanging on Windows. Reverts the temporary fix in Meteor 2.4 of disabling native file watchers for some commands
   - Uses recursive file watchers on Windows and macOS. In most situations removes the up to 5 seconds delay before detecting the first change to a file, and is more efficient.
   - Node updated to [v14.18.1](https://nodejs.org/en/blog/release/v14.18.1/), following [October 12th 2021 security release](https://nodejs.org/en/blog/vulnerability/oct-2021-security-releases/)
+  - Skeletons had their dependencies updated
 
 * `accounts-passwordless@1.0.0`
   - New accounts package to provide passwordless authentication.
@@ -87,6 +91,19 @@
 
 * `ecmascript-runtime-client@0.12.1`
   - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
+
+* `modern-browsers@0.1.7`
+  - Added `firefoxMobile` as an alias for `firefox`
+
+* `dynamic-import@0.7.2`
+  - Fixes 404 in dynamic-import/fetch when ROOT_URL is set with a custom path. [see issue](https://github.com/meteor/meteor/issues/11701)
+
+## v2.4.1, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.4.1`
+  - Patch to make 2.4.1 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
 
 ## v2.4, 2021-09-15
 

@@ -10,9 +10,6 @@ MONGO_VERSION_64BIT=4.4.4
 MONGO_VERSION_32BIT=3.2.22
 NPM_VERSION=6.14.15
 
-# If we built Node from source on Jenkins, this is the build number.
-NODE_BUILD_NUMBER=
-
 if [ "$UNAME" == "Linux" ] ; then
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
         echo "Unsupported architecture: $ARCH"

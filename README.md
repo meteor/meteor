@@ -80,3 +80,4 @@ sudo rm /usr/local/bin/meteor
 ```
 
 On Windows, [read here](npm-packages/meteor-installer/README.md).
+
