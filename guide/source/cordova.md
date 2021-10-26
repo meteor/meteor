@@ -97,6 +97,8 @@ After installing Xcode from the Mac App Store, it is still necessary to enable t
 ```
 <h3 id="installing-prerequisites-android">Android</h3>
 
+{% youtube vhlNO0dVvjE %}
+
 In order to build and run Android apps, you will need to:
 
 - Install a Java Development Kit (JDK)
