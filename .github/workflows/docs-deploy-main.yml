@@ -3,7 +3,14 @@ on:
   push:
     paths:
       - 'docs/**/*'
+    branches:
+      - 'version-**'
+      - 'devel'
 jobs:
+  echo:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "🔎 The name of your branch is ${{ github.ref }} -/- ${{ github.head_ref }} and your repository is ${{ github.repository }}. ${{github}}"
   deploy-main:
     runs-on: ubuntu-latest
     defaults:
@@ -30,7 +37,6 @@ jobs:
           netlify-config-path: './docs/netlify.toml'
           enable-pull-request-comment: false
           enable-commit-comment: false
-          production-deploy: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DOCS_SITE_ID }}
@@ -60,6 +66,7 @@ jobs:
           netlify-config-path: './docs/netlify.toml'
           enable-pull-request-comment: false
           enable-commit-comment: false
+          alias: ${{ github.head_ref }}
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DOCS_SITE_ID }}
