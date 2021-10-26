@@ -762,4 +762,5 @@ if (! list.editableBy(userId)) {
     'Only list owners can edit private lists.');
 }
 ```
+
 Learn more about how to use collection helpers in the [Collections article](collections.html#collection-helpers).
