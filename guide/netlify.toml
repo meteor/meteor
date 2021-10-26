@@ -1,4 +1,3 @@
 [build]
-  base    = "site"
-  publish = "site/public"
+  publish = "public"
   command = "npm install && npm run build"
