@@ -32,6 +32,7 @@ jobs:
           netlify-config-path: './docs/netlify.toml'
           enable-pull-request-comment: false
           enable-commit-comment: false
+          production-deploy: true
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_DOCS_SITE_ID }}
