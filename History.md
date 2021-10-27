@@ -8,6 +8,7 @@
 
 * `github-oauth@1.4.0`
   - More data will be retrieved and saved under `services.github` on the user account.
+  - Add option to disallow sign-up on GitHub using `allow_signup` [parameter](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#parameters), this will be activated based on your Accounts settings, specifically if the option `forbidClientAccountCreation` is set to `true`.
 
 #### Independent Releases
 
