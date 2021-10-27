@@ -1,4 +1,0 @@
-- Code syntax highlighting
-- Content table styling
-- Version selection
-- Bottom navigation (prev/next)
