@@ -1,3 +1,17 @@
+## v2.6, 2021-11-
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Meteor Version Release
+
+#### Independent Releases
+
+* `github-oauth@1.3.2`
+  - Migrate from `http` to `fetch`
+  - Fix GitHub login params to adhere to changes in GitHub API
+
 ## v2.5, 2021-10-21
 
 #### Highlights
