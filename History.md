@@ -14,7 +14,6 @@
 * Cordova Android v10
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
-* HMR now works on all arch's
 
 #### Breaking Changes
 

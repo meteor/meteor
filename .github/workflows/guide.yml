@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: guide/site/
+        working-directory: guide/
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v1
@@ -19,42 +19,12 @@ jobs:
       - name: Deploy to Netlify for preview
         uses: nwtgck/actions-netlify@v1.2.2
         with:
-          publish-dir: './guide/site/public'
+          publish-dir: './guide/public'
           production-branch: devel
           github-token: ${{ secrets.GITHUB_TOKEN }}
           deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
           netlify-config-path: './guide/netlify.toml'
           alias: deploy-preview-${{ github.event.number }}
-          enable-pull-request-comment: false
-          enable-commit-comment: false
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_GUIDE_SITE_ID }}
-  deploy-branch:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: guide/site/
-    if:
-      contains('
-      refs/heads/release-
-      ', github.ref)
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 12.x
-      - name: Build the Guide
-        run: npm ci && npm run build
-      - name: Deploy to Netlify for preview
-        uses: nwtgck/actions-netlify@v1.2.2
-        with:
-          publish-dir: './guide/site/public'
-          production-branch: devel
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: Deploy from GitHub Actions ${{ github.event.pull_request.title }}
-          netlify-config-path: './guide/netlify.toml'
-          alias: ${{ github.head_ref }}
           enable-pull-request-comment: false
           enable-commit-comment: false
         env:

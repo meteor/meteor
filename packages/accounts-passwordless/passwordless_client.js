@@ -62,12 +62,12 @@ Meteor.loginWithToken = (selector, token, callback) => {
 /**
  * @summary Request a login token.
  * @locus Client
- * @param selector
- * @param userData
+ * @param {Object} selector
+ * @param {Object} userData
  * @param {Object} options
  * @param {String} options.selector The email address to get a token for or username or a mongo selector.
  * @param {String} options.userData When creating an user use this data if selector produces no result
- * @param {String} options.options. For example userCreationDisabled.
+ * @param {String} options.options For example userCreationDisabled.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Accounts.requestLoginTokenForUser = (
