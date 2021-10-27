@@ -1,6 +1,6 @@
-# Static Site Shell (WIP)
+# Meteor Guide
 
-This is a setup to generate a static site from the markdown files location in `/content` using [Hexo](https://hexo.io/).
+This is a setup to generate a static site from the markdown files location in `/source` using [Hexo](https://hexo.io/).
 
 ### Notes on Content Authoring
 
@@ -15,23 +15,24 @@ git submodule update --init
 
 npm install -g hexo-cli
 
-# in /site
 npm install
 # serve at localhost:4000
 hexo server
 ```
 
-The static site theme is in `themes/meteor` and is responsible for the visual representation of the site. For more information, check out the [Hexo docs](https://hexo.io/docs/index.html).
+The static site theme is `meteor`, loaded from an npm package, is responsible for the visual representation of the site. For more information, check out the [Hexo docs](https://hexo.io/docs/index.html).
 
 ### Continuous Deployment
 
-- The `master` branch is automatically deployed to the root of the S3 bucket on every push.
+- `devel` is automatically deployed as the production site via Netlify.
 
 - Any branch that starts with `version-` will be automatically deployed in a sub-folder on every push. A branch with the name `version-1.2` will be deployed under the `v1.2` folder.
 
-- To make a branch available in the site's version selection dropdown, make sure to add it to the `versions` list in `site/_config.yaml`!
+- To make a branch available in the site's version selection dropdown, make sure to add it to the `versions` list in `_config.yaml`!
 
-- Any other branch is ignored by default. If you want to enable auto-deploy for a branch, you should edit [the branch field in the deployment section of `circle.yml`](https://github.com/meteor/guide/blob/master/circle.yml#L18) to match the name of the branch. The branch will be then be deployed with the `branch-` prefix automatically. For example, branch `test` will be deployed under the `branch-test` folder.
+- Pull Requests will generate deploy previews.
+
+- All other branches are ignored.
 
 ### Manual Deployment
 
