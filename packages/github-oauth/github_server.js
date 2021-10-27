@@ -15,6 +15,12 @@ OAuth.registerService('github', 2, null, (query) => {
       accessToken: OAuth.sealSecret(accessToken),
       email: identity.email || (primaryEmail && primaryEmail.email) || '',
       username: identity.login,
+      name: identity.name,
+      avatar: identity.avatar_url,
+      company: identity.company,
+      blog: identity.blog,
+      location: identity.location,
+      bio: identity.bio,
       emails
     },
     options: { profile: { name: identity.name } }

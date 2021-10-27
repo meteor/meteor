@@ -6,6 +6,9 @@
 
 #### Meteor Version Release
 
+* `github-oauth@1.4.0`
+  - More data will be retrieved and saved under `services.github` on the user account.
+
 #### Independent Releases
 
 * `github-oauth@1.3.2`
