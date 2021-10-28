@@ -251,6 +251,12 @@ Your project should be a git repository as the commit hash is going to be used t
 The `cache-build` option is available since Meteor 1.11.
 {% endpullquote %}
 
+With the argument `--container-size` you can change your app's container size using the deploy command. The valid arguments are: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, and `dozen`. To see more about the difference and prices of each one you can check it [here](https://www.meteor.com/cloud#pricing-section).
+
+{% pullquote warning %}
+The `--container-size` option is available since Meteor 2.4.1.
+{% endpullquote %}
+
 <h2 id="meteorupdate">meteor update</h2>
 
 Attempts to bring you to the latest version of Meteor, and then to upgrade your
