@@ -246,7 +246,7 @@ The `plan` option is available to Meteor 2.1+
 With the argument `--container-size` you can change your app's container size using the deploy command. The valid arguments are: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, and `dozen`. To see more about the difference and prices of each one you can check it [here](https://www.meteor.com/cloud#pricing-section).
 
 {% pullquote warning %}
-The `--container-size` option is available to Meteor 2.4.1+
+The `--container-size` option is available since Meteor 2.4.1.
 {% endpullquote %}
 
 <h2 id="meteorupdate">meteor update</h2>
