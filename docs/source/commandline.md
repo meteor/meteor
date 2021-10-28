@@ -240,7 +240,15 @@ This is necessary as our database provider does not have certificates installed 
 You can change the app plan by providing argument `--plan` with one of the following values: professional, essentials, or free. Be aware that this argument overwrites the `--free` argument.
 
 {% pullquote warning %}
-The `plan` option is available to Meteor 2.1+
+The `plan` option is available since Meteor 2.1.
+{% endpullquote %}
+
+Use `--cache-build` to keep the bundle in your temp folder after the deploy is finished, this is helpful when you want to deploy the same code to different environments. For example, a [background job](https://cloud-guide.meteor.com/background-jobs.html) app from the same code as the web app.
+
+Your project should be a git repository as the commit hash is going to be used to decide if your code is still the same or not in the next deploy.
+
+{% pullquote warning %}
+The `cache-build` option is available since Meteor 1.11.
 {% endpullquote %}
 
 <h2 id="meteorupdate">meteor update</h2>
