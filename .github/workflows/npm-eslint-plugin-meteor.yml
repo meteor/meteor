@@ -2,7 +2,7 @@ name: NPM eslint-plugin-meteor
 on:
   push:
     paths:
-      - "npm-packages/eslint-plugin-meteor/**"
+      - "npm-packages/eslint-plugin-meteor/**" 
   pull_request:
     paths:
       - "npm-packages/eslint-plugin-meteor/**"
