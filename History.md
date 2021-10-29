@@ -12,6 +12,9 @@
   - Migrate from `http` to `fetch`
   - Fix GitHub login params to adhere to changes in GitHub API
 
+* `meteor-developer-oauth@1.3.2`
+  - Migrate from `http` to `fetch`
+
 ## v2.5, 2021-10-21
 
 #### Highlights
