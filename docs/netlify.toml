@@ -1,5 +1,3 @@
 [build]
   publish = "public"
   command = "npm install && npm run build"
-# Force rebuild! Change this to 0 for ignoring it
-  ignore = "return 1"
