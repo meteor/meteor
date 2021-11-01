@@ -65,7 +65,7 @@ Meteor.loginWithToken = (selector, token, callback) => {
  * @param {Object} options
  * @param {String} options.selector The email address to get a token for or username or a mongo selector.
  * @param {String} options.userData When creating a user use this data if selector produces no result.
- * @param {String} options.options For example userCreationDisabled.
+ * @param {Object} options.options For example userCreationDisabled.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Accounts.requestLoginTokenForUser = (

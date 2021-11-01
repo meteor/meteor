@@ -212,7 +212,7 @@ Meteor.methods({
  * @param {String} options.userId The id of the user to send email to.
  * @param {String} options.sequence The token to be provided
  * @param {String} options.email Which address of the user's to send the email to.
- * @param {Object} options.[extra] Optional. Extra properties
+ * @param {Object} options.extra Optional. Extra properties
  * @returns {Object} Object with {email, user, token, url, options} values.
  */
 Accounts.sendLoginTokenEmail = ({ userId, sequence, email, extra = {} }) => {
