@@ -59,6 +59,6 @@ This installation method is not maintained anymore, and you should always use th
 
 To be able to user `meteor` command from fish it's needed to include `/home/<user>/.meteor` in `$PATH`; to do that just add this line in `/home/<user>/.config/fish/config.fish` file (replace `<user>` with your username):
 
-`set PATH /home/<user>/.meteor $PAHT`
+`set PATH /home/<user>/.meteor $PATH`
 
 
