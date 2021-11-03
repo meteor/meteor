@@ -677,10 +677,10 @@ You could use this to include (white-list) the standard fields as used by [the A
 Accounts.config({
   defaultFieldSelector: {
     username: 1,
-    emails: 1
+    emails: 1,
     createdAt: 1,
     profile: 1,
-    services: 1
+    services: 1,
   }
 });
 ```

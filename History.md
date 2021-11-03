@@ -1,3 +1,17 @@
+## v2.6, 2021-11-
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Meteor Version Release
+
+#### Independent Releases
+
+* `github-oauth@1.3.2`
+  - Migrate from `http` to `fetch`
+  - Fix GitHub login params to adhere to changes in GitHub API
+
 ## v2.5, 2021-10-21
 
 #### Highlights
@@ -6,7 +20,6 @@
 * Cordova Android v10
 * HMR now works on all architectures and legacy browsers
 * `Accounts.config()` and third-party login services can now be configured from Meteor settings
-* HMR now works on all arch's
 
 #### Breaking Changes
 

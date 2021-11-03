@@ -103,7 +103,7 @@ export default {
 You can render the Vue component hierarchy to the DOM by using the below snippet in you client startup file.  If you created a new project from `meteor create .`, put this in your `/client/main.js`.
 
 ```javascript
-import Vue from 'vue';
+import Vue from 'guide/site/content/vue';
 import App from './App.vue';
 import './main.html';
 
