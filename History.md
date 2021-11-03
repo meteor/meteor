@@ -12,6 +12,11 @@
   - Migrate from `http` to `fetch`
   - Fix GitHub login params to adhere to changes in GitHub API
 
+## v2.5.1, UNRELEASED
+
+#### Highlights
+Mac M1 Support - darwin arm64
+
 ## v2.5, 2021-10-21
 
 #### Highlights
