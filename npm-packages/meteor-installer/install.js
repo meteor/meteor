@@ -31,7 +31,6 @@ const semver = require('semver')
 process.on('unhandledRejection', err => {
   throw err;
 });
-
 if (os.arch() !== 'x64') {
   const isValidM1Version = semver.gte(METEOR_LATEST_VERSION, '2.5.1');
   if(os.arch() !== 'arm64' || !isMac() || !isValidM1Version){
@@ -246,8 +245,6 @@ function showGettingStarted() {
 
 Meteor has been installed!
 
-*You might need to open a new terminal windows to have access to the meteor command.*
-
 To get started fast:
 
   $ meteor create ~/my_cool_app
@@ -262,6 +259,8 @@ Deploy and host your app with Cloud:
 
   www.meteor.com/cloud
 
+***************************************
+*You need to open a new terminal window to have access to the meteor command.*
 ***************************************
   `;
 
