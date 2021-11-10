@@ -6,6 +6,9 @@ const sudoUser = process.env.SUDO_USER || '';
 function isRoot() {
   return process.getuid && process.getuid() === 0;
 }
+function isSudo() {
+  return isRoot() && !!sudoUser;
+}
 const localAppData = process.env.LOCALAPPDATA;
 const isWindows = () => os.platform() === 'win32';
 const isMac = () => os.platform() === 'darwin';
@@ -42,4 +45,5 @@ module.exports = {
   isWindows,
   isMac,
   isRoot,
+  isSudo
 };
