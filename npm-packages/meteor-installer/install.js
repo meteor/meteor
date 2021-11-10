@@ -58,13 +58,15 @@ let tempDirObject;
 try{
   tempDirObject = tmp.dirSync();
 } catch(e){
-  console.error("****************************")
-  console.error("Couldn't create tmp dir for extracting meteor.")
-  if(isRoot()){
-    console.error("-- \tYou are running npm install -g meteor as root without passing the --unsafe-perm option. Please rerun with this option enabled.\t --")
-  }else {
-    console.error("-- \tA possible cause is that you might not have enough space in disk or permission to create folders\t --")
-  }
+  console.error("****************************");
+  console.error("Couldn't create tmp dir for extracting meteor.");
+  console.error("There are 2 possible causes:");
+  console.error(
+    '\t1. You are running npm install -g meteor as root without passing the --unsafe-perm option. Please rerun with this option enabled.'
+  );
+  console.error(
+    '\t2. You might not have enough space in disk or permission to create folders'
+  );
   console.error("****************************")
   process.exit(1);
 }
