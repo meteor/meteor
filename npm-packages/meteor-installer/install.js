@@ -14,11 +14,11 @@ const {
   startedPath,
   extractPath,
   isWindows,
-  isRoot,
   rootPath,
   sudoUser,
+  isSudo,
   isMac,
-  METEOR_LATEST_VERSION
+  METEOR_LATEST_VERSION,
 } = require('./config.js');
 const { uninstall } = require('./uninstall');
 const {
@@ -26,15 +26,20 @@ const {
   extractWith7Zip,
   extractWithNativeTar,
 } = require('./extract.js');
-const semver = require('semver')
+const semver = require('semver');
+const {isRoot} = require("./config");
 
 process.on('unhandledRejection', err => {
   throw err;
 });
 if (os.arch() !== 'x64') {
   const isValidM1Version = semver.gte(METEOR_LATEST_VERSION, '2.5.1-beta.3');
-  if(os.arch() !== 'arm64' || !isMac() || !isValidM1Version){
-    console.error('The current architecture is not supported in this version: ', os.arch(), '. Try Meteor 2.5.1-beta.3 or above.');
+  if (os.arch() !== 'arm64' || !isMac() || !isValidM1Version) {
+    console.error(
+      'The current architecture is not supported in this version: ',
+      os.arch(),
+      '. Try Meteor 2.5.1-beta.3 or above.'
+    );
     process.exit(1);
   }
 }
@@ -49,7 +54,21 @@ const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
   downloadPlatform[os.platform()]
 }.${os.arch() === 'arm64' ? 'arm64' : 'x86_64'}&release=${release}`;
 
-const tempPath = tmp.dirSync().name;
+let tempDirObject;
+try{
+  tempDirObject = tmp.dirSync();
+} catch(e){
+  console.error("****************************")
+  console.error("Couldn't create tmp dir for extracting meteor.")
+  if(isRoot()){
+    console.error("-- \tYou are running npm install -g meteor as root without passing the --unsafe-perm option. Please rerun with this option enabled.\t --")
+  }else {
+    console.error("-- \tA possible cause is that you might not have enough space in disk or permission to create folders\t --")
+  }
+  console.error("****************************")
+  process.exit(1);
+}
+const tempPath = tempDirObject.name;
 const tarGzName = 'meteor.tar.gz';
 const tarName = 'meteor.tar';
 
@@ -63,7 +82,7 @@ if (fs.existsSync(startedPath)) {
 } else if (fs.existsSync(meteorPath)) {
   console.log('Meteor is already installed at', meteorPath);
   console.log(
-`If you want to reinstall it, run:
+    `If you want to reinstall it, run:
 
   $ meteor-installer uninstall
   $ meteor-installer install
@@ -94,6 +113,7 @@ try {
     console.log('Assuming unable to create symlinks');
   }
 }
+
 download();
 
 function download() {
@@ -215,28 +235,29 @@ async function setup() {
 }
 async function setupExecPath() {
   if (isWindows()) {
+    //set for the current session and beyond
+    child_process.execSync(`set path "${meteorPath}/;%path%`);
     child_process.execSync(`setx path "${meteorPath}/;%path%`);
     return;
   }
-  const appendPathToFile = async (file) => {
-    return fsPromises.appendFile(
-        `${rootPath}/${file}`,
-        `export PATH=${meteorPath}:$PATH\n`
-    );
+  const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
-  }
-  if(process.env.SHELL && process.env.SHELL.includes('zsh')){
+  const appendPathToFile = async file => {
+    return fsPromises.appendFile(`${rootPath}/${file}`, `${exportCommand}\n`);
+  };
+  child_process.execSync(exportCommand);
+
+  if (process.env.SHELL && process.env.SHELL.includes('zsh')) {
     await appendPathToFile('.zshrc');
-  }else {
+  } else {
     await appendPathToFile('.bashrc');
     await appendPathToFile('.bash_profile');
   }
 
-  if (!isRoot()) {
-    return;
+  if (isSudo()) {
+    // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
+    child_process.execSync(`chown -R ${sudoUser} "${meteorPath}"`);
   }
-  // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
-  child_process.execSync(`chown -R ${sudoUser} "${meteorPath}"`);
 }
 
 function showGettingStarted() {
@@ -260,7 +281,7 @@ Deploy and host your app with Cloud:
   www.meteor.com/cloud
 
 ***************************************
-*You need to open a new terminal window to have access to the meteor command.*
+You might need to open a new terminal window to have access to the meteor command
 ***************************************
   `;
 

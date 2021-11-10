@@ -1,6 +1,6 @@
 {
   "name": "meteor",
-  "version": "2.5.1-beta.3",
+  "version": "2.5.1-beta.4",
   "description": "Install Meteor on Windows",
   "main": "install.js",
   "scripts": {
