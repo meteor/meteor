@@ -27,7 +27,6 @@ const {
   extractWithNativeTar,
 } = require('./extract.js');
 const semver = require('semver');
-const {isRoot} = require("./config");
 
 process.on('unhandledRejection', err => {
   throw err;
@@ -58,6 +57,8 @@ let tempDirObject;
 try{
   tempDirObject = tmp.dirSync();
 } catch(e){
+  console.error("");
+  console.error("");
   console.error("****************************");
   console.error("Couldn't create tmp dir for extracting meteor.");
   console.error("There are 2 possible causes:");
@@ -68,6 +69,8 @@ try{
     '\t2. You might not have enough space in disk or permission to create folders'
   );
   console.error("****************************")
+  console.error("")
+  console.error("")
   process.exit(1);
 }
 const tempPath = tempDirObject.name;
@@ -238,7 +241,6 @@ async function setup() {
 async function setupExecPath() {
   if (isWindows()) {
     //set for the current session and beyond
-    child_process.execSync(`set path "${meteorPath}/;%path%`);
     child_process.execSync(`setx path "${meteorPath}/;%path%`);
     return;
   }
@@ -247,7 +249,6 @@ async function setupExecPath() {
   const appendPathToFile = async file => {
     return fsPromises.appendFile(`${rootPath}/${file}`, `${exportCommand}\n`);
   };
-  child_process.execSync(exportCommand);
 
   if (process.env.SHELL && process.env.SHELL.includes('zsh')) {
     await appendPathToFile('.zshrc');
@@ -263,6 +264,9 @@ async function setupExecPath() {
 }
 
 function showGettingStarted() {
+  const exportCommand = `export PATH=${meteorPath}:$PATH`;
+
+  const runCommand = isWindows() ? `set path "${meteorPath}/;%path%` : exportCommand;
   const message = `
 ***************************************
 
@@ -283,7 +287,11 @@ Deploy and host your app with Cloud:
   www.meteor.com/cloud
 
 ***************************************
-You might need to open a new terminal window to have access to the meteor command
+You might need to open a new terminal window to have access to the meteor command, or run this in your terminal:
+
+${runCommand}
+
+For adding it immediately to your path.
 ***************************************
   `;
 
