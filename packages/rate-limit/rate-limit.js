@@ -8,6 +8,19 @@ const DEFAULT_REQUESTS_PER_INTERVAL = 10;
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
+function compatOptions(options) {
+  if (options.numRequestsAllowed == null) {
+    return options;
+  }
+  const { numRequestsAllowed, intervalTime, callback } = options;
+  return {
+    callback,
+    initialCapacity: numRequestsAllowed,
+    maxCapacity: numRequestsAllowed,
+    refillRate: numRequestsAllowed / intervalTime,
+  };
+}
+
 // A rule is defined by an options object that contains two fields,
 // `numRequestsAllowed` which is the number of events allowed per interval, and
 // an `intervalTime` which is the amount of time in milliseconds before the
@@ -26,15 +39,27 @@ class Rule {
   constructor(options, matchers) {
     this.id = Random.id();
 
-    this.options = options;
+    const {
+      callback,
+      initialCapacity,
+      maxCapacity,
+      refillRate,
+    } = compatOptions(options);
+    this.callback = callback;
+    this.initialCapacity = initialCapacity;
+    this.maxCapacity = maxCapacity;
+    this.refillRate = refillRate;
 
     this._matchers = matchers;
 
-    this._lastResetTime = new Date().getTime();
+    this.buckets = new Map(); // key(input) => { currentCapacity, lastRefill, expiresAt }
 
-    // Dictionary of input keys to counters
-    this.counters = {};
+    this.nextExpiryCheck = -1;
+    const timeToMaxCapacity = Math.ceil(maxCapacity / refillRate);
+    this.expiryCheckInterval = timeToMaxCapacity;
+    this.expiryBuffer = Math.ceil(timeToMaxCapacity / 2); // how long to keep filled buckets
   }
+
   // Determine if this rule applies to the given input by comparing all
   // rule.matchers. If the match fails, search short circuits instead of
   // iterating through all matchers.
@@ -78,29 +103,63 @@ class Rule {
   // Applies the provided input and returns the key string, time since counters
   // were last reset and time to next reset.
   apply(input) {
+    const now = Date.now();
+    if (now > this.nextExpiryCheck) {
+      this.removeExpiredBuckets();
+    }
     const key = this._generateKeyString(input);
-    const timeSinceLastReset = new Date().getTime() - this._lastResetTime;
-    const timeToNextReset = this.options.intervalTime - timeSinceLastReset;
+    let bucket = this.buckets.get(key);
+    if (bucket == null) {
+      bucket = {
+        currentCapacity: this.initialCapacity,
+        lastRefill: now,
+        expiresAt: now + this.expiryBuffer,
+      };
+      this.buckets.set(key, bucket);
+    } else {
+      const elapsed = now - bucket.lastRefill;
+      const frac = elapsed * this.refillRate; // eg, 5.33 quota accrued
+      const whole = Math.trunc(frac);
+      if (whole > 0) {
+        const newCapacity = Math.max(0, bucket.currentCapacity) + whole;
+        if (newCapacity <= this.maxCapacity) {
+          bucket.currentCapacity = newCapacity;
+          bucket.lastRefill = now - (frac - whole) / this.refillRate;
+          const timeToFill =
+            (this.maxCapacity - newCapacity) * this.refillRate;
+          bucket.expiresAt = bucket.lastRefill + timeToFill + this.expiryBuffer;
+        } else {
+          bucket.currentCapacity = this.maxCapacity;
+          bucket.lastRefill = now;
+          bucket.expiresAt = now + this.expiryBuffer;
+        }
+      }
+    }
+    const timeSinceLastReset = now - bucket.lastRefill;
+    const timeToNextReset = bucket.lastRefill + 1 / this.refillRate - now;
     return {
       key,
+      bucket,
       timeSinceLastReset,
       timeToNextReset,
     };
   }
 
-  // Reset counter dictionary for this specific rule. Called once the
-  // timeSinceLastReset has exceeded the intervalTime. _lastResetTime is
-  // set to be the current time in milliseconds.
-  resetCounter() {
-    // Delete the old counters dictionary to allow for garbage collection
-    this.counters = {};
-    this._lastResetTime = new Date().getTime();
+  removeExpiredBuckets() {
+    const now = Date.now();
+    this.buckets.forEach((bucket, key) => {
+      const expired = now > bucket.expiresAt;
+      if (expired) {
+        this.buckets.delete(key);
+      }
+    });
+    this.nextExpiryCheck = now + this.expiryCheckInterval;
   }
 
   _executeCallback(reply, ruleInput) {
     try {
-      if (this.options.callback) {
-        this.options.callback(reply, ruleInput);
+      if (this.callback) {
+        this.callback(reply, ruleInput);
       }
     } catch (e) {
       // Do not throw error here
@@ -139,22 +198,11 @@ class RateLimiter {
       timeToReset: 0,
       numInvocationsLeft: Infinity,
     };
-
     const matchedRules = this._findAllMatchingRules(input);
     matchedRules.forEach((rule) => {
       const ruleResult = rule.apply(input);
-      let numInvocations = rule.counters[ruleResult.key];
-
-      if (ruleResult.timeToNextReset < 0) {
-        // Reset all the counters since the rule has reset
-        rule.resetCounter();
-        ruleResult.timeSinceLastReset = new Date().getTime() -
-          rule._lastResetTime;
-        ruleResult.timeToNextReset = rule.options.intervalTime;
-        numInvocations = 0;
-      }
-
-      if (numInvocations > rule.options.numRequestsAllowed) {
+      const allowed = ruleResult.bucket.currentCapacity >= 0;
+      if (!allowed) {
         // Only update timeToReset if the new time would be longer than the
         // previously set time. This is to ensure that if this input triggers
         // multiple rules, we return the longest period of time until they can
@@ -166,13 +214,15 @@ class RateLimiter {
         reply.numInvocationsLeft = 0;
         rule._executeCallback(reply, input);
       } else {
+        const numInvocationsLeft = Math.max(
+          0,
+          ruleResult.bucket.currentCapacity,
+        );
         // If this is an allowed attempt and we haven't failed on any of the
         // other rules that match, update the reply field.
-        if (rule.options.numRequestsAllowed - numInvocations <
-          reply.numInvocationsLeft && reply.allowed) {
+        if (numInvocationsLeft < reply.numInvocationsLeft && reply.allowed) {
           reply.timeToReset = ruleResult.timeToNextReset;
-          reply.numInvocationsLeft = rule.options.numRequestsAllowed -
-            numInvocations;
+          reply.numInvocationsLeft = numInvocationsLeft;
         }
         rule._executeCallback(reply, input);
       }
@@ -224,23 +274,11 @@ class RateLimiter {
   * match to rules
   */
   increment(input) {
-    // Only increment rule counters that match this input
+    const cost = 1;
     const matchedRules = this._findAllMatchingRules(input);
-    matchedRules.forEach((rule) => {
+    matchedRules.forEach(rule => {
       const ruleResult = rule.apply(input);
-
-      if (ruleResult.timeSinceLastReset > rule.options.intervalTime) {
-        // Reset all the counters since the rule has reset
-        rule.resetCounter();
-      }
-
-      // Check whether the key exists, incrementing it if so or otherwise
-      // adding the key and setting its value to 1
-      if (hasOwn.call(rule.counters, ruleResult.key)) {
-        rule.counters[ruleResult.key]++;
-      } else {
-        rule.counters[ruleResult.key] = 1;
-      }
+      ruleResult.bucket.currentCapacity = Math.max(ruleResult.bucket.currentCapacity, 0) - cost;
     });
   }
 
