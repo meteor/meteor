@@ -1,7 +1,7 @@
 {
   "name": "meteor",
-  "version": "2.5.1-beta.5",
-  "description": "Install Meteor on Windows",
+  "version": "2.5.1-beta.9",
+  "description": "Install Meteor",
   "main": "install.js",
   "scripts": {
     "install": "node cli.js install"
