@@ -55,7 +55,7 @@ curl https://install.meteor.com/ | sh
 
 This installation method is not maintained anymore, and you should always use the NPM one.
 
-<h2 id="legacy-install">Run Meteor inside Docker</h2>
+<h2 id="meteor-docker">Run Meteor inside Docker</h2>
 
 You can also use a Docker container for running Meteor inside your CI, or even in your local development toolchain.
 
