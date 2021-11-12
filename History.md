@@ -6,6 +6,9 @@
 
 #### Meteor Version Release
 
+* `facebook-oauth@1.11.0`
+  - Updated Facebook API to version 12.0
+
 #### Independent Releases
 
 * `github-oauth@1.3.2`
