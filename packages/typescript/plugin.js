@@ -5,9 +5,9 @@ Plugin.registerCompiler({
     react: true,
     typescript: true,
   }, (babelOptions, file) => {
-    if (file.hmrAvailable() && ReactFastRefresh.babelPlugin) {
+    if (file.hmrAvailable()) {
       babelOptions.plugins = babelOptions.plugins || [];
-      babelOptions.plugins.push(ReactFastRefresh.babelPlugin);
+      babelOptions.plugins.push(...ReactFastRefresh.getBabelPluginConfig());
     }
   });
 });

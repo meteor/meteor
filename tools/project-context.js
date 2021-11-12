@@ -89,6 +89,7 @@ import {
 } from "./utils/archinfo";
 
 import Resolver from "./isobuild/resolver";
+import { addWatchRoot } from './fs/safe-watcher';
 
 const CAN_DELAY_LEGACY_BUILD = ! JSON.parse(
   process.env.METEOR_DISALLOW_DELAYED_LEGACY_BUILD || "false"
@@ -174,6 +175,8 @@ Object.assign(ProjectContext.prototype, {
         files.convertToStandardPath(process.env.METEOR_LOCAL_DIR))
       : (options.projectLocalDir ||
         files.pathJoin(self.projectDir, '.meteor', 'local'));
+
+    addWatchRoot(self.projectDir);
 
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
     // package names.  Deletes the isopacks and their plugin caches.
@@ -928,6 +931,13 @@ Object.assign(ProjectContext.prototype, {
   _buildLocalPackages: Profile('_buildLocalPackages', function () {
     var self = this;
     buildmessage.assertInCapture();
+
+
+    self.packageMap.eachPackage((name, packageInfo) => {
+      if (packageInfo.kind === 'local') {
+        addWatchRoot(packageInfo.packageSource.sourceRoot)
+      }
+    });
 
     self.isopackCache = new isopackCacheModule.IsopackCache({
       packageMap: self.packageMap,

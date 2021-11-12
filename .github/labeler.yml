@@ -112,3 +112,9 @@ Project:Examples:
 
 Project:Dynamic Import:
   - packages/dynamic-import/**/*
+
+Project:Docs:
+  - docs/**/*
+
+Project:Guide:
+  - guide/**/*

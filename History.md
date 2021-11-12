@@ -1,8 +1,85 @@
-## v2.5, UNRELEASED
+## v2.6, 2021-11-
 
 #### Highlights
 
+#### Breaking Changes
+
 #### Meteor Version Release
+
+#### Independent Releases
+
+* `github-oauth@1.3.2`
+  - Migrate from `http` to `fetch`
+  - Fix GitHub login params to adhere to changes in GitHub API
+
+## v2.5, 2021-10-21
+
+#### Highlights
+
+* New package: `accounts-passwordless`
+* Cordova Android v10
+* HMR now works on all architectures and legacy browsers
+* `Accounts.config()` and third-party login services can now be configured from Meteor settings
+
+#### Breaking Changes
+
+* Cordova Android v10 now enables AndroidX. If you use any cordova-plugin that depends or uses any old support library, you need to include the cordova-plugin-androidx-adapter cordova-plugin, otherwise you will get build errors.
+
+#### Meteor Version Release
+
+* CircleCI testing image was updated to include Android 30 and Node 14 
+
+* `meteor-tool@2.5`
+  - Cordova Android upgraded to v10
+  - HMR improvements related to `hot-module-replacement@0.4.0`
+  - Fix finding local packages on Windows located on drives other than C
+  - Fix infinite loop in import scanner when file is on a different drive than source root
+  - Fix Meteor sometimes not detecting changes to a file after the first time it is modified
+  - Fixes Meteor sometimes hanging on Windows. Reverts the temporary fix in Meteor 2.4 of disabling native file watchers for some commands
+  - Uses recursive file watchers on Windows and macOS. In most situations removes the up to 5 seconds delay before detecting the first change to a file, and is more efficient.
+  - Node updated to [v14.18.1](https://nodejs.org/en/blog/release/v14.18.1/), following [October 12th 2021 security release](https://nodejs.org/en/blog/vulnerability/oct-2021-security-releases/)
+  - Skeletons had their dependencies updated
+
+* `accounts-passwordless@1.0.0`
+  - New accounts package to provide passwordless authentication.
+  
+* `accounts-password@2.2.0`
+  - Changes to reuse code between passwordless and password packages.
+   
+* `accounts-base@2.2.0`
+  - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
+  - Changes to reuse code between passwordless and password packages.
+
+* `accounts-ui-unstyled@1.6.0`
+  - Add support for `accounts-passwordless`.
+
+* `service-configuration@1.3.0`
+  - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.
+
+* `autoupdate@1.8.0`
+  - Enable HMR for all web arch's
+
+* `ecmascript@0.16.0`
+  - Enable HMR for all web arch's
+
+* `hot-module-replacement@0.4.0`
+  - Provides polyfills needed by Meteor.absoluteUrl in legacy browsers
+  - Improvements for HMR to work in all architectures and legacy browsers
+
+* `module-runtime@0.14.0`
+  - Improvements for legacy browsers
+
+* `react-fast-refrest@0.2.0`
+  - Enable HMR for all web arch's
+
+* `typescript@4.4.0`
+  - Enable HMR for all web arch's
+
+* `webapp@1.13.0`
+  - Update `cordova-plugin-meteor-webapp` to v2
+  - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
+  - Cordova Meteor plugin is now using AndroidX
+  - Added new settings option `Meteor.settings.packages.webapp.alwaysReturnContent` that will always return content on requests like `POST`, essentially enabling behavior prior to Meteor 2.3.1.
 
 #### Independent Releases
 
@@ -21,11 +98,17 @@
 * `accounts-ui-unstyled@1.5.1`
   - Update compatibility range with `less` from 3.0.2 to 4.0.0
 
+* `google-config-ui@1.0.3`
+  - Deliver siteUrl in the same way as other config-ui packages
+
 * `ecmascript-runtime-client@0.12.1`
   - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
 
 * `modern-browsers@0.1.7`
   - Added `firefoxMobile` as an alias for `firefox`
+
+* `dynamic-import@0.7.2`
+  - Fixes 404 in dynamic-import/fetch when ROOT_URL is set with a custom path. [see issue](https://github.com/meteor/meteor/issues/11701)
 
 ## v2.4.1, 2021-10-12
 
