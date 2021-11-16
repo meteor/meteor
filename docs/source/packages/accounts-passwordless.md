@@ -10,7 +10,7 @@ The first step to in the passwordless process is for the user to sign-up or requ
 
 If the user is signing up you can pass in the `userData` object like in [Accounts.createUser](/api/passwords.html#Accounts-createUser).
 
-{% apibox "Meteor.loginWithToken" %}
+{% apibox "Meteor.passwordlessLoginWithToken" %}
 The second step in the passwordless flow. Like all the other `loginWith` functions call this method to login the user with the token they have inputted.
 
 {% apibox "Accounts.sendLoginTokenEmail" %}
