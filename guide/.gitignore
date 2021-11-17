@@ -1,3 +1,9 @@
 .DS_Store
-npm-debug.log
-.idea/
+Thumbs.db
+db.json
+_multiconfig.yml
+*.log
+node_modules/
+public/
+.deploy*/
+keys.json

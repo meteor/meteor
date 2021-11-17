@@ -1,11 +1,13 @@
 Github = {};
 
-OAuth.registerService('github', 2, null, query => {
-
-  const accessToken = getAccessToken(query);
-  const identity = getIdentity(accessToken);
-  const emails = getEmails(accessToken);
-  const primaryEmail = emails.find(email => email.primary);
+OAuth.registerService('github', 2, null, (query) => {
+  const accessTokenCall = Meteor.wrapAsync(getAccessToken);
+  const accessToken = accessTokenCall(query);
+  const identityCall = Meteor.wrapAsync(getIdentity);
+  const identity = identityCall(accessToken);
+  const emailsCall = Meteor.wrapAsync(getEmails);
+  const emails = emailsCall(accessToken);
+  const primaryEmail = emails.find((email) => email.primary);
 
   return {
     serviceData: {
@@ -13,72 +15,101 @@ OAuth.registerService('github', 2, null, query => {
       accessToken: OAuth.sealSecret(accessToken),
       email: identity.email || (primaryEmail && primaryEmail.email) || '',
       username: identity.login,
-      emails,
+      emails
     },
-    options: {profile: {name: identity.name}}
+    options: { profile: { name: identity.name } }
   };
 });
 
 // http://developer.github.com/v3/#user-agent-required
-let userAgent = "Meteor";
-if (Meteor.release)
-  userAgent += `/${Meteor.release}`;
+let userAgent = 'Meteor';
+if (Meteor.release) userAgent += `/${Meteor.release}`;
 
-const getAccessToken = query => {
-  const config = ServiceConfiguration.configurations.findOne({service: 'github'});
-  if (!config)
-    throw new ServiceConfiguration.ConfigError();
+const getAccessToken = async (query, callback) => {
+  const config = ServiceConfiguration.configurations.findOne({
+    service: 'github'
+  });
+  if (!config) throw new ServiceConfiguration.ConfigError();
 
   let response;
   try {
-    response = HTTP.post(
-      "https://github.com/login/oauth/access_token", {
+    const content = new URLSearchParams({
+      client_id: config.clientId,
+      client_secret: config.secret,
+      code: query.code,
+      redirect_uri: OAuth._redirectUri(
+        'github',
+        config
+      )
+    });
+    const request = await fetch(
+      `https://github.com/login/oauth/access_token?${content.toString()}`,
+      {
+        method: 'POST',
         headers: {
           Accept: 'application/json',
-          "User-Agent": userAgent
-        },
-        params: {
-          code: query.code,
-          client_id: config.clientId,
-          client_secret: OAuth.openSecret(config.secret),
-          redirect_uri: OAuth._redirectUri('github', config),
-          state: query.state
+          'User-Agent': userAgent
         }
-      });
+      }
+    );
+    response = await request.json();
   } catch (err) {
     throw Object.assign(
-      new Error(`Failed to complete OAuth handshake with Github. ${err.message}`),
-      { response: err.response },
+      new Error(
+        `Failed to complete OAuth handshake with Github. ${err.message}`
+      ),
+      { response: err.response }
     );
   }
-  if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with GitHub. ${response.data.error}`);
+  if (response.error) {
+    callback(response.error);
+    // if the http response was a json object with an error attribute
+    throw new Error(
+      `Failed to complete OAuth handshake with GitHub. ${response.error}`
+    );
   } else {
-    return response.data.access_token;
+    callback(null, response.access_token);
+    return response.access_token;
   }
 };
 
-const getIdentity = accessToken => {
+const getIdentity = async (accessToken, callback) => {
   try {
-    return HTTP.get(
-      "https://api.github.com/user", {
-        headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
-      }).data;
+    const request = await fetch('https://api.github.com/user', {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': userAgent,
+        Authorization: `token ${accessToken}`
+      } // http://developer.github.com/v3/#user-agent-required
+    });
+    const response = await request.json();
+    callback(null, response);
+    return response;
   } catch (err) {
+    callback(err.message);
     throw Object.assign(
       new Error(`Failed to fetch identity from Github. ${err.message}`),
-      { response: err.response },
+      { response: err.response }
     );
   }
 };
 
-const getEmails = accessToken => {
+const getEmails = async (accessToken, callback) => {
   try {
-    return HTTP.get(
-      "https://api.github.com/user/emails", {
-        headers: {"User-Agent": userAgent, "Authorization": `token ${accessToken}`}, // http://developer.github.com/v3/#user-agent-required
-      }).data;
+    const request = await fetch('https://api.github.com/user/emails', {
+      method: 'GET',
+      headers: {
+        'User-Agent': userAgent,
+        Accept: 'application/json',
+        Authorization: `token ${accessToken}`
+      } // http://developer.github.com/v3/#user-agent-required
+    });
+    const response = await request.json();
+    callback(null, response);
+    return response;
   } catch (err) {
+    callback(err.message, []);
     return [];
   }
 };
