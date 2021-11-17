@@ -63,4 +63,10 @@ We do provide the meteor/meteor-base ubuntu-based Docker image, that comes pre-b
 
 You can refer to our meteor/galaxy-images repository to see how to use it, and the latest version. [More about meteor-base here.](https://github.com/meteor/galaxy-images/blob/master/meteor-base/README.md)
 
+<h2 id="fish-shell">Note for fish shell users (Linux)</h2>
+
+To be able to user `meteor` command from fish it's needed to include `/home/<user>/.meteor` in `$PATH`; to do that just add this line in `/home/<user>/.config/fish/config.fish` file (replace `<user>` with your username):
+
+`set PATH /home/<user>/.meteor $PATH`
+
 
