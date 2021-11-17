@@ -21,6 +21,9 @@ Install the latest official Meteor release from your terminal:
 npm install -g meteor
 ```
 
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
 If your user doesn't have permission to install global binaries, and you need to use sudo, it's necessary to append *--unsafe-perm* to the above command:
 
 ```bash
@@ -32,7 +35,11 @@ Only run the above command with sudo if you know what you are doing.
 
 If you only use sudo because of a distribution default permission system, [check this link for fixing it](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally).
 
-For Apple M1 computers, you can append Rosetta prefix as following:
+In some cases you can get this error `npm WARN checkPermissions Missing write access to /usr/local/lib/node_modules` because your Node.js installation was performed with wrong permissions. An easy way to fix this is to install Node.js using [nvm](https://github.com/nvm-sh/nvm) and forcing it to be used in your terminal. You can force it in the current session of your terminal by running `nvm use 14`.
+
+<h2 id="old-versions-m1">Old Versions on Apple M1</h2>
+
+For Apple M1 computers, you can append Rosetta prefix as following, if you need to run older versions of Meteor (before 2.5.1):
 
 ```bash
 arch -x86_64 npm install -g meteor
