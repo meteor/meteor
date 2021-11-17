@@ -27,7 +27,18 @@ const {
   extractWithNativeTar,
 } = require('./extract.js');
 const semver = require('semver');
+const isInstalledGlobally = process.env.npm_config_global === 'true';
 
+if (!isInstalledGlobally) {
+  console.error('******************************************');
+  console.error(
+    'You are not using a global npm context to install, you should never add meteor to your package.json.'
+  );
+  console.error('Make sure you pass -g to npm install.');
+  console.error('Aborting');
+  console.error('******************************************');
+  process.exit(1);
+}
 process.on('unhandledRejection', err => {
   throw err;
 });
@@ -54,23 +65,23 @@ const url = `https://packages.meteor.com/bootstrap-link?arch=os.${
 }.${os.arch() === 'arm64' ? 'arm64' : 'x86_64'}&release=${release}`;
 
 let tempDirObject;
-try{
+try {
   tempDirObject = tmp.dirSync();
-} catch(e){
-  console.error("");
-  console.error("");
-  console.error("****************************");
+} catch (e) {
+  console.error('');
+  console.error('');
+  console.error('****************************');
   console.error("Couldn't create tmp dir for extracting meteor.");
-  console.error("There are 2 possible causes:");
+  console.error('There are 2 possible causes:');
   console.error(
     '\t1. You are running npm install -g meteor as root without passing the --unsafe-perm option. Please rerun with this option enabled.'
   );
   console.error(
     '\t2. You might not have enough space in disk or permission to create folders'
   );
-  console.error("****************************")
-  console.error("")
-  console.error("")
+  console.error('****************************');
+  console.error('');
+  console.error('');
   process.exit(1);
 }
 const tempPath = tempDirObject.name;
@@ -266,7 +277,9 @@ async function setupExecPath() {
 function showGettingStarted() {
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
-  const runCommand = isWindows() ? `set path "${meteorPath}/;%path%` : exportCommand;
+  const runCommand = isWindows()
+    ? `set path "${meteorPath}/;%path%`
+    : exportCommand;
   const message = `
 ***************************************
 
