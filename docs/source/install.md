@@ -35,15 +35,10 @@ If you only use sudo because of a distribution default permission system, [check
 For Apple M1 computers, you can append Rosetta prefix as following:
 
 ```bash
-
 arch -x86_64 npm install -g meteor
-
 ```
 
 or select Terminal in the Applications folder, press CMD(⌘)+I and check the "Open using Rosetta" option.
-
-We currently don't support Apple M1 native binaries as the latest meteor release uses Node.js 14 which doesn't have support for it until now. More info in our repository, [here](https://github.com/meteor/meteor/issues/11249#issuecomment-734327204).
-
 
 <h2 id="legacy-install">Legacy Installation Method</h2>
 
@@ -62,6 +57,16 @@ You can also use a Docker container for running Meteor inside your CI, or even i
 We do provide the meteor/meteor-base ubuntu-based Docker image, that comes pre-bundled with Node.JS and Meteor, and runs it as a local user (not as root).
 
 You can refer to our meteor/galaxy-images repository to see how to use it, and the latest version. [More about meteor-base here.](https://github.com/meteor/galaxy-images/blob/master/meteor-base/README.md)
+
+
+<h2 id="windows">Note for Windows users</h2>
+
+On Windows, the installer runs faster when [Windows Developer Mode](https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) is enabled. The installation extracts a large number of small files, which Windows Defender can cause to be very slow.
+
+
+<h2 id="nvm">Node version manager</h2>
+
+If you use a node version manager that uses a separate global `node_modules` folder for each Node version, you will need to re-install the `meteor` npm package when changing to a Node version for the first time. Otherwise, the `meteor` command will no longer be found.
 
 <h2 id="fish-shell">Note for fish shell users (Linux)</h2>
 
