@@ -8,6 +8,8 @@ Install Meteor by running:
 npm install -g meteor
 ```
 
+Read more
+
 If Meteor is already installed, it will do nothing.
 
 Uninstall by running:
