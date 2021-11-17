@@ -15,11 +15,10 @@ With Meteor you write apps:
 Try a getting started tutorial:
  * [React](https://react-tutorial.meteor.com)
  * [Blaze](https://blaze-tutorial.meteor.com/)
- * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
  * [Vue](https://vue-tutorial.meteor.com/)
  * [Svelte](https://svelte-tutorial.meteor.com/)
 
-Next, read the [guide](https://guide.meteor.com) and the [documentation](https://docs.meteor.com/).
+Next, read the [documentation](https://docs.meteor.com/).
 
 Are you looking for examples? Check this [meteor/examples](https://github.com/meteor/examples)
 
@@ -69,15 +68,5 @@ Interested in helping or contributing to Meteor?  These resources will help:
 * [Feature requests](https://github.com/meteor/meteor/discussions/)
 * [Issue tracker](https://github.com/meteor/meteor/issues)
 
-## Uninstalling Meteor
-
-Aside from a short launcher shell script, Meteor installs itself inside your
-home directory. To uninstall Meteor, run:
-
-```bash
-rm -rf ~/.meteor/
-sudo rm /usr/local/bin/meteor
-```
-
-On Windows, [read here](npm-packages/meteor-installer/README.md).
+To uninstall Meteor [read here](https://docs.meteor.com/install.html#uninstall).
 
