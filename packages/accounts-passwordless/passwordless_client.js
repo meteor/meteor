@@ -41,7 +41,7 @@ const transformSelector = selector => {
  *   on failure.
  * @importFromPackage meteor
  */
-Meteor.loginWithToken = (selector, token, callback) => {
+Meteor.passwordlessLoginWithToken = (selector, token, callback) => {
   Accounts.callLoginMethod({
     methodArguments: [
       {
@@ -91,7 +91,7 @@ const checkToken = ({ selector, token }) => {
   const userId = Tracker.nonreactive(Meteor.userId);
 
   if (!userId) {
-    Meteor.loginWithToken(selector, token, () => {
+    Meteor.passwordlessLoginWithToken(selector, token, () => {
       // Make it look clean by removing the authToken from the URL
       if (window.history) {
         const url = window.location.href.split('?')[0];
