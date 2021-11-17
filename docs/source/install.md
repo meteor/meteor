@@ -69,4 +69,12 @@ To be able to user `meteor` command from fish it's needed to include `/home/<use
 
 `set PATH /home/<user>/.meteor $PATH`
 
+<h2 id="uninstall">Uninstalling Meteor</h2>
+
+If you installed Meteor using npm, you can remove it by running:
+`meteor-installer uninstall`
+
+If you installed Meteor using curl, you can remove it by running:
+`rm -rf ~/.meteor`
+`sudo rm /usr/local/bin/meteor` 
 
