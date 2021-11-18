@@ -20,7 +20,9 @@ Try a getting started tutorial:
 
 Next, read the [documentation](https://docs.meteor.com/).
 
-Are you looking for examples? Check this [meteor/examples](https://github.com/meteor/examples)
+Are you looking for examples? Check this [meteor/examples](https://github.com/meteor/examples).
+
+Check your [changes](https://docs.meteor.com/changelog.html) to keep your app up-to-date.
 
 ## Quick Start
 
@@ -32,22 +34,16 @@ npm install -g meteor
 
 Visit the official [install page](https://www.meteor.com/developers/install) to learn more.
 
-Alternatively, on macOS and Linux you can use:
-
-```bash
-curl https://install.meteor.com/ | sh
-```
-
 Create a project:
 
 ```bash
-meteor create try-meteor
+meteor create my-app
 ```
 
 Run it:
 
 ```bash
-cd try-meteor
+cd my-app
 meteor
 ```
 
@@ -55,10 +51,10 @@ meteor
 
 Building an application with Meteor?
 
-* Deploy on Galaxy hosting: https://www.meteor.com/cloud
-* Announcement list: sign up at https://www.meteor.com/
-* Discussion forums: https://forums.meteor.com/
+* Deploy on [Meteor Cloud](https://www.meteor.com/cloud)
+* Discussion [Forums](https://forums.meteor.com/)
 * Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
+* Announcement list. Subscribe in the [footer](https://www.meteor.com/).
 
 
 Interested in helping or contributing to Meteor?  These resources will help:

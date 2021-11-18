@@ -11,7 +11,7 @@
 ## v2.5.1, 2021-11-17
 
 #### Highlights
-- Mac M1 Support - darwin arm64
+- Mac M1 Support - darwin arm64. [Read more](https://blog.meteor.com/).
 
 #### Breaking Changes
 - `Meteor.loginWithToken` from the new package `accounts-passwordless` was conflicting with another method with the same name on `accounts-base` so we had to rename the method of `accounts-passwordless` package to `Meteor.passwordlessLoginWithToken`. 
