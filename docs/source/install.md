@@ -6,7 +6,7 @@ Apple M1 is only supported from Meteor 2.5.1 onward.
 
 <h2 id="prereqs">Prerequisites and useful information</h2>
 
-- Meteor requires Node.js 8 or newer installed for running the npm installer.
+- Meteor requires Node.js 10 or newer installed for running the npm installer.
 - Meteor supports Windows 7/Windows Server 2008 R2 and up.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
 - For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
