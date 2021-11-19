@@ -202,7 +202,7 @@ export class AccountsClient extends AccountsCommon {
   //                 logged in, or with the error on error.
   //
   callLoginMethod(options) {
-    options = { 
+    options = {
       methodName: 'login',
       methodArguments: [{}],
       _suppressLoggingIn: false,
@@ -214,7 +214,7 @@ export class AccountsClient extends AccountsCommon {
     ['validateResult', 'userCallback'].forEach(f => {
       if (!options[f])
         options[f] = () => null;
-    })
+    });
 
     // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
     let called;
@@ -222,7 +222,7 @@ export class AccountsClient extends AccountsCommon {
       if (!called) {
         called = true;
         if (!error) {
-          this._onLoginHook.each(callback => {
+          this._onLoginHook.forEach(callback => {
             callback(loginDetails);
             return true;
           });
@@ -380,7 +380,7 @@ export class AccountsClient extends AccountsCommon {
     this.connection.setUserId(null);
     this._reconnectStopper && this._reconnectStopper.stop();
   }
-  
+
   makeClientLoggedIn(userId, token, tokenExpires) {
     this._storeLoginToken(userId, token, tokenExpires);
     this.connection.setUserId(userId);
@@ -635,14 +635,14 @@ export class AccountsClient extends AccountsCommon {
   _initUrlMatching() {
     // By default, allow the autologin process to happen.
     this._autoLoginEnabled = true;
-  
+
     // We only support one callback per URL.
     this._accountsCallbacks = {};
-  
+
     // Try to match the saved value of window.location.hash.
     this._attemptToMatchHash();
   };
-  
+
   // Separate out this functionality for testing
   _attemptToMatchHash() {
     attemptToMatchHash(this, this.savedHash, defaultSuccessHandler);
@@ -731,8 +731,8 @@ export class AccountsClient extends AccountsCommon {
 };
 
 /**
- * @summary True if a login method (such as `Meteor.loginWithPassword`, 
- * `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in 
+ * @summary True if a login method (such as `Meteor.loginWithPassword`,
+ * `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in
  * progress. A reactive data source.
  * @locus Client
  * @importFromPackage meteor
@@ -740,7 +740,7 @@ export class AccountsClient extends AccountsCommon {
 Meteor.loggingIn = () => Accounts.loggingIn();
 
 /**
- * @summary True if a logout method (such as `Meteor.logout`) is currently in 
+ * @summary True if a logout method (such as `Meteor.logout`) is currently in
  * progress. A reactive data source.
  * @locus Client
  * @importFromPackage meteor
@@ -766,7 +766,7 @@ Meteor.logoutOtherClients = callback => Accounts.logoutOtherClients(callback);
 /**
  * @summary Login with a Meteor access token.
  * @locus Client
- * @param {Object} [token] Local storage token for use with login across 
+ * @param {Object} [token] Local storage token for use with login across
  * multiple tabs in the same browser.
  * @param {Function} [callback] Optional callback. Called with no arguments on
  * success.
@@ -815,7 +815,7 @@ if (Package.blaze) {
    * @summary Calls [Meteor.loggingIn()](#meteor_loggingin) or [Meteor.loggingOut()](#meteor_loggingout).
    */
   Template.registerHelper(
-    'loggingInOrOut', 
+    'loggingInOrOut',
     () => Meteor.loggingIn() || Meteor.loggingOut()
   );
 }
@@ -872,6 +872,6 @@ const attemptToMatchHash = (accounts, hash, success) => {
 
 // Export for testing
 export const AccountsTest = {
-  attemptToMatchHash: (hash, success) => 
+  attemptToMatchHash: (hash, success) =>
     attemptToMatchHash(Accounts, hash, success),
 };

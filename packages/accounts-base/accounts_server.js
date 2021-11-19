@@ -245,14 +245,14 @@ export class AccountsServer extends AccountsCommon {
   };
 
   _successfulLogin(connection, attempt) {
-    this._onLoginHook.each(callback => {
+    this._onLoginHook.forEach(callback => {
       callback(cloneAttemptWithConnection(connection, attempt));
       return true;
     });
   };
 
   _failedLogin(connection, attempt) {
-    this._onLoginFailureHook.each(callback => {
+    this._onLoginFailureHook.forEach(callback => {
       callback(cloneAttemptWithConnection(connection, attempt));
       return true;
     });
@@ -261,7 +261,7 @@ export class AccountsServer extends AccountsCommon {
   _successfulLogout(connection, userId) {
     // don't fetch the user object unless there are some callbacks registered
     let user;
-    this._onLogoutHook.each(callback => {
+    this._onLogoutHook.forEach(callback => {
       if (!user && userId) user = this.users.findOne(userId, {fields: this._options.defaultFieldSelector});
       callback({ user, connection });
       return true;
@@ -878,16 +878,17 @@ export class AccountsServer extends AccountsCommon {
     };
   };
 
-  // Using $addToSet avoids getting an index error if another client
-  // logging in simultaneously has already inserted the new hashed
-  // token.
   _insertHashedLoginToken(userId, hashedToken, query) {
     query = query ? { ...query } : {};
     query._id = userId;
     this.users.update(query, {
+      // Using $addToSet avoids getting an index error if another client
+      // logging in simultaneously has already inserted the new hashed
+      // token.
       $addToSet: {
         "services.resume.loginTokens": hashedToken
-      }
+      },
+      $set: { lastLoginAt: new Date() }
     });
   };
 
