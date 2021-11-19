@@ -1,7 +1,7 @@
 {
   "name": "meteor",
-  "version": "2.5.0",
-  "description": "Install Meteor on Windows",
+  "version": "2.5.1",
+  "description": "Install Meteor",
   "main": "install.js",
   "scripts": {
     "install": "node cli.js install"
@@ -14,6 +14,7 @@
     "node-7z": "^2.0.5",
     "node-downloader-helper": "^1.0.11",
     "rimraf": "^3.0.2",
+    "semver": "^7.3.5",
     "tar": "^6.1.0",
     "tmp": "^0.1.0"
   },

@@ -1,4 +1,4 @@
-## v2.6, 2021-11-
+## vNext, UNRELEASED
 
 #### Highlights
 
@@ -11,6 +11,30 @@
   - Add option to disallow sign-up on GitHub using `allow_signup` [parameter](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#parameters), this will be activated based on your Accounts settings, specifically if the option `forbidClientAccountCreation` is set to `true`.
 
 #### Independent Releases
+
+## v2.5.1, 2021-11-17
+
+#### Highlights
+- Mac M1 Support - darwin arm64. [Read more](https://blog.meteor.com/).
+
+#### Breaking Changes
+- `Meteor.loginWithToken` from the new package `accounts-passwordless` was conflicting with another method with the same name on `accounts-base` so we had to rename the method of `accounts-passwordless` package to `Meteor.passwordlessLoginWithToken`. 
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.1`
+  - Meteor supports now Mac M1 chips (darwin arm64)
+  
+* `accounts-passwordless@2.0.0`
+  - `Meteor.loginWithToken` from the new package `accounts-passwordless` was conflicting with another method with the same name on `accounts-base` so we had to rename the method of `accounts-passwordless` package to `Meteor.passwordlessLoginWithToken`.
+
+#### Independent Releases
+* `minifier-js@2.7.2`
+  - Stopped using `evaluate` option in the compression to fix a [bug](https://github.com/meteor/meteor/issues/11756).
+  - Updated `terser` to [v5.9.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v590) to fix various bugs
+  
+* `standard-minifier-js@2.7.2`
+  - Using `minifier-js@2.7.2`
 
 * `github-oauth@1.3.2`
   - Migrate from `http` to `fetch`
