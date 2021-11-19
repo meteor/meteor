@@ -6,6 +6,9 @@
 
 #### Meteor Version Release
 
+* `accounts-base@2.3.0`
+  - Add a new field to the user collection `lastLoginAt` which indicated the last time user login function was triggered
+
 #### Independent Releases
 
 ## v2.5.1, 2021-11-17
