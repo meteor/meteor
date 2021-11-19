@@ -6,6 +6,7 @@ Apple M1 is only supported from Meteor 2.5.1 onward.
 
 <h2 id="prereqs">Prerequisites and useful information</h2>
 
+- If you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed. Check how [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/)
 - Meteor requires Node.js version >= 10 and <= 14 installed for running the npm installer (tip: you can use [nvm](https://github.com/nvm-sh/nvm) for managing node versions).
 - Meteor supports Windows 7/Windows Server 2008 R2 and up.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
