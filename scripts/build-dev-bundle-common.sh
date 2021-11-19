@@ -12,6 +12,7 @@ NPM_VERSION=6.14.15
 
 
 if [ "$UNAME" == "Linux" ] ; then
+    NODE_BUILD_NUMBER=
     if [ "$ARCH" != "i686" -a "$ARCH" != "x86_64" ] ; then
         echo "Unsupported architecture: $ARCH"
         echo "Meteor only supports i686 and x86_64 for now."
@@ -25,6 +26,7 @@ if [ "$UNAME" == "Linux" ] ; then
     }
 elif [ "$UNAME" == "Darwin" ] ; then
     if [ "$ARCH" != "arm64" ] ; then
+      NODE_BUILD_NUMBER=
       SYSCTL_64BIT=$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)
       if [ "$ARCH" == "i386" -a "1" != "$SYSCTL_64BIT" ] ; then
           # some older macos returns i386 but can run 64 bit binaries.

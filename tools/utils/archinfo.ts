@@ -164,7 +164,11 @@ export function host() {
           run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel and M1 processors are supported on OS X");
       }
-      _host  = "os.osx.x86_64";
+      if(arch === "arm"){
+        _host  = "os.osx.arm64";
+      }else{
+        _host  = "os.osx.x86_64";
+      }
     } else if (platform === "linux") {
       const machine = run('uname', '-m');
       if (["x86_64", "amd64", "ia64"].includes(machine)) {
