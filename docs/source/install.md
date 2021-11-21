@@ -38,6 +38,16 @@ If you only use sudo because of a distribution default permission system, [check
 
 In some cases you can get this error `npm WARN checkPermissions Missing write access to /usr/local/lib/node_modules` because your Node.js installation was performed with wrong permissions. An easy way to fix this is to install Node.js using [nvm](https://github.com/nvm-sh/nvm) and forcing it to be used in your terminal. You can force it in the current session of your terminal by running `nvm use 14`.
 
+<h2 id="path-management">PATH management</h2>
+
+By default, the Meteor installer adds its install path (by default, `~/.meteor/`) to your PATH by updating either your `.bashrc`, `.bash_profile`, or `.zshrc` as appropriate. To disable this behavior, install Meteor by running:
+
+```bash
+npm install -g meteor --ignore-meteor-setup-exec-path
+```
+
+(or by setting the environment variable `npm_config_ignore_meteor_setup_exec_path=true`)
+
 <h2 id="old-versions-m1">Old Versions on Apple M1</h2>
 
 For Apple M1 computers, you can append Rosetta prefix as following, if you need to run older versions of Meteor (before 2.5.1):
