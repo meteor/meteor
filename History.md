@@ -7,6 +7,14 @@
 #### Meteor Version Release
 
 #### Independent Releases
+* `accounts-ui@1.4.2` 
+  - Update usage of `accounts-passwordless` to be compatible with 2.0.0.
+
+* `minifier-js@2.7.3`
+  - Revert `evaluate` option that was set to false in 2.7.2.
+
+* `standard-minifier-js@2.7.3`
+  - Using `minifier-js@2.7.3`
 
 ## v2.5.1, 2021-11-17
 
