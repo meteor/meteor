@@ -22,7 +22,6 @@ export const meteorJsMinify = function (source) {
       drop_debugger: false,  // remove debugger; statements
       unused: false,         // drop unreferenced functions and variables
       dead_code: true,       // remove unreachable code
-      evaluate: false,       // work around issue in terser (possibly https://github.com/terser/terser/issues/837)
       typeofs: false,        // set to false due to known issues in IE10
       global_defs: {
         "process.env.NODE_ENV": NODE_ENV
