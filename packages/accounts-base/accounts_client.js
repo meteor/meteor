@@ -443,7 +443,7 @@ export class AccountsClient extends AccountsCommon {
   // before callbacks are registered see #10157
   _startupCallback(callback) {
     // Are we already logged in?
-    if (this.connection._userId) {
+    if (Meteor.user()) {
       // If already logged in before handler is registered, it's safe to
       // assume type is a 'resume', so we execute the callback at the end
       // of the queue so that Meteor.startup can complete before any
