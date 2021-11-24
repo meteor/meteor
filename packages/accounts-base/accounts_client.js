@@ -31,6 +31,10 @@ export class AccountsClient extends AccountsCommon {
 
     // This is for .registerClientLoginFunction & .callLoginFunction.
     this._loginFuncs = {};
+
+    // This tracks whether callbacks registered with
+    // Accounts.onLogin have been called
+    this.loginCallbacks_called = false;
   }
 
   ///
@@ -217,10 +221,9 @@ export class AccountsClient extends AccountsCommon {
     })
 
     // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
-    let called;
     const loginCallbacks = ({ error, loginDetails }) => {
-      if (!called) {
-        called = true;
+      if (!this.loginCallbacks_called) {
+        this.loginCallbacks_called = true;
         if (!error) {
           this._onLoginHook.each(callback => {
             callback(loginDetails);
@@ -443,7 +446,7 @@ export class AccountsClient extends AccountsCommon {
   // before callbacks are registered see #10157
   _startupCallback(callback) {
     // Are we already logged in?
-    if (Meteor.user()) {
+    if (this.loginCallbacks_called) {
       // If already logged in before handler is registered, it's safe to
       // assume type is a 'resume', so we execute the callback at the end
       // of the queue so that Meteor.startup can complete before any
