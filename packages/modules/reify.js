@@ -1,3 +1,3 @@
-require("reify/lib/runtime").enable(
+require("@meteorjs/reify/lib/runtime").enable(
   module.constructor.prototype
 );

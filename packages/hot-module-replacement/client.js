@@ -1,5 +1,5 @@
 // TODO: add an api to Reify to update cached exports for a module
-const ReifyEntry = require('/node_modules/meteor/modules/node_modules/reify/lib/runtime/entry.js')
+const ReifyEntry = require('/node_modules/meteor/modules/node_modules/@meteorjs/reify/lib/runtime/entry.js')
 
 const SOURCE_URL_PREFIX = "meteor://\ud83d\udcbbapp";
 
@@ -286,11 +286,11 @@ function replaceFileContent(file, contents) {
 
 function checkModuleAcceptsUpdate(moduleId, checked) {
   checked.add(moduleId);
-  
+
   if (moduleId === '/' ) {
     return false;
   }
-  
+
   const file = findFile(moduleId);
   const moduleHot = file.module.hot;
   const moduleAccepts = moduleHot ? moduleHot._canAcceptUpdate() : false;

@@ -3,7 +3,7 @@ var path = require("path");
 var fs = require("fs");
 var util = require("./util.js");
 var meteorBabelVersion = require("./package.json").version;
-var reifyVersion = require("reify/package.json").version;
+var reifyVersion = require("@meteorjs/reify/package.json").version;
 var hasOwn = Object.prototype.hasOwnProperty;
 
 function Cache(fillFn, cacheDir) {
@@ -68,7 +68,7 @@ Cp.get = function (source, options, deps) {
       source, options, deps
     );
   }
-  
+
   var cacheFile = cacheHash + ".json";
   var fullCacheFile = path.join(this.dir, cacheFile);
   var result;
