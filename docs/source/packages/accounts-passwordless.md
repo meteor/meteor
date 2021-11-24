@@ -13,7 +13,7 @@ If the user is signing up you can pass in the `userData` object like in [Account
 {% apibox "Meteor.passwordlessLoginWithToken" %}
 The second step in the passwordless flow. Like all the other `loginWith` functions call this method to login the user with the token they have inputted.
 
-{% apibox "Accounts.sendLoginTokenEmail" %}
+{% apibox "Accounts.sendLoginTokenEmail" "module":"accounts-base" %}
 Use this function if you want to manually send the email to users to login with token from the server. Do note that you will need to create the token/sequence and save it in the DB yourself. This is good if you want to change how the tokens look or are generated, but unless you are sure of what you are doing we don't recommend it.
 
 <h3 id="passwordless-email-templates">E-mail templates</h3>
