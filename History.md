@@ -1,10 +1,19 @@
-## vNext, UNRELEASED
+## v2.5.2, UNRELEASED
 
 #### Highlights
 
 #### Breaking Changes
 
 #### Meteor Version Release
+
+* `meteor-tool@2.5.2`
+  - Changes @meteorjs/babel and @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/babel@7.14.0`
+  - Updates @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/reify@0.23.0`
+  - Check scope when wrapping to fix slowness in MUI v5. [PR](https://github.com/meteor/reify/pull/1) and [Issue](https://github.com/benjamn/reify/issues/277).
 
 #### Independent Releases
 * `accounts-ui@1.4.2` 
