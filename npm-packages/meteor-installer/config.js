@@ -17,7 +17,7 @@ let rootPath;
 if (isWindows()) {
   rootPath = localAppData;
 } else if (isRoot() && sudoUser) {
-  rootPath = `/home/${sudoUser}`;
+  rootPath = isMac() ? `/Users/${sudoUser}` : `/home/${sudoUser}`;
 } else {
   if (isRoot()) {
     console.info(
