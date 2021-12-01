@@ -935,6 +935,9 @@ createAsyncCollection = (name, optionsParam = {}) => {
 
 Mongo.createAsyncCollection = createAsyncCollection;
 
+const userOptions = Meteor.settings?.packages?.mongo?.options || {};
+
 if (Meteor.isServer) {
+  if(userOptions?.skipStartupConnection || process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) return;
   Promise.await(MongoInternals.defaultRemoteCollectionDriver());
 }
