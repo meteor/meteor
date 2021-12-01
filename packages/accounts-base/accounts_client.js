@@ -34,6 +34,8 @@ export class AccountsClient extends AccountsCommon {
 
     // This tracks whether callbacks registered with
     // Accounts.onLogin have been called
+    // Only set to true when logged in after callbacks
+    // have been called
     this._loginCallbacks_called = false;
   }
 
@@ -123,6 +125,7 @@ export class AccountsClient extends AccountsCommon {
       wait: true
     }, (error, result) => {
       this._loggingOut.set(false);
+      this._loginCallbacks_called = false;
       if (error) {
         callback && callback(error);
       } else {
@@ -220,6 +223,7 @@ export class AccountsClient extends AccountsCommon {
         options[f] = () => null;
     })
 
+    this._loginCallbacks_called = false;
     // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
     const loginCallbacks = ({ error, loginDetails }) => {
       if (!this._loginCallbacks_called) {
