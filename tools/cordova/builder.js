@@ -348,7 +348,7 @@ export class CordovaBuilder {
 
       this._configureAndCopyIcon(iconsIosSizes, platformElement.ios);
       this._configureAndCopyIcon(iconsAndroidSizes, platformElement.android);
-      this._configureAndCopySplashImages(splashIosKeys, platformElement.ios);
+      this._configureAndCopySplashImages(splashIosKeys, platformElement.ios, true);
       this._configureAndCopySplashImages(splashAndroidKeys, platformElement.android);
     }
 
@@ -403,8 +403,7 @@ export class CordovaBuilder {
     })
   }
 
-  _configureAndCopySplashImages(allowedValues, xmlElement) {
-    const isIos = xmlElement.name === 'ios';
+  _configureAndCopySplashImages(allowedValues, xmlElement, isIos = false) {
     const appendDarkMode = (stringValue , { separator = '.', withChar = '~' } = {}) => {
       if (!stringValue) {
         throw new Error("No string was passed.");
