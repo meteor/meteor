@@ -221,18 +221,18 @@ export class CordovaBuilder {
       }
     };
 
-    const setDefaultLaunchScreen = (size, name) => {
-      const imageFile = files.pathJoin(launchScreensPath, `${size}.png`);
+    const setDefaultLaunchScreen = (key) => {
+      const imageFile = files.pathJoin(launchScreensPath, `${key}.png`);
       if (files.exists(imageFile)) {
-        this.imagePaths.splash[name] = imageFile;
+        this.imagePaths.splash[key] = imageFile;
       }
     };
 
     _.each(iconsIosSizes, setDefaultIcon);
     _.each(iconsAndroidSizes, setDefaultIcon);
-    //TODO -> Fix default.
-    _.each(splashIosKeys, setDefaultLaunchScreen);
-    _.each(splashAndroidKeys, setDefaultLaunchScreen);
+
+    setDefaultLaunchScreen('ios_universal');
+    setDefaultLaunchScreen('android_mdpi_portrait');
 
     this.pluginsConfiguration = {};
   }
