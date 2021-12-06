@@ -50,33 +50,30 @@ const iconsAndroidSizes = {
   'android_xxxhdpi': '192x192'
 };
 
-const launchIosSizes = {
-  'iphone5': '640x1136',
-  'iphone6': '750x1334',
-  'iphone6p_portrait': '1242x2208',
-  'iphone6p_landscape': '2208x1242',
-  'iphoneX_portrait': '1125x2436',
-  'iphoneX_landscape': '2436x1125',
-  'ipad_portrait_2x': '1536x2048',
-  'ipad_landscape_2x': '2048x1536',
-  // Legacy
-  'iphone': '320x480',
-  'iphone_2x': '640x960',
-  'ipad_portrait': '768x1024',
-  'ipad_landscape': '1024x768'
+const splashIosKeys = {
+  'ios_universal': 'Default@2x~universal~anyany.png',
+  'ios_universal_3x': 'Default@3x~universal~anyany.png',
+  'Default@2x~iphone~anyany': 'Default@2x~iphone~anyany.png',
+  'Default@2x~iphone~comany': 'Default@2x~iphone~comany.png',
+  'Default@2x~iphone~comcom': 'Default@2x~iphone~comcom.png',
+  'Default@3x~iphone~anyanyg': 'Default@3x~iphone~anyanyg.png',
+  'Default@3x~iphone~anycom': 'Default@3x~iphone~anycom.png',
+  'Default@3x~iphone~comany': 'Default@3x~iphone~comany.png',
+  'Default@2x~ipad~anyany': 'Default@2x~ipad~anyany.png',
+  'Default@2x~ipad~comany': 'Default@2x~ipad~comany.png'
 };
 
-const launchAndroidSizes = {
-  'android_mdpi_portrait': '320x480',
-  'android_mdpi_landscape': '480x320',
-  'android_hdpi_portrait': '480x800',
-  'android_hdpi_landscape': '800x480',
-  'android_xhdpi_portrait': '720x1280',
-  'android_xhdpi_landscape': '1280x720',
-  'android_xxhdpi_portrait': '960x1600',
-  'android_xxhdpi_landscape': '1600x960',
-  'android_xxxhdpi_portrait': '1280x1920',
-  'android_xxxhdpi_landscape': '1920x1280'
+const splashAndroidKeys = {
+  'android_mdpi_portrait': 'port-mdpi',
+  'android_mdpi_landscape': 'land-mdpi',
+  'android_hdpi_portrait': 'port-hdpi',
+  'android_hdpi_landscape': 'land-hdpi',
+  'android_xhdpi_portrait': 'port-xhdpi',
+  'android_xhdpi_landscape': 'land-xhdpi',
+  'android_xxhdpi_portrait': 'port-xxhdpi',
+  'android_xxhdpi_landscape': 'land-xxhdpi',
+  'android_xxxhdpi_portrait': 'port-xxxhdpi',
+  'android_xxxhdpi_landscape': 'land-xxxhdpi'
 };
 
 export class CordovaBuilder {
@@ -167,7 +164,7 @@ export class CordovaBuilder {
     }
 
     // Default access rules.
-    // Rules can be extended with App.accesRule() in mobile-config.js.
+    // Rules can be extended with App.accessRule() in mobile-config.js.
     this.accessRules = {
       // Allow the app to ask the system to open these types of URLs.
       // (e.g. in the phone app or an email client)
@@ -233,8 +230,9 @@ export class CordovaBuilder {
 
     _.each(iconsIosSizes, setDefaultIcon);
     _.each(iconsAndroidSizes, setDefaultIcon);
-    _.each(launchIosSizes, setDefaultLaunchScreen);
-    _.each(launchAndroidSizes, setDefaultLaunchScreen);
+    //TODO -> Fix default.
+    _.each(splashIosKeys, setDefaultLaunchScreen);
+    _.each(splashAndroidKeys, setDefaultLaunchScreen);
 
     this.pluginsConfiguration = {};
   }
@@ -348,10 +346,10 @@ export class CordovaBuilder {
 
       Console.debug('Copying resources for mobile apps');
 
-      this.configureAndCopyImages(iconsIosSizes, platformElement.ios, 'icon');
-      this.configureAndCopyImages(iconsAndroidSizes, platformElement.android, 'icon');
-      this.configureAndCopyImages(launchIosSizes, platformElement.ios, 'splash');
-      this.configureAndCopyImages(launchAndroidSizes, platformElement.android, 'splash');
+      this._configureAndCopyIcon(iconsIosSizes, platformElement.ios);
+      this._configureAndCopyIcon(iconsAndroidSizes, platformElement.android);
+      this._configureAndCopySplashImages(splashIosKeys, platformElement.ios);
+      this._configureAndCopySplashImages(splashAndroidKeys, platformElement.android);
     }
 
     this.configureAndCopyResourceFiles(
@@ -367,52 +365,100 @@ export class CordovaBuilder {
     files.writeFile(configXmlPath, formattedXmlConfig, 'utf8');
   }
 
-  configureAndCopyImages(sizes, xmlElement, tag) {
-    const imageAttributes = (name, width, height, src) => {
-      const androidMatch = /android_(.?.dpi)_(landscape|portrait)/g.exec(name);
+  _copyImageToBuildFolderAndAppendToXmlNode(suppliedPath, newFilename, xmlElement, tag, attributes = {}) {
+    const src = files.pathJoin('resources', newFilename);
 
-      let attributes = {
-        src: src,
-        width: width,
-        height: height
-      };
+    files.copyFile(
+        files.pathResolve(this.projectContext.projectDir, suppliedPath),
+        files.pathJoin(this.resourcesPath, newFilename));
 
-      // XXX special case for Android
-      if (androidMatch) {
-        attributes.density =
-          androidMatch[2].substr(0, 4) + '-' + androidMatch[1];
+    // Set it to the xml tree
+    xmlElement.ele(tag, { src, ...attributes });
+  }
+
+  _resolveFilenameForImages = (suppliedPath, key, tag) => {
+    const suppliedFilename = _.last(suppliedPath.split(files.pathSep));
+    let extension = _.last(suppliedFilename.split('.'));
+
+    // XXX special case for 9-patch png's
+    if (suppliedFilename.match(/\.9\.png$/)) {
+      extension = '9.png';
+    }
+
+    return `${key}.${tag}.${extension}`;
+  }
+
+  _configureAndCopyIcon(sizes, xmlElement) {
+    if (!sizes || !xmlElement) {
+      throw new Error("Invalid parameters")
+    }
+
+    Object.entries(sizes).forEach(([key, size]) => {
+      const suppliedPath = this.imagePaths['icon'][key];
+      if (!suppliedPath) return;
+
+      const [width, height] = size.split('x');
+      const filename = this._resolveFilenameForImages(suppliedPath, key, 'icon');
+      this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath, filename, xmlElement, 'icon', { width, height })
+    })
+  }
+
+  _configureAndCopySplashImages(allowedValues, xmlElement) {
+    const isIos = xmlElement.name === 'ios';
+    const appendDarkMode = (stringValue , { separator = '.', withChar = '~' } = {}) => {
+      if (!stringValue) {
+        throw new Error("No string was passed.");
       }
 
-      return attributes;
-    };
+      const darkModeIdentifier = isIos ? 'dark' : 'night';
+      const lastIndexOfSeparator = stringValue.lastIndexOf(separator);
 
-    _.each(sizes, (size, name) => {
-      const [width, height] = size.split('x');
+      if (!lastIndexOfSeparator) {
+        throw new Error("Invalid src value!");
+      }
 
-      const suppliedPath = this.imagePaths[tag][name];
-      if (!suppliedPath) {
+      return stringValue.substring(0, lastIndexOfSeparator) + withChar + darkModeIdentifier + stringValue.substring(lastIndexOfSeparator);
+    }
+
+    Object.entries(allowedValues).forEach(([key, value]) => {
+      const suppliedValue = this.imagePaths['splash'][key];
+      if (!suppliedValue) return;
+
+      let suppliedPath = suppliedValue;
+      let suppliedPathDarkMode = null;
+      if (typeof suppliedValue === 'object') {
+        suppliedPath = suppliedValue.src;
+        suppliedPathDarkMode = suppliedValue.srcDarkMode;
+      }
+
+      if (isIos) {
+        if (suppliedPathDarkMode) {
+          this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPathDarkMode,
+              appendDarkMode(value),
+              xmlElement,
+              'splash');
+        }
+        this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
+            value,
+            xmlElement,
+            'splash');
         return;
       }
 
-      const suppliedFilename = _.last(suppliedPath.split(files.pathSep));
-      let extension = _.last(suppliedFilename.split('.'));
-
-      // XXX special case for 9-patch png's
-      if (suppliedFilename.match(/\.9\.png$/)) {
-        extension = '9.png';
+      const filename = this._resolveFilenameForImages(suppliedPath, key, 'splash');
+      if (suppliedPathDarkMode) {
+        this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPathDarkMode,
+            appendDarkMode(filename, { withChar: '_' }),
+            xmlElement, 'splash',
+            { density: appendDarkMode(value, { separator: '-', withChar: '-' })}
+        );
       }
-
-      const filename = name + '.' + tag + '.' + extension;
-      const src = files.pathJoin('resources', filename);
-
-      // Copy the file to the build folder with a standardized name
-      files.copyFile(
-        files.pathResolve(this.projectContext.projectDir, suppliedPath),
-        files.pathJoin(this.resourcesPath, filename));
-
-      // Set it to the xml tree
-      xmlElement.ele(tag, imageAttributes(name, width, height, src));
-    });
+      this._copyImageToBuildFolderAndAppendToXmlNode(suppliedPath,
+          filename,
+          xmlElement,
+          'splash',
+          { density: value });
+    })
   }
 
   configureAndCopyResourceFiles(resourceFiles, iosElement, androidElement) {
@@ -742,15 +788,15 @@ configuration. The key may be deprecated.`);
      * @memberOf App
      */
     launchScreens: function (launchScreens) {
-      var validDevices =
-        Object.keys(launchIosSizes).concat(Object.keys(launchAndroidSizes));
+      const validDevices =
+        Object.keys(splashIosKeys).concat(Object.keys(splashAndroidKeys));
 
-      _.each(launchScreens, function (value, key) {
-        if (!_.include(validDevices, key)) {
+      Object.keys(launchScreens).forEach((key) => {
+        if (!key in validDevices) {
           Console.labelWarn(`${key}: unknown key in App.launchScreens \
 configuration. The key may be deprecated.`);
         }
-      });
+      })
       Object.assign(builder.imagePaths.splash, launchScreens);
     },
 
