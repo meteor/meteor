@@ -128,6 +128,12 @@ This version should be ignored. Proceed to 2.5.5 above.
 
 * `standard-minifier-js@2.7.3`
   - Using `minifier-js@2.7.3`
+  
+* `mongo@1.14.0`
+  - useUnifiedTopology is not an option anymore, it defaults to true.
+  
+* `npm-mongo@4.2.1`
+  - Update MongoDB driver version to 4.2.1
 
 ## v2.5.1, 2021-11-17
 
