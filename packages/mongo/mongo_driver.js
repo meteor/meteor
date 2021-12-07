@@ -877,6 +877,12 @@ CursorDescription = function (collectionName, selector, options) {
   self.collectionName = collectionName;
   self.selector = Mongo.Collection._rewriteSelector(selector);
   self.options = options || {};
+  // transform fields key in projection
+  const { fields, projection, ...otherOptions } = self.options;
+  // TODO: enable this comment when deprecating the fields option
+  // Log.debug(`fields option has been deprecated, please use the new 'projection' instead`)
+
+  self.options = { ...otherOptions, ...(projection || fields ? {projection: fields || projection} : {}) };
 };
 
 Cursor = function (mongo, cursorDescription) {

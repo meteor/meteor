@@ -131,6 +131,8 @@ This version should be ignored. Proceed to 2.5.5 above.
   
 * `mongo@1.14.0`
   - useUnifiedTopology is not an option anymore, it defaults to true.
+  - fields option is deprecated, we are maintaining a translation layer to "projection" field (now prefered) until the next minor version, where we will start showing alerts.
+
   
 * `npm-mongo@4.2.1`
   - Update MongoDB driver version to 4.2.1
