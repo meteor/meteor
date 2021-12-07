@@ -146,23 +146,8 @@ MongoConnection = function (url, options) {
 
   var mongoOptions = Object.assign({
     ignoreUndefined: true,
-    // (node:59240) [MONGODB DRIVER] Warning: Current Server Discovery and
-    // Monitoring engine is deprecated, and will be removed in a future version.
-    // To use the new Server Discover and Monitoring engine, pass option
-    // { useUnifiedTopology: true } to the MongoClient constructor.
-    useUnifiedTopology: true,
   }, userOptions);
 
-  // The autoReconnect and reconnectTries options are incompatible with
-  // useUnifiedTopology: https://github.com/meteor/meteor/pull/10861#commitcomment-37525845
-  if (!mongoOptions.useUnifiedTopology) {
-    // Reconnect on error. This defaults to true, but it never hurts to be
-    // explicit about it.
-    mongoOptions.autoReconnect = true;
-    // Try to reconnect forever, instead of stopping after 30 tries (the
-    // default), with each attempt separated by 1000ms.
-    mongoOptions.reconnectTries = Infinity;
-  }
 
   // Disable the native parser by default, unless specifically enabled
   // in the mongo URL.
