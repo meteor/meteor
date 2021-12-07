@@ -416,7 +416,7 @@ export class CordovaBuilder {
         throw new Error("Invalid src value!");
       }
 
-      return stringValue.substring(0, lastIndexOfSeparator) + withChar + darkModeIdentifier + stringValue.substring(lastIndexOfSeparator);
+      return `${stringValue.substring(0, lastIndexOfSeparator)}${withChar}${darkModeIdentifier}${stringValue.substring(lastIndexOfSeparator)}`;
     }
 
     Object.entries(allowedValues).forEach(([key, value]) => {
