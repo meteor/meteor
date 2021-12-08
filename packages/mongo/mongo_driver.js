@@ -150,12 +150,12 @@ MongoConnection = function (url, options) {
 
 
 
-  // Internally the oplog connections specify their own poolSize
+  // Internally the oplog connections specify their own maxPoolSize
   // which we don't want to overwrite with any user defined value
-  if (_.has(options, 'poolSize')) {
+  if (_.has(options, 'maxPoolSize')) {
     // If we just set this for "server", replSet will override it. If we just
     // set it for replSet, it will be ignored if we're not using a replSet.
-    mongoOptions.poolSize = options.poolSize;
+    mongoOptions.maxPoolSize = options.maxPoolSize;
   }
 
   // Transform options like "tlsCAFileAsset": "filename.pem" into
