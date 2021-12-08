@@ -70,19 +70,70 @@
 
 <template name="_loginButtonsLoggedOutAllServices">
   {{#each services}}
-    {{#if isPasswordService}}
-      {{#if hasOtherServices}} {{! the password service will always come last }}
-        {{> _loginButtonsLoggedOutPasswordServiceSeparator}}
+    {{#if isInternalService}}
+      {{#if isPasswordService}}
+        {{#if hasOtherServices}} {{! the password service will always come last, but before passwordless }}
+          {{> _loginButtonsLoggedOutPasswordServiceSeparator}}
+        {{/if}}
+        {{> _loginButtonsLoggedOutPasswordService}}
       {{/if}}
-      {{> _loginButtonsLoggedOutPasswordService}}
+      {{#if isPasswordlessService}}
+        {{#if hasPasswordService}}
+          <br />
+        {{/if}}
+        {{#if displaySeparatorForPasswordless}} {{! the passwordless service will always come last }}
+          {{> _loginButtonsLoggedOutPasswordServiceSeparator}}
+        {{/if}}
+        {{> _loginButtonsLoggedOutPasswordlessService}}
+      {{/if}}
     {{else}}
       {{> _loginButtonsLoggedOutSingleLoginButton}}
     {{/if}}
   {{/each}}
-
-  {{#unless hasPasswordService}}
+  {{#unless hasInternalService}}
     {{> _loginButtonsMessages}}
   {{/unless}}
+</template>
+
+<template name="_loginButtonsLoggedOutPasswordlessService">
+  <form class="login-form login-passwordless-form">
+    {{#each fields}}
+      {{> _loginButtonsFormField}}
+    {{/each}}
+
+    {{> _loginButtonsMessages}}
+
+    <button
+      class="login-button login-button-form-submit"
+      id="login-buttons-passwordless"
+    >
+      {{#if inPasswordlessConfirmation}}
+        Submit
+      {{else}}
+        {{#if inSignupFlow}}
+          Create account
+        {{else}}
+          Get login code
+        {{/if}}
+      {{/if}}
+    </button>
+    {{#if inLoginFlow}}
+      {{#if showCreateAccountLink}}
+        <div class="additional-link-container">
+          <a id="signup-link" class="additional-link">Create account</a>
+        </div>
+      {{/if}}
+
+      {{#if inPasswordlessConfirmation}}
+        <div class="additional-link-container">
+          <a id="resend-passwordless-code" class="additional-link">Re-send code</a>
+        </div>
+      {{/if}}
+    {{/if}}
+    {{#if inSignupFlow}}
+      {{> _loginButtonsBackToLoginLink}}
+    {{/if}}
+  </form>
 </template>
 
 <template name="_loginButtonsLoggedOutPasswordServiceSeparator">
@@ -169,7 +220,7 @@
         id="login-{{fieldName}}"
         type="{{inputType}}"
         value="{{fieldValue}}"
-        autocomplete="{{autocomplete}}" 
+        autocomplete="{{autocomplete}}"
       />
     </div>
   {{/if}}

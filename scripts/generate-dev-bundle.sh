@@ -33,7 +33,7 @@ downloadNodeFromS3() {
     S3_TGZ="node_${UNAME}_${ARCH}_v${NODE_VERSION}.tar.gz"
     NODE_URL="https://${S3_HOST}/dev-bundle-node-${NODE_BUILD_NUMBER}/${S3_TGZ}"
     echo "Downloading Node from ${NODE_URL}" >&2
-    curl "${NODE_URL}" | tar zx --strip-components 1
+    curl "${NODE_URL}" | tar zx --strip 1
 }
 
 downloadOfficialNode() {
@@ -70,7 +70,13 @@ case $OS in
         ;;
 esac
 
-MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
+
+if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
+  MONGO_NAME="mongodb-${OS}-x86_64-${MONGO_VERSION}"
+else
+  MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
+fi
+
 MONGO_TGZ="${MONGO_NAME}.tgz"
 MONGO_URL="${MONGO_BASE_URL}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"

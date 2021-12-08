@@ -1,10 +1,10 @@
 Package.describe({
   summary: 'Logging facility.',
-  version: '1.2.0'
+  version: '1.3.1'
 });
 
 Npm.depends({
-  'cli-color': '2.0.0'
+  'chalk': '4.1.1'
 });
 
 Npm.strip({
@@ -19,6 +19,8 @@ Package.onUse(function (api) {
   // `ecmascript-runtime-client@0.6.2` or newer.
   api.use(['ejson', 'ecmascript', 'ecmascript-runtime-client']);
   api.mainModule('logging.js');
+  api.addFiles('logging_server.js', 'server')
+  api.addFiles('logging_browser.js', 'client')
   api.mainModule('logging_cordova.js', 'web.cordova');
 });
 

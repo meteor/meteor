@@ -1,0 +1,31 @@
+---
+blank_issues_enabled: false
+contact_links:
+  -
+    about: Visit our Discussions page
+    name: 💡 Feature requests
+    url: https://github.com/meteor/meteor/discussions
+  -
+    about: Ask a question or for help on the Meteor forums
+    name: ❓ Question
+    url: https://forums.meteor.com/
+  -
+    about: Chat on our community Slack
+    name: 🗯 Chat
+    url: https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc
+  -
+    about: The official Meteor website
+    name: ℹ️ Website
+    url: https://www.meteor.com
+  -
+    about: Meteor documentation
+    name: 📜 Documentation
+    url: https://docs.meteor.com
+  -
+    about: The official Meteor guide on how to build great apps with Meteor
+    name: ☄ Guide
+    url: https://guide.meteor.com
+  -
+    about: Check out example Meteor apps
+    name: ‍🎨 Examples
+    url: https://github.com/meteor/examples

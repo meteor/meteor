@@ -1,0 +1,26 @@
+name: NPM eslint-plugin-meteor
+on:
+  push:
+    paths:
+      - "npm-packages/eslint-plugin-meteor/**"
+  pull_request:
+    paths:
+      - "npm-packages/eslint-plugin-meteor/**"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: npm-packages/eslint-plugin-meteor
+    strategy:
+      matrix:
+        node-version: [12.x, 14.x]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - run: npm ci
+      - run: npm test

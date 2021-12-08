@@ -79,7 +79,8 @@ function updateVersions(shouldReloadClientProgram) {
       versionNonRefreshable: AUTOUPDATE_VERSION ||
         WebApp.calculateClientHashNonRefreshable(arch),
       versionReplaceable: AUTOUPDATE_VERSION ||
-        WebApp.calculateClientHashReplaceable(arch)
+        WebApp.calculateClientHashReplaceable(arch),
+      versionHmr: WebApp.clientPrograms[arch].hmrVersion
     };
   });
 

@@ -1,45 +1,49 @@
-var terser;
+let terser;
 
-meteorJsMinify = function (source) {
-  var result = {};
-  var NODE_ENV = process.env.NODE_ENV || "development";
-
+const terserMinify = async (source, options, callback) => {
   terser = terser || Npm.require("terser");
-
   try {
-    var terserResult = terser.minify(source, {
-      compress: {
-        drop_debugger: false,
-        unused: false,
-        dead_code: true,
-        global_defs: {
-          "process.env.NODE_ENV": NODE_ENV
-        }
-      },
-      // Fix issue #9866, as explained in this comment:
-      // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
-      // And fix terser issue #117: https://github.com/terser-js/terser/issues/117
-      safari10: true,
-    });
-
-    if (typeof terserResult.code === "string") {
-      result.code = terserResult.code;
-      result.minifier = 'terser';
-    } else {
-      throw terserResult.error ||
-        new Error("unknown terser.minify failure");
-    }
-
+    const result = await terser.minify(source, options);
+    callback(null, result);
+    return result;
   } catch (e) {
-    // Although Babel.minify can handle a wider variety of ECMAScript
-    // 2015+ syntax, it is substantially slower than UglifyJS/terser, so
-    // we use it only as a fallback.
-    var options = Babel.getMinifierOptions({
-      inlineNodeEnv: NODE_ENV
-    });
-    result.code = Babel.minify(source, options).code;
-    result.minifier = 'babel-minify';
+    callback(e);
+    return e;
   }
+};
+
+export const meteorJsMinify = function (source) {
+  const result = {};
+  const NODE_ENV = process.env.NODE_ENV || "development";
+
+
+  const options = {
+    compress: {
+      drop_debugger: false,  // remove debugger; statements
+      unused: false,         // drop unreferenced functions and variables
+      dead_code: true,       // remove unreachable code
+      typeofs: false,        // set to false due to known issues in IE10
+      global_defs: {
+        "process.env.NODE_ENV": NODE_ENV
+      }
+    },
+    // Fix issue #9866, as explained in this comment:
+    // https://github.com/mishoo/UglifyJS2/issues/1753#issuecomment-324814782
+    // And fix terser issue #117: https://github.com/terser-js/terser/issues/117
+    safari10: true,          // set this option to true to work around the Safari 10/11 await bug
+  };
+
+  const terserJsMinify = Meteor.wrapAsync(terserMinify);
+  let terserResult;
+  try {
+    terserResult = terserJsMinify(source, options);
+  } catch (e) {
+    throw e;
+  }
+
+  // this is kept to maintain backwards compatability
+  result.code = terserResult.code;
+  result.minifier = 'terser';
 
   return result;
 };

@@ -10,6 +10,9 @@ export const Autoupdate = {};
 // Stores acceptable client versions.
 const clientVersions = new ClientVersions();
 
+// Used by hot-module-replacement
+Autoupdate._clientVersions = clientVersions;
+
 Meteor.connection.registerStore(
   "meteor_autoupdate_clientVersions",
   clientVersions.createStore()

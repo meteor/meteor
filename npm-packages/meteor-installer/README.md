@@ -1,28 +1,12 @@
-## Windows Meteor Installer
+## Meteor Installer
 
-Requires [Node.js](https://nodejs.org/) 12 or newer.
-
-Install Meteor on Windows by running:
+Install Meteor by running:
 
 ```bash
 npm install -g meteor
 ```
 
-If Meteor is already installed, it will do nothing.
-
-Uninstall by running:
-
-```bash
-meteor-installer uninstall
-npm uninstall -g meteor
-```
-
-The installer runs faster when [Windows Developer Mode](https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) is enabled. The installation extracts a large number of small files, which Windows Defender can cause to be very slow.
-
-It is not recommended to run the installer and `meteor` as administrator. Otherwise, if the administrator is a separate user the `meteor` command might not always be found.
-
-If you use a node version manager that uses a separate global `node_modules` folder for each Node version, you will need to re-install the `meteor` npm package when changing to a Node version for the first time. Otherwise, the `meteor` command will no longer be found.
-
+[Read more](https://www.meteor.com/developers/install)
 
 ### Meteor version relationship
 
@@ -32,3 +16,15 @@ If you use a node version manager that uses a separate global `node_modules` fol
 | 2.3.2       | 2.3.1                   |
 | 2.3.3       | 2.3.2                   |
 | 2.3.4       | 2.3.4                   |
+| 2.3.5       | 2.3.5                   |
+| 2.3.6       | 2.3.5                   |
+| 2.3.7       | 2.3.6                   |
+| 2.4.0       | 2.4                     |
+| 2.4.1       | 2.4                     |
+| 2.5.0       | 2.5                     |
+| 2.5.1       | 2.5.1                   |
+| 2.5.2       | 2.5.1                   |
+
+### Important note
+
+This npm package is not Meteor itself, this npm package is just an installer. You should not include it as a dependency in your project. If you do your deploy is going to be broken.

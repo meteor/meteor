@@ -1,9 +1,15 @@
 import { Meteor } from 'meteor/meteor';
 import { LinksCollection } from '/imports/api/links';
-import './apollo'
+import { startApolloServer } from './apollo';
 
 function insertLink({ title, url }) {
   LinksCollection.insert({title, url, createdAt: new Date()});
+}
+
+try {
+  startApolloServer().then();
+} catch (e) {
+  console.error(e.reason);
 }
 
 Meteor.startup(() => {

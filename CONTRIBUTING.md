@@ -21,11 +21,11 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://forums.meteor.com/c/meetups) and events and helping to moderate our [forums](https://forums.meteor.com/).
 
-If you can think of any changes to the project, [documentation](https://github.com/meteor/docs), or [guide](https://github.com/meteor/guide) that would improve the contributor experience, let us know by opening an issue in the correct repository!
+If you can think of any changes to the project, [documentation](https://github.com/meteor/meteor/tree/devel/docs), or [guide](https://github.com/meteor/meteor/tree/devel/guide) that would improve the contributor experience, let us know by opening an issue!
 
 ### Finding work
 
-Are you new here? Please check our issues `good-first-issue`: [core](https://github.com/meteor/meteor/labels/good%20first%20issue), [docs](https://github.com/meteor/docs/labels/good%20first%20issue), [guide](https://github.com/meteor/guide/labels/good%20first%20issue).
+Are you new here? Please [check](https://github.com/meteor/meteor/labels/good%20first%20issue) our issues `good-first-issue`.
 
 We curate specific issues that would make great pull requests for community contributors by applying the `ready` label.
 
@@ -37,34 +37,17 @@ If in doubt about the best way to implement something, please create additional 
 
 Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
 
-#### Issue Triager
-
-Issue Triagers are members of the community that help every week with  Meteor’s open issues and bug reports.
-
-Current Issue Triagers:
-- [meteor](https://github.com/meteor/meteor)
-  - [@klaussner](https://github.com/klaussner)
-
-- [docs](https://github.com/meteor/docs) / [guide](https://github.com/meteor/guide)
-  - [@lorensr](https://github.com/lorensr)
-
 #### Reviewer
 
 Reviwers are members of the community that help with Pull Requests reviews.
 
 Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
-  - [@klaussner](https://github.com/klaussner)
-  - [@zodern](https://github.com/zodern)
+  - [@filipenevola](https://github.com/filipenevola)
+  - [@renanccastro](https://github.com/renanccastro)
   - [@StorytellerCZ](https://github.com/StorytellerCZ)
-  - [@sebakerckhof](https://github.com/sebakerckhof)
-  - [@filipenevola](https://github.com/filipenevola)
-  - [@renanccastro](https://github.com/renanccastro)
-
-- [docs](https://github.com/meteor/docs) / [guide](https://github.com/meteor/guide)
+  - [@zodern](https://github.com/zodern)
   - [@lorensr](https://github.com/lorensr)
-  - [@filipenevola](https://github.com/filipenevola)
-  - [@renanccastro](https://github.com/renanccastro)
 
 #### Core Committer
 
@@ -166,7 +149,7 @@ Learn how we use GitHub labels [here](LABELS.md)
 
 ## Documentation
 
-If you'd like to contribute to Meteor's documentation, head over to https://github.com/meteor/docs or https://github.com/meteor/guide and create issues or pull requests there.
+If you'd like to contribute to Meteor's documentation, head over to https://docs.meteor.com or https://guide.meteor.com and if you find something that could be better click in "Edit on GitHub" footer to edit and submit a PR.
 
 ## Blaze
 

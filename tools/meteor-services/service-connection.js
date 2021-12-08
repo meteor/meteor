@@ -1,4 +1,3 @@
-var _ = require("underscore");
 import { loadIsopackage } from '../tool-env/isopackets.js';
 var files = require('../fs/files');
 var fiberHelpers = require("../utils/fiber-helpers.js");
@@ -29,7 +28,7 @@ var ServiceConnection = function (endpointUrl, options) {
 
   // ServiceConnection never should retry connections: just one TCP connection
   // is enough, and any errors on it should be detected promptly.
-  options = _.extend({}, options, {
+  options = Object.assign({}, options, {
     // We found that this was likely to time out with the DDP default of 10s,
     // especially if the CPU is churning on bundling (eg, for the stats
     // connection which we start in parallel with bundling).
@@ -99,7 +98,7 @@ var ServiceConnection = function (endpointUrl, options) {
   connectPromise.await();
 };
 
-_.extend(ServiceConnection.prototype, {
+Object.assign(ServiceConnection.prototype, {
   call: function (name, ...args) {
     return this.apply(name, args);
   },
