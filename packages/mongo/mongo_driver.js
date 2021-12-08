@@ -258,9 +258,7 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
   if (! self.db)
     throw Error("rawCollection called before Connection created?");
 
-  var future = new Future;
-  self.db.collection(collectionName, future.resolver());
-  return future.wait();
+  return self.db.collection(collectionName);
 };
 
 MongoConnection.prototype._createCappedCollection = function (
