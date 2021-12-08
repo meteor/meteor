@@ -3318,7 +3318,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) 
   var c = new Mongo.Collection(Random.id());
   var rawCollection = c.rawCollection();
   test.isTrue(rawCollection);
-  test.isTrue(rawCollection.findAndModify);
+  test.isTrue(rawCollection.findOneAndUpdate);
   var rawDb = c.rawDatabase();
   test.isTrue(rawDb);
   test.isTrue(rawDb.admin);
