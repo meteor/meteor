@@ -679,21 +679,21 @@ var launchMongo = function(options) {
     stopOrReadyPromise.await();
   };
 
-  var initiateReplSetAndWaitForReady = function() {
+  var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      const { MongoClient, Server } = loadIsopackage(
-        'npm-mongo'
+      const {MongoClient} = loadIsopackage(
+          'npm-mongo'
       ).NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
       const client = new MongoClient(
-        `mongodb://127.0.0.1:${options.port}`, {
-          poolSize: 1,
-          socketOptions: {
-            connectTimeoutMS: 60000,
-          },
-        }
+          `mongodb://127.0.0.1:${options.port}`, {
+            minPoolSize: 1,
+            maxPoolSize: 1,
+            socketTimeoutMS: 60000,
+            directConnection: true
+          }
       );
 
       yieldingMethod(client, 'connect');
@@ -707,7 +707,7 @@ var launchMongo = function(options) {
         _id: replSetName,
         version: 1,
         protocolVersion: 1,
-        members: [{ _id: 0, host: '127.0.0.1:' + options.port, priority: 100 }],
+        members: [{_id: 0, host: '127.0.0.1:' + options.port, priority: 100}],
       };
 
       try {
@@ -762,7 +762,7 @@ var launchMongo = function(options) {
       // Wait until the primary is writable. If it isn't writable after one
       // minute, throw an error and report the replica set status.
       while (!stopped) {
-        const { ismaster } = yieldingMethod(db.admin(), 'command', {
+        const {ismaster} = yieldingMethod(db.admin(), 'command', {
           isMaster: 1,
         });
 
@@ -774,7 +774,7 @@ var launchMongo = function(options) {
           });
 
           throw new Error(
-            'Primary not writable after one minute. Last replica set status: ' +
+              'Primary not writable after one minute. Last replica set status: ' +
               JSON.stringify(status)
           );
         }
@@ -791,6 +791,7 @@ var launchMongo = function(options) {
       }
     }
   };
+  console.log("DONE! - Enabling rplset")
 
   try {
     if (options.multiple) {
@@ -812,6 +813,7 @@ var launchMongo = function(options) {
       var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
       launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
+        console.log("got here");
         initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.

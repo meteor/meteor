@@ -190,13 +190,13 @@ MongoConnection = function (url, options) {
         }
 
         var db = client.db();
-
+        const helloDocument = db.admin().command( { hello: 1 } ).await();
         // First, figure out what the current primary is, if any.
-        if (db.serverConfig.isMasterDoc) {
-          self._primary = db.serverConfig.isMasterDoc.primary;
+        if (helloDocument.isWritablePrimary) {
+          self._primary = helloDocument.primary;
         }
 
-        db.serverConfig.on(
+        client.topology.on(
           'joined', Meteor.bindEnvironment(function (kind, doc) {
             if (kind === 'primary') {
               if (doc.primary !== self._primary) {
