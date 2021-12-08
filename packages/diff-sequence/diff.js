@@ -149,27 +149,29 @@ export const DiffSequence = {
       }
 
       // pull out the LCS/LIS into unmoved
+      //Change from Array.push() to Array.unshift() to reverse the order
       var idx = (max_seq_len === 0 ? -1 : seq_ends[max_seq_len-1]);
       while (idx >= 0) {
-        unmoved.push(idx);
+        unmoved.unshift(idx);
         idx = ptrs[idx];
       }
-      // the unmoved item list is built backwards, so fix that
-      unmoved.reverse();
 
       // the last group is always anchored by the end of the result list, which is
       // an id of "null"
       unmoved.push(new_results.length);
 
-      old_results.forEach(function (doc) {
+
+      //Remove Array.forEach() replace with for..let loop (faster)
+      for(let doc of old_results) {
         if (!new_presence_of_id[doc._id])
           observer.removed && observer.removed(doc._id);
-      });
+      }
 
       // for each group of things in the new_results that is anchored by an unmoved
       // element, iterate through the things before it.
       var startOfGroup = 0;
-      unmoved.forEach(function (endOfGroup) {
+      //Remove Array.forEach() replace with for..let loop (faster)
+      for(let endOfGroup of unmoved) {
         var groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
         var oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
@@ -202,7 +204,7 @@ export const DiffSequence = {
           }
         }
         startOfGroup = endOfGroup+1;
-      });
+      }
     },
     diffObjects: (left, right, callbacks) => {
       Object.keys(left).forEach(key => {
@@ -252,12 +254,15 @@ export const DiffSequence = {
       return Object.fromEntries(fields);
     },
     applyChanges: (doc, changeFields) => {
-      Object.keys(changeFields).forEach(key => {
+      const keys = Object.keys(changeFields);
+      //Convert Array.forEach() to for..of loop (faster)
+      for(let key of keys){
         const value = changeFields[key];
         if (typeof value === "undefined")
           delete doc[key];
         else 
           doc[key] = value;
-      });
+      };
+      return doc;
     }
 }
