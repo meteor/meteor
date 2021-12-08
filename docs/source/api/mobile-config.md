@@ -32,7 +32,7 @@ App.icons({
 
 App.launchScreens({
   'ios_universal': { src: 'splash/Default@2x.png', srcDarkMode: 'splash/Default@2x~dark.png' },
-  'ios_universal_3x': 'splash/Default~iphone5.png',
+  'ios_universal_3x': 'splash/Default@3x.png',
   // More screen sizes and platforms...
 });
 
