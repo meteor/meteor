@@ -688,12 +688,12 @@ var launchMongo = function(options) {
 
       // Connect to the intended primary and start a replset.
       const client = new MongoClient(
-        new Server('127.0.0.1', options.port, {
+        `mongodb://127.0.0.1:${options.port}`, {
           poolSize: 1,
           socketOptions: {
             connectTimeoutMS: 60000,
           },
-        })
+        }
       );
 
       yieldingMethod(client, 'connect');
