@@ -149,17 +149,6 @@ MongoConnection = function (url, options) {
   }, userOptions);
 
 
-  // Disable the native parser by default, unless specifically enabled
-  // in the mongo URL.
-  // - The native driver can cause errors which normally would be
-  //   thrown, caught, and handled into segfaults that take down the
-  //   whole app.
-  // - Binary modules don't yet work when you bundle and move the bundle
-  //   to a different platform (aka deploy)
-  // We should revisit this after binary npm module support lands.
-  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-    mongoOptions.native_parser = false;
-  }
 
   // Internally the oplog connections specify their own poolSize
   // which we don't want to overwrite with any user defined value
