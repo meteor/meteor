@@ -190,9 +190,10 @@ MongoConnection = function (url, options) {
 
 
   var connectFuture = new Future;
-  MongoDB.connect(
+  new MongoDB.MongoClient(
     url,
-    mongoOptions,
+    mongoOptions
+  ).connect(
     Meteor.bindEnvironment(
       function (err, client) {
         if (err) {
