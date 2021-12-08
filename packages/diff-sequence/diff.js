@@ -65,11 +65,11 @@ export const DiffSequence = {
       var projectionFn = options.projectionFn || EJSON.clone;
 
       var new_presence_of_id = {};
-      new_results.forEach(function (doc) {
+      for(let doc of new_results){
         if (new_presence_of_id[doc._id])
           Meteor._debug("Duplicate _id in new_results");
         new_presence_of_id[doc._id] = true;
-      });
+      }
 
       var old_index_of_id = {};
       old_results.forEach(function (doc, i) {
