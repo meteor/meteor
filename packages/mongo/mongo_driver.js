@@ -374,7 +374,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self.rawCollection(collection_name);
-    collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
+    collection.insertOne(replaceTypes(document, replaceMeteorAtomWithMongo),
                       {safe: true}, callback);
   } catch (err) {
     write.committed();
@@ -1148,9 +1148,9 @@ _.extend(SynchronousCursor.prototype, {
     return self.map(_.identity);
   },
 
-  count: function (options = {}) {
+  count: function () {
     var self = this;
-    return self._synchronousCount(options).wait();
+    return self._synchronousCount().wait();
   },
 
   // This method is NOT wrapped in Cursor.

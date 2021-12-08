@@ -133,7 +133,7 @@ This version should be ignored. Proceed to 2.5.5 above.
   - useUnifiedTopology is not an option anymore, it defaults to true.
   - fields option is deprecated, we are maintaining a translation layer to "projection" field (now prefered) until the next minor version, where we will start showing alerts.
   - _ensureIndex is now showing a deprecation message
-  
+  - applySkipLimit option for count() on find cursors is no longer supported.
 
   
 * `npm-mongo@4.2.1`
