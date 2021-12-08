@@ -92,7 +92,6 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     args = ['-x86_64', mongodPath, ...args];
     mongodPath = 'arch';
   }
-  console.log(args.join(' '))
   return child_process.spawn(mongodPath, args, {
     // Apparently in some contexts, Mongo crashes if your locale isn't set up
     // right. I wasn't able to reproduce it, but many people on #4019
@@ -791,7 +790,6 @@ var launchMongo = function(options) {
       }
     }
   };
-  console.log("DONE! - Enabling rplset")
 
   try {
     if (options.multiple) {
@@ -813,7 +811,6 @@ var launchMongo = function(options) {
       var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
       launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
-        console.log("got here");
         initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.

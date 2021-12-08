@@ -311,13 +311,11 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
 
   // Regression test for https://github.com/meteor/meteor/issues/7436
-  //  - ensure applySkipLimit defaults to false for count()
+  //  - ensure applySkipLimit defaults to true for count()
   // Note that the current behavior is inconsistent on the client.
   //  (https://github.com/meteor/meteor/issues/1201)
   if (Meteor.isServer) {
-    test.equal(coll.find({run: run}, {limit: 1}).count(), 2);
-    test.equal(coll.find({run: run}, {limit: 1}).count(true), 1);
-    test.equal(coll.find({run: run}, {limit: 1}).count(false), 2);
+    test.equal(coll.find({run: run}, {limit: 1}).count(), 1);
   }
 
   var cur = coll.find({run: run}, {sort: ["x"]});
