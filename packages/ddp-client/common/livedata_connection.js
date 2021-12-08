@@ -6,7 +6,7 @@ import { Random } from 'meteor/random';
 import { Hook } from 'meteor/callback-hook';
 import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
-import { DiffSequence } from "../../diff-sequence/diff"
+import { DiffSequence } from "meteor/diff-sequence"
 import MethodInvoker from './MethodInvoker.js';
 import {
   hasOwn,

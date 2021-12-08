@@ -1,4 +1,3 @@
-import { DiffSequence } from "../diff-sequence/diff";
 var Future = Npm.require('fibers/future');
 var PHASE = {
   QUERYING: "QUERYING",

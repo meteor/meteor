@@ -8,8 +8,6 @@ import {
   populateDocumentWithQueryFields,
   projectionDetails,
 } from './common.js';
-import { DiffSequence } from "../diff-sequence/diff";
-
 
 // XXX type checking on selectors (graceful error if malformed)
 

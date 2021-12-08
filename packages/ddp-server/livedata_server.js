@@ -1,7 +1,5 @@
 DDPServer = {};
 
-import { DiffSequence} from "../diff-sequence/diff"
-
 var Fiber = Npm.require('fibers');
 
 // Publication strategies define how we handle data from published cursors at the collection level
