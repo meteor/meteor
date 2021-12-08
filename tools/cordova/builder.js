@@ -760,29 +760,30 @@ configuration. The key may be deprecated.`);
      * be special "Nine-patch" image files that specify how they should be
      * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
      *
+     * You have the option to pass only one source image string for each key
+     * or pass an object containing a dark mode image too ({src, srcDarkMode}).
+     *
      * Valid key values:
-     * - `iphone5` (640x1136) // iPhone 5, SE
-     * - `iphone6` (750x1334) // iPhone 6, 6s, 7, 8
-     * - `iphone6p_portrait` (1242x2208) // iPhone 6 Plus, 6s Plus, 7 Plus, 8 Plus
-     * - `iphone6p_landscape` (2208x1242) // iPhone 6 Plus, 6s Plus, 7 Plus, 8 Plus
-     * - `iphoneX_portrait` (1125x2436) // iPhone X
-     * - `iphoneX_landscape` (2436x1125) // iPhone X
-     * - `ipad_portrait_2x` (1536x2048) // iPad, iPad mini
-     * - `ipad_landscape_2x` (2048x1536) // iPad, iPad mini
-     * - `iphone` (320x480) // Legacy
-     * - `iphone_2x` (640x960) // Legacy
-     * - `ipad_portrait` (768x1024) // Legacy
-     * - `ipad_landscape` (1024x768) // Legacy
-     * - `android_mdpi_portrait` (320x480)
-     * - `android_mdpi_landscape` (480x320)
-     * - `android_hdpi_portrait` (480x800)
-     * - `android_hdpi_landscape` (800x480)
-     * - `android_xhdpi_portrait` (720x1280)
-     * - `android_xhdpi_landscape` (1280x720)
-     * - `android_xxhdpi_portrait` (960x1600)
-     * - `android_xxhdpi_landscape` (1600x960)
-     * - `android_xxxhdpi_portrait` (1280x1920)
-     * - `android_xxxhdpi_landscape` (1920x1280)
+     * - 'ios_universal' (Default@2xuniversalanyany.png)
+     * - 'ios_universal_3x' (Default@3xuniversalanyany.png)
+     * - 'Default@2xiphoneanyany'
+     * - 'Default@2xiphonecomany'
+     * - 'Default@2xiphonecomcom'
+     * - 'Default@3xiphoneanyanyg'
+     * - 'Default@3xiphoneanycom'
+     * - 'Default@3xiphonecomany'
+     * - 'Default@2xipadanyany'
+     * - 'Default@2xipadcomany'
+     * - 'android_mdpi_portrait' (320x480)
+     * - 'android_mdpi_landscape' (480x320)
+     * - 'android_hdpi_portrait' (480x800)
+     * - 'android_hdpi_landscape' (800x480)
+     * - 'android_xhdpi_portrait' (720x1280)
+     * - 'android_xhdpi_landscape' (1280x720)
+     * - 'android_xxhdpi_portrait' (960x1600)
+     * - 'android_xxhdpi_landscape' (1600x960)
+     * - 'android_xxxhdpi_portrait' (1280x1920)
+     * - 'android_xxxhdpi_landscape' (1920x1280)
      *
      * @memberOf App
      */

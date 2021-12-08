@@ -31,8 +31,8 @@ App.icons({
 });
 
 App.launchScreens({
-  'iphone_2x': 'splash/Default@2x~iphone.png',
-  'iphone5': 'splash/Default~iphone5.png',
+  'ios_universal': { src: 'splash/Default@2x.png', srcDarkMode: 'splash/Default@2x~dark.png' },
+  'ios_universal_3x': 'splash/Default~iphone5.png',
   // More screen sizes and platforms...
 });
 
