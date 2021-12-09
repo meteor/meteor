@@ -754,7 +754,7 @@ configuration. The key may be deprecated.`);
      * @summary Set the launch screen images for your mobile app.
      * @param {Object} launchScreens A dictionary where keys are different
      * devices, screen sizes, and orientations, and the values are image paths
-     * relative to the project root directory.
+     * relative to the project root directory or an object containing a dark mode image path too ({src, srcDarkMode}).
      *
      * For Android, launch screen images should
      * be special "Nine-patch" image files that specify how they should be
@@ -762,30 +762,28 @@ configuration. The key may be deprecated.`);
      *
      * For best practices when developing a splash image, see the [Apple Guidelines](https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/launch-screen/).
      *
-     * You have the option to pass only one source image string for each key
-     * or pass an object containing a dark mode image too ({src, srcDarkMode}).
      *
      * Valid key values:
-     * - 'ios_universal' (Default@2xuniversalanyany.png - 2732x2732) - All @2x devices, if device specific is not declared.
-     * - 'ios_universal_3x' (Default@3xuniversalanyany.png - 2208x2208) - All @3x devices, if device specific is not declared.
-     * - 'Default@2xiphoneanyany' (1334x1334) - iPhone SE/6s/7/8/XR
-     * - 'Default@2xiphonecomany' (750x1334) - iPhone SE/6s/7/8/XR
-     * - 'Default@2xiphonecomcom' (1334x750) - iPhone SE/6s/7/8/XR
-     * - 'Default@3xiphoneanyanyg' (2208x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
-     * - 'Default@3xiphoneanycom' (2208x1242) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
-     * - 'Default@3xiphonecomany' (1242x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
-     * - 'Default@2xipadanyany' (2732x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
-     * - 'Default@2xipadcomany' (1278x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
-     * - 'android_mdpi_portrait' (320x480)
-     * - 'android_mdpi_landscape' (480x320)
-     * - 'android_hdpi_portrait' (480x800)
-     * - 'android_hdpi_landscape' (800x480)
-     * - 'android_xhdpi_portrait' (720x1280)
-     * - 'android_xhdpi_landscape' (1280x720)
-     * - 'android_xxhdpi_portrait' (960x1600)
-     * - 'android_xxhdpi_landscape' (1600x960)
-     * - 'android_xxxhdpi_portrait' (1280x1920)
-     * - 'android_xxxhdpi_landscape' (1920x1280)
+     * - `ios_universal` (Default@2xuniversalanyany.png - 2732x2732) - All @2x devices, if device specific is not declared.
+     * - `ios_universal_3x` (Default@3xuniversalanyany.png - 2208x2208) - All @3x devices, if device specific is not declared.
+     * - `Default@2xiphoneanyany` (1334x1334) - iPhone SE/6s/7/8/XR
+     * - `Default@2xiphonecomany` (750x1334) - iPhone SE/6s/7/8/XR
+     * - `Default@2xiphonecomcom` (1334x750) - iPhone SE/6s/7/8/XR
+     * - `Default@3xiphoneanyanyg` (2208x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
+     * - `Default@3xiphoneanycom` (2208x1242) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
+     * - `Default@3xiphonecomany` (1242x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
+     * - `Default@2xipadanyany` (2732x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
+     * - `Default@2xipadcomany` (1278x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
+     * - `android_mdpi_portrait` (320x480)
+     * - `android_mdpi_landscape` (480x320)
+     * - `android_hdpi_portrait` (480x800)
+     * - `android_hdpi_landscape` (800x480)
+     * - `android_xhdpi_portrait` (720x1280)
+     * - `android_xhdpi_landscape` (1280x720)
+     * - `android_xxhdpi_portrait` (960x1600)
+     * - `android_xxhdpi_landscape` (1600x960)
+     * - `android_xxxhdpi_portrait` (1280x1920)
+     * - `android_xxxhdpi_landscape` (1920x1280)
      *
      * @memberOf App
      */
