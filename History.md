@@ -4,6 +4,8 @@
 
 #### Breaking Changes
 
+* Legacy launch screens keys for iOS on `App.launchScreens` are now deprecated in favor of new storyboard compliant keys [PR #11797](https://github.com/meteor/meteor/pull/11797).
+
 #### Meteor Version Release
 
 #### Independent Releases
