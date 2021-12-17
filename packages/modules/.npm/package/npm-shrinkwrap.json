@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@meteorjs/reify": {
-      "version": "0.23.0-beta.0",
-      "resolved": "https://registry.npmjs.org/@meteorjs/reify/-/reify-0.23.0-beta.0.tgz",
-      "integrity": "sha512-P9AEeY+B2ebBpnpsLMSDoSKtKr0RId2OeGSTynywzWB4FkLGjUWmLozPJcXH+h13lInhoLrBfABqvHfSJ63fcg=="
+      "version": "0.23.0-beta.1",
+      "resolved": "https://registry.npmjs.org/@meteorjs/reify/-/reify-0.23.0-beta.1.tgz",
+      "integrity": "sha512-ASiLZBviNLTdoWtJM6TGxHjW9/7lsowOkOnmNJViW/Tr3tzSBQlmJl4xrmBaEPszUS9vtfOdLj8kz6nsubSWoQ=="
     },
     "@types/estree": {
       "version": "0.0.50",
