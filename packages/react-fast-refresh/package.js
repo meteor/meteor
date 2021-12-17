@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'react-refresh': '0.9.0',
+  'react-refresh': '0.11.0',
   semver: '7.3.4',
 });
 
