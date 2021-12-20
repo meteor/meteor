@@ -53,10 +53,14 @@ const iconsAndroidSizes = {
 const splashIosKeys = {
   'ios_universal': 'Default@2x~universal~anyany.png',
   'ios_universal_3x': 'Default@3x~universal~anyany.png',
+  'Default@2x~universal~comany': 'Default@2x~universal~comany.png',
+  'Default@2x~universal~comcom': 'Default@2x~universal~comcom.png',
+  'Default@3x~universal~anycom': 'Default@3x~universal~anycom.png',
+  'Default@3x~universal~comany': 'Default@3x~universal~comany.png',
   'Default@2x~iphone~anyany': 'Default@2x~iphone~anyany.png',
   'Default@2x~iphone~comany': 'Default@2x~iphone~comany.png',
   'Default@2x~iphone~comcom': 'Default@2x~iphone~comcom.png',
-  'Default@3x~iphone~anyanyg': 'Default@3x~iphone~anyanyg.png',
+  'Default@3x~iphone~anyany': 'Default@3x~iphone~anyany.png',
   'Default@3x~iphone~anycom': 'Default@3x~iphone~anycom.png',
   'Default@3x~iphone~comany': 'Default@3x~iphone~comany.png',
   'Default@2x~ipad~anyany': 'Default@2x~ipad~anyany.png',
@@ -761,29 +765,37 @@ configuration. The key may be deprecated.`);
      * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
      *
      * For best practices when developing a splash image, see the [Apple Guidelines](https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/launch-screen/).
-     *
+     * To learn more about size classes for iOS, check out the [documentation](https://cordova.apache.org/docs/en/10.x/reference/cordova-plugin-splashscreen/#size-classes) from Cordova.
      *
      * Valid key values:
-     * - `ios_universal` (Default@2xuniversalanyany.png - 2732x2732) - All @2x devices, if device specific is not declared.
-     * - `ios_universal_3x` (Default@3xuniversalanyany.png - 2208x2208) - All @3x devices, if device specific is not declared.
-     * - `Default@2xiphoneanyany` (1334x1334) - iPhone SE/6s/7/8/XR
-     * - `Default@2xiphonecomany` (750x1334) - iPhone SE/6s/7/8/XR
-     * - `Default@2xiphonecomcom` (1334x750) - iPhone SE/6s/7/8/XR
-     * - `Default@3xiphoneanyanyg` (2208x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
-     * - `Default@3xiphoneanycom` (2208x1242) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
-     * - `Default@3xiphonecomany` (1242x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
-     * - `Default@2xipadanyany` (2732x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
-     * - `Default@2xipadcomany` (1278x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
-     * - `android_mdpi_portrait` (320x480)
-     * - `android_mdpi_landscape` (480x320)
-     * - `android_hdpi_portrait` (480x800)
-     * - `android_hdpi_landscape` (800x480)
-     * - `android_xhdpi_portrait` (720x1280)
-     * - `android_xhdpi_landscape` (1280x720)
-     * - `android_xxhdpi_portrait` (960x1600)
-     * - `android_xxhdpi_landscape` (1600x960)
-     * - `android_xxxhdpi_portrait` (1280x1920)
-     * - `android_xxxhdpi_landscape` (1920x1280)
+     *
+     * iOS:
+     *  - `ios_universal` (Default@2xuniversalanyany.png - 2732x2732) - All @2x devices, if device/mode specific is not declared
+     *  - `ios_universal_3x` (Default@3xuniversalanyany.png - 2208x2208) - All @3x devices, if device/mode specific is not declared
+     *  - `Default@2x~universal~comany` (1278x2732) - All @2x devices in portrait mode
+     *  - `Default@2x~universal~comcom` (1334x750) - All @2x devices in landscape (narrow) mode
+     *  - `Default@3x~universal~anycom` (2208x1242) - All @3x devices in landscape (wide) mode
+     *  - `Default@3x~universal~comany` (1242x2208) - All @3x devices in portrait mode
+     *  - `Default@2x~iphone~anyany` (1334x1334) - iPhone SE/6s/7/8/XR
+     *  - `Default@2x~iphone~comany` (750x1334) - iPhone SE/6s/7/8/XR - portrait mode
+     *  - `Default@2x~iphone~comcom` (1334x750) - iPhone SE/6s/7/8/XR - landscape (narrow) mode
+     *  - `Default@3x~iphone~anyany` (2208x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max
+     *  - `Default@3x~iphone~anycom` (2208x1242) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max - landscape (wide) mode
+     *  - `Default@3x~iphone~comany` (1242x2208) - iPhone 6s Plus/7 Plus/8 Plus/X/XS/XS Max - portrait mode
+     *  - `Default@2x~ipad~anyany` (2732x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9"
+     *  - `Default@2x~ipad~comany` (1278x2732) - iPad Pro 12.9"/11"/10.5"/9.7"/7.9" - portrait mode
+     *
+     * Android:
+     *  - `android_mdpi_portrait` (320x480)
+     *  - `android_mdpi_landscape` (480x320)
+     *  - `android_hdpi_portrait` (480x800)
+     *  - `android_hdpi_landscape` (800x480)
+     *  - `android_xhdpi_portrait` (720x1280)
+     *  - `android_xhdpi_landscape` (1280x720)
+     *  - `android_xxhdpi_portrait` (960x1600)
+     *  - `android_xxhdpi_landscape` (1600x960)
+     *  - `android_xxxhdpi_portrait` (1280x1920)
+     *  - `android_xxxhdpi_landscape` (1920x1280)
      *
      * @memberOf App
      */
