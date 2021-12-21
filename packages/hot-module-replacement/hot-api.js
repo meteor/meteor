@@ -34,11 +34,17 @@ Object.defineProperty(meteorInstall.Module.prototype, "hot", {
         if (arguments.length > 0) {
           console.warn('hot.accept does not support any arguments.');
         }
+
+        if (hotState._hotAccepts === false) {
+          return;
+        }
+
         hotState._hotAccepts = true;
       },
       /**
         * @summary Disable updating this module or its dependencies with HMR.
-        * Hot code push will be used instead.
+        * Hot code push will be used instead. Can not be overridden by calling
+        * module.hot.accept later.
         * @locus Client
         * @memberOf module.hot
         * @instance

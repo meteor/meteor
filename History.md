@@ -1,4 +1,4 @@
-## vNext, UNRELEASED
+## v2.5.2, UNRELEASED
 
 #### Highlights
 
@@ -6,12 +6,29 @@
 
 #### Meteor Version Release
 
+* `meteor-tool@2.5.2`
+  - Changes @meteorjs/babel and @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/babel@7.14.0`
+  - Updates @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/reify@0.23.0`
+  - Check scope when wrapping to fix slowness in MUI v5. [PR](https://github.com/meteor/reify/pull/1) and [Issue](https://github.com/benjamn/reify/issues/277).
+
 #### Independent Releases
+* `accounts-ui@1.4.2` 
+  - Update usage of `accounts-passwordless` to be compatible with 2.0.0.
+
+* `minifier-js@2.7.3`
+  - Revert `evaluate` option that was set to false in 2.7.2.
+
+* `standard-minifier-js@2.7.3`
+  - Using `minifier-js@2.7.3`
 
 ## v2.5.1, 2021-11-17
 
 #### Highlights
-- Mac M1 Support - darwin arm64
+- Mac M1 Support - darwin arm64. [Read more](https://blog.meteor.com/).
 
 #### Breaking Changes
 - `Meteor.loginWithToken` from the new package `accounts-passwordless` was conflicting with another method with the same name on `accounts-base` so we had to rename the method of `accounts-passwordless` package to `Meteor.passwordlessLoginWithToken`. 
