@@ -1,5 +1,5 @@
-import Visitor from "reify/lib/visitor.js";
-import { findPossibleIndexes } from "reify/lib/utils.js";
+import Visitor from "@meteorjs/reify/lib/visitor.js";
+import { findPossibleIndexes } from "@meteorjs/reify/lib/utils.js";
 import { Babel } from "meteor/babel-compiler";
 
 // This RegExp will be used to scan the source for calls to meteorInstall,

@@ -44,8 +44,8 @@ import {
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
-const { compile: reifyCompile } = require("reify/lib/compiler");
-const { parse: reifyBabelParse } = require("reify/lib/parsers/babel");
+const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
+const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
 
@@ -150,7 +150,7 @@ class DefaultHandlers {
       }
     }
 
-    const cacheFileName = this.cacheDir ? 
+    const cacheFileName = this.cacheDir ?
       this.getCacheFileName(file) :
       null;
 

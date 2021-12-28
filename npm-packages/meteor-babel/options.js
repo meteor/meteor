@@ -1,6 +1,6 @@
 "use strict";
 
-const getESModule = require("reify/lib/runtime/utils.js").getESModule;
+const getESModule = require("@meteorjs/reify/lib/runtime/utils.js").getESModule;
 const nodeRequire = require;
 require = function require(id) {
   const exports = nodeRequire(id);
@@ -10,7 +10,7 @@ require = function require(id) {
 const babelRuntimeVersion = require("@babel/runtime/package.json").version;
 const babelPresetMeteor = require("babel-preset-meteor");
 const babelPresetMeteorModern = require("babel-preset-meteor/modern");
-const reifyPlugin = require("reify/plugins/babel");
+const reifyPlugin = require("@meteorjs/reify/plugins/babel");
 
 function getReifyPlugin(features) {
   return [reifyPlugin, getReifyOptions(features)];
@@ -110,7 +110,7 @@ function getDefaultsForModernBrowsers(features) {
   return finish(features, [combined]);
 }
 
-const parserOpts = require("reify/lib/parsers/babel.js").options;
+const parserOpts = require("@meteorjs/reify/lib/parsers/babel.js").options;
 const util = require("./util.js");
 
 function finish(features, presets) {

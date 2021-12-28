@@ -1,4 +1,4 @@
-## vNext, UNRELEASED
+## vNEXT, UNRELEASED
 
 #### Highlights
 * You are now able to use dark theme specific splash screens for both iOS and Android by passing an object `{src: 'light-image-src-here.png', srcDarkMode: 'dark-mode-src-here.png'}` to the corresponding key in `App.launchScreens`
@@ -11,9 +11,65 @@
 * Replace the deprecated keys `['iphone5','iphone6','iphone6p_portrait','iphone6p_landscape','iphoneX_portrait','iphoneX_landscape','ipad_portrait_2x','ipad_landscape_2x','iphone','iphone_2x','ipad_portrait','ipad_landscape']` with the
 corresponding new key: `['ios_universal','ios_universal_3x','Default@2x~universal~comany','Default@2x~universal~comcom','Default@3x~universal~anycom','Default@3x~universal~comany','Default@2x~iphone~anyany','Default@2x~iphone~comany','Default@2x~iphone~comcom','Default@3x~iphone~anyany','Default@3x~iphone~anycom','Default@3x~iphone~comany','Default@2x~ipad~anyany','Default@2x~ipad~comany']`
 and adapt necessary splash images to the new dimensions asked by Apple. You can get more info [here](https://docs.meteor.com/api/mobile-config.html#App-launchScreens).
+
 #### Meteor Version Release
 
 #### Independent Releases
+
+## v2.5.2, 2021-12-21
+
+#### Highlights
+
+* Reify performance improvements
+* Node.js update to 14.18.2
+* HMR Fixes
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.2`
+  - Changes @meteorjs/babel and @meteorjs/reify to improve Reify performance.
+  - Upgrades Node.js to 14.18.2
+  - Fixes isopacket [load failure](https://github.com/meteor/meteor/issues/10930) on Windows. [PR](https://github.com/meteor/meteor/pull/11740)
+
+* `hot-module-replacement@0.5.0` 
+  - Prevents hot.accept from overriding hot.decline. [PR](https://github.com/meteor/meteor/pull/11801)
+  - Fixes falling back to hot code push on web archs. [PR](https://github.com/meteor/meteor/pull/11795)
+
+* `@meteorjs/babel@7.15.0`
+  - Updates @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/reify@0.23.0`
+  - Uses `@meteorjs/reify` instead of `reify`
+  - Check scope when wrapping to fix slowness in MUI v5. [PR](https://github.com/meteor/reify/pull/1) and [Issue](https://github.com/benjamn/reify/issues/277).
+
+* `standard-minifier-js@2.8.0`
+  - Bump to apply improvements from Reify
+
+* `typescript@4.4.1`
+  - Bump to apply improvements from Reify
+
+* `babel-compiler@7.8.0`
+  - Bump to apply improvements from Reify
+
+* `ecmascript@0.16.1`
+  - Bump to apply improvements from Reify
+
+* `modules@0.18.0`
+  - Bump to apply improvements from Reify
+
+#### Independent Releases
+
+* `react-fast-refresh@0.2.2`
+  - [Fixes](https://github.com/meteor/meteor/issues/11744) bugs. [PR](https://github.com/meteor/meteor/pull/11794/)
+  
 * `accounts-ui@1.4.2` 
   - Update usage of `accounts-passwordless` to be compatible with 2.0.0.
 

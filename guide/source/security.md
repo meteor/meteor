@@ -508,8 +508,7 @@ WebApp.connectHandlers.use(
       connectSrc: ["*"],
       imgSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-    },
-    browserSniff: false
+    }
   })
 );
 ```
