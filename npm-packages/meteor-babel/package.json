@@ -1,7 +1,7 @@
 {
   "name": "@meteorjs/babel",
   "author": "Meteor <dev@meteor.com>",
-  "version": "7.13.0",
+  "version": "7.15.0",
   "license": "MIT",
   "description": "Babel wrapper package for use with Meteor",
   "keywords": [
@@ -46,7 +46,7 @@
     "convert-source-map": "^1.6.0",
     "lodash": "^4.17.21",
     "meteor-babel-helpers": "0.0.3",
-    "reify": "^0.22.0",
+    "@meteorjs/reify": "0.23.0",
     "typescript": "^4.3.5"
   },
   "devDependencies": {

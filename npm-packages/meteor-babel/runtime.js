@@ -9,7 +9,7 @@ Module.prototype.resolve = function (id) {
   return Module._resolveFilename(id, this);
 };
 
-require("reify/lib/runtime").enable(Module.prototype);
+require("@meteorjs/reify/lib/runtime").enable(Module.prototype);
 
 require("meteor-promise").makeCompatible(
   global.Promise = global.Promise ||

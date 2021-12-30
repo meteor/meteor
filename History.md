@@ -1,12 +1,69 @@
-## vNext, UNRELEASED
+## vNEXT, UNRELEASED
 
 #### Highlights
 
 #### Breaking Changes
 
+#### Migration Steps
+
 #### Meteor Version Release
 
 #### Independent Releases
+
+## v2.5.2, 2021-12-21
+
+#### Highlights
+
+* Reify performance improvements
+* Node.js update to 14.18.2
+* HMR Fixes
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.2`
+  - Changes @meteorjs/babel and @meteorjs/reify to improve Reify performance.
+  - Upgrades Node.js to 14.18.2
+  - Fixes isopacket [load failure](https://github.com/meteor/meteor/issues/10930) on Windows. [PR](https://github.com/meteor/meteor/pull/11740)
+
+* `hot-module-replacement@0.5.0` 
+  - Prevents hot.accept from overriding hot.decline. [PR](https://github.com/meteor/meteor/pull/11801)
+  - Fixes falling back to hot code push on web archs. [PR](https://github.com/meteor/meteor/pull/11795)
+
+* `@meteorjs/babel@7.15.0`
+  - Updates @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/reify@0.23.0`
+  - Uses `@meteorjs/reify` instead of `reify`
+  - Check scope when wrapping to fix slowness in MUI v5. [PR](https://github.com/meteor/reify/pull/1) and [Issue](https://github.com/benjamn/reify/issues/277).
+
+* `standard-minifier-js@2.8.0`
+  - Bump to apply improvements from Reify
+
+* `typescript@4.4.1`
+  - Bump to apply improvements from Reify
+
+* `babel-compiler@7.8.0`
+  - Bump to apply improvements from Reify
+
+* `ecmascript@0.16.1`
+  - Bump to apply improvements from Reify
+
+* `modules@0.18.0`
+  - Bump to apply improvements from Reify
+
+#### Independent Releases
+
+* `react-fast-refresh@0.2.2`
+  - [Fixes](https://github.com/meteor/meteor/issues/11744) bugs. [PR](https://github.com/meteor/meteor/pull/11794/)
+  
 * `accounts-ui@1.4.2` 
   - Update usage of `accounts-passwordless` to be compatible with 2.0.0.
 
