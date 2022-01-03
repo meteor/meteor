@@ -101,4 +101,5 @@ Package.onTest(function (api) {
   api.addFiles('observe_changes_tests.js', ['client', 'server']);
   api.addFiles('oplog_tests.js', 'server');
   api.addFiles('doc_fetcher_tests.js', 'server');
+  api.addFiles('collection_async_tests.js', 'server');
 });
