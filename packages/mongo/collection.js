@@ -909,7 +909,7 @@ const EXCLUDE_FROM_ASYNC_WRAPPER = ['_isRemoteCollection'];
     Mongo.Collection.prototype[asyncName] = async function(...args) {
       if (!this.isAsync) {
         throw new Error(
-          `It is only allowed to use "${asyncName}" method in async collections like "${this._name}". Use "Mongo.createAsyncCollection" to create async collections.`);
+          `It is only allowed to use "${asyncName}" method in async collections like "${this._name}". Use "Mongo.Collection.create" to create async collections.`);
       }
 
       const options = { isAsync: this.isAsync };
@@ -918,7 +918,7 @@ const EXCLUDE_FROM_ASYNC_WRAPPER = ['_isRemoteCollection'];
     };
   });
 
-createAsyncCollection = (name, optionsParam = {}) => {
+Mongo.Collection.create = (name, optionsParam = {}) => {
   try {
     const options = {...optionsParam, isAsync: true};
     const collectionInstance = getCollectionInstanceOrNull({name: name, options});
@@ -933,11 +933,9 @@ createAsyncCollection = (name, optionsParam = {}) => {
   }
 }
 
-Mongo.createAsyncCollection = createAsyncCollection;
-
 const userOptions = Meteor.settings?.packages?.mongo || {};
 
 if (Meteor.isServer) {
-  if(userOptions?.skipStartupConnection || process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) return;
+  if (userOptions?.skipStartupConnection || process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) return;
   Promise.await(MongoInternals.defaultRemoteCollectionDriver());
 }
