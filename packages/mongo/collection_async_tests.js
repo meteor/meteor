@@ -36,9 +36,9 @@ Tinytest.only(
       collAsync
     )
     new Mongo.Collection('myCollection2');
-    test.throws(new Mongo.Collection('myCollection2'));
+    new Mongo.Collection('myCollection2');
 
     Mongo.Collection.create('myCollection3');
-    test.throws(Mongo.Collection.create('myCollection3'));
+    Mongo.Collection.create('myCollection3');
   }
 );

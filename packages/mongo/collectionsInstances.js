@@ -63,6 +63,9 @@ export const setCollectionInstance = ({
     collectionsInstances[scope] = {};
   }
 
+  // this is not going to happen unless we have an error in our internal code
+  // we try to always return the same instance if the user create two instances
+  // of the same name and type (async / sync)
   if (collectionsInstances[scope][isAsyncBoolean]) {
     throw new Error(
       `There is already a collection named "${name}" for type "${
