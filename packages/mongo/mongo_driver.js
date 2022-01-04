@@ -422,11 +422,15 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 
   try {
     var collection = self.rawCollection(collection_name);
-    var wrappedCallback = function(err, driverResult) {
-      callback(err, transformResult(driverResult).numberAffected);
-    };
-    collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                       {safe: true}, wrappedCallback);
+    const result = {};
+    try {
+      const {deletedCount} = collection.deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo),
+          {safe: true}).await();
+      result.numberAffected = deletedCount;
+    }catch(err){
+      callback(err)
+    }
+    callback(null, result)
   } catch (err) {
     write.committed();
     throw err;
@@ -602,11 +606,14 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
       }
 
-      collection.update(
+      const strings = Object.keys(mongoMod).filter((key) => !key.startsWith("$"));
+      let updateMethod = strings.length > 0 ? 'replaceOne' : 'updateMany';
+      updateMethod = updateMethod === 'updateMany' && !mongoOpts.multi ? 'updateOne' : updateMethod;
+      collection[updateMethod](
         mongoSelector, mongoMod, mongoOpts,
         bindEnvironmentForWrite(function (err, result) {
           if (! err) {
-            var meteorResult = transformResult(result);
+            var meteorResult = transformResult({result});
             if (meteorResult && options._returnObject) {
               // If this was an upsert() call, and we ended up
               // inserting a new doc and we know its id, then
@@ -638,15 +645,14 @@ var transformResult = function (driverResult) {
   var meteorResult = { numberAffected: 0 };
   if (driverResult) {
     var mongoResult = driverResult.result;
-
     // On updates with upsert:true, the inserted values come as a list of
     // upserted values -- even with options.multi, when the upsert does insert,
     // it only inserts one element.
-    if (mongoResult.upserted) {
-      meteorResult.numberAffected += mongoResult.upserted.length;
+    if (mongoResult.upsertedCount) {
+      meteorResult.numberAffected += mongoResult.upsertedCount.length;
 
-      if (mongoResult.upserted.length == 1) {
-        meteorResult.insertedId = mongoResult.upserted[0]._id;
+      if (mongoResult.upsertedCount.length === 1) {
+        meteorResult.insertedId = mongoResult.upsertedId;
       }
     } else {
       meteorResult.numberAffected = mongoResult.n;
@@ -715,7 +721,11 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     if (! tries) {
       callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
     } else {
-      collection.update(selector, mod, mongoOptsForUpdate,
+      let method = collection.updateMany;
+      if(!Object.keys(mod).some(key => key.startsWith("$"))){
+        method = collection.replaceOne;
+      }
+      method(selector, mod, {upsert:true,...mongoOptsForUpdate},
                         bindEnvironmentForWrite(function (err, result) {
                           if (err) {
                             callback(err);
@@ -731,7 +741,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   };
 
   var doConditionalInsert = function () {
-    collection.update(selector, replacementWithId, mongoOptsForInsert,
+    collection.updateMany(selector, replacementWithId, mongoOptsForInsert,
                       bindEnvironmentForWrite(function (err, result) {
                         if (err) {
                           // figure out if this is a
