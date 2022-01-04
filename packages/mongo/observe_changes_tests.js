@@ -57,7 +57,7 @@ _.each ([{added: 'added', forceOrdered: true},
   });
 });
 
-Tinytest.onlyAsync("observeChanges - callback isolation", function (test, onComplete) {
+Tinytest.addAsync("observeChanges - callback isolation", function (test, onComplete) {
   var c = makeCollection();
   withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
     var handles = [];

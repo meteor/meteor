@@ -357,8 +357,6 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   expectObserve('', function () {
     var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
-    console.log(`count`, count);
-
     test.equal(count, 0);
   });
 
@@ -768,16 +766,11 @@ if (Meteor.isServer) {
     test.isTrue(observeMultiplexer);
     test.isTrue(observeMultiplexer === o2.handle._multiplexer);
 
-    console.log('runInFence filipe')
-    console.log(`o1.output`, o1.output);
-
     // Update. Both observes fire.
     runInFence(function () {
       coll.update(docId1, {$set: {x: 'y'}});
     });
-    console.log('runInFence filipe 2')
-    console.log(`o1.output `, o1.output);
-    test.length(o1.output, 1, 'filipe');
+    test.length(o1.output, 1, 'test that is breaking');
     test.length(o2.output, 1);
     test.equal(o1.output.shift(), {changed: docId1});
     test.equal(o2.output.shift(), {changed: docId1});
