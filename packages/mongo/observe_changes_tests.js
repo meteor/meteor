@@ -48,17 +48,16 @@ _.each ([{added: 'added', forceOrdered: true},
 
     handle.stop();
 
-    var badCursor = c.find({}, {fields: {noodles: 1, _id: false}});
     test.throws(function () {
-      badCursor.observeChanges(logger);
-    });
+      c.find({}, {fields: {noodles: 1, _id: false}})
+    }, undefined, 'bad cursor excluding _id from projection');
 
     onComplete();
     });
   });
 });
 
-Tinytest.addAsync("observeChanges - callback isolation", function (test, onComplete) {
+Tinytest.onlyAsync("observeChanges - callback isolation", function (test, onComplete) {
   var c = makeCollection();
   withCallbackLogger(test, ["added", "changed", "removed"], Meteor.isServer, function (logger) {
     var handles = [];
@@ -420,5 +419,5 @@ if (Meteor.isServer) {
       });
       c.insert({ type: { name: 'foobar' } });
     }
-  );  
+  );
 }

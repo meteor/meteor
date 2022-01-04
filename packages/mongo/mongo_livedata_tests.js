@@ -357,6 +357,8 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
 
   expectObserve('', function () {
     var count = coll.update({run: run, x: -1}, {$inc: {x: 2}}, {multi: true});
+    console.log(`count`, count);
+
     test.equal(count, 0);
   });
 
@@ -563,7 +565,7 @@ if (Meteor.isServer) {
     function error() {
       throw new Meteor.Error('unsafe object mutation');
     }
-    
+
     const denyModifications = {
       get(target, key) {
         const type = Object.prototype.toString.call(target[key]);
@@ -577,7 +579,7 @@ if (Meteor.isServer) {
       deleteProperty: error,
       defineProperty: error,
     };
-    
+
     // Object.freeze only throws in silent mode
     // So we make our own version that always throws.
     function freeze(obj) {
@@ -589,7 +591,7 @@ if (Meteor.isServer) {
       // Make sure that if anything touches the original object, this will throw
       return origApplyCallback.call(this, callback, freeze(args));
     }
-    
+
     const run = test.runId();
     const coll = new Mongo.Collection(`livedata_test_scribble_collection_${run}`, collectionOptions);
     const expectMutatable = (o) => {
@@ -623,7 +625,7 @@ if (Meteor.isServer) {
       coll.insert({run, a: [ {c: 1} ]});
       coll.update({run}, { $set: { 'a.0.c': 2 } });
     });
- 
+
     handle.stop();
     handle2.stop();
 
@@ -720,6 +722,8 @@ if (Meteor.isServer) {
       var output = [];
       var callbacks = {
         changed: function (newDoc) {
+          console.log(`newDoc`, newDoc);
+
           output.push({changed: newDoc._id});
         }
       };
@@ -764,11 +768,16 @@ if (Meteor.isServer) {
     test.isTrue(observeMultiplexer);
     test.isTrue(observeMultiplexer === o2.handle._multiplexer);
 
+    console.log('runInFence filipe')
+    console.log(`o1.output`, o1.output);
+
     // Update. Both observes fire.
     runInFence(function () {
       coll.update(docId1, {$set: {x: 'y'}});
     });
-    test.length(o1.output, 1);
+    console.log('runInFence filipe 2')
+    console.log(`o1.output `, o1.output);
+    test.length(o1.output, 1, 'filipe');
     test.length(o2.output, 1);
     test.equal(o1.output.shift(), {changed: docId1});
     test.equal(o2.output.shift(), {changed: docId1});
@@ -2231,7 +2240,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
 });  // end idGeneration parametrization
 
 Tinytest.add('mongo-livedata - rewrite selector', function (test) {
- 
+
   test.equal(Mongo.Collection._rewriteSelector('foo'),
              {_id: 'foo'});
 

@@ -1,6 +1,8 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 
+import { normalizeProjection } from "./mongo_utils";
+
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -320,15 +322,18 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   _getFindOptions(args) {
+    const [, options] = args || [];
+    const newOptions = normalizeProjection(options);
+
     var self = this;
     if (args.length < 2) {
       return { transform: self._transform };
     } else {
       check(
-        args[1],
+        newOptions,
         Match.Optional(
           Match.ObjectIncluding({
-            fields: Match.Optional(Match.OneOf(Object, undefined)),
+            projection: Match.Optional(Match.OneOf(Object, undefined)),
             sort: Match.Optional(
               Match.OneOf(Object, Array, Function, undefined)
             ),
@@ -338,9 +343,17 @@ Object.assign(Mongo.Collection.prototype, {
         )
       );
 
+      const { projection } = newOptions;
+
+      // this error: "Cannot do exclusion on field _id in inclusion projection"
+      // happens on MongoDB CLI but doesn't happen in the Node.js Driver for MongoDB 5.0+
+      if (projection && projection._id != null && !projection._id) {
+        throw new Error(`Cannot do exclusion on field _id in inclusion projection, collectionName=${self._name}`);
+      }
+
       return {
         transform: self._transform,
-        ...args[1],
+        ...newOptions,
       };
     }
   },
