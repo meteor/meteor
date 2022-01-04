@@ -644,8 +644,6 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 };
 
 var transformResult = function (driverResult) {
-  console.log(`driverResult`, driverResult);
-
   var meteorResult = { numberAffected: 0 };
   if (driverResult) {
     var mongoResult = driverResult.result;
