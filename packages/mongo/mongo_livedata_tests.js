@@ -3546,7 +3546,7 @@ if (Meteor.isServer) {
     session.withTransaction(session => {
       let promise = Promise.resolve();
       ["a", "b"].forEach((id, index) => {
-        promise = promise.then(() => rawCollection.update(
+        promise = promise.then(() => rawCollection.updateMany(
           { _id: id },
           { $set: { field: `updated${index + 1}` } },
           { session }
