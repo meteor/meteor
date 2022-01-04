@@ -1,3 +1,5 @@
+import { normalizeProjection } from "./mongo_utils";
+
 /**
  * Provide a synchronous Collection API using fibers, backed by
  * MongoDB.  This is only for use on the server, and mostly identical
@@ -422,15 +424,15 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 
   try {
     var collection = self.rawCollection(collection_name);
-    const result = {};
+    let result = {};
     try {
       const {deletedCount} = collection.deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo),
           {safe: true}).await();
-      result.numberAffected = deletedCount;
+      result.modifiedCount = deletedCount;
     }catch(err){
       callback(err)
     }
-    callback(null, result)
+    callback(null, transformResult({result}).numberAffected)
   } catch (err) {
     write.committed();
     throw err;
@@ -642,6 +644,8 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 };
 
 var transformResult = function (driverResult) {
+  console.log(`driverResult`, driverResult);
+
   var meteorResult = { numberAffected: 0 };
   if (driverResult) {
     var mongoResult = driverResult.result;
@@ -655,7 +659,9 @@ var transformResult = function (driverResult) {
         meteorResult.insertedId = mongoResult.upsertedId;
       }
     } else {
-      meteorResult.numberAffected = mongoResult.n;
+      // n was used before Mongo 5.0, in Mongo 5.0 we are not receiving this n
+      // field and so we are using modifiedCount instead
+      meteorResult.numberAffected = mongoResult.n || mongoResult.modifiedCount;
     }
   }
 
@@ -875,12 +881,6 @@ CursorDescription = function (collectionName, selector, options) {
   self.collectionName = collectionName;
   self.selector = Mongo.Collection._rewriteSelector(selector);
   self.options = options || {};
-  // transform fields key in projection
-  const { fields, projection, ...otherOptions } = self.options;
-  // TODO: enable this comment when deprecating the fields option
-  // Log.debug(`fields option has been deprecated, please use the new 'projection' instead`)
-
-  self.options = { ...otherOptions, ...(projection || fields ? {projection: fields || projection} : {}) };
 };
 
 Cursor = function (mongo, cursorDescription) {
