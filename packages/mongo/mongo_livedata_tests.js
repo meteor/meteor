@@ -1771,10 +1771,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
           coll = coll._collection;
 
         var result1 = upsert(coll, useUpdate, {foo: 'bar'}, {foo: 'bar'});
-        console.log(result1)
         test.equal(result1.numberAffected, 1);
-        console.log("result1");
-        console.log(result1);
         if (! skipIds)
           test.isTrue(result1.insertedId);
         compareResults(test, skipIds, coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
@@ -1863,8 +1860,6 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                              {name: 'Steve'},
                              {insertedId: 'steve'});
         test.equal(result9.numberAffected, 1);
-        console.log("result9")
-        console.log(result9)
         if (! skipIds)
           test.equal(result9.insertedId, 'steve');
         compareResults(test, skipIds, coll.find().fetch(),
