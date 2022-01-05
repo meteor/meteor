@@ -720,8 +720,6 @@ if (Meteor.isServer) {
       var output = [];
       var callbacks = {
         changed: function (newDoc) {
-          console.log(`newDoc`, newDoc);
-
           output.push({changed: newDoc._id});
         }
       };
@@ -1773,7 +1771,10 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
           coll = coll._collection;
 
         var result1 = upsert(coll, useUpdate, {foo: 'bar'}, {foo: 'bar'});
+        console.log(result1)
         test.equal(result1.numberAffected, 1);
+        console.log("result1");
+        console.log(result1);
         if (! skipIds)
           test.isTrue(result1.insertedId);
         compareResults(test, skipIds, coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
@@ -1860,6 +1861,8 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                              {name: 'Steve'},
                              {insertedId: 'steve'});
         test.equal(result9.numberAffected, 1);
+        console.log("result9")
+        console.log(result9)
         if (! skipIds)
           test.equal(result9.insertedId, 'steve');
         compareResults(test, skipIds, coll.find().fetch(),
@@ -3306,12 +3309,11 @@ Meteor.isServer && Tinytest.add(
   }
 );
 
-Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
+Meteor.isServer && Tinytest.only("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(MongoInternals.NpmModules.mongodb.version, /^3\.(\d+)\.(\d+)/);
-  test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'function');
-  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.connect),
-             'function');
+  test.matches(MongoInternals.NpmModules.mongodb.version, /^4\.(\d+)\.(\d+)/);
+  console.log(MongoInternals.NpmModules.mongodb)
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'object');
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module.ObjectID),
              'function');
 

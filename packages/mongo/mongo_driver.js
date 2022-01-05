@@ -611,7 +611,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
       const strings = Object.keys(mongoMod).filter((key) => !key.startsWith("$"));
       let updateMethod = strings.length > 0 ? 'replaceOne' : 'updateMany';
       updateMethod = updateMethod === 'updateMany' && !mongoOpts.multi ? 'updateOne' : updateMethod;
-      collection[updateMethod](
+      collection[updateMethod].bind(collection)(
         mongoSelector, mongoMod, mongoOpts,
         bindEnvironmentForWrite(function (err, result) {
           if (! err) {
@@ -651,9 +651,9 @@ var transformResult = function (driverResult) {
     // upserted values -- even with options.multi, when the upsert does insert,
     // it only inserts one element.
     if (mongoResult.upsertedCount) {
-      meteorResult.numberAffected += mongoResult.upsertedCount.length;
+      meteorResult.numberAffected = mongoResult.upsertedCount;
 
-      if (mongoResult.upsertedCount.length === 1) {
+      if (mongoResult.upsertedId) {
         meteorResult.insertedId = mongoResult.upsertedId;
       }
     } else {
@@ -727,15 +727,17 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     } else {
       let method = collection.updateMany;
       if(!Object.keys(mod).some(key => key.startsWith("$"))){
-        method = collection.replaceOne;
+        method = collection.replaceOne.bind(collection);
+        mod = replacementWithId;
       }
       method(selector, mod, {upsert:true,...mongoOptsForUpdate},
                         bindEnvironmentForWrite(function (err, result) {
                           if (err) {
                             callback(err);
-                          } else if (result && result.result.n != 0) {
+                          } else if (result && (result.modifiedCount || result.upsertedCount)) {
                             callback(null, {
-                              numberAffected: result.result.n
+                              numberAffected: result.modifiedCount || result.upsertedCount,
+                              insertedId: result.upsertedId
                             });
                           } else {
                             doConditionalInsert();
@@ -745,7 +747,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   };
 
   var doConditionalInsert = function () {
-    collection.updateMany(selector, replacementWithId, mongoOptsForInsert,
+    collection.replaceOne(selector, replacementWithId, mongoOptsForInsert,
                       bindEnvironmentForWrite(function (err, result) {
                         if (err) {
                           // figure out if this is a
@@ -758,8 +760,8 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
                           }
                         } else {
                           callback(null, {
-                            numberAffected: result.result.upserted.length,
-                            insertedId: insertedId,
+                            numberAffected: result.upsertedCount,
+                            insertedId: result.upsertedId,
                           });
                         }
                       }));
