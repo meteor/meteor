@@ -857,7 +857,7 @@ export function isOperatorObject(valueSelector, inconsistentOK) {
 
   let theseAreOperators = undefined;
   Object.keys(valueSelector).forEach(selKey => {
-    const thisIsOperator = selKey.substr(0, 1) === '$';
+    const thisIsOperator = selKey.substr(0, 1) === '$' || selKey === 'diff';
 
     if (theseAreOperators === undefined) {
       theseAreOperators = thisIsOperator;

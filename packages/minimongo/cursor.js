@@ -25,7 +25,7 @@ export default class Cursor {
 
     this.skip = options.skip || 0;
     this.limit = options.limit;
-    this.fields = options.fields;
+    this.fields = options.projection || options.fields;
 
     this._projectionFn = LocalCollection._compileProjection(this.fields || {});
 

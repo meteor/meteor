@@ -1779,7 +1779,9 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
           test.isTrue(result1.insertedId);
         compareResults(test, skipIds, coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
 
+        // !!!!
         var result2 = upsert(coll, useUpdate, {foo: 'bar'}, {foo: 'baz'});
+        // !!!!
         test.equal(result2.numberAffected, 1);
         if (! skipIds)
           test.isFalse(result2.insertedId);
@@ -3309,7 +3311,7 @@ Meteor.isServer && Tinytest.add(
   }
 );
 
-Meteor.isServer && Tinytest.only("mongo-livedata - npm modules", function (test) {
+Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
   test.matches(MongoInternals.NpmModules.mongodb.version, /^4\.(\d+)\.(\d+)/);
   console.log(MongoInternals.NpmModules.mongodb)

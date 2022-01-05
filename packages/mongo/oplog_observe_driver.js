@@ -86,7 +86,9 @@ OplogObserveDriver = function (options) {
   self._registerPhaseChange(PHASE.QUERYING);
 
   self._matcher = options.matcher;
-  var projection = self._cursorDescription.options.fields || {};
+  // we are now using projection, not fields in the cursor description even if you pass {fields}
+  // in the cursor construction
+  var projection = self._cursorDescription.options.fields || self._cursorDescription.options.projection || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection

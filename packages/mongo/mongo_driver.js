@@ -376,8 +376,16 @@ MongoConnection.prototype._insert = function (collection_name, document,
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self.rawCollection(collection_name);
-    collection.insertOne(replaceTypes(document, replaceMeteorAtomWithMongo),
-                      {safe: true}, callback);
+      collection.insertOne(
+        replaceTypes(document, replaceMeteorAtomWithMongo),
+        {
+          safe: true,
+        }
+      ).then(({insertedId}) => {
+        callback(null, transformResult({ result : {modifiedCount : insertedId ? 1 : 0} }).numberAffected);
+      }).catch((e) => {
+        callback(e)
+      });
   } catch (err) {
     write.committed();
     throw err;
@@ -424,15 +432,15 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 
   try {
     var collection = self.rawCollection(collection_name);
-    let result = {};
-    try {
-      const {deletedCount} = collection.deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo),
-          {safe: true}).await();
-      result.modifiedCount = deletedCount;
-    }catch(err){
-      callback(err)
-    }
-    callback(null, transformResult({result}).numberAffected)
+    collection
+      .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
+        safe: true,
+      })
+      .then(({ deletedCount }) => {
+        callback(null, transformResult({ result : {modifiedCount : deletedCount} }).numberAffected);
+      }).catch((err) => {
+      callback(err);
+    });
   } catch (err) {
     write.committed();
     throw err;
@@ -610,7 +618,11 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
 
       const strings = Object.keys(mongoMod).filter((key) => !key.startsWith("$"));
       let updateMethod = strings.length > 0 ? 'replaceOne' : 'updateMany';
-      updateMethod = updateMethod === 'updateMany' && !mongoOpts.multi ? 'updateOne' : updateMethod;
+      updateMethod =
+        updateMethod === 'updateMany' && !mongoOpts.multi
+          ? 'updateOne'
+          : updateMethod;
+      console.log(`Choose method ${updateMethod} for ${JSON.stringify(mongoMod)}`)
       collection[updateMethod].bind(collection)(
         mongoSelector, mongoMod, mongoOpts,
         bindEnvironmentForWrite(function (err, result) {
@@ -727,44 +739,60 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     } else {
       let method = collection.updateMany;
       if(!Object.keys(mod).some(key => key.startsWith("$"))){
+        console.log(`Choose method replace for ${JSON.stringify(mod)} on selector ${JSON.stringify(selector)}`)
+
         method = collection.replaceOne.bind(collection);
         mod = replacementWithId;
+        console.trace("Aqui")
       }
-      method(selector, mod, {upsert:true,...mongoOptsForUpdate},
-                        bindEnvironmentForWrite(function (err, result) {
-                          if (err) {
-                            callback(err);
-                          } else if (result && (result.modifiedCount || result.upsertedCount)) {
-                            callback(null, {
-                              numberAffected: result.modifiedCount || result.upsertedCount,
-                              insertedId: result.upsertedId
-                            });
-                          } else {
-                            doConditionalInsert();
-                          }
-                        }));
+      console.log("mongoOptsForUpdate");
+      console.log(mongoOptsForUpdate);
+      console.log("method");
+      console.log(method);
+      method(
+        selector,
+        mod,
+        { upsert: true, ...mongoOptsForUpdate },
+        bindEnvironmentForWrite(function(err, result) {
+          console.log(err)
+          if (err) {
+            callback(err);
+          } else if (result && (result.modifiedCount || result.upsertedCount)) {
+            callback(null, {
+              numberAffected: result.modifiedCount || result.upsertedCount,
+              insertedId: result.upsertedId,
+            });
+          } else {
+            doConditionalInsert();
+          }
+        })
+      );
     }
   };
 
-  var doConditionalInsert = function () {
-    collection.replaceOne(selector, replacementWithId, mongoOptsForInsert,
-                      bindEnvironmentForWrite(function (err, result) {
-                        if (err) {
-                          // figure out if this is a
-                          // "cannot change _id of document" error, and
-                          // if so, try doUpdate() again, up to 3 times.
-                          if (MongoConnection._isCannotChangeIdError(err)) {
-                            doUpdate();
-                          } else {
-                            callback(err);
-                          }
-                        } else {
-                          callback(null, {
-                            numberAffected: result.upsertedCount,
-                            insertedId: result.upsertedId,
-                          });
-                        }
-                      }));
+  var doConditionalInsert = function() {
+    collection.replaceOne(
+      selector,
+      replacementWithId,
+      mongoOptsForInsert,
+      bindEnvironmentForWrite(function(err, result) {
+        if (err) {
+          // figure out if this is a
+          // "cannot change _id of document" error, and
+          // if so, try doUpdate() again, up to 3 times.
+          if (MongoConnection._isCannotChangeIdError(err)) {
+            doUpdate();
+          } else {
+            callback(err);
+          }
+        } else {
+          callback(null, {
+            numberAffected: result.upsertedCount,
+            insertedId: result.upsertedId,
+          });
+        }
+      })
+    );
   };
 
   doUpdate();
@@ -977,8 +1005,8 @@ MongoConnection.prototype._createSynchronousCursor = function(
     sort: cursorOptions.sort,
     limit: cursorOptions.limit,
     skip: cursorOptions.skip,
-    projection: cursorOptions.fields,
-    readPreference: cursorOptions.readPreference
+    projection: cursorOptions.fields || cursorOptions.projection,
+    readPreference: cursorOptions.readPreference,
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
