@@ -10,6 +10,27 @@
 
 #### Independent Releases
 
+## v2.5.3, 2022-01-04
+
+#### Highlights
+
+* Fixes invalid package.json error with `resolve` 
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.3`
+  - Fixes invalid package.json files breaking Meteor run. [PR](https://github.com/meteor/meteor/pull/11832) and [Issue](https://github.com/meteor/meteor/issues/11830)
+
+#### Independent Releases
+
 ## v2.5.2, 2021-12-21
 
 #### Highlights
