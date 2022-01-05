@@ -10,6 +10,9 @@
 
 #### Independent Releases
 
+* `oauth@2.1.1`
+  - Fixes end of redirect response for oauth inside iframes. [PR](https://github.com/meteor/meteor/pull/11825) and [Issue](https://github.com/meteor/meteor/issues/11817)
+
 ## v2.5.3, 2022-01-04
 
 #### Highlights
