@@ -1372,7 +1372,7 @@ Object.assign(PackageSource.prototype, {
           }
           // This is going to break the run but at least with a clear error indicating what is the problematic package.json
           console.error(message, e);
-          throw new Error(message);
+          throw e;
         }
 
         // If a package.json file with a "name" property is found, it will
