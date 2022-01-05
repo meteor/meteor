@@ -376,16 +376,16 @@ MongoConnection.prototype._insert = function (collection_name, document,
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self.rawCollection(collection_name);
-      collection.insertOne(
-        replaceTypes(document, replaceMeteorAtomWithMongo),
-        {
-          safe: true,
-        }
-      ).then(({insertedId}) => {
-        callback(null, transformResult({ result : {modifiedCount : insertedId ? 1 : 0} }).numberAffected);
-      }).catch((e) => {
-        callback(e)
-      });
+    collection.insertOne(
+      replaceTypes(document, replaceMeteorAtomWithMongo),
+      {
+        safe: true,
+      }
+    ).then(({insertedId}) => {
+      callback(null, transformResult({ result : {modifiedCount : insertedId ? 1 : 0} }).numberAffected);
+    }).catch((e) => {
+      callback(e, null)
+    });
   } catch (err) {
     write.committed();
     throw err;
@@ -622,10 +622,10 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         updateMethod === 'updateMany' && !mongoOpts.multi
           ? 'updateOne'
           : updateMethod;
-      console.log(`Choose method ${updateMethod} for ${JSON.stringify(mongoMod)}`)
       collection[updateMethod].bind(collection)(
         mongoSelector, mongoMod, mongoOpts,
-        bindEnvironmentForWrite(function (err, result) {
+          // mongo driver now returns undefined for err in the callback
+          bindEnvironmentForWrite(function (err = null, result) {
           if (! err) {
             var meteorResult = transformResult({result});
             if (meteorResult && options._returnObject) {
@@ -671,7 +671,7 @@ var transformResult = function (driverResult) {
     } else {
       // n was used before Mongo 5.0, in Mongo 5.0 we are not receiving this n
       // field and so we are using modifiedCount instead
-      meteorResult.numberAffected = mongoResult.n || mongoResult.modifiedCount;
+      meteorResult.numberAffected = mongoResult.n || mongoResult.matchedCount || mongoResult.modifiedCount;
     }
   }
 
@@ -739,28 +739,19 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     } else {
       let method = collection.updateMany;
       if(!Object.keys(mod).some(key => key.startsWith("$"))){
-        console.log(`Choose method replace for ${JSON.stringify(mod)} on selector ${JSON.stringify(selector)}`)
-
         method = collection.replaceOne.bind(collection);
-        mod = replacementWithId;
-        console.trace("Aqui")
       }
-      console.log("mongoOptsForUpdate");
-      console.log(mongoOptsForUpdate);
-      console.log("method");
-      console.log(method);
       method(
         selector,
         mod,
         { upsert: true, ...mongoOptsForUpdate },
         bindEnvironmentForWrite(function(err, result) {
-          console.log(err)
           if (err) {
             callback(err);
           } else if (result && (result.modifiedCount || result.upsertedCount)) {
             callback(null, {
               numberAffected: result.modifiedCount || result.upsertedCount,
-              insertedId: result.upsertedId,
+              insertedId: result.upsertedId || undefined,
             });
           } else {
             doConditionalInsert();
