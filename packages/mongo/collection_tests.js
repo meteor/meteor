@@ -170,13 +170,15 @@ Tinytest.add('collection - calling find with a valid readPreference',
       defaultCursor.count();
       customCursor.count();
 
+      // defaultCursor._synchronousCursor._dbCursor.operation is not an option anymore
+      // defaultCursor._synchronousCursor._dbCursor.option is
       test.equal(
-        defaultCursor._synchronousCursor._dbCursor.operation.readPreference
+        defaultCursor._synchronousCursor._dbCursor.options.readPreference
           .mode,
         defaultReadPreference
       );
       test.equal(
-        customCursor._synchronousCursor._dbCursor.operation.readPreference.mode,
+        customCursor._synchronousCursor._dbCursor.options.readPreference.mode,
         customReadPreference
       );
     }

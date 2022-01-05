@@ -602,7 +602,8 @@ _.extend(OplogObserveDriver.prototype, {
         // database to figure out if the whole document matches the selector) or
         // a replacement (in which case we can just directly re-evaluate the
         // selector)?
-        var isReplace = !_.has(op.o, '$set') && !_.has(op.o, '$unset');
+        // oplog format has changed on mongodb 5, we have to support both now
+        var isReplace = !_.has(op.o, '$set') && !_.has(op.o, 'diff') && !_.has(op.o, '$unset');
         // If this modifier modifies something inside an EJSON custom type (ie,
         // anything with EJSON$), then we can't try to use
         // LocalCollection._modify, since that just mutates the EJSON encoding,
