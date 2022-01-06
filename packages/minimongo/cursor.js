@@ -53,7 +53,6 @@ export default class Cursor {
 
     return this._getRawObjects({
       ordered: true,
-      applySkipLimit: true
     }).length;
   }
 
