@@ -63,7 +63,7 @@ const nestedOplogEntryParsers = (
 
     return {
       ...acc,
-      ...(typeof setObjectSource[key] === 'object'
+      ...(!Array.isArray(setObjectSource[key]) && typeof setObjectSource[key] === 'object'
         ? flattenObject({ [prefixedKey]: setObjectSource[key] })
         : {
             [prefixedKey]: setObjectSource[key],
