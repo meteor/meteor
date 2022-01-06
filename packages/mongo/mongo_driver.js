@@ -744,7 +744,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
       method(
         selector,
         mod,
-        { upsert: true, ...mongoOptsForUpdate },
+        mongoOptsForUpdate,
         bindEnvironmentForWrite(function(err, result) {
           if (err) {
             callback(err);
