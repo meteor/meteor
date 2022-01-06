@@ -1,4 +1,4 @@
-import LRUCache from 'lru-native2'
+import LRU from 'lru-native2'
 const path = Plugin.path;
 
 // MultiFileCachingCompiler is like CachingCompiler, but for implementing
@@ -23,7 +23,7 @@ extends CachingCompilerBase {
     // Maps from cache key to { compileResult, cacheKeys }, where
     // cacheKeys is an object mapping from absolute import path to hashed
     // cacheKey for each file referenced by this file (including itself).
-    this._cache = new LRUCache({
+    this._cache = new LRU({
       max: this._cacheSize,
       // We ignore the size of cacheKeys here.
       length: (value) => this.compileResultSize(value.compileResult),

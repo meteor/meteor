@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import assert from 'assert';
-import LRUCache from 'lru-native2';
+import LRU from 'lru-native2';
 const fs = Plugin.fs;
 const path = Plugin.path;
 
@@ -250,7 +250,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
     super({compilerName, defaultCacheSize, maxParallelism});
 
     // Maps from a hashed cache key to a compileResult.
-    this._cache = new LRUCache({
+    this._cache = new LRU({
       max: this._cacheSize,
       length: (value) => this.compileResultSize(value),
     });
