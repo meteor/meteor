@@ -1,6 +1,6 @@
 import { oplogV2V1Converter } from './oplog_v2_converter';
 
-Tinytest.add('oplog - v2/v1 conversion', function(test) {
+Tinytest.only('oplog - v2/v1 conversion', function(test) {
   const entry1 = {
     $v: 2,
     diff: { scustom: { sEJSON$value: { u: { EJSONtail: 'd' } } } },
@@ -32,6 +32,8 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
     diff: { sa: { d: { b: false } } },
   };
   const entry8 = { $v: 2, diff: { u: { c: 'bar' }, sb: { a: true, u0: 2 } } };
+
+  const entry9 = {"$v":2,"diff":{"sservices":{"sresume":{"u":{"loginTokens":[]}}}}};
 
   test.equal(
     JSON.stringify(oplogV2V1Converter(entry1)),
@@ -73,5 +75,9 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
   test.equal(
     JSON.stringify(oplogV2V1Converter(entry8)),
     JSON.stringify({ $v: 2, $set: { 'b.0': 2, c: 'bar' } })
+  );
+  test.equal(
+    JSON.stringify(oplogV2V1Converter(entry9)),
+    JSON.stringify({ '$v': 2, '$set': { 'services.resume.loginTokens': [] } })
   );
 });
