@@ -14,7 +14,7 @@ import {
   sha1,
   readAndWatchFileWithHash,
 } from  '../fs/watch';
-import LRU from 'lru-cache';
+import LRU from 'lru-native2';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner';

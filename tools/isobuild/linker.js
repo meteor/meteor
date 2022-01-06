@@ -4,7 +4,7 @@ var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
 import assert from 'assert';
-import LRU from 'lru-cache';
+import LRU from 'lru-native2';
 import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';

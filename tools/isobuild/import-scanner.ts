@@ -289,7 +289,7 @@ function setImportedStatus(file: File, status: string | boolean) {
 // The cache can be global because findImportedModuleIdentifiers
 // is a pure function, and that way it applies across instances
 // of ImportScanner (which do not persist across builds).
-const LRU = require("lru-cache");
+const LRU = require("lru-native2");
 const IMPORT_SCANNER_CACHE = new LRU({
   max: 1024*1024,
   length(ids: Record<string, ImportInfo>) {

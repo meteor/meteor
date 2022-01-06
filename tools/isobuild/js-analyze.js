@@ -1,6 +1,6 @@
 import { parse } from '@meteorjs/babel';
 import { analyze as analyzeScope } from 'escope';
-import LRU from "lru-cache";
+import LRU from "lru-native2";
 
 import Visitor from "reify/lib/visitor.js";
 import { findPossibleIndexes } from "reify/lib/utils.js";
