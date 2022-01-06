@@ -1,6 +1,6 @@
 import sourcemap from "source-map";
 import { createHash } from "crypto";
-import LRU from "lru-cache";
+import LRU from "lru-native2";
 
 Plugin.registerMinifier({
   extensions: ["css"],
