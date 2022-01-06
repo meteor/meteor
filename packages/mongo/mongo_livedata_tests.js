@@ -3309,7 +3309,6 @@ Meteor.isServer && Tinytest.add(
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
   test.matches(MongoInternals.NpmModules.mongodb.version, /^4\.(\d+)\.(\d+)/);
-  console.log(MongoInternals.NpmModules.mongodb)
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'object');
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module.ObjectID),
              'function');
