@@ -1293,9 +1293,10 @@ MongoConnection.prototype._observeChanges = function (
 
   // You may not filter out _id when observing changes, because the id is a core
   // part of the observeChanges API.
-  if (cursorDescription.options.fields &&
-      (cursorDescription.options.fields._id === 0 ||
-       cursorDescription.options.fields._id === false)) {
+  const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
+  if (fieldsOptions &&
+      (fieldsOptions._id === 0 ||
+       fieldsOptions._id === false)) {
     throw Error("You may not observe a cursor with {fields: {_id: 0}}");
   }
 
