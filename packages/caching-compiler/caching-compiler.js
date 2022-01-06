@@ -1,8 +1,8 @@
+import { createHash } from 'crypto';
+import assert from 'assert';
+import LRUCache from 'lru-native2';
 const fs = Plugin.fs;
 const path = Plugin.path;
-const createHash = Npm.require('crypto').createHash;
-const assert = Npm.require('assert');
-const LRU = Npm.require('lru-cache');
 
 // Base class for CachingCompiler and MultiFileCachingCompiler.
 CachingCompilerBase = class CachingCompilerBase {
@@ -161,7 +161,6 @@ CachingCompilerBase = class CachingCompilerBase {
 
     case 'function':
       assert.ok(false, 'cannot hash function objects');
-      break;
 
     default:
       hash.update('' + val);
@@ -251,7 +250,7 @@ CachingCompiler = class CachingCompiler extends CachingCompilerBase {
     super({compilerName, defaultCacheSize, maxParallelism});
 
     // Maps from a hashed cache key to a compileResult.
-    this._cache = new LRU({
+    this._cache = new LRUCache({
       max: this._cacheSize,
       length: (value) => this.compileResultSize(value),
     });
