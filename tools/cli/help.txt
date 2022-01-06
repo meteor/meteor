@@ -541,6 +541,9 @@ Options:
                   ('galaxy.meteor.com'.env.MONGO_URL), when deploying, Galaxy will create
                   a database to your app in its shared cluster and will insert the URL in
                   your app's settings for you.
+  --container-size         With the argument `--container-size` you can change your app's
+                  container size using the deploy command. The valid arguments are: tiny,
+                  compact, standard, double, quad, octa, and dozen.
 
 >>> authorized
 View or change authorized users and organizations for a site.

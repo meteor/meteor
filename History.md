@@ -1,21 +1,305 @@
-## v2.4, UNRELEASED
+## v2.5.2, UNRELEASED
+
+#### Highlights
+
+#### Breaking Changes
 
 #### Meteor Version Release
 
+* `meteor-tool@2.5.2`
+  - Changes @meteorjs/babel and @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/babel@7.14.0`
+  - Updates @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/reify@0.23.0`
+  - Check scope when wrapping to fix slowness in MUI v5. [PR](https://github.com/meteor/reify/pull/1) and [Issue](https://github.com/benjamn/reify/issues/277).
+
+#### Independent Releases
+* `accounts-ui@1.4.2` 
+  - Update usage of `accounts-passwordless` to be compatible with 2.0.0.
+
+* `minifier-js@2.7.3`
+  - Revert `evaluate` option that was set to false in 2.7.2.
+
+* `standard-minifier-js@2.7.3`
+  - Using `minifier-js@2.7.3`
+
+## v2.5.1, 2021-11-17
+
+#### Highlights
+- Mac M1 Support - darwin arm64. [Read more](https://blog.meteor.com/).
+
+#### Breaking Changes
+- `Meteor.loginWithToken` from the new package `accounts-passwordless` was conflicting with another method with the same name on `accounts-base` so we had to rename the method of `accounts-passwordless` package to `Meteor.passwordlessLoginWithToken`. 
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.1`
+  - Meteor supports now Mac M1 chips (darwin arm64)
+  
+* `accounts-passwordless@2.0.0`
+  - `Meteor.loginWithToken` from the new package `accounts-passwordless` was conflicting with another method with the same name on `accounts-base` so we had to rename the method of `accounts-passwordless` package to `Meteor.passwordlessLoginWithToken`.
+
+#### Independent Releases
+* `minifier-js@2.7.2`
+  - Stopped using `evaluate` option in the compression to fix a [bug](https://github.com/meteor/meteor/issues/11756).
+  - Updated `terser` to [v5.9.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v590) to fix various bugs
+  
+* `standard-minifier-js@2.7.2`
+  - Using `minifier-js@2.7.2`
+
+* `github-oauth@1.3.2`
+  - Migrate from `http` to `fetch`
+  - Fix GitHub login params to adhere to changes in GitHub API
+
+## v2.5, 2021-10-21
+
+#### Highlights
+
+* New package: `accounts-passwordless`
+* Cordova Android v10
+* HMR now works on all architectures and legacy browsers
+* `Accounts.config()` and third-party login services can now be configured from Meteor settings
+
+#### Breaking Changes
+
+* Cordova Android v10 now enables AndroidX. If you use any cordova-plugin that depends or uses any old support library, you need to include the cordova-plugin-androidx-adapter cordova-plugin, otherwise you will get build errors.
+
+#### Meteor Version Release
+
+* CircleCI testing image was updated to include Android 30 and Node 14 
+
+* `meteor-tool@2.5`
+  - Cordova Android upgraded to v10
+  - HMR improvements related to `hot-module-replacement@0.4.0`
+  - Fix finding local packages on Windows located on drives other than C
+  - Fix infinite loop in import scanner when file is on a different drive than source root
+  - Fix Meteor sometimes not detecting changes to a file after the first time it is modified
+  - Fixes Meteor sometimes hanging on Windows. Reverts the temporary fix in Meteor 2.4 of disabling native file watchers for some commands
+  - Uses recursive file watchers on Windows and macOS. In most situations removes the up to 5 seconds delay before detecting the first change to a file, and is more efficient.
+  - Node updated to [v14.18.1](https://nodejs.org/en/blog/release/v14.18.1/), following [October 12th 2021 security release](https://nodejs.org/en/blog/vulnerability/oct-2021-security-releases/)
+  - Skeletons had their dependencies updated
+
+* `accounts-passwordless@1.0.0`
+  - New accounts package to provide passwordless authentication.
+  
+* `accounts-password@2.2.0`
+  - Changes to reuse code between passwordless and password packages.
+   
+* `accounts-base@2.2.0`
+  - You can now apply all the settings for `Accounts.config` in `Meteor.settings.packages.accounts-base`. They will be applied automatically at the start of your app. Given the limitations of `json` format you can only apply configuration that can be applied via types supported by `json` (ie. booleans, strings, numbers, arrays). If you need a function in any of the config options the current approach will still work. The options should have the same name as in `Accounts.config`, [check them out in docs.](https://docs.meteor.com/api/accounts-multi.html#AccountsCommon-config).
+  - Changes to reuse code between passwordless and password packages.
+
+* `accounts-ui-unstyled@1.6.0`
+  - Add support for `accounts-passwordless`.
+
+* `service-configuration@1.3.0`
+  - You can now define services configuration via `Meteor.settings.packages.service-configuration` by adding keys as service names and their objects being the service settings. You will need to refer to the specific service for the settings that are expected, most commonly those will be `secret` and `appId`.
+
+* `autoupdate@1.8.0`
+  - Enable HMR for all web arch's
+
+* `ecmascript@0.16.0`
+  - Enable HMR for all web arch's
+
+* `hot-module-replacement@0.4.0`
+  - Provides polyfills needed by Meteor.absoluteUrl in legacy browsers
+  - Improvements for HMR to work in all architectures and legacy browsers
+
+* `module-runtime@0.14.0`
+  - Improvements for legacy browsers
+
+* `react-fast-refrest@0.2.0`
+  - Enable HMR for all web arch's
+
+* `typescript@4.4.0`
+  - Enable HMR for all web arch's
+
+* `webapp@1.13.0`
+  - Update `cordova-plugin-meteor-webapp` to v2
+  - Removed dependency on `cordova-plugin-whitelist` as it is now included in core
+  - Cordova Meteor plugin is now using AndroidX
+  - Added new settings option `Meteor.settings.packages.webapp.alwaysReturnContent` that will always return content on requests like `POST`, essentially enabling behavior prior to Meteor 2.3.1.
+
+#### Independent Releases
+
+* `modern-browsers@0.1.6`
+  - Added `mobileSafariUI` as an alias for Mobile Safari
+
+* `minifier-js@2.7.1`
+  - Updated `terser` to [v5.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v580) to fix various bugs
+
+* `standard-minifier-js@2.7.1`
+  - Updated `@babel/runtime` to [v7.15.4](https://github.com/babel/babel/releases/tag/v7.15.4)
+
+* `accounts-ui@1.4.1`
+  - Update compatibility range with `less` from 3.0.2 to 4.0.0
+
+* `accounts-ui-unstyled@1.5.1`
+  - Update compatibility range with `less` from 3.0.2 to 4.0.0
+
+* `google-config-ui@1.0.3`
+  - Deliver siteUrl in the same way as other config-ui packages
+
+* `ecmascript-runtime-client@0.12.1`
+  - Revert `core-js` to v3.15.2 due to issues in legacy build with arrays, [see issue for more details](https://github.com/meteor/meteor/issues/11662)
+
+* `modern-browsers@0.1.7`
+  - Added `firefoxMobile` as an alias for `firefox`
+
+* `dynamic-import@0.7.2`
+  - Fixes 404 in dynamic-import/fetch when ROOT_URL is set with a custom path. [see issue](https://github.com/meteor/meteor/issues/11701)
+
+## v2.4.1, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.4.1`
+  - Patch to make 2.4.1 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
+
+## v2.4, 2021-09-15
+
+#### Highlights
+
+* Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+* Email package now allows setting `Email.customTransport` to override sending method.
+* Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming. 
+* Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
+* `reify` has been updated to v0.22.2 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
+* Meteor NPM installer is [now available for all platforms](https://github.com/meteor/meteor/pull/11590).
+* DDP server now allows you to set publication strategies for your publications to control mergebox behavior
+* On Windows Meteor should no longer be hanging on commands
+
+#### Migration steps
+
+1. Replace all usage of `collection._ensureIndex` with `collection.createIndex`. You only need to rename the method as the functionality is the same.
+2. If you are using a [well known service](https://nodemailer.com/smtp/well-known/) for the email package switch to using `Meteor.settings.packages.email` settings instead of `MAIL_URL` env variable. Alternatively you can utilize the new `Email.customTransport` function to override the default package behavior and use your own. [Read the email docs](https://docs.meteor.com/api/email.html) for implementation details.
+
+#### Meteor Version Release
+
+* Skeletons dependencies updated
+
 * `meteor-tool@2.4`
   - `meteor show` now reports if a package is deprecated
+  - `reify` update to v0.22.2 which bring optimizations for imports. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
+  - Apollo skeleton now uses [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300) - [migration guide](https://www.apollographql.com/docs/apollo-server/migration/)
+  - Upgraded `chalk` to v4.1.1
+  - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+  - `METEOR_SETTINGS` is now accepted an all modes
+  - Native file watchers are now disabled on Windows for many file-intensive actions (like, `create`, `update`, `build` etc.), this solves an issue with hanging Meteor commands on Windows
+    
+* `webapp@1.12`
+  - npm dependencies have been updated
+  - Added hook to change runtime config delivered to the client app, [read more](https://github.com/meteor/meteor/pull/11506)
+  - Added hook to get notified when the app is updated, [read more](https://github.com/meteor/meteor/pull/11607)
+  - `@vlasky/whomst@0.1.7`
+  - Added `addUpdateNotifyHook` that gets called when runtime configuration is updated
+  
+* `logging@1.3.0`
+  - Switch from `cli-color` to `chalk` to have the same dependency as meteor-tool
+  - Fix detecting eval
+  - Copy over code from `Meteor._debug` to `Log.debug` which will be deprecated in the future
+  
+* `email@2.2`
+  - Modernized package code
+  - Add alternative API function that you can hook into to utilize your own sending method: `Email.customTransport`. [Read the docs](https://docs.meteor.com/api/email.html#Email-customTransport)
+  - Use `Meteor.settings` for easy setup to sending email via [known providers](https://nodemailer.com/smtp/well-known/). [Read the docs](https://docs.meteor.com/api/email.html)
+
+* `ddp-server@2.5.0`
+  - One of three different publication strategies can be selected for any Meteor publication - SERVER_MERGE, NO_MERGE and NO_MERGE_NO_HISTORY. These control the behaviour of the Meteor mergebox, providing a compromise between client-server bandwidth usage and server side memory usage. [See PR](https://github.com/meteor/meteor/pull/11368) or [the documentation](https://docs.meteor.com/api/pubsub.html#Publication-strategies) for more details.
+
+* `mongo@1.13.0`
+  - Add `createIndex` as a collection function (in MongoDB since MongoDB v3). This is a new name for `_ensureIndex` which MongoDB has deprecated and removed in MongoDB 5.0. Use of `_ensureIndex` will show a deprecation warning on development.
+
+* `accounts-base@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `accounts-oauth@1.4.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `accounts-password@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `oauth@2.1.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `oauth1@1.5.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `facebook-oauth@1.10.0`
+  - Added login handler hook, like in the Google package for easier management in React Native and similar apps. [PR](https://github.com/meteor/meteor/pull/11603)
+
+* `service-configuration@1.5.0`
+  - Migrated usage of `_ensureIndex` to `createIndex`
+
+* `ecmascript-runtime-client@0.12.0`
+  - `core-js@3.16.0`
+
+* `ecmascript-runtime-server@0.11.0`
+  - `core-js@3.16.0`
+
+* `ecmascript-runtime@0.8.0`
+  - Version bump to ensure changes from server & client runtime get propagated.
+
+* `tinytest@1.2.0`
+  - Add option to temporarily replace `Tinytest.add` or `Tinytest.addAsync` by `Tinytest.only` or `Tinytest.onlyAsync` so only the tests added using `only*` are going to be executed.
+
+* `test-helpers@1.3.0`
+  - Support for `Tinytest.only` and `Tinytest.onlyAsync`
+
+* `modules@0.17.0`
+  - Update `reify` to `0.22.2`
+
+* `standard-minifier-js@2.7.0`
+  - `@babel/runtime@7.15.3`
+  - Code modernization
+  - Improved error handling
+
+* `minifier-js@2.7.0`
+  - Added tests
+  - Code modernization
+
+* `standard-minifier-css@1.7.4`
+  - `@babel/runtime@7.15.3`
+
+* `minifier-css@1.6.0`
+  - Updated dependencies
+    - `postcss@8.3.5`
+    - `cssnano@4.1.11`
+
+* `callback-hook@1.4.0`
+  - Added `forEach` iterator to be more in-line with the ES use for iterations. `each` is now deprecated, but will remain supported.
+  
+## v2.3.7, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.7`
+  - Patch to make 2.3.7 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
+
+## v2.3.6, 2021-09-02
+
+#### Highlights
+
+* Updated Node.js per [August 31st security release](https://nodejs.org/en/blog/vulnerability/aug-2021-security-releases2/)
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.6`
+  - Node.js updated to [v14.17.6](https://nodejs.org/en/blog/release/v14.17.6/)
 
 #### Independent Releases
 
 * `minifier-js@2.6.1`
   - Terser updated to [4.8.0](https://github.com/terser/terser/blob/master/CHANGELOG.md#v480)
-    
+
 * `routepolicy@1.1.1`
   - Removed `underscore` dependency since it was not used in the package
-  
+
 * `email@2.1.1`
   - Updated `nodemailer` to v6.6.3
-  
+
 * `callback-hook@1.3.1`
   - Modernized the code
   - Fixed a variable assignment bug in `dontBindEnvironment` function
@@ -51,6 +335,36 @@
 
 * `oauth1@1.4.1`
   - Allow usage of `http` package both v1 and v2 for backward compatibility
+  - Blaze weak dependency updated to v2.5.0
+
+* `ddp-server@2.4.1`
+  - Fix a bug where `testMessageOnConnect` has always been sent
+
+* `accounts-password@2.0.1`
+  - Fix use of `isEnroll` in reset password
+
+* `mdg:geolocation@1.3.1`
+  - Fixed API to work with Meteor 2.3+
+
+* `mdg:reload-on-resume@1.0.5`
+  - Fixed API to work with Meteor 2.3+
+
+## v2.3.5, 2021-08-12
+
+#### Highlights
+
+* Updated Node.js per the [August security release](https://nodejs.org/en/blog/vulnerability/aug-2021-security-releases/)
+* Includes same improvements as in Meteor v2.2.3
+  - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+  - `@meteorjs/babel@7.12.0`
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.5`
+  - Node.js updated to [v14.17.5](https://nodejs.org/en/blog/release/v14.17.5/)
+  - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+  - `@meteorjs/babel@7.12.0`
+  - Fix broken source maps in VSCode - [PR](https://github.com/meteor/meteor/pull/11584)
   
 ## v2.3.4, 2021-08-03
 
@@ -144,14 +458,14 @@
 - If you are maintaining a package that depends on one of the accounts packages which had a major version bump you will either need to set the new version manually or set `api.versionsFrom('2.3')`.
   You can also have it reference its current version and 2.3 like this: `api.versionsFrom(['1.12', '2.3'])`, for specific package it can be like this: `api.use('accounts-base@1.0.1 || 2.0.0')`.
   
-- Old API for packages definitions has been removed. The old underscore method names (e.g. `api.add_files()`) will no longer, please use the camel case method names (e.g. `api.addFiles()`).
+- Old API for packages definitions has been removed. The old underscore method names (e.g. `api.add_files()`) will no longer work, please use the camel case method names (e.g. `api.addFiles()`).
 
 ### Breaking changes
 * Removed deprecated `mobile-port` flag
 
 * Removed deprecated `raw` name from `isobuild`
 
-* Removed deprecated package API method names `Package.on_use`, `Package.on_test`, `Package._transitional_registerBuildPlugin` and `api.add_files`, if you haven't till now, please use the current camel case versions
+* Removed deprecated package API method names `Package.on_use`, `Package.on_test`, `Package._transitional_registerBuildPlugin` and `api.add_files`, if you haven't till now, please use the current camel case versions.
 
 * `accounts-base@2.0.0`
   - Deprecated backward compatibility function `logoutOtherClients` has been removed.
@@ -317,6 +631,39 @@
   
 * `react-fast-refresh@0.1.1`
   - Fixed the package to work in IE11
+  
+## v2.2.4, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.2.4`
+  - Patch to make 2.2.4 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
+
+## v2.2.3, 2021-08-12
+
+#### Highlights
+
+* Security update to Node.js [12.22.5](https://nodejs.org/en/blog/release/v12.22.5/)
+* Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+
+#### Meteor Version Release
+
+* `meteor-tool@2.3.3`
+  - Updated Node.js to 12.22.5 per [Node security update](https://nodejs.org/en/blog/vulnerability/aug-2021-security-releases/)
+  - Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
+  - `@meteorjs/babel@7.12.0`
+
+* `@meteorjs/babel@7.12.0` && `@meteorjs/babel@7.13.0`
+  - Dependencies updated to their latest versions
+
+* `babel-compile@7.7.0`
+  - `@meteorjs/babel@7.12.0`
+
+* `ecmascript@0.15.3`
+  - Typescript and Babel version bump
+
+* `typescript@4.3.5`
+  - [`typescript@4.3.5`](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
 
 ## v2.2.2, 2021-08-02
 
@@ -393,6 +740,14 @@
 * `webapp@1.10.1`
   - Fix for UNIX sockets with node cluster. [#11369](https://github.com/meteor/meteor/pull/11369)
 
+
+## v2.1.2, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.1.2`
+  - Patch to make 2.1.2 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
+
 ## v2.1.1, 2021-04-06
 
 ### Changes
@@ -436,6 +791,13 @@
 ### Migration steps
 
 * N/A
+
+## v2.0.1, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@2.0.1`
+  - Patch to make 2.0.1 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
 
 ## v2.0, 2021-01-20
 
@@ -502,6 +864,13 @@
 Simple run `meteor update` in your app.
 
 Great new features and no breaking changes (except one package deprecation). You can always check our [Roadmap](./Roadmap.md) to understand what is next.
+
+## v1.12.2, 2021-10-12
+
+#### Meteor Version Release
+
+* `meteor-tool@1.12.2`
+  - Patch to make 1.12.2 compatible with Push to Deploy feature in Galaxy (Meteor Cloud)
 
 ## v1.12.1, 2021-01-06
 

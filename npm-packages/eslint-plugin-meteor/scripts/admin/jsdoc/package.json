@@ -1,0 +1,11 @@
+{
+  "name": "meteor-jsdoc",
+  "version": "0.0.0",
+  "description": "no warn",
+  "readme": "no warn",
+  "repository": "no warn",
+  "dependencies": {
+    "jsdoc": "git+https://github.com/jsdoc3/jsdoc.git",
+    "canonical-json": "0.0.4"
+  }
+}

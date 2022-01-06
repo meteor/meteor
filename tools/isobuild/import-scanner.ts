@@ -44,8 +44,8 @@ import {
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
-const { compile: reifyCompile } = require("reify/lib/compiler");
-const { parse: reifyBabelParse } = require("reify/lib/parsers/babel");
+const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
+const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
 
@@ -150,7 +150,7 @@ class DefaultHandlers {
       }
     }
 
-    const cacheFileName = this.cacheDir ? 
+    const cacheFileName = this.cacheDir ?
       this.getCacheFileName(file) :
       null;
 
@@ -538,7 +538,7 @@ export default class ImportScanner {
     }
 
     let relativePath = pathRelative(this.sourceRoot, absPath);
-    if (relativePath.startsWith("..")) {
+    if (relativePath.startsWith("..") || relativePath.startsWith('/')) {
       // If the absPath is outside this.sourceRoot, assume it's real.
       return this.realPathCache[absPath] = absPath;
     }
@@ -1442,7 +1442,10 @@ export default class ImportScanner {
     this.nodeModulesPaths.some(path => {
       const relPathWithinNodeModules = pathRelative(path, absPath);
 
-      if (relPathWithinNodeModules.startsWith("..")) {
+      if (
+        relPathWithinNodeModules.startsWith("..") ||
+        relPathWithinNodeModules.startsWith('/')
+      ) {
         // absPath is not a subdirectory of path.
         return false;
       }

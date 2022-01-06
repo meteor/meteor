@@ -74,7 +74,7 @@ Project:Mongo Driver:
   - packages/non-core/mongo-decimal/**/*
 
 Project:NPM:
-  - npm-packages/*
+  - npm-packages/**/*
 
 Project:Release Process:
   - scripts/**/*
@@ -112,3 +112,9 @@ Project:Examples:
 
 Project:Dynamic Import:
   - packages/dynamic-import/**/*
+
+Project:Docs:
+  - docs/**/*
+
+Project:Guide:
+  - guide/**/*

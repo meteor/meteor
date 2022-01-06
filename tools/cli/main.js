@@ -20,6 +20,12 @@ import { isEmacs } from "../utils/utils.js";
 
 var main = exports;
 
+if (process.platform === 'darwin' && process.arch === 'arm64') {
+  // pool size needs to be bigger on m1 because arm64 builds are using
+  // fibers with CORO_PTHREAD set. - default on fibers is 120
+  Fiber.poolSize = 250;
+}
+
 require('./flush-buffers-on-exit-in-windows.js');
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
@@ -38,7 +44,7 @@ Error.stackTraceLimit = Infinity;
 function Command(options) {
   assert.ok(this instanceof Command);
 
-  options = _.extend({
+  options = Object.assign({
     minArgs: 0,
     options: {},
     allowUnrecognizedOptions: false,
@@ -61,7 +67,7 @@ function Command(options) {
     }
   });
 
-  _.extend(this, options);
+  Object.assign(this, options);
 
   _.each(this.options, function (value, key) {
     if (key === "args" || key === "appDir") {
@@ -113,7 +119,7 @@ main.ExitWithCode = function ExitWithCode(code) {
   this.code = code;
 };
 
-_.extend(main.ExitWithCode.prototype, {
+Object.assign(main.ExitWithCode.prototype, {
   toString: function () {
     var self = this;
     return "ExitWithCode:" + self.code;
@@ -1385,9 +1391,9 @@ Fiber(function () {
   });
 
   // Check for unrecognized options.
-  if (_.keys(rawOptions).length > 0 && !command.allowUnrecognizedOptions) {
+  if (Object.keys(rawOptions).length > 0 && !command.allowUnrecognizedOptions) {
     Console.error(
-      Console.command(_.keys(rawOptions)[0]) + ": unknown option.");
+      Console.command(Object.keys(rawOptions)[0]) + ": unknown option.");
     Console.rawError(
       longHelp(commandName));
     process.exit(1);

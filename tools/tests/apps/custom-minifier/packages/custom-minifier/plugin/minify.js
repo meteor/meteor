@@ -14,7 +14,7 @@ Plugin.registerMinifier({
 
 function CustomMinifier(type) {
   this.type = type;
-};
+}
 
 CustomMinifier.prototype.processFilesForBundle = function (files, options) {
   var self = this;

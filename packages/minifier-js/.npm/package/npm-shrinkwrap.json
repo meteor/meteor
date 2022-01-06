@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "buffer-from": {
-      "version": "1.1.1",
-      "resolved": "https://registry.npmjs.org/buffer-from/-/buffer-from-1.1.1.tgz",
-      "integrity": "sha512-MQcXEUbCKtEo7bhqEs6560Hyd4XaovZlO/k9V3hjVUF/zwW7KBVdSK4gIt/bzwS9MbR5qob+F5jusZsb0YQK2A=="
+      "version": "1.1.2",
+      "resolved": "https://registry.npmjs.org/buffer-from/-/buffer-from-1.1.2.tgz",
+      "integrity": "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="
     },
     "commander": {
       "version": "2.20.3",
@@ -12,19 +12,26 @@
       "integrity": "sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ=="
     },
     "source-map": {
-      "version": "0.6.1",
-      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.6.1.tgz",
-      "integrity": "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="
+      "version": "0.7.3",
+      "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.7.3.tgz",
+      "integrity": "sha512-CkCj6giN3S+n9qrYiBTX5gystlENnRW5jZeNLHpe6aue+SrHcG5VYwujhW9s4dY31mEGsxBDrHR6oI69fTXsaQ=="
     },
     "source-map-support": {
-      "version": "0.5.19",
-      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.5.19.tgz",
-      "integrity": "sha512-Wonm7zOCIJzBGQdB+thsPar0kYuCIzYvxZwlBa87yi/Mdjv7Tip2cyVbLj5o0cFPN4EVkuTwb3GDDyUx2DGnGw=="
+      "version": "0.5.20",
+      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.5.20.tgz",
+      "integrity": "sha512-n1lZZ8Ve4ksRqizaBQgxXDgKwttHDhyfQjA6YZZn8+AroHbsIz+JjwxQDxbp+7y5OYCI8t1Yk7etjD9CRd2hIw==",
+      "dependencies": {
+        "source-map": {
+          "version": "0.6.1",
+          "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.6.1.tgz",
+          "integrity": "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="
+        }
+      }
     },
     "terser": {
-      "version": "4.8.0",
-      "resolved": "https://registry.npmjs.org/terser/-/terser-4.8.0.tgz",
-      "integrity": "sha512-EAPipTNeWsb/3wLPeup1tVPaXfIaU68xMnVdPafIL1TV05OhASArYyIfFvnvJCNrR2NIOvDVNNTFRa+Re2MWyw=="
+      "version": "5.9.0",
+      "resolved": "https://registry.npmjs.org/terser/-/terser-5.9.0.tgz",
+      "integrity": "sha512-h5hxa23sCdpzcye/7b8YqbE5OwKca/ni0RQz1uRX3tGh8haaGHqcuSqbGRybuAKNdntZ0mDgFNXPJ48xQ2RXKQ=="
     }
   }
 }

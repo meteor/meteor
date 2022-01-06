@@ -89,8 +89,12 @@ function deployRpc(options) {
   if (options.headers.cookie) {
     throw new Error("sorry, can't combine cookie headers yet");
   }
-  options.qs = Object.assign({}, options.qs,
-    {capabilities: CAPABILITIES.slice()});
+  options.qs = Object.assign(
+    {},
+    options.qs,
+    { capabilities: CAPABILITIES.slice() },
+    options.deployWithTokenProps || {}
+  );
   // If we are waiting for deploy, we let Galaxy know so it can
   // use that information to send us the right deploy message response.
   if (options.waitForDeploy) {
@@ -351,13 +355,13 @@ function canonicalizeSite(site) {
 
 // Executes the poll to check for deployment success and outputs proper messages
 // to user about the status of their app during the polling process
-async function pollForDeploymentSuccess(versionId, deployPollTimeout, result, site) {
+async function pollForDeploymentSuccess(versionId, deployPollTimeout, result, site, deployWithTokenProps) {
   // Create a default polling configuration for polling for deploy / build
   // In the future, we may change this to be user-configurable or smart
   // The user can only currently configure the polling timeout via a flag
   const pollingState = new PollingState(deployPollTimeout);
   await sleepForMilliseconds(pollingState.initialWaitTimeMs);
-  const deploymentPollResult = await pollForDeploy(pollingState, versionId, site);
+  const deploymentPollResult = await pollForDeploy(pollingState, versionId, site, deployWithTokenProps);
   if (deploymentPollResult && deploymentPollResult.isActive) {
     return 0;
   }
@@ -398,7 +402,7 @@ class PollingState {
 // messages pertaining to the status of the version, which will then be reported
 // directly to the user. When the poll is complete, it will return an object
 // with information about the final state of the version and the app.
-async function pollForDeploy(pollingState, versionId, site) {
+async function pollForDeploy(pollingState, versionId, site, deployWithTokenProps) {
   const {
     deadline,
     pollIntervalMs,
@@ -413,6 +417,7 @@ async function pollForDeploy(pollingState, versionId, site) {
     operand: versionId,
     expectPayload: ['message', 'finishStatus'],
     printDeployURL: false,
+    deployWithTokenProps
   });
 
   // Check the details of the Version Status response and compare message to last call
@@ -437,7 +442,7 @@ async function pollForDeploy(pollingState, versionId, site) {
     } else if (new Date() < deadline) {
       Console.warn(`Error checking deploy status; will retry: ${errorMessage}`);
       await sleepForMilliseconds(pollIntervalMs);
-      return await pollForDeploy(pollingState, versionId, site);
+      return await pollForDeploy(pollingState, versionId, site, deployWithTokenProps);
     }
   }
 
@@ -446,7 +451,7 @@ async function pollForDeploy(pollingState, versionId, site) {
   if(new Date() < deadline && !finishStatus.isFinished) {
     // Wait for a set interval and then poll again
     await sleepForMilliseconds(pollIntervalMs);
-    return await pollForDeploy(pollingState, versionId, site);
+    return await pollForDeploy(pollingState, versionId, site, deployWithTokenProps);
   } else if (!finishStatus.isFinished) {
     Console.info(`Polling timed out. To check the status of your app, visit
     ${versionStatusResult.payload.galaxyUrl}. To wait longer, pass a timeout
@@ -516,7 +521,14 @@ export async function bundleAndDeploy(options) {
       site: site,
       preflight: true,
       promptIfAuthFails: promptIfAuthFails,
-      qs: options.rawOptions,
+      qs: Object.assign(
+        {},
+        options.rawOptions,
+        {
+          deployToken: options.deployToken,
+          owner: options.owner,
+        }
+      ),
       printDeployURL: true
     });
 
@@ -628,6 +640,11 @@ export async function bundleAndDeploy(options) {
     return 0;
   }
 
+  const deployWithTokenProps = {
+    deployToken: options.deployToken,
+    owner: options.owner
+  };
+
   Console.info('Preparing to upload your app...');
   const result = buildmessage.enterJob({
     title: "uploading"
@@ -643,7 +660,9 @@ export async function bundleAndDeploy(options) {
         {
           free: options.free,
           plan: options.plan,
-          mongo: options.mongo
+          containerSize: options.containerSize,
+          mongo: options.mongo,
+          ...deployWithTokenProps,
         },
       ),
       bodyStream: createTarGzStream(pathJoin(buildDir, 'bundle')),
@@ -676,7 +695,9 @@ export async function bundleAndDeploy(options) {
       result.payload.newVersionId,
       options.deployPollingTimeoutMs,
       result,
-      site);
+      site,
+      deployWithTokenProps,
+    );
   }
   return 0;
 };

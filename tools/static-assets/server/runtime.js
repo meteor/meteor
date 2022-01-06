@@ -28,7 +28,7 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
   };
 
   // Enable the module.{watch,export,...} runtime API needed by Reify.
-  require("reify/lib/runtime").enable(Mp);
+  require("@meteorjs/reify/lib/runtime").enable(Mp);
 
   const moduleLoad = Mp.load;
   Mp.load = function (filename) {
@@ -46,9 +46,9 @@ module.exports = function enable ({ cachePath, createLoader = true } = {}) {
     return resolved.then(() => require(id));
   };
 
-  const reifyVersion = require("reify/package.json").version;
-  const reifyBabelParse = require("reify/lib/parsers/babel").parse;
-  const reifyCompile = require("reify/lib/compiler").compile;
+  const reifyVersion = require("@meteorjs/reify/package.json").version;
+  const reifyBabelParse = require("@meteorjs/reify/lib/parsers/babel").parse;
+  const reifyCompile = require("@meteorjs/reify/lib/compiler").compile;
 
   function compileContent (content) {
     let identical = true;

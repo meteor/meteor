@@ -80,10 +80,18 @@ const logInBrowser = obj => {
   if ((typeof console !== 'undefined') && console[level]) {
     console[level](str);
   } else {
-    // XXX Uses of Meteor._debug should probably be replaced by Log.debug or
-    //     Log.info, and we should have another name for "do your best to
-    //     call call console.log".
-    Meteor._debug(str);
+    // IE doesn't have console.log.apply, it's not a real Object.
+    // http://stackoverflow.com/questions/5538972/console-log-apply-not-working-in-ie9
+    // http://patik.com/blog/complete-cross-browser-console-log/
+    if (typeof console.log.apply === "function") {
+      // Most browsers
+      console.log.apply(console, [str]);
+
+    } else if (typeof Function.prototype.bind === "function") {
+      // IE9
+      const log = Function.prototype.bind.call(console.log, console);
+      log.apply(console, [str]);
+    }
   }
 };
 
@@ -100,16 +108,14 @@ Log._getCallerDetails = () => {
 
   const stack = getStack();
 
-  if (!stack) {
-    return {};
-  }
+  if (!stack) return {};
 
   // looking for the first line outside the logging package (or an
   // eval if we find that first)
   let line;
   const lines = stack.split('\n').slice(1);
   for (line of lines) {
-    if (line.match(/^\s*at eval \(eval/)) {
+    if (line.match(/^\s*(at eval \(eval)|(eval:)/)) {
       return {file: "eval"};
     }
 
@@ -301,13 +307,9 @@ Log.format = (obj, options = {}) => {
     sourceInfo,
     stderrIndicator].join('');
 
-  const prettify = function (line, color) {
-    return (options.color && Meteor.isServer && color) ?
-      require('cli-color')[color](line) : line;
-  };
 
-  return prettify(metaPrefix, platformColor(options.metaColor || META_COLOR)) +
-    prettify(message, platformColor(LEVEL_COLORS[level]));
+  return Formatter.prettify(metaPrefix, options.color && platformColor(options.metaColor || META_COLOR)) +
+      Formatter.prettify(message, options.color && platformColor(LEVEL_COLORS[level]));
 };
 
 // Turn a line of text into a loggable object.

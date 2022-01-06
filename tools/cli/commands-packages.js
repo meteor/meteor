@@ -95,6 +95,7 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean }
   }
 }, function (options) {
+
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
   var projectContext = new projectContextModule.ProjectContext({
@@ -118,7 +119,7 @@ main.registerCommand({
   };
   addPackages(projectContext.localCatalog.getAllPackageNames());
   if (release.current.isProperRelease()) {
-    addPackages(_.keys(release.current.getPackages()));
+    addPackages(Object.keys(release.current.getPackages()));
   }
 
   // Now finish building and downloading.
@@ -1829,7 +1830,7 @@ main.registerCommand({
     // `.meteor/packages`) alone.
     if (options["all-packages"]) {
       upgradePackageNames = _.filter(
-        _.keys(projectContext.packageMapFile.getCachedVersions()),
+        Object.keys(projectContext.packageMapFile.getCachedVersions()),
         packageName => ! compiler.isIsobuildFeaturePackage(packageName)
       );
     }
@@ -1999,6 +2000,11 @@ main.registerCommand({
         "To update one or more of these packages to their latest",
         "compatible versions, pass their names to `meteor update`,",
         "or just run `meteor update --all-packages`.",
+        "If the packages do not upgrade after this, this could mean",
+        "that there is a newer version of Meteor which the package",
+        "requires, but it not yet recommended or that some package",
+        "dependencies are not up to date and don't allow you to get",
+        "the latest package version."
       ].join("\n"));
     }
   }
@@ -2620,7 +2626,7 @@ main.registerCommand({
   if (options['target-arch']) {
     // check if the passed arch is in the list
     var arch = options['target-arch'];
-    if (! _.contains(osArches, arch)) {
+    if (! osArches.includes(arch)) {
       throw new Error(
         arch + ": the arch is not available for the release. Available arches: "
         + osArches.join(', '));

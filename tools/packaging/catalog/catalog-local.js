@@ -113,7 +113,7 @@ var LocalCatalog = function (options) {
   self._nextId = 1;
 };
 
-_.extend(LocalCatalog.prototype, {
+Object.assign(LocalCatalog.prototype, {
   toString: function () {
     var self = this;
     return "LocalCatalog [localPackageSearchDirs=" +
@@ -150,18 +150,8 @@ _.extend(LocalCatalog.prototype, {
         patterns.forEach(pattern => {
           if (process.platform === "win32") {
             pattern = files.convertToOSPath(pattern);
-
-            if (pattern.charAt(1) === ":") {
-              // Get rid of drive prefix, e.g. C:
-              pattern = pattern.slice(2);
-            }
-
-            // Convert to /forward/slash/path without /C
-            pattern = files.convertToPosixPath(pattern, true);
           }
 
-          // Note: glob expects POSIX-style paths, even on Windows.
-          // https://github.com/isaacs/node-glob/blob/master/README.md#windows
           glob(pattern).forEach(
             p => list.push(files.pathResolve(p))
           );
@@ -197,7 +187,7 @@ _.extend(LocalCatalog.prototype, {
     var self = this;
     self._requireInitialized();
 
-    return _.keys(self.packages);
+    return Object.keys(self.packages);
   },
 
   // Return an array with the names of all of the non-test packages that we know
