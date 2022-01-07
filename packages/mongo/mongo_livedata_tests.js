@@ -310,8 +310,7 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 1}).x, 1);
 
 
-  // Regression test for https://github.com/meteor/meteor/issues/7436
-  //  - ensure applySkipLimit defaults to true for count()
+  //  - applySkipLimit is no longer an option
   // Note that the current behavior is inconsistent on the client.
   //  (https://github.com/meteor/meteor/issues/1201)
   if (Meteor.isServer) {
@@ -768,7 +767,7 @@ if (Meteor.isServer) {
     runInFence(function () {
       coll.update(docId1, {$set: {x: 'y'}});
     });
-    test.length(o1.output, 1, 'test that is breaking');
+    test.length(o1.output, 1);
     test.length(o2.output, 1);
     test.equal(o1.output.shift(), {changed: docId1});
     test.equal(o2.output.shift(), {changed: docId1});
@@ -1776,9 +1775,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
           test.isTrue(result1.insertedId);
         compareResults(test, skipIds, coll.find().fetch(), [{foo: 'bar', _id: result1.insertedId}]);
 
-        // !!!!
         var result2 = upsert(coll, useUpdate, {foo: 'bar'}, {foo: 'baz'});
-        // !!!!
         test.equal(result2.numberAffected, 1);
         if (! skipIds)
           test.isFalse(result2.insertedId);

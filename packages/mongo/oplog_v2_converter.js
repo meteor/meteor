@@ -24,13 +24,7 @@ on mongo 4
 const isArrayOperator = possibleArrayOperator => {
   if (!Object.keys(possibleArrayOperator).length) return false;
 
-  let isArrayOperator = true;
-  Object.keys(possibleArrayOperator).forEach(key => {
-    if (key !== 'a' && !key.match(/u\d+/)) {
-      isArrayOperator = false;
-    }
-  });
-  return isArrayOperator;
+  return !Object.keys(possibleArrayOperator).find(key => key !== 'a' && !key.match(/u\d+/));
 };
 const nestedOplogEntryParsers = (
   { i = {}, u = {}, d = {}, ...sFields },
@@ -41,13 +35,16 @@ const nestedOplogEntryParsers = (
     if (isArrayOperator(value || {})) {
       const { a, ...uPosition } = value;
       const [positionKey, newArrayIndexValue] = Object.entries(uPosition)[0];
-      if (uPosition)
+      if (uPosition) {
         sFieldsOperators.push({
           [newArrayIndexValue === null ? '$unset' : '$set']: {
             [`${prefixKey}${key.substring(1)}.${positionKey.substring(1)}`]:
-              newArrayIndexValue === null ? true : newArrayIndexValue,
+                newArrayIndexValue === null ? true : newArrayIndexValue,
           },
         });
+      }else{
+        throw new Error(`Unsupported oplog array entry, please review the input: ${JSON.stringify(value)}`)
+      }
     } else {
       sFieldsOperators.push(
         nestedOplogEntryParsers(value, `${prefixKey}${key.substring(1)}.`)
@@ -93,13 +90,13 @@ export const oplogV2V1Converter = v2OplogEntry => {
 };
 
 function flattenObject(ob) {
-  var toReturn = {};
+  const toReturn = {};
 
   for (const i in ob) {
     if (!ob.hasOwnProperty(i)) continue;
 
     if (typeof ob[i] == 'object' && ob[i] !== null) {
-      var flatObject = flattenObject(ob[i]);
+      const flatObject = flattenObject(ob[i]);
       for (const x in flatObject) {
         if (!flatObject.hasOwnProperty(x)) continue;
 
