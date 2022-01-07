@@ -35,6 +35,8 @@ Tinytest.only('oplog - v2/v1 conversion', function(test) {
 
   const entry9 = {"$v":2,"diff":{"sservices":{"sresume":{"u":{"loginTokens":[]}}}}};
 
+  const entry10 =  {"$v":2,"$set":{"services.resume.loginTokens":[{"when":"2022-01-06T23:58:35.704Z","hashedToken":"RlalW6ZSvPPJLH6sW3B1b+vrUnPy+Ox5oMv3O3S7jwg="},{"when":"2022-01-06T23:58:35.704Z","hashedToken":"DWG0Qw/+nZ48wAIhKR2r9H41wLpth9BM+Br6aZsl2bU="}]}};
+
   test.equal(
     JSON.stringify(oplogV2V1Converter(entry1)),
     JSON.stringify({
@@ -79,5 +81,9 @@ Tinytest.only('oplog - v2/v1 conversion', function(test) {
   test.equal(
     JSON.stringify(oplogV2V1Converter(entry9)),
     JSON.stringify({ '$v': 2, '$set': { 'services.resume.loginTokens': [] } })
+  );
+  test.equal(
+    JSON.stringify(oplogV2V1Converter(entry10)),
+    JSON.stringify( {"$v":2,"$set":{"services.resume.loginTokens":[{"when":"2022-01-06T23:58:35.704Z","hashedToken":"RlalW6ZSvPPJLH6sW3B1b+vrUnPy+Ox5oMv3O3S7jwg="},{"when":"2022-01-06T23:58:35.704Z","hashedToken":"DWG0Qw/+nZ48wAIhKR2r9H41wLpth9BM+Br6aZsl2bU="}]}})
   );
 });
