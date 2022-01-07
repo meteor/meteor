@@ -14,11 +14,15 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
+  api.use(['accounts-base'], ['client', 'server']);
+
+  // Export Accounts (etc) to packages using this one.
+  api.imply('accounts-base', ['client', 'server']);
+
+
   api.use("ecmascript");
 
-  api.addFiles([
-    "utils.js",
-  ], 'server');
-
-  api.mainModule('index.js', 'server');
+  api.addFiles(["2fa-client.js"], 'client');
+  api.addFiles(["2fa-server.js"], 'server');
+  api.addFiles(["utils.js"], ['client', 'server']);
 });
