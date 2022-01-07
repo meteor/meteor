@@ -610,6 +610,7 @@ _.extend(OplogObserveDriver.prototype, {
         // a replacement (in which case we can just directly re-evaluate the
         // selector)?
         // oplog format has changed on mongodb 5, we have to support both now
+        // diff is the format in Mongo 5+ (oplog v2)
         var isReplace = !_.has(op.o, '$set') && !_.has(op.o, 'diff') && !_.has(op.o, '$unset');
         // If this modifier modifies something inside an EJSON custom type (ie,
         // anything with EJSON$), then we can't try to use
