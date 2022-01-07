@@ -10,7 +10,7 @@
 
 #### Independent Releases
 
-## v2.6, UNRELEASED
+## v2.6-beta.0, UNRELEASED
 
 #### Highlights
 
