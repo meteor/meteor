@@ -192,10 +192,16 @@ MongoConnection = function (url, options) {
         }
 
         var db = client.db();
-        const helloDocument = db.admin().command( { hello: 1 } ).await();
-        // First, figure out what the current primary is, if any.
-        if (helloDocument.isWritablePrimary) {
-          self._primary = helloDocument.primary;
+        try {
+          const helloDocument = db.admin().command({hello: 1}).await();
+          // First, figure out what the current primary is, if any.
+          if (helloDocument.isWritablePrimary) {
+            self._primary = helloDocument.primary;
+          }
+        }catch(_){
+          if (db.serverConfig && db.serverConfig.isMasterDoc) {
+            self._primary = db.serverConfig.isMasterDoc.primary;
+          }
         }
 
         client.topology.on(
