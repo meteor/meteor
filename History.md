@@ -30,6 +30,7 @@
   - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.
   - internal result of operations inside nodejs mongodb driver have changed. If you are depending on rawCollection results(not only the effect inside the DB), please review the expected format as we have done [here](https://github.com/meteor/meteor/blob/155ae639ee590bae66237fc1c29295072ec92aef/packages/mongo/mongo_driver.js#L658)
   - waitForStepDownOnNonCommandShutdown=false is not needed anymore when spawning the mongodb process
+  - _synchronousCursor._dbCursor.operation is not an option anymore in the raw cursor from nodejs mongodb driver. If you want to access the options, use _synchronousCursor._dbCursor.(GETTERS) - for example, _synchronousCursor._dbCursor.readPreference.
 
 #### Migration Steps
 
