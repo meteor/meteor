@@ -1,6 +1,6 @@
 import { oplogV2V1Converter } from './oplog_v2_converter';
 
-Tinytest.only('oplog - v2/v1 conversion', function(test) {
+Tinytest.add('oplog - v2/v1 conversion', function(test) {
   const entry1 = {
     $v: 2,
     diff: { scustom: { sEJSON$value: { u: { EJSONtail: 'd' } } } },
