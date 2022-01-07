@@ -195,12 +195,15 @@ MongoConnection = function (url, options) {
         try {
           const helloDocument = db.admin().command({hello: 1}).await();
           // First, figure out what the current primary is, if any.
-          if (helloDocument.isWritablePrimary) {
+          if (helloDocument.primary) {
             self._primary = helloDocument.primary;
           }
         }catch(_){
-          if (db.serverConfig && db.serverConfig.isMasterDoc) {
-            self._primary = db.serverConfig.isMasterDoc.primary;
+          // ismaster command is supported on older mongodb versions
+          const isMasterDocument = db.admin().command({ismaster:1}).await();
+          // First, figure out what the current primary is, if any.
+          if (isMasterDocument.primary) {
+            self._primary = isMasterDocument.primary;
           }
         }
 
