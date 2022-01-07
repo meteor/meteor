@@ -88,7 +88,7 @@ const nestedOplogEntryParsers = (
 };
 
 export const oplogV2V1Converter = v2OplogEntry => {
-  if (v2OplogEntry.$v !== 2) return v2OplogEntry;
+  if (v2OplogEntry.$v !== 2 || !v2OplogEntry.diff) return v2OplogEntry;
   return { $v: 2, ...nestedOplogEntryParsers(v2OplogEntry.diff || {}) };
 };
 
