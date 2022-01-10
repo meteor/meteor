@@ -943,81 +943,22 @@ function tryExtractWithNpmTar(
   });
 }
 
-// In the same fashion as node-pre-gyp does, add the executable
-// bit but only if the read bit was present.  Same as:
-// https://github.com/mapbox/node-pre-gyp/blob/7a28f4b0f562ba4712722fefe4eeffb7b20fbf7a/lib/install.js#L71-L77
-// and others reported in: https://github.com/npm/node-tar/issues/7
-function addExecBitWhenReadBitPresent(fileMode: number) {
-  return fileMode |= (fileMode >>> 2) & 0o111;
-}
-
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
 export function createTarGzStream(dirPath: string) {
   const tar = require("tar-fs");
-  const fstream = require('fstream');
   const zlib = require("zlib");
+  const basename = pathBasename(dirPath);
 
-  // Create a segment of the file path which we will look for to
-  // identify exactly what we think is a "bin" file (that is, something
-  // which should be expected to work within the context of an
-  // 'npm run-script').
-  const binPathMatch = ["", "node_modules", ".bin", ""].join(path.sep);
-
-  // Don't use `{ path: dirPath, type: 'Directory' }` as an argument to
-  // fstream.Reader. This triggers a collection of odd behaviors in fstream
-  // (which might be bugs or might just be weirdnesses).
-  //
-  // First, if we pass an object with `type: 'Directory'` as an argument, then
-  // the resulting tarball has no entry for the top-level directory, because
-  // the reader emits an entry (with just the path, no permissions or other
-  // properties) before the pipe to gzip is even set up, so that entry gets
-  // lost. Even if we pause the streams until all the pipes are set up, we'll
-  // get the entry in the tarball for the top-level directory without
-  // permissions or other properties, which is problematic. Just passing
-  // `dirPath` appears to cause `fstream` to stat the directory before emitting
-  // an entry for it, so the pipes are set up by the time the entry is emitted,
-  // and the entry has all the right permissions, etc. from statting it.
-  //
-  // The second weird behavior is that we need an entry for the top-level
-  // directory in the tarball to untar it with npm `tar`. (GNU tar, in
-  // contrast, appears to have no problems untarring tarballs without entries
-  // for the top-level directory inside them.) The problem is that, without an
-  // entry for the top-level directory, `fstream` will create the directory
-  // with the same permissions as the first file inside it. This manifests as
-  // an EACCESS when untarring if the first file inside the top-level directory
-  // is not writeable.
-  const fileStream = fstream.Reader({
-    path: convertToOSPath(dirPath),
-    filter(entry: any) {
-      if (process.platform !== "win32") {
-        return true;
-      }
-
-      // Refuse to create a directory that isn't listable. Tarballs
-      // created on Windows will have non-executable directories (since
-      // executable isn't a thing in Windows directory permissions), and
-      // so the resulting extracted directories will not be listable on
-      // Linux/Mac unless we explicitly make them executable. We think
-      // this should really be an option that you pass to node tar, but
-      // setting it in an 'entry' handler is the same strategy that npm
-      // does, so we do that here too.
-      if (entry.type === "Directory") {
-        entry.props.mode = addExecBitWhenReadBitPresent(entry.props.mode);
-      }
-
-      // In a similar way as for directories, but only if is in a path
-      // location that is expected to be executable (npm "bin" links)
-      if (entry.type === "File" && entry.path.indexOf(binPathMatch) > -1) {
-        entry.props.mode = addExecBitWhenReadBitPresent(entry.props.mode);
-      }
-
-      return true;
+  const tarStream = tar.pack(convertToOSPath(dirPath), {
+    map: (header: any) => {
+      header.name = `${basename}/${header.name}`
+      return header
     }
   });
 
-  return fileStream.pipe(tar.pack).pipe(zlib.createGzip());
+  return tarStream.pipe(zlib.createGzip());
 }
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
