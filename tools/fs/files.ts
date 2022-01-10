@@ -917,22 +917,23 @@ function tryExtractWithNpmTar(
 ) {
   ensureDirectoryEmpty(tempDir);
 
-  const tar = require("tar");
+  const tar = require("tar-fs");
   const zlib = require("zlib");
 
   return new Promise((resolve, reject) => {
     const gunzip = zlib.createGunzip().on('error', reject);
-    const extractor = new tar.Extract({
-      path: convertToOSPath(tempDir)
-    }).on('entry', function (e: any) {
-      if (process.platform === "win32" || options.forceConvert) {
-        // On Windows, try to convert old packages that have colons in
-        // paths by blindly replacing all of the paths. Otherwise, we
-        // can't even extract the tarball
-        e.path = colonConverter.convert(e.path);
+    const extractor = tar.extract(convertToOSPath(tempDir), {
+      map: function(header: any) {
+        if (process.platform === "win32" || options.forceConvert) {
+          // On Windows, try to convert old packages that have colons in
+          // paths by blindly replacing all of the paths. Otherwise, we
+          // can't even extract the tarball
+          header.name = colonConverter.convert(header.name);
+        }
+        return header
       }
     }).on('error', reject)
-      .on('end', resolve);
+      .on('resolve', resolve);
 
     // write the buffer to the (gunzip|untar) pipeline; these calls
     // cause the tar to be extracted to disk.
@@ -954,7 +955,7 @@ function addExecBitWhenReadBitPresent(fileMode: number) {
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
 export function createTarGzStream(dirPath: string) {
-  const tar = require("tar");
+  const tar = require("tar-fs");
   const fstream = require('fstream');
   const zlib = require("zlib");
 
@@ -1016,9 +1017,7 @@ export function createTarGzStream(dirPath: string) {
     }
   });
 
-  return fileStream.pipe(tar.Pack({
-    noProprietary: true,
-  })).pipe(zlib.createGzip());
+  return fileStream.pipe(tar.pack).pipe(zlib.createGzip());
 }
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
