@@ -6,7 +6,6 @@
 
 import assert from "assert";
 import fs, { PathLike, Stats, Dirent } from "fs";
-import path from "path";
 import os from "os";
 import { spawn, execFile } from "child_process";
 import { EventEmitter } from "events";
