@@ -932,7 +932,7 @@ function tryExtractWithNpmTar(
         return header
       }
     }).on('error', reject)
-      .on('resolve', resolve);
+      .on('finish', resolve);
 
     // write the buffer to the (gunzip|untar) pipeline; these calls
     // cause the tar to be extracted to disk.
