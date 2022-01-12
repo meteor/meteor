@@ -1011,14 +1011,21 @@ MongoConnection.prototype._createSynchronousCursor = function(
 
   // Do we want a tailable cursor (which only works on capped collections)?
   if (cursorOptions.tailable) {
+    mongoOptions.numberOfRetries = -1;
+  }
+
+  var dbCursor = collection.find(
+    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
+    mongoOptions);
+
+  // Do we want a tailable cursor (which only works on capped collections)?
+  if (cursorOptions.tailable) {
     // We want a tailable cursor...
-    mongoOptions.tailable = true;
+    dbCursor.addCursorFlag("tailable", true)
     // ... and for the server to wait a bit if any getMore has no data (rather
     // than making us put the relevant sleeps in the client)...
-    mongoOptions.awaitdata = true;
-    // ... and to keep querying the server indefinitely rather than just 5 times
-    // if there's no more data.
-    mongoOptions.numberOfRetries = -1;
+    dbCursor.addCursorFlag("awaitData", true)
+
     // And if this is on the oplog collection and the cursor specifies a 'ts',
     // then set the undocumented oplog replay flag, which does a special scan to
     // find the first document (instead of creating an index on ts). This is a
@@ -1026,13 +1033,9 @@ MongoConnection.prototype._createSynchronousCursor = function(
     // only works with the ts field.
     if (cursorDescription.collectionName === OPLOG_COLLECTION &&
         cursorDescription.selector.ts) {
-      mongoOptions.oplogReplay = true;
+      dbCursor.addCursorFlag("oplogReplay", true)
     }
   }
-
-  var dbCursor = collection.find(
-    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-    mongoOptions);
 
   if (typeof cursorOptions.maxTimeMs !== 'undefined') {
     dbCursor = dbCursor.maxTimeMS(cursorOptions.maxTimeMs);
