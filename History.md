@@ -34,6 +34,30 @@
 
 #### Independent Releases
 
+## v2.5.4, UNRELEASED
+
+#### Highlights
+
+* Bump node version to 14.18.3 - security patch 
+* Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected. 
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.4`
+  - Bump node version to 14.18.3 - security patch
+  - Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected.
+
+
+#### Independent Releases
+
 ## v2.5.2, 2021-12-21
 
 #### Highlights
