@@ -51,14 +51,6 @@ var SessionDocumentView = function () {
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
-
-// how long we should maintain a session for after a non-graceful disconnect before killing it
-// sessions that reconnect within this time will be resumed with minimal performance impact.
-const DISCONNECT_GRACE_PERIOD = 5000;
-
-// how many messages should we queue during a non-graceful disconnect before we kill the session (to insure against memory leaks)
-const MAX_QUEUE_LENGTH = 100;
-
 _.extend(SessionDocumentView.prototype, {
 
   getFields: function () {
@@ -275,6 +267,7 @@ var Session = function (server, version, socket, options) {
 
   self.initialized = false;
   self.socket = socket;
+  self.options = options;
 
   // Set to null when the session is destroyed. Multiple places below
   // use this to determine if the session is alive or not.
@@ -504,7 +497,7 @@ Object.assign(Session.prototype, {
 
         // Defer calling the close callbacks, so that the caller closing
         // the session isn't waiting for all the callbacks to complete.
-        _.each(self._closeCallbacks, function (callback) {
+        self._closeCallbacks.forEach(callback => {
           callback();
         });
       });
@@ -516,10 +509,11 @@ Object.assign(Session.prototype, {
   // It should be a JSON object (it will be stringified).
   send: function (msg) {
     var self = this;
-    const isPingPong = ['ping', 'pong'].includes(msg.msg);
-    if (self.messageQueue && !isPingPong) {
+    const ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
+    const isIgnoredMsg = ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg);
+    if (self.messageQueue && !isIgnoredMsg) {
       self.messageQueue.push(msg);
-      if (self.messageQueue.length > MAX_QUEUE_LENGTH) {
+      if (self.messageQueue.length > self.options.maxMessageQueueLength) {
         Meteor.clearTimeout(self._removeTimeoutHandle);
         self._pendingRemoveFunction();
       }
@@ -528,7 +522,7 @@ Object.assign(Session.prototype, {
     if (self.socket) {
       if (Meteor._printSentDDP)
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
-      if (!isPingPong) {
+      if (!isIgnoredMsg) {
         self.sentCount++;
       }
       self.socket.send(DDPCommon.stringifyDDP(msg));
@@ -1447,6 +1441,11 @@ Server = function (options = {}) {
     // For testing, allow responding to pings to be disabled.
     respondToPings: true,
     defaultPublicationStrategy: publicationStrategies.SERVER_MERGE,
+    // how many messages should we queue during a non-graceful disconnect before we kill the session (to insure against memory leaks)
+    maxMessageQueueLength: 100,
+    // how long we should maintain a session for after a non-graceful disconnect before killing it
+    // sessions that reconnect within this time will be resumed with minimal performance impact.
+    disconnectGracePeriod: 5000,
     ...options,
   };
 
@@ -1757,7 +1756,7 @@ Object.assign(Server.prototype, {
     }
     session.messageQueue = [];
     session._pendingRemoveFunction = f;
-    session._removeTimeoutHandle = Meteor.setTimeout(f, DISCONNECT_GRACE_PERIOD);
+    session._removeTimeoutHandle = Meteor.setTimeout(f, self.options.disconnectGracePeriod);
   },
 
   /**

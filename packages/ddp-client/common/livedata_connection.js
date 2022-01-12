@@ -1635,7 +1635,8 @@ export class Connection {
       }
       return;
     }
-    if (!['ping', 'pong'].includes(msg.msg)) {
+    const ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
+    if (!ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg)) {
       this._receivedCount++;
     }
     if (msg.msg === 'connected') {
