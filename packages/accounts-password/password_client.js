@@ -25,12 +25,15 @@ const reportError = (error, callback) => {
  *   single key: `email`, `username` or `id`. Username or email match in a case
  *   insensitive manner.
  * @param {String} password The user's password.
+ * @param {String} token
+ *   Optional if not using the package accounts-2fa. This will be the user's token
+ *   when they're trying to log in.
  * @param {Function} [callback] Optional callback.
  *   Called with no arguments on success, or with a single `Error` argument
  *   on failure.
  * @importFromPackage meteor
  */
-Meteor.loginWithPassword = (selector, password, callback) => {
+Meteor.loginWithPassword = (selector, password, token, callback) => {
   if (typeof selector === 'string')
     if (!selector.includes('@'))
       selector = {username: selector};
@@ -40,7 +43,8 @@ Meteor.loginWithPassword = (selector, password, callback) => {
   Accounts.callLoginMethod({
     methodArguments: [{
       user: selector,
-      password: Accounts._hashPassword(password)
+      password: Accounts._hashPassword(password),
+      token,
     }],
     userCallback: (error, result) => {
       if (error) {

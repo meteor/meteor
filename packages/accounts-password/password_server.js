@@ -169,16 +169,27 @@ Accounts.registerLoginHandler("password", options => {
 
   check(options, {
     user: Accounts._userQueryValidator,
-    password: passwordValidator
+    password: passwordValidator,
+    token: Match.Optional(NonEmptyString),
   });
 
 
   const user = Accounts._findUserByQuery(options.user, {fields: {
     services: 1,
+    twoFactorAuthentication: 1,
     ...Accounts._checkPasswordUserFields,
   }});
   if (!user) {
     Accounts._handleError("User not found");
+  }
+
+  if(Accounts.checkUserHas2FAEnabled && Accounts.checkUserHas2FAEnabled(options.user)){
+    if(!options.token){
+      Accounts._handleError("Token must be informed.");
+    }
+    if(!Accounts.isTokenValid(user.twoFactorAuthentication.secret, options.token)){
+      Accounts._handleError("Invalid token.");
+    }
   }
 
   if (!user.services || !user.services.password ||

@@ -1,5 +1,4 @@
-import { verifyCode } from "./utils";
-import {Accounts} from "meteor/accounts-base";
+import { Accounts } from "meteor/accounts-base";
 
 // Used in the various functions below to handle errors consistently
 const reportError = (error, callback) => {
@@ -9,46 +8,23 @@ const reportError = (error, callback) => {
     throw error;
   }
 };
-const originalLoginWithPassword = Meteor.loginWithPassword;
 
-Meteor.loginWithPassword = (selector, password, callback) => {
-  if (typeof selector === 'string') {
-    if (!selector.includes('@')) {
-      selector = {username: selector};
-    } else {
-      selector = {email: selector};
-    }
-  }
 
+Accounts.has2FAEnabled = (selector, callback) => {
   Accounts.connection.call(
-    'getUserTwoFactorAuthenticationData',
-    { selector },
-    (err, twoFactorAuthenticationData) => {
-      const { type, secret } = twoFactorAuthenticationData || {};
-      if (err) {
-        reportError(err, callback);
-        return;
-      }
-      if (type === "otp") {
-        callback(null, code => {
-          verifyCode({ secret, code});
-          originalLoginWithPassword(selector, password, callback);
-        });
-        return;
-      }
-      originalLoginWithPassword(selector, password, callback);
-    }
+    'has2FAEnabled',
+    selector,
+    callback,
   );
 };
 
-
-Accounts.generateSvgCode = (appName, callback) => {
+Accounts.generateSvgCodeAndSaveSecret = (appName, callback) => {
   let cb = callback;
   if (typeof appName === "function") {
     cb = appName;
   }
   Accounts.connection.call(
-    'generateSvgCode',
+    'generateSvgCodeAndSaveSecret',
     appName,
     cb,
   );
@@ -57,11 +33,19 @@ Accounts.generateSvgCode = (appName, callback) => {
 
 Accounts.enableUser2fa = (code, callback) => {
   if (!code) {
-    return reportError(new Meteor.Error(400, 'Must pass a code to validate'), callback);
+    return reportError(new Meteor.Error(400, 'Must provide a code to validate'), callback);
   }
   Accounts.connection.call(
     'enableUser2fa',
     code,
+    callback,
+  );
+};
+
+
+Accounts.disableUser2fa = callback => {
+  Accounts.connection.call(
+    'disableUser2fa',
     callback,
   );
 };
