@@ -13,6 +13,32 @@
 * `oauth@2.1.1`
   - Fixes end of redirect response for oauth inside iframes. [PR](https://github.com/meteor/meteor/pull/11825) and [Issue](https://github.com/meteor/meteor/issues/11817)
 
+
+## v2.5.4, 2022-01-14
+
+#### Highlights
+
+* Bump node version to 14.18.3 - security patch
+* Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.4`
+  - Bump node version to 14.18.3 - security patch
+  - Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected.
+
+
+#### Independent Releases
+
+
 ## v2.5.3, 2022-01-04
 
 #### Highlights
@@ -31,30 +57,6 @@
 
 * `meteor-tool@2.5.3`
   - Fixes invalid package.json files breaking Meteor run. [PR](https://github.com/meteor/meteor/pull/11832) and [Issue](https://github.com/meteor/meteor/issues/11830)
-
-#### Independent Releases
-
-## v2.5.4, UNRELEASED
-
-#### Highlights
-
-* Bump node version to 14.18.3 - security patch 
-* Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected. 
-
-#### Breaking Changes
-
-- N/A
-
-#### Migration Steps
-
-- N/A
-
-#### Meteor Version Release
-
-* `meteor-tool@2.5.4`
-  - Bump node version to 14.18.3 - security patch
-  - Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected.
-
 
 #### Independent Releases
 
