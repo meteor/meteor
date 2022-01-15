@@ -1690,9 +1690,6 @@ STACK_OVERFLOW_BUG_INPUT = {
         "meteor@1.1.5-winr.4",
         "underscore@1.0.3-winr.2"
       ],
-      "underscore 0.0.0-glasser-isopacket.0": [
-        "meteor@1.5.0-glasser.isopacket.0"
-      ],
       "underscore 1.0.0": [
         "meteor@1.0.2"
       ],

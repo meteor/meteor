@@ -3,10 +3,18 @@ Package.describe({
   version: "1.2.0"
 });
 
+Npm.depends({
+  'lodash.has': '4.5.2',
+  'lodash.memoize': '4.1.2',
+  'lodash.isequal': '4.5.0',
+  'lodash.isempty': '4.4.0',
+  'lodash.zip': '4.2.0',
+  'lodash.groupby': '4.6.0'
+})
+
 Package.onUse(function (api) {
   api.export('ConstraintSolver');
   api.use([
-    'underscore',
     'check',
     'package-version-parser',
     'logic-solver'
@@ -27,7 +35,6 @@ Package.onTest(function (api) {
     'tinytest',
     'minimongo',
     'package-version-parser',
-    'underscore',
     'check'
   ]);
 
