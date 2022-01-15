@@ -777,13 +777,8 @@ export function extractTarGz(
 
   const startTime = +new Date;
 
-  let promise = process.platform === "win32"
-    ? tryExtractWithNative7z(buffer, tempDir, options)
-    : tryExtractWithNativeTar(buffer, tempDir, options)
-
-  promise = promise.catch(
-    () => tryExtractWithNpmTar(buffer, tempDir, options)
-  );
+  // standardize only one way of extracting, as native ones can be tricky
+  const promise = tryExtractWithNpmTar(buffer, tempDir, options)
 
   promise.await();
 
@@ -922,6 +917,10 @@ function tryExtractWithNpmTar(
   return new Promise((resolve, reject) => {
     const gunzip = zlib.createGunzip().on('error', reject);
     const extractor = tar.extract(convertToOSPath(tempDir), {
+      /* the following lines guarantees that archives created on windows
+      are going to be readable and writable on unixes */
+      readable: true, // all dirs and files should be readable
+      writable: true, // all dirs and files should be writable
       map: function(header: any) {
         if (process.platform === "win32" || options.forceConvert) {
           // On Windows, try to convert old packages that have colons in
