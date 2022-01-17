@@ -13,84 +13,160 @@ This package uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works
 meteor add accounts-2fa
 ```
 
+When the package is added, the meteor `Meteor.loginWithPassword()` starts to accept 3 parameters: `Meteor.loginWithPassword(selector, password, token)`. The token is required when the user has 2FA enabled. Examples: 
+
+**Generating a new QR code**
 ```js
-/******** Server ********/
-import { generateSecret, verifyCode } from "meteor/accounts-2fa";
+import { Buffer } from "buffer";
+import { Accounts } from 'meteor/accounts-base';
 
-Meteor.methods({
-  generateSecret(username) {
-    const newSecret = generateSecret({ username, appName: "Meteor" });
-    /*
-    * {
-    *   secret: 'AFBYWAQ5MQ1OA32FQXDHQMPHI3YFK358',
-    *   svg: <svg>...</svg>
-    * }
-    */
-    return newSecret;
-  },
-  verifyCode(code, secret) {
-    const result = verifyCode({ code, secret });
-    /*
-    * => {delta: 0} //if success
-    * => null //if failed
-    */
-    return result;
-  },
-});
-
-/******** Client - React example ********/
-
-const [secretData, setSecret] = useState(null);
+--
+  
 const [qrCode, setQrCode] = useState(null);
 
-const handleGenerateSecret = () => {
-  Meteor.call("generateSecret", "John", (error, result) => {
-    if (error) {
-      console.error("Error generating secret", error);
-      return;
-    }
-    const { svg, secret } = result;
-    setSecret(secret);
-    /*
-      the svg can be converted to base64, then be used like: 
-       <img 
-          width="200"
-          src={`data:image/svg+xml;base64,${qrCode}`}
-       />
-    */
-    setQrCode(Buffer.from(svg).toString("base64"));
-  });
-};
+--
+  
+<button
+  onClick={() => {
+    Accounts.generateSvgCodeAndSaveSecret((err, svg) => {
+      if (err) {console.error("...", err);return;}
+      /*
+        the svg can be converted to base64, then be used like: 
+         <img 
+            width="200"
+            src={`data:image/svg+xml;base64,${qrCode}`}
+         />
+      */
+      setQrCode(Buffer.from(svg).toString('base64'));
+    })
+  }}
+>
+  Generate a new code
+</button>
+```
 
-const handleVerifyCode = (code) => {
-  Meteor.call("verifyCode", code, secretData, (error, result) => {
-    if (error) {
-      console.error("Error verifying code", error);
-      return;
-    }
-    // do something with the result
-  });
-};
+**Enabling 2FA**
+```js
+import { Accounts } from 'meteor/accounts-base';
 
+--
+  
+const [code, setCode] = useState(null);
+
+--
+
+const handleValidateCodeFromQr = () => {
+  try {
+    Accounts.enableUser2fa(code);
+    console.log("2FA enabled");
+  } catch (err) {
+    console.error('Error verifying code from qr', err);
+  }
+}
+  
+--
+  
+<div>
+    <img
+      alt="qr code"
+      width="200"
+      src={`data:image/svg+xml;base64,${qrCode}`}
+    />
+    <input onChange={({target: {value}}) => setCode(value)}/>
+    <button onClick={handleValidateCodeFromQr}>validate</button>
+</div>
+```
+
+**Disabling 2FA**
+```js
+import { Accounts } from 'meteor/accounts-base';
+
+---
+
+<button
+    onClick={() => {
+      Accounts.disableUser2fa()
+    }}
+>
+  Disable 2FA
+</button>
+```
+
+**Login**
+
+```js
+// Verify with the user has 2FA enabled. If no, performe normal login.
+<button 
+  onClick={() => {
+    Accounts.has2FAEnabled(username, (err, isEnabled) => {
+      if (err) {
+        console.error("Error verifying if user has 2fa enabled", err);
+        return;
+      }
+
+      if (isEnabled) {
+        // send user to a page or show a component 
+        // where they can provide a 2FA code
+        setShouldAskCode(true);
+        return;
+      }
+      // Normal login when they don't have 2FA enabled.
+      Meteor.loginWithPassword(username, password, error => {
+        if (error) {
+          console.error("Error trying to log in (user without 2fa)", error);
+        }
+      });
+    });
+  }
+}>
+  Login
+</button>
+
+// If 2FA is enabled, inform a token, with username and password.
+<button onClick={() => {
+  Meteor.loginWithPassword(username, password, code,error => {
+    if (error) {
+      console.error("Error trying to log in (user with 2fa)", error);
+    }
+  })}
+}>
+  Validate
+</button>
 ```
 
 #API
 
-####generateSecret(options)
+####Accounts.generateSvgCodeAndSaveSecret({String} appName, {Function} [callback])
 
-Receive options is an object containing `appName` which is the name of your app that will show up when the user scans the QR code and `username` which can be the username and will also show up in the user's app. Both parameters are optional.
+Receive an `appName` which is the name of your app that will show up when the user scans the QR code. Also, a callback that's called with no arguments on success, or with a single `Error` argument
+on failure. Both parameters are optional.
 
-> Avoid using spaces in the `appName` and `username`. Today, there's an open issue on `node-2fa` with token invalidation when there's a space on these variables: [node-2fa/issues/6](https://github.com/jeremyscalpello/node-2fa/issues/6). 
+On success, this function will add an object to the logged user containing the QR secret:
 
-####verifyCode({ code, secret, window })
+```js
+twoFactorAuthetication: {
+  secret: "***"
+}
+```
 
-> This function operates exactly like on the package `node-2fa`. You can find the same description [here](https://github.com/jeremyscalpello/node-2fa#verifytokensecret-token-window).
+> Avoid using spaces in the `appName`. Today, there's an open issue on `node-2fa` with token invalidation when there's a space on these variables: [node-2fa/issues/6](https://github.com/jeremyscalpello/node-2fa/issues/6). 
 
-Checks if a time-based token matches a token from secret key within a +/- window (default: 4) minute window.
+####Accounts.enableUser2fa({String} code)
 
-Returns either `null` if the token does not match, or an object containing delta key, which is an integer of how far behind / forward the code time sync is in terms of how many new codes have been generated since entry.
+Called with a code the user will receive from the authenticator app once they read the QR code. This function throws an error on failure. If the code provided is correct, a `type` will be added to the user's `twoFactorAuthentication` object:
 
-ex. 
-- {delta: -1} means that the client entered the key too late (a newer key was meant to be used). 
-- {delta: 1} means the client entered the key too early (an older key was meant to be used). 
-- {delta: 0} means the client was within the time frame of the current key.
+```js
+twoFactorAuthetication: {
+  type: "otp",
+  secret: "***",
+}
+```
+
+#### Accounts.disableUser2fa()
+
+Called with no arguments. Remove the object `twoFactorAuthentication` from the user. Throws an error on failure.
+
+
+#### Accounts.has2FAEnabled({String} username, {Function} [callback])
+
+Called with two arguments: Username, and a callback function. The `username` is the user you want to verify if the 2FA is enabled. The callback is called with a boolean on success indicating if the user have or not the 2FA enabled, or with a single `Error` argument on failure.
