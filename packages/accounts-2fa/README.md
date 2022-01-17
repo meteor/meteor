@@ -169,4 +169,4 @@ Called with no arguments. Remove the object `twoFactorAuthentication` from the u
 
 #### Accounts.has2FAEnabled({String} username, {Function} [callback])
 
-Called with two arguments: Username, and a callback function. The `username` is the user you want to verify if the 2FA is enabled. The callback is called with a boolean on success indicating if the user have or not the 2FA enabled, or with a single `Error` argument on failure.
+Called with two arguments: Username, and a callback function. The `username` is the user you want to verify if the 2FA is enabled. The callback is called with a boolean on success that indicates whether the user has or not the 2FA enabled, or with a single `Error` argument on failure.
