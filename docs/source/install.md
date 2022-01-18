@@ -2,10 +2,11 @@
 title: Install
 ---
 Meteor currently supports **OS X, Windows, and Linux**. Only 64-bit is supported.
-Apple M1 is only supported from Meteor 2.5.1 onward.
+Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, you will need to run with a [rosetta terminal](https://osxdaily.com/2020/11/18/how-run-homebrew-x86-terminal-apple-silicon-mac/)).
 
 <h2 id="prereqs">Prerequisites and useful information</h2>
 
+- If you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/)
 - Meteor requires Node.js version >= 10 and <= 14 installed for running the npm installer (tip: you can use [nvm](https://github.com/nvm-sh/nvm) for managing node versions).
 - Meteor supports Windows 7/Windows Server 2008 R2 and up.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
@@ -47,15 +48,15 @@ arch -x86_64 npm install -g meteor
 
 or select Terminal in the Applications folder, press CMD(⌘)+I and check the "Open using Rosetta" option.
 
-<h2 id="legacy-install">Legacy Installation Method</h2>
+<h2 id="legacy-install">Alternative Installation Method</h2>
 
-For Linux and OS X, we are still providing the legacy installation method which uses a bash script and doesn't depend on Node.
+For Linux and OS X, we still provide an alternative installation method which uses a bash script and doesn't depend on Node.js.
 
 ```bash
 curl https://install.meteor.com/ | sh
 ```
 
-This installation method is not maintained anymore, and you should always use the NPM one.
+We recommend everybody to use the npm installer but we are still going to maintain this script as well.
 
 <h2 id="meteor-docker">Run Meteor inside Docker</h2>
 

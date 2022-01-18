@@ -1,6 +1,16 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
+    "@meteorjs/reify": {
+      "version": "0.23.0",
+      "resolved": "https://registry.npmjs.org/@meteorjs/reify/-/reify-0.23.0.tgz",
+      "integrity": "sha512-sHQCbZHoM+PxT+pWvkJDsaOpJP+tMQ31Mr2t1T0YcXl18eScb0bQNafe8TugNCc4pngByppfscVX4ppr84MzDw=="
+    },
+    "@types/estree": {
+      "version": "0.0.50",
+      "resolved": "https://registry.npmjs.org/@types/estree/-/estree-0.0.50.tgz",
+      "integrity": "sha512-C6N5s2ZFtuZRj54k2/zyRhNDjJwwcViAM3Nbm8zjBpbqAdZ00mr0CFxvSKeO8Y/e03WVFLpQMdHYVfUd6SB+Hw=="
+    },
     "acorn": {
       "version": "6.4.2",
       "resolved": "https://registry.npmjs.org/acorn/-/acorn-6.4.2.tgz",
@@ -10,6 +20,16 @@
       "version": "4.0.0",
       "resolved": "https://registry.npmjs.org/acorn-dynamic-import/-/acorn-dynamic-import-4.0.0.tgz",
       "integrity": "sha512-d3OEjQV4ROpoflsnUA8HozoIR504TFxNivYEUi6uwz0IYhBkTDXGuWlNdMtybRt3nqVx/L6XqMt0FxkXuWKZhw=="
+    },
+    "estree-walker": {
+      "version": "2.0.2",
+      "resolved": "https://registry.npmjs.org/estree-walker/-/estree-walker-2.0.2.tgz",
+      "integrity": "sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w=="
+    },
+    "is-reference": {
+      "version": "1.2.1",
+      "resolved": "https://registry.npmjs.org/is-reference/-/is-reference-1.2.1.tgz",
+      "integrity": "sha512-U82MsXXiFIrjCK4otLT+o2NA2Cd2g5MLoOVXUZjIOhLurrRxpEXzI8O0KZHr3IjLvlAH1kTPYSuqer5T9ZVBKQ=="
     },
     "magic-string": {
       "version": "0.25.7",
@@ -21,10 +41,10 @@
       "resolved": "https://registry.npmjs.org/meteor-babel-helpers/-/meteor-babel-helpers-0.0.3.tgz",
       "integrity": "sha1-8uXZ+HlvvS6JAQI9dpnlsgLqn7A="
     },
-    "reify": {
-      "version": "0.22.2",
-      "resolved": "https://registry.npmjs.org/reify/-/reify-0.22.2.tgz",
-      "integrity": "sha512-XJ1/k44E7JXZ6E3sZtT1k4OPiwiTDQnNdH3ive/6npOOymuF8TehAIUiLSHkinhww1HItaDbK4SKhSQsQQOjmA=="
+    "periscopic": {
+      "version": "2.0.3",
+      "resolved": "https://registry.npmjs.org/periscopic/-/periscopic-2.0.3.tgz",
+      "integrity": "sha512-FuCZe61mWxQOJAQFEfmt9FjzebRlcpFz8sFPbyaCKtdusPkMEbA9ey0eARnRav5zAhmXznhaQkKGFAPn7X9NUw=="
     },
     "semver": {
       "version": "5.7.1",
