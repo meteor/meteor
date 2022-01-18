@@ -4,10 +4,9 @@
 /// (such as testing whether an directory is a meteor app)
 ///
 
-import assert from "assert";
 import fs, { PathLike, Stats, Dirent } from "fs";
 import os from "os";
-import { spawn, execFile } from "child_process";
+import { execFile } from "child_process";
 import { EventEmitter } from "events";
 import { Slot } from "@wry/context";
 import { dep } from "optimism";
@@ -777,13 +776,8 @@ export function extractTarGz(
 
   const startTime = +new Date;
 
-  let promise = process.platform === "win32"
-    ? tryExtractWithNative7z(buffer, tempDir, options)
-    : tryExtractWithNativeTar(buffer, tempDir, options)
-
-  promise = promise.catch(
-    () => tryExtractWithNpmTar(buffer, tempDir, options)
-  );
+  // standardize only one way of extracting, as native ones can be tricky
+  const promise = tryExtractWithNpmTar(buffer, tempDir, options)
 
   promise.await();
 
@@ -813,102 +807,6 @@ function ensureDirectoryEmpty(dir: string) {
   });
 }
 
-function tryExtractWithNativeTar(
-  buffer: Buffer,
-  tempDir: string,
-  options: TarOptions = {},
-) {
-  ensureDirectoryEmpty(tempDir);
-
-  if (options.forceConvert) {
-    return Promise.reject(new Error(
-      "Native tar cannot convert colons in package names"));
-  }
-
-  return new Promise((resolve, reject) => {
-    const flags = options.verbose ? "-xzvf" : "-xzf";
-    const tarProc = spawn("tar", [flags, "-"], {
-      cwd: convertToOSPath(tempDir),
-      stdio: options.verbose ? [
-        "pipe", // Always need to write to tarProc.stdin.
-        process.stdout,
-        process.stderr
-      ] : "pipe",
-    });
-
-    tarProc.on("error", reject);
-    tarProc.on("exit", resolve);
-
-    if (tarProc.stdin) {
-      tarProc.stdin.write(buffer);
-      tarProc.stdin.end();
-    }
-  });
-}
-
-function tryExtractWithNative7z(
-  buffer: Buffer,
-  tempDir: string,
-  options: TarOptions = {},
-) {
-  ensureDirectoryEmpty(tempDir);
-
-  if (options.forceConvert) {
-    return Promise.reject(new Error(
-      "Native 7z.exe cannot convert colons in package names"));
-  }
-
-  const exeOSPath = convertToOSPath(pathJoin(getCurrentNodeBinDir(), "7z.exe"));
-  const tarGzBasename = "out.tar.gz";
-  const spawnOptions = {
-    cwd: convertToOSPath(tempDir),
-    stdio: (options.verbose ? "inherit" : "pipe") as ("inherit" | "pipe"),
-  };
-
-  writeFile(pathJoin(tempDir, tarGzBasename), buffer);
-
-  return new Promise((resolve, reject) => {
-    spawn(exeOSPath, [
-      "x", "-y", tarGzBasename
-    ], spawnOptions)
-      .on("error", reject)
-      .on("exit", resolve);
-
-  }).then(code => {
-    assert.strictEqual(code, 0);
-
-    let tarBasename: string;
-    const foundTar = readdir(tempDir).some(file => {
-      if (file !== tarGzBasename) {
-        tarBasename = file;
-        return true;
-      }
-    });
-
-    assert.ok(foundTar, "failed to find .tar file");
-
-    function cleanUp() {
-      unlink(pathJoin(tempDir, tarGzBasename));
-      unlink(pathJoin(tempDir, tarBasename));
-    }
-
-    return new Promise((resolve, reject) => {
-      spawn(exeOSPath, [
-        "x", "-y", tarBasename
-      ], spawnOptions)
-        .on("error", reject)
-        .on("exit", resolve);
-
-    }).then(code => {
-      cleanUp();
-      return code;
-    }, error => {
-      cleanUp();
-      throw error;
-    });
-  });
-}
-
 function tryExtractWithNpmTar(
   buffer: Buffer,
   tempDir: string,
@@ -922,6 +820,10 @@ function tryExtractWithNpmTar(
   return new Promise((resolve, reject) => {
     const gunzip = zlib.createGunzip().on('error', reject);
     const extractor = tar.extract(convertToOSPath(tempDir), {
+      /* the following lines guarantees that archives created on windows
+      are going to be readable and writable on unixes */
+      readable: true, // all dirs and files should be readable
+      writable: true, // all dirs and files should be writable
       map: function(header: any) {
         if (process.platform === "win32" || options.forceConvert) {
           // On Windows, try to convert old packages that have colons in
