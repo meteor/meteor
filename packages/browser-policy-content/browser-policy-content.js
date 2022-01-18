@@ -1,3 +1,6 @@
+import isEmpty from 'lodash.isempty';
+import has from 'lodash.has';
+
 // By adding this package, you get the following default policy:
 // No eval or other string-to-code, and content can only be loaded from the
 // same origin as the app (except for XHRs and websocket connections, which can
@@ -56,12 +59,12 @@ BrowserPolicy.content = {};
 var parseCsp = function (csp) {
   var policies = csp.split("; ");
   cspSrcs = {};
-  _.each(policies, function (policy) {
+  policies.forEach(function (policy) {
     if (policy[policy.length - 1] === ";")
       policy = policy.substring(0, policy.length - 1);
     var srcs = policy.split(" ");
     var directive = srcs[0];
-    if (_.indexOf(srcs, keywords.none) !== -1)
+    if (srcs.indexOf(keywords.none) !== -1)
       cspSrcs[directive] = null;
     else
       cspSrcs[directive] = srcs.slice(1);
@@ -72,13 +75,15 @@ var parseCsp = function (csp) {
                     "browser-policy must specify a default-src.");
 
   // Copy default-src sources to other directives.
-  _.each(cspSrcs, function (sources, directive) {
-    cspSrcs[directive] = _.union(sources || [], cspSrcs["default-src"] || []);
+  cspSrcs.forEach(function (sources, directive) {
+    cspSrcs[directive] = [...new Set((sources || [], cspSrcs["default-src"] || []).flat())];
   });
 };
 
 var removeCspSrc = function (directive, src) {
-  cspSrcs[directive] = _.without(cspSrcs[directive] || [], src);
+  cspSrcs[directive] = cspSrcs[directive] || [].filter(function(value) {
+    return value !== src;
+  });
 };
 
 // Prepare for a change to cspSrcs. Ensure that we have a key in the dictionary
@@ -86,8 +91,8 @@ var removeCspSrc = function (directive, src) {
 var prepareForCspDirective = function (directive) {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
-  if (! _.has(cspSrcs, directive))
-    cspSrcs[directive] = _.clone(cspSrcs["default-src"]);
+  if (!has(cspSrcs, directive))
+    cspSrcs[directive] = Object.assign({}, cspSrcs["default-src"]);
 };
 
 // Add `src` to the list of allowed sources for `directive`, with the
@@ -100,7 +105,7 @@ var prepareForCspDirective = function (directive) {
 // - Trim trailing slashes from `src`, since some browsers interpret
 //   "foo.com/" as "foo.com" and some don't.
 var addSourceForDirective = function (directive, src) {
-  if (_.contains(_.values(keywords), src)) {
+  if (Object.values(keywords).includes(src)) {
     cspSrcs[directive].push(src);
   } else {
     var toAdd = [];
@@ -123,7 +128,7 @@ var addSourceForDirective = function (directive, src) {
       }
     }
 
-    _.each(toAdd, function (s) {
+    toAdd.forEach(function (s) {
       cspSrcs[directive].push(s);
     });
   }
@@ -148,23 +153,23 @@ var setWebAppInlineScripts = function (value) {
     WebAppInternals.setInlineScriptsAllowed(value);
 };
 
-_.extend(BrowserPolicy.content, {
+Object.assign(BrowserPolicy.content, {
   allowContentTypeSniffing: function () {
     contentSniffingAllowed = true;
   },
   // Exported for tests and browser-policy-common.
   _constructCsp: function () {
-    if (! cspSrcs || _.isEmpty(cspSrcs))
+    if (! cspSrcs || isEmpty(cspSrcs))
       return null;
 
     if (cachedCsp)
       return cachedCsp;
 
-    var header = _.map(cspSrcs, function (srcs, directive) {
+    var header = cspSrcs.map(function (srcs, directive) {
       srcs = srcs || [];
-      if (_.isEmpty(srcs))
+      if (isEmpty(srcs))
         srcs = [keywords.none];
-      var directiveCsp = _.uniq(srcs).join(" ");
+      var directiveCsp = [...new Set(srcs)].join(" ");
       return directive + " " + directiveCsp + ";";
     });
 
@@ -187,7 +192,7 @@ _.extend(BrowserPolicy.content, {
 
   _keywordAllowed: function (directive, keyword) {
     return (cspSrcs[directive] &&
-            _.indexOf(cspSrcs[directive], keyword) !== -1);
+            cspSrcs[directive].indexOf(keyword) !== -1);
   },
 
   // Helpers for creating content security policies
@@ -228,7 +233,7 @@ _.extend(BrowserPolicy.content, {
   },
   allowOriginForAll: function (origin) {
     prepareForCspDirective("default-src");
-    _.each(_.keys(cspSrcs), function (directive) {
+    Object.keys(cspSrcs).forEach(function (directive) {
       addSourceForDirective(directive, origin);
     });
   },
@@ -260,12 +265,12 @@ var resources = [
   { methodResource: "Frame", directive: "frame-src" },
   { methodResource: "FrameAncestors", directive: "frame-ancestors" }
 ];
-_.each(resources,  function (resource) {
-  var directive = resource.directive; 
-  var methodResource = resource.methodResource; 
+resources.forEach(function (resource) {
+  var directive = resource.directive;
+  var methodResource = resource.methodResource;
   var allowMethodName = "allow" + methodResource + "Origin";
   var disallowMethodName = "disallow" + methodResource;
-  var allowDataMethodName = "allow" + methodResource + "DataUrl"; 
+  var allowDataMethodName = "allow" + methodResource + "DataUrl";
   var allowBlobMethodName = "allow" + methodResource + "BlobUrl";
   var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
 
