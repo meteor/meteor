@@ -31,6 +31,10 @@ export class AccountsClient extends AccountsCommon {
 
     // This is for .registerClientLoginFunction & .callLoginFunction.
     this._loginFuncs = {};
+
+    // This tracks whether callbacks registered with
+    // Accounts.onLogin have been called
+    this._loginCallbacks_called = false;
   }
 
   ///
@@ -119,6 +123,7 @@ export class AccountsClient extends AccountsCommon {
       wait: true
     }, (error, result) => {
       this._loggingOut.set(false);
+      this._loginCallbacks_called = false;
       if (error) {
         callback && callback(error);
       } else {
@@ -216,11 +221,12 @@ export class AccountsClient extends AccountsCommon {
         options[f] = () => null;
     })
 
-    // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
     let called;
+    // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
     const loginCallbacks = ({ error, loginDetails }) => {
       if (!called) {
         called = true;
+        this._loginCallbacks_called = true;
         if (!error) {
           this._onLoginHook.each(callback => {
             callback(loginDetails);
@@ -443,7 +449,7 @@ export class AccountsClient extends AccountsCommon {
   // before callbacks are registered see #10157
   _startupCallback(callback) {
     // Are we already logged in?
-    if (this.connection._userId) {
+    if (this._loginCallbacks_called) {
       // If already logged in before handler is registered, it's safe to
       // assume type is a 'resume', so we execute the callback at the end
       // of the queue so that Meteor.startup can complete before any
