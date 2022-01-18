@@ -180,7 +180,7 @@ var _findTestForResults = function (results) {
   var server = !!results.server;
   var test = (group.tests || (group.tests = []).find(
                     function(t) { return t.name === testName &&
-                                  t.server === server; });
+                                  t.server === server; }));
   if (! test) {
     // create test
     var nameParts = [...groupPath];
