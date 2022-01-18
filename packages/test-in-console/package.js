@@ -3,8 +3,13 @@ Package.describe({
   version: '1.2.3'
 });
 
+Npm.depends({
+  'lodash.has': '4.5.2',
+  'lodash.isempty': '4.4.0'
+})
+
 Package.onUse(function(api) {
-  api.use(['tinytest', 'underscore', 'random', 'ejson', 'check']);
+  api.use(['tinytest', 'random', 'ejson', 'check']);
   api.use('http', 'server'); // TODO replace with fetch
 
   api.export('TEST_STATUS', 'client');
