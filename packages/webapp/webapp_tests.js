@@ -47,15 +47,13 @@ MockResponse.prototype.getBody = function () {
 Tinytest.add("webapp - content-type header", function (test) {
   const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
 
-  const cssResource = _.find(
-    _.keys(staticFiles),
+  const cssResource = Object.keys(staticFiles).find(
     function (url) {
       return staticFiles[url].type === "css";
     }
   );
 
-  const jsResource = _.find(
-    _.keys(staticFiles),
+  const jsResource = Object.keys(staticFiles).find(
     function (url) {
       return staticFiles[url].type === "js";
     }
