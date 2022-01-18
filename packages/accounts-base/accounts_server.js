@@ -767,8 +767,8 @@ export class AccountsServer extends AccountsCommon {
     Meteor.startup(() => {
       // Merge custom fields selector and default publish fields so that the client
       // gets all the necessary fields to run properly
-      const customFields = this._addDefaultFieldSelector().fields;
-      const keys = Object.keys(customFields || {});
+      const customFields = this._addDefaultFieldSelector().fields || {};
+      const keys = Object.keys(customFields);
       // If the custom fields are negative, then ignore them and only send the necessary fields
       const fields = keys.length > 0 && customFields[keys[0]] ? {
         ...this._addDefaultFieldSelector().fields,
