@@ -1,9 +1,10 @@
 import { Meteor } from "meteor/meteor";
 import { Tracker } from "meteor/tracker";
-import { _ } from "meteor/underscore";
 import { HTTP } from "meteor/http";
 import { toSockjsUrl } from "./urls.js";
 import { ClientStream } from "meteor/socket-stream-client";
+import isEqual from "lodash.isequal";
+import once from "lodash.once";
 
 Tinytest.add('stream - status', function(test) {
   // Very basic test. Just see that it runs and returns something. Not a
@@ -15,7 +16,7 @@ Tinytest.add('stream - status', function(test) {
 
 testAsyncMulti('stream - reconnect', [
   function(test, expect) {
-    var callback = _.once(
+    var callback = once(
       expect(function() {
         var status;
         status = Meteor.status();
@@ -54,17 +55,17 @@ testAsyncMulti('stream - basic disconnect', [
     Tracker.autorun(function() {
       var status = stream.status();
 
-      if (_.last(history) !== status.status) {
+      if (history[history.length -1] !== status.status) {
         history.push(status.status);
 
-        if (_.isEqual(history, ['connecting'])) {
+        if (isEqual(history, ['connecting'])) {
           // do nothing; wait for the next state
-        } else if (_.isEqual(history, ['connecting', 'connected'])) {
+        } else if (isEqual(history, ['connecting', 'connected'])) {
           stream.disconnect();
-        } else if (_.isEqual(history, ['connecting', 'connected', 'offline'])) {
+        } else if (isEqual(history, ['connecting', 'connected', 'offline'])) {
           stream.reconnect();
         } else if (
-          _.isEqual(history, [
+          isEqual(history, [
             'connecting',
             'connected',
             'offline',
@@ -73,7 +74,7 @@ testAsyncMulti('stream - basic disconnect', [
         ) {
           // do nothing; wait for the next state
         } else if (
-          _.isEqual(history, [
+          isEqual(history, [
             'connecting',
             'connected',
             'offline',
@@ -107,14 +108,14 @@ testAsyncMulti('stream - disconnect remains offline', [
     Tracker.autorun(function() {
       var status = stream.status();
 
-      if (_.last(history) !== status.status) {
+      if (history[history.length - 1] !== status.status) {
         history.push(status.status);
 
-        if (_.isEqual(history, ['connecting'])) {
+        if (isEqual(history, ['connecting'])) {
           // do nothing; wait for the next status
-        } else if (_.isEqual(history, ['connecting', 'connected'])) {
+        } else if (isEqual(history, ['connecting', 'connected'])) {
           stream.disconnect();
-        } else if (_.isEqual(history, ['connecting', 'connected', 'offline'])) {
+        } else if (isEqual(history, ['connecting', 'connected', 'offline'])) {
           stream._online();
           test.isTrue(status.status === 'offline');
           onTestComplete();
