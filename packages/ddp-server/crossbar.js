@@ -1,3 +1,5 @@
+import has from 'lodash.has';
+
 // A "crossbar" is a class that provides structured notification registration.
 // See _match for the definition of how a notification matches a trigger.
 // All notifications and triggers must have a string key named 'collection'.
@@ -16,11 +18,11 @@ DDPServer._Crossbar = function (options) {
   self.factName = options.factName || null;
 };
 
-_.extend(DDPServer._Crossbar.prototype, {
+Object.assign(DDPServer._Crossbar.prototype, {
   // msg is a trigger or a notification
   _collectionForMessage: function (msg) {
     var self = this;
-    if (! _.has(msg, 'collection')) {
+    if (! has(msg, 'collection')) {
       return '';
     } else if (typeof(msg.collection) === 'string') {
       if (msg.collection === '')
@@ -47,7 +49,7 @@ _.extend(DDPServer._Crossbar.prototype, {
 
     var collection = self._collectionForMessage(trigger);
     var record = {trigger: EJSON.clone(trigger), callback: callback};
-    if (! _.has(self.listenersByCollection, collection)) {
+    if (!has(self.listenersByCollection, collection)) {
       self.listenersByCollection[collection] = {};
       self.listenersByCollectionCount[collection] = 0;
     }
@@ -88,13 +90,13 @@ _.extend(DDPServer._Crossbar.prototype, {
 
     var collection = self._collectionForMessage(notification);
 
-    if (! _.has(self.listenersByCollection, collection)) {
+    if (!has(self.listenersByCollection, collection)) {
       return;
     }
 
     var listenersForCollection = self.listenersByCollection[collection];
     var callbackIds = [];
-    _.each(listenersForCollection, function (l, id) {
+    Object.entries(listenersForCollection).forEach(function ([id, l]) {
       if (self._matches(notification, l.trigger)) {
         callbackIds.push(id);
       }
@@ -109,8 +111,8 @@ _.extend(DDPServer._Crossbar.prototype, {
     // because the only way that stops being true is if listenersForCollection
     // first gets reduced down to the empty object (and then never gets
     // increased again).
-    _.each(callbackIds, function (id) {
-      if (_.has(listenersForCollection, id)) {
+    callbackIds.forEach(function (id) {
+      if (has(listenersForCollection, id)) {
         listenersForCollection[id].callback(notification);
       }
     });
@@ -150,8 +152,8 @@ _.extend(DDPServer._Crossbar.prototype, {
       return false;
     }
 
-    return _.all(trigger, function (triggerValue, key) {
-      return !_.has(notification, key) ||
+    return Object.keys(trigger).every(function ([key, triggerValue]) {
+      return !has(notification, key) ||
         EJSON.equals(triggerValue, notification[key]);
     });
   }

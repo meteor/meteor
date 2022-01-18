@@ -21,7 +21,7 @@ DDPServer._WriteFence = function () {
 //
 DDPServer._CurrentWriteFence = new Meteor.EnvironmentVariable;
 
-_.extend(DDPServer._WriteFence.prototype, {
+Object.assign(DDPServer._WriteFence.prototype, {
   // Start tracking a write, and return an object to represent it. The
   // object has a single method, committed(). This method should be
   // called when the write is fully committed and propagated. You can
@@ -107,7 +107,7 @@ _.extend(DDPServer._WriteFence.prototype, {
       while (self.before_fire_callbacks.length > 0) {
         var callbacks = self.before_fire_callbacks;
         self.before_fire_callbacks = [];
-        _.each(callbacks, invokeCallback);
+        callbacks.forEach(invokeCallback);
       }
       self.outstanding_writes--;
 
@@ -115,7 +115,7 @@ _.extend(DDPServer._WriteFence.prototype, {
         self.fired = true;
         var callbacks = self.completion_callbacks;
         self.completion_callbacks = [];
-        _.each(callbacks, invokeCallback);
+        callbacks.forEach(invokeCallback);
       }
     }
   },
