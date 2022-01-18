@@ -1,10 +1,12 @@
+import has from 'lodash.has';
+
 Meteor.methods({
   nothing: function() {
     // No need to check if there are no arguments.
   },
   echo: function(/* arguments */) {
     check(arguments, [Match.Any]);
-    return _.toArray(arguments);
+    return Array.from(arguments);
   },
   echoOne: function(/*arguments*/) {
     check(arguments, [Match.Any]);
@@ -241,15 +243,14 @@ if (Meteor.isServer) {
     const collName = 'overlappingUniversalSubs';
     const universalSubscribers = [[], []];
 
-    _.each([0, 1], function(index) {
+    [0, 1].forEach(function(index) {
       Meteor.publish(null, function() {
         const sub = this;
         universalSubscribers[index].push(sub);
         sub.onStop(function() {
-          universalSubscribers[index] = _.without(
-            universalSubscribers[index],
-            sub
-          );
+          universalSubscribers[index] = universalSubscribers[index].filter(function(value) {
+            return value !== sub;
+          });
         });
       });
     });
@@ -257,13 +258,13 @@ if (Meteor.isServer) {
     Meteor.methods({
       testOverlappingSubs: function(token) {
         check(token, String);
-        _.each(universalSubscribers[0], function(sub) {
+        universalSubscribers[0].forEach(function(sub) {
           sub.added(collName, token, {});
         });
-        _.each(universalSubscribers[1], function(sub) {
+        universalSubscribers[1].forEach(function(sub) {
           sub.added(collName, token, {});
         });
-        _.each(universalSubscribers[0], function(sub) {
+        universalSubscribers[0].forEach(function(sub) {
           sub.removed(collName, token);
         });
       }
@@ -366,11 +367,11 @@ if (Meteor.isServer) {
 const resultByValueArrays = Object.create(null);
 Meteor.methods({
   getArray: function(testId) {
-    if (!_.has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
+    if (!has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
     return resultByValueArrays[testId];
   },
   pushToArray: function(testId, value) {
-    if (!_.has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
+    if (!has(resultByValueArrays, testId)) resultByValueArrays[testId] = [];
     resultByValueArrays[testId].push(value);
   }
 });

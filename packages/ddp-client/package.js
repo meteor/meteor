@@ -43,7 +43,6 @@ Package.onTest((api) => {
     'mongo',
     'test-helpers',
     'ecmascript',
-    'underscore',
     'tinytest',
     'random',
     'tracker',
