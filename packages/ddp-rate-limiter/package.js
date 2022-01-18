@@ -19,9 +19,8 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use('underscore');
   api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
-           'accounts-base', 'random', 'email', 'underscore', 'check',
+           'accounts-base', 'random', 'email', 'check',
            'ddp', 'ecmascript', 'es5-shim']);
   api.use('ddp-rate-limiter');
 
