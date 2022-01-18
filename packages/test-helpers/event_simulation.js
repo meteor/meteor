@@ -9,11 +9,11 @@ simulateEvent = function (node, event, args, options) {
   if (document.createEvent) {
     var e = document.createEvent("Event");
     e.initEvent(event, bubbles, true);
-    _.extend(e, args);
+    Object.assign(e, args);
     node.dispatchEvent(e);
   } else {
     var e = document.createEventObject();
-    _.extend(e, args);
+    Object.assign(e, args);
     node.fireEvent("on" + event, e);
   }
 };
