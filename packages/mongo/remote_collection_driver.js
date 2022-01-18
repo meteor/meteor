@@ -1,3 +1,5 @@
+import once from 'lodash.once';
+
 MongoInternals.RemoteCollectionDriver = function (
   mongo_url, options) {
   var self = this;
@@ -12,7 +14,7 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
       'remove', '_ensureIndex', 'createIndex', '_dropIndex', '_createCappedCollection',
       'dropCollection', 'rawCollection'].forEach(
       function (m) {
-        ret[m] = _.bind(self.mongo[m], self.mongo, name);
+        ret[m] = self.mongo[m].bind(self.mongo, name);
       });
     return ret;
   }
@@ -22,7 +24,7 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
 // Create the singleton RemoteCollectionDriver only on demand, so we
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)
-MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
+MongoInternals.defaultRemoteCollectionDriver = once(function () {
   var connectionOptions = {};
 
   var mongoUrl = process.env.MONGO_URL;

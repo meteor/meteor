@@ -1,3 +1,5 @@
+import has from 'lodash.has';
+import isEmpty from 'lodash.isempty';
 var Future = Npm.require('fibers/future');
 
 var PHASE = {
@@ -158,7 +160,7 @@ OplogObserveDriver = function (options) {
         // oplog, and all observers made it back to the steady state.
         self._mongoHandle._oplogHandle.waitUntilCaughtUp();
 
-        _.each(drivers, function (driver) {
+        Object.values(drivers).forEach(function (driver) {
           if (driver._stopped)
             return;
 
@@ -192,11 +194,11 @@ OplogObserveDriver = function (options) {
   }));
 };
 
-_.extend(OplogObserveDriver.prototype, {
+Object.assign(OplogObserveDriver.prototype, {
   _addPublished: function (id, doc) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
-      var fields = _.clone(doc);
+      var fields = Object.assign({}, doc);
       delete fields._id;
       self._published.set(id, self._sharedProjectionFn(doc));
       self._multiplexer.added(id, self._projectionFn(fields));
@@ -285,7 +287,7 @@ _.extend(OplogObserveDriver.prototype, {
       var projectedOld = self._projectionFn(oldDoc);
       var changed = DiffSequence.makeChangedFields(
         projectedNew, projectedOld);
-      if (!_.isEmpty(changed))
+      if (!isEmpty(changed))
         self._multiplexer.changed(id, changed);
     });
   },
@@ -558,7 +560,7 @@ _.extend(OplogObserveDriver.prototype, {
       var writes = self._writesToCommitWhenWeReachSteady;
       self._writesToCommitWhenWeReachSteady = [];
       self._multiplexer.onFlush(function () {
-        _.each(writes, function (w) {
+        writes.forEach(function (w) {
           w.committed();
         });
       });
@@ -602,7 +604,7 @@ _.extend(OplogObserveDriver.prototype, {
         // database to figure out if the whole document matches the selector) or
         // a replacement (in which case we can just directly re-evaluate the
         // selector)?
-        var isReplace = !_.has(op.o, '$set') && !_.has(op.o, '$unset');
+        var isReplace = !has(op.o, '$set') && !has(op.o, '$unset');
         // If this modifier modifies something inside an EJSON custom type (ie,
         // anything with EJSON$), then we can't try to use
         // LocalCollection._modify, since that just mutates the EJSON encoding,
@@ -614,7 +616,7 @@ _.extend(OplogObserveDriver.prototype, {
         var bufferedBefore = self._limit && self._unpublishedBuffer.has(id);
 
         if (isReplace) {
-          self._handleDoc(id, _.extend({_id: id}, op.o));
+          self._handleDoc(id, Object.assign({_id: id}, op.o));
         } else if ((publishedBefore || bufferedBefore) &&
                    canDirectlyModifyDoc) {
           // Oh great, we actually know what the document is, so we can apply
@@ -821,11 +823,11 @@ _.extend(OplogObserveDriver.prototype, {
       // the selector, not just the fields we are going to publish (that's the
       // "shared" projection). And we don't want to apply any transform in the
       // cursor, because observeChanges shouldn't use the transform.
-      var options = _.clone(self._cursorDescription.options);
+      var options = Object.assign({}, self._cursorDescription.options);
 
       // Allow the caller to modify the options. Useful to specify different
       // skip and limit values.
-      _.extend(options, optionsOverwrite);
+      Object.assign(options, optionsOverwrite);
 
       options.fields = self._sharedProjection;
       delete options.transform;
@@ -863,7 +865,7 @@ _.extend(OplogObserveDriver.prototype, {
         if (!newResults.has(id))
           idsToRemove.push(id);
       });
-      _.each(idsToRemove, function (id) {
+      idsToRemove.forEach(function (id) {
         self._removePublished(id);
       });
 
@@ -912,7 +914,7 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._stopped)
       return;
     self._stopped = true;
-    _.each(self._stopHandles, function (handle) {
+    self._stopHandles.forEach(function (handle) {
       handle.stop();
     });
 
@@ -921,7 +923,7 @@ _.extend(OplogObserveDriver.prototype, {
     // determined that there are no handles left. So nothing is actually going
     // to get flushed (and it's probably not valid to call methods on the
     // dying multiplexer).
-    _.each(self._writesToCommitWhenWeReachSteady, function (w) {
+    self._writesToCommitWhenWeReachSteady.forEach(function (w) {
       w.committed();  // maybe yields?
     });
     self._writesToCommitWhenWeReachSteady = null;
@@ -999,8 +1001,8 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
 };
 
 var modifierCanBeDirectlyApplied = function (modifier) {
-  return _.all(modifier, function (fields, operation) {
-    return _.all(fields, function (value, field) {
+  return Object.entries(modifier).every(function ([operation, fields]) {
+    return Object.entries(fields).every(function ([field, value]) {
       return !/EJSON\$/.test(field);
     });
   });
