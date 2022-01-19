@@ -1,5 +1,6 @@
 const has = Npm.require('lodash.has');
 const isString = Npm.require('lodash.isstring');
+const isEmpty = Npm.require('lodash.isempty');
 
 var PV = PackageVersion;
 var CS = ConstraintSolver;
@@ -12,7 +13,8 @@ var makeResolver = function (data) {
     var version = versionDescription.shift();
     var deps = versionDescription.shift();
     var constructedDeps = {};
-    deps.forEach(function (constraint, name) {
+    if (!isEmpty(deps)) { 
+    Object.entries(deps).forEach(function ([name, constraint]) {
       constructedDeps[name] = {
         constraint: constraint,
         references: [
@@ -22,6 +24,7 @@ var makeResolver = function (data) {
         ]
       };
     });
+  }
     Versions.insert({ packageName: packageName, version: version,
                       dependencies: constructedDeps });
   });
