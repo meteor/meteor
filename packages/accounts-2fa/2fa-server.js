@@ -3,9 +3,9 @@ import twofactor from "node-2fa";
 import QRCode from "qrcode-svg";
 import { Meteor } from "meteor/meteor";
 
-Accounts.checkUserHas2FAEnabled = selector => {
+Accounts.checkUserHas2faEnabled = selector => {
   if (!Meteor.isServer) {
-    throw new Meteor.Error(400, "The function checkUserHas2FAEnabled can only be called on the server");
+    throw new Meteor.Error(400, "The function checkUserHas2faEnabled can only be called on the server");
   }
 
   if (typeof selector === 'string') {
@@ -30,7 +30,7 @@ Accounts.isTokenValid = (secret, token) => {
 };
 
 Meteor.methods({
-  generateSvgCodeAndSaveSecret(appName) {
+  generate2faActivationQrCode(appName) {
     const user = Meteor.user();
 
     if (!user) { return null; }
@@ -61,7 +61,7 @@ Meteor.methods({
 
 
     if (!twoFactorAuthentication || !twoFactorAuthentication.secret) {
-      throw new Meteor.Error(400, "The user does not have a secret generated. You may have to call the function generateSvgCode first.");
+      throw new Meteor.Error(500, "The user does not have a secret generated. You may have to call the function generateSvgCode first.");
     }
     if (!Accounts.isTokenValid(twoFactorAuthentication.secret, code)) {
       throw new Meteor.Error(400, "Invalid token.");
@@ -89,7 +89,7 @@ Meteor.methods({
       }
     });
   },
-  has2FAEnabled(selector) {
+  has2faEnabled(selector) {
     return Accounts.checkUserHas2FAEnabled(selector);
   }
 });

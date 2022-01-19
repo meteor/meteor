@@ -6,7 +6,7 @@ description: Documentation of Meteor's `accounts-2fa` package.
 The package `accounts-2fa` allows you to easily integrate 2FA with the OTP technology on your login flow.
 
 The first step to use 2FA is to generate a QR code so the user can read it on an authenticator app and start to receiving codes.
-{% apibox "Accounts.generateSvgCodeAndSaveSecret" "module":"accounts-base" %}
+{% apibox "Accounts.generate2faActivationQrCode" "module":"accounts-base" %}
 
 
 {% apibox "Accounts.enableUser2fa" "module":"accounts-base" %}

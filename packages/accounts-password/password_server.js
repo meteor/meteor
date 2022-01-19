@@ -183,6 +183,7 @@ Accounts.registerLoginHandler("password", options => {
     Accounts._handleError("User not found");
   }
 
+  // This method is added by the package accounts-2fa
   if(Accounts.checkUserHas2FAEnabled && Accounts.checkUserHas2FAEnabled(options.user)){
     if(!options.token){
       Accounts._handleError("Token must be informed.");

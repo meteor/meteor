@@ -7,33 +7,8 @@ const reportError = (error, callback) => {
    }
 };
 
-// Attempt to log in with a password.
-//
-// @param selector {String|Object} One of the following:
-//   - {username: (username)}
-//   - {email: (email)}
-//   - a string which may be a username or email, depending on whether
-//     it contains "@".
-// @param password {String}
-// @param callback {Function(error|undefined)}
 
-/**
- * @summary Log the user in with a password.
- * @locus Client
- * @param {Object | String} selector
- *   Either a string interpreted as a username or an email; or an object with a
- *   single key: `email`, `username` or `id`. Username or email match in a case
- *   insensitive manner.
- * @param {String} password The user's password.
- * @param {String} token
- *   Optional if not using the package accounts-2fa. This will be the user's token
- *   when they're trying to log in.
- * @param {Function} [callback] Optional callback.
- *   Called with no arguments on success, or with a single `Error` argument
- *   on failure.
- * @importFromPackage meteor
- */
-Meteor.loginWithPassword = (selector, password, token, callback) => {
+const internalLoginWithPassword = ({ selector, password, token, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@'))
       selector = {username: selector};
@@ -54,6 +29,59 @@ Meteor.loginWithPassword = (selector, password, token, callback) => {
       }
     }
   });
+  return selector;
+}
+
+// Attempt to log in with a password.
+//
+// @param selector {String|Object} One of the following:
+//   - {username: (username)}
+//   - {email: (email)}
+//   - a string which may be a username or email, depending on whether
+//     it contains "@".
+// @param password {String}
+// @param callback {Function(error|undefined)}
+
+/**
+ * @summary Log the user in with a password.
+ * @locus Client
+ * @param {Object | String} selector
+ *   Either a string interpreted as a username or an email; or an object with a
+ *   single key: `email`, `username` or `id`. Username or email match in a case
+ *   insensitive manner.
+ * @param {String} password The user's password.
+ * @param {Function} [callback] Optional callback.
+ *   Called with no arguments on success, or with a single `Error` argument
+ *   on failure.
+ * @importFromPackage meteor
+ */
+Meteor.loginWithPassword = (selector, password, callback) => {
+  return internalLoginWithPassword({ selector, password, callback });
+};
+
+/**
+ * @summary Log the user in with a password and token.
+ * @locus Client
+ * @param {Object | String} selector
+ *   Either a string interpreted as a username or an email; or an object with a
+ *   single key: `email`, `username` or `id`. Username or email match in a case
+ *   insensitive manner.
+ * @param {String} password The user's password.
+ * @param {String} token Token provide by the user's authenticator app.
+ * @param {Function} [callback] Optional callback.
+ *   Called with no arguments on success, or with a single `Error` argument
+ *   on failure.
+ * @importFromPackage meteor
+ */
+
+Meteor.loginWithPasswordAnd2faToken = (selector, password, token, callback) => {
+  if (token == null || typeof token !== 'string' || !token) {
+    throw new Meteor.Error(
+      400,
+      'token is required to use loginWithPasswordAnd2faToken and must be a string',
+    );
+  }
+  return internalLoginWithPassword({ selector, password, token, callback });
 };
 
 Accounts._hashPassword = password => ({

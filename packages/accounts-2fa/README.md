@@ -28,7 +28,7 @@ const [qrCode, setQrCode] = useState(null);
   
 <button
   onClick={() => {
-    Accounts.generateSvgCodeAndSaveSecret((err, svg) => {
+    Accounts.generate2faActivationQrCode((err, svg) => {
       if (err) {console.error("...", err);return;}
       /*
         the svg can be converted to base64, then be used like: 
@@ -136,7 +136,7 @@ import { Accounts } from 'meteor/accounts-base';
 
 #API
 
-####Accounts.generateSvgCodeAndSaveSecret({String} appName, {Function} [callback])
+####Accounts.generate2faActivationQrCode({String} appName, {Function} [callback])
 
 Receive an `appName` which is the name of your app that will show up when the user scans the QR code. Also, a callback that's called with no arguments on success, or with a single `Error` argument
 on failure. Both parameters are optional.
