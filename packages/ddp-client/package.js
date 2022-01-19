@@ -5,7 +5,9 @@ Package.describe({
 });
 
 Npm.depends({
-  '@sinonjs/fake-timers': '7.0.5'
+  '@sinonjs/fake-timers': '7.0.5',
+  'lodash.has': '4.5.2',
+  'lodash.identity': '3.0.0'
 });
 
 Package.onUse((api) => {
