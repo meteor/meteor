@@ -3,9 +3,9 @@ import twofactor from "node-2fa";
 import QRCode from "qrcode-svg";
 import { Meteor } from "meteor/meteor";
 
-Accounts.checkUserHas2faEnabled = selector => {
+Accounts.is2faEnabledForUser = selector => {
   if (!Meteor.isServer) {
-    throw new Meteor.Error(400, "The function checkUserHas2faEnabled can only be called on the server");
+    throw new Meteor.Error(400, "The function is2faEnabledForUser can only be called on the server");
   }
 
   if (typeof selector === 'string') {
@@ -90,6 +90,6 @@ Meteor.methods({
     });
   },
   has2faEnabled(selector) {
-    return Accounts.checkUserHas2faEnabled(selector);
+    return Accounts.is2faEnabledForUser(selector);
   }
 });

@@ -184,7 +184,7 @@ Accounts.registerLoginHandler("password", options => {
   }
 
   // This method is added by the package accounts-2fa
-  if(Accounts.checkUserHas2faEnabled && Accounts.checkUserHas2faEnabled(options.user)){
+  if(Accounts.is2faEnabledForUser && Accounts.is2faEnabledForUser(options.user)){
     if(!options.token){
       Accounts._handleError("Token must be informed.");
     }
