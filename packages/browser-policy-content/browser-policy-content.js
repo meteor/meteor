@@ -1,5 +1,5 @@
-import isEmpty from 'lodash.isempty';
-import has from 'lodash.has';
+const isEmpty = Npm.require('lodash.isempty');
+const has = Npm.require('lodash.has');
 
 // By adding this package, you get the following default policy:
 // No eval or other string-to-code, and content can only be loaded from the
@@ -75,7 +75,7 @@ var parseCsp = function (csp) {
                     "browser-policy must specify a default-src.");
 
   // Copy default-src sources to other directives.
-  cspSrcs.forEach(function (sources, directive) {
+  Object.entries(cspSrcs).forEach(function ([directive, sources]) {
     cspSrcs[directive] = [...new Set((sources || [], cspSrcs["default-src"] || []).flat())];
   });
 };
