@@ -84,8 +84,8 @@ Meteor.methods({
     }
 
     Meteor.users.update({ username: user.username }, {
-      $set: {
-        twoFactorAuthentication: {}
+      $unset: {
+        twoFactorAuthentication: 1
       }
     });
   },
