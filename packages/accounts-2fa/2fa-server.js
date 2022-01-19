@@ -90,6 +90,6 @@ Meteor.methods({
     });
   },
   has2faEnabled(selector) {
-    return Accounts.checkUserHas2FAEnabled(selector);
+    return Accounts.checkUserHas2faEnabled(selector);
   }
 });
