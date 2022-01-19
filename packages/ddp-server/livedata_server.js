@@ -1687,7 +1687,7 @@ Object.assign(Server.prototype, {
       }
     }
     else{
-      name.forEach(function(value, key) {
+      Object.entries(name).forEach(function([key, value]) {
         self.publish(key, value, {});
       });
     }
