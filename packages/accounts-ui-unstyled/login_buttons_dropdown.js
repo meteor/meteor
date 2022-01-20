@@ -44,7 +44,7 @@ const loginOrSignupPasswordless = () => {
 
   if (loginButtonsSession.get('inPasswordlessConfirmation')) {
     const token = trimmedElementValueById('login-code-passwordless');
-    Meteor.loginWithToken({ email: loginButtonsSession.get('passwordlessCodeEmail') }, token, (error) => {
+    Meteor.passwordlessLoginWithToken({ email: loginButtonsSession.get('passwordlessCodeEmail') }, token, (error) => {
       if (error) {
         loginButtonsSession.errorMessage(error.reason || "Unknown error");
       } else {

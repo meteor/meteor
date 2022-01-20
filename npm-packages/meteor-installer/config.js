@@ -1,7 +1,7 @@
 const path = require('path');
 const os = require('os');
 
-const METEOR_LATEST_VERSION = '2.5.1';
+const METEOR_LATEST_VERSION = '2.5.5';
 const sudoUser = process.env.SUDO_USER || '';
 function isRoot() {
   return process.getuid && process.getuid() === 0;
@@ -17,7 +17,7 @@ let rootPath;
 if (isWindows()) {
   rootPath = localAppData;
 } else if (isRoot() && sudoUser) {
-  rootPath = `/home/${sudoUser}`;
+  rootPath = isMac() ? `/Users/${sudoUser}` : `/home/${sudoUser}`;
 } else {
   if (isRoot()) {
     console.info(

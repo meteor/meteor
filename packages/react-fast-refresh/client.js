@@ -18,7 +18,7 @@ if (
 ) {
   let inBefore = false;
   module.hot.onRequire({
-    before(module) {
+    before: function (module) {
       if (inBefore) {
         // This is a module required while loading the react refresh runtime
         // Do not initialize it to avoid an infinite loop 

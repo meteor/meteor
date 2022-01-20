@@ -1,8 +1,10 @@
-## vNext, UNRELEASED
+## vNEXT, UNRELEASED
 
 #### Highlights
 
 #### Breaking Changes
+
+#### Migration Steps
 
 #### Meteor Version Release
 
@@ -10,6 +12,125 @@
   - Add a new field to the user collection `lastLoginAt` which indicated the last time user login function was triggered
 
 #### Independent Releases
+
+
+## v2.5.5, 2022-01-18
+
+#### Highlights
+
+* Bump node version to 14.18.3 - security patch
+* Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.5`
+  - Bump node version to 14.18.3 - security patch
+  - Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected.
+
+* `accounts-base@2.2.1`
+  - Fixes onLogin firing twice. [PR](https://github.com/meteor/meteor/pull/11785) and [Issue](https://github.com/meteor/meteor/issues/10853)
+
+
+#### Independent Releases
+
+* `oauth@2.1.1`
+  - Fixes end of redirect response for oauth inside iframes. [PR](https://github.com/meteor/meteor/pull/11825) and [Issue](https://github.com/meteor/meteor/issues/11817)
+
+## v2.5.4, 2022-01-14
+
+This version should be ignored. Proceed to 2.5.5 above.
+
+## v2.5.3, 2022-01-04
+
+#### Highlights
+
+* Fixes invalid package.json error with `resolve` 
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.3`
+  - Fixes invalid package.json files breaking Meteor run. [PR](https://github.com/meteor/meteor/pull/11832) and [Issue](https://github.com/meteor/meteor/issues/11830)
+
+#### Independent Releases
+
+## v2.5.2, 2021-12-21
+
+#### Highlights
+
+* Reify performance improvements
+* Node.js update to 14.18.2
+* HMR Fixes
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.2`
+  - Changes @meteorjs/babel and @meteorjs/reify to improve Reify performance.
+  - Upgrades Node.js to 14.18.2
+  - Fixes isopacket [load failure](https://github.com/meteor/meteor/issues/10930) on Windows. [PR](https://github.com/meteor/meteor/pull/11740)
+
+* `hot-module-replacement@0.5.0` 
+  - Prevents hot.accept from overriding hot.decline. [PR](https://github.com/meteor/meteor/pull/11801)
+  - Fixes falling back to hot code push on web archs. [PR](https://github.com/meteor/meteor/pull/11795)
+
+* `@meteorjs/babel@7.15.0`
+  - Updates @meteorjs/reify to improve Reify performance.
+
+* `@meteorjs/reify@0.23.0`
+  - Uses `@meteorjs/reify` instead of `reify`
+  - Check scope when wrapping to fix slowness in MUI v5. [PR](https://github.com/meteor/reify/pull/1) and [Issue](https://github.com/benjamn/reify/issues/277).
+
+* `standard-minifier-js@2.8.0`
+  - Bump to apply improvements from Reify
+
+* `typescript@4.4.1`
+  - Bump to apply improvements from Reify
+
+* `babel-compiler@7.8.0`
+  - Bump to apply improvements from Reify
+
+* `ecmascript@0.16.1`
+  - Bump to apply improvements from Reify
+
+* `modules@0.18.0`
+  - Bump to apply improvements from Reify
+
+#### Independent Releases
+
+* `react-fast-refresh@0.2.2`
+  - [Fixes](https://github.com/meteor/meteor/issues/11744) bugs. [PR](https://github.com/meteor/meteor/pull/11794/)
+  
+* `accounts-ui@1.4.2` 
+  - Update usage of `accounts-passwordless` to be compatible with 2.0.0.
+
+* `minifier-js@2.7.3`
+  - Revert `evaluate` option that was set to false in 2.7.2.
+
+* `standard-minifier-js@2.7.3`
+  - Using `minifier-js@2.7.3`
 
 ## v2.5.1, 2021-11-17
 
