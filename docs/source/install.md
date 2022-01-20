@@ -48,15 +48,15 @@ arch -x86_64 npm install -g meteor
 
 or select Terminal in the Applications folder, press CMD(⌘)+I and check the "Open using Rosetta" option.
 
-<h2 id="legacy-install">Legacy Installation Method</h2>
+<h2 id="legacy-install">Alternative Installation Method</h2>
 
-For Linux and OS X, we are still providing the legacy installation method which uses a bash script and doesn't depend on Node.
+For Linux and OS X, we still provide an alternative installation method which uses a bash script and doesn't depend on Node.js.
 
 ```bash
 curl https://install.meteor.com/ | sh
 ```
 
-This installation method is not maintained anymore, and you should always use the NPM one.
+We recommend everybody to use the npm installer but we are still going to maintain this script as well.
 
 <h2 id="meteor-docker">Run Meteor inside Docker</h2>
 

@@ -2,8 +2,8 @@ import { parse } from '@meteorjs/babel';
 import { analyze as analyzeScope } from 'escope';
 import LRU from "lru-cache";
 
-import Visitor from "reify/lib/visitor.js";
-import { findPossibleIndexes } from "reify/lib/utils.js";
+import Visitor from "@meteorjs/reify/lib/visitor.js";
+import { findPossibleIndexes } from "@meteorjs/reify/lib/utils.js";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 const objToStr = Object.prototype.toString
