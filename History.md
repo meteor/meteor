@@ -10,8 +10,40 @@
 
 #### Independent Releases
 
+
+## v2.5.5, 2022-01-18
+
+#### Highlights
+
+* Bump node version to 14.18.3 - security patch
+* Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.5`
+  - Bump node version to 14.18.3 - security patch
+  - Change the tar implementation for streams, used on deploying and unpacking packages. Reduced "upload bundle" time when deploying is expected.
+
+* `accounts-base@2.2.1`
+  - Fixes onLogin firing twice. [PR](https://github.com/meteor/meteor/pull/11785) and [Issue](https://github.com/meteor/meteor/issues/10853)
+
+
+#### Independent Releases
+
 * `oauth@2.1.1`
   - Fixes end of redirect response for oauth inside iframes. [PR](https://github.com/meteor/meteor/pull/11825) and [Issue](https://github.com/meteor/meteor/issues/11817)
+
+## v2.5.4, 2022-01-14
+
+This version should be ignored. Proceed to 2.5.5 above.
 
 ## v2.5.3, 2022-01-04
 
