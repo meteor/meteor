@@ -73,13 +73,25 @@ Meteor.startup(() => {
 // nothing should happen.
 Accounts.oauth.tryLoginAfterPopupClosed = (credentialToken, callback) => {
   const credentialSecret = OAuth._retrieveCredentialSecret(credentialToken) || null;
-  Accounts.callLoginMethod({
-    methodArguments: [{oauth: { credentialToken, credentialSecret }}],
-    userCallback: callback && (err => callback(convertError(err))),
+  if (!credentialSecret) {
+    Meteor.setTimeout(() => {
+      const secret = OAuth._retrieveCredentialSecret(credentialToken) || null;
+      Accounts.callLoginMethod({
+        methodArguments: [
+          { oauth: { credentialToken, credentialSecret: secret } }
+        ],
+        userCallback: callback && (err => callback(convertError(err)))
+      });
+    }, 500);
+  } else {
+    Accounts.callLoginMethod({
+      methodArguments: [{oauth: { credentialToken, credentialSecret }}],
+      userCallback: callback && (err => callback(convertError(err))),
     });
+  }
 };
 
-Accounts.oauth.credentialRequestCompleteHandler = callback => 
+Accounts.oauth.credentialRequestCompleteHandler = callback =>
   credentialTokenOrError => {
     if(credentialTokenOrError && credentialTokenOrError instanceof Error) {
       callback && callback(credentialTokenOrError);

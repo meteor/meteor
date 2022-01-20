@@ -71,6 +71,7 @@ OAuth._storePendingCredential = (key, credential, credentialSecret = null) => {
 //
 OAuth._retrievePendingCredential = (key, credentialSecret = null) => {
   check(key, String);
+  check(credentialSecret, Match.Maybe(String));
 
   const pendingCredential = OAuth._pendingCredentials.findOne({
     key,
