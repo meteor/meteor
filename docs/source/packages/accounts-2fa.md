@@ -133,7 +133,7 @@ So the call of this function should look something like this:
 
 <h3 id="disabling-2fa">Disabling 2FA</h3>
 
-To disable 2FA you call simply use this function: 
+To disable 2FA you can simply use this function: 
 
 {% apibox "Accounts.disableUser2fa" "module":"accounts-base" %}
 
