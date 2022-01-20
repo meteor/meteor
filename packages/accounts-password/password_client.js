@@ -10,27 +10,27 @@ const reportError = (error, callback) => {
 
 const internalLoginWithPassword = ({ selector, password, token, callback }) => {
   if (typeof selector === 'string')
-    if (!selector.includes('@'))
-      selector = {username: selector};
-    else
-      selector = {email: selector};
+    if (!selector.includes('@')) selector = { username: selector };
+    else selector = { email: selector };
 
   Accounts.callLoginMethod({
-    methodArguments: [{
-      user: selector,
-      password: Accounts._hashPassword(password),
-      token,
-    }],
+    methodArguments: [
+      {
+        user: selector,
+        password: Accounts._hashPassword(password),
+        token,
+      },
+    ],
     userCallback: (error, result) => {
       if (error) {
         reportError(error, callback);
       } else {
         callback && callback();
       }
-    }
+    },
   });
   return selector;
-}
+};
 
 // Attempt to log in with a password.
 //
