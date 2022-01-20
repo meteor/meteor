@@ -526,7 +526,7 @@ Template.event.helpers({
       var type = details.type;
       var stack = details.stack;
 
-      details = [...details];
+      details = Array.isArray(details) && [...details] || Object.assign({}, details);
       delete details.type;
       delete details.stack;
 
