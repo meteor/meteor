@@ -28,6 +28,8 @@ Accounts.is2faEnabledForUser = selector => {
   );
 };
 
+Accounts.generate2faToken = secret => twofactor.generateToken(secret);
+
 Accounts.isTokenValid = (secret, token) => {
   if (!Meteor.isServer) {
     throw new Meteor.Error(
@@ -50,7 +52,7 @@ Meteor.methods({
     const { username } = user;
 
     const { secret, uri } = twofactor.generateSecret({
-      name: appName,
+      name: typeof appName === 'string' ? appName : undefined,
       account: username,
     });
     const svg = new QRCode(uri).svg();

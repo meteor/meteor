@@ -78,7 +78,7 @@ Meteor.loginWithPasswordAnd2faToken = (selector, password, token, callback) => {
   if (token == null || typeof token !== 'string' || !token) {
     throw new Meteor.Error(
       400,
-      'token is required to use loginWithPasswordAnd2faToken and must be a string',
+      'token is required to use loginWithPasswordAnd2faToken and must be a string'
     );
   }
   return internalLoginWithPassword({ selector, password, token, callback });
