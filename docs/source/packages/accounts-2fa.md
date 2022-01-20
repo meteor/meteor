@@ -13,7 +13,7 @@ The first step to use 2FA is to generate a QR code so the user can read it on an
 
 {% apibox "Accounts.generate2faActivationQrCode" "module":"accounts-base" %}
 
-Receive an `appName` which is the name of your app that will show up when the user scans the QR code. Also, a callback called with a QR code in SVG format on success or a single `Error` argument
+Receives an `appName` which is the name of your app that will show up when the user scans the QR code. Also, a callback called with a QR code in SVG format on success or a single `Error` argument
 on failure. Both parameters are optional.
 
 On success, this function will also add an object to the logged user containing the QR secret:
