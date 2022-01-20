@@ -93,7 +93,7 @@ CS.CatalogCache.prototype.toJSONable = function () {
   Object.entries(self._dependencies).forEach(function ([key, depsByPackage]) {
     // depsByPackage is a map of String -> Dependency.
     // Map over the values to get an array of String.
-    data[key] = depsByPackage.map(function (dep) {
+    data[key] = Object.values(depsByPackage).map(function (dep) {
       return dep.toString();
     });
   });

@@ -485,7 +485,7 @@ var groupMutuallyExclusiveTerms = function (costTerms, costWeights) {
   // costWeights, as usual, may be a number or an array
   if (typeof costWeights === 'number') {
     return {
-      costTerms: Object.keys(groupBy(costTerms, getTermKey)).map(function (group) {
+      costTerms: Object.values(groupBy(costTerms, getTermKey)).map(function (group) {
         return Logic.or(group);
       }),
       costWeights: costWeights
@@ -494,21 +494,21 @@ var groupMutuallyExclusiveTerms = function (costTerms, costWeights) {
     return { costTerms: costTerms, costWeights: costWeights };
   } else {
     var weightedTerms = zip(costWeights, costTerms);
-    var newWeightedTerms = groupBy(weightedTerms.map(function (wt) {
+    var newWeightedTerms = Object.values(groupBy(weightedTerms, function (wt) {
       // construct a string from the weight and term key, for grouping
       // purposes.  since the weight comes first, there's no ambiguity
       // and the separator char could be pretty much anything.
       return wt[0] + ' ' + getTermKey(wt[1]);
-    }), function (wts) {
-      return [wts[0][0], Logic.or(Object.keys(wts).map(function(x){
+    })).map(function (wts) {
+      return [wts[0][0], Logic.or(wts.map(function(x){
         return x[1]
       }))];
     });
     return {
-      costTerms: Object.keys(newWeightedTerms).map(function(x){
+      costTerms: newWeightedTerms.map(function(x){
         return x[1]
       }),
-      costWeights: Object.keys(newWeightedTerms).map(function(x){
+      costWeights: newWeightedTerms.map(function(x){
         return x[0]
       })
     };
@@ -849,7 +849,7 @@ CS.Solver.prototype._getAnswer = function (options) {
 
   self.minimize(previousRootVersionParts);
 
-  var otherPrevious = Object.entries(input.previousSolution).map(function ([p, v]) {
+  var otherPrevious = Object.entries(input.previousSolution || []).map(function ([p, v]) {
     return new CS.PackageAndVersion(p, v);
   }).filter(function (pv) {
     var p = pv.package;
@@ -1070,7 +1070,7 @@ CS.Solver.prototype.throwConflicts = function () {
   var constraints = self.analysis.constraints;
 
   self.Profile.time("generate error about conflicts", function () {
-    constraints.each(function (c) {
+    constraints.forEach(function (c) {
       // c is a CS.Solver.Constraint
       if (solution.evaluate(c.conflictVar)) {
         // skipped this constraint

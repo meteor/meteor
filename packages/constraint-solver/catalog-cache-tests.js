@@ -54,7 +54,7 @@ Tinytest.add("constraint solver - CatalogCache", function (test) {
   var foos = [];
   cache.getPackageVersions('foo').forEach(function (v) {
     var depMap = cache.getDependencyMap('foo', v);
-    foos.push([v, depMap.map(String).sort()]);
+    foos.push([v, Object.values(depMap).map(String).sort()]);
   });
   // versions should come out sorted, just like this.
   test.equal(foos,
