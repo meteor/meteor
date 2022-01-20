@@ -10,7 +10,7 @@ const newConnection = function(stream, options) {
   // change.
   return new Connection(
     stream,
-    Object.assgn(
+    Object.assign(
       {
         reloadWithOutstanding: true,
         bufferedWritesInterval: 0
@@ -53,7 +53,7 @@ const testGotMessage = function(test, stream, expected) {
   // function.
   if (typeof expected === 'object') {
     const keysWithStarValues = [];
-    expected.forEach(function(v, k) {
+    Object.entries(expected).forEach(function([k, v]) {
       if (v === '*') keysWithStarValues.push(k);
     });
     keysWithStarValues.forEach(function(k) {
@@ -638,7 +638,7 @@ const observeCursor = function(test, cursor) {
   return {
     stop: handle.stop.bind(handle),
     expectCallbacks: function(delta) {
-      delta.forEach(function(mod, field) {
+      Object.entries(delta || []).forEach(function([field, mod]) {
         expectedCounts[field] += mod;
       });
       test.equal(counts, expectedCounts);
