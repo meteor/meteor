@@ -1206,7 +1206,7 @@ var binaryWeightedSum = function (varsByWeight) {
   if (assert) assert(varsByWeight,
                      isArrayWhere(isArrayWhere(isFormulaOrTerm)));
   // initialize buckets to a two-level clone of varsByWeight
-  var buckets = varsByWeight.map((vars) => Object.assign({}, vars));
+  var buckets = varsByWeight.map((vars) => [...vars]);
   
   var lowestWeight = 0; // index of the first non-empty array
   var output = [];

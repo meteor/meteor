@@ -1336,7 +1336,7 @@ Tinytest.add("logic-solver - eight queens", function (test) {
     test.equal(solution.length, 8);
     test.isTrue(/^([1-8],[1-8] ){7}[1-8],[1-8]$/.test(solution.join(' ')));
     var assertEightDifferent = function (transformFunc) {
-      test.equal([...new Set(solution.map(transformFunc).length)], 8);
+      test.equal([...new Set(solution.map(transformFunc))].length, 8);
     };
     // queens occur in eight different rows, eight different columns
     assertEightDifferent(function (queen) { return queen.charAt(0); });
@@ -1559,7 +1559,7 @@ Tinytest.add("logic-solver - toy packages", function (test) {
 
       for (var i = 0; i < vectorLength; i++) {
         var weights = weightVectors.map(function(vector){
-          return vector.i
+          return vector[i]
         });
         solution = solver.minimizeWeightedSum(solution, terms, weights);
       }

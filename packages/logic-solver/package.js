@@ -8,13 +8,12 @@ Npm.depends({
 })
 
 Package.onUse(function (api) {
-  api.addFiles(['minisat.js',
-  'minisat_wrapper.js',
-  'types.js',
-  'logic.js',
-  'optimize.js']);
-  
   api.export('Logic');
+  api.addFiles(['minisat.js',
+                 'minisat_wrapper.js',
+                 'types.js',
+                 'logic.js',
+                 'optimize.js']);
 });
 
 Package.onTest(function (api) {
