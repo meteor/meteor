@@ -284,6 +284,15 @@ export function getSettings(
   return str;
 }
 
+// Returns true if the first path is a parent of the second path
+export function containsPath(path1: string, path2: string) {
+  const relPath = pathRelative(path1, path2);
+
+  // On Windows, if the two paths are on different drives the relative
+  // path starts with /
+  return !(relPath.startsWith("..") || relPath.startsWith("/"));
+}
+
 // Try to find the prettiest way to present a path to the
 // user. Presently, the main thing it does is replace $HOME with ~.
 export function prettyPath(p: string) {
