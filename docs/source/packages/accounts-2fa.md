@@ -73,7 +73,7 @@ twoFactorAuthetication: {
 
 Now that you have a way to allow your users to enable 2FA on their accounts, you can create a login flow based on that.
 
-To verify if a user has or not 2FA enabled you can call the function `Accounts.has2FAEnabled`:
+To verify whether or not a user has 2FA enabled, you can call the function `Accounts.has2FAEnabled`:
 
 {% apibox "Accounts.has2faEnabled" "module":"accounts-base" %}
 
