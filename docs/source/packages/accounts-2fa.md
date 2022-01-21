@@ -77,7 +77,7 @@ To verify whether or not a user has 2FA enabled, you can call the function `Acco
 
 {% apibox "Accounts.has2faEnabled" "module":"accounts-base" %}
 
-With this function, you can check whether or not the user has 2FA enabled, and based on this information, you can directly log the user in the 2FA is not enabled, or redirect the user to a place where they can provide a code, in case they do have 2FA enabled.
+With this function, you can check whether or not the user has 2FA enabled, and based on this information, you can directly call `Meteor.loginWithPassword` if the 2FA is not enabled, or redirect the user to a place where they can provide a code, in case they do have 2FA enabled.
 
 A way of using it would be:
 
