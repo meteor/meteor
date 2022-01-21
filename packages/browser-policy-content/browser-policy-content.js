@@ -1,5 +1,6 @@
 const isEmpty = Npm.require('lodash.isempty');
 const has = Npm.require('lodash.has');
+const union = Npm.require('lodash.union');
 
 // By adding this package, you get the following default policy:
 // No eval or other string-to-code, and content can only be loaded from the
@@ -76,12 +77,12 @@ var parseCsp = function (csp) {
 
   // Copy default-src sources to other directives.
   Object.entries(cspSrcs).forEach(function ([directive, sources]) {
-    cspSrcs[directive] = [...new Set((sources || [], cspSrcs["default-src"] || []).flat())];
+    cspSrcs[directive] = union(sources || [], cspSrcs["default-src"] || []);
   });
 };
 
 var removeCspSrc = function (directive, src) {
-  cspSrcs[directive] = cspSrcs[directive] || [].filter(function(value) {
+  cspSrcs[directive] = (cspSrcs[directive] || []).filter(function(value) {
     return value !== src;
   });
 };
@@ -92,7 +93,7 @@ var prepareForCspDirective = function (directive) {
   cspSrcs = cspSrcs || {};
   cachedCsp = null;
   if (!has(cspSrcs, directive))
-    cspSrcs[directive] = Object.assign({}, cspSrcs["default-src"]);
+    cspSrcs[directive] = [...cspSrcs["default-src"]];
 };
 
 // Add `src` to the list of allowed sources for `directive`, with the
@@ -165,7 +166,7 @@ Object.assign(BrowserPolicy.content, {
     if (cachedCsp)
       return cachedCsp;
 
-    var header = cspSrcs.map(function (srcs, directive) {
+    var header = Object.entries(cspSrcs).map(function ([directive, srcs]) {
       srcs = srcs || [];
       if (isEmpty(srcs))
         srcs = [keywords.none];

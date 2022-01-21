@@ -5,7 +5,8 @@ Package.describe({
 
 Npm.depends({
   'lodash.isempty': '4.4.0',
-  'lodash.has': '4.5.2'
+  'lodash.has': '4.5.2',
+  'lodash.union': '4.6.0'
 })
 
 Package.onUse(function (api) {

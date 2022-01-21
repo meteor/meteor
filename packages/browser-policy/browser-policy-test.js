@@ -20,7 +20,10 @@ var cspsEqual = function (csp1, csp2) {
       return part.split(" ");
     });
     var keys = parts.map(part => part[0]);
-    var values = parts.map(parts, _.rest);
+    var values = parts.map((part) => {
+      const [head, ...tail] = part;
+      return tail;
+    });
     values.forEach(function (value) {
       value.sort();
     });
