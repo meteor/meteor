@@ -240,7 +240,7 @@ export class AccountsClient extends AccountsCommon {
         }
         options.userCallback(error, loginDetails);
       }
-    }
+    };
 
     let reconnected = false;
 

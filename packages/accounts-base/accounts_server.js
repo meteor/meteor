@@ -402,6 +402,8 @@ export class AccountsServer extends AccountsCommon {
     if (! stampedLoginToken) {
       stampedLoginToken = this._generateStampedLoginToken();
       this._insertLoginToken(userId, stampedLoginToken);
+    } else {
+      this.users.update(userId, { $set: { lastLoginAt: new Date() } });
     }
 
     // This order (and the avoidance of yields) is important to make
