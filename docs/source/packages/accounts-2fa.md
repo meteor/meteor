@@ -3,7 +3,7 @@ title: accounts-2fa
 description: Documentation of Meteor's `accounts-2fa` package.
 ---
 
-The package allows you to easily integrate 2FA with the OTP technology on your login flow. It uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works on top of [notp](https://github.com/guyht/notp), which implements TOTP ([RFC 6238](https://www.ietf.org/rfc/rfc6238.txt)) (the Authenticator standard), which is based on HOTP ([RFC 4226](https://www.ietf.org/rfc/rfc4226.txt)) to provide codes that are exactly compatible with all other Authenticator apps and services that use them.
+The package allows you to easily integrate 2FA with the OTP technology on your login flow. It uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works on top of [notp](https://github.com/guyht/notp), **that** implements TOTP ([RFC 6238](https://www.ietf.org/rfc/rfc6238.txt)) (the Authenticator standard), which is based on HOTP ([RFC 4226](https://www.ietf.org/rfc/rfc4226.txt)) to provide codes that are exactly compatible with all other Authenticator apps and services that use them.
 
 > This package is meant to be used with `accounts-password`, so if you still didn't add `account-password` to your project, you'll need to add it too. In the future we want to enable the use of this app with other login methods, like `accounts-passwordless` or our oauth methods (Google, GitHub, etc...).
 
