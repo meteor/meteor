@@ -14,12 +14,22 @@
 
 #### Highlights
 
-* Support for MongoDB 5+
+* MongoDB Node.js driver Upgrade to support MongoDB 5.x
 * Embedded Mongo now uses MongoDB 5.0.5
 
 #### Breaking Changes
 
 * `mongo@1.14.0`
+  - This is not a breaking change in Meteor itself but internal result of operations inside Node.js MongoDB driver have changed. If you are depending on rawCollection results (not only the effect inside the DB), please review the expected format as we have done [here](https://github.com/meteor/meteor/blob/155ae639ee590bae66237fc1c29295072ec92aef/packages/mongo/mongo_driver.js#L658)
+
+#### Migration Steps
+
+Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this version.
+
+#### Meteor Version Release
+
+* `mongo@1.14.0`
+  - internal result of operations inside Node.js MongoDB driver have changed. If you are depending on rawCollection results (not only the effect inside the DB), please review the expected format as we have done [here](https://github.com/meteor/meteor/blob/155ae639ee590bae66237fc1c29295072ec92aef/packages/mongo/mongo_driver.js#L658)
   - useUnifiedTopology is not an option anymore, it defaults to true.
   - native parser is not an option anymore, it defaults to false in the mongo connection.
   - poolSize not an option anymore, we are using max/minPoolSize for the same behavior on mongo connection.
@@ -28,14 +38,24 @@
   - applySkipLimit option for count() on find cursors is no longer supported.
   - we are maintaining a translation layer for the new oplog format, so if you read or rely on any behavior of it please read our oplog_v2_converter.js code
   - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.
-  - internal result of operations inside nodejs mongodb driver have changed. If you are depending on rawCollection results(not only the effect inside the DB), please review the expected format as we have done [here](https://github.com/meteor/meteor/blob/155ae639ee590bae66237fc1c29295072ec92aef/packages/mongo/mongo_driver.js#L658)
   - waitForStepDownOnNonCommandShutdown=false is not needed anymore when spawning the mongodb process
   - _synchronousCursor._dbCursor.operation is not an option anymore in the raw cursor from nodejs mongodb driver. If you want to access the options, use _synchronousCursor._dbCursor.(GETTERS) - for example, _synchronousCursor._dbCursor.readPreference.
 
-#### Migration Steps
+* `allow-deny@1.1.1`
+  - TODO
 
-#### Meteor Version Release
+* `meteor-tool@2.6.0`
+  - TODO
 
+* `minimongo@1.8.0`
+  - TODO
+
+* `npm-mongo@4.3.0`
+  - Upgraded MongoDB Node.js driver to 4.3.0
+  
+* `tinytest@1.2.1`
+  - TODO
+  
 #### Independent Releases
 
 ## v2.5.5, 2022-01-18
