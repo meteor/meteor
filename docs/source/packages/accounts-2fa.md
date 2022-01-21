@@ -111,7 +111,7 @@ A way of using it would be:
 
 If the user has 2FA enabled, and you try to use the function `Meteor.loginWithPassword`, the login will fail, as the user should provide a token to access the app.
 
-The function you will need to call now to allow the user to log in is `Meteor.loginWithPasswordAnd2faToken`:
+The function you will need to call now to allow the user to login is `Meteor.loginWithPasswordAnd2faToken`:
 
 {% apibox "Meteor.loginWithPasswordAnd2faToken" %}
 
