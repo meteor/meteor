@@ -60,7 +60,7 @@ At this point, the 2FA won't be activated just yet. Now that the user has access
 
 {% apibox "Accounts.enableUser2fa" "module":"accounts-base" %}
 
-Called with a code the user will receive from the authenticator app once they read the QR code. This function throws an error on failure. If the code provided is correct, a `type` will be added to the user's `twoFactorAuthentication` object, and now the 2FA will be considered enabled:
+It should be called with a code that the users will receive from the authenticator app once they read the QR code. This function throws an error on failure. If the code provided is correct, a `type` will be added to the user's `twoFactorAuthentication` object and now 2FA will be enabled:
 
 ```js
 twoFactorAuthetication: {
