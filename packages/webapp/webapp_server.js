@@ -526,9 +526,8 @@ WebAppInternals.generateBoilerplateInstance = function(
           return pathJoin(archPath[arch], itemPath);
         },
         baseDataExtension: {
-          additionalStaticJs: (Object.keys(additionalStaticJs) || []).map(function(
-            contents,
-            pathname
+          additionalStaticJs: (Object.entries(additionalStaticJs) || []).map(function(
+            [pathname, contents]
           ) {
             return {
               pathname: pathname,
