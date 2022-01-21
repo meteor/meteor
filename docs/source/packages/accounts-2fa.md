@@ -60,7 +60,7 @@ At this point, the 2FA won't be activated just yet. Now that the user has access
 
 {% apibox "Accounts.enableUser2fa" "module":"accounts-base" %}
 
-It should be called with a code that the users will receive from the authenticator app once they read the QR code. This function throws an error on failure. If the code provided is correct, a `type` will be added to the user's `twoFactorAuthentication` object and now 2FA will be enabled:
+It should be called with a code that the users will receive from the authenticator app once they read the QR code. The callback is called with a single `Error` argument on failure. If the code provided is correct, a `type` will be added to the user's `twoFactorAuthentication` object and now 2FA will be enabled:
 
 ```js
 twoFactorAuthetication: {
@@ -109,11 +109,11 @@ A way of using it would be:
 </button>
 ```
 
-If the user has 2FA enabled, and you try to use the function `Meteor.loginWithPassword`, the login will fail, as the user should provide a token to access the app.
+If the user has 2FA enabled, and you try to use the function `Meteor.loginWithPassword`, the login will fail, as the user should provide a code to access the app.
 
-The function you will need to call now to allow the user to login is `Meteor.loginWithPasswordAnd2faToken`:
+The function you will need to call now to allow the user to login is `Meteor.loginWithPasswordAnd2faCode`:
 
-{% apibox "Meteor.loginWithPasswordAnd2faToken" %}
+{% apibox "Meteor.loginWithPasswordAnd2faCode" %}
 
 Now you will be able to receive a code from the user and this function will verify if the code is valid. If it is, the user will be logged in.
 
@@ -121,7 +121,7 @@ So the call of this function should look something like this:
 
 ```js
 <button onClick={() => {
-  Meteor.loginWithPasswordAnd2faToken(username, password, code,error => {
+  Meteor.loginWithPasswordAnd2faCode(username, password, code,error => {
     if (error) {
       console.error("Error trying to log in (user with 2fa)", error);
     }

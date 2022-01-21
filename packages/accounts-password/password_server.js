@@ -188,11 +188,11 @@ Accounts.registerLoginHandler("password", options => {
     Accounts.is2faEnabledForUser &&
     Accounts.is2faEnabledForUser(options.user)
   ) {
-    if (!options.token) {
+    if (!options.code) {
       Accounts._handleError('Token must be informed.');
     }
     if (
-      !Accounts.isTokenValid(user.twoFactorAuthentication.secret, options.token)
+      !Accounts.isTokenValid(user.twoFactorAuthentication.secret, options.code)
     ) {
       Accounts._handleError('Invalid token.');
     }

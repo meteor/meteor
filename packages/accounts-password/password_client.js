@@ -8,7 +8,7 @@ const reportError = (error, callback) => {
 };
 
 
-const internalLoginWithPassword = ({ selector, password, token, callback }) => {
+const internalLoginWithPassword = ({ selector, password, code, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@')) selector = { username: selector };
     else selector = { email: selector };
@@ -18,7 +18,7 @@ const internalLoginWithPassword = ({ selector, password, token, callback }) => {
       {
         user: selector,
         password: Accounts._hashPassword(password),
-        token,
+        code,
       },
     ],
     userCallback: (error, result) => {
@@ -74,14 +74,14 @@ Meteor.loginWithPassword = (selector, password, callback) => {
  * @importFromPackage meteor
  */
 
-Meteor.loginWithPasswordAnd2faToken = (selector, password, token, callback) => {
-  if (token == null || typeof token !== 'string' || !token) {
+Meteor.loginWithPasswordAnd2faCode = (selector, password, code, callback) => {
+  if (code == null || typeof code !== 'string' || !code) {
     throw new Meteor.Error(
       400,
-      'token is required to use loginWithPasswordAnd2faToken and must be a string'
+      'token is required to use loginWithPasswordAnd2faCode and must be a string'
     );
   }
-  return internalLoginWithPassword({ selector, password, token, callback });
+  return internalLoginWithPassword({ selector, password, code, callback });
 };
 
 Accounts._hashPassword = password => ({

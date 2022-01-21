@@ -30,14 +30,14 @@ Accounts.is2faEnabledForUser = selector => {
 
 Accounts.generate2faToken = secret => twofactor.generateToken(secret);
 
-Accounts.isTokenValid = (secret, token) => {
+Accounts.isTokenValid = (secret, code) => {
   if (!Meteor.isServer) {
     throw new Meteor.Error(
       400,
       'The function isTokenValid can only be called on the server'
     );
   }
-  const { delta } = twofactor.verifyToken(secret, token, 10) || {};
+  const { delta } = twofactor.verifyToken(secret, code, 10) || {};
   return delta != null && delta >= 0;
 };
 
@@ -86,7 +86,7 @@ Meteor.methods({
       );
     }
     if (!Accounts.isTokenValid(twoFactorAuthentication.secret, code)) {
-      throw new Meteor.Error(400, 'Invalid token.');
+      throw new Meteor.Error(400, 'Invalid code.');
     }
 
     Meteor.users.update(

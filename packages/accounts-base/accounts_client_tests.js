@@ -180,15 +180,15 @@ Tinytest.addAsync(
 
 
 Tinytest.addAsync(
-  'accounts-2fa - Meteor.loginWithPasswordAnd2faToken() fails when token is not provided',
+  'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() fails when token is not provided',
   (test, done) => {
     createUserAndLogout(test, done, () => {
       try {
-        Meteor.loginWithPasswordAnd2faToken(username, password);
+        Meteor.loginWithPasswordAnd2faCode(username, password);
       } catch (e) {
         test.equal(
           e.reason,
-          'token is required to use loginWithPasswordAnd2faToken and must be a string'
+          'token is required to use loginWithPasswordAnd2faCode and must be a string'
         );
       } finally {
         test.isFalse(Meteor.user());
@@ -200,11 +200,11 @@ Tinytest.addAsync(
 
 
 Tinytest.addAsync(
-  'accounts-2fa - Meteor.loginWithPasswordAnd2faToken() fails with invalid token',
+  'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() fails with invalid token',
   (test, done) => {
     createUserAndLogout(test, done, () => {
       forceEnableUser2fa(() => {
-        Meteor.loginWithPasswordAnd2faToken(username, password, 'ABC', e => {
+        Meteor.loginWithPasswordAnd2faCode(username, password, 'ABC', e => {
           test.isFalse(Meteor.user());
           test.equal(e.reason, 'Invalid token.');
           removeTestUser(done);
@@ -215,11 +215,11 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-2fa - Meteor.loginWithPasswordAnd2faToken() succeeds when token is correct',
+  'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() succeeds when token is correct',
   (test, done) => {
     createUserAndLogout(test, done, () => {
       forceEnableUser2fa((token) => {
-        Meteor.loginWithPasswordAnd2faToken(username, password, token, e => {
+        Meteor.loginWithPasswordAnd2faCode(username, password, token, e => {
           test.equal(e, undefined);
           test.isTrue(Meteor.user());
           removeTestUser(done);
