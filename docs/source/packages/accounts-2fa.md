@@ -9,7 +9,7 @@ The package allows you to easily integrate 2FA with the OTP technology on your l
 
 <h3 id="activating-2fa">Activating 2FA</h3>
 
-The first step to use 2FA is to generate a QR code so the user can read it on an authenticator app and start to receiving codes.
+The first step to using 2FA is to generate a QR code so that the user can scan it in an authenticator app and start receiving codes.
 
 {% apibox "Accounts.generate2faActivationQrCode" "module":"accounts-base" %}
 
