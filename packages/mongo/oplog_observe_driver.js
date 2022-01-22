@@ -560,7 +560,7 @@ Object.assign(OplogObserveDriver.prototype, {
       var writes = self._writesToCommitWhenWeReachSteady;
       self._writesToCommitWhenWeReachSteady = [];
       self._multiplexer.onFlush(function () {
-        writes.forEach(function (w) {
+        (writes || []).forEach(function (w) {
           w.committed();
         });
       });
