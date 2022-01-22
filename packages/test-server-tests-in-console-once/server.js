@@ -1,4 +1,4 @@
-import has from 'lodash.has';
+const has = Npm.require('lodash.has');
 
 var passed = 0;
 var failed = 0;
