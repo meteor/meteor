@@ -175,7 +175,6 @@ var _findTestForResults = function (results) {
     i++;
   });
 
-  
   var testName = results.test;
   var server = !!results.server;
   var test = (group.tests || (group.tests = [])).find(
@@ -452,7 +451,7 @@ Template.test.helpers({
 
   eventsArray: function() {
     var events = this.events.filter(function(e) {
-      return e.type != "finish";
+      return e[type] != "finish";
     });
 
     var partitionBy = function(seq, func) {
