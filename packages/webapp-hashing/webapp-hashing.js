@@ -37,7 +37,7 @@ WebAppHashing.calculateClientHash =
 
 WebAppHashing.calculateCordovaCompatibilityHash =
   function(platformVersion, pluginVersions) {
-  const hash = crypto.createHash('sha1');
+  const hash = createHash('sha1');
 
   hash.update(platformVersion);
 
