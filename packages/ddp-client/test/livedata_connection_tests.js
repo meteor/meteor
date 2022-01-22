@@ -347,8 +347,13 @@ Tinytest.add('livedata stub - reactive subscribe', function(test) {
   // The order of unsubs here is not important.
   const unsubMessages = stream.sent.map(JSON.parse);
   stream.sent.length = 0;
-  test.equal(_.unique(_.pluck(unsubMessages, 'msg')), ['unsub']);
-  const actualIds = _.pluck(unsubMessages, 'id');
+  test.equal(
+    [...new Set(unsubMessages.map(msg => {
+    return msg['msg']
+  }))], ['unsub']);
+  const actualIds = unsubMessages.map(function(msg){
+    return msg['id']
+  });
   const expectedIds = [idFoo2, idBar1, idCompleter, idStopperAgain];
   actualIds.sort();
   expectedIds.sort();

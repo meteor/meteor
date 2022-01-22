@@ -4,9 +4,9 @@ Meteor.methods({
   nothing: function() {
     // No need to check if there are no arguments.
   },
-  echo: function(/* arguments */) {
+  echo: function(...args) {
     check(arguments, [Match.Any]);
-    return Array.from(arguments);
+    return args;
   },
   echoOne: function(/*arguments*/) {
     check(arguments, [Match.Any]);
