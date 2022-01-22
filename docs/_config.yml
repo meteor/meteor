@@ -74,7 +74,6 @@ sidebar_categories:
     - packages/random
     - packages/server-render
     - packages/spacebars
-    - packages/underscore
     - packages/url
     - packages/webapp
   Command Line:
