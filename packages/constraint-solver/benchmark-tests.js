@@ -284,16 +284,15 @@ runBenchmarks && Tinytest.add("constraint solver - benchmark on gems - rails, gi
 function getCatalogStub (gems) {
   return {
     getSortedVersionRecords(name) {
-      var versions = gems.filter(function (pv) { return pv.name === name; })
+      var versions = Object.values(gems.filter(function (pv) { return pv.name === name; })
         .map(function(gem) {
           return gem.number
         })
         .filter(function (v) {
           return PackageVersion.getValidServerVersion(v);
         })
-        .sort(PackageVersion.compare)
-        .uniq(true)
-        .value();
+        .sort(PackageVersion.compare));
+        
       return versions.map(function (version) {
         var gem = gems.find(function (pv) {
           return pv.name === name && pv.number === version;
