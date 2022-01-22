@@ -360,7 +360,7 @@ jobs:
           path: ./tmp/results
       - persist_to_workspace:
           root: .
-          paths: ./tmp/results/junit
+          paths: [./tmp/results/junit]
       - store_artifacts:
           path: ./tmp/results
       - store_artifacts:
