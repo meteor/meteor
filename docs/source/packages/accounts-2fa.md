@@ -86,7 +86,7 @@ A way of using it would be:
 ```js
 <button 
   onClick={() => {
-    Accounts.has2fanabled(username, (err, isEnabled) => {
+    Accounts.has2faEnabled(username, (err, isEnabled) => {
       if (err) {
         console.error("Error verifying if user has 2fa enabled", err);
         return;
