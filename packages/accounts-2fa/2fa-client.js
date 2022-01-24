@@ -24,7 +24,7 @@ Accounts.has2faEnabled = (selector, callback) => {
  * @summary Generates a svg QR code and save secret on user
  * @locus Client
  * @param {String} [appName] Optional. It's the name of your app that will show up when the user scans the QR code.
- * @param {Function} [callback]
+ * @param {Function} callback
  *   Called with a QR code in SVG format on success, or with a single `Error` argument
  *   on failure.
  */
