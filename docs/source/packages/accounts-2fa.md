@@ -3,13 +3,15 @@ title: accounts-2fa
 description: Documentation of Meteor's `accounts-2fa` package.
 ---
 
-The package allows you to easily integrate 2FA with the OTP technology on your login flow. It uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works on top of [notp](https://github.com/guyht/notp), **that** implements TOTP ([RFC 6238](https://www.ietf.org/rfc/rfc6238.txt)) (the Authenticator standard), which is based on HOTP ([RFC 4226](https://www.ietf.org/rfc/rfc4226.txt)) to provide codes that are exactly compatible with all other Authenticator apps and services that use them.
+This package allows you to provide a way for your users to enable 2FA on their accounts, using an authenticator app such as Google Authenticator, or 1Password. When the user is logged in on your app, they will be able to generate a new QR code and read this code on the app they prefer. After that, they'll start receiving their codes. Then, they can finish enabling 2FA on your app, and every time they try to log in to your app, you can redirect them to a place where they can provide a code they received from the authenticator.
 
-> This package is meant to be used with `accounts-password`, so if you don't have `account-password` in your project, you'll need to add it. In the future, we want to enable the use of this app with other login methods, like `accounts-passwordless` or our oauth methods (Google, GitHub, etc...).
+This package uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works on top of [notp](https://github.com/guyht/notp), **that** implements TOTP ([RFC 6238](https://www.ietf.org/rfc/rfc6238.txt)) (the Authenticator standard), which is based on HOTP ([RFC 4226](https://www.ietf.org/rfc/rfc4226.txt)) to provide codes that are exactly compatible with all other Authenticator apps and services that use them.
+
+> This package is meant to be used with `accounts-password`, so if you don't have `account-password` in your project, you'll need to add it. In the future, we want to enable the use of this package with other login methods, like `accounts-passwordless` or our oauth methods (Google, GitHub, etc...).
 
 <h3 id="activating-2fa">Activating 2FA</h3>
 
-The first step to using 2FA is to generate a QR code so that the user can scan it in an authenticator app and start receiving codes.
+The first step, in order to enable 2FA, is to generate a QR code so that the user can scan it in an authenticator app and start receiving codes.
 
 {% apibox "Accounts.generate2faActivationQrCode" "module":"accounts-base" %}
 
@@ -60,7 +62,7 @@ At this point, the 2FA won't be activated just yet. Now that the user has access
 
 {% apibox "Accounts.enableUser2fa" "module":"accounts-base" %}
 
-It should be called with a code that the users will receive from the authenticator app once they read the QR code. The callback is called with a single `Error` argument on failure. If the code provided is correct, a `type` will be added to the user's `twoFactorAuthentication` object and now 2FA will be enabled:
+It should be called with a code that the users will receive from the authenticator app once they read the QR code. The callback is called with a single `Error` argument on failure. If the code provided is correct, a `type` will be added to the user's `twoFactorAuthentication` object and now 2FA is considered enabled:
 
 ```js
 twoFactorAuthetication: {
@@ -73,7 +75,7 @@ twoFactorAuthetication: {
 
 Now that you have a way to allow your users to enable 2FA on their accounts, you can create a login flow based on that.
 
-To verify whether or not a user has 2FA enabled, you can call the function `Accounts.has2FAEnabled`:
+To verify whether or not a user has 2FA enabled, you can call the function `Accounts.has2faEnabled`:
 
 {% apibox "Accounts.has2faEnabled" "module":"accounts-base" %}
 
@@ -84,7 +86,7 @@ A way of using it would be:
 ```js
 <button 
   onClick={() => {
-    Accounts.has2FAEnabled(username, (err, isEnabled) => {
+    Accounts.has2fanabled(username, (err, isEnabled) => {
       if (err) {
         console.error("Error verifying if user has 2fa enabled", err);
         return;
@@ -133,7 +135,7 @@ So the call of this function should look something like this:
 
 <h3 id="disabling-2fa">Disabling 2FA</h3>
 
-To disable 2FA for an user use this method: 
+To disable 2FA for a user use this method: 
 
 {% apibox "Accounts.disableUser2fa" "module":"accounts-base" %}
 
