@@ -9,7 +9,7 @@ const getTokenFromSecret = ({ username, secret: secretParam }) => {
     }
     secret = twoFactorAuthentication.secret;
   }
-  const { token } = Accounts.generate2faToken(secret);
+  const { token } = Accounts._generate2faToken(secret);
 
   return token;
 };
