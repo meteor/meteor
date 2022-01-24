@@ -170,7 +170,7 @@ Accounts.registerLoginHandler("password", options => {
   check(options, {
     user: Accounts._userQueryValidator,
     password: passwordValidator,
-    token: Match.Optional(NonEmptyString),
+    code: Match.Optional(NonEmptyString),
   });
 
 
