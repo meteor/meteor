@@ -1015,7 +1015,7 @@ This version should be ignored. Proceed to 2.5.5 above.
 
 Simple run `meteor update` in your app.
 
-Great new features and no breaking changes (except one package deprecation). You can always check our [Roadmap](./Roadmap.md) to understand what is next.
+Great new features and no breaking changes (except one package deprecation). You can always check our [Roadmap](https://docs.meteor.com/roadmap.html) to understand what is next.
 
 ## v1.12.2, 2021-10-12
 

@@ -64,7 +64,7 @@ Current Core Committers:
 
 ### Tracking project work
 
-Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones).  Also, the [Meteor Roadmap](Roadmap.md) contains high-level information on the current priorities of the project.
+Right now, the best place to track the work being done on Meteor is to take a look at the latest release milestone [here](https://github.com/meteor/meteor/milestones).  Also, the [Meteor Roadmap](https://docs.meteor.com/roadmap.html) contains high-level information on the current priorities of the project.
 
 ## Reporting a bug in Meteor
 <a name="reporting-bug"></a>
@@ -126,7 +126,7 @@ for more details on proposing changes to core code.
 Feature requests are tracked in the [Discussions](https://github.com/meteor/meteor/discussions).
 
 Meteor is a big project with [many sub-projects](https://github.com/meteor/meteor/tree/devel/packages).
-Community is welcome to help in all the sub-projects. We use our [roadmap](Roadmap.md) to communicate the high-level features we're currently prioritizing.
+Community is welcome to help in all the sub-projects. We use our [roadmap](https://docs.meteor.com/roadmap.html) to communicate the high-level features we're currently prioritizing.
 
 Every additional feature adds a maintenance cost in addition to its value. This
 cost starts with the work of writing the feature or reviewing a community pull
@@ -199,7 +199,7 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 ### Proposing your change
 
-You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://github.com/meteor/meteor/blob/devel/Roadmap.md). Start by creating a well specified Discussion [here](https://github.com/meteor/meteor/discussions).
+You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://docs.meteor.com/roadmap.html). Start by creating a well specified Discussion [here](https://github.com/meteor/meteor/discussions).
 
 Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `ready` label.
 
