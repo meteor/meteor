@@ -1,8 +1,9 @@
 ---
-title: Meteor Roadmap
+title: Roadmap
 description: Describes the high-level features and actions for the Meteor project in the near-to-medium term future.
 ---
-# Meteor Roadmap
+
+## Introduction
 
 **Up to date as of Jan 26, 2022**
 
@@ -14,11 +15,11 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 If you have new feature requests or ideas you should open a new [discussion](https://github.com/meteor/meteor/discussions/new).
 
-# Core team
+## Core team
 
 The items in this section are the core team's priorities.
 
-## Next minor releases 
+### Next minor releases 
 
 - New Core Packages
   - Accounts 2FA package; [PR](https://github.com/meteor/meteor/pull/11818)
@@ -32,7 +33,7 @@ The items in this section are the core team's priorities.
 - ES Modules Support;
 - node: Protocol Import Support;
 
-## Next major releases
+### Next major releases
 
 - Support Top-level await;
 - Remove Fibers dependency from Meteor Public APIs;
@@ -45,7 +46,7 @@ The items in this section are the core team's priorities.
 - HTTP/3 Support;
 - Change Streams Support;
 
-# Community
+## Community
 
 The items in this section are not the priorities of the core team but the core team can support community members working on it.
 
@@ -54,7 +55,7 @@ The items in this section are not the priorities of the core team but the core t
 - SolidJS real app examples;
 - React Native real app examples;
 
-# Previous releases
+## Previous releases
 - Support to MongoDB 5.0; [Migration Guide](https://guide.meteor.com/2.6-migration.html)
 - Add missing binaries to Fibers fork; [Issue](https://github.com/meteor/meteor/issues/11791)
 - [Meteor University launch](https://university.meteor.com/)
