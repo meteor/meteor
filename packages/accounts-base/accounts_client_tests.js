@@ -200,13 +200,13 @@ Tinytest.addAsync(
 
 
 Tinytest.addAsync(
-  'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() fails with invalid token',
+  'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() fails with invalid code',
   (test, done) => {
     createUserAndLogout(test, done, () => {
       forceEnableUser2fa(() => {
         Meteor.loginWithPasswordAnd2faCode(username, password, 'ABC', e => {
           test.isFalse(Meteor.user());
-          test.equal(e.reason, 'Invalid token.');
+          test.equal(e.reason, 'Invalid 2FA code.');
           removeTestUser(done);
         });
       });
