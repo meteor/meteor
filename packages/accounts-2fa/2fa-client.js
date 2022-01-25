@@ -23,25 +23,27 @@ Accounts.has2faEnabled = (selector, callback) => {
 /**
  * @summary Generates a svg QR code and save secret on user
  * @locus Client
- * @param {String} [appName] Optional. It's the name of your app that will show up when the user scans the QR code.
+ * @param {String} appName It's the name of your app that will show up when the user scans the QR code.
  * @param {Function} callback
  *   Called with a QR code in SVG format on success, or with a single `Error` argument
  *   on failure.
  */
 Accounts.generate2faActivationQrCode = (appName, callback) => {
-  let cb = callback;
-  if (typeof appName === 'function') {
-    cb = appName;
+  if (!appName) {
+    throw new Meteor.Error(
+      500,
+      'An app name is necessary when calling the function generate2faActivationQrCode'
+    );
   }
 
-  if (!cb) {
+  if (!callback) {
     throw new Meteor.Error(
       500,
       'A callback is necessary when calling the function generate2faActivationQrCode so a QR code can be provided'
     );
   }
 
-  Accounts.connection.call('generate2faActivationQrCode', appName, cb);
+  Accounts.connection.call('generate2faActivationQrCode', appName, callback);
 };
 
 /**

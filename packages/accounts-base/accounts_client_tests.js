@@ -234,7 +234,7 @@ Tinytest.addAsync(
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
       // Generates secret
-      Accounts.generate2faActivationQrCode((err, svg) => {
+      Accounts.generate2faActivationQrCode('test', (err, svg) => {
         test.isTrue(svg != null);
         getTokenFromSecret(token => {
           // enable 2fa

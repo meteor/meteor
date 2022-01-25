@@ -52,7 +52,7 @@ Meteor.methods({
     const { username } = user;
 
     const { secret, uri } = twofactor.generateSecret({
-      name: typeof appName === 'string' ? appName : undefined,
+      name: appName.trim(),
       account: username,
     });
     const svg = new QRCode(uri).svg();
