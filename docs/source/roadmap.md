@@ -72,4 +72,4 @@ The items in this section are not the priorities of the core team but the core t
 - New Skeleton for Svelte
 - Repository with [Meteor Examples](https://github.com/meteor/examples)
 
-For more completed items, refer to the [project history](https://github.com/meteor/meteor/blob/devel/History.md).
+For more completed items, refer to our [changelog](https://docs.meteor.com/changelog.html).
