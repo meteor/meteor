@@ -7,7 +7,7 @@ This package allows you to provide a way for your users to enable 2FA on their a
 
 This package uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works on top of [notp](https://github.com/guyht/notp), **that** implements TOTP ([RFC 6238](https://www.ietf.org/rfc/rfc6238.txt)) (the Authenticator standard), which is based on HOTP ([RFC 4226](https://www.ietf.org/rfc/rfc4226.txt)) to provide codes that are exactly compatible with all other Authenticator apps and services that use them.
 
-> This package is meant to be used with `accounts-password`, so if you don't have `account-password` in your project, you'll need to add it. In the future, we want to enable the use of this package with other login methods, like `accounts-passwordless` or our oauth methods (Google, GitHub, etc...).
+> This package is meant to be used with [`accounts-password`](https://docs.meteor.com/api/passwords.html) or [`accounts-passwordless`](https://docs.meteor.com/packages/accounts-passwordless.html), so if you don't have either of those in your project, you'll need to add one of them. In the future, we want to enable the use of this package with other login methods, our oauth methods (Google, GitHub, etc...).
 
 <h3 id="activating-2fa">Activating 2FA</h3>
 
@@ -85,7 +85,11 @@ To verify whether or not a user has 2FA enabled, you can call the function `Acco
 
 {% apibox "Accounts.has2faEnabled" "module":"accounts-base" %}
 
-With this function, you can check whether or not the user has 2FA enabled, and based on this information, you can directly call `Meteor.loginWithPassword` if the 2FA is not enabled, or redirect the user to a place where they can provide a code, in case they do have 2FA enabled.
+As said at the beginning of this guide, this package is currently working with two other packages: `accounts-password` and `accounts-passwordless`. Below there is an explanation on how to use this package with them.
+
+<h4 id="working-with-accounts-password">Working with accounts-password</h4>
+
+With the function `Accounts.has2faEnabled`, you can check whether or not the user has 2FA enabled, and based on this information, you can directly call `Meteor.loginWithPassword` if the 2FA is not enabled, or redirect the user to a place where they can provide a code, in case they do have 2FA enabled.
 
 A way of using it would be:
 
@@ -139,6 +143,64 @@ So the call of this function should look something like this:
 </button>
 ```
 
+<h4 id="working-with-accounts-passwordless">Working with accounts-passwordless</h4>
+
+Following the same strategy from the previous package, you can use the function `Accounts.has2faEnabled` to verify whether or not the user has 2FA enabled. If yes, you send them their token and on next step you receive their token and their 2FA code, otherwise, you still send them their token but on the next step you don't ask them for a 2FA code.
+
+Here it's an example:
+
+```js
+Accounts.has2faEnabled(username, (err, isEnabled) => {
+  if (err) {console.error("...", err);return;}
+  
+  Accounts.requestLoginTokenForUser({selector: "email@example.com"}, e => {
+     if (e) {console.error("...", e);return;}
+     
+     if (isEnabled) {
+      setShouldAskTokenAndCode(true);
+      return;
+     }
+
+    setShouldAskToken(true);
+  });
+});
+```
+
+Now you can either call the standard method [`Meteor.passwordlessLoginWithToken`](https://docs.meteor.com/packages/accounts-passwordless.html#Meteor-passwordlessLoginWithToken) if they don't have 2FA enabled, or in case they do, you call the method `Meteor.passwordlessLoginWithTokenAnd2faCode` that will allow you to provide a selector, token, and 2FA code:
+
+{% apibox "Meteor.passwordlessLoginWithTokenAnd2faCode" %}
+
+So, using this strategy your code should look something like this:
+
+```js
+<button
+  onClick={() => {
+    // logging in with token and code
+    if (shouldAskTokenAndCode) {
+      Meteor.passwordlessLoginWithTokenAnd2faCode(
+        email,
+        token,
+        code,
+        error => {
+          if (error) {console.error('...', error);}
+        }
+      );
+      return;
+    }
+    // logging in just with token 
+    Meteor.passwordlessLoginWithToken(
+      email,
+      token,
+      error => {
+        if (error) {console.error('...', error);}
+      }
+    );
+  }}
+>
+  Validate and Log in
+</button>;
+```
+
 <h3 id="disabling-2fa">Disabling 2FA</h3>
 
 To disable 2FA for a user use this method: 
@@ -146,3 +208,34 @@ To disable 2FA for a user use this method:
 {% apibox "Accounts.disableUser2fa" "module":"accounts-base" %}
 
 To call this function the user must be already logged in.
+
+<h3 id="integrating-auth-package">How to integrate an Authentication Package with accounts-2fa</h3>
+
+To integrate this package with any other existing Login method, it's necessary following two steps:
+
+1 - For the client, create a new method from your current login method. So for example, from the method `Meteor.loginWithPassword` we created a new one called `Meteor.loginWithPasswordAnd2faCode`, and the only difference between them is that the latest one receives one additional parameter, the 2FA code, but we call the same function on the server side.
+
+2 - For the server, inside the function that will log the user in, you verify if the function `Accounts._is2faEnabledForUser` exists, and if yes, you call it providing the user you want to check if the 2FA is enabled, and if either of these statements are false, you proceed with the login flow. This function exists only when the package `accounts-2fa` is added to the project.
+
+If both statements are true, now you verify if a code was provided, if not throw an error, if it was provided, verify if the code is valid by calling the function `Accounts._isTokenValid`, if not, throw an error.
+
+Here it's an example:
+
+```js
+if (
+    Accounts._is2faEnabledForUser &&
+    Accounts._is2faEnabledForUser(user)
+  ) {
+    if (!code) {
+      Accounts._handleError('2FA code must be informed.');
+    }
+    if (
+      !Accounts._isTokenValid(user.services.twoFactorAuthentication.secret, code)
+    ) {
+      Accounts._handleError('Invalid 2FA code.');
+    }
+  }
+  
+  // continue the login flow
+```
+ 
