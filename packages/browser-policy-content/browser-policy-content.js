@@ -65,7 +65,7 @@ var parseCsp = function (csp) {
       policy = policy.substring(0, policy.length - 1);
     var srcs = policy.split(" ");
     var directive = srcs[0];
-    if (srcs.indexOf(keywords.none) !== -1)
+    if (srcs.includes(keywords.none))
       cspSrcs[directive] = null;
     else
       cspSrcs[directive] = srcs.slice(1);
