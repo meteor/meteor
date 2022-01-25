@@ -1,5 +1,5 @@
 ---
-title: Meteor API Docs
+title: Docs
 ---
 
 <!--  XXX: note that this content is somewhat duplicated on the guide, and should be updated in parallel -->
