@@ -43,7 +43,7 @@ const [qrCode, setQrCode] = useState(null);
   
 <button
   onClick={() => {
-    Accounts.generate2faActivationQrCode((err, svg) => {
+    Accounts.generate2faActivationQrCode("My app name", (err, svg) => {
       if (err) {console.error("...", err);return;}
       /*
         the svg can be converted to base64, then be used like: 
