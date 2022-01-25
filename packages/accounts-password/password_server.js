@@ -176,7 +176,6 @@ Accounts.registerLoginHandler("password", options => {
 
   const user = Accounts._findUserByQuery(options.user, {fields: {
     services: 1,
-    twoFactorAuthentication: 1,
     ...Accounts._checkPasswordUserFields,
   }});
   if (!user) {
@@ -192,7 +191,7 @@ Accounts.registerLoginHandler("password", options => {
       Accounts._handleError('Token must be informed.');
     }
     if (
-      !Accounts._isTokenValid(user.twoFactorAuthentication.secret, options.code)
+      !Accounts._isTokenValid(user.services.twoFactorAuthentication.secret, options.code)
     ) {
       Accounts._handleError('Invalid token.');
     }

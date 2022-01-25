@@ -2,7 +2,7 @@ const getTokenFromSecret = ({ username, secret: secretParam }) => {
   let secret = secretParam;
 
   if (!secret) {
-    const { twoFactorAuthentication } =
+    const { services: { twoFactorAuthentication } = {} } =
       Meteor.users.findOne({ username }) || {};
     if (!twoFactorAuthentication) {
       throw new Meteor.Error(500, 'twoFactorAuthentication not set.');
@@ -23,7 +23,7 @@ Meteor.methods({
       { username },
       {
         $set: {
-          twoFactorAuthentication: {
+          'services.twoFactorAuthentication': {
             secret,
             type: 'otp',
           },

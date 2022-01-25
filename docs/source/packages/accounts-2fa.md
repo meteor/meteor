@@ -18,11 +18,14 @@ The first step, in order to enable 2FA, is to generate a QR code so that the use
 Receives an `appName` which is the name of your app that will show up when the user scans the QR code. Also, a callback called with a QR code in SVG format on success or a single `Error` argument
 on failure.
 
-On success, this function will also add an object to the logged user containing the QR secret:
+On success, this function will also add an object to the logged user's services object containing the QR secret:
 
 ```js
-twoFactorAuthetication: {
-  secret: "***"
+services: {
+  ...
+  twoFactorAuthentication: {
+    secret: "***"
+  }
 }
 ``` 
 
@@ -65,9 +68,12 @@ At this point, the 2FA won't be activated just yet. Now that the user has access
 It should be called with a code that the users will receive from the authenticator app once they read the QR code. The callback is called with a single `Error` argument on failure. If the code provided is correct, a `type` will be added to the user's `twoFactorAuthentication` object and now 2FA is considered enabled:
 
 ```js
-twoFactorAuthetication: {
-  type: "otp",
-  secret: "***",
+services: {
+  ...
+  twoFactorAuthentication: {
+    type: "otp",
+    secret: "***",
+  }
 }
 ```
 

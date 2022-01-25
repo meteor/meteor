@@ -20,7 +20,7 @@ Accounts._is2faEnabledForUser = selector => {
   }
 
   const user = Meteor.users.findOne(selector) || {};
-  const { twoFactorAuthentication } = user;
+  const { services: { twoFactorAuthentication } = {} } = user;
   return (
     twoFactorAuthentication &&
     twoFactorAuthentication.secret &&
@@ -61,7 +61,7 @@ Meteor.methods({
       { username },
       {
         $set: {
-          twoFactorAuthentication: {
+          "services.twoFactorAuthentication": {
             secret,
           },
         },
@@ -77,7 +77,7 @@ Meteor.methods({
       throw new Meteor.Error(400, 'No user logged in.');
     }
 
-    const { twoFactorAuthentication, username } = user;
+    const { services: { twoFactorAuthentication }, username } = user;
 
     if (!twoFactorAuthentication || !twoFactorAuthentication.secret) {
       throw new Meteor.Error(
@@ -93,7 +93,7 @@ Meteor.methods({
       { username },
       {
         $set: {
-          twoFactorAuthentication: {
+          "services.twoFactorAuthentication": {
             ...twoFactorAuthentication,
             type: 'otp',
           },
@@ -112,7 +112,7 @@ Meteor.methods({
       { username: user.username },
       {
         $unset: {
-          twoFactorAuthentication: 1,
+          "services.twoFactorAuthentication": 1,
         },
       }
     );
