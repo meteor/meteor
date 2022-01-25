@@ -72,28 +72,3 @@ Accounts.enableUser2fa = (code, callback) => {
 Accounts.disableUser2fa = callback => {
   Accounts.connection.call('disableUser2fa', callback);
 };
-
-/**
- * @summary Log the user in with a password and token.
- * @locus Client
- * @param {Object | String} selector
- *   Either a string interpreted as a username or an email; or an object with a
- *   single key: `email`, `username` or `id`. Username or email match in a case
- *   insensitive manner.
- * @param {String} password The user's password.
- * @param {String} token Token provide by the user's authenticator app.
- * @param {Function} [callback] Optional callback.
- *   Called with no arguments on success, or with a single `Error` argument
- *   on failure.
- * @importFromPackage meteor
- */
-
-Meteor.loginWithPasswordAnd2faCode = (selector, password, code, callback) => {
-  if (code == null || typeof code !== 'string' || !code) {
-    throw new Meteor.Error(
-      400,
-      'token is required to use loginWithPasswordAnd2faCode and must be a string'
-    );
-  }
-  return Accounts._internalLoginWithPassword({ selector, password, code, callback });
-};
