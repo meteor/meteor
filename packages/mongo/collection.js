@@ -739,11 +739,11 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection._ensureIndex || !self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
-    import { Log } from 'meteor/logging';
-    Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
     if (self._collection.createIndex) {
       self._collection.createIndex(index, options);
     } else {
+      import { Log } from 'meteor/logging';
+      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
       self._collection._ensureIndex(index, options);
     }
   },
