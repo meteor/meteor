@@ -34,4 +34,4 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 {% oldRedirects %}
 
-<!-- hidden comment to trigger a change 2 -->
+<!-- hidden comment to trigger a change -->
