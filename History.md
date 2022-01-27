@@ -1,10 +1,16 @@
 ## vNEXT, UNRELEASED
 
 #### Highlights
-
+* You are now able to use dark theme specific splash screens for both iOS and Android by passing an object `{src: 'light-image-src-here.png', srcDarkMode: 'dark-mode-src-here.png'}` to the corresponding key in `App.launchScreens`
 #### Breaking Changes
 
+* Legacy launch screens keys for iOS on `App.launchScreens` are now deprecated in favor of new storyboard compliant keys [PR #11797](https://github.com/meteor/meteor/pull/11797).
+  - This will drop the following keys we have: `['iphone5','iphone6','iphone6p_portrait','iphone6p_landscape','iphoneX_portrait','iphoneX_landscape','ipad_portrait_2x','ipad_landscape_2x','iphone','iphone_2x','ipad_portrait','ipad_landscape']`
+
 #### Migration Steps
+* Replace the deprecated keys `['iphone5','iphone6','iphone6p_portrait','iphone6p_landscape','iphoneX_portrait','iphoneX_landscape','ipad_portrait_2x','ipad_landscape_2x','iphone','iphone_2x','ipad_portrait','ipad_landscape']` with the
+corresponding new key: `['ios_universal','ios_universal_3x','Default@2x~universal~comany','Default@2x~universal~comcom','Default@3x~universal~anycom','Default@3x~universal~comany','Default@2x~iphone~anyany','Default@2x~iphone~comany','Default@2x~iphone~comcom','Default@3x~iphone~anyany','Default@3x~iphone~anycom','Default@3x~iphone~comany','Default@2x~ipad~anyany','Default@2x~ipad~comany']`
+and adapt necessary splash images to the new dimensions asked by Apple. You can get more info [here](https://docs.meteor.com/api/mobile-config.html#App-launchScreens).
 
 #### Meteor Version Release
 
