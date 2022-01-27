@@ -9,7 +9,7 @@ This package uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works
 
 > This package is meant to be used with [`accounts-password`](https://docs.meteor.com/api/passwords.html) or [`accounts-passwordless`](https://docs.meteor.com/packages/accounts-passwordless.html), so if you don't have either of those in your project, you'll need to add one of them. In the future, we want to enable the use of this package with other login methods, our oauth methods (Google, GitHub, etc...).
 
-<h3 id="activating-2fa">Activating 2FA</h3>
+<h2 id="activating-2fa">Activating 2FA</h2>
 
 The first step, in order to enable 2FA, is to generate a QR code so that the user can scan it in an authenticator app and start receiving codes.
 
@@ -77,7 +77,15 @@ services: {
 }
 ```
 
-<h3 id="log-in-with-2fa">Log in with 2FA</h3>
+<h2 id="disabling-2fa">Disabling 2FA</h2>
+
+To disable 2FA for a user use this method:
+
+{% apibox "Accounts.disableUser2fa" "module":"accounts-base" %}
+
+To call this function the user must be already logged in.
+
+<h2 id="log-in-with-2fa">Log in with 2FA</h2>
 
 Now that you have a way to allow your users to enable 2FA on their accounts, you can create a login flow based on that.
 
@@ -87,7 +95,7 @@ To verify whether or not a user has 2FA enabled, you can call the function `Acco
 
 As said at the beginning of this guide, this package is currently working with two other packages: `accounts-password` and `accounts-passwordless`. Below there is an explanation on how to use this package with them.
 
-<h4 id="working-with-accounts-password">Working with accounts-password</h4>
+<h3 id="working-with-accounts-password">Working with accounts-password</h3>
 
 With the function `Accounts.has2faEnabled`, you can check whether or not the user has 2FA enabled, and based on this information, you can directly call `Meteor.loginWithPassword` if the 2FA is not enabled, or redirect the user to a place where they can provide a code, in case they do have 2FA enabled.
 
@@ -143,7 +151,7 @@ So the call of this function should look something like this:
 </button>
 ```
 
-<h4 id="working-with-accounts-passwordless">Working with accounts-passwordless</h4>
+<h3 id="working-with-accounts-passwordless">Working with accounts-passwordless</h3>
 
 Following the same strategy from the previous package, you can use the function `Accounts.has2faEnabled` to verify whether or not the user has 2FA enabled. If yes, you send them their token and on next step you receive their token and their 2FA code, otherwise, you still send them their token but on the next step you don't ask them for a 2FA code.
 
@@ -201,15 +209,7 @@ So, using this strategy your code should look something like this:
 </button>;
 ```
 
-<h3 id="disabling-2fa">Disabling 2FA</h3>
-
-To disable 2FA for a user use this method: 
-
-{% apibox "Accounts.disableUser2fa" "module":"accounts-base" %}
-
-To call this function the user must be already logged in.
-
-<h3 id="integrating-auth-package">How to integrate an Authentication Package with accounts-2fa</h3>
+<h2 id="integrating-auth-package">How to integrate an Authentication Package with accounts-2fa</h2>
 
 To integrate this package with any other existing Login method, it's necessary following two steps:
 
