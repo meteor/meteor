@@ -2,4 +2,4 @@
 title: Changelog
 ---
 
-{%- changelog 'history.md' %}
+{%- changelog 'source/history.md' %}
