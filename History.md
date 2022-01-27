@@ -1,5 +1,5 @@
 # History
 
-This content was moved to [Changelog](https://docs.meteor.com/changelog.html).
+This content was moved to [history.md](./docs/source/history.md).
 
-Previously the changelog was available to be edited here but it was always published in the URL above.
+Previously the changelog was available to be edited here but it was always published in [https://docs.meteor.com/changelog.html](https://docs.meteor.com/changelog.html).
