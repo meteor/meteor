@@ -10,7 +10,7 @@
 #### Breaking Changes
 
 * `mongo@1.14.0`
-  - This is not a breaking change in Meteor itself but internal result of operations inside Node.js MongoDB driver have changed. If you are depending on rawCollection, read the [Migration Guide](https://guide.meteor.com/2.6-migration.html) for more details.
+  - This is not a breaking change in Meteor itself but if you are depending on rawCollection, read the [Migration Guide](https://guide.meteor.com/2.6-migration.html) for more details.
   
 * `meteor-tool@2.6`
   - Legacy launch screens keys for iOS on `App.launchScreens` are now deprecated in favor of new storyboard compliant keys [PR #11797](https://github.com/meteor/meteor/pull/11797). This will drop the following keys we have: `['iphone5','iphone6','iphone6p_portrait','iphone6p_landscape','iphoneX_portrait','iphoneX_landscape','ipad_portrait_2x','ipad_landscape_2x','iphone','iphone_2x','ipad_portrait','ipad_landscape']`. Read the [Migration Guide](https://guide.meteor.com/2.6-migration.html) for more details.
