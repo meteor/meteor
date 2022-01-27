@@ -32,6 +32,7 @@ The items in this section are the core team's priorities.
 - Finish Blaze 2.6;
 - ES Modules Support;
 - node: Protocol Import Support;
+- Explore new ways to expose Meteor type definitions;
 
 ### Next major releases
 
@@ -44,7 +45,9 @@ The items in this section are the core team's priorities.
 - Launch new sections for [Meteor University](https://university.meteor.com/);
 - ARM Support;
 - HTTP/3 Support;
-- Change Streams Support;
+- MongoDB Change Streams Support;
+- Explore bringing Redis-oplog to core;
+- Explore Flutter as a front-end for Meteor apps;
 
 ## Community
 
