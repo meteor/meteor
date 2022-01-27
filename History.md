@@ -1,32 +1,19 @@
-## vNEXT, UNRELEASED
-
-#### Highlights
-* You are now able to use dark theme specific splash screens for both iOS and Android by passing an object `{src: 'light-image-src-here.png', srcDarkMode: 'dark-mode-src-here.png'}` to the corresponding key in `App.launchScreens`
-#### Breaking Changes
-
-* Legacy launch screens keys for iOS on `App.launchScreens` are now deprecated in favor of new storyboard compliant keys [PR #11797](https://github.com/meteor/meteor/pull/11797).
-  - This will drop the following keys we have: `['iphone5','iphone6','iphone6p_portrait','iphone6p_landscape','iphoneX_portrait','iphoneX_landscape','ipad_portrait_2x','ipad_landscape_2x','iphone','iphone_2x','ipad_portrait','ipad_landscape']`
-
-#### Migration Steps
-* Replace the deprecated keys `['iphone5','iphone6','iphone6p_portrait','iphone6p_landscape','iphoneX_portrait','iphoneX_landscape','ipad_portrait_2x','ipad_landscape_2x','iphone','iphone_2x','ipad_portrait','ipad_landscape']` with the
-corresponding new key: `['ios_universal','ios_universal_3x','Default@2x~universal~comany','Default@2x~universal~comcom','Default@3x~universal~anycom','Default@3x~universal~comany','Default@2x~iphone~anyany','Default@2x~iphone~comany','Default@2x~iphone~comcom','Default@3x~iphone~anyany','Default@3x~iphone~anycom','Default@3x~iphone~comany','Default@2x~ipad~anyany','Default@2x~ipad~comany']`
-and adapt necessary splash images to the new dimensions asked by Apple. You can get more info [here](https://docs.meteor.com/api/mobile-config.html#App-launchScreens).
-
-#### Meteor Version Release
-
-#### Independent Releases
-
-## v2.6-beta.0, UNRELEASED
+## v2.6, UNRELEASED
 
 #### Highlights
 
-* MongoDB Node.js driver Upgrade to support MongoDB 5.x
+* MongoDB Node.js driver Upgrade from 3.6.10 to 4.3.1
+* MongoDB Server 5.x Support
 * Embedded Mongo now uses MongoDB 5.0.5
+* You are now able to use dark theme specific splash screens for both iOS and Android by passing an object `{src: 'light-image-src-here.png', srcDarkMode: 'dark-mode-src-here.png'}` to the corresponding key in `App.launchScreens`
 
 #### Breaking Changes
 
 * `mongo@1.14.0`
-  - This is not a breaking change in Meteor itself but internal result of operations inside Node.js MongoDB driver have changed. If you are depending on rawCollection results (not only the effect inside the DB), please review the expected format as we have done [here](https://github.com/meteor/meteor/blob/155ae639ee590bae66237fc1c29295072ec92aef/packages/mongo/mongo_driver.js#L658)
+  - This is not a breaking change in Meteor itself but internal result of operations inside Node.js MongoDB driver have changed. If you are depending on rawCollection, read the [Migration Guide](https://guide.meteor.com/2.6-migration.html) for more details.
+  
+* `meteor-tool@2.6`
+  - Legacy launch screens keys for iOS on `App.launchScreens` are now deprecated in favor of new storyboard compliant keys [PR #11797](https://github.com/meteor/meteor/pull/11797). This will drop the following keys we have: `['iphone5','iphone6','iphone6p_portrait','iphone6p_landscape','iphoneX_portrait','iphoneX_landscape','ipad_portrait_2x','ipad_landscape_2x','iphone','iphone_2x','ipad_portrait','ipad_landscape']`. Read the [Migration Guide](https://guide.meteor.com/2.6-migration.html) for more details.
 
 #### Migration Steps
 
@@ -48,19 +35,20 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
   - _synchronousCursor._dbCursor.operation is not an option anymore in the raw cursor from nodejs mongodb driver. If you want to access the options, use _synchronousCursor._dbCursor.(GETTERS) - for example, _synchronousCursor._dbCursor.readPreference.
 
 * `allow-deny@1.1.1`
-  - TODO
+  - Handle `MongoBulkWriteError` as `BulkWriteError` was already handled.
 
 * `meteor-tool@2.6.0`
-  - TODO
+  - Cordova changes to support new Launch Screens.
+  - Mongo changes to support new embedded version, 5.0.5.
 
 * `minimongo@1.8.0`
-  - TODO
+  - Changes to keep everything compatible with MongoDB Server 5.x and MongoDB Node.js driver 4.x.
 
-* `npm-mongo@4.3.0`
-  - Upgraded MongoDB Node.js driver to 4.3.0
+* `npm-mongo@4.3.1`
+  - Upgraded MongoDB Node.js driver to 4.3.1
   
 * `tinytest@1.2.1`
-  - TODO
+  - Custom message support for `throws`
   
 #### Independent Releases
 
