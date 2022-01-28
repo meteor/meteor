@@ -40,6 +40,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 * `meteor-tool@2.6.0`
     - Cordova changes to support new Launch Screens.
     - Mongo changes to support new embedded version, 5.0.5.
+    - Fix resolving npm deps of local packages when on different drive. [PR](https://github.com/meteor/meteor/pull/11868)
 
 * `minimongo@1.8.0`
     - Changes to keep everything compatible with MongoDB Server 5.x and MongoDB Node.js driver 4.x.
