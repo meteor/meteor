@@ -508,7 +508,7 @@ Note that user documents – ones that you would normally query with `Meteor.use
 
 <h4 id="testing-methods">Testing methods</h4>
 
-Given these methods:
+We can also access methods using `Meteor.server.method_handlers` and apply the same principles. Take note of how we can use `sinon.fake()` to mock `this.unblock()`. 
 
 ```js
 Meteor.methods({
@@ -636,6 +636,7 @@ describe('notes', function () {
 
 ```
 
+These examples are heavily inspired by [Andrew Mead example app](https://github.com/andrewjmead/notes-meteor-course).
 
 <h2 id="integration-testing">Integration testing</h2>
 
