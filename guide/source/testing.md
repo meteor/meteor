@@ -37,7 +37,7 @@ The primary way to test your application in Meteor is the `meteor test` command.
 This loads your application in a special "test mode". What this does is:
 
 - *Doesn't* eagerly load *any* of our application code as Meteor normally would.
-  - *This is a highly important not as Meteor wouldn't know of any methods/collections/publications unless you import them in your test files.*
+  - *This is a highly important note as Meteor wouldn't know of any methods/collections/publications unless you import them in your test files.*
 - *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.test[s].*`, or `*.spec[s].*`
 - Sets the `Meteor.isTest` flag to be true.
 - Starts up the test driver package ([see below](#driver-packages)).
