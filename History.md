@@ -14,6 +14,25 @@
 #### Independent Releases
 
 
+## v2.5.6, 2022-01-25
+
+#### Highlights
+
+* Go back to using node-fibers mainline dependency instead of a fork. Also ships fibers binaries.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.6`
+  - Go back to using node-fibers mainline dependency instead of a fork. Also ships fibers binaries.
+  
 ## v2.5.5, 2022-01-18
 
 #### Highlights
