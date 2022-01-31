@@ -33,6 +33,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.
     - waitForStepDownOnNonCommandShutdown=false is not needed anymore when spawning the mongodb process
     - _synchronousCursor._dbCursor.operation is not an option anymore in the raw cursor from nodejs mongodb driver. If you want to access the options, use _synchronousCursor._dbCursor.(GETTERS) - for example, _synchronousCursor._dbCursor.readPreference.
+    - the default write preference for replica sets on mongo v5 is w:majority
 
 * `allow-deny@1.1.1`
     - Handle `MongoBulkWriteError` as `BulkWriteError` was already handled.
