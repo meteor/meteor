@@ -766,6 +766,15 @@ var launchMongo = function(options) {
         });
 
         if (ismaster) {
+          // From mongoDB 5.0, w: majority is the default write concern for most MongoDB configurations
+          // this causes writes to be acknowledged after the timeout on M1 macs
+          // We are explicitly setting it to 1 when there is only 1 node, as we do simulate replica sets with only 1 node
+          // when running locally or in test environments.
+          // ref: https://docs.mongodb.com/manual/reference/write-concern/#mongodb-writeconcern-writeconcern.-majority-
+          yieldingMethod(db.admin(), 'command', {
+            setDefaultRWConcern: 1,
+            ...( options.multiple ? {} : {defaultWriteConcern: {w: 1}})
+          });
           break;
         } else if (Date.now() - writableTimestamp > 60000) {
           const status = yieldingMethod(db.admin(), 'command', {
