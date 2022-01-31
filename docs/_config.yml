@@ -57,6 +57,7 @@ sidebar_categories:
   Packages:
     - packages/accounts-ui
     - packages/accounts-passwordless
+    - packages/accounts-2fa
     - packages/appcache
     - packages/audit-argument-checks
     - packages/autoupdate

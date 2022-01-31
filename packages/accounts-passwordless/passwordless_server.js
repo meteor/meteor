@@ -1,5 +1,5 @@
 import { Accounts } from 'meteor/accounts-base';
-import { getUserById, tokenValidator } from './server_utils';
+import {getUserById, NonEmptyString, tokenValidator} from './server_utils';
 import { Random } from 'meteor/random';
 
 const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
@@ -63,6 +63,7 @@ Accounts.registerLoginHandler('passwordless', options => {
 
   check(options, {
     token: tokenValidator(),
+    code: Match.Optional(NonEmptyString),
     selector: Accounts._userQueryValidator,
   });
 
@@ -77,6 +78,21 @@ Accounts.registerLoginHandler('passwordless', options => {
 
   if (!user.services || !user.services.passwordless) {
     Accounts._handleError('User has no token set');
+  }
+
+  // This method is added by the package accounts-2fa
+  if (
+    Accounts._is2faEnabledForUser &&
+    Accounts._is2faEnabledForUser(user)
+  ) {
+    if (!options.code) {
+      Accounts._handleError('2FA code must be informed.');
+    }
+    if (
+      !Accounts._isTokenValid(user.services.twoFactorAuthentication.secret, options.code)
+    ) {
+      Accounts._handleError('Invalid 2FA code.');
+    }
   }
 
   const result = checkToken({

@@ -60,6 +60,7 @@ Package.onTest(api => {
     'oauth-encryption',
     'ddp',
     'accounts-password',
+    'accounts-2fa',
   ]);
 
   api.addFiles('accounts_tests_setup.js', 'server');
