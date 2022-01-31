@@ -865,7 +865,9 @@ export function createTarGzStream(dirPath: string) {
     map: (header: any) => {
       header.name = `${basename}/${header.name}`
       return header
-    }
+    },
+    readable: true, // all dirs and files should be readable
+    writable: true, // all dirs and files should be writable
   });
 
   return tarStream.pipe(zlib.createGzip());
