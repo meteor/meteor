@@ -1,3 +1,27 @@
+## v2.6.1, UNRELEASED
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+* `@meteorjs/babel@7.16.0`
+  - Upgrade TypeScript to `4.5.4`
+
+* `babel-compiler@7.9.0`
+  - Upgrade TypeScript to `4.5.4`
+
+* `ecmascript@0.16.2`
+  - Upgrade TypeScript to `4.5.4`
+
+* `typescript@4.5.4`
+  - Upgrade TypeScript to `4.5.4` [PR](https://github.com/meteor/meteor/pull/11846)
+
+#### Independent Releases
+
 ## v2.6, UNRELEASED
 
 #### Highlights
