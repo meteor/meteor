@@ -1,4 +1,14 @@
-## v2.6, UNRELEASED
+## vNEXT, UNRELEASED
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+## v2.6, 2022-02-01
 
 #### Highlights
 
