@@ -71,19 +71,7 @@ function spawnMongod(mongodPath, port, dbPath, replSetName) {
     '8',
     '--replSet',
     replSetName,
-    '--noauth',
-
-    // Starting with version 4.0.8/4.1.10, MongoDB performs a step down
-    // procedure if the primary receives a SIGTERM signal
-    // (https://jira.mongodb.org/browse/SERVER-38994). During this procedure,
-    // the process doesn't shut down for up to ten seconds until a secondary
-    // becomes the new primary. Since Meteor starts a single-node replica set,
-    // this is unnecessary because there are no secondaries. The following
-    // parameter disables the step down. This will be the default for single-
-    // node replica sets in MongoDB 4.3 (relevant commit: https://git.io/JeNkT),
-    // so the parameter can be removed in the future.
-    '--setParameter',
-    'waitForStepDownOnNonCommandShutdown=false',
+    '--noauth'
   ];
 
   // Use mmapv1 on 32bit platforms, as our binary doesn't support WT
@@ -690,21 +678,21 @@ var launchMongo = function(options) {
     stopOrReadyPromise.await();
   };
 
-  var initiateReplSetAndWaitForReady = function() {
+  var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      const { MongoClient, Server } = loadIsopackage(
-        'npm-mongo'
+      const {MongoClient} = loadIsopackage(
+          'npm-mongo'
       ).NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
       const client = new MongoClient(
-        new Server('127.0.0.1', options.port, {
-          poolSize: 1,
-          socketOptions: {
-            connectTimeoutMS: 60000,
-          },
-        })
+          `mongodb://127.0.0.1:${options.port}`, {
+            minPoolSize: 1,
+            maxPoolSize: 1,
+            socketTimeoutMS: 60000,
+            directConnection: true
+          }
       );
 
       yieldingMethod(client, 'connect');
@@ -718,7 +706,7 @@ var launchMongo = function(options) {
         _id: replSetName,
         version: 1,
         protocolVersion: 1,
-        members: [{ _id: 0, host: '127.0.0.1:' + options.port, priority: 100 }],
+        members: [{_id: 0, host: '127.0.0.1:' + options.port, priority: 100}],
       };
 
       try {
@@ -773,11 +761,20 @@ var launchMongo = function(options) {
       // Wait until the primary is writable. If it isn't writable after one
       // minute, throw an error and report the replica set status.
       while (!stopped) {
-        const { ismaster } = yieldingMethod(db.admin(), 'command', {
+        const {ismaster} = yieldingMethod(db.admin(), 'command', {
           isMaster: 1,
         });
 
         if (ismaster) {
+          // From mongoDB 5.0, w: majority is the default write concern for most MongoDB configurations
+          // this causes writes to be acknowledged after the timeout on M1 macs
+          // We are explicitly setting it to 1 when there is only 1 node, as we do simulate replica sets with only 1 node
+          // when running locally or in test environments.
+          // ref: https://docs.mongodb.com/manual/reference/write-concern/#mongodb-writeconcern-writeconcern.-majority-
+          yieldingMethod(db.admin(), 'command', {
+            setDefaultRWConcern: 1,
+            ...( options.multiple ? {} : {defaultWriteConcern: {w: 1}})
+          });
           break;
         } else if (Date.now() - writableTimestamp > 60000) {
           const status = yieldingMethod(db.admin(), 'command', {
@@ -785,7 +782,7 @@ var launchMongo = function(options) {
           });
 
           throw new Error(
-            'Primary not writable after one minute. Last replica set status: ' +
+              'Primary not writable after one minute. Last replica set status: ' +
               JSON.stringify(status)
           );
         }

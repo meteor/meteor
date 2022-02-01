@@ -29,6 +29,7 @@ sidebar_categories:
     - index
     - changelog
     - install
+    - roadmap
   API:
     - api/core
     - api/pubsub

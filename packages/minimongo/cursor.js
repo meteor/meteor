@@ -25,7 +25,7 @@ export default class Cursor {
 
     this.skip = options.skip || 0;
     this.limit = options.limit;
-    this.fields = options.fields;
+    this.fields = options.projection || options.fields;
 
     this._projectionFn = LocalCollection._compileProjection(this.fields || {});
 
@@ -41,16 +41,11 @@ export default class Cursor {
    * @summary Returns the number of documents that match a query.
    * @memberOf Mongo.Cursor
    * @method  count
-   * @param {boolean} [applySkipLimit=true] If set to `false`, the value
-   *                                         returned will reflect the total
-   *                                         number of matching documents,
-   *                                         ignoring any value supplied for
-   *                                         limit
    * @instance
    * @locus Anywhere
    * @returns {Number}
    */
-  count(applySkipLimit = true) {
+  count() {
     if (this.reactive) {
       // allow the observe to be unordered
       this._depend({added: true, removed: true}, true);
@@ -58,7 +53,6 @@ export default class Cursor {
 
     return this._getRawObjects({
       ordered: true,
-      applySkipLimit
     }).length;
   }
 
