@@ -1119,8 +1119,7 @@ class Target {
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
-      // TODO Cache result by resource hash?
-      minifyCssResource(resource) {
+      minifyCssResource: (resource) => {
         if (! minifiersByExt.css ||
             minifyMode === "development") {
           // Indicates the caller should use the original resource.data
@@ -1142,6 +1141,7 @@ class Target {
           arch: target.arch,
           minifier: minifiersByExt.css,
           minifyMode,
+          watchSet: this.watchSet
         }).map(file => file.contents("utf8")).join("\n");
       }
     });
@@ -1691,6 +1691,7 @@ class ClientTarget extends Target {
       arch: this.arch,
       minifier: minifierDef,
       minifyMode,
+      watchSet: this.watchSet
     });
   }
 
@@ -1900,10 +1901,11 @@ function minifyCssFiles (files, {
   arch,
   minifier,
   minifyMode,
+  watchSet
 }) {
   const inputHashesByCssFile = new Map;
   const sources = files.map(file => {
-    const cssFile = new CssFile(file, { arch });
+    const cssFile = new CssFile(file, { arch, watchSet });
     inputHashesByCssFile.set(cssFile, file.hash());
     return cssFile;
   });
