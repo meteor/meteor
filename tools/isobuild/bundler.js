@@ -1896,8 +1896,7 @@ class ClientTarget extends Target {
   }
 }
 
-const { wrap, defaultMakeCacheKey } = require("optimism");
-const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
+function minifyCssFiles (files, {
   arch,
   minifier,
   minifyMode,
@@ -1943,16 +1942,7 @@ const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
       return newFile;
     });
   }));
-}, {
-  makeCacheKey(files, { arch, minifier, minifyMode }) {
-    return defaultMakeCacheKey(
-      minifier,
-      arch,
-      minifyMode,
-      hashOfFiles(files),
-    );
-  }
-}));
+}
 
 const { createHash } = require("crypto");
 function hashOfFiles(files) {
