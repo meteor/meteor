@@ -384,6 +384,14 @@ makeInstaller = function (options) {
     return file && isObject(file.contents);
   }
 
+  function fileIsSymbolicLink(file) {
+    return file && isString(file.contents);
+  }
+
+  function fileIsDirectoryOrSymlinkToDirectory(file) {
+    return file && (isObject(file.contents) || (isString(file.contents) && fileIsDirectoryOrSymlinkToDirectory(fileAppendId(root, file.contents))));
+  }
+
   function fileIsDynamic(file) {
     return file && file.contents === null;
   }
@@ -455,6 +463,11 @@ makeInstaller = function (options) {
   }
 
   function fileAppendIdPart(file, part, extensions) {
+    // Resolve any potential aliases.
+    while (fileIsSymbolicLink(file)) {
+      file = fileAppendId(root, file.contents);
+    }
+
     // Always append relative to a directory.
     while (file && !fileIsDirectory(file)) {
       file = file.parent;
@@ -473,10 +486,12 @@ makeInstaller = function (options) {
     // Only consider multiple file extensions if this part is the last
     // part of a module identifier and not equal to `.` or `..`, and there
     // was no exact match or the exact match was a directory.
-    if (extensions && (!exactChild || fileIsDirectory(exactChild))) {
+    if (extensions && (!exactChild || fileIsDirectoryOrSymlinkToDirectory(exactChild))) {
       for (var e = 0; e < extensions.length; ++e) {
         var child = getOwn(file.contents, part + extensions[e]);
-        if (child && !fileIsDirectory(child)) {
+        // Basically, this means that no-directory match is preferred over directory
+        // but if exact match does not exist, then directory is fine too.
+        if (child && (!exactChild || !fileIsDirectoryOrSymlinkToDirectory(child))) {
           return child;
         }
       }
@@ -584,7 +599,7 @@ makeInstaller = function (options) {
 
   function nodeModulesLookup(file, id, extensions) {
     for (var resolved; file && !resolved; file = file.parent) {
-      resolved = fileIsDirectory(file) &&
+      resolved = fileIsDirectoryOrSymlinkToDirectory(file) &&
         fileAppendId(file, "node_modules/" + id, extensions);
     }
     return resolved;
