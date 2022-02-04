@@ -20,6 +20,9 @@
 * `typescript@4.5.4`
   - Upgrade TypeScript to `4.5.4` [PR](https://github.com/meteor/meteor/pull/11846)
 
+* `accounts-ui-unstyled@1.6.0`
+  - `Accounts.ui.config` can now be set via `Meteor.settings.public.packages.accounts-ui-unstyled`.
+
 #### Independent Releases
 
 `email@2.2.1`
