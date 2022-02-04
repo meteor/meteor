@@ -57,7 +57,6 @@ const nestedOplogEntryParsers = (
   const setObjectSource = { ...i, ...u };
   const $set = Object.keys(setObjectSource).reduce((acc, key) => {
     const prefixedKey = `${prefixKey}${key}`;
-
     return {
       ...acc,
       ...(!Array.isArray(setObjectSource[key]) && typeof setObjectSource[key] === 'object'
@@ -97,6 +96,7 @@ function flattenObject(ob) {
 
     if (typeof ob[i] == 'object' && ob[i] !== null) {
       const flatObject = flattenObject(ob[i]);
+      if(Object.keys(flatObject).length === 0) { return ob; }
       for (const x in flatObject) {
         if (!flatObject.hasOwnProperty(x)) continue;
 
