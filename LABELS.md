@@ -2,7 +2,7 @@
 
 Labels are used to organize our issues and PRs.
 
-We should change the labels of issues and PRs when its status changes.
+We should change the labels of issues and PRs when their status changes.
 
 ### Status Labels
 Labels to indicate the status of a specific issue or PR. These are the most important labels as they tell us in which stage a specific item is at the moment at a glance.

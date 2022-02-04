@@ -1,13 +1,13 @@
 Package.describe({
   name: 'react-fast-refresh',
-  version: '0.2.0-rc250.1',
+  version: '0.2.2',
   summary: 'Automatically update React components with HMR',
   documentation: 'README.md',
   devOnly: true,
 });
 
 Npm.depends({
-  'react-refresh': '0.9.0',
+  'react-refresh': '0.11.0',
   semver: '7.3.4',
 });
 

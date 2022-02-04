@@ -44,8 +44,8 @@ import {
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
-const { compile: reifyCompile } = require("reify/lib/compiler");
-const { parse: reifyBabelParse } = require("reify/lib/parsers/babel");
+const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
+const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
 
@@ -80,7 +80,7 @@ const reifyCompileWithCache = Profile("reifyCompileWithCache", wrap(function (
   if (cacheFilePath) {
     try {
       return readFile(cacheFilePath, "utf8");
-    } catch (e) {
+    } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
     }
   }
@@ -150,7 +150,7 @@ class DefaultHandlers {
       }
     }
 
-    const cacheFileName = this.cacheDir ? 
+    const cacheFileName = this.cacheDir ?
       this.getCacheFileName(file) :
       null;
 
@@ -1090,7 +1090,7 @@ export default class ImportScanner {
 
     try {
       file.deps = file.deps || this.findImportedModuleIdentifiers(file);
-    } catch (e) {
+    } catch (e: any) {
       if (e.$ParseError) {
         (buildmessage as any).error(e.message, {
           file: file.sourcePath,
@@ -1214,7 +1214,7 @@ export default class ImportScanner {
   private readPackageJson(absPath: string) {
     try {
       var info = this.readFile(absPath);
-    } catch (e) {
+    } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
       return null;
     }
@@ -1257,7 +1257,7 @@ export default class ImportScanner {
 
     try {
       var info = this.readFile(absPath);
-    } catch (e) {
+    } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
       return null;
     }

@@ -7,7 +7,7 @@ var meteorBabel = require("./index.js");
 var util = require("./util.js");
 
 var Module = module.constructor;
-require("reify/lib/runtime").enable(Module.prototype);
+require("@meteorjs/reify/lib/runtime").enable(Module.prototype);
 
 var config = {
   sourceMapRootPath: null,

@@ -79,6 +79,27 @@ subscriptions and reactivity.
 If the initial run of an autorun throws an exception, the computation
 is automatically stopped and won't be rerun.
 
+### Tracker.autorun and async callbacks
+`Tracker.autorun` can accept an `async` callback function.  However, the async call back function will only be dependent on reactive functions called prior to any called functions that return a promise.
+
+Example 1 - autorun `example1()` **is not** dependent on reactive changes to the `Meteor.users` collection.  Because it is dependent on nothing reactive it will run only once:
+```javascript
+  Tracker.autorun(async function example1() {
+    let asyncData = await  asyncDataFunction();
+    let users = Meteor.users.find({}).fetch();
+  });
+```
+
+However, simply changing the order so there are no `async` calls prior to the reactive call to `Meteor.users.find`, will make the async autorun `example2()` dependent on reactive changes to the `Meteor.users` collection.
+
+Example 2 -  autorun `example2()` **is** dependent on reactive changes to the Meteor.users collection.  Changes to the `Meteor.users` collection will cause a rerun of `example2()`:
+```javascript
+  Tracker.autorun(async function example2()  {
+    let users = Meteor.users.find({}).fetch();
+    let asyncData = await  asyncDataFunction();
+  });
+```
+
 {% apibox "Tracker.flush" %}
 
 Normally, when you make changes (like writing to the database),

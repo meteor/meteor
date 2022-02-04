@@ -4,11 +4,9 @@
 /// (such as testing whether an directory is a meteor app)
 ///
 
-import assert from "assert";
 import fs, { PathLike, Stats, Dirent } from "fs";
-import path from "path";
 import os from "os";
-import { spawn, execFile } from "child_process";
+import { execFile } from "child_process";
 import { EventEmitter } from "events";
 import { Slot } from "@wry/context";
 import { dep } from "optimism";
@@ -286,6 +284,15 @@ export function getSettings(
   return str;
 }
 
+// Returns true if the first path is a parent of the second path
+export function containsPath(path1: string, path2: string) {
+  const relPath = pathRelative(path1, path2);
+
+  // On Windows, if the two paths are on different drives the relative
+  // path starts with /
+  return !(relPath.startsWith("..") || relPath.startsWith("/"));
+}
+
 // Try to find the prettiest way to present a path to the
 // user. Presently, the main thing it does is replace $HOME with ~.
 export function prettyPath(p: string) {
@@ -311,7 +318,7 @@ function statOrNullHelper(path: string, preserveSymlinks = false) {
     return preserveSymlinks
       ? lstat(path)
       : stat(path);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === "ENOENT") {
       return null;
     }
@@ -322,7 +329,7 @@ function statOrNullHelper(path: string, preserveSymlinks = false) {
 export function realpathOrNull(path: string) {
   try {
     return realpath(path);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code !== "ENOENT") throw e;
     return null;
   }
@@ -340,7 +347,7 @@ export function rm_recursive_async(path: string) {
 export const rm_recursive = Profile("files.rm_recursive", (path: string) => {
   try {
     rimraf.sync(convertToOSPath(path));
-  } catch (e) {
+  } catch (e: any) {
     if ((e.code === "ENOTEMPTY" ||
          e.code === "EPERM") &&
         canYield()) {
@@ -445,7 +452,7 @@ export function mkdir_p(dir: string, mode: number | null = null) {
 
   try {
     mkdir(p, mode);
-  } catch (err) {
+  } catch (err: any) {
     if (err.code === "EEXIST") {
       if (pathIsDirectory(p)) {
         // all good, someone else created this directory for us while we were
@@ -568,7 +575,7 @@ Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
 
   try {
     symlink(...args);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === "EEXIST") {
       function normalizePath(path: string) {
         return convertToOSPath(path).replace(/[\/\\]$/, "")
@@ -778,13 +785,8 @@ export function extractTarGz(
 
   const startTime = +new Date;
 
-  let promise = process.platform === "win32"
-    ? tryExtractWithNative7z(buffer, tempDir, options)
-    : tryExtractWithNativeTar(buffer, tempDir, options)
-
-  promise = promise.catch(
-    () => tryExtractWithNpmTar(buffer, tempDir, options)
-  );
+  // standardize only one way of extracting, as native ones can be tricky
+  const promise = tryExtractWithNpmTar(buffer, tempDir, options)
 
   promise.await();
 
@@ -814,102 +816,6 @@ function ensureDirectoryEmpty(dir: string) {
   });
 }
 
-function tryExtractWithNativeTar(
-  buffer: Buffer,
-  tempDir: string,
-  options: TarOptions = {},
-) {
-  ensureDirectoryEmpty(tempDir);
-
-  if (options.forceConvert) {
-    return Promise.reject(new Error(
-      "Native tar cannot convert colons in package names"));
-  }
-
-  return new Promise((resolve, reject) => {
-    const flags = options.verbose ? "-xzvf" : "-xzf";
-    const tarProc = spawn("tar", [flags, "-"], {
-      cwd: convertToOSPath(tempDir),
-      stdio: options.verbose ? [
-        "pipe", // Always need to write to tarProc.stdin.
-        process.stdout,
-        process.stderr
-      ] : "pipe",
-    });
-
-    tarProc.on("error", reject);
-    tarProc.on("exit", resolve);
-
-    if (tarProc.stdin) {
-      tarProc.stdin.write(buffer);
-      tarProc.stdin.end();
-    }
-  });
-}
-
-function tryExtractWithNative7z(
-  buffer: Buffer,
-  tempDir: string,
-  options: TarOptions = {},
-) {
-  ensureDirectoryEmpty(tempDir);
-
-  if (options.forceConvert) {
-    return Promise.reject(new Error(
-      "Native 7z.exe cannot convert colons in package names"));
-  }
-
-  const exeOSPath = convertToOSPath(pathJoin(getCurrentNodeBinDir(), "7z.exe"));
-  const tarGzBasename = "out.tar.gz";
-  const spawnOptions = {
-    cwd: convertToOSPath(tempDir),
-    stdio: (options.verbose ? "inherit" : "pipe") as ("inherit" | "pipe"),
-  };
-
-  writeFile(pathJoin(tempDir, tarGzBasename), buffer);
-
-  return new Promise((resolve, reject) => {
-    spawn(exeOSPath, [
-      "x", "-y", tarGzBasename
-    ], spawnOptions)
-      .on("error", reject)
-      .on("exit", resolve);
-
-  }).then(code => {
-    assert.strictEqual(code, 0);
-
-    let tarBasename: string;
-    const foundTar = readdir(tempDir).some(file => {
-      if (file !== tarGzBasename) {
-        tarBasename = file;
-        return true;
-      }
-    });
-
-    assert.ok(foundTar, "failed to find .tar file");
-
-    function cleanUp() {
-      unlink(pathJoin(tempDir, tarGzBasename));
-      unlink(pathJoin(tempDir, tarBasename));
-    }
-
-    return new Promise((resolve, reject) => {
-      spawn(exeOSPath, [
-        "x", "-y", tarBasename
-      ], spawnOptions)
-        .on("error", reject)
-        .on("exit", resolve);
-
-    }).then(code => {
-      cleanUp();
-      return code;
-    }, error => {
-      cleanUp();
-      throw error;
-    });
-  });
-}
-
 function tryExtractWithNpmTar(
   buffer: Buffer,
   tempDir: string,
@@ -917,22 +823,27 @@ function tryExtractWithNpmTar(
 ) {
   ensureDirectoryEmpty(tempDir);
 
-  const tar = require("tar");
+  const tar = require("tar-fs");
   const zlib = require("zlib");
 
   return new Promise((resolve, reject) => {
     const gunzip = zlib.createGunzip().on('error', reject);
-    const extractor = new tar.Extract({
-      path: convertToOSPath(tempDir)
-    }).on('entry', function (e: any) {
-      if (process.platform === "win32" || options.forceConvert) {
-        // On Windows, try to convert old packages that have colons in
-        // paths by blindly replacing all of the paths. Otherwise, we
-        // can't even extract the tarball
-        e.path = colonConverter.convert(e.path);
+    const extractor = tar.extract(convertToOSPath(tempDir), {
+      /* the following lines guarantees that archives created on windows
+      are going to be readable and writable on unixes */
+      readable: true, // all dirs and files should be readable
+      writable: true, // all dirs and files should be writable
+      map: function(header: any) {
+        if (process.platform === "win32" || options.forceConvert) {
+          // On Windows, try to convert old packages that have colons in
+          // paths by blindly replacing all of the paths. Otherwise, we
+          // can't even extract the tarball
+          header.name = colonConverter.convert(header.name);
+        }
+        return header
       }
     }).on('error', reject)
-      .on('end', resolve);
+      .on('finish', resolve);
 
     // write the buffer to the (gunzip|untar) pipeline; these calls
     // cause the tar to be extracted to disk.
@@ -942,83 +853,24 @@ function tryExtractWithNpmTar(
   });
 }
 
-// In the same fashion as node-pre-gyp does, add the executable
-// bit but only if the read bit was present.  Same as:
-// https://github.com/mapbox/node-pre-gyp/blob/7a28f4b0f562ba4712722fefe4eeffb7b20fbf7a/lib/install.js#L71-L77
-// and others reported in: https://github.com/npm/node-tar/issues/7
-function addExecBitWhenReadBitPresent(fileMode: number) {
-  return fileMode |= (fileMode >>> 2) & 0o111;
-}
-
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
 export function createTarGzStream(dirPath: string) {
-  const tar = require("tar");
-  const fstream = require('fstream');
+  const tar = require("tar-fs");
   const zlib = require("zlib");
+  const basename = pathBasename(dirPath);
 
-  // Create a segment of the file path which we will look for to
-  // identify exactly what we think is a "bin" file (that is, something
-  // which should be expected to work within the context of an
-  // 'npm run-script').
-  const binPathMatch = ["", "node_modules", ".bin", ""].join(path.sep);
-
-  // Don't use `{ path: dirPath, type: 'Directory' }` as an argument to
-  // fstream.Reader. This triggers a collection of odd behaviors in fstream
-  // (which might be bugs or might just be weirdnesses).
-  //
-  // First, if we pass an object with `type: 'Directory'` as an argument, then
-  // the resulting tarball has no entry for the top-level directory, because
-  // the reader emits an entry (with just the path, no permissions or other
-  // properties) before the pipe to gzip is even set up, so that entry gets
-  // lost. Even if we pause the streams until all the pipes are set up, we'll
-  // get the entry in the tarball for the top-level directory without
-  // permissions or other properties, which is problematic. Just passing
-  // `dirPath` appears to cause `fstream` to stat the directory before emitting
-  // an entry for it, so the pipes are set up by the time the entry is emitted,
-  // and the entry has all the right permissions, etc. from statting it.
-  //
-  // The second weird behavior is that we need an entry for the top-level
-  // directory in the tarball to untar it with npm `tar`. (GNU tar, in
-  // contrast, appears to have no problems untarring tarballs without entries
-  // for the top-level directory inside them.) The problem is that, without an
-  // entry for the top-level directory, `fstream` will create the directory
-  // with the same permissions as the first file inside it. This manifests as
-  // an EACCESS when untarring if the first file inside the top-level directory
-  // is not writeable.
-  const fileStream = fstream.Reader({
-    path: convertToOSPath(dirPath),
-    filter(entry: any) {
-      if (process.platform !== "win32") {
-        return true;
-      }
-
-      // Refuse to create a directory that isn't listable. Tarballs
-      // created on Windows will have non-executable directories (since
-      // executable isn't a thing in Windows directory permissions), and
-      // so the resulting extracted directories will not be listable on
-      // Linux/Mac unless we explicitly make them executable. We think
-      // this should really be an option that you pass to node tar, but
-      // setting it in an 'entry' handler is the same strategy that npm
-      // does, so we do that here too.
-      if (entry.type === "Directory") {
-        entry.props.mode = addExecBitWhenReadBitPresent(entry.props.mode);
-      }
-
-      // In a similar way as for directories, but only if is in a path
-      // location that is expected to be executable (npm "bin" links)
-      if (entry.type === "File" && entry.path.indexOf(binPathMatch) > -1) {
-        entry.props.mode = addExecBitWhenReadBitPresent(entry.props.mode);
-      }
-
-      return true;
-    }
+  const tarStream = tar.pack(convertToOSPath(dirPath), {
+    map: (header: any) => {
+      header.name = `${basename}/${header.name}`
+      return header
+    },
+    readable: true, // all dirs and files should be readable
+    writable: true, // all dirs and files should be writable
   });
 
-  return fileStream.pipe(tar.Pack({
-    noProprietary: true,
-  })).pipe(zlib.createGzip());
+  return tarStream.pipe(zlib.createGzip());
 }
 
 // Tar-gzips a directory into a tarball on disk, synchronously.
@@ -1056,7 +908,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   try {
     rename(toDir, garbageDir);
     cleanupGarbage = true;
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === 'EXDEV') {
       // Some (notably Docker) file systems will fail to do a seemingly
       // harmless operation, such as renaming, on what is apparently the same
@@ -1074,7 +926,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   if (! forceCopy) {
     try {
       rename(fromDir, toDir);
-    } catch (e) {
+    } catch (e: any) {
       // It's possible that there may not have been a `toDir` to have
       // advanced warning about this, so we're prepared to handle it again.
       if (e.code === 'EXDEV') {
@@ -1220,7 +1072,7 @@ export function runJavaScript(code: string, {
       // Pass 'true' as third argument if we want the parse error on
       // stderr (which we don't).
       var script = require('vm').createScript(wrapped, stackFilename);
-    } catch (nodeParseError) {
+    } catch (nodeParseError: any) {
       if (!(nodeParseError instanceof SyntaxError)) {
         throw nodeParseError;
       }
@@ -1238,7 +1090,7 @@ export function runJavaScript(code: string, {
       const { parse } = require('@meteorjs/babel');
       try {
         parse(wrapped, { strictMode: false });
-      } catch (parseError) {
+      } catch (parseError: any) {
         if (typeof parseError.loc !== "object") {
           throw parseError;
         }
@@ -1306,7 +1158,7 @@ export class OfflineError {
 export function readdirNoDots(path: string) {
   try {
     var entries = readdir(path);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === 'ENOENT') {
       return [];
     }
@@ -1344,7 +1196,7 @@ export function splitBufferToLines(buffer: Buffer) {
 export function getLinesOrEmpty(file: string) {
   try {
     return getLines(file);
-  } catch (e) {
+  } catch (e: any) {
     if (e && e.code === 'ENOENT') {
       return [];
     }
@@ -1357,7 +1209,7 @@ export function getLinesOrEmpty(file: string) {
 export function readJSONOrNull(file: string) {
   try {
     var raw = readFile(file, 'utf8');
-  } catch (e) {
+  } catch (e: any) {
     if (e && e.code === 'ENOENT') {
       return null;
     }
@@ -1725,7 +1577,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
         rimraf.sync(osTo);
         wrappedRename(from, to);
         resolve();
-      } catch (err) {
+      } catch (err: any) {
         if (err.code !== 'EPERM' && err.code !== 'EACCES') {
           reject(err);
         } else if (Date.now() - startTimeMs < timeLimitMs) {
@@ -1736,7 +1588,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
       }
     }
     attempt();
-  }).catch(error => {
+  }).catch((error: any) => {
     if (error.code === 'EPERM' ||
         error.code === 'EACCESS') {
       cp_r(from, to, { preserveSymlinks: true });

@@ -1,5 +1,5 @@
 ---
-title: Meteor Changelog
+title: Changelog
 ---
 
-{%- changelog '../History.md' %}
+{%- changelog 'history.md' %}

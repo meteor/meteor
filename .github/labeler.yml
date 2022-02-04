@@ -115,3 +115,6 @@ Project:Dynamic Import:
 
 Project:Docs:
   - docs/**/*
+
+Project:Guide:
+  - guide/**/*

@@ -32,6 +32,8 @@ Here are a few of those methods:
 
 {% apibox "AccountsCommon#config" %}
 
+From Meteor 2.5 you can set these in your Meteor settings under `Meteor.settings.packages.accounts-base`. Note that due to the nature of settings file you won't be able to set parameters that require functions.
+
 {% apibox "AccountsCommon#onLogin" %}
 
 See description of [AccountsCommon#onLoginFailure](#accounts_onloginfailure)

@@ -28,7 +28,7 @@ mkdir node-build
 cd node-build
 
 echo "Downloading Node from ${NODE_URL}"
-curl -sL "${NODE_URL}" | tar zx --strip-components 1
+curl -sL "${NODE_URL}" | tar -xz --strip 1
 
 node_configure_flags=(
     # Enable the ICU internationalization library.
@@ -40,15 +40,20 @@ then
     node_configure_flags+=('--debug')
 fi
 
-# "make binary" includes DESTDIR and PORTABLE=1 options.
+TARBALL_NAME="node_${PLATFORM}_v${NODE_VERSION}"
+INSTALL_DIR="${DIR}/node-build/${TARBALL_NAME}"
+./configure --prefix="${INSTALL_DIR}"
 # Unsetting BUILD_DOWNLOAD_FLAGS allows the ICU download above to work.
-make -j4 binary \
+# -j8 from sysctl -n hw.ncpu
+make -j "$(sysctl -n hw.ncpu)" install \
   BUILD_DOWNLOAD_FLAGS= \
   RELEASE_URLBASE=https://nodejs.org/download/release/ \
   CONFIG_FLAGS="${node_configure_flags[@]+"${node_configure_flags[@]}"}"
 
-TARBALL_PATH="${CHECKOUT_DIR}/node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
-mv node-*.tar.gz "${TARBALL_PATH}"
+TARBALL_PATH="${CHECKOUT_DIR}/${TARBALL_NAME}.tar.gz"
+cd "$INSTALL_DIR"
+tar vcfz node.tar.gz .
+mv node.tar.gz "${TARBALL_PATH}"
 
 cd "$DIR"
 rm -rf node-build

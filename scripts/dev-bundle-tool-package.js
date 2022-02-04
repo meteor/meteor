@@ -14,13 +14,13 @@ var packageJson = {
     pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
     "node-gyp": "8.0.0",
     "node-pre-gyp": "0.15.0",
-    typescript: "4.3.5",
-    "@meteorjs/babel": "7.13.0",
+    typescript: "4.5.4",
+    "@meteorjs/babel": "7.16.0-beta.0",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.9.0",
-    fibers: "5.0.0",
-    reify: "0.22.2",
+    fibers: "5.0.1",
+    "@meteorjs/reify": "0.23.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.15.3",
     // For backwards compatibility with isopackets that still depend on
@@ -35,7 +35,8 @@ var packageJson = {
     uuid: "3.4.0",
     "graceful-fs": "4.2.6",
     fstream: "https://github.com/meteor/fstream/tarball/cf4ea6c175355cec7bee38311e170d08c4078a5d",
-    tar: "2.2.2",
+    tar: "6.1.11",
+    'tar-fs': "2.1.1",
     // Fork of kexec@3.0.0 with my Node.js 12 compatibility PR
     // https://github.com/jprichardson/node-kexec/pull/37 applied.
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38

@@ -20,6 +20,12 @@ import { isEmacs } from "../utils/utils.js";
 
 var main = exports;
 
+if (process.platform === 'darwin' && process.arch === 'arm64') {
+  // pool size needs to be bigger on m1 because arm64 builds are using
+  // fibers with CORO_PTHREAD set. - default on fibers is 120
+  Fiber.poolSize = 250;
+}
+
 require('./flush-buffers-on-exit-in-windows.js');
 
 // node (v8) defaults to only recording 10 lines of stack trace. This

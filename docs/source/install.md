@@ -2,24 +2,28 @@
 title: Install
 ---
 Meteor currently supports **OS X, Windows, and Linux**. Only 64-bit is supported.
-Apple M1 is only supported through Rosetta at this moment.
+Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, you will need to run with a [rosetta terminal](https://osxdaily.com/2020/11/18/how-run-homebrew-x86-terminal-apple-silicon-mac/)).
 
-### Prerequisites and useful information
+<h2 id="prereqs">Prerequisites and useful information</h2>
 
-- Meteor requires Node.js 8 or newer installed for running the npm installer.
+- If you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/)
+- Meteor requires Node.js version >= 10 and <= 14 installed for running the npm installer (tip: you can use [nvm](https://github.com/nvm-sh/nvm) for managing node versions).
 - Meteor supports Windows 7/Windows Server 2008 R2 and up.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
 - For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
 - iOS development requires the latest Xcode.
 - **Do not install meteor npm in your project's package.json by any means, the npm library is only an installer.**
 
-### Installation
+<h2 id="installation">Installation</h2>
 
 Install the latest official Meteor release from your terminal:
 
 ```bash
 npm install -g meteor
 ```
+
+
+<h2 id="troubleshooting">Troubleshooting</h2>
 
 If your user doesn't have permission to install global binaries, and you need to use sudo, it's necessary to append *--unsafe-perm* to the above command:
 
@@ -32,28 +36,68 @@ Only run the above command with sudo if you know what you are doing.
 
 If you only use sudo because of a distribution default permission system, [check this link for fixing it](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally).
 
-For Apple M1 computers, you can append Rosetta prefix as following:
+In some cases you can get this error `npm WARN checkPermissions Missing write access to /usr/local/lib/node_modules` because your Node.js installation was performed with wrong permissions. An easy way to fix this is to install Node.js using [nvm](https://github.com/nvm-sh/nvm) and forcing it to be used in your terminal. You can force it in the current session of your terminal by running `nvm use 14`.
+
+<h2 id="path-management">PATH management</h2>
+
+By default, the Meteor installer adds its install path (by default, `~/.meteor/`) to your PATH by updating either your `.bashrc`, `.bash_profile`, or `.zshrc` as appropriate. To disable this behavior, install Meteor by running:
 
 ```bash
+npm install -g meteor --ignore-meteor-setup-exec-path
+```
 
+(or by setting the environment variable `npm_config_ignore_meteor_setup_exec_path=true`)
+
+<h2 id="old-versions-m1">Old Versions on Apple M1</h2>
+
+For Apple M1 computers, you can append Rosetta prefix as following, if you need to run older versions of Meteor (before 2.5.1):
+
+```bash
 arch -x86_64 npm install -g meteor
-
 ```
 
 or select Terminal in the Applications folder, press CMD(⌘)+I and check the "Open using Rosetta" option.
 
-We currently don't support Apple M1 native binaries as the latest meteor release uses Node.js 14 which doesn't have support for it until now. More info in our repository, [here](https://github.com/meteor/meteor/issues/11249#issuecomment-734327204).
+<h2 id="legacy-install">Alternative Installation Method</h2>
 
-
-### Legacy Installation Method
-
-For Linux and OS X, we are still providing the legacy installation method which uses a bash script and doesn't depend on Node.
+For Linux and OS X, we still provide an alternative installation method which uses a bash script and doesn't depend on Node.js.
 
 ```bash
 curl https://install.meteor.com/ | sh
 ```
 
-This installation method is not maintained anymore, and you should always use the NPM one.
+We recommend everybody to use the npm installer but we are still going to maintain this script as well.
+
+<h2 id="meteor-docker">Run Meteor inside Docker</h2>
+
+You can also use a Docker container for running Meteor inside your CI, or even in your local development toolchain.
+
+We do provide the meteor/meteor-base ubuntu-based Docker image, that comes pre-bundled with Node.JS and Meteor, and runs it as a local user (not as root).
+
+You can refer to our meteor/galaxy-images repository to see how to use it, and the latest version. [More about meteor-base here.](https://github.com/meteor/galaxy-images/blob/master/meteor-base/README.md)
 
 
+<h2 id="windows">Note for Windows users</h2>
+
+On Windows, the installer runs faster when [Windows Developer Mode](https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) is enabled. The installation extracts a large number of small files, which Windows Defender can cause to be very slow.
+
+
+<h2 id="nvm">Node version manager</h2>
+
+If you use a node version manager that uses a separate global `node_modules` folder for each Node version, you will need to re-install the `meteor` npm package when changing to a Node version for the first time. Otherwise, the `meteor` command will no longer be found.
+
+<h2 id="fish-shell">Note for fish shell users (Linux)</h2>
+
+To be able to user `meteor` command from fish it's needed to include `/home/<user>/.meteor` in `$PATH`; to do that just add this line in `/home/<user>/.config/fish/config.fish` file (replace `<user>` with your username):
+
+`set PATH /home/<user>/.meteor $PATH`
+
+<h2 id="uninstall">Uninstalling Meteor</h2>
+
+If you installed Meteor using npm, you can remove it by running:
+`meteor-installer uninstall`
+
+If you installed Meteor using curl, you can remove it by running:
+`rm -rf ~/.meteor`
+`sudo rm /usr/local/bin/meteor` 
 

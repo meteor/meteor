@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-BUNDLE_VERSION=14.18.1.1
+BUNDLE_VERSION=14.19.0.0
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -11,14 +11,18 @@ if [ "$UNAME" != "Linux" -a "$UNAME" != "Darwin" ] ; then
 fi
 
 if [ "$UNAME" = "Darwin" ] ; then
-    if [ "i386" != "$(uname -p)" -o "1" != "$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)" ] ; then
+    if [ "arm64" == "$(uname -m)" ]; then
+      ARCH="arm64"
+    else
+      if [ "i386" != "$(uname -p)" -o "1" != "$(sysctl -n hw.cpu64bit_capable 2>/dev/null || echo 0)" ] ; then
 
-        # Can't just test uname -m = x86_64, because Snow Leopard can
-        # return other values.
-        echo "Only 64-bit Intel processors are supported at this time."
-        exit 1
+          # Can't just test uname -m = x86_64, because Snow Leopard can
+          # return other values.
+          echo "Only 64-bit and arm64 processors are supported at this time."
+          exit 1
+      fi
+      ARCH="x86_64"
     fi
-    ARCH="x86_64"
 elif [ "$UNAME" = "Linux" ] ; then
     ARCH="$(uname -m)"
     if [ "$ARCH" != "x86_64" ] ; then
