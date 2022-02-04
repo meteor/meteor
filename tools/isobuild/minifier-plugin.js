@@ -87,23 +87,16 @@ export class CssFile extends InputFile {
     this._minifiedFiles.push({ ...options });
   }
 
-  readAndWatchFileWithHash(path, { cache } = {}) {
+  readAndWatchFileWithHash(path) {
     const filePath = convertToPosixPath(path);
 
-    if (cache) {
-      const hash = optimisticHashOrNull(filePath);
-      const contents = optimisticReadFile(filePath);
-      this._watchSet.addFile(filePath, hash);
+    const hash = optimisticHashOrNull(filePath);
+    const contents = optimisticReadFile(filePath);
+    this._watchSet.addFile(filePath, hash);
 
-      return {
-        hash,
-        contents
-      }
+    return {
+      hash,
+      contents
     }
-
-    return readAndWatchFileWithHash(
-      this._watchSet,
-      filePath,
-    );
   }
 }
