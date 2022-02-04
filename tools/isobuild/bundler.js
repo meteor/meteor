@@ -3332,6 +3332,13 @@ function bundle({
       return mergeAppWatchSets();
     }
 
+    // Call any beforeMinify callbacks defined by minifier plugins
+    minifiers.forEach(minifier => {
+      if (typeof minifier.userPlugin.beforeMinify === 'function') {
+        minifier.userPlugin.beforeMinify();
+      }
+    });
+
     const targets = Object.create(null);
     const hasOwn = Object.prototype.hasOwnProperty;
 
