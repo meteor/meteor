@@ -22,6 +22,9 @@
 
 #### Independent Releases
 
+`email@2.2.1`
+- Added checking that `to` and `from` email params are present if not using MailComposer object and throw error early
+
 ## v2.6, UNRELEASED
 
 #### Highlights
