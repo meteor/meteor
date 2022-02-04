@@ -8,6 +8,11 @@
 
 #### Meteor Version Release
 
+#### Independent Releases
+
+* `mongo@1.14.1` at 2022-02-04
+  - Fix flatten object issue when the object is empty on oplog converter. [PR](https://github.com/meteor/meteor/pull/11885), [Issue](https://github.com/meteor/meteor/issues/11884).
+
 ## v2.6, 2022-02-01
 
 #### Highlights
