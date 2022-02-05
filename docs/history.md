@@ -1,12 +1,19 @@
 ## v2.6.1, UNRELEASED
 
 #### Highlights
+* TailwindCSS 3.x support
+* Postcss Minifier (`minifier-css-postcss`) is now a core package.
 
 #### Breaking Changes
 
 #### Migration Steps
 
 #### Meteor Version Release
+
+* `minifier-css-postcss@1.0.0`
+  - TailwindCSS 3.x support
+  - Support postcss dependency messages. [PR](https://github.com/Meteor-Community-Packages/meteor-postcss/pull/56)
+  - Postcss Minifier is now a core package.
 
 * `@meteorjs/babel@7.16.0`
   - Upgrade TypeScript to `4.5.4`
@@ -22,6 +29,12 @@
 
 * `accounts-ui-unstyled@1.6.0`
   - `Accounts.ui.config` can now be set via `Meteor.settings.public.packages.accounts-ui-unstyled`.
+
+* `meteor-tool@2.6.1`
+  - Have build plugins handle caching for css minifiers. [PR](https://github.com/meteor/meteor/pull/11882).
+  
+* `standard-minifier-css@1.8.0`
+ - Cache minified stylesheets. [PR](https://github.com/meteor/meteor/pull/11882).
 
 #### Independent Releases
 
