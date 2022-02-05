@@ -9,7 +9,11 @@
 
 #### Breaking Changes
 
+N/A
+
 #### Migration Steps
+
+Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for this version.
 
 #### Meteor Version Release
 
