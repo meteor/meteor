@@ -25,8 +25,11 @@
 
 #### Independent Releases
 
-`email@2.2.1`
-- Added checking that `to` and `from` email params are present if not using MailComposer object and throw error early
+* `mongo@1.14.1` at 2022-02-04
+  - Fix flatten object issue when the object is empty on oplog converter. [PR](https://github.com/meteor/meteor/pull/11885), [Issue](https://github.com/meteor/meteor/issues/11884).
+
+* `email@2.2.1`
+  - Added checking that `to` and `from` email params are present if not using MailComposer object and throw error early
 
 ## v2.6, UNRELEASED
 
@@ -64,6 +67,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - waitForStepDownOnNonCommandShutdown=false is not needed anymore when spawning the mongodb process
     - _synchronousCursor._dbCursor.operation is not an option anymore in the raw cursor from nodejs mongodb driver. If you want to access the options, use _synchronousCursor._dbCursor.(GETTERS) - for example, _synchronousCursor._dbCursor.readPreference.
     - the default write preference for replica sets on mongo v5 is w:majority
+    - If you are using MongoDB inside a Docker container in your dev environment, you might need to append directConnection=true in your mongouri to avoid the new mongo driver Service Discovery feature
 
 * `allow-deny@1.1.1`
     - Handle `MongoBulkWriteError` as `BulkWriteError` was already handled.

@@ -50,6 +50,16 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
     JSON.stringify({ $v: 2, $set: { 'a.b': 2 } })
   );
 
+  //set a new nested field inside an object
+  const entry51 =  { "$v" : 2, "diff" : { "u" : { "count" : 1 }, "i" : { "nested" : { "state" : {  } } } } };
+  // the correct format for this test, inspecting the mongodb oplog, should be "nested" : { "state" : {  } } }
+  // but this is a case in which we can flatten the object without collateral, so we are considering
+  // "nested.state" : {  } to be valid too
+  test.equal(
+    JSON.stringify(oplogV2V1Converter(entry51)),
+    JSON.stringify( { "$v" : 2, "$set" : { "nested.state": {  }, "count" : 1 } })
+  );
+
   //set an existing nested field inside an object
   const entry6 = {
     $v: 2,
