@@ -11,43 +11,56 @@ Plugin.registerMinifier({
 });
 
 class CssToolsMinifier {
+  constructor() {
+    this.cache = new LRU({
+      max: 100
+    });
+  }
+
+  async minifyFiles (files, mode) {
+    const cacheKey = createCacheKey(files, { mode });
+    const cachedResult = this.cache.get(cacheKey);
+    if (cachedResult) {
+      return cachedResult;
+    }
+
+    let result = [];
+    const merged = await mergeCss(files);
+
+    if (mode === 'development') {
+      result = [{
+        data: merged.code,
+        sourceMap: merged.sourceMap,
+        path: 'merged-stylesheets.css'
+      }];
+    } else {
+      const minifiedFiles = CssTools.minifyCss(merged.code);
+
+      result = minifiedFiles.map(minified => ({
+        data: minified
+      }));
+    }
+
+    this.cache.set(cacheKey, result);
+    return result;
+  }
 
   async processFilesForBundle (files, options) {
     const mode = options.minifyMode;
   
     if (! files.length) return;
-  
-    const merged = await mergeCss(files);
 
-    if (mode === 'development') {
-      files[0].addStylesheet({
-    	data: merged.code,
-      	sourceMap: merged.sourceMap,
-      	path: 'merged-stylesheets.css'
-      });
-      return;
-    }
-  
-    const minifiedFiles = CssTools.minifyCss(merged.code);
-  
-    if (files.length) {
-      minifiedFiles.forEach(function (minified) {
-        files[0].addStylesheet({
-          data: minified
-        });
-      });
-    }
+    const stylesheets = await this.minifyFiles(files, mode);
+
+    stylesheets.forEach(stylesheet => {
+      files[0].addStylesheet(stylesheet);
+    });
   }
-
 }
 
-
-const mergeCache = new LRU({
-  max: 100
-});
-
-const hashFiles = Profile("hashFiles", function (files) {
+const createCacheKey = Profile("createCacheKey", function (files, options = {}) {
   const hash = createHash("sha1");
+  hash.update(JSON.stringify(options)).update("\0");
   files.forEach(f => {
     hash.update(f.getSourceHash()).update("\0");
   });
@@ -63,12 +76,6 @@ function disableSourceMappingURLs(css) {
 // pulling any @import directives up to the top since the CSS spec does not
 // allow them to appear in the middle of a file.
 const mergeCss = Profile("mergeCss", async function (css) {
-  const hashOfFiles = hashFiles(css);
-  let merged = mergeCache.get(hashOfFiles);
-  if (merged) {
-    return merged;
-  }
-
   // Filenames passed to AST manipulator mapped to their original files
   const originals = {};
 
@@ -116,7 +123,6 @@ const mergeCss = Profile("mergeCss", async function (css) {
   });
 
   if (! stringifiedCss.code) {
-    mergeCache.set(hashOfFiles, merged = { code: '' });
     return merged;
   }
 
@@ -220,10 +226,8 @@ const mergeCss = Profile("mergeCss", async function (css) {
     return newMap;
   });
 
-  mergeCache.set(hashOfFiles, merged = {
+  return {
     code: stringifiedCss.code,
     sourceMap: newMap.toString()
-  });
-
-  return merged;
+  };
 });
