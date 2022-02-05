@@ -2,6 +2,9 @@
 
 #### Highlights
 * TailwindCSS 3.x support
+* Typescript `4.5.4` upgrade
+* New core package: `accounts-2fa`
+* Support for 2FA in `accounts-password` and `accounts-passwordless`
 * Postcss Minifier (`minifier-css-postcss`) is now a core package.
 
 #### Breaking Changes
@@ -14,6 +17,15 @@
   - TailwindCSS 3.x support
   - Support postcss dependency messages. [PR](https://github.com/Meteor-Community-Packages/meteor-postcss/pull/56)
   - Postcss Minifier is now a core package.
+
+* `accounts-2fa@1.0.0`
+  - New package to provide 2FA support
+  
+* `accounts-password@2.3.0`
+  - 2FA support
+  
+* `accounts-passwordless@2.1.0`
+  - 2FA support
 
 * `@meteorjs/babel@7.16.0`
   - Upgrade TypeScript to `4.5.4`
