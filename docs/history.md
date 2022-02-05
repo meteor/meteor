@@ -56,7 +56,7 @@
 * `email@2.2.1`
   - Added checking that `to` and `from` email params are present if not using MailComposer object and throw error early
 
-## v2.6, UNRELEASED
+## v2.6, 2022-02-01
 
 #### Highlights
 
