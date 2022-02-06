@@ -26,8 +26,9 @@ Github.requestCredential = (options, credentialRequestCompleteCallback) => {
   const loginStyle = OAuth._loginStyle('github', config, options);
 
   let allowSignup = '';
-  if (Accounts._options?.forbidClientAccountCreation)
+  if (Accounts._options?.forbidClientAccountCreation) {
     allowSignup = '&allow_signup=false'; // https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#parameters
+  }
 
   const loginUrl =
     'https://github.com/login/oauth/authorize' +
