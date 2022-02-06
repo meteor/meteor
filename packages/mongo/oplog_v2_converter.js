@@ -99,8 +99,6 @@ function flattenObject(ob) {
       let objectKeys = Object.keys(flatObject);
       if(objectKeys.length === 0) { return ob; }
       for (const x of objectKeys) {
-        if (!flatObject.hasOwnProperty(x)) continue;
-
         toReturn[i + '.' + x] = flatObject[x];
       }
     } else {
