@@ -197,6 +197,28 @@ Email.hookSend = function(f) {
 Email.customTransport = undefined;
 
 /**
+ * We check the options only before the default send.
+ *
+ * Hooks can run before this check and Custom transport doesn't need to have
+ * its options checked.
+ * @param options
+ */
+const checkOptionsBeforeDefaultSend = options => {
+  if (!options.from?.includes('@')) {
+    throw new Meteor.Error(
+      'invalid-mail-options',
+      "Email options passed to send function must contain a valid 'from' address"
+    );
+  }
+  if (!options.to?.includes('@')) {
+    throw new Meteor.Error(
+      'invalid-mail-options',
+      "Email options passed to send function must contain a valid 'to' address"
+    );
+  }
+};
+
+/**
  * @summary Send an email. Throws an `Error` on failure to contact mail server
  * or if mail server returns an error. All fields should match
  * [RFC5322](http://tools.ietf.org/html/rfc5322) specification.
@@ -231,20 +253,6 @@ Email.customTransport = undefined;
 Email.send = function(options) {
   if (options.mailComposer) {
     options = options.mailComposer.mail;
-  } else {
-    // Check that we have the needed params
-    if (!options.from?.includes('@')) {
-      throw new Meteor.Error(
-        'invalid-mail-options',
-        "Email options passed to send function must contain a valid 'from' address"
-      );
-    }
-    if (!options.to?.includes('@')) {
-      throw new Meteor.Error(
-        'invalid-mail-options',
-        "Email options passed to send function must contain a valid 'to' address"
-      );
-    }
   }
 
   let send = true;
@@ -260,6 +268,9 @@ Email.send = function(options) {
     customTransport({ packageSettings, ...options });
     return;
   }
+
+  checkOptionsBeforeDefaultSend(options);
+
   if (
     Meteor.isProduction ||
     process.env.MAIL_URL ||
