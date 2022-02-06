@@ -94,10 +94,11 @@ function flattenObject(ob) {
   for (const i in ob) {
     if (!ob.hasOwnProperty(i)) continue;
 
-    if (typeof ob[i] == 'object' && ob[i] !== null) {
+    if (!Array.isArray(ob[i]) && typeof ob[i] == 'object' && ob[i] !== null) {
       const flatObject = flattenObject(ob[i]);
-      if(Object.keys(flatObject).length === 0) { return ob; }
-      for (const x in flatObject) {
+      let objectKeys = Object.keys(flatObject);
+      if(objectKeys.length === 0) { return ob; }
+      for (const x of objectKeys) {
         if (!flatObject.hasOwnProperty(x)) continue;
 
         toReturn[i + '.' + x] = flatObject[x];
