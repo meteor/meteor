@@ -55,13 +55,13 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `ejson@1.1.2`
   - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).
 
+* `email@2.2.1`
+  - Throwing error when trying to send email in a production environment but without a mail URL set. [PR](https://github.com/meteor/meteor/pull/11891), [Issue](https://github.com/meteor/meteor/issues/11709).
+
 #### Independent Releases
 
 * `mongo@1.14.1` at 2022-02-04
   - Fix flatten object issue when the object is empty on oplog converter. [PR](https://github.com/meteor/meteor/pull/11885), [Issue](https://github.com/meteor/meteor/issues/11884).
-
-* `email@2.2.1`
-  - Modernizes the code.
 
 ## v2.6, 2022-02-01
 
