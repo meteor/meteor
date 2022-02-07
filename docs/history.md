@@ -58,7 +58,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
   - Fix flatten object issue when the object is empty on oplog converter. [PR](https://github.com/meteor/meteor/pull/11885), [Issue](https://github.com/meteor/meteor/issues/11884).
 
 * `email@2.2.1`
-  - Added checking that `to` and `from` email params are present if not using MailComposer object and throw error early
+  - Modernizes the code.
 
 * `ejson@1.1.2`
   - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).

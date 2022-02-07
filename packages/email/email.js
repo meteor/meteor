@@ -231,20 +231,6 @@ Email.customTransport = undefined;
 Email.send = function(options) {
   if (options.mailComposer) {
     options = options.mailComposer.mail;
-  } else {
-    // Check that we have the needed params
-    if (!options.from?.includes('@')) {
-      throw new Meteor.Error(
-        'invalid-mail-options',
-        "Email options passed to send function must contain a valid 'from' address"
-      );
-    }
-    if (!options.to?.includes('@')) {
-      throw new Meteor.Error(
-        'invalid-mail-options',
-        "Email options passed to send function must contain a valid 'to' address"
-      );
-    }
   }
 
   let send = true;
