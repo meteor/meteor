@@ -62,7 +62,10 @@ const makeTransport = function(mailUrlString) {
 // More info: https://nodemailer.com/smtp/well-known/
 const knownHostsTransport = function(settings = undefined, url = undefined) {
   let service, user, password;
-  if (url && !settings) {
+
+  const hasSettings = settings && Object.keys(settings).length;
+
+  if (url && !hasSettings) {
     let host = url.split(':')[0];
     const urlObject = new URL(url);
     if (host === 'http' || host === 'https') {
@@ -116,11 +119,11 @@ const getTransport = function() {
   if (
     this.cacheKey === undefined ||
     this.cacheKey !== url ||
-    this.cacheKey !== packageSettings?.service ||
+    this.cacheKey !== packageSettings.service ||
     this.cacheKey !== 'settings'
   ) {
     if (
-      (packageSettings?.service && wellKnow(packageSettings.service)) ||
+      (packageSettings.service && wellKnow(packageSettings.service)) ||
       (url && wellKnow(new URL(url).hostname)) ||
       wellKnow(url?.split(':')[0] || '')
     ) {
@@ -246,11 +249,18 @@ Email.send = function(options) {
     customTransport({ packageSettings, ...options });
     return;
   }
-  if (
-    Meteor.isProduction ||
-    process.env.MAIL_URL ||
-    Meteor.settings.packages?.email
-  ) {
+
+  const mailUrlEnv = process.env.MAIL_URL;
+  const mailUrlUrlSettings = Meteor.settings.packages?.email;
+  if (Meteor.isProduction || mailUrlEnv || mailUrlUrlSettings) {
+    // This check is mostly necessary when using the flag --production when running locally.
+    // And it works as a reminder to properly set the mail URL when running locally.
+    if (!mailUrlEnv && !mailUrlUrlSettings) {
+      throw new Error(
+        'You do not provided a mail URL. You can provide it by using the environment variable MAIL_URL or using your settings. You can read more about it here: https://docs.meteor.com/api/email.html.'
+      );
+    }
+
     const transport = getTransport();
     smtpSend(transport, options);
     return;
