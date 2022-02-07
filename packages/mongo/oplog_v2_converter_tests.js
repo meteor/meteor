@@ -98,6 +98,12 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
     JSON.stringify({ $v: 2, $set: { 'services.resume.loginTokens': [] } })
   );
 
+  const entry91 = { "$v" : 2, "diff" : { "i" : { "tShirt" : { "sizes" : [ "small", "medium", "large" ] } } } };
+  test.equal(
+    JSON.stringify(oplogV2V1Converter(entry91)),
+    JSON.stringify({ $v: 2, $set: { "tShirt.sizes" : [ "small", "medium", "large" ] } })
+  );
+
   const entry10 = {
     $v: 2,
     $set: {
