@@ -60,6 +60,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `email@2.2.1`
   - Added checking that `to` and `from` email params are present if not using MailComposer object and throw error early
 
+* `ejson@1.1.2`
+  - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).
+
 ## v2.6, 2022-02-01
 
 #### Highlights
