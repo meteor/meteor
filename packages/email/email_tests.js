@@ -108,6 +108,7 @@ Tinytest.add("email - using mail composer", function (test) {
     // Test direct MailComposer usage.
     const mc = new EmailInternals.NpmModules.mailcomposer.module({
       from: "a@b.com",
+      to: "bar@example.com",
       text: "body"
     });
     Email.send({mailComposer: mc});
@@ -116,6 +117,7 @@ Tinytest.add("email - using mail composer", function (test) {
                devWarningBanner +
                "Content-Type: text/plain; charset=utf-8\r\n" +
                "From: a@b.com\r\n" +
+               "To: bar@example.com\r\n" +
                "Message-ID: <...>\r\n" +
                "Content-Transfer-Encoding: 7bit\r\n" +
                "Date: ...\r\n" +
@@ -326,4 +328,25 @@ Tinytest.add("email - hooks stop the sending", function(test) {
   hook1.stop();
   hook2.stop();
   hook3.stop();
+});
+
+Tinytest.add("email - Throws when there is no 'from' or 'to'", function(test) {
+  smokeEmailTest(function(stream) {
+    test.throws(
+      () =>
+        Email.send({
+          to: 'bar@example.com',
+          text: '*Cool*, man',
+        }),
+      "Email options passed to send function must contain a valid 'from' address"
+    );
+    test.throws(
+      () =>
+        Email.send({
+          from: 'foo@example.com',
+          text: '*Cool*, man',
+        }),
+      "Email options passed to send function must contain a valid 'to' address"
+    );
+  });
 });
