@@ -48,9 +48,10 @@ _.each ([{added: 'added', forceOrdered: true},
 
     handle.stop();
 
-    test.throws(function () {
-      c.find({}, {fields: {noodles: 1, _id: false}})
-    }, undefined, 'bad cursor excluding _id from projection');
+   const badCursor = c.find({}, {fields: {noodles: 1, _id: false}});
+   test.throws(function () {
+     badCursor.observeChanges(logger);
+   });
 
     onComplete();
     });
