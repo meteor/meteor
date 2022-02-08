@@ -46,7 +46,10 @@ Meteor.methods({
     const user = Meteor.user();
 
     if (!user) {
-      return null;
+      throw new Meteor.Error(
+        400,
+        'There must be a user logged in to generate the QR code.'
+      );
     }
 
     const { username } = user;
@@ -61,7 +64,7 @@ Meteor.methods({
       { username },
       {
         $set: {
-          "services.twoFactorAuthentication": {
+          'services.twoFactorAuthentication': {
             secret,
           },
         },
@@ -77,7 +80,10 @@ Meteor.methods({
       throw new Meteor.Error(400, 'No user logged in.');
     }
 
-    const { services: { twoFactorAuthentication }, username } = user;
+    const {
+      services: { twoFactorAuthentication },
+      username,
+    } = user;
 
     if (!twoFactorAuthentication || !twoFactorAuthentication.secret) {
       throw new Meteor.Error(
@@ -93,7 +99,7 @@ Meteor.methods({
       { username },
       {
         $set: {
-          "services.twoFactorAuthentication": {
+          'services.twoFactorAuthentication': {
             ...twoFactorAuthentication,
             type: 'otp',
           },
@@ -112,7 +118,7 @@ Meteor.methods({
       { username: user.username },
       {
         $unset: {
-          "services.twoFactorAuthentication": 1,
+          'services.twoFactorAuthentication': 1,
         },
       }
     );
