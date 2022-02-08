@@ -1,6 +1,7 @@
 import sourcemap from "source-map";
 import { createHash } from "crypto";
 import LRU from "lru-cache";
+import { loadPostCss } from './postcss.js';
 
 Plugin.registerMinifier({
   extensions: ["css"],
@@ -45,12 +46,17 @@ class CssToolsMinifier {
     return result;
   }
 
-  async processFilesForBundle (files, options) {
-    const mode = options.minifyMode;
-  
+  async processFilesForBundle (files, { mode }) {
     if (! files.length) return;
 
-    const stylesheets = await this.minifyFiles(files, mode);
+    const postcssInfo = await loadPostCss();
+
+    if (postcssInfo.error) {
+      files[0].error(postcssInfo.error);
+      return;
+    }
+
+    const stylesheets = await this.minifyFiles(files, mode, postcssInfo);
 
     stylesheets.forEach(stylesheet => {
       files[0].addStylesheet(stylesheet);
