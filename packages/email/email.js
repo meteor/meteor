@@ -252,15 +252,16 @@ Email.send = function(options) {
 
   const mailUrlEnv = process.env.MAIL_URL;
   const mailUrlSettings = Meteor.settings.packages?.email;
-  if (Meteor.isProduction || mailUrlEnv || mailUrlSettings) {
+
+  if (Meteor.isProduction && !mailUrlEnv && !mailUrlSettings) {
     // This check is mostly necessary when using the flag --production when running locally.
     // And it works as a reminder to properly set the mail URL when running locally.
-    if (!mailUrlEnv && !mailUrlSettings) {
-      throw new Error(
-        'You do not provided a mail URL. You can provide it by using the environment variable MAIL_URL or using your settings. You can read more about it here: https://docs.meteor.com/api/email.html.'
-      );
-    }
+    throw new Error(
+      'You do not provided a mail URL. You can provide it by using the environment variable MAIL_URL or using your settings. You can read more about it here: https://docs.meteor.com/api/email.html.'
+    );
+  }
 
+  if (mailUrlEnv || mailUrlSettings) {
     const transport = getTransport();
     smtpSend(transport, options);
     return;
