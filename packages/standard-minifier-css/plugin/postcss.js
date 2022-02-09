@@ -1,4 +1,4 @@
-let postcssInfo;
+let postcssConfig;
 let loaded = false;
 
 const missingPostCssError = new Error([
@@ -12,18 +12,19 @@ const missingPostCssError = new Error([
 
 export async function loadPostCss() {
   if (loaded) {
-    return postcssInfo;
+    return { postcssConfig };
   }
 
   let loadConfig;
   try {
     loadConfig = require('postcss-load-config');
   } catch (e) {
+    console.log('no postcss-load-config');
     // The app doesn't have this package installed
     // Assuming the app doesn't use PostCSS
     loaded = true;
 
-    return;
+    return {};
  }
 
   let config;
@@ -32,9 +33,10 @@ export async function loadPostCss() {
   } catch (e) {
     if (e.message.includes('No PostCSS Config found in')) {
       // PostCSS is not used by this app
+      console.log('no PostCSS config');
       loaded = true;
 
-      return;
+      return {};
     }
 
     if (e.message.includes('Cannot find module \'postcss\'')) {
@@ -71,10 +73,8 @@ export async function loadPostCss() {
   }
 
   loaded = true;
-  postcssInfo = {
-    config,
-    postcss
-  };
+  config.postcss = postcss;
+  postcssConfig = config;
 
-  return postcssInfo;
+  return { postcssConfig };
 }
