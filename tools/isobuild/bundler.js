@@ -1120,8 +1120,7 @@ class Target {
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
       minifyCssResource: (resource) => {
-        if (! minifiersByExt.css ||
-            minifyMode === "development") {
+        if (! minifiersByExt.css) {
           // Indicates the caller should use the original resource.data
           // without minification.
           return null;
