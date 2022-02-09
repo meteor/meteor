@@ -75,7 +75,7 @@ In order to build and run mobile apps, you will need to install some prerequisit
 
 <h3 id="installing-prerequisites-ios">iOS</h3>
 
-In order to build and run iOS apps, you will need a Mac with [Apple Xcode](https://developer.apple.com/xcode/) developer tools installed. We recommend installing the latest version, but you should also check the [Meteor history](https://github.com/meteor/meteor/blob/devel/History.md) for any specific version dependencies.  NOTE: To build with Xcode 10.2+, your webapp package must be v1.7.4 or higher.
+In order to build and run iOS apps, you will need a Mac with [Apple Xcode](https://developer.apple.com/xcode/) developer tools installed. We recommend installing the latest version, but you should also check the [Meteor history](https://docs.meteor.com/changelog.html) for any specific version dependencies.  NOTE: To build with Xcode 10.2+, your webapp package must be v1.7.4 or higher.
 
 <h4>Installing Xcode from the App Store</h4>
 

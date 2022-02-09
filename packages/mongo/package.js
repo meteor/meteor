@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.13.0'
+  version: '1.14.3'
 });
 
 Npm.depends({
@@ -76,7 +76,7 @@ Package.onUse(function (api) {
 
   api.addFiles(['mongo_driver.js', 'oplog_tailing.js',
                  'observe_multiplex.js', 'doc_fetcher.js',
-                 'polling_observe_driver.js','oplog_observe_driver.js'],
+                 'polling_observe_driver.js','oplog_observe_driver.js', 'oplog_v2_converter.js'],
                 'server');
   api.addFiles('local_collection_driver.js', ['client', 'server']);
   api.addFiles('remote_collection_driver.js', 'server');
@@ -98,5 +98,6 @@ Package.onTest(function (api) {
   api.addFiles('collection_tests.js', ['client', 'server']);
   api.addFiles('observe_changes_tests.js', ['client', 'server']);
   api.addFiles('oplog_tests.js', 'server');
+  api.addFiles('oplog_v2_converter_tests.js', 'server');
   api.addFiles('doc_fetcher_tests.js', 'server');
 });

@@ -48,10 +48,10 @@ _.each ([{added: 'added', forceOrdered: true},
 
     handle.stop();
 
-    var badCursor = c.find({}, {fields: {noodles: 1, _id: false}});
-    test.throws(function () {
-      badCursor.observeChanges(logger);
-    });
+   const badCursor = c.find({}, {fields: {noodles: 1, _id: false}});
+   test.throws(function () {
+     badCursor.observeChanges(logger);
+   });
 
     onComplete();
     });
@@ -420,5 +420,5 @@ if (Meteor.isServer) {
       });
       c.insert({ type: { name: 'foobar' } });
     }
-  );  
+  );
 }
