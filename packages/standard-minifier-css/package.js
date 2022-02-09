@@ -14,7 +14,8 @@ Package.registerBuildPlugin({
   npmDependencies: {
     "@babel/runtime": "7.15.3",
     "source-map": "0.7.3",
-    "lru-cache": "6.0.0"
+    "lru-cache": "6.0.0",
+    "micromatch": "4.0.4"
   },
   sources: [
     'plugin/minify-css.js'

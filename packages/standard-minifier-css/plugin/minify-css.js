@@ -1,7 +1,7 @@
 import sourcemap from "source-map";
 import { createHash } from "crypto";
 import LRU from "lru-cache";
-import { loadPostCss } from './postcss.js';
+import { loadPostCss, watchAndHashDeps } from './postcss.js';
 
 Plugin.registerMinifier({
   extensions: ["css"],
@@ -16,13 +16,38 @@ class CssToolsMinifier {
     this.cache = new LRU({
       max: 100
     });
+
+    this.depsHashCache = Object.create(null);
+  }
+
+  beforeMinify() {
+    this.depsHashCache = Object.create(null);
+  }
+
+  watchAndHashDeps(deps, file) {
+    const cacheKey = JSON.stringify(deps);
+
+    if (cacheKey in this.depsHashCache) {
+      return this.depsHashCache[cacheKey];
+    }
+
+    let hash = watchAndHashDeps(deps, (filePath) => {
+      return file.readAndWatchFileWithHash(filePath).hash;
+    });
+    this.depsHashCache[cacheKey] = hash;
+
+    return hash;
   }
 
   async minifyFiles (files, mode, postcssConfig) {
-    const cacheKey = createCacheKey(files, { mode });
+    const cacheKey = createCacheKey(files, mode);
     const cachedResult = this.cache.get(cacheKey);
-    if (cachedResult) {
-      return cachedResult;
+
+    if (
+      cachedResult &&
+      cachedResult.depsCacheKey === this.watchAndHashDeps(cachedResult.deps, files[0])
+    ) {
+      return cachedResult.stylesheets;
     }
 
     let result = [];
@@ -42,7 +67,11 @@ class CssToolsMinifier {
       }));
     }
 
-    this.cache.set(cacheKey, result);
+    this.cache.set(cacheKey, {
+      stylesheets: result,
+      deps: merged.deps,
+      depsCacheKey: this.watchAndHashDeps(merged.deps, files[0])
+    });
     return result;
   }
 
@@ -64,9 +93,9 @@ class CssToolsMinifier {
   }
 }
 
-const createCacheKey = Profile("createCacheKey", function (files, options = {}) {
+const createCacheKey = Profile("createCacheKey", function (files, minifyMode) {
   const hash = createHash("sha1");
-  hash.update(JSON.stringify(options)).update("\0");
+  hash.update(minifyMode).update("\0");
   files.forEach(f => {
     hash.update(f.getSourceHash()).update("\0");
   });
@@ -84,6 +113,7 @@ function disableSourceMappingURLs(css) {
 const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   // Filenames passed to AST manipulator mapped to their original files
   const originals = {};
+  const deps = [];
 
   const astPromises = css.map(async function (file) {
     const filename = file.getPathInBundle();
@@ -104,6 +134,11 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
 
         result.warnings().forEach(warning => {
           warnCb(filename, warning.toString());
+        });
+        result.messages.forEach(message => {
+          if (['dependency', 'dir-dependency'].includes(message.type)) {
+            deps.push(message);
+          }
         });
         content = result.css;
       }
@@ -141,7 +176,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   });
 
   if (! stringifiedCss.code) {
-    return { code: '' };
+    return { code: '', deps };
   }
 
   // Add the contents of the input files to the source map of the new file
@@ -246,7 +281,8 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
 
   return {
     code: stringifiedCss.code,
-    sourceMap: newMap.toString()
+    sourceMap: newMap.toString(),
+    deps
   };
 });
 
