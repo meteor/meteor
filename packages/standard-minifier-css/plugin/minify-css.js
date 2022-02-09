@@ -1,7 +1,7 @@
 import sourcemap from "source-map";
 import { createHash } from "crypto";
 import LRU from "lru-cache";
-import { loadPostCss, watchAndHashDeps } from './postcss.js';
+import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
 
 Plugin.registerMinifier({
   extensions: ["css"],
@@ -123,7 +123,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
     try {
       let content = disableSourceMappingURLs(file.getContentsAsString());
 
-      if (postcssConfig) {
+      if (usePostCss(file, postcssConfig)) {
         const result = await postcssConfig.postcss(
           postcssConfig.plugins
         ).process(content, {

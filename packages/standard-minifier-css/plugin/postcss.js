@@ -42,7 +42,6 @@ export async function loadPostCss() {
   } catch (e) {
     if (e.message.includes('No PostCSS Config found in')) {
       // PostCSS is not used by this app
-      console.log('no PostCSS config');
       loaded = true;
 
       return {};
@@ -86,6 +85,21 @@ export async function loadPostCss() {
   postcssConfig = config;
 
   return { postcssConfig };
+}
+
+export function usePostCss(file, postcssConfig) {
+  if (!postcssConfig) {
+    return false;
+  }
+
+  const excludedPackages = postcssConfig.options.excludedMeteorPackages || [];
+  const path = file.getPathInBundle();
+
+  const excluded = excludedPackages.some(name => {
+    return path.includes(`packages/${name.replace(':', '_')}`)
+  });
+
+  return !excluded;
 }
 
 export const watchAndHashDeps = Profile(
