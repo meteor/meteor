@@ -141,7 +141,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   });
 
   if (! stringifiedCss.code) {
-    return merged;
+    return { code: '' };
   }
 
   // Add the contents of the input files to the source map of the new file
