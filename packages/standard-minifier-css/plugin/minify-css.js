@@ -102,7 +102,6 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
           parser: postcssConfig.options.parser
         });
 
-        // TODO: test this
         result.warnings().forEach(warning => {
           warnCb(filename, warning.toString());
         });
@@ -133,13 +132,6 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   });
 
   const cssAsts = await Promise.all(astPromises);
-
-  const warnCb = (filename, msg) => {
-    // XXX make this a buildmessage.warning call rather than a random log.
-    //     this API would be like buildmessage.error, but wouldn't cause
-    //     the build to fail.
-    console.log(`${filename}: warn: ${msg}`);
-  };
 
   const mergedCssAst = CssTools.mergeCssAsts(cssAsts, warnCb);
 
@@ -259,3 +251,10 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
     sourceMap: newMap.toString()
   };
 });
+
+function warnCb (filename, msg) {
+  // XXX make this a buildmessage.warning call rather than a random log.
+  //     this API would be like buildmessage.error, but wouldn't cause
+  //     the build to fail.
+  console.log(`${filename}: warn: ${msg}`);
+};
