@@ -120,7 +120,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
         });
       } else {
         // Just in case it's not the normal error the library makes.
-        file.error({message: e.message});
+        file.error({message: e.stack});
       }
 
       return { type: "stylesheet", stylesheet: { rules: [] }, filename };
