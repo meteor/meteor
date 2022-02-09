@@ -1,6 +1,7 @@
 import sourcemap from "source-map";
 import { createHash } from "crypto";
 import LRU from "lru-cache";
+import { loadPostCss, watchAndHashDeps, usePostCss } from './postcss.js';
 
 Plugin.registerMinifier({
   extensions: ["css"],
@@ -15,17 +16,42 @@ class CssToolsMinifier {
     this.cache = new LRU({
       max: 100
     });
+
+    this.depsHashCache = Object.create(null);
   }
 
-  async minifyFiles (files, mode) {
-    const cacheKey = createCacheKey(files, { mode });
+  beforeMinify() {
+    this.depsHashCache = Object.create(null);
+  }
+
+  watchAndHashDeps(deps, file) {
+    const cacheKey = JSON.stringify(deps);
+
+    if (cacheKey in this.depsHashCache) {
+      return this.depsHashCache[cacheKey];
+    }
+
+    let hash = watchAndHashDeps(deps, (filePath) => {
+      return file.readAndWatchFileWithHash(filePath).hash;
+    });
+    this.depsHashCache[cacheKey] = hash;
+
+    return hash;
+  }
+
+  async minifyFiles (files, mode, postcssConfig) {
+    const cacheKey = createCacheKey(files, mode);
     const cachedResult = this.cache.get(cacheKey);
-    if (cachedResult) {
-      return cachedResult;
+
+    if (
+      cachedResult &&
+      cachedResult.depsCacheKey === this.watchAndHashDeps(cachedResult.deps, files[0])
+    ) {
+      return cachedResult.stylesheets;
     }
 
     let result = [];
-    const merged = await mergeCss(files);
+    const merged = await mergeCss(files, postcssConfig);
 
     if (mode === 'development') {
       result = [{
@@ -41,16 +67,25 @@ class CssToolsMinifier {
       }));
     }
 
-    this.cache.set(cacheKey, result);
+    this.cache.set(cacheKey, {
+      stylesheets: result,
+      deps: merged.deps,
+      depsCacheKey: this.watchAndHashDeps(merged.deps, files[0])
+    });
     return result;
   }
 
-  async processFilesForBundle (files, options) {
-    const mode = options.minifyMode;
-  
+  async processFilesForBundle(files, { minifyMode }) {
     if (! files.length) return;
 
-    const stylesheets = await this.minifyFiles(files, mode);
+    const { error, postcssConfig } = await loadPostCss();
+
+    if (error) {
+      files[0].error(postcssInfo.error);
+      return;
+    }
+
+    const stylesheets = await this.minifyFiles(files, minifyMode, postcssConfig);
 
     stylesheets.forEach(stylesheet => {
       files[0].addStylesheet(stylesheet);
@@ -58,9 +93,9 @@ class CssToolsMinifier {
   }
 }
 
-const createCacheKey = Profile("createCacheKey", function (files, options = {}) {
+const createCacheKey = Profile("createCacheKey", function (files, minifyMode) {
   const hash = createHash("sha1");
-  hash.update(JSON.stringify(options)).update("\0");
+  hash.update(minifyMode).update("\0");
   files.forEach(f => {
     hash.update(f.getSourceHash()).update("\0");
   });
@@ -75,18 +110,41 @@ function disableSourceMappingURLs(css) {
 // Lints CSS files and merges them into one file, fixing up source maps and
 // pulling any @import directives up to the top since the CSS spec does not
 // allow them to appear in the middle of a file.
-const mergeCss = Profile("mergeCss", async function (css) {
+const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   // Filenames passed to AST manipulator mapped to their original files
   const originals = {};
+  const deps = [];
 
-  const cssAsts = css.map(function (file) {
+  const astPromises = css.map(async function (file) {
     const filename = file.getPathInBundle();
     originals[filename] = file;
+
     let ast;
     try {
+      let content = disableSourceMappingURLs(file.getContentsAsString());
+
+      if (usePostCss(file, postcssConfig)) {
+        const result = await postcssConfig.postcss(
+          postcssConfig.plugins
+        ).process(content, {
+          // TODO: provide a better way to get the file's path
+          from: process.cwd() + file._source.url?.replace('/__cordova', ''),
+          parser: postcssConfig.options.parser
+        });
+
+        result.warnings().forEach(warning => {
+          warnCb(filename, warning.toString());
+        });
+        result.messages.forEach(message => {
+          if (['dependency', 'dir-dependency'].includes(message.type)) {
+            deps.push(message);
+          }
+        });
+        content = result.css;
+      }
+
       const parseOptions = { source: filename, position: true };
-      const css = disableSourceMappingURLs(file.getContentsAsString());
-      ast = CssTools.parseCss(css, parseOptions);
+      ast = CssTools.parseCss(content, parseOptions);
       ast.filename = filename;
     } catch (e) {
       if (e.reason) {
@@ -97,7 +155,7 @@ const mergeCss = Profile("mergeCss", async function (css) {
         });
       } else {
         // Just in case it's not the normal error the library makes.
-        file.error({message: e.message});
+        file.error({message: e.stack});
       }
 
       return { type: "stylesheet", stylesheet: { rules: [] }, filename };
@@ -106,12 +164,7 @@ const mergeCss = Profile("mergeCss", async function (css) {
     return ast;
   });
 
-  const warnCb = (filename, msg) => {
-    // XXX make this a buildmessage.warning call rather than a random log.
-    //     this API would be like buildmessage.error, but wouldn't cause
-    //     the build to fail.
-    console.log(`${filename}: warn: ${msg}`);
-  };
+  const cssAsts = await Promise.all(astPromises);
 
   const mergedCssAst = CssTools.mergeCssAsts(cssAsts, warnCb);
 
@@ -123,7 +176,7 @@ const mergeCss = Profile("mergeCss", async function (css) {
   });
 
   if (! stringifiedCss.code) {
-    return merged;
+    return { code: '', deps };
   }
 
   // Add the contents of the input files to the source map of the new file
@@ -228,6 +281,14 @@ const mergeCss = Profile("mergeCss", async function (css) {
 
   return {
     code: stringifiedCss.code,
-    sourceMap: newMap.toString()
+    sourceMap: newMap.toString(),
+    deps
   };
 });
+
+function warnCb (filename, msg) {
+  // XXX make this a buildmessage.warning call rather than a random log.
+  //     this API would be like buildmessage.error, but wouldn't cause
+  //     the build to fail.
+  console.log(`${filename}: warn: ${msg}`);
+};
