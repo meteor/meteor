@@ -1,6 +1,8 @@
 if (Meteor.isClient) {
+  require('./imports/imported.css');
+
   Meteor.startup(function () {
-    ['production_css', 'development_css'].forEach(cls => {
+    ['production_css', 'development_css', 'minified_lazy'].forEach(cls => {
       var color = getComputedStyle(document.querySelectorAll('.' + cls)[0]).color;
       Meteor.call('print', cls + ': ' + color);
     });

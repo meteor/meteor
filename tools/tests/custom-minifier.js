@@ -22,6 +22,7 @@ selftest.define('custom minifier - devel vs prod', function (options) {
 
     run.match('production_css: rgb(255, 0, 0)');
     run.match('development_css: rgb(0, 0, 0)');
+    run.match('minified_lazy: rgb(0, 255, 0)');
     run.match('Message (client): production_js');
 
     run.stop();
@@ -43,6 +44,7 @@ selftest.define('custom minifier - devel vs prod', function (options) {
 
     run.match('production_css: rgb(0, 0, 0)');
     run.match('development_css: rgb(255, 0, 0)');
+    run.match('minified_lazy: rgb(0, 255, 0)');
     run.match('Message (client): development_js');
 
     run.stop();
