@@ -91,13 +91,13 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
 
     let ast;
     try {
-      let content = file.getContentsAsString();
+      let content = disableSourceMappingURLs(file.getContentsAsString());
 
       if (postcssConfig) {
         const result = await postcssConfig.postcss(
           postcssConfig.plugins
-        ).process(file.getContentsAsString(), {
-          // TODO: review this
+        ).process(content, {
+          // TODO: provide a better way to get the file's path
           from: process.cwd() + file._source.url?.replace('/__cordova', ''),
           parser: postcssConfig.options.parser
         });
@@ -109,9 +109,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
       }
 
       const parseOptions = { source: filename, position: true };
-      // TODO: check this
-      const css = disableSourceMappingURLs(content);
-      ast = CssTools.parseCss(css, parseOptions);
+      ast = CssTools.parseCss(content, parseOptions);
       ast.filename = filename;
     } catch (e) {
       if (e.reason) {
