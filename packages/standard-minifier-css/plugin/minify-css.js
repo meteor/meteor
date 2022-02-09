@@ -18,7 +18,7 @@ class CssToolsMinifier {
     });
   }
 
-  async minifyFiles (files, mode) {
+  async minifyFiles (files, mode, postcssConfig) {
     const cacheKey = createCacheKey(files, { mode });
     const cachedResult = this.cache.get(cacheKey);
     if (cachedResult) {
@@ -26,7 +26,7 @@ class CssToolsMinifier {
     }
 
     let result = [];
-    const merged = await mergeCss(files);
+    const merged = await mergeCss(files, postcssConfig);
 
     if (mode === 'development') {
       result = [{
@@ -46,17 +46,17 @@ class CssToolsMinifier {
     return result;
   }
 
-  async processFilesForBundle (files, { mode }) {
+  async processFilesForBundle(files, { minifyMode }) {
     if (! files.length) return;
 
-    const postcssInfo = await loadPostCss();
+    const { error, postcssConfig } = await loadPostCss();
 
-    if (postcssInfo.error) {
+    if (error) {
       files[0].error(postcssInfo.error);
       return;
     }
 
-    const stylesheets = await this.minifyFiles(files, mode, postcssInfo);
+    const stylesheets = await this.minifyFiles(files, minifyMode, postcssConfig);
 
     stylesheets.forEach(stylesheet => {
       files[0].addStylesheet(stylesheet);
@@ -81,17 +81,37 @@ function disableSourceMappingURLs(css) {
 // Lints CSS files and merges them into one file, fixing up source maps and
 // pulling any @import directives up to the top since the CSS spec does not
 // allow them to appear in the middle of a file.
-const mergeCss = Profile("mergeCss", async function (css) {
+const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
   // Filenames passed to AST manipulator mapped to their original files
   const originals = {};
 
-  const cssAsts = css.map(function (file) {
+  const astPromises = css.map(async function (file) {
     const filename = file.getPathInBundle();
     originals[filename] = file;
+
     let ast;
     try {
+      let content = file.getContentsAsString();
+
+      if (postcssConfig) {
+        const result = await postcssConfig.postcss(
+          postcssConfig.plugins
+        ).process(file.getContentsAsString(), {
+          // TODO: review this
+          from: process.cwd() + file._source.url?.replace('/__cordova', ''),
+          parser: postcssConfig.options.parser
+        });
+
+        // TODO: test this
+        result.warnings().forEach(warning => {
+          warnCb(filename, warning.toString());
+        });
+        content = result.css;
+      }
+
       const parseOptions = { source: filename, position: true };
-      const css = disableSourceMappingURLs(file.getContentsAsString());
+      // TODO: check this
+      const css = disableSourceMappingURLs(content);
       ast = CssTools.parseCss(css, parseOptions);
       ast.filename = filename;
     } catch (e) {
@@ -111,6 +131,8 @@ const mergeCss = Profile("mergeCss", async function (css) {
 
     return ast;
   });
+
+  const cssAsts = await Promise.all(astPromises);
 
   const warnCb = (filename, msg) => {
     // XXX make this a buildmessage.warning call rather than a random log.
