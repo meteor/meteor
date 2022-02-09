@@ -5,7 +5,7 @@
 * Typescript `4.5.4` upgrade
 * New core package: `accounts-2fa`
 * Support for 2FA in `accounts-password` and `accounts-passwordless`
-* Postcss Minifier (`minifier-css-postcss`) is now a core package.
+* Postcss configurations are now handled by `standard-minifier-css`
 
 #### Breaking Changes
 
@@ -17,10 +17,10 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 
 #### Meteor Version Release
 
-* `minifier-css-postcss@1.0.0`
+* `standard-minifier-css@1.8.0`
+  - Postcss configurations are now handled in this package
   - TailwindCSS 3.x support
-  - Support postcss dependency messages. [PR](https://github.com/Meteor-Community-Packages/meteor-postcss/pull/56)
-  - Postcss Minifier is now a core package.
+  - Support postcss dependency messages. [PR](https://github.com/meteor/meteor/pull/11903)
 
 * `accounts-2fa@1.0.0`
   - New package to provide 2FA support
