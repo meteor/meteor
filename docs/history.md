@@ -5,7 +5,7 @@
 * Typescript `4.5.4` upgrade
 * New core package: `accounts-2fa`
 * Support for 2FA in `accounts-password` and `accounts-passwordless`
-* Postcss configurations are now handled by `standard-minifier-css`
+* PostCSS plugins are run by `standard-minifier-css` if the app has PostCSS configured
 
 #### Breaking Changes
 
@@ -18,9 +18,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 #### Meteor Version Release
 
 * `standard-minifier-css@1.8.0`
-  - Postcss configurations are now handled in this package
-  - TailwindCSS 3.x support
-  - Support postcss dependency messages. [PR](https://github.com/meteor/meteor/pull/11903)
+  - Runs PostCSS plugins if the app has a PostCSS config and the `postcss-load-config` npm package installed. Supports TailwindCSS 3.x [PR 1](https://github.com/Meteor-Community-Packages/meteor-postcss/pull/56) [PR 2](https://github.com/meteor/meteor/pull/11903)
 
 * `accounts-2fa@1.0.0`
   - New package to provide 2FA support
@@ -47,10 +45,11 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
   - `Accounts.ui.config` can now be set via `Meteor.settings.public.packages.accounts-ui-unstyled`.
 
 * `meteor-tool@2.6.1`
-  - Have build plugins handle caching for css minifiers. [PR](https://github.com/meteor/meteor/pull/11882).
-  
-* `standard-minifier-css@1.8.0`
- - Cache minified stylesheets. [PR](https://github.com/meteor/meteor/pull/11882).
+  - CSS minifiers must now handle any caching themselves [PR](https://github.com/meteor/meteor/pull/11882)
+  - CSS minifiers are always given lazy css resources instead of only during production builds [PR](https://github.com/meteor/meteor/pull/11897)
+  - Files passed to CSS minifiers now have `file.readAndWatchFileWithHash`, same as for compilers [PR](https://github.com/meteor/meteor/pull/11882)
+  - If a minifier has a `beforeMinify` function, it will be called once during each build before the minifier is run the first time [PR](https://github.com/meteor/meteor/pull/11882)
+  - Add `Plugin.fs.readdirWithTypesSync` [PR](https://github.com/meteor/meteor/pull/11882)
 
 * `ejson@1.1.2`
   - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).
@@ -205,6 +204,8 @@ This version should be ignored. Proceed to 2.5.5 above.
 * HMR Fixes
 
 #### Breaking Changes
+
+* If a module calls `module.hot.decline()`, calling `module.hot.accept()` later now does nothing instead of overriding `module.hot.decline()`.
 
 #### Migration Steps
 
