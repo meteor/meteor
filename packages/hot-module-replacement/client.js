@@ -1,5 +1,5 @@
 // TODO: add an api to Reify to update cached exports for a module
-const ReifyEntry = require('/node_modules/meteor/modules/node_modules/reify/lib/runtime/entry.js')
+const ReifyEntry = require('/node_modules/meteor/modules/node_modules/@meteorjs/reify/lib/runtime/entry.js')
 
 const SOURCE_URL_PREFIX = "meteor://\ud83d\udcbbapp";
 
@@ -42,8 +42,20 @@ if (module._onRequire) {
   });
 }
 
-let pendingReload;
-let mustReload = false;
+// On web, we can reload the page any time to get the new version. On cordova,
+// we have to wait until Reload._onMigrate is called
+let hotCodePushReady = arch !== 'web.cordova';
+
+let useHotCodePush = false;
+let forceReload = function () {
+  useHotCodePush = true;
+  // Wait until Reload package has been loaded
+  Meteor.startup(function () {
+    if (hotCodePushReady) {
+      Package['reload'].Reload._reload();
+    }
+  });
+};
 
 // Once an eager update fails, we stop processing future updates since they
 // might depend on the failed update. This gets reset when we re-try applying
@@ -58,7 +70,7 @@ function handleMessage(message) {
     } else if (message.reason === 'wrong-secret') {
       console.log('HMR: Have the wrong secret, probably because Meteor was restarted');
       console.log('HMR: Will enable HMR the next time the page is loaded');
-      mustReload = true;
+      useHotCodePush = true;
     } else {
       console.log('HMR: Register failed for unknown reason', message);
     }
@@ -96,7 +108,6 @@ function handleMessage(message) {
   });
 
   if (
-    pendingReload &&
     hasUnreloadable ||
     message.changeSets.length === 0
   ) {
@@ -111,8 +122,7 @@ function handleMessage(message) {
 
     console.log('HMR: Unable to do HMR. Falling back to hot code push.');
     // Complete hot code push if we can not do hot module reload
-    mustReload = true;
-    return pendingReload();
+    return forceReload();
   }
 
   // In case the user changed how a module works with HMR
@@ -142,12 +152,8 @@ function handleMessage(message) {
 
   if (!succeeded) {
     console.log('HMR: Some changes can not be applied with HMR. Using hot code push.')
-    mustReload = true;
 
-    if (pendingReload) {
-      pendingReload();
-    }
-
+    forceReload();
     return;
   }
 
@@ -169,7 +175,7 @@ function send(message) {
 }
 
 function connect() {
-  if (mustReload) {
+  if (useHotCodePush) {
     // The page will reload, no reason to
     // connect and show more logs in the console
     return;
@@ -186,7 +192,7 @@ function connect() {
   socket.addEventListener('close', function () {
     socket = null;
 
-    if (logDisconnect && !mustReload) {
+    if (logDisconnect && !useHotCodePush) {
       console.log('HMR: websocket closed');
     }
 
@@ -222,8 +228,7 @@ function connect() {
 if (enabled) {
   connect();
 } else {
-  // Always fall back to hot code push if HMR is disabled
-  mustReload = true;
+  useHotCodePush = true;
 }
 
 function requestChanges() {
@@ -286,11 +291,11 @@ function replaceFileContent(file, contents) {
 
 function checkModuleAcceptsUpdate(moduleId, checked) {
   checked.add(moduleId);
-  
+
   if (moduleId === '/' ) {
     return false;
   }
-  
+
   const file = findFile(moduleId);
   const moduleHot = file.module.hot;
   const moduleAccepts = moduleHot ? moduleHot._canAcceptUpdate() : false;
@@ -442,7 +447,6 @@ function applyChangeset(options) {
     return false;
   }
 
-
   changedFiles.forEach(function (changedFile) {
     module._replaceModule(changedFile.path, changedFile.content);
   });
@@ -487,35 +491,24 @@ Meteor.startup(function () {
     if (nonRefreshableVersion !== doc.versionNonRefreshable) {
       nonRefreshableVersion = doc.versionNonRefreshable;
       console.log('HMR: Some changes can not be applied with HMR. Using hot code push.')
-      mustReload = true;
-      if (pendingReload) {
-        pendingReload();
-      }
+      forceReload();
     } else if (doc.versionReplaceable !== replaceableVersion) {
       replaceableVersion = doc.versionReplaceable;
-      if (!mustReload) {
-        if (pendingReload) {
-          requestChanges();
-        }
-      } else {
-        mustReload = true;
-        if (pendingReload) {
-          pendingReload();
-        }
+
+      if (useHotCodePush) {
+        return forceReload();
       }
+
+      requestChanges();
     }
   });
 
-  // We disable hot code push for js until there were
-  // changes that can not be applied through HMR.
-  Package['reload'].Reload._onMigrate(function (tryReload) {
-    if (mustReload) {
+  Package['reload'].Reload._onMigrate(function () {
+    if (useHotCodePush) {
       return [true];
     }
 
-    pendingReload = tryReload;
-    requestChanges();
-
+    hotCodePushReady = true;
     return [false];
   });
 });

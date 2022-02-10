@@ -94,7 +94,7 @@ Tinytest.add('collection - call native find with sort function',
               return doc.a;
             });
         },
-        /Illegal sort clause/
+        /Invalid sort format: undefined Sort must be a valid object/
       );
     }
   }
@@ -159,7 +159,7 @@ Tinytest.add('collection - calling find with a valid readPreference',
     if (Meteor.isServer) {
       const defaultReadPreference = 'primary';
       const customReadPreference = 'secondaryPreferred';
-      const collection = new Mongo.Collection('readPreferenceTest1');
+      const collection = new Mongo.Collection('readPreferenceTest');
       const defaultCursor = collection.find();
       const customCursor = collection.find(
         {},
@@ -170,13 +170,16 @@ Tinytest.add('collection - calling find with a valid readPreference',
       defaultCursor.count();
       customCursor.count();
 
+      // defaultCursor._synchronousCursor._dbCursor.operation is not an option anymore
+      // as the cursor options are now private
+      // You can check on abstract_cursor.ts the exposed public getters
       test.equal(
-        defaultCursor._synchronousCursor._dbCursor.operation.readPreference
+        defaultCursor._synchronousCursor._dbCursor.readPreference
           .mode,
         defaultReadPreference
       );
       test.equal(
-        customCursor._synchronousCursor._dbCursor.operation.readPreference.mode,
+        customCursor._synchronousCursor._dbCursor.readPreference.mode,
         customReadPreference
       );
     }
@@ -196,7 +199,7 @@ Tinytest.add('collection - calling find with an invalid readPreference',
       test.throws(function() {
         // Trigger the creation of _synchronousCursor
         cursor.count();
-      }, `Invalid read preference mode ${invalidReadPreference}`);
+      }, `Invalid read preference mode "${invalidReadPreference}"`);
     }
   }
 );
