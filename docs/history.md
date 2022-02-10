@@ -55,6 +55,10 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `ejson@1.1.2`
   - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).
 
+* `github-oauth@1.4.0`
+  - More data will be retrieved and saved under `services.github` on the user account.
+  - Add option to disallow sign-up on GitHub using `allow_signup` [parameter](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#parameters), this will be activated based on your Accounts settings, specifically if the option `forbidClientAccountCreation` is set to `true`.
+
 #### Independent Releases
 
 * `mongo@1.14.3` at 2022-02-08
