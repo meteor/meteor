@@ -391,7 +391,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
         safe: true,
       }
     ).then(({insertedId}) => {
-      callback(null, transformResult({ result : {modifiedCount : insertedId ? 1 : 0} }).numberAffected);
+      callback(null, insertedId);
     }).catch((e) => {
       callback(e, null)
     });
