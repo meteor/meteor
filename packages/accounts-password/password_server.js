@@ -169,7 +169,8 @@ Accounts.registerLoginHandler("password", options => {
 
   check(options, {
     user: Accounts._userQueryValidator,
-    password: passwordValidator
+    password: passwordValidator,
+    code: Match.Optional(NonEmptyString),
   });
 
 
@@ -179,6 +180,21 @@ Accounts.registerLoginHandler("password", options => {
   }});
   if (!user) {
     Accounts._handleError("User not found");
+  }
+
+  // This method is added by the package accounts-2fa
+  if (
+    Accounts._is2faEnabledForUser &&
+    Accounts._is2faEnabledForUser(options.user)
+  ) {
+    if (!options.code) {
+      Accounts._handleError('2FA code must be informed.');
+    }
+    if (
+      !Accounts._isTokenValid(user.services.twoFactorAuthentication.secret, options.code)
+    ) {
+      Accounts._handleError('Invalid 2FA code.');
+    }
   }
 
   if (!user.services || !user.services.password ||

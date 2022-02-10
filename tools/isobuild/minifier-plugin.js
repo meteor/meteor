@@ -1,4 +1,14 @@
 import buildmessage from '../utils/buildmessage.js';
+import {
+  readAndWatchFileWithHash,
+} from '../fs/watch';
+import {
+  optimisticReadFile,
+  optimisticHashOrNull,
+} from "../fs/optimistic";
+import {
+  convertToPosixPath
+} from '../fs/files';
 const buildPluginModule = require('./build-plugin.js');
 
 class InputFile extends buildPluginModule.InputFile {
@@ -7,6 +17,7 @@ class InputFile extends buildPluginModule.InputFile {
 
     this._source = source;
     this._arch = options.arch;
+    this._watchSet = options.watchSet;
     this._minifiedFiles = [];
   }
 
@@ -75,5 +86,17 @@ export class CssFile extends InputFile {
   addStylesheet(options) {
     this._minifiedFiles.push({ ...options });
   }
-}
 
+  readAndWatchFileWithHash(path) {
+    const filePath = convertToPosixPath(path);
+
+    const hash = optimisticHashOrNull(filePath);
+    const contents = optimisticReadFile(filePath);
+    this._watchSet.addFile(filePath, hash);
+
+    return {
+      hash,
+      contents
+    }
+  }
+}

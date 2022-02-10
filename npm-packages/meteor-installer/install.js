@@ -19,6 +19,7 @@ const {
   isSudo,
   isMac,
   METEOR_LATEST_VERSION,
+  shouldSetupExecPath,
 } = require('./config.js');
 const { uninstall } = require('./uninstall');
 const {
@@ -246,7 +247,10 @@ async function extract() {
 }
 async function setup() {
   fs.unlinkSync(startedPath);
-  await setupExecPath();
+  if (shouldSetupExecPath()) {
+    await setupExecPath();
+  }
+  await fixOwnership();
   showGettingStarted();
 }
 async function setupExecPath() {
@@ -267,8 +271,9 @@ async function setupExecPath() {
     await appendPathToFile('.bashrc');
     await appendPathToFile('.bash_profile');
   }
-
-  if (isSudo()) {
+}
+async function fixOwnership() {
+  if (!isWindows() && isSudo()) {
     // if we identified sudo is being used, we need to change the ownership of the meteorpath folder
     child_process.execSync(`chown -R ${sudoUser} "${meteorPath}"`);
   }

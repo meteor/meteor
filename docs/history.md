@@ -1,12 +1,59 @@
-## vNEXT, UNRELEASED
+## v2.6.1, UNRELEASED
 
 #### Highlights
+* TailwindCSS 3.x support
+* Typescript `4.5.4` upgrade
+* New core package: `accounts-2fa`
+* Support for 2FA in `accounts-password` and `accounts-passwordless`
+* Postcss configurations are now handled by `standard-minifier-css`
 
 #### Breaking Changes
 
+N/A
+
 #### Migration Steps
 
+Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for this version.
+
 #### Meteor Version Release
+
+* `standard-minifier-css@1.8.0`
+  - Postcss configurations are now handled in this package
+  - TailwindCSS 3.x support
+  - Support postcss dependency messages. [PR](https://github.com/meteor/meteor/pull/11903)
+
+* `accounts-2fa@1.0.0`
+  - New package to provide 2FA support
+  
+* `accounts-password@2.3.0`
+  - 2FA support
+  
+* `accounts-passwordless@2.1.0`
+  - 2FA support
+
+* `@meteorjs/babel@7.16.0`
+  - Upgrade TypeScript to `4.5.4`
+
+* `babel-compiler@7.9.0`
+  - Upgrade TypeScript to `4.5.4`
+
+* `ecmascript@0.16.2`
+  - Upgrade TypeScript to `4.5.4`
+
+* `typescript@4.5.4`
+  - Upgrade TypeScript to `4.5.4` [PR](https://github.com/meteor/meteor/pull/11846)
+
+* `accounts-ui-unstyled@1.6.0`
+  - `Accounts.ui.config` can now be set via `Meteor.settings.public.packages.accounts-ui-unstyled`.
+
+* `meteor-tool@2.6.1`
+  - Have build plugins handle caching for css minifiers. [PR](https://github.com/meteor/meteor/pull/11882).
+  
+* `standard-minifier-css@1.8.0`
+ - Cache minified stylesheets. [PR](https://github.com/meteor/meteor/pull/11882).
+
+* `ejson@1.1.2`
+  - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).
 
 #### Independent Releases
 
@@ -16,6 +63,9 @@
   - Fix flatten object issue when internal object value is an array on oplog converter. [PR](https://github.com/meteor/meteor/pull/11888).
 * `mongo@1.14.1` at 2022-02-04
   - Fix flatten object issue when the object is empty on oplog converter. [PR](https://github.com/meteor/meteor/pull/11885), [Issue](https://github.com/meteor/meteor/issues/11884).
+
+* `email@2.2.1`
+  - Modernizes the code.
 
 ## v2.6, 2022-02-01
 

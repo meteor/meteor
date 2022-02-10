@@ -38,7 +38,7 @@ const WATCHER_CLEANUP_DELAY_MS = 30000;
 // watched folder and create a separate watcher for each subfolder. Until it has a
 // way for us to filter which folders it walks we will continue to use
 // pathwatcher to avoid having too many watchers.
-let watcherLibrary = process.env.METEOR_WATCHER_LIBRARY || 
+let watcherLibrary = process.env.METEOR_WATCHER_LIBRARY ||
   (process.platform === 'linux' ? 'pathwatcher' : 'nsfw');
 
 // Pathwatcher complains (using console.error, ugh) if you try to watch
@@ -360,7 +360,7 @@ function watchLibraryWatch(absPath: string, callback: EntryCallback) {
   if (watcherEnabled && watcherLibrary === 'pathwatcher') {
     try {
       return pathwatcher.watch(convertToOSPath(absPath), callback);
-    } catch (e) {
+    } catch (e: any) {
       maybeSuggestRaisingWatchLimit(e);
       // ... ignore the error.  We'll still have watchFile, which is good
       // enough.
@@ -430,7 +430,7 @@ export function addWatchRoot(absPath: string) {
   }
 
   watchRoots.add(absPath);
-  
+
   // If there already is a watcher for a parent directory, there is no need
   // to create this watcher.
   for (const path of watchRoots) {

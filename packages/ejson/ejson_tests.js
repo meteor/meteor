@@ -44,6 +44,14 @@ Tinytest.add('ejson - some equality tests', test => {
   test.isFalse(EJSON.equals({a: 1, b: 2, c: 3}, {a: 1, c: 3, b: 4}));
   test.isFalse(EJSON.equals({a: {}}, {a: {b: 2}}));
   test.isFalse(EJSON.equals({a: {b: 2}}, {a: {}}));
+  // XXX: Object and Array were previously mistaken, which is why
+  // we add some extra tests for them here
+  test.isTrue(EJSON.equals([1, 2, 3, 4, 5], [1, 2, 3, 4, 5]));
+  test.isFalse(EJSON.equals([1, 2, 3, 4, 5], [1, 2, 3, 4]));
+  test.isFalse(EJSON.equals([1,2,3,4], {0: 1, 1: 2, 2: 3, 3: 4}));
+  test.isFalse(EJSON.equals({0: 1, 1: 2, 2: 3, 3: 4}, [1,2,3,4]));
+  test.isFalse(EJSON.equals({}, []));
+  test.isFalse(EJSON.equals([], {}));
 });
 
 Tinytest.add('ejson - equality and falsiness', test => {
