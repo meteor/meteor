@@ -55,6 +55,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `ejson@1.1.2`
   - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).
 
+* `accounts-base@2.2.2`
+  - Fix an issue where an extra field defined in `defaultFieldSelector` would not get published to the client
+
 #### Independent Releases
 
 * `mongo@1.14.1` at 2022-02-04
