@@ -13,7 +13,7 @@ Meteor.methods({
 // *are* validated, but Accounts._options is global state which makes this hard
 // (impossible?)
 Tinytest.add(
-  'accounts - config validates keys', 
+  'accounts - config validates keys',
   test => test.throws(() => Accounts.config({foo: "bar"}))
 );
 
@@ -202,7 +202,7 @@ Tinytest.add('accounts - insertUserDoc username', test => {
 
   // run the hook again. now the user exists, so it throws an error.
   test.throws(
-    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn), 
+    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Username already exists.'
   );
 
@@ -238,13 +238,13 @@ Tinytest.add('accounts - insertUserDoc email', test => {
   );
 
   // now with only one of them.
-  test.throws(() => 
-    Accounts.insertUserDoc({}, {emails: [{address: email1}]}), 
+  test.throws(() =>
+    Accounts.insertUserDoc({}, {emails: [{address: email1}]}),
     'Email already exists.'
   );
 
-  test.throws(() => 
-    Accounts.insertUserDoc({}, {emails: [{address: email2}]}), 
+  test.throws(() =>
+    Accounts.insertUserDoc({}, {emails: [{address: email2}]}),
     'Email already exists.'
   );
 
@@ -452,14 +452,14 @@ Tinytest.add(
       test.equal(Meteor.userId(), validateAttemptExpectedUserId, "validateLoginAttempt");
       return true;
     });
-    const onLoginStopper = Accounts.onLogin(attempt => 
+    const onLoginStopper = Accounts.onLogin(attempt =>
       test.equal(Meteor.userId(), onLoginExpectedUserId, "onLogin")
     );
     const onLogoutStopper = Accounts.onLogout(logoutContext => {
       test.equal(logoutContext.user._id, onLogoutExpectedUserId, "onLogout");
       test.instanceOf(logoutContext.connection, Object);
     });
-    const onLoginFailureStopper = Accounts.onLoginFailure(attempt => 
+    const onLoginFailureStopper = Accounts.onLoginFailure(attempt =>
       test.equal(Meteor.userId(), onLoginFailureExpectedUserId, "onLoginFailure")
     );
 
@@ -552,7 +552,8 @@ Tinytest.add(
   'accounts - Meteor.user() obeys options.defaultFieldSelector',
   test => {
     const ignoreFieldName = "bigArray";
-    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const customField = "customField";
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
     const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;
@@ -588,6 +589,15 @@ Tinytest.add(
     user = Meteor.user({fields: {}});
     test.isNotUndefined(user[ignoreFieldName], 'full selector');
     test.isNotUndefined(user.username, 'full selector username');
+
+    Accounts._options = {};
+
+    // Test that a custom field gets retrieved properly
+    Accounts.config({defaultFieldSelector: {[customField]: 1}});
+    user = Meteor.user()
+    test.isNotUndefined(user[customField]);
+    test.isUndefined(user.username);
+    test.isUndefined(user[ignoreFieldName]);
 
     Accounts._options = options;
     Accounts.userId = origAccountsUserId;
@@ -702,14 +712,14 @@ Tinytest.add(
       // create test user, without a google service
       const testEmail = "test@testdomain.com"
       const uid0 = Accounts.createUser({email: testEmail})
-      
+
       // Verify that user is found from email and service merged
       Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
         if (serviceName === "google") {
           return Accounts.findUserByEmail(serviceData.email)
         }
       })
-      
+
       let googleId = Random.id();
       const uid1 = Accounts.updateOrCreateUserFromExternalService(
           'google',
