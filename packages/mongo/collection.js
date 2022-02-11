@@ -343,13 +343,6 @@ Object.assign(Mongo.Collection.prototype, {
         )
       );
 
-      const { projection } = newOptions;
-
-      // this error: "Cannot do exclusion on field _id in inclusion projection"
-      // happens on MongoDB CLI but doesn't happen in the Node.js Driver for MongoDB 5.0+
-      if (projection && projection._id != null && !projection._id) {
-        throw new Error(`Cannot do exclusion on field _id in inclusion projection, collectionName=${self._name}`);
-      }
 
       return {
         transform: self._transform,
