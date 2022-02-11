@@ -67,6 +67,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `email@2.2.1`
   - Throwing error when trying to send email in a production environment but without a mail URL set. [PR](https://github.com/meteor/meteor/pull/11891), [Issue](https://github.com/meteor/meteor/issues/11709).
 
+* `facebook-oauth@1.11.0`
+  - Updated Facebook API to version 12.0
+
 #### Independent Releases
 
 * `mongo@1.14.3` at 2022-02-08
