@@ -70,6 +70,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `facebook-oauth@1.11.0`
   - Updated Facebook API to version 12.0
 
+* `google-oauth@1.4.2`
+  - Migrate from `http` to `fetch`
+
 #### Independent Releases
 
 * `mongo@1.14.3` at 2022-02-08
