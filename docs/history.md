@@ -10,6 +10,9 @@
 
 #### Independent Releases
 
+* `mongo@1.14.4` at 2022-02-11
+  - Fix sync return for insert methods inside _collection private method [PR](https://github.com/meteor/meteor/pull/11907)
+  - Support the new "projection" field inside the decision of using oplog for a published cursor or not [PR](https://github.com/meteor/meteor/pull/11908)
 * `mongo@1.14.3` at 2022-02-08
   - Remove throw on _id exclusion inside mongo collection finds. [PR](https://github.com/meteor/meteor/pull/11894).
 * `mongo@1.14.2` at 2022-02-06
