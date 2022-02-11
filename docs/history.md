@@ -60,8 +60,16 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `accounts-base@2.2.2`
   - Fix an issue where an extra field defined in `defaultFieldSelector` would not get published to the client
 
+* `github-oauth@1.4.0`
+  - More data will be retrieved and saved under `services.github` on the user account.
+  - Add option to disallow sign-up on GitHub using `allow_signup` [parameter](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#parameters), this will be activated based on your Accounts settings, specifically if the option `forbidClientAccountCreation` is set to `true`.
+
 #### Independent Releases
 
+* `mongo@1.14.3` at 2022-02-08
+  - Remove throw on _id exclusion inside mongo collection finds. [PR](https://github.com/meteor/meteor/pull/11894).
+* `mongo@1.14.2` at 2022-02-06
+  - Fix flatten object issue when internal object value is an array on oplog converter. [PR](https://github.com/meteor/meteor/pull/11888).
 * `mongo@1.14.1` at 2022-02-04
   - Fix flatten object issue when the object is empty on oplog converter. [PR](https://github.com/meteor/meteor/pull/11885), [Issue](https://github.com/meteor/meteor/issues/11884).
 
