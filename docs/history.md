@@ -60,6 +60,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `accounts-base@2.2.2`
   - Fix an issue where an extra field defined in `defaultFieldSelector` would not get published to the client
 
+* `facebook-oauth@1.11.0`
+  - Updated Facebook API to version 12.0
+
 #### Independent Releases
 
 * `mongo@1.14.1` at 2022-02-04
