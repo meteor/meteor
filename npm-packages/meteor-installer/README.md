@@ -12,6 +12,7 @@ npm install -g meteor
 
 | NPM Package | Meteor Official Release |
 |-------------|-------------------------|
+| 2.6.1       | 2.6                     |
 | 2.6.0       | 2.6                     |
 | 2.5.7       | 2.5.6                   |
 | 2.5.6       | 2.5.5                   |
