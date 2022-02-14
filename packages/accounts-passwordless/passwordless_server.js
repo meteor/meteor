@@ -80,21 +80,6 @@ Accounts.registerLoginHandler('passwordless', options => {
     Accounts._handleError('User has no token set');
   }
 
-  // This method is added by the package accounts-2fa
-  if (
-    Accounts._is2faEnabledForUser &&
-    Accounts._is2faEnabledForUser(user)
-  ) {
-    if (!options.code) {
-      Accounts._handleError('2FA code must be informed.');
-    }
-    if (
-      !Accounts._isTokenValid(user.services.twoFactorAuthentication.secret, options.code)
-    ) {
-      Accounts._handleError('Invalid 2FA code.');
-    }
-  }
-
   const result = checkToken({
     user,
     selector,
@@ -102,16 +87,47 @@ Accounts.registerLoginHandler('passwordless', options => {
   });
   const { verifiedEmail, error } = result;
 
-  if (!error && verifiedEmail) {
+
+  const is2faEnabled =
+    Accounts._is2faEnabledForUser &&
+    Accounts._is2faEnabledForUser({ _id: user._id });
+
+  const removeTokenFromUser = () => {
     Meteor.users.update(
       { _id: user._id, 'emails.address': verifiedEmail },
       {
         $set: {
-          'emails.$.verified': true,
+          'emails.$.verified': verifiedEmail,
         },
         $unset: { 'services.passwordless': 1 },
       }
     );
+  };
+
+  // It's necessary to make sure we don't remove the token if the user has 2fa enabled
+  // otherwise, it would be necessary to generate a new one if this method is called without
+  // a 2fa code
+  if (!error && !is2faEnabled) {
+    removeTokenFromUser();
+  }
+
+  // This method is added by the package accounts-2fa
+  // First the login is validated, then the code situation is checked
+  if (!error && is2faEnabled) {
+    if (!options.code) {
+      Accounts._handleError('2FA code must be informed');
+      return;
+    }
+    if (
+      !Accounts._isTokenValid(
+        user.services.twoFactorAuthentication.secret,
+        options.code
+      )
+    ) {
+      Accounts._handleError('Invalid 2FA code');
+      return;
+    }
+    removeTokenFromUser();
   }
 
   return result;
