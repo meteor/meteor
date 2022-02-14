@@ -1,4 +1,4 @@
-## v2.6.1, UNRELEASED
+## v2.7, UNRELEASED
 
 #### Highlights
 * TailwindCSS 3.x support
@@ -13,7 +13,7 @@ N/A
 
 #### Migration Steps
 
-Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for this version.
+Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this version.
 
 #### Meteor Version Release
 
@@ -44,7 +44,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6.1-migration.html) for th
 * `accounts-ui-unstyled@1.6.0`
   - `Accounts.ui.config` can now be set via `Meteor.settings.public.packages.accounts-ui-unstyled`.
 
-* `meteor-tool@2.6.1`
+* `meteor-tool@2.7`
   - CSS minifiers must now handle any caching themselves [PR](https://github.com/meteor/meteor/pull/11882)
   - CSS minifiers are always given lazy css resources instead of only during production builds [PR](https://github.com/meteor/meteor/pull/11897)
   - Files passed to CSS minifiers now have `file.readAndWatchFileWithHash`, same as for compilers [PR](https://github.com/meteor/meteor/pull/11882)

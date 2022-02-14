@@ -35,7 +35,7 @@ sidebar_categories:
     - index
     - code-style
     - structure
-    - 2.6.1-migration
+    - 2.7-migration
   Data:
     - collections
     - data-loading
