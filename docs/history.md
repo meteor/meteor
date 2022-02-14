@@ -10,6 +10,26 @@
 
 #### Independent Releases
 
+## v2.6.1, 2022-02-14
+
+#### Highlights
+
+* Fix regression on build speed by updating babel dependencies to 7.17.x
+
+#### Breaking Changes
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+* `meteor-tool@2.6.1`
+  - Use latest @meteor/babel dependency with @babel@7.17.x
+  
+* `babel-compiler@7.8.1`
+  - Use latest @meteor/babel dependency with @babel@7.17.x
+
+#### Independent Releases
+
 * `mongo@1.14.4` at 2022-02-11
   - Fix sync return for insert methods inside _collection private method [PR](https://github.com/meteor/meteor/pull/11907)
   - Support the new "projection" field inside the decision of using oplog for a published cursor or not [PR](https://github.com/meteor/meteor/pull/11908)
