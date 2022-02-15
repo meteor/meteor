@@ -99,7 +99,7 @@ As said at the beginning of this guide, this package is currently working with t
 
 <h3 id="working-with-accounts-password">Working with accounts-password</h3>
 
-When calling the function `Meteor.loginWithPassword`, if the 2FA is enabled for the user, an error will be return to the callback, so you can redirect the user to a place where they can provide a code.
+When calling the function `Meteor.loginWithPassword`, if the 2FA is enabled for the user, an error will be returned to the callback, so you can redirect the user to a place where they can provide a code.
 
 As an example:
 
@@ -149,7 +149,7 @@ So the call of this function should look something like this:
 
 Following the same logic from the previous package, if the 2FA is enabled, an error will be returned to the callback of the function [`Meteor.passwordlessLoginWithToken`](https://docs.meteor.com/packages/accounts-passwordless.html#Meteor-passwordlessLoginWithToken), then you can redirect the user to a place where they can provide a code.
 
-Here it's an example:
+Here is an example:
 
 ```js
 <button
@@ -188,7 +188,7 @@ To integrate this package with any other existing Login method, it's necessary f
 
 2 - For the server, inside the function that will log the user in, you verify if the function `Accounts._is2faEnabledForUser` exists, and if yes, you call it providing the user you want to check if the 2FA is enabled, and if either of these statements are false, you proceed with the login flow. This function exists only when the package `accounts-2fa` is added to the project.
 
-If both statements are true, and the login validation was a success, now you verify if a code was provided, if not throw an error, if it was provided, verify if the code is valid by calling the function `Accounts._isTokenValid`, if not, throw an error.
+If both statements are true, and the login validation succeeds, you verify if a code was provided: if not, throw an error; if it was provided, verify if the code is valid by calling the function `Accounts._isTokenValid`. if `Accounts._isTokenValid` returns false, throw an error.
 
 Here it's an example:
 
