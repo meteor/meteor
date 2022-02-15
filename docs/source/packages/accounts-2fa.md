@@ -149,7 +149,7 @@ So the call of this function should look something like this:
 
 Following the same logic from the previous package, if the 2FA is enabled, an error will be returned to the callback of the function [`Meteor.passwordlessLoginWithToken`](https://docs.meteor.com/packages/accounts-passwordless.html#Meteor-passwordlessLoginWithToken), then you can redirect the user to a place where they can provide a code.
 
-Here it's an example:
+Here is an example:
 
 ```js
 <button
