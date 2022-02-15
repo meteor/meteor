@@ -984,9 +984,10 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
 
   // If a fields projection option is given check if it is supported by
   // minimongo (some operators are not supported).
-  if (options.fields) {
+  const fields = options.fields || options.projection;
+  if (fields) {
     try {
-      LocalCollection._checkSupportedProjection(options.fields);
+      LocalCollection._checkSupportedProjection(fields);
     } catch (e) {
       if (e.name === "MinimongoError") {
         return false;
