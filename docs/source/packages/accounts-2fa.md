@@ -99,7 +99,7 @@ As said at the beginning of this guide, this package is currently working with t
 
 <h3 id="working-with-accounts-password">Working with accounts-password</h3>
 
-When calling the function `Meteor.loginWithPassword`, if the 2FA is enabled for the user, an error will be return to the callback, so you can redirect the user to a place where they can provide a code.
+When calling the function `Meteor.loginWithPassword`, if the 2FA is enabled for the user, an error will be returned to the callback, so you can redirect the user to a place where they can provide a code.
 
 As an example:
 
