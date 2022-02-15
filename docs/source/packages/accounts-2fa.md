@@ -166,7 +166,7 @@ Here is an example:
             setShouldAskCode(true);
             return;
           }
-          console.error('...', error);
+          console.error('Error verifying token', error);
         }
       }
     );
