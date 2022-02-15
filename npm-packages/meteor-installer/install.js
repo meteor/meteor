@@ -44,7 +44,7 @@ process.on('unhandledRejection', err => {
   throw err;
 });
 if (os.arch() !== 'x64') {
-  const isValidM1Version = semver.gte(METEOR_LATEST_VERSION, '2.5.1-beta.3');
+  const isValidM1Version = semver.gte(semver.coerce(METEOR_LATEST_VERSION), '2.5.1-beta.3');
   if (os.arch() !== 'arm64' || !isMac() || !isValidM1Version) {
     console.error(
       'The current architecture is not supported in this version: ',
