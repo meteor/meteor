@@ -1477,9 +1477,9 @@ export class AccountsServer extends AccountsCommon {
     return userId;
   }
 
-  _handleError = (msg, throwError = true) => {
+  _handleError = (msg, throwError = true, errorCode = 403) => {
     const error = new Meteor.Error(
-      403,
+      errorCode,
       this._options.ambiguousErrorMessages
         ? "Something went wrong. Please check your credentials."
         : msg

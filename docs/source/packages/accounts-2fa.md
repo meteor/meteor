@@ -108,7 +108,7 @@ As an example:
   onClick={() => {
     Meteor.loginWithPassword(username, password, error => {
       if (error) {
-        if (error.reason === '2FA code must be informed') {
+        if (error.error === 'no-2fa-code') {
             // send user to a page or show a component 
             // where they can provide a 2FA code
             setShouldAskCode(true);
@@ -160,7 +160,7 @@ Here it's an example:
       token,
       error => {
         if (error) {
-          if (error.reason === '2FA code must be informed') {
+          if (error.error === 'no-2fa-code') {
             // send user to a page or show a component 
             // where they can provide a 2FA code
             setShouldAskCode(true);

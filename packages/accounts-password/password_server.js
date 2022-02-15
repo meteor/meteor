@@ -197,7 +197,7 @@ Accounts.registerLoginHandler("password", options => {
     Accounts._is2faEnabledForUser(options.user)
   ) {
     if (!options.code) {
-      Accounts._handleError('2FA code must be informed');
+      Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
     }
     if (
       !Accounts._isTokenValid(
@@ -205,7 +205,7 @@ Accounts.registerLoginHandler("password", options => {
         options.code
       )
     ) {
-      Accounts._handleError('Invalid 2FA code');
+      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
     }
   }
 
