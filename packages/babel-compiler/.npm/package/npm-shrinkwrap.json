@@ -419,9 +419,9 @@
       "integrity": "sha512-vFv9ttIedivx0ux3QSjhgtCVjPZd5l46ZOMDSCwnH1yUO2e964gO8LZGyv2QkqcgR6TnBU1v+1IFqmeoG+0UJQ=="
     },
     "@meteorjs/babel": {
-      "version": "7.15.1-beta.0",
-      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.15.1-beta.0.tgz",
-      "integrity": "sha512-/TbH3JivC73FES8HU/rXLoaYLvey1hh8jvYiZopYpQBteRfaxCpCduW8OnLBatHGT+PCVIUS/Q/2NX6HuJ1Oxg=="
+      "version": "7.15.1",
+      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.15.1.tgz",
+      "integrity": "sha512-BloIEpv1buxakJqIx+o/mRXZJdmNIvrFrte1ZJSw8eetkU17P0PTsGHMkYkePk6+lCas7sntMRgg2LKUapkdPQ=="
     },
     "@meteorjs/reify": {
       "version": "0.23.0",
