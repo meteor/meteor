@@ -2517,7 +2517,10 @@ class JsImage {
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
           npmDiscards: nmd.npmDiscards,
-          symlink: includeNodeModules === 'symlink'
+          symlink: includeNodeModules === 'symlink' || (
+            // App node_modules should be symlinked in MONOREPO mode.
+            process.env.METEOR_MONOREPO_ROOT && !nmd.packageName
+          )
         };
 
         const prodPackagePredicate =
