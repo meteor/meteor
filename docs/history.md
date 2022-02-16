@@ -10,7 +10,7 @@
 
 #### Independent Releases
 
-## v2.6.1, 2022-02-14
+## v2.6.1, UNRELEASED
 
 #### Highlights
 
@@ -30,6 +30,9 @@
 
 #### Independent Releases
 
+* `mongo@1.14.5` at 2022-02-16
+  - Fix multiple array operators bug and add support for debug messages
+  - Fix isArrayOperator function regexp false-positive
 * `mongo@1.14.4` at 2022-02-11
   - Fix sync return for insert methods inside _collection private method [PR](https://github.com/meteor/meteor/pull/11907)
   - Support the new "projection" field inside the decision of using oplog for a published cursor or not [PR](https://github.com/meteor/meteor/pull/11908)
