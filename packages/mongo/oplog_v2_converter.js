@@ -6,6 +6,18 @@
 //  diff: { u: { key1: 2022-01-06T18:23:16.131Z, key2: [ObjectID] } }
 // }
 
+function logConverterCalls(oplogEntry, prefixKey, key) {
+  if (!process.env.OPLOG_CONVERTER_DEBUG) {
+    return;
+  }
+  console.log('Calling nestedOplogEntryParsers with the following values: ');
+  console.log(
+    `Oplog entry: ${JSON.stringify(
+      oplogEntry
+    )}, prefixKey: ${prefixKey}, key: ${key}`
+  );
+}
+
 /*
 the structure of an entry is:
 
@@ -24,30 +36,64 @@ on mongo 4
 const isArrayOperator = possibleArrayOperator => {
   if (!Object.keys(possibleArrayOperator).length) return false;
 
-  return !Object.keys(possibleArrayOperator).find(key => key !== 'a' && !key.match(/u\d+/));
+  return !Object.keys(possibleArrayOperator).find(
+    key => key !== 'a' && !key.match(/u\d+/)
+  );
 };
-const nestedOplogEntryParsers = (
-  { i = {}, u = {}, d = {}, ...sFields },
-  prefixKey = ''
-) => {
+
+function logOplogEntryError(oplogEntry, prefixKey, key) {
+  console.log('---');
+  console.log(
+    'WARNING: Unsupported oplog operation, please fill an issue with this message at github.com/meteor/meteor'
+  );
+  console.log(
+    `Oplog entry: ${JSON.stringify(
+      oplogEntry
+    )}, prefixKey: ${prefixKey}, key: ${key}`
+  );
+  console.log('---');
+}
+
+const nestedOplogEntryParsers = (oplogEntry, prefixKey = '') => {
+  const { i = {}, u = {}, d = {}, ...sFields } = oplogEntry;
+  logConverterCalls(oplogEntry, prefixKey, 'ENTRY_POINT');
   const sFieldsOperators = [];
   Object.entries(sFields).forEach(([key, value]) => {
+    const actualKeyNameWithoutSPrefix = key.substring(1);
     if (isArrayOperator(value || {})) {
       const { a, ...uPosition } = value;
-      const [positionKey, newArrayIndexValue] = Object.entries(uPosition)[0];
       if (uPosition) {
-        sFieldsOperators.push({
-          [newArrayIndexValue === null ? '$unset' : '$set']: {
-            [`${prefixKey}${key.substring(1)}.${positionKey.substring(1)}`]:
-                newArrayIndexValue === null ? true : newArrayIndexValue,
-          },
-        });
-      }else{
-        throw new Error(`Unsupported oplog array entry, please review the input: ${JSON.stringify(value)}`)
+        for (const [positionKey, newArrayIndexValue] of Object.entries(
+          uPosition
+        )) {
+          sFieldsOperators.push({
+            [newArrayIndexValue === null ? '$unset' : '$set']: {
+              [`${prefixKey}${actualKeyNameWithoutSPrefix}.${positionKey.substring(
+                1
+              )}`]: newArrayIndexValue === null ? true : newArrayIndexValue,
+            },
+          });
+        }
+      } else {
+        logOplogEntryError(oplogEntry, prefixKey, key);
+        throw new Error(
+          `Unsupported oplog array entry, please review the input: ${JSON.stringify(
+            value
+          )}`
+        );
       }
     } else {
+      // we are looking at a "sSomething" that is actually a nested object set
+      if (!actualKeyNameWithoutSPrefix || actualKeyNameWithoutSPrefix === '') {
+        logOplogEntryError(oplogEntry, prefixKey, key);
+        return null;
+      }
+      logConverterCalls(oplogEntry, prefixKey, key);
       sFieldsOperators.push(
-        nestedOplogEntryParsers(value, `${prefixKey}${key.substring(1)}.`)
+        nestedOplogEntryParsers(
+          value,
+          `${prefixKey}${actualKeyNameWithoutSPrefix}.`
+        )
       );
     }
   });
@@ -59,7 +105,8 @@ const nestedOplogEntryParsers = (
     const prefixedKey = `${prefixKey}${key}`;
     return {
       ...acc,
-      ...(!Array.isArray(setObjectSource[key]) && typeof setObjectSource[key] === 'object'
+      ...(!Array.isArray(setObjectSource[key]) &&
+      typeof setObjectSource[key] === 'object'
         ? flattenObject({ [prefixedKey]: setObjectSource[key] })
         : {
             [prefixedKey]: setObjectSource[key],
@@ -85,6 +132,7 @@ const nestedOplogEntryParsers = (
 
 export const oplogV2V1Converter = v2OplogEntry => {
   if (v2OplogEntry.$v !== 2 || !v2OplogEntry.diff) return v2OplogEntry;
+  logConverterCalls(v2OplogEntry, 'INITIAL_CALL', 'INITIAL_CALL');
   return { $v: 2, ...nestedOplogEntryParsers(v2OplogEntry.diff || {}) };
 };
 
@@ -97,7 +145,9 @@ function flattenObject(ob) {
     if (!Array.isArray(ob[i]) && typeof ob[i] == 'object' && ob[i] !== null) {
       const flatObject = flattenObject(ob[i]);
       let objectKeys = Object.keys(flatObject);
-      if(objectKeys.length === 0) { return ob; }
+      if (objectKeys.length === 0) {
+        return ob;
+      }
       for (const x of objectKeys) {
         toReturn[i + '.' + x] = flatObject[x];
       }

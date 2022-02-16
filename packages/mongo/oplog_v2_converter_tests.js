@@ -51,13 +51,16 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
   );
 
   //set a new nested field inside an object
-  const entry51 =  { "$v" : 2, "diff" : { "u" : { "count" : 1 }, "i" : { "nested" : { "state" : {  } } } } };
+  const entry51 = {
+    $v: 2,
+    diff: { u: { count: 1 }, i: { nested: { state: {} } } },
+  };
   // the correct format for this test, inspecting the mongodb oplog, should be "nested" : { "state" : {  } } }
   // but this is a case in which we can flatten the object without collateral, so we are considering
   // "nested.state" : {  } to be valid too
   test.equal(
     JSON.stringify(oplogV2V1Converter(entry51)),
-    JSON.stringify( { "$v" : 2, "$set" : { "nested.state": {  }, "count" : 1 } })
+    JSON.stringify({ $v: 2, $set: { 'nested.state': {}, count: 1 } })
   );
 
   //set an existing nested field inside an object
@@ -98,10 +101,30 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
     JSON.stringify({ $v: 2, $set: { 'services.resume.loginTokens': [] } })
   );
 
-  const entry91 = { "$v" : 2, "diff" : { "i" : { "tShirt" : { "sizes" : [ "small", "medium", "large" ] } } } };
+  const entry91 = {
+    $v: 2,
+    diff: { i: { tShirt: { sizes: ['small', 'medium', 'large'] } } },
+  };
   test.equal(
     JSON.stringify(oplogV2V1Converter(entry91)),
-    JSON.stringify({ $v: 2, $set: { "tShirt.sizes" : [ "small", "medium", "large" ] } })
+    JSON.stringify({
+      $v: 2,
+      $set: { 'tShirt.sizes': ['small', 'medium', 'large'] },
+    })
+  );
+
+  test.equal(
+    JSON.stringify(
+      oplogV2V1Converter({
+        $v: 2,
+        diff: { slist: { a: true, u3: 'i', u4: 'h' } },
+      })
+    ),
+    JSON.stringify({
+      $v: 2,
+      // oplog v1 outputs the whole list -> list: ['e', 'f', 'g', 'i', 'h', 'j']
+      "$set":{"list.3":"i", "list.4":"h"},
+    })
   );
 
   const entry10 = {
@@ -135,6 +158,20 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
           },
         ],
       },
+    })
+  );
+  test.equal(
+    JSON.stringify(
+      oplogV2V1Converter({
+        $v: 2,
+        diff: {
+          sobject: { u: { array: ['2', '2', '4', '3'] } },
+        },
+      })
+    ),
+    JSON.stringify({
+      $v: 2,
+      $set: { 'object.array': ['2', '2', '4', '3'] },
     })
   );
 });
