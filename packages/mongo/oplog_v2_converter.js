@@ -34,13 +34,16 @@ on mongo 4
  */
 
 const isArrayOperator = possibleArrayOperator => {
-  if (!Object.keys(possibleArrayOperator).length) return false;
+  if (!possibleArrayOperator || !Object.keys(possibleArrayOperator).length)
+    return false;
 
+  if (!possibleArrayOperator.a) {
+    return false;
+  }
   return !Object.keys(possibleArrayOperator).find(
-    key => key !== 'a' && !key.match(/u\d+/)
+      key => key !== 'a' && !key.match(/^u\d+/)
   );
 };
-
 function logOplogEntryError(oplogEntry, prefixKey, key) {
   console.log('---');
   console.log(

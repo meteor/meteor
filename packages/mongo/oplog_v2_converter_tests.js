@@ -123,7 +123,7 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
     JSON.stringify({
       $v: 2,
       // oplog v1 outputs the whole list -> list: ['e', 'f', 'g', 'i', 'h', 'j']
-      "$set":{"list.3":"i", "list.4":"h"},
+      $set: { 'list.3': 'i', 'list.4': 'h' },
     })
   );
 
@@ -172,6 +172,29 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
     JSON.stringify({
       $v: 2,
       $set: { 'object.array': ['2', '2', '4', '3'] },
+    })
+  );
+  test.equal(
+    JSON.stringify(
+      oplogV2V1Converter({
+        $v: 2,
+        diff: {
+          slayout: {
+            sjourneyStepIds: {
+              sj4aqp3tiK6xCPCYu8: {
+                a: true,
+                u2: 'zTkxivNrKuBi2iJ2m',
+              },
+            },
+          },
+        },
+      })
+    ),
+    JSON.stringify({
+      $v: 2,
+      $set: {
+        'layout.journeyStepIds.j4aqp3tiK6xCPCYu8.2': 'zTkxivNrKuBi2iJ2m',
+      },
     })
   );
 });
