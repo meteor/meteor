@@ -20,6 +20,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this
 * `standard-minifier-css@1.8.0`
   - Runs PostCSS plugins if the app has a PostCSS config and the `postcss-load-config` npm package installed. Supports TailwindCSS 3.x [PR 1](https://github.com/Meteor-Community-Packages/meteor-postcss/pull/56) [PR 2](https://github.com/meteor/meteor/pull/11903)
 
+* `react-fast-refresh@0.2.3`
+  - Fix tracking states with circular dependencies. [PR](https://github.com/meteor/meteor/pull/11923)
+  
 * `accounts-2fa@1.0.0`
   - New package to provide 2FA support
   
