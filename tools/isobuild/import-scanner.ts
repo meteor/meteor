@@ -16,6 +16,7 @@ import {Profile} from "../tool-env/profile";
 import {
   mkdir_p,
   pathJoin,
+  pathResolve,
   pathRelative,
   pathNormalize,
   pathExtname,
@@ -48,6 +49,10 @@ const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
 const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
+
+const MONOREPO_ROOT = process.env.METEOR_MONOREPO_ROOT
+  ? pathResolve(process.env.METEOR_MONOREPO_ROOT)
+  : null;
 
 const fakeFileStat = {
   isFile() {
@@ -1443,7 +1448,8 @@ export default class ImportScanner {
   private getAbsModuleId(absPath: string) {
     let path =
       this.getNodeModulesAbsModuleId(absPath) ||
-      this.getSourceRootAbsModuleId(absPath);
+      this.getSourceRootAbsModuleId(absPath) ||
+      this.getMonorepoRootAbsModuleId(absPath);
 
     if (! path) {
       return;
@@ -1546,6 +1552,36 @@ export default class ImportScanner {
 
     return ensureLeadingSlash(relPath);
   }
+
+  private getMonorepoRootAbsModuleId(absPath: string) {
+    let absModuleId: string | undefined;
+
+    if (!MONOREPO_ROOT) {
+      return;
+    }
+
+    const relPath = pathRelative(this.sourceRoot, absPath);
+    if (!relPath.startsWith("..")) {
+      return this.getSourceRootAbsModuleId(absPath);
+    }
+
+    const relPathWithinMonorepoRoot = pathRelative(MONOREPO_ROOT, absPath);
+    if (
+      relPathWithinMonorepoRoot.startsWith("..") ||
+      relPathWithinMonorepoRoot.startsWith('/')
+    ) {
+      return;
+    }
+
+    absModuleId = pathJoin(
+      "node_modules",
+      "$ROOT",
+      relPathWithinMonorepoRoot
+    );
+
+    return ensureLeadingSlash(absModuleId);
+  }
+
 
   // Called by this.resolver when a module identifier cannot be resolved.
   private onMissing(

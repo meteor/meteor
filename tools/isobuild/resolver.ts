@@ -26,6 +26,10 @@ import {
   optimisticReadJsonOrNull,
 } from "../fs/optimistic";
 
+const MONOREPO_ROOT = process.env.METEOR_MONOREPO_ROOT
+  ? pathResolve(process.env.METEOR_MONOREPO_ROOT)
+  : null;
+
 const nativeModulesMap: Record<string, string> = Object.create(null);
 const nativeNames = require('module').builtinModules;
 
@@ -407,6 +411,10 @@ export default class Resolver {
       }
     });
 
+    if (!sourceRoot && MONOREPO_ROOT && !pathRelative(MONOREPO_ROOT, absParentPath).startsWith("..")) {
+      sourceRoot = MONOREPO_ROOT;
+    }
+
     let resolved = null;
 
     const links: Record<string, string> = Object.create(null);
@@ -418,7 +426,11 @@ export default class Resolver {
         sourceRoot,
       ];
     } else {
-      linkRoots = this.nodeModulesPaths;
+      linkRoots = [...this.nodeModulesPaths];
+    }
+
+    if (MONOREPO_ROOT) {
+      linkRoots.push(MONOREPO_ROOT);
     }
 
     const followLinks = !archMatches(this.targetArch, "os");
