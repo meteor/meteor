@@ -124,6 +124,9 @@ Meteor.methods({
     );
   },
   has2faEnabled(selector) {
+    if (!Meteor.user()) {
+      throw new Meteor.Error(400, 'No user logged in.');
+    }
     return Accounts._is2faEnabledForUser(selector);
   },
 });
