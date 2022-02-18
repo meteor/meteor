@@ -10,13 +10,19 @@
 
 #### Independent Releases
 
-## v2.6.1, UNRELEASED
+## v2.6.1, 2022-02-18
 
 #### Highlights
 
 * Fix regression on build speed by updating babel dependencies to 7.17.x
+* We are not going to provide support anymore for IE 9
+* We are changing the device used for testing, Samsung Galaxy S7, as browserstack is having issues provisioning it. We will be using now Samsung Galaxy Note 10.
+* Fix issue when generating tarballs from Windows systems related to execute permissions
+
 
 #### Breaking Changes
+
+- IE 9 might not be compatible from now on, although, we will still consider PR's fixing it.
 
 #### Migration Steps
 
@@ -24,6 +30,9 @@
 
 * `meteor-tool@2.6.1`
   - Use latest @meteor/babel dependency with @babel@7.17.x
+  
+* `@meteorjs/babel@7.15.1`
+  - Use babel@7.17.x
   
 * `babel-compiler@7.8.1`
   - Use latest @meteor/babel dependency with @babel@7.17.x
