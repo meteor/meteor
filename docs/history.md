@@ -18,6 +18,7 @@
 * We are not going to provide support anymore for IE 9
 * We are changing the device used for testing, Samsung Galaxy S7, as browserstack is having issues provisioning it. We will be using now Samsung Galaxy Note 10.
 * Fix issue when generating tarballs from Windows systems related to execute permissions
+* Fix issues with HMR and meteor build --debug [PR](https://github.com/meteor/meteor/pull/11922)
 
 
 #### Breaking Changes
@@ -36,6 +37,12 @@
   
 * `babel-compiler@7.8.1`
   - Use latest @meteor/babel dependency with @babel@7.17.x
+  
+* `hot-module-replacement@0.5.1`
+  - Fix issues with HMR and meteor build --debug [PR](https://github.com/meteor/meteor/pull/11922)
+  
+* `webapp@1.13.1`
+  - Fix issues with HMR and meteor build --debug [PR](https://github.com/meteor/meteor/pull/11922)
 
 #### Independent Releases
 
