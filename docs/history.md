@@ -15,7 +15,7 @@
 #### Highlights
 
 * Fix regression on build speed by updating babel dependencies to 7.17.x
-* We are not going to provide support anymore for IE 9
+* We have removed IE 9 from our browser test list
 * We are changing the device used for testing, Samsung Galaxy S7, as browserstack is having issues provisioning it. We will be using now Samsung Galaxy Note 10.
 * Fix issue when generating tarballs from Windows systems related to execute permissions
 * Fix issues with HMR and meteor build --debug [PR](https://github.com/meteor/meteor/pull/11922)
