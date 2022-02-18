@@ -853,6 +853,14 @@ function tryExtractWithNpmTar(
   });
 }
 
+// In the same fashion as node-pre-gyp does, add the executable
+// bit but only if the read bit was present.  Same as:
+// https://github.com/mapbox/node-pre-gyp/blob/7a28f4b0f562ba4712722fefe4eeffb7b20fbf7a/lib/install.js#L71-L77
+// and others reported in: https://github.com/npm/node-tar/issues/7
+function addExecBitWhenReadBitPresent(fileMode: number) {
+  return fileMode |= (fileMode >>> 2) & 0o111;
+}
+
 // Tar-gzips a directory, returning a stream that can then be piped as
 // needed.  The tar archive will contain a top-level directory named
 // after dirPath.
@@ -861,9 +869,27 @@ export function createTarGzStream(dirPath: string) {
   const zlib = require("zlib");
   const basename = pathBasename(dirPath);
 
+  // Create a segment of the file path which we will look for to
+  // identify exactly what we think is a "bin" file (that is, something
+  // which should be expected to work within the context of an
+  // 'npm run-script').
+  // tar-fs doesn't use native paths in the header, so we are joining with a slash
+  const binPathMatch = ["", "node_modules", ".bin", ""].join('/');
   const tarStream = tar.pack(convertToOSPath(dirPath), {
     map: (header: any) => {
       header.name = `${basename}/${header.name}`
+
+      if (process.platform !== "win32") {
+        return header;
+      }
+
+      if (header.type === "directory") {
+        header.mode = addExecBitWhenReadBitPresent(header.mode);
+      }
+
+      if (header.type === "file" && header.name.includes(binPathMatch)) {
+        header.mode = addExecBitWhenReadBitPresent(header.mode);
+      }
       return header
     },
     readable: true, // all dirs and files should be readable

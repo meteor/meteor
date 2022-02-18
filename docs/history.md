@@ -78,6 +78,47 @@ Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this
 
 #### Independent Releases
 
+## v2.6.1, 2022-02-18
+
+#### Highlights
+
+* Fix regression on build speed by updating babel dependencies to 7.17.x
+* We have removed IE 9 from our browser test list
+* We are changing the device used for testing, Samsung Galaxy S7, as browserstack is having issues provisioning it. We will be using now Samsung Galaxy Note 10.
+* Fix issue when generating tarballs from Windows systems related to execute permissions
+* Fix issues with HMR and meteor build --debug [PR](https://github.com/meteor/meteor/pull/11922)
+
+
+#### Breaking Changes
+
+- IE 9 might not be compatible from now on, although, we will still consider PR's fixing it.
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+* `meteor-tool@2.6.1`
+  - Use latest @meteor/babel dependency with @babel@7.17.x
+  
+* `@meteorjs/babel@7.15.1`
+  - Use babel@7.17.x
+  
+* `babel-compiler@7.8.1`
+  - Use latest @meteor/babel dependency with @babel@7.17.x
+  
+* `hot-module-replacement@0.5.1`
+  - Fix issues with HMR and meteor build --debug [PR](https://github.com/meteor/meteor/pull/11922)
+  
+* `webapp@1.13.1`
+  - Fix issues with HMR and meteor build --debug [PR](https://github.com/meteor/meteor/pull/11922)
+
+#### Independent Releases
+
+* `mongo@1.14.6` at 2022-02-18
+  - Remove false-positive warning for supported operation a.0.b:{}
+* `mongo@1.14.5` at 2022-02-16
+  - Fix multiple array operators bug and add support for debug messages
+  - Fix isArrayOperator function regexp false-positive
 * `mongo@1.14.4` at 2022-02-11
   - Fix sync return for insert methods inside _collection private method [PR](https://github.com/meteor/meteor/pull/11907)
   - Support the new "projection" field inside the decision of using oplog for a published cursor or not [PR](https://github.com/meteor/meteor/pull/11908)
