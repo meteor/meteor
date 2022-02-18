@@ -46,6 +46,8 @@
 
 #### Independent Releases
 
+* `mongo@1.14.6` at 2022-02-18
+  - Remove false-positive warning for supported operation a.0.b:{}
 * `mongo@1.14.5` at 2022-02-16
   - Fix multiple array operators bug and add support for debug messages
   - Fix isArrayOperator function regexp false-positive

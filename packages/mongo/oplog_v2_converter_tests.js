@@ -197,4 +197,15 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
       },
     })
   );
+  test.equal(
+    JSON.stringify(
+      oplogV2V1Converter({
+        $v: 2,
+        diff: {
+          sarray: { a: true, s2: { u: { a: 'something' } } },
+        },
+      })
+    ),
+    JSON.stringify({ $v: 2, $set: { 'array.2.a': 'something' } })
+  );
 });

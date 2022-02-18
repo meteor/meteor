@@ -86,11 +86,13 @@ const nestedOplogEntryParsers = (oplogEntry, prefixKey = '') => {
         );
       }
     } else {
-      // we are looking at a "sSomething" that is actually a nested object set
+      // we are looking at something that we expected to be "sSomething" but is null after removing s
+      // this happens on "a": true which is a simply ack that comes embeded
+      // we dont need to call recursion on this case, only ignore it
       if (!actualKeyNameWithoutSPrefix || actualKeyNameWithoutSPrefix === '') {
-        logOplogEntryError(oplogEntry, prefixKey, key);
         return null;
       }
+      // we are looking at a "sSomething" that is actually a nested object set
       logConverterCalls(oplogEntry, prefixKey, key);
       sFieldsOperators.push(
         nestedOplogEntryParsers(
