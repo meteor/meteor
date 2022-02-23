@@ -62,6 +62,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this
 
 * `accounts-base@2.2.2`
   - Fix an issue where an extra field defined in `defaultFieldSelector` would not get published to the client
+  - Proving the login results to the `_onLoginHook` when finishing login inside `callLoginMethod`. [PR](https://github.com/meteor/meteor/pull/11913).
 
 * `github-oauth@1.4.0`
   - More data will be retrieved and saved under `services.github` on the user account.
