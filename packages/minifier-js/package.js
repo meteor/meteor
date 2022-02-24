@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  terser: "5.9.0"
+  esbuild: "0.14.23"
 });
 
 Package.onUse(function (api) {
