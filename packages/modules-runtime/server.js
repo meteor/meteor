@@ -48,7 +48,7 @@ var Module = meteorInstall.Module;
 Module.prototype.useNode = function () {
   if (typeof npmRequire !== "function") {
     // Can't use Node if npmRequire is not defined.
-    return false;
+    throw new Error('npmRequire must be defined to use useNode');
   }
 
   var parts = this.id.split("/");
@@ -62,7 +62,7 @@ Module.prototype.useNode = function () {
   if (parts.indexOf("node_modules", start) < 0) {
     // Don't try to use Node for modules that aren't in node_modules
     // directories.
-    return false;
+    throw new Error('useNode can not be used to import modules outside of node_modules');
   }
 
   // See tools/static-assets/server/npm-require.js for the implementation
@@ -70,6 +70,4 @@ Module.prototype.useNode = function () {
   // modules (typically, a .js file in a package with "type": "module" in
   // its package.json), as of Node 12.16.0 (Meteor 1.9.1).
   this.exports = npmRequire(this.id);
-
-  return true;
 };
