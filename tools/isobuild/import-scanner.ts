@@ -291,7 +291,7 @@ function setImportedStatus(file: File, status: string | boolean) {
 // of ImportScanner (which do not persist across builds).
 const LRU = require("lru-cache");
 const IMPORT_SCANNER_CACHE = new LRU({
-  max: 1024*1024,
+  max: Math.pow(2, 22),
   length(ids: Record<string, ImportInfo>) {
     let total = 40; // size of key
     each(ids, (_info, id) => { total += id.length; });
