@@ -65,12 +65,6 @@ Module.prototype.useNode = function () {
     return false;
   }
 
-  try {
-    npmRequire.resolve(this.id);
-  } catch (e) {
-    return false;
-  }
-
   // See tools/static-assets/server/npm-require.js for the implementation
   // of npmRequire. Note that this strategy fails when importing ESM
   // modules (typically, a .js file in a package with "type": "module" in
