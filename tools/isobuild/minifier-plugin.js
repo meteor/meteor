@@ -36,6 +36,9 @@ class InputFile extends buildPluginModule.InputFile {
   getArch() {
     return this._arch;
   }
+  getSourcePath() {
+    return this._source.sourcePath || null;
+  }
 
   error({message, sourcePath, line, column, func}) {
     const relPath = this.getPathInBundle();
