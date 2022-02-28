@@ -77,6 +77,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this
 * `google-oauth@1.4.2`
   - Migrate from `http` to `fetch`
 
+* `modules-runtime@0.13.0`
+  - Fix some npm modules being imported as an empty object. [PR](https://github.com/meteor/meteor/pull/11954), [Issue 1](https://github.com/meteor/meteor/issues/11900), [Issue 2](https://github.com/meteor/meteor/issues/11853).
+
 #### Independent Releases
 
 ## v2.6.1, 2022-02-18

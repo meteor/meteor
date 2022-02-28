@@ -51,6 +51,15 @@ Module.prototype.useNode = function () {
     throw new Error('npmRequire must be defined to use useNode');
   }
 
+  try {
+    npmRequire.resolve(this.id);
+  } catch (e) {
+    throw new Error(
+      `Cannot find module "${this.id}". ` +
+      `Try installing the npm package or make sure it is not a devDependency.`
+    );
+  }
+
   // See tools/static-assets/server/npm-require.js for the implementation
   // of npmRequire. Note that this strategy fails when importing ESM
   // modules (typically, a .js file in a package with "type": "module" in
