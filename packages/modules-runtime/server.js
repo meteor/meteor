@@ -51,20 +51,6 @@ Module.prototype.useNode = function () {
     throw new Error('npmRequire must be defined to use useNode');
   }
 
-  var parts = this.id.split("/");
-  var start = 0;
-  if (parts[start] === "") ++start;
-  if (parts[start] === "node_modules" &&
-      parts[start + 1] === "meteor") {
-    start += 2;
-  }
-
-  if (parts.indexOf("node_modules", start) < 0) {
-    // Don't try to use Node for modules that aren't in node_modules
-    // directories.
-    throw new Error('useNode can not be used to import modules outside of node_modules');
-  }
-
   // See tools/static-assets/server/npm-require.js for the implementation
   // of npmRequire. Note that this strategy fails when importing ESM
   // modules (typically, a .js file in a package with "type": "module" in
