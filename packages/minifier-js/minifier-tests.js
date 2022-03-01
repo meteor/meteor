@@ -6,7 +6,7 @@ Tinytest.add('minifier-js - verify how esbuild handles an empty string', (test) 
 
 Tinytest.add('minifier-js - verify esbuild is able to minify valid javascript', (test) => {
   let result = meteorJsMinify('function add(first,second){return first + second; }\n');
-  test.equal(result.code, 'function add(n,d){return n+d}');
+  test.equal(result.code, 'function add(n,d){return n+d}\n');
   test.equal(result.minifier, 'esbuild');
 });
 
