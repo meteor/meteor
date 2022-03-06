@@ -892,6 +892,7 @@ class OutputResource {
       sourcePath,
       targetPath,
       servePath,
+      sourceRoot: resourceSlot.packageSourceBatch.sourceRoot,
       // Remember the source hash so that changes to the source that
       // disappear after compilation can still contribute to the hash.
       // Bypassing SourceResource.hash getter so if the compiler plugin doesn't

@@ -1126,11 +1126,17 @@ class Target {
           return null;
         }
 
+        let sourcePath;
+        if (resource.data && resource.sourceRoot && resource.sourcePath) {
+          sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
+        }
+
         const file = new File({
           info: 'resource ' + resource.servePath,
           arch: target.arch,
           data: resource.data,
           hash: resource.hash,
+          sourcePath
         });
 
         file.setTargetPathFromRelPath(
@@ -1279,13 +1285,18 @@ class Target {
             return;
           }
 
+          let sourcePath;
+          if (resource.data && resource.sourceRoot && resource.sourcePath) {
+            sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
+          }
           const f = new File({
             info: 'resource ' + resource.servePath,
             arch: this.arch,
             data: resource.data,
             hash: resource.hash,
             cacheable: false,
-            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable
+            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable,
+            sourcePath
           });
 
           const relPath = stripLeadingSlash(resource.servePath);
