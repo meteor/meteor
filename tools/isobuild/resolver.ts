@@ -31,6 +31,7 @@ nativeNames.forEach((id: string) => {
   // identifier will not be imported at runtime, but the modules it
   // depends on are necessary for the original import to succeed.
   nativeModulesMap[id] =  "meteor-node-stubs/deps/" + id;
+  nativeModulesMap[`node:${id}`] =  "meteor-node-stubs/deps/" + id;
 });
 
 export type ResolverOptions = {
