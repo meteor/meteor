@@ -36,6 +36,8 @@ The items in this section are the core team's priorities.
 
 ### Next major releases
 
+- Support building mobile apps using CapacitorJS;
+- Explore bringing Redis-oplog to core;
 - Support Top-level await;
 - Remove Fibers dependency from Meteor Public APIs;
 - Make Fibers optional on runtime, or remove it entirely;
@@ -46,7 +48,6 @@ The items in this section are the core team's priorities.
 - ARM Support;
 - HTTP/3 Support;
 - MongoDB Change Streams Support;
-- Explore bringing Redis-oplog to core;
 - Explore Flutter as a front-end for Meteor apps;
 
 ## Community
