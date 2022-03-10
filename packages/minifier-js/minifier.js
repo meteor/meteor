@@ -1,6 +1,6 @@
 let esbuild;
 
-const terserMinify = async (source, options, callback) => {
+const esbuildMinify = async (source, options, callback) => {
   esbuild = esbuild || Npm.require('esbuild');
   try {
     const result = await esbuild.transform(source, options);
@@ -28,7 +28,7 @@ export const meteorJsMinify = function(source) {
     minify: true,
   };
 
-  const terserJsMinify = Meteor.wrapAsync(terserMinify);
+  const terserJsMinify = Meteor.wrapAsync(esbuildMinify);
   let esbuildResult;
   try {
     esbuildResult = terserJsMinify(source, options);
