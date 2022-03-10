@@ -47,7 +47,7 @@ class MeteorMinifier {
                   let originalFilePath = lines[i - 2].substring(3).replace(/\s+\/\//, "");
 
                   throw new Error(
-                      `terser minification error (${error.name}:${error.message})\n` +
+                      `esbuild minification error (${error.name}:${error.message})\n` +
                       `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` +
                       `Line content: ${lineContent}\n`);
               }
@@ -76,7 +76,7 @@ class MeteorMinifier {
         catch (err) {
           maybeThrowMinifyErrorBySourceFile(err, file);
 
-          throw new Error(`terser minification error (${err.name}:${err.message})\n` +
+          throw new Error(`esbuild minification error (${err.name}:${err.message})\n` +
                           `Bundled file: ${file.getPathInBundle()}  (${err.line}:${err.col})\n`);
         }
 
