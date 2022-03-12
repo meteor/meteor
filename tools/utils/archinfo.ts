@@ -157,14 +157,15 @@ export function host() {
 
     if (platform === "darwin") {
       // Can't just test uname -m = x86_64, because Snow Leopard can
-      // return other values.
+      // return other values. 
+      // Added code for arm64 based on issue https://github.com/meteor/meteor/issues/11838
       const arch = run('uname', '-p');
 
-      if ((arch !== "i386" && arch !== "arm") ||
+      if ((arch !== "i386" && arch !== "arm" && arch !== "arm64") ||
           run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1") {
         throw new Error("Only 64-bit Intel and M1 processors are supported on OS X");
       }
-      if(arch === "arm"){
+      if(arch === "arm" || arch === "arm64"){
         _host  = "os.osx.arm64";
       }else{
         _host  = "os.osx.x86_64";
