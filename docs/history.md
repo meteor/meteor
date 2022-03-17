@@ -6,7 +6,7 @@
 * New core package: `accounts-2fa`
 * Support for 2FA in `accounts-password` and `accounts-passwordless`
 * PostCSS's plugins are run by `standard-minifier-css` if the app has PostCSS configured
-* App skeletons and test packages were updated to `meteor-node-stubs@1.2.0`
+* App skeletons and test packages were updated to `meteor-node-stubs@1.2.1`
 
 #### Breaking Changes
 
@@ -81,7 +81,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this
 * `modules-runtime@0.13.0`
   - Fix some npm modules being imported as an empty object. [PR](https://github.com/meteor/meteor/pull/11954), [Issue 1](https://github.com/meteor/meteor/issues/11900), [Issue 2](https://github.com/meteor/meteor/issues/11853).
 
-* `meteor-node-stubs@1.2`
+* `meteor-node-stubs@1.2.1`
   - Adds support for [node:](https://nodejs.org/api/esm.html#node-imports) imports.
 
 #### Independent Releases
