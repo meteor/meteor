@@ -131,7 +131,7 @@ Meteor.methods({
     }
 
     if (!selector) {
-      selector = { $or: [{ _id: userId }, { username: userId }] };
+      selector = { _id: userId };
     }
 
     return Accounts._is2faEnabledForUser(selector);
