@@ -12,11 +12,25 @@ Npm.depends({
 Package.onUse(function(api) {
   api.use(['accounts-base'], ['client', 'server']);
 
-  // Export Accounts (etc) to packages using this one.
+  // Export Accounts (etc.) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
 
   api.use('ecmascript');
+  api.use('check', 'server');
 
   api.addFiles(['2fa-client.js'], 'client');
   api.addFiles(['2fa-server.js'], 'server');
+});
+
+Package.onTest(function(api) {
+  api.use([
+    'accounts-base',
+    'accounts-password',
+    'ecmascript',
+    'tinytest',
+    'random',
+    'accounts-2fa',
+  ]);
+
+  api.mainModule('server_tests.js', 'server');
 });

@@ -10,7 +10,7 @@ const profile = {
   name: username,
   [excludeField]: excludeValue,
   [defaultExcludeField]: excludeValue,
-}
+};
 
 const logoutAndCreateUser = (test, done, nextTests) => {
   Meteor.logout(() => {

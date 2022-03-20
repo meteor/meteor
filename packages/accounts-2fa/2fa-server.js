@@ -2,6 +2,7 @@ import { Accounts } from 'meteor/accounts-base';
 import twofactor from 'node-2fa';
 import QRCode from 'qrcode-svg';
 import { Meteor } from 'meteor/meteor';
+import { check, Match } from 'meteor/check';
 
 Accounts._is2faEnabledForUser = selector => {
   if (!Meteor.isServer) {
@@ -13,7 +14,7 @@ Accounts._is2faEnabledForUser = selector => {
 
   if (typeof selector === 'string') {
     if (!selector.includes('@')) {
-      selector = { username: selector };
+      selector = { $or: [{ _id: selector }, { username: selector }] };
     } else {
       selector = { email: selector };
     }
@@ -21,7 +22,7 @@ Accounts._is2faEnabledForUser = selector => {
 
   const user = Meteor.users.findOne(selector) || {};
   const { services: { twoFactorAuthentication } = {} } = user;
-  return (
+  return !!(
     twoFactorAuthentication &&
     twoFactorAuthentication.secret &&
     twoFactorAuthentication.type === 'otp'
@@ -43,6 +44,7 @@ Accounts._isTokenValid = (secret, code) => {
 
 Meteor.methods({
   generate2faActivationQrCode(appName) {
+    check(appName, String);
     const user = Meteor.user();
 
     if (!user) {
@@ -52,28 +54,27 @@ Meteor.methods({
       );
     }
 
-    const { username } = user;
-
     const { secret, uri } = twofactor.generateSecret({
       name: appName.trim(),
-      account: username,
+      account: user.username || user._id
     });
     const svg = new QRCode(uri).svg();
 
     Meteor.users.update(
-      { username },
+      { _id: user._id },
       {
         $set: {
           'services.twoFactorAuthentication': {
-            secret,
-          },
-        },
+            secret
+          }
+        }
       }
     );
 
     return svg;
   },
   enableUser2fa(code) {
+    check(code, String);
     const user = Meteor.user();
 
     if (!user) {
@@ -81,8 +82,7 @@ Meteor.methods({
     }
 
     const {
-      services: { twoFactorAuthentication },
-      username,
+      services: { twoFactorAuthentication }
     } = user;
 
     if (!twoFactorAuthentication || !twoFactorAuthentication.secret) {
@@ -96,37 +96,44 @@ Meteor.methods({
     }
 
     Meteor.users.update(
-      { username },
+      { _id: user._id },
       {
         $set: {
           'services.twoFactorAuthentication': {
             ...twoFactorAuthentication,
-            type: 'otp',
-          },
-        },
+            type: 'otp'
+          }
+        }
       }
     );
   },
   disableUser2fa() {
-    const user = Meteor.user();
+    const userId = Meteor.userId();
 
-    if (!user) {
+    if (!userId) {
       throw new Meteor.Error(400, 'No user logged in.');
     }
 
     Meteor.users.update(
-      { username: user.username },
+      { _id: userId },
       {
         $unset: {
-          'services.twoFactorAuthentication': 1,
-        },
+          'services.twoFactorAuthentication': 1
+        }
       }
     );
   },
   has2faEnabled(selector) {
-    if (!Meteor.user()) {
+    check(selector, Match.Maybe(Match.OneOf(String, Object)));
+    const userId = Meteor.userId();
+    if (!userId) {
       throw new Meteor.Error(400, 'No user logged in.');
     }
+
+    if (!selector) {
+      selector = { $or: [{ _id: userId }, { username: userId }] };
+    }
+
     return Accounts._is2faEnabledForUser(selector);
-  },
+  }
 });
