@@ -15,8 +15,8 @@ The first step, in order to enable 2FA, is to generate a QR code so that the use
 
 {% apibox "Accounts.generate2faActivationQrCode" "module":"accounts-base" %}
 
-Receives an `appName` which is the name of your app that will show up when the user scans the QR code. Also, a callback called with a QR code in SVG format on success or a single `Error` argument
-on failure.
+Receives an `appName` which is the name of your app that will show up when the user scans the QR code. Also, a callback called with a QR code in SVG format and QR secret on success 
+or a single `Error` argument on failure.
 
 On success, this function will also add an object to the logged user's services object containing the QR secret:
 
