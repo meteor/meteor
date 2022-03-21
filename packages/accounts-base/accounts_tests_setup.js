@@ -1,9 +1,9 @@
-const getTokenFromSecret = ({ username, secret: secretParam }) => {
+const getTokenFromSecret = ({ selector, secret: secretParam }) => {
   let secret = secretParam;
 
   if (!secret) {
     const { services: { twoFactorAuthentication } = {} } =
-      Meteor.users.findOne({ username }) || {};
+      Meteor.users.findOne(selector) || {};
     if (!twoFactorAuthentication) {
       throw new Meteor.Error(500, 'twoFactorAuthentication not set.');
     }
@@ -18,9 +18,9 @@ Meteor.methods({
   removeAccountsTestUser(username) {
     Meteor.users.remove({ username });
   },
-  forceEnableUser2fa(username, secret) {
+  forceEnableUser2fa(selector, secret) {
     Meteor.users.update(
-      { username },
+      selector,
       {
         $set: {
           'services.twoFactorAuthentication': {
@@ -30,7 +30,7 @@ Meteor.methods({
         },
       }
     );
-    return getTokenFromSecret({ username, secret });
+    return getTokenFromSecret({ selector, secret });
   },
   getTokenFromSecret,
 });

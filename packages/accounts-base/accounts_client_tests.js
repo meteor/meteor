@@ -53,7 +53,7 @@ const removeTestUser = done => {
 };
 
 const forceEnableUser2fa = done => {
-  Meteor.call('forceEnableUser2fa', username, secret2fa, (err, token) => {
+  Meteor.call('forceEnableUser2fa', { username }, secret2fa, (err, token) => {
     done(token);
   });
 };
@@ -61,7 +61,7 @@ const forceEnableUser2fa = done => {
 const getTokenFromSecret = done => {
   Meteor.call(
     'getTokenFromSecret',
-    { username },
+    { selector: { username } },
     (err, token) => {
       done(token);
     }
