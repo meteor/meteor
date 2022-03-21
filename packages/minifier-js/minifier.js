@@ -7,8 +7,16 @@ const swcMinify = async (source, options, callback) => {
     callback(null, result);
     return result;
   } catch (e) {
-    callback(e);
-    return e;
+    // the older minifier (esbuild) returned those fields, swc does not.
+    // injecting those fields so tests expecting them don't break
+    const error = Object.assign(e, {
+      name: 'minification error',
+      filename: '',
+      line: '',
+      col: '',
+    });
+    callback(error);
+    return error;
   }
 };
 
