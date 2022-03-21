@@ -52,16 +52,16 @@ Meteor.methods({
       );
     }
 
-    const { username } = user;
+    const { _id, username, email } = user;
 
     const { secret, uri } = twofactor.generateSecret({
       name: appName.trim(),
-      account: username,
+      account: username || email,
     });
     const svg = new QRCode(uri).svg();
 
     Meteor.users.update(
-      { username },
+      { _id },
       {
         $set: {
           'services.twoFactorAuthentication': {
@@ -81,8 +81,8 @@ Meteor.methods({
     }
 
     const {
+      _id,
       services: { twoFactorAuthentication },
-      username,
     } = user;
 
     if (!twoFactorAuthentication || !twoFactorAuthentication.secret) {
@@ -96,7 +96,7 @@ Meteor.methods({
     }
 
     Meteor.users.update(
-      { username },
+      { _id },
       {
         $set: {
           'services.twoFactorAuthentication': {
@@ -115,7 +115,7 @@ Meteor.methods({
     }
 
     Meteor.users.update(
-      { username: user.username },
+      { _id: user._id },
       {
         $unset: {
           'services.twoFactorAuthentication': 1,
