@@ -85,7 +85,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this
   - Adds support for [node:](https://nodejs.org/api/esm.html#node-imports) imports.
 
 * `minifier-jss@2.8.0`
-  - Replacing 
+  - Replacing terser for SWC. It will fix this [issue](https://github.com/meteor/meteor/issues/11721) and [this](https://github.com/meteor/meteor/issues/11930) one. As well as decreasing minification time. [PR](https://github.com/meteor/meteor/pull/11982).
 
 #### Independent Releases
 
