@@ -5,7 +5,8 @@
 * Typescript `4.5.4` upgrade
 * New core package: `accounts-2fa`
 * Support for 2FA in `accounts-password` and `accounts-passwordless`
-* PostCSS plugins are run by `standard-minifier-css` if the app has PostCSS configured
+* PostCSS's plugins are run by `standard-minifier-css` if the app has PostCSS configured
+* App skeletons and test packages were updated to `meteor-node-stubs@1.2.1`
 
 #### Breaking Changes
 
@@ -76,6 +77,12 @@ Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this
 
 * `google-oauth@1.4.2`
   - Migrate from `http` to `fetch`
+
+* `modules-runtime@0.13.0`
+  - Fix some npm modules being imported as an empty object. [PR](https://github.com/meteor/meteor/pull/11954), [Issue 1](https://github.com/meteor/meteor/issues/11900), [Issue 2](https://github.com/meteor/meteor/issues/11853).
+
+* `meteor-node-stubs@1.2.1`
+  - Adds support for [node:](https://nodejs.org/api/esm.html#node-imports) imports.
 
 #### Independent Releases
 
@@ -154,13 +161,13 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 #### Meteor Version Release
 
 * `mongo@1.14.0`
+    - `applySkipLimit` option for count() on find cursors is no longer supported. Read more about it [here](https://guide.meteor.com/2.6-migration.html), in the `Cursor.count()` section.
     - internal result of operations inside Node.js MongoDB driver have changed. If you are depending on rawCollection results (not only the effect inside the DB), please review the expected format as we have done [here](https://github.com/meteor/meteor/blob/155ae639ee590bae66237fc1c29295072ec92aef/packages/mongo/mongo_driver.js#L658)
     - useUnifiedTopology is not an option anymore, it defaults to true.
     - native parser is not an option anymore, it defaults to false in the mongo connection.
     - poolSize not an option anymore, we are using max/minPoolSize for the same behavior on mongo connection.
     - fields option is deprecated, we are maintaining a translation layer to "projection" field (now prefered) until the next minor version, where we will start showing alerts.
     - _ensureIndex is now showing a deprecation message
-    - applySkipLimit option for count() on find cursors is no longer supported.
     - we are maintaining a translation layer for the new oplog format, so if you read or rely on any behavior of it please read our oplog_v2_converter.js code
     - update/insert/remove behavior is maintained in the Meteor way, documented in our docs, but we are now using replaceOne/updateOne/updateMany internally. This is subject to changes in the API rewrite of MongoDB without Fibers AND if you are using rawCollection directly you have to review your methods otherwise you will see deprecation messages if you are still using the old mongodb style directly.
     - waitForStepDownOnNonCommandShutdown=false is not needed anymore when spawning the mongodb process

@@ -6,11 +6,11 @@ Object.keys(map).forEach(function (id) {
     var aliasParts = module.id.split("/");
     aliasParts.pop();
     aliasParts.push("node_modules", map[id]);
-    exports[id] = meteorAliases[id + ".js"] =
+    exports[id] = meteorAliases[id + ".js"] = meteorAliases["node:" + id] =
       aliasParts.join("/");
   } else {
     exports[id] = map[id];
-    meteorAliases[id + ".js"] = function(){};
+    meteorAliases[id + ".js"] = meteorAliases["node:" + id] = function(){};
   }
 });
 

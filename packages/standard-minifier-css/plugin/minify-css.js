@@ -127,8 +127,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
         const result = await postcssConfig.postcss(
           postcssConfig.plugins
         ).process(content, {
-          // TODO: provide a better way to get the file's path
-          from: process.cwd() + file._source.url?.replace('/__cordova', ''),
+          from: file.getSourcePath(),
           parser: postcssConfig.options.parser
         });
 
