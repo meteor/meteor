@@ -652,8 +652,12 @@ const helpmentOptions = {
 // connection available.
 // Run your project with --production flag to simulate script-src hashing
 if (!usesHttps && Meteor.isDevelopment) {
-  delete opt.contentSecurityPolicy.directives.blockAllMixedContent
-  opt.contentSecurityPolicy.directives.scriptSrc = [self, unsafeEval, unsafeInline]
+  delete helpmentOptions.contentSecurityPolicy.blockAllMixedContent;
+  helpmentOptions.contentSecurityPolicy.directives.scriptSrc = [
+    self,
+    unsafeEval,
+    unsafeInline,
+  ];
 }
 
 // finally pass the options to helmet to make them apply
