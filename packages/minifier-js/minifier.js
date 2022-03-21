@@ -1,23 +1,14 @@
-let esbuild;
+let swc;
 
-const esbuildMinify = async (source, options, callback) => {
-  esbuild = esbuild || Npm.require('esbuild');
+const swcMinify = async (source, options, callback) => {
+  swc = swc || Npm.require('@swc/core');
   try {
-    const result = await esbuild.transform(source, options);
+    const result = await swc.minify(source, options);
     callback(null, result);
     return result;
   } catch (e) {
-    const { text, location } = e.errors[0];
-    const newError = {
-      name: 'Error',
-      message: text,
-      stack: e.stack,
-      filename: location.file,
-      line: location.line,
-      col: location.column,
-    };
-    callback(newError);
-    return newError;
+    callback(e);
+    return e;
   }
 };
 
@@ -25,10 +16,16 @@ export const meteorJsMinify = function(source) {
   const result = {};
 
   const options = {
-    minify: true,
+    mangle: true,
+    compress: {
+      drop_debugger: false, // remove debugger; statements
+      unused: false, // drop unreferenced functions and variables
+      dead_code: true, // remove unreachable code
+      typeofs: false, // set to false due to known issues in IE10
+    },
   };
 
-  const terserJsMinify = Meteor.wrapAsync(esbuildMinify);
+  const terserJsMinify = Meteor.wrapAsync(swcMinify);
   let esbuildResult;
   try {
     esbuildResult = terserJsMinify(source, options);
@@ -38,7 +35,7 @@ export const meteorJsMinify = function(source) {
 
   // this is kept to maintain backwards compatability
   result.code = esbuildResult.code;
-  result.minifier = 'esbuild';
+  result.minifier = 'swc';
 
   return result;
 };

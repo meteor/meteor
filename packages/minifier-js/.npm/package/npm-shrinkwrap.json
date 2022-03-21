@@ -1,15 +1,20 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
-    "esbuild": {
-      "version": "0.14.23",
-      "resolved": "https://registry.npmjs.org/esbuild/-/esbuild-0.14.23.tgz",
-      "integrity": "sha512-XjnIcZ9KB6lfonCa+jRguXyRYcldmkyZ99ieDksqW/C8bnyEX299yA4QH2XcgijCgaddEZePPTgvx/2imsq7Ig=="
+    "@swc/core": {
+      "version": "1.2.155",
+      "resolved": "https://registry.npmjs.org/@swc/core/-/core-1.2.155.tgz",
+      "integrity": "sha512-rNJ4NWL0vqwAqHk2m/GKnveDHttsZGGDWxht3iQFdVMPHdreHTln7dYJl1U+Vzw5FG/nS/uqz+fc+Jd4EhAF/w=="
     },
-    "esbuild-linux-64": {
-      "version": "0.14.23",
-      "resolved": "https://registry.npmjs.org/esbuild-linux-64/-/esbuild-linux-64-0.14.23.tgz",
-      "integrity": "sha512-H0gztDP60qqr8zoFhAO64waoN5yBXkmYCElFklpd6LPoobtNGNnDe99xOQm28+fuD75YJ7GKHzp/MLCLhw2+vQ=="
+    "@swc/core-linux-x64-gnu": {
+      "version": "1.2.155",
+      "resolved": "https://registry.npmjs.org/@swc/core-linux-x64-gnu/-/core-linux-x64-gnu-1.2.155.tgz",
+      "integrity": "sha512-hIi6epWH05yAVTrxB81/5/yILT/5mhw+n52JrZcUT1CkxCZJmPPLHrlLWR/A4QtPpwHUdNm01vn0hBWdDHWtxQ=="
+    },
+    "@swc/core-linux-x64-musl": {
+      "version": "1.2.155",
+      "resolved": "https://registry.npmjs.org/@swc/core-linux-x64-musl/-/core-linux-x64-musl-1.2.155.tgz",
+      "integrity": "sha512-HI2117+Y9vXwPIJOCWhAQHulyD1o+xNfiwjJeF42ukxKsBLoDm1STwNKbx8PUgWTAVwade9UG2YCskVX89OOGA=="
     }
   }
 }

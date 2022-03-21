@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  esbuild: "0.14.23"
+  '@swc/core': "1.2.155"
 });
 
 Package.onUse(function (api) {
