@@ -61,7 +61,7 @@ const forceEnableUser2fa = done => {
 const getTokenFromSecret = done => {
   Meteor.call(
     'getTokenFromSecret',
-    { username },
+    { selector: { username } },
     (err, token) => {
       done(token);
     }
