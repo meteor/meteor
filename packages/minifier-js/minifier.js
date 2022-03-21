@@ -33,16 +33,16 @@ export const meteorJsMinify = function(source) {
     },
   };
 
-  const terserJsMinify = Meteor.wrapAsync(swcMinify);
-  let esbuildResult;
+  const minify = Meteor.wrapAsync(swcMinify);
+  let minifyResult;
   try {
-    esbuildResult = terserJsMinify(source, options);
+    minifyResult = minify(source, options);
   } catch (e) {
     throw e;
   }
 
   // this is kept to maintain backwards compatability
-  result.code = esbuildResult.code;
+  result.code = minifyResult.code;
   result.minifier = 'swc';
 
   return result;

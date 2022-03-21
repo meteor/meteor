@@ -84,6 +84,9 @@ Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this
 * `meteor-node-stubs@1.2.1`
   - Adds support for [node:](https://nodejs.org/api/esm.html#node-imports) imports.
 
+* `minifier-jss@2.8.0`
+  - Replacing 
+
 #### Independent Releases
 
 ## v2.6.1, 2022-02-18
