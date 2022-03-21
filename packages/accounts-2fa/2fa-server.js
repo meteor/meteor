@@ -71,7 +71,7 @@ Meteor.methods({
       }
     );
 
-    return svg;
+    return { svg, secret };
   },
   enableUser2fa(code) {
     const user = Meteor.user();
