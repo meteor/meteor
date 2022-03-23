@@ -9,12 +9,12 @@ selftest.define('custom minifier - devel vs prod', function (options) {
   s.cd('myapp');
 
   s.testWithAllClients(function (run) {
-    run.waitSecs(5);
+    run.waitSecs(20);
     run.match('myapp');
     run.match('proxy');
 
     run.connectClient();
-    run.waitSecs(20);
+    run.waitSecs(4800);
 
     // XXX when minifiers start getting applied to server target, this
     // outcome would change
@@ -30,12 +30,12 @@ selftest.define('custom minifier - devel vs prod', function (options) {
     testFile: 'customer-minifier.js' });
 
   s.testWithAllClients(function (run) {
-    run.waitSecs(5);
+    run.waitSecs(20);
     run.match('myapp');
     run.match('proxy');
 
     run.connectClient();
-    run.waitSecs(20);
+    run.waitSecs(250);
 
     // XXX when minifiers start getting applied to server target, this
     // outcome would change

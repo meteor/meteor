@@ -62,7 +62,8 @@ architecture of the pending HTTP response (e.g. "web.browser").
 Here is a basic example of `onPageLoad` usage on the server:
 
 ```js
-import React from "react";
+import 
+from "react";
 import { renderToString } from "react-dom/server";
 import { onPageLoad } from "meteor/server-render";
 
@@ -160,11 +161,7 @@ In some cases you want to customize meta tags or something else in your response
 You can extract information from the request using the `sink` object.
 
 ```js
-import React from "react";
 import { onPageLoad } from "meteor/server-render";
-import { renderToNodeStream } from "react-dom/server";
-import { ServerStyleSheet } from "styled-components"
-import App from "/imports/Server";
 
 const getBaseUrlFromHeaders = headers => {
   const protocol = headers['x-forwarded-proto'];

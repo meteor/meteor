@@ -51,7 +51,7 @@ var SessionDocumentView = function () {
 
 DDPServer._SessionDocumentView = SessionDocumentView;
 
-_.extend(SessionDocumentView.prototype, {
+Object.assign(SessionDocumentView.prototype, {
 
   getFields: function () {
     var self = this;

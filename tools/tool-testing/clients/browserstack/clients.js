@@ -37,13 +37,6 @@ module.exports = [
   },
   {
     selenium: {
-      platform: "WINDOWS",
-      browserName: "internet explorer",
-      version: "9",
-    },
-  },
-  {
-    selenium: {
       platform: "MAC",
       browserName: "safari",
       version: "11",
@@ -55,7 +48,7 @@ module.exports = [
       browserName: "android",
     },
     browserstack: {
-      device: "Samsung Galaxy S7",
+      device: "Samsung Galaxy Note 10",
       realMobile: true
     },
   },
