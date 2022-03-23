@@ -16,7 +16,15 @@ Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, you
 
 <h2 id="installation">Installation</h2>
 
-Install the latest official Meteor release from your terminal:
+Install the latest official Meteor release from your terminal running one of the commands below.
+
+For Linux and OS X:
+
+```bash
+curl https://install.meteor.com/ | sh
+```
+
+For Windows (Node.js is required):
 
 ```bash
 npm install -g meteor
@@ -47,16 +55,6 @@ arch -x86_64 npm install -g meteor
 ```
 
 or select Terminal in the Applications folder, press CMD(⌘)+I and check the "Open using Rosetta" option.
-
-<h2 id="legacy-install">Alternative Installation Method</h2>
-
-For Linux and OS X, we still provide an alternative installation method which uses a bash script and doesn't depend on Node.js.
-
-```bash
-curl https://install.meteor.com/ | sh
-```
-
-We recommend everybody to use the npm installer but we are still going to maintain this script as well.
 
 <h2 id="meteor-docker">Run Meteor inside Docker</h2>
 
