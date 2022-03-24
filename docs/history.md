@@ -1,4 +1,4 @@
-## v2.7, UNRELEASED
+## v2.7, 2022-03-24
 
 #### Highlights
 * TailwindCSS 3.x support
