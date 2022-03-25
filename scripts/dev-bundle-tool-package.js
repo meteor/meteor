@@ -10,12 +10,12 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "6.14.15",
+    npm: "6.14.16",
     pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
     "node-gyp": "8.0.0",
     "node-pre-gyp": "0.15.0",
-    typescript: "4.3.5",
-    "@meteorjs/babel": "7.15.1",
+    typescript: "4.5.4",
+    "@meteorjs/babel": "7.16.0-beta.1",
     // Keep the versions of these packages consistent with the versions
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.9.0",

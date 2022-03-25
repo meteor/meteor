@@ -20,7 +20,7 @@ export function transform(callback: LineTransformer) {
     let line = chunk.toString("utf8");
     try {
       line = await callback(line);
-    } catch (error) {
+    } catch (error: any) {
       done(error);
       return;
     }

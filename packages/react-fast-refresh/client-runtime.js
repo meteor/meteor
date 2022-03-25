@@ -94,15 +94,14 @@ module.hot.onRequire({
   after: function (module) {
     // TODO: handle modules with errors
 
-    const beforeData = moduleInitialState.get(module);
-    if (!beforeData) {
+    const beforeStates = moduleInitialState.get(module);
+    const beforeState = beforeStates && beforeStates.pop();
+    if (!beforeState) {
       return;
     }
 
-    moduleInitialState.delete(module);
-
-    window.$RefreshReg$ = beforeData.prevRefreshReg;
-    window.$RefreshSig$ = beforeData.prevRefreshSig;
+    window.$RefreshReg$ = beforeState.prevRefreshReg;
+    window.$RefreshSig$ = beforeState.prevRefreshSig;
     if (isReactRefreshBoundary(module.exports)) {
       registerExportsForReactRefresh(module.id, module.exports);
       module.hot.accept();
@@ -118,6 +117,13 @@ module.exports = function setupModule (module) {
     return;
   }
 
+  let beforeStates = moduleInitialState.get(module);
+
+  if (beforeStates === undefined) {
+    beforeStates = [];
+    moduleInitialState.set(module, beforeStates);
+  }
+
   var prevRefreshReg = window.$RefreshReg$;
   var prevRefreshSig = window.$RefreshSig$;
 
@@ -128,7 +134,7 @@ module.exports = function setupModule (module) {
   }
   window.$RefreshSig$ = RefreshRuntime.createSignatureFunctionForTransform;
 
-  moduleInitialState.set(module, {
+  beforeStates.push({
     prevRefreshReg: prevRefreshReg,
     prevRefreshSig: prevRefreshSig
   });

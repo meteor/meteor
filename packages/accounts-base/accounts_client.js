@@ -361,7 +361,7 @@ export class AccountsClient extends AccountsCommon {
 
       // Make the client logged in. (The user data should already be loaded!)
       this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
-      loginCallbacks({ loginDetails: { type: result.type } });
+      loginCallbacks({ loginDetails: result });
     };
 
     if (!options._suppressLoggingIn) {
