@@ -193,7 +193,7 @@ Accounts.registerLoginHandler("password", options => {
   // First the login is validated, then the code situation is checked
   if (
     !result.error &&
-    Accounts._check2faEnabled(user)
+    Accounts._check2faEnabled?.(user)
   ) {
     if (!options.code) {
       Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
