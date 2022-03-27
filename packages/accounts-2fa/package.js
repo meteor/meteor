@@ -33,4 +33,5 @@ Package.onTest(function(api) {
   ]);
 
   api.mainModule('server_tests.js', 'server');
+  api.mainModule('client_tests.js', 'client');
 });
