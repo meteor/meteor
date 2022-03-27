@@ -127,7 +127,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
         const result = await postcssConfig.postcss(
           postcssConfig.plugins
         ).process(content, {
-          from: file.getSourcePath(),
+          from: Plugin.convertToOSPath(file.getSourcePath()),
           parser: postcssConfig.options.parser
         });
 
