@@ -81,7 +81,7 @@ class CssToolsMinifier {
     const { error, postcssConfig } = await loadPostCss();
 
     if (error) {
-      files[0].error(postcssInfo.error);
+      files[0].error(error);
       return;
     }
 
