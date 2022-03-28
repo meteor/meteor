@@ -1,6 +1,11 @@
 {
   "lockfileVersion": 1,
   "dependencies": {
+    "acorn": {
+      "version": "8.7.0",
+      "resolved": "https://registry.npmjs.org/acorn/-/acorn-8.7.0.tgz",
+      "integrity": "sha512-V/LGr1APy+PXIwKebEWrkZPwoeoF+w1jiOBUmuxuiUIaOHtob8Qc9BTrYo7VuI5fR8tqsy+buA2WFooR5olqvQ=="
+    },
     "buffer-from": {
       "version": "1.1.2",
       "resolved": "https://registry.npmjs.org/buffer-from/-/buffer-from-1.1.2.tgz",
@@ -17,9 +22,9 @@
       "integrity": "sha512-CkCj6giN3S+n9qrYiBTX5gystlENnRW5jZeNLHpe6aue+SrHcG5VYwujhW9s4dY31mEGsxBDrHR6oI69fTXsaQ=="
     },
     "source-map-support": {
-      "version": "0.5.20",
-      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.5.20.tgz",
-      "integrity": "sha512-n1lZZ8Ve4ksRqizaBQgxXDgKwttHDhyfQjA6YZZn8+AroHbsIz+JjwxQDxbp+7y5OYCI8t1Yk7etjD9CRd2hIw==",
+      "version": "0.5.21",
+      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.5.21.tgz",
+      "integrity": "sha512-uBHU3L3czsIyYXKX88fdrGovxdSCoTGDRZ6SYXtSRxLZUzHg5P/66Ht6uoUlHu9EZod+inXhKo3qQgwXUT/y1w==",
       "dependencies": {
         "source-map": {
           "version": "0.6.1",
@@ -29,9 +34,9 @@
       }
     },
     "terser": {
-      "version": "5.9.0",
-      "resolved": "https://registry.npmjs.org/terser/-/terser-5.9.0.tgz",
-      "integrity": "sha512-h5hxa23sCdpzcye/7b8YqbE5OwKca/ni0RQz1uRX3tGh8haaGHqcuSqbGRybuAKNdntZ0mDgFNXPJ48xQ2RXKQ=="
+      "version": "5.12.1",
+      "resolved": "https://registry.npmjs.org/terser/-/terser-5.12.1.tgz",
+      "integrity": "sha512-NXbs+7nisos5E+yXwAD+y7zrcTkMqb0dEJxIGtSKPdCBzopf7ni4odPul2aechpV7EXNvOudYOX2bb5tln1jbQ=="
     }
   }
 }

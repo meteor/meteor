@@ -313,6 +313,8 @@ methods are available:
    uses the `hot-module-replacement` package. There are rare situations where `hmrAvailable`
    returns true, but when more information is available later in the build process Meteor
    decides the file can not be updated with HMR.
+ - `readAndWatchFileWithHash` - Accepts an absolute path, and returns { contents, hash }
+    Makes sure Meteor watches the file so any changes to it will trigger a rebuild
 
 Meteor implements a couple of compilers as Core packages, good examples would be
 the
@@ -385,9 +387,11 @@ unnecessary work and then we minify the files in production mode.
 
 Besides the common input files' methods, these methods are available:
 - `getPathInBundle` - returns a path of the processed file in the bundle.
+- `getSourcePath` - returns absolute path of the input file if available, or null.
 - `getSourceMap` - returns the source-map for the processed file if there is such.
 - `addJavaScript` - same as compilers
 - `addStylesheet` - same as compilers
+- `readAndWatchFileWithHash` - only available for css minifiers. Same as compilers.
 
 Right now, Meteor Core ships with the `standard-minifiers` package that can be
 replaced with a custom one. The

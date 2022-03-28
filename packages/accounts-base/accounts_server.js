@@ -765,13 +765,22 @@ export class AccountsServer extends AccountsCommon {
     // Use Meteor.startup to give other packages a chance to call
     // setDefaultPublishFields.
     Meteor.startup(() => {
+      // Merge custom fields selector and default publish fields so that the client
+      // gets all the necessary fields to run properly
+      const customFields = this._addDefaultFieldSelector().fields || {};
+      const keys = Object.keys(customFields);
+      // If the custom fields are negative, then ignore them and only send the necessary fields
+      const fields = keys.length > 0 && customFields[keys[0]] ? {
+        ...this._addDefaultFieldSelector().fields,
+        ..._defaultPublishFields.projection
+      } : _defaultPublishFields.projection
       // Publish the current user's record to the client.
       this._server.publish(null, function () {
         if (this.userId) {
           return users.find({
             _id: this.userId
           }, {
-            fields: _defaultPublishFields.projection,
+            fields,
           });
         } else {
           return null;
@@ -1468,9 +1477,9 @@ export class AccountsServer extends AccountsCommon {
     return userId;
   }
 
-  _handleError = (msg, throwError = true) => {
+  _handleError = (msg, throwError = true, errorCode = 403) => {
     const error = new Meteor.Error(
-      403,
+      errorCode,
       this._options.ambiguousErrorMessages
         ? "Something went wrong. Please check your credentials."
         : msg
