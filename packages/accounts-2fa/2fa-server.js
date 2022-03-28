@@ -4,6 +4,15 @@ import QRCode from 'qrcode-svg';
 import { Meteor } from 'meteor/meteor';
 import { check, Match } from 'meteor/check';
 
+Accounts._check2faEnabled = user => {
+  const { services: { twoFactorAuthentication } = {} } = user;
+  return !!(
+    twoFactorAuthentication &&
+    twoFactorAuthentication.secret &&
+    twoFactorAuthentication.type === 'otp'
+  );
+};
+
 Accounts._is2faEnabledForUser = selector => {
   if (!Meteor.isServer) {
     throw new Meteor.Error(
@@ -21,12 +30,7 @@ Accounts._is2faEnabledForUser = selector => {
   }
 
   const user = Meteor.users.findOne(selector) || {};
-  const { services: { twoFactorAuthentication } = {} } = user;
-  return !!(
-    twoFactorAuthentication &&
-    twoFactorAuthentication.secret &&
-    twoFactorAuthentication.type === 'otp'
-  );
+  return Accounts._check2faEnabled(user);
 };
 
 Accounts._generate2faToken = secret => twofactor.generateToken(secret);
