@@ -29,7 +29,13 @@ Accounts._is2faEnabledForUser = selector => {
     }
   }
 
-  const user = Meteor.users.findOne(selector) || {};
+  const user = Meteor.users.findOne(selector);
+  if (!user) {
+    throw new Meteor.Error(
+      500,
+      `User not found with the selector ${JSON.stringify(selector)}`
+    );
+  }
   return Accounts._check2faEnabled(user);
 };
 
@@ -60,7 +66,7 @@ Meteor.methods({
 
     const { secret, uri } = twofactor.generateSecret({
       name: appName.trim(),
-      account: user.username || user._id
+      account: user.username || user._id,
     });
     const svg = new QRCode(uri).svg();
 
@@ -69,9 +75,9 @@ Meteor.methods({
       {
         $set: {
           'services.twoFactorAuthentication': {
-            secret
-          }
-        }
+            secret,
+          },
+        },
       }
     );
 
@@ -86,7 +92,7 @@ Meteor.methods({
     }
 
     const {
-      services: { twoFactorAuthentication }
+      services: { twoFactorAuthentication },
     } = user;
 
     if (!twoFactorAuthentication || !twoFactorAuthentication.secret) {
@@ -105,9 +111,9 @@ Meteor.methods({
         $set: {
           'services.twoFactorAuthentication': {
             ...twoFactorAuthentication,
-            type: 'otp'
-          }
-        }
+            type: 'otp',
+          },
+        },
       }
     );
   },
@@ -122,8 +128,8 @@ Meteor.methods({
       { _id: userId },
       {
         $unset: {
-          'services.twoFactorAuthentication': 1
-        }
+          'services.twoFactorAuthentication': 1,
+        },
       }
     );
   },
@@ -139,5 +145,5 @@ Meteor.methods({
     }
 
     return Accounts._is2faEnabledForUser(selector);
-  }
+  },
 });

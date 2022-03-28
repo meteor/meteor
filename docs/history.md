@@ -12,6 +12,11 @@ N/A
 
 * `accounts-2fa@1.0.1`
   - Reduce one DB call on 2FA login. [PR](https://github.com/meteor/meteor/pull/11985)
+  - Throw error when user is not found on `Accounts._is2faEnabledForUser`
+* `accounts-password@2.3.1`
+  - Use method `Accounts._check2faEnabled` when validating 2FA
+* `accounts-passwordless@2.1.1`
+  - Use method `Accounts._check2faEnabled` when validating 2FA
 * `oauth@2.1.2`
   - Check effectively if popup was blocked by browser. [PR](https://github.com/meteor/meteor/pull/11984)
 * `standard-minifier-css@1.8.1`
