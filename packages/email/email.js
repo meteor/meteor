@@ -14,29 +14,34 @@ export const EmailInternals = {
   NpmModules: {
     mailcomposer: {
       version: Npm.require('nodemailer/package.json').version,
-      module: Npm.require('nodemailer/lib/mail-composer')
+      module: Npm.require('nodemailer/lib/mail-composer'),
     },
     nodemailer: {
       version: Npm.require('nodemailer/package.json').version,
-      module: Npm.require('nodemailer')
-    }
-  }
+      module: Npm.require('nodemailer'),
+    },
+  },
 };
 
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-const makeTransport = function (mailUrlString) {
+const makeTransport = function(mailUrlString) {
   const mailUrl = new URL(mailUrlString);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
-    throw new Error("Email protocol in $MAIL_URL (" +
-                    mailUrlString + ") must be 'smtp' or 'smtps'");
+    throw new Error(
+      'Email protocol in $MAIL_URL (' +
+        mailUrlString +
+        ") must be 'smtp' or 'smtps'"
+    );
   }
 
   if (mailUrl.protocol === 'smtp:' && mailUrl.port === '465') {
-    Log.debug("The $MAIL_URL is 'smtp://...:465'.  " +
-              "You probably want 'smtps://' (The 's' enables TLS/SSL) " +
-              "since '465' is typically a secure port.");
+    Log.debug(
+      "The $MAIL_URL is 'smtp://...:465'.  " +
+        "You probably want 'smtps://' (The 's' enables TLS/SSL) " +
+        "since '465' is typically a secure port."
+    );
   }
 
   // Allow overriding pool setting, but default to true.
@@ -57,7 +62,10 @@ const makeTransport = function (mailUrlString) {
 // More info: https://nodemailer.com/smtp/well-known/
 const knownHostsTransport = function(settings = undefined, url = undefined) {
   let service, user, password;
-  if (url && !settings) {
+
+  const hasSettings = settings && Object.keys(settings).length;
+
+  if (url && !hasSettings) {
     let host = url.split(':')[0];
     const urlObject = new URL(url);
     if (host === 'http' || host === 'https') {
@@ -84,15 +92,17 @@ const knownHostsTransport = function(settings = undefined, url = undefined) {
   }
 
   if (!wellKnow(settings?.service || service)) {
-    throw new Error('Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.');
+    throw new Error(
+      'Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.'
+    );
   }
 
   const transport = nodemailer.createTransport({
     service: settings?.service || service,
     auth: {
       user: settings?.user || user,
-      pass: settings?.password || password
-    }
+      pass: settings?.password || password,
+    },
   });
 
   transport._syncSendMail = Meteor.wrapAsync(transport.sendMail, transport);
@@ -106,8 +116,17 @@ const getTransport = function() {
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
   // process.env.MAIL_URL changes.
   const url = process.env.MAIL_URL;
-  if (this.cacheKey === undefined || (this.cacheKey !== url || this.cacheKey !== packageSettings?.service || 'settings')) {
-    if ((packageSettings?.service && wellKnow(packageSettings.service)) || (url && wellKnow(new URL(url).hostname) || wellKnow(url?.split(':')[0] || ''))) {
+  if (
+    this.cacheKey === undefined ||
+    this.cacheKey !== url ||
+    this.cacheKey !== packageSettings.service ||
+    this.cacheKey !== 'settings'
+  ) {
+    if (
+      (packageSettings.service && wellKnow(packageSettings.service)) ||
+      (url && wellKnow(new URL(url).hostname)) ||
+      wellKnow(url?.split(':')[0] || '')
+    ) {
       this.cacheKey = packageSettings.service || 'settings';
       this.cache = knownHostsTransport(packageSettings, url);
     } else {
@@ -122,35 +141,37 @@ let nextDevModeMailId = 0;
 let output_stream = process.stdout;
 
 // Testing hooks
-EmailTest.overrideOutputStream = function (stream) {
+EmailTest.overrideOutputStream = function(stream) {
   nextDevModeMailId = 0;
   output_stream = stream;
 };
 
-EmailTest.restoreOutputStream = function () {
+EmailTest.restoreOutputStream = function() {
   output_stream = process.stdout;
 };
 
-const devModeSend = function (mail) {
+const devModeSend = function(mail) {
   let devModeMailId = nextDevModeMailId++;
 
   const stream = output_stream;
 
   // This approach does not prevent other writers to stdout from interleaving.
-  stream.write("====== BEGIN MAIL #" + devModeMailId + " ======\n");
-  stream.write("(Mail not sent; to enable sending, set the MAIL_URL " +
-               "environment variable.)\n");
+  stream.write('====== BEGIN MAIL #' + devModeMailId + ' ======\n');
+  stream.write(
+    '(Mail not sent; to enable sending, set the MAIL_URL ' +
+      'environment variable.)\n'
+  );
   const readStream = new MailComposer(mail).compile().createReadStream();
-  readStream.pipe(stream, {end: false});
-  const future = new Future;
-  readStream.on('end', function () {
-    stream.write("====== END MAIL #" + devModeMailId + " ======\n");
+  readStream.pipe(stream, { end: false });
+  const future = new Future();
+  readStream.on('end', function() {
+    stream.write('====== END MAIL #' + devModeMailId + ' ======\n');
     future.return();
   });
   future.wait();
 };
 
-const smtpSend = function (transport, mail) {
+const smtpSend = function(transport, mail) {
   transport._syncSendMail(mail);
 };
 
@@ -165,7 +186,7 @@ const sendHooks = new Hook();
  * false to skip sending.
  * @returns {{ stop: function, callback: function }}
  */
-Email.hookSend = function (f) {
+Email.hookSend = function(f) {
   return sendHooks.register(f);
 };
 
@@ -210,13 +231,13 @@ Email.customTransport = undefined;
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
-Email.send = function (options) {
+Email.send = function(options) {
   if (options.mailComposer) {
     options = options.mailComposer.mail;
   }
 
   let send = true;
-  sendHooks.each(hook => {
+  sendHooks.forEach(hook => {
     send = hook(options);
     return send;
   });
@@ -228,7 +249,19 @@ Email.send = function (options) {
     customTransport({ packageSettings, ...options });
     return;
   }
-  if (Meteor.isProduction || process.env.MAIL_URL || Meteor.settings.packages?.email) {
+
+  const mailUrlEnv = process.env.MAIL_URL;
+  const mailUrlSettings = Meteor.settings.packages?.email;
+
+  if (Meteor.isProduction && !mailUrlEnv && !mailUrlSettings) {
+    // This check is mostly necessary when using the flag --production when running locally.
+    // And it works as a reminder to properly set the mail URL when running locally.
+    throw new Error(
+      'You have not provided a mail URL. You can provide it by using the environment variable MAIL_URL or your settings. You can read more about it here: https://docs.meteor.com/api/email.html.'
+    );
+  }
+
+  if (mailUrlEnv || mailUrlSettings) {
     const transport = getTransport();
     smtpSend(transport, options);
     return;

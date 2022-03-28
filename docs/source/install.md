@@ -7,7 +7,7 @@ Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, you
 <h2 id="prereqs">Prerequisites and useful information</h2>
 
 - If you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/)
-- Meteor requires Node.js version >= 10 and <= 14 installed for running the npm installer (tip: you can use [nvm](https://github.com/nvm-sh/nvm) for managing node versions).
+- Meteor works with Node.js version >= 10 and <= 14, for Windows you need to have Node.js installed for running the npm installer (tip: you can use [nvm](https://github.com/nvm-sh/nvm) for managing node versions).
 - Meteor supports Windows 7/Windows Server 2008 R2 and up.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
 - For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
@@ -16,7 +16,15 @@ Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, you
 
 <h2 id="installation">Installation</h2>
 
-Install the latest official Meteor release from your terminal:
+Install the latest official Meteor release from your terminal running one of the commands below.
+
+For Linux and OS X:
+
+```bash
+curl https://install.meteor.com/ | sh
+```
+
+For Windows (Node.js is required):
 
 ```bash
 npm install -g meteor
@@ -38,6 +46,16 @@ If you only use sudo because of a distribution default permission system, [check
 
 In some cases you can get this error `npm WARN checkPermissions Missing write access to /usr/local/lib/node_modules` because your Node.js installation was performed with wrong permissions. An easy way to fix this is to install Node.js using [nvm](https://github.com/nvm-sh/nvm) and forcing it to be used in your terminal. You can force it in the current session of your terminal by running `nvm use 14`.
 
+<h2 id="path-management">PATH management</h2>
+
+By default, the Meteor installer adds its install path (by default, `~/.meteor/`) to your PATH by updating either your `.bashrc`, `.bash_profile`, or `.zshrc` as appropriate. To disable this behavior, install Meteor by running:
+
+```bash
+npm install -g meteor --ignore-meteor-setup-exec-path
+```
+
+(or by setting the environment variable `npm_config_ignore_meteor_setup_exec_path=true`)
+
 <h2 id="old-versions-m1">Old Versions on Apple M1</h2>
 
 For Apple M1 computers, you can append Rosetta prefix as following, if you need to run older versions of Meteor (before 2.5.1):
@@ -47,16 +65,6 @@ arch -x86_64 npm install -g meteor
 ```
 
 or select Terminal in the Applications folder, press CMD(⌘)+I and check the "Open using Rosetta" option.
-
-<h2 id="legacy-install">Alternative Installation Method</h2>
-
-For Linux and OS X, we still provide an alternative installation method which uses a bash script and doesn't depend on Node.js.
-
-```bash
-curl https://install.meteor.com/ | sh
-```
-
-We recommend everybody to use the npm installer but we are still going to maintain this script as well.
 
 <h2 id="meteor-docker">Run Meteor inside Docker</h2>
 

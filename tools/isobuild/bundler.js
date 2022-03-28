@@ -1119,13 +1119,16 @@ class Target {
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
-      // TODO Cache result by resource hash?
-      minifyCssResource(resource) {
-        if (! minifiersByExt.css ||
-            minifyMode === "development") {
+      minifyCssResource: (resource) => {
+        if (! minifiersByExt.css) {
           // Indicates the caller should use the original resource.data
           // without minification.
           return null;
+        }
+
+        let sourcePath;
+        if (resource.data && resource.sourceRoot && resource.sourcePath) {
+          sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
         }
 
         const file = new File({
@@ -1133,6 +1136,7 @@ class Target {
           arch: target.arch,
           data: resource.data,
           hash: resource.hash,
+          sourcePath
         });
 
         file.setTargetPathFromRelPath(
@@ -1142,6 +1146,7 @@ class Target {
           arch: target.arch,
           minifier: minifiersByExt.css,
           minifyMode,
+          watchSet: this.watchSet
         }).map(file => file.contents("utf8")).join("\n");
       }
     });
@@ -1280,13 +1285,18 @@ class Target {
             return;
           }
 
+          let sourcePath;
+          if (resource.data && resource.sourceRoot && resource.sourcePath) {
+            sourcePath = files.pathJoin(resource.sourceRoot, resource.sourcePath);
+          }
           const f = new File({
             info: 'resource ' + resource.servePath,
             arch: this.arch,
             data: resource.data,
             hash: resource.hash,
             cacheable: false,
-            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable
+            replaceable: resource.type === 'js' && sourceBatch.hmrAvailable,
+            sourcePath
           });
 
           const relPath = stripLeadingSlash(resource.servePath);
@@ -1691,6 +1701,7 @@ class ClientTarget extends Target {
       arch: this.arch,
       minifier: minifierDef,
       minifyMode,
+      watchSet: this.watchSet
     });
   }
 
@@ -1896,15 +1907,15 @@ class ClientTarget extends Target {
   }
 }
 
-const { wrap, defaultMakeCacheKey } = require("optimism");
-const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
+function minifyCssFiles (files, {
   arch,
   minifier,
   minifyMode,
+  watchSet
 }) {
   const inputHashesByCssFile = new Map;
   const sources = files.map(file => {
-    const cssFile = new CssFile(file, { arch });
+    const cssFile = new CssFile(file, { arch, watchSet });
     inputHashesByCssFile.set(cssFile, file.hash());
     return cssFile;
   });
@@ -1943,16 +1954,7 @@ const minifyCssFiles = Profile("minifyCssFiles", wrap(function (files, {
       return newFile;
     });
   }));
-}, {
-  makeCacheKey(files, { arch, minifier, minifyMode }) {
-    return defaultMakeCacheKey(
-      minifier,
-      arch,
-      minifyMode,
-      hashOfFiles(files),
-    );
-  }
-}));
+}
 
 const { createHash } = require("crypto");
 function hashOfFiles(files) {
@@ -3339,6 +3341,13 @@ function bundle({
     if (buildmessage.jobHasMessages()) {
       return mergeAppWatchSets();
     }
+
+    // Call any beforeMinify callbacks defined by minifier plugins
+    minifiers.forEach(minifier => {
+      if (typeof minifier.userPlugin.beforeMinify === 'function') {
+        minifier.userPlugin.beforeMinify();
+      }
+    });
 
     const targets = Object.create(null);
     const hasOwn = Object.prototype.hasOwnProperty;

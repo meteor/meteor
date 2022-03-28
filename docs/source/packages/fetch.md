@@ -13,7 +13,7 @@ To add this package to an existing app, run the following command from
 your app directory:
 
 ```bash
-meteor add ecmascript
+meteor add fetch
 ```
 
 To add the `fetch` package to an existing package, include the
