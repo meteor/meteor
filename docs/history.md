@@ -1,3 +1,24 @@
+## v2.7.1, UNRELEASED
+
+#### Highlights
+
+#### Breaking Changes
+
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+* `accounts-2fa@1.0.1`
+  - Reduce one DB call on 2FA login. [PR](https://github.com/meteor/meteor/pull/11985)
+* `oauth@2.1.2`
+  - Check effectively if popup was blocked by browser. [PR](https://github.com/meteor/meteor/pull/11984)
+* `standard-minifier-css@1.8.1`
+  - PostCSS bug fixes. [PR](https://github.com/meteor/meteor/pull/11987/files)
+
+#### Independent Releases
+
 ## v2.7, 2022-03-24
 
 #### Highlights
