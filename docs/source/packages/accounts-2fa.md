@@ -186,7 +186,7 @@ To integrate this package with any other existing Login method, it's necessary f
 
 1 - For the client, create a new method from your current login method. So for example, from the method `Meteor.loginWithPassword` we created a new one called `Meteor.loginWithPasswordAnd2faCode`, and the only difference between them is that the latest one receives one additional parameter, the 2FA code, but we call the same function on the server side.
 
-2 - For the server, inside the function that will log the user in, you verify if the function `Accounts._is2faEnabledForUser` exists, and if yes, you call it providing the user you want to check if the 2FA is enabled, and if either of these statements are false, you proceed with the login flow. This function exists only when the package `accounts-2fa` is added to the project.
+2 - For the server, inside the function that will log the user in, you verify if the function `Accounts._check2faEnabled` exists, and if yes, you call it providing the user you want to check if the 2FA is enabled, and if either of these statements are false, you proceed with the login flow. This function exists only when the package `accounts-2fa` is added to the project.
 
 If both statements are true, and the login validation succeeds, you verify if a code was provided: if not, throw an error; if it was provided, verify if the code is valid by calling the function `Accounts._isTokenValid`. if `Accounts._isTokenValid` returns false, throw an error.
 
@@ -196,8 +196,7 @@ Here it's an example:
   const result = validateLogin();
   if (
     !result.error &&
-    Accounts._is2faEnabledForUser &&
-    Accounts._is2faEnabledForUser(user)
+    Accounts._check2faEnabled?.(user)
   ) {
     if (!code) {
       Accounts._handleError('2FA code must be informed.');

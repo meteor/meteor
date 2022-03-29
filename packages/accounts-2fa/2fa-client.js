@@ -10,14 +10,13 @@ const reportError = (error, callback) => {
 };
 
 /**
- * @summary Verify if the user has 2FA enabled
+ * @summary Verify if the logged user has 2FA enabled
  * @locus Client
- * @param {Object|String} selector Username, email or custom selector to identify the user.
  * @param {Function} [callback] Called with a boolean on success that indicates whether the user has
  *    or not 2FA enabled, or with a single `Error` argument on failure.
  */
-Accounts.has2faEnabled = (selector, callback) => {
-  Accounts.connection.call('has2faEnabled', selector, callback);
+Accounts.has2faEnabled = callback => {
+  Accounts.connection.call('has2faEnabled', callback);
 };
 
 /**

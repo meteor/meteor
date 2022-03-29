@@ -13,7 +13,7 @@ Accounts._check2faEnabled = user => {
   );
 };
 
-Accounts._is2faEnabledForUser = selector => {
+Accounts._is2faEnabledForUser = () => {
   if (!Meteor.isServer) {
     throw new Meteor.Error(
       400,
@@ -21,20 +21,9 @@ Accounts._is2faEnabledForUser = selector => {
     );
   }
 
-  if (typeof selector === 'string') {
-    if (!selector.includes('@')) {
-      selector = { $or: [{ _id: selector }, { username: selector }] };
-    } else {
-      selector = { email: selector };
-    }
-  }
-
-  const user = Meteor.users.findOne(selector);
+  const user = Meteor.user();
   if (!user) {
-    throw new Meteor.Error(
-      500,
-      `User not found with the selector ${JSON.stringify(selector)}`
-    );
+    throw new Meteor.Error('no-logged-user', 'No user logged in.');
   }
   return Accounts._check2faEnabled(user);
 };
@@ -133,17 +122,7 @@ Meteor.methods({
       }
     );
   },
-  has2faEnabled(selector) {
-    check(selector, Match.Maybe(Match.OneOf(String, Object)));
-    const userId = Meteor.userId();
-    if (!userId) {
-      throw new Meteor.Error(400, 'No user logged in.');
-    }
-
-    if (!selector) {
-      selector = { _id: userId };
-    }
-
-    return Accounts._is2faEnabledForUser(selector);
+  has2faEnabled() {
+    return Accounts._is2faEnabledForUser();
   },
 });
