@@ -46,9 +46,16 @@ Meteor.methods({
       );
     }
 
+    if (Accounts._check2faEnabled(user)) {
+      throw new Meteor.Error(
+        '2fa-activated',
+        'The 2FA is activated. You need to disable the 2FA first before trying to generate a new activation code.'
+      );
+    }
+
     const { secret, uri } = twofactor.generateSecret({
       name: appName.trim(),
-      account: user.username || user._id,
+      account: user.username || user.email || user._id,
     });
     const svg = new QRCode(uri).svg();
 
@@ -118,4 +125,8 @@ Meteor.methods({
   has2faEnabled() {
     return Accounts._is2faEnabledForUser();
   },
+});
+
+Accounts.addAutopublishFields({
+  forLoggedInUser: ['services.twoFactorAuthentication.type'],
 });

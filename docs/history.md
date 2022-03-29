@@ -6,6 +6,7 @@
 
 * `accounts-2fa@1.0.1`
   - The method `has2faEnabled` no longer takes a selector as an argument, just the callback.
+  - `generate2faActivationQrCode` now throws an error if it's being called when the user already has 2FA enabled.
 
 #### Migration Steps
 
@@ -15,6 +16,7 @@
   - Reduce one DB call on 2FA login. [PR](https://github.com/meteor/meteor/pull/11985)
   - Throw error when user is not found on `Accounts._is2faEnabledForUser`
   - Remove vulnerability from the method `has2faEnabled`
+  - Now the package auto-publish the field `services.twoFactorAuthentication.type` for logged in users.
 * `accounts-password@2.3.1`
   - Use method `Accounts._check2faEnabled` when validating 2FA
 * `accounts-passwordless@2.1.1`
