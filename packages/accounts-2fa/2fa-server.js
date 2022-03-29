@@ -14,13 +14,6 @@ Accounts._check2faEnabled = user => {
 };
 
 Accounts._is2faEnabledForUser = () => {
-  if (!Meteor.isServer) {
-    throw new Meteor.Error(
-      400,
-      'The function _is2faEnabledForUser can only be called on the server'
-    );
-  }
-
   const user = Meteor.user();
   if (!user) {
     throw new Meteor.Error('no-logged-user', 'No user logged in.');

@@ -4,7 +4,8 @@
 
 #### Breaking Changes
 
-N/A
+* `accounts-2fa@1.0.1`
+  - The method `has2faEnabled` no longer takes a selector as an argument, just the callback.
 
 #### Migration Steps
 
