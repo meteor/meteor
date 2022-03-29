@@ -53,9 +53,10 @@ Meteor.methods({
       );
     }
 
+    const emails = user.emails || [];
     const { secret, uri } = twofactor.generateSecret({
       name: appName.trim(),
-      account: user.username || user.email || user._id,
+      account: user.username || emails[0]?.address || user._id,
     });
     const svg = new QRCode(uri).svg();
 
