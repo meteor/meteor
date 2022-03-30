@@ -1,3 +1,15 @@
+## v.NEXT, 2022-04-XX
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Meteor Version Release
+
+* `mongo@1.15.0`
+  - If an index with the same name, but different options exists Meteor will re-create it instead of crashing.
+  - If there is an error Meteor will output a better message naming the collection and index where the error occured.
+
 ## v2.7, 2022-03-24
 
 #### Highlights
