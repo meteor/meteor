@@ -24,8 +24,9 @@ Accounts.has2faEnabled = callback => {
  * @locus Client
  * @param {String} appName It's the name of your app that will show up when the user scans the QR code.
  * @param {Function} callback
- *   Called with a QR code in SVG format on success, or with a single `Error` argument
- *   on failure.
+ *   Called with a single `Error` argument on failure.
+ *   Or, on success, called with an object containing the QR code in SVG format (svg),
+ *   the QR secret (secret), and the URI so the user can manually activate the 2FA without reading the QR code (uri).
  */
 Accounts.generate2faActivationQrCode = (appName, callback) => {
   if (!appName) {

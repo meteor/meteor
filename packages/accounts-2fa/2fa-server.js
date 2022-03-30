@@ -31,7 +31,9 @@ Accounts._isTokenValid = (secret, code) => {
     );
   }
   const { delta } = twofactor.verifyToken(secret, code, 10) || {};
-  return delta != null && delta >= 0;
+  // we are using != instead of !==, which means "undefined != null" and "null != null" are both false,
+  // so we don't need to check delta !== undefined
+  return delta != null && delta === 0;
 };
 
 Meteor.methods({
@@ -71,7 +73,7 @@ Meteor.methods({
       }
     );
 
-    return { svg, secret };
+    return { svg, secret, uri };
   },
   enableUser2fa(code) {
     check(code, String);
@@ -92,7 +94,7 @@ Meteor.methods({
       );
     }
     if (!Accounts._isTokenValid(twoFactorAuthentication.secret, code)) {
-      throw new Meteor.Error(400, 'Invalid code.');
+      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
     }
 
     Meteor.users.update(
