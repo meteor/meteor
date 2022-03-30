@@ -757,7 +757,19 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
-    self._collection.createIndex(index, options);
+    try {
+      self._collection.createIndex(index, options);
+    } catch (e) {
+      if (e.message.includes('An equivalent index already exists with the same name but different options.')) {
+        import { Log } from 'meteor/logging';
+
+        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatchs.`);
+        self._collection._dropIndex(index);
+        self._collection.createIndex(index, options);
+      } else {
+        throw new Meteor.Error(`An error occurred when creating an index for collection "${self._name}: ${e.message}`);
+      }
+    }
   },
 
   _dropIndex(index) {
