@@ -81,7 +81,7 @@ class CssToolsMinifier {
     const { error, postcssConfig } = await loadPostCss();
 
     if (error) {
-      files[0].error(postcssInfo.error);
+      files[0].error(error);
       return;
     }
 
@@ -127,7 +127,7 @@ const mergeCss = Profile("mergeCss", async function (css, postcssConfig) {
         const result = await postcssConfig.postcss(
           postcssConfig.plugins
         ).process(content, {
-          from: file.getSourcePath(),
+          from: Plugin.convertToOSPath(file.getSourcePath()),
           parser: postcssConfig.options.parser
         });
 

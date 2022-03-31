@@ -1,3 +1,33 @@
+## v2.7.1, 2022-03-31
+
+#### Highlights
+
+#### Breaking Changes
+
+* `accounts-2fa@2.0.0`
+  - The method `has2faEnabled` no longer takes a selector as an argument, just the callback.
+  - `generate2faActivationQrCode` now throws an error if it's being called when the user already has 2FA enabled.
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+* `accounts-2fa@2.0.0`
+  - Reduce one DB call on 2FA login. [PR](https://github.com/meteor/meteor/pull/11985)
+  - Throw error when user is not found on `Accounts._is2faEnabledForUser`
+  - Remove vulnerability from the method `has2faEnabled`
+  - Now the package auto-publish the field `services.twoFactorAuthentication.type` for logged in users.
+* `accounts-password@2.3.1`
+  - Use method `Accounts._check2faEnabled` when validating 2FA
+* `accounts-passwordless@2.1.1`
+  - Use method `Accounts._check2faEnabled` when validating 2FA
+* `oauth@2.1.2`
+  - Check effectively if popup was blocked by browser. [PR](https://github.com/meteor/meteor/pull/11984)
+* `standard-minifier-css@1.8.1`
+  - PostCSS bug fixes. [PR](https://github.com/meteor/meteor/pull/11987/files)
+
+#### Independent Releases
+
 ## v2.7, 2022-03-24
 
 #### Highlights
