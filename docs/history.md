@@ -1,4 +1,4 @@
-## v2.7.1, UNRELEASED
+## v2.7.1, 2022-03-31
 
 #### Highlights
 
