@@ -13,23 +13,11 @@ Accounts._check2faEnabled = user => {
   );
 };
 
-Accounts._is2faEnabledForUser = selector => {
-  if (!Meteor.isServer) {
-    throw new Meteor.Error(
-      400,
-      'The function _is2faEnabledForUser can only be called on the server'
-    );
+Accounts._is2faEnabledForUser = () => {
+  const user = Meteor.user();
+  if (!user) {
+    throw new Meteor.Error('no-logged-user', 'No user logged in.');
   }
-
-  if (typeof selector === 'string') {
-    if (!selector.includes('@')) {
-      selector = { $or: [{ _id: selector }, { username: selector }] };
-    } else {
-      selector = { email: selector };
-    }
-  }
-
-  const user = Meteor.users.findOne(selector) || {};
   return Accounts._check2faEnabled(user);
 };
 
@@ -43,7 +31,9 @@ Accounts._isTokenValid = (secret, code) => {
     );
   }
   const { delta } = twofactor.verifyToken(secret, code, 10) || {};
-  return delta != null && delta >= 0;
+  // we are using != instead of !==, which means "undefined != null" and "null != null" are both false,
+  // so we don't need to check delta !== undefined
+  return delta != null && delta === 0;
 };
 
 Meteor.methods({
@@ -58,9 +48,17 @@ Meteor.methods({
       );
     }
 
+    if (Accounts._check2faEnabled(user)) {
+      throw new Meteor.Error(
+        '2fa-activated',
+        'The 2FA is activated. You need to disable the 2FA first before trying to generate a new activation code.'
+      );
+    }
+
+    const emails = user.emails || [];
     const { secret, uri } = twofactor.generateSecret({
       name: appName.trim(),
-      account: user.username || user._id
+      account: user.username || emails[0]?.address || user._id,
     });
     const svg = new QRCode(uri).svg();
 
@@ -69,13 +67,13 @@ Meteor.methods({
       {
         $set: {
           'services.twoFactorAuthentication': {
-            secret
-          }
-        }
+            secret,
+          },
+        },
       }
     );
 
-    return { svg, secret };
+    return { svg, secret, uri };
   },
   enableUser2fa(code) {
     check(code, String);
@@ -86,7 +84,7 @@ Meteor.methods({
     }
 
     const {
-      services: { twoFactorAuthentication }
+      services: { twoFactorAuthentication },
     } = user;
 
     if (!twoFactorAuthentication || !twoFactorAuthentication.secret) {
@@ -96,7 +94,7 @@ Meteor.methods({
       );
     }
     if (!Accounts._isTokenValid(twoFactorAuthentication.secret, code)) {
-      throw new Meteor.Error(400, 'Invalid code.');
+      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
     }
 
     Meteor.users.update(
@@ -105,9 +103,9 @@ Meteor.methods({
         $set: {
           'services.twoFactorAuthentication': {
             ...twoFactorAuthentication,
-            type: 'otp'
-          }
-        }
+            type: 'otp',
+          },
+        },
       }
     );
   },
@@ -122,22 +120,16 @@ Meteor.methods({
       { _id: userId },
       {
         $unset: {
-          'services.twoFactorAuthentication': 1
-        }
+          'services.twoFactorAuthentication': 1,
+        },
       }
     );
   },
-  has2faEnabled(selector) {
-    check(selector, Match.Maybe(Match.OneOf(String, Object)));
-    const userId = Meteor.userId();
-    if (!userId) {
-      throw new Meteor.Error(400, 'No user logged in.');
-    }
+  has2faEnabled() {
+    return Accounts._is2faEnabledForUser();
+  },
+});
 
-    if (!selector) {
-      selector = { _id: userId };
-    }
-
-    return Accounts._is2faEnabledForUser(selector);
-  }
+Accounts.addAutopublishFields({
+  forLoggedInUser: ['services.twoFactorAuthentication.type'],
 });

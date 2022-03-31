@@ -1,13 +1,14 @@
 import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 
-Tinytest.add('account - 2fa - has2faEnabled', test => {
-  const userId = Accounts.createUser({
+Tinytest.addAsync('account - 2fa - has2faEnabled - client', (test, done) => {
+  Accounts.createUser({
     username: Random.id(),
     password: Random.id(),
   });
 
-  Accounts.has2faEnabled(userId, (error, result) => {
-    test.equal(result, false);
+  Accounts.has2faEnabled((error, result) => {
+    test.isFalse(result);
+    done();
   });
 });
