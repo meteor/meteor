@@ -30,10 +30,7 @@ Accounts._isTokenValid = (secret, code) => {
       'The function _isTokenValid can only be called on the server'
     );
   }
-  const { delta } = twofactor.verifyToken(secret, code, 10) || {};
-  // we are using != instead of !==, which means "undefined != null" and "null != null" are both false,
-  // so we don't need to check delta !== undefined
-  return delta != null && delta === 0;
+  return twofactor.verifyToken(secret, code, 10) !== null;
 };
 
 Meteor.methods({
