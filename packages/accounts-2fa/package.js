@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.0',
+  version: '2.0.1',
   summary:
     'Package used to enable two factor authentication through OTP protocol',
 });
@@ -33,4 +33,5 @@ Package.onTest(function(api) {
   ]);
 
   api.mainModule('server_tests.js', 'server');
+  api.mainModule('client_tests.js', 'client');
 });

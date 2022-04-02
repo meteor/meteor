@@ -59,7 +59,7 @@ const openCenteredPopup = function(url, width, height) {
 
   const newwindow = window.open(url, 'Login', features);
 
-  if (typeof newwindow === 'undefined') {
+  if (!newwindow || newwindow.closed) {
     // blocked by a popup blocker maybe?
     const err = new Error("The login popup was blocked by the browser");
     err.attemptedUrl = url;

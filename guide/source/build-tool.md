@@ -24,7 +24,7 @@ By default Meteor will build certain files as controlled by your application [fi
 
 <h3 id="concatenate-and-minify">Combines and minifies code</h3>
 
-Another important feature of the Meteor build tool is that it automatically concatenates your application asset files, and in production minifies these bundles. This lets you add all of the comments and whitespace you want to your source code and split your code into as many files as necessary, all without worrying about app performance and load times. This is enabled by the [`standard-minifier-js`](https://atmospherejs.com/meteor/standard-minifiers-js) and [`standard-minifier-css`](https://atmospherejs.com/meteor/standard-minifiers-css) packages, which are included in all Meteor apps by default. If you need different minification behavior, you can replace these packages (see [zodern:standard-minifier-css](https://atmospherejs.com/zodern/standard-minifier-js) as an example).
+Another important feature of the Meteor build tool is that it automatically concatenates your application asset files, and in production minifies these bundles. This lets you add all of the comments and whitespace you want to your source code and split your code into as many files as necessary, all without worrying about app performance and load times. This is enabled by the [`standard-minifier-js`](https://atmospherejs.com/meteor/standard-minifiers-js) and [`standard-minifier-css`](https://atmospherejs.com/meteor/standard-minifiers-css) packages, which are included in all Meteor apps by default. If you need different minification behavior, you can replace these packages (see [zodern:standard-minifier-js](https://atmospherejs.com/zodern/standard-minifier-js) as an example).
 
 <h3 id="dev-vs-prod">Development vs. production</h3>
 
