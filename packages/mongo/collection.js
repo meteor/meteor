@@ -760,10 +760,10 @@ Object.assign(Mongo.Collection.prototype, {
     try {
       self._collection.createIndex(index, options);
     } catch (e) {
-      if (e.message.includes('An equivalent index already exists with the same name but different options.')) {
+      if (e.message.includes('An equivalent index already exists with the same name but different options.') && Meteor.settings?.packages?.mongo?.reCreateIndexOnOptionMismatch) {
         import { Log } from 'meteor/logging';
 
-        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatchs.`);
+        Log.info(`Re-creating index ${index} for ${self._name} due to options mismatch.`);
         self._collection._dropIndex(index);
         self._collection.createIndex(index, options);
       } else {

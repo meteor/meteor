@@ -408,6 +408,22 @@ Example defining a simple index on Players collection in Meteor:
 Players.createIndex({ userId: 1 }, { name: 'user reference on players' });
 ```
 
+Sometimes you or a package might change an already established indexes. This might throw an error and prevent a startup. 
+For cases where you can afford to re-build indexes or the change affect too many indexes you can set the `reCreateIndexOnOptionMismatch` 
+to true in your `settings.json`:
+
+```json
+{
+  "packages": {
+    "mongo": {
+      "reCreateIndexOnOptionMismatch": true
+    }
+  }
+}
+```
+
+> You should use this option only when you are dealing with a change across many indexes and it is not feasible to fix them manually and you can afford the re-building of the indexes as this will destroy the old index and create a new one. Use this carefully.
+
 {% apibox "Mongo.Collection#allow" %}
 
 {% pullquote warning %}
