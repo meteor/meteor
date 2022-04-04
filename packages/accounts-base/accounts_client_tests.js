@@ -240,12 +240,12 @@ Tinytest.addAsync(
           // enable 2fa
           Accounts.enableUser2fa(token, () => {
             // verifies if 2fa is enabled
-            Accounts.has2faEnabled(username, (err, isEnabled) => {
+            Accounts.has2faEnabled((err, isEnabled) => {
               test.isTrue(isEnabled);
               // disable 2fa
               Accounts.disableUser2fa(() => {
                 // verifies if 2fa is disabled
-                Accounts.has2faEnabled(username, (err, isEnabled) => {
+                Accounts.has2faEnabled((err, isEnabled) => {
                   test.isFalse(!!isEnabled);
                   removeTestUser(done);
                 });

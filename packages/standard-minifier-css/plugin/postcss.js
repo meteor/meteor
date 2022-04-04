@@ -28,7 +28,6 @@ export async function loadPostCss() {
   try {
     loadConfig = require('postcss-load-config');
   } catch (e) {
-    console.log('no postcss-load-config');
     // The app doesn't have this package installed
     // Assuming the app doesn't use PostCSS
     loaded = true;

@@ -89,10 +89,7 @@ Accounts.registerLoginHandler('passwordless', options => {
 
   if (!error && verifiedEmail) {
     // This method is added by the package accounts-2fa
-    if (
-      Accounts._is2faEnabledForUser &&
-      Accounts._is2faEnabledForUser({ _id: user._id })
-    ) {
+    if (Accounts._check2faEnabled?.(user)) {
       if (!options.code) {
         Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
         return;
