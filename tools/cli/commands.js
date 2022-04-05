@@ -906,7 +906,7 @@ main.registerCommand({
     cmd("meteor create --svelte     # to create a basic Svelte app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
     cmd("meteor create --blaze      # to create an app using Blaze");
-    cmd("meteor create --tailwind      # to create an app using React and Tailwind");
+    cmd("meteor create --tailwind   # to create an app using React and Tailwind");
   }
 
   Console.info("");
