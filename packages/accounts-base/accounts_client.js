@@ -219,7 +219,7 @@ export class AccountsClient extends AccountsCommon {
     ['validateResult', 'userCallback'].forEach(f => {
       if (!options[f])
         options[f] = () => null;
-    })
+    });
 
     let called;
     // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
@@ -228,19 +228,19 @@ export class AccountsClient extends AccountsCommon {
         called = true;
         this._loginCallbacksCalled = true;
         if (!error) {
-          this._onLoginHook.each(callback => {
+          this._onLoginHook.forEach(callback => {
             callback(loginDetails);
             return true;
           });
         } else {
-          this._onLoginFailureHook.each(callback => {
+          this._onLoginFailureHook.forEach(callback => {
             callback({ error });
             return true;
           });
         }
         options.userCallback(error, loginDetails);
       }
-    }
+    };
 
     let reconnected = false;
 

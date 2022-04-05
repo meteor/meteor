@@ -1,3 +1,15 @@
+## v.NEXT, 2022-04-XX
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Meteor Version Release
+
+* `mongo@1.15.0`
+  - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created. 
+  - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured.
+
 ## v2.7.1, 2022-03-31
 
 #### Highlights
