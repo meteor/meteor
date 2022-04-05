@@ -28,6 +28,10 @@ Similar to `skel`, `skel-pack` is copied on `meteor create --package` command.
 
 Similar to `skel`, `skel-react` is copied on `meteor create --react` command.
 
+## skel-tailwind - Package Skeleton
+
+Similar to `skel`, `skel-tailwind` is copied on `meteor create --tailwind` command.
+
 ## server - Bundled App's Bootstrap
 
 The `server` folder is copied by Isobuild when the app is bundled (on
