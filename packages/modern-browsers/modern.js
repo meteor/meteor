@@ -120,9 +120,12 @@ function getCaller(calleeName) {
   return caller;
 }
 
+function getMinimumBrowserVersions() { return minimumVersions; }
+
 Object.assign(exports, {
   isModern,
   setMinimumBrowserVersions,
+  getMinimumBrowserVersions,
   calculateHashOfMinimumVersions() {
     const { createHash } = require('crypto');
     return createHash('sha1')
