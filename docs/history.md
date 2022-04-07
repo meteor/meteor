@@ -1,3 +1,11 @@
+## v2.7.2, UNRELEASED
+
+#### Highlights
+
+#### Meteor Version Release
+
+* Skeleton dependencies updated
+
 ## v2.7.1, 2022-03-31
 
 #### Highlights
