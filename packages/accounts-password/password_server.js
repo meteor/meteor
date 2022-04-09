@@ -169,7 +169,8 @@ Accounts.registerLoginHandler("password", options => {
 
   check(options, {
     user: Accounts._userQueryValidator,
-    password: passwordValidator
+    password: passwordValidator,
+    code: Match.Optional(NonEmptyString),
   });
 
 
@@ -181,15 +182,33 @@ Accounts.registerLoginHandler("password", options => {
     Accounts._handleError("User not found");
   }
 
+
   if (!user.services || !user.services.password ||
       !user.services.password.bcrypt) {
     Accounts._handleError("User has no password set");
   }
 
-  return checkPassword(
-    user,
-    options.password
-  );
+  const result = checkPassword(user, options.password);
+  // This method is added by the package accounts-2fa
+  // First the login is validated, then the code situation is checked
+  if (
+    !result.error &&
+    Accounts._check2faEnabled?.(user)
+  ) {
+    if (!options.code) {
+      Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
+    }
+    if (
+      !Accounts._isTokenValid(
+        user.services.twoFactorAuthentication.secret,
+        options.code
+      )
+    ) {
+      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
+    }
+  }
+
+  return result;
 });
 
 ///

@@ -1,12 +1,122 @@
-## vNEXT, UNRELEASED
+## v2.7.1, 2022-03-31
 
 #### Highlights
 
 #### Breaking Changes
 
+* `accounts-2fa@2.0.0`
+  - The method `has2faEnabled` no longer takes a selector as an argument, just the callback.
+  - `generate2faActivationQrCode` now throws an error if it's being called when the user already has 2FA enabled.
+
 #### Migration Steps
 
 #### Meteor Version Release
+
+* `accounts-2fa@2.0.0`
+  - Reduce one DB call on 2FA login. [PR](https://github.com/meteor/meteor/pull/11985)
+  - Throw error when user is not found on `Accounts._is2faEnabledForUser`
+  - Remove vulnerability from the method `has2faEnabled`
+  - Now the package auto-publish the field `services.twoFactorAuthentication.type` for logged in users.
+* `accounts-password@2.3.1`
+  - Use method `Accounts._check2faEnabled` when validating 2FA
+* `accounts-passwordless@2.1.1`
+  - Use method `Accounts._check2faEnabled` when validating 2FA
+* `oauth@2.1.2`
+  - Check effectively if popup was blocked by browser. [PR](https://github.com/meteor/meteor/pull/11984)
+* `standard-minifier-css@1.8.1`
+  - PostCSS bug fixes. [PR](https://github.com/meteor/meteor/pull/11987/files)
+
+#### Independent Releases
+
+## v2.7, 2022-03-24
+
+#### Highlights
+* Bump node version to 14.19.1
+* TailwindCSS 3.x support
+* Typescript `4.5.4` upgrade
+* New core package: `accounts-2fa`
+* Support for 2FA in `accounts-password` and `accounts-passwordless`
+* PostCSS's plugins are run by `standard-minifier-css` if the app has PostCSS configured
+* App skeletons and test packages were updated to `meteor-node-stubs@1.2.1`
+
+#### Breaking Changes
+
+N/A
+
+#### Migration Steps
+
+Read our [Migration Guide](https://guide.meteor.com/2.7-migration.html) for this version.
+
+#### Meteor Version Release
+
+* `standard-minifier-css@1.8.0`
+  - Runs PostCSS plugins if the app has a PostCSS config and the `postcss-load-config` npm package installed. Supports TailwindCSS 3.x [PR 1](https://github.com/Meteor-Community-Packages/meteor-postcss/pull/56) [PR 2](https://github.com/meteor/meteor/pull/11903)
+
+* `react-fast-refresh@0.2.3`
+  - Fix tracking states with circular dependencies. [PR](https://github.com/meteor/meteor/pull/11923)
+  
+* `accounts-2fa@1.0.0`
+  - New package to provide 2FA support
+  
+* `accounts-password@2.3.0`
+  - 2FA support
+  
+* `accounts-passwordless@2.1.0`
+  - 2FA support
+
+* `@meteorjs/babel@7.16.0`
+  - Upgrade TypeScript to `4.5.4`
+
+* `babel-compiler@7.9.0`
+  - Upgrade TypeScript to `4.5.4`
+
+* `ecmascript@0.16.2`
+  - Upgrade TypeScript to `4.5.4`
+
+* `typescript@4.5.4`
+  - Upgrade TypeScript to `4.5.4` [PR](https://github.com/meteor/meteor/pull/11846)
+
+* `accounts-ui-unstyled@1.6.0`
+  - `Accounts.ui.config` can now be set via `Meteor.settings.public.packages.accounts-ui-unstyled`.
+
+* `meteor-tool@2.7`
+  - CSS minifiers must now handle any caching themselves [PR](https://github.com/meteor/meteor/pull/11882)
+  - CSS minifiers are always given lazy css resources instead of only during production builds [PR](https://github.com/meteor/meteor/pull/11897)
+  - Files passed to CSS minifiers now have `file.readAndWatchFileWithHash`, same as for compilers [PR](https://github.com/meteor/meteor/pull/11882)
+  - If a minifier has a `beforeMinify` function, it will be called once during each build before the minifier is run the first time [PR](https://github.com/meteor/meteor/pull/11882)
+  - Add `Plugin.fs.readdirWithTypesSync` [PR](https://github.com/meteor/meteor/pull/11882)
+
+* `ejson@1.1.2`
+  - Fixing error were EJSON.equals fail to compare object and array if first param is object and second is array. [PR](https://github.com/meteor/meteor/pull/11866), [Issue](https://github.com/meteor/meteor/issues/11864).
+  
+* `oauth@1.4.1`
+  - If OAuth._retrieveCredentialSecret() fails trying to get credentials inside Accounts.oauth.tryLoginAfterPopupClosed(), we call it again once more.
+
+* `accounts-base@2.2.2`
+  - Fix an issue where an extra field defined in `defaultFieldSelector` would not get published to the client
+  - Proving the login results to the `_onLoginHook` when finishing login inside `callLoginMethod`. [PR](https://github.com/meteor/meteor/pull/11913).
+
+* `github-oauth@1.4.0`
+  - More data will be retrieved and saved under `services.github` on the user account.
+  - Add option to disallow sign-up on GitHub using `allow_signup` [parameter](https://docs.github.com/en/developers/apps/building-oauth-apps/authorizing-oauth-apps#parameters), this will be activated based on your Accounts settings, specifically if the option `forbidClientAccountCreation` is set to `true`.
+
+* `email@2.2.1`
+  - Throwing error when trying to send email in a production environment but without a mail URL set. [PR](https://github.com/meteor/meteor/pull/11891), [Issue](https://github.com/meteor/meteor/issues/11709).
+
+* `facebook-oauth@1.11.0`
+  - Updated Facebook API to version 12.0
+
+* `google-oauth@1.4.2`
+  - Migrate from `http` to `fetch`
+
+* `modules-runtime@0.13.0`
+  - Fix some npm modules being imported as an empty object. [PR](https://github.com/meteor/meteor/pull/11954), [Issue 1](https://github.com/meteor/meteor/issues/11900), [Issue 2](https://github.com/meteor/meteor/issues/11853).
+
+* `meteor-node-stubs@1.2.1`
+  - Adds support for [node:](https://nodejs.org/api/esm.html#node-imports) imports.
+
+* `minifier-jss@2.8.0`
+  - Updating terser. It will fix this [issue](https://github.com/meteor/meteor/issues/11721) and [this](https://github.com/meteor/meteor/issues/11930) one. [PR](https://github.com/meteor/meteor/pull/11983).
 
 #### Independent Releases
 
@@ -200,6 +310,8 @@ This version should be ignored. Proceed to 2.5.5 above.
 * HMR Fixes
 
 #### Breaking Changes
+
+* If a module calls `module.hot.decline()`, calling `module.hot.accept()` later now does nothing instead of overriding `module.hot.decline()`.
 
 #### Migration Steps
 

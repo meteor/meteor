@@ -7,6 +7,31 @@ const reportError = (error, callback) => {
    }
 };
 
+
+const internalLoginWithPassword = ({ selector, password, code, callback }) => {
+  if (typeof selector === 'string')
+    if (!selector.includes('@')) selector = { username: selector };
+    else selector = { email: selector };
+
+  Accounts.callLoginMethod({
+    methodArguments: [
+      {
+        user: selector,
+        password: Accounts._hashPassword(password),
+        code,
+      },
+    ],
+    userCallback: (error, result) => {
+      if (error) {
+        reportError(error, callback);
+      } else {
+        callback && callback();
+      }
+    },
+  });
+  return selector;
+};
+
 // Attempt to log in with a password.
 //
 // @param selector {String|Object} One of the following:
@@ -31,31 +56,40 @@ const reportError = (error, callback) => {
  * @importFromPackage meteor
  */
 Meteor.loginWithPassword = (selector, password, callback) => {
-  if (typeof selector === 'string')
-    if (!selector.includes('@'))
-      selector = {username: selector};
-    else
-      selector = {email: selector};
-
-  Accounts.callLoginMethod({
-    methodArguments: [{
-      user: selector,
-      password: Accounts._hashPassword(password)
-    }],
-    userCallback: (error, result) => {
-      if (error) {
-        reportError(error, callback);
-      } else {
-        callback && callback();
-      }
-    }
-  });
+  return internalLoginWithPassword({ selector, password, callback });
 };
 
 Accounts._hashPassword = password => ({
   digest: SHA256(password),
   algorithm: "sha-256"
 });
+
+
+/**
+ * @summary Log the user in with a password and token.
+ * @locus Client
+ * @param {Object | String} selector
+ *   Either a string interpreted as a username or an email; or an object with a
+ *   single key: `email`, `username` or `id`. Username or email match in a case
+ *   insensitive manner.
+ * @param {String} password The user's password.
+ * @param {String} token Token provide by the user's authenticator app.
+ * @param {Function} [callback] Optional callback.
+ *   Called with no arguments on success, or with a single `Error` argument
+ *   on failure.
+ * @importFromPackage meteor
+ */
+
+Meteor.loginWithPasswordAnd2faCode = (selector, password, code, callback) => {
+  if (code == null || typeof code !== 'string' || !code) {
+    throw new Meteor.Error(
+      400,
+      'token is required to use loginWithPasswordAnd2faCode and must be a string'
+    );
+  }
+  return internalLoginWithPassword({ selector, password, code, callback });
+};
+
 
 // Attempt to log in as a new user.
 

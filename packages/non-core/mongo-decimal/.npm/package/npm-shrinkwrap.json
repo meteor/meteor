@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "decimal.js": {
-      "version": "10.2.1",
-      "resolved": "https://registry.npmjs.org/decimal.js/-/decimal.js-10.2.1.tgz",
-      "integrity": "sha512-KaL7+6Fw6i5A2XSnsbhm/6B+NuEA7TZ4vqxnd5tXz9sbKtrN9Srj8ab4vKVdK8YAqZO9P1kg45Y6YLoduPf+kw=="
+      "version": "10.3.1",
+      "resolved": "https://registry.npmjs.org/decimal.js/-/decimal.js-10.3.1.tgz",
+      "integrity": "sha512-V0pfhfr8suzyPGOx3nmq4aHqabehUZn6Ch9kyFpV79TGDTWFmHqUqXdabR7QHqxzrYolF4+tVmJhUG4OURg5dQ=="
     }
   }
 }

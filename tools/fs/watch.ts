@@ -314,7 +314,7 @@ export class WatchSet {
 export function readFile(absPath: string) {
   try {
     return files.readFile(absPath);
-  } catch (e) {
+  } catch (e: any) {
     // Rethrow most errors.
     if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR')) {
       throw e;
@@ -340,7 +340,7 @@ function readAndStatDirectory(absPath: string) {
   // Read the directory.
   try {
     var contents = files.readdirWithTypes(absPath);
-  } catch (e) {
+  } catch (e: any) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
       return null;
@@ -618,7 +618,7 @@ export class Watcher {
       } else if (stat.isDirectory()) {
         try {
           var dirFiles = files.readdir(absPath);
-        } catch (err) {
+        } catch (err: any) {
           if (err.code === "ENOENT" ||
               err.code === "ENOTDIR") {
             // The directory was removed or changed type since we called
@@ -834,8 +834,8 @@ export function readAndWatchDirectory(
 ) {
   const contents = readDirectory(options);
   watchSet.addDirectory({
-    contents,
     ...options,
+    contents,
   });
   return contents;
 }
@@ -858,7 +858,7 @@ export function readAndWatchFileWithHash(watchSet: WatchSet, absPath: string) {
 
   try {
     result.contents = files.readFile(absPath);
-  } catch (e) {
+  } catch (e: any) {
     if (e && e.code === "EISDIR") {
       // Avoid adding directories to the watchSet as files.
       return result;

@@ -318,7 +318,7 @@ function statOrNullHelper(path: string, preserveSymlinks = false) {
     return preserveSymlinks
       ? lstat(path)
       : stat(path);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === "ENOENT") {
       return null;
     }
@@ -329,7 +329,7 @@ function statOrNullHelper(path: string, preserveSymlinks = false) {
 export function realpathOrNull(path: string) {
   try {
     return realpath(path);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code !== "ENOENT") throw e;
     return null;
   }
@@ -347,7 +347,7 @@ export function rm_recursive_async(path: string) {
 export const rm_recursive = Profile("files.rm_recursive", (path: string) => {
   try {
     rimraf.sync(convertToOSPath(path));
-  } catch (e) {
+  } catch (e: any) {
     if ((e.code === "ENOTEMPTY" ||
          e.code === "EPERM") &&
         canYield()) {
@@ -452,7 +452,7 @@ export function mkdir_p(dir: string, mode: number | null = null) {
 
   try {
     mkdir(p, mode);
-  } catch (err) {
+  } catch (err: any) {
     if (err.code === "EEXIST") {
       if (pathIsDirectory(p)) {
         // all good, someone else created this directory for us while we were
@@ -575,7 +575,7 @@ Profile("files.symlinkWithOverwrite", function symlinkWithOverwrite(
 
   try {
     symlink(...args);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === "EEXIST") {
       function normalizePath(path: string) {
         return convertToOSPath(path).replace(/[\/\\]$/, "")
@@ -934,7 +934,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   try {
     rename(toDir, garbageDir);
     cleanupGarbage = true;
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === 'EXDEV') {
       // Some (notably Docker) file systems will fail to do a seemingly
       // harmless operation, such as renaming, on what is apparently the same
@@ -952,7 +952,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   if (! forceCopy) {
     try {
       rename(fromDir, toDir);
-    } catch (e) {
+    } catch (e: any) {
       // It's possible that there may not have been a `toDir` to have
       // advanced warning about this, so we're prepared to handle it again.
       if (e.code === 'EXDEV') {
@@ -1098,7 +1098,7 @@ export function runJavaScript(code: string, {
       // Pass 'true' as third argument if we want the parse error on
       // stderr (which we don't).
       var script = require('vm').createScript(wrapped, stackFilename);
-    } catch (nodeParseError) {
+    } catch (nodeParseError: any) {
       if (!(nodeParseError instanceof SyntaxError)) {
         throw nodeParseError;
       }
@@ -1116,7 +1116,7 @@ export function runJavaScript(code: string, {
       const { parse } = require('@meteorjs/babel');
       try {
         parse(wrapped, { strictMode: false });
-      } catch (parseError) {
+      } catch (parseError: any) {
         if (typeof parseError.loc !== "object") {
           throw parseError;
         }
@@ -1184,7 +1184,7 @@ export class OfflineError {
 export function readdirNoDots(path: string) {
   try {
     var entries = readdir(path);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === 'ENOENT') {
       return [];
     }
@@ -1222,7 +1222,7 @@ export function splitBufferToLines(buffer: Buffer) {
 export function getLinesOrEmpty(file: string) {
   try {
     return getLines(file);
-  } catch (e) {
+  } catch (e: any) {
     if (e && e.code === 'ENOENT') {
       return [];
     }
@@ -1235,7 +1235,7 @@ export function getLinesOrEmpty(file: string) {
 export function readJSONOrNull(file: string) {
   try {
     var raw = readFile(file, 'utf8');
-  } catch (e) {
+  } catch (e: any) {
     if (e && e.code === 'ENOENT') {
       return null;
     }
@@ -1603,7 +1603,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
         rimraf.sync(osTo);
         wrappedRename(from, to);
         resolve();
-      } catch (err) {
+      } catch (err: any) {
         if (err.code !== 'EPERM' && err.code !== 'EACCES') {
           reject(err);
         } else if (Date.now() - startTimeMs < timeLimitMs) {
@@ -1614,7 +1614,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
       }
     }
     attempt();
-  }).catch(error => {
+  }).catch((error: any) => {
     if (error.code === 'EPERM' ||
         error.code === 'EACCESS') {
       cp_r(from, to, { preserveSymlinks: true });
