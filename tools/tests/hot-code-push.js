@@ -19,7 +19,7 @@ selftest.define("css hot code push", function (options) {
 
     run.connectClient();
 
-    run.waitSecs(20);
+    run.waitSecs(4800);
     run.match("client connected");
 
     // 'numCssChanges' variable is set to 0 on a client refresh.
@@ -35,7 +35,7 @@ selftest.define("css hot code push", function (options) {
 
     // The server does NOT restart if a new css file is added.
     s.write("test.css", "body { background-color: red; }");
-    run.waitSecs(30);
+    run.waitSecs(50);
     run.match("Client modified -- refreshing");
     run.match("numCssChanges: 1");
     run.match(/background-color: (red|rgb\(255, 0, 0\))/);
@@ -113,7 +113,7 @@ selftest.define("versioning hot code push", function (options) {
     run.match("running at");
     run.match("localhost");
     run.connectClient();
-    run.waitSecs(40);
+    run.waitSecs(4800);
 
     run.match("client connected: 0");
 
@@ -139,7 +139,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("localhost");
 
     run.connectClient();
-    run.waitSecs(40);
+    run.waitSecs(150);
 
     // There is initially no JavaScript file.
     run.match("client connected: 0");

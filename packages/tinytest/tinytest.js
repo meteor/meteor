@@ -205,7 +205,7 @@ export class TestCaseResults {
   // The upshot is, if you want to test whether an error is of a
   // particular class, use a predicate function.
   //
-  throws(f, expected) {
+  throws(f, expected, message) {
     var actual, predicate;
 
     if (expected === undefined) {
@@ -238,9 +238,9 @@ export class TestCaseResults {
     else
       this.fail({
         type: "throws",
-        message: actual ?
+        message: (actual ?
           "wrong error thrown: " + actual.message :
-          "did not throw an error as expected"
+          "did not throw an error as expected") + (message ? ": " + message : ""),
       });
   }
 

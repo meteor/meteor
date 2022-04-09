@@ -117,7 +117,7 @@ Email.customTransport = (data) => {
   // The rest of the options are from Email.send options
   const mailgun = Mailgun({ apiKey: data.packageSettings.mailgun.privateKey, domain: 'mg.mygreatapp.com' })
   
-  // Since the data object that we recieve already includes the correct key names for sending
+  // Since the data object that we receive already includes the correct key names for sending
   // we can just pass it to the mailgun sending message.
   mailgun.messages().send(data, (error, body) => {
     if (error) Log.error(error)

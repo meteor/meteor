@@ -36,10 +36,11 @@ The primary way to test your application in Meteor is the `meteor test` command.
 
 This loads your application in a special "test mode". What this does is:
 
-1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
-2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.test[s].*`, or `*.spec[s].*`
-3. Sets the `Meteor.isTest` flag to be true.
-4. Starts up the test driver package ([see below](#driver-packages)).
+- *Doesn't* eagerly load *any* of our application code as Meteor normally would.
+  - *This is a highly important note as Meteor wouldn't know of any methods/collections/publications unless you import them in your test files.*
+- *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.test[s].*`, or `*.spec[s].*`
+- Sets the `Meteor.isTest` flag to be true.
+- Starts up the test driver package ([see below](#driver-packages)).
 
 > The [Meteor build tool](build-tool.html#what-it-does) and the `meteor test` command ignore any files located in any `tests/` directory. This allows you to put tests in this directory that you can run using a test runner outside of Meteor's built-in test tools and still not have those files loaded in your application. See Meteor's [default file load order](structure.html#load-order) rules.
 
@@ -71,7 +72,7 @@ There are two main kinds of test driver packages:
 
 <h3 id="mocha">Recommended: Mocha</h3>
 
-In this article, we'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write and run tests in Mocha, we need to add an appropriate test driver package.
+In this article, we'll use the popular [Mocha](https://mochajs.org) test runner. And you can pair it with any assertion library you want like[Chai](http://chaijs.com) or [expect](https://jestjs.io/docs/expect). In order to write and run tests in Mocha, we need to add an appropriate test driver package.
 
 There are several options. Choose the ones that makes sense for your app. You may depend on more than one and set up different test commands for different situations.
 
@@ -104,9 +105,29 @@ Note that arrow function use with Mocha [is discouraged](http://mochajs.org/#arr
 
 When your app is run in test mode, it is initialized with a clean test database.
 
-If you are running a test that relies on using the database, and specifically the content of the database, you'll need to perform some *setup* steps in your test to ensure the database is in the state you expect. There are some tools you can use to do this.
+If you are running a test that relies on using the database, and specifically the content of the database, you'll need to perform some *setup* steps in your test to ensure the database is in the state you expect.
 
-To ensure the database is clean, the [`xolvio:cleaner`](https://atmospherejs.com/xolvio/cleaner) package is useful. You can use it to reset the database in a `beforeEach` block:
+```js
+import { Meteor } from 'meteor/meteor';
+import expect from 'expect';
+
+import { Notes } from './notes';
+
+ describe('notes', function () {
+   const noteOne = {
+     _id: 'testNote1',
+     title: 'Groceries',
+     body: 'Milk, Eggs and Oatmeal'
+   };
+
+   beforeEach(function () {
+     Notes.remove({});
+     Notes.insert(noteOne);
+   });
+    ...
+```
+
+You can also use [`xolvio:cleaner`](https://atmospherejs.com/xolvio/cleaner) which is useful for resetting the entire database if you wish to do so. You can use it to reset the database in a `beforeEach` block:
 
 ```js
 import { resetDatabase } from 'meteor/xolvio:cleaner';
@@ -118,7 +139,18 @@ describe('my module', function () {
 });
 ```
 
-This technique will only work on the server. If you need to reset the database from a client test, you can use a method to do so:
+This technique will only work on the server. If you need to reset the database from a client test, [`xolvio:cleaner`](https://github.com/xolvio/cleaner) provides you with a built-in method called [`xolvio:cleaner/resetDatabase`](https://github.com/xolvio/cleaner/blob/master/cleaner.js#L30):
+
+```js
+describe('my module', function (done) {
+  beforeEach(function (done) {
+    // We need to wait until the method call is done before moving on, so we
+    // use Mocha's async mechanism (calling a done callback)
+    Meteor.call('xolvio:cleaner/resetDatabase', done);
+  });
+});
+```
+You can also invoke `resetDatabase` in your methods in case you wanted to apply custom code before or after:
 
 ```js
 import { resetDatabase } from 'meteor/xolvio:cleaner';
@@ -126,15 +158,11 @@ import { resetDatabase } from 'meteor/xolvio:cleaner';
 // NOTE: Before writing a method like this you'll want to double check
 // that this file is only going to be loaded in test mode!!
 Meteor.methods({
-  'test.resetDatabase': () => resetDatabase(),
-});
-
-describe('my module', function (done) {
-  beforeEach(function (done) {
-    // We need to wait until the method call is done before moving on, so we
-    // use Mocha's async mechanism (calling a done callback)
-    Meteor.call('test.resetDatabase', done);
-  });
+  'test.resetDatabase': () => {
+    // custom code goes here... 
+    resetDatabase()
+    // or here
+  }
 });
 ```
 
@@ -144,10 +172,10 @@ As we've placed the code above in a test file, it *will not* load in normal deve
 
 Often it's sensible to create a set of data to run your test against. You can use standard `insert()` calls against your collections to do this, but often it's easier to create *factories* which help encode random test data. A great package to use to do this is [`dburles:factory`](https://atmospherejs.com/dburles/factory).
 
-In the [Todos](https://github.com/meteor/todos) example app, we define a factory to describe how to create a test todo item, using the [`faker`](https://www.npmjs.com/package/faker) npm package:
+In the [Todos](https://github.com/meteor/todos) example app, we define a factory to describe how to create a test todo item, using the [`faker`](https://www.npmjs.com/package/@faker-js/faker) npm package:
 
 ```js
-import faker from 'faker';
+import faker from '@faker-js/faker';
 
 Factory.define('todo', Todos, {
   listId: () => Factory.get('list'),
@@ -202,7 +230,7 @@ To do so, we'll use a very simple test helper that renders a Blaze component off
 [`imports/ui/test-helpers.js`](https://github.com/meteor/todos/blob/master/imports/ui/test-helpers.js):
 
 ```js
-import { _ } from 'meteor/underscore';
+import isString from 'lodash.isstring';
 import { Template } from 'meteor/templating';
 import { Blaze } from 'meteor/blaze';
 import { Tracker } from 'meteor/tracker';
@@ -219,7 +247,7 @@ const withDiv = function withDiv(callback) {
 
 export const withRenderedTemplate = function withRenderedTemplate(template, data, callback) {
   withDiv((el) => {
-    const ourTemplate = _.isString(template) ? Template[template] : template;
+    const ourTemplate = isString(template) ? Template[template] : template;
     Blaze.renderWithData(ourTemplate, data, el);
     Tracker.flush();
     callback(el);
@@ -238,7 +266,7 @@ An example of a reusable component to test is the [`Todos_item`](https://github.
 import { Factory } from 'meteor/dburles:factory';
 import chai from 'chai';
 import { Template } from 'meteor/templating';
-import { $ } from 'meteor/jquery';
+import $ from 'jquery';
 import { Todos } from '../../../api/todos/todos';
 
 
@@ -408,22 +436,68 @@ There's a lot of scope for better isolation and testing utilities.
 
 <h4 id="testing-publications">Testing publications</h4>
 
-Using the [`johanbrook:publication-collector`](https://atmospherejs.com/johanbrook/publication-collector) package, you're able to test individual publication's output without needing to create a traditional subscription:
+Let's take this simple publication for example:
 
 ```js
-describe('lists.public', function () {
-  it('sends all public lists', function (done) {
+// server/publications/notes
+ Meteor.publish('user.notes', function () {
+    return Notes.find({ userId: this.userId });
+  });
+```  
+We access Meteor publications using `Meteor.server.publish_handlers`, then use `.apply` to provide the needed parameters for the publication and test what it returns. 
+
+```js
+import { Meteor } from 'meteor/meteor';
+import expect from 'expect';
+
+import { Notes } from './notes';
+
+ describe('notes', function () {
+   const noteOne = {
+     _id: 'testNote1',
+     title: 'Groceries',
+     body: 'Milk, Eggs and Oatmeal'
+     userId: 'userId1'
+   };
+
+   beforeEach(function () {
+     Notes.remove({});
+     Notes.insert(noteOne);
+   });
+
+ it('should return a users notes', function () {
+      const res = Meteor.server.publish_handlers['user.notes'].apply({ userId: noteOne.userId });
+      const notes = res.fetch();
+
+      expect(notes.length).toBe(1);
+      expect(notes[0]).toEqual(noteOne);
+    });
+
+  it('should return no notes for user that has none', function () {
+      const res = Meteor.server.publish_handlers.notes.apply({ userId: 'testid' });
+      const notes = res.fetch();
+
+      expect(notes.length).toBe(0);
+    });  
+ });
+```    
+
+A useful package for testing publications is [`johanbrook:publication-collector`](https://atmospherejs.com/johanbrook/publication-collector), it allows you to test individual publication's output without needing to create a traditional subscription:
+
+```js
+describe('notes', function () {
+  it('should return a users notes', function (done) {
     // Set a user id that will be provided to the publish function as `this.userId`,
     // in case you want to test authentication.
-    const collector = new PublicationCollector({userId: 'some-id'});
+    const collector = new PublicationCollector({userId: noteOne.userId});
 
     // Collect the data published from the `lists.public` publication.
-    collector.collect('lists.public', (collections) => {
+    collector.collect('user.notes', (collections) => {
       // `collections` is a dictionary with collection names as keys,
       // and their published documents as values in an array.
       // Here, documents from the collection 'Lists' are published.
       chai.assert.typeOf(collections.Lists, 'array');
-      chai.assert.equal(collections.Lists.length, 3);
+      chai.assert.equal(collections.Lists.length, 1);
       done();
     });
   });
@@ -431,6 +505,138 @@ describe('lists.public', function () {
 ```
 
 Note that user documents – ones that you would normally query with `Meteor.users.find()` – will be available as the key `users` on the dictionary passed from a `PublicationCollector.collect()` call. See the [tests](https://github.com/johanbrook/meteor-publication-collector/blob/master/tests/publication-collector.test.js) in the package for more details.
+
+<h4 id="testing-methods">Testing methods</h4>
+
+We can also access methods using `Meteor.server.method_handlers` and apply the same principles. Take note of how we can use `sinon.fake()` to mock `this.unblock()`. 
+
+```js
+Meteor.methods({
+  'notes.insert'(title, body) {
+    if (!this.userId || Meteor.users.findOne({ _id: this.userId })) {
+      throw new Meteor.Error('not-authorized', 'You have to be authorized');
+    }
+
+    check(title, String);
+    check(body, String);
+
+    this.unblock();
+
+    return Notes.insert({
+      title,
+      body,
+      userId: this.userId
+    });
+  },
+  'notes.remove'(_id) {
+    if (!this.userId || Meteor.users.findOne({ _id: this.userId })) {
+      throw new Meteor.Error('not-authorized', 'You have to be authorized');
+    }
+
+    check(_id, String);
+
+    Notes.remove({ _id, userId: this.userId });
+  },
+  'notes.update'(_id, {title, body}) {
+    if (!this.userId || Meteor.users.findOne({ _id: this.userId })) {
+      throw new Meteor.Error('not-authorized', 'You have to be authorized');
+    }
+
+    check(_id, String);
+    check(title, String);
+    check(body, String);
+
+    Notes.update({
+      _id,
+      userId: this.userId
+    }, {
+      $set: {
+        title,
+        body
+      }
+    });
+  }
+});
+
+```
+
+```js
+
+describe('notes', function () {
+    const noteOne = {
+      _id: 'testNote1',
+      title: 'Groceries',
+      body: 'Milk, Eggs and Oatmeal'
+      userId: 'testUserId1'
+    };
+    beforeEach(function () {
+      Notes.remove({});
+    });
+
+    it('should insert new note', function () {
+      const _id = Meteor.server.method_handlers['notes.insert'].apply({ userId: noteOne.userId, unblock: sinon.fake() }. [title: noteOne.title, body: noteOne.body]);
+
+      expect(Notes.findOne({ _id })).toMatchObject(
+			expect.objectContaining(noteOne)
+		);
+    });
+
+    it('should not insert note if not authenticated', function () {
+      expect(() => {
+        Meteor.server.method_handlers['notes.insert']();
+      }).toThrow();
+    });
+
+    it('should remove note', function () {
+      Meteor.server.method_handlers['notes.remove'].apply({ userId: noteOne.userId }, [noteOne._id]);
+
+      expect(Notes.findOne({ _id: noteOne._id})).toNotExist();
+    });
+
+    it('should not remove note if invalid _id', function () {
+      expect(() => {
+        Meteor.server.method_handlers['notes.remove'].apply({ userId: noteOne.userId});
+      }).toThrow();
+    });
+
+    it('should update note', function () {
+      const title = 'To Buy';
+      const beef = 'Beef, Salmon'
+
+      Meteor.server.method_handlers['notes.update'].apply({
+        userId: noteOne.userId
+      }, [
+        noteOne._id,
+        {title, body}
+      ]);
+
+      const note = Notes.findOne(noteOne._id);
+
+      expect(note).toInclude({
+        title,
+        body
+      });
+    });
+
+    it('should not update note if user was not creator', function () {
+      const title = 'This is an updated title';
+
+      Meteor.server.method_handlers['notes.update'].apply({
+        userId: 'testid'
+      }, [
+        noteOne._id,
+        { title }
+      ]);
+
+      const note = Notes.findOne(noteOne._id);
+
+      expect(note).toInclude(noteOne);
+    });
+});
+
+```
+
+These examples are heavily inspired by [Andrew Mead example app](https://github.com/andrewjmead/notes-meteor-course).
 
 <h2 id="integration-testing">Integration testing</h2>
 
@@ -460,8 +666,7 @@ import { Random } from 'meteor/random';
 import chai from 'chai';
 import StubCollections from 'meteor/hwillson:stub-collections';
 import { Template } from 'meteor/templating';
-import { _ } from 'meteor/underscore';
-import { $ } from 'meteor/jquery';
+import $ from 'jquery';
 import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
 import sinon from 'sinon';
 
@@ -481,7 +686,7 @@ describe('Lists_show_page', function () {
     sinon.stub(Meteor, 'subscribe').returns.({
       subscriptionId: 0,
       ready: () => true,
-    }));
+    });
   });
 
   afterEach(function () {
@@ -494,7 +699,7 @@ describe('Lists_show_page', function () {
   it('renders correctly with simple data', function () {
     Factory.create('list', { _id: listId });
     const timestamp = new Date();
-    const todos = _.times(3, i => Factory.create('todo', {
+    const todos = [...Array(3).keys()].forEach(i => Factory.create('todo', {
       listId,
       createdAt: new Date(timestamp - (3 - i)),
     }));
@@ -543,7 +748,7 @@ import { FlowRouter } from 'meteor/ostrio:flow-router-extra';
 import { assert } from 'chai';
 
 import { Promise } from 'meteor/promise';
-import { $ } from 'meteor/jquery';
+import $ from 'jquery';
 
 import { denodeify } from '../../utils/denodeify';
 import { generateData } from './../../api/generate-data.app-tests.js';
@@ -627,13 +832,12 @@ import { Meteor } from 'meteor/meteor';
 import { Factory } from 'meteor/dburles:factory';
 import { resetDatabase } from 'meteor/xolvio:cleaner';
 import { Random } from 'meteor/random';
-import { _ } from 'meteor/underscore';
 
 import { denodeify } from '../utils/denodeify';
 
 const createList = (userId) => {
   const list = Factory.create('list', { userId });
-  _.times(3, () => Factory.create('todo', { listId: list._id }));
+  [...Array(3).keys()].forEach(() => Factory.create('todo', { listId: list._id }));
   return list;
 };
 
@@ -644,10 +848,10 @@ Meteor.methods({
     resetDatabase();
 
     // create 3 public lists
-    _.times(3, () => createList());
+    [...Array(3).keys()].forEach(() => createList());
 
     // create 3 private lists
-    _.times(3, () => createList(Random.id()));
+    [...Array(3).keys()].forEach(() => createList(Random.id()));
   },
 });
 
@@ -674,102 +878,77 @@ Also of note is the way we use a second DDP connection to the server in order to
 
 Acceptance testing is the process of taking an unmodified version of our application and testing it from the "outside" to make sure it behaves in a way we expect. Typically if an app passes acceptance tests, we have done our job properly from a product perspective.
 
-As acceptance tests test the behavior of the application in a full browser context in a generic way, there are a range of tools that you can use to specify and run such tests. In this guide we'll demonstrate using [Chimp](https://chimp.readme.io), an acceptance testing tool with a few neat Meteor-specific features that makes it easy to use.
+As acceptance tests test the behavior of the application in a full browser context in a generic way, there are a range of tools that you can use to specify and run such tests. In this guide we'll demonstrate using [Cypress](https://www.cypress.io/), an acceptance testing tool with a few neat Meteor-specific features that makes it easy to use.
 
-Chimp requires node version 4 or 5. You can check your node version by running:
+Install Cypress as a dev dependency:
 
-```sh
-node -v
+```bash
+cd /your/project/path
+meteor npm install cypress --save-dev
 ```
 
-You can install version 4 from [nodejs.org](https://nodejs.org/en/download/) or version 5 with `brew install node`. Then we can install the Chimp tool globally using:
+Designate a special directory for cypress test to avoid Meteor eagerly loading it:
 
-```sh
-npm install --global chimp
+```bash
+mkdir tests
+mv cypress/ tests/cypress
 ```
 
-> Note that you can also install Chimp as a `devDependency` in your `package.json` but you may run into problems deploying your application as it includes binary dependencies. You can avoid such problems by running `meteor npm prune` to remove non-production dependencies before deploying.
-
-Chimp has a variety of options for setting it up, but we can add some npm scripts which will run the currently tests we define in Chimp's two main modes. We can add them to our `package.json`:
+Create `cypress.json` file at the root of your project to config Cypress: 
 
 ```json
 {
-  "scripts": {
-    "chimp-watch": "chimp --ddp=http://localhost:3000 --watch --mocha --path=tests",
-    "chimp-test": "chimp --mocha --path=tests"
-  }
+  "fixturesFolder": "tests/cypress/fixtures",
+  "integrationFolder": "tests/cypress/integration",
+  "pluginsFile": "tests/cypress/plugins/index.js",
+  "screenshotsFolder": "tests/cypress/screenshots",
+  "supportFile": "tests/cypress/support/index.js",
+  "videosFolder": "tests/cypress/videos"
 }
 ```
 
-Chimp will now look in the `tests/` directory (otherwise ignored by the Meteor tool) for files in which you define acceptance tests. In the [Todos](https://github.com/meteor/todos) example app, we define a simple test that ensures we can click the "create list" button.
-
-[`tests/lists.js`](https://github.com/meteor/todos/blob/master/tests/lists.js):
+Add commands to your `package.json`
 
 ```js
-/* eslint-env mocha */
-/* eslint-disable func-names, prefer-arrow-callback */
+ "scripts": {
+    "cypress:gui": "cypress open",
+    "cypress:headless": "cypress run"
+  },
+```
 
-// These are Chimp globals
-/* globals browser assert server */
+Now, let's create a simple test by adding a new file called `signup_tests.js` in the `tests/cypress/integration/` directory.
 
-function countLists() {
-  browser.waitForExist('.list-todo');
-  const elements = browser.elements('.list-todo');
-  return elements.value.length;
-};
-
-describe('list ui', function () {
-  beforeEach(function () {
-    browser.url('http://localhost:3000');
-    server.call('generateFixtures');
+```js
+describe("sign-up", () => {
+  beforeEach(() => {
+    cy.visit("http://localhost:3000/");
   });
 
-  it('can create a list @watch', function () {
-    const initialCount = countLists();
+  it("should create and log the new user", () => {
+    cy.contains("Register").click();
+    cy.get("input#at-field-email").type("jean-peter.mac.calloway@gmail.com");
+    cy.get("input#at-field-password").type("awesome-password");
+    cy.get("input#at-field-password_again").type("awesome-password");
+    // I added a name field on meteor user accounts system
+    cy.get("input#at-field-name").type("Jean-Peter");
+    cy.get("button#at-btn").click();
 
-    browser.click('.js-new-list');
+    cy.url().should("eq", "http://localhost:3000/board");
 
-    assert.equal(countLists(), initialCount + 1);
+    cy.window().then(win => {
+      // this allows accessing the window object within the browser
+      const user = win.Meteor.user();
+      expect(user).to.exist;
+      expect(user.profile.name).to.equal("Jean-Peter");
+      expect(user.emails[0].address).to.equal(
+        "jean-peter.mac.calloway@gmail.com"
+      );
+    });
   });
 });
 ```
 
-<h3 id="running-acceptance-tests">Running acceptance tests</h3>
-
-To run acceptance tests, we need to start our Meteor app as usual, and point Chimp at it.
-
-In one terminal, we can do:
-
-```bash
-meteor
-```
-
-In another:
-
-```bash
-meteor npm run chimp-watch
-```
-
-The `chimp-watch` command will then run the test in a browser, and continue to re-run it as we change the test or the application. (Note that the test assumes we are running the app on port `3000`).
-
-
-Thus it's a good way to develop the test---this is why chimp has a feature where we mark tests with a `@watch` in the name to call out the tests we want to work on (running our entire acceptance test suite can be time consuming in a large application).
-
-The `chimp-test` command will run all of the tests *once only* and is good for testing that our suite passes, either as a manual step, or as part of a [continuous integration](#ci) process.
-
-
-<h3 id="creating-acceptance-test-data">Creating data</h3>
-
-Although we can run the acceptance test against our "pure" Meteor app, as we've done above, it often makes sense to start our meteor server with a special test driver, `tmeasday:acceptance-test-driver`. (You'll need to `meteor add` it to your app):
-
-```txt
-meteor test --full-app --driver-package tmeasday:acceptance-test-driver
-```
-
-The advantage of running our acceptance test suite pointed at an app that runs in full app test mode is that all of the [data generating methods](#creating-integration-test-data) that we've created remain available. Otherwise the `acceptance-test-driver` does nothing.
-
-In Chimp tests, you have a DDP connection to the server available on the `server` variable. You can thus use `server.call()` (which is wrapped to be synchronous in Chimp tests) to call these methods. This is a convenient way to share data preparation code between acceptance and integration tests.
-
+This is example is sampled from [Jean-Denis Gallego post](https://dev.to/splitified/test-your-meteor-app-with-docker-jenkins-and-cypress-part-1-12om). You may also check out this [entry](https://blog.meteor.com/testing-a-meteor-app-with-cypress-bfb3d3c6ed6f?gi=4f799b6211b7) on Meteor blog and [marmelab](https://marmelab.com/blog/2019/02/28/cypress-on-meteor.html) article for more information.
 
 <h2 id="ci">Continuous Integration</h2>
 
@@ -779,7 +958,7 @@ There are two principal ways to do it: on the developer's machine before allowin
 
 <h3 id="command-line">Command line</h3>
 
-We've seen one example of running tests on the command line, using our `meteor npm run chimp-test` mode.
+We've seen one example of running tests on the command line, using our `meteor npm run cypress:headless` mode.
 
 We can also use a command-line driver for Mocha [`meteortesting:mocha`](https://atmospherejs.com/meteortesting/mocha) to run our standard tests on the command line.
 

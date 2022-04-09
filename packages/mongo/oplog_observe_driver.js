@@ -1,5 +1,7 @@
 import has from 'lodash.has';
 import isEmpty from 'lodash.isempty';
+import { oplogV2V1Converter } from "./oplog_v2_converter";
+
 var Future = Npm.require('fibers/future');
 
 var PHASE = {
@@ -88,7 +90,9 @@ OplogObserveDriver = function (options) {
   self._registerPhaseChange(PHASE.QUERYING);
 
   self._matcher = options.matcher;
-  var projection = self._cursorDescription.options.fields || {};
+  // we are now using projection, not fields in the cursor description even if you pass {fields}
+  // in the cursor construction
+  var projection = self._cursorDescription.options.fields || self._cursorDescription.options.projection || {};
   self._projectionFn = LocalCollection._compileProjection(projection);
   // Projection function, result of combining important fields for selector and
   // existing fields projection
@@ -600,11 +604,16 @@ Object.assign(OplogObserveDriver.prototype, {
         if (self._matcher.documentMatches(op.o).result)
           self._addMatching(op.o);
       } else if (op.op === 'u') {
+        // we are mapping the new oplog format on mongo 5
+        // to what we know better, $set
+        op.o = oplogV2V1Converter(op.o)
         // Is this a modifier ($set/$unset, which may require us to poll the
         // database to figure out if the whole document matches the selector) or
         // a replacement (in which case we can just directly re-evaluate the
         // selector)?
-        var isReplace = !has(op.o, '$set') && !has(op.o, '$unset');
+        // oplog format has changed on mongodb 5, we have to support both now
+        // diff is the format in Mongo 5+ (oplog v2)
+        var isReplace = !has(op.o, '$set') && !has(op.o, 'diff') && !has(op.o, '$unset');
         // If this modifier modifies something inside an EJSON custom type (ie,
         // anything with EJSON$), then we can't try to use
         // LocalCollection._modify, since that just mutates the EJSON encoding,
@@ -977,9 +986,10 @@ OplogObserveDriver.cursorSupported = function (cursorDescription, matcher) {
 
   // If a fields projection option is given check if it is supported by
   // minimongo (some operators are not supported).
-  if (options.fields) {
+  const fields = options.fields || options.projection;
+  if (fields) {
     try {
-      LocalCollection._checkSupportedProjection(options.fields);
+      LocalCollection._checkSupportedProjection(fields);
     } catch (e) {
       if (e.name === "MinimongoError") {
         return false;
