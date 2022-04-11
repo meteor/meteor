@@ -227,9 +227,8 @@ First, add the service configuration package:
 meteor add service-configuration
 ```
 
-Then, in your app (this example is for the Weebo service), import `ServiceConfiguration` inside your `server/main.js` file:
+Then, inside the server of your app (this example is for the Weebo service), import `ServiceConfiguration`:
 
-`server/main.js`
 ```js
 import { ServiceConfiguration } from 'meteor/service-configuration';
 ServiceConfiguration.configurations.upsert(
