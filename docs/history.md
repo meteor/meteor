@@ -43,6 +43,7 @@
 ## v2.7, 2022-03-24
 
 #### Highlights
+* Bump node version to 14.19.1
 * TailwindCSS 3.x support
 * Typescript `4.5.4` upgrade
 * New core package: `accounts-2fa`
