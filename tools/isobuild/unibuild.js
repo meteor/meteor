@@ -120,10 +120,6 @@ export class Unibuild {
     _.each(unibuildJson.resources, function (resource) {
       rejectBadPath(resource.file);
 
-      if (resource.type === 'head') {
-        console.dir(resource);
-      }
-
       const data = files.readBufferWithLengthAndOffset(
         files.pathJoin(unibuildBasePath, resource.file),
         resource.length,
