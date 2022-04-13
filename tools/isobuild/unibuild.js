@@ -120,6 +120,10 @@ export class Unibuild {
     _.each(unibuildJson.resources, function (resource) {
       rejectBadPath(resource.file);
 
+      if (resource.type === 'head') {
+        console.dir(resource);
+      }
+
       const data = files.readBufferWithLengthAndOffset(
         files.pathJoin(unibuildBasePath, resource.file),
         resource.length,
@@ -153,7 +157,10 @@ export class Unibuild {
           usesDefaultSourceProcessor: true,
           legacyPrelink: {
             packageVariables: unibuildJson.packageVariables || []
-          }
+          },
+          // Only published packages still use prelink resources,
+          // so there is no need to mark this file to be watched
+          _dataUsed: false
         };
 
         if (resource.sourceMap) {
