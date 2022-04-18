@@ -10,8 +10,13 @@ N/A
 
 * `mongo@1.15.0`
   - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created. 
-  - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured.
-* Skeleton dependencies updated
+  - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+* `modern-browsers@0.1.8`
+  - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
+* `socket-stream-client@0.5.0`
+  - Ability to disable sockjs on client side. [PR](https://github.com/meteor/meteor/pull/12007/).
+* Skeleton dependencies updated.
+* New Tailwind skeleton. [PR](https://github.com/meteor/meteor/pull/12000).
 
 #### Independent Releases
 
