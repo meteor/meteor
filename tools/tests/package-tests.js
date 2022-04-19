@@ -357,15 +357,15 @@ selftest.define("add packages client archs", function (options) {
 
     s.testWithAllClients(function (run) {
       var expectedLogNum = 0;
-      run.waitSecs(5);
+      run.waitSecs(10);
       run.match("myapp");
       run.match("proxy");
-      run.waitSecs(5);
+      run.waitSecs(10);
       run.match("running at");
       run.match("localhost");
 
       run.connectClient();
-      run.waitSecs(20);
+      run.waitSecs(40);
       run.match("all clients " + (expectedLogNum++));
       run.match(clientType + " client " + (expectedLogNum++));
       run.stop();

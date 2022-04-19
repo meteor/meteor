@@ -508,8 +508,7 @@ WebApp.connectHandlers.use(
       connectSrc: ["*"],
       imgSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-    },
-    browserSniff: false
+    }
   })
 );
 ```
@@ -653,8 +652,12 @@ const helpmentOptions = {
 // connection available.
 // Run your project with --production flag to simulate script-src hashing
 if (!usesHttps && Meteor.isDevelopment) {
-  delete opt.contentSecurityPolicy.directives.blockAllMixedContent
-  opt.contentSecurityPolicy.directives.scriptSrc = [self, unsafeEval, unsafeInline]
+  delete helpmentOptions.contentSecurityPolicy.blockAllMixedContent;
+  helpmentOptions.contentSecurityPolicy.directives.scriptSrc = [
+    self,
+    unsafeEval,
+    unsafeInline,
+  ];
 }
 
 // finally pass the options to helmet to make them apply
@@ -695,6 +698,7 @@ This is a collection of points to check about your app that might catch common e
 1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's a nice UX feature.
 1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.
 1. Set up secure [HTTP headers](https://guide.meteor.com/security.html#httpheaders) using [Helmet](https://www.npmjs.com/package/helmet), but know that not all browsers support it so it provides an extra layer of security to users with modern browsers.
+1. At the end of the day, Meteor is a Node.js app so make sure to also follow the [best practises](https://cheatsheetseries.owasp.org/cheatsheets/Nodejs_Security_Cheat_Sheet.html) to ensure maximum security.
 
 <h2 id="appProtection">App Protection</h2>
 App Protection on Galaxy Hosting is a feature in our proxy server layer that sits in front of every request to your application. This means that all requests across servers are analyzed and measured against expected limits. This will help protect against DoS and DDoS attacks that aimed to overload servers and make your app unavailable for legitimate requests.

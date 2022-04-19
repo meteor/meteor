@@ -340,7 +340,7 @@ var uploadFile = function (putUrl, filepath) {
     });
   } catch (err) {
     // XXX: getUrl's error handling is terrible and we should fix it there.
-    buildmessage.error(typeof err === "string" ? err : err.error.toString());
+    buildmessage.error(typeof err === "string" ? err : err.toString());
     return false;
   } finally {
     rs.close();

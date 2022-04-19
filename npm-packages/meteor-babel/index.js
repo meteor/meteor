@@ -10,7 +10,7 @@ let options; // Lazily initialized.
 // Make sure that module.importSync and module.export are defined in the
 // current Node process.
 const Module = module.constructor;
-require("reify/lib/runtime").enable(Module.prototype);
+require("@meteorjs/reify/lib/runtime").enable(Module.prototype);
 
 // Options passed to compile will completely replace the default options,
 // so if you only want to modify the default options, call this function

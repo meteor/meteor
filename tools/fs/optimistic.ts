@@ -265,7 +265,7 @@ export const optimisticLStatOrNull = makeCheapPathFunction(
   (path: string) => {
     try {
       return optimisticLStat(path);
-    } catch (e) {
+    } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
       dependOnParentDirectory(path);
       return null;
@@ -282,7 +282,7 @@ export const optimisticHashOrNull = makeOptimistic("hashOrNull", (
   try {
     return sha1(optimisticReadFile(path, options)) as string;
 
-  } catch (e) {
+  } catch (e: any) {
     if (e.code !== "EISDIR" &&
         e.code !== "ENOENT") {
       throw e;
@@ -309,7 +309,7 @@ makeOptimistic("readJsonOrNull", (
   let contents: string | Buffer;
   try {
     contents = optimisticReadFile(path, options);
-  } catch (e) {
+  } catch (e: any) {
     if (e.code === "ENOENT") {
       dependOnParentDirectory(path);
       return null;
@@ -399,7 +399,7 @@ wrap((absRootDir: string, relDir: string) => {
 const optimisticIsSymbolicLink = wrap((path: string) => {
   try {
     return lstat(path)?.isSymbolicLink();
-  } catch (e) {
+  } catch (e: any) {
     if (e.code !== "ENOENT") throw e;
     dependOnParentDirectory(path);
     return false;

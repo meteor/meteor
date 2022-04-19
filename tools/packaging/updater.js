@@ -124,7 +124,7 @@ var maybeShowBanners = function () {
           "=> A patch (" +
           catalogUtils.displayRelease(track, patchReleaseVersion) +
           ") for your current release is available!");
-        runLog.log("   Update this project now with 'meteor update --patch'.");
+        runLog.log("   Check the changelog https://docs.meteor.com/changelog.html and update this project now with 'meteor update --patch'.");
       }
       return;
     }
@@ -142,7 +142,7 @@ var maybeShowBanners = function () {
     if (shouldShow(futureReleaseKey)) {
       runLog.log(
         "=> " + catalogUtils.displayRelease(track, futureReleases[0]) +
-        " is available. Update this project with 'meteor update'.");
+        " is available. Check the changelog https://docs.meteor.com/changelog.html and update this project with 'meteor update'.");
     }
     return;
   }

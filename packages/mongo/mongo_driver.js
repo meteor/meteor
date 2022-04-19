@@ -1,3 +1,5 @@
+import { normalizeProjection } from "./mongo_utils";
+
 /**
  * Provide a synchronous Collection API using fibers, backed by
  * MongoDB.  This is only for use on the server, and mostly identical
@@ -146,42 +148,16 @@ MongoConnection = function (url, options) {
 
   var mongoOptions = Object.assign({
     ignoreUndefined: true,
-    // (node:59240) [MONGODB DRIVER] Warning: Current Server Discovery and
-    // Monitoring engine is deprecated, and will be removed in a future version.
-    // To use the new Server Discover and Monitoring engine, pass option
-    // { useUnifiedTopology: true } to the MongoClient constructor.
-    useUnifiedTopology: true,
   }, userOptions);
 
-  // The autoReconnect and reconnectTries options are incompatible with
-  // useUnifiedTopology: https://github.com/meteor/meteor/pull/10861#commitcomment-37525845
-  if (!mongoOptions.useUnifiedTopology) {
-    // Reconnect on error. This defaults to true, but it never hurts to be
-    // explicit about it.
-    mongoOptions.autoReconnect = true;
-    // Try to reconnect forever, instead of stopping after 30 tries (the
-    // default), with each attempt separated by 1000ms.
-    mongoOptions.reconnectTries = Infinity;
-  }
 
-  // Disable the native parser by default, unless specifically enabled
-  // in the mongo URL.
-  // - The native driver can cause errors which normally would be
-  //   thrown, caught, and handled into segfaults that take down the
-  //   whole app.
-  // - Binary modules don't yet work when you bundle and move the bundle
-  //   to a different platform (aka deploy)
-  // We should revisit this after binary npm module support lands.
-  if (!(/[\?&]native_?[pP]arser=/.test(url))) {
-    mongoOptions.native_parser = false;
-  }
 
-  // Internally the oplog connections specify their own poolSize
+  // Internally the oplog connections specify their own maxPoolSize
   // which we don't want to overwrite with any user defined value
-  if (_.has(options, 'poolSize')) {
+  if (_.has(options, 'maxPoolSize')) {
     // If we just set this for "server", replSet will override it. If we just
     // set it for replSet, it will be ignored if we're not using a replSet.
-    mongoOptions.poolSize = options.poolSize;
+    mongoOptions.maxPoolSize = options.maxPoolSize;
   }
 
   // Transform options like "tlsCAFileAsset": "filename.pem" into
@@ -205,9 +181,10 @@ MongoConnection = function (url, options) {
 
 
   var connectFuture = new Future;
-  MongoDB.connect(
+  new MongoDB.MongoClient(
     url,
-    mongoOptions,
+    mongoOptions
+  ).connect(
     Meteor.bindEnvironment(
       function (err, client) {
         if (err) {
@@ -215,13 +192,22 @@ MongoConnection = function (url, options) {
         }
 
         var db = client.db();
-
-        // First, figure out what the current primary is, if any.
-        if (db.serverConfig.isMasterDoc) {
-          self._primary = db.serverConfig.isMasterDoc.primary;
+        try {
+          const helloDocument = db.admin().command({hello: 1}).await();
+          // First, figure out what the current primary is, if any.
+          if (helloDocument.primary) {
+            self._primary = helloDocument.primary;
+          }
+        }catch(_){
+          // ismaster command is supported on older mongodb versions
+          const isMasterDocument = db.admin().command({ismaster:1}).await();
+          // First, figure out what the current primary is, if any.
+          if (isMasterDocument.primary) {
+            self._primary = isMasterDocument.primary;
+          }
         }
 
-        db.serverConfig.on(
+        client.topology.on(
           'joined', Meteor.bindEnvironment(function (kind, doc) {
             if (kind === 'primary') {
               if (doc.primary !== self._primary) {
@@ -283,9 +269,7 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
   if (! self.db)
     throw Error("rawCollection called before Connection created?");
 
-  var future = new Future;
-  self.db.collection(collectionName, future.resolver());
-  return future.wait();
+  return self.db.collection(collectionName);
 };
 
 MongoConnection.prototype._createCappedCollection = function (
@@ -401,8 +385,16 @@ MongoConnection.prototype._insert = function (collection_name, document,
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
     var collection = self.rawCollection(collection_name);
-    collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
-                      {safe: true}, callback);
+    collection.insertOne(
+      replaceTypes(document, replaceMeteorAtomWithMongo),
+      {
+        safe: true,
+      }
+    ).then(({insertedId}) => {
+      callback(null, insertedId);
+    }).catch((e) => {
+      callback(e, null)
+    });
   } catch (err) {
     write.committed();
     throw err;
@@ -449,11 +441,15 @@ MongoConnection.prototype._remove = function (collection_name, selector,
 
   try {
     var collection = self.rawCollection(collection_name);
-    var wrappedCallback = function(err, driverResult) {
-      callback(err, transformResult(driverResult).numberAffected);
-    };
-    collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
-                       {safe: true}, wrappedCallback);
+    collection
+      .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
+        safe: true,
+      })
+      .then(({ deletedCount }) => {
+        callback(null, transformResult({ result : {modifiedCount : deletedCount} }).numberAffected);
+      }).catch((err) => {
+      callback(err);
+    });
   } catch (err) {
     write.committed();
     throw err;
@@ -629,11 +625,18 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
         Object.assign(mongoMod.$setOnInsert, replaceTypes({_id: options.insertedId}, replaceMeteorAtomWithMongo));
       }
 
-      collection.update(
+      const strings = Object.keys(mongoMod).filter((key) => !key.startsWith("$"));
+      let updateMethod = strings.length > 0 ? 'replaceOne' : 'updateMany';
+      updateMethod =
+        updateMethod === 'updateMany' && !mongoOpts.multi
+          ? 'updateOne'
+          : updateMethod;
+      collection[updateMethod].bind(collection)(
         mongoSelector, mongoMod, mongoOpts,
-        bindEnvironmentForWrite(function (err, result) {
+          // mongo driver now returns undefined for err in the callback
+          bindEnvironmentForWrite(function (err = null, result) {
           if (! err) {
-            var meteorResult = transformResult(result);
+            var meteorResult = transformResult({result});
             if (meteorResult && options._returnObject) {
               // If this was an upsert() call, and we ended up
               // inserting a new doc and we know its id, then
@@ -665,18 +668,19 @@ var transformResult = function (driverResult) {
   var meteorResult = { numberAffected: 0 };
   if (driverResult) {
     var mongoResult = driverResult.result;
-
     // On updates with upsert:true, the inserted values come as a list of
     // upserted values -- even with options.multi, when the upsert does insert,
     // it only inserts one element.
-    if (mongoResult.upserted) {
-      meteorResult.numberAffected += mongoResult.upserted.length;
+    if (mongoResult.upsertedCount) {
+      meteorResult.numberAffected = mongoResult.upsertedCount;
 
-      if (mongoResult.upserted.length == 1) {
-        meteorResult.insertedId = mongoResult.upserted[0]._id;
+      if (mongoResult.upsertedId) {
+        meteorResult.insertedId = mongoResult.upsertedId;
       }
     } else {
-      meteorResult.numberAffected = mongoResult.n;
+      // n was used before Mongo 5.0, in Mongo 5.0 we are not receiving this n
+      // field and so we are using modifiedCount instead
+      meteorResult.numberAffected = mongoResult.n || mongoResult.matchedCount || mongoResult.modifiedCount;
     }
   }
 
@@ -742,40 +746,53 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     if (! tries) {
       callback(new Error("Upsert failed after " + NUM_OPTIMISTIC_TRIES + " tries."));
     } else {
-      collection.update(selector, mod, mongoOptsForUpdate,
-                        bindEnvironmentForWrite(function (err, result) {
-                          if (err) {
-                            callback(err);
-                          } else if (result && result.result.n != 0) {
-                            callback(null, {
-                              numberAffected: result.result.n
-                            });
-                          } else {
-                            doConditionalInsert();
-                          }
-                        }));
+      let method = collection.updateMany;
+      if(!Object.keys(mod).some(key => key.startsWith("$"))){
+        method = collection.replaceOne.bind(collection);
+      }
+      method(
+        selector,
+        mod,
+        mongoOptsForUpdate,
+        bindEnvironmentForWrite(function(err, result) {
+          if (err) {
+            callback(err);
+          } else if (result && (result.modifiedCount || result.upsertedCount)) {
+            callback(null, {
+              numberAffected: result.modifiedCount || result.upsertedCount,
+              insertedId: result.upsertedId || undefined,
+            });
+          } else {
+            doConditionalInsert();
+          }
+        })
+      );
     }
   };
 
-  var doConditionalInsert = function () {
-    collection.update(selector, replacementWithId, mongoOptsForInsert,
-                      bindEnvironmentForWrite(function (err, result) {
-                        if (err) {
-                          // figure out if this is a
-                          // "cannot change _id of document" error, and
-                          // if so, try doUpdate() again, up to 3 times.
-                          if (MongoConnection._isCannotChangeIdError(err)) {
-                            doUpdate();
-                          } else {
-                            callback(err);
-                          }
-                        } else {
-                          callback(null, {
-                            numberAffected: result.result.upserted.length,
-                            insertedId: insertedId,
-                          });
-                        }
-                      }));
+  var doConditionalInsert = function() {
+    collection.replaceOne(
+      selector,
+      replacementWithId,
+      mongoOptsForInsert,
+      bindEnvironmentForWrite(function(err, result) {
+        if (err) {
+          // figure out if this is a
+          // "cannot change _id of document" error, and
+          // if so, try doUpdate() again, up to 3 times.
+          if (MongoConnection._isCannotChangeIdError(err)) {
+            doUpdate();
+          } else {
+            callback(err);
+          }
+        } else {
+          callback(null, {
+            numberAffected: result.upsertedCount,
+            insertedId: result.upsertedId,
+          });
+        }
+      })
+    );
   };
 
   doUpdate();
@@ -988,20 +1005,27 @@ MongoConnection.prototype._createSynchronousCursor = function(
     sort: cursorOptions.sort,
     limit: cursorOptions.limit,
     skip: cursorOptions.skip,
-    projection: cursorOptions.fields,
-    readPreference: cursorOptions.readPreference
+    projection: cursorOptions.fields || cursorOptions.projection,
+    readPreference: cursorOptions.readPreference,
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
   if (cursorOptions.tailable) {
+    mongoOptions.numberOfRetries = -1;
+  }
+
+  var dbCursor = collection.find(
+    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
+    mongoOptions);
+
+  // Do we want a tailable cursor (which only works on capped collections)?
+  if (cursorOptions.tailable) {
     // We want a tailable cursor...
-    mongoOptions.tailable = true;
+    dbCursor.addCursorFlag("tailable", true)
     // ... and for the server to wait a bit if any getMore has no data (rather
     // than making us put the relevant sleeps in the client)...
-    mongoOptions.awaitdata = true;
-    // ... and to keep querying the server indefinitely rather than just 5 times
-    // if there's no more data.
-    mongoOptions.numberOfRetries = -1;
+    dbCursor.addCursorFlag("awaitData", true)
+
     // And if this is on the oplog collection and the cursor specifies a 'ts',
     // then set the undocumented oplog replay flag, which does a special scan to
     // find the first document (instead of creating an index on ts). This is a
@@ -1009,13 +1033,9 @@ MongoConnection.prototype._createSynchronousCursor = function(
     // only works with the ts field.
     if (cursorDescription.collectionName === OPLOG_COLLECTION &&
         cursorDescription.selector.ts) {
-      mongoOptions.oplogReplay = true;
+      dbCursor.addCursorFlag("oplogReplay", true)
     }
   }
-
-  var dbCursor = collection.find(
-    replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
-    mongoOptions);
 
   if (typeof cursorOptions.maxTimeMs !== 'undefined') {
     dbCursor = dbCursor.maxTimeMS(cursorOptions.maxTimeMs);
@@ -1169,9 +1189,9 @@ _.extend(SynchronousCursor.prototype, {
     return self.map(_.identity);
   },
 
-  count: function (applySkipLimit = false) {
+  count: function () {
     var self = this;
-    return self._synchronousCount(applySkipLimit).wait();
+    return self._synchronousCount().wait();
   },
 
   // This method is NOT wrapped in Cursor.
@@ -1285,9 +1305,10 @@ MongoConnection.prototype._observeChanges = function (
 
   // You may not filter out _id when observing changes, because the id is a core
   // part of the observeChanges API.
-  if (cursorDescription.options.fields &&
-      (cursorDescription.options.fields._id === 0 ||
-       cursorDescription.options.fields._id === false)) {
+  const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
+  if (fieldsOptions &&
+      (fieldsOptions._id === 0 ||
+       fieldsOptions._id === false)) {
     throw Error("You may not observe a cursor with {fields: {_id: 0}}");
   }
 

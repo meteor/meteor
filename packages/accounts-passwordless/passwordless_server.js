@@ -1,5 +1,5 @@
 import { Accounts } from 'meteor/accounts-base';
-import { getUserById, tokenValidator } from './server_utils';
+import {getUserById, NonEmptyString, tokenValidator} from './server_utils';
 import { Random } from 'meteor/random';
 
 const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
@@ -63,6 +63,7 @@ Accounts.registerLoginHandler('passwordless', options => {
 
   check(options, {
     token: tokenValidator(),
+    code: Match.Optional(NonEmptyString),
     selector: Accounts._userQueryValidator,
   });
 
@@ -87,6 +88,25 @@ Accounts.registerLoginHandler('passwordless', options => {
   const { verifiedEmail, error } = result;
 
   if (!error && verifiedEmail) {
+    // This method is added by the package accounts-2fa
+    if (Accounts._check2faEnabled?.(user)) {
+      if (!options.code) {
+        Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
+        return;
+      }
+      if (
+        !Accounts._isTokenValid(
+          user.services.twoFactorAuthentication.secret,
+          options.code
+        )
+      ) {
+        Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
+        return;
+      }
+    }
+    // It's necessary to make sure we don't remove the token if the user has 2fa enabled
+    // otherwise, it would be necessary to generate a new one if this method is called without
+    // a 2fa code
     Meteor.users.update(
       { _id: user._id, 'emails.address': verifiedEmail },
       {

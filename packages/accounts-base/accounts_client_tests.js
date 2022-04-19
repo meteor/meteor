@@ -1,13 +1,16 @@
+import {Accounts} from "meteor/accounts-base";
+
 const username = 'jsmith';
 const password = 'password';
 const excludeField = 'excludeField';
 const defaultExcludeField = 'defaultExcludeField';
 const excludeValue = 'foo';
+const secret2fa = 'shhhh';
 const profile = {
   name: username,
   [excludeField]: excludeValue,
   [defaultExcludeField]: excludeValue,
-}
+};
 
 const logoutAndCreateUser = (test, done, nextTests) => {
   Meteor.logout(() => {
@@ -22,10 +25,47 @@ const logoutAndCreateUser = (test, done, nextTests) => {
   });
 };
 
-const removeTestUser = (done) => {
+const createUserAndLogout = (test, done, nextTests) => {
+  // Setup a new test user
+  Accounts.createUser(
+    {
+      username,
+      password,
+      profile: {
+        name: username,
+      },
+    },
+    () => {
+      Meteor.logout(() => {
+        // Make sure we're logged out
+        test.isFalse(Meteor.user());
+        // Handle next tests
+        nextTests(test, done);
+      });
+    }
+  );
+};
+
+const removeTestUser = done => {
   Meteor.call('removeAccountsTestUser', username, () => {
     done();
   });
+};
+
+const forceEnableUser2fa = done => {
+  Meteor.call('forceEnableUser2fa', { username }, secret2fa, (err, token) => {
+    done(token);
+  });
+};
+
+const getTokenFromSecret = done => {
+  Meteor.call(
+    'getTokenFromSecret',
+    { selector: { username } },
+    (err, token) => {
+      done(token);
+    }
+  );
 };
 
 Tinytest.addAsync(
@@ -137,3 +177,84 @@ Tinytest.addAsync(
     });
   }
 );
+
+
+Tinytest.addAsync(
+  'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() fails when token is not provided',
+  (test, done) => {
+    createUserAndLogout(test, done, () => {
+      try {
+        Meteor.loginWithPasswordAnd2faCode(username, password);
+      } catch (e) {
+        test.equal(
+          e.reason,
+          'token is required to use loginWithPasswordAnd2faCode and must be a string'
+        );
+      } finally {
+        test.isFalse(Meteor.user());
+        removeTestUser(done);
+      }
+    });
+  }
+);
+
+
+Tinytest.addAsync(
+  'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() fails with invalid code',
+  (test, done) => {
+    createUserAndLogout(test, done, () => {
+      forceEnableUser2fa(() => {
+        Meteor.loginWithPasswordAnd2faCode(username, password, 'ABC', e => {
+          test.isFalse(Meteor.user());
+          test.equal(e.reason, 'Invalid 2FA code');
+          removeTestUser(done);
+        });
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() succeeds when token is correct',
+  (test, done) => {
+    createUserAndLogout(test, done, () => {
+      forceEnableUser2fa((token) => {
+        Meteor.loginWithPasswordAnd2faCode(username, password, token, e => {
+          test.equal(e, undefined);
+          test.isTrue(Meteor.user());
+          removeTestUser(done);
+        });
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts-2fa - Generates secret, enable 2fa, verifies if 2fa is enabled, disable 2fa, verifies if 2fa is disabled',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      // Generates secret
+      Accounts.generate2faActivationQrCode('test', (err, svg) => {
+        test.isTrue(svg != null);
+        getTokenFromSecret(token => {
+          // enable 2fa
+          Accounts.enableUser2fa(token, () => {
+            // verifies if 2fa is enabled
+            Accounts.has2faEnabled((err, isEnabled) => {
+              test.isTrue(isEnabled);
+              // disable 2fa
+              Accounts.disableUser2fa(() => {
+                // verifies if 2fa is disabled
+                Accounts.has2faEnabled((err, isEnabled) => {
+                  test.isFalse(!!isEnabled);
+                  removeTestUser(done);
+                });
+              });
+            });
+          });
+        });
+      });
+    });
+  }
+);
+
