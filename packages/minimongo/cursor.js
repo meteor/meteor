@@ -519,11 +519,9 @@ export default class Cursor {
 }
 
 // Implements async version of cursor methods to keep collections isomorphic
-CURSOR_METHODS
-  .forEach(method => {
-    const asyncName = getAsyncMethodName(method);
-    Cursor.prototype[asyncName] = async function(...args) {
-      return Promise.resolve(this[method].apply(
-        this, args));
-    };
-  });
+CURSOR_METHODS.forEach(method => {
+  const asyncName = getAsyncMethodName(method);
+  Cursor.prototype[asyncName] = function(...args) {
+    return Promise.resolve(this[method].apply(this, args));
+  };
+});

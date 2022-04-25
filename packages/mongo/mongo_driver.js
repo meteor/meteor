@@ -15,9 +15,7 @@ const util = require("util");
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
-import {
-  getCollectionInstanceOrNull,
-} from "./collectionsInstances";
+import { getCollectionInstanceOrNull } from "./collectionsInstances";
 import { getAsyncMethodName, CURSOR_METHODS } from "meteor/minimongo/constants";
 
 MongoInternals = {};
@@ -784,7 +782,6 @@ _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], functio
   };
 });
 
-
 // XXX MongoConnection.upsert() does not return the id of the inserted document
 // unless you set it explicitly in the selector or modifier (as a replacement
 // doc).
@@ -917,41 +914,35 @@ const setupSynchronousCursor = (cursor, method) => {
   }
 };
 
-_.each([...CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator],
-  function (method) {
-    Cursor.prototype[method] = function () {
-      var self = this;
+[...CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(method => {
+  Cursor.prototype[method] = function () {
+    setupSynchronousCursor(this, method);
 
-      setupSynchronousCursor(self, method);
+    return this._synchronousCursor[method].apply(
+      this._synchronousCursor,
+      arguments
+    );
+  };
+});
 
-      return self._synchronousCursor[method].apply(
-        self._synchronousCursor,
-        arguments
-      );
-    };
-  }
-);
+CURSOR_METHODS.forEach(method => {
+  const asyncName = getAsyncMethodName(method);
+  Cursor.prototype[asyncName] = function(...args) {
+    setupSynchronousCursor(this, method);
 
-CURSOR_METHODS
-  .forEach(method => {
-    const asyncName = getAsyncMethodName(method);
-    Cursor.prototype[asyncName] = async function(...args) {
-      setupSynchronousCursor(this, method);
+    const collectionName = this._cursorDescription.collectionName;
 
-      const collectionName = this._cursorDescription.collectionName;
+    const options = { isAsync: true };
+    const collectionInstance = getCollectionInstanceOrNull({name: collectionName, options});
 
-      const options = { isAsync: true };
-      const collectionInstance = getCollectionInstanceOrNull({name: collectionName, options});
+    if (!collectionInstance) {
+      throw new Error(
+        `It is only allowed to use "${asyncName}" cursor method in async collections like "${collectionName}". Use "Mongo.createAsyncCollection" to create async collections.`);
+    }
 
-      if (!collectionInstance) {
-        throw new Error(
-          `It is only allowed to use "${asyncName}" cursor method in async collections like "${collectionName}". Use "Mongo.createAsyncCollection" to create async collections.`);
-      }
-
-      return Promise.resolve(this._synchronousCursor[method].apply(
-        this._synchronousCursor, args));
-    };
-  });
+    return Promise.resolve(this._synchronousCursor[method].apply(this._synchronousCursor, args));
+  };
+});
 
 Cursor.prototype.getTransform = function () {
   return this._cursorDescription.options.transform;

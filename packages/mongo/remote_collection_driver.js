@@ -19,7 +19,7 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });
     return ret;
-  },
+  }
 });
 
 // Create the singleton RemoteCollectionDriver only on demand, so we

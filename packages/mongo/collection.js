@@ -161,7 +161,7 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
 
     // autopublish
     if (Package.autopublish &&
-        ! options._preventAutopublish &&
+        !options._preventAutopublish &&
         this._connection &&
         this._connection.publish) {
       this._connection.publish(null, () => this.find(), {
@@ -176,8 +176,7 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
 Object.assign(Mongo.Collection.prototype, {
   _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
     const self = this;
-    if (! (self._connection &&
-      self._connection.registerStore)) {
+    if (!(self._connection && self._connection.registerStore)) {
       return;
     }
 
@@ -433,19 +432,21 @@ Object.assign(Mongo.Collection.prototype, {
 Object.assign(Mongo.Collection, {
   _publishCursor(cursor, sub, collection) {
     var observeHandle = cursor.observeChanges(
-        {added: function (id, fields) {
+      {
+        added: function(id, fields) {
           sub.added(collection, id, fields);
         },
-        changed: function (id, fields) {
+        changed: function(id, fields) {
           sub.changed(collection, id, fields);
         },
-        removed: function (id) {
+        removed: function(id) {
           sub.removed(collection, id);
         },
       },
       // Publications don't mutate the documents
       // This is tested by the `livedata - publish callbacks clone` test
-      { nonMutatingCallbacks: true });
+      { nonMutatingCallbacks: true }
+    );
 
     // We don't call sub.ready() here: it gets called in livedata_server, after
     // possibly calling _publishCursor on multiple returned cursors.
@@ -536,9 +537,10 @@ const collectionImplementation = {
     );
 
     if ('_id' in doc) {
-      if (! doc._id ||
-        ! (typeof doc._id === 'string' ||
-          doc._id instanceof Mongo.ObjectID)) {
+      if (
+        !doc._id ||
+        !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
+      ) {
         throw new Error(
           'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
         );
