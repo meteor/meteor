@@ -9,12 +9,12 @@ selftest.define('custom minifier - devel vs prod', function (options) {
   s.cd('myapp');
 
   s.testWithAllClients(function (run) {
-    run.waitSecs(5);
+    run.waitSecs(20);
     run.match('myapp');
     run.match('proxy');
 
     run.connectClient();
-    run.waitSecs(20);
+    run.waitSecs(4800);
 
     // XXX when minifiers start getting applied to server target, this
     // outcome would change
@@ -22,6 +22,7 @@ selftest.define('custom minifier - devel vs prod', function (options) {
 
     run.match('production_css: rgb(255, 0, 0)');
     run.match('development_css: rgb(0, 0, 0)');
+    run.match('minified_lazy: rgb(0, 255, 0)');
     run.match('Message (client): production_js');
 
     run.stop();
@@ -30,12 +31,12 @@ selftest.define('custom minifier - devel vs prod', function (options) {
     testFile: 'customer-minifier.js' });
 
   s.testWithAllClients(function (run) {
-    run.waitSecs(5);
+    run.waitSecs(20);
     run.match('myapp');
     run.match('proxy');
 
     run.connectClient();
-    run.waitSecs(20);
+    run.waitSecs(250);
 
     // XXX when minifiers start getting applied to server target, this
     // outcome would change
@@ -43,6 +44,7 @@ selftest.define('custom minifier - devel vs prod', function (options) {
 
     run.match('production_css: rgb(0, 0, 0)');
     run.match('development_css: rgb(255, 0, 0)');
+    run.match('minified_lazy: rgb(0, 255, 0)');
     run.match('Message (client): development_js');
 
     run.stop();

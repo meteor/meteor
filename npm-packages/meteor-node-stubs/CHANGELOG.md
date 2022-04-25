@@ -1,3 +1,11 @@
+v1.2.1 - 2022-03-17
+
+* Fix the missing dependencies.
+
+v1.2.0 - 2022-03-11
+
+* Adds support for [node: imports](https://nodejs.org/api/esm.html#node-imports).
+
 v1.1.0 - 2021-07-19
 
 * Updated dependencies to their latest versions

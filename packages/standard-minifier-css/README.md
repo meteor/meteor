@@ -7,5 +7,4 @@ Standard Minifier for CSS
 
 This package provides a minifier plugin used for Meteor apps by default.
 
-The CSS minifier mostly reduces amount of white-space parsing CSS with
-ParseCSS.
+Documentation of the package can be found in the [Meteor docs](https://docs.meteor.com/packages/standard-minifier-css.html).

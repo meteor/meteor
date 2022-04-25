@@ -20,18 +20,18 @@ const VALID_OPTIONS = new Set()
   .add('passwordlessSignupFields');
 
 const VALID_PASSWORD_SIGNUP_FIELDS = new Set()
-  .add("USERNAME_AND_EMAIL")
-  .add("USERNAME_AND_OPTIONAL_EMAIL")
-  .add("USERNAME_ONLY")
-  .add("EMAIL_ONLY");
+  .add('USERNAME_AND_EMAIL')
+  .add('USERNAME_AND_OPTIONAL_EMAIL')
+  .add('USERNAME_ONLY')
+  .add('EMAIL_ONLY');
 
 function isValidPasswordSignupField(field) {
   return VALID_PASSWORD_SIGNUP_FIELDS.has(field);
 }
 
 const VALID_PASSWORDLESS_SIGNUP_FIELDS = new Set()
-  .add("USERNAME_AND_EMAIL")
-  .add("EMAIL_ONLY")
+  .add('USERNAME_AND_EMAIL')
+  .add('EMAIL_ONLY');
 
 function isValidPasswordlessSignupField(field) {
   return VALID_PASSWORDLESS_SIGNUP_FIELDS.has(field);
@@ -62,15 +62,25 @@ Accounts.ui.config = options => {
   handleForceApprovalPrompt(options);
 };
 
+Meteor.startup(function() {
+  const settings = Meteor.settings.public?.packages?.['accounts-ui-unstyled'];
+
+  if (settings) {
+    Accounts.ui.config(settings);
+  }
+});
+
 function handlePasswordlessSignupFields(options) {
   let { passwordlessSignupFields } = options;
 
   if (passwordlessSignupFields) {
     const reportInvalid = () => {
-      throw new Error(`Accounts.ui.config: Invalid option for \`passwordlessSignupFields\`: ${passwordlessSignupFields}`);
+      throw new Error(
+        `Accounts.ui.config: Invalid option for \`passwordlessSignupFields\`: ${passwordlessSignupFields}`
+      );
     };
 
-    if (typeof passwordlessSignupFields === "string") {
+    if (typeof passwordlessSignupFields === 'string') {
       passwordlessSignupFields = [passwordlessSignupFields];
     } else if (!Array.isArray(passwordlessSignupFields)) {
       reportInvalid();
@@ -78,7 +88,9 @@ function handlePasswordlessSignupFields(options) {
 
     if (passwordlessSignupFields.every(isValidPasswordlessSignupField)) {
       if (Accounts.ui._options.passwordlessSignupFields) {
-        throw new Error("Accounts.ui.config: Can't set `passwordlessSignupFields` more than once");
+        throw new Error(
+          "Accounts.ui.config: Can't set `passwordlessSignupFields` more than once"
+        );
       }
       Object.assign(Accounts.ui._options, { passwordlessSignupFields });
       return;
@@ -93,10 +105,12 @@ function handlePasswordSignupFields(options) {
 
   if (passwordSignupFields) {
     const reportInvalid = () => {
-      throw new Error(`Accounts.ui.config: Invalid option for \`passwordSignupFields\`: ${passwordSignupFields}`);
+      throw new Error(
+        `Accounts.ui.config: Invalid option for \`passwordSignupFields\`: ${passwordSignupFields}`
+      );
     };
 
-    if (typeof passwordSignupFields === "string") {
+    if (typeof passwordSignupFields === 'string') {
       passwordSignupFields = [passwordSignupFields];
     } else if (!Array.isArray(passwordSignupFields)) {
       reportInvalid();
@@ -104,7 +118,9 @@ function handlePasswordSignupFields(options) {
 
     if (passwordSignupFields.every(isValidPasswordSignupField)) {
       if (Accounts.ui._options.passwordSignupFields) {
-        throw new Error("Accounts.ui.config: Can't set `passwordSignupFields` more than once");
+        throw new Error(
+          "Accounts.ui.config: Can't set `passwordSignupFields` more than once"
+        );
       }
       Object.assign(Accounts.ui._options, { passwordSignupFields });
       return;
@@ -125,7 +141,7 @@ export function passwordSignupFields() {
     return [passwordSignupFields];
   }
 
-  return ["EMAIL_ONLY"];
+  return ['EMAIL_ONLY'];
 }
 
 export function passwordlessSignupFields() {
@@ -139,21 +155,24 @@ export function passwordlessSignupFields() {
     return [passwordlessSignupFields];
   }
 
-  return ["EMAIL_ONLY"];
+  return ['EMAIL_ONLY'];
 }
-
 
 function handleRequestPermissions({ requestPermissions }) {
   if (requestPermissions) {
     Object.keys(requestPermissions).forEach(service => {
       if (Accounts.ui._options.requestPermissions[service]) {
-        throw new Error(`Accounts.ui.config: Can't set \`requestPermissions\` more than once for ${service}`);
+        throw new Error(
+          `Accounts.ui.config: Can't set \`requestPermissions\` more than once for ${service}`
+        );
       }
 
       const scope = requestPermissions[service];
 
       if (!Array.isArray(scope)) {
-        throw new Error("Accounts.ui.config: Value for `requestPermissions` must be an array");
+        throw new Error(
+          'Accounts.ui.config: Value for `requestPermissions` must be an array'
+        );
       }
 
       Accounts.ui._options.requestPermissions[service] = scope;
@@ -165,11 +184,15 @@ function handleRequestOfflineToken({ requestOfflineToken }) {
   if (requestOfflineToken) {
     Object.keys(requestOfflineToken).forEach(service => {
       if (service !== 'google') {
-        throw new Error("Accounts.ui.config: `requestOfflineToken` only supported for Google login at the moment.");
+        throw new Error(
+          'Accounts.ui.config: `requestOfflineToken` only supported for Google login at the moment.'
+        );
       }
 
       if (Accounts.ui._options.requestOfflineToken[service]) {
-        throw new Error(`Accounts.ui.config: Can't set \`requestOfflineToken\` more than once for ${service}`);
+        throw new Error(
+          `Accounts.ui.config: Can't set \`requestOfflineToken\` more than once for ${service}`
+        );
       }
 
       Accounts.ui._options.requestOfflineToken[service] =
@@ -182,11 +205,15 @@ function handleForceApprovalPrompt({ forceApprovalPrompt }) {
   if (forceApprovalPrompt) {
     Object.keys(forceApprovalPrompt).forEach(service => {
       if (service !== 'google') {
-        throw new Error("Accounts.ui.config: `forceApprovalPrompt` only supported for Google login at the moment.");
+        throw new Error(
+          'Accounts.ui.config: `forceApprovalPrompt` only supported for Google login at the moment.'
+        );
       }
 
       if (Accounts.ui._options.forceApprovalPrompt[service]) {
-        throw new Error(`Accounts.ui.config: Can't set \`forceApprovalPrompt\` more than once for ${service}`);
+        throw new Error(
+          `Accounts.ui.config: Can't set \`forceApprovalPrompt\` more than once for ${service}`
+        );
       }
 
       Accounts.ui._options.forceApprovalPrompt[service] =

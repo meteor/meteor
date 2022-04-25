@@ -1,4 +1,4 @@
-Tinytest.only(
+Tinytest.add(
   'async collection - create Mongo.Collection and check the name',
   function(test) {
     const collection = Mongo.Collection.create('myAsyncCollection');
@@ -6,7 +6,7 @@ Tinytest.only(
   }
 );
 
-Tinytest.only(
+Tinytest.add(
   'async collection - reusing Mongo.Collection instances for the same name',
   function(test) {
     test.equal(new Mongo.Collection('myCollection')._name, 'myCollection');
@@ -20,11 +20,15 @@ Tinytest.only(
   }
 );
 
-Tinytest.only(
+Tinytest.add(
   'async collection - create sync Mongo.Collection and try to use async insert',
   function(test) {
     const collection = new Mongo.Collection('myAsyncCollection');
-    test.throws(() => collection.insertAsync({ name: 'test' }));
+    // FIXME: It'd be nice to have `test.throws` that understands `Promise`s.
+    test.throws(
+      () => collection.insertAsync({ name: 'test' }),
+      'It is only allowed to use "insertAsync" method in async collections'
+    );
   }
 );
 

@@ -20,6 +20,7 @@ This documentation is purely focused on integrating it with Meteor.
 > There is also a [Vue tutorial](https://vue-tutorial.meteor.com/) which covers the basics of this section. 
 
 <h2 id="introduction">Introduction</h2>
+
 [Vue](https://vuejs.org/v2/guide/) (pronounced /vjuː/, like view) is a progressive framework for building user interfaces. 
 Unlike other monolithic frameworks, Vue is designed from the ground up to be incrementally adoptable.
 The core library is focused on the view layer only, and is easy to
@@ -338,9 +339,11 @@ Application Structure is documented here:
 
 
 <h2 id="ssr-code-splitting">SSR and Code Splitting</h2>
+
 Vue has [an excellent guide on how to render your Vue application on the server](https://vuejs.org/v2/guide/ssr.html). It includes code splitting, async data fetching and many other practices that are used in most apps that require this. 
 
 <h3 id="basic-example">Basic Example</h3>
+
 Making Vue SSR to work with Meteor is not more complex then for example with [Express](https://expressjs.com/). 
 However instead of defining a wildcard route, Meteor uses its own [server-render](https://docs.meteor.com/packages/server-render.html) package that exposes an `onPageLoad` function. Every time a call is made to 
 the server side, this function is triggered. This is where we should put our code like how its described on the [VueJS SSR Guide](https://ssr.vuejs.org/guide/#integrating-with-a-server).

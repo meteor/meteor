@@ -7,12 +7,12 @@ import {
 import { matches as archMatches, isLegacyArch } from "../utils/archinfo";
 import {
   pathJoin,
-  pathRelative,
   pathNormalize,
   pathDirname,
   pathBasename,
   convertToOSPath,
   convertToPosixPath,
+  containsPath,
 } from "../fs/files";
 import { Stats, BigIntStats } from "fs";
 import { wrap } from "optimism";
@@ -31,6 +31,7 @@ nativeNames.forEach((id: string) => {
   // identifier will not be imported at runtime, but the modules it
   // depends on are necessary for the original import to succeed.
   nativeModulesMap[id] =  "meteor-node-stubs/deps/" + id;
+  nativeModulesMap[`node:${id}`] =  "meteor-node-stubs/deps/" + id;
 });
 
 export type ResolverOptions = {
@@ -300,8 +301,7 @@ export default class Resolver {
     }
 
     let sourceRoot: string | undefined;
-    const relParentPath = pathRelative(this.sourceRoot, absParentPath);
-    if (! relParentPath.startsWith("..")) {
+    if (containsPath(this.sourceRoot, absParentPath)) {
       // If the file is contained by this.sourceRoot, then it's safe to
       // use this.sourceRoot as the limiting ancestor directory in the
       // while loop below, but we're still going to check whether the file
@@ -312,7 +312,7 @@ export default class Resolver {
     }
 
     this.nodeModulesPaths.some(path => {
-      if (! pathRelative(path, absParentPath).startsWith("..")) {
+      if (containsPath(path, absParentPath)) {
         // If the file is inside an external node_modules directory,
         // consider the rootDir to be the parent directory of that
         // node_modules directory, rather than this.sourceRoot.

@@ -929,13 +929,7 @@ function runWebAppServer() {
       versionReplaceable: () =>
         WebAppHashing.calculateClientHash(
           manifest,
-          (_type, replaceable) => {
-            if (Meteor.isProduction && replaceable) {
-              throw new Error('Unexpected replaceable file in production');
-            }
-
-            return replaceable;
-          },
+          (_type, replaceable) => replaceable,
           configOverrides
         ),
       cordovaCompatibilityVersions: programJson.cordovaCompatibilityVersions,

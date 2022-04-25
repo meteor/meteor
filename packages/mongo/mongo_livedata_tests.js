@@ -310,14 +310,11 @@ Tinytest.addAsync("mongo-livedata - basics, " + idGeneration, function (test, on
   test.equal(coll.findOne({run: run}, {sort: {x: -1}, skip: 1}).x, 1);
 
 
-  // Regression test for https://github.com/meteor/meteor/issues/7436
-  //  - ensure applySkipLimit defaults to false for count()
+  //  - applySkipLimit is no longer an option
   // Note that the current behavior is inconsistent on the client.
   //  (https://github.com/meteor/meteor/issues/1201)
   if (Meteor.isServer) {
-    test.equal(coll.find({run: run}, {limit: 1}).count(), 2);
-    test.equal(coll.find({run: run}, {limit: 1}).count(true), 1);
-    test.equal(coll.find({run: run}, {limit: 1}).count(false), 2);
+    test.equal(coll.find({run: run}, {limit: 1}).count(), 1);
   }
 
   var cur = coll.find({run: run}, {sort: ["x"]});
@@ -3245,17 +3242,15 @@ Meteor.isServer && Tinytest.add(
 
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
-  test.matches(MongoInternals.NpmModules.mongodb.version, /^3\.(\d+)\.(\d+)/);
-  test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'function');
-  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.connect),
-             'function');
+  test.matches(MongoInternals.NpmModules.mongodb.version, /^4\.(\d+)\.(\d+)/);
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'object');
   test.equal(typeof(MongoInternals.NpmModules.mongodb.module.ObjectID),
              'function');
 
   var c = new Mongo.Collection(Random.id());
   var rawCollection = c.rawCollection();
   test.isTrue(rawCollection);
-  test.isTrue(rawCollection.findAndModify);
+  test.isTrue(rawCollection.findOneAndUpdate);
   var rawDb = c.rawDatabase();
   test.isTrue(rawDb);
   test.isTrue(rawDb.admin);
@@ -3486,7 +3481,7 @@ if (Meteor.isServer) {
       session.withTransaction(session => {
         let promise = Promise.resolve();
         ["a", "b"].forEach((id, index) => {
-          promise = promise.then(() => rawCollection.update(
+          promise = promise.then(() => rawCollection.updateMany(
             { _id: id },
             { $set: { field: `updated${index + 1}` } },
             { session }

@@ -14,6 +14,7 @@ export {
   read, read as readSync,
   readFile, readFile as readFileSync,
   readdir, readdir as readdirSync,
+  readdirWithTypes as readdirWithTypesSync,
   readlink, readlink as readlinkSync,
   realpath, realpath as realpathSync,
   rename, rename as renameSync,

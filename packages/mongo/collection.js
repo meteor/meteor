@@ -8,6 +8,8 @@ import {
 } from "./collectionsInstances";
 import { getAsyncMethodName } from "meteor/minimongo/constants";
 
+import { normalizeProjection } from "./mongo_utils";
+
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
@@ -348,15 +350,18 @@ Object.assign(Mongo.Collection.prototype, {
   },
 
   _getFindOptions(args) {
+    const [, options] = args || [];
+    const newOptions = normalizeProjection(options);
+
     var self = this;
     if (args.length < 2) {
       return { transform: self._transform };
     } else {
       check(
-        args[1],
+        newOptions,
         Match.Optional(
           Match.ObjectIncluding({
-            fields: Match.Optional(Match.OneOf(Object, undefined)),
+            projection: Match.Optional(Match.OneOf(Object, undefined)),
             sort: Match.Optional(
               Match.OneOf(Object, Array, Function, undefined)
             ),
@@ -366,9 +371,10 @@ Object.assign(Mongo.Collection.prototype, {
         )
       );
 
+
       return {
         transform: self._transform,
-        ...args[1],
+        ...newOptions,
       };
     }
   },
@@ -754,12 +760,11 @@ const collectionImplementation = {
     var self = this;
     if (!self._collection._ensureIndex || !self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
-    // TODO enable this message a release before we will remove this function
-    // import { Log } from 'meteor/logging';
-    // Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
     if (self._collection.createIndex) {
       self._collection.createIndex(index, options);
     } else {
+      import { Log } from 'meteor/logging';
+      Log.debug(`_ensureIndex has been deprecated, please use the new 'createIndex' instead${options?.name ? `, index name: ${options.name}` : `, index: ${JSON.stringify(index)}`}`)
       self._collection._ensureIndex(index, options);
     }
   },

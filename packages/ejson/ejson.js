@@ -486,10 +486,16 @@ EJSON.equals = (a, b, options) => {
     return b.equals(a, options);
   }
 
-  if (a instanceof Array) {
-    if (!(b instanceof Array)) {
-      return false;
-    }
+  // Array.isArray works across iframes while instanceof won't
+  const aIsArray = Array.isArray(a);
+  const bIsArray = Array.isArray(b);
+
+  // if not both or none are array they are not equal
+  if (aIsArray !== bIsArray) {
+    return false;
+  }
+
+  if (aIsArray && bIsArray) {
     if (a.length !== b.length) {
       return false;
     }

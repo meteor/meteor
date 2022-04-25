@@ -1,5 +1,6 @@
 import Google from './namespace.js';
 import { Accounts } from 'meteor/accounts-base';
+import { fetch } from 'meteor/fetch';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -9,8 +10,26 @@ Google.whitelistedFields = ['id', 'email', 'verified_email', 'name', 'given_name
 
 const getServiceDataFromTokens = tokens => {
   const { accessToken, idToken } = tokens;
-  const scopes = getScopes(accessToken);
-  const identity = getIdentity(accessToken);
+  const scopesCall = Meteor.wrapAsync(getScopes);
+  let scopes;
+  try {
+    scopes = scopesCall(accessToken);
+  } catch (err) {
+    throw Object.assign(
+      new Error(`Failed to fetch tokeninfo from Google. ${err.message}`),
+      { response: err.response }
+    );
+  }
+  const identityCall = Meteor.wrapAsync(getIdentity);
+  let identity;
+  try {
+    identity = identityCall(accessToken);
+  } catch (err) {
+    throw Object.assign(
+      new Error(`Failed to fetch identity from Google. ${err.message}`),
+      { response: err.response }
+    );
+  }
   const serviceData = {
     accessToken,
     idToken,
@@ -46,7 +65,7 @@ const getServiceDataFromTokens = tokens => {
       }
     }
   };
-}
+};
 
 Accounts.registerLoginHandler(request => {
   if (request.googleSignIn !== true) {
@@ -65,7 +84,15 @@ Accounts.registerLoginHandler(request => {
     }));
   }
 
-  const result = getServiceDataFromTokens(tokens);
+  let result;
+  try {
+    result = getServiceDataFromTokens(tokens);
+  } catch (err) {
+    throw Object.assign(
+      new Error(`Failed to complete OAuth handshake with Google. ${err.message}`),
+      { response: err.response }
+    );
+  }
 
   return Accounts.updateOrCreateUserFromExternalService("google", {
     id: request.userId,
@@ -77,72 +104,89 @@ Accounts.registerLoginHandler(request => {
   }, result.options);
 });
 
-const getServiceData = query => getServiceDataFromTokens(getTokens(query));
-
-OAuth.registerService('google', 2, null, getServiceData);
-
 // returns an object containing:
 // - accessToken
 // - expiresIn: lifetime of token in seconds
 // - refreshToken, if this is the first authorization request
-const getTokens = query => {
+const getTokens = async (query, callback) => {
   const config = ServiceConfiguration.configurations.findOne({service: 'google'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
+  const content = new URLSearchParams({
+    code: query.code,
+    client_id: config.clientId,
+    client_secret: OAuth.openSecret(config.secret),
+    redirect_uri: OAuth._redirectUri('google', config),
+    grant_type: 'authorization_code'
+  });
+  const request = await fetch(
+    "https://accounts.google.com/o/oauth2/token", {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: content,
+    });
+  const response = await request.json();
+
+  if (response.error) { // if the http response was a json object with an error attribute
+    callback(response.error);
+    throw new Meteor.Error(`Failed to complete OAuth handshake with Google. ${response.error}`);
+  } else {
+    const data = {
+      accessToken: response.access_token,
+      refreshToken: response.refresh_token,
+      expiresIn: response.expires_in,
+      idToken: response.id_token
+    };
+    callback(undefined, data);
+    return data;
+  }
+};
+
+const getTokensCall = Meteor.wrapAsync(getTokens);
+const getServiceData = query => getServiceDataFromTokens(getTokensCall(query));
+
+OAuth.registerService('google', 2, null, getServiceData);
+
+const getIdentity = async (accessToken, callback) => {
+  const content = new URLSearchParams({ access_token: accessToken });
   let response;
   try {
-    response = HTTP.post(
-      "https://accounts.google.com/o/oauth2/token", {params: {
-        code: query.code,
-        client_id: config.clientId,
-        client_secret: OAuth.openSecret(config.secret),
-        redirect_uri: OAuth._redirectUri('google', config),
-        grant_type: 'authorization_code'
-      }});
-  } catch (err) {
-    throw Object.assign(
-      new Error(`Failed to complete OAuth handshake with Google. ${err.message}`),
-      { response: err.response }
-    );
+    const request = await fetch(
+      `https://www.googleapis.com/oauth2/v1/userinfo?${content.toString()}`,
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' }
+      });
+    response = await request.json();
+  } catch (e) {
+    callback(e);
+    throw new Meteor.Error(e.reason);
   }
-
-  if (response.data.error) { // if the http response was a json object with an error attribute
-    throw new Error(`Failed to complete OAuth handshake with Google. ${response.data.error}`);
-  } else {
-    return {
-      accessToken: response.data.access_token,
-      refreshToken: response.data.refresh_token,
-      expiresIn: response.data.expires_in,
-      idToken: response.data.id_token
-    };
-  }
+  callback(undefined, response);
+  return response;
 };
 
-const getIdentity = accessToken => {
+const getScopes = async (accessToken, callback) => {
+  const content = new URLSearchParams({ access_token: accessToken });
+  let response;
   try {
-    return HTTP.get(
-      "https://www.googleapis.com/oauth2/v1/userinfo",
-      {params: {access_token: accessToken}}).data;
-  } catch (err) {
-    throw Object.assign(
-      new Error(`Failed to fetch identity from Google. ${err.message}`),
-      { response: err.response }
-    );
+    const request = await fetch(
+      `https://www.googleapis.com/oauth2/v1/tokeninfo?${content.toString()}`,
+      {
+        method: 'GET',
+        headers: { Accept: 'application/json' }
+      });
+    response = await request.json();
+  } catch (e) {
+    callback(e);
+    throw new Meteor.Error(e.reason);
   }
-};
-
-const getScopes = accessToken => {
-  try {
-    return HTTP.get(
-      "https://www.googleapis.com/oauth2/v1/tokeninfo",
-      {params: {access_token: accessToken}}).data.scope.split(' ');
-  } catch (err) {
-    throw Object.assign(
-      new Error(`Failed to fetch tokeninfo from Google. ${err.message}`),
-      { response: err.response }
-    );
-  }
+  callback(undefined, response.scope.split(' '));
+  return response.scope.split(' ');
 };
 
 Google.retrieveCredential = (credentialToken, credentialSecret) =>

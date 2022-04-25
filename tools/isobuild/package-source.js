@@ -37,6 +37,10 @@ import {
   optimisticLookupPackageJsonArray,
 } from "../fs/optimistic";
 
+// resolve package includes malformed package.json intentionally
+// https://forums.meteor.com/t/unable-to-run-after-update-to-2-5-2/57266/6
+const EXPECTED_INVALID_PACKAGE_JSON_PATHS_TO_IGNORE = ['resolve/test/resolver/malformed_package_json']
+
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
 // world in some way.
@@ -1341,7 +1345,35 @@ Object.assign(PackageSource.prototype, {
       if (inNodeModules) {
         // This is an array because (in some rare cases) an npm package
         // may have nested package.json files with additional properties.
-        const pkgJsonArray = optimisticLookupPackageJsonArray(self.sourceRoot, dir);
+        let pkgJsonArray = [];
+        try {
+          pkgJsonArray = optimisticLookupPackageJsonArray(self.sourceRoot, dir);
+        } catch (e) {
+          const message = `Error reading package.json from dir "${dir}", this may cause important errors in your project like modules not being found. You should fix this dependency or find an alternative`;
+          if (
+            EXPECTED_INVALID_PACKAGE_JSON_PATHS_TO_IGNORE.find(path =>
+              dir.includes(path)
+            )
+          ) {
+            if (process.env.METEOR_WARN_ON_INVALID_EXPECTED_PACKAGE_JSON_ERRORS) {
+              console.warn(message, e);
+            }
+            // Pretend we found no files but in reality this package.json was ignored
+            return [];
+          }
+          if (process.env.METEOR_IGNORE_INVALID_PACKAGE_JSON_ERRORS) {
+            // Pretend we found no files but in reality an error happened reading this package.json
+            return [];
+          }
+          if (process.env.METEOR_WARN_ON_INVALID_PACKAGE_JSON_ERRORS) {
+            console.warn(message, e);
+            // Pretend we found no files but in reality an error happened reading this package.json
+            return [];
+          }
+          // This is going to break the run but at least with a clear error indicating what is the problematic package.json
+          console.error(message, e);
+          throw e;
+        }
 
         // If a package.json file with a "name" property is found, it will
         // always be the first in the array.

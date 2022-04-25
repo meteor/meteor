@@ -114,7 +114,7 @@ export const Match = {
   _failIfArgumentsAreNotAllChecked(f, context, args, description) {
     const argChecker = new ArgumentChecker(args, description);
     const result = currentArgumentChecker.withValue(
-      argChecker, 
+      argChecker,
       () => f.apply(context, args)
     );
 
@@ -261,7 +261,7 @@ const testSubtree = (value, pattern) => {
     if (typeof value === 'number' && (value | 0) === value) {
       return false;
     }
-    
+
     return {
       message: `Expected Integer, got ${stringForErrorMessage(value)}`,
       path: '',
@@ -296,7 +296,7 @@ const testSubtree = (value, pattern) => {
         return result;
       }
     }
-    
+
     return false;
   }
 
@@ -310,7 +310,7 @@ const testSubtree = (value, pattern) => {
       if (!(err instanceof Match.Error)) {
         throw err;
       }
-      
+
       return {
         message: err.message,
         path: err.path
