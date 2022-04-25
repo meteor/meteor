@@ -908,7 +908,7 @@ const EXCLUDE_FROM_ASYNC_WRAPPER = ['_isRemoteCollection'];
   .forEach(method => {
     const asyncName = getAsyncMethodName(method);
 
-    Mongo.Collection.prototype[asyncName] = async function(...args) {
+    Mongo.Collection.prototype[asyncName] = function(...args) {
       if (!this.isAsync) {
         throw new Error(
           `It is only allowed to use "${asyncName}" method in async collections like "${this._name}". Use "Mongo.Collection.create" to create async collections.`);
