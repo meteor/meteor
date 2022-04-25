@@ -404,29 +404,6 @@ Object.assign(Mongo.Collection.prototype, {
       this._getFindOptions(args)
     );
   },
-
-  /**
-   * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
-   * @locus Anywhere
-   * @method findOne
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {MongoSelector} [selector] A query describing the documents to find
-   * @param {Object} [options]
-   * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
-   * @param {Number} options.skip Number of results to skip at the beginning
-   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
-   * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
-   * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
-   * @param {String} options.readPreference (Server only) Specifies a custom MongoDB [`readPreference`](https://docs.mongodb.com/manual/core/read-preference) for fetching the document. Possible values are `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred` and `nearest`.
-   * @returns {Object}
-   */
-  findOne(...args) {
-    return this._collection.findOne(
-      this._getFindSelector(args),
-      this._getFindOptions(args)
-    );
-  },
 });
 
 Object.assign(Mongo.Collection, {
@@ -485,6 +462,29 @@ Object.assign(Mongo.Collection, {
 });
 
 const collectionImplementation = {
+  /**
+   * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+   * @locus Anywhere
+   * @method findOne
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to find
+   * @param {Object} [options]
+   * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
+   * @param {Number} options.skip Number of results to skip at the beginning
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
+   * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @param {String} options.readPreference (Server only) Specifies a custom MongoDB [`readPreference`](https://docs.mongodb.com/manual/core/read-preference) for fetching the document. Possible values are `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred` and `nearest`.
+   * @returns {Object}
+   */
+  findOne(...args) {
+    return this._collection.findOne(
+      this._getFindSelector(args),
+      this._getFindOptions(args)
+    );
+  },
+
   // 'insert' immediately returns the inserted document's new _id.
   // The others return values immediately if you are in a stub, an in-memory
   // unmanaged collection, or a mongo-backed collection and you don't pass a
