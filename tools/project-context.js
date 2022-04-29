@@ -1749,11 +1749,17 @@ export class MeteorConfig {
       const get = arch => packageNamesByArch[arch] || (
         packageNamesByArch[arch] = new Set);
 
+      const addToWeb = name => {
+        ['web.browser', 'web.browser.legacy', 'web.cordova'].forEach(arch => {
+          get(arch).add(name);
+        });
+      };
+
       Object.keys(recompile).forEach(packageName => {
         const info = recompile[packageName];
         if (! info) return;
         if (info === true) {
-          get("web").add(packageName);
+          addToWeb(packageName);
           get("os").add(packageName);
         } else if (typeof info === "string") {
           mapWhereToArches(info).forEach(arch => {
@@ -1762,7 +1768,11 @@ export class MeteorConfig {
         } else if (Array.isArray(info)) {
           info.forEach(where => {
             mapWhereToArches(where).forEach(arch => {
-              get(arch).add(packageName);
+              if (arch === 'web') {
+                addToWeb(packageName);
+              } else {
+                get(arch).add(packageName);
+              }
             });
           });
         }
