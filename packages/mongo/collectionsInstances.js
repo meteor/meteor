@@ -9,6 +9,7 @@ export const markCollectionAsInitializing = ({ name }) => {
   if (name === null) {
     return;
   }
+
   collectionsStatusByName[name] = 'initializing';
 };
 
@@ -16,11 +17,11 @@ export const hasCollectionStatus = ({ name }) => {
   if (name === null) {
     return false;
   }
+
   return !!collectionsStatusByName[name];
 };
 
-const getScope = ({ name }) =>
-  name;
+const getScope = ({ name }) => name;
 
 const getCollectionInstancesByScope = ({
   name,
@@ -28,6 +29,7 @@ const getCollectionInstancesByScope = ({
   if (name === null) {
     return null;
   }
+
   const scope = getScope({ name });
   return collectionsInstances[scope];
 };
@@ -37,13 +39,8 @@ export const getCollectionInstanceOrNull = ({
   options: { isAsync } = {},
 }) => {
   const isAsyncBoolean = !!isAsync;
-  const collectionsInstancesByScope = getCollectionInstancesByScope({
-    name,
-  });
-  if (collectionsInstancesByScope) {
-    return collectionsInstancesByScope[isAsyncBoolean] || null;
-  }
-  return null;
+  const collectionsInstancesByScope = getCollectionInstancesByScope({ name });
+  return collectionsInstancesByScope?.[isAsyncBoolean] ?? null;
 };
 
 export const setCollectionInstance = ({
@@ -54,9 +51,8 @@ export const setCollectionInstance = ({
   if (name === null) {
     return instance;
   }
-  collectionsStatusByName[name] = 'initialized';
 
-  const isAsyncBoolean = !!isAsync;
+  collectionsStatusByName[name] = 'initialized';
 
   const scope = getScope({ name });
   if (!collectionsInstances[scope]) {
@@ -66,6 +62,7 @@ export const setCollectionInstance = ({
   // this is not going to happen unless we have an error in our internal code
   // we try to always return the same instance if the user create two instances
   // of the same name and type (async / sync)
+  const isAsyncBoolean = !!isAsync;
   if (collectionsInstances[scope][isAsyncBoolean]) {
     throw new Error(
       `There is already a collection named "${name}" for type "${

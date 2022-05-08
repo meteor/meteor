@@ -927,35 +927,25 @@ const setupSynchronousCursor = (cursor, method) => {
       }
     );
   }
+
+  return cursor._synchronousCursor;
 };
 
-[...CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(method => {
-  Cursor.prototype[method] = function () {
-    setupSynchronousCursor(this, method);
-
-    return this._synchronousCursor[method].apply(
-      this._synchronousCursor,
-      arguments
-    );
+[...CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
+  Cursor.prototype[methodName] = function (...args) {
+    const cursor = setupSynchronousCursor(this, methodName);
+    return cursor[methodName].apply(cursor, args);
   };
-});
 
-CURSOR_METHODS.forEach(method => {
-  const asyncName = getAsyncMethodName(method);
-  Cursor.prototype[asyncName] = function(...args) {
-    setupSynchronousCursor(this, method);
+  // These methods are handled separately.
+  if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) {
+    return;
+  }
 
-    const collectionName = this._cursorDescription.collectionName;
-
-    const options = { isAsync: true };
-    const collectionInstance = getCollectionInstanceOrNull({name: collectionName, options});
-
-    if (!collectionInstance) {
-      throw new Error(
-        `It is only allowed to use "${asyncName}" cursor method in async collections like "${collectionName}". Use "Mongo.createAsyncCollection" to create async collections.`);
-    }
-
-    return Promise.resolve(this._synchronousCursor[method].apply(this._synchronousCursor, args));
+  const methodNameAsync = getAsyncMethodName(methodName);
+  Cursor.prototype[methodNameAsync] = function (...args) {
+    const cursor = setupSynchronousCursor(this, methodName);
+    return Promise.resolve(cursor[methodName].apply(cursor, args));
   };
 });
 

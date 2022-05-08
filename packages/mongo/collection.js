@@ -59,10 +59,9 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
     ...optionsParam,
   };
 
-  const collectionInstance = options.ignoreInstanceReuse ? null : getCollectionInstanceOrNull({name, options});
-
-  if (collectionInstance) {
-    return collectionInstance;
+  const instance = options.ignoreInstanceReuse ? null : getCollectionInstanceOrNull({name, options});
+  if (instance) {
+    return instance;
   }
 
   const hasCollectionStatusAlready = hasCollectionStatus({name});
@@ -377,6 +376,13 @@ Object.assign(Mongo.Collection.prototype, {
         ...newOptions,
       };
     }
+  },
+
+  // Determine if this collection is simply a minimongo representation of a real
+  // database on another server
+  _isRemoteCollection() {
+    // XXX see #MeteorServerNull
+    return this._connection && this._connection !== Meteor.server;
   },
 
   /**
@@ -717,13 +723,6 @@ const collectionImplementation = {
     }
   },
 
-  // Determine if this collection is simply a minimongo representation of a real
-  // database on another server
-  _isRemoteCollection() {
-    // XXX see #MeteorServerNull
-    return this._connection && this._connection !== Meteor.server;
-  },
-
   /**
    * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
    * @locus Anywhere
@@ -840,8 +839,6 @@ const collectionImplementation = {
   },
 };
 
-Object.assign(Mongo.Collection.prototype, collectionImplementation);
-
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {
   return (
@@ -903,34 +900,49 @@ function popCallbackFromArgs(args) {
   }
 }
 
-// some methods don't need to be async
-const EXCLUDE_FROM_ASYNC_WRAPPER = ['_isRemoteCollection'];
+Object.entries(collectionImplementation).forEach(([methodName, method]) => {
+  Mongo.Collection.prototype[methodName] = function(...args) {
+    if (this.isAsync) {
+      throw new Error(`It is only allowed to use "${methodName}" method in sync collections like "${this._name}". Use "new Mongo.Collection" to create sync collections.`);
+    }
 
-// "find" is necessary here because we are already delaying the collection
-// connection after the creation so we need to wait it at this point
-[...Object.keys(collectionImplementation)]
-  .filter(method => !EXCLUDE_FROM_ASYNC_WRAPPER.includes(method))
-  .forEach(method => {
-    const asyncName = getAsyncMethodName(method);
-
-    Mongo.Collection.prototype[asyncName] = function(...args) {
-      if (!this.isAsync) {
-        throw new Error(
-          `It is only allowed to use "${asyncName}" method in async collections like "${this._name}". Use "Mongo.Collection.create" to create async collections.`);
+    // Check for the instance if it's not a local collection.
+    if (this._name !== null) {
+      const options = { isAsync: false };
+      const instance = getCollectionInstanceOrNull({name: this._name, options});
+      if (!instance) {
+        throw new Error(`Sync collection instance for "${this._name}" not found. Use "new Mongo.Collection" to create sync collections.`);
       }
+    }
 
-      const options = { isAsync: this.isAsync };
-      const collectionInstance = getCollectionInstanceOrNull({name: this._name, options});
-      return Promise.resolve(collectionInstance[method].apply(collectionInstance, arguments));
-    };
-  });
+    return method.apply(this, args);
+  };
+
+  const methodNameAsync = getAsyncMethodName(methodName);
+  Mongo.Collection.prototype[methodNameAsync] = function(...args) {
+    if (!this.isAsync) {
+      throw new Error(`It is only allowed to use "${methodNameAsync}" method in async collections like "${this._name}". Use "Mongo.Collection.create" to create async collections.`);
+    }
+
+    // Check for the instance if it's not a local collection.
+    if (this._name !== null) {
+      const options = { isAsync: true };
+      const instance = getCollectionInstanceOrNull({name: this._name, options});
+      if (!instance) {
+        throw new Error(`Async collection instance for "${this._name}" not found. Use "Mongo.Collection.create" to create async collections.`);
+      }
+    }
+
+    return Promise.resolve(method.apply(this, args));
+  };
+});
 
 Mongo.Collection.create = (name, optionsParam = {}) => {
   try {
     const options = {...optionsParam, isAsync: true};
-    const collectionInstance = getCollectionInstanceOrNull({name: name, options});
-    if (collectionInstance) {
-      return collectionInstance;
+    const instance = getCollectionInstanceOrNull({name: name, options});
+    if (instance) {
+      return instance;
     }
 
     return new Mongo.Collection(name, options);
