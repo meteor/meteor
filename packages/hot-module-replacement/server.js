@@ -1,4 +1,3 @@
-// METEOR_PARENT_PID 
 if (process.env.METEOR_HMR_SECRET) {
   __meteor_runtime_config__._hmrSecret = process.env.METEOR_HMR_SECRET;
 } else if (process.env.METEOR_PARENT_PID) {

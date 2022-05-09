@@ -1,3 +1,28 @@
+## 2.7.2, 2022-04-XX
+
+#### Highlights
+
+#### Breaking Changes
+N/A
+#### Migration Steps
+
+#### Meteor Version Release
+
+* `mongo@1.15.0`
+  - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created. 
+  - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+* `modern-browsers@0.1.8`
+  - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
+* `socket-stream-client@0.5.0`
+  - Ability to disable sockjs on client side. [PR](https://github.com/meteor/meteor/pull/12007/).
+*`meteor-node-stubs@1.2.2`:
+  - Fix using meteor-node-stubs in IE. [PR](https://github.com/meteor/meteor/pull/12014).
+* New ARCH environment variable that permit users to set uname info. [PR](https://github.com/meteor/meteor/pull/12020).
+* Skeleton dependencies updated.
+* New Tailwind skeleton. [PR](https://github.com/meteor/meteor/pull/12000).
+
+#### Independent Releases
+
 ## v2.7.1, 2022-03-31
 
 #### Highlights
@@ -31,6 +56,7 @@
 ## v2.7, 2022-03-24
 
 #### Highlights
+* Bump node version to 14.19.1
 * TailwindCSS 3.x support
 * Typescript `4.5.4` upgrade
 * New core package: `accounts-2fa`
