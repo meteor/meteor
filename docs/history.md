@@ -15,7 +15,7 @@ N/A
   - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
 * `socket-stream-client@0.5.0`
   - Ability to disable sockjs on client side. [PR](https://github.com/meteor/meteor/pull/12007/).
-*`meteor-node-stubs@1.2.2`:
+* `meteor-node-stubs@1.2.3`:
   - Fix using meteor-node-stubs in IE. [PR](https://github.com/meteor/meteor/pull/12014).
 * New ARCH environment variable that permit users to set uname info. [PR](https://github.com/meteor/meteor/pull/12020).
 * Skeleton dependencies updated.
