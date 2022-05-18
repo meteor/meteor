@@ -185,15 +185,16 @@ Depending on the version of Meteor you are using, you should install the proper 
 
 > If you use a mis-matched version of Node when deploying your application, you will encounter errors!
 
-You can then run the application by invoking `node` with a `ROOT_URL`, and `MONGO_URL`.  These instructions are also available in the `README` file found in the root of the bundle you built above.
+You can then run the application by invoking `node` with a `ROOT_URL`, `PORT`, and `MONGO_URL`.  These instructions are also available in the `README` file found in the root of the bundle you built above.
 
 ```bash
 cd my_build_bundle_directory
 (cd programs/server && npm install)
-MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com node main.js
+MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=8080 node main.js
 ```
 
 * `ROOT_URL` is the base URL for your Meteor project
+* `PORT` is the port at which the application is running 
 * `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/) supplied by the MongoDB provider.
 
 
