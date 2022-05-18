@@ -1,3 +1,16 @@
+## 2.7.3, 2022-05-XX
+
+#### Highlights
+* Node updated to v14.19.3
+* npm update to v6.14.17
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+
 ## 2.7.2, 2022-05-10
 
 #### Highlights
