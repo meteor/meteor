@@ -190,7 +190,7 @@ You can then run the application by invoking `node` with a `ROOT_URL`, `PORT`, a
 ```bash
 cd my_build_bundle_directory
 (cd programs/server && npm install)
-MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=8080 node main.js
+MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=3000 node main.js
 ```
 
 * `ROOT_URL` is the base URL for your Meteor project
