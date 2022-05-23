@@ -3,6 +3,7 @@
 #### Highlights
 * Node updated to v14.19.3
 * npm update to v6.14.17
+* Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
 
 #### Breaking Changes
 N/A
