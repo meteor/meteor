@@ -6,10 +6,10 @@ export function getAsyncMethodName(method) {
 }
 
 export const ASYNC_COLLECTION_METHODS = [
-  'createCappedCollection',
+  '_createCappedCollection',
+  '_dropCollection',
+  '_dropIndex',
   'createIndex',
-  'dropCollection',
-  'dropIndex',
   'findOne',
   'insert',
   'remove',
