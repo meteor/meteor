@@ -189,6 +189,11 @@ Meteor.methods({
         return { email, sequence };
       })
       .filter(Boolean);
+
+    if (!tokens.length) {
+      Accounts._handleError(`Login tokens could not be generated`);
+    }
+
     Meteor.users.update(user._id, {
       $set: {
         'services.passwordless': {
