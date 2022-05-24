@@ -27,6 +27,7 @@ Package.onUse(function (api) {
   api.use([
     'random',
     'ejson',
+    'binary',
     'minimongo',
     'ddp',
     'tracker',
@@ -89,7 +90,7 @@ Package.onTest(function (api) {
   api.use('check');
   api.use('ecmascript');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
-           'ddp', 'base64']);
+           'ddp', 'base64', 'binary']);
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles('mongo_livedata_tests.js', ['client', 'server']);

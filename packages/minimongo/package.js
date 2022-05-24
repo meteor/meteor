@@ -15,6 +15,7 @@ Package.onUse(api => {
     'diff-sequence',
     'ecmascript',
     'ejson',
+    'binary',
     // This package is used for geo-location queries such as $near
     'geojson-utils',
     'id-map',
@@ -37,6 +38,7 @@ Package.onTest(api => {
   api.use([
     'ecmascript',
     'ejson',
+    'binary',
     'mongo-id',
     'ordered-dict',
     'random',

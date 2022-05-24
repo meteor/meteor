@@ -417,17 +417,6 @@ EJSON.parse = item => {
 };
 
 /**
- * @summary Returns true if `x` is a buffer of binary data, as returned from
- *          [`EJSON.newBinary`](#ejson_new_binary).
- * @param {Object} x The variable to check.
- * @locus Anywhere
- */
-EJSON.isBinary = obj => {
-  return !!((typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
-    (obj && obj.$Uint8ArrayPolyfill));
-};
-
-/**
  * @summary Return true if `a` and `b` are equal to each other.  Return false
  *          otherwise.  Uses the `equals` method on `a` if present, otherwise
  *          performs a deep comparison.
@@ -466,7 +455,7 @@ EJSON.equals = (a, b, options) => {
     return a.valueOf() === b.valueOf();
   }
 
-  if (EJSON.isBinary(a) && EJSON.isBinary(b)) {
+  if (binary.isBinary(a) && binary.isBinary(b)) {
     if (a.length !== b.length) {
       return false;
     }
@@ -574,8 +563,8 @@ EJSON.clone = v => {
     return v;
   }
 
-  if (EJSON.isBinary(v)) {
-    ret = EJSON.newBinary(v.length);
+  if (binary.isBinary(v)) {
+    ret = binary.newBinary(v.length);
     for (let i = 0; i < v.length; i++) {
       ret[i] = v[i];
     }
@@ -607,17 +596,5 @@ EJSON.clone = v => {
   });
   return ret;
 };
-
-/**
- * @summary Allocate a new buffer of binary data that EJSON can serialize.
- * @locus Anywhere
- * @param {Number} size The number of bytes of binary data to allocate.
- */
-// EJSON.newBinary is the public documented API for this functionality,
-// but the implementation is in the 'base64' package to avoid
-// introducing a circular dependency. (If the implementation were here,
-// then 'base64' would have to use EJSON.newBinary, and 'ejson' would
-// also have to use 'base64'.)
-EJSON.newBinary = Base64.newBinary;
 
 export { EJSON };

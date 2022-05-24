@@ -4,13 +4,14 @@ Package.describe({
 });
 
 Package.onUse(function onUse(api) {
-  api.use(['ecmascript', 'base64']);
+  api.use(['ecmascript', 'base64', 'binary']);
   api.mainModule('ejson.js');
   api.export('EJSON');
 });
 
 Package.onTest(function onTest(api) {
   api.use(['ecmascript', 'tinytest', 'mongo']);
+  api.use('binary');
   api.use('ejson');
   api.mainModule('ejson_tests.js');
 });

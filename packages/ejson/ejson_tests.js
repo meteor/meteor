@@ -284,7 +284,7 @@ Tinytest.add('ejson - handle objects with properties named "length"', test => {
   const parsedWidget = EJSON.parse('{"length":10}');
   test.equal({ length: 10 }, parsedWidget);
 
-  test.isFalse(EJSON.isBinary(widget));
+  test.isFalse(binary.isBinary(widget));
 
   const widget2 = new Widget();
   test.isTrue(widget, widget2);
