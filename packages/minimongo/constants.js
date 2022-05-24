@@ -1,10 +1,20 @@
-/**
- * Exported values are also used on mongo package.
- */
+/** Exported values are also used in the mongo package. */
 
-const MONGO_ASYNC_SUFFIX = 'Async';
+/** @param {string} method */
+export function getAsyncMethodName(method) {
+  return `${method.replace('_', '')}Async`;
+}
 
-export const getAsyncMethodName = method =>
-  `${method}${MONGO_ASYNC_SUFFIX}`.replace('_', '');
+export const ASYNC_COLLECTION_METHODS = [
+  'createCappedCollection',
+  'createIndex',
+  'dropCollection',
+  'dropIndex',
+  'findOne',
+  'insert',
+  'remove',
+  'update',
+  'upsert',
+];
 
-export const CURSOR_METHODS = ['count', 'fetch', 'forEach', 'map'];
+export const ASYNC_CURSOR_METHODS = ['count', 'fetch', 'forEach', 'map'];

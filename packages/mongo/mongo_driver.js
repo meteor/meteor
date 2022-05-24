@@ -15,8 +15,7 @@ const util = require("util");
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
-import { getCollectionInstanceOrNull } from "./collectionsInstances";
-import { getAsyncMethodName, CURSOR_METHODS } from "meteor/minimongo/constants";
+import { getAsyncMethodName, ASYNC_CURSOR_METHODS } from "meteor/minimongo/constants";
 
 MongoInternals = {};
 
@@ -911,7 +910,7 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-const setupSynchronousCursor = (cursor, method) => {
+function setupSynchronousCursor(cursor, method) {
   // You can only observe a tailable cursor.
   if (cursor._cursorDescription.options.tailable)
     throw new Error('Cannot call ' + method + ' on a tailable cursor');
@@ -929,12 +928,12 @@ const setupSynchronousCursor = (cursor, method) => {
   }
 
   return cursor._synchronousCursor;
-};
+}
 
-[...CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
+[...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
   Cursor.prototype[methodName] = function (...args) {
     const cursor = setupSynchronousCursor(this, methodName);
-    return cursor[methodName].apply(cursor, args);
+    return cursor[methodName](...args);
   };
 
   // These methods are handled separately.
@@ -944,8 +943,7 @@ const setupSynchronousCursor = (cursor, method) => {
 
   const methodNameAsync = getAsyncMethodName(methodName);
   Cursor.prototype[methodNameAsync] = function (...args) {
-    const cursor = setupSynchronousCursor(this, methodName);
-    return Promise.resolve(cursor[methodName].apply(cursor, args));
+    return Promise.resolve(this[methodName](...args));
   };
 });
 

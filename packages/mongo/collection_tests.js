@@ -7,47 +7,32 @@ Tinytest.add(
   }
 );
 
-Tinytest.add('collection - call new Mongo.Collection multiple times should use the same instance',
+Tinytest.add('collection - call new Mongo.Collection multiple times',
   function (test) {
     var collectionName = 'multiple_times_1_' + test.id;
     new Mongo.Collection(collectionName);
 
-    // as we reuse the same instance they should be equals
-    test.equal(
-      new Mongo.Collection(collectionName, {_suppressSameNameError: false})
-      === new Mongo.Collection(collectionName, {_suppressSameNameError: false}),
-      true
+    test.throws(
+      function () {
+        new Mongo.Collection(collectionName);
+      },
+      /There is already a collection named/
     );
   }
 );
 
-Tinytest.add('collection - call new Mongo.Collection multiple times should be ok',
+Tinytest.add('collection - call new Mongo.Collection multiple times with _suppressSameNameError=true',
   function (test) {
     var collectionName = 'multiple_times_2_' + test.id;
     new Mongo.Collection(collectionName);
 
     try {
-      new Mongo.Collection(collectionName);
+      new Mongo.Collection(collectionName, {_suppressSameNameError: true});
       test.ok();
     } catch (error) {
       console.log(error);
       test.fail('Expected new Mongo.Collection not to throw an error when called twice with the same name');
     }
-  }
-);
-
-Tinytest.add('collection - call new Mongo.Collection multiple times without instance reuse should throw error',
-  function (test) {
-    var collectionName = 'multiple_times_error_' + test.id;
-    const collectionOptions = { ignoreInstanceReuse: true };
-    new Mongo.Collection(collectionName, collectionOptions);
-
-    test.throws(
-      function () {
-        new Mongo.Collection(collectionName, collectionOptions);
-      },
-      /There is already a collection named/
-    );
   }
 );
 

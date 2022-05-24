@@ -1,12 +1,9 @@
 // options.connection, if given, is a LivedataClient or LivedataServer
 // XXX presently there is no way to destroy/clean up a Collection
 import {
-  getCollectionInstanceOrNull,
-  hasCollectionStatus,
-  markCollectionAsInitializing,
-  setCollectionInstance
-} from "./collectionsInstances";
-import { getAsyncMethodName } from "meteor/minimongo/constants";
+  ASYNC_COLLECTION_METHODS,
+  getAsyncMethodName
+} from "meteor/minimongo/constants";
 
 import { normalizeProjection } from "./mongo_utils";
 
@@ -32,10 +29,8 @@ Mongo = {};
 The default id generation technique is `'STRING'`.
  * @param {Function} options.transform An optional transformation function. Documents will be passed through this function before being returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` or to cursors returned from publish functions.
  * @param {Boolean} options.defineMutationMethods Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. Default `true`.
- * @param {Boolean} options.isAsync Set to `true` to create an async collection but this is not recommended, you should use `createAsyncCollection` instead. Default `undefined`.
- * @param {Boolean} options.ignoreInstanceReuse EXPERIMENTAL Set to `true` if you really know what you are doing. Default `undefined`.
  */
-Mongo.Collection = function Collection(name, optionsParam = {}) {
+Mongo.Collection = function Collection(name, options) {
   if (!name && name !== null) {
     Meteor._debug(
       'Warning: creating anonymous collection. It will not be ' +
@@ -50,24 +45,27 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
       'First argument to new Mongo.Collection must be a string or null'
     );
   }
-  const options = {
+
+  if (options && options.methods) {
+    // Backwards compatibility hack with original signature (which passed
+    // "connection" directly instead of in options. (Connections must have a "methods"
+    // method.)
+    // XXX remove before 1.0
+    options = { connection: options };
+  }
+  // Backwards compatibility: "connection" used to be called "manager".
+  if (options && options.manager && !options.connection) {
+    options.connection = options.manager;
+  }
+
+  options = {
     connection: undefined,
     idGeneration: 'STRING',
     transform: null,
     _driver: undefined,
     _preventAutopublish: false,
-    ...optionsParam,
+    ...options,
   };
-
-  const instance = options.ignoreInstanceReuse ? null : getCollectionInstanceOrNull({name, options});
-  if (instance) {
-    return instance;
-  }
-
-  const hasCollectionStatusAlready = hasCollectionStatus({name});
-  if (!hasCollectionStatusAlready) {
-    markCollectionAsInitializing({name});
-  }
 
   switch (options.idGeneration) {
     case 'MONGO':
@@ -98,13 +96,6 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
   else if (Meteor.isClient) this._connection = Meteor.connection;
   else this._connection = Meteor.server;
 
-  this.openDriver = (driver) => {
-    this._driver = driver;
-    this._collection = this._driver.open(name, this._connection);
-  }
-
-  this.isAsync = options.isAsync;
-
   if (options._driver) {
     if (typeof options._driver.open !== 'function') {
       throw new Error('If you are creating the driver manually using new ' +
@@ -113,7 +104,7 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
         'versions of Meteor. ' +
         'Read more https://docs.meteor.com/changelog.html.');
     }
-    this.openDriver(options._driver);
+    options._driver = options._driver;
   } else {
     // XXX This check assumes that webapp is loaded so that Meteor.server !==
     // null. We should fully support the case of "want to use a Mongo-backed
@@ -125,53 +116,46 @@ Mongo.Collection = function Collection(name, optionsParam = {}) {
       typeof MongoInternals !== 'undefined' &&
       MongoInternals.defaultRemoteCollectionDriver
     ) {
-      const driver = MongoInternals.getDefaultRemoteCollectionDriver();
-      this.openDriver(driver);
+      options._driver = MongoInternals.getDefaultRemoteCollectionDriver();
     } else {
       const { LocalCollectionDriver } = require('./local_collection_driver.js');
-      const driver = LocalCollectionDriver;
-      this.openDriver(driver);
+      options._driver = LocalCollectionDriver;
     }
   }
 
+  this._collection = options._driver.open(name, this._connection);
   this._name = name;
+  this._driver = options._driver;
 
-  // we can have two collections instances for the same collection, one async
-  // and another sync but we don't want to setup replication, mutations methods
-  // and auto publish twice
-  if (!hasCollectionStatusAlready) {
-    this._maybeSetUpReplication(name, options);
+  this._maybeSetUpReplication(name, options);
 
-    // XXX don't define these until allow or deny is actually used for this
-    // collection. Could be hard if the security rules are only defined on the
-    // server.
-    if (options.defineMutationMethods !== false) {
-      try {
-        this._defineMutationMethods({
-          useExisting: options._suppressSameNameError === true,
-        });
-      } catch (error) {
-        // Throw a more understandable error on the server for same collection name
-        if (
-        error.message === `A method named '/${name}/insert' is already defined`
-      )
-          throw new Error(`There is already a collection named "${name}"`);
-        throw error;
-      }
-    }
-
-    // autopublish
-    if (Package.autopublish &&
-        !options._preventAutopublish &&
-        this._connection &&
-        this._connection.publish) {
-      this._connection.publish(null, () => this.find(), {
-        is_auto: true,
+  // XXX don't define these until allow or deny is actually used for this
+  // collection. Could be hard if the security rules are only defined on the
+  // server.
+  if (options.defineMutationMethods !== false) {
+    try {
+      this._defineMutationMethods({
+        useExisting: options._suppressSameNameError === true,
       });
+    } catch (error) {
+      // Throw a more understandable error on the server for same collection name
+      if (
+      error.message === `A method named '/${name}/insert' is already defined`
+    )
+        throw new Error(`There is already a collection named "${name}"`);
+      throw error;
     }
   }
 
-  setCollectionInstance({name: this._name, instance: this, options});
+  // autopublish
+  if (Package.autopublish &&
+      !options._preventAutopublish &&
+      this._connection &&
+      this._connection.publish) {
+    this._connection.publish(null, () => this.find(), {
+      is_auto: true,
+    });
+  }
 };
 
 Object.assign(Mongo.Collection.prototype, {
@@ -378,13 +362,6 @@ Object.assign(Mongo.Collection.prototype, {
     }
   },
 
-  // Determine if this collection is simply a minimongo representation of a real
-  // database on another server
-  _isRemoteCollection() {
-    // XXX see #MeteorServerNull
-    return this._connection && this._connection !== Meteor.server;
-  },
-
   /**
    * @summary Find the documents in a collection that match the selector.
    * @locus Anywhere
@@ -416,64 +393,7 @@ Object.assign(Mongo.Collection.prototype, {
       this._getFindOptions(args)
     );
   },
-});
 
-Object.assign(Mongo.Collection, {
-  _publishCursor(cursor, sub, collection) {
-    var observeHandle = cursor.observeChanges(
-      {
-        added: function(id, fields) {
-          sub.added(collection, id, fields);
-        },
-        changed: function(id, fields) {
-          sub.changed(collection, id, fields);
-        },
-        removed: function(id) {
-          sub.removed(collection, id);
-        },
-      },
-      // Publications don't mutate the documents
-      // This is tested by the `livedata - publish callbacks clone` test
-      { nonMutatingCallbacks: true }
-    );
-
-    // We don't call sub.ready() here: it gets called in livedata_server, after
-    // possibly calling _publishCursor on multiple returned cursors.
-
-    // register stop callback (expects lambda w/ no args).
-    sub.onStop(function() {
-      observeHandle.stop();
-    });
-
-    // return the observeHandle in case it needs to be stopped early
-    return observeHandle;
-  },
-
-  // protect against dangerous selectors.  falsey and {_id: falsey} are both
-  // likely programmer error, and not what you want, particularly for destructive
-  // operations. If a falsey _id is sent in, a new string _id will be
-  // generated and returned; if a fallbackId is provided, it will be returned
-  // instead.
-  _rewriteSelector(selector, { fallbackId } = {}) {
-    // shorthand -- scalars match _id
-    if (LocalCollection._selectorIsId(selector)) selector = { _id: selector };
-
-    if (Array.isArray(selector)) {
-      // This is consistent with the Mongo console itself; if we don't do this
-      // check passing an empty array ends up selecting all items
-      throw new Error("Mongo selector can't be an array.");
-    }
-
-    if (!selector || ('_id' in selector && !selector._id)) {
-      // can't match anything
-      return { _id: fallbackId || Random.id() };
-    }
-
-    return selector;
-  },
-});
-
-const collectionImplementation = {
   /**
    * @summary Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
    * @locus Anywhere
@@ -723,6 +643,13 @@ const collectionImplementation = {
     }
   },
 
+  // Determine if this collection is simply a minimongo representation of a real
+  // database on another server
+  _isRemoteCollection() {
+    // XXX see #MeteorServerNull
+    return this._connection && this._connection !== Meteor.server;
+  },
+
   /**
    * @summary Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified)  and `insertedId` (the unique _id of the document that was inserted, if any).
    * @locus Anywhere
@@ -837,7 +764,62 @@ const collectionImplementation = {
     }
     return self._driver.mongo.db;
   },
-};
+});
+
+Object.assign(Mongo.Collection, {
+  _publishCursor(cursor, sub, collection) {
+    var observeHandle = cursor.observeChanges(
+      {
+        added: function(id, fields) {
+          sub.added(collection, id, fields);
+        },
+        changed: function(id, fields) {
+          sub.changed(collection, id, fields);
+        },
+        removed: function(id) {
+          sub.removed(collection, id);
+        },
+      },
+      // Publications don't mutate the documents
+      // This is tested by the `livedata - publish callbacks clone` test
+      { nonMutatingCallbacks: true }
+    );
+
+    // We don't call sub.ready() here: it gets called in livedata_server, after
+    // possibly calling _publishCursor on multiple returned cursors.
+
+    // register stop callback (expects lambda w/ no args).
+    sub.onStop(function() {
+      observeHandle.stop();
+    });
+
+    // return the observeHandle in case it needs to be stopped early
+    return observeHandle;
+  },
+
+  // protect against dangerous selectors.  falsey and {_id: falsey} are both
+  // likely programmer error, and not what you want, particularly for destructive
+  // operations. If a falsey _id is sent in, a new string _id will be
+  // generated and returned; if a fallbackId is provided, it will be returned
+  // instead.
+  _rewriteSelector(selector, { fallbackId } = {}) {
+    // shorthand -- scalars match _id
+    if (LocalCollection._selectorIsId(selector)) selector = { _id: selector };
+
+    if (Array.isArray(selector)) {
+      // This is consistent with the Mongo console itself; if we don't do this
+      // check passing an empty array ends up selecting all items
+      throw new Error("Mongo selector can't be an array.");
+    }
+
+    if (!selector || ('_id' in selector && !selector._id)) {
+      // can't match anything
+      return { _id: fallbackId || Random.id() };
+    }
+
+    return selector;
+  },
+});
 
 // Convert the callback to not return a result if there is an error
 function wrapCallback(callback, convertResult) {
@@ -900,61 +882,16 @@ function popCallbackFromArgs(args) {
   }
 }
 
-Object.entries(collectionImplementation).forEach(([methodName, method]) => {
-  Mongo.Collection.prototype[methodName] = function(...args) {
-    if (this.isAsync) {
-      throw new Error(`It is only allowed to use "${methodName}" method in sync collections like "${this._name}". Use "new Mongo.Collection" to create sync collections.`);
-    }
-
-    // Check for the instance if it's not a local collection.
-    if (this._name !== null) {
-      const options = { isAsync: false };
-      const instance = getCollectionInstanceOrNull({name: this._name, options});
-      if (!instance) {
-        throw new Error(`Sync collection instance for "${this._name}" not found. Use "new Mongo.Collection" to create sync collections.`);
-      }
-    }
-
-    return method.apply(this, args);
-  };
-
+ASYNC_COLLECTION_METHODS.forEach(methodName => {
   const methodNameAsync = getAsyncMethodName(methodName);
   Mongo.Collection.prototype[methodNameAsync] = function(...args) {
-    if (!this.isAsync) {
-      throw new Error(`It is only allowed to use "${methodNameAsync}" method in async collections like "${this._name}". Use "Mongo.Collection.create" to create async collections.`);
-    }
-
-    // Check for the instance if it's not a local collection.
-    if (this._name !== null) {
-      const options = { isAsync: true };
-      const instance = getCollectionInstanceOrNull({name: this._name, options});
-      if (!instance) {
-        throw new Error(`Async collection instance for "${this._name}" not found. Use "Mongo.Collection.create" to create async collections.`);
-      }
-    }
-
-    return Promise.resolve(method.apply(this, args));
+    return Promise.resolve(this[methodName](...args));
   };
 });
 
-Mongo.Collection.create = (name, optionsParam = {}) => {
-  try {
-    const options = {...optionsParam, isAsync: true};
-    const instance = getCollectionInstanceOrNull({name: name, options});
-    if (instance) {
-      return instance;
-    }
-
-    return new Mongo.Collection(name, options);
-  } catch (e) {
-    console.error(`Error creating ${name} async collection`, e);
-    throw e;
-  }
-}
-
-const userOptions = Meteor.settings?.packages?.mongo || {};
-
 if (Meteor.isServer) {
-  if (userOptions?.skipStartupConnection || process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) return;
-  Promise.await(MongoInternals.defaultRemoteCollectionDriver());
+  const userOptions = Meteor.settings?.packages?.mongo || {};
+  if (!userOptions?.skipStartupConnection && !process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) {
+    Promise.await(MongoInternals.defaultRemoteCollectionDriver());
+  }
 }
