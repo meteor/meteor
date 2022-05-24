@@ -634,7 +634,6 @@ if (Meteor.isServer) {
 Tinytest.addAsync("mongo-livedata - stop handle in callback, " + idGeneration, function (test, onComplete) {
   var run = Random.id();
   var coll;
-
   if (Meteor.isClient) {
     coll = new Mongo.Collection(null, collectionOptions); // local, unmanaged
   } else {
@@ -2505,7 +2504,6 @@ testAsyncMulti('mongo-livedata - empty string _id', [
 
 
 if (Meteor.isServer) {
-
   testAsyncMulti("mongo-livedata - minimongo observe on server", [
     function (test, expect) {
       var self = this;
@@ -3107,12 +3105,12 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 ]);
 
 
-var waitUntilOplogCaughtUp = async function () {
+async function waitUntilOplogCaughtUp() {
   var oplogHandle =
-        (await MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle;
+    (await MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle;
   if (oplogHandle)
     oplogHandle.waitUntilCaughtUp();
-};
+}
 
 
 Meteor.isServer && Tinytest.add("mongo-livedata - cursor dedup stop", function (test) {

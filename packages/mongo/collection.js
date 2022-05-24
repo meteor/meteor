@@ -104,7 +104,6 @@ Mongo.Collection = function Collection(name, options) {
         'versions of Meteor. ' +
         'Read more https://docs.meteor.com/changelog.html.');
     }
-    options._driver = options._driver;
   } else {
     // XXX This check assumes that webapp is loaded so that Meteor.server !==
     // null. We should fully support the case of "want to use a Mongo-backed
@@ -140,23 +139,80 @@ Mongo.Collection = function Collection(name, options) {
     } catch (error) {
       // Throw a more understandable error on the server for same collection name
       if (
-      error.message === `A method named '/${name}/insert' is already defined`
-    )
+        error.message === `A method named '/${name}/insert' is already defined`
+      )
         throw new Error(`There is already a collection named "${name}"`);
       throw error;
     }
   }
 
   // autopublish
-  if (Package.autopublish &&
-      !options._preventAutopublish &&
-      this._connection &&
-      this._connection.publish) {
+  if (
+    Package.autopublish &&
+    !options._preventAutopublish &&
+    this._connection &&
+    this._connection.publish
+  ) {
     this._connection.publish(null, () => this.find(), {
       is_auto: true,
     });
   }
 };
+
+Object.assign(Mongo.Collection, {
+  _publishCursor(cursor, sub, collection) {
+    var observeHandle = cursor.observeChanges(
+      {
+        added: function(id, fields) {
+          sub.added(collection, id, fields);
+        },
+        changed: function(id, fields) {
+          sub.changed(collection, id, fields);
+        },
+        removed: function(id) {
+          sub.removed(collection, id);
+        },
+      },
+      // Publications don't mutate the documents
+      // This is tested by the `livedata - publish callbacks clone` test
+      { nonMutatingCallbacks: true }
+    );
+
+    // We don't call sub.ready() here: it gets called in livedata_server, after
+    // possibly calling _publishCursor on multiple returned cursors.
+
+    // register stop callback (expects lambda w/ no args).
+    sub.onStop(function() {
+      observeHandle.stop();
+    });
+
+    // return the observeHandle in case it needs to be stopped early
+    return observeHandle;
+  },
+
+  // protect against dangerous selectors.  falsey and {_id: falsey} are both
+  // likely programmer error, and not what you want, particularly for destructive
+  // operations. If a falsey _id is sent in, a new string _id will be
+  // generated and returned; if a fallbackId is provided, it will be returned
+  // instead.
+  _rewriteSelector(selector, { fallbackId } = {}) {
+    // shorthand -- scalars match _id
+    if (LocalCollection._selectorIsId(selector)) selector = { _id: selector };
+
+    if (Array.isArray(selector)) {
+      // This is consistent with the Mongo console itself; if we don't do this
+      // check passing an empty array ends up selecting all items
+      throw new Error("Mongo selector can't be an array.");
+    }
+
+    if (!selector || ('_id' in selector && !selector._id)) {
+      // can't match anything
+      return { _id: fallbackId || Random.id() };
+    }
+
+    return selector;
+  },
+});
 
 Object.assign(Mongo.Collection.prototype, {
   _maybeSetUpReplication(name, { _suppressSameNameError = false }) {
@@ -775,61 +831,6 @@ Object.assign(Mongo.Collection.prototype, {
       throw new Error('Can only call rawDatabase on server collections');
     }
     return self._driver.mongo.db;
-  },
-});
-
-Object.assign(Mongo.Collection, {
-  _publishCursor(cursor, sub, collection) {
-    var observeHandle = cursor.observeChanges(
-      {
-        added: function(id, fields) {
-          sub.added(collection, id, fields);
-        },
-        changed: function(id, fields) {
-          sub.changed(collection, id, fields);
-        },
-        removed: function(id) {
-          sub.removed(collection, id);
-        },
-      },
-      // Publications don't mutate the documents
-      // This is tested by the `livedata - publish callbacks clone` test
-      { nonMutatingCallbacks: true }
-    );
-
-    // We don't call sub.ready() here: it gets called in livedata_server, after
-    // possibly calling _publishCursor on multiple returned cursors.
-
-    // register stop callback (expects lambda w/ no args).
-    sub.onStop(function() {
-      observeHandle.stop();
-    });
-
-    // return the observeHandle in case it needs to be stopped early
-    return observeHandle;
-  },
-
-  // protect against dangerous selectors.  falsey and {_id: falsey} are both
-  // likely programmer error, and not what you want, particularly for destructive
-  // operations. If a falsey _id is sent in, a new string _id will be
-  // generated and returned; if a fallbackId is provided, it will be returned
-  // instead.
-  _rewriteSelector(selector, { fallbackId } = {}) {
-    // shorthand -- scalars match _id
-    if (LocalCollection._selectorIsId(selector)) selector = { _id: selector };
-
-    if (Array.isArray(selector)) {
-      // This is consistent with the Mongo console itself; if we don't do this
-      // check passing an empty array ends up selecting all items
-      throw new Error("Mongo selector can't be an array.");
-    }
-
-    if (!selector || ('_id' in selector && !selector._id)) {
-      // can't match anything
-      return { _id: fallbackId || Random.id() };
-    }
-
-    return selector;
   },
 });
 

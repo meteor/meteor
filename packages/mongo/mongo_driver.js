@@ -15,7 +15,10 @@ const util = require("util");
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
-import { getAsyncMethodName, ASYNC_CURSOR_METHODS } from "meteor/minimongo/constants";
+import {
+  ASYNC_CURSOR_METHODS,
+  getAsyncMethodName
+} from "meteor/minimongo/constants";
 
 MongoInternals = {};
 
