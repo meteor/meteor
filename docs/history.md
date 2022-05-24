@@ -1,6 +1,8 @@
 ## 2.7.3, 2022-05-XX
 
 #### Highlights
+* `accounts-passwordless@2.1.2`:
+  - Throwing an error when the login tokens are not generated well calling requestLoginTokenForUser. [PR](https://github.com/meteor/meteor/pull/12047/files).
 * Node updated to v14.19.3
 * npm update to v6.14.17
 * Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
