@@ -28,6 +28,11 @@ Setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`)  will define
 
 In the event that your own deployment platform does not support WebSockets, or you are confident that you will not benefit from them, setting this variable with `DISABLE_WEBSOCKETS=1` will explicitly disable WebSockets and forcibly resort to the fallback polling-mechanism, instead of trying to detect this automatically.
 
+## DISABLE_SOCKJS
+(_development, production_)
+
+Set `DISABLE_SOCKJS=1` if you want to use the native WebSocket implementation instead of SockJS on the client side, for example, if you want to use a custom WebSocket implementation (e.g. [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/)) on the server side.
+
 ## HTTP_FORWARDED_COUNT
 (_production_)
 

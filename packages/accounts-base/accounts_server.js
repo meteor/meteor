@@ -219,7 +219,7 @@ export class AccountsServer extends AccountsCommon {
   }
 
   _validateLogin(connection, attempt) {
-    this._validateLoginHook.each(callback => {
+    this._validateLoginHook.forEach(callback => {
       let ret;
       try {
         ret = callback(cloneAttemptWithConnection(connection, attempt));
