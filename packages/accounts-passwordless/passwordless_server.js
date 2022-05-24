@@ -182,7 +182,10 @@ Meteor.methods({
     const tokens = emails
       .map(email => {
         // if the email was informed we will notify only this email
-        if (selector.email && selector.email !== email) {
+        if (
+          selector.email &&
+          selector.email.toLowerCase() !== email.toLowerCase()
+        ) {
           return null;
         }
         const sequence = generateSequence();
