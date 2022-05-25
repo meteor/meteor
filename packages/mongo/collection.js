@@ -100,9 +100,9 @@ Mongo.Collection = function Collection(name, options) {
     if (typeof options._driver.open !== 'function') {
       throw new Error('If you are creating the driver manually using new ' +
         'MongoInternals.RemoteCollectionDriver then you need to use ' +
-        'Promise.await() or await on it. Since it is async in recent ' +
+        'Promise.await() or await on it since it is async in recent ' +
         'versions of Meteor. ' +
-        'Read more https://docs.meteor.com/changelog.html.');
+        'Read more: https://docs.meteor.com/changelog.html.');
     }
   } else {
     // XXX This check assumes that webapp is loaded so that Meteor.server !==
