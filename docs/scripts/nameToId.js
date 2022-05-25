@@ -73,7 +73,6 @@ module.exports = {
   "Tracker.Computation#stop": "computation_stop",
   "Tracker.currentComputation": "tracker_currentcomputation",
   "Session.equals": "session_equals",
-  "EJSON.newBinary": "ejson_new_binary",
   "EJSON.addType": "ejson_add_type",
   "DDPCommon.MethodInvocation#unblock": "method_unblock",
   "Accounts.ui.config": "accounts_ui_config",
