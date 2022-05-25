@@ -7,7 +7,7 @@ types, as well as:
 
  - **Date** - JavaScript `Date`
  - **Binary** - JavaScript `Uint8Array` or the
-   result of [`EJSON.newBinary`](http://docs.meteor.com/#ejson_new_binary)
+   result of [`binary.newBinary`](http://docs.meteor.com/#ejson_new_binary)
  - **User-defined types** - see [`EJSON.addType`](http://docs.meteor.com/#ejson_add_type)
 
 All EJSON serializations are also valid JSON.  For example an object with a date
