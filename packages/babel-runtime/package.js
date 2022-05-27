@@ -7,5 +7,5 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use("modules");
-  api.mainModule("babel-runtime.js");
+  api.mainModule("babel-runtime.js", "server");
 });
