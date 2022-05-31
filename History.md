@@ -10,6 +10,25 @@
 
 #### Independent Releases
 
+## v2.5.7, 2022-05-31
+
+#### Highlights
+
+* Node updated to v14.19.3
+* npm update to v6.14.17
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.7`
+  - Updating node and npm versions
 
 ## v2.5.6, 2022-01-25
 
