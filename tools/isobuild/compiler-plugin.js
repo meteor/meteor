@@ -304,7 +304,7 @@ class InputFile extends buildPluginModule.InputFile {
     const sourceBatch = this._resourceSlot.packageSourceBatch;
     return readAndWatchFileWithHash(
       sourceBatch.unibuild.watchSet,
-      files.convertToOSPath(path),
+      files.convertToPosixPath(path),
     );
   }
 
