@@ -13,7 +13,7 @@ var packageJson = {
     fibers: "https://github.com/meteor/node-fibers/archive/refs/tags/5.0.0.tar.gz",
     "meteor-promise": "0.9.0",
     promise: "8.1.0",
-    "@meteorjs/reify": "0.23.0",
+    "@meteorjs/reify": "0.24.0",
     "@babel/parser": "7.15.3",
     "@types/underscore": "1.11.2",
     underscore: "1.13.1",
