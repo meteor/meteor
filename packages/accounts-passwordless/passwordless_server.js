@@ -182,13 +182,21 @@ Meteor.methods({
     const tokens = emails
       .map(email => {
         // if the email was informed we will notify only this email
-        if (selector.email && selector.email !== email) {
+        if (
+          selector.email &&
+          selector.email.toLowerCase() !== email.toLowerCase()
+        ) {
           return null;
         }
         const sequence = generateSequence();
         return { email, sequence };
       })
       .filter(Boolean);
+
+    if (!tokens.length) {
+      Accounts._handleError(`Login tokens could not be generated`);
+    }
+
     Meteor.users.update(user._id, {
       $set: {
         'services.passwordless': {

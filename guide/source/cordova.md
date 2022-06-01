@@ -99,6 +99,8 @@ After installing Xcode from the Mac App Store, it is still necessary to enable t
 
 {% youtube vhlNO0dVvjE %}
 
+> For Mac OSX Intel and Linux architectures, follow the following instructions. Mac M1 users, keep scrolling to the next section.
+
 In order to build and run Android apps, you will need to:
 
 - Install a Java Development Kit (JDK)
@@ -181,6 +183,22 @@ You will then have to reload `.bash_profile` (by executing `source ~/.bash_profi
 The current Android emulator tends to be rather slow and can be unstable, so our recommendation is to run your app on a physical device instead.
 
 If you do want to run on an emulator however, you will have to create an Android Virtual Device (AVD) using the [AVD Manager](http://developer.android.com/tools/devices/managing-avds.html). Make sure to configure an AVD with an API level that is supported by the version of [Cordova Android](https://github.com/apache/cordova-android/blob/master/RELEASENOTES.md) you are using.
+
+<h4>Mac M1</h4>
+In order to make Android run on m1 machines:
+
+- Install Java Development Kit (JDK) 8 from [here](https://cdn.azul.com/zulu/bin/zulu8.62.0.19-ca-jdk8.0.332-macosx_aarch64.dmg) 
+- Install the Android SDK and download the required tools, platforms, and other components (which is done most easily by installing Android Studio) from the [official website](https://developer.android.com/studio#downloads) and for the ARM architecture.
+- Create a Virtual Device on Android Studio, add any model (e.g. Pixel 4) with Android 11 (API 30)
+- Set up the following PATHs in your `.bashrc` or `.zshrc` file:
+```
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export ANDROID_SDK_ROOT=${ANDROID_HOME}
+export PATH=${PATH}:${ANDROID_HOME}/emulator
+export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+```
+> Remember to reload your configuration using `source ~/.zshrc` or `source ~/.bashrc`
+- Install `gradle` using `brew install gradle`
 
 <h2 id ="running-your-app">Developing on a device</h2>
 

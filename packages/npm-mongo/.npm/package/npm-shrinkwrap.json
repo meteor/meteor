@@ -2,9 +2,9 @@
   "lockfileVersion": 1,
   "dependencies": {
     "@types/node": {
-      "version": "17.0.12",
-      "resolved": "https://registry.npmjs.org/@types/node/-/node-17.0.12.tgz",
-      "integrity": "sha512-4YpbAsnJXWYK/fpTVFlMIcUIho2AYCi4wg5aNPrG1ng7fn/1/RZfCIpRCiBX+12RVa34RluilnvCqD+g3KiSiA=="
+      "version": "17.0.32",
+      "resolved": "https://registry.npmjs.org/@types/node/-/node-17.0.32.tgz",
+      "integrity": "sha512-eAIcfAvhf/BkHcf4pkLJ7ECpBAhh9kcxRBpip9cTiO+hf+aJrsxYxBeS6OXvOd9WqNAJmavXVpZvY1rBjNsXmw=="
     },
     "@types/webidl-conversions": {
       "version": "6.1.1",
@@ -22,9 +22,9 @@
       "integrity": "sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA=="
     },
     "bson": {
-      "version": "4.6.1",
-      "resolved": "https://registry.npmjs.org/bson/-/bson-4.6.1.tgz",
-      "integrity": "sha512-I1LQ7Hz5zgwR4QquilLNZwbhPw0Apx7i7X9kGMBTsqPdml/03Q9NBtD9nt/19ahjlphktQImrnderxqpzeVDjw=="
+      "version": "4.6.3",
+      "resolved": "https://registry.npmjs.org/bson/-/bson-4.6.3.tgz",
+      "integrity": "sha512-rAqP5hcUVJhXP2MCSNVsf0oM2OGU1So6A9pVRDYayvJ5+hygXHQApf87wd5NlhPM1J9RJnbqxIG/f8QTzRoQ4A=="
     },
     "buffer": {
       "version": "5.7.1",
@@ -42,9 +42,9 @@
       "integrity": "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="
     },
     "ip": {
-      "version": "1.1.5",
-      "resolved": "https://registry.npmjs.org/ip/-/ip-1.1.5.tgz",
-      "integrity": "sha1-vd7XARQpCCjAoDnnLvJfWq7ENUo="
+      "version": "1.1.8",
+      "resolved": "https://registry.npmjs.org/ip/-/ip-1.1.8.tgz",
+      "integrity": "sha512-PuExPYUiu6qMBQb4l06ecm6T6ujzhmh+MeJcW9wa89PoAz5pvd4zPgN5WJV104mb6S2T1AwNIAaB70JNrLQWhg=="
     },
     "memory-pager": {
       "version": "1.5.0",
@@ -57,9 +57,9 @@
       "integrity": "sha512-sNa8APSIk+r4x31ZwctKjuPSaeKuvUeNb/fu/3B6dRM02HpEgig7hTHM8A/PJQTlxuC/KFWlDlQjhsk/S43tBg=="
     },
     "mongodb-connection-string-url": {
-      "version": "2.4.1",
-      "resolved": "https://registry.npmjs.org/mongodb-connection-string-url/-/mongodb-connection-string-url-2.4.1.tgz",
-      "integrity": "sha512-d5Kd2bVsKcSA7YI/yo57fSTtMwRQdFkvc5IZwod1RRxJtECeWPPSo7zqcUGJELifRA//Igs4spVtYAmvFCatug=="
+      "version": "2.5.2",
+      "resolved": "https://registry.npmjs.org/mongodb-connection-string-url/-/mongodb-connection-string-url-2.5.2.tgz",
+      "integrity": "sha512-tWDyIG8cQlI5k3skB6ywaEA5F9f5OntrKKsT/Lteub2zgwSUlhqEN2inGgBTm8bpYJf8QYBdA/5naz65XDpczA=="
     },
     "punycode": {
       "version": "2.1.1",
@@ -77,9 +77,9 @@
       "integrity": "sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg=="
     },
     "socks": {
-      "version": "2.6.1",
-      "resolved": "https://registry.npmjs.org/socks/-/socks-2.6.1.tgz",
-      "integrity": "sha512-kLQ9N5ucj8uIcxrDwjm0Jsqk06xdpBjGNQtpXy4Q8/QY2k+fY7nZH8CARy+hkbG+SGAovmzzuauCpBlb8FrnBA=="
+      "version": "2.6.2",
+      "resolved": "https://registry.npmjs.org/socks/-/socks-2.6.2.tgz",
+      "integrity": "sha512-zDZhHhZRY9PxRruRMR7kMhnf3I8hDs4S3f9RecfnGxvcBHQcKcIH/oUcEWffsfl1XxdYlA7nnlGbbTvPz9D8gA=="
     },
     "sparse-bitfield": {
       "version": "3.0.3",

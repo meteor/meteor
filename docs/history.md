@@ -1,4 +1,28 @@
-## 2.7.2, 2022-04-XX
+## 2.7.3, 2022-05-31
+
+#### Highlights
+* `accounts-passwordless@2.1.2`:
+  - Throwing an error when the login tokens are not generated well calling requestLoginTokenForUser. [PR](https://github.com/meteor/meteor/pull/12047/files).
+* Node updated to v14.19.3
+* npm update to v6.14.17
+* Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `accounts-passwordless@2.1.2`:
+  - Throwing an error when the login tokens are not generated well calling requestLoginTokenForUser. [PR](https://github.com/meteor/meteor/pull/12047/files).
+* `babel-runtime@1.5.1`:
+  - Make client 25kb smaller. [PR](https://github.com/meteor/meteor/pull/12051).
+* Node updated to v14.19.3
+* npm update to v6.14.17
+* Fix win style paths being added to watch sets.
+* Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
+
+## 2.7.2, 2022-05-10
 
 #### Highlights
 
@@ -15,7 +39,7 @@ N/A
   - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
 * `socket-stream-client@0.5.0`
   - Ability to disable sockjs on client side. [PR](https://github.com/meteor/meteor/pull/12007/).
-*`meteor-node-stubs@1.2.2`:
+* `meteor-node-stubs@1.2.3`:
   - Fix using meteor-node-stubs in IE. [PR](https://github.com/meteor/meteor/pull/12014).
 * New ARCH environment variable that permit users to set uname info. [PR](https://github.com/meteor/meteor/pull/12020).
 * Skeleton dependencies updated.
