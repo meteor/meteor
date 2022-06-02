@@ -277,6 +277,25 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 
 #### Independent Releases
 
+## v2.5.7, 2022-05-31
+
+#### Highlights
+
+* Patch release to update Node and npm versions.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.7`
+  - Patch release to update Node and npm versions.
+
 ## v2.5.6, 2022-01-25
 
 #### Highlights
