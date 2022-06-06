@@ -1,3 +1,20 @@
+## 2.7.4, 2022-06-XX
+
+#### Highlights
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `modules@0.19.0`:
+  - Updating reify version. [PR](https://github.com/meteor/meteor/pull/12055).
+* `minimongo@1.9.0`:
+  - New methods to work with the Async API. [PR](https://github.com/meteor/meteor/pull/12028/files).
+* `mongo@1.16.0`:
+  - Adding async counterparts that allows gradual migration from Fibers. [PR](https://github.com/meteor/meteor/pull/12028).
+  
 ## 2.7.3, 2022-05-31
 
 #### Highlights
