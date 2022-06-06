@@ -10,10 +10,15 @@ import { normalizeProjection } from "./mongo_utils";
  */
 
 const path = require("path");
+const util = require("util");
 
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
+import {
+  ASYNC_CURSOR_METHODS,
+  getAsyncMethodName
+} from "meteor/minimongo/constants";
 
 MongoInternals = {};
 
@@ -135,7 +140,7 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-MongoConnection = function (url, options) {
+MongoConnection = async function (url, options) {
   var self = this;
   options = options || {};
   self._observeMultiplexers = {};
@@ -179,69 +184,58 @@ MongoConnection = function (url, options) {
   self._oplogHandle = null;
   self._docFetcher = null;
 
-
-  var connectFuture = new Future;
-  new MongoDB.MongoClient(
+  const connect = util.promisify(MongoDB.MongoClient.connect);
+  const client = await connect(
     url,
-    mongoOptions
-  ).connect(
-    Meteor.bindEnvironment(
-      function (err, client) {
-        if (err) {
-          throw err;
+    mongoOptions);
+
+  var db = client.db();
+
+  try {
+    const helloDocument = await db.admin().command({hello: 1});
+    // First, figure out what the current primary is, if any.
+    if (helloDocument.primary) {
+      self._primary = helloDocument.primary;
+    }
+  }catch(_){
+    // ismaster command is supported on older mongodb versions
+    const isMasterDocument = await db.admin().command({ismaster:1});
+    // First, figure out what the current primary is, if any.
+    if (isMasterDocument.primary) {
+      self._primary = isMasterDocument.primary;
+    }
+  }
+
+  client.topology.on(
+    'joined', Meteor.bindEnvironment(function (kind, doc) {
+      if (kind === 'primary') {
+        if (doc.primary !== self._primary) {
+          self._primary = doc.primary;
+          self._onFailoverHook.each(function (callback) {
+            callback();
+            return true;
+          });
         }
-
-        var db = client.db();
-        try {
-          const helloDocument = db.admin().command({hello: 1}).await();
-          // First, figure out what the current primary is, if any.
-          if (helloDocument.primary) {
-            self._primary = helloDocument.primary;
-          }
-        }catch(_){
-          // ismaster command is supported on older mongodb versions
-          const isMasterDocument = db.admin().command({ismaster:1}).await();
-          // First, figure out what the current primary is, if any.
-          if (isMasterDocument.primary) {
-            self._primary = isMasterDocument.primary;
-          }
-        }
-
-        client.topology.on(
-          'joined', Meteor.bindEnvironment(function (kind, doc) {
-            if (kind === 'primary') {
-              if (doc.primary !== self._primary) {
-                self._primary = doc.primary;
-                self._onFailoverHook.each(function (callback) {
-                  callback();
-                  return true;
-                });
-              }
-            } else if (doc.me === self._primary) {
-              // The thing we thought was primary is now something other than
-              // primary.  Forget that we thought it was primary.  (This means
-              // that if a server stops being primary and then starts being
-              // primary again without another server becoming primary in the
-              // middle, we'll correctly count it as a failover.)
-              self._primary = null;
-            }
-          }));
-
-        // Allow the constructor to return.
-        connectFuture['return']({ client, db });
-      },
-      connectFuture.resolver()  // onException
-    )
-  );
+      } else if (doc.me === self._primary) {
+        // The thing we thought was primary is now something other than
+        // primary.  Forget that we thought it was primary.  (This means
+        // that if a server stops being primary and then starts being
+        // primary again without another server becoming primary in the
+        // middle, we'll correctly count it as a failover.)
+        self._primary = null;
+      }
+    }));
 
   // Wait for the connection to be successful (throws on failure) and assign the
   // results (`client` and `db`) to `self`.
-  Object.assign(self, connectFuture.wait());
+  Object.assign(self, { client, db });
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
-    self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
+    self._oplogHandle = await new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
+
+  return self;
 };
 
 MongoConnection.prototype.close = function() {
@@ -919,26 +913,40 @@ Cursor = function (mongo, cursorDescription) {
   self._synchronousCursor = null;
 };
 
-_.each(['forEach', 'map', 'fetch', 'count', Symbol.iterator], function (method) {
-  Cursor.prototype[method] = function () {
-    var self = this;
+function setupSynchronousCursor(cursor, method) {
+  // You can only observe a tailable cursor.
+  if (cursor._cursorDescription.options.tailable)
+    throw new Error('Cannot call ' + method + ' on a tailable cursor');
 
-    // You can only observe a tailable cursor.
-    if (self._cursorDescription.options.tailable)
-      throw new Error("Cannot call " + method + " on a tailable cursor");
+  if (!cursor._synchronousCursor) {
+    cursor._synchronousCursor = cursor._mongo._createSynchronousCursor(
+      cursor._cursorDescription,
+      {
+        // Make sure that the "cursor" argument to forEach/map callbacks is the
+        // Cursor, not the SynchronousCursor.
+        selfForIteration: cursor,
+        useTransform: true,
+      }
+    );
+  }
 
-    if (!self._synchronousCursor) {
-      self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription, {
-          // Make sure that the "self" argument to forEach/map callbacks is the
-          // Cursor, not the SynchronousCursor.
-          selfForIteration: self,
-          useTransform: true
-        });
-    }
+  return cursor._synchronousCursor;
+}
 
-    return self._synchronousCursor[method].apply(
-      self._synchronousCursor, arguments);
+[...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
+  Cursor.prototype[methodName] = function (...args) {
+    const cursor = setupSynchronousCursor(this, methodName);
+    return cursor[methodName](...args);
+  };
+
+  // These methods are handled separately.
+  if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) {
+    return;
+  }
+
+  const methodNameAsync = getAsyncMethodName(methodName);
+  Cursor.prototype[methodNameAsync] = function (...args) {
+    return Promise.resolve(this[methodName](...args));
   };
 });
 
@@ -1226,6 +1234,15 @@ SynchronousCursor.prototype[Symbol.iterator] = function () {
     }
   };
 };
+
+SynchronousCursor.prototype[Symbol.asyncIterator] = function () {
+  const syncResult = this[Symbol.iterator]();
+  return {
+    async next() {
+      return Promise.resolve(syncResult.next());
+    }
+  };
+}
 
 // Tails the cursor described by cursorDescription, most likely on the
 // oplog. Calls docCallback with each document found. Ignores errors and just

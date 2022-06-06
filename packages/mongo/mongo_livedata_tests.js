@@ -873,7 +873,7 @@ if (Meteor.isServer) {
 
   // This test mainly checks the correctness of oplog code dealing with limited
   // queries. Compitablity with poll-diff is added as well.
-  Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, function (test, onComplete) {
+  Tinytest.addAsync("mongo-livedata - observe sorted, limited " + idGeneration, async function (test) {
     var run = test.runId();
     var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
 
@@ -936,7 +936,7 @@ if (Meteor.isServer) {
 
     // Insert a doc and start observing.
     var docId1 = ins({foo: 22, bar: 5});
-    waitUntilOplogCaughtUp();
+    await waitUntilOplogCaughtUp();
 
     // State: [ 5:1 | ]!
     var o = observer();
@@ -1140,7 +1140,6 @@ if (Meteor.isServer) {
     testSafeAppendToBufferFlag(false);
 
     o.handle.stop();
-    onComplete();
   });
 
   Tinytest.addAsync("mongo-livedata - observe sorted, limited, sort fields " + idGeneration, function (test, onComplete) {
@@ -1219,7 +1218,7 @@ if (Meteor.isServer) {
     onComplete();
   });
 
-  Tinytest.addAsync("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test, onComplete) {
+  Tinytest.addAsync("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, async function (test) {
     var run = test.runId();
     var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
 
@@ -1277,7 +1276,7 @@ if (Meteor.isServer) {
 
     // Ensure that we are past all the 'i' entries before we run the query, so
     // that we get the expected phase transitions.
-    waitUntilOplogCaughtUp();
+    await waitUntilOplogCaughtUp();
 
     var o = observer();
     var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
@@ -1326,9 +1325,6 @@ if (Meteor.isServer) {
     usesOplog && testOplogBufferIds([ids[10], ids[6]]);
     usesOplog && testSafeAppendToBufferFlag(true);
     clearOutput(o);
-
-
-    onComplete();
   });
 }
 
@@ -2508,67 +2504,6 @@ testAsyncMulti('mongo-livedata - empty string _id', [
 
 
 if (Meteor.isServer) {
-
-  testAsyncMulti("mongo-livedata - minimongo on server to server connection", [
-    function (test, expect) {
-      var self = this;
-      Meteor._debug("connection setup");
-      self.id = Random.id();
-      var C = self.C = new Mongo.Collection("ServerMinimongo_" + self.id);
-      C.allow({
-        insert: function () {return true;},
-        update: function () {return true;},
-        remove: function () {return true;}
-      });
-      C.insert({a: 0, b: 1});
-      C.insert({a: 0, b: 2});
-      C.insert({a: 1, b: 3});
-      Meteor.publish(self.id, function () {
-        return C.find({a: 0});
-      });
-
-      self.conn = DDP.connect(Meteor.absoluteUrl());
-      pollUntil(expect, function () {
-        return self.conn.status().connected;
-      }, 10000);
-    },
-
-    function (test, expect) {
-      var self = this;
-      if (self.conn.status().connected) {
-        self.miniC = new Mongo.Collection("ServerMinimongo_" + self.id, {
-          connection: self.conn
-        });
-        var exp = expect(function (err) {
-          test.isFalse(err);
-        });
-        self.conn.subscribe(self.id, {
-          onError: exp,
-          onReady: exp
-        });
-      }
-    },
-
-    function (test, expect) {
-      var self = this;
-      if (self.miniC) {
-        var contents = self.miniC.find().fetch();
-        test.equal(contents.length, 2);
-        test.equal(contents[0].a, 0);
-      }
-    },
-
-    function (test, expect) {
-      var self = this;
-      if (!self.miniC)
-        return;
-      self.miniC.insert({a:0, b:3});
-      var contents = self.miniC.find({b:3}).fetch();
-      test.equal(contents.length, 1);
-      test.equal(contents[0].a, 0);
-    }
-  ]);
-
   testAsyncMulti("mongo-livedata - minimongo observe on server", [
     function (test, expect) {
       var self = this;
@@ -2867,10 +2802,10 @@ if (Meteor.isServer) {
 }
 
 // This is a VERY white-box test.
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", function (test) {
+Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - _disableOplog", async function (test) {
   var collName = Random.id();
   var coll = new Mongo.Collection(collName);
-  if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
+  if ((await MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle) {
     var observeWithOplog = coll.find({x: 5})
           .observeChanges({added: function () {}});
     test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
@@ -2882,7 +2817,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - _disableOplog", functi
   observeWithoutOplog.stop();
 });
 
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector fields", function (test) {
+Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - include selector fields", async function (test) {
   var collName = "includeSelector" + Random.id();
   var coll = new Mongo.Collection(collName);
 
@@ -2893,7 +2828,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector field
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  waitUntilOplogCaughtUp();
+  await waitUntilOplogCaughtUp();
 
   var output = [];
   var handle = coll.find({a: 1, b: 2}, {fields: {c: 1}}).observeChanges({
@@ -2924,7 +2859,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - include selector field
   handle.stop();
 });
 
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (test) {
+Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - transform", async function (test) {
   var collName = "oplogTransform" + Random.id();
   var coll = new Mongo.Collection(collName);
 
@@ -2935,7 +2870,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
   // during the observeChanges, the bug in question is not consistently
   // reproduced.) We don't have to do this for polling observe (eg
   // --disable-oplog).
-  waitUntilOplogCaughtUp();
+  await waitUntilOplogCaughtUp();
 
   var cursor = coll.find({}, {transform: function (doc) {
     return doc.x;
@@ -2964,17 +2899,17 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
 });
 
 
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", function (test) {
+Meteor.isServer && Tinytest.addAsync("mongo-livedata - oplog - drop collection/db", async function (test) {
   // This test uses a random database, so it can be dropped without affecting
   // anything else.
   var mongodbUri = Npm.require('mongodb-uri');
   var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
   parsedUri.database = 'dropDB' + Random.id();
-  var driver = new MongoInternals.RemoteCollectionDriver(
+  var driver = Promise.await(new MongoInternals.RemoteCollectionDriver(
     mongodbUri.format(parsedUri), {
       oplogUrl: process.env.MONGO_OPLOG_URL
     }
-  );
+  ));
 
   var collName = "dropCollection" + Random.id();
   var coll = new Mongo.Collection(collName, { _driver: driver });
@@ -3008,7 +2943,7 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", f
 
   // Wait until we've processed the insert oplog entry, so that we are in a
   // steady state (and we don't see the dropped docs because we are FETCHING).
-  waitUntilOplogCaughtUp();
+  await waitUntilOplogCaughtUp();
 
   // Drop the collection. Should remove all docs.
   runInFence(function () {
@@ -3170,12 +3105,12 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 ]);
 
 
-var waitUntilOplogCaughtUp = function () {
+async function waitUntilOplogCaughtUp() {
   var oplogHandle =
-        MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
+    (await MongoInternals.defaultRemoteCollectionDriver()).mongo._oplogHandle;
   if (oplogHandle)
     oplogHandle.waitUntilCaughtUp();
-};
+}
 
 
 Meteor.isServer && Tinytest.add("mongo-livedata - cursor dedup stop", function (test) {
@@ -3298,7 +3233,7 @@ Meteor.isServer && Tinytest.add(
   "mongo-livedata - connection failure throws",
   function (test) {
     test.throws(function () {
-      new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+      Promise.await(new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf'));
     });
   }
 );
@@ -3498,8 +3433,8 @@ if (Meteor.isServer) {
 }
 
 if (Meteor.isServer) {
-  Tinytest.addAsync("mongo-livedata - transaction", function (test, onComplete) {
-    const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
+  Tinytest.addAsync("mongo-livedata - transaction", async function (test) {
+    const { client } = (await MongoInternals.defaultRemoteCollectionDriver()).mongo;
 
     const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
     const rawCollection = Collection.rawCollection();
@@ -3509,49 +3444,51 @@ if (Meteor.isServer) {
 
     let changeCount = 0;
 
-    function finalize() {
-      observeHandle.stop();
-      Meteor.clearTimeout(timeout);
-      onComplete();
-    }
-
-    const observeHandle = Collection.find().observeChanges({
-      changed(id, fields) {
-        let expectedValue;
-
-        if (id === "a") {
-          expectedValue = "updated1";
-        } else if (id === "b") {
-          expectedValue = "updated2";
-        }
-
-        test.equal(fields.field, expectedValue);
-        changeCount += 1;
-
-        if (changeCount === 2) {
-          finalize();
-        }
+    return new Promise(resolve => {
+      function finalize() {
+        observeHandle.stop();
+        Meteor.clearTimeout(timeout);
+        resolve();
       }
-    });
 
-    const timeout = Meteor.setTimeout(() => {
-      test.fail("Didn't receive all transaction operations in two seconds.");
-      finalize();
-    }, 2000);
+      const observeHandle = Collection.find().observeChanges({
+        changed(id, fields) {
+          let expectedValue;
 
-    const session = client.startSession();
-    session.withTransaction(session => {
-      let promise = Promise.resolve();
-      ["a", "b"].forEach((id, index) => {
-        promise = promise.then(() => rawCollection.updateMany(
-          { _id: id },
-          { $set: { field: `updated${index + 1}` } },
-          { session }
-        ));
+          if (id === "a") {
+            expectedValue = "updated1";
+          } else if (id === "b") {
+            expectedValue = "updated2";
+          }
+
+          test.equal(fields.field, expectedValue);
+          changeCount += 1;
+
+          if (changeCount === 2) {
+            finalize();
+          }
+        }
       });
-      return promise;
-    }).finally(() => {
-      session.endSession();
+
+      const timeout = Meteor.setTimeout(() => {
+        test.fail("Didn't receive all transaction operations in two seconds.");
+        finalize();
+      }, 2000);
+
+      const session = client.startSession();
+      session.withTransaction(session => {
+        let promise = Promise.resolve();
+        ["a", "b"].forEach((id, index) => {
+          promise = promise.then(() => rawCollection.updateMany(
+            { _id: id },
+            { $set: { field: `updated${index + 1}` } },
+            { session }
+          ));
+        });
+        return promise;
+      }).finally(() => {
+        session.endSession();
+      });
     });
   });
 }
