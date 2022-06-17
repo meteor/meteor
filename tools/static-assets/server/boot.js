@@ -477,10 +477,11 @@ var runMain = Profile("Run main()", function () {
   }
 });
 
-Fiber(function () {
+// TODO remove-fiber - remove this Fiber call
+// Fiber(function () {
   Profile.run("Server startup", function () {
     loadServerBundles();
     callStartupHooks();
     runMain();
   });
-}).run();
+// }).run();

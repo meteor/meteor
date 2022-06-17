@@ -4,12 +4,13 @@ var Fiber = Npm.require('fibers');
 
 var nextSlot = 0;
 
+// TODO remove-fiber - maybe this function should check if there is an ALS context or something like that. Fix it
 Meteor._nodeCodeMustBeInFiber = function () {
-  if (!Fiber.current) {
-    throw new Error("Meteor code must always run within a Fiber. " +
-                    "Try wrapping callbacks that you pass to non-Meteor " +
-                    "libraries with Meteor.bindEnvironment.");
-  }
+  // if (!Fiber.current) {
+  //   throw new Error("Meteor code must always run within a Fiber. " +
+  //                   "Try wrapping callbacks that you pass to non-Meteor " +
+  //                   "libraries with Meteor.bindEnvironment.");
+  // }
 };
 
 /**
@@ -107,14 +108,18 @@ EVp.withValue = function (value, func) {
  * @locus Anywhere
  * @memberOf Meteor
  * @param {Function} func Function that is wrapped
- * @param {Function} onException 
+ * @param {Function} onException
  * @param {Object} _this Optional `this` object against which the original function will be invoked
  * @return {Function} The wrapped function
  */
 Meteor.bindEnvironment = function (func, onException, _this) {
   Meteor._nodeCodeMustBeInFiber();
 
-  var dynamics = Fiber.current._meteor_dynamics;
+  // TODO remove-fiber - important-change
+  // var dynamics = Fiber.current._meteor_dynamics;
+  const store = Meteor.asyncLocalStorage.getStore() || {};
+  var dynamics = store._meteor_dynamics || [];
+
   var boundValues = dynamics ? dynamics.slice() : [];
 
   if (!onException || typeof(onException) === 'string') {
@@ -133,11 +138,13 @@ Meteor.bindEnvironment = function (func, onException, _this) {
     var args = Array.prototype.slice.call(arguments);
 
     var runWithEnvironment = function () {
-      var savedValues = Fiber.current._meteor_dynamics;
+      // TODO remove-fiber - important-change - not duplicating value
+      // var savedValues = Fiber.current._meteor_dynamics;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
-        Fiber.current._meteor_dynamics = boundValues.slice();
+        // TODO remove-fiber - important-change - not duplicating value
+        // Fiber.current._meteor_dynamics = boundValues.slice();
         var ret = func.apply(_this, args);
       } catch (e) {
         // note: callback-hook currently relies on the fact that if onException
@@ -145,13 +152,15 @@ Meteor.bindEnvironment = function (func, onException, _this) {
         // within a Fiber, the wrapped call throws.
         onException(e);
       } finally {
-        Fiber.current._meteor_dynamics = savedValues;
+        // TODO remove-fiber - important-change
+        // Fiber.current._meteor_dynamics = savedValues;
       }
       return ret;
     };
-
-    if (Fiber.current)
-      return runWithEnvironment();
-    Fiber(runWithEnvironment).run();
+    // TODO remove-fiber - important-change
+    // if (Fiber.current)
+    //   return runWithEnvironment();
+    // Fiber(runWithEnvironment).run();
+    return runWithEnvironment();
   };
 };

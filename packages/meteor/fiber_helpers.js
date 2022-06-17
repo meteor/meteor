@@ -1,5 +1,9 @@
 var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
+const { AsyncLocalStorage } = Npm.require('async_hooks');
+
+// TODO remove-fiber - important-change  check if this is a good strategy
+Meteor.asyncLocalStorage = new AsyncLocalStorage();
 
 Meteor._noYieldsAllowed = function (f) {
   var savedYield = Fiber.yield;
@@ -58,14 +62,23 @@ var SQp = Meteor._SynchronousQueue.prototype;
 SQp.runTask = function (task) {
   var self = this;
 
-  if (!self.safeToRunTask()) {
+  // TODO remove-fiber - figure out what would be the equivalent here. Maybe check if there is a AsyncLocalStorage context set up?
+  if (false && !self.safeToRunTask()) {
     if (Fiber.current)
       throw new Error("Can't runTask from another task in the same fiber");
     else
       throw new Error("Can only call runTask in a Fiber");
   }
 
-  var fut = new Future;
+  const fut = {
+    throw(exception) {
+      throw new Error(exception);
+    },
+    // // TODO remove-fiber - finally not the right behavior. Fix it. Check the right behavior here https://github.com/laverdet/node-fibers
+    return(value) {
+      return value;
+    }
+  };
   var handle = {
     task: Meteor.bindEnvironment(task, function (e) {
       Meteor._debug("Exception from task", e);
@@ -75,10 +88,15 @@ SQp.runTask = function (task) {
     name: task.name
   };
   self._taskHandles.push(handle);
-  self._scheduleRun();
+
+  Meteor.asyncLocalStorage.run(self, () => {
+    self._scheduleRun();
+  });
+
   // Yield. We'll get back here after the task is run (and will throw if the
   // task throws).
-  fut.wait();
+  // // TODO remove-fiber - check how important is this wait() here
+  // fut.wait();
 };
 
 SQp.queueTask = function (task) {
@@ -122,9 +140,7 @@ SQp._scheduleRun = function () {
 
   self._runningOrRunScheduled = true;
   setImmediate(function () {
-    Fiber(function () {
       self._run();
-    }).run();
   });
 };
 
@@ -143,7 +159,7 @@ SQp._run = function () {
   var taskHandle = self._taskHandles.shift();
 
   // Run the task.
-  self._currentTaskFiber = Fiber.current;
+  self._currentTaskFiber = Meteor.asyncLocalStorage.getStore();
   var exception = undefined;
   try {
     taskHandle.task();
