@@ -41,7 +41,7 @@ npm install -g meteor
 
 ### Important note
 
-This npm package is not Meteor itself, this npm package is just an installer. You should not include it as a dependency in your project. If you do your deploy is going to be broken.
+This npm package is not Meteor itself, it is just an installer. You should not include it as a dependency in your project. If you do, your deployment is going to be broken.
 
 ### Path management
 
