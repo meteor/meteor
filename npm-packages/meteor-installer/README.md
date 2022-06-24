@@ -1,5 +1,7 @@
 ## Meteor Installer
 
+Node.js <= 14.9.3 is required.
+
 Install Meteor by running:
 
 ```bash
@@ -12,6 +14,7 @@ npm install -g meteor
 
 | NPM Package | Meteor Official Release |
 |-------------|-------------------------|
+| 2.7.5       | 2.7.3                   |
 | 2.7.4       | 2.7.3                   |
 | 2.7.3       | 2.7.2                   |
 | 2.7.2       | 2.7.1                   |
