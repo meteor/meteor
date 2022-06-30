@@ -477,10 +477,23 @@ var runMain = Profile("Run main()", function () {
   }
 });
 
-Fiber(function () {
-  Profile.run("Server startup", function () {
+function startServerProcess() {
+  Profile.run('Server startup', function() {
     loadServerBundles();
     callStartupHooks();
     runMain();
   });
-}).run();
+}
+
+// TODO fibers - DUPLICATED CODE - Check if this is the best way of doing this.
+const isFiberEnabled = !!process.env.ENABLE_FIBERS;
+
+if (isFiberEnabled) {
+  console.log('SHOULD go here', {});
+  Fiber(function() {
+    startServerProcess();
+  }).run();
+  return;
+}
+
+startServerProcess();
