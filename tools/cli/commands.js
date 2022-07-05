@@ -21,12 +21,6 @@ import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
-const { AsyncLocalStorage } = require('async_hooks');
-const asyncLocalStorage = new AsyncLocalStorage();
-global.getAsyncLocalStorage = function getAsyncLocalStorage() {
-  console.log('getAsyncLocalStorage', asyncLocalStorage);
-  return asyncLocalStorage;
-};
 import { EXAMPLE_REPOSITORIES } from './example-repositories.js';
 
 // The architecture used by Meteor Software's hosted servers; it's the

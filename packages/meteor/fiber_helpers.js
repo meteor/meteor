@@ -55,14 +55,20 @@ Meteor._SynchronousQueue = function () {
 
 var SQp = Meteor._SynchronousQueue.prototype;
 
+// TODO fibers - DUPLICATED CODE - Check if this is the best way of doing this.
+const isFiberEnabled = !!process.env.ENABLE_FIBERS;
+
 SQp.runTask = function (task) {
   var self = this;
-
+  // TODO fibers - check if this is the best way of verifying. We probably should have one for the ALS
   if (!self.safeToRunTask()) {
-    if (Fiber.current)
+    if (Fiber.current) {
       throw new Error("Can't runTask from another task in the same fiber");
-    else
-      throw new Error("Can only call runTask in a Fiber");
+    } else {
+      if (isFiberEnabled) {
+        throw new Error('Can only call runTask in a Fiber');
+      }
+    }
   }
 
   var fut = new Future;

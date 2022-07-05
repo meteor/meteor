@@ -570,12 +570,13 @@ Object.assign(AppRunner.prototype, {
         self.projectContext.packageMapDelta.displayOnConsole();
       }
 
-      if (self.recordPackageUsage) {
-        stats.recordPackages({
-          what: "sdk.run",
-          projectContext: self.projectContext
-        });
-      }
+      // TODO fibers - This throws an error when trying when run without Fibers. We need to fix it or change the way it runs
+      // if (self.recordPackageUsage) {
+      //   stats.recordPackages({
+      //     what: "sdk.run",
+      //     projectContext: self.projectContext
+      //   });
+      // }
 
       var bundleResult = Profile.run((firstRun?"B":"Reb")+"uild App", () => {
         return bundler.bundle({

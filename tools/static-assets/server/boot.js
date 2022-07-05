@@ -418,8 +418,11 @@ var loadServerBundles = Profile("Load server bundles", function () {
         args
       });
     } else {
-      // Allows us to use code-coverage if the debugger is not enabled
-      Profile(fileInfo.path, func).apply(global, args);
+      // TODO fibers - check if this is the best context to be provided to the run
+      global.asyncLocalStorage.run({init: true}, () => {
+        // Allows us to use code-coverage if the debugger is not enabled
+        Profile(fileInfo.path, func).apply(global, args);
+      });
     }
   });
 
@@ -478,6 +481,8 @@ var runMain = Profile("Run main()", function () {
 });
 
 function startServerProcess() {
+  const { AsyncLocalStorage } = require('async_hooks');
+  global.asyncLocalStorage = new AsyncLocalStorage();
   Profile.run('Server startup', function() {
     loadServerBundles();
     callStartupHooks();
