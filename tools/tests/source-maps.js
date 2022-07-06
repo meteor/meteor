@@ -1,7 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files');
-var catalog = require('../packaging/catalog/catalog.js');
 
 function matchPath (text, doubleBS) {
   if (process.platform === 'win32') {
