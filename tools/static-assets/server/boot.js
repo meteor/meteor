@@ -14,6 +14,11 @@ var MIN_NODE_VERSION = 'v14.0.0';
 
 var hasOwn = Object.prototype.hasOwnProperty;
 
+
+// TODO fibers - DUPLICATED CODE - Check if this is the best way of doing this.
+const isFiberEnabled = !!process.env.ENABLE_FIBERS;
+
+
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
     'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.\n');
@@ -419,10 +424,17 @@ var loadServerBundles = Profile("Load server bundles", function () {
       });
     } else {
       // TODO fibers - check if this is the best context to be provided to the run
-      global.asyncLocalStorage.run({init: true}, () => {
-        // Allows us to use code-coverage if the debugger is not enabled
-        Profile(fileInfo.path, func).apply(global, args);
-      });
+      // Allows us to use code-coverage if the debugger is not enabled
+      const fileInfoFunc = () => Profile(fileInfo.path, func).apply(global, args);
+
+      if (isFiberEnabled) {
+        fileInfoFunc();
+      } else {
+        global.asyncLocalStorage.run({init: true}, () => {
+          fileInfoFunc();
+        });
+      }
+
     }
   });
 
@@ -489,9 +501,6 @@ function startServerProcess() {
     runMain();
   });
 }
-
-// TODO fibers - DUPLICATED CODE - Check if this is the best way of doing this.
-const isFiberEnabled = !!process.env.ENABLE_FIBERS;
 
 if (isFiberEnabled) {
   console.log('SHOULD go here', {});
