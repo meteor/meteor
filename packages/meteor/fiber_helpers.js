@@ -58,23 +58,19 @@ var SQp = Meteor._SynchronousQueue.prototype;
 // TODO fibers - DUPLICATED CODE - Check if this is the best way of doing this.
 const isFiberEnabled = !!process.env.ENABLE_FIBERS;
 
-SQp.runTask = function (task) {
-  var self = this;
-  // TODO fibers - check if this is the best way of verifying. We probably should have one for the ALS
+const runTaskWithFibers = ({ task, self }) => {
   if (!self.safeToRunTask()) {
     if (Fiber.current) {
       throw new Error("Can't runTask from another task in the same fiber");
     } else {
-      if (isFiberEnabled) {
-        throw new Error('Can only call runTask in a Fiber');
-      }
+      throw new Error('Can only call runTask in a Fiber');
     }
   }
 
-  var fut = new Future;
-  var handle = {
-    task: Meteor.bindEnvironment(task, function (e) {
-      Meteor._debug("Exception from task", e);
+  const fut = new Future();
+  const handle = {
+    task: Meteor.bindEnvironment(task, function(e) {
+      Meteor._debug('Exception from task', e);
       throw e;
     }),
     future: fut,
@@ -85,6 +81,39 @@ SQp.runTask = function (task) {
   // Yield. We'll get back here after the task is run (and will throw if the
   // task throws).
   fut.wait();
+};
+
+const runTask = async ({ task, self }) => {
+  const handle = {
+    task: Meteor.bindEnvironment(task, function(e) {
+      Meteor._debug('Exception from task', e);
+      throw e;
+    }),
+    future: () => {
+      console.log('future was called');
+    },
+    name: task.name,
+  };
+  self._taskHandles.push(handle);
+  console.log('BEFORE setImmediate', global.asyncLocalStorage.getStore());
+  await setImmediate(function() {
+    console.log('INSIDE SETIMMEDIATE', {});
+  });
+  console.log('AFTER setImmediate', {});
+  console.log('CALL RUN TASK');
+  self._scheduleRun();
+  // TODO Check this comment:
+  //  Yield. We'll get back here after the task is run (and will throw if the
+  //  task throws).
+};
+
+SQp.runTask = function(task) {
+  const self = this;
+  if (isFiberEnabled) {
+    runTaskWithFibers({ task, self });
+    return;
+  }
+  runTask({ task, self });
 };
 
 SQp.queueTask = function (task) {
@@ -127,16 +156,21 @@ SQp._scheduleRun = function () {
     return;
 
   self._runningOrRunScheduled = true;
-  setImmediate(function () {
-    Fiber(function () {
-      self._run();
-    }).run();
+  console.log('SQp._scheduleRun BEFORE setImmediate');
+  setImmediate(function() {
+    if (isFiberEnabled) {
+      Fiber(function() {
+        self._run();
+      }).run();
+      return;
+    }
+    self._run();
   });
 };
 
 SQp._run = function () {
   var self = this;
-
+  console.log('INSIDE _run TASK FUNCTION');
   if (!self._runningOrRunScheduled)
     throw new Error("expected to be _runningOrRunScheduled");
 
