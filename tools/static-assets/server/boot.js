@@ -425,16 +425,9 @@ var loadServerBundles = Profile("Load server bundles", function () {
     } else {
       // TODO fibers - check if this is the best context to be provided to the run
       // Allows us to use code-coverage if the debugger is not enabled
-      const fileInfoFunc = () => Profile(fileInfo.path, func).apply(global, args);
 
-      if (isFiberEnabled) {
-        fileInfoFunc();
-      } else {
-        global.asyncLocalStorage.run({init: true}, () => {
-          fileInfoFunc();
-        });
-      }
 
+      Profile(fileInfo.path, func).apply(global, args);
     }
   });
 
@@ -495,10 +488,30 @@ var runMain = Profile("Run main()", function () {
 function startServerProcess() {
   const { AsyncLocalStorage } = require('async_hooks');
   global.asyncLocalStorage = new AsyncLocalStorage();
-  Profile.run('Server startup', function() {
-    loadServerBundles();
-    callStartupHooks();
-    runMain();
+  global.asyncLocalStorage.run({ init: "this is getting out of hand" }, () => {
+    console.log('BEFORE PROFILE', global.asyncLocalStorage.getStore());
+    Profile.run('Server startup', function() {
+      // TODO the if around loadServerBundles should be enough
+      if (isFiberEnabled) {
+        loadServerBundles();
+        callStartupHooks();
+        runMain();
+      } else {
+
+        global.asyncLocalStorage.run({ init: true }, () => {
+          console.log('BEFORE loadServerBundles', global.asyncLocalStorage.getStore());
+          loadServerBundles();
+          console.log('BEFORE callStartupHooks', global.asyncLocalStorage.getStore());
+          callStartupHooks();
+          console.log('BEFORE runMain', global.asyncLocalStorage.getStore());
+          runMain();
+          console.log('AFTER runMain', global.asyncLocalStorage.getStore());
+        });
+
+
+      }
+    });
+    console.log('AFTER PROFILE', global.asyncLocalStorage.getStore());
   });
 }
 

@@ -83,7 +83,7 @@ const runTaskWithFibers = ({ task, self }) => {
   fut.wait();
 };
 
-const runTask = async ({ task, self }) => {
+const runTask = ({ task, self }) => {
   const handle = {
     task: Meteor.bindEnvironment(task, function(e) {
       Meteor._debug('Exception from task', e);
@@ -96,7 +96,7 @@ const runTask = async ({ task, self }) => {
   };
   self._taskHandles.push(handle);
   console.log('BEFORE setImmediate', global.asyncLocalStorage.getStore());
-  await setImmediate(function() {
+  setImmediate(function() {
     console.log('INSIDE SETIMMEDIATE', {});
   });
   console.log('AFTER setImmediate', {});
