@@ -2,13 +2,10 @@
 
 const Fiber = Npm.require('fibers');
 
-// TODO fibers - DUPLICATED CODE - Check if this is the best way of doing this.
-const isFiberEnabled = !!process.env.ENABLE_FIBERS;
-
 let nextSlot = 0;
 
 Meteor._nodeCodeMustBeInFiber = function() {
-  if (!Fiber.current && isFiberEnabled) {
+  if (!Fiber.current && global.IS_FIBER_ENABLED()) {
     throw new Error(
       'Meteor code must always run within a Fiber. ' +
         'Try wrapping callbacks that you pass to non-Meteor ' +
@@ -114,7 +111,7 @@ EVp.withValue = function(value, func) {
     slot: this.slot,
   };
 
-  if (isFiberEnabled) {
+  if (global.IS_FIBER_ENABLED()) {
     withValueWithFibers(params);
     return;
   }
@@ -246,7 +243,7 @@ function bindEnvironment({ func, onException, _this }) {
  * @return {Function} The wrapped function
  */
 Meteor.bindEnvironment = function(func, onException, _this) {
-  return isFiberEnabled
+  return global.IS_FIBER_ENABLED()
     ? bindEnvironmentWithFibers({ func, onException, _this })
     : bindEnvironment({ func, onException, _this });
 };

@@ -55,9 +55,6 @@ Meteor._SynchronousQueue = function () {
 
 var SQp = Meteor._SynchronousQueue.prototype;
 
-// TODO fibers - DUPLICATED CODE - Check if this is the best way of doing this.
-const isFiberEnabled = !!process.env.ENABLE_FIBERS;
-
 const runTaskWithFibers = ({ task, self }) => {
   if (!self.safeToRunTask()) {
     if (Fiber.current) {
@@ -109,7 +106,7 @@ const runTask = ({ task, self }) => {
 
 SQp.runTask = function(task) {
   const self = this;
-  if (isFiberEnabled) {
+  if (global.IS_FIBER_ENABLED()) {
     runTaskWithFibers({ task, self });
     return;
   }
@@ -158,7 +155,7 @@ SQp._scheduleRun = function () {
   self._runningOrRunScheduled = true;
   console.log('SQp._scheduleRun BEFORE setImmediate');
   setImmediate(function() {
-    if (isFiberEnabled) {
+    if (global.IS_FIBER_ENABLED()) {
       Fiber(function() {
         self._run();
       }).run();
