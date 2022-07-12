@@ -11,7 +11,7 @@ let errorMessage = (rateLimitResult) => {
 };
 
 // Store rule specific error messages.
-const errorMessageByRule = [];
+const errorMessageByRule = new Map();
 
 const rateLimiter = new RateLimiter();
 
