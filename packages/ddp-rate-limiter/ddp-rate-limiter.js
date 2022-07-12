@@ -17,14 +17,15 @@ const rateLimiter = new RateLimiter();
 
 DDPRateLimiter.getErrorMessage = (rateLimitResult) => {
   // If there is a specific error message for this rule, use it.
-  if (errorMessageByRule[rateLimitResult.ruleId]) {
+  if (errorMessageByRule.has(rateLimitResult.ruleId)) {
+    const message = errorMessageByRule.get(rateLimitResult.ruleId);
     // if it's a function, we need to call it
-    if (typeof errorMessageByRule[rateLimitResult.ruleId] === 'function') {
+    if (typeof message === 'function') {
       // call the function with the rateLimitResult
-      return errorMessageByRule[rateLimitResult.ruleId](rateLimitResult);
+      return message(rateLimitResult);
     } else {
       // otherwise, just return the string
-      return errorMessageByRule[rateLimitResult.ruleId];
+      return message;
     }
  }
 
@@ -60,7 +61,7 @@ DDPRateLimiter.setErrorMessage = (message) => {
  * @locus Server
  */
 DDPRateLimiter.setErrorMessageOnRule = (ruleId, message) => {
-  errorMessageByRule[ruleId] = message;
+  errorMessageByRule.set(ruleId, message);
 };
 
 /**
