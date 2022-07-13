@@ -1,5 +1,5 @@
 import { Accounts } from 'meteor/accounts-base';
-import {getUserById, NonEmptyString, tokenValidator} from './server_utils';
+import { getUserById, NonEmptyString, tokenValidator } from './server_utils';
 import { Random } from 'meteor/random';
 
 const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
@@ -11,11 +11,12 @@ const checkToken = ({ user, sequence, selector }) => {
 
   const { createdAt, token: userToken } = user.services.passwordless;
 
+  const { loginTokenExpirationHours = 1 } = Accounts._options || {};
+
   if (
     new Date(
-      createdAt.getTime() +
-        Accounts._options.loginTokenExpirationHours * ONE_HOUR_IN_MILLISECONDS
-    ) >= new Date()
+      createdAt.getTime() + loginTokenExpirationHours * ONE_HOUR_IN_MILLISECONDS
+    ) <= new Date()
   ) {
     result.error = Accounts._handleError('Expired token', false);
   }
