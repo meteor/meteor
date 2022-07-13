@@ -20,6 +20,7 @@ import {
   doInteractivePasswordLogin,
   loggedInUsername,
   isLoggedIn,
+  maybePrintRegistrationLink,
 } from './auth.js';
 import { recordPackages } from './stats.js';
 import { Console } from '../console/console.js';

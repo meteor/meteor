@@ -5,6 +5,7 @@ var colonConverter = require('../utils/colon-converter.js');
 var files = require('../fs/files');
 var compiler = require('./compiler.js');
 var linker = require('./linker.js');
+var util = require('util');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
@@ -21,6 +22,7 @@ import {cssToCommonJS} from "./css-modules";
 import Resolver from "./resolver";
 import {
   optimisticStatOrNull,
+  optimisticReadJsonOrNull,
   optimisticHashOrNull,
 } from "../fs/optimistic";
 
