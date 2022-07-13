@@ -1,10 +1,12 @@
 import { Accounts } from 'meteor/accounts-base';
 
+export const DEFAULT_TOKEN_SEQUENCE_LENGTH = 6;
+
 export const getUserById = (id, options) =>
   Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
 
 export const tokenValidator = () => {
-  const tokenLength = Accounts._options.tokenLength || 6;
+  const tokenLength = Accounts._options.tokenSequenceLength || DEFAULT_TOKEN_SEQUENCE_LENGTH;
   return Match.Where(
     str => Match.test(str, String) && str.length <= tokenLength
   );

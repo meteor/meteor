@@ -1,5 +1,10 @@
 import { Accounts } from 'meteor/accounts-base';
-import { getUserById, NonEmptyString, tokenValidator } from './server_utils';
+import {
+  DEFAULT_TOKEN_SEQUENCE_LENGTH,
+  getUserById,
+  NonEmptyString,
+  tokenValidator,
+} from './server_utils';
 import { Random } from 'meteor/random';
 
 const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
@@ -140,7 +145,7 @@ const createUser = userData => {
 
 function generateSequence() {
   return Random.hexString(
-    Accounts._options.tokenSequenceLength || 6
+    Accounts._options.tokenSequenceLength || DEFAULT_TOKEN_SEQUENCE_LENGTH
   ).toUpperCase();
 }
 
