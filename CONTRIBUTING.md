@@ -43,23 +43,24 @@ Reviwers are members of the community that help with Pull Requests reviews.
 
 Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
-  - [@denihs](https://github.com/denihs)
   - [@filipenevola](https://github.com/filipenevola)
-  - [@henriquealbert](https://github.com/henriquealbert)
-  - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+  - [@renanccastro](https://github.com/renanccastro)
   - [@StorytellerCZ](https://github.com/StorytellerCZ)
   - [@zodern](https://github.com/zodern)
+  - [@lorensr](https://github.com/lorensr)
 
 #### Core Committer
 
 The contributors with commit access to meteor/meteor are employees of Meteor Software Ltd or community members who have distinguished themselves in other contribution areas. If you want to become a core committer please start writing PRs.
 
 Current Core Committers:
-- [@denihs](https://github.com/denihs)
-- [@zodern](https://github.com/zodern)
 - [@filipenevola](https://github.com/filipenevola)
-- [@henriquealbert](https://github.com/henriquealbert)
-- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@renanccastro](https://github.com/renanccastro)
+- [@denihs](https://github.com/denihs)
+
+#### Developer Evangelist
+
+- [@filipenevola](https://github.com/filipenevola) (Feel free to reach him out on [Twitter](https://twitter.com/FilipeNevola))
 
 ### Tracking project work
 

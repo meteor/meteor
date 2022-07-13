@@ -1,4 +1,5 @@
 import chalk from 'chalk';
+import child_process from 'child_process';
 
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { Console } from '../console/console.js';
