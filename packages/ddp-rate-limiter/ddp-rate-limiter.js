@@ -23,18 +23,16 @@ DDPRateLimiter.getErrorMessage = (rateLimitResult) => {
     if (typeof message === 'function') {
       // call the function with the rateLimitResult
       return message(rateLimitResult);
-    } else {
-      // otherwise, just return the string
-      return message;
     }
+    // otherwise, just return the string
+    return message;
  }
 
   // Otherwise, use the default error message.
   if (typeof errorMessage === 'function') {
     return errorMessage(rateLimitResult);
-  } else {
-    return errorMessage;
   }
+  return errorMessage;
 };
 
 /**
