@@ -9,6 +9,11 @@ Module.prototype.resolve = function (id) {
   return Module._resolveFilename(id, this);
 };
 
+// Do not change the behavior of the promise
+if (!process.env.ENABLE_FIBERS) {
+  return;
+}
+
 require("@meteorjs/reify/lib/runtime").enable(Module.prototype);
 
 require("meteor-promise").makeCompatible(

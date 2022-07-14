@@ -92,13 +92,9 @@ const runTask = ({ task, self }) => {
     name: task.name,
   };
   self._taskHandles.push(handle);
-  console.log('BEFORE setImmediate', global.asyncLocalStorage.getStore());
-  setImmediate(function() {
-    console.log('INSIDE SETIMMEDIATE', {});
-  });
-  console.log('AFTER setImmediate', {});
   console.log('CALL RUN TASK');
   self._scheduleRun();
+  console.log('AFTER CALL RUN TASK');
   // TODO Check this comment:
   //  Yield. We'll get back here after the task is run (and will throw if the
   //  task throws).
@@ -153,7 +149,7 @@ SQp._scheduleRun = function () {
     return;
 
   self._runningOrRunScheduled = true;
-  console.log('SQp._scheduleRun BEFORE setImmediate');
+  console.log('SQp._scheduleRun BEFORE setImmediate', global.asyncLocalStorage.getStore());
   setImmediate(function() {
     if (global.IS_FIBER_ENABLED()) {
       Fiber(function() {
