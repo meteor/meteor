@@ -18,7 +18,7 @@ var hasOwn = Object.prototype.hasOwnProperty;
 //  For now it's a function to ensure we don't get a falsy value.
 //  Once we figure out the best place to create this EV (maybe it's here),
 //  it won't need to be a function anymore.
-global.IS_FIBER_ENABLED = () => !!process.env.ENABLE_FIBERS;
+global.isFibersEnabled = () => !!process.env.ENABLE_FIBERS;
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
