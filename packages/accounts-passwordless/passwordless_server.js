@@ -4,50 +4,10 @@ import {
   getUserById,
   NonEmptyString,
   tokenValidator,
+  checkToken,
 } from './server_utils';
 import { Random } from 'meteor/random';
 
-const ONE_HOUR_IN_MILLISECONDS = 60 * 60 * 1000;
-
-const checkToken = ({ user, sequence, selector }) => {
-  const result = {
-    userId: user._id,
-  };
-
-  const { createdAt, token: userToken } = user.services.passwordless;
-
-  const { loginTokenExpirationHours = 1 } = Accounts._options || {};
-
-  if (
-    new Date(
-      createdAt.getTime() + loginTokenExpirationHours * ONE_HOUR_IN_MILLISECONDS
-    ) <= new Date()
-  ) {
-    result.error = Accounts._handleError('Expired token', false);
-  }
-
-  if (selector.email) {
-    const foundTokenEmail = user.services.passwordless.tokens.find(
-      ({ email: tokenEmail, token }) =>
-        SHA256(selector.email + sequence) === token &&
-        selector.email === tokenEmail
-    );
-    if (foundTokenEmail) {
-      return { ...result, verifiedEmail: foundTokenEmail.email };
-    }
-
-    result.error = Accounts._handleError('Email or token mismatch', false);
-    return result;
-  }
-
-  if (sequence && SHA256(user._id + sequence) === userToken) {
-    return result;
-  }
-
-  result.error = Accounts._handleError('Token mismatch', false);
-
-  return result;
-};
 const findUserWithOptions = ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
@@ -155,7 +115,11 @@ Meteor.methods({
       fields: { emails: 1 },
     });
 
-    if (!user && (options.userCreationDisabled || Accounts._options.forbidClientAccountCreation)) {
+    if (
+      !user &&
+      (options.userCreationDisabled ||
+        Accounts._options.forbidClientAccountCreation)
+    ) {
       Accounts._handleError('User not found');
     }
 

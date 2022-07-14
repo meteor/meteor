@@ -20,3 +20,10 @@ Package.onUse(api => {
   api.addFiles('passwordless_client.js', 'client');
   api.addFiles('server_utils.js', 'server');
 });
+
+Package.onTest(function(api) {
+  api.use(['accounts-base', 'ecmascript', 'tinytest', 'sha']);
+
+  api.addFiles('server_utils.js', 'server');
+  api.mainModule('server_tests.js', 'server');
+});
