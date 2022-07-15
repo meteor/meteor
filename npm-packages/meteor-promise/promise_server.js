@@ -1,7 +1,7 @@
 var assert = require("assert");
 var fiberPool = require("./fiber_pool.js").makePool();
 
-exports.makeCompatible = function (Promise, Fiber) {
+function makeCompatibleWithFibers (Promise, Fiber) {
   var es6PromiseThen = Promise.prototype.then;
 
   if (typeof Fiber === "function") {
@@ -17,7 +17,7 @@ exports.makeCompatible = function (Promise, Fiber) {
     var Fiber = Promise.Fiber;
 
     if (typeof Fiber === "function" &&
-        ! this._meteorPromiseAlreadyWrapped) {
+      ! this._meteorPromiseAlreadyWrapped) {
       onResolved = wrapCallback(onResolved, Promise);
       onRejected = wrapCallback(onRejected, Promise);
 
@@ -139,6 +139,47 @@ exports.makeCompatible = function (Promise, Fiber) {
       dynamics: cloneFiberOwnProperties(fiber)
     }, Promise);
   };
+};
+
+function makeCompatible (Promise) {
+  if (Promise.asyncApply) {
+    return; // Already compatible.
+  }
+
+  Promise.awaitAll = function (args) {
+    return this.all(args);
+  };
+
+  Promise.await = function (arg) {
+    return this.resolve(arg);
+  };
+
+  Promise.prototype.await = function () {
+    return this;
+  };
+  // Return a wrapper function that returns a Promise for the eventual
+  // result of the original function.
+  Promise.async = function (fn, allowReuseOfCurrentFiber) {
+    var Promise = this;
+    return function () {
+      return Promise.asyncApply(
+        fn, this, arguments,
+        allowReuseOfCurrentFiber
+      );
+    };
+  };
+
+  Promise.asyncApply = function (
+    fn, context, args
+  ) {
+    return this.resolve(fn.apply(context, args));
+  };
+};
+
+exports.makeCompatible = function(Promise, Fiber) {
+  return process.env.ENABLE_FIBERS
+    ? makeCompatibleWithFibers(Promise, Fiber)
+    : makeCompatible(Promise);
 };
 
 function wrapCallback(callback, Promise) {
