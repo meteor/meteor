@@ -171,3 +171,5 @@ function logErr(err) {
     );
   }
 }
+
+Meteor.isFibersEnabled = global.isFibersEnabled;
