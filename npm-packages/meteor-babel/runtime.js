@@ -10,7 +10,7 @@ Module.prototype.resolve = function (id) {
 };
 
 // Do not change the behavior of the promise
-if (!process.env.ENABLE_FIBERS) {
+if (!!process.env.DISABLE_FIBERS) {
   return;
 }
 

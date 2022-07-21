@@ -177,9 +177,9 @@ function makeCompatible (Promise) {
 };
 
 exports.makeCompatible = function(Promise, Fiber) {
-  return process.env.ENABLE_FIBERS
-    ? makeCompatibleWithFibers(Promise, Fiber)
-    : makeCompatible(Promise);
+  return process.env.DISABLE_FIBERS
+    ? makeCompatible(Promise)
+    : makeCompatibleWithFibers(Promise, Fiber);
 };
 
 function wrapCallback(callback, Promise) {
