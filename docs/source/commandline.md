@@ -119,7 +119,7 @@ React.
 
 `--apollo`
 
-Create a basic [Apollo + Reac](https://www.apollographql.com/) app.
+Create a basic [Apollo + React](https://www.apollographql.com/) app.
 
 **Flags for default UI libraries / frameworks**
 
