@@ -116,6 +116,16 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     this.inferTypeScriptConfig(
       features, inputFile, cacheOptions.cacheDeps);
 
+    /**
+     * Collection.js in mongo package should use the native implementation of async/await.
+     *
+     * For now, we only need to support this package. When Fibers are actually removed, everything
+     * will use the native implementation.
+     */
+    if (packageName === "mongo" && inputFilePath === "collection.js") {
+      features.useNativeAsyncAwait = true;
+    }
+
     var babelOptions = Babel.getDefaultOptions(features);
     babelOptions.caller = { name: "meteor", arch };
 

@@ -188,7 +188,7 @@ function getDefaultsForNode8(features) {
     combined.plugins.push([require("./plugins/async-await.js"), {
       // Do not transform `await x` to `Promise.await(x)`, since Node
       // 8 has native support for await expressions.
-      useNativeAsyncAwait: false
+      useNativeAsyncAwait: !!features.useNativeAsyncAwait,
     }]);
 
     // Enable async generator functions proposal.
