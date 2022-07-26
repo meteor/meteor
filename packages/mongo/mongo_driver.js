@@ -12,6 +12,7 @@ import { normalizeProjection } from "./mongo_utils";
 const path = require("path");
 const util = require("util");
 
+/** @type {import('mongodb')} */
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
@@ -140,7 +141,7 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-MongoConnection = async function (url, options) {
+MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
   self._observeMultiplexers = {};
@@ -219,11 +220,9 @@ MongoConnection = async function (url, options) {
     }));
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
-    self._oplogHandle = await new OplogHandle(options.oplogUrl, self.db.databaseName);
+    self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
-
-  return self;
 };
 
 MongoConnection.prototype.close = function() {
