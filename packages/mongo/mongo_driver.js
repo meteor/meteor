@@ -184,29 +184,21 @@ MongoConnection = async function (url, options) {
   self._oplogHandle = null;
   self._docFetcher = null;
 
-  const connect = util.promisify(MongoDB.MongoClient.connect);
-  const client = await connect(
-    url,
-    mongoOptions);
+  self.client = new MongoDB.MongoClient(url, mongoOptions);
+  self.db = self.client.db();
 
-  var db = client.db();
-
-  try {
-    const helloDocument = await db.admin().command({hello: 1});
-    // First, figure out what the current primary is, if any.
+  // Figure out what the current primary is, if any. This operation will fail,
+  // if the connection fails, as `connect` is implicit since version 4.7 of the
+  // MongoDB driver.
+  //
+  // FIXME: This results in an `UnhandledPromiseRejectionWarning`.
+  self.db.admin().command({hello: 1}).then(helloDocument => {
     if (helloDocument.primary) {
       self._primary = helloDocument.primary;
     }
-  }catch(_){
-    // ismaster command is supported on older mongodb versions
-    const isMasterDocument = await db.admin().command({ismaster:1});
-    // First, figure out what the current primary is, if any.
-    if (isMasterDocument.primary) {
-      self._primary = isMasterDocument.primary;
-    }
-  }
+  });
 
-  client.topology.on(
+  self.client.topology.on(
     'joined', Meteor.bindEnvironment(function (kind, doc) {
       if (kind === 'primary') {
         if (doc.primary !== self._primary) {
@@ -225,10 +217,6 @@ MongoConnection = async function (url, options) {
         self._primary = null;
       }
     }));
-
-  // Wait for the connection to be successful (throws on failure) and assign the
-  // results (`client` and `db`) to `self`.
-  Object.assign(self, { client, db });
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = await new OplogHandle(options.oplogUrl, self.db.databaseName);
