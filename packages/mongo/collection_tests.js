@@ -159,7 +159,7 @@ Tinytest.add('collection - calling find with a valid readPreference',
     if (Meteor.isServer) {
       const defaultReadPreference = 'primary';
       const customReadPreference = 'secondaryPreferred';
-      const collection = new Mongo.Collection('readPreferenceTest');
+      const collection = new Mongo.Collection('readPreferenceTest' + test.id);
       const defaultCursor = collection.find();
       const customCursor = collection.find(
         {},
@@ -190,7 +190,7 @@ Tinytest.add('collection - calling find with an invalid readPreference',
   function(test) {
     if (Meteor.isServer) {
       const invalidReadPreference = 'INVALID';
-      const collection = new Mongo.Collection('readPreferenceTest2');
+      const collection = new Mongo.Collection('readPreferenceTest2' + test.id);
       const cursor = collection.find(
         {},
         { readPreference: invalidReadPreference }
