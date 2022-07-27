@@ -56,7 +56,7 @@ Facts.resetServerFacts = function () {
 // called?
 Meteor.defer(function () {
   // XXX Also publish facts-by-package.
-  Meteor.publish(FACTS_PUBLICATION, function () {
+  Meteor.publish(FACTS_PUBLICATION, async  function () {
     const sub = this;
     if (!userIdFilter(this.userId)) {
       sub.ready();
