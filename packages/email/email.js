@@ -238,51 +238,43 @@ Email.customTransport = undefined;
  */
 Email.sendAsync = async function (options) {
   const stream = output_stream;
-  return new Promise((resolve, reject) => {
-    if (options.mailComposer) {
-      options = options.mailComposer.mail;
-    }
+  if (options.mailComposer) {
+    options = options.mailComposer.mail;
+  }
 
-    let send = true;
-    sendHooks.forEach((hook) => {
-      send = hook(options);
-      return send;
-    });
-    if (!send) {
-      resolve();
-      return;
-    }
+  let send = true;
+  sendHooks.forEach((hook) => {
+    send = hook(options);
+    return send;
+  });
+  if (!send) {
+    return;
+  }
 
-    if (Email.customTransport) {
-      const packageSettings = Meteor.settings.packages?.email || {};
-      Email.customTransport({ packageSettings, ...options });
-      resolve();
-      return;
-    }
+  if (Email.customTransport) {
+    const packageSettings = Meteor.settings.packages?.email || {};
+    Email.customTransport({ packageSettings, ...options });
+    return;
+  }
 
-    const mailUrlEnv = process.env.MAIL_URL;
-    const mailUrlSettings = Meteor.settings.packages?.email;
+  const mailUrlEnv = process.env.MAIL_URL;
+  const mailUrlSettings = Meteor.settings.packages?.email;
 
-    if (Meteor.isProduction && !mailUrlEnv && !mailUrlSettings) {
-      // This check is mostly necessary when using the flag --production when running locally.
-      // And it works as a reminder to properly set the mail URL when running locally.
-      reject(
-        new Error(
-          'You have not provided a mail URL. You can provide it by using the environment variable MAIL_URL or your settings. You can read more about it here: https://docs.meteor.com/api/email.html.'
-        )
-      );
-      return;
-    }
+  if (Meteor.isProduction && !mailUrlEnv && !mailUrlSettings) {
+    // This check is mostly necessary when using the flag --production when running locally.
+    // And it works as a reminder to properly set the mail URL when running locally.
+    new Error(
+      'You have not provided a mail URL. You can provide it by using the environment variable MAIL_URL or your settings. You can read more about it here: https://docs.meteor.com/api/email.html.'
+    );
+  }
 
-    if (mailUrlEnv || mailUrlSettings) {
-      const transport = getTransport();
-      smtpSend(transport, options);
-      resolve();
-      return;
-    }
-    devModeSendAsync(options, stream)
-      .then((currentStream) => resolve(currentStream))
-      .catch((err) => reject(err));
+  if (mailUrlEnv || mailUrlSettings) {
+    const transport = getTransport();
+    smtpSend(transport, options);
+    return;
+  }
+  return devModeSendAsync(options, stream).catch((err) => {
+    throw err;
   });
 };
 
