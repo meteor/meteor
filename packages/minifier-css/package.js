@@ -19,6 +19,7 @@ Package.onTest(function (api) {
   api.use('tinytest');
   api.addFiles([
     'minifier-tests.js',
+    'minifier-async-tests.js',
     'urlrewriting-tests.js'
   ], 'server');
 });
