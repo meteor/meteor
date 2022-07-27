@@ -122,7 +122,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
      * For now, we only need to support this package. When Fibers are actually removed, everything
      * will use the native implementation.
      */
-    if (packageName === "mongo" && inputFilePath === "collection.js") {
+    if (packageName === "mongo" && inputFilePath === "collection-server.js") {
       features.useNativeAsyncAwait = true;
     }
 

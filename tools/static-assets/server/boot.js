@@ -225,6 +225,7 @@ var specialArgPaths = {
 var loadServerBundles = Profile("Load server bundles", function () {
   var infos = [];
 
+  const fiber = Fiber.current;
   serverJson.load.forEach(function (fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
     var nonLocalNodeModulesPaths = [];
@@ -374,7 +375,20 @@ var loadServerBundles = Profile("Load server bundles", function () {
       }
     };
 
-    var wrapParts = ["(function(Npm,Assets"];
+    // It is safer to use the absolute path when source map is present as
+    // different tooling, such as node-inspector, can get confused on relative
+    // urls.
+
+    // fileInfo.path is a standard path, convert it to OS path to join with
+    // __dirname
+    var fileInfoOSPath = files.convertToOSPath(fileInfo.path);
+    var absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
+    var scriptPath =
+        parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
+
+
+    const isAsync = scriptPath.includes("packages/mongo.js");
+    var wrapParts = [`(${isAsync ? "async" : ""} function(Npm,Assets`];
 
     var specialArgs =
       hasOwn.call(specialArgPaths, fileInfo.path) &&
@@ -388,18 +402,6 @@ var loadServerBundles = Profile("Load server bundles", function () {
     // \n is necessary in case final line is a //-comment
     wrapParts.push("){", code, "\n})");
     var wrapped = wrapParts.join("");
-
-    // It is safer to use the absolute path when source map is present as
-    // different tooling, such as node-inspector, can get confused on relative
-    // urls.
-
-    // fileInfo.path is a standard path, convert it to OS path to join with
-    // __dirname
-    var fileInfoOSPath = files.convertToOSPath(fileInfo.path);
-    var absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
-
-    var scriptPath =
-      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
     var func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
@@ -418,8 +420,13 @@ var loadServerBundles = Profile("Load server bundles", function () {
         args
       });
     } else {
-      // Allows us to use code-coverage if the debugger is not enabled
-      Profile(fileInfo.path, func).apply(global, args);
+      if (isAsync) {
+        func.apply(global, args).then(() => fiber.run());
+        Fiber.yield();
+      } else {
+        // Allows us to use code-coverage if the debugger is not enabled
+        Profile(fileInfo.path, func).apply(global, args);
+      }
     }
   });
 

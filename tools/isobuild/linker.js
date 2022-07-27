@@ -463,9 +463,10 @@ Object.assign(Module.prototype, {
           exportsName = "exports";
         }
 
+        const withAwait = this.bundleArch.includes("os") && file.absModuleId.includes("collection-server.js");
         chunks.push(
           file.mainModule ? "\nvar " + exportsName + " = " : "\n",
-          "require(",
+          `${withAwait ? "await" : ""} require(`,
           JSON.stringify(file.absModuleId),
           ");"
         );
@@ -685,7 +686,9 @@ Object.assign(File.prototype, {
 
   _getClosureHeader() {
     if (this.meteorInstallOptions) {
-      const headerParts = ["function module("];
+      const asyncClosure = this.bundleArch && this.bundleArch.includes("os") && this.servePath && this.servePath.includes("collection-server.js");
+
+      const headerParts = [`${asyncClosure ? "async" : ""} function module(`];
 
       if (this.source.match(/\b__dirname\b/)) {
         headerParts.push("require,exports,module,__filename,__dirname");
@@ -964,8 +967,10 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 var getHeader = function (options) {
   var chunks = [];
 
+  const { module } = options;
+  const asyncHeader = module && module.bundleArch && module.bundleArch.includes("os") && module.name === "mongo";
   chunks.push(
-    "(function () {\n\n",
+    `${asyncHeader ? "await (async" : "(" } function () {\n\n`,
     getImportCode(options.imports, "/* Imports */\n", false),
   );
 
@@ -1151,7 +1156,8 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // into a single scope.
   var header = getHeader({
     imports,
-    packageVariables: _.union(assignedVariables, declaredExports)
+    packageVariables: _.union(assignedVariables, declaredExports),
+    module
   });
 
   let exportsName;
