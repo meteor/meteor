@@ -6,7 +6,7 @@ var handle = LaunchScreen.hold();
 
 var Template = Package.templating && Package.templating.Template;
 
-Meteor.startup(function () {
+Meteor.startup(async function () {
   if (! Template) {
     handle.release();
   } else if (Package['iron:router']) {
