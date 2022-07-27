@@ -140,6 +140,10 @@ const getTransport = function () {
 let nextDevModeMailId = 0;
 let output_stream = process.stdout;
 
+EmailTest._getAndIncNextDevModeMailId = function () {
+  return nextDevModeMailId++;
+};
+
 // Testing hooks
 EmailTest.overrideOutputStream = function (stream) {
   nextDevModeMailId = 0;
@@ -150,11 +154,9 @@ EmailTest.restoreOutputStream = function () {
   output_stream = process.stdout;
 };
 
-const devModeSend = async function (mail) {
+const devModeSendAsync = async function (mail, stream) {
   return new Promise((resolve, reject) => {
-    let devModeMailId = nextDevModeMailId++;
-
-    const stream = output_stream;
+    let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
 
     // This approach does not prevent other writers to stdout from interleaving.
     stream.write('====== BEGIN MAIL #' + devModeMailId + ' ======\n');
@@ -166,7 +168,7 @@ const devModeSend = async function (mail) {
     readStream.pipe(stream, { end: false });
     readStream.on('end', function () {
       stream.write('====== END MAIL #' + devModeMailId + ' ======\n');
-      resolve();
+      resolve(stream);
     });
     readStream.on('error', (err) => reject(err));
   });
@@ -235,6 +237,7 @@ Email.customTransport = undefined;
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.sendAsync = async function (options) {
+  const stream = output_stream;
   return new Promise((resolve, reject) => {
     if (options.mailComposer) {
       options = options.mailComposer.mail;
@@ -277,10 +280,32 @@ Email.sendAsync = async function (options) {
       resolve();
       return;
     }
-    devModeSend(options)
-      .then(() => resolve())
+    devModeSendAsync(options, stream)
+      .then((currentStream) => resolve(currentStream))
       .catch((err) => reject(err));
   });
+};
+
+// TODO To remove in future versions (3.0.0 ????)
+const devModeSend = function (mail) {
+  let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
+
+  const stream = output_stream;
+
+  // This approach does not prevent other writers to stdout from interleaving.
+  stream.write('====== BEGIN MAIL #' + devModeMailId + ' ======\n');
+  stream.write(
+    '(Mail not sent; to enable sending, set the MAIL_URL ' +
+      'environment variable.)\n'
+  );
+  const readStream = new MailComposer(mail).compile().createReadStream();
+  readStream.pipe(stream, { end: false });
+  const future = new Future();
+  readStream.on('end', function () {
+    stream.write('====== END MAIL #' + devModeMailId + ' ======\n');
+    future.return();
+  });
+  future.wait();
 };
 
 /**
@@ -316,12 +341,32 @@ Email.sendAsync = async function (options) {
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
-Email.send = async function (options) {
-  const future = new Future();
-  Email.sendAsync(options)
-    .then(() => future.return())
-    .catch((err) => {
-      throw err;
-    });
-  future.wait();
+Email.send = function (options) {
+  if (options.mailComposer) {
+    options = options.mailComposer.mail;
+  }
+
+  let send = true;
+  sendHooks.forEach((hook) => {
+    send = hook(options);
+    return send;
+  });
+  if (!send) return;
+
+  const customTransport = Email.customTransport;
+  if (customTransport) {
+    const packageSettings = Meteor.settings.packages?.email || {};
+    customTransport({ packageSettings, ...options });
+    return;
+  }
+  if (
+    Meteor.isProduction ||
+    process.env.MAIL_URL ||
+    Meteor.settings.packages?.email
+  ) {
+    const transport = getTransport();
+    smtpSend(transport, options);
+    return;
+  }
+  devModeSend(options);
 };

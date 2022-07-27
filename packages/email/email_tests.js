@@ -25,6 +25,44 @@ function canonicalize(string) {
                .replace(/(boundary="|^--)--[^\s"]+?(-Part|")/mg, "$1--...$2");
 }
 
+Tinytest.addAsync('[Async] email - fully customizable', function (test, onComplete) {
+  smokeEmailTest(function () {
+    Email.sendAsync({
+      from: 'foo@example.com',
+      to: 'bar@example.com',
+      cc: ['friends@example.com', 'enemies@example.com'],
+      subject: 'This is the subject',
+      text: 'This is the body\nof the message\nFrom us.',
+      headers: {
+        'X-Meteor-Test': 'a custom header',
+        Date: 'dummy',
+      },
+    }).then((currentStream) => {
+      test.equal(
+        canonicalize(currentStream.getContentsAsString('utf8')),
+        '====== BEGIN MAIL #0 ======\n' +
+          devWarningBanner +
+          'Content-Type: text/plain; charset=utf-8\r\n' +
+          'X-Meteor-Test: a custom header\r\n' +
+          'Date: dummy\r\n' +
+          'From: foo@example.com\r\n' +
+          'To: bar@example.com\r\n' +
+          'Cc: friends@example.com, enemies@example.com\r\n' +
+          'Subject: This is the subject\r\n' +
+          'Message-ID: <...>\r\n' +
+          'Content-Transfer-Encoding: 7bit\r\n' +
+          'MIME-Version: 1.0\r\n' +
+          '\r\n' +
+          'This is the body\n' +
+          'of the message\n' +
+          'From us.\r\n' +
+          '====== END MAIL #0 ======\n'
+      );
+      onComplete();
+    });
+  });
+});
+
 Tinytest.add("email - fully customizable", function (test) {
   smokeEmailTest(function(stream) {
     Email.send({
