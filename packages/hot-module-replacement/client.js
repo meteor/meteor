@@ -50,7 +50,7 @@ let useHotCodePush = false;
 let forceReload = function () {
   useHotCodePush = true;
   // Wait until Reload package has been loaded
-  Meteor.startup(function () {
+  Meteor.startup(async function () {
     if (hotCodePushReady) {
       Package['reload'].Reload._reload();
     }
@@ -478,7 +478,7 @@ function applyChangeset(options) {
 let nonRefreshableVersion = initialVersions.versionNonRefreshable;
 let replaceableVersion = initialVersions.versionReplaceable;
 
-Meteor.startup(function () {
+Meteor.startup(async function () {
   if (!enabled) {
     return;
   }
