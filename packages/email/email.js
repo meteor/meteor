@@ -155,7 +155,7 @@ EmailTest.restoreOutputStream = function() {
 };
 
 const devModeSend = function(mail) {
-  let devModeMailId = nextDevModeMailId++;
+  let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
 
   const stream = output_stream;
 
