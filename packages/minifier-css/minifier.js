@@ -84,18 +84,14 @@ const CssTools = {
    * @return {Promise<String[]>} Array containing the minified CSS.
    */
   async minifyCssAsync(cssText) {
-    return new Promise((resolve, reject) => {
-      postcss([cssnano({ safe: true })])
-        .process(cssText, {
-          from: void 0,
-        })
-        .then((result) => {
-          resolve([result.css]);
-        })
-        .catch((error) => {
-          reject(error);
-        });
-    });
+    return postcss([cssnano({ safe: true })])
+      .process(cssText, {
+        from: void 0,
+      })
+      .then((result) => [result.css])
+      .catch((error) => {
+        throw new Error(error);
+      });
   },
 
   /**
