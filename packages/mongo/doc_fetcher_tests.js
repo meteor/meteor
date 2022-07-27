@@ -3,7 +3,7 @@ var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
 
 testAsyncMulti("mongo-livedata - doc fetcher", [
-  function (test, expect) {
+  async function (test, expect) {
     var self = this;
     var collName = "docfetcher-" + Random.id();
     var collection = new Mongo.Collection(collName);
@@ -11,7 +11,7 @@ testAsyncMulti("mongo-livedata - doc fetcher", [
     var id2 = collection.insert({y: 2});
 
     var fetcher = new DocFetcher(
-      MongoInternals.defaultRemoteCollectionDriver().mongo);
+      (await MongoInternals.defaultRemoteCollectionDriver()).mongo);
 
     // Test basic operation.
     const fakeOp1 = {};
