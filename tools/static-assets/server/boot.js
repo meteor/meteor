@@ -18,7 +18,7 @@ var hasOwn = Object.prototype.hasOwnProperty;
 //  Once we figure out the best place to create this EV (maybe it's here),
 //  it won't need to be a function anymore.
 
-global.isFibersEnabled = function () {
+global._isFibersEnabled = function () {
   return !process.env.DISABLE_FIBERS;
 };
 

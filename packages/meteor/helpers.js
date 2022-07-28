@@ -172,4 +172,4 @@ function logErr(err) {
   }
 }
 
-Meteor.isFibersEnabled = global.isFibersEnabled;
+Meteor._isFibersEnabled = global._isFibersEnabled;
