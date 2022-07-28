@@ -895,10 +895,3 @@ ASYNC_COLLECTION_METHODS.forEach(methodName => {
     return Promise.resolve(this[methodName](...args));
   };
 });
-
-if (Meteor.isServer) {
-  const userOptions = Meteor.settings?.packages?.mongo || {};
-  if (!userOptions?.skipStartupConnection && !process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) {
-    MongoInternals.defaultRemoteCollectionDriver();
-  }
-}
