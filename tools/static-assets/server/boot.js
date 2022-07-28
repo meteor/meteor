@@ -387,8 +387,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
         parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
 
-    const isAsync = scriptPath.includes("packages/mongo.js");
-    var wrapParts = [`(${isAsync ? "async" : ""} function(Npm,Assets`];
+    var wrapParts = ["(async function(Npm,Assets"];
 
     var specialArgs =
       hasOwn.call(specialArgPaths, fileInfo.path) &&
@@ -420,13 +419,8 @@ var loadServerBundles = Profile("Load server bundles", function () {
         args
       });
     } else {
-      if (isAsync) {
-        func.apply(global, args).then(() => fiber.run());
-        Fiber.yield();
-      } else {
-        // Allows us to use code-coverage if the debugger is not enabled
-        Profile(fileInfo.path, func).apply(global, args);
-      }
+      func.apply(global, args).then(() => fiber.run());
+      Fiber.yield();
     }
   });
 

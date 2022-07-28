@@ -1034,7 +1034,6 @@ export function runJavaScript(code: string, {
   sourceMap?: object;
   sourceMapRoot?: string;
 }) {
-  return Profile.time('runJavaScript ' + filename, () => {
     const keys: string[] = [], values: any[] = [];
     // don't assume that _.keys and _.values are guaranteed to
     // enumerate in the same order
@@ -1051,7 +1050,7 @@ export function runJavaScript(code: string, {
     }
 
     const chunks = [];
-    const header = "(function(" + keys.join(',') + "){";
+    const header = "(async function(" + keys.join(',') + "){";
     chunks.push(header);
     if (sourceMap) {
       const sourcemapConsumer = Promise.await(new sourcemap.SourceMapConsumer(sourceMap));
@@ -1155,10 +1154,9 @@ export function runJavaScript(code: string, {
       throw nodeParseError;
     }
 
-    return buildmessage.markBoundary(
+    return Promise.await(buildmessage.markBoundary(
       script.runInThisContext()
-    ).apply(null, values);
-  });
+    ).apply(null, values));
 }
 
 // - message: an error message from the parser
