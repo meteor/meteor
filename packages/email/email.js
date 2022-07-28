@@ -231,7 +231,6 @@ Email.customTransport = undefined;
  * @param {Object[]} [options.attachments] Array of attachment objects, as
  * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
- * @deprecated in 2.8
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
