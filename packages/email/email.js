@@ -328,6 +328,7 @@ const devModeSendAsync = async function (mail, stream) {
  */
 Email.sendAsync = async function (options) {
   const stream = output_stream;
+  const { isTestMode } = Email;
   if (options.mailComposer) {
     options = options.mailComposer.mail;
   }
@@ -338,13 +339,13 @@ Email.sendAsync = async function (options) {
     return send;
   });
   if (!send) {
-    return;
+    return isTestMode && stream;
   }
 
   if (Email.customTransport) {
     const packageSettings = Meteor.settings.packages?.email || {};
     Email.customTransport({ packageSettings, ...options });
-    return;
+    return isTestMode && stream;
   }
 
   const mailUrlEnv = process.env.MAIL_URL;
