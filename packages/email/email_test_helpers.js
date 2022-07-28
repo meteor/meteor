@@ -7,15 +7,9 @@ export const devWarningBanner =
 export const smokeEmailTest = (testFunction) => {
   // This only tests dev mode, so don't run the test if this is deployed.
   if (process.env.MAIL_URL) return;
-
-  try {
-    const stream = new streamBuffers.WritableStreamBuffer();
-    EmailTest.overrideOutputStream(stream);
-
-    testFunction(stream);
-  } finally {
-    EmailTest.restoreOutputStream();
-  }
+  const stream = new streamBuffers.WritableStreamBuffer();
+  EmailTest.resetNextDevModeMailId();
+  testFunction(stream);
 };
 
 export const canonicalize = (string) => {

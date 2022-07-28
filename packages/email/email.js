@@ -2,7 +2,6 @@ import { Meteor } from 'meteor/meteor';
 import { Log } from 'meteor/logging';
 import { Hook } from 'meteor/callback-hook';
 
-import Future from 'fibers/future';
 import url from 'url';
 import nodemailer from 'nodemailer';
 import wellKnow from 'nodemailer/lib/well-known';
@@ -25,7 +24,7 @@ export const EmailInternals = {
 
 const MailComposer = EmailInternals.NpmModules.mailcomposer.module;
 
-const makeTransport = function(mailUrlString) {
+const makeTransport = function (mailUrlString) {
   const mailUrl = new URL(mailUrlString);
 
   if (mailUrl.protocol !== 'smtp:' && mailUrl.protocol !== 'smtps:') {
@@ -60,7 +59,7 @@ const makeTransport = function(mailUrlString) {
 };
 
 // More info: https://nodemailer.com/smtp/well-known/
-const knownHostsTransport = function(settings = undefined, url = undefined) {
+const knownHostsTransport = function (settings = undefined, url = undefined) {
   let service, user, password;
 
   const hasSettings = settings && Object.keys(settings).length;
@@ -110,7 +109,7 @@ const knownHostsTransport = function(settings = undefined, url = undefined) {
 };
 EmailTest.knowHostsTransport = knownHostsTransport;
 
-const getTransport = function() {
+const getTransport = function () {
   const packageSettings = Meteor.settings.packages?.email || {};
   // We delay this check until the first call to Email.send, in case someone
   // set process.env.MAIL_URL in startup code. Then we store in a cache until
@@ -138,44 +137,37 @@ const getTransport = function() {
 };
 
 let nextDevModeMailId = 0;
-let output_stream = process.stdout;
 
 EmailTest._getAndIncNextDevModeMailId = function () {
   return nextDevModeMailId++;
 };
 
 // Testing hooks
-EmailTest.overrideOutputStream = function(stream) {
+EmailTest.resetNextDevModeMailId = function () {
   nextDevModeMailId = 0;
-  output_stream = stream;
 };
 
-EmailTest.restoreOutputStream = function() {
-  output_stream = process.stdout;
-};
+const devModeSendAsync = async function (mail, stream) {
+  return new Promise((resolve, reject) => {
+    let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
 
-const devModeSend = function(mail) {
-  let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
-
-  const stream = output_stream;
-
-  // This approach does not prevent other writers to stdout from interleaving.
-  stream.write('====== BEGIN MAIL #' + devModeMailId + ' ======\n');
-  stream.write(
-    '(Mail not sent; to enable sending, set the MAIL_URL ' +
-      'environment variable.)\n'
-  );
-  const readStream = new MailComposer(mail).compile().createReadStream();
-  readStream.pipe(stream, { end: false });
-  const future = new Future();
-  readStream.on('end', function() {
-    stream.write('====== END MAIL #' + devModeMailId + ' ======\n');
-    future.return();
+    // This approach does not prevent other writers to stdout from interleaving.
+    stream.write('====== BEGIN MAIL #' + devModeMailId + ' ======\n');
+    stream.write(
+      '(Mail not sent; to enable sending, set the MAIL_URL ' +
+        'environment variable.)\n'
+    );
+    const readStream = new MailComposer(mail).compile().createReadStream();
+    readStream.pipe(stream, { end: false });
+    readStream.on('end', function () {
+      stream.write('====== END MAIL #' + devModeMailId + ' ======\n');
+      resolve();
+    });
+    readStream.on('error', (err) => reject(err));
   });
-  future.wait();
 };
 
-const smtpSend = function(transport, mail) {
+const smtpSend = function (transport, mail) {
   transport._syncSendMail(mail);
 };
 
@@ -190,7 +182,7 @@ const sendHooks = new Hook();
  * false to skip sending.
  * @returns {{ stop: function, callback: function }}
  */
-Email.hookSend = function(f) {
+Email.hookSend = function (f) {
   return sendHooks.register(f);
 };
 
@@ -231,67 +223,16 @@ Email.customTransport = undefined;
  * @param {Object[]} [options.attachments] Array of attachment objects, as
  * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
+ * @param {Object} [options.stream] Output stream to write email on development environment
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
-Email.send = function(options) {
-  if (options.mailComposer) {
-    options = options.mailComposer.mail;
-  }
-
-  let send = true;
-  sendHooks.forEach(hook => {
-    send = hook(options);
-    return send;
-  });
-  if (!send) return;
-
-  const customTransport = Email.customTransport;
-  if (customTransport) {
-    const packageSettings = Meteor.settings.packages?.email || {};
-    customTransport({ packageSettings, ...options });
-    return;
-  }
-
-  const mailUrlEnv = process.env.MAIL_URL;
-  const mailUrlSettings = Meteor.settings.packages?.email;
-
-  if (Meteor.isProduction && !mailUrlEnv && !mailUrlSettings) {
-    // This check is mostly necessary when using the flag --production when running locally.
-    // And it works as a reminder to properly set the mail URL when running locally.
-    throw new Error(
-      'You have not provided a mail URL. You can provide it by using the environment variable MAIL_URL or your settings. You can read more about it here: https://docs.meteor.com/api/email.html.'
-    );
-  }
-
-  if (mailUrlEnv || mailUrlSettings) {
-    const transport = getTransport();
-    smtpSend(transport, options);
-    return;
-  }
-  devModeSend(options);
+Email.send = function (options) {
+  // Using Fibers Promise.await
+  Promise.await(Email.sendAsync(options));
 };
 
-const devModeSendAsync = async function (mail, stream) {
-  return new Promise((resolve, reject) => {
-    let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
-
-    // This approach does not prevent other writers to stdout from interleaving.
-    stream.write('====== BEGIN MAIL #' + devModeMailId + ' ======\n');
-    stream.write(
-      '(Mail not sent; to enable sending, set the MAIL_URL ' +
-      'environment variable.)\n'
-    );
-    const readStream = new MailComposer(mail).compile().createReadStream();
-    readStream.pipe(stream, { end: false });
-    readStream.on('end', function () {
-      stream.write('====== END MAIL #' + devModeMailId + ' ======\n');
-      resolve(stream);
-    });
-    readStream.on('error', (err) => reject(err));
-  });
-};
 // TODO Rewrite summary.
 /**
  * @summary Send an email with asyncronous method. Capture  Throws an `Error` on failure to contact mail server
@@ -322,30 +263,28 @@ const devModeSendAsync = async function (mail, stream) {
  * @param {Object[]} [options.attachments] Array of attachment objects, as
  * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
+ * @param {Object} [options.stream] Output stream to write email on development environment
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.sendAsync = async function (options) {
-  const stream = output_stream;
-  const { isTestMode } = Email;
-  if (options.mailComposer) {
-    options = options.mailComposer.mail;
-  }
+  const { stream = process.stdout, ...rest } = options;
+  const email = rest.mailComposer ? rest.mailComposer.mail : rest;
 
   let send = true;
   sendHooks.forEach((hook) => {
-    send = hook(options);
+    send = hook(email);
     return send;
   });
   if (!send) {
-    return isTestMode && stream;
+    return;
   }
 
   if (Email.customTransport) {
     const packageSettings = Meteor.settings.packages?.email || {};
-    Email.customTransport({ packageSettings, ...options });
-    return isTestMode && stream;
+    Email.customTransport({ packageSettings, ...email });
+    return;
   }
 
   const mailUrlEnv = process.env.MAIL_URL;
@@ -361,10 +300,10 @@ Email.sendAsync = async function (options) {
 
   if (mailUrlEnv || mailUrlSettings) {
     const transport = getTransport();
-    smtpSend(transport, options);
+    smtpSend(transport, email);
     return;
   }
-  return devModeSendAsync(options, stream).catch((err) => {
+  return devModeSendAsync(email, stream).catch((err) => {
     throw err;
   });
 };

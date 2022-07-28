@@ -1,7 +1,6 @@
+import { Email } from 'meteor/email';
 import { smokeEmailTest } from './email_test_helpers';
 import { TEST_CASES } from './email_tests_data';
-
-Email.isTestMode = true;
 
 // Create dynamic sync tests
 TEST_CASES.forEach(({ title, options, testCalls }) => {
@@ -9,7 +8,7 @@ TEST_CASES.forEach(({ title, options, testCalls }) => {
     smokeEmailTest((stream) => {
       Object.entries(options).forEach(([key, option]) => {
         const testCall = testCalls[key];
-        Email.send(option);
+        Email.send({ ...option, stream });
         testCall(test, stream);
       });
     });
@@ -19,10 +18,10 @@ TEST_CASES.forEach(({ title, options, testCalls }) => {
 // Create dynamic async tests
 TEST_CASES.forEach(({ title, options, testCalls }) => {
   Tinytest.addAsync(`[Async] ${title}`, function (test, onComplete) {
-    smokeEmailTest(() => {
+    smokeEmailTest((stream) => {
       const allPromises = Object.entries(options).map(([key, option]) => {
         const testCall = testCalls[key];
-        return Email.sendAsync(option).then((stream) => {
+        return Email.sendAsync({ ...option, stream }).then(() => {
           testCall(test, stream);
         });
       });
@@ -45,6 +44,7 @@ Tinytest.add(
         to: 'bar@example.com',
         text: '*Cool*, man',
         html: '<i>Cool</i>, man',
+        stream,
       });
       test.equal(stream.getContentsAsString('utf8'), false);
     });
@@ -63,6 +63,7 @@ Tinytest.add(
         to: 'bar@example.com',
         text: '*Cool*, man',
         html: '<i>Cool</i>, man',
+        stream,
       });
 
       test.equal(stream.getContentsAsString('utf8'), false);
@@ -93,6 +94,7 @@ Tinytest.add('[Sync] email - hooks stop the sending', function (test) {
       to: 'bar@example.com',
       text: '*Cool*, man',
       html: '<i>Cool</i>, man',
+      stream,
     });
 
     test.equal(stream.getContentsAsString('utf8'), false);
@@ -108,7 +110,7 @@ Tinytest.addAsync(
   '[Async] email - alternate API is used for sending gets data',
   function (test, onComplete) {
     const allPromises = [];
-    smokeEmailTest(() => {
+    smokeEmailTest((stream) => {
       Email.customTransport = (options) => {
         test.equal(options.from, 'foo@example.com');
       };
@@ -118,13 +120,14 @@ Tinytest.addAsync(
           to: 'bar@example.com',
           text: '*Cool*, man',
           html: '<i>Cool</i>, man',
-        }).then((stream) => {
+          stream,
+        }).then(() => {
           test.equal(stream.getContentsAsString('utf8'), false);
         })
       );
     });
 
-    smokeEmailTest(function () {
+    smokeEmailTest(function (stream) {
       Meteor.settings.packages = {
         email: { service: '1on1', user: 'test', password: 'pwd' },
       };
@@ -139,7 +142,8 @@ Tinytest.addAsync(
           to: 'bar@example.com',
           text: '*Cool*, man',
           html: '<i>Cool</i>, man',
-        }).then((stream) => {
+          stream,
+        }).then(() => {
           test.equal(stream.getContentsAsString('utf8'), false);
         })
       );
@@ -169,13 +173,14 @@ Tinytest.addAsync(
     const hook3 = Email.hookSend(() => {
       console.log('FAIL');
     });
-    smokeEmailTest(() => {
+    smokeEmailTest((stream) => {
       Email.sendAsync({
         from: 'foo@example.com',
         to: 'bar@example.com',
         text: '*Cool*, man',
         html: '<i>Cool</i>, man',
-      }).then((stream) => {
+        stream,
+      }).then(() => {
         test.equal(stream.getContentsAsString('utf8'), false);
         hook1.stop();
         hook2.stop();
