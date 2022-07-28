@@ -3229,15 +3229,6 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
   }
 ]);
 
-Meteor.isServer && Tinytest.add(
-  "mongo-livedata - connection failure throws",
-  function (test) {
-    test.throws(function () {
-      new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
-    });
-  }
-);
-
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
   test.matches(MongoInternals.NpmModules.mongodb.version, /^4\.(\d+)\.(\d+)/);

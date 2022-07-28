@@ -190,13 +190,14 @@ MongoConnection = function (url, options) {
 
   // Figure out what the current primary is, if any. This operation will fail,
   // if the connection fails, as `connect` is implicit since version 4.7 of the
-  // MongoDB driver.
-  //
-  // FIXME: This results in an `UnhandledPromiseRejectionWarning`.
+  // MongoDB driver. It's not a problem, as the connection may break at anytime
+  // anyway, and all errors have to be handled properly.
   self.db.admin().command({hello: 1}).then(helloDocument => {
     if (helloDocument.primary) {
       self._primary = helloDocument.primary;
     }
+  }, () => {
+    // Ignore the error entirely.
   });
 
   self.client.topology.on(
