@@ -152,16 +152,18 @@ const devModeSendAsync = async function (mail, stream) {
     let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
 
     // This approach does not prevent other writers to stdout from interleaving.
-    stream.write('====== BEGIN MAIL #' + devModeMailId + ' ======\n');
-    stream.write(
+    const output = ['====== BEGIN MAIL #' + devModeMailId + ' ======\n'];
+    output.push(
       '(Mail not sent; to enable sending, set the MAIL_URL ' +
-        'environment variable.)\n'
+      'environment variable.)\n'
     );
     const readStream = new MailComposer(mail).compile().createReadStream();
-    readStream.pipe(stream, { end: false });
+    readStream.on('data', buffer => {
+      output.push(buffer.toString());
+    });
     readStream.on('end', function () {
-      stream.write('====== END MAIL #' + devModeMailId + ' ======\n');
-      resolve();
+      output.push('====== END MAIL #' + devModeMailId + ' ======\n');
+      stream.write(output.join(''), () => resolve());
     });
     readStream.on('error', (err) => reject(err));
   });
