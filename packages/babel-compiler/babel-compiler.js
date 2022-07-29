@@ -68,7 +68,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     hash: inputFile.getSourceHash(),
     sourceMap: null,
     bare: !!fileOptions.bare,
-    isAsync: !!fileOptions.isAsync
+    isAsync: inputFile.isAsyncFile()
   };
 
   // If you need to exclude a specific file within a package from Babel
