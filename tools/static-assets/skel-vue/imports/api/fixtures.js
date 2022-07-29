@@ -10,12 +10,12 @@ Meteor.startup(async () => {
   if (Links.find().count() === 0) {
     await insertLink({
       title: 'Do the Tutorial',
-      url: 'https://www.meteor.com/tutorials/react/creating-an-app',
+      url: 'https://vue-tutorial.meteor.com/',
     });
 
     await insertLink({
       title: 'Follow the Guide',
-      url: 'http://guide.meteor.com',
+      url: 'https://guide.meteor.com',
     });
 
     await insertLink({

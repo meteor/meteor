@@ -22,7 +22,7 @@ Meteor.startup(async () => {
 
     await insertLink({
       title: 'Follow the Guide',
-      url: 'http://guide.meteor.com',
+      url: 'https://guide.meteor.com',
     });
 
     await insertLink({
