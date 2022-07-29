@@ -200,7 +200,7 @@ export class CompilerPluginProcessor {
           title: jobTitle
         }, function () {
           var inputFiles = _.map(resourceSlots, function (resourceSlot) {
-            return new InputFile(resourceSlot);
+            return new InputFile(resourceSlot, self.arch);
           });
 
           const markedMethod = buildmessage.markBoundary(
@@ -222,7 +222,7 @@ export class CompilerPluginProcessor {
 }
 
 class InputFile extends buildPluginModule.InputFile {
-  constructor(resourceSlot) {
+  constructor(resourceSlot, arch) {
     super();
     // We use underscored attributes here because this is user-visible
     // code and we don't want users to be accessing anything that we don't
@@ -245,6 +245,8 @@ class InputFile extends buildPluginModule.InputFile {
     // accept a lazy finalizer function as a second argument, so that
     // compilation can be avoided until/unless absolutely necessary.
     this.supportsLazyCompilation = true;
+
+    this.isServer = arch.includes("os");
   }
 
   getContentsAsBuffer() {
@@ -293,6 +295,14 @@ class InputFile extends buildPluginModule.InputFile {
     const { inputResource } = this._resourceSlot;
     return inputResource.fileOptions || (inputResource.fileOptions = {});
   }
+
+  isAsyncFile() {
+    if (!this.isServer) return false;
+
+    const { inputResource } = this._resourceSlot;
+    return !!inputResource.fileOptions?.isAsync;
+  }
+
 
   hmrAvailable() {
     const fileOptions = this.getFileOptions() || {};
@@ -700,7 +710,11 @@ class ResourceSlot {
   }
 
   _isBare(options) {
-    return !! this._getOption("bare", options);
+    return !!this._getOption("bare", options);
+  }
+
+  _isAsync(options) {
+    return !!this._getOption("isAsync", options);
   }
 
   hmrAvailable() {
@@ -888,7 +902,7 @@ class OutputResource {
       type,
       lazy: resourceSlot._isLazy(options, true),
       bare: resourceSlot._isBare(options),
-      isAsync: resourceSlot._getOption("isAsync", options),
+      isAsync: resourceSlot._isAsync(options),
       mainModule: !! resourceSlot._getOption("mainModule", options),
       sourcePath,
       targetPath,

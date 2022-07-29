@@ -32,7 +32,7 @@ BCp.processFilesForTarget = function (inputFiles) {
       inputFile.addJavaScript({
         path: inputFile.getPathInPackage(),
         bare: !! inputFile.getFileOptions().bare,
-        isAsync: !!inputFile.getFileOptions().isAsync
+        isAsync: inputFile.isAsyncFile()
       }, function () {
         return compiler.processOneFileForTarget(inputFile);
       });
@@ -67,7 +67,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     data: source,
     hash: inputFile.getSourceHash(),
     sourceMap: null,
-    bare: !! fileOptions.bare,
+    bare: !!fileOptions.bare,
     isAsync: !!fileOptions.isAsync
   };
 
@@ -118,7 +118,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     this.inferTypeScriptConfig(
       features, inputFile, cacheOptions.cacheDeps);
 
-    if (!!inputFile.getFileOptions().isAsync) {
+    if (inputFile.isAsyncFile()) {
       features.useNativeAsyncAwait = true;
     }
 
