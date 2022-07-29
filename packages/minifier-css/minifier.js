@@ -1,6 +1,5 @@
 import path from 'path';
 import url from 'url';
-import Future from 'fibers/future';
 import postcss from 'postcss';
 import cssnano from 'cssnano';
 
@@ -66,15 +65,7 @@ const CssTools = {
    * @deprecated on 2.8
    */
   minifyCss(cssText) {
-    const f = new Future();
-    CssTools.minifyCssAsync(cssText)
-      .then((res) => f.return(res))
-      .catch((error) => f.throw(error));
-    // Since this function has always returned an array, we'll wrap the
-    // minified css string in an array before returning, even though we're
-    // only ever returning one minified css string in that array (maintaining
-    // backwards compatibility).
-    return f.wait();
+    return Promise.await(CssTools.minifyCssAsync(cssText));
   },
 
   /**
