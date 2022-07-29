@@ -118,7 +118,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     this.inferTypeScriptConfig(
       features, inputFile, cacheOptions.cacheDeps);
 
-    if (!!inputFile.isAsync) {
+    if (!!inputFile.getFileOptions().isAsync) {
       features.useNativeAsyncAwait = true;
     }
 
