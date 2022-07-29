@@ -62,7 +62,6 @@ const CssTools = {
    *
    * @param {string} cssText CSS string to minify.
    * @return {String[]} Array containing the minified CSS.
-   * @deprecated on 2.8
    */
   minifyCss(cssText) {
     return Promise.await(CssTools.minifyCssAsync(cssText));
