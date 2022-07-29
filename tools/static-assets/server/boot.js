@@ -418,7 +418,7 @@ var loadServerBundles = Profile("Load server bundles", function () {
         args
       });
     } else {
-      func.apply(global, args).then(() => fiber.run());
+      func.apply(global, args).catch(e => console.error(e)).finally(() => fiber.run());
       Fiber.yield();
     }
   });
