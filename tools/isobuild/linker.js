@@ -463,10 +463,10 @@ Object.assign(Module.prototype, {
           exportsName = "exports";
         }
 
-        const withAwait = this.bundleArch.includes("os") && this.isAsync;
+        const withAwait = this.bundleArch.includes("os") && file.isAsync;
         chunks.push(
           file.mainModule ? "\nvar " + exportsName + " = " : "\n",
-          `${withAwait ? "await" : ""} require(`,
+          `${withAwait ? "await " : ""}require(`,
           JSON.stringify(file.absModuleId),
           ");"
         );
