@@ -40,12 +40,12 @@ const TEST_CASES = [
 
 Tinytest.addAsync(
   '[Async] minifier-css - simple CSS minification',
-  (test, onComplete) => {
+  async (test) => {
     const promises = TEST_CASES.map(([css, expected, desc]) =>
       CssTools.minifyCssAsync(css).then((minifiedCss) => {
         test.equal(minifiedCss[0], expected, desc);
       })
     );
-    Promise.all(promises).then(() => onComplete());
+    return Promise.all(promises);
   }
 );
