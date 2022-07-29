@@ -375,6 +375,7 @@ export class Unibuild {
           hash: resource.hash,
           servePath: this.pkg._getServePath(resource.path),
           bare: resource.fileOptions && resource.fileOptions.bare,
+          isAsync: resource.fileOptions && resource.fileOptions.isAsync,
           sourceMap: resource.sourceMap,
           // If this file was actually read from a legacy isopack and is
           // itself prelinked, this will be an object with some metadata

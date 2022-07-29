@@ -386,7 +386,6 @@ var loadServerBundles = Profile("Load server bundles", function () {
     var scriptPath =
         parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
 
-
     var wrapParts = ["(async function(Npm,Assets"];
 
     var specialArgs =

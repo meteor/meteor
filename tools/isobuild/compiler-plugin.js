@@ -888,6 +888,7 @@ class OutputResource {
       type,
       lazy: resourceSlot._isLazy(options, true),
       bare: resourceSlot._isBare(options),
+      isAsync: resourceSlot._getOption("isAsync", options),
       mainModule: !! resourceSlot._getOption("mainModule", options),
       sourcePath,
       targetPath,
@@ -1708,6 +1709,7 @@ export class PackageSourceBatch {
           alias: inputFile.alias,
           lazy: inputFile.lazy,
           bare: inputFile.bare,
+          isAsync: inputFile.isAsync
         };
       })
     }));

@@ -335,7 +335,8 @@ export class HMRServer {
           imported: file.imported,
           alias: file.alias,
           lazy: file.lazy,
-          bare: file.bare
+          bare: file.bare,
+          isAsync: file.isAsync,
         })
       }
 

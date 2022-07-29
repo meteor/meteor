@@ -31,7 +31,8 @@ BCp.processFilesForTarget = function (inputFiles) {
     if (inputFile.supportsLazyCompilation) {
       inputFile.addJavaScript({
         path: inputFile.getPathInPackage(),
-        bare: !! inputFile.getFileOptions().bare
+        bare: !! inputFile.getFileOptions().bare,
+        isAsync: !!inputFile.getFileOptions().isAsync
       }, function () {
         return compiler.processOneFileForTarget(inputFile);
       });
@@ -66,7 +67,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     data: source,
     hash: inputFile.getSourceHash(),
     sourceMap: null,
-    bare: !! fileOptions.bare
+    bare: !! fileOptions.bare,
+    isAsync: !!fileOptions.isAsync
   };
 
   // If you need to exclude a specific file within a package from Babel
@@ -116,13 +118,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     this.inferTypeScriptConfig(
       features, inputFile, cacheOptions.cacheDeps);
 
-    /**
-     * Collection.js in mongo package should use the native implementation of async/await.
-     *
-     * For now, we only need to support this package. When Fibers are actually removed, everything
-     * will use the native implementation.
-     */
-    if (packageName === "mongo" && inputFilePath === "collection-server.js") {
+    if (!!inputFile.isAsync) {
       features.useNativeAsyncAwait = true;
     }
 

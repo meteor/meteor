@@ -81,7 +81,7 @@ Package.onUse(function (api) {
   api.addFiles('local_collection_driver.js', ['client', 'server']);
   api.addFiles('remote_collection_driver.js', 'server');
   api.addFiles('collection.js', ['client', 'server']);
-  api.addFiles('collection-server.js', 'server');
+  api.addFiles('collection-server.js', 'server', { isAsync: true });
   api.addFiles('connection_options.js', 'server');
 });
 
