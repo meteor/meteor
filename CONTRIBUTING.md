@@ -44,15 +44,15 @@ Reviwers are members of the community that help with Pull Requests reviews.
 Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
   - [@denihs](https://github.com/denihs)
-  - [@filipenevola](https://github.com/filipenevola)
   - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
   - [@henriquealbert](https://github.com/henriquealbert)
   - [@aquinoit](https://github.com/aquinoit)
   - [@Grubba27](https://github.com/Grubba27)
-  - [@StorytellerCZ](https://github.com/StorytellerCZ)
-  - [@zodern](https://github.com/zodern)
-  - [CaptainN](https://github.com/orgs/meteor/people/CaptainN)
-  - [radekmie](https://github.com/orgs/meteor/people/radekmie)
+- [@filipenevola](https://github.com/filipenevola)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@zodern](https://github.com/zodern)
+- [CaptainN](https://github.com/orgs/meteor/people/CaptainN)
+- [radekmie](https://github.com/orgs/meteor/people/radekmie)
 
 #### Core Committer
 
