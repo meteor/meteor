@@ -1793,11 +1793,10 @@ export default class ImportScanner {
         file.alias = alias;
       } else {
         const relSourcePath = pathRelative(this.sourceRoot, source.path);
-
         this.addFile(source.path, {
           type: "js",
           alias,
-          absPath: absPkgJsonPath,
+          absPath: source.path,
           data: emptyData,
           dataString: emptyDataString,
           hash: emptyHash,
