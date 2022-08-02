@@ -479,6 +479,34 @@ export default class ImportScanner {
     return null;
   }
 
+  private addSymbolicLinks(links: Record<string, string>, imported: string | boolean) {
+    Object.keys(links).forEach((path) => {
+      const linkFile = this.getFile(path);
+      const linkTarget = links[path];
+      if (!linkFile && linkTarget) {
+        const absModuleId = this.getAbsModuleId(path);
+        this.addFile(path, {
+          type: "js",
+          alias: {
+            path,
+            absModuleId: this.getAbsModuleId(linkTarget),
+          },
+          absPath: path,
+          data: emptyData,
+          dataString: emptyDataString,
+          hash: emptyHash,
+          // sourcePath: null,
+          sourcePath: pathRelative(this.sourceRoot, path),
+          absModuleId,
+          servePath: stripLeadingSlash(absModuleId),
+          lazy: true,
+          imported,
+          implicit: false,
+        });
+      }
+    });
+  }
+
   addInputFiles(files: File[]) {
     files.forEach(file => {
       this.checkSourceAndTargetPaths(file);
@@ -1141,31 +1169,7 @@ export default class ImportScanner {
       }
 
       if (resolved && 'links' in resolved && resolved.links) {
-        Object.keys(resolved.links).forEach((path) => {
-          const linkFile = this.getFile(path);
-          const linkTarget = resolved.links && resolved.links[path];
-          if (!linkFile && linkTarget) {
-            const absModuleId = this.getAbsModuleId(path);
-            this.addFile(path, {
-              type: "js",
-              alias: {
-                path,
-                absModuleId: this.getAbsModuleId(linkTarget),
-              },
-              absPath: path,
-              data: emptyData,
-              dataString: emptyDataString,
-              hash: emptyHash,
-              // sourcePath: null,
-              sourcePath: pathRelative(this.sourceRoot, path),
-              absModuleId,
-              servePath: stripLeadingSlash(absModuleId),
-              lazy: true,
-              imported: forDynamicImport ? Status.DYNAMIC : Status.STATIC,
-              implicit: false,
-            });
-          }
-        });
+        this.addSymbolicLinks(resolved.links, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
       }      
 
       let depFile = this.getFile(absImportedPath);
