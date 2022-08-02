@@ -1044,7 +1044,10 @@ export default class ImportScanner {
       const file = this.getFile(resolved.path);
       if (file && file.alias) {
         setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
-        return file.alias;
+        return {
+          ...file.alias,
+          links: resolved.links,
+        };
       }
     }
 
