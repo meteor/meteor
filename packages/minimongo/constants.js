@@ -7,7 +7,7 @@ export function getAsyncMethodName(method) {
 
 export const ASYNC_COLLECTION_METHODS = [
   '_createCappedCollection',
-  '_dropCollection',
+  'dropCollection',
   '_dropIndex',
   'createIndex',
   'findOne',
