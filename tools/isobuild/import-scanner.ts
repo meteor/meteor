@@ -48,7 +48,7 @@ import { wrap } from "optimism";
 const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
 const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
 
-import Resolver, { Resolution } from "./resolver";
+import Resolver, { Resolution, resolveRealPath } from "./resolver";
 
 const MONOREPO_ROOT = process.env.METEOR_MONOREPO_ROOT
   ? pathResolve(process.env.METEOR_MONOREPO_ROOT)
@@ -483,11 +483,26 @@ export default class ImportScanner {
     files.forEach(file => {
       this.checkSourceAndTargetPaths(file);
 
+      const links: Record<string, string> = Object.create(null);
+      const linkRoots: string[] = [];
+      if (MONOREPO_ROOT) {
+        linkRoots.push(MONOREPO_ROOT);
+      }
+
       // Note: this absolute path may not necessarily exist on the file
       // system, but any import statements or require calls in file.data
       // will be interpreted relative to this path, so it needs to be
       // something plausible. #6411 #6383
       file.absPath = pathJoin(this.sourceRoot, file.sourcePath);
+
+      if (/^node_modules\//.test(file.sourcePath)) {
+        const realPath = resolveRealPath(file.absPath, links, linkRoots);
+        if (realPath) {
+          file.absPath = realPath;
+          file.absModuleId = this.getAbsModuleId(file.absPath);
+          file.sourcePath = pathRelative(this.sourceRoot, realPath);
+        }
+      }
 
       // This property can have values false, true, "dynamic" (which
       // indicates that the file has been imported, but only dynamically).
