@@ -14,7 +14,7 @@ try {
 
 Meteor.startup(async () => {
   // If the Links collection is empty, add some data.
-  if (LinksCollection.find().count() === 0) {
+  if (await LinksCollection.find().countAsync() === 0) {
     await insertLink({
       title: 'Do the Tutorial',
       url: 'https://www.meteor.com/tutorials/react/creating-an-app',
