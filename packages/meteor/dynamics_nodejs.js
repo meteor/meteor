@@ -14,6 +14,7 @@ Meteor._nodeCodeMustBeInFiber = function() {
   }
 };
 const getStore = () => global.asyncLocalStorage.getStore();
+const getValueFromStore = key => getStore().get(key);
 const updateStore = (key, value) => {
   getStore().set(key, value);
 };
@@ -63,7 +64,7 @@ EVp.getOrNullIfOutsideFiber = function() {
 };
 
 function withValue({ value, func, slot }) {
-  let meteorDynamics = getStore()._meteor_dynamics;
+  let meteorDynamics = getValueFromStore('_meteor_dynamics');
   if (!meteorDynamics) {
     meteorDynamics = [];
     updateStore('_meteor_dynamics', []);
@@ -190,7 +191,7 @@ function bindEnvironmentWithFibers({ func, onException, _this }) {
 function bindEnvironment({ func, onException, _this }) {
   // TODO should we check if there is a instance of ALS here?
 
-  const savedValues = getStore()._meteor_dynamics;
+  const savedValues = getValueFromStore('_meteor_dynamics');
   const boundValues = savedValues ? savedValues.slice() : [];
 
   return function(/* arguments */) {

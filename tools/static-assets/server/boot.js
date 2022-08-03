@@ -429,8 +429,15 @@ var loadServerBundles = Profile('Load server bundles', function() {
         args,
       });
     } else {
-      func.apply(global, args).catch(e => console.error(e)).finally(() => fiber.run());
-      Fiber.yield();
+      if(global.isFibersEnabled()) {
+        func.apply(global, args).catch(e => console.error(e)).finally(() => fiber.run());
+        Fiber.yield();
+      } else {
+        // TODO Fibers - check if this call is correct. The execution above calls a fiber,
+        //  not sure if we need to do something more here.
+        func.apply(global, args).catch(e => console.error(e))
+      }
+
     }
   });
 
@@ -497,7 +504,7 @@ function startServerProcess() {
       callStartupHooks();
       runMain();
     } else {
-      global.asyncLocalStorage.run({ init: true }, () => {
+      global.asyncLocalStorage.run(new Map(), () => {
         console.log(
           'BEFORE loadServerBundles',
           global.asyncLocalStorage.getStore()
