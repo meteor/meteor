@@ -7,7 +7,7 @@ async function insertLink({ title, url }) {
 
 Meteor.startup(async () => {
   // If the Links collection is empty, add some data.
-  if (Links.find().count() === 0) {
+  if (await Links.find().countAsync() === 0) {
     await insertLink({
       title: 'Do the Tutorial',
       url: 'https://vue-tutorial.meteor.com/',
