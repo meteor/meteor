@@ -7,7 +7,7 @@ Package.describe({
 });
 
 Npm.depends({
-  install: "0.13.0"
+  install: "https://github.com/meteor/install.git#e5d90289cb384663a1f68d8eb18895a494ae88de"
 });
 
 Package.onUse(function(api) {

@@ -31,7 +31,8 @@ BCp.processFilesForTarget = function (inputFiles) {
     if (inputFile.supportsLazyCompilation) {
       inputFile.addJavaScript({
         path: inputFile.getPathInPackage(),
-        bare: !! inputFile.getFileOptions().bare
+        bare: !! inputFile.getFileOptions().bare,
+        isAsync: inputFile.isAsyncFile()
       }, function () {
         return compiler.processOneFileForTarget(inputFile);
       });
@@ -66,7 +67,8 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     data: source,
     hash: inputFile.getSourceHash(),
     sourceMap: null,
-    bare: !! fileOptions.bare
+    bare: !!fileOptions.bare,
+    isAsync: inputFile.isAsyncFile()
   };
 
   // If you need to exclude a specific file within a package from Babel
@@ -115,6 +117,10 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
     this.inferTypeScriptConfig(
       features, inputFile, cacheOptions.cacheDeps);
+
+    if (inputFile.isAsyncFile()) {
+      features.useNativeAsyncAwait = true;
+    }
 
     var babelOptions = Babel.getDefaultOptions(features);
     babelOptions.caller = { name: "meteor", arch };

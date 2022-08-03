@@ -324,6 +324,7 @@ export class PackageAPI {
    * be compiled into JavaScript code by a build plugin, don't wrap the
    * resulting file in a closure. Has the same effect as putting a file into the
    * `client/compatibility` directory in an app.
+   * @param {Boolean} [options.asyncExport] If the file exports a promise that must be resolved.
    */
   addFiles(paths, arch, fileOptions) {
     if (fileOptions && fileOptions.isAsset) {

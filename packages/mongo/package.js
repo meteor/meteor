@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.16.0-beta274.2'
+  version: '1.16.0-beta274.3'
 });
 
 Npm.depends({
@@ -81,6 +81,7 @@ Package.onUse(function (api) {
   api.addFiles('local_collection_driver.js', ['client', 'server']);
   api.addFiles('remote_collection_driver.js', 'server');
   api.addFiles('collection.js', ['client', 'server']);
+  api.addFiles('collection-server.js', 'server', { isAsync: true });
   api.addFiles('connection_options.js', 'server');
 });
 

@@ -233,6 +233,7 @@ var specialArgPaths = {
 var loadServerBundles = Profile('Load server bundles', function() {
   var infos = [];
 
+  const fiber = Fiber.current;
   serverJson.load.forEach(function(fileInfo) {
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
     var nonLocalNodeModulesPaths = [];
@@ -383,21 +384,6 @@ var loadServerBundles = Profile('Load server bundles', function() {
       },
     };
 
-    var wrapParts = ['(function(Npm,Assets'];
-
-    var specialArgs =
-      hasOwn.call(specialArgPaths, fileInfo.path) &&
-      specialArgPaths[fileInfo.path](fileInfo);
-
-    var specialKeys = Object.keys(specialArgs || {});
-    specialKeys.forEach(function(key) {
-      wrapParts.push(',' + key);
-    });
-
-    // \n is necessary in case final line is a //-comment
-    wrapParts.push('){', code, '\n})');
-    var wrapped = wrapParts.join('');
-
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
     // urls.
@@ -410,6 +396,21 @@ var loadServerBundles = Profile('Load server bundles', function() {
     var scriptPath = parsedSourceMaps[absoluteFilePath]
       ? absoluteFilePath
       : fileInfoOSPath;
+
+    var wrapParts = ["(async function(Npm,Assets"];
+
+    var specialArgs =
+      hasOwn.call(specialArgPaths, fileInfo.path) &&
+      specialArgPaths[fileInfo.path](fileInfo);
+
+    var specialKeys = Object.keys(specialArgs || {});
+    specialKeys.forEach(function (key) {
+      wrapParts.push("," + key);
+    });
+
+    // \n is necessary in case final line is a //-comment
+    wrapParts.push("){", code, "\n})");
+    var wrapped = wrapParts.join("");
 
     var func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
@@ -428,10 +429,8 @@ var loadServerBundles = Profile('Load server bundles', function() {
         args,
       });
     } else {
-      // TODO fibers - check if this is the best context to be provided to the run
-      // Allows us to use code-coverage if the debugger is not enabled
-
-      Profile(fileInfo.path, func).apply(global, args);
+      func.apply(global, args).catch(e => console.error(e)).finally(() => fiber.run());
+      Fiber.yield();
     }
   });
 
