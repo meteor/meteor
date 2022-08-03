@@ -43,24 +43,37 @@ Reviwers are members of the community that help with Pull Requests reviews.
 
 Current Reviewers:
 - [meteor](https://github.com/meteor/meteor)
-  - [@filipenevola](https://github.com/filipenevola)
-  - [@renanccastro](https://github.com/renanccastro)
+  - [@denihs](https://github.com/denihs)
+  - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+  - [@henriquealbert](https://github.com/henriquealbert)
+  - [@aquinoit](https://github.com/aquinoit)
+  - [@Grubba27](https://github.com/Grubba27)
+- [@filipenevola](https://github.com/filipenevola)
+- [@Grubba27](https://github.com/Grubba27)
   - [@StorytellerCZ](https://github.com/StorytellerCZ)
-  - [@zodern](https://github.com/zodern)
-  - [@lorensr](https://github.com/lorensr)
+- [@zodern](https://github.com/zodern)
+- [CaptainN](https://github.com/orgs/meteor/people/CaptainN)
+- [radekmie](https://github.com/orgs/meteor/people/radekmie)
 
 #### Core Committer
 
-The contributors with commit access to meteor/meteor are employees of Meteor Software Ltd or community members who have distinguished themselves in other contribution areas. If you want to become a core committer please start writing PRs.
+The contributors with commit access to meteor/meteor are employees of Meteor Software LP or community members who have distinguished themselves in other contribution areas or members of partner companies. If you want to become a core committer please start writing PRs.
 
 Current Core Committers:
-- [@filipenevola](https://github.com/filipenevola)
-- [@renanccastro](https://github.com/renanccastro)
 - [@denihs](https://github.com/denihs)
-
-#### Developer Evangelist
-
-- [@filipenevola](https://github.com/filipenevola) (Feel free to reach him out on [Twitter](https://twitter.com/FilipeNevola))
+- [@zodern](https://github.com/zodern)
+- [@filipenevola](https://github.com/filipenevola)
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@henriquealbert](https://github.com/henriquealbert)
+- [@Grubba27](https://github.com/Grubba27)
+- [StorytellerCZ](https://github.com/orgs/meteor/people/StorytellerCZ)
+- [CaptainN](https://github.com/orgs/meteor/people/CaptainN)
+- [radekmie](https://github.com/orgs/meteor/people/radekmie)
+- [piotrpospiech](https://github.com/orgs/meteor/people/piotrpospiech)
+- [edimarlnx](https://github.com/orgs/meteor/people/edimarlnx)
+- [matheusccastroo](https://github.com/orgs/meteor/people/matheusccastroo)
+- [eduwr](https://github.com/orgs/meteor/people/eduwr)
+- [@Grubba27](https://github.com/Grubba27)
 
 ### Tracking project work
 
