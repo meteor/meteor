@@ -51,8 +51,8 @@ Current Reviewers:
 - [@filipenevola](https://github.com/filipenevola)
 - [@StorytellerCZ](https://github.com/StorytellerCZ)
 - [@zodern](https://github.com/zodern)
-- [CaptainN](https://github.com/orgs/meteor/people/CaptainN)
-- [radekmie](https://github.com/orgs/meteor/people/radekmie)
+- [@CaptainN](https://github.com/CaptainN)
+- [@radekmie](https://github.com/radekmie)
 
 #### Core Committer
 
@@ -65,13 +65,13 @@ Current Core Committers:
 - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
 - [@henriquealbert](https://github.com/henriquealbert)
 - [@Grubba27](https://github.com/Grubba27)
-- [StorytellerCZ](https://github.com/orgs/meteor/people/StorytellerCZ)
-- [CaptainN](https://github.com/orgs/meteor/people/CaptainN)
-- [radekmie](https://github.com/orgs/meteor/people/radekmie)
-- [piotrpospiech](https://github.com/orgs/meteor/people/piotrpospiech)
-- [edimarlnx](https://github.com/orgs/meteor/people/edimarlnx)
-- [matheusccastroo](https://github.com/orgs/meteor/people/matheusccastroo)
-- [eduwr](https://github.com/orgs/meteor/people/eduwr)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@CaptainN](https://github.com/CaptainN)
+- [@radekmie](https://github.com/radekmie)
+- [@piotrpospiech](https://github.com/piotrpospiech)
+- [@edimarlnx](https://github.com/edimarlnx)
+- [@matheusccastroo](https://github.com/matheusccastroo)
+- [@eduwr](https://github.com/eduwr)
 
 ### Tracking project work
 
