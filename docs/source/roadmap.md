@@ -1,3 +1,8 @@
+---
+title: Roadmap
+description: Describes the high-level features and actions for the Meteor project in the near-to-medium term future.
+---
+
 ## Introduction
 
 Last update: August 4, 2022.
