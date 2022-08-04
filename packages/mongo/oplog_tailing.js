@@ -26,7 +26,7 @@ idForOp = function (op) {
     throw Error("Unknown op: " + EJSON.stringify(op));
 };
 
-OplogHandle = async function (oplogUrl, dbName) {
+OplogHandle = function (oplogUrl, dbName) {
   var self = this;
   self._oplogUrl = oplogUrl;
   self._dbName = dbName;
@@ -82,8 +82,7 @@ OplogHandle = async function (oplogUrl, dbName) {
   self._entryQueue = new Meteor._DoubleEndedQueue();
   self._workerActive = false;
 
-  await self._startTailing();
-  return self;
+  self._startTailing();
 };
 
 Object.assign(OplogHandle.prototype, {
@@ -186,7 +185,7 @@ Object.assign(OplogHandle.prototype, {
     self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
     f.wait();
   },
-  _startTailing: async function () {
+  _startTailing: function () {
     var self = this;
     // First, make sure that we're talking to the local database.
     var mongodbUri = Npm.require('mongodb-uri');
@@ -206,12 +205,12 @@ Object.assign(OplogHandle.prototype, {
     //
     // The tail connection will only ever be running a single tail command, so
     // it only needs to make one underlying TCP connection.
-    self._oplogTailConnection = await new MongoConnection(
+    self._oplogTailConnection = new MongoConnection(
       self._oplogUrl, {maxPoolSize: 1});
     // XXX better docs, but: it's to get monotonic results
     // XXX is it safe to say "if there's an in flight query, just use its
     //     results"? I don't think so but should consider that
-    self._oplogLastEntryConnection = await new MongoConnection(
+    self._oplogLastEntryConnection = new MongoConnection(
       self._oplogUrl, {maxPoolSize: 1});
 
     // Now, make sure that there actually is a repl set here. If not, oplog

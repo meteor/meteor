@@ -1,11 +1,7 @@
-import { onceAsync } from './mongoAsyncUtils';
-
-let defaultRemoteCollectionDriver = null;
-MongoInternals.RemoteCollectionDriver = async function (
+MongoInternals.RemoteCollectionDriver = function (
   mongo_url, options) {
   var self = this;
-  self.mongo = await new MongoConnection(mongo_url, options);
-  return self;
+  self.mongo = new MongoConnection(mongo_url, options);
 };
 
 Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
@@ -25,7 +21,7 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
 // Create the singleton RemoteCollectionDriver only on demand, so we
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)
-MongoInternals.defaultRemoteCollectionDriver = onceAsync(async function () {
+MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
   var connectionOptions = {};
 
   var mongoUrl = process.env.MONGO_URL;
@@ -37,13 +33,5 @@ MongoInternals.defaultRemoteCollectionDriver = onceAsync(async function () {
   if (! mongoUrl)
     throw new Error("MONGO_URL must be set in environment");
 
-  defaultRemoteCollectionDriver = await new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
-  return defaultRemoteCollectionDriver;
+  return new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
 });
-
-MongoInternals.getDefaultRemoteCollectionDriver = function() {
-  if (!defaultRemoteCollectionDriver) {
-    throw new Meteor.Error('getDefaultRemoteCollectionDriver should be called only after mongo package evaluation, make sure your package is declared after mongo in .meteor/packages file.');
-  }
-  return defaultRemoteCollectionDriver;
-}

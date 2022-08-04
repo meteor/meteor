@@ -14,7 +14,13 @@ N/A
   - New methods to work with the Async API. [PR](https://github.com/meteor/meteor/pull/12028/files).
 * `mongo@1.16.0`:
   - Adding async counterparts that allows gradual migration from Fibers. [PR](https://github.com/meteor/meteor/pull/12028).
-  
+
+#### Independent Releases
+* `accounts-passwordless@2.1.3`:
+  - Fixing bug where tokes where never expiring. [PR](https://github.com/meteor/meteor/pull/12088).
+* `accounts-base@2.2.4`:
+  - Adding new options to the `Accounts.config()` method: `loginTokenExpirationHours` and `tokenSequenceLength`. [PR](https://github.com/meteor/meteor/pull/12088).
+
 ## 2.7.3, 2022-05-31
 
 #### Highlights

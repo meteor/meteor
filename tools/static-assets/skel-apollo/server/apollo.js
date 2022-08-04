@@ -12,6 +12,7 @@ const resolvers = {
 };
 
 const server = new ApolloServer({
+  cache: 'bounded',
   typeDefs,
   resolvers,
   context: async ({ req }) => ({

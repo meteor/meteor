@@ -1,7 +1,7 @@
 Tinytest.add('async collection - check for methods presence', function (test) {
   const isFunction = fn => test.equal(typeof fn, 'function');
 
-  const collection = new Mongo.Collection('myAsyncCollection');
+  const collection = new Mongo.Collection('myAsyncCollection' + test.id);
   isFunction(collection.createCappedCollectionAsync);
   isFunction(collection.createIndexAsync);
   isFunction(collection.dropCollectionAsync);

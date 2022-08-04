@@ -693,7 +693,6 @@ var launchMongo = function(options) {
           }
       );
 
-      yieldingMethod(client, 'connect');
       const db = client.db('meteor');
 
       if (stopped) {
