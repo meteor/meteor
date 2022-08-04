@@ -15,6 +15,10 @@ N/A
   - New methods to work with the Async API. [PR](https://github.com/meteor/meteor/pull/12028/files).
 * `mongo@1.16.0`:
   - Adding async counterparts that allows gradual migration from Fibers. [PR](https://github.com/meteor/meteor/pull/12028).
+* `meteor@1.10.1`:
+  - Create method to check if Fibers is enabled by flag DISABLE_FIBERS. [PR](https://github.com/meteor/meteor/pull/12100).
+* `npm-mongo@4.8.0`:
+  - Updated MongoDB driver to 4.8. [PR](https://github.com/meteor/meteor/pull/12097).
 
 #### Independent Releases
 * `accounts-passwordless@2.1.3`:
