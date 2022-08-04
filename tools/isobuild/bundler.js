@@ -149,7 +149,6 @@
 // wait until later.
 
 var assert = require('assert');
-var util = require('util');
 var Fiber = require('fibers');
 var _ = require('underscore');
 
@@ -160,7 +159,6 @@ var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
 import { addToTree, File as LinkerFile } from "./linker.js";
-
 var files = require('../fs/files');
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
@@ -1578,7 +1576,7 @@ class Target {
   // we always add the exact version specified, overriding any other
   // version that has already been added.
   // Additionally we need to be sure that a cordova-plugin-name gets
-  // overriden with @scope/cordova-plugin-name.
+  // overridden with @scope/cordova-plugin-name.
   _addCordovaDependency(name, version, override) {
     if (! this.cordovaDependencies) {
       return;
