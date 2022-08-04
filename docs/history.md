@@ -1,6 +1,7 @@
 ## 2.7.4, 2022-06-XX
 
 #### Highlights
+* Node update to [v14.20.0](https://nodejs.org/en/blog/release/v14.20.0/) as part of the [July 7th security release](https://nodejs.org/en/blog/vulnerability/july-2022-security-releases/)
 
 #### Breaking Changes
 N/A
