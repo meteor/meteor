@@ -28,7 +28,8 @@ the structure of an entry is:
 -> i,u,d: { key: value }
 -> value: {key: value}
 
-i and u are both $set
+i is nested $set
+u is flat $set
 d is $unset
 on mongo 4
  */
@@ -58,7 +59,7 @@ function logOplogEntryError(oplogEntry, prefixKey, key) {
 }
 
 const nestedOplogEntryParsers = (oplogEntry, prefixKey = '') => {
-  const { i = {}, u = {}, d = {}, ...sFields } = oplogEntry;
+  const { i, u, d = {}, ...sFields } = oplogEntry;
   logConverterCalls(oplogEntry, prefixKey, 'ENTRY_POINT');
   const sFieldsOperators = [];
   Object.entries(sFields).forEach(([key, value]) => {
@@ -105,19 +106,28 @@ const nestedOplogEntryParsers = (oplogEntry, prefixKey = '') => {
   const $unset = Object.keys(d).reduce((acc, key) => {
     return { ...acc, [`${prefixKey}${key}`]: true };
   }, {});
-  const setObjectSource = { ...i, ...u };
-  const $set = Object.keys(setObjectSource).reduce((acc, key) => {
-    const prefixedKey = `${prefixKey}${key}`;
-    return {
-      ...acc,
-      ...(!Array.isArray(setObjectSource[key]) &&
-      typeof setObjectSource[key] === 'object'
-        ? flattenObject({ [prefixedKey]: setObjectSource[key] })
-        : {
-            [prefixedKey]: setObjectSource[key],
-          }),
-    };
-  }, {});
+
+  const $set = {};
+
+  // Handle potentially nested keys.
+  if (i) {
+    Object.entries(i).forEach(([key, value]) => {
+      const prefixedKey = `${prefixKey}${key}`;
+      if (!Array.isArray(value) && typeof value === 'object') {
+        Object.assign($set, flattenObject({ [prefixedKey]: value }));
+      } else {
+        $set[prefixedKey] = value;
+      }
+    });
+  }
+
+  // Handle flat keys.
+  if (u) {
+    Object.entries(u).forEach(([key, value]) => {
+      const prefixedKey = `${prefixKey}${key}`;
+      $set[prefixedKey] = value;
+    });
+  }
 
   const c = [...sFieldsOperators, { $unset, $set }];
   const { $set: s, $unset: un } = c.reduce(
