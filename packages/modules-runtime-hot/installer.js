@@ -208,7 +208,7 @@ makeInstaller = function (options) {
       .split('/');
 
     const importsFrom = (location) =>
-      path.some((id) => id.indexOf(location) !== -1);
+      path.some((subPath) => subPath === location);
 
     if (importsFrom('server') || importsFrom('client')) {
       return new Error('Cannot import module ' + id + ' \n (cross-boundary import) \n see: https://guide.meteor.com/structure.html#special-directories');
