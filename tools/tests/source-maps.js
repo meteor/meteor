@@ -17,7 +17,7 @@ selftest.define("source maps from checkout", ['checkout'], function () {
     throw new Error();
   } catch (e) {
     var index = (process.platform === 'win32') ? 2 : 1;
-    selftest.expectEqual(e.stack.split(":")[index], "18");
+    selftest.expectEqual(e.stack.split(":")[index], "17");
   }
 });
 
