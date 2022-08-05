@@ -204,6 +204,17 @@ makeInstaller = function (options) {
   }
 
   function makeMissingError(id) {
+    var path = String(id)
+      .split('/');
+    var importsFromServer = path.some(function (id) {
+      return id.indexOf('server') !== -1;
+    });
+    var importsFromClient = path.some(function (id) {
+      return id.indexOf('client') !== -1;
+    });
+    if (importsFromServer || importsFromClient) {
+      return new Error('Cannot import module ' + id + ' \n (cross-boundary import) \n see: https://guide.meteor.com/structure.html#special-directories');
+    }
     return new Error("Cannot find module '" + id + "'");
   }
 
