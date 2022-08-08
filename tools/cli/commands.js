@@ -1323,7 +1323,7 @@ main.registerCommand({
     throw new main.ExitWithCode(2);
   }
 
-  if (bundle.warnings) {
+  if (bundle.warnings && bundle.warnings.hasMessages()) {
     Console.warn(bundle.warnings.formatMessages());
     return 1;
   }
