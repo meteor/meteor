@@ -964,7 +964,10 @@ Object.assign(PackageSource.prototype, {
           // If this architecture has a mainModule defined in
           // package.json, it's an error if _findSources doesn't find that
           // module. If no mainModule is defined, anything goes.
-          let missingMainModule = !! mainModule;
+          // If the source processor set allows conflicts (such as when linting)
+          // then sources will not be the same files used to bundle the app.
+          let missingMainModule = !! mainModule &&
+            !sourceProcessorSet.isConflictsAllowed();
 
           const sources = self._findSources(findOptions).sort(
             loadOrderSort(sourceProcessorSet, arch)
