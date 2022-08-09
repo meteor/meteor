@@ -459,6 +459,16 @@ regular expression.
 Shows more information about a specific package or release: name, summary, the
 usernames of its maintainers, and, if specified, its homepage and git URL.
 
+Get information on meteor recommended releases:
+```
+meteor show METEOR
+```
+
+Get information on all meteor releases (including intermediate releases)"
+```
+meteor show --show-all METEOR
+```
+
 
 <h2 id="meteorpublish">meteor publish</h2>
 
