@@ -208,4 +208,36 @@ Tinytest.add('oplog - v2/v1 conversion', function(test) {
     ),
     JSON.stringify({ $v: 2, $set: { 'array.2.a': 'something' } })
   );
+
+  // https://github.com/meteor/meteor/issues/12098
+  test.equal(
+    JSON.stringify(oplogV2V1Converter({
+      $v: 2,
+      diff: { u: { params: { d: 5 } } },
+    })),
+    JSON.stringify({
+      $v: 2,
+      $set: { params: { d: 5 } },
+    })
+  );
+  test.equal(
+    JSON.stringify(oplogV2V1Converter({
+      $v: 2,
+      diff: { u: { params: { a: 5, d: 5 } } },
+    })),
+    JSON.stringify({
+      $v: 2,
+      $set: { params: { a: 5, d: 5 } },
+    })
+  );
+  test.equal(
+    JSON.stringify(oplogV2V1Converter({
+      $v: 2,
+      diff: { u: { params: { e: { _str: '5f953cde8ceca90030bdb86f' } } } },
+    })),
+    JSON.stringify({
+      $v: 2,
+      $set: { params: { e: { _str: '5f953cde8ceca90030bdb86f' } } },
+    })
+  );
 });
