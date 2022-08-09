@@ -42,9 +42,11 @@ Tinytest.addAsync('Async: minifier-js - verify terser is able to minify valid ja
   done();
 });
 
-Tinytest.addAsync('Async: minifier-js - verify error handling is done as expected', async (test, done) => {
-  test.throws(() => meteorJsMinifyAsync('let name = {;\n'), undefined );
-  done();
+Tinytest.addAsync('Async: minifier-js - verify error handling is done as expected', (test, done) => {
+    meteorJsMinifyAsync('let name = {;\n').catch(err => {
+      test.equal(err.message, 'Unexpected token: punc (;)');
+      done();
+    });
 });
 
 Tinytest.addAsync('Async: minifier-js - verify tersers error object has the fields we use for reporting errors to users', async (test, done) => {
