@@ -5,7 +5,7 @@ const Fiber = Npm.require('fibers');
 let nextSlot = 0;
 
 Meteor._nodeCodeMustBeInFiber = function() {
-  if (!Fiber.current && global.isFibersEnabled()) {
+  if (!Fiber.current && global._isFibersEnabled()) {
     throw new Error(
       'Meteor code must always run within a Fiber. ' +
         'Try wrapping callbacks that you pass to non-Meteor ' +
@@ -112,7 +112,7 @@ EVp.withValue = function(value, func) {
     slot: this.slot,
   };
 
-  if (global.isFibersEnabled()) {
+  if (global._isFibersEnabled()) {
     withValueWithFibers(params);
     return;
   }
@@ -244,7 +244,7 @@ function bindEnvironment({ func, onException, _this }) {
  * @return {Function} The wrapped function
  */
 Meteor.bindEnvironment = function(func, onException, _this) {
-  return global.isFibersEnabled()
+  return global._isFibersEnabled()
     ? bindEnvironmentWithFibers({ func, onException, _this })
     : bindEnvironment({ func, onException, _this });
 };

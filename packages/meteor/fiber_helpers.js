@@ -102,7 +102,7 @@ const runTask = ({ task, self }) => {
 
 SQp.runTask = function(task) {
   const self = this;
-  if (global.isFibersEnabled()) {
+  if (global._isFibersEnabled()) {
     runTaskWithFibers({ task, self });
     return;
   }
@@ -151,7 +151,7 @@ SQp._scheduleRun = function () {
   self._runningOrRunScheduled = true;
   console.log('SQp._scheduleRun BEFORE setImmediate', global.asyncLocalStorage.getStore());
   setImmediate(function() {
-    if (global.isFibersEnabled()) {
+    if (global._isFibersEnabled()) {
       Fiber(function() {
         self._run();
       }).run();

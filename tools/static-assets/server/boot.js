@@ -432,7 +432,7 @@ var loadServerBundles = Profile('Load server bundles', function() {
         args,
       });
     } else {
-      if(global.isFibersEnabled()) {
+      if(global._isFibersEnabled()) {
         func.apply(global, args).catch(e => console.error(e)).finally(() => fiber.run());
         Fiber.yield();
       } else {
@@ -502,7 +502,7 @@ function startServerProcess() {
   console.log('BEFORE PROFILE', global.asyncLocalStorage.getStore());
   Profile.run('Server startup', function() {
     // TODO the if around loadServerBundles should be enough
-    if (global.isFibersEnabled()) {
+    if (global._isFibersEnabled()) {
       loadServerBundles();
       callStartupHooks();
       runMain();
@@ -527,7 +527,7 @@ function startServerProcess() {
   console.log('AFTER PROFILE', global.asyncLocalStorage.getStore());
 }
 
-if (global.isFibersEnabled()) {
+if (global._isFibersEnabled()) {
   console.log('SHOULD go here', {});
   Fiber(function() {
     startServerProcess();
