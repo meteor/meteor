@@ -178,47 +178,26 @@ MongoConnection = function (url, options) {
     });
 
   self.db = null;
-  // We keep track of the ReplSet's primary, so that we can trigger hooks when
-  // it changes.  The Node driver's joined callback seems to fire way too
-  // often, which is why we need to track it ourselves.
-  self._primary = null;
   self._oplogHandle = null;
   self._docFetcher = null;
 
   self.client = new MongoDB.MongoClient(url, mongoOptions);
   self.db = self.client.db();
 
-  // Figure out what the current primary is, if any. This operation will fail,
-  // if the connection fails, as `connect` is implicit since version 4.7 of the
-  // MongoDB driver. It's not a problem, as the connection may break at anytime
-  // anyway, and all errors have to be handled properly.
-  self.db.admin().command({hello: 1}).then(helloDocument => {
-    if (helloDocument.primary) {
-      self._primary = helloDocument.primary;
+  self.client.on('serverDescriptionChanged', Meteor.bindEnvironment(event => {
+    // When the connection is no longer against the primary node, execute all
+    // failover hooks. This is important for the driver as it has to re-pool the
+    // query when it happens.
+    if (
+      event.previousDescription.type === 'RSPrimary' &&
+      event.newDescription.type !== 'RSPrimary'
+    ) {
+      self._onFailoverHook.each(callback => {
+        callback();
+        return true;
+      });
     }
-  }, () => {
-    // Ignore the error entirely.
-  });
-
-  self.client.topology.on(
-    'joined', Meteor.bindEnvironment(function (kind, doc) {
-      if (kind === 'primary') {
-        if (doc.primary !== self._primary) {
-          self._primary = doc.primary;
-          self._onFailoverHook.each(function (callback) {
-            callback();
-            return true;
-          });
-        }
-      } else if (doc.me === self._primary) {
-        // The thing we thought was primary is now something other than
-        // primary.  Forget that we thought it was primary.  (This means
-        // that if a server stops being primary and then starts being
-        // primary again without another server becoming primary in the
-        // middle, we'll correctly count it as a failover.)
-        self._primary = null;
-      }
-    }));
+  }));
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
