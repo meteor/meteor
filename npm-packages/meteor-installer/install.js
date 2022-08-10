@@ -32,15 +32,12 @@ const isInstalledGlobally = process.env.npm_config_global === 'true';
 
 const { engines } = require('./package');
 const nodeVersion = engines.node;
+const npmVersion = engines.npm;
 
 // Compare installed NodeJs version with required NodeJs version
 if (!semver.satisfies(process.version, nodeVersion)) {
-  console.error('******************************************');
-  console.error(`Required Node.js version ${nodeVersion} not satisfied with current version ${process.version}.`);
-  console.error('If you need to use other Node.js versions, we recommend you using Volta or NVM.');
-  console.error('Aborting...');
-  console.error('******************************************');
-  process.exit(1);
+  console.warn(`WARNING: Recommended versions are Node.js ${nodeVersion} and npm ${npmVersion}.`);
+  console.warn(`We recommend using a Node version manager like NVM or Volta to install Node.js and npm.\n`);
 }
 
 if (!isInstalledGlobally) {

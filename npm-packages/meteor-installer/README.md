@@ -1,6 +1,6 @@
 ## Meteor Installer
 
-Node.js <= 14.9.3 is required.
+Node.js <=14.x and npm <=6.x is recommended.
 
 Install Meteor by running:
 
