@@ -61,8 +61,10 @@ function flattenObjectInto(target, source, prefix) {
   }
 }
 
+const logDebugMessages = !!process.env.OPLOG_CONVERTER_DEBUG;
+
 function convertOplogDiff(oplogEntry, diff, prefix) {
-  if (process.env.OPLOG_CONVERTER_DEBUG) {
+  if (logDebugMessages) {
     console.log(`convertOplogDiff(${JSON.stringify(oplogEntry)}, ${JSON.stringify(diff)}, ${JSON.stringify(prefix)})`);
   }
 
