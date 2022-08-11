@@ -1578,7 +1578,7 @@ class Target {
   // we always add the exact version specified, overriding any other
   // version that has already been added.
   // Additionally we need to be sure that a cordova-plugin-name gets
-  // overriden with @scope/cordova-plugin-name.
+  // overridden with @scope/cordova-plugin-name.
   _addCordovaDependency(name, version, override) {
     if (! this.cordovaDependencies) {
       return;
