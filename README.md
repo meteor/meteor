@@ -55,6 +55,27 @@ What about to try a getting started tutorial in your favorite technology?
 
 Next, read the [documentation](https://docs.meteor.com/) and get some [examples](https://github.com/meteor/examples).
 
+# 🚀 Quick Start
+
+On your platform, use this line:
+
+```shell
+> npm install -g meteor
+```
+ 
+🚀 To create a project:
+
+```shell
+> meteor create my-app
+```
+
+☄️ Run it:
+
+```shell
+cd my-app
+meteor
+```
+
 # 🧱 Developer Resources
 
 **Building an application with Meteor?**
