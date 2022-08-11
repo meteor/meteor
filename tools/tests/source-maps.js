@@ -19,7 +19,7 @@ selftest.define("source maps from checkout", ['checkout'], function () {
   } catch (e) {
     var index = (process.platform === 'win32') ? 2 : 1;
     const sourceMap = e.stack.split(":")[index];
-    const r = (sourceMap === "17" || sourceMap === "18");
+    const result = (sourceMap === "17" || sourceMap === "18");
     selftest.expectEqual(r, true);
   }
 });
