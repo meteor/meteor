@@ -189,8 +189,8 @@ MongoConnection = function (url, options) {
     // failover hooks. This is important for the driver as it has to re-pool the
     // query when it happens.
     if (
-      event.previousDescription.type === 'RSPrimary' &&
-      event.newDescription.type !== 'RSPrimary'
+      event.previousDescription.type !== 'RSPrimary' &&
+      event.newDescription.type === 'RSPrimary'
     ) {
       self._onFailoverHook.each(callback => {
         callback();
