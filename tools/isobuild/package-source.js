@@ -968,9 +968,17 @@ Object.assign(PackageSource.prototype, {
           // then sources will not be the same files used to bundle the app.
           let missingMainModule = !! mainModule &&
             !sourceProcessorSet.isConflictsAllowed();
+          
+          // Similar to the main module, when conflicts are allowed
+          // these sources won't be used to build the app so the order
+          // isn't important, and is difficult to accurately create when
+          // there are conflicts
+          let sorter = sourceProcessorSet.isConflictsAllowed() ?
+            () => 0 :
+            loadOrderSort(sourceProcessorSet, arch);
 
           const sources = self._findSources(findOptions).sort(
-            loadOrderSort(sourceProcessorSet, arch)
+            sorter
           ).map(relPath => {
             if (relPath === mainModule) {
               missingMainModule = false;
