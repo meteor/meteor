@@ -17,6 +17,13 @@
       "client": "client/main.js",
       "server": "server/main.js"
     },
+    "nodeModules": {
+      "recompile": {
+        "svelte": [
+          "legacy"
+        ]
+      }
+    },
     "testModule": "tests/main.js"
   }
 }

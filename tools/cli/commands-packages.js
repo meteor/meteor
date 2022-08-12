@@ -10,7 +10,6 @@ var compiler = require('../isobuild/compiler.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var isopack = require('../isobuild/isopack.js');
-var updater = require('../packaging/updater.js');
 var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');

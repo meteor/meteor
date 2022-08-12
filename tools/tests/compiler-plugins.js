@@ -2,7 +2,6 @@ var _ = require('underscore');
 var selftest = require('../tool-testing/selftest.js');
 var files = require('../fs/files');
 import { getUrl } from '../utils/http-helpers.js';
-import { sleepMs } from '../utils/utils.js';
 import { host } from '../utils/archinfo';
 const osArch = host();
 
@@ -19,7 +18,7 @@ function startRun(sandbox) {
   run.matchBeforeExit("Started MongoDB");
   run.waitSecs(15);
   return run;
-};
+}
 
 // Tests the actual cache logic used by coffeescript.
 selftest.define("compiler plugin caching - coffee", () => {

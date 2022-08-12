@@ -18,7 +18,6 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   }
 });
 
-
 // Create the singleton RemoteCollectionDriver only on demand, so we
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)

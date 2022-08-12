@@ -1,3 +1,31 @@
+## 2.8, 2022-08-XX
+
+#### Highlights
+* Node update to [v14.20.0](https://nodejs.org/en/blog/release/v14.20.0/) as part of the [July 7th security release](https://nodejs.org/en/blog/vulnerability/july-2022-security-releases/)
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `modules@0.19.0`:
+  - Updating reify version. [PR](https://github.com/meteor/meteor/pull/12055).
+* `minimongo@1.9.0`:
+  - New methods to work with the Async API. [PR](https://github.com/meteor/meteor/pull/12028/files).
+* `mongo@1.16.0`:
+  - Adding async counterparts that allows gradual migration from Fibers. [PR](https://github.com/meteor/meteor/pull/12028).
+* `meteor@1.10.1`:
+  - Create method to check if Fibers is enabled by flag DISABLE_FIBERS. [PR](https://github.com/meteor/meteor/pull/12100).
+* `npm-mongo@4.8.0`:
+  - Updated MongoDB driver to 4.8. [PR](https://github.com/meteor/meteor/pull/12097).
+
+#### Independent Releases
+* `accounts-passwordless@2.1.3`:
+  - Fixing bug where tokes where never expiring. [PR](https://github.com/meteor/meteor/pull/12088).
+* `accounts-base@2.2.4`:
+  - Adding new options to the `Accounts.config()` method: `loginTokenExpirationHours` and `tokenSequenceLength`. [PR](https://github.com/meteor/meteor/pull/12088).
+
 ## 2.7.3, 2022-05-31
 
 #### Highlights
