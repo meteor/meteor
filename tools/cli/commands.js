@@ -1254,6 +1254,11 @@ main.registerCommand({
   maxArgs: 0,
   requiresAppOrPackage: true,
   options: {
+    'allow-incompatible-update': { type: Boolean },
+
+    // This option has never done anything, but we are keeping it for
+    // backwards compatibility since it existed for 7 years before adding
+    // the correctly named option 
     'allow-incompatible-updates': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
