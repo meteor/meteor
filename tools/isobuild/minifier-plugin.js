@@ -1,5 +1,8 @@
 import buildmessage from '../utils/buildmessage.js';
 import {
+  readAndWatchFileWithHash,
+} from '../fs/watch';
+import {
   optimisticReadFile,
   optimisticHashOrNull,
 } from "../fs/optimistic";
