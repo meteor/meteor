@@ -10,7 +10,7 @@
   "dependencies": {
     "@babel/runtime": "^7.15.3",
     "meteor-node-stubs": "^1.2.1",
-    "caniuse-lite": "^1.0.30001376"
+    "caniuse-lite": "^1"
   },
   "meteor": {
     "mainModule": false,
