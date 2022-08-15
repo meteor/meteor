@@ -210,8 +210,18 @@ makeInstaller = function (options) {
     const importsFrom = (location) =>
       path.some((subPath) => subPath === location);
 
-    if (importsFrom('server') || importsFrom('client')) {
-      return new Error('Cannot import module ' + id + ' \n (cross-boundary import) \n see: https://guide.meteor.com/structure.html#special-directories');
+    if (importsFrom('client')) {
+      return new Error(
+        `Unable to import on the client a module from a server directory: ${id}
+        (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories`
+      );
+    }
+
+    if (importsFrom('server')) {
+      return new Error(
+        `Unable to import on the server a module from a client directory: ${id}
+        (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories`
+      );
     }
 
     return new Error("Cannot find module '" + id + "'");
