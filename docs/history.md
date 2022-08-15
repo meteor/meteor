@@ -305,6 +305,21 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 
 #### Independent Releases
 
+## v2.5.8, 2022-05-31
+
+#### Highlights
+
+* Fixed 2.5.7 MongoDB error
+* Patch release to update Node and npm versions.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
 ## v2.5.7, 2022-05-31
 
 #### Highlights
