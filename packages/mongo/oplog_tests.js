@@ -163,3 +163,19 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
     }
   ]
 );
+
+Tinytest.addAsync("mongo-livedata - oplog - _onFailover", async () => {
+  const driver = MongoInternals.defaultRemoteCollectionDriver();
+  const failoverPromise = new Promise(resolve => {
+    driver.mongo._onFailover(() => {
+      resolve();
+    });
+  });
+
+  await driver.mongo.db.admin().command({
+    replSetStepDown: 1,
+    force: true
+  });
+
+  return failoverPromise;
+});
