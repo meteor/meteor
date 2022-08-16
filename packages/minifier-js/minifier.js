@@ -1,14 +1,12 @@
 let terser;
 
-const terserMinify = async (source, options, callback = () => {}) => {
+const terserMinify = async (source, options, callback) => {
   terser = terser || Npm.require("terser");
   try {
     const result = await terser.minify(source, options);
-    callback(null, result);
-    return result;
+    return callback(null, result);
   } catch (e) {
-    callback(e);
-    throw e;
+    return callback(e);
   }
 };
 
