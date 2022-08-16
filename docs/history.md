@@ -28,13 +28,13 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Fixing bug where tokes where never expiring. [PR](https://github.com/meteor/meteor/pull/12088).
 * `accounts-base@2.2.4`:
   - Adding new options to the `Accounts.config()` method: `loginTokenExpirationHours` and `tokenSequenceLength`. [PR](https://github.com/meteor/meteor/pull/12088).
-* `minifiser-css@1.6.1`:
+* `minifier-css@1.6.1`:
   - Update postcss package to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12136).
-* `minifiser-js@2.7.5`:
+* `minifier-js@2.7.5`:
   - Update terser package due to security fixes and to take advantage of terser improvements. [PR](https://github.com/meteor/meteor/pull/12137).
-* `standard-minifiser-css@1.8.2`:
+* `standard-minifier-css@1.8.2`:
   - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12141).
-* `standard-minifiser-js@2.8.1`:
+* `standard-minifier-js@2.8.1`:
   - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12142).
 
 ## v2.7.3, 2022-05-31
