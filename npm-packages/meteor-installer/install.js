@@ -1,4 +1,5 @@
 const { DownloaderHelper } = require('node-downloader-helper');
+const HttpsProxyAgent = require('https-proxy-agent');
 const cliProgress = require('cli-progress');
 const Seven = require('node-7z');
 const path = require('path');
@@ -133,6 +134,15 @@ try {
 
 download();
 
+function generateProxyAgent() {
+  const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY;
+  if (!proxyUrl) {
+    return undefined;
+  }
+
+  return new HttpsProxyAgent(proxyUrl);
+}
+
 function download() {
   const start = Date.now();
   const downloadProgress = new cliProgress.SingleBar(
@@ -148,6 +158,9 @@ function download() {
     retry: { maxRetries: 5, delay: 5000 },
     override: true,
     fileName: tarGzName,
+    httpsRequestOptions: {
+      agent: generateProxyAgent()
+    }
   });
 
   dl.on('progress', ({ progress }) => {
