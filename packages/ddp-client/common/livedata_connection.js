@@ -554,6 +554,27 @@ export class Connection {
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
+   * @alias Meteor.callAsync
+   * @summary Invokes asynchronously a method passing any number of arguments.
+   * @locus Anywhere
+   * @param {string} name Name of method to invoke
+   * @param args Optional method arguments
+   */
+  async callAsync(name, ...args) {
+    return new Promise((resolve, reject) => {
+      this.call(name, ...args, (err, res) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(res);
+        }
+      });
+    });
+  }
+
+  /**
+   * @memberOf Meteor
+   * @importFromPackage meteor
    * @alias Meteor.apply
    * @summary Invoke a method passing an array of arguments.
    * @locus Anywhere
