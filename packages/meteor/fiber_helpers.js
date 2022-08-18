@@ -55,20 +55,19 @@ Meteor._SynchronousQueue = function () {
 
 var SQp = Meteor._SynchronousQueue.prototype;
 
-SQp.runTask = function (task) {
-  var self = this;
-
+const runTaskWithFibers = ({ task, self }) => {
   if (!self.safeToRunTask()) {
-    if (Fiber.current)
+    if (Fiber.current) {
       throw new Error("Can't runTask from another task in the same fiber");
-    else
-      throw new Error("Can only call runTask in a Fiber");
+    } else {
+      throw new Error('Can only call runTask in a Fiber');
+    }
   }
 
-  var fut = new Future;
-  var handle = {
-    task: Meteor.bindEnvironment(task, function (e) {
-      Meteor._debug("Exception from task", e);
+  const fut = new Future();
+  const handle = {
+    task: Meteor.bindEnvironment(task, function(e) {
+      Meteor._debug('Exception from task', e);
       throw e;
     }),
     future: fut,
@@ -79,6 +78,31 @@ SQp.runTask = function (task) {
   // Yield. We'll get back here after the task is run (and will throw if the
   // task throws).
   fut.wait();
+};
+
+const runTask = ({ task, self }) => {
+  const handle = {
+    task: Meteor.bindEnvironment(task, function(e) {
+      Meteor._debug('Exception from task', e);
+      throw e;
+    }),
+    name: task.name,
+  };
+
+  self._taskHandles.push(handle);
+  self._scheduleRun();
+  // TODO Check this comment:
+  //  Yield. We'll get back here after the task is run (and will throw if the
+  //  task throws).
+};
+
+SQp.runTask = function(task) {
+  const self = this;
+  if (global._isFibersEnabled()) {
+    runTaskWithFibers({ task, self });
+    return;
+  }
+  runTask({ task, self });
 };
 
 SQp.queueTask = function (task) {
@@ -121,10 +145,14 @@ SQp._scheduleRun = function () {
     return;
 
   self._runningOrRunScheduled = true;
-  setImmediate(function () {
-    Fiber(function () {
-      self._run();
-    }).run();
+  setImmediate(function() {
+    if (global._isFibersEnabled()) {
+      Fiber(function() {
+        self._run();
+      }).run();
+      return;
+    }
+    self._run();
   });
 };
 
@@ -142,32 +170,45 @@ SQp._run = function () {
   }
   var taskHandle = self._taskHandles.shift();
 
-  // Run the task.
-  self._currentTaskFiber = Fiber.current;
   var exception = undefined;
-  try {
-    taskHandle.task();
-  } catch (err) {
-    if (taskHandle.future) {
-      // We'll throw this exception through runTask.
-      exception = err;
-    } else {
-      Meteor._debug("Exception in queued task", err);
+  function runFiber() {
+    self._currentTaskFiber = Fiber.current;
+    try {
+      taskHandle.task();
+    } catch (err) {
+      if (taskHandle.future) {
+        // We'll throw this exception through runTask.
+        exception = err;
+      } else {
+        Meteor._debug("Exception in queued task", err);
+      }
+    }
+    self._currentTaskFiber = undefined;
+  }
+  // Run the task.
+  if (Meteor._isFibersEnabled()) {
+    runFiber();
+  } else {
+    try {
+      taskHandle.task();
+    } catch (err) {
+        Meteor._debug("Exception in queued task", err);
     }
   }
-  self._currentTaskFiber = undefined;
 
   // Soon, run the next task, if there is any.
   self._runningOrRunScheduled = false;
   self._scheduleRun();
 
-  // If this was queued with runTask, let the runTask call return (throwing if
-  // the task threw).
-  if (taskHandle.future) {
-    if (exception)
-      taskHandle.future['throw'](exception);
-    else
-      taskHandle.future['return']();
+  if (Meteor._isFibersEnabled()) {
+    // If this was queued with runTask, let the runTask call return (throwing if
+    // the task threw).
+    if (taskHandle.future) {
+      if (exception)
+        taskHandle.future['throw'](exception);
+      else
+        taskHandle.future['return']();
+    }
   }
 };
 

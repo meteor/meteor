@@ -1,7 +1,7 @@
 DDPServer = {};
 
 var Fiber = Npm.require('fibers');
-
+const ASL = global.asyncLocalStorage;
 // Publication strategies define how we handle data from published cursors at the collection level
 // This allows someone to:
 // - Choose a trade-off between client-server bandwidth and server memory usage
@@ -330,9 +330,9 @@ var Session = function (server, version, socket, options) {
   self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
-  Fiber(function () {
+  ASL.run({}, function () {
     self.startUniversalSubs();
-  }).run();
+  });
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
     // We no longer need the low level timeout because we have heartbeats.
@@ -557,9 +557,9 @@ Object.assign(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      Fiber(function () {
+      ASL.run({}, function () {
         self.heartbeat.messageReceived();
-      }).run();
+      });
     }
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
@@ -584,7 +584,7 @@ Object.assign(Session.prototype, {
         return;
       }
 
-      Fiber(function () {
+      ASL.run({}, function () {
         var blocked = true;
 
         var unblock = function () {
@@ -604,7 +604,7 @@ Object.assign(Session.prototype, {
         else
           self.sendError('Bad request', msg);
         unblock(); // in case the handler didn't already do it
-      }).run();
+      });
     };
 
     processNext();
@@ -1475,9 +1475,9 @@ Server = function (options = {}) {
             sendError("Already connected", msg);
             return;
           }
-          Fiber(function () {
+          ASL.run({}, function () {
             self._handleConnect(socket, msg);
-          }).run();
+          });
           return;
         }
 
@@ -1494,9 +1494,9 @@ Server = function (options = {}) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        Fiber(function () {
+        ASL.run({}, function () {
           socket._meteorSession.close();
-        }).run();
+        });
       }
     });
   });
@@ -1674,9 +1674,9 @@ Object.assign(Server.prototype, {
         // self.sessions to change while we're running this loop.
         self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
-            Fiber(function() {
+            ASL.run({}, function() {
               session._startSubscription(handler);
-            }).run();
+            });
           }
         });
       }

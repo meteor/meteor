@@ -485,10 +485,32 @@ var runMain = Profile("Run main()", function () {
   }
 });
 
-Fiber(function () {
-  Profile.run("Server startup", function () {
-    loadServerBundles();
-    callStartupHooks();
-    runMain();
+function startServerProcess() {
+  const { AsyncLocalStorage } = require('async_hooks');
+  global.asyncLocalStorage = new AsyncLocalStorage();
+
+  Profile.run('Server startup', function() {
+    // TODO the if around loadServerBundles should be enough
+    if (global._isFibersEnabled()) {
+      loadServerBundles();
+      callStartupHooks();
+      runMain();
+    } else {
+      global.asyncLocalStorage.run({}, () => {
+        loadServerBundles();
+        callStartupHooks();
+        runMain();
+      });
+    }
   });
-}).run();
+}
+
+if (global._isFibersEnabled()) {
+  Fiber(function() {
+    startServerProcess();
+  }).run();
+  return;
+} else {
+  startServerProcess();
+}
+

@@ -4,6 +4,12 @@ var Fiber = Npm.require('fibers');
 
 var nextSlot = 0;
 
+const getStore = () => global.asyncLocalStorage.getStore();
+const getValueFromStore = key => getStore()[key];
+const updateStore = (key, value) => getStore()[key] = value;
+
+const IS_FIBERS_ENABLED = !!!process.env.DISABLE_FIBERS;
+
 Meteor._nodeCodeMustBeInFiber = function () {
   if (!Fiber.current) {
     throw new Error("Meteor code must always run within a Fiber. " +
@@ -31,10 +37,16 @@ var EVp = Meteor.EnvironmentVariable.prototype;
  * @memberof Meteor.EnvironmentVariable
  */
 EVp.get = function () {
-  Meteor._nodeCodeMustBeInFiber();
+  if (IS_FIBERS_ENABLED) {
+    Meteor._nodeCodeMustBeInFiber();
 
-  return Fiber.current._meteor_dynamics &&
-    Fiber.current._meteor_dynamics[this.slot];
+    return Fiber.current._meteor_dynamics &&
+        Fiber.current._meteor_dynamics[this.slot];
+  }
+
+  // TODO -> Meteor tools also use this, so the asyncLocalStorage there will be null.
+  // When handling with tools, we should always end up with the isFibersEnabled condition.
+  return global?.asyncLocalStorage?.getStore?.() || null;
 };
 
 // Most Meteor code ought to run inside a fiber, and the
@@ -56,16 +68,7 @@ EVp.getOrNullIfOutsideFiber = function () {
   return this.get();
 };
 
-/**
- * @summary Set the environment variable to the given value while a function is run
- * @locus Anywhere
- * @method withValue
- * @memberof Meteor.EnvironmentVariable
- * @param {Any} value Value the environment variable should be set to
- * @param {Function} func The function to run
- * @return {Any} Return value of function
- */
-EVp.withValue = function (value, func) {
+function withValuesWithFiber(value, func) {
   Meteor._nodeCodeMustBeInFiber();
 
   if (!Fiber.current._meteor_dynamics)
@@ -78,6 +81,34 @@ EVp.withValue = function (value, func) {
     return func();
   } finally {
     currentValues[this.slot] = saved;
+  }
+}
+/**
+ * @summary Set the environment variable to the given value while a function is run
+ * @locus Anywhere
+ * @method withValue
+ * @memberof Meteor.EnvironmentVariable
+ * @param {Any} value Value the environment variable should be set to
+ * @param {Function} func The function to run
+ * @return {Any} Return value of function
+ */
+EVp.withValue = function (value, func) {
+  if (IS_FIBERS_ENABLED) {
+    return withValuesWithFiber.call(this, value, func);
+  }
+
+  let meteorDynamics = getValueFromStore('_meteor_dynamics');
+  if (!meteorDynamics) {
+    meteorDynamics = [];
+    updateStore('_meteor_dynamics', []);
+  }
+
+  const saved = meteorDynamics[this.slot];
+  try {
+    updateStore('_meteor_dynamics', value);
+    return func();
+  } finally {
+    updateStore('_meteor_dynamics', saved);
   }
 };
 
@@ -107,51 +138,102 @@ EVp.withValue = function (value, func) {
  * @locus Anywhere
  * @memberOf Meteor
  * @param {Function} func Function that is wrapped
- * @param {Function} onException 
+ * @param {Function} onException
  * @param {Object} _this Optional `this` object against which the original function will be invoked
  * @return {Function} The wrapped function
  */
 Meteor.bindEnvironment = function (func, onException, _this) {
-  Meteor._nodeCodeMustBeInFiber();
-
-  var dynamics = Fiber.current._meteor_dynamics;
-  var boundValues = dynamics ? dynamics.slice() : [];
-
-  if (!onException || typeof(onException) === 'string') {
-    var description = onException || "callback of async function";
-    onException = function (error) {
-      Meteor._debug(
-        "Exception in " + description + ":",
-        error
-      );
-    };
-  } else if (typeof(onException) !== 'function') {
-    throw new Error('onException argument must be a function, string or undefined for Meteor.bindEnvironment().');
+  if (IS_FIBERS_ENABLED) {
+    return bindEnvironmentWithFibers({ func, onException, _this });
   }
 
-  return function (/* arguments */) {
-    var args = Array.prototype.slice.call(arguments);
+  const savedValues = getValueFromStore('_meteor_dynamics');
+  const boundValues = savedValues ? savedValues.slice() : [];
 
-    var runWithEnvironment = function () {
-      var savedValues = Fiber.current._meteor_dynamics;
-      try {
-        // Need to clone boundValues in case two fibers invoke this
-        // function at the same time
-        Fiber.current._meteor_dynamics = boundValues.slice();
-        var ret = func.apply(_this, args);
-      } catch (e) {
-        // note: callback-hook currently relies on the fact that if onException
-        // throws and you were originally calling the wrapped callback from
-        // within a Fiber, the wrapped call throws.
-        onException(e);
-      } finally {
-        Fiber.current._meteor_dynamics = savedValues;
-      }
-      return ret;
-    };
+  return function(/* arguments */) {
+    const args = Array.prototype.slice.call(arguments);
 
-    if (Fiber.current)
-      return runWithEnvironment();
-    Fiber(runWithEnvironment).run();
+    const runWithEnvironment = handleRunWithEnvironment({
+      args,
+      _this,
+      func,
+      onException,
+      savedValues,
+      boundValues,
+      handleUpdate(values) {
+        updateStore('_meteor_dynamics', values);
+      },
+    });
+
+    runWithEnvironment();
   };
 };
+
+const handleRunWithEnvironment = ({
+                                  args,
+                                  _this,
+                                  savedValues,
+                                  boundValues,
+                                  handleUpdate,
+                                  onException,
+                                  func,
+}) => () => {
+  let handleException = onException;
+
+  if (!onException || typeof handleException === 'string') {
+    const description = handleException || 'callback of async function';
+    handleException = function(error) {
+      Meteor._debug('Exception in ' + description + ':', error);
+    };
+  } else if (typeof handleException !== 'function') {
+    throw new Error(
+        'onException argument must be a function, string or undefined for Meteor.bindEnvironment().'
+    );
+  }
+
+  let ret;
+  try {
+    // Need to clone boundValues in case two fibers invoke this
+    // function at the same time
+    handleUpdate(boundValues.slice());
+
+    ret = func.apply(_this, args);
+  } catch (e) {
+    // TODO check the scenario from this comment when we don't have a Fiber
+    // note: callback-hook currently relies on the fact that if onException
+    // throws and you were originally calling the wrapped callback from
+    // within a Fiber, the wrapped call throws.
+    handleException(e);
+  } finally {
+    handleUpdate(savedValues);
+  }
+  return ret;
+};
+
+function bindEnvironmentWithFibers({ func, onException, _this }) {
+  Meteor._nodeCodeMustBeInFiber();
+
+  // to keep the function scope and don't lose the Fiber.current reference
+  const fibersCurrent = Fiber.current;
+
+  const savedValues = fibersCurrent._meteor_dynamics;
+  const boundValues = savedValues ? savedValues.slice() : [];
+
+  return function(/* arguments */) {
+    const args = Array.prototype.slice.call(arguments);
+    const runWithEnvironment = handleRunWithEnvironment({
+      args,
+      _this,
+      func,
+      onException,
+      savedValues,
+      boundValues,
+      handleUpdate(values) {
+        fibersCurrent._meteor_dynamics = values;
+      },
+    });
+
+    if (Fiber.current) return runWithEnvironment();
+    Fiber(runWithEnvironment).run();
+  };
+}

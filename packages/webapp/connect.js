@@ -1,6 +1,10 @@
 import npmConnect from "connect";
 
 export function connect(...connectArgs) {
+  if (!Meteor._isFibersEnabled()) {
+    return npmConnect.apply(this, connectArgs);
+  }
+
   const handlers = npmConnect.apply(this, connectArgs);
   const originalUse = handlers.use;
 
