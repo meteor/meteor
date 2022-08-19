@@ -5,6 +5,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('ecmascript');
+  api.use('zodern:types');
   api.export('Random');
   api.mainModule('main_client.js', 'client');
   api.mainModule('main_server.js', 'server');
