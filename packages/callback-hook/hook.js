@@ -99,7 +99,7 @@ export class Hook {
     // Invoking bindEnvironment'd callbacks outside of a Fiber in Node doesn't
     // run them to completion (and exceptions thrown from onException are not
     // propagated), so we need to be in a Fiber.
-    if (Meteor._isFibersEnabled()) {
+    if (Meteor._isFibersEnabled) {
       Meteor._nodeCodeMustBeInFiber();
     }
 

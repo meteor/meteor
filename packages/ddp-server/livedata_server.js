@@ -330,7 +330,7 @@ var Session = function (server, version, socket, options) {
   self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
-  ASL.run({}, function () {
+  ASL.run(Meteor._getAslStore, function () {
     self.startUniversalSubs();
   });
 
@@ -557,7 +557,7 @@ Object.assign(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      ASL.run({}, function () {
+      ASL.run(Meteor._getAslStore, function () {
         self.heartbeat.messageReceived();
       });
     }
@@ -584,7 +584,7 @@ Object.assign(Session.prototype, {
         return;
       }
 
-      ASL.run({}, function () {
+      ASL.run(Meteor._getAslStore, function () {
         var blocked = true;
 
         var unblock = function () {
@@ -1475,7 +1475,7 @@ Server = function (options = {}) {
             sendError("Already connected", msg);
             return;
           }
-          ASL.run({}, function () {
+          ASL.run(Meteor._getAslStore, function () {
             self._handleConnect(socket, msg);
           });
           return;
@@ -1494,7 +1494,7 @@ Server = function (options = {}) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        ASL.run({}, function () {
+        ASL.run(Meteor._getAslStore, function () {
           socket._meteorSession.close();
         });
       }
@@ -1674,7 +1674,7 @@ Object.assign(Server.prototype, {
         // self.sessions to change while we're running this loop.
         self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
-            ASL.run({}, function() {
+            ASL.run(Meteor._getAslStore, function() {
               session._startSubscription(handler);
             });
           }

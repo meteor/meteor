@@ -98,7 +98,7 @@ const runTask = ({ task, self }) => {
 
 SQp.runTask = function(task) {
   const self = this;
-  if (global._isFibersEnabled()) {
+  if (Meteor._isFibersEnabled) {
     runTaskWithFibers({ task, self });
     return;
   }
@@ -146,13 +146,16 @@ SQp._scheduleRun = function () {
 
   self._runningOrRunScheduled = true;
   setImmediate(function() {
-    if (global._isFibersEnabled()) {
+    if (Meteor._isFibersEnabled) {
       Fiber(function() {
         self._run();
       }).run();
       return;
     }
-    self._run();
+
+    global.asyncLocalStorage.run(Meteor._getAslStore(), () => {
+      self._run();
+    });
   });
 };
 
@@ -186,7 +189,7 @@ SQp._run = function () {
     self._currentTaskFiber = undefined;
   }
   // Run the task.
-  if (Meteor._isFibersEnabled()) {
+  if (Meteor._isFibersEnabled) {
     runFiber();
   } else {
     try {
@@ -200,7 +203,7 @@ SQp._run = function () {
   self._runningOrRunScheduled = false;
   self._scheduleRun();
 
-  if (Meteor._isFibersEnabled()) {
+  if (Meteor._isFibersEnabled) {
     // If this was queued with runTask, let the runTask call return (throwing if
     // the task threw).
     if (taskHandle.future) {

@@ -1,14 +1,13 @@
-// Fiber-aware implementation of dynamic scoping, for use on the server
+/**
+ * Fiber-aware implementation of dynamic scoping, for use on the server
+ *
+ * If we are using Fiber, we store/update/fetch the context from the current Fiber.
+ * Else, we fetch from the AsyncLocalStorage.
+ */
 
 var Fiber = Npm.require('fibers');
 
 var nextSlot = 0;
-
-const getStore = () => global.asyncLocalStorage.getStore();
-const getValueFromStore = key => getStore()[key];
-const updateStore = (key, value) => getStore()[key] = value;
-
-const IS_FIBERS_ENABLED = !!!process.env.DISABLE_FIBERS;
 
 Meteor._nodeCodeMustBeInFiber = function () {
   if (!Fiber.current) {
@@ -37,16 +36,14 @@ var EVp = Meteor.EnvironmentVariable.prototype;
  * @memberof Meteor.EnvironmentVariable
  */
 EVp.get = function () {
-  if (IS_FIBERS_ENABLED) {
+  if (Meteor._isFibersEnabled) {
     Meteor._nodeCodeMustBeInFiber();
 
     return Fiber.current._meteor_dynamics &&
         Fiber.current._meteor_dynamics[this.slot];
   }
 
-  // TODO -> Meteor tools also use this, so the asyncLocalStorage there will be null.
-  // When handling with tools, we should always end up with the isFibersEnabled condition.
-  return global?.asyncLocalStorage?.getStore?.() || null;
+  return Meteor._getValueFromAslStore("_meteor_dynamics")?.[this.slot] || null;
 };
 
 // Most Meteor code ought to run inside a fiber, and the
@@ -63,7 +60,7 @@ EVp.get = function () {
 // returns null rather than throwing when called from outside a Fiber. (On the
 // client, it is identical to get().)
 EVp.getOrNullIfOutsideFiber = function () {
-  if (!Fiber.current)
+  if (!Fiber.current || !Meteor._isFibersEnabled)
     return null;
   return this.get();
 };
@@ -93,22 +90,22 @@ function withValuesWithFiber(value, func) {
  * @return {Any} Return value of function
  */
 EVp.withValue = function (value, func) {
-  if (IS_FIBERS_ENABLED) {
+  if (Meteor._isFibersEnabled) {
     return withValuesWithFiber.call(this, value, func);
   }
 
-  let meteorDynamics = getValueFromStore('_meteor_dynamics');
+  let meteorDynamics = Meteor._getValueFromAslStore('_meteor_dynamics');
   if (!meteorDynamics) {
     meteorDynamics = [];
-    updateStore('_meteor_dynamics', []);
+    Meteor._updateAslStore('_meteor_dynamics', []);
   }
 
   const saved = meteorDynamics[this.slot];
   try {
-    updateStore('_meteor_dynamics', value);
+    Meteor._updateAslStore('_meteor_dynamics', value);
     return func();
   } finally {
-    updateStore('_meteor_dynamics', saved);
+    Meteor._updateAslStore('_meteor_dynamics', saved);
   }
 };
 
@@ -143,12 +140,12 @@ EVp.withValue = function (value, func) {
  * @return {Function} The wrapped function
  */
 Meteor.bindEnvironment = function (func, onException, _this) {
-  if (IS_FIBERS_ENABLED) {
+  if (Meteor._isFibersEnabled) {
     return bindEnvironmentWithFibers({ func, onException, _this });
   }
 
-  const savedValues = getValueFromStore('_meteor_dynamics');
-  const boundValues = savedValues ? savedValues.slice() : [];
+  const savedValues = Meteor._getValueFromAslStore('_meteor_dynamics');
+  const boundValues = Array.isArray(savedValues) ? savedValues.slice() : [];
 
   return function(/* arguments */) {
     const args = Array.prototype.slice.call(arguments);
@@ -161,7 +158,7 @@ Meteor.bindEnvironment = function (func, onException, _this) {
       savedValues,
       boundValues,
       handleUpdate(values) {
-        updateStore('_meteor_dynamics', values);
+        Meteor._updateAslStore('_meteor_dynamics', values);
       },
     });
 
