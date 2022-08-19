@@ -18,12 +18,16 @@ Package.onUse(function(api) {
     bare: true
   });
 
-  api.addFiles("modern.js", "modern");
-  api.addFiles("legacy.js", "legacy");
-  api.addFiles("server.js", "server");
-  api.addFiles("profile.js");
+  api.addFiles(['./errors/cannotImportFrom.js',
+    './errors/cannotFindMeteorPackage.js']);
+  api.addFiles('modern.js', 'modern');
+  api.addFiles('legacy.js', 'legacy');
+  api.addFiles('server.js', 'server');
+  api.addFiles('profile.js');
+  api.addFiles('verifyErrors.js');
 
-  api.export("meteorInstall");
+  api.export('meteorInstall');
+  api.export('verifyErrors');
 });
 
 Package.onTest(function(api) {
