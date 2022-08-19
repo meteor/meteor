@@ -11,12 +11,12 @@ Tinytest.add('modules - meteor/ - error', function (test) {
 
 Tinytest.add('modules - client calling server', function (test) {
   const require = meteorInstall();
-  test.throws(require('./../server/main.js'), `Unable to import on the client a module from a server directory: './../server/main.js'
-       (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories`);
+  test.throws(require('./../server/main.js'), 'Unable to import on the client a module from a server directory: ' + id + ' \n (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories`'
+  );
 });
 
-Tinytest.add('modules - server - error', function (test) {
+Tinytest.add('modules - server calling client', function (test) {
   const require = meteorInstall();
-  test.throws(require('./../client/main.js'), `Unable to import on the server a module from a client directory: './../client/main.js'
-       (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories`);
+  test.throws(require('./../client/main.js'), 'Unable to import on the server a module from a client directory: ' + id + ' \n (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories`'
+  );
 });
