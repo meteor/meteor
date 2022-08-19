@@ -548,7 +548,10 @@ export class Connection {
     if (args.length && typeof args[args.length - 1] === 'function') {
       callback = args.pop();
     }
-    return this.apply(name, args, callback);
+    if (Meteor.isServer && !callback) {
+      return Promise.await(this._apply(name, args, callback));
+    }
+    return this._apply(name, args, callback);
   }
 
   /**
@@ -568,6 +571,13 @@ export class Connection {
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply(name, args, options, callback) {
+    if (Meteor.isServer && !callback) {
+      return Promise.await(this._apply(name, args, options, callback));
+    }
+    return this._apply(name, args, options, callback);
+  }
+
+  async _apply(name, args, options, callback) {
     const self = this;
 
     // We were passed 3 arguments. They may be either (name, args, options)
@@ -647,7 +657,7 @@ export class Connection {
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
-        stubReturnValue = DDP._CurrentMethodInvocation.withValue(
+        stubReturnValue = await DDP._CurrentMethodInvocation.withValueAsync(
           invocation,
           () => {
             if (Meteor.isServer) {

@@ -762,16 +762,16 @@ Object.assign(Session.prototype, {
           }
         }
 
-        resolve(DDPServer._CurrentWriteFence.withValue(
+        resolve(Promise.await(DDPServer._CurrentWriteFence.withValueAsync(
           fence,
-          () => DDP._CurrentMethodInvocation.withValue(
+          () => DDP._CurrentMethodInvocation.withValueAsync(
             invocation,
             () => maybeAuditArgumentChecks(
               handler, invocation, msg.params,
               "call to '" + msg.method + "'"
             )
           )
-        ));
+        )));
       });
 
       function finish() {

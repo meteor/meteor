@@ -81,6 +81,31 @@ EVp.withValue = function (value, func) {
   }
 };
 
+/**
+ * @summary Set the environment variable to the given value while a function is run
+ * @locus Anywhere
+ * @method withValueAsync
+ * @memberof Meteor.EnvironmentVariable
+ * @param {Any} value Value the environment variable should be set to
+ * @param {Function} func The function to run
+ * @return {Any} Return value of function
+ */
+EVp.withValueAsync = async function (value, func) {
+  Meteor._nodeCodeMustBeInFiber();
+
+  if (!Fiber.current._meteor_dynamics)
+    Fiber.current._meteor_dynamics = [];
+  var currentValues = Fiber.current._meteor_dynamics;
+
+  var saved = currentValues[this.slot];
+  try {
+    currentValues[this.slot] = value;
+    return await func();
+  } finally {
+    currentValues[this.slot] = saved;
+  }
+};
+
 // Meteor application code is always supposed to be run inside a
 // fiber. bindEnvironment ensures that the function it wraps is run from
 // inside a fiber and ensures it sees the values of Meteor environment
@@ -107,7 +132,7 @@ EVp.withValue = function (value, func) {
  * @locus Anywhere
  * @memberOf Meteor
  * @param {Function} func Function that is wrapped
- * @param {Function} onException 
+ * @param {Function} onException
  * @param {Object} _this Optional `this` object against which the original function will be invoked
  * @return {Function} The wrapped function
  */
