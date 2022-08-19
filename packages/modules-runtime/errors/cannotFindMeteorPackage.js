@@ -3,8 +3,8 @@
  * @param id{string}
  * @return {Error}
  */
-export const cannotFindMeteorPackage = (id) => {
-  const packageName = id.split('/', 2)[1];
+cannotFindMeteorPackage = function(id) {
+  var packageName = id.split('/', 2)[1];
   return new Error(
     'Cannot find package "' + packageName + '". ' +
     'Try "meteor add ' + packageName + '".'

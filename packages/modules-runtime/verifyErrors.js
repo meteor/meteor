@@ -1,21 +1,21 @@
-import * as E from './errors';
 
 /**
  *
  * @param id{string}
+ * @param parentId{string}
+ * @param err {Error}
  */
-export const verifyErrors = (id) => {
+verifyErrors = function (id, parentId,err)  {
   if (id && id.startsWith('meteor/')) {
-    throw E.cannotFindMeteorPackage(id);
+    throw cannotFindMeteorPackage(id);
   }
-  if (E.cannotImport(id)
-    .from('client')) {
-    throw E.cannotImport(id)
-      .fromClient();
+  if (cannotImport(id).from('client')) {
+    throw cannotImport(id).fromClient();
   }
-  if (E.cannotImport(id)
-    .from('server')) {
-    throw E.cannotImport(id)
-      .fromServer();
+  if (cannotImport(id).from('server')) {
+    throw cannotImport(id).fromServer();
+  }
+  if (err) {
+    throw err;
   }
 };
