@@ -12,6 +12,7 @@ import { normalizeProjection } from "./mongo_utils";
 const path = require("path");
 const util = require("util");
 
+/** @type {import('mongodb')} */
 var MongoDB = NpmModuleMongodb;
 var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
@@ -140,7 +141,7 @@ var replaceTypes = function (document, atomTransformer) {
 };
 
 
-MongoConnection = async function (url, options) {
+MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
   self._observeMultiplexers = {};
@@ -177,65 +178,31 @@ MongoConnection = async function (url, options) {
     });
 
   self.db = null;
-  // We keep track of the ReplSet's primary, so that we can trigger hooks when
-  // it changes.  The Node driver's joined callback seems to fire way too
-  // often, which is why we need to track it ourselves.
-  self._primary = null;
   self._oplogHandle = null;
   self._docFetcher = null;
 
-  const connect = util.promisify(MongoDB.MongoClient.connect);
-  const client = await connect(
-    url,
-    mongoOptions);
+  self.client = new MongoDB.MongoClient(url, mongoOptions);
+  self.db = self.client.db();
 
-  var db = client.db();
-
-  try {
-    const helloDocument = await db.admin().command({hello: 1});
-    // First, figure out what the current primary is, if any.
-    if (helloDocument.primary) {
-      self._primary = helloDocument.primary;
+  self.client.on('serverDescriptionChanged', Meteor.bindEnvironment(event => {
+    // When the connection is no longer against the primary node, execute all
+    // failover hooks. This is important for the driver as it has to re-pool the
+    // query when it happens.
+    if (
+      event.previousDescription.type !== 'RSPrimary' &&
+      event.newDescription.type === 'RSPrimary'
+    ) {
+      self._onFailoverHook.each(callback => {
+        callback();
+        return true;
+      });
     }
-  }catch(_){
-    // ismaster command is supported on older mongodb versions
-    const isMasterDocument = await db.admin().command({ismaster:1});
-    // First, figure out what the current primary is, if any.
-    if (isMasterDocument.primary) {
-      self._primary = isMasterDocument.primary;
-    }
-  }
-
-  client.topology.on(
-    'joined', Meteor.bindEnvironment(function (kind, doc) {
-      if (kind === 'primary') {
-        if (doc.primary !== self._primary) {
-          self._primary = doc.primary;
-          self._onFailoverHook.each(function (callback) {
-            callback();
-            return true;
-          });
-        }
-      } else if (doc.me === self._primary) {
-        // The thing we thought was primary is now something other than
-        // primary.  Forget that we thought it was primary.  (This means
-        // that if a server stops being primary and then starts being
-        // primary again without another server becoming primary in the
-        // middle, we'll correctly count it as a failover.)
-        self._primary = null;
-      }
-    }));
-
-  // Wait for the connection to be successful (throws on failure) and assign the
-  // results (`client` and `db`) to `self`.
-  Object.assign(self, { client, db });
+  }));
 
   if (options.oplogUrl && ! Package['disable-oplog']) {
-    self._oplogHandle = await new OplogHandle(options.oplogUrl, self.db.databaseName);
+    self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
-
-  return self;
 };
 
 MongoConnection.prototype.close = function() {

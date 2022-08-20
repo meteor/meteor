@@ -1,11 +1,9 @@
 import { MongoExitCodes } from '../utils/mongo-exit-codes';
-
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var runLog = require('./run-log.js');
 var child_process = require('child_process');
-
 var _ = require('underscore');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 var Console = require('../console/console.js').Console;
@@ -695,7 +693,6 @@ var launchMongo = function(options) {
           }
       );
 
-      yieldingMethod(client, 'connect');
       const db = client.db('meteor');
 
       if (stopped) {
