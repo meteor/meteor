@@ -91,9 +91,6 @@ const runTask = ({ task, self }) => {
 
   self._taskHandles.push(handle);
   self._scheduleRun();
-  // TODO Check this comment:
-  //  Yield. We'll get back here after the task is run (and will throw if the
-  //  task throws).
 };
 
 SQp.runTask = function(task) {
@@ -145,18 +142,25 @@ SQp._scheduleRun = function () {
     return;
 
   self._runningOrRunScheduled = true;
-  setImmediate(function() {
-    if (Meteor._isFibersEnabled) {
+
+  /**
+   * FIXME:
+   *  Here seems like we should defer and also yield while the handler is not
+   *  finished...
+   *  For autoupdate, for example, swapping to just running it sync won't make a difference,
+   *  but maybe there is another place that would? (DDP/Web)-Server?
+   */
+  if (Meteor._isFibersEnabled) {
+    setImmediate(function() {
       Fiber(function() {
         self._run();
       }).run();
-      return;
-    }
-
+    });
+  } else {
     global.asyncLocalStorage.run(Meteor._getAslStore(), () => {
       self._run();
     });
-  });
+  }
 };
 
 SQp._run = function () {
