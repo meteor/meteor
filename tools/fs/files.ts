@@ -1432,6 +1432,9 @@ export function readBufferWithLengthAndOffset(
       if (count !== length) {
         throw new Error("couldn't read entire resource");
       }
+    } catch (err: any) {
+      err.message = `Error while reading ${filename}: ` + err.message;
+      throw err;
     } finally {
       close(fd);
     }

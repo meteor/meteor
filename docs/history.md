@@ -1,3 +1,52 @@
+## 2.7.3, 2022-05-31
+
+#### Highlights
+* `accounts-passwordless@2.1.2`:
+  - Throwing an error when the login tokens are not generated well calling requestLoginTokenForUser. [PR](https://github.com/meteor/meteor/pull/12047/files).
+* Node updated to v14.19.3
+* npm update to v6.14.17
+* Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `accounts-passwordless@2.1.2`:
+  - Throwing an error when the login tokens are not generated well calling requestLoginTokenForUser. [PR](https://github.com/meteor/meteor/pull/12047/files).
+* `babel-runtime@1.5.1`:
+  - Make client 25kb smaller. [PR](https://github.com/meteor/meteor/pull/12051).
+* Node updated to v14.19.3
+* npm update to v6.14.17
+* Fix win style paths being added to watch sets.
+* Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
+
+## 2.7.2, 2022-05-10
+
+#### Highlights
+
+#### Breaking Changes
+N/A
+#### Migration Steps
+
+#### Meteor Version Release
+
+* `mongo@1.15.0`
+  - New option `Meteor.settings.packages.mongo.reCreateIndexOnOptionMismatch` for case when an index with the same name, but different options exists it will be re-created. 
+  - If there is an error on index creation Meteor will output a better message naming the collection and index where the error occured. [PR](https://github.com/meteor/meteor/pull/11995).
+* `modern-browsers@0.1.8`
+  - New api `getMinimumBrowserVersions` to access the `minimumBrowserVersions`. [PR](https://github.com/meteor/meteor/pull/11998).
+* `socket-stream-client@0.5.0`
+  - Ability to disable sockjs on client side. [PR](https://github.com/meteor/meteor/pull/12007/).
+* `meteor-node-stubs@1.2.3`:
+  - Fix using meteor-node-stubs in IE. [PR](https://github.com/meteor/meteor/pull/12014).
+* New ARCH environment variable that permit users to set uname info. [PR](https://github.com/meteor/meteor/pull/12020).
+* Skeleton dependencies updated.
+* New Tailwind skeleton. [PR](https://github.com/meteor/meteor/pull/12000).
+
+#### Independent Releases
+
 ## v2.7.1, 2022-03-31
 
 #### Highlights
@@ -31,6 +80,7 @@
 ## v2.7, 2022-03-24
 
 #### Highlights
+* Bump node version to 14.19.1
 * TailwindCSS 3.x support
 * Typescript `4.5.4` upgrade
 * New core package: `accounts-2fa`
@@ -226,6 +276,25 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - Custom message support for `throws`
 
 #### Independent Releases
+
+## v2.5.7, 2022-05-31
+
+#### Highlights
+
+* Patch release to update Node and npm versions.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
+
+#### Meteor Version Release
+
+* `meteor-tool@2.5.7`
+  - Patch release to update Node and npm versions.
 
 ## v2.5.6, 2022-01-25
 

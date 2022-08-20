@@ -163,8 +163,9 @@ export class ClientStream extends StreamClientCommon {
     };
 
     const hasSockJS = typeof SockJS === "function";
+    const disableSockJS = __meteor_runtime_config__.DISABLE_SOCKJS;
 
-    this.socket = hasSockJS
+    this.socket = hasSockJS && !disableSockJS
       // Convert raw URL to SockJS URL each time we open a connection, so
       // that we can connect to random hostnames and get around browser
       // per-host connection limits.

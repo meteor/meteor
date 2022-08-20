@@ -129,7 +129,7 @@ Galaxy is a distributed system that runs on Amazon AWS. If you understand what i
 
 In order to deploy to Galaxy, you'll need to [sign up for an account](https://www.meteor.com/galaxy/signup), and separately provision a MongoDB database (see below).
 
-Once you've done that, it's easy to [deploy to Galaxy](http://galaxy-guide.meteor.com/deploy-guide.html). You need to [add some environment variables to your settings file](http://galaxy-guide.meteor.com/environment-variables.html) to point it at your MongoDB, and you can deploy with:
+Once you've done that, it's easy to [deploy to Galaxy](https://galaxy-guide.meteor.com/deploy-to-galaxy.html). You need to [add some environment variables to your settings file](http://galaxy-guide.meteor.com/environment-variables.html) to point it at your MongoDB, and you can deploy with:
 
 ```bash
 DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
@@ -185,15 +185,16 @@ Depending on the version of Meteor you are using, you should install the proper 
 
 > If you use a mis-matched version of Node when deploying your application, you will encounter errors!
 
-You can then run the application by invoking `node` with a `ROOT_URL`, and `MONGO_URL`.  These instructions are also available in the `README` file found in the root of the bundle you built above.
+You can then run the application by invoking `node` with a `ROOT_URL`, `PORT`, and `MONGO_URL`.  These instructions are also available in the `README` file found in the root of the bundle you built above.
 
 ```bash
 cd my_build_bundle_directory
 (cd programs/server && npm install)
-MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com node main.js
+MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=3000 node main.js
 ```
 
 * `ROOT_URL` is the base URL for your Meteor project
+* `PORT` is the port at which the application is running 
 * `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/) supplied by the MongoDB provider.
 
 

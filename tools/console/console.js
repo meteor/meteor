@@ -96,7 +96,7 @@ const FALLBACK_STATUS = '';
 // WITH RAYS. We intentionally want to NOT use a space-like character: it should
 // be obvious that something has gone wrong if this ever gets printed.
 const SPACE_REPLACEMENT = '\u2600';
-// In Javascript, replace only replaces the first occurance and this is the
+// In Javascript, replace only replaces the first occurrence and this is the
 // proposed alternative.
 const replaceAll = (str, search, replace) => str.split(search).join(replace);
 
