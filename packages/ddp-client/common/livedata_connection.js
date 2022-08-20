@@ -530,6 +530,10 @@ export class Connection {
     });
   }
 
+  isAsyncCall(name) {
+    return this._methodHandlers[name]?.constructor?.name === 'AsyncFunction';
+  }
+
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
@@ -548,10 +552,10 @@ export class Connection {
     if (args.length && typeof args[args.length - 1] === 'function') {
       callback = args.pop();
     }
-    if (Meteor.isServer && !callback) {
-      return Promise.await(this._apply(name, args, callback));
+    if (this.isAsyncCall(name)) {
+      return this.applyAsync(name, args, callback);
     }
-    return this._apply(name, args, callback);
+    return this.apply(name, args, callback);
   }
 
   /**
@@ -571,13 +575,52 @@ export class Connection {
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply(name, args, options, callback) {
-    if (Meteor.isServer && !callback) {
-      return Promise.await(this._apply(name, args, options, callback));
+    const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
+
+    if (stubOptions.hasStub) {
+      if (!stubOptions.alreadyInSimulation) this._saveOriginals();
+      try {
+        stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
+          .withValue(invocation, stubInvocation);
+      } catch (e) {
+        stubOptions.exception = e;
+      }
     }
-    return this._apply(name, args, options, callback);
+    return this._apply(name, stubOptions, args, options, callback);
   }
 
-  async _apply(name, args, options, callback) {
+  /**
+   * @memberOf Meteor
+   * @importFromPackage meteor
+   * @alias Meteor.applyAsync
+   * @summary Invoke a method passing an array of arguments.
+   * @locus Anywhere
+   * @param {String} name Name of method to invoke
+   * @param {EJSONable[]} args Method arguments
+   * @param {Object} [options]
+   * @param {Boolean} options.wait (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
+   * @param {Function} options.onResultReceived (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
+   * @param {Boolean} options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
+   * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
+   * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
+   * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
+   */
+  async applyAsync(name, args, options, callback) {
+    const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
+    console.log('applyAsync', {name, stubOptions});
+    if (stubOptions.hasStub) {
+      if (!stubOptions.alreadyInSimulation) this._saveOriginals();
+      try {
+        stubOptions.stubReturnValue = await DDP._CurrentMethodInvocation
+          .withValueAsync(invocation, stubInvocation);
+      } catch (e) {
+        stubOptions.exception = e;
+      }
+    }
+    return this._apply(name, stubOptions, args, options, callback);
+  }
+
+  _apply(name, stubCallValue, args, options, callback) {
     const self = this;
 
     // We were passed 3 arguments. They may be either (name, args, options)
@@ -602,80 +645,7 @@ export class Connection {
     // while because of a wait method).
     args = EJSON.clone(args);
 
-    const enclosing = DDP._CurrentMethodInvocation.get();
-    const alreadyInSimulation = enclosing && enclosing.isSimulation;
-
-    // Lazily generate a randomSeed, only if it is requested by the stub.
-    // The random streams only have utility if they're used on both the client
-    // and the server; if the client doesn't generate any 'random' values
-    // then we don't expect the server to generate any either.
-    // Less commonly, the server may perform different actions from the client,
-    // and may in fact generate values where the client did not, but we don't
-    // have any client-side values to match, so even here we may as well just
-    // use a random seed on the server.  In that case, we don't pass the
-    // randomSeed to save bandwidth, and we don't even generate it to save a
-    // bit of CPU and to avoid consuming entropy.
-    let randomSeed = null;
-    const randomSeedGenerator = () => {
-      if (randomSeed === null) {
-        randomSeed = DDPCommon.makeRpcSeed(enclosing, name);
-      }
-      return randomSeed;
-    };
-
-    // Run the stub, if we have one. The stub is supposed to make some
-    // temporary writes to the database to give the user a smooth experience
-    // until the actual result of executing the method comes back from the
-    // server (whereupon the temporary writes to the database will be reversed
-    // during the beginUpdate/endUpdate process.)
-    //
-    // Normally, we ignore the return value of the stub (even if it is an
-    // exception), in favor of the real return value from the server. The
-    // exception is if the *caller* is a stub. In that case, we're not going
-    // to do a RPC, so we use the return value of the stub as our return
-    // value.
-
-    let stubReturnValue;
-    let exception;
-    const stub = self._methodHandlers[name];
-    if (stub) {
-      const setUserId = userId => {
-        self.setUserId(userId);
-      };
-
-      const invocation = new DDPCommon.MethodInvocation({
-        isSimulation: true,
-        userId: self.userId(),
-        setUserId: setUserId,
-        randomSeed() {
-          return randomSeedGenerator();
-        }
-      });
-
-      if (!alreadyInSimulation) self._saveOriginals();
-
-      try {
-        // Note that unlike in the corresponding server code, we never audit
-        // that stubs check() their arguments.
-        stubReturnValue = await DDP._CurrentMethodInvocation.withValueAsync(
-          invocation,
-          () => {
-            if (Meteor.isServer) {
-              // Because saveOriginals and retrieveOriginals aren't reentrant,
-              // don't allow stubs to yield.
-              return Meteor._noYieldsAllowed(() => {
-                // re-clone, so that the stub can't affect our caller's values
-                return stub.apply(invocation, EJSON.clone(args));
-              });
-            } else {
-              return stub.apply(invocation, EJSON.clone(args));
-            }
-          }
-        );
-      } catch (e) {
-        exception = e;
-      }
-    }
+    const { hasStub, exception, stubReturnValue, alreadyInSimulation, randomSeed } = stubCallValue;
 
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
@@ -692,7 +662,7 @@ export class Connection {
     // We only create the methodId here because we don't actually need one if
     // we're already in a simulation
     const methodId = '' + self._nextMethodId++;
-    if (stub) {
+    if (hasStub) {
       self._retrieveAndStoreOriginals(methodId);
     }
 
@@ -748,8 +718,8 @@ export class Connection {
     }
 
     // Send the randomSeed only if we used it
-    if (randomSeed !== null) {
-      message.randomSeed = randomSeed;
+    if (randomSeed.value !== null) {
+      message.randomSeed = randomSeed.value;
     }
 
     const methodInvoker = new MethodInvoker({
@@ -791,6 +761,80 @@ export class Connection {
       return future.wait();
     }
     return options.returnStubValue ? stubReturnValue : undefined;
+  }
+
+
+  _stubCall(name, args) {
+    // Run the stub, if we have one. The stub is supposed to make some
+    // temporary writes to the database to give the user a smooth experience
+    // until the actual result of executing the method comes back from the
+    // server (whereupon the temporary writes to the database will be reversed
+    // during the beginUpdate/endUpdate process.)
+    //
+    // Normally, we ignore the return value of the stub (even if it is an
+    // exception), in favor of the real return value from the server. The
+    // exception is if the *caller* is a stub. In that case, we're not going
+    // to do a RPC, so we use the return value of the stub as our return
+    // value.
+    const self = this;
+    const enclosing = DDP._CurrentMethodInvocation.get();
+    const stub = self._methodHandlers[name];
+    const alreadyInSimulation = enclosing?.isSimulation;
+    const randomSeed = { value: null};
+
+    const defaultReturn = {
+      alreadyInSimulation, randomSeed
+    };
+    if (!stub) {
+      return { ...defaultReturn, hasStub: false };
+    }
+
+    // Lazily generate a randomSeed, only if it is requested by the stub.
+    // The random streams only have utility if they're used on both the client
+    // and the server; if the client doesn't generate any 'random' values
+    // then we don't expect the server to generate any either.
+    // Less commonly, the server may perform different actions from the client,
+    // and may in fact generate values where the client did not, but we don't
+    // have any client-side values to match, so even here we may as well just
+    // use a random seed on the server.  In that case, we don't pass the
+    // randomSeed to save bandwidth, and we don't even generate it to save a
+    // bit of CPU and to avoid consuming entropy.
+
+    const randomSeedGenerator = () => {
+      if (randomSeed.value === null) {
+        randomSeed.value = DDPCommon.makeRpcSeed(enclosing, name);
+      }
+      return randomSeed.value;
+    };
+
+    const setUserId = userId => {
+      self.setUserId(userId);
+    };
+
+    const invocation = new DDPCommon.MethodInvocation({
+      isSimulation: true,
+      userId: self.userId(),
+      setUserId: setUserId,
+      randomSeed() {
+        return randomSeedGenerator();
+      }
+    });
+
+    // Note that unlike in the corresponding server code, we never audit
+    // that stubs check() their arguments.
+    const stubInvocation = () => {
+        if (Meteor.isServer) {
+          // Because saveOriginals and retrieveOriginals aren't reentrant,
+          // don't allow stubs to yield.
+          return Meteor._noYieldsAllowed(() => {
+            // re-clone, so that the stub can't affect our caller's values
+            return stub.apply(invocation, EJSON.clone(args));
+          });
+        } else {
+          return stub.apply(invocation, EJSON.clone(args));
+        }
+    };
+    return { ...defaultReturn, hasStub: true, stubInvocation, invocation };
   }
 
   // Before calling a method stub, prepare all stores to track changes and allow
