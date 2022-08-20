@@ -983,6 +983,10 @@ package or release. Use '<name>@local' to see information from a
 local version. Running from a package source directory with no arguments will
 show information for that package version.
 
+The name for meteor release information is METEOR.
+
+  meteor show METEOR - will show all recommended meteor releases
+
 By default, Meteor will not show more than five versions, and will not
 show experimental release versions. Meteor will also hide packages that
 are known to not be compatible with  Meteor 0.9.0 and later. Running with the

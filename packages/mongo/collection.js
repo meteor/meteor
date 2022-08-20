@@ -96,15 +96,7 @@ Mongo.Collection = function Collection(name, options) {
   else if (Meteor.isClient) this._connection = Meteor.connection;
   else this._connection = Meteor.server;
 
-  if (options._driver) {
-    if (typeof options._driver.open !== 'function') {
-      throw new Error('If you are creating the driver manually using new ' +
-        'MongoInternals.RemoteCollectionDriver then you need to use ' +
-        'Promise.await() or await on it since it is async in recent ' +
-        'versions of Meteor. ' +
-        'Read more: https://docs.meteor.com/changelog.html.');
-    }
-  } else {
+  if (!options._driver) {
     // XXX This check assumes that webapp is loaded so that Meteor.server !==
     // null. We should fully support the case of "want to use a Mongo-backed
     // collection from Node code without webapp", but we don't yet.
@@ -115,7 +107,7 @@ Mongo.Collection = function Collection(name, options) {
       typeof MongoInternals !== 'undefined' &&
       MongoInternals.defaultRemoteCollectionDriver
     ) {
-      options._driver = MongoInternals.getDefaultRemoteCollectionDriver();
+      options._driver = MongoInternals.defaultRemoteCollectionDriver();
     } else {
       const { LocalCollectionDriver } = require('./local_collection_driver.js');
       options._driver = LocalCollectionDriver;
@@ -903,10 +895,3 @@ ASYNC_COLLECTION_METHODS.forEach(methodName => {
     return Promise.resolve(this[methodName](...args));
   };
 });
-
-if (Meteor.isServer) {
-  const userOptions = Meteor.settings?.packages?.mongo || {};
-  if (!userOptions?.skipStartupConnection && !process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) {
-    Promise.await(MongoInternals.defaultRemoteCollectionDriver());
-  }
-}

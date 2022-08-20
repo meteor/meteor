@@ -1,9 +1,7 @@
-var _ = require('underscore');
 var selftest = require('../tool-testing/selftest.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var Sandbox = selftest.Sandbox;
 var testUtils = require('../tool-testing/test-utils.js');
-var config = require('../meteor-services/config.js');
 
 // This is not an end-to-end test for Cordova hot code push, but this test
 // is for the issue that we observed where the value of the

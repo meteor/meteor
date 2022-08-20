@@ -125,6 +125,8 @@ Create a basic [Apollo + React](https://www.apollographql.com/) app.
 
 `--blaze`
 
+Create a basic [Blaze](https://blazejs.org/) app.
+
 `--vue`
 
 Create a basic vue-based app. See the [Vue guide](https://guide.meteor.com/vue.html) 
@@ -134,40 +136,45 @@ for more information.
 
 Create a basic [Svelte](https://svelte.dev/) app.
 
+`--tailwind`
+
+Create a basic [React](https://reactjs.org) + [Tailwind CSS](https://tailwindcss.com) app.
+
 **Packages**
 
-|   | Default (`--react`) | `--bare`  | `--full`  | `--minimal` | `--blaze`| `--apollo` | `--vue` | `--svelte` |
-|---|:-------------------:|:---------:|:---------:|:-----------:|:--------:|:----------:|:-------:|:----------:|
-|[autopublish](https://atmospherejs.com/meteor/autopublish)|X| | | |X| | |X|
-|[akryum:vue-component](https://atmospherejs.com/akryum/vue-component)| | | | | | |X| |
-|[apollo](https://atmospherejs.com/meteor/apollo)| | | | | |X| | |
-|[blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)| | |X| |X| | | |
-|[ecmascript](https://atmospherejs.com/meteor/ecmascript)|X|X|X|X|X|X|X|X|
-|[es5-shim](https://atmospherejs.com/meteor/es5-shim)|X|X|X|X|X|X|X|X|
-|[hot-module-replacement](https://atmospherejs.com/meteor/hot-module-replacement)|X| | | |X|X| | |
-|[insecure](https://atmospherejs.com/meteor/insecure)|X| | | |X| | |X|
-|[johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook/publication-collector)| | |X| | |X| |
-|[jquery](https://atmospherejs.com/meteor/jquery)| | |X| |X| | |
-|[ostrio:flow-router-extra](https://atmospherejs.com/meteor/ostrio/flow-router-extra)| | |X|| | | | |
-|[less](https://atmospherejs.com/meteor/less)| | |X| | | | | |
-|[meteor](https://atmospherejs.com/meteor/meteor)| | | |X| | | | |
-|[meteor-base](https://atmospherejs.com/meteor/meteor-base)|X|X|X| |X|X|X|X|
-|[mobile-experience](https://atmospherejs.com/meteor/mobile-experience)|X|X|X| |X|X|X|X|
-|[mongo](https://atmospherejs.com/meteor/mongo)|X|X|X| |X|X|X|X|
-|[meteortesting:mocha](https://atmospherejs.com/meteortesting/mocha)| | |X| | | |X|
-|[reactive-var](https://atmospherejs.com/meteor/reactive-var)|X|X|X| |X|X|X|X|
-|[rdb:svelte-meteor-data](https://atmospherejs.com/rdb/svelte-meteor-data)| | | | | | | |X|
-|[server-render](https://atmospherejs.com/meteor/server-render)| | | |X| |X|X| |
-|[shell-server](https://atmospherejs.com/meteor/shell-server)| |X| |X|X|X|X|X
-|[standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)|X|X|X|X|X|X|X|X|
-|[standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)|X|X|X|X|X|X|X|X|
-|[static-html](https://atmospherejs.com/meteor/static-html)| |X| |X| |X|X|X|
-|[svelte:compiler](https://atmospherejs.com/svelte/compiler)| | | | | | | |X|
-|[swydo:graphql](https://atmospherejs.com/swydo/graphql)| | | | | |X| | |
-|[tracker](https://atmospherejs.com/meteor/tracker)| |X|X| |X| |X| |
-|[typescript](https://atmospherejs.com/meteor/typescript)|X|X|X|X|X|X|X|X|
-|[webapp](https://atmospherejs.com/meteor/webapp)| | | |X| | | | |
-|[react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)|X| | | | | | | |
+|                                                                                                      | Default (`--react`) | `--bare`  | `--full`  | `--minimal` | `--blaze`| `--apollo` | `--vue` | `--svelte` | `--tailwind` |
+|------------------------------------------------------------------------------------------------------|:-------------------:|:---------:|:---------:|:-----------:|:--------:|:----------:|:-------:|:----------:|:------------:|
+| [autopublish](https://atmospherejs.com/meteor/autopublish)                                           |X| | | |X| | |X|X|
+| [akryum:vue-component](https://atmospherejs.com/akryum/vue-component)                                | | | | | | |X| | |
+| [apollo](https://atmospherejs.com/meteor/apollo)                                                     | | | | | |X| | | |
+| [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)                         | | |X| |X| | | | |
+| [ecmascript](https://atmospherejs.com/meteor/ecmascript)                                             |X|X|X|X|X|X|X|X|X|
+| [es5-shim](https://atmospherejs.com/meteor/es5-shim)                                                 |X|X|X|X|X|X|X|X|X|
+| [hot-module-replacement](https://atmospherejs.com/meteor/hot-module-replacement)                     |X| | | |X|X| | |X|
+| [insecure](https://atmospherejs.com/meteor/insecure)                                                 |X| | | |X| | |X|X|
+| [johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook/publication-collector) | | |X| | |X| | |
+| [jquery](https://atmospherejs.com/meteor/jquery)                                                     | | |X| |X| | | |
+| [ostrio:flow-router-extra](https://atmospherejs.com/meteor/ostrio/flow-router-extra)                 | | |X|| | | | | |
+| [less](https://atmospherejs.com/meteor/less)                                                         | | |X| | | | | | |
+| [meteor](https://atmospherejs.com/meteor/meteor)                                                     | | | |X| | | | | |
+| [meteor-base](https://atmospherejs.com/meteor/meteor-base)                                           |X|X|X| |X|X|X|X|X|
+| [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)                               |X|X|X| |X|X|X|X|X|
+| [mongo](https://atmospherejs.com/meteor/mongo)                                                       |X|X|X| |X|X|X|X|X|
+| [meteortesting:mocha](https://atmospherejs.com/meteortesting/mocha)                                  | | |X| | | |X| |
+| [reactive-var](https://atmospherejs.com/meteor/reactive-var)                                         |X|X|X| |X|X|X|X|X|
+| [rdb:svelte-meteor-data](https://atmospherejs.com/rdb/svelte-meteor-data)                            | | | | | | | |X| |
+| [server-render](https://atmospherejs.com/meteor/server-render)                                       | | | |X| |X|X| | |
+| [shell-server](https://atmospherejs.com/meteor/shell-server)                                         | |X| |X|X|X|X|X |
+| [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)                       |X|X|X|X|X|X|X|X|X|
+| [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)                         |X|X|X|X|X|X|X|X|X|
+| [static-html](https://atmospherejs.com/meteor/static-html)                                           | |X| |X| |X|X|X| |
+| [svelte:compiler](https://atmospherejs.com/svelte/compiler)                                          | | | | | | | |X| |
+| [swydo:graphql](https://atmospherejs.com/swydo/graphql)                                              | | | | | |X| | | |
+| [tailwindcss](https://tailwindcss.com)                                                               | |X|X| |X| |X| |X|
+| [tracker](https://atmospherejs.com/meteor/tracker)                                                   | |X|X| |X| |X| | |
+| [typescript](https://atmospherejs.com/meteor/typescript)                                             |X|X|X|X|X|X|X|X|X|
+| [webapp](https://atmospherejs.com/meteor/webapp)                                                     | | | |X| | | | | |
+| [react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)                               |X| | | | | | | |X|
 
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
@@ -451,6 +458,16 @@ regular expression.
 
 Shows more information about a specific package or release: name, summary, the
 usernames of its maintainers, and, if specified, its homepage and git URL.
+
+Get information on meteor recommended releases:
+```
+meteor show METEOR
+```
+
+Get information on all meteor releases (including intermediate releases)"
+```
+meteor show --show-all METEOR
+```
 
 
 <h2 id="meteorpublish">meteor publish</h2>

@@ -260,6 +260,10 @@ export class SourceProcessorSet {
       _.isEmpty(this._legacyHandlers);
   }
 
+  isConflictsAllowed() {
+    return this._allowConflicts;
+  }
+
   // Returns an options object suitable for passing to
   // `watch.readAndWatchDirectory` to find source files processed by this
   // SourceProcessorSet.

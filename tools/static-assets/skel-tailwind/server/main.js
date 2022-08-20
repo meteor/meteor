@@ -1,31 +1,31 @@
 import { Meteor } from 'meteor/meteor';
 import { LinksCollection } from '/imports/api/links';
 
-function insertLink({ title, url }) {
-  LinksCollection.insert({title, url, createdAt: new Date()});
+async function insertLink({ title, url }) {
+  await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
 }
 
-Meteor.startup(() => {
+Meteor.startup(async () => {
   // If the Links collection is empty, add some data.
-  if (LinksCollection.find().count() === 0) {
-    insertLink({
+  if (await LinksCollection.find().countAsync() === 0) {
+    await insertLink({
       title: 'Do the Tutorial',
-      url: 'https://www.meteor.com/tutorials/react/creating-an-app'
+      url: 'https://www.meteor.com/tutorials/react/creating-an-app',
     });
 
-    insertLink({
+    await insertLink({
       title: 'Follow the Guide',
-      url: 'http://guide.meteor.com'
+      url: 'http://guide.meteor.com',
     });
 
-    insertLink({
+    await insertLink({
       title: 'Read the Docs',
-      url: 'https://docs.meteor.com'
+      url: 'https://docs.meteor.com',
     });
 
-    insertLink({
+    await insertLink({
       title: 'Discussions',
-      url: 'https://forums.meteor.com'
+      url: 'https://forums.meteor.com',
     });
   }
 });
