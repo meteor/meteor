@@ -607,7 +607,6 @@ export class Connection {
    */
   async applyAsync(name, args, options, callback) {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
-    console.log('applyAsync', {name, stubOptions});
     if (stubOptions.hasStub) {
       if (!stubOptions.alreadyInSimulation) this._saveOriginals();
       try {
