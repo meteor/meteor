@@ -1,15 +1,9 @@
 var _ = require('underscore');
-var sourcemap = require('source-map');
-
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var watch = require('../fs/watch');
 var buildmessage = require('../utils/buildmessage.js');
-var meteorNpm = require('./meteor-npm.js');
-import Builder from './builder.js';
 var archinfo = require('../utils/archinfo');
-var catalog = require('../packaging/catalog/catalog.js');
-var packageVersionParser = require('../packaging/package-version-parser.js');
 var compiler = require('./compiler.js');
 var Profile = require('../tool-env/profile').Profile;
 
@@ -964,10 +958,21 @@ Object.assign(PackageSource.prototype, {
           // If this architecture has a mainModule defined in
           // package.json, it's an error if _findSources doesn't find that
           // module. If no mainModule is defined, anything goes.
-          let missingMainModule = !! mainModule;
+          // If the source processor set allows conflicts (such as when linting)
+          // then sources will not be the same files used to bundle the app.
+          let missingMainModule = !! mainModule &&
+            !sourceProcessorSet.isConflictsAllowed();
+          
+          // Similar to the main module, when conflicts are allowed
+          // these sources won't be used to build the app so the order
+          // isn't important, and is difficult to accurately create when
+          // there are conflicts
+          let sorter = sourceProcessorSet.isConflictsAllowed() ?
+            () => 0 :
+            loadOrderSort(sourceProcessorSet, arch);
 
           const sources = self._findSources(findOptions).sort(
-            loadOrderSort(sourceProcessorSet, arch)
+            sorter
           ).map(relPath => {
             if (relPath === mainModule) {
               missingMainModule = false;

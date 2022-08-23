@@ -49,7 +49,8 @@ Current Reviewers:
   - [@aquinoit](https://github.com/aquinoit)
   - [@Grubba27](https://github.com/Grubba27)
 - [@filipenevola](https://github.com/filipenevola)
-- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@Grubba27](https://github.com/Grubba27)
+  - [@StorytellerCZ](https://github.com/StorytellerCZ)
 - [@zodern](https://github.com/zodern)
 - [@CaptainN](https://github.com/CaptainN)
 - [@radekmie](https://github.com/radekmie)
@@ -72,6 +73,7 @@ Current Core Committers:
 - [@edimarlnx](https://github.com/edimarlnx)
 - [@matheusccastroo](https://github.com/matheusccastroo)
 - [@eduwr](https://github.com/eduwr)
+- [@Grubba27](https://github.com/Grubba27)
 
 ### Tracking project work
 
