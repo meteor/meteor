@@ -147,7 +147,7 @@ EmailTest.resetNextDevModeMailId = function () {
   nextDevModeMailId = 0;
 };
 
-const devModeSendAsync = async function (mail, stream) {
+const devModeSendAsync = function (mail, stream) {
   return new Promise((resolve, reject) => {
     let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
 
@@ -305,7 +305,5 @@ Email.sendAsync = async function (options) {
     smtpSend(transport, email);
     return;
   }
-  return devModeSendAsync(email, stream).catch((err) => {
-    throw err;
-  });
+  return devModeSendAsync(email, stream);
 };
