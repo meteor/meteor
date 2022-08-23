@@ -762,7 +762,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
-    return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
+    return Meteor._isFibersEnabled ? Meteor.wrapAsync(self["_" + method]).apply(self, arguments) : self[`_${method}`].apply(self, arguments);
   };
 });
 
@@ -1019,8 +1019,153 @@ MongoConnection.prototype._createSynchronousCursor = function(
     dbCursor = dbCursor.hint(cursorOptions.hint);
   }
 
-  return new SynchronousCursor(dbCursor, cursorDescription, options);
+  return Meteor._isFibersEnabled ? new SynchronousCursor(dbCursor, cursorDescription, options) : new AsynchronousCursor(dbCursor, cursorDescription, options);
 };
+
+/**
+ * This is just a light wrapper for the cursor. The goal here is to ensure compatibility even if
+ * there are breaking changes on the MongoDB driver.
+ *
+ * @constructor
+ */
+class AsynchronousCursor {
+  constructor(dbCursor, cursorDescription, options) {
+    this._cursor = dbCursor;
+    this._cursorDescription = cursorDescription
+
+    this._selfForIteration = options.selfForIteration || this;
+    if (options.useTransform && cursorDescription.options.transform) {
+      this._transform = LocalCollection.wrapTransform(
+          cursorDescription.options.transform);
+    } else {
+      this._transform = null;
+    }
+
+    this._visitedIds = new LocalCollection._IdMap;
+  }
+
+  [Symbol.iterator]() {
+    return this._cursor[Symbol.iterator]();
+  }
+
+  // Returns a Promise for the next object from the underlying cursor (before
+  // the Mongo->Meteor type replacement).
+  async _rawNextObjectPromise() {
+    try {
+      return this._cursor.next();
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Returns a Promise for the next object from the cursor, skipping those whose
+  // IDs we've already seen and replacing Mongo atoms with Meteor atoms.
+  async _nextObjectPromise () {
+    while (true) {
+      var doc = await this._rawNextObjectPromise();
+
+      if (!doc) return null;
+      doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
+
+      if (!this._cursorDescription.options.tailable && _.has(doc, '_id')) {
+        // Did Mongo give us duplicate documents in the same cursor? If so,
+        // ignore this one. (Do this before the transform, since transform might
+        // return some unrelated value.) We don't do this for tailable cursors,
+        // because we want to maintain O(1) memory usage. And if there isn't _id
+        // for some reason (maybe it's the oplog), then we don't do this either.
+        // (Be careful to do this for falsey but existing _id, though.)
+        if (this._visitedIds.has(doc._id)) continue;
+        this._visitedIds.set(doc._id, true);
+      }
+
+      if (this._transform)
+        doc = this._transform(doc);
+
+      return doc;
+    }
+  }
+
+  // Returns a promise which is resolved with the next object (like with
+  // _nextObjectPromise) or rejected if the cursor doesn't return within
+  // timeoutMS ms.
+  _nextObjectPromiseWithTimeout(timeoutMS) {
+    if (!timeoutMS) {
+      return this._nextObjectPromise();
+    }
+    const nextObjectPromise = this._nextObjectPromise();
+    const timeoutErr = new Error('Client-side timeout waiting for next object');
+    const timeoutPromise = new Promise((resolve, reject) => {
+      setTimeout(() => {
+        reject(timeoutErr);
+      }, timeoutMS);
+    });
+    return Promise.race([nextObjectPromise, timeoutPromise])
+        .catch((err) => {
+          if (err === timeoutErr) {
+            this.close();
+          }
+          throw err;
+        });
+  }
+
+  forEach(callback, thisArg) {
+    // Get back to the beginning.
+    this._rewind();
+
+    return this._cursor.forEach((doc, index) => {
+      callback.call(thisArg, doc, index)
+    }, this._selfForIteration);
+  }
+
+  async map(callback, thisArg) {
+    const results = [];
+
+    await this.forEach(async (doc, index) => {
+      results.push(await callback.call(thisArg, doc, index, this._selfForIteration));
+    });
+
+    return results;
+  }
+
+  _rewind() {
+    // known to be synchronous
+    this._cursor.rewind();
+
+    this._visitedIds = new LocalCollection._IdMap;
+  }
+
+  // Mostly usable for tailable cursors.
+  close() {
+    this._cursor.close();
+  }
+
+  fetch() {
+    return this._cursor.toArray();
+  }
+
+  /**
+   * FIXME: (node:34680) [MONGODB DRIVER] Warning: cursor.count is deprecated and will be
+   *  removed in the next major version, please use `collection.estimatedDocumentCount` or
+   *  `collection.countDocuments` instead.
+   */
+  count() {
+    return this._cursor.count();
+  }
+
+  // This method is NOT wrapped in Cursor.
+  getRawObjects(ordered) {
+    var self = this;
+    if (ordered) {
+      return self.fetch();
+    } else {
+      var results = new LocalCollection._IdMap;
+      self.forEach(function (doc) {
+        results.set(doc._id, doc);
+      });
+      return results;
+    }
+  }
+}
 
 var SynchronousCursor = function (dbCursor, cursorDescription, options) {
   var self = this;
@@ -1226,7 +1371,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
 
   var stopped = false;
   var lastTS;
-  var loop = function () {
+  const loopWithFibers = function () {
     var doc = null;
     while (true) {
       if (stopped)
@@ -1257,9 +1402,9 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
           newSelector.ts = {$gt: lastTS};
         }
         cursor = self._createSynchronousCursor(new CursorDescription(
-          cursorDescription.collectionName,
-          newSelector,
-          cursorDescription.options));
+            cursorDescription.collectionName,
+            newSelector,
+            cursorDescription.options));
         // Mongo failover takes many seconds.  Retry in a bit.  (Without this
         // setTimeout, we peg the CPU at 100% and never notice the actual
         // failover.
@@ -1268,8 +1413,50 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
       }
     }
   };
+  const loop = async function () {
+    var doc = null;
+    while (true) {
+      if (stopped)
+        return;
+      try {
+        doc = await cursor._nextObjectPromiseWithTimeout(timeoutMS);
+      } catch (err) {
+        // There's no good way to figure out if this was actually an error from
+        // Mongo, or just client-side (including our own timeout error). Ah
+        // well. But either way, we need to retry the cursor (unless the failure
+        // was because the observe got stopped).
+        doc = null;
+      }
+      // Since we awaited a promise above, we need to check again to see if
+      // we've been stopped before calling the callback.
+      if (stopped)
+        return;
+      if (doc) {
+        // If a tailable cursor contains a "ts" field, use it to recreate the
+        // cursor on error. ("ts" is a standard that Mongo uses internally for
+        // the oplog, and there's a special flag that lets you do binary search
+        // on it instead of needing to use an index.)
+        lastTS = doc.ts;
+        docCallback(doc);
+      } else {
+        var newSelector = _.clone(cursorDescription.selector);
+        if (lastTS) {
+          newSelector.ts = {$gt: lastTS};
+        }
+        cursor = self._createSynchronousCursor(new CursorDescription(
+          cursorDescription.collectionName,
+          newSelector,
+          cursorDescription.options));
+        // Mongo failover takes many seconds.  Retry in a bit.  (Without this
+        // setTimeout, we peg the CPU at 100% and never notice the actual
+        // failover.
+        setTimeout(loop, 100);
+        break;
+      }
+    }
+  };
 
-  Meteor.defer(loop);
+  Meteor.defer(Meteor._isFibersEnabled ? loopWithFibers : loop);
 
   return {
     stop: function () {

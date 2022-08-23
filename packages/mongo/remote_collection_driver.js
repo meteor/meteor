@@ -40,8 +40,8 @@ MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
   // to know about a database connection problem before the app starts. Doing so
   // in a `Meteor.startup` is fine, as the `WebApp` handles requests only after
   // all are finished.
-  Meteor.startup(() => {
-    Promise.await(driver.mongo.client.connect());
+  Meteor.startup(async () => {
+    await driver.mongo.client.connect();
   });
 
   return driver;

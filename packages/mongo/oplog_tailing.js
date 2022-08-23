@@ -213,23 +213,70 @@ Object.assign(OplogHandle.prototype, {
     self._oplogLastEntryConnection = new MongoConnection(
       self._oplogUrl, {maxPoolSize: 1});
 
+    if (Meteor._isFibersEnabled) {
+      return this._startTailingFibers();
+    }
+
+    self._oplogLastEntryConnection.db.admin().command(
+        { ismaster: 1 }, function(_, isMasterDoc) {
+          if (!(isMasterDoc && isMasterDoc.setName)) {
+            throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
+                "a Mongo replica set");
+          }
+
+          // Find the last oplog entry.
+          var lastOplogEntry = self._oplogLastEntryConnection.findOne(
+              OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
+
+          var oplogSelector = Object.assign({}, self._baseOplogSelector);
+          if (lastOplogEntry) {
+            // Start after the last entry that currently exists.
+            oplogSelector.ts = {$gt: lastOplogEntry.ts};
+            // If there are any calls to callWhenProcessedLatest before any other
+            // oplog entries show up, allow callWhenProcessedLatest to call its
+            // callback immediately.
+            self._lastProcessedTS = lastOplogEntry.ts;
+          }
+
+          var cursorDescription = new CursorDescription(
+              OPLOG_COLLECTION, oplogSelector, {tailable: true});
+
+          // Start tailing the oplog.
+          //
+          // We restart the low-level oplog query every 30 seconds if we didn't get a
+          // doc. This is a workaround for #8598: the Node Mongo driver has at least
+          // one bug that can lead to query callbacks never getting called (even with
+          // an error) when leadership failover occur.
+          self._tailHandle = self._oplogTailConnection.tail(
+              cursorDescription,
+              function (doc) {
+                self._entryQueue.push(doc);
+                self._maybeStartWorker();
+              },
+              TAIL_TIMEOUT
+          );
+        });
+  },
+
+  _startTailingFibers: function() {
+    const self = this;
     // Now, make sure that there actually is a repl set here. If not, oplog
     // tailing won't ever find anything!
     // More on the isMasterDoc
     // https://docs.mongodb.com/manual/reference/command/isMaster/
     var f = new Future;
     self._oplogLastEntryConnection.db.admin().command(
-      { ismaster: 1 }, f.resolver());
+        { ismaster: 1 }, f.resolver());
     var isMasterDoc = f.wait();
 
     if (!(isMasterDoc && isMasterDoc.setName)) {
       throw Error("$MONGO_OPLOG_URL must be set to the 'local' database of " +
-                  "a Mongo replica set");
+          "a Mongo replica set");
     }
 
     // Find the last oplog entry.
     var lastOplogEntry = self._oplogLastEntryConnection.findOne(
-      OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
+        OPLOG_COLLECTION, {}, {sort: {$natural: -1}, fields: {ts: 1}});
 
     var oplogSelector = _.clone(self._baseOplogSelector);
     if (lastOplogEntry) {
@@ -242,7 +289,7 @@ Object.assign(OplogHandle.prototype, {
     }
 
     var cursorDescription = new CursorDescription(
-      OPLOG_COLLECTION, oplogSelector, {tailable: true});
+        OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
     // Start tailing the oplog.
     //
@@ -251,12 +298,12 @@ Object.assign(OplogHandle.prototype, {
     // one bug that can lead to query callbacks never getting called (even with
     // an error) when leadership failover occur.
     self._tailHandle = self._oplogTailConnection.tail(
-      cursorDescription,
-      function (doc) {
-        self._entryQueue.push(doc);
-        self._maybeStartWorker();
-      },
-      TAIL_TIMEOUT
+        cursorDescription,
+        function (doc) {
+          self._entryQueue.push(doc);
+          self._maybeStartWorker();
+        },
+        TAIL_TIMEOUT
     );
     self._readyFuture.return();
   },
