@@ -560,10 +560,10 @@ Accounts.sendEnrollmentEmail = (userId, email, extraTokenData, extraParams) => {
 
 // Take token from sendResetPasswordEmail or sendEnrollmentEmail, change
 // the users password, and log them in.
-Meteor.methods({resetPassword: function (...args) {
+Meteor.methods({resetPassword: async function (...args) {
   const token = args[0];
   const newPassword = args[1];
-  return Accounts._loginMethod(
+  return await Accounts._loginMethod(
     this,
     "resetPassword",
     args,
@@ -712,9 +712,9 @@ Accounts.sendVerificationEmail = (userId, email, extraTokenData, extraParams) =>
 
 // Take token from sendVerificationEmail, mark the email as verified,
 // and log them in.
-Meteor.methods({verifyEmail: function (...args) {
+Meteor.methods({verifyEmail: async function (...args) {
   const token = args[0];
-  return Accounts._loginMethod(
+  return await Accounts._loginMethod(
     this,
     "verifyEmail",
     args,
@@ -911,9 +911,9 @@ const createUser = options => {
 };
 
 // method for create user. Requests come from the client.
-Meteor.methods({createUser: function (...args) {
+Meteor.methods({createUser: async function (...args) {
   const options = args[0];
-  return Accounts._loginMethod(
+  return await Accounts._loginMethod(
     this,
     "createUser",
     args,
