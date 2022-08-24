@@ -330,9 +330,15 @@ var Session = function (server, version, socket, options) {
   self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
-  ASL.run(Meteor._getAslStore, function () {
-    self.startUniversalSubs();
-  });
+  if (Meteor._isFibersEnabled) {
+    Fiber(function() {
+      self.startUniversalSubs();
+    }).run();
+  } else {
+    ASL.run(Meteor._getAslStore, function () {
+      self.startUniversalSubs();
+    });
+  }
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
     // We no longer need the low level timeout because we have heartbeats.
@@ -556,7 +562,11 @@ Object.assign(Session.prototype, {
     //
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
-    if (self.heartbeat) {
+    if (Meteor._isFibersEnabled && self.heartbeat) {
+      Fiber(function() {
+        self.heartbeat.messageReceived();
+      }).run();
+    } else if (self.heartbeat) {
       ASL.run(Meteor._getAslStore, function () {
         self.heartbeat.messageReceived();
       });
@@ -584,7 +594,7 @@ Object.assign(Session.prototype, {
         return;
       }
 
-      ASL.run(Meteor._getAslStore, function () {
+      function runHandlers() {
         var blocked = true;
 
         var unblock = function () {
@@ -604,7 +614,14 @@ Object.assign(Session.prototype, {
         else
           self.sendError('Bad request', msg);
         unblock(); // in case the handler didn't already do it
-      });
+      }
+
+      if (Meteor._isFibersEnabled) {
+        Fiber(runHandlers).run();
+        return;
+      }
+
+      ASL.run(Meteor._getAslStore, runHandlers);
     };
 
     processNext();
@@ -1475,9 +1492,17 @@ Server = function (options = {}) {
             sendError("Already connected", msg);
             return;
           }
-          ASL.run(Meteor._getAslStore, function () {
-            self._handleConnect(socket, msg);
-          });
+
+          if (Meteor._isFibersEnabled) {
+            Fiber(function() {
+              self._handleConnect(socket, msg);
+            }).run();
+          } else {
+            ASL.run(Meteor._getAslStore, function () {
+              self._handleConnect(socket, msg);
+            });
+          }
+
           return;
         }
 
@@ -1494,6 +1519,13 @@ Server = function (options = {}) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
+        if (Meteor._isFibersEnabled) {
+          Fiber(function() {
+            socket._meteorSession.close()
+          }).run();
+          return;
+        }
+
         ASL.run(Meteor._getAslStore, function () {
           socket._meteorSession.close();
         });
@@ -1674,6 +1706,13 @@ Object.assign(Server.prototype, {
         // self.sessions to change while we're running this loop.
         self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
+            if (Meteor._isFibersEnabled) {
+              Fiber(function() {
+                session._startSubscription(handler);
+              }).run();
+              return;
+            }
+
             ASL.run(Meteor._getAslStore, function() {
               session._startSubscription(handler);
             });
