@@ -285,8 +285,7 @@ Email.sendAsync = async function (options) {
 
   if (Email.customTransport) {
     const packageSettings = Meteor.settings.packages?.email || {};
-    Email.customTransport({ packageSettings, ...email });
-    return;
+    return Email.customTransport({ packageSettings, ...email });
   }
 
   const mailUrlEnv = process.env.MAIL_URL;
