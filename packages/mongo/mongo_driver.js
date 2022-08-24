@@ -1120,9 +1120,11 @@ class AsynchronousCursor {
   async map(callback, thisArg) {
     const results = [];
 
-    await this.forEach(async (doc, index) => {
-      results.push(await callback.call(thisArg, doc, index, this._selfForIteration));
-    });
+    let idx = 0;
+    for await (const doc of this._cursor) {
+      results.push(await callback.call(thisArg, doc, idx, this._selfForIteration))
+      idx++;
+    }
 
     return results;
   }
