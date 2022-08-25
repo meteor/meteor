@@ -564,10 +564,9 @@ if (Meteor.isClient) {
     });
 
     // send another methods (unknown on client)
-    const resultAsync = await conn.callAsync('do_something_else_async', 'sunday')
+    const resultAsync = conn.callAsync('do_something_else_async', 'sunday')
     test.isFalse(callback1Fired);
     test.isFalse(callback2Fired);
-    test.equal( resultAsync, 'foo');
 
     const message3 = JSON.parse(stream.sent.shift());
     test.isUndefined(message3.randomSeed);
@@ -601,6 +600,9 @@ if (Meteor.isClient) {
     test.equal(coll.find({ value: 'tuesday', _id: docId }).count(), 1);
     test.equal(counts, { added: 1, removed: 0, changed: 1, moved: 0 });
 
+    stream.receive({ msg: 'result', id: message3.id, result: 'foo' });
+    const resultFoo = await resultAsync;
+    test.equal(resultFoo, 'foo');
     handle.stop();
   });
 }
