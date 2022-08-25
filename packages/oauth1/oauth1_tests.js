@@ -17,8 +17,8 @@ const testPendingCredential = async (test, method) => {
     authenticate: "https://example.com/oauth/authenticate"
   };
 
-  OAuth1Binding.prototype.prepareRequestToken = () => {};
-  OAuth1Binding.prototype.prepareAccessToken = function() {
+  OAuth1Binding.prototype.prepareRequestToken = async () => {};
+  OAuth1Binding.prototype.prepareAccessToken = async function() {
     this.accessToken = twitterfooAccessToken;
     this.accessTokenSecret = twitterfooAccessTokenSecret;
   };
@@ -27,7 +27,7 @@ const testPendingCredential = async (test, method) => {
 
   try {
     // register a fake login service
-    OAuth.registerService(serviceName, 1, urls, query => ({
+    OAuth.registerService(serviceName, 1, urls, async query => ({
       serviceData: {
         id: twitterfooId,
         screenName: twitterfooName,
@@ -100,7 +100,7 @@ Tinytest.addAsync("oauth1 - pendingCredential is stored and can be retrieved (wi
   await testPendingCredential(test, "POST");
 });
 
-Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (with oauth encryption)", async test => {
+Tinytest.addAsync("oauth1 - pendingCredential is stored and can be retrieved (with oauth encryption)", async test => {
   try {
     OAuthEncryption.loadKey(Buffer.from([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
     await testPendingCredential(test, "GET");

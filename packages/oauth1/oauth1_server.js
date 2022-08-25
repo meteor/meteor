@@ -45,7 +45,7 @@ OAuth._requestHandlers['1'] = async (service, query, res) => {
     });
 
     // Get a request token to start auth process
-    oauthBinding.prepareRequestToken(callbackUrl);
+    await oauthBinding.prepareRequestToken(callbackUrl);
 
     // Keep track of request token so we can verify it on the next step
     OAuth._storeRequestToken(
@@ -91,10 +91,10 @@ OAuth._requestHandlers['1'] = async (service, query, res) => {
       // subsequent call to the `login` method will be immediate.
 
       // Get the access token for signing requests
-      oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
+      await oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
-      const oauthResult = service.handleOauthRequest(
+      const oauthResult = await service.handleOauthRequest(
         oauthBinding, { query: query });
 
       const credentialToken = OAuth._credentialTokenFromQuery(query);

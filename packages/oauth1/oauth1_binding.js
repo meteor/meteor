@@ -2,6 +2,14 @@ import crypto from 'crypto';
 import querystring from 'querystring';
 import urlModule from 'url';
 
+// TODO Create helper for use in all oauth packages
+
+const toFormUrlencoded = data => {
+  return Object.entries(data)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('&');
+};
+
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
 //
@@ -19,12 +27,12 @@ export class OAuth1Binding {
     this._urls = urls;
   }
 
-  prepareRequestToken(callbackUrl) {
+  async prepareRequestToken(callbackUrl) {
     const headers = this._buildHeader({
       oauth_callback: callbackUrl
     });
 
-    const response = this._call('POST', this._urls.requestToken, headers);
+    const response = await this._call({method: 'POST', url: this._urls.requestToken, headers});
     const tokens = querystring.parse(response.content);
 
     if (! tokens.oauth_callback_confirmed)
@@ -35,7 +43,7 @@ export class OAuth1Binding {
     this.requestTokenSecret = tokens.oauth_token_secret;
   }
 
-  prepareAccessToken(query, requestTokenSecret) {
+  async prepareAccessToken(query, requestTokenSecret) {
     // support implementations that use request token secrets. This is
     // read by this._call.
     //
@@ -50,7 +58,7 @@ export class OAuth1Binding {
       oauth_verifier: query.oauth_verifier
     });
 
-    const response = this._call('POST', this._urls.accessToken, headers);
+    const response = await this._call({ method: 'POST', url: this._urls.accessToken, headers });
     const tokens = querystring.parse(response.content);
 
     if (! tokens.oauth_token || ! tokens.oauth_token_secret) {
@@ -66,7 +74,7 @@ export class OAuth1Binding {
     this.accessTokenSecret = tokens.oauth_token_secret;
   }
 
-  call(method, url, params, callback) {
+  async callAsync(method, url, params, callback) {
     const headers = this._buildHeader({
       oauth_token: this.accessToken
     });
@@ -75,14 +83,29 @@ export class OAuth1Binding {
       params = {};
     }
 
-    return this._call(method, url, headers, params, callback);
+    return this._call({ method, url, headers, params, callback });
+  }
+
+  async getAsync(url, params, callback) {
+    return this.callAsync('GET', url, params, callback);
+  }
+
+  async postAsync(url, params, callback) {
+    return this.callAsync('POST', url, params, callback);
+  }
+
+  call(method, url, params, callback) {
+    // Require changes when remove Fibers. Exposed to public api.
+    return Promise.await(this.callAsync(method, url, params, callback));
   }
 
   get(url, params, callback) {
+    // Require changes when remove Fibers. Exposed to public api.
     return this.call('GET', url, params, callback);
   }
 
   post(url, params, callback) {
+    // Require changes when remove Fibers. Exposed to public api.
     return this.call('POST', url, params, callback);
   }
 
@@ -118,7 +141,7 @@ export class OAuth1Binding {
     return crypto.createHmac('SHA1', signingKey).update(signatureBase).digest('base64');
   };
 
-  _call(method, url, headers = {}, params = {}, callback) {
+  async _call({method, url, headers = {}, params = {}, callback}) {
     // all URLs to be functions to support parameters/customization
     if(typeof url === "function") {
       url = url(this);
@@ -141,29 +164,55 @@ export class OAuth1Binding {
 
     // Make a authorization string according to oauth1 spec
     const authString = this._getAuthHeaderString(headers);
-
     // Make signed request
-    try {
-      const response = HTTP.call(method, url, {
-        params,
+    return fetch(
+      method.toUpperCase() === 'POST' ? url : `${url}?${toFormUrlencoded(params)}`,
+      {
+        method,
         headers: {
-          Authorization: authString
+          Authorization: authString,
+          ...(method.toUpperCase() === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+        },
+        ...(method.toUpperCase() === 'POST' ? { body: toFormUrlencoded(params) } : {}),
+      }
+    )
+      .then((res) =>
+        res.text().then((content) => {
+          const responseHeaders = Array.from(res.headers.entries()).reduce(
+            (acc, [key, val]) => {
+              return { ...acc, [key.toLowerCase()]: val };
+            },
+            {}
+          );
+          const data = responseHeaders['content-type'].includes('application/json') ?
+            JSON.parse(content) : undefined;
+          return  {
+            content: data ? '' : content,
+            data,
+            headers: { ...responseHeaders, nonce: headers.oauth_nonce },
+            redirected: res.redirected,
+            ok: res.ok,
+            statusCode: res.status,
+          };
+        })
+      )
+      .then((response) => {
+        if (callback) {
+          callback(undefined, response);
         }
-      }, callback && ((error, response) => {
-        if (! error) {
-          response.nonce = headers.oauth_nonce;
+        return response;
+      })
+      .catch((err) => {
+        if (callback) {
+          callback(err);
         }
-        callback(error, response);
-      }));
-      // We store nonce so that JWTs can be validated
-      if (response)
-        response.nonce = headers.oauth_nonce;
-      return response;
-    } catch (err) {
-      throw Object.assign(new Error(`Failed to send OAuth1 request to ${url}. ${err.message}`),
-                     {response: err.response});
-    }
-  };
+        console.log({ err });
+        throw Object.assign(
+          new Error(`Failed to send OAuth1 request to ${url}. ${err.message}`),
+          { response: err.response }
+        );
+      });
+  }
 
   _encodeHeader(header) {
     return Object.keys(header).reduce((memo, key) => {
