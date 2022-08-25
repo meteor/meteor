@@ -163,3 +163,21 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
     }
   ]
 );
+
+// TODO this is commented for now, but we need to find out the cause
+// PR: https://github.com/meteor/meteor/pull/12057
+// Tinytest.addAsync("mongo-livedata - oplog - _onFailover", async () => {
+//   const driver = MongoInternals.defaultRemoteCollectionDriver();
+//   const failoverPromise = new Promise(resolve => {
+//     driver.mongo._onFailover(() => {
+//       resolve();
+//     });
+//   });
+//
+//   await driver.mongo.db.admin().command({
+//     replSetStepDown: 1,
+//     force: true
+//   });
+//
+//   return failoverPromise;
+// });

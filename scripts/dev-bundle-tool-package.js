@@ -20,7 +20,7 @@ var packageJson = {
     // found in dev-bundle-server-package.js.
     "meteor-promise": "0.9.0",
     fibers: "5.0.1",
-    "@meteorjs/reify": "0.23.0",
+    "@meteorjs/reify": "0.24.0",
     // So that Babel can emit require("@babel/runtime/helpers/...") calls.
     "@babel/runtime": "7.15.3",
     // For backwards compatibility with isopackets that still depend on

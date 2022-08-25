@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.15.0'
+  version: '1.16.0-beta280.5'
 });
 
 Npm.depends({
@@ -96,6 +96,7 @@ Package.onTest(function (api) {
   api.addFiles('upsert_compatibility_test.js', 'server');
   api.addFiles('allow_tests.js', ['client', 'server']);
   api.addFiles('collection_tests.js', ['client', 'server']);
+  api.addFiles('collection_async_tests.js', ['client', 'server']);
   api.addFiles('observe_changes_tests.js', ['client', 'server']);
   api.addFiles('oplog_tests.js', 'server');
   api.addFiles('oplog_v2_converter_tests.js', 'server');
