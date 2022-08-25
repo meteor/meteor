@@ -466,7 +466,7 @@ Tinytest.add('livedata stub - this', function(test) {
 });
 
 if (Meteor.isClient) {
-  Tinytest.add('livedata stub - methods', function(test) {
+  Tinytest.add('livedata stub - methods', async function(test) {
     const stream = new StubStream();
     const conn = newConnection(stream);
 
@@ -564,16 +564,11 @@ if (Meteor.isClient) {
     });
 
     // send another methods (unknown on client)
-    let callback3Fired = false;
-    conn.callAsync('do_something_else_async', 'sunday')
-      .then(function(res) {
-        callback3Fired = true;
-      });
+    const resultAsync = await conn.callAsync('do_something_else_async', 'sunday')
     test.isFalse(callback1Fired);
     test.isFalse(callback2Fired);
-    test.isFalse(callback3Fired);
+    test.equal( resultAsync, 'foo');
 
-    // test we still send a method request to server
     const message3 = JSON.parse(stream.sent.shift());
     test.isUndefined(message3.randomSeed);
     test.equal(message3, {
@@ -582,7 +577,6 @@ if (Meteor.isClient) {
       params: ['sunday'],
       id: message3.id
     });
-
 
     // get the first data satisfied message. changes are applied to database even
     // though another method is outstanding, because the other method didn't have
@@ -602,14 +596,6 @@ if (Meteor.isClient) {
     // get second satisfied; no new changes are applied.
     stream.receive({ msg: 'updated', methods: [message2.id] });
     test.isTrue(callback2Fired);
-
-    // third result
-    stream.receive({ msg: 'result', id: message3.id, result: 'foo' });
-    test.isFalse(callback3Fired);
-
-    // get third satisfied; no new changes are applied.
-    stream.receive({ msg: 'updated', methods: [message3.id] });
-    test.isTrue(callback3Fired);
 
     test.equal(coll.find({}).count(), 1);
     test.equal(coll.find({ value: 'tuesday', _id: docId }).count(), 1);
