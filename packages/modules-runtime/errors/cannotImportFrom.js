@@ -24,8 +24,7 @@ cannotImport = function (id) {
   var fromClient =
     function () {
       return new Error(
-        'Unable to import on the client a module from a server directory: ' +
-        id + ' \n (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories'
+        'Unable to import on the client a module from a server directory: "' + id + '" \n (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories'
       );
     };
 
@@ -33,8 +32,7 @@ cannotImport = function (id) {
   var fromServer =
     function () {
       return new Error(
-        'Unable to import on the server a module from a client directory: ' +
-        id + ' \n (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories'
+        'Unable to import on the server a module from a client directory: "' + id + '" \n (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories'
       );
     };
 
