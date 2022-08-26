@@ -3229,19 +3229,18 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
   }
 ]);
 
-// TODO this is commented for now, but we need to find out the cause
-// PR: https://github.com/meteor/meteor/pull/12057
-// Meteor.isServer && Tinytest.add(
-//   "mongo-livedata - connection failure throws",
-//   function (test) {
-//     test.throws(function () {
-//       const connection = new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
-//
-//       // Same as `MongoInternals.defaultRemoteCollectionDriver`.
-//       Promise.await(connection.client.connect());
-//     });
-//   }
-// );
+Meteor.isServer && Tinytest.add(
+  "mongo-livedata - connection failure throws",
+  function (test) {
+    // Exception happens in 30s
+    test.throws(function () {
+      const connection = new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+
+      // Same as `MongoInternals.defaultRemoteCollectionDriver`.
+      Promise.await(connection.client.connect());
+    });
+  }
+);
 
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
   // Make sure the version number looks like a version number.
