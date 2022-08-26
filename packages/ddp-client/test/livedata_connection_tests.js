@@ -466,7 +466,7 @@ Tinytest.add('livedata stub - this', function(test) {
 });
 
 if (Meteor.isClient) {
-  Tinytest.add('livedata stub - methods', async function(test) {
+  Tinytest.addAsync('livedata stub - methods',  async function(test) {
     const stream = new StubStream();
     const conn = newConnection(stream);
 
@@ -601,8 +601,9 @@ if (Meteor.isClient) {
     test.equal(counts, { added: 1, removed: 0, changed: 1, moved: 0 });
 
     stream.receive({ msg: 'result', id: message3.id, result: 'foo' });
-    const resultFoo = await resultAsync;
-    test.equal(resultFoo, 'foo');
+    stream.receive({ msg: 'updated', methods: [message3.id] });
+    const fooAsync = await resultAsync
+    test.equal(fooAsync, 'foo');
     handle.stop();
   });
 }
