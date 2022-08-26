@@ -2,14 +2,6 @@ import crypto from 'crypto';
 import querystring from 'querystring';
 import urlModule from 'url';
 
-// TODO Create helper for use in all oauth packages
-
-const toFormUrlencoded = data => {
-  return Object.entries(data)
-    .map(([key, value]) => `${key}=${value}`)
-    .join('&');
-};
-
 // An OAuth1 wrapper around http calls which helps get tokens and
 // takes care of HTTP headers
 //
@@ -165,18 +157,15 @@ export class OAuth1Binding {
     // Make a authorization string according to oauth1 spec
     const authString = this._getAuthHeaderString(headers);
     // Make signed request
-    return fetch(
-      method.toUpperCase() === 'POST' ? url : `${url}?${toFormUrlencoded(params)}`,
-      {
-        method,
-        headers: {
-          Authorization: authString,
-          ...(method.toUpperCase() === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
-        },
-        ...(method.toUpperCase() === 'POST' ? { body: toFormUrlencoded(params) } : {}),
-      }
-    )
-      .then((res) =>
+    return OAuth._fetch(url, method, {
+      headers: {
+        Authorization: authString,
+        ...(method.toUpperCase() === 'POST' ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {})
+      },
+      ...(method.toUpperCase() === 'POST' ?
+        { body: OAuth._addValuesToQueryParams(params).toString() }
+        : { queryParams: params })
+    }).then((res) =>
         res.text().then((content) => {
           const responseHeaders = Array.from(res.headers.entries()).reduce(
             (acc, [key, val]) => {

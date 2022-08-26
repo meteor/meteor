@@ -6,7 +6,6 @@ Package.describe({
 Package.onUse(api => {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('fetch', ['server']);
   api.use(['ecmascript', 'service-configuration'], ['client', 'server']);
   api.use('random', 'client');
 

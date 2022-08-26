@@ -7,7 +7,6 @@ Package.onUse(api => {
   api.use('oauth1', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('random', 'client');
-  api.use('fetch', 'server');
   api.use(['service-configuration', 'ecmascript'], ['client', 'server']);
 
   api.addFiles('weibo_client.js', 'client');

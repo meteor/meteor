@@ -8,7 +8,7 @@ Package.onUse(api => {
   api.use('random');
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use(['check', 'fetch'], 'server');
+  api.use('check', 'server');
 
   api.use('mongo');
 

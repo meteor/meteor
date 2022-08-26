@@ -474,6 +474,16 @@ OAuth.openSecrets = (serviceData, userId) => {
   return result;
 };
 
+OAuth._addValuesToQueryParams = (
+  values = {},
+  queryParams = new URLSearchParams()
+) => {
+  Object.entries(values).forEach(([key, value]) => {
+    queryParams.set(key, `${value}`);
+  });
+  return queryParams;
+};
+
 OAuth._fetch = async (
   url,
   method = 'GET',
@@ -481,9 +491,7 @@ OAuth._fetch = async (
 ) => {
   const urlWithParams = new URL(url);
 
-  Object.entries(queryParams).forEach(([key, value]) => {
-    urlWithParams.searchParams.set(key, `${value}`);
-  });
+  OAuth._addValuesToQueryParams(queryParams, urlWithParams.searchParams);
 
   const requestOptions = {
     method: method.toUpperCase(),
