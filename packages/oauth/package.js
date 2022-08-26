@@ -11,6 +11,7 @@ Package.onUse(api => {
   api.use(['reload', 'base64'], 'client');
 
   api.use('oauth-encryption', 'server', {weak: true});
+  api.use('fetch', 'server');
 
 
   api.export('OAuth');

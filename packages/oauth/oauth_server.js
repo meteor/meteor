@@ -473,3 +473,23 @@ OAuth.openSecrets = (serviceData, userId) => {
   );
   return result;
 };
+
+OAuth._fetch = async (
+  url,
+  method = 'GET',
+  { headers = {}, queryParams = {}, body, ...options } = {}
+) => {
+  const urlWithParams = new URL(url);
+
+  Object.entries(queryParams).forEach(([key, value]) => {
+    urlWithParams.searchParams.set(key, `${value}`);
+  });
+
+  const requestOptions = {
+    method: method.toUpperCase(),
+    headers,
+    ...(body ? { body } : {}),
+    ...options,
+  };
+  return fetch(urlWithParams.toString(), requestOptions);
+};
