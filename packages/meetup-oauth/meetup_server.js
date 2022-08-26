@@ -33,18 +33,12 @@ OAuth.registerService('meetup', 2, null, async query => {
   };
 });
 
-const toFormUrlencoded = data => {
-  return Object.entries(data)
-    .map(([key, value]) => `${key}=${value}`)
-    .join('&');
-};
-
 const getAccessToken = async query => {
   const config = ServiceConfiguration.configurations.findOne({service: 'meetup'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
 
-  const bodyFormEncoded = toFormUrlencoded({
+  const body = OAuth._addValuesToQueryParams({
     code: query.code,
     client_id: config.clientId,
     client_secret: OAuth.openSecret(config.secret),
@@ -53,13 +47,12 @@ const getAccessToken = async query => {
     state: query.state
   });
 
-  return await fetch('https://secure.meetup.com/oauth2/access', {
-    method: 'POST',
+  return OAuth._fetch('https://secure.meetup.com/oauth2/access', 'POST', {
     headers: {
       Accept: 'application/json',
       'Content-type': 'application/x-www-form-urlencoded',
     },
-    body: bodyFormEncoded,
+    body,
   })
     .then(data => data.json())
     .then(data => {
@@ -77,18 +70,17 @@ const getAccessToken = async query => {
 };
 
 const getIdentity = async accessToken => {
-  const bodyFormEncoded = toFormUrlencoded({
+  const body = OAuth._addValuesToQueryParams({
     member_id: 'self',
     access_token: accessToken
   });
 
-  return await fetch('https://api.meetup.com/2/members', {
-    method: 'POST',
+  return OAuth._fetch('https://api.meetup.com/2/members', 'POST', {
     headers: {
       Accept: 'application/json',
       'Content-type': 'application/x-www-form-urlencoded',
     },
-    body: bodyFormEncoded,
+    body,
   }).then(data => data.json())
     .then(({results = []}) => results.length && results[0])
     .catch(err => {

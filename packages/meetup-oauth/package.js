@@ -8,7 +8,6 @@ Package.onUse(api => {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('random', 'client');
-  api.use('fetch', 'server');
   api.use('service-configuration', ['client', 'server']);
 
   api.addFiles('meetup_server.js', 'server');
