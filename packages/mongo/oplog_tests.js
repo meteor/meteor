@@ -165,7 +165,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
 );
 
 
-Meteor.isServer && Tinytest.addAsync(
+/*Meteor.isServer && Tinytest.addAsync(
   "mongo-livedata - oplog - _onFailover",
   async function (test) {
     const driver = MongoInternals.defaultRemoteCollectionDriver();
@@ -190,4 +190,4 @@ Meteor.isServer && Tinytest.addAsync(
     } catch (e) {
       test.fail({ message: "Error waiting on Promise", value: JSON.stringify(e) });
     }
-  });
+  });*/
