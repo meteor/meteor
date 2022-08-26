@@ -235,7 +235,6 @@ Email.send = function (options) {
   Promise.await(Email.sendAsync(options));
 };
 
-// TODO Rewrite summary.
 /**
  * @summary Send an email with asyncronous method. Capture  Throws an `Error` on failure to contact mail server
  * or if mail server returns an error. All fields should match
