@@ -36,7 +36,7 @@ OplogHandle = function (oplogUrl, dbName) {
   self._stopped = false;
   self._tailHandle = null;
   self._readyFuture = new Future();
-  self._isTailingReady = false;
+  self._isReady = false;
   self._crossbar = new DDPServer._Crossbar({
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
@@ -96,17 +96,34 @@ Object.assign(OplogHandle.prototype, {
       self._tailHandle.stop();
     // XXX should close connections too
   },
-  onOplogEntry: function (trigger, callback) {
+  _onOplogEntryFibers: function(trigger, callback) {
     var self = this;
     if (self._stopped)
       throw new Error("Called onOplogEntry on stopped handle!");
 
-    // TODO -> How to wait here? Actually, should we wait?
-    if (!self._isTailingReady && !Meteor._isFibersEnabled) {
-      return;
-    } else if (Meteor._isFibersEnabled) {
-      // Calling onOplogEntry requires us to wait for the tailing to be ready.
-      self._readyFuture.wait();
+    // Calling onOplogEntry requires us to wait for the tailing to be ready.
+    self._readyFuture.wait();
+
+    var originalCallback = callback;
+    callback = Meteor.bindEnvironment(function (notification) {
+      originalCallback(notification);
+    }, function (err) {
+      Meteor._debug("Error in oplog callback", err);
+    });
+    var listenHandle = self._crossbar.listen(trigger, callback);
+    return {
+      stop: function () {
+        listenHandle.stop();
+      }
+    };
+  },
+  async _onOplogEntryNoFibers(trigger, callback) {
+    var self = this;
+    if (self._stopped)
+      throw new Error("Called onOplogEntry on stopped handle!");
+
+    while (!self._isReady) {
+      await Meteor._sleepForMs(100);
     }
 
     var originalCallback = callback;
@@ -121,6 +138,9 @@ Object.assign(OplogHandle.prototype, {
         listenHandle.stop();
       }
     };
+  },
+  onOplogEntry: function (trigger, callback) {
+    return Meteor._isFibersEnabled ? this._onOplogEntryFibers(trigger, callback) : this._onOplogEntryNoFibers(trigger, callback);
   },
   // Register a callback to be invoked any time we skip oplog entries (eg,
   // because we are too far behind).
@@ -196,8 +216,8 @@ Object.assign(OplogHandle.prototype, {
     // TODO -> Should we wait? Is waiting needed?
     // Calling waitUntilCaughtUp requries us to wait for the oplog connection to
     // be ready.
-    if (!self._isReady) {
-      return;
+    while (!this._isReady) {
+      await Meteor._sleepForMs(100);
     }
 
     var lastEntry;
@@ -318,7 +338,7 @@ Object.assign(OplogHandle.prototype, {
               TAIL_TIMEOUT
           );
 
-          self._isTailingReady = true;
+          self._isReady = true;
         });
   },
 

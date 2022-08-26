@@ -1018,30 +1018,41 @@ _.extend(OplogObserveDriver.prototype, {
     if (self._stopped)
       return;
     self._stopped = true;
-    _.each(self._stopHandles, function (handle) {
-      handle.stop();
-    });
 
-    // Note: we *don't* use multiplexer.onFlush here because this stop
-    // callback is actually invoked by the multiplexer itself when it has
-    // determined that there are no handles left. So nothing is actually going
-    // to get flushed (and it's probably not valid to call methods on the
-    // dying multiplexer).
-    _.each(self._writesToCommitWhenWeReachSteady, function (w) {
-      w.committed();  // maybe yields?
-    });
-    self._writesToCommitWhenWeReachSteady = null;
+    const afterStopHandles = () => {
+      // Note: we *don't* use multiplexer.onFlush here because this stop
+      // callback is actually invoked by the multiplexer itself when it has
+      // determined that there are no handles left. So nothing is actually going
+      // to get flushed (and it's probably not valid to call methods on the
+      // dying multiplexer).
+      _.each(self._writesToCommitWhenWeReachSteady, function (w) {
+        w.committed();  // maybe yields?
+      });
+      self._writesToCommitWhenWeReachSteady = null;
 
-    // Proactively drop references to potentially big things.
-    self._published = null;
-    self._unpublishedBuffer = null;
-    self._needToFetch = null;
-    self._currentlyFetching = null;
-    self._oplogEntryHandle = null;
-    self._listenersHandle = null;
+      // Proactively drop references to potentially big things.
+      self._published = null;
+      self._unpublishedBuffer = null;
+      self._needToFetch = null;
+      self._currentlyFetching = null;
+      self._oplogEntryHandle = null;
+      self._listenersHandle = null;
 
-    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-      "mongo-livedata", "observe-drivers-oplog", -1);
+      Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
+          "mongo-livedata", "observe-drivers-oplog", -1);
+    };
+
+    if (Meteor._isFibersEnabled) {
+      self._stopHandles.forEach(handle => {
+        handle.stop();
+      });
+      return afterStopHandles();
+    }
+
+    Promise.all(self._stopHandles.map(async handle => {
+      const _h = await handle;
+      _h.stop();
+    })).then(() => afterStopHandles());
   },
 
   _registerPhaseChange: function (phase) {

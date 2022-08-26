@@ -1177,15 +1177,21 @@ Object.assign(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      try {
-        res._publishCursor(self);
-      } catch (e) {
-        self.error(e);
-        return;
+      if (Meteor._isFibersEnabled) {
+        try {
+          res._publishCursor(self);
+        } catch (e) {
+          self.error(e);
+          return;
+        }
+        // _publishCursor only returns after the initial added callbacks have run.
+        // mark subscription as ready.
+        self.ready();
+      } else {
+        res._publishCursor(self).then(() => {
+          self.ready();
+        }).catch((e) => self.error(e));
       }
-      // _publishCursor only returns after the initial added callbacks have run.
-      // mark subscription as ready.
-      self.ready();
     } else if (_.isArray(res)) {
       // Check all the elements are cursors
       if (! _.all(res, isCursor)) {
@@ -1207,15 +1213,21 @@ Object.assign(Subscription.prototype, {
         collectionNames[collectionName] = true;
       };
 
-      try {
-        _.each(res, function (cur) {
-          cur._publishCursor(self);
-        });
-      } catch (e) {
-        self.error(e);
-        return;
+      if (Meteor._isFibersEnabled) {
+        try {
+          _.each(res, function (cur) {
+            cur._publishCursor(self);
+          });
+        } catch (e) {
+          self.error(e);
+          return;
+        }
+        self.ready();
+      } else {
+        Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
+          self.ready();
+        }).catch((e) => self.error(e));
       }
-      self.ready();
     } else if (res) {
       // Truthy values other than cursors or arrays are probably a
       // user mistake (possible returning a Mongo document via, say,

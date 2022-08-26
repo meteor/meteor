@@ -30,7 +30,7 @@ ObserveMultiplexer = function (options) {
 };
 
 _.extend(ObserveMultiplexer.prototype, {
-  addHandleAndSendInitialAdds: function (handle) {
+  _addHandleAndSendInitialAddsFibers: function (handle) {
     var self = this;
 
     // Check this before calling runTask (even though runTask does the same
@@ -42,7 +42,7 @@ _.extend(ObserveMultiplexer.prototype, {
     ++self._addHandleTasksScheduledButNotPerformed;
 
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-      "mongo-livedata", "observe-handles", 1);
+        "mongo-livedata", "observe-handles", 1);
 
     self._queue.runTask(function () {
       self._handles[handle._id] = handle;
@@ -52,10 +52,37 @@ _.extend(ObserveMultiplexer.prototype, {
       --self._addHandleTasksScheduledButNotPerformed;
     });
 
-    if (Meteor._isFibersEnabled) {
-      // *outside* the task, since otherwise we'd deadlock
-      self._readyFuture.wait();
+    // *outside* the task, since otherwise we'd deadlock
+    self._readyFuture.wait();
+  },
+  _addHandleAndSendInitialAddsNoFibers: async function (handle) {
+    var self = this;
+
+    // Check this before calling runTask (even though runTask does the same
+    // check) so that we don't leak an ObserveMultiplexer on error by
+    // incrementing _addHandleTasksScheduledButNotPerformed and never
+    // decrementing it.
+    if (!self._queue.safeToRunTask())
+      throw new Error("Can't call observeChanges from an observe callback on the same query");
+    ++self._addHandleTasksScheduledButNotPerformed;
+
+    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
+        "mongo-livedata", "observe-handles", 1);
+
+    self._queue.runTask(function () {
+      self._handles[handle._id] = handle;
+      // Send out whatever adds we have so far (whether the
+      // multiplexer is ready).
+      self._sendAdds(handle);
+      --self._addHandleTasksScheduledButNotPerformed;
+    });
+
+    while (!self._isReady) {
+      await Meteor._sleepForMs(100);
     }
+  },
+  addHandleAndSendInitialAdds: function (handle) {
+    return Meteor._isFibersEnabled ? this._addHandleAndSendInitialAddsFibers(handle) : this._addHandleAndSendInitialAddsNoFibers(handle);
   },
 
   // Remove an observe handle. If it was the last observe handle, call the

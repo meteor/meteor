@@ -1468,112 +1468,229 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
-MongoConnection.prototype._observeChanges = function (
-    cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
-  var self = this;
+Object.assign(MongoConnection.prototype, {
+  _observeChanges: function (
+      cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
+    return Meteor._isFibersEnabled
+        ? this._observeChangesFibers(cursorDescription, ordered, callbacks, nonMutatingCallbacks)
+        : this._observeChangesNoFibers(cursorDescription, ordered, callbacks, nonMutatingCallbacks);
+  },
 
-  if (cursorDescription.options.tailable) {
-    return self._observeChangesTailable(cursorDescription, ordered, callbacks);
-  }
+  _observeChangesNoFibers: async function (
+      cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
+    var self = this;
 
-  // You may not filter out _id when observing changes, because the id is a core
-  // part of the observeChanges API.
-  const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
-  if (fieldsOptions &&
-      (fieldsOptions._id === 0 ||
-       fieldsOptions._id === false)) {
-    throw Error("You may not observe a cursor with {fields: {_id: 0}}");
-  }
-
-  var observeKey = EJSON.stringify(
-    _.extend({ordered: ordered}, cursorDescription));
-
-  var multiplexer, observeDriver;
-  var firstHandle = false;
-
-  // Find a matching ObserveMultiplexer, or create a new one. This next block is
-  // guaranteed to not yield (and it doesn't call anything that can observe a
-  // new query), so no other calls to this function can interleave with it.
-  Meteor._noYieldsAllowed(function () {
-    if (_.has(self._observeMultiplexers, observeKey)) {
-      multiplexer = self._observeMultiplexers[observeKey];
-    } else {
-      firstHandle = true;
-      // Create a new ObserveMultiplexer.
-      multiplexer = new ObserveMultiplexer({
-        ordered: ordered,
-        onStop: function () {
-          delete self._observeMultiplexers[observeKey];
-          observeDriver.stop();
-        }
-      });
-      self._observeMultiplexers[observeKey] = multiplexer;
+    if (cursorDescription.options.tailable) {
+      return self._observeChangesTailable(cursorDescription, ordered, callbacks);
     }
-  });
 
-  var observeHandle = new ObserveHandle(multiplexer,
-    callbacks,
-    nonMutatingCallbacks,
-  );
+    // You may not filter out _id when observing changes, because the id is a core
+    // part of the observeChanges API.
+    const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
+    if (fieldsOptions &&
+        (fieldsOptions._id === 0 ||
+            fieldsOptions._id === false)) {
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+    }
 
-  if (firstHandle) {
-    var matcher, sorter;
-    var canUseOplog = _.all([
-      function () {
-        // At a bare minimum, using the oplog requires us to have an oplog, to
-        // want unordered callbacks, and to not want a callback on the polls
-        // that won't happen.
-        return self._oplogHandle && !ordered &&
-          !callbacks._testOnlyPollCallback;
-      }, function () {
-        // We need to be able to compile the selector. Fall back to polling for
-        // some newfangled $selector that minimongo doesn't support yet.
-        try {
-          matcher = new Minimongo.Matcher(cursorDescription.selector);
-          return true;
-        } catch (e) {
-          // XXX make all compilation errors MinimongoError or something
-          //     so that this doesn't ignore unrelated exceptions
-          return false;
-        }
-      }, function () {
-        // ... and the selector itself needs to support oplog.
-        return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-      }, function () {
-        // And we need to be able to compile the sort, if any.  eg, can't be
-        // {$natural: 1}.
-        if (!cursorDescription.options.sort)
-          return true;
-        try {
-          sorter = new Minimongo.Sorter(cursorDescription.options.sort);
-          return true;
-        } catch (e) {
-          // XXX make all compilation errors MinimongoError or something
-          //     so that this doesn't ignore unrelated exceptions
-          return false;
-        }
-      }], function (f) { return f(); });  // invoke each function
+    var observeKey = EJSON.stringify(
+        _.extend({ordered: ordered}, cursorDescription));
 
-    var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
-    observeDriver = new driverClass({
-      cursorDescription: cursorDescription,
-      mongoHandle: self,
-      multiplexer: multiplexer,
-      ordered: ordered,
-      matcher: matcher,  // ignored by polling
-      sorter: sorter,  // ignored by polling
-      _testOnlyPollCallback: callbacks._testOnlyPollCallback
+    var multiplexer, observeDriver;
+    var firstHandle = false;
+
+    // Find a matching ObserveMultiplexer, or create a new one. This next block is
+    // guaranteed to not yield (and it doesn't call anything that can observe a
+    // new query), so no other calls to this function can interleave with it.
+    Meteor._noYieldsAllowed(function () {
+      if (_.has(self._observeMultiplexers, observeKey)) {
+        multiplexer = self._observeMultiplexers[observeKey];
+      } else {
+        firstHandle = true;
+        // Create a new ObserveMultiplexer.
+        multiplexer = new ObserveMultiplexer({
+          ordered: ordered,
+          onStop: function () {
+            delete self._observeMultiplexers[observeKey];
+            observeDriver.stop();
+          }
+        });
+        self._observeMultiplexers[observeKey] = multiplexer;
+      }
     });
 
-    // This field is only set for use in tests.
-    multiplexer._observeDriver = observeDriver;
-  }
+    var observeHandle = new ObserveHandle(multiplexer,
+        callbacks,
+        nonMutatingCallbacks,
+    );
 
-  // Blocks until the initial adds have been sent.
-  multiplexer.addHandleAndSendInitialAdds(observeHandle);
+    if (firstHandle) {
+      var matcher, sorter;
+      var canUseOplog = _.all([
+        function () {
+          // At a bare minimum, using the oplog requires us to have an oplog, to
+          // want unordered callbacks, and to not want a callback on the polls
+          // that won't happen.
+          return self._oplogHandle && !ordered &&
+              !callbacks._testOnlyPollCallback;
+        }, function () {
+          // We need to be able to compile the selector. Fall back to polling for
+          // some newfangled $selector that minimongo doesn't support yet.
+          try {
+            matcher = new Minimongo.Matcher(cursorDescription.selector);
+            return true;
+          } catch (e) {
+            // XXX make all compilation errors MinimongoError or something
+            //     so that this doesn't ignore unrelated exceptions
+            return false;
+          }
+        }, function () {
+          // ... and the selector itself needs to support oplog.
+          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+        }, function () {
+          // And we need to be able to compile the sort, if any.  eg, can't be
+          // {$natural: 1}.
+          if (!cursorDescription.options.sort)
+            return true;
+          try {
+            sorter = new Minimongo.Sorter(cursorDescription.options.sort);
+            return true;
+          } catch (e) {
+            // XXX make all compilation errors MinimongoError or something
+            //     so that this doesn't ignore unrelated exceptions
+            return false;
+          }
+        }], function (f) { return f(); });  // invoke each function
 
-  return observeHandle;
-};
+      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+      observeDriver = new driverClass({
+        cursorDescription: cursorDescription,
+        mongoHandle: self,
+        multiplexer: multiplexer,
+        ordered: ordered,
+        matcher: matcher,  // ignored by polling
+        sorter: sorter,  // ignored by polling
+        _testOnlyPollCallback: callbacks._testOnlyPollCallback
+      });
+
+      // This field is only set for use in tests.
+      multiplexer._observeDriver = observeDriver;
+    }
+
+    // Blocks until the initial adds have been sent.
+    await multiplexer.addHandleAndSendInitialAdds(observeHandle);
+
+    return observeHandle;
+  },
+
+  _observeChangesFibers: function (
+      cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
+    var self = this;
+
+    if (cursorDescription.options.tailable) {
+      return self._observeChangesTailable(cursorDescription, ordered, callbacks);
+    }
+
+    // You may not filter out _id when observing changes, because the id is a core
+    // part of the observeChanges API.
+    const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
+    if (fieldsOptions &&
+        (fieldsOptions._id === 0 ||
+            fieldsOptions._id === false)) {
+      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
+    }
+
+    var observeKey = EJSON.stringify(
+        _.extend({ordered: ordered}, cursorDescription));
+
+    var multiplexer, observeDriver;
+    var firstHandle = false;
+
+    // Find a matching ObserveMultiplexer, or create a new one. This next block is
+    // guaranteed to not yield (and it doesn't call anything that can observe a
+    // new query), so no other calls to this function can interleave with it.
+    Meteor._noYieldsAllowed(function () {
+      if (_.has(self._observeMultiplexers, observeKey)) {
+        multiplexer = self._observeMultiplexers[observeKey];
+      } else {
+        firstHandle = true;
+        // Create a new ObserveMultiplexer.
+        multiplexer = new ObserveMultiplexer({
+          ordered: ordered,
+          onStop: function () {
+            delete self._observeMultiplexers[observeKey];
+            observeDriver.stop();
+          }
+        });
+        self._observeMultiplexers[observeKey] = multiplexer;
+      }
+    });
+
+    var observeHandle = new ObserveHandle(multiplexer,
+        callbacks,
+        nonMutatingCallbacks,
+    );
+
+    if (firstHandle) {
+      var matcher, sorter;
+      var canUseOplog = _.all([
+        function () {
+          // At a bare minimum, using the oplog requires us to have an oplog, to
+          // want unordered callbacks, and to not want a callback on the polls
+          // that won't happen.
+          return self._oplogHandle && !ordered &&
+              !callbacks._testOnlyPollCallback;
+        }, function () {
+          // We need to be able to compile the selector. Fall back to polling for
+          // some newfangled $selector that minimongo doesn't support yet.
+          try {
+            matcher = new Minimongo.Matcher(cursorDescription.selector);
+            return true;
+          } catch (e) {
+            // XXX make all compilation errors MinimongoError or something
+            //     so that this doesn't ignore unrelated exceptions
+            return false;
+          }
+        }, function () {
+          // ... and the selector itself needs to support oplog.
+          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
+        }, function () {
+          // And we need to be able to compile the sort, if any.  eg, can't be
+          // {$natural: 1}.
+          if (!cursorDescription.options.sort)
+            return true;
+          try {
+            sorter = new Minimongo.Sorter(cursorDescription.options.sort);
+            return true;
+          } catch (e) {
+            // XXX make all compilation errors MinimongoError or something
+            //     so that this doesn't ignore unrelated exceptions
+            return false;
+          }
+        }], function (f) { return f(); });  // invoke each function
+
+      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+      observeDriver = new driverClass({
+        cursorDescription: cursorDescription,
+        mongoHandle: self,
+        multiplexer: multiplexer,
+        ordered: ordered,
+        matcher: matcher,  // ignored by polling
+        sorter: sorter,  // ignored by polling
+        _testOnlyPollCallback: callbacks._testOnlyPollCallback
+      });
+
+      // This field is only set for use in tests.
+      multiplexer._observeDriver = observeDriver;
+    }
+
+    // Blocks until the initial adds have been sent.
+    multiplexer.addHandleAndSendInitialAdds(observeHandle);
+
+    return observeHandle;
+  },
+});
+
 
 // Listen for the invalidation messages that will trigger us to poll the
 // database for changes. If this selector specifies specific IDs, specify them
