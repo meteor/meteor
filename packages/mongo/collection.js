@@ -434,9 +434,13 @@ Object.assign(Mongo.Collection, {
     // possibly calling _publishCursor on multiple returned cursors.
 
     // register stop callback (expects lambda w/ no args).
-    sub.onStop(function() {
+    const onStopFibers = () => {
       observeHandle.stop();
-    });
+    };
+    const onStopNoFibers = async () => {
+      await (observeHandle).stop();
+    };
+    sub.onStop(Meteor._isFibersEnabled ? onStopFibers : onStopNoFibers);
 
     // return the observeHandle in case it needs to be stopped early
     return observeHandle;

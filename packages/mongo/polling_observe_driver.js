@@ -211,7 +211,14 @@ _.extend(PollingObserveDriver.prototype, {
   stop: function () {
     var self = this;
     self._stopped = true;
-    _.each(self._stopCallbacks, function (c) { c(); });
+    const stopCallbacksCallerFibers = function (c) {
+      c();
+    };
+    const stopCallbacksCallerNoFibers = async function(c) {
+      await c();
+    };
+
+    _.each(self._stopCallbacks, Meteor._isFibersEnabled ? stopCallbacksCallerFibers : stopCallbacksCallerNoFibers);
     // Release any write fences that are waiting on us.
     _.each(self._pendingWrites, function (w) {
       w.committed();

@@ -36,6 +36,7 @@ OplogHandle = function (oplogUrl, dbName) {
   self._stopped = false;
   self._tailHandle = null;
   self._readyFuture = new Future();
+  self._isTailingReady = false;
   self._crossbar = new DDPServer._Crossbar({
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
@@ -100,8 +101,13 @@ Object.assign(OplogHandle.prototype, {
     if (self._stopped)
       throw new Error("Called onOplogEntry on stopped handle!");
 
-    // Calling onOplogEntry requires us to wait for the tailing to be ready.
-    self._readyFuture.wait();
+    // TODO -> How to wait here? Actually, should we wait?
+    if (!self._isTailingReady && !Meteor._isFibersEnabled) {
+      return;
+    } else if (Meteor._isFibersEnabled) {
+      // Calling onOplogEntry requires us to wait for the tailing to be ready.
+      self._readyFuture.wait();
+    }
 
     var originalCallback = callback;
     callback = Meteor.bindEnvironment(function (notification) {
@@ -124,12 +130,8 @@ Object.assign(OplogHandle.prototype, {
       throw new Error("Called onSkippedEntries on stopped handle!");
     return self._onSkippedEntriesHook.register(callback);
   },
-  // Calls `callback` once the oplog has been processed up to a point that is
-  // roughly "now": specifically, once we've processed all ops that are
-  // currently visible.
-  // XXX become convinced that this is actually safe even if oplogConnection
-  // is some kind of pool
-  waitUntilCaughtUp: function () {
+
+  _waitUntilCaughtUpFibers() {
     var self = this;
     if (self._stopped)
       throw new Error("Called waitUntilCaughtUp on stopped handle!");
@@ -145,8 +147,8 @@ Object.assign(OplogHandle.prototype, {
       // find a TS that won't show up in the actual tail stream.
       try {
         lastEntry = self._oplogLastEntryConnection.findOne(
-          OPLOG_COLLECTION, self._baseOplogSelector,
-          {fields: {ts: 1}, sort: {$natural: -1}});
+            OPLOG_COLLECTION, self._baseOplogSelector,
+            {fields: {ts: 1}, sort: {$natural: -1}});
         break;
       } catch (e) {
         // During failover (eg) if we get an exception we should log and retry
@@ -185,6 +187,66 @@ Object.assign(OplogHandle.prototype, {
     self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
     f.wait();
   },
+
+  async _waitUntilCaughtUpNoFibers() {
+    var self = this;
+    if (self._stopped)
+      throw new Error("Called waitUntilCaughtUp on stopped handle!");
+
+    // TODO -> Should we wait? Is waiting needed?
+    // Calling waitUntilCaughtUp requries us to wait for the oplog connection to
+    // be ready.
+    if (!self._isReady) {
+      return;
+    }
+
+    var lastEntry;
+
+    while (!self._stopped) {
+      // We need to make the selector at least as restrictive as the actual
+      // tailing selector (ie, we need to specify the DB name) or else we might
+      // find a TS that won't show up in the actual tail stream.
+      try {
+        lastEntry = self._oplogLastEntryConnection.findOne(
+            OPLOG_COLLECTION, self._baseOplogSelector,
+            {fields: {ts: 1}, sort: {$natural: -1}});
+        break;
+      } catch (e) {
+        // During failover (eg) if we get an exception we should log and retry
+        // instead of crashing.
+        Meteor._debug("Got exception while reading last entry", e);
+        await Meteor._sleepForMs(100);
+      }
+    }
+
+    if (self._stopped)
+      return;
+
+    if (!lastEntry) {
+      // Really, nothing in the oplog? Well, we've processed everything.
+      return;
+    }
+
+    var ts = lastEntry.ts;
+    if (!ts)
+      throw Error("oplog entry without ts: " + EJSON.stringify(lastEntry));
+
+    if (self._lastProcessedTS && ts.lessThanOrEqual(self._lastProcessedTS)) {
+      // We've already caught up to here.
+      return;
+    }
+  },
+
+
+  // Calls `callback` once the oplog has been processed up to a point that is
+  // roughly "now": specifically, once we've processed all ops that are
+  // currently visible.
+  // XXX become convinced that this is actually safe even if oplogConnection
+  // is some kind of pool
+  waitUntilCaughtUp: function () {
+    return Meteor._isFibersEnabled ? this._waitUntilCaughtUpFibers() : this._waitUntilCaughtUpNoFibers()
+  },
+
   _startTailing: function () {
     var self = this;
     // First, make sure that we're talking to the local database.
@@ -255,6 +317,8 @@ Object.assign(OplogHandle.prototype, {
               },
               TAIL_TIMEOUT
           );
+
+          self._isTailingReady = true;
         });
   },
 

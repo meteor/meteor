@@ -117,7 +117,13 @@ SQp.flush = function () {
   self.runTask(function () {});
 };
 
+
+// TODO -> Check if we are already running a task.
 SQp.safeToRunTask = function () {
+  if (!Meteor._isFibersEnabled) {
+    return true;
+  }
+
   var self = this;
   return Fiber.current && self._currentTaskFiber !== Fiber.current;
 };
@@ -223,9 +229,14 @@ SQp._run = function () {
 // methods).
 //
 Meteor._sleepForMs = function (ms) {
-  var fiber = Fiber.current;
-  setTimeout(function() {
-    fiber.run();
-  }, ms);
-  Fiber.yield();
+  if (Meteor._isFibersEnabled) {
+    var fiber = Fiber.current;
+    setTimeout(function() {
+      fiber.run();
+    }, ms);
+    Fiber.yield();
+    return;
+  }
+
+  return new Promise(resolve => setTimeout(() => resolve(), ms));
 };

@@ -14,6 +14,7 @@ ObserveMultiplexer = function (options) {
   self._queue = new Meteor._SynchronousQueue();
   self._handles = {};
   self._readyFuture = new Future;
+  self._isReady = false;
   self._cache = new LocalCollection._CachingChangeObserver({
     ordered: options.ordered});
   // Number of addHandleAndSendInitialAdds tasks scheduled but not yet
@@ -45,13 +46,16 @@ _.extend(ObserveMultiplexer.prototype, {
 
     self._queue.runTask(function () {
       self._handles[handle._id] = handle;
-      // Send out whatever adds we have so far (whether or not we the
+      // Send out whatever adds we have so far (whether the
       // multiplexer is ready).
       self._sendAdds(handle);
       --self._addHandleTasksScheduledButNotPerformed;
     });
-    // *outside* the task, since otherwise we'd deadlock
-    self._readyFuture.wait();
+
+    if (Meteor._isFibersEnabled) {
+      // *outside* the task, since otherwise we'd deadlock
+      self._readyFuture.wait();
+    }
   },
 
   // Remove an observe handle. If it was the last observe handle, call the
@@ -106,7 +110,12 @@ _.extend(ObserveMultiplexer.prototype, {
     self._queue.queueTask(function () {
       if (self._ready())
         throw Error("can't make ObserveMultiplex ready twice!");
-      self._readyFuture.return();
+      if (Meteor._isFibersEnabled) {
+        self._readyFuture.return();
+        return;
+      }
+
+      self._isReady = true;
     });
   },
 
@@ -145,7 +154,7 @@ _.extend(ObserveMultiplexer.prototype, {
       return ["added", "changed", "removed"];
   },
   _ready: function () {
-    return this._readyFuture.isResolved();
+    return Meteor._isFibersEnabled ? this._readyFuture.isResolved() : !!this._isReady;
   },
   _applyCallback: function (callbackName, args) {
     var self = this;
@@ -187,7 +196,7 @@ _.extend(ObserveMultiplexer.prototype, {
   // flush the queue afterwards to ensure that the callbacks get out.
   _sendAdds: function (handle) {
     var self = this;
-    if (self._queue.safeToRunTask())
+    if (self._queue.safeToRunTask() && Meteor._isFibersEnabled)
       throw Error("_sendAdds may only be called from within a task!");
     var add = self._ordered ? handle._addedBefore : handle._added;
     if (!add)
