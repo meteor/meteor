@@ -560,7 +560,7 @@ export class Connection {
    * @param {string} name Name of method to invoke
    * @param args Optional method arguments
    */
-  async callAsync(name, ...args) {
+  callAsync(name, ...args) {
     return new Promise((resolve, reject) => {
       this.call(name, ...args, (err, res) => {
         if (err) {
