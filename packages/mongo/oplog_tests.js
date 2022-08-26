@@ -165,29 +165,22 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
 );
 
 
-/*Meteor.isServer && Tinytest.addAsync(
-  "mongo-livedata - oplog - _onFailover",
-  async function (test) {
-    const driver = MongoInternals.defaultRemoteCollectionDriver();
-    const failoverPromise = new Promise(resolve => {
-      driver.mongo._onFailover(() => {
-        resolve(true);
-      });
+Tinytest.addAsync("mongo-livedata - oplog - _onFailover", (test, onComplete) => {
+  const driver = MongoInternals.defaultRemoteCollectionDriver();
+  const failoverPromise = new Promise(resolve => {
+    driver.mongo._onFailover(() => {
+      resolve(true);
     });
+  });
 
+  driver.mongo.db
+    .admin()
+    .command({ replSetStepDown: 1, force: true })
+    .then(() => {
     failoverPromise
-      .then(test.isTrue)
-      .catch(e => test.fail({ message: "Error waiting on Promise", value: JSON.stringify(e) }));
+      .then(result => test.isTrue(result))
+      .catch(err => test.fail(err));
+    onComplete();
+  });
 
-    await driver.mongo.db.admin().command({
-      replSetStepDown: 1,
-      force: true
-    });
-
-    try {
-      const result = await failoverPromise;
-      test.isTrue(result);
-    } catch (e) {
-      test.fail({ message: "Error waiting on Promise", value: JSON.stringify(e) });
-    }
-  });*/
+});
