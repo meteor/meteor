@@ -70,7 +70,7 @@ const getServiceDataFromTokens = async (tokens, callback) => {
       },
     },
   };
-  console.log({ returnValue });
+
   callback && callback(undefined, returnValue);
 
   return returnValue;
