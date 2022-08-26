@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
 import { Accounts } from "meteor/accounts-base";
 
 // Utility for grabbing user
@@ -47,7 +47,7 @@ const getPasswordString = password => {
 //
 const hashPassword = async password => {
   password = getPasswordString(password);
-  return await bcrypt.hash(password, Accounts._bcryptRounds());
+  return await bcryptHash(password, Accounts._bcryptRounds());
 };
 
 // Extract the number of rounds used in the specified bcrypt hash.
@@ -80,7 +80,7 @@ const checkPassword = async (user, password) => {
   const hash = user.services.password.bcrypt;
   const hashRounds = getRoundsFromBcryptHash(hash);
 
-  if (! await bcrypt.compare(formattedPassword, hash)) {
+  if (! await bcryptCompare(formattedPassword, hash)) {
     result.error = Accounts._handleError("Incorrect password", false);
   } else if (hash && Accounts._bcryptRounds() != hashRounds) {
     // The password checks out, but the user's bcrypt hash needs to be updated.
@@ -89,7 +89,7 @@ const checkPassword = async (user, password) => {
       Meteor.users.update({ _id: user._id }, {
         $set: {
           'services.password.bcrypt':
-            await bcrypt.hash(formattedPassword, Accounts._bcryptRounds())
+            await bcryptHash(formattedPassword, Accounts._bcryptRounds())
         }
       });
     });
@@ -315,7 +315,7 @@ Meteor.methods({changePassword: async function (oldPassword, newPassword) {
  * @param {Object} options.logout Logout all current connections with this userId (default: true)
  * @importFromPackage accounts-base
  */
-Accounts.setPassword = (userId, newPlaintextPassword, options) => {
+Accounts.setPasswordAsync = async (userId, newPlaintextPassword, options) => {
   check(userId, String);
   check(newPlaintextPassword, Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256));
   check(options, Match.Maybe({ logout: Boolean }));
@@ -326,20 +326,31 @@ Accounts.setPassword = (userId, newPlaintextPassword, options) => {
     throw new Meteor.Error(403, "User not found");
   }
 
-  return hashPassword(newPlaintextPassword).then(hash => {
-    const update = {
-      $unset: {
-        'services.password.reset': 1
-      },
-      $set: {'services.password.bcrypt': hash}
-    };
+  const update = {
+    $unset: {
+      'services.password.reset': 1
+    },
+    $set: {'services.password.bcrypt': await hashPassword(newPlaintextPassword)}
+  };
 
-    if (options.logout) {
-      update.$unset['services.resume.loginTokens'] = 1;
-    }
+  if (options.logout) {
+    update.$unset['services.resume.loginTokens'] = 1;
+  }
 
-    Meteor.users.update({_id: user._id}, update);
-  });
+  Meteor.users.update({_id: user._id}, update);
+};
+
+/**
+ * @summary Forcibly change the password for a user.
+ * @locus Server
+ * @param {String} userId The id of the user to update.
+ * @param {String} newPassword A new password for the user.
+ * @param {Object} [options]
+ * @param {Object} options.logout Logout all current connections with this userId (default: true)
+ * @importFromPackage accounts-base
+ */
+Accounts.setPassword = (userId, newPlaintextPassword, options) => {
+  return Promise.await(Accounts.setPasswordAsync(userId, newPlaintextPassword, options));
 };
 
 
