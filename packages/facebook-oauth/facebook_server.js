@@ -4,13 +4,13 @@ import {Accounts} from 'meteor/accounts-base';
 
 const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '13.0';
 
-Facebook.handleAuthFromAccessToken = (accessToken, expiresAt) => {
+Facebook.handleAuthFromAccessToken = async (accessToken, expiresAt) => {
   // include basic fields from facebook
   // https://developers.facebook.com/docs/facebook-login/permissions/
   const whitelisted = ['id', 'email', 'name', 'first_name', 'last_name',
     'middle_name', 'name_format', 'picture', 'short_name'];
 
-  const identity = getIdentity(accessToken, whitelisted);
+  const identity = await getIdentity(accessToken, whitelisted);
 
   const fields = {};
   whitelisted.forEach(field => fields[field] = identity[field]);
@@ -39,7 +39,7 @@ OAuth.registerService('facebook', 2, null, async query => {
   const {accessToken} = response;
   const {expiresIn} = response;
 
-  return Facebook.handleAuthFromAccessToken(accessToken, (+new Date) + (1000 * expiresIn));
+  return await Facebook.handleAuthFromAccessToken(accessToken, (+new Date) + (1000 * expiresIn));
 });
 
 function getAbsoluteUrlOptions(query) {
@@ -94,11 +94,10 @@ const getTokenResponse = async query => {
       method: "GET",
       headers: {
         Accept: 'application/json',
-        'Content-type': 'application/x-www-form-urlencoded',
       },
     })
 
-    const data  = await response.json();
+    const data = await response.json();
 
     const fbAccessToken = data.access_token;
     const fbExpires = data.expires_in;
@@ -115,8 +114,7 @@ const getTokenResponse = async query => {
   }
 };
 
-const getIdentity = (accessToken, fields) => {
-  console.log({accessToken})
+const getIdentity = async (accessToken, fields) => {
   const config = ServiceConfiguration.configurations.findOne({service: 'facebook'});
   if (!config)
     throw new ServiceConfiguration.ConfigError();
@@ -128,14 +126,22 @@ const getIdentity = (accessToken, fields) => {
 
   try {
 
-    //Replace HTTP to fetch here
-    return HTTP.get(`https://graph.facebook.com/v${API_VERSION}/me`, {
-      params: {
-        access_token: accessToken,
-        appsecret_proof: hmac.digest('hex'),
-        fields: fields.join(",")
-      }
-    }).data;
+    const params = new URLSearchParams();
+
+    params.append("access_token", accessToken)
+    params.append("appsecret_proof", hmac.digest('hex'))
+    params.append("fields", fields.join(","))
+
+    const uri = `https://graph.facebook.com/v${API_VERSION}/me?${params.toString()}`
+
+    const response = await fetch(uri, {
+      method: "GET",
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+
+    return response.json();
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Facebook. ${err.message}`),
