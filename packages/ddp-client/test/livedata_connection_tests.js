@@ -466,7 +466,27 @@ Tinytest.add('livedata stub - this', function(test) {
 });
 
 if (Meteor.isClient) {
-  Tinytest.addAsync('livedata stub - methods',  async function(test) {
+  Tinytest.addAsync('livedata stub - async methods',  async function(test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+    startAndConnect(test, stream);
+
+    const resultAsync = conn.callAsync('do_something_else_async', 'sunday')
+    const message = JSON.parse(stream.sent.shift());
+    test.isUndefined(message.randomSeed);
+    test.equal(message, {
+      msg: 'method',
+      method: 'do_something_else_async',
+      params: ['sunday'],
+      id: message.id
+    });
+    stream.receive({ msg: 'result', id: message.id, result: 'foo' });
+    stream.receive({ msg: 'updated', methods: [message.id] });
+    const fooAsync = await resultAsync
+    test.equal(fooAsync, 'foo');
+  })
+
+  Tinytest.add('livedata stub - methods',  function(test) {
     const stream = new StubStream();
     const conn = newConnection(stream);
 
@@ -563,20 +583,6 @@ if (Meteor.isClient) {
       id: message2.id
     });
 
-    // send another methods (unknown on client)
-    const resultAsync = conn.callAsync('do_something_else_async', 'sunday')
-    test.isFalse(callback1Fired);
-    test.isFalse(callback2Fired);
-
-    const message3 = JSON.parse(stream.sent.shift());
-    test.isUndefined(message3.randomSeed);
-    test.equal(message3, {
-      msg: 'method',
-      method: 'do_something_else_async',
-      params: ['sunday'],
-      id: message3.id
-    });
-
     // get the first data satisfied message. changes are applied to database even
     // though another method is outstanding, because the other method didn't have
     // a stub. and its callback is called.
@@ -600,10 +606,6 @@ if (Meteor.isClient) {
     test.equal(coll.find({ value: 'tuesday', _id: docId }).count(), 1);
     test.equal(counts, { added: 1, removed: 0, changed: 1, moved: 0 });
 
-    stream.receive({ msg: 'result', id: message3.id, result: 'foo' });
-    stream.receive({ msg: 'updated', methods: [message3.id] });
-    const fooAsync = await resultAsync
-    test.equal(fooAsync, 'foo');
     handle.stop();
   });
 }
