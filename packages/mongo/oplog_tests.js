@@ -173,13 +173,20 @@ Tinytest.addAsync("mongo-livedata - oplog - _onFailover", (test, onComplete) => 
     });
   });
 
+  failoverPromise
+    .then(result => {
+      test.isTrue(result);
+      onComplete();
+    })
+    .catch(err => {
+      test.fail(err);
+      onComplete();
+    });
+
   driver.mongo.db
     .admin()
     .command({ replSetStepDown: 1, force: true })
     .then(() => {
-    failoverPromise
-      .then(result => test.isTrue(result))
-      .catch(err => test.fail(err));
     onComplete();
   });
 
