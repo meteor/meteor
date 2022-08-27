@@ -1,5 +1,3 @@
-const Future = Meteor.isServer && require('fibers/future');
-
 /******************************************************************************/
 /* TestCaseResults                                                            */
 /******************************************************************************/
@@ -548,35 +546,31 @@ export class TestRun {
     if (Meteor.isServer) {
       // On the server, ensure that only one test runs at a time, even
       // with multiple clients.
-      this.manager.testQueue.queueTask(() => {
-        // The future resolves when the test completes or times out.
-        var future = new Future();
-        Meteor.setTimeout(
-          () => {
-            if (future.isResolved())
-              // If the future has resolved the test has completed.
-              return;
-            test.timedOut = true;
-            this._report(test, {
-              type: "exception",
-              details: {
-                message: "test timed out"
-              }
-            });
-            future['return']();
-          },
-          3 * 60 * 1000  // 3 minutes
-        );
+      let hasRan = false;
+      const timeoutPromise = new Promise((resolve, reject) => {
+        Meteor.setTimeout(() => {
+          if (hasRan) {
+            resolve();
+          }
+
+          reject();
+        }, 3 * 60 * 1000);
+      });
+      const runnerPromise = new Promise((resolve) => {
         this._runTest(test, () => {
           // The test can complete after it has timed out (it might
           // just be slow), so only resolve the future if the test
           // hasn't timed out.
-          if (! future.isResolved())
-            future['return']();
+          if (!hasRan) {
+            hasRan = true;
+            resolve();
+          }
         }, stop_at_offset);
-        // Wait for the test to complete or time out.
-        future.wait();
-        onComplete && onComplete();
+      });
+      this.manager.testQueue.queueTask(() => {
+        Promise.race([runnerPromise, timeoutPromise]).finally(() => {
+          onComplete && onComplete();
+        });
       });
     } else {
       // client

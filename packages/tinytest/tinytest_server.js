@@ -58,7 +58,7 @@ Meteor.methods({
     }
 
     function onReport(report) {
-      if (! Fiber.current) {
+      if (!Fiber.current && Meteor._isFibersEnabled) {
         Meteor._debug("Trying to report a test not in a fiber! "+
                       "You probably forgot to wrap a callback in bindEnvironment.");
         console.trace();
