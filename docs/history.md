@@ -32,16 +32,21 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Refactoring/Remove unused imports from tools folder. [PR](https://github.com/meteor/meteor/pull/12084).
   - Fix problem when publishing async methods. [PR](https://github.com/meteor/meteor/pull/12152).
   - Update skeletons Apollo[PR](https://github.com/meteor/meteor/pull/12091) and other skeletons [PR](https://github.com/meteor/meteor/pull/12099)
-* `npm-mongo@4.9.0`:
-  - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
 * `meteor-installer@2.7.5`:
   - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
+* `npm-mongo@4.9.0`:
+  - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
+
 
 #### Independent Releases
 * `accounts-passwordless@2.1.3`:
   - Fixing bug where tokes where never expiring. [PR](https://github.com/meteor/meteor/pull/12088).
 * `accounts-base@2.2.4`:
   - Adding new options to the `Accounts.config()` method: `loginTokenExpirationHours` and `tokenSequenceLength`. [PR](https://github.com/meteor/meteor/pull/12088).
+* `Meteor Repo`:
+  - Included githubactions in the dependabot config. [PR](https://github.com/meteor/meteor/pull/12061).
+  - Visual rework in meteor readme. [PR](https://github.com/meteor/meteor/pull/12133).
+  - Remove useraccounts from Guide. [PR](https://github.com/meteor/meteor/pull/12090).
 * `minifier-css@1.6.1`:
   - Update postcss package to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12136).
 * `minifier-js@2.7.5`:
@@ -52,10 +57,6 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12142).
 * `ddp-server@2.5.1`:
   - Rename setPublicationStrategy and getPublicationStrategy arguments. [PR](https://github.com/meteor/meteor/pull/12166).
-* `Meteor Repo`:
-  - Included githubactions in the dependabot config. [PR](https://github.com/meteor/meteor/pull/12061).
-  - Visual rework in meteor readme. [PR](https://github.com/meteor/meteor/pull/12133).
-  - Remove useraccounts from Guide. [PR](https://github.com/meteor/meteor/pull/12090).
 
 ## v2.7.3, 2022-05-31
 
