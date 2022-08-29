@@ -3,7 +3,7 @@
 #### Highlights
 * New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
 * Node update to [v14.20.0](https://nodejs.org/en/blog/release/v14.20.0/) as part of the [July 7th security release](https://nodejs.org/en/blog/vulnerability/july-2022-security-releases/)
-* Update MongoDB driver to 4.8. [PR](https://github.com/meteor/meteor/pull/12097)
+* Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
 
 #### Breaking Changes
 N/A
@@ -15,13 +15,27 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
 * `modules@0.19.0`:
   - Updating reify version. [PR](https://github.com/meteor/meteor/pull/12055).
 * `minimongo@1.9.0`:
-  - New methods to work with the Async API. [PR](https://github.com/meteor/meteor/pull/12028/files).
+  - New methods to work with the Async API. [PR](https://github.com/meteor/meteor/pull/12028).
+  - Solved invalid dates in Minimongo Matcher [PR](https://github.com/meteor/meteor/pull/12165).
 * `mongo@1.16.0`:
   - Adding async counterparts that allows gradual migration from Fibers. [PR](https://github.com/meteor/meteor/pull/12028).
+  - Improved oplogV2V1Converter implementation. [PR](https://github.com/meteor/meteor/pull/12116).
+  - Exit on MongoDB connection error. [PR](https://github.com/meteor/meteor/pull/12115).
+  - Fixed MongoConnection._onFailover hook. [PR](https://github.com/meteor/meteor/pull/12125).
+  - Fixed handling objects in oplogV2V1Converter. [PR](https://github.com/meteor/meteor/pull/12107).
 * `meteor@1.10.1`:
   - Create method to check if Fibers is enabled by flag DISABLE_FIBERS. [PR](https://github.com/meteor/meteor/pull/12100).
+  - Fix bugs for linter build plugins. [PR](https://github.com/meteor/meteor/pull/12120).
+  - Document meteor show METEOR. [PR](https://github.com/meteor/meteor/pull/12124).
+  - Update Cordova Android to 10.1.2. [PR](https://github.com/meteor/meteor/pull/12131).
+  - Fixed flaky test. [PR](https://github.com/meteor/meteor/pull/12129).
+  - Refactoring/Remove unused imports from tools folder. [PR](https://github.com/meteor/meteor/pull/12084).
+  - Fix problem when publishing async methods. [PR](https://github.com/meteor/meteor/pull/12152).
+  - Update skeletons Apollo[PR](https://github.com/meteor/meteor/pull/12091) and other skeletons [PR](https://github.com/meteor/meteor/pull/12099)
 * `npm-mongo@4.9.0`:
   - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
+* `meteor-installer@2.7.5`:
+  - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
 
 #### Independent Releases
 * `accounts-passwordless@2.1.3`:
@@ -36,6 +50,12 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12141).
 * `standard-minifier-js@2.8.1`:
   - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12142).
+* `ddp-server@2.5.1`:
+  - Rename setPublicationStrategy and getPublicationStrategy arguments. [PR](https://github.com/meteor/meteor/pull/12166).
+* `Meteor Repo`:
+  - Included githubactions in the dependabot config. [PR](https://github.com/meteor/meteor/pull/12061).
+  - Visual rework in meteor readme. [PR](https://github.com/meteor/meteor/pull/12133).
+  - Remove useraccounts from Guide. [PR](https://github.com/meteor/meteor/pull/12090).
 
 ## v2.7.3, 2022-05-31
 
