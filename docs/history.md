@@ -58,6 +58,21 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
 * `ddp-server@2.5.1`:
   - Rename setPublicationStrategy and getPublicationStrategy arguments. [PR](https://github.com/meteor/meteor/pull/12166).
 
+#### Special thanks to
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@radekmie](https://github.com/radekmie)
+- [@naveensrinivasan](https://github.com/naveensrinivasan)
+- [@zodern](https://github.com/zodern)
+- [@brucejo75](https://github.com/brucejo75)
+- [@matheusccastroo](https://github.com/matheusccastroo)
+- [@victoriaquasar](https://github.com/victoriaquasar)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@Grubba27](https://github.com/Grubba27)
+- [@denihs](https://github.com/denihs)
+- [@edimarlnx](https://github.com/edimarlnx)
+
+For making this great framework even better!
+
 ## v2.7.3, 2022-05-31
 
 #### Highlights
