@@ -40,7 +40,7 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
 
 #### Independent Releases
 * `accounts-passwordless@2.1.3`:
-  - Fixing bug where tokes where never expiring. [PR](https://github.com/meteor/meteor/pull/12088).
+  - Fixing bug where tokens where never expiring. [PR](https://github.com/meteor/meteor/pull/12088).
 * `accounts-base@2.2.4`:
   - Adding new options to the `Accounts.config()` method: `loginTokenExpirationHours` and `tokenSequenceLength`. [PR](https://github.com/meteor/meteor/pull/12088).
 * `Meteor Repo`:
