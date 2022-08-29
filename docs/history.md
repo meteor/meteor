@@ -20,8 +20,8 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Adding async counterparts that allows gradual migration from Fibers. [PR](https://github.com/meteor/meteor/pull/12028).
 * `meteor@1.10.1`:
   - Create method to check if Fibers is enabled by flag DISABLE_FIBERS. [PR](https://github.com/meteor/meteor/pull/12100).
-* `npm-mongo@4.8.0`:
-  - Updated MongoDB driver to 4.8. [PR](https://github.com/meteor/meteor/pull/12097).
+* `npm-mongo@4.9.0`:
+  - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
 
 #### Independent Releases
 * `accounts-passwordless@2.1.3`:
