@@ -6,3 +6,17 @@ Meteor._isFibersEnabled = !process.env.DISABLE_FIBERS && Meteor.isServer;
 Meteor._getAslStore = getAslStore;
 Meteor._getValueFromAslStore = getValueFromAslStore;
 Meteor._updateAslStore = updateAslStore;
+
+Meteor._runAsync = (fn, ctx) => {
+    if (Meteor._isFibersEnabled) {
+        const Fiber = Npm.require('fibers');
+
+        return Fiber(() => {
+            fn.call(ctx);
+        }).run();
+    }
+
+    global.asyncLocalStorage.run(Meteor._getAslStore(), () => {
+        fn.call(ctx);
+    });
+};
