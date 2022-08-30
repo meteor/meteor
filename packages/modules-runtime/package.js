@@ -18,7 +18,7 @@ Package.onUse(function(api) {
     bare: true
   });
 
-  api.addFiles(['./errors/cannotImportFrom.js',
+  api.addFiles(['./errors/importsErrors.js',
     './errors/cannotFindMeteorPackage.js']);
   api.addFiles('modern.js', 'modern');
   api.addFiles('legacy.js', 'legacy');
