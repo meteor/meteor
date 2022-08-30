@@ -11,7 +11,12 @@ Tinytest.add('errors - standard', function (test) {
   }, 'Cannot find package "foo". Try "meteor add foo".');
 });
 
-
+Tinytest.add('errors - node_modules', function (test) {
+  var require = meteorInstall();
+  test.throws(() => {
+    require('./node_modules/foo');
+  }, "Cannot find module './node_modules/foo'");
+});
 
 if (Meteor.isServer) {
   Tinytest.add('server - throwClientError', function (test) {
