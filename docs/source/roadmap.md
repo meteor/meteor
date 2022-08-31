@@ -46,6 +46,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 - Remove Fibers entirely;
 
 ### Community items
+- Release Blaze 2.6.2; ([Milestone](https://github.com/meteor/blaze/milestone/9))
 - Vue 3 integration; ([Forums](https://forums.meteor.com/t/status-of-vue-3-meteor/57915/25) / [Discussion](https://github.com/meteor/meteor/discussions/11521))
 - SolidJS starter template;
 
