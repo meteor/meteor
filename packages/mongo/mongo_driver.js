@@ -794,8 +794,7 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype.findOne = function (collection_name, selector,
-                                              options) {
+MongoConnection.prototype._findOneFibers = function (collection_name, selector, options) {
   var self = this;
   if (arguments.length === 1)
     selector = {};
@@ -803,6 +802,24 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
   options = options || {};
   options.limit = 1;
   return self.find(collection_name, selector, options).fetch()[0];
+};
+
+MongoConnection.prototype._findOneNoFibers = async function (collection_name, selector, options) {
+  var self = this;
+  if (arguments.length === 1) {
+    selector = {};
+  }
+
+  options = options || {};
+  options.limit = 1;
+
+  const results = await self.find(collection_name, selector, options).fetch();
+
+  return results[0];
+};
+
+MongoConnection.prototype.findOne = function (...args) {
+  return Meteor._isFibersEnabled ? this._findOneFibers(...args) : this._findOneNoFibers(...args);
 };
 
 // We'll actually design an index API later. For now, we just pass through to

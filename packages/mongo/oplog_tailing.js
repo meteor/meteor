@@ -227,7 +227,7 @@ Object.assign(OplogHandle.prototype, {
       // tailing selector (ie, we need to specify the DB name) or else we might
       // find a TS that won't show up in the actual tail stream.
       try {
-        lastEntry = self._oplogLastEntryConnection.findOne(
+        lastEntry = await self._oplogLastEntryConnection.findOne(
             OPLOG_COLLECTION, self._baseOplogSelector,
             {fields: {ts: 1}, sort: {$natural: -1}});
         break;

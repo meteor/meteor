@@ -142,7 +142,11 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
         test.extraDetails.asyncBlock = i++;
 
         new Promise(resolve => {
-          resolve(func.apply(context, [test, _.bind(em.expect, em)]));
+          if (func.constructor.name === "Function") {
+            return resolve(func.apply(context, [test, _.bind(em.expect, em)]));
+          }
+
+          return func.apply(context, [test, _.bind(em.expect, em)]).then((r) => resolve(r));
         }).then(result => {
           em.done();
         }, exception => {
