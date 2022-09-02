@@ -14,11 +14,13 @@ imports = function (id) {
       if (!id) {
         return false;
       }
-      return String(id)
-        .split('/')
-        .some(function (subPath) {
-          return subPath === location;
-        });
+
+      // XXX: removed last part of path so that it does not trigger false positives
+      var path = String(id).split('/').slice(0, -1);
+
+      return path.some(function (subPath) {
+        return subPath === location;
+      });
     };
 
   var fromClientError =
