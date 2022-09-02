@@ -26,6 +26,15 @@ if (Meteor.isServer) {
       }, "Cannot find module './../server/main.js'"
     );
   });
+  Tinytest.add('server - client and server in path', function (test) {
+    var require = meteorInstall();
+    test.throws(() => {
+        require('/client/graphql/client');
+      },
+      'Unable to import on the server a module from a client directory: "/client/graphql/client" \n' +
+      ' (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories'
+    );
+  });
   Tinytest.add('server - throwServerError', function (test) {
     var require = meteorInstall();
     test.throws(() => {
@@ -44,6 +53,15 @@ if (Meteor.isClient) {
         require('./../server/main.js');
       },
       'Unable to import on the client a module from a server directory: "./../server/main.js" \n' +
+      ' (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories'
+    );
+  });
+  Tinytest.add('client - client and server in path', function (test) {
+    var require = meteorInstall();
+    test.throws(() => {
+        require('/server/graphql/client');
+      },
+      'Unable to import on the client a module from a server directory: "/server/graphql/client" \n' +
       ' (cross-boundary import) see: https://guide.meteor.com/structure.html#special-directories'
     );
   });
