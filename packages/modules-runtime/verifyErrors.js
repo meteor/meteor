@@ -15,11 +15,6 @@ verifyErrors = function (id, parentId,err)  {
     throw err;
   }
 
-  if (id.endsWith('client') || id.endsWith('server')) {
-    // We don't know for sure what client wants to do so throw standard error
-    throw err;
-  }
-
   if (imports(id).from('node_modules')) {
     // Problem with node modules
     throw err;
