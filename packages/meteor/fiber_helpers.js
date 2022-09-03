@@ -2,6 +2,10 @@ var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
 
 Meteor._noYieldsAllowed = function (f) {
+  if (!Meteor._isFibersEnabled) {
+    return f();
+  }
+
   var savedYield = Fiber.yield;
   Fiber.yield = function () {
     throw new Error("Can't call yield in a noYieldsAllowed block!");

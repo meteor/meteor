@@ -762,7 +762,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
-    return Meteor._isFibersEnabled ? Meteor.wrapAsync(self["_" + method]).apply(self, arguments) : self[`_${method}`].apply(self, arguments);
+    return Meteor._isFibersEnabled ? Meteor.wrapAsync(self["_" + method]).apply(self, arguments) : Meteor.promisify(self[`_${method}`]).apply(self, arguments);
   };
 });
 
