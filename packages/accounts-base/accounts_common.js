@@ -79,40 +79,6 @@ export class AccountsCommon {
     // should come up with a more generic way to do this (eg, with some sort of
     // symbolic error code rather than a number).
     this.LoginCancelledError.numericError = 0x8acdc2f;
-
-    // loginServiceConfiguration and ConfigError are maintained for backwards compatibility
-    Meteor.startup(() => {
-      const { ServiceConfiguration } = Package['service-configuration'];
-      this.loginServiceConfiguration = ServiceConfiguration.configurations;
-      this.ConfigError = ServiceConfiguration.ConfigError;
-
-      const settings = Meteor.settings?.packages?.['accounts-base'];
-      if (settings) {
-        if (settings.oauthSecretKey) {
-          if (!Package['oauth-encryption']) {
-            throw new Error(
-              'The oauth-encryption package must be loaded to set oauthSecretKey'
-            );
-          }
-          Package['oauth-encryption'].OAuthEncryption.loadKey(
-            settings.oauthSecretKey
-          );
-          delete settings.oauthSecretKey;
-        }
-        // Validate config options keys
-        Object.keys(settings).forEach(key => {
-          if (!VALID_CONFIG_KEYS.includes(key)) {
-            // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
-            throw new Meteor.Error(
-              `Accounts configuration: Invalid key: ${key}`
-            );
-          } else {
-            // set values in Accounts._options
-            this._options[key] = settings[key];
-          }
-        });
-      }
-    });
   }
 
   /**

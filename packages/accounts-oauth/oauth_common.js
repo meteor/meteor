@@ -1,3 +1,5 @@
+import { Meteor } from 'meteor/meteor';
+
 Accounts.oauth = {};
 
 const services = {};
@@ -31,3 +33,37 @@ Accounts.oauth.unregisterService = name => {
 };
 
 Accounts.oauth.serviceNames = () => Object.keys(services);
+
+// loginServiceConfiguration and ConfigError are maintained for backwards compatibility
+Meteor.startup(() => {
+  const { ServiceConfiguration } = Package['service-configuration'];
+  Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
+  Accounts.ConfigError = ServiceConfiguration.ConfigError;
+
+  const settings = Meteor.settings?.packages?.['accounts-base'];
+  if (settings) {
+    if (settings.oauthSecretKey) {
+      if (!Package['oauth-encryption']) {
+        throw new Error(
+          'The oauth-encryption package must be loaded to set oauthSecretKey'
+        );
+      }
+      Package['oauth-encryption'].OAuthEncryption.loadKey(
+        settings.oauthSecretKey
+      );
+      delete settings.oauthSecretKey;
+    }
+    // Validate config options keys
+    Object.keys(settings).forEach(key => {
+      if (!VALID_CONFIG_KEYS.includes(key)) {
+        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
+        throw new Meteor.Error(
+          `Accounts configuration: Invalid key: ${key}`
+        );
+      } else {
+        // set values in Accounts._options
+        Accounts._options[key] = settings[key];
+      }
+    });
+  }
+});

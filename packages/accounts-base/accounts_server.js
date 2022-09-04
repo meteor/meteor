@@ -76,9 +76,6 @@ export class AccountsServer extends AccountsCommon {
     setExpireTokensInterval(this);
 
     this._validateLoginHook = new Hook({ bindEnvironment: false });
-    this._validateNewUserHooks = [
-      defaultValidateNewUserHook.bind(this)
-    ];
 
     this._deleteSavedTokensForAllUsersOnStartup();
 
@@ -1684,66 +1681,6 @@ const setExpireTokensInterval = accounts => {
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 
-///
-/// OAuth Encryption Support
-///
-
-const OAuthEncryption =
-  Package["oauth-encryption"] &&
-  Package["oauth-encryption"].OAuthEncryption;
-
-const usingOAuthEncryption = () => {
-  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
-};
-
-// OAuth service data is temporarily stored in the pending credentials
-// collection during the oauth authentication process.  Sensitive data
-// such as access tokens are encrypted without the user id because
-// we don't know the user id yet.  We re-encrypt these fields with the
-// user id included when storing the service data permanently in
-// the users collection.
-//
-const pinEncryptedFieldsToUser = (serviceData, userId) => {
-  Object.keys(serviceData).forEach(key => {
-    let value = serviceData[key];
-    if (OAuthEncryption && OAuthEncryption.isSealed(value))
-      value = OAuthEncryption.seal(OAuthEncryption.open(value), userId);
-    serviceData[key] = value;
-  });
-};
-
-
-// Encrypt unencrypted login service secrets when oauth-encryption is
-// added.
-//
-// XXX For the oauthSecretKey to be available here at startup, the
-// developer must call Accounts.config({oauthSecretKey: ...}) at load
-// time, instead of in a Meteor.startup block, because the startup
-// block in the app code will run after this accounts-base startup
-// block.  Perhaps we need a post-startup callback?
-
-Meteor.startup(() => {
-  if (! usingOAuthEncryption()) {
-    return;
-  }
-
-  const { ServiceConfiguration } = Package['service-configuration'];
-
-  ServiceConfiguration.configurations.find({
-    $and: [{
-      secret: { $exists: true }
-    }, {
-      "secret.algorithm": { $exists: false }
-    }]
-  }).forEach(config => {
-    ServiceConfiguration.configurations.update(config._id, {
-      $set: {
-        secret: OAuthEncryption.seal(config.secret)
-      }
-    });
-  });
-});
-
 // XXX see comment on Accounts.createUser in passwords_server about adding a
 // second "server options" argument.
 const defaultCreateUserHook = (options, user) => {
@@ -1751,37 +1688,6 @@ const defaultCreateUserHook = (options, user) => {
     user.profile = options.profile;
   return user;
 };
-
-// Validate new user's email or Google/Facebook/GitHub account's email
-function defaultValidateNewUserHook(user) {
-  const domain = this._options.restrictCreationByEmailDomain;
-  if (!domain) {
-    return true;
-  }
-
-  let emailIsGood = false;
-  if (user.emails && user.emails.length > 0) {
-    emailIsGood = user.emails.reduce(
-      (prev, email) => prev || this._testEmailDomain(email.address), false
-    );
-  } else if (user.services && Object.values(user.services).length > 0) {
-    // Find any email of any service and check it
-    emailIsGood = Object.values(user.services).reduce(
-      (prev, service) => service.email && this._testEmailDomain(service.email),
-      false,
-    );
-  }
-
-  if (emailIsGood) {
-    return true;
-  }
-
-  if (typeof domain === 'string') {
-    throw new Meteor.Error(403, `@${domain} email required`);
-  } else {
-    throw new Meteor.Error(403, "Email doesn't match the criteria.");
-  }
-}
 
 const setupUsersCollection = users => {
   ///
