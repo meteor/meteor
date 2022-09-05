@@ -14,6 +14,7 @@ Package.describe({
 Package.onUse(function(api) {
   api.use('rate-limit', 'server');
   api.use('ecmascript');
+  api.addAssets('ddp-rate-limiter.d.ts', ['client', 'server']);
   api.export('DDPRateLimiter', 'server');
   api.mainModule('ddp-rate-limiter.js', 'server');
 });
