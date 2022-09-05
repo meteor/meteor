@@ -7,6 +7,8 @@ Package.onUse(function (api) {
   api.use(['ddp-client'], ['client', 'server']);
   api.use(['ddp-server'], 'server');
 
+  api.addAssets('ddp.d.ts', ['client', 'server']);
+
   api.export('DDP');
   api.export('DDPServer', 'server');
 
