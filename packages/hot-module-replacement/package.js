@@ -11,6 +11,8 @@ Package.onUse(function(api) {
   api.use('meteor');
   api.use('hot-code-push', { unordered: true });
 
+  api.addAssets('hot-module-replacement.d.ts', ['client', 'server']);
+
   // Provides polyfills needed by Meteor.absoluteUrl in legacy browsers
   api.use('ecmascript-runtime-client', { weak: true });
 
