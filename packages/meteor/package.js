@@ -11,7 +11,8 @@ Package.registerBuildPlugin({
 });
 
 Npm.depends({
-  "double-ended-queue": "2.1.0-0"
+  "double-ended-queue": "2.1.0-0",
+  "zone.js": "0.11.8",
 });
 
 Package.onUse(function (api) {

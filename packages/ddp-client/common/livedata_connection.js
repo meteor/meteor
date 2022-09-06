@@ -7,6 +7,12 @@ import { Hook } from 'meteor/callback-hook';
 import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
 import MethodInvoker from './MethodInvoker.js';
+
+if (Meteor.isClient) {
+  require('zone.js');
+}
+
+
 import {
   hasOwn,
   slice,
@@ -21,6 +27,19 @@ if (Meteor.isServer) {
   Fiber = Npm.require('fibers');
   Future = Npm.require('fibers/future');
 }
+
+function randomId(n) {
+  let s = "";
+  while (s.length < n) {
+    s += Math.random().toString(36).slice(2);
+  }
+  return s.slice(0, n);
+}
+
+const isAsyncFunction = func => {
+  const {constructor: { name } = {}} = func || {};
+  return name === 'AsyncFunction';
+};
 
 class MongoIDMap extends IdMap {
   constructor() {
@@ -530,6 +549,17 @@ export class Connection {
     });
   }
 
+  createInvocationContext({ ...options } = {}) {
+    return {
+      invocationContext: {
+        uuid: randomId(32),
+        invocationStart: new Date(),
+        context: {},
+        ...options,
+      }
+    };
+  }
+
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
@@ -548,7 +578,30 @@ export class Connection {
     if (args.length && typeof args[args.length - 1] === 'function') {
       callback = args.pop();
     }
-    return this.apply(name, args, callback);
+    if (Meteor.isClient) {
+      const invocationZone = Zone.current.fork({name,
+        properties: {
+          invocationContext: this.createInvocationContext({ name, origin: 'call' }),
+        }
+      });
+      return invocationZone.run(() => this._apply(name, args, callback));
+    }
+    return this._apply(name, args, callback);
+    //
+    // const context = this.createInvocationContext({
+    //   name,
+    //   from: 'call'
+    // });
+    // const proxy = new Proxy(this, {
+    //   get: function (target, prop, receiver) {
+    //     //console.log("Proxy", {prop});
+    //     if (prop === "invocationContext") {
+    //       return context;
+    //     }
+    //     return Reflect.get(...arguments);
+    //   },
+    // });
+    // return this.apply.bind(proxy)(name, args, callback);
   }
 
   /**
@@ -567,7 +620,28 @@ export class Connection {
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
+
   apply(name, args, options, callback) {
+    console.log({ Zone });
+    if (Meteor.isClient) {
+      const invocationContext = Zone?.current?.get && Zone.current.get('invocationContext');
+      if (!invocationContext) {
+        const invocationZone = Zone.current.fork({
+          name,
+          properties: {
+            invocationContext: this.createInvocationContext({
+              name,
+              origin: 'apply'
+            }),
+          }
+        });
+        return invocationZone.run(() => this._apply(name, args, options, callback));
+      }
+    }
+    return this._apply(name, args, options, callback);
+  }
+
+  _apply(name, args, options, callback) {
     const self = this;
 
     // We were passed 3 arguments. They may be either (name, args, options)
@@ -591,7 +665,8 @@ export class Connection {
     // Keep our args safe from mutation (eg if we don't send the message for a
     // while because of a wait method).
     args = EJSON.clone(args);
-
+    //const invocationContext = Zone?.current?.get && Zone.current.get('invocationContext');
+    //console.log('Apply-invocationContext', { currentZone, invocationContext });
     const enclosing = DDP._CurrentMethodInvocation.get();
     const alreadyInSimulation = enclosing && enclosing.isSimulation;
 
@@ -643,24 +718,26 @@ export class Connection {
       });
 
       if (!alreadyInSimulation) self._saveOriginals();
-
+      const method = () => {
+        if (Meteor.isServer) {
+          // Because saveOriginals and retrieveOriginals aren't reentrant,
+          // don't allow stubs to yield.
+          return Meteor._noYieldsAllowed(() => {
+            // re-clone, so that the stub can't affect our caller's values
+            return stub.apply(invocation, EJSON.clone(args));
+          });
+        } else {
+          return stub.apply(invocation, EJSON.clone(args));
+        }
+      };
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
         stubReturnValue = DDP._CurrentMethodInvocation.withValue(
           invocation,
-          () => {
-            if (Meteor.isServer) {
-              // Because saveOriginals and retrieveOriginals aren't reentrant,
-              // don't allow stubs to yield.
-              return Meteor._noYieldsAllowed(() => {
-                // re-clone, so that the stub can't affect our caller's values
-                return stub.apply(invocation, EJSON.clone(args));
-              });
-            } else {
-              return stub.apply(invocation, EJSON.clone(args));
-            }
-          }
+          !Meteor.isServer && isAsyncFunction(stub) ?
+            async () => await method()
+            : method
         );
       } catch (e) {
         exception = e;

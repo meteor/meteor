@@ -3,6 +3,11 @@
 var nextSlot = 0;
 var currentValues = [];
 
+const isAsyncFunction = func => {
+  const {constructor: { name } = {}} = func || {};
+  return name === 'AsyncFunction';
+};
+
 Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
 };
@@ -10,22 +15,33 @@ Meteor.EnvironmentVariable = function () {
 var EVp = Meteor.EnvironmentVariable.prototype;
 
 EVp.get = function () {
-  return currentValues[this.slot];
+  const currentContext = Zone.current;
+  if (!currentContext?.get) {
+    return null;
+  }
+  return currentContext.get('invocationContext')?.context;
 };
 
 EVp.getOrNullIfOutsideFiber = function () {
-  return this.get();
+  return null;
 };
 
 EVp.withValue = function (value, func) {
-  var saved = currentValues[this.slot];
-  try {
-    currentValues[this.slot] = value;
-    var ret = func();
-  } finally {
-    currentValues[this.slot] = saved;
-  }
-  return ret;
+  const currentContext = Zone.current;
+  const invocationContext = currentContext.get('invocationContext') || {};
+  const newContext = currentContext.fork({
+    properties: { invocationContext: { ...invocationContext, context: value } }
+  });
+  // if (isAsyncFunction(func)) {
+  //   return newContext.run(() => {
+  //     return func().then().catch(err => {
+  //       console.log({err});
+  //     });
+  //   });
+  // }
+  return newContext.run(() => {
+    return func();
+  });
 };
 
 Meteor.bindEnvironment = function (func, onException, _this) {

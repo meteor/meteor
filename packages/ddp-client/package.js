@@ -5,7 +5,8 @@ Package.describe({
 });
 
 Npm.depends({
-  '@sinonjs/fake-timers': '7.0.5'
+  '@sinonjs/fake-timers': '7.0.5',
+  'zone.js': '0.11.8',
 });
 
 Package.onUse((api) => {
