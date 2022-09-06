@@ -97,15 +97,15 @@ EVp.withValue = function (value, func) {
   let meteorDynamics = Meteor._getValueFromAslStore('_meteor_dynamics');
   if (!meteorDynamics) {
     meteorDynamics = [];
-    Meteor._updateAslStore('_meteor_dynamics', []);
   }
 
   const saved = meteorDynamics[this.slot];
   try {
-    Meteor._updateAslStore('_meteor_dynamics', value);
+    meteorDynamics[this.slot] = value;
     return func();
   } finally {
-    Meteor._updateAslStore('_meteor_dynamics', saved);
+    meteorDynamics[this.slot] = saved;
+    Meteor._updateAslStore('_meteor_dynamics', meteorDynamics);
   }
 };
 

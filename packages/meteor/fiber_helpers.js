@@ -162,12 +162,12 @@ SQp._scheduleRun = function () {
    */
   if (Meteor._isFibersEnabled) {
     setImmediate(function() {
-      Fiber(function() {
+      Meteor._runAsync(function() {
         self._run();
-      }).run();
+      });
     });
   } else {
-    global.asyncLocalStorage.run(Meteor._getAslStore(), () => {
+    Meteor._runAsync(() => {
       self._run();
     });
   }

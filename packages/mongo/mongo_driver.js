@@ -1125,23 +1125,23 @@ class AsynchronousCursor {
         });
   }
 
-  forEach(callback, thisArg) {
+  async forEach(callback, thisArg) {
     // Get back to the beginning.
     this._rewind();
 
-    return this._cursor.forEach((doc, index) => {
-      callback.call(thisArg, doc, index)
-    }, this._selfForIteration);
+    let idx = 0;
+    while (true) {
+      const doc = await this._nextObjectPromise();
+      if (!doc) return;
+      await callback.call(thisArg, doc, idx++, this._selfForIteration);
+    }
   }
 
   async map(callback, thisArg) {
     const results = [];
-
-    let idx = 0;
-    for await (const doc of this._cursor) {
-      results.push(await callback.call(thisArg, doc, idx, this._selfForIteration))
-      idx++;
-    }
+    await this.forEach(async (doc, index) => {
+      results.push(await callback.call(thisArg, doc, index, this._selfForIteration));
+    });
 
     return results;
   }
@@ -1159,7 +1159,7 @@ class AsynchronousCursor {
   }
 
   fetch() {
-    return this._cursor.toArray();
+    return this.map(_.identity);
   }
 
   /**
@@ -1172,13 +1172,13 @@ class AsynchronousCursor {
   }
 
   // This method is NOT wrapped in Cursor.
-  getRawObjects(ordered) {
+  async getRawObjects(ordered) {
     var self = this;
     if (ordered) {
       return self.fetch();
     } else {
       var results = new LocalCollection._IdMap;
-      self.forEach(function (doc) {
+      await self.forEach(function (doc) {
         results.set(doc._id, doc);
       });
       return results;
@@ -1590,6 +1590,10 @@ Object.assign(MongoConnection.prototype, {
         _testOnlyPollCallback: callbacks._testOnlyPollCallback
       });
 
+      if (observeDriver._init) {
+        await observeDriver._init();
+      }
+
       // This field is only set for use in tests.
       multiplexer._observeDriver = observeDriver;
     }
@@ -1696,6 +1700,10 @@ Object.assign(MongoConnection.prototype, {
         sorter: sorter,  // ignored by polling
         _testOnlyPollCallback: callbacks._testOnlyPollCallback
       });
+
+      if (observeDriver._init) {
+        observeDriver._init();
+      }
 
       // This field is only set for use in tests.
       multiplexer._observeDriver = observeDriver;

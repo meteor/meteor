@@ -79,8 +79,7 @@ _.extend(DDPServer._WriteFence.prototype, {
     self.completion_callbacks.push(func);
   },
 
-  // Convenience function. Arms the fence, then blocks until it fires.
-  armAndWait: function () {
+  _armAndWaitFibers: function () {
     var self = this;
     var future = new Future;
     self.onAllCommitted(function () {
@@ -88,6 +87,29 @@ _.extend(DDPServer._WriteFence.prototype, {
     });
     self.arm();
     future.wait();
+  },
+  _armAndWaitNoFibers: function () {
+    var self = this;
+
+    let _resolver;
+    self.onAllCommitted(function () {
+      if (!_resolver) {
+        console.warn("oops, no resolver");
+        return;
+      }
+
+      _resolver();
+    });
+
+    return new Promise((r) => {
+      _resolver = r;
+      self.arm();
+    } );
+  },
+
+  // Convenience function. Arms the fence, then blocks until it fires.
+  armAndWait: function () {
+    return Meteor._isFibersEnabled ? this._armAndWaitFibers() : this._armAndWaitNoFibers();
   },
 
   _maybeFire: function () {
