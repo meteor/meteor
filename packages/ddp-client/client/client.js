@@ -1,3 +1,5 @@
+import 'zone.js';
+
 export { DDP } from '../common/namespace.js';
 
 import '../common/livedata_connection';

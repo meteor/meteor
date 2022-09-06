@@ -8,11 +8,6 @@ import { MongoID } from 'meteor/mongo-id';
 import { DDP } from './namespace.js';
 import MethodInvoker from './MethodInvoker.js';
 
-if (Meteor.isClient) {
-  require('zone.js');
-}
-
-
 import {
   hasOwn,
   slice,
@@ -581,12 +576,12 @@ export class Connection {
     if (Meteor.isClient) {
       const invocationZone = Zone.current.fork({name,
         properties: {
-          invocationContext: this.createInvocationContext({ name, origin: 'call' }),
+          ...this.createInvocationContext({ name, origin: 'call' }),
         }
       });
       return invocationZone.run(() => this._apply(name, args, callback));
     }
-    return this._apply(name, args, callback);
+    return this.apply(name, args, callback);
     //
     // const context = this.createInvocationContext({
     //   name,
@@ -622,14 +617,13 @@ export class Connection {
    */
 
   apply(name, args, options, callback) {
-    console.log({ Zone });
     if (Meteor.isClient) {
       const invocationContext = Zone?.current?.get && Zone.current.get('invocationContext');
       if (!invocationContext) {
         const invocationZone = Zone.current.fork({
           name,
           properties: {
-            invocationContext: this.createInvocationContext({
+            ...this.createInvocationContext({
               name,
               origin: 'apply'
             }),
@@ -668,6 +662,7 @@ export class Connection {
     //const invocationContext = Zone?.current?.get && Zone.current.get('invocationContext');
     //console.log('Apply-invocationContext', { currentZone, invocationContext });
     const enclosing = DDP._CurrentMethodInvocation.get();
+    //console.log({enclosing});
     const alreadyInSimulation = enclosing && enclosing.isSimulation;
 
     // Lazily generate a randomSeed, only if it is requested by the stub.
@@ -717,27 +712,28 @@ export class Connection {
         }
       });
 
-      if (!alreadyInSimulation) self._saveOriginals();
-      const method = () => {
+      const stubInvocationMethod = () => {
         if (Meteor.isServer) {
           // Because saveOriginals and retrieveOriginals aren't reentrant,
           // don't allow stubs to yield.
-          return Meteor._noYieldsAllowed(() => {
+          return () => Meteor._noYieldsAllowed(() => {
             // re-clone, so that the stub can't affect our caller's values
             return stub.apply(invocation, EJSON.clone(args));
           });
-        } else {
-          return stub.apply(invocation, EJSON.clone(args));
         }
+        if (isAsyncFunction(stub)) {
+          return async () => await stub.apply(invocation, EJSON.clone(args));
+        }
+        return () => stub.apply(invocation, EJSON.clone(args));
       };
+
+      if (!alreadyInSimulation) self._saveOriginals();
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
         stubReturnValue = DDP._CurrentMethodInvocation.withValue(
           invocation,
-          !Meteor.isServer && isAsyncFunction(stub) ?
-            async () => await method()
-            : method
+          stubInvocationMethod()
         );
       } catch (e) {
         exception = e;

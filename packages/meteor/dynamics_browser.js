@@ -28,9 +28,10 @@ EVp.getOrNullIfOutsideFiber = function () {
 
 EVp.withValue = function (value, func) {
   const currentContext = Zone.current;
-  const invocationContext = currentContext.get('invocationContext') || {};
+  const currentInvocationContext = currentContext.get('invocationContext') || {};
+  const invocationContext = { ...currentInvocationContext, context: value };
   const newContext = currentContext.fork({
-    properties: { invocationContext: { ...invocationContext, context: value } }
+    properties: { invocationContext }
   });
   // if (isAsyncFunction(func)) {
   //   return newContext.run(() => {
