@@ -82,6 +82,7 @@ Package.onUse(function (api) {
   api.addFiles('remote_collection_driver.js', 'server');
   api.addFiles('collection.js', ['client', 'server']);
   api.addFiles('connection_options.js', 'server');
+  api.addAssets('mongo.d.ts', ['client', 'server']);
 });
 
 Package.onTest(function (api) {
