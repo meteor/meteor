@@ -8,6 +8,7 @@ Package.onUse(function (api) {
   api.addFiles("tracker.js");
   api.export("Tracker");
   api.export("Deps");
+  api.addAssets("tracker.d.ts", ["client", "server"]);
 });
 
 Package.onTest(function (api) {
