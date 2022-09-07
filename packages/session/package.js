@@ -13,6 +13,7 @@ Package.onUse(function (api) {
 
   api.export('Session', 'client');
   api.mainModule('session.js', 'client');
+  api.addAssets('session.d.ts', ['client', 'server']);
 });
 
 Package.onTest(function (api) {
