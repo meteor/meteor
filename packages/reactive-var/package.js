@@ -9,4 +9,5 @@ Package.onUse(function (api) {
   api.use('tracker');
 
   api.addFiles('reactive-var.js');
+  api.addAssets('reactive-var.d.ts', ['client', 'server']);
 });
