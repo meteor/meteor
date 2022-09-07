@@ -57,6 +57,7 @@ Package.onUse(function(api) {
   api.export('WebApp', 'client');
 
   api.mainModule('webapp_cordova.js', 'web.cordova');
+  api.addAssets('webapp.d.ts', ['client', 'server']);
 });
 
 Package.onTest(function(api) {
