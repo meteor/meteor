@@ -1,4 +1,4 @@
-export class Promise<T> extends globalThis.Promise<T> {
+export declare class Promise<T> extends globalThis.Promise<T> {
   static async<
     Fn extends (this: This, ...args: Args) => any,
     This,

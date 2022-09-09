@@ -86,7 +86,7 @@ export namespace Match {
  * @param value The value to check
  * @param pattern The pattern to match `value` against
  */
-export function check<T extends Match.Pattern>(
+export declare function check<T extends Match.Pattern>(
   value: any,
   pattern: T
 ): asserts value is Match.PatternMatch<T>;

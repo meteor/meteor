@@ -1,7 +1,7 @@
 /**
  * The namespace for Tracker-related methods.
  */
-export declare namespace Tracker {
+export namespace Tracker {
   function Computation(): void;
   /**
    * A Computation object represents code that is repeatedly rerun

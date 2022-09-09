@@ -1,7 +1,7 @@
 import * as http from 'http';
 import * as connect from 'connect';
 
-declare interface StaticFiles {
+export interface StaticFiles {
   [key: string]: {
     content?: string | undefined;
     absolutePath: string;
@@ -12,7 +12,7 @@ declare interface StaticFiles {
   };
 }
 
-declare module WebApp {
+export declare module WebApp {
   var defaultArch: string;
   var clientPrograms: {
     [key: string]: {
@@ -41,7 +41,7 @@ declare module WebApp {
   function encodeRuntimeConfig(rtimeConfig: unknown): string;
 }
 
-declare module WebAppInternals {
+export declare module WebAppInternals {
   var NpmModules: {
     [key: string]: {
       version: string;

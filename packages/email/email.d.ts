@@ -30,7 +30,8 @@ export interface MailComposerOptions {
   forceEmbeddedImages: boolean;
 }
 
-export var MailComposer: MailComposerStatic;
+export declare var MailComposer: MailComposerStatic;
+
 export interface MailComposerStatic {
   new (options: MailComposerOptions): MailComposer;
 }

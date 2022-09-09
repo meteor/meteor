@@ -2,9 +2,9 @@ import * as http from 'http';
 
 // NodeJS.ReadableStream only works on server.
 // HTMLElement only works on client.
-type Content = string | Content[] | NodeJS.ReadableStream | HTMLElement;
+export type Content = string | Content[] | NodeJS.ReadableStream | HTMLElement;
 
-interface ClientSink {
+export interface ClientSink {
   // Client and server. Only client
   appendToHead(html: Content): void;
   appendToBody(html: Content): void;
@@ -19,7 +19,7 @@ interface ClientSink {
   getCookies(): { [key: string]: string };
 }
 
-interface ServerSink extends ClientSink {
+export interface ServerSink extends ClientSink {
   // Server-only:
   request: http.IncomingMessage;
   arch: string;
@@ -29,8 +29,8 @@ interface ServerSink extends ClientSink {
   maybeMadeChanges: boolean;
 }
 
-type Sink = ClientSink | ServerSink;
+export type Sink = ClientSink | ServerSink;
 
-type Callback = (sink: Sink) => Promise<any> | any;
+export type Callback = (sink: Sink) => Promise<any> | any;
 
 export function onPageLoad<T extends Callback>(callback: T): T;

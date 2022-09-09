@@ -1,4 +1,4 @@
-export var ReactiveVar: ReactiveVarStatic;
+export declare var ReactiveVar: ReactiveVarStatic;
 
 export interface ReactiveVarStatic {
   /**

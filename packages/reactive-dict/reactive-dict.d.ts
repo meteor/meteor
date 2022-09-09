@@ -1,6 +1,6 @@
 import { EJSONable } from 'meteor/ejson';
 
-export class ReactiveDict<O = EJSONable> {
+export declare class ReactiveDict<O = EJSONable> {
   /**
    * Constructor for a ReactiveDict, which represents a reactive dictionary of key/value pairs.
    * @param name When a name is passed, preserves contents across Hot Code Pushes

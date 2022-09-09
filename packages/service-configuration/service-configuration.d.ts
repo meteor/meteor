@@ -1,10 +1,10 @@
 import { Mongo } from 'meteor/mongo';
 
-interface Configuration {
+export interface Configuration {
   appId: string;
   secret: string;
 }
 
-declare var ServiceConfiguration: {
+export declare var ServiceConfiguration: {
   configurations: Mongo.Collection<Configuration>;
 };
