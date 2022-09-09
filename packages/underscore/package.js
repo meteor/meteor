@@ -27,6 +27,8 @@ Package.onUse(function (api) {
   // numeric length field whose constructor === Object are still treated as
   // objects, not as arrays.  Search for looksLikeArray.
   api.addFiles(['pre.js', 'underscore.js', 'post.js']);
+
+  api.addAssets('underscore.d.ts', ['client', 'server']);
 });
 
 
