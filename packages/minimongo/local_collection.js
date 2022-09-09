@@ -34,6 +34,7 @@ export default class LocalCollection {
     // null if not saving originals; an IdMap from id to original document value
     // if saving originals. See comments before saveOriginals().
     this._savedOriginals = null;
+    this._savedOriginalsMethods = [];
 
     // True when observers are paused and we should not send callbacks.
     this.paused = false;
@@ -174,7 +175,7 @@ export default class LocalCollection {
     // Easy special case: if we're not calling observeChanges callbacks and
     // we're not saving originals and we got asked to remove everything, then
     // just empty everything directly.
-    if (this.paused && !this._savedOriginals && EJSON.equals(selector, {})) {
+    if (this.paused && !this._savedOriginalsMethods.length && EJSON.equals(selector, {})) {
       const result = this._docs.size();
 
       this._docs.clear();
@@ -306,14 +307,14 @@ export default class LocalCollection {
     this._observeQueue.drain();
   }
 
-  retrieveOriginals() {
-    if (!this._savedOriginals) {
+  retrieveOriginals(methodId) {
+    if (!this._savedOriginalsMethods[methodId]) {
       throw new Error('Called retrieveOriginals without saveOriginals');
     }
 
-    const originals = this._savedOriginals;
+    const originals = this._savedOriginalsMethods[methodId];
 
-    this._savedOriginals = null;
+    delete this._savedOriginalsMethods[methodId];
 
     return originals;
   }
@@ -325,12 +326,12 @@ export default class LocalCollection {
   // equal to the document's contents at the time of saveOriginals. (In the case
   // of an inserted document, undefined is the value.) You must alternate
   // between calls to saveOriginals() and retrieveOriginals().
-  saveOriginals() {
-    if (this._savedOriginals) {
+  saveOriginals(methodId) {
+    if (this._savedOriginalsMethods[methodId]) {
       throw new Error('Called saveOriginals twice without retrieveOriginals');
     }
 
-    this._savedOriginals = new LocalCollection._IdMap;
+    this._savedOriginalsMethods[methodId] = new LocalCollection._IdMap;
   }
 
   // XXX atomicity: if multi is true, and one modification fails, do
@@ -616,18 +617,18 @@ export default class LocalCollection {
 
   _saveOriginal(id, doc) {
     // Are we even trying to save originals?
-    if (!this._savedOriginals) {
+    if (!this._savedOriginalsMethods[0]) {
       return;
     }
 
     // Have we previously mutated the original (and so 'doc' is not actually
     // original)?  (Note the 'has' check rather than truth: we store undefined
     // here for inserted docs!)
-    if (this._savedOriginals.has(id)) {
+    if (this._savedOriginalsMethods[0].has(id)) {
       return;
     }
 
-    this._savedOriginals.set(id, EJSON.clone(doc));
+    this._savedOriginalsMethods[0].set(id, EJSON.clone(doc));
   }
 }
 

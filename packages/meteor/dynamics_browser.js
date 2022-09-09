@@ -33,15 +33,8 @@ EVp.withValue = function (value, func) {
   const newContext = currentContext.fork({
     properties: { invocationContext }
   });
-  // if (isAsyncFunction(func)) {
-  //   return newContext.run(() => {
-  //     return func().then().catch(err => {
-  //       console.log({err});
-  //     });
-  //   });
-  // }
-  return newContext.run(() => {
-    return func();
+  return newContext.run(async () => {
+    return await func();
   });
 };
 

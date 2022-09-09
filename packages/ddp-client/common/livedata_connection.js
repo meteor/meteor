@@ -662,7 +662,6 @@ export class Connection {
     //const invocationContext = Zone?.current?.get && Zone.current.get('invocationContext');
     //console.log('Apply-invocationContext', { currentZone, invocationContext });
     const enclosing = DDP._CurrentMethodInvocation.get();
-    //console.log({enclosing});
     const alreadyInSimulation = enclosing && enclosing.isSimulation;
 
     // Lazily generate a randomSeed, only if it is requested by the stub.
@@ -698,6 +697,9 @@ export class Connection {
     let stubReturnValue;
     let exception;
     const stub = self._methodHandlers[name];
+    // We only create the methodId here because we don't actually need one if
+    // we're already in a simulation
+    const methodId = '' + self._nextMethodId++;
     if (stub) {
       const setUserId = userId => {
         self.setUserId(userId);
@@ -727,13 +729,23 @@ export class Connection {
         return () => stub.apply(invocation, EJSON.clone(args));
       };
 
-      if (!alreadyInSimulation) self._saveOriginals();
+      if (!alreadyInSimulation) self._saveOriginals(methodId);
       try {
         // Note that unlike in the corresponding server code, we never audit
         // that stubs check() their arguments.
         stubReturnValue = DDP._CurrentMethodInvocation.withValue(
           invocation,
-          stubInvocationMethod()
+          () => {
+            if (Meteor.isServer) {
+              // Because saveOriginals and retrieveOriginals aren't reentrant,
+              // don't allow stubs to yield.
+              return Meteor._noYieldsAllowed(() => {
+                // re-clone, so that the stub can't affect our caller's values
+                return stub.apply(invocation, EJSON.clone(args));
+              });
+            }
+            return () => stub.apply(invocation, EJSON.clone(args));
+          }
         );
       } catch (e) {
         exception = e;
@@ -752,9 +764,7 @@ export class Connection {
       return stubReturnValue;
     }
 
-    // We only create the methodId here because we don't actually need one if
-    // we're already in a simulation
-    const methodId = '' + self._nextMethodId++;
+
     if (stub) {
       self._retrieveAndStoreOriginals(methodId);
     }
@@ -859,13 +869,13 @@ export class Connection {
   // Before calling a method stub, prepare all stores to track changes and allow
   // _retrieveAndStoreOriginals to get the original versions of changed
   // documents.
-  _saveOriginals() {
+  _saveOriginals(methodId) {
     if (! this._waitingForQuiescence()) {
       this._flushBufferedWrites();
     }
 
     Object.values(this._stores).forEach((store) => {
-      store.saveOriginals();
+      store.saveOriginals(methodId);
     });
   }
 
@@ -880,7 +890,7 @@ export class Connection {
     const docsWritten = [];
 
     Object.entries(self._stores).forEach(([collection, store]) => {
-      const originals = store.retrieveOriginals();
+      const originals = store.retrieveOriginals(methodId);
       // not all stores define retrieveOriginals
       if (! originals) return;
       originals.forEach((doc, id) => {

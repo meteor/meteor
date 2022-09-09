@@ -281,11 +281,11 @@ Object.assign(Mongo.Collection.prototype, {
 
       // Called around method stub invocations to capture the original versions
       // of modified documents.
-      saveOriginals() {
-        self._collection.saveOriginals();
+      saveOriginals(methodId) {
+        self._collection.saveOriginals(methodId);
       },
-      retrieveOriginals() {
-        return self._collection.retrieveOriginals();
+      retrieveOriginals(methodId) {
+        return self._collection.retrieveOriginals(methodId);
       },
 
       // Used to preserve current versions of documents across a store reset.
