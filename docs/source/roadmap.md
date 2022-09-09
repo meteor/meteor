@@ -5,7 +5,7 @@ description: Describes the high-level features and actions for the Meteor projec
 
 ## Introduction
 
-Last update: August 4, 2022.
+Last update: August 31, 2022.
 
 This document describes the high-level features and actions for the Meteor project in the near-to-medium term future.
 The description of many items include sentences and ideas from Meteor community members.
@@ -45,6 +45,11 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 - Remove Fibers dependency from Meteor Public APIs;
 - Remove Fibers entirely;
 
+### Community items
+- Release Blaze 2.6.2; ([Milestone](https://github.com/meteor/blaze/milestone/9))
+- Vue 3 integration; ([Forums](https://forums.meteor.com/t/status-of-vue-3-meteor/57915/25) / [Discussion](https://github.com/meteor/meteor/discussions/11521))
+- SolidJS starter template;
+
 ### Next educational items
 - Create a new Meteor Guide; ([Current Guide](https://guide.meteor.com/))
 - Login and Accounts course; ([Meteor University](https://university.meteor.com/))
@@ -54,7 +59,6 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 We plan to implement these items in the near future. Community help would be greatly appreciated.
 - ES Modules Support; ([Discussion](https://github.com/meteor/meteor/discussions/11727))
 - MongoDB 6.0 Support; ([Discussion](https://github.com/meteor/meteor/discussions/12092))
-- Vue 3 integration; ([Forums](https://forums.meteor.com/t/status-of-vue-3-meteor/57915/25) / [Discussion](https://github.com/meteor/meteor/discussions/11521))
 - Improve Meteor build time; ([Discussion](https://github.com/meteor/meteor/discussions/11587))
 - HTTP/3 Support;
 - Tree-shaking; ([PR](https://github.com/meteor/meteor/pull/11164))
