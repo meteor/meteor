@@ -19,6 +19,7 @@ Package.onUse(function(api) {
   api.mainModule("legacy.js", "legacy");
   api.mainModule("server.js", "server");
 
+  api.addAssets("fetch.d.ts", ["client", "server"]);
   // The other exports (Headers, Request, Response) can be imported
   // explicitly from the "meteor/fetch" package.
   api.export("fetch");
