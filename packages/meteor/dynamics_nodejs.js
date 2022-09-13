@@ -89,7 +89,7 @@ function withValuesWithFiber(value, func) {
  * @param {Function} func The function to run
  * @return {Any} Return value of function
  */
-EVp.withValue = function (value, func) {
+EVp.withValue = async function (value, func) {
   if (Meteor._isFibersEnabled) {
     return withValuesWithFiber.call(this, value, func);
   }
@@ -102,7 +102,9 @@ EVp.withValue = function (value, func) {
   const saved = meteorDynamics[this.slot];
   try {
     meteorDynamics[this.slot] = value;
-    return func();
+    Meteor._updateAslStore('_meteor_dynamics', meteorDynamics);
+    const result = await func();
+    return result;
   } finally {
     meteorDynamics[this.slot] = saved;
     Meteor._updateAslStore('_meteor_dynamics', meteorDynamics);
