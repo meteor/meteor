@@ -70,6 +70,8 @@ export const ISOPACKETS = {
     'logging',
     // support for childProcess.sendMessage(topic, payload)
     'inter-process-messaging',
+    //rpc
+    'rpc'
   ]
 };
 
