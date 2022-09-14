@@ -7,6 +7,7 @@ export const createPublication: Subscription =
   <Name extends string, S extends z.ZodUndefined | z.ZodTypeAny, T>
   (name: Name, schema: S, run: (this: Meteor.MethodThisType, args: z.output<S>) => T, config?: Config<S, T>) => {
 
+  if (Meteor.isServer) {
     Meteor.publish(name, function (data: z.input<S>) {
         const parsed: z.output<S> = schema.parse(data);
         const result: T = run.call(this, parsed);
@@ -18,6 +19,7 @@ export const createPublication: Subscription =
         }
       }
     );
+  }
 
     if (config?.rateLimit) {
       RateLimiterConfig("subscription", name, config.rateLimit);
