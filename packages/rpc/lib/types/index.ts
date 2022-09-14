@@ -15,7 +15,7 @@ type ReturnMethod<Name extends string, S extends z.ZodUndefined | z.ZodTypeAny, 
 }
 
 type ReturnSubscription<Name extends string, S extends z.ZodUndefined | z.ZodTypeAny, T> = {
-  configuration: {
+  config: {
     name: Name;
     schema: S,
     rateLimit?: {
@@ -24,7 +24,7 @@ type ReturnSubscription<Name extends string, S extends z.ZodUndefined | z.ZodTyp
     }
     run: (this: Meteor.MethodThisType, args: z.output<S>) => T
   };
-  subscribe: (args?: z.input<S>, callbacks?: SubscriptionCallbacks) => Meteor.SubscriptionHandle
+  (args?: z.input<S>, callbacks?: SubscriptionCallbacks): Meteor.SubscriptionHandle
 }
 type Config<S extends z.ZodUndefined | z.ZodTypeAny, T> = {
   rateLimit?: {
