@@ -140,6 +140,10 @@ Create a basic [Svelte](https://svelte.dev/) app.
 
 Create a basic [React](https://reactjs.org) + [Tailwind CSS](https://tailwindcss.com) app.
 
+`--chakra-ui`
+
+Create a basic [chakra-ui](https://chakra-ui.com/) app.
+
 **Packages**
 
 |                                                                                                      | Default (`--react`) | `--bare`  | `--full`  | `--minimal` | `--blaze`| `--apollo` | `--vue` | `--svelte` | `--tailwind` |
