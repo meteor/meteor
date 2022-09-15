@@ -47,3 +47,4 @@ export const createRouter =
       build
     }
   }
+export type Router = typeof createRouter

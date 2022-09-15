@@ -1,5 +1,6 @@
 import {Meteor} from "meteor/meteor";
 import {z} from "zod"
+import { Router } from "../createRouter";
 
 type ReturnMethod<Name extends string, S extends z.ZodUndefined | z.ZodTypeAny, T> = {
   config: {
@@ -61,6 +62,7 @@ interface SubscriptionCallbacks {
 
 export {
   Method,
+  Router,
   Subscription,
   ReturnMethod,
   ReturnSubscription,
