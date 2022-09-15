@@ -96,7 +96,7 @@ var replaceMeteorAtomWithMongo = function (document) {
     // serialize it correctly).
     return new MongoDB.Binary(Buffer.from(document));
   }
-  if (document instanceof Mongo.Binary) {
+  if (document instanceof MongoDB.Binary) {
      return document;
   }
   if (document instanceof Mongo.ObjectID) {
