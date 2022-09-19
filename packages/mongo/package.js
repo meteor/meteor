@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.15.0'
+  version: '1.14.4'
 });
 
 Npm.depends({
@@ -88,6 +88,7 @@ Package.onTest(function (api) {
   api.use('mongo');
   api.use('check');
   api.use('ecmascript');
+  api.use('npm-mongo', 'server');
   api.use(['tinytest', 'underscore', 'test-helpers', 'ejson', 'random',
            'ddp', 'base64']);
   // XXX test order dependency: the allow_tests "partial allow" test
