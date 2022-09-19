@@ -5,7 +5,7 @@ import {RateLimiterConfig} from "./utils/RateLimiterConfig";
 
 export const createPublication: Subscription =
   <Name extends string, S extends z.ZodUndefined | z.ZodTypeAny, T>
-  (name: Name, schema: S, run: (this: Meteor.MethodThisType, args: z.output<S>) => T, config?: Config<S, T>) => {
+  (name: Name, schema: S, run: (this: Meteor.Subscription, args: z.output<S>) => T, config?: Config<S, T>) => {
 
   if (Meteor.isServer) {
     Meteor.publish(name, function (data: z.input<S>) {

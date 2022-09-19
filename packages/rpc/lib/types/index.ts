@@ -1,6 +1,5 @@
 import {Meteor} from "meteor/meteor";
 import {z} from "zod"
-import { Router } from "../createRouter";
 
 type ReturnMethod<Name extends string, S extends z.ZodUndefined | z.ZodTypeAny, T> = {
   config: {
@@ -23,7 +22,7 @@ type ReturnSubscription<Name extends string, S extends z.ZodUndefined | z.ZodTyp
       interval: number,
       limit: number
     }
-    run: (this: Meteor.MethodThisType, args: z.output<S>) => T
+    run: (this: Meteor.Subscription, args: z.output<S>) => T
   };
   (args?: z.input<S>, callbacks?: SubscriptionCallbacks): Meteor.SubscriptionHandle
 }
@@ -62,7 +61,6 @@ interface SubscriptionCallbacks {
 
 export {
   Method,
-  Router,
   Subscription,
   ReturnMethod,
   ReturnSubscription,
