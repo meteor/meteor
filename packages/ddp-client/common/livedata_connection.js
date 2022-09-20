@@ -545,6 +545,9 @@ export class Connection {
    * @param {Function} [asyncCallback] Optional callback, which is called asynchronously with the error or result after the method is complete. If not provided, the method runs synchronously if possible (see below).
    */
   call(name /* .. [arguments] .. callback */) {
+    if (this.isAsyncCall(name)) {
+      throw new Error("Meteor.call() can be called just for sync methods. Use Meteor.callAsync instead.")
+    }
     // if it's a function, the last argument is the result callback,
     // not a parameter to the remote method.
     const args = slice.call(arguments, 1);
@@ -552,10 +555,28 @@ export class Connection {
     if (args.length && typeof args[args.length - 1] === 'function') {
       callback = args.pop();
     }
-    if (this.isAsyncCall(name)) {
-      return this.applyAsync(name, args, callback);
-    }
     return this.apply(name, args, callback);
+  }
+
+  async callAsync(name /* .. [arguments] .. callback */) {
+    if (!this.isAsyncCall(name)) {
+      throw new Error("Meteor.calAsync() can be called just for sync methods. Use Meteor.call instead.");
+    }
+
+    const args = slice.call(arguments, 1);
+    if (args.length && typeof args[args.length - 1] === 'function') {
+      throw new Error("Meteor.calAsync() does not accept a callback.");
+    }
+
+    return new Promise((resolve, reject) => {
+      this.applyAsync(name, args, (err, result) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
+      });
+    });
   }
 
   /**
