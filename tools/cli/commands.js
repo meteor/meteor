@@ -912,7 +912,7 @@ main.registerCommand({
     cmd("meteor create --blaze      # to create an app using Blaze");
     cmd("meteor create --tailwind   # to create an app using React and Tailwind");
     cmd("meteor create --chakra-ui  # to create an app Chakra UI and React");
-    cmd("meteor create --solid      # to create abasic Solid app");
+    cmd("meteor create --solid      # to create a basic Solid app");
   }
 
   Console.info("");
