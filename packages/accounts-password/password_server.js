@@ -71,7 +71,7 @@ const getRoundsFromBcryptHash = hash => {
 // The user parameter needs at least user._id and user.services
 Accounts._checkPasswordUserFields = {_id: 1, services: 1};
 //
-const checkPassword = async (user, password) => {
+const checkPasswordAsync = async (user, password) => {
   const result = {
     userId: user._id
   };
@@ -98,7 +98,12 @@ const checkPassword = async (user, password) => {
   return result;
 };
 
+const checkPassword = async (user, password) => {
+  return Promise.await(checkPasswordAsync(user, password));
+};
+
 Accounts._checkPassword = checkPassword;
+Accounts._checkPasswordAsync =  checkPasswordAsync;
 
 ///
 /// LOGIN
@@ -187,7 +192,7 @@ Accounts.registerLoginHandler("password", async options => {
     Accounts._handleError("User has no password set");
   }
 
-  const result = await checkPassword(user, options.password);
+  const result = await checkPasswordAsync(user, options.password);
   // This method is added by the package accounts-2fa
   // First the login is validated, then the code situation is checked
   if (
@@ -277,7 +282,7 @@ Meteor.methods({changePassword: async function (oldPassword, newPassword) {
     Accounts._handleError("User has no password set");
   }
 
-  const result = await checkPassword(user, oldPassword);
+  const result = await checkPasswordAsync(user, oldPassword);
   if (result.error) {
     throw result.error;
   }

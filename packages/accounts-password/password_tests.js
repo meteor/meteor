@@ -1768,7 +1768,7 @@ if (Meteor.isServer) (() => {
       const defaultRounds = Accounts._bcryptRounds();
       const customRounds = 11;
       Accounts._options.bcryptRounds = customRounds;
-      await Accounts._checkPassword(user1, password);
+      await Accounts._checkPasswordAsync(user1, password);
       Meteor.setTimeout(() => {
         user1 = Meteor.users.findOne(userId1);
         rounds = getUserHashRounds(user1);
