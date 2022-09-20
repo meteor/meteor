@@ -36,6 +36,10 @@ Similar to `skel`, `skel-tailwind` is copied on `meteor create --tailwind` comma
 
 Similar to `skel`, `skel-chakra-ui` is copied on `meteor create --chakra-ui` command.
 
+## skel-solid - Package Skeleton
+
+Similar to `skel`, `skel-solid` is copied on `meteor create --solid` command.
+
 ## server - Bundled App's Bootstrap
 
 The `server` folder is copied by Isobuild when the app is bundled (on
