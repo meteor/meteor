@@ -516,6 +516,8 @@ export const AVAILABLE_SKELETONS = [
   "vue",
   "svelte",
   "tailwind",
+  "chakra-ui",
+  "solid",
 ];
 
 main.registerCommand({
@@ -535,6 +537,8 @@ main.registerCommand({
     apollo: { type: Boolean },
     svelte: { type: Boolean },
     tailwind: { type: Boolean },
+    'chakra-ui': { type: Boolean },
+    solid: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -907,6 +911,8 @@ main.registerCommand({
     cmd("meteor create --typescript # to create an app using TypeScript and React");
     cmd("meteor create --blaze      # to create an app using Blaze");
     cmd("meteor create --tailwind   # to create an app using React and Tailwind");
+    cmd("meteor create --chakra-ui  # to create an app Chakra UI and React");
+    cmd("meteor create --solid      # to create a basic Solid app");
   }
 
   Console.info("");
@@ -1258,7 +1264,7 @@ main.registerCommand({
 
     // This option has never done anything, but we are keeping it for
     // backwards compatibility since it existed for 7 years before adding
-    // the correctly named option 
+    // the correctly named option
     'allow-incompatible-updates': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
