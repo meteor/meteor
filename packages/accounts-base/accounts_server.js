@@ -588,7 +588,7 @@ export class AccountsServer extends AccountsCommon {
   // return `undefined`, meaning it handled this call to `login`. Return
   // that return value.
   async _runLoginHandlers(methodInvocation, options) {
-    for await (let handler of this._loginHandlers) {
+    for (let handler of this._loginHandlers) {
       const result = await tryLoginMethod(handler.name, async () =>
         await handler.handler.call(methodInvocation, options)
       );

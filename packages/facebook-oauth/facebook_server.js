@@ -1,6 +1,6 @@
 Facebook = {};
 import crypto from 'crypto';
-import {Accounts} from 'meteor/accounts-base';
+import { Accounts } from 'meteor/accounts-base';
 
 const API_VERSION = Meteor.settings?.public?.packages?.['facebook-oauth']?.apiVersion || '13.0';
 
