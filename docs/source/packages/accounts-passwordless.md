@@ -16,6 +16,14 @@ The second step in the passwordless flow. Like all the other `loginWith` functio
 {% apibox "Accounts.sendLoginTokenEmail" "module":"accounts-base" %}
 Use this function if you want to manually send the email to users to login with token from the server. Do note that you will need to create the token/sequence and save it in the DB yourself. This is good if you want to change how the tokens look or are generated, but unless you are sure of what you are doing we don't recommend it.
 
+<h3 id="config-options">Settings Options</h3>
+
+You can use the function `Accounts.config` in the server to change some settings on this package:
+
+- **tokenSequenceLength**: use `Accounts.config({tokenSequenceLength: _Number_})` to the size of the token sequence generated. The default is 6.
+
+- **loginTokenExpirationHours**: use `Accounts.config({loginTokenExpirationHours: _Number_})` to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
+
 <h3 id="passwordless-email-templates">E-mail templates</h3>
 
 `accounts-passwordless` brings new templates that you can edit to change the look of emails which send code to users. The email template is named `sendLoginToken` and beside `user` and `url`, the templates also receive a data object with `sequence` which is the user's code.
