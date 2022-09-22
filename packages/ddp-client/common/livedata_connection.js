@@ -579,7 +579,7 @@ export class Connection {
     const args = slice.call(arguments, 1);
     if (args.length && typeof args[args.length - 1] === 'function') {
       console.warn(
-        "Meteor.calAsync() does not accept a callback. You should 'await' the result, or use .then()."
+        "Meteor.callAsync() does not accept a callback. You should 'await' the result, or use .then()."
       );
     }
 
