@@ -762,16 +762,16 @@ Object.assign(Session.prototype, {
           }
         }
 
-        resolve(DDPServer._CurrentWriteFence.withValue(
+        resolve(Promise.await(DDPServer._CurrentWriteFence.withValueAsync(
           fence,
-          () => DDP._CurrentMethodInvocation.withValue(
+          () => DDP._CurrentMethodInvocation.withValueAsync(
             invocation,
             () => maybeAuditArgumentChecks(
               handler, invocation, msg.params,
               "call to '" + msg.method + "'"
             )
           )
-        ));
+        )));
       });
 
       function finish() {
@@ -1517,33 +1517,33 @@ Object.assign(Server.prototype, {
   },
 
   /**
-   * @summary Set publication strategy for the given publication. Publications strategies are available from `DDPServer.publicationStrategies`. You call this method from `Meteor.server`, like `Meteor.server.setPublicationStrategy()`
+   * @summary Set publication strategy for the given collection. Publications strategies are available from `DDPServer.publicationStrategies`. You call this method from `Meteor.server`, like `Meteor.server.setPublicationStrategy()`
    * @locus Server
    * @alias setPublicationStrategy
-   * @param publicationName {String}
+   * @param collectionName {String}
    * @param strategy {{useCollectionView: boolean, doAccountingForCollection: boolean}}
    * @memberOf Meteor.server
    * @importFromPackage meteor
    */
-  setPublicationStrategy(publicationName, strategy) {
+  setPublicationStrategy(collectionName, strategy) {
     if (!Object.values(publicationStrategies).includes(strategy)) {
       throw new Error(`Invalid merge strategy: ${strategy} 
-        for collection ${publicationName}`);
+        for collection ${collectionName}`);
     }
-    this._publicationStrategies[publicationName] = strategy;
+    this._publicationStrategies[collectionName] = strategy;
   },
 
   /**
-   * @summary Gets the publication strategy for the requested publication. You call this method from `Meteor.server`, like `Meteor.server.getPublicationStrategy()`
+   * @summary Gets the publication strategy for the requested collection. You call this method from `Meteor.server`, like `Meteor.server.getPublicationStrategy()`
    * @locus Server
    * @alias getPublicationStrategy
-   * @param publicationName {String}
+   * @param collectionName {String}
    * @memberOf Meteor.server
    * @importFromPackage meteor
    * @return {{useCollectionView: boolean, doAccountingForCollection: boolean}}
    */
-  getPublicationStrategy(publicationName) {
-    return this._publicationStrategies[publicationName]
+  getPublicationStrategy(collectionName) {
+    return this._publicationStrategies[collectionName]
       || this.options.defaultPublicationStrategy;
   },
 
