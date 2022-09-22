@@ -538,7 +538,7 @@ export class Connection {
    * @memberOf Meteor
    * @importFromPackage meteor
    * @alias Meteor.call
-   * @summary Invokes a method passing any number of arguments.
+   * @summary Invokes a sync method passing any number of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
@@ -546,7 +546,9 @@ export class Connection {
    */
   call(name /* .. [arguments] .. callback */) {
     if (this.isAsyncCall(name)) {
-      throw new Error("Meteor.call() can be called just for sync methods. Use Meteor.callAsync instead.")
+      console.warn(
+        "You should use Meteor.callAsync() when calling async Methods! If you don't call the proper function and don't 'await' or use .then() on its return, some unexpected behaviors may appear."
+      );
     }
     // if it's a function, the last argument is the result callback,
     // not a parameter to the remote method.
@@ -557,15 +559,28 @@ export class Connection {
     }
     return this.apply(name, args, callback);
   }
-
+  /**
+   * @memberOf Meteor
+   * @importFromPackage meteor
+   * @alias Meteor.callAsync
+   * @summary Invokes an async method passing any number of arguments.
+   * @locus Anywhere
+   * @param {String} name Name of method to invoke
+   * @param {EJSONable} [arg1,arg2...] Optional method arguments
+   * @returns {Promise}
+   */
   async callAsync(name /* .. [arguments] .. callback */) {
     if (!this.isAsyncCall(name)) {
-      throw new Error("Meteor.calAsync() can be called just for sync methods. Use Meteor.call instead.");
+      console.warn(
+        "You should use Meteor.call() when calling sync Methods! If you don't call the proper function, some unexpected behaviors may appear."
+      );
     }
 
     const args = slice.call(arguments, 1);
     if (args.length && typeof args[args.length - 1] === 'function') {
-      throw new Error("Meteor.calAsync() does not accept a callback.");
+      console.warn(
+        "Meteor.calAsync() does not accept a callback. You should 'await' the result, or use .then()."
+      );
     }
 
     return new Promise((resolve, reject) => {
@@ -624,7 +639,7 @@ export class Connection {
    * @param {Boolean} options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
-   * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
+   * @param {Function} [asyncCallback] Optional callback.
    */
   async applyAsync(name, args, options, callback) {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));

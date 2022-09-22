@@ -6,7 +6,8 @@
 * Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
 
 #### Breaking Changes
-N/A
+
+* Now `Meteor.call()` should be called only for **sync** methods. For calling an async method, you should use `Meteor.callAsync()`. If `Meteor.call()` is called for a sync method, a warning will show up in the console. In the next release, an error will be thrown.
 
 #### Migration Steps
 Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.app/2.8-migration.html) for this version.
