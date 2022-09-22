@@ -546,7 +546,7 @@ export class Connection {
    */
   call(name /* .. [arguments] .. callback */) {
     if (this.isAsyncCall(name)) {
-      console.warn(
+      throw new Error(
         "You should use Meteor.callAsync() when calling async Methods! If you don't call the proper function and don't 'await' or use .then() on its return, some unexpected behaviors may appear."
       );
     }
@@ -571,14 +571,14 @@ export class Connection {
    */
   async callAsync(name /* .. [arguments] .. callback */) {
     if (!this.isAsyncCall(name)) {
-      console.warn(
+      throw new Error(
         "You should use Meteor.call() when calling sync Methods! If you don't call the proper function, some unexpected behaviors may appear."
       );
     }
 
     const args = slice.call(arguments, 1);
     if (args.length && typeof args[args.length - 1] === 'function') {
-      console.warn(
+      throw new Error(
         "Meteor.callAsync() does not accept a callback. You should 'await' the result, or use .then()."
       );
     }
