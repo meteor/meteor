@@ -2,8 +2,9 @@
 
 #### Highlights
 * New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
-* Node update to [v14.20.0](https://nodejs.org/en/blog/release/v14.20.0/) as part of the [July 7th security release](https://nodejs.org/en/blog/vulnerability/july-2022-security-releases/)
+* Node update to [v14.20.1](https://nodejs.org/en/blog/release/v14.20.0/) as part of the [September 22nd security release](https://nodejs.org/en/blog/vulnerability/september-2022-security-releases/)
 * Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
+* Meteor.callAsync method. [PR] (https://github.com/meteor/meteor/pull/12196)
 
 #### Breaking Changes
 
@@ -33,6 +34,7 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Refactoring/Remove unused imports from tools folder. [PR](https://github.com/meteor/meteor/pull/12084).
   - Fix problem when publishing async methods. [PR](https://github.com/meteor/meteor/pull/12152).
   - Update skeletons Apollo[PR](https://github.com/meteor/meteor/pull/12091) and other skeletons [PR](https://github.com/meteor/meteor/pull/12099)
+  - Added callAsync method for calling async methods [PR](https://github.com/meteor/meteor/pull/12196).
 * `meteor-installer@2.7.5`:
   - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
 * `npm-mongo@4.9.0`:
