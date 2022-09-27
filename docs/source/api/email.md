@@ -98,7 +98,7 @@ Meteor.methods({
     // waiting for the email sending to complete.
     this.unblock();
 
-    Email.sendAsync({ to, from, subject, text }).catch(err => {
+    return Email.sendAsync({ to, from, subject, text }).catch(err => {
       // 
     });
   }

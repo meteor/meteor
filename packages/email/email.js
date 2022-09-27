@@ -147,7 +147,8 @@ EmailTest.resetNextDevModeMailId = function () {
   nextDevModeMailId = 0;
 };
 
-const devModeSendAsync = function (mail, stream) {
+const devModeSendAsync = function (mail, options) {
+  const stream = options?.stream || process.stdout;
   return new Promise((resolve, reject) => {
     let devModeMailId = EmailTest._getAndIncNextDevModeMailId();
 
@@ -225,14 +226,17 @@ Email.customTransport = undefined;
  * @param {Object[]} [options.attachments] Array of attachment objects, as
  * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
- * @param {Object} [options.stream] Output stream to write email on development environment
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.send = function (options) {
+  if (Email.customTransport) {
+    // Don't wait for sending process. Preserve current behavior
+    return Email.sendAsync(options);
+  }
   // Using Fibers Promise.await
-  Promise.await(Email.sendAsync(options));
+  return Promise.await(Email.sendAsync(options));
 };
 
 /**
@@ -264,14 +268,13 @@ Email.send = function (options) {
  * @param {Object[]} [options.attachments] Array of attachment objects, as
  * described in the [nodemailer documentation](https://nodemailer.com/message/attachments/).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://nodemailer.com/extras/mailcomposer/#e-mail-message-fields)
- * @param {Object} [options.stream] Output stream to write email on development environment
  * object representing the message to be sent.  Overrides all other options.
  * You can create a `MailComposer` object via
  * `new EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.sendAsync = async function (options) {
-  const { stream = process.stdout, ...rest } = options;
-  const email = rest.mailComposer ? rest.mailComposer.mail : rest;
+
+  const email = options.mailComposer ? options.mailComposer.mail : options;
 
   let send = true;
   sendHooks.forEach((hook) => {
@@ -303,5 +306,5 @@ Email.sendAsync = async function (options) {
     smtpSend(transport, email);
     return;
   }
-  return devModeSendAsync(email, stream);
+  return devModeSendAsync(email, options);
 };
