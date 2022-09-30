@@ -61,9 +61,9 @@ If you believe someone is violating the code of conduct, please report it by ema
 
 Sections of this Code of Conduct were inspired in by the following Codes from other open source projects and resources we admire:  
 
-- [The Contributor Covenant](http://contributor-covenant.org/version/1/4/)
+- [The Contributor Covenant](https://www.contributor-covenant.org/version/1/4/code-of-conduct/)
 - [Python](https://www.python.org/psf/codeofconduct/)
-- [Ubuntu](http://www.ubuntu.com/about/about-ubuntu/conduct)
+- [Ubuntu](https://ubuntu.com/community/code-of-conduct)
 - [Django](https://www.djangoproject.com/conduct/)
 
 *This Meteor Code of Conduct is licensed under the [Creative Commons Attribution-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-sa/4.0/) license. This Code was last updated on August 28, 2017.* 
