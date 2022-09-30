@@ -240,6 +240,52 @@ export class TestCaseResults {
       });
   }
 
+  /**
+   * Same as throw, but accepts an async function as a parameter.
+   * @param f
+   * @param expected
+   * @param message
+   * @returns {Promise<void>}
+   */
+  async throwsAsync(f, expected, message) {
+    var actual, predicate;
+
+    if (expected === undefined) {
+      predicate = function (actual) {
+        return true;
+      };
+    } else if (typeof expected === "string") {
+      predicate = function (actual) {
+        return typeof actual.message === "string" &&
+            actual.message.indexOf(expected) !== -1;
+      };
+    } else if (expected instanceof RegExp) {
+      predicate = function (actual) {
+        return expected.test(actual.message);
+      };
+    } else if (typeof expected === 'function') {
+      predicate = expected;
+    } else {
+      throw new Error('expected should be a string, regexp, or predicate function');
+    }
+
+    try {
+      await f();
+    } catch (exception) {
+      actual = exception;
+    }
+
+    if (actual && predicate(actual))
+      this.ok();
+    else
+      this.fail({
+        type: "throws",
+        message: (actual ?
+            "wrong error thrown: " + actual.message :
+            "did not throw an error as expected") + (message ? ": " + message : ""),
+      });
+  }
+
   isTrue(v, msg) {
     if (v)
       this.ok();

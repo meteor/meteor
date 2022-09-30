@@ -160,17 +160,35 @@ SQp._scheduleRun = function () {
    *  For autoupdate, for example, swapping to just running it sync won't make a difference,
    *  but maybe there is another place that would? (DDP/Web)-Server?
    */
-  if (Meteor._isFibersEnabled) {
-    setImmediate(function() {
-      Meteor._runAsync(function() {
-        self._run();
-      });
-    });
-  } else {
-    Meteor._runAsync(() => {
-      self._run();
-    });
+  setImmediate(function() {
+    Meteor._runAsync(Meteor._isFibersEnabled ? self._run : self._runAsync, self);
+  });
+};
+
+SQp._runAsync = async function() {
+  var self = this;
+
+  if (!self._runningOrRunScheduled)
+    throw new Error("expected to be _runningOrRunScheduled");
+
+  if (self._taskHandles.isEmpty()) {
+    // Done running tasks! Don't immediately schedule another run, but
+    // allow future tasks to do so.
+    self._runningOrRunScheduled = false;
+    return;
   }
+  var taskHandle = self._taskHandles.shift();
+
+  // Run the task.
+  try {
+    await taskHandle.task();
+  } catch (err) {
+    Meteor._debug("Exception in queued task", err);
+  }
+
+  // Soon, run the next task, if there is any.
+  self._runningOrRunScheduled = false;
+  self._scheduleRun();
 };
 
 SQp._run = function () {

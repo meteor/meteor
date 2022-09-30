@@ -479,14 +479,27 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   // non-object modifier in that they don't crash, they are not
   // meaningful operations and do not do anything. Defensively throw an
   // error here.
-  if (!mod || typeof mod !== 'object')
-    throw new Error("Invalid modifier. Modifier must be an object.");
+  if (!mod || typeof mod !== 'object') {
+    const error = new Error("Invalid modifier. Modifier must be an object.");
+
+    if (callback) {
+      return callback(error);
+    } else {
+      throw error;
+    }
+  }
 
   if (!(LocalCollection._isPlainObject(mod) &&
         !EJSON._isCustomType(mod))) {
-    throw new Error(
-      "Only plain objects may be used as replacement" +
+    const error = new Error(
+        "Only plain objects may be used as replacement" +
         " documents in MongoDB");
+
+    if (callback) {
+      return callback(error);
+    } else {
+      throw error;
+    }
   }
 
   if (!options) options = {};

@@ -28,7 +28,7 @@ Package.onUse(function (api) {
     'SeededRandom', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'renderToDiv', 'clickIt',
-    'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
+    'withCallbackLogger', 'testAsyncMulti', 'simplePoll', 'runAndThrowIfNeeded',
     'makeTestConnection', 'DomUtils']);
 
   api.addFiles('try_all_permutations.js');

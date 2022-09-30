@@ -185,7 +185,7 @@ _.extend(ObserveMultiplexer.prototype, {
   },
   _applyCallback: function (callbackName, args) {
     var self = this;
-    self._queue.queueTask(function () {
+    self._queue.queueTask(async function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
@@ -205,15 +205,17 @@ _.extend(ObserveMultiplexer.prototype, {
       // can continue until these are done. (But we do have to be careful to not
       // use a handle that got removed, because removeHandle does not use the
       // queue; thus, we iterate over an array of keys that we control.)
-      _.each(_.keys(self._handles), function (handleId) {
+      const toAwait = Object.keys(self._handles).map(async (handleId) => {
         var handle = self._handles && self._handles[handleId];
         if (!handle)
           return;
         var callback = handle['_' + callbackName];
         // clone arguments so that callbacks can mutate their arguments
-        callback && callback.apply(null,
-          handle.nonMutatingCallbacks ? args : EJSON.clone(args));
+        callback && await callback.apply(null,
+            handle.nonMutatingCallbacks ? args : EJSON.clone(args));
       });
+
+      await Promise.all(toAwait);
     });
   },
 

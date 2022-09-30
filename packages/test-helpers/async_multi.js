@@ -195,3 +195,16 @@ pollUntil = function (expect, f, timeout, step, noFail) {
     step
   );
 };
+
+runAndThrowIfNeeded = async (fn, test, shouldErrorOut) => {
+  let err, result;
+  try {
+    result = await fn();
+  } catch (e) {
+    err = e;
+  }
+
+  test[shouldErrorOut ? "isTrue" : "isFalse"](err);
+
+  return result;
+};
