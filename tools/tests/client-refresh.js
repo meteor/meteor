@@ -1,45 +1,54 @@
 import * as selftest from '../tool-testing/selftest.js';
 
 selftest.define("client refresh for package code", () => testHelper({
-  client: {
+  client: 
+  {
     path: "packages/test-package/client.js",
     id: "/node_modules/meteor/test-package/client.js",
   },
-  server: {
+  server: 
+  {
     path: "packages/test-package/server.js",
     id: "/node_modules/meteor/test-package/server.js",
   },
-  both: {
+  both: 
+  {
     path: "packages/test-package/both.js",
     id: "/node_modules/meteor/test-package/both.js",
   },
 }));
 
 selftest.define("client refresh for application code", () => testHelper({
-  client: {
+  client: 
+  {
     path: "client/main.js",
     id: "/client/main.js",
   },
-  server: {
+  server:
+  {
     path: "server/main.js",
     id: "/server/main.js",
   },
-  both: {
+  both: 
+  {
     path: "imports/both.js",
     id: "/imports/both.js",
   },
 }));
 
 selftest.define("client refresh for non-npm node_modules", () => testHelper({
-  client: {
+  client: 
+  {
     path: "client/main.js",
     id: "/client/main.js",
   },
-  server: {
+  server:
+  {
     path: "server/main.js",
     id: "/server/main.js",
   },
-  both: {
+  both: 
+  {
     path: "imports/node_modules/some-package/index.js",
     id: "/imports/node_modules/some-package/index.js",
   },
@@ -63,10 +72,12 @@ function testHelper(pathsAndIds) {
 
   function checkServerRestart(counts) {
     run.match("Server modified -- restarting");
-    if (typeof counts.both === "number") {
+    if (typeof counts.both === "number") 
+    {
       run.match(pathsAndIds.both.id + " " + counts.both);
     }
-    if (typeof counts.server === "number") {
+    if (typeof counts.server === "number") 
+    {
       run.match(pathsAndIds.server.id + " " + counts.server);
     }
     run.match("Meteor server restarted");
