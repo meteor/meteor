@@ -1,5 +1,24 @@
 import { Meteor } from 'meteor/meteor';
 
+// TODO get from account-base
+// config option keys
+const VALID_CONFIG_KEYS = [
+  'sendVerificationEmail',
+  'forbidClientAccountCreation',
+  'passwordEnrollTokenExpiration',
+  'passwordEnrollTokenExpirationInDays',
+  'restrictCreationByEmailDomain',
+  'loginExpirationInDays',
+  'loginExpiration',
+  'passwordResetTokenExpirationInDays',
+  'passwordResetTokenExpiration',
+  'ambiguousErrorMessages',
+  'bcryptRounds',
+  'defaultFieldSelector',
+  'loginTokenExpirationHours',
+  'tokenSequenceLength',
+];
+
 Accounts.oauth = {};
 
 const services = {};

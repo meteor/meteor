@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { Meteor } from 'meteor/meteor'
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
@@ -76,6 +77,9 @@ export class AccountsServer extends AccountsCommon {
     setExpireTokensInterval(this);
 
     this._validateLoginHook = new Hook({ bindEnvironment: false });
+    this._validateNewUserHooks = [
+      defaultValidateNewUserHook.bind(this)
+    ];
 
     this._deleteSavedTokensForAllUsersOnStartup();
 
@@ -727,7 +731,8 @@ export class AccountsServer extends AccountsCommon {
       if (ServiceConfiguration.configurations.findOne({service: options.service}))
         throw new Meteor.Error(403, `Service ${options.service} already configured`);
 
-      if (hasOwn.call(options, 'secret') && usingOAuthEncryption())
+      const { OAuthEncryption } = Package["oauth-encryption"]
+      if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
         options.secret = OAuthEncryption.seal(options.secret);
 
       ServiceConfiguration.configurations.insert(options);
@@ -755,8 +760,10 @@ export class AccountsServer extends AccountsCommon {
 
     // Publish all login service configuration fields other than secret.
     this._server.publish("meteor.loginServiceConfiguration", () => {
-      const { ServiceConfiguration } = Package['service-configuration'];
-      return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
+      if (Package['service-configuration']) {
+        const { ServiceConfiguration } = Package['service-configuration'];
+        return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
+      }
     }, {is_auto: true}); // not technically autopublish, but stops the warning.
 
     // Use Meteor.startup to give other packages a chance to call
@@ -1681,6 +1688,24 @@ const setExpireTokensInterval = accounts => {
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 
+const OAuthEncryption = Package["oauth-encryption"]?.OAuthEncryption;
+
+// OAuth service data is temporarily stored in the pending credentials
+// collection during the oauth authentication process.  Sensitive data
+// such as access tokens are encrypted without the user id because
+// we don't know the user id yet.  We re-encrypt these fields with the
+// user id included when storing the service data permanently in
+// the users collection.
+//
+const pinEncryptedFieldsToUser = (serviceData, userId) => {
+  Object.keys(serviceData).forEach(key => {
+    let value = serviceData[key];
+    if (OAuthEncryption?.isSealed(value))
+      value = OAuthEncryption.seal(OAuthEncryption.open(value), userId);
+    serviceData[key] = value;
+  });
+};
+
 // XXX see comment on Accounts.createUser in passwords_server about adding a
 // second "server options" argument.
 const defaultCreateUserHook = (options, user) => {
@@ -1688,6 +1713,37 @@ const defaultCreateUserHook = (options, user) => {
     user.profile = options.profile;
   return user;
 };
+
+// Validate new user's email or Google/Facebook/GitHub account's email
+function defaultValidateNewUserHook(user) {
+  const domain = this._options.restrictCreationByEmailDomain;
+  if (!domain) {
+    return true;
+  }
+
+  let emailIsGood = false;
+  if (user.emails && user.emails.length > 0) {
+    emailIsGood = user.emails.reduce(
+      (prev, email) => prev || this._testEmailDomain(email.address), false
+    );
+  } else if (user.services && Object.values(user.services).length > 0) {
+    // Find any email of any service and check it
+    emailIsGood = Object.values(user.services).reduce(
+      (prev, service) => service.email && this._testEmailDomain(service.email),
+      false,
+    );
+  }
+
+  if (emailIsGood) {
+    return true;
+  }
+
+  if (typeof domain === 'string') {
+    throw new Meteor.Error(403, `@${domain} email required`);
+  } else {
+    throw new Meteor.Error(403, "Email doesn't match the criteria.");
+  }
+}
 
 const setupUsersCollection = users => {
   ///

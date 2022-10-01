@@ -230,6 +230,7 @@ export class AccountsCommon {
     // Validate config options keys
     Object.keys(options).forEach(key => {
       if (!VALID_CONFIG_KEYS.includes(key)) {
+        // TODO Consider just logging a debug message instead to allow for additional keys in the settings here?
         throw new Meteor.Error(`Accounts.config: Invalid key: ${key}`);
       }
     });
@@ -396,9 +397,6 @@ const DEFAULT_PASSWORD_ENROLL_TOKEN_EXPIRATION_DAYS = 30;
 const MIN_TOKEN_LIFETIME_CAP_SECS = 3600; // one hour
 // how often (in milliseconds) we check for expired tokens
 export const EXPIRE_TOKENS_INTERVAL_MS = 600 * 1000; // 10 minutes
-// how long we wait before logging out clients when Meteor.logoutOtherClients is
-// called
-export const CONNECTION_CLOSE_DELAY_MS = 10 * 1000;
 // A large number of expiration days (approximately 100 years worth) that is
 // used when creating unexpiring tokens.
 const LOGIN_UNEXPIRING_TOKEN_DAYS = 365 * 100;

@@ -1,3 +1,15 @@
+## NEXT, 2022-XX-XX
+
+### Highlights
+
+#### Breaking Changes
+* Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+
 ## 2.7.3, 2022-05-31
 
 #### Highlights
