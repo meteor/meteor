@@ -8,8 +8,6 @@
 
 #### Breaking Changes
 
-* Now `Meteor.call()` should be called only for **sync** methods. For calling an async method, you should use `Meteor.callAsync()`. If `Meteor.call()` is called for an async method, an error will be thrown.
-
 #### Migration Steps
 Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.app/2.8-migration.html) for this version.
 
