@@ -727,15 +727,19 @@ export class AccountsServer extends AccountsCommon {
         throw new Meteor.Error(403, "Service unknown");
       }
 
-      const { ServiceConfiguration } = Package['service-configuration'];
-      if (ServiceConfiguration.configurations.findOne({service: options.service}))
-        throw new Meteor.Error(403, `Service ${options.service} already configured`);
+      if (Package['service-configuration']) {
+        const { ServiceConfiguration } = Package['service-configuration'];
+        if (ServiceConfiguration.configurations.findOne({service: options.service}))
+          throw new Meteor.Error(403, `Service ${options.service} already configured`);
 
-      const { OAuthEncryption } = Package["oauth-encryption"]
-      if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
-        options.secret = OAuthEncryption.seal(options.secret);
+        if (Package["oauth-encryption"]) {
+          const { OAuthEncryption } = Package["oauth-encryption"]
+          if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
+            options.secret = OAuthEncryption.seal(options.secret);
+        }
 
-      ServiceConfiguration.configurations.insert(options);
+        ServiceConfiguration.configurations.insert(options);
+      }
     };
 
     accounts._server.methods(methods);
