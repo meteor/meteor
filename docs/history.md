@@ -4,6 +4,7 @@
 * New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
 * Node update to [v14.20.0](https://nodejs.org/en/blog/release/v14.20.0/) as part of the [July 7th security release](https://nodejs.org/en/blog/vulnerability/july-2022-security-releases/)
 * Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
+* Upgrade TypeScript to 4.6.4 [PR]()
 
 #### Breaking Changes
 N/A
@@ -36,7 +37,16 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
 * `npm-mongo@4.9.0`:
   - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
-
+* `@meteorjs/babel@7.17.0`
+  - Upgrade TypeScript to `4.6.4`
+* `babel-compiler@7.10.0`
+  - Upgrade TypeScript to `4.6.4`
+* `ecmascript@0.16.3`
+  - Upgrade TypeScript to `4.6.4`
+* `typescript@4.6.4`
+  - Upgrade TypeScript to `4.6.4`
+* `eslint-plugin-meteor@7.4.0`
+  - Upgrade TypeScript to `4.6.4`
 
 #### Independent Releases
 * `accounts-passwordless@2.1.3`:
