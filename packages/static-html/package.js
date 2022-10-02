@@ -20,5 +20,5 @@ Package.onUse(function(api) {
   api.use('isobuild:compiler-plugin@1.0.0');
 
   // Body attributes are compiled to code that uses Meteor.startup
-  api.imply('meteor@1.2.17', 'client');
+  api.imply('meteor@1.10.0', 'client');
 });
