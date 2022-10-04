@@ -631,8 +631,22 @@ export class Connection {
     if (stubOptions.hasStub) {
       if (!stubOptions.alreadyInSimulation) this._saveOriginals();
       try {
-        stubOptions.stubReturnValue = await DDP._CurrentMethodInvocation
-          .withValueAsync(invocation, stubInvocation);
+        /*
+         * The code below follows the same logic as the function withValues().
+         *
+         * But as the Meteor package is not compiled by ecmascript, it is unable to use newer syntax in the browser,
+         * such as, the async/await.
+         *
+         * So, to keep supporting old browsers, like IE 11, we're creating the logic one level above.
+         */
+        const savedContext = DDP._CurrentMethodInvocation.setNewContextAndGetCurrent(
+          invocation
+        );
+        try {
+          stubOptions.stubReturnValue = await stubInvocation();
+        } finally {
+          DDP._CurrentMethodInvocation.set(savedContext);
+        }
       } catch (e) {
         stubOptions.exception = e;
       }

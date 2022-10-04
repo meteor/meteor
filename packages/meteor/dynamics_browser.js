@@ -28,16 +28,16 @@ EVp.withValue = function (value, func) {
   return ret;
 };
 
-EVp.withValueAsync = async function (value, func) {
-  var saved = currentValues[this.slot];
-  try {
-    currentValues[this.slot] = value;
-    var ret = await func();
-  } finally {
-    currentValues[this.slot] = saved;
-  }
-  return ret;
+EVp.set = function (context) {
+  currentValues[this.slot] = context;
 };
+
+EVp.setNewContextAndGetCurrent = function (value) {
+  const saved = currentValues[this.slot];
+  this.set(value);
+  return saved;
+};
+
 
 Meteor.bindEnvironment = function (func, onException, _this) {
   // needed in order to be able to create closures inside func and
