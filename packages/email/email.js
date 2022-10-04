@@ -232,8 +232,19 @@ Email.customTransport = undefined;
  */
 Email.send = function (options) {
   if (Email.customTransport) {
-    // Don't wait for sending process. Preserve current behavior
-    return Email.sendAsync(options);
+    // Preserve current behavior
+    const email = options.mailComposer ? options.mailComposer.mail : options;
+    let send = true;
+    sendHooks.forEach((hook) => {
+      send = hook(email);
+      return send;
+    });
+    if (!send) {
+      return;
+    }
+    const packageSettings = Meteor.settings.packages?.email || {};
+    Email.customTransport({ packageSettings, ...email });
+    return;
   }
   // Using Fibers Promise.await
   return Promise.await(Email.sendAsync(options));

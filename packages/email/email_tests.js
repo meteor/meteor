@@ -2,6 +2,14 @@ import { Email } from 'meteor/email';
 import { smokeEmailTest } from './email_test_helpers';
 import { TEST_CASES } from './email_tests_data';
 
+const CUSTOM_TRANSPORT_SETTINGS = {
+  email: { service: '1on1', user: 'test', password: 'pwd' },
+};
+
+const sleep = (ms) => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
 // Create dynamic sync tests
 TEST_CASES.forEach(({ title, options, testCalls }) => {
   Tinytest.add(`[Sync] ${title}`, function (test) {
@@ -50,9 +58,7 @@ Tinytest.add(
     });
 
     smokeEmailTest(function (stream) {
-      Meteor.settings.packages = {
-        email: { service: '1on1', user: 'test', password: 'pwd' },
-      };
+      Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
       Email.customTransport = (options) => {
         test.equal(options.from, 'foo@example.com');
         test.equal(options.packageSettings?.service, '1on1');
@@ -128,9 +134,7 @@ Tinytest.addAsync(
     });
 
     smokeEmailTest(function (stream) {
-      Meteor.settings.packages = {
-        email: { service: '1on1', user: 'test', password: 'pwd' },
-      };
+      Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
       Email.customTransport = (options) => {
         test.equal(options.from, 'foo@example.com');
         test.equal(options.packageSettings?.service, '1on1');
@@ -239,7 +243,7 @@ Tinytest.add('[Sync] email - URL string for known hosts', function (test) {
   console.dir(hotmailTransport);
   test.equal(hotmailTransport.transporter.options.service, 'hotmail');
 
-  const falseService = { service: '1on1', user: 'test', password: 'pwd' };
+  const falseService = CUSTOM_TRANSPORT_SETTINGS.email;
   const errorMsg =
     'Could not recognize e-mail service. See list at https://nodemailer.com/smtp/well-known/ for services that we can configure for you.';
   test.throws(() => EmailTest.knowHostsTransport(falseService), errorMsg);
@@ -248,3 +252,60 @@ Tinytest.add('[Sync] email - URL string for known hosts', function (test) {
     errorMsg
   );
 });
+
+Tinytest.addAsync(
+  '[Async] email - with custom transport exception',
+  async function (test) {
+    Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
+    Email.customTransport = (options) => {
+      test.equal(options.from, 'foo@example.com');
+      test.equal(options.packageSettings?.service, '1on1');
+      throw new Meteor.Error('Expected error');
+    };
+    await Email.sendAsync({
+      from: 'foo@example.com',
+      to: 'bar@example.com',
+    }).catch((err) => {
+      test.equal(err.error, 'Expected error');
+    });
+    Meteor.settings.packages = undefined;
+    Email.customTransport = undefined;
+  }
+);
+
+Tinytest.addAsync(
+  '[Async] email - with custom transport long time running',
+  async function (test) {
+    Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
+    Email.customTransport = async (options) => {
+      await sleep(3000);
+      test.equal(options.from, 'foo@example.com');
+      test.equal(options.packageSettings?.service, '1on1');
+    };
+    await Email.sendAsync({
+      from: 'foo@example.com',
+      to: 'bar@example.com',
+    });
+    Meteor.settings.packages = undefined;
+    Email.customTransport = undefined;
+  }
+);
+
+Tinytest.addAsync(
+  '[Sync] email - with custom transport long time running',
+  function (test, onComplete) {
+    Meteor.settings.packages = CUSTOM_TRANSPORT_SETTINGS;
+    Email.customTransport = async (options) => {
+      await sleep(3000);
+      test.equal(options.from, 'foo@example.com');
+      test.equal(options.packageSettings?.service, '1on1');
+      Meteor.settings.packages = undefined;
+      Email.customTransport = undefined;
+      onComplete();
+    };
+    Email.send({
+      from: 'foo@example.com',
+      to: 'bar@example.com',
+    });
+  }
+);

@@ -86,6 +86,7 @@ Meteor.call(
 {% apibox "Email.sendAsync" %}
 
 `sendAsync` only works on the server. It has the same behavior as `Email.send`, but returns a Promise.
+If you defined `Email.customTransport`, the `callAsync` method returns the return value from the `customTransport` method or a Promise, if this method is async.
 
 ```js
 // Server: Define a method that the client can call.
