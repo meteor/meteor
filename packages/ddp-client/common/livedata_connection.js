@@ -639,13 +639,13 @@ export class Connection {
          *
          * So, to keep supporting old browsers, like IE 11, we're creating the logic one level above.
          */
-        const savedContext = DDP._CurrentMethodInvocation.setNewContextAndGetCurrent(
+        const currentContext = DDP._CurrentMethodInvocation.setNewContextAndGetCurrent(
           invocation
         );
         try {
           stubOptions.stubReturnValue = await stubInvocation();
         } finally {
-          DDP._CurrentMethodInvocation.set(savedContext);
+          DDP._CurrentMethodInvocation.set(currentContext);
         }
       } catch (e) {
         stubOptions.exception = e;

@@ -762,7 +762,7 @@ Object.assign(Session.prototype, {
           }
         }
 
-        const currentMethodInvocationResult = () => {
+        const getCurrentMethodInvocationResult = () => {
           const currentContext = DDP._CurrentMethodInvocation.setNewContextAndGetCurrent(
             invocation
           );
@@ -787,18 +787,18 @@ Object.assign(Session.prototype, {
             DDP._CurrentMethodInvocation.set(currentContext);
           }
         };
-        const currentWriteFenceResult = () => {
+        const getCurrentWriteFenceResult = () => {
           const currentContext = DDPServer._CurrentWriteFence.setNewContextAndGetCurrent(
             fence
           );
           try {
-            return currentMethodInvocationResult();
+            return getCurrentMethodInvocationResult();
           } finally {
             DDPServer._CurrentWriteFence.set(currentContext);
           }
         };
 
-        resolve(currentWriteFenceResult());
+        resolve(getCurrentWriteFenceResult());
       });
 
       function finish() {
