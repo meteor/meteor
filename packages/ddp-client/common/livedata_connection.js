@@ -569,13 +569,16 @@ export class Connection {
     }
 
     return new Promise((resolve, reject) => {
-      this.applyAsync(name, args, (err, result) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve(result);
-      });
+      DDP._CurrentMethodInvocation.set();
+      Meteor.bindEnvironment(() => {
+        this.applyAsync(name, args, (err, result) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          resolve(result);
+        });
+      })();
     });
   }
 
