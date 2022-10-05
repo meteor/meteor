@@ -39,7 +39,7 @@ For the most part though, you will only need to import `fetch` and `Headers`.
 import { Meteor } from 'meteor/meteor';
 import { fetch, Headers } from 'meteor/fetch';
 
-const postData =async(url, data) => {
+const postData = async(url, data) => {
     try {
       const response = await fetch(url, {
           method: 'POST', // *GET, POST, PUT, DELETE, etc.
@@ -57,7 +57,7 @@ const postData =async(url, data) => {
       const data = await response.json();
       return response(null, data);
     } catch (err) {
-      return res.status(500).send({status: false, msg: err.message});
+      return response.status(500).send({status: false, msg: err.message});
     }
 }
 
