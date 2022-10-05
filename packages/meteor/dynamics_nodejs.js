@@ -90,20 +90,20 @@ EVp.withValue = function (value, func) {
  * @param {Function} func The function to run
  * @return {Any} Return value of function
  */
-EVp.withValueAsync = function (value, func) {
-  return Fiber(async () => {
-    if (!Fiber.current._meteor_dynamics)
-      Fiber.current._meteor_dynamics = [];
-    var currentValues = Fiber.current._meteor_dynamics;
 
-    var saved = currentValues[this.slot];
-    try {
-      currentValues[this.slot] = value;
-      return await func();
-    } finally {
-      currentValues[this.slot] = saved;
-    }
-  }).run();
+EVp.set = function (context) {
+  Meteor._nodeCodeMustBeInFiber();
+  Fiber.current._meteor_dynamics[this.slot] = context;
+};
+
+EVp.setNewContextAndGetCurrent = function (value) {
+  Meteor._nodeCodeMustBeInFiber();
+  if (!Fiber.current._meteor_dynamics) {
+    Fiber.current._meteor_dynamics = [];
+  }
+  const saved = Fiber.current._meteor_dynamics[this.slot];
+  this.set(value);
+  return saved;
 };
 
 // Meteor application code is always supposed to be run inside a

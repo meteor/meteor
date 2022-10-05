@@ -762,16 +762,43 @@ Object.assign(Session.prototype, {
           }
         }
 
-        resolve(Promise.await(DDPServer._CurrentWriteFence.withValueAsync(
-          fence,
-          () => DDP._CurrentMethodInvocation.withValueAsync(
-            invocation,
-            () => maybeAuditArgumentChecks(
-              handler, invocation, msg.params,
+        const currentMethodInvocationResult = () => {
+          const currentContext = DDP._CurrentMethodInvocation.setNewContextAndGetCurrent(
+            invocation
+          );
+
+          try {
+            let result;
+            const resultOrThenable = maybeAuditArgumentChecks(
+              handler,
+              invocation,
+              msg.params,
               "call to '" + msg.method + "'"
-            )
-          )
-        )));
+            );
+            const isThenable =
+              resultOrThenable && typeof resultOrThenable.then === 'function';
+            if (isThenable) {
+              result = Promise.await(resultOrThenable);
+            } else {
+              result = resultOrThenable;
+            }
+            return result;
+          } finally {
+            DDP._CurrentMethodInvocation.set(currentContext);
+          }
+        };
+        const currentWriteFenceResult = () => {
+          const currentContext = DDPServer._CurrentWriteFence.setNewContextAndGetCurrent(
+            fence
+          );
+          try {
+            return currentMethodInvocationResult();
+          } finally {
+            DDPServer._CurrentWriteFence.set(currentContext);
+          }
+        };
+
+        resolve(currentWriteFenceResult());
       });
 
       function finish() {
@@ -784,20 +811,21 @@ Object.assign(Session.prototype, {
         id: msg.id
       };
 
-      promise.then((result) => {
+      try {
+        const result = Promise.await(promise);
         finish();
         if (result !== undefined) {
           payload.result = result;
         }
         self.send(payload);
-      }, (exception) => {
+      } catch (exception) {
         finish();
         payload.error = wrapInternalException(
           exception,
           `while invoking method '${msg.method}'`
         );
         self.send(payload);
-      });
+      }
     }
   },
 
