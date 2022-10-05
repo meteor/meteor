@@ -1,3 +1,15 @@
+## 2.X.X, Unreleased
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `facebook-oauth@1.12.0`
+  - Updated default version of Facebook GraphAPI to v15
+
 ## 2.7.3, 2022-05-31
 
 #### Highlights
