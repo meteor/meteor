@@ -16,8 +16,8 @@ git fetch origin && git checkout release/METEOR@$VERSION && git reset --hard ori
 ./meteor admin make-bootstrap-tarballs --target-arch os.windows.x86_64 $VERSION win64
 ./meteor admin make-bootstrap-tarballs --target-arch os.linux.x86_64 $VERSION linux64
 ./meteor admin make-bootstrap-tarballs --target-arch os.osx.x86_64 $VERSION osx &&
-  ./meteor admin make-bootstrap-tarballs --target-arch os.osx.arm64 $VERSION osx
-./meteor aws s3 mb s3://com.meteor.static/packages-bootstrap/$VERSION/ &&
+./meteor admin make-bootstrap-tarballs --target-arch os.osx.arm64 $VERSION osx
+  aws s3 mb s3://com.meteor.static/packages-bootstrap/$VERSION/ &&
   aws s3 cp --acl public-read win64/meteor-bootstrap-os.windows.x86_64.tar.gz s3://com.meteor.static/packages-bootstrap/$VERSION/ &&
   aws s3 cp --acl public-read linux64/meteor-bootstrap-os.linux.x86_64.tar.gz s3://com.meteor.static/packages-bootstrap/$VERSION/ &&
   aws s3 cp --acl public-read osx/meteor-bootstrap-os.osx.x86_64.tar.gz s3://com.meteor.static/packages-bootstrap/$VERSION/ &&
