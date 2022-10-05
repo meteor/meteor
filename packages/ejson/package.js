@@ -5,7 +5,7 @@ Package.describe({
 
 Package.onUse(function onUse(api) {
   api.use(['ecmascript', 'base64']);
-  api.addAssets('ejson.d.ts', ['client', 'server']);
+  api.addAssets('ejson.d.ts', 'server');
   api.mainModule('ejson.js');
   api.export('EJSON');
 });
