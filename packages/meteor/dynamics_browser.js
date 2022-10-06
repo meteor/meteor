@@ -28,6 +28,17 @@ EVp.withValue = function (value, func) {
   return ret;
 };
 
+EVp._set = function (context) {
+  currentValues[this.slot] = context;
+};
+
+EVp._setNewContextAndGetCurrent = function (value) {
+  const saved = currentValues[this.slot];
+  this._set(value);
+  return saved;
+};
+
+
 Meteor.bindEnvironment = function (func, onException, _this) {
   // needed in order to be able to create closures inside func and
   // have the closed variables not change back to their original

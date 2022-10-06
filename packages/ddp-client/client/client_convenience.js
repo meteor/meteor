@@ -48,7 +48,9 @@ Meteor.connection = DDP.connect(ddpUrl, {
   'subscribe',
   'methods',
   'call',
+  'callAsync',
   'apply',
+  'applyAsync',
   'status',
   'reconnect',
   'disconnect'
