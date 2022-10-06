@@ -28,13 +28,13 @@ EVp.withValue = function (value, func) {
   return ret;
 };
 
-EVp.set = function (context) {
+EVp._set = function (context) {
   currentValues[this.slot] = context;
 };
 
-EVp.setNewContextAndGetCurrent = function (value) {
+EVp._setNewContextAndGetCurrent = function (value) {
   const saved = currentValues[this.slot];
-  this.set(value);
+  this._set(value);
   return saved;
 };
 

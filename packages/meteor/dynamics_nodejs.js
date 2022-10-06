@@ -91,18 +91,18 @@ EVp.withValue = function (value, func) {
  * @return {Any} Return value of function
  */
 
-EVp.set = function (context) {
+EVp._set = function (context) {
   Meteor._nodeCodeMustBeInFiber();
   Fiber.current._meteor_dynamics[this.slot] = context;
 };
 
-EVp.setNewContextAndGetCurrent = function (value) {
+EVp._setNewContextAndGetCurrent = function (value) {
   Meteor._nodeCodeMustBeInFiber();
   if (!Fiber.current._meteor_dynamics) {
     Fiber.current._meteor_dynamics = [];
   }
   const saved = Fiber.current._meteor_dynamics[this.slot];
-  this.set(value);
+  this._set(value);
   return saved;
 };
 

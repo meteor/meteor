@@ -534,7 +534,7 @@ export class Connection {
    * @memberOf Meteor
    * @importFromPackage meteor
    * @alias Meteor.call
-   * @summary Invokes a sync method passing any number of arguments.
+   * @summary Invokes a method with a sync stub, passing any number of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
@@ -554,7 +554,7 @@ export class Connection {
    * @memberOf Meteor
    * @importFromPackage meteor
    * @alias Meteor.callAsync
-   * @summary Invokes an async method passing any number of arguments.
+   * @summary Invokes a method with an async stub, passing any number of arguments.
    * @locus Anywhere
    * @param {String} name Name of method to invoke
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
@@ -569,7 +569,19 @@ export class Connection {
     }
 
     return new Promise((resolve, reject) => {
-      DDP._CurrentMethodInvocation.set();
+      /*
+      * This is necessary because when you call a Promise.then, you're actually call a bound function by meteor.
+      *
+      * This is done by this code https://github.com/meteor/meteor/blob/17673c66878d3f7b1d564a4215eb0633fa679017/npm-packages/meteor-promise/promise_client.js#L1-L16.
+      *
+      * So, without resting the context at this point, and then calling Meteor.bindEnvironment before calling
+      * applyAsync, when you call a ".then()", like "Meteor.callAsync().then()", the global context (inside currentValues)
+      * will be from the call of Meteor.callAsync(), and not the context after the promise is done.
+      *
+      * Which means that without this code, if you call a stub inside the ".then()", this stub will act as a simulation
+      * and won't reach the server.
+      * */
+      DDP._CurrentMethodInvocation._set();
       Meteor.bindEnvironment(() => {
         this.applyAsync(name, args, (err, result) => {
           if (err) {
@@ -628,6 +640,7 @@ export class Connection {
    * @param {Boolean} options.throwStubExceptions (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
    * @param {Boolean} options.returnStubValue (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
    * @param {Function} [asyncCallback] Optional callback.
+   * @returns {Promise}
    */
   async applyAsync(name, args, options, callback) {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
@@ -642,13 +655,13 @@ export class Connection {
          *
          * So, to keep supporting old browsers, like IE 11, we're creating the logic one level above.
          */
-        const currentContext = DDP._CurrentMethodInvocation.setNewContextAndGetCurrent(
+        const currentContext = DDP._CurrentMethodInvocation._setNewContextAndGetCurrent(
           invocation
         );
         try {
           stubOptions.stubReturnValue = await stubInvocation();
         } finally {
-          DDP._CurrentMethodInvocation.set(currentContext);
+          DDP._CurrentMethodInvocation._set(currentContext);
         }
       } catch (e) {
         stubOptions.exception = e;

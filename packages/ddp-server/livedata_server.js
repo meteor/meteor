@@ -763,7 +763,7 @@ Object.assign(Session.prototype, {
         }
 
         const getCurrentMethodInvocationResult = () => {
-          const currentContext = DDP._CurrentMethodInvocation.setNewContextAndGetCurrent(
+          const currentContext = DDP._CurrentMethodInvocation._setNewContextAndGetCurrent(
             invocation
           );
 
@@ -784,21 +784,11 @@ Object.assign(Session.prototype, {
             }
             return result;
           } finally {
-            DDP._CurrentMethodInvocation.set(currentContext);
-          }
-        };
-        const getCurrentWriteFenceResult = () => {
-          const currentContext = DDPServer._CurrentWriteFence.setNewContextAndGetCurrent(
-            fence
-          );
-          try {
-            return getCurrentMethodInvocationResult();
-          } finally {
-            DDPServer._CurrentWriteFence.set(currentContext);
+            DDP._CurrentMethodInvocation._set(currentContext);
           }
         };
 
-        resolve(getCurrentWriteFenceResult());
+        resolve(DDPServer._CurrentWriteFence.withValue(fence, getCurrentMethodInvocationResult));
       });
 
       function finish() {
@@ -811,21 +801,20 @@ Object.assign(Session.prototype, {
         id: msg.id
       };
 
-      try {
-        const result = Promise.await(promise);
+      promise.then(result => {
         finish();
         if (result !== undefined) {
           payload.result = result;
         }
         self.send(payload);
-      } catch (exception) {
+      }, (exception) => {
         finish();
         payload.error = wrapInternalException(
           exception,
           `while invoking method '${msg.method}'`
         );
         self.send(payload);
-      }
+      });
     }
   },
 
