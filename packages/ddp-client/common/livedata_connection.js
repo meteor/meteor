@@ -570,7 +570,7 @@ export class Connection {
 
     return new Promise((resolve, reject) => {
       /*
-      * This is necessary because when you call a Promise.then, you're actually call a bound function by meteor.
+      * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
       *
       * This is done by this code https://github.com/meteor/meteor/blob/17673c66878d3f7b1d564a4215eb0633fa679017/npm-packages/meteor-promise/promise_client.js#L1-L16.
       *
@@ -578,7 +578,7 @@ export class Connection {
       * applyAsync, when you call a ".then()", like "Meteor.callAsync().then()", the global context (inside currentValues)
       * will be from the call of Meteor.callAsync(), and not the context after the promise is done.
       *
-      * Which means that without this code, if you call a stub inside the ".then()", this stub will act as a simulation
+      * This means that without this code if you call a stub inside the ".then()", this stub will act as a simulation
       * and won't reach the server.
       * */
       DDP._CurrentMethodInvocation._set();
