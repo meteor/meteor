@@ -560,7 +560,7 @@ export class Connection {
    * @param {EJSONable} [arg1,arg2...] Optional method arguments
    * @returns {Promise}
    */
-  async callAsync(name /* .. [arguments] .. callback */) {
+  async callAsync(name /* .. [arguments] .. */) {
     const args = slice.call(arguments, 1);
     if (args.length && typeof args[args.length - 1] === 'function') {
       throw new Error(
