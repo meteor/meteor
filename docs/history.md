@@ -4,7 +4,7 @@
 * New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
 * Node update to [v14.20.1](https://nodejs.org/en/blog/release/v14.20.1/) as part of the [September 22nd security release](https://nodejs.org/en/blog/vulnerability/september-2022-security-releases/)
 * Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
-* Meteor.callAsync method. [PR] (https://github.com/meteor/meteor/pull/12196)
+* Meteor.callAsync method. [PR](https://github.com/meteor/meteor/pull/12196)
 
 #### Breaking Changes
 
