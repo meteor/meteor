@@ -59,51 +59,42 @@ Meteor._SynchronousQueue = function () {
 
 var SQp = Meteor._SynchronousQueue.prototype;
 
-const runTaskWithFibers = ({ task, self }) => {
+SQp.runTask = function(task) {
+  const self = this;
+
   if (!self.safeToRunTask()) {
-    if (Fiber.current) {
-      throw new Error("Can't runTask from another task in the same fiber");
+    if (Meteor._isFibersEnabled) {
+      if (Fiber.current) {
+        throw new Error("Can't runTask from another task in the same fiber");
+      } else {
+        throw new Error('Can only call runTask in a Fiber');
+      }
     } else {
-      throw new Error('Can only call runTask in a Fiber');
+      throw new Error('Can not run multiple tasks in a SynchronousQueue at the same time');
     }
   }
+  
+  let fut;
 
-  const fut = new Future();
+  if (Meteor._isFibersEnabled) {
+    fut = new Future();
+  }
+
   const handle = {
     task: Meteor.bindEnvironment(task, function(e) {
       Meteor._debug('Exception from task', e);
       throw e;
     }),
     future: fut,
-    name: task.name
-  };
-  self._taskHandles.push(handle);
-  self._scheduleRun();
-  // Yield. We'll get back here after the task is run (and will throw if the
-  // task throws).
-  fut.wait();
-};
-
-const runTask = ({ task, self }) => {
-  const handle = {
-    task: Meteor.bindEnvironment(task, function(e) {
-      Meteor._debug('Exception from task', e);
-      throw e;
-    }),
     name: task.name,
   };
 
   self._taskHandles.push(handle);
   self._scheduleRun();
-};
 
-SQp.runTask = function(task) {
-  const self = this;
   if (Meteor._isFibersEnabled) {
-    runTaskWithFibers({ task, self });
-    return;
+    fut.wait();
   }
-  runTask({ task, self });
 };
 
 SQp.queueTask = function (task) {
@@ -118,18 +109,18 @@ SQp.queueTask = function (task) {
 
 SQp.flush = function () {
   var self = this;
+  
   self.runTask(function () {});
 };
 
-
-// TODO -> Check if we are already running a task.
 SQp.safeToRunTask = function () {
-  if (!Meteor._isFibersEnabled) {
-    return true;
+  var self = this;
+
+  if (Meteor._isFibersEnabled) {
+    return Fiber.current && self._currentTaskFiber !== Fiber.current;
   }
 
-  var self = this;
-  return Fiber.current && self._currentTaskFiber !== Fiber.current;
+  return !self._runningOrRunScheduled;
 };
 
 SQp.drain = function () {
@@ -161,37 +152,11 @@ SQp._scheduleRun = function () {
    *  but maybe there is another place that would? (DDP/Web)-Server?
    */
   setImmediate(function() {
-    Meteor._runAsync(Meteor._isFibersEnabled ? self._run : self._runAsync, self);
+    Meteor._runAsync(self._run, self);
   });
 };
 
-SQp._runAsync = async function() {
-  var self = this;
-
-  if (!self._runningOrRunScheduled)
-    throw new Error("expected to be _runningOrRunScheduled");
-
-  if (self._taskHandles.isEmpty()) {
-    // Done running tasks! Don't immediately schedule another run, but
-    // allow future tasks to do so.
-    self._runningOrRunScheduled = false;
-    return;
-  }
-  var taskHandle = self._taskHandles.shift();
-
-  // Run the task.
-  try {
-    await taskHandle.task();
-  } catch (err) {
-    Meteor._debug("Exception in queued task", err);
-  }
-
-  // Soon, run the next task, if there is any.
-  self._runningOrRunScheduled = false;
-  self._scheduleRun();
-};
-
-SQp._run = function () {
+SQp._run = async function () {
   var self = this;
 
   if (!self._runningOrRunScheduled)
@@ -206,8 +171,11 @@ SQp._run = function () {
   var taskHandle = self._taskHandles.shift();
 
   var exception = undefined;
-  function runFiber() {
+
+  // Run the task.
+  if (Meteor._isFibersEnabled) {
     self._currentTaskFiber = Fiber.current;
+
     try {
       taskHandle.task();
     } catch (err) {
@@ -218,16 +186,13 @@ SQp._run = function () {
         Meteor._debug("Exception in queued task", err);
       }
     }
+
     self._currentTaskFiber = undefined;
-  }
-  // Run the task.
-  if (Meteor._isFibersEnabled) {
-    runFiber();
   } else {
     try {
-      taskHandle.task();
+      await taskHandle.task();
     } catch (err) {
-        Meteor._debug("Exception in queued task", err);
+      Meteor._debug("Exception in queued task", err);
     }
   }
 
