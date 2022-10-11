@@ -1038,7 +1038,13 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options, collecti
     self._transform = null;
   }
 
-  self._synchronousCount = Future.wrap(collection.estimatedDocumentCount.bind(collection));
+  self._synchronousCount = Future.wrap(
+    collection.countDocuments.bind(
+      collection,
+      replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
+      replaceTypes(cursorDescription.options, replaceMeteorAtomWithMongo),
+    )
+  );
   self._visitedIds = new LocalCollection._IdMap;
 };
 
