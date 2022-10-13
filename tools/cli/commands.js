@@ -522,7 +522,7 @@ export const AVAILABLE_SKELETONS = [
 
 main.registerCommand({
   name: 'create',
-  maxArgs: 1,
+  maxArgs: 2,
   options: {
     list: { type: Boolean },
     example: { type: String },
@@ -539,6 +539,7 @@ main.registerCommand({
     tailwind: { type: Boolean },
     'chakra-ui': { type: Boolean },
     solid: { type: Boolean },
+    prototype: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -790,6 +791,22 @@ main.registerCommand({
       return transform(f);
     },
     transformContents: function (contents, f) {
+
+      // check if this app is just for prototyping if it is then we need to add autopublish and insecure in the packages file
+      if ((/packages/).test(f)) {
+
+        const prototypePackages =
+          () =>
+            'autopublish             # Publish all data to the clients (for prototyping)\n' +
+            'insecure                # Allow all DB writes from clients (for prototyping)';
+
+        // XXX: if there is the need to add more options maybe we should have a better abstraction for this if-else
+        if (options.prototype) {
+          return Buffer.from(contents.toString().replace(/~prototype~/g, prototypePackages()))
+        } else {
+          return Buffer.from(contents.toString().replace(/~prototype~/g, ''))
+        }
+      }
       if ((/(\.html|\.[jt]sx?|\.css)/).test(f)) {
         return Buffer.from(transform(contents.toString()));
       } else {

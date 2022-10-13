@@ -150,7 +150,7 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
+Usage: meteor create [--release <release>] [--prototype] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
@@ -191,6 +191,7 @@ Options:
   --tailwind    Create a basic react-based app, with tailwind configured.
   --chakra-ui   Create a basic react-based app, with chakra-ui configured.
   --solid       Create a basic solid-based app.
+  --prototype   Create a prototype app.
 
 
 >>> update
