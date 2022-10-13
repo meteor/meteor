@@ -548,7 +548,13 @@ main.registerCommand({
   // latest release to create a package if we are inside an app)
   if (options.package) {
     var packageName = options.args[0];
-
+    if (options.prototype) {
+      Console.error(
+        `The ${Console.command('--prototype')} option is not supported for packages.`
+      );
+      Console.error();
+      throw new main.ShowUsage;
+    }
     if (options.list || options.example) {
       Console.error("No package examples exist at this time.");
       Console.error();
