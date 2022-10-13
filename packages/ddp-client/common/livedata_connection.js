@@ -530,6 +530,13 @@ export class Connection {
     });
   }
 
+  _getIsSimulation({isFromCallAsync, alreadyInSimulation}) {
+    if (!isFromCallAsync) {
+      return alreadyInSimulation;
+    }
+    return alreadyInSimulation && DDP._CurrentMethodInvocation._isCallAsyncMethodRunning();
+  }
+
   /**
    * @memberOf Meteor
    * @importFromPackage meteor
@@ -567,30 +574,46 @@ export class Connection {
         "Meteor.callAsync() does not accept a callback. You should 'await' the result, or use .then()."
       );
     }
-
+    /*
+    * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
+    *
+    * This is done by this code https://github.com/meteor/meteor/blob/17673c66878d3f7b1d564a4215eb0633fa679017/npm-packages/meteor-promise/promise_client.js#L1-L16. (All the logic below can be removed in the future, when we stop overwriting the
+    * Promise.)
+    *
+    * When you call a ".then()", like "Meteor.callAsync().then()", the global context (inside currentValues)
+    * will be from the call of Meteor.callAsync(), and not the context after the promise is done.
+    *
+    * This means that without this code if you call a stub inside the ".then()", this stub will act as a simulation
+    * and won't reach the server.
+    *
+    * Inside the function _getIsSimulation(), if isFromCallAsync is false, we continue to consider just the
+    * alreadyInSimulation, otherwise, isFromCallAsync is true, we also check the value of callAsyncMethodRunning (by
+    * calling DDP._CurrentMethodInvocation._isCallAsyncMethodRunning()).
+    *
+    * With this, if a stub is running inside a ".then()", it'll know it's not a simulation, because callAsyncMethodRunning
+    * will be false.
+    *
+    * DDP._CurrentMethodInvocation._set() is important because without it, if you have a code like:
+    *
+    * Meteor.callAsync("m1").then(() => {
+    *   Meteor.callAsync("m2")
+    * })
+    *
+    * The call the method m2 will act as a simulation and won't reach the server. That's why we reset the context here
+    * before calling everything else.
+    *
+    * */
+    DDP._CurrentMethodInvocation._set();
+    DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(true);
     return new Promise((resolve, reject) => {
-      /*
-      * This is necessary because when you call a Promise.then, you're actually calling a bound function by Meteor.
-      *
-      * This is done by this code https://github.com/meteor/meteor/blob/17673c66878d3f7b1d564a4215eb0633fa679017/npm-packages/meteor-promise/promise_client.js#L1-L16.
-      *
-      * So, without resting the context at this point, and then calling Meteor.bindEnvironment before calling
-      * applyAsync, when you call a ".then()", like "Meteor.callAsync().then()", the global context (inside currentValues)
-      * will be from the call of Meteor.callAsync(), and not the context after the promise is done.
-      *
-      * This means that without this code if you call a stub inside the ".then()", this stub will act as a simulation
-      * and won't reach the server.
-      * */
-      DDP._CurrentMethodInvocation._set();
-      Meteor.bindEnvironment(() => {
-        this.applyAsync(name, args, (err, result) => {
-          if (err) {
-            reject(err);
-            return;
-          }
-          resolve(result);
-        });
-      })();
+      this.applyAsync(name, args, { isFromCallAsync: true }, (err, result) => {
+        DDP._CurrentMethodInvocation._setCallAsyncMethodRunning(false);
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(result);
+      });
     });
   }
 
@@ -614,7 +637,14 @@ export class Connection {
     const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
 
     if (stubOptions.hasStub) {
-      if (!stubOptions.alreadyInSimulation) this._saveOriginals();
+      if (
+        !this._getIsSimulation({
+          alreadyInSimulation: stubOptions.alreadyInSimulation,
+          isFromCallAsync: stubOptions.isFromCallAsync,
+        })
+      ) {
+        this._saveOriginals();
+      }
       try {
         stubOptions.stubReturnValue = DDP._CurrentMethodInvocation
           .withValue(invocation, stubInvocation);
@@ -642,9 +672,16 @@ export class Connection {
    * @param {Function} [asyncCallback] Optional callback.
    */
   async applyAsync(name, args, options, callback) {
-    const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args));
+    const { stubInvocation, invocation, ...stubOptions } = this._stubCall(name, EJSON.clone(args), options);
     if (stubOptions.hasStub) {
-      if (!stubOptions.alreadyInSimulation) this._saveOriginals();
+      if (
+        !this._getIsSimulation({
+          alreadyInSimulation: stubOptions.alreadyInSimulation,
+          isFromCallAsync: stubOptions.isFromCallAsync,
+        })
+      ) {
+        this._saveOriginals();
+      }
       try {
         /*
          * The code below follows the same logic as the function withValues().
@@ -699,7 +736,12 @@ export class Connection {
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
     // we'll end up returning undefined.
-    if (alreadyInSimulation) {
+    if (
+      this._getIsSimulation({
+        alreadyInSimulation,
+        isFromCallAsync: stubCallValue.isFromCallAsync,
+      })
+    ) {
       if (callback) {
         callback(exception, stubReturnValue);
         return undefined;
@@ -813,7 +855,7 @@ export class Connection {
   }
 
 
-  _stubCall(name, args) {
+  _stubCall(name, args, options) {
     // Run the stub, if we have one. The stub is supposed to make some
     // temporary writes to the database to give the user a smooth experience
     // until the actual result of executing the method comes back from the
@@ -829,10 +871,11 @@ export class Connection {
     const enclosing = DDP._CurrentMethodInvocation.get();
     const stub = self._methodHandlers[name];
     const alreadyInSimulation = enclosing?.isSimulation;
+    const isFromCallAsync = enclosing?._isFromCallAsync;
     const randomSeed = { value: null};
 
     const defaultReturn = {
-      alreadyInSimulation, randomSeed
+      alreadyInSimulation, randomSeed, isFromCallAsync
     };
     if (!stub) {
       return { ...defaultReturn, hasStub: false };
@@ -863,6 +906,7 @@ export class Connection {
     const invocation = new DDPCommon.MethodInvocation({
       isSimulation: true,
       userId: self.userId(),
+      isFromCallAsync: options?.isFromCallAsync,
       setUserId: setUserId,
       randomSeed() {
         return randomSeedGenerator();
