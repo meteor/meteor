@@ -7,10 +7,9 @@
 * Meteor.callAsync method. [PR](https://github.com/meteor/meteor/pull/12196)
 
 #### Breaking Changes
-N/A
 
 #### Migration Steps
-Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this version.
+Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.app/2.8-migration.html) for this version.
 
 #### Meteor Version Release
 * `modules@0.19.0`:

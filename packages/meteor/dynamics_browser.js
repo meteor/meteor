@@ -2,7 +2,6 @@
 
 var nextSlot = 0;
 var currentValues = [];
-var callAsyncMethodRunning = false;
 
 Meteor.EnvironmentVariable = function () {
   this.slot = nextSlot++;
@@ -10,9 +9,6 @@ Meteor.EnvironmentVariable = function () {
 
 var EVp = Meteor.EnvironmentVariable.prototype;
 
-EVp.getCurrentValues = function () {
-  return currentValues;
-};
 EVp.get = function () {
   return currentValues[this.slot];
 };
@@ -40,14 +36,6 @@ EVp._setNewContextAndGetCurrent = function (value) {
   const saved = currentValues[this.slot];
   this._set(value);
   return saved;
-};
-
-EVp._isCallAsyncMethodRunning = function () {
-  return callAsyncMethodRunning;
-};
-
-EVp._setCallAsyncMethodRunning = function (value) {
-  callAsyncMethodRunning = value;
 };
 
 
