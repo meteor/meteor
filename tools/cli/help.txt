@@ -191,7 +191,7 @@ Options:
   --tailwind    Create a basic react-based app, with tailwind configured.
   --chakra-ui   Create a basic react-based app, with chakra-ui configured.
   --solid       Create a basic solid-based app.
-  --prototype   Create a prototype app.
+  --prototype   Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
 
 
 >>> update

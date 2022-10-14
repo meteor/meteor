@@ -550,7 +550,7 @@ main.registerCommand({
     var packageName = options.args[0];
     if (options.prototype) {
       Console.error(
-        `The ${Console.command('--prototype')} option is not supported for packages.`
+        `The ${Console.command('--prototype')} option is no longer supported for packages.`
       );
       Console.error();
       throw new main.ShowUsage;
