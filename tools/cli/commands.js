@@ -522,7 +522,7 @@ export const AVAILABLE_SKELETONS = [
 
 main.registerCommand({
   name: 'create',
-  maxArgs: 2,
+  maxArgs: 1,
   options: {
     list: { type: Boolean },
     example: { type: String },
