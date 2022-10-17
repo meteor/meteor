@@ -57,9 +57,12 @@ async function main() {
       // should only run on lines that have a version
       if (!line.includes('version')) continue;
 
-      const [_, lineVersion] = line.split(':');
-
-      const currentVersion = lineVersion.trim().replace(',', '');
+      //Package.describe({
+      //   summary: 'some description.',
+      //   version: '1.2.3' <--- this is the line we want, we assure that it has a version in the previous if
+      //});
+      const [_, versionValue] = line.split(':');
+      const currentVersion = versionValue.trim().replace(',', '');
       const semverVersion = semver.coerce(currentVersion);
 
       /**
