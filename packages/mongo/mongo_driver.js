@@ -1049,7 +1049,7 @@ MongoConnection.prototype._createSynchronousCursor = function(
     dbCursor = dbCursor.hint(cursorOptions.hint);
   }
 
-  return Meteor._isFibersEnabled ? new SynchronousCursor(dbCursor, cursorDescription, options) : new AsynchronousCursor(dbCursor, cursorDescription, options);
+  return Meteor._isFibersEnabled ? new SynchronousCursor(dbCursor, cursorDescription, options, collection) : new AsynchronousCursor(dbCursor, cursorDescription, options, collection);
 };
 
 /**
@@ -1199,7 +1199,7 @@ class AsynchronousCursor {
   }
 }
 
-var SynchronousCursor = function (dbCursor, cursorDescription, options) {
+var SynchronousCursor = function (dbCursor, cursorDescription, options, collection) {
   var self = this;
   options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
@@ -1215,7 +1215,13 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
     self._transform = null;
   }
 
-  self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
+  self._synchronousCount = Future.wrap(
+    collection.countDocuments.bind(
+      collection,
+      replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
+      replaceTypes(cursorDescription.options, replaceMeteorAtomWithMongo),
+    )
+  );
   self._visitedIds = new LocalCollection._IdMap;
 };
 

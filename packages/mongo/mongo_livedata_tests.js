@@ -3232,6 +3232,7 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
 Meteor.isServer && Tinytest.add(
   "mongo-livedata - connection failure throws",
   function (test) {
+    // Exception happens in 30s
     test.throws(function () {
       const connection = new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
 
