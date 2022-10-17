@@ -1,6 +1,5 @@
 // this script is used in the following way:
-// node index.js <package>.<major|minor|patch> # if does not include a version, it will default to patch for betas and rc's use <package>.<major|minor|patch|beta|rc>
-// for example:
+// node index.js <package>.<major|minor|patch|beta|rc> # if does not include a version, it will default to patch.
 // node scripts/admin/update-semver/index.js meteor-tool.patch ddp base64.beta
 // or
 // node scripts/admin/update-semver/index.js @auto # it will update by a patch all packages that have changed since the last release compared to master
