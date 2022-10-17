@@ -142,12 +142,13 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
         test.extraDetails.asyncBlock = i++;
 
         new Promise(resolve => {
-          if (func.constructor.name === "Function") {
-            return resolve(func.apply(context, [test, _.bind(em.expect, em)]));
+          const result = func.apply(context, [test, _.bind(em.expect, em)]);
+          if (result && typeof result.then === "function") {
+            return result.then((r) => resolve(r))
           }
 
-          return func.apply(context, [test, _.bind(em.expect, em)]).then((r) => resolve(r));
-        }).then(result => {
+          return resolve(result);
+        }).then(() => {
           em.done();
         }, exception => {
           if (em.cancel()) {
@@ -196,6 +197,14 @@ pollUntil = function (expect, f, timeout, step, noFail) {
   );
 };
 
+/**
+ * Helper that is used on the async tests.
+ * Just run the function and assert if we have an error or not.
+ * @param fn
+ * @param test
+ * @param shouldErrorOut
+ * @returns {Promise<*>}
+ */
 runAndThrowIfNeeded = async (fn, test, shouldErrorOut) => {
   let err, result;
   try {
