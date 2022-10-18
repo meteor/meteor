@@ -517,6 +517,7 @@ export const AVAILABLE_SKELETONS = [
   "svelte",
   "tailwind",
   "chakra-ui",
+  "solid",
 ];
 
 main.registerCommand({
@@ -537,6 +538,7 @@ main.registerCommand({
     svelte: { type: Boolean },
     tailwind: { type: Boolean },
     'chakra-ui': { type: Boolean },
+    solid: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -910,6 +912,7 @@ main.registerCommand({
     cmd("meteor create --blaze      # to create an app using Blaze");
     cmd("meteor create --tailwind   # to create an app using React and Tailwind");
     cmd("meteor create --chakra-ui  # to create an app Chakra UI and React");
+    cmd("meteor create --solid      # to create a basic Solid app");
   }
 
   Console.info("");

@@ -762,16 +762,33 @@ Object.assign(Session.prototype, {
           }
         }
 
-        resolve(DDPServer._CurrentWriteFence.withValue(
-          fence,
-          () => DDP._CurrentMethodInvocation.withValue(
-            invocation,
-            () => maybeAuditArgumentChecks(
-              handler, invocation, msg.params,
+        const getCurrentMethodInvocationResult = () => {
+          const currentContext = DDP._CurrentMethodInvocation._setNewContextAndGetCurrent(
+            invocation
+          );
+
+          try {
+            let result;
+            const resultOrThenable = maybeAuditArgumentChecks(
+              handler,
+              invocation,
+              msg.params,
               "call to '" + msg.method + "'"
-            )
-          )
-        ));
+            );
+            const isThenable =
+              resultOrThenable && typeof resultOrThenable.then === 'function';
+            if (isThenable) {
+              result = Promise.await(resultOrThenable);
+            } else {
+              result = resultOrThenable;
+            }
+            return result;
+          } finally {
+            DDP._CurrentMethodInvocation._set(currentContext);
+          }
+        };
+
+        resolve(DDPServer._CurrentWriteFence.withValue(fence, getCurrentMethodInvocationResult));
       });
 
       function finish() {
@@ -784,7 +801,7 @@ Object.assign(Session.prototype, {
         id: msg.id
       };
 
-      promise.then((result) => {
+      promise.then(result => {
         finish();
         if (result !== undefined) {
           payload.result = result;
