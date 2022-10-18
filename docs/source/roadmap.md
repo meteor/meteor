@@ -5,7 +5,7 @@ description: Describes the high-level features and actions for the Meteor projec
 
 ## Introduction
 
-Last update: August 31, 2022.
+Last update: Setember 14, 2022.
 
 This document describes the high-level features and actions for the Meteor project in the near-to-medium term future.
 The description of many items include sentences and ideas from Meteor community members.
@@ -57,7 +57,7 @@ Contributors are encouraged to focus their efforts on work that aligns with the 
 
 ### Future items
 We plan to implement these items in the near future. Community help would be greatly appreciated.
-- ES Modules Support; ([Discussion](https://github.com/meteor/meteor/discussions/11727))
+- Support package.json exports fields; ([Discussion](https://github.com/meteor/meteor/discussions/11727))
 - MongoDB 6.0 Support; ([Discussion](https://github.com/meteor/meteor/discussions/12092))
 - Improve Meteor build time; ([Discussion](https://github.com/meteor/meteor/discussions/11587))
 - HTTP/3 Support;
