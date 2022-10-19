@@ -99,12 +99,11 @@ EVp.withValue = async function (value, func) {
     meteorDynamics = [];
   }
 
-  const saved = meteorDynamics[this.slot];
+  const saved = meteorDynamics[this.slot] || {};
   try {
     meteorDynamics[this.slot] = value;
     Meteor._updateAslStore('_meteor_dynamics', meteorDynamics);
-    const result = await func();
-    return result;
+    return await func();
   } finally {
     meteorDynamics[this.slot] = saved;
     Meteor._updateAslStore('_meteor_dynamics', meteorDynamics);
@@ -120,18 +119,33 @@ EVp.withValue = async function (value, func) {
  * @param {Function} func The function to run
  * @return {Any} Return value of function
  */
-
 EVp._set = function (context) {
-  Meteor._nodeCodeMustBeInFiber();
-  Fiber.current._meteor_dynamics[this.slot] = context;
+  if (Meteor._isFibersEnabled) {
+    Meteor._nodeCodeMustBeInFiber();
+    Fiber.current._meteor_dynamics[this.slot] = context;
+    return;
+  }
+
+  Meteor._updateAslStore("_meteor_dynamics", context);
 };
 
 EVp._setNewContextAndGetCurrent = function (value) {
-  Meteor._nodeCodeMustBeInFiber();
-  if (!Fiber.current._meteor_dynamics) {
-    Fiber.current._meteor_dynamics = [];
+  if (Meteor._isFibersEnabled) {
+    Meteor._nodeCodeMustBeInFiber();
+    if (!Fiber.current._meteor_dynamics) {
+      Fiber.current._meteor_dynamics = [];
+    }
+    const saved = Fiber.current._meteor_dynamics[this.slot];
+    this._set(value);
+    return saved;
   }
-  const saved = Fiber.current._meteor_dynamics[this.slot];
+
+  let meteorDynamics = Meteor._getValueFromAslStore('_meteor_dynamics');
+  if (!meteorDynamics) {
+    meteorDynamics = [];
+  }
+
+  const saved = meteorDynamics[this.slot];
   this._set(value);
   return saved;
 };
