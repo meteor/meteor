@@ -142,7 +142,7 @@ Create a basic [React](https://reactjs.org) + [Tailwind CSS](https://tailwindcss
 
 `--chakra-ui`
 
-Create a basic [chakra-ui](https://chakra-ui.com/) app.
+Create a basic [React](https://reactjs.org) + [Chakra-UI](https://chakra-ui.com/) app.
 
 `--solid`
 
