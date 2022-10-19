@@ -361,7 +361,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 #### Highlights
 
 * Fixed 2.5.7 MongoDB error
-* Patch release to update Node and npm versions.
+* Patch release to update Node to version 14.19.3 and npm version to 6.14.17.
 
 #### Breaking Changes
 
