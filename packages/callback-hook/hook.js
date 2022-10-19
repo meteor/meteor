@@ -84,6 +84,11 @@ export class Hook {
     };
   }
 
+  clear() {
+    this.nextCallbackId = 0;
+    this.callbacks = [];
+  }
+
   /**
    * For each registered callback, call the passed iterator function with the callback.
    *
@@ -110,6 +115,20 @@ export class Hook {
       if (hasOwn.call(this.callbacks, id)) {
         const callback = this.callbacks[id];
         if (! iterator(callback)) {
+          break;
+        }
+      }
+    }
+  }
+
+  async forEachAsync(iterator) {
+    const ids = Object.keys(this.callbacks);
+    for (let i = 0;  i < ids.length;  ++i) {
+      const id = ids[i];
+      // check to see if the callback was removed during iteration
+      if (hasOwn.call(this.callbacks, id)) {
+        const callback = this.callbacks[id];
+        if (!await iterator(callback)) {
           break;
         }
       }

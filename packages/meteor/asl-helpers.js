@@ -20,3 +20,7 @@ Meteor._runAsync = (fn, ctx) => {
         fn.call(ctx);
     });
 };
+
+Meteor._isPromise = (r) => {
+    return r && typeof r.then === 'function';
+};
