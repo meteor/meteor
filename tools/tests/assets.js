@@ -12,7 +12,7 @@ function startRun(sandbox) {
   run.tellMongo(MONGO_LISTENING);
   run.match("MongoDB");
   return run;
-};
+}
 
 // Test that an app can properly read assets with unicode based filenames
 selftest.define("assets - unicode asset names are allowed", () => {

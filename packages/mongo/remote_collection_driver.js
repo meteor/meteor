@@ -18,7 +18,6 @@ Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   }
 });
 
-
 // Create the singleton RemoteCollectionDriver only on demand, so we
 // only require Mongo configuration if it's actually used (eg, not if
 // you're only trying to receive data from a remote DDP server.)
@@ -34,5 +33,16 @@ MongoInternals.defaultRemoteCollectionDriver = _.once(function () {
   if (! mongoUrl)
     throw new Error("MONGO_URL must be set in environment");
 
-  return new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
+  const driver = new MongoInternals.RemoteCollectionDriver(mongoUrl, connectionOptions);
+
+  // As many deployment tools, including Meteor Up, send requests to the app in
+  // order to confirm that the deployment finished successfully, it's required
+  // to know about a database connection problem before the app starts. Doing so
+  // in a `Meteor.startup` is fine, as the `WebApp` handles requests only after
+  // all are finished.
+  Meteor.startup(() => {
+    Promise.await(driver.mongo.client.connect());
+  });
+
+  return driver;
 });

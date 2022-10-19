@@ -303,7 +303,7 @@ You can use the following methods to set or get the publication strategy for pub
 
 {% apibox "setPublicationStrategy" %}
 
-For publication `foo`, you can set `NO_MERGE` strategy as shown:
+For the `foo` collection, you can set the `NO_MERGE` strategy as shown:
 
 ```js
 import { DDPServer } from "meteor/ddp-server";
