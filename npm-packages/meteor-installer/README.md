@@ -1,5 +1,7 @@
 ## Meteor Installer
 
+Node.js <=14.x and npm <=6.x is recommended.
+
 Install Meteor by running:
 
 ```bash
@@ -12,6 +14,8 @@ npm install -g meteor
 
 | NPM Package | Meteor Official Release |
 |-------------|-------------------------|
+| 2.8.0       | 2.8.0                   |
+| 2.7.5       | 2.7.3                   |
 | 2.7.4       | 2.7.3                   |
 | 2.7.3       | 2.7.2                   |
 | 2.7.2       | 2.7.1                   |
@@ -20,6 +24,7 @@ npm install -g meteor
 | 2.6.2       | 2.6.1                   |
 | 2.6.1       | 2.6                     |
 | 2.6.0       | 2.6                     |
+| 2.5.9       | 2.5.8                   |
 | 2.5.8       | 2.5.7                   |
 | 2.5.7       | 2.5.6                   |
 | 2.5.6       | 2.5.5                   |
@@ -41,7 +46,7 @@ npm install -g meteor
 
 ### Important note
 
-This npm package is not Meteor itself, this npm package is just an installer. You should not include it as a dependency in your project. If you do your deploy is going to be broken.
+This npm package is not Meteor itself, it is just an installer. You should not include it as a dependency in your project. If you do, your deployment is going to be broken.
 
 ### Path management
 

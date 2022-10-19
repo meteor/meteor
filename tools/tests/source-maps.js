@@ -1,7 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files');
-var catalog = require('../packaging/catalog/catalog.js');
 
 function matchPath (text, doubleBS) {
   if (process.platform === 'win32') {
@@ -17,8 +16,12 @@ selftest.define("source maps from checkout", ['checkout'], function () {
   try {
     throw new Error();
   } catch (e) {
+    // this refers to the line number where the error is thrown
+    const errorLine = "17";
     var index = (process.platform === 'win32') ? 2 : 1;
-    selftest.expectEqual(e.stack.split(":")[index], "18");
+    const sourceMap = e.stack.split(":")[index];
+    const result = (sourceMap === errorLine);
+    selftest.expectEqual(result, true);
   }
 });
 

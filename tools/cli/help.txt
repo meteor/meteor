@@ -150,7 +150,7 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
@@ -189,6 +189,8 @@ Options:
   --typescript  Create a basic Typescript React-based app.
   --blaze       Create a basic blaze-based app.
   --tailwind    Create a basic react-based app, with tailwind configured.
+  --chakra-ui   Create a basic react-based app, with chakra-ui configured.
+  --solid       Create a basic solid-based app.
 
 
 >>> update
@@ -982,6 +984,10 @@ Use <name>@<version> to get more information about a specific version of a
 package or release. Use '<name>@local' to see information from a
 local version. Running from a package source directory with no arguments will
 show information for that package version.
+
+The name for meteor release information is METEOR.
+
+  meteor show METEOR - will show all recommended meteor releases
 
 By default, Meteor will not show more than five versions, and will not
 show experimental release versions. Meteor will also hide packages that

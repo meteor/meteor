@@ -33,6 +33,9 @@ DDPCommon.MethodInvocation = class MethodInvocation {
     this._unblock = options.unblock || function () {};
     this._calledUnblock = false;
 
+    // used to know when the function apply was called by callAsync
+    this._isFromCallAsync = options.isFromCallAsync;
+
     // current user id
 
     /**

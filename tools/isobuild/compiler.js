@@ -786,10 +786,10 @@ function runLinters({inputSourceArch, isopackCache, sources,
         `Unexpected classification for ${ relPath }: ${ classification.type }`);
     }
 
-    // Read the file and add it to the WatchSet.
-    const {hash, contents} = watch.readAndWatchFileWithHash(
-      watchSet,
-      files.pathResolve(inputSourceArch.sourceRoot, relPath));
+    const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
+    const hash = optimisticHashOrNull(absPath);
+    const contents = optimisticReadFile(absPath);
+    watchSet.addFile(absPath, hash);
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them
