@@ -6,7 +6,9 @@ Package.describe({
 Package.onUse(function (api) {
   api.use("ecmascript");
   api.addFiles("tracker.js");
+  api.addFiles("trackerAsync.js");
   api.export("Tracker");
+  api.export("TrackerAsync");
   api.export("Deps");
 });
 
@@ -15,4 +17,5 @@ Package.onTest(function (api) {
   api.use('test-helpers');
   api.use('tracker');
   api.addFiles('tracker_tests.js', 'client');
+  api.addFiles('tracker_async_tests.js', 'client');
 });
