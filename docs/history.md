@@ -1,4 +1,4 @@
-## v2.8, 2022-08-XX
+## v2.8, 2022-10-19
 
 #### Highlights
 * New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
