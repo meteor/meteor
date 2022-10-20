@@ -524,7 +524,11 @@ Tinytest.addAsync('tracker - async function', function (test, onComplete) {
   const computation = Tracker.autorun(async function (computation) {
     test.equal(computation.firstRun, true, 'before (firstRun)');
     test.equal(Tracker.currentComputation, computation, 'before');
-    const x = await Promise.resolve(123);
+    const x = await Promise.resolve().then(() => {
+      test.equal(computation.firstRun, false, 'inside (firstRun)');
+      test.equal(Tracker.currentComputation, null, 'inside');
+      return 123;
+    });
     test.equal(x, 123, 'await (value)');
     test.equal(computation.firstRun, false, 'await (firstRun)');
     test.equal(Tracker.currentComputation, null, 'await');
@@ -550,7 +554,11 @@ Tinytest.addAsync('tracker - generator function', function (test, onComplete) {
   const computation = Tracker.autorun(function* (computation) {
     test.equal(computation.firstRun, true, 'before (firstRun)');
     test.equal(Tracker.currentComputation, computation, 'before');
-    const x = yield Promise.resolve(123);
+    const x = yield Promise.resolve().then(() => {
+      test.equal(computation.firstRun, false, 'inside (firstRun)');
+      test.equal(Tracker.currentComputation, null, 'inside');
+      return 123;
+    });
     test.equal(x, 123, 'yield (value)');
     test.equal(computation.firstRun, false, 'yield (firstRun)');
     test.equal(Tracker.currentComputation, computation, 'yield');
@@ -572,7 +580,7 @@ Tinytest.addAsync('tracker - generator function', function (test, onComplete) {
   test.instanceOf(computation, Tracker.Computation, 'outside (result)');
 });
 
-Tinytest.addAsync('tracker - generator function interleaved', function (test, onComplete) {
+Tinytest.addAsync('tracker - generator function interleaved', async function (test) {
   let count = 0;
   const limit = 100;
   for (let index = 0; index < limit; ++index) {
@@ -585,15 +593,38 @@ Tinytest.addAsync('tracker - generator function interleaved', function (test, on
   }
 
   test.equal(count, 0, 'before resolve');
-  new Promise(resolve => setTimeout(resolve, limit)).then(() => {
-    test.equal(count, limit, 'after resolve');
-    onComplete();
-  }, () => {
-    test.fail();
-  });
+  await new Promise(resolve => setTimeout(resolve, limit));
+  test.equal(count, limit, 'after resolve');
 });
 
-Tinytest.addAsync('tracker - generator function stepped', function (test, onComplete) {
+Tinytest.addAsync('tracker - generator function parallel', async function (test) {
+  let resolvePromise;
+  const promise = new Promise(resolve => {
+    resolvePromise = resolve;
+  });
+
+  let count = 0;
+  const limit = 100;
+  const dependency = new Tracker.Dependency();
+  for (let index = 0; index < limit; ++index) {
+    Tracker.autorun(function* () {
+      count++;
+      dependency.depend();
+      yield promise;
+      count--;
+    });
+  }
+
+  test.equal(count, limit, 'before');
+  dependency.changed();
+  await new Promise(setTimeout);
+  test.equal(count, limit * 2, 'changed');
+  resolvePromise();
+  await new Promise(setTimeout);
+  test.equal(count, 0, 'after');
+});
+
+Tinytest.addAsync('tracker - generator function stepped', async function (test) {
   let resolvePromise;
   const promise = new Promise(resolve => {
     resolvePromise = resolve;
@@ -612,12 +643,8 @@ Tinytest.addAsync('tracker - generator function stepped', function (test, onComp
 
   test.equal(count, 0, 'before resolve');
   resolvePromise();
-  new Promise(setTimeout).then(() => {
-    test.equal(count, limit, 'after resolve');
-    onComplete();
-  }, () => {
-    test.fail();
-  });
+  await new Promise(setTimeout);
+  test.equal(count, limit, 'after resolve');
 });
 
 Tinytest.add('computation - #flush', function (test) {
