@@ -83,6 +83,32 @@ function _throwOrLog(from, e) {
   }
 }
 
+// Does one step of a generator. Anything the generator yields will be awaited,
+// because we chain it into the promise.
+function _computeStep(computation, iterator, result) {
+  return result.done
+    ? Promise.resolve()
+    : Promise.resolve(result.value).then(
+        value => _computeStep(computation, iterator, _withComputation(computation, () => iterator.next(value))),
+        error => _computeStep(computation, iterator, _withComputation(computation, () => iterator.throw(error)))
+      );
+}
+
+function _withComputation(computation, f) {
+  var previousComputation = Tracker.currentComputation;
+  var previousInCompute = inCompute;
+
+  setCurrentComputation(computation);
+  inCompute = true;
+
+  try {
+    return withNoYieldsAllowed(f)();
+  } finally {
+    setCurrentComputation(previousComputation);
+    inCompute = previousInCompute;
+  }
+}
+
 // Takes a function `f`, and wraps it in a `Meteor._noYieldsAllowed`
 // block if we are running on the server. On the client, returns the
 // original function (since `Meteor._noYieldsAllowed` is a
@@ -300,15 +326,12 @@ Tracker.Computation = class Computation {
   _compute() {
     this.invalidated = false;
 
-    var previous = Tracker.currentComputation;
-    setCurrentComputation(this);
-    var previousInCompute = inCompute;
-    inCompute = true;
-    try {
-      withNoYieldsAllowed(this._func)(this);
-    } finally {
-      setCurrentComputation(previous);
-      inCompute = previousInCompute;
+    // Run the autorun function. It has to happen within the context of current
+    // computation. If it returns something that looks like a generator (i.e.,
+    // it has a `next` function), we'll continue running it with `_computeStep`.
+    var maybeIterator = _withComputation(this, () => this._func(this));
+    if (typeof maybeIterator?.next === 'function') {
+      _computeStep(this, maybeIterator, _withComputation(this, () => maybeIterator.next()));
     }
   }
 
@@ -597,13 +620,7 @@ Tracker.autorun = function (f, options) {
  * @param {Function} func A function to call immediately.
  */
 Tracker.nonreactive = function (f) {
-  var previous = Tracker.currentComputation;
-  setCurrentComputation(null);
-  try {
-    return f();
-  } finally {
-    setCurrentComputation(previous);
-  }
+  return _withComputation(null, f);
 };
 
 // http://docs.meteor.com/#tracker_oninvalidate

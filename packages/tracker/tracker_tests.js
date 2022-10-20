@@ -518,6 +518,108 @@ testAsyncMulti('tracker - Tracker.autorun, onError option', [function (test, exp
   Tracker.flush();
 }]);
 
+Tinytest.addAsync('tracker - async function', function (test, onComplete) {
+  // Please note that this test just confirms, that
+  // using async functions DOES NOT WORK currently.
+  const computation = Tracker.autorun(async function (computation) {
+    test.equal(computation.firstRun, true, 'before (firstRun)');
+    test.equal(Tracker.currentComputation, computation, 'before');
+    const x = await Promise.resolve(123);
+    test.equal(x, 123, 'await (value)');
+    test.equal(computation.firstRun, false, 'await (firstRun)');
+    test.equal(Tracker.currentComputation, null, 'await');
+    await new Promise(resolve => setTimeout(resolve, 10));
+    test.equal(computation.firstRun, false, 'sleep (firstRun)');
+    test.equal(Tracker.currentComputation, null, 'sleep');
+    try {
+      await Promise.reject('example');
+      test.fail();
+    } catch (error) {
+      test.equal(error, 'example', 'catch (error)');
+      test.equal(computation.firstRun, false, 'catch (firstRun)');
+      test.equal(Tracker.currentComputation, null, 'catch');
+    }
+    onComplete();
+  });
+
+  test.equal(Tracker.currentComputation, null, 'outside (computation)');
+  test.instanceOf(computation, Tracker.Computation, 'outside (result)');
+});
+
+Tinytest.addAsync('tracker - generator function', function (test, onComplete) {
+  const computation = Tracker.autorun(function* (computation) {
+    test.equal(computation.firstRun, true, 'before (firstRun)');
+    test.equal(Tracker.currentComputation, computation, 'before');
+    const x = yield Promise.resolve(123);
+    test.equal(x, 123, 'yield (value)');
+    test.equal(computation.firstRun, false, 'yield (firstRun)');
+    test.equal(Tracker.currentComputation, computation, 'yield');
+    yield new Promise(resolve => setTimeout(resolve, 10));
+    test.equal(computation.firstRun, false, 'sleep (firstRun)');
+    test.equal(Tracker.currentComputation, computation, 'sleep');
+    try {
+      yield Promise.reject('example');
+      test.fail();
+    } catch (error) {
+      test.equal(error, 'example', 'catch (error)');
+      test.equal(computation.firstRun, false, 'catch (firstRun)');
+      test.equal(Tracker.currentComputation, computation, 'catch');
+    }
+    onComplete();
+  });
+
+  test.equal(Tracker.currentComputation, null, 'outside (computation)');
+  test.instanceOf(computation, Tracker.Computation, 'outside (result)');
+});
+
+Tinytest.addAsync('tracker - generator function interleaved', function (test, onComplete) {
+  let count = 0;
+  const limit = 100;
+  for (let index = 0; index < limit; ++index) {
+    Tracker.autorun(function* (computation) {
+      test.equal(Tracker.currentComputation, computation, `before (${index})`);
+      yield new Promise(resolve => setTimeout(resolve, Math.random() * limit));
+      count++;
+      test.equal(Tracker.currentComputation, computation, `after (${index})`);
+    });
+  }
+
+  test.equal(count, 0, 'before resolve');
+  new Promise(resolve => setTimeout(resolve, limit)).then(() => {
+    test.equal(count, limit, 'after resolve');
+    onComplete();
+  }, () => {
+    test.fail();
+  });
+});
+
+Tinytest.addAsync('tracker - generator function stepped', function (test, onComplete) {
+  let resolvePromise;
+  const promise = new Promise(resolve => {
+    resolvePromise = resolve;
+  });
+
+  let count = 0;
+  const limit = 100;
+  for (let index = 0; index < limit; ++index) {
+    Tracker.autorun(function* (computation) {
+      test.equal(Tracker.currentComputation, computation, `before (${index})`);
+      yield promise;
+      count++;
+      test.equal(Tracker.currentComputation, computation, `after (${index})`);
+    });
+  }
+
+  test.equal(count, 0, 'before resolve');
+  resolvePromise();
+  new Promise(setTimeout).then(() => {
+    test.equal(count, limit, 'after resolve');
+    onComplete();
+  }, () => {
+    test.fail();
+  });
+});
+
 Tinytest.add('computation - #flush', function (test) {
   var i = 0, j = 0, d = new Tracker.Dependency;
   var c1 = Tracker.autorun(function () {
