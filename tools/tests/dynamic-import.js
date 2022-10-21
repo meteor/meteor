@@ -1,6 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-const { mkdtemp } = require("../fs/files");
 
 const offlineStorageQuotaKB = 10000;
 
@@ -31,7 +30,7 @@ function run(isProduction) {
     "--full-app",
     "--driver-package", "meteortesting:mocha"
   ];
-  
+
   // For meteortesting:mocha to work we must set test broswer driver
   // See https://github.com/meteortesting/meteor-mocha
   sandbox.set("TEST_BROWSER_DRIVER", "puppeteer");

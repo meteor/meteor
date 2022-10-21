@@ -762,16 +762,33 @@ Object.assign(Session.prototype, {
           }
         }
 
-        resolve(DDPServer._CurrentWriteFence.withValue(
-          fence,
-          () => DDP._CurrentMethodInvocation.withValue(
-            invocation,
-            () => maybeAuditArgumentChecks(
-              handler, invocation, msg.params,
+        const getCurrentMethodInvocationResult = () => {
+          const currentContext = DDP._CurrentMethodInvocation._setNewContextAndGetCurrent(
+            invocation
+          );
+
+          try {
+            let result;
+            const resultOrThenable = maybeAuditArgumentChecks(
+              handler,
+              invocation,
+              msg.params,
               "call to '" + msg.method + "'"
-            )
-          )
-        ));
+            );
+            const isThenable =
+              resultOrThenable && typeof resultOrThenable.then === 'function';
+            if (isThenable) {
+              result = Promise.await(resultOrThenable);
+            } else {
+              result = resultOrThenable;
+            }
+            return result;
+          } finally {
+            DDP._CurrentMethodInvocation._set(currentContext);
+          }
+        };
+
+        resolve(DDPServer._CurrentWriteFence.withValue(fence, getCurrentMethodInvocationResult));
       });
 
       function finish() {
@@ -784,7 +801,7 @@ Object.assign(Session.prototype, {
         id: msg.id
       };
 
-      promise.then((result) => {
+      promise.then(result => {
         finish();
         if (result !== undefined) {
           payload.result = result;
@@ -1517,33 +1534,33 @@ Object.assign(Server.prototype, {
   },
 
   /**
-   * @summary Set publication strategy for the given publication. Publications strategies are available from `DDPServer.publicationStrategies`. You call this method from `Meteor.server`, like `Meteor.server.setPublicationStrategy()`
+   * @summary Set publication strategy for the given collection. Publications strategies are available from `DDPServer.publicationStrategies`. You call this method from `Meteor.server`, like `Meteor.server.setPublicationStrategy()`
    * @locus Server
    * @alias setPublicationStrategy
-   * @param publicationName {String}
+   * @param collectionName {String}
    * @param strategy {{useCollectionView: boolean, doAccountingForCollection: boolean}}
    * @memberOf Meteor.server
    * @importFromPackage meteor
    */
-  setPublicationStrategy(publicationName, strategy) {
+  setPublicationStrategy(collectionName, strategy) {
     if (!Object.values(publicationStrategies).includes(strategy)) {
       throw new Error(`Invalid merge strategy: ${strategy} 
-        for collection ${publicationName}`);
+        for collection ${collectionName}`);
     }
-    this._publicationStrategies[publicationName] = strategy;
+    this._publicationStrategies[collectionName] = strategy;
   },
 
   /**
-   * @summary Gets the publication strategy for the requested publication. You call this method from `Meteor.server`, like `Meteor.server.getPublicationStrategy()`
+   * @summary Gets the publication strategy for the requested collection. You call this method from `Meteor.server`, like `Meteor.server.getPublicationStrategy()`
    * @locus Server
    * @alias getPublicationStrategy
-   * @param publicationName {String}
+   * @param collectionName {String}
    * @memberOf Meteor.server
    * @importFromPackage meteor
    * @return {{useCollectionView: boolean, doAccountingForCollection: boolean}}
    */
-  getPublicationStrategy(publicationName) {
-    return this._publicationStrategies[publicationName]
+  getPublicationStrategy(collectionName) {
+    return this._publicationStrategies[collectionName]
       || this.options.defaultPublicationStrategy;
   },
 

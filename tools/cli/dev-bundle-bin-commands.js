@@ -1,9 +1,6 @@
 // Note that this file is required before we install our Babel hooks in
 // ../tool-env/install-babel.js, so we can't use ES2015+ syntax here.
 
-var fs = require("fs");
-var path = require("path");
-
 // The dev_bundle/bin command has to come immediately after the meteor
 // command, as in `meteor npm` or `meteor node`, because we don't want to
 // require("./main.js") for these commands.
