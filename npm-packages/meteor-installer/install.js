@@ -31,13 +31,23 @@ const {
 const semver = require('semver');
 const isInstalledGlobally = process.env.npm_config_global === 'true';
 
+const { engines } = require('./package');
+const nodeVersion = engines.node;
+const npmVersion = engines.npm;
+
+// Compare installed NodeJs version with required NodeJs version
+if (!semver.satisfies(process.version, nodeVersion)) {
+  console.warn(`WARNING: Recommended versions are Node.js ${nodeVersion} and npm ${npmVersion}.`);
+  console.warn(`We recommend using a Node version manager like NVM or Volta to install Node.js and npm.\n`);
+}
+
 if (!isInstalledGlobally) {
   console.error('******************************************');
   console.error(
     'You are not using a global npm context to install, you should never add meteor to your package.json.'
   );
   console.error('Make sure you pass -g to npm install.');
-  console.error('Aborting');
+  console.error('Aborting...');
   console.error('******************************************');
   process.exit(1);
 }

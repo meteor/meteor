@@ -4,7 +4,9 @@ async function runNextUrl(browser) {
   const page = await browser.newPage();
 
   page.on('console', msg => {
-    console.log(msg._text);
+    if (msg._text !== undefined) {
+      console.log(msg._text);
+    }
   });
 
   if (!process.env.URL) {
@@ -17,7 +19,11 @@ async function runNextUrl(browser) {
   async function poll() {
     if (await isDone(page)) {
       let failCount = await getFailCount(page);
+      console.log(`Tests complete with ${failCount} failures`);
+      console.log(`Tests complete with ${await getPassCount(page)} passes`);
       if (failCount > 0) {
+        const failed = await getFailed(page);
+        failed.map( (f) => console.log(`${f.name} failed: ${f.info}`));
         await page.close();
         await browser.close();
         process.exit(1);
@@ -34,6 +40,11 @@ async function runNextUrl(browser) {
   poll();
 }
 
+/**
+ *
+ * @param page
+ * @return {Promise<boolean>}
+ */
 async function isDone(page) {
   return await page.evaluate(function() {
     if (typeof TEST_STATUS !== 'undefined') {
@@ -44,6 +55,26 @@ async function isDone(page) {
   });
 }
 
+/**
+ *
+ * @param page
+ * @return {Promise<number>}
+ */
+async function getPassCount(page) {
+  return await page.evaluate(function() {
+    if (typeof TEST_STATUS !== 'undefined') {
+      return TEST_STATUS.PASSED;
+    }
+
+    return typeof PASSED !== 'undefined' && PASSED;
+  });
+}
+
+/**
+ *
+ * @param page
+ * @return {Promise<number>}
+ */
 async function getFailCount(page) {
   return await page.evaluate(function() {
     if (typeof TEST_STATUS !== 'undefined') {
@@ -55,6 +86,20 @@ async function getFailCount(page) {
     }
 
     return 0;
+  });
+}
+
+/**
+ *
+ * @param page
+ * @return {Promise<[{name: string, info: string}]>}
+ */
+async function getFailed(page) {
+  return await page.evaluate(function() {
+    if (typeof TEST_STATUS !== 'undefined') {
+      return TEST_STATUS.WHERE_FAILED;
+    }
+    return typeof WHERE_FAILED !== 'undefined' && WHERE_FAILED;
   });
 }
 
