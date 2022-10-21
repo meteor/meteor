@@ -63,37 +63,43 @@ class MeteorMinifier {
       stats: Object.create(null)
     };
 
-    files.forEach(file => {
+    files.forEach((file) => {
       // Don't reminify *.min.js.
       if (/\.min\.js$/.test(file.getPathInBundle())) {
         toBeAdded.data += file.getContentsAsString();
+        toBeAdded.data += '\n\n';
+        Plugin.nudge();
       }
       else {
         let minified;
-        try {
-          minified = meteorJsMinify(file.getContentsAsString());
-        }
-        catch (err) {
+        // Async Implementation
+        meteorJsMinifyAsync(file.getContentsAsString()).then(min => {
+          minified = min;
+        }).catch(err => {
           maybeThrowMinifyErrorBySourceFile(err, file);
 
-          throw new Error(`terser minification error (${err.name}:${err.message})\n` +
-                          `Bundled file: ${file.getPathInBundle()}  (${err.line}:${err.col})\n`);
-        }
+          throw new Error(`
+            terser minification error (${err.name}:${err.message})
+            Bundled file: ${file.getPathInBundle()}  (${err.line}:${err.col})
+            `
+          );
+        }).finally(() => {
+          const ast = extractModuleSizesTree(minified.code);
 
-        const ast = extractModuleSizesTree(minified.code);
+          if (ast) {
+            toBeAdded.stats[file.getPathInBundle()] = [Buffer.byteLength(minified.code), ast];
+          } else {
+            toBeAdded.stats[file.getPathInBundle()] = Buffer.byteLength(minified.code);
+          }
+          // append the minified code to the "running sum"
+          // of code being minified
+          toBeAdded.data += minified.code;
 
-        if (ast) {
-          toBeAdded.stats[file.getPathInBundle()] = [Buffer.byteLength(minified.code), ast];
-        } else {
-          toBeAdded.stats[file.getPathInBundle()] = Buffer.byteLength(minified.code);
-        }
-        // append the minified code to the "running sum"
-        // of code being minified
-        toBeAdded.data += minified.code;
+          toBeAdded.data += '\n\n';
+          Plugin.nudge();
+        });
+
       }
-      toBeAdded.data += '\n\n';
-
-      Plugin.nudge();
     });
 
     // this is where the minified code gets added to one
