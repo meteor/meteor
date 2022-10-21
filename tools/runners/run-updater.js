@@ -1,5 +1,3 @@
-var Fiber = require('fibers');
-var fiberHelpers = require('../utils/fiber-helpers.js');
 var Console = require('../console/console.js').Console;
 
 var Updater = function () {

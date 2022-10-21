@@ -1,4 +1,83 @@
-## 2.7.3, 2022-05-31
+## v2.8, 2022-10-19
+
+#### Highlights
+* New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
+* Node update to [v14.20.1](https://nodejs.org/en/blog/release/v14.20.1/) as part of the [September 22nd security release](https://nodejs.org/en/blog/vulnerability/september-2022-security-releases/)
+* Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
+* Meteor.callAsync method. [PR](https://github.com/meteor/meteor/pull/12196)
+* Added new Chakra-ui Skeleton. [PR](https://github.com/meteor/meteor/pull/12181)
+* Added new Solid Skeleton. [PR](https://github.com/meteor/meteor/pull/12186)
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this version.
+
+#### Meteor Version Release
+* `modules@0.19.0`:
+  - Updating reify version. [PR](https://github.com/meteor/meteor/pull/12055).
+* `minimongo@1.9.0`:
+  - New methods to work with the Async API. [PR](https://github.com/meteor/meteor/pull/12028).
+  - Solved invalid dates in Minimongo Matcher [PR](https://github.com/meteor/meteor/pull/12165).
+* `mongo@1.16.0`:
+  - Adding async counterparts that allows gradual migration from Fibers. [PR](https://github.com/meteor/meteor/pull/12028).
+  - Improved oplogV2V1Converter implementation. [PR](https://github.com/meteor/meteor/pull/12116).
+  - Exit on MongoDB connection error. [PR](https://github.com/meteor/meteor/pull/12115).
+  - Fixed MongoConnection._onFailover hook. [PR](https://github.com/meteor/meteor/pull/12125).
+  - Fixed handling objects in oplogV2V1Converter. [PR](https://github.com/meteor/meteor/pull/12107).
+* `meteor@1.10.1`:
+  - Create method to check if Fibers is enabled by flag DISABLE_FIBERS. [PR](https://github.com/meteor/meteor/pull/12100).
+  - Fix bugs for linter build plugins. [PR](https://github.com/meteor/meteor/pull/12120).
+  - Document meteor show METEOR. [PR](https://github.com/meteor/meteor/pull/12124).
+  - Update Cordova Android to 10.1.2. [PR](https://github.com/meteor/meteor/pull/12131).
+  - Fixed flaky test. [PR](https://github.com/meteor/meteor/pull/12129).
+  - Refactoring/Remove unused imports from tools folder. [PR](https://github.com/meteor/meteor/pull/12084).
+  - Fix problem when publishing async methods. [PR](https://github.com/meteor/meteor/pull/12152).
+  - Update skeletons Apollo[PR](https://github.com/meteor/meteor/pull/12091) and other skeletons [PR](https://github.com/meteor/meteor/pull/12099)
+  - Added callAsync method for calling async methods [PR](https://github.com/meteor/meteor/pull/12196).
+* `meteor-installer@2.7.5`:
+  - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
+* `npm-mongo@4.9.0`:
+  - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
+
+
+#### Independent Releases
+* `accounts-passwordless@2.1.3`:
+  - Fixing bug where tokens where never expiring. [PR](https://github.com/meteor/meteor/pull/12088).
+* `accounts-base@2.2.4`:
+  - Adding new options to the `Accounts.config()` method: `loginTokenExpirationHours` and `tokenSequenceLength`. [PR](https://github.com/meteor/meteor/pull/12088).
+* `Meteor Repo`:
+  - Included githubactions in the dependabot config. [PR](https://github.com/meteor/meteor/pull/12061).
+  - Visual rework in meteor readme. [PR](https://github.com/meteor/meteor/pull/12133).
+  - Remove useraccounts from Guide. [PR](https://github.com/meteor/meteor/pull/12090).
+* `minifier-css@1.6.1`:
+  - Update postcss package to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12136).
+* `minifier-js@2.7.5`:
+  - Update terser package due to security fixes and to take advantage of terser improvements. [PR](https://github.com/meteor/meteor/pull/12137).
+* `standard-minifier-css@1.8.2`:
+  - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12141).
+* `standard-minifier-js@2.8.1`:
+  - Update dependencies to avoid issues with `Browserslist` and `caniuse-lite`. [PR](https://github.com/meteor/meteor/pull/12142).
+* `ddp-server@2.5.1`:
+  - Rename setPublicationStrategy and getPublicationStrategy arguments. [PR](https://github.com/meteor/meteor/pull/12166).
+
+#### Special thanks to
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@radekmie](https://github.com/radekmie)
+- [@naveensrinivasan](https://github.com/naveensrinivasan)
+- [@zodern](https://github.com/zodern)
+- [@brucejo75](https://github.com/brucejo75)
+- [@matheusccastroo](https://github.com/matheusccastroo)
+- [@victoriaquasar](https://github.com/victoriaquasar)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@Grubba27](https://github.com/Grubba27)
+- [@denihs](https://github.com/denihs)
+- [@edimarlnx](https://github.com/edimarlnx)
+
+For making this great framework even better!
+
+## v2.7.3, 2022-05-31
 
 #### Highlights
 * `accounts-passwordless@2.1.2`:
@@ -22,7 +101,7 @@ N/A
 * Fix win style paths being added to watch sets.
 * Fix recompiling npm packages for web arch. [PR](https://github.com/meteor/meteor/pull/12023).
 
-## 2.7.2, 2022-05-10
+## v2.7.2, 2022-05-10
 
 #### Highlights
 
@@ -276,6 +355,21 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
     - Custom message support for `throws`
 
 #### Independent Releases
+
+## v2.5.8, 2022-05-31
+
+#### Highlights
+
+* Fixed 2.5.7 MongoDB error
+* Patch release to update Node to version 14.19.3 and npm version to 6.14.17.
+
+#### Breaking Changes
+
+- N/A
+
+#### Migration Steps
+
+- N/A
 
 ## v2.5.7, 2022-05-31
 
