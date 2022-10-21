@@ -1,9 +1,12 @@
+import has from 'lodash.has'; 
+import isEmpty from 'lodash.isempty';
+
 var Future = Npm.require('fibers/future');
 
 ObserveMultiplexer = function (options) {
   var self = this;
 
-  if (!options || !_.has(options, 'ordered'))
+  if (!options || !has(options, 'ordered'))
     throw Error("must specified ordered");
 
   Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
@@ -21,14 +24,14 @@ ObserveMultiplexer = function (options) {
   // callback.
   self._addHandleTasksScheduledButNotPerformed = 0;
 
-  _.each(self.callbackNames(), function (callbackName) {
-    self[callbackName] = function (/* ... */) {
-      self._applyCallback(callbackName, _.toArray(arguments));
+  self.callbackNames().forEach(function (callbackName) {
+    self[callbackName] = function (...args) {
+      self._applyCallback(callbackName, args);
     };
   });
 };
 
-_.extend(ObserveMultiplexer.prototype, {
+Object.assign(ObserveMultiplexer.prototype, {
   addHandleAndSendInitialAdds: function (handle) {
     var self = this;
 
@@ -74,7 +77,7 @@ _.extend(ObserveMultiplexer.prototype, {
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "mongo-livedata", "observe-handles", -1);
 
-    if (_.isEmpty(self._handles) &&
+    if (isEmpty(self._handles) &&
         self._addHandleTasksScheduledButNotPerformed === 0) {
       self._stop();
     }
@@ -169,7 +172,7 @@ _.extend(ObserveMultiplexer.prototype, {
       // can continue until these are done. (But we do have to be careful to not
       // use a handle that got removed, because removeHandle does not use the
       // queue; thus, we iterate over an array of keys that we control.)
-      _.each(_.keys(self._handles), function (handleId) {
+      Object.keys(self._handles).forEach(function (handleId) {
         var handle = self._handles && self._handles[handleId];
         if (!handle)
           return;
@@ -194,7 +197,7 @@ _.extend(ObserveMultiplexer.prototype, {
       return;
     // note: docs may be an _IdMap or an OrderedDict
     self._cache.docs.forEach(function (doc, id) {
-      if (!_.has(self._handles, handle._id))
+      if (!has(self._handles, handle._id))
         throw Error("handle got removed before sending initial adds!");
       const { _id, ...fields } = handle.nonMutatingCallbacks ? doc
         : EJSON.clone(doc);
@@ -215,7 +218,7 @@ ObserveHandle = function (multiplexer, callbacks, nonMutatingCallbacks = false) 
   // The end user is only supposed to call stop().  The other fields are
   // accessible to the multiplexer, though.
   self._multiplexer = multiplexer;
-  _.each(multiplexer.callbackNames(), function (name) {
+  multiplexer.callbackNames().forEach(function (name) {
     if (callbacks[name]) {
       self['_' + name] = callbacks[name];
     } else if (name === "addedBefore" && callbacks.added) {

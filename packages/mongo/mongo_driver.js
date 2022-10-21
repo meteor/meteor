@@ -1,4 +1,5 @@
-import { normalizeProjection } from "./mongo_utils";
+import has from 'lodash.has';
+import identity from 'lodash.identity';
 
 /**
  * Provide a synchronous Collection API using fibers, backed by
@@ -44,11 +45,11 @@ const APP_FOLDER = 'app';
 // inside an EJSON custom type. It should only be called on pure JSON!
 var replaceNames = function (filter, thing) {
   if (typeof thing === "object" && thing !== null) {
-    if (_.isArray(thing)) {
-      return _.map(thing, _.bind(replaceNames, null, filter));
+    if (Array.isArray(thing)) {
+      return thing.map(replaceNames.bind(null, filter));
     }
     var ret = {};
-    _.each(thing, function (value, key) {
+    thing.forEach(function (value, key) {
       ret[filter(key)] = replaceNames(filter, value);
     });
     return ret;
@@ -78,7 +79,7 @@ var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Decimal128) {
     return Decimal(document.toString());
   }
-  if (document["EJSON$type"] && document["EJSON$value"] && _.size(document) === 2) {
+  if (document["EJSON$type"] && document["EJSON$value"] && Object.keys(document).length === 2) {
     return EJSON.fromJSONValue(replaceNames(unmakeMongoLegal, document));
   }
   if (document instanceof MongoDB.Timestamp) {
@@ -128,12 +129,12 @@ var replaceTypes = function (document, atomTransformer) {
     return replacedTopLevelAtom;
 
   var ret = document;
-  _.each(document, function (val, key) {
+  Object.entries(document).forEach(function ([key, val]) {
     var valReplaced = replaceTypes(val, atomTransformer);
     if (val !== valReplaced) {
       // Lazy clone. Shallow copy.
       if (ret === document)
-        ret = _.clone(document);
+        ret = Object.assign({}, document);
       ret[key] = valReplaced;
     }
   });
@@ -160,7 +161,7 @@ MongoConnection = function (url, options) {
 
   // Internally the oplog connections specify their own maxPoolSize
   // which we don't want to overwrite with any user defined value
-  if (_.has(options, 'maxPoolSize')) {
+  if (has(options, 'maxPoolSize')) {
     // If we just set this for "server", replSet will override it. If we just
     // set it for replSet, it will be ignored if we're not using a replSet.
     mongoOptions.maxPoolSize = options.maxPoolSize;
@@ -220,7 +221,7 @@ MongoConnection.prototype.close = function() {
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
-  Future.wrap(_.bind(self.client.close, self.client))(true).wait();
+  Future.wrap(self.client.close.bind(self.client))(true).wait();
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -372,8 +373,8 @@ MongoConnection.prototype._refresh = function (collectionName, selector) {
   // poll.)
   var specificIds = LocalCollection._idsMatchedBySelector(selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
-      Meteor.refresh(_.extend({id: id}, refreshKey));
+    specificIds.forEach(function (id) {
+      Meteor.refresh(Object.assign({id: id}, refreshKey));
     });
   } else {
     Meteor.refresh(refreshKey);
@@ -759,7 +760,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   doUpdate();
 };
 
-_.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
+["insert", "update", "remove", "dropCollection", "dropDatabase"].forEach(function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
@@ -778,7 +779,7 @@ MongoConnection.prototype.upsert = function (collectionName, selector, mod,
   }
 
   return self.update(collectionName, selector, mod,
-                     _.extend({}, options, {
+                     Object.assign({}, options, {
                        upsert: true,
                        _returnObject: true
                      }), callback);
@@ -970,9 +971,10 @@ Cursor.prototype.observeChanges = function (callbacks, options = {}) {
 };
 
 MongoConnection.prototype._createSynchronousCursor = function(
-    cursorDescription, options) {
+    cursorDescription, options = {}) {
   var self = this;
-  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
+  const { selfForIteration, useTransform } = options; 
+  options = { selfForIteration, useTransform };
 
   var collection = self.rawCollection(cursorDescription.collectionName);
   var cursorOptions = cursorDescription.options;
@@ -1022,9 +1024,10 @@ MongoConnection.prototype._createSynchronousCursor = function(
   return new SynchronousCursor(dbCursor, cursorDescription, options, collection);
 };
 
-var SynchronousCursor = function (dbCursor, cursorDescription, options, collection) {
+var SynchronousCursor = function (dbCursor, cursorDescription, options = {}, collection) {
   var self = this;
-  options = _.pick(options || {}, 'selfForIteration', 'useTransform');
+  const { selfForIteration, useTransform } = options; 
+  options = { selfForIteration, useTransform };
 
   self._dbCursor = dbCursor;
   self._cursorDescription = cursorDescription;
@@ -1048,7 +1051,7 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options, collecti
   self._visitedIds = new LocalCollection._IdMap;
 };
 
-_.extend(SynchronousCursor.prototype, {
+Object.assign(SynchronousCursor.prototype, {
   // Returns a Promise for the next object from the underlying cursor (before
   // the Mongo->Meteor type replacement).
   _rawNextObjectPromise: function () {
@@ -1075,7 +1078,7 @@ _.extend(SynchronousCursor.prototype, {
       if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
 
-      if (!self._cursorDescription.options.tailable && _.has(doc, '_id')) {
+      if (!self._cursorDescription.options.tailable && has(doc, '_id')) {
         // Did Mongo give us duplicate documents in the same cursor? If so,
         // ignore this one. (Do this before the transform, since transform might
         // return some unrelated value.) We don't do this for tailable cursors,
@@ -1167,7 +1170,7 @@ _.extend(SynchronousCursor.prototype, {
 
   fetch: function () {
     var self = this;
-    return self.map(_.identity);
+    return self.map(identity);
   },
 
   count: function () {
@@ -1258,7 +1261,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
         lastTS = doc.ts;
         docCallback(doc);
       } else {
-        var newSelector = _.clone(cursorDescription.selector);
+        var newSelector = Object.assign({}, cursorDescription.selector);
         if (lastTS) {
           newSelector.ts = {$gt: lastTS};
         }
@@ -1303,7 +1306,7 @@ MongoConnection.prototype._observeChanges = function (
   }
 
   var observeKey = EJSON.stringify(
-    _.extend({ordered: ordered}, cursorDescription));
+    Object.assign({ordered}, cursorDescription));
 
   var multiplexer, observeDriver;
   var firstHandle = false;
@@ -1312,7 +1315,7 @@ MongoConnection.prototype._observeChanges = function (
   // guaranteed to not yield (and it doesn't call anything that can observe a
   // new query), so no other calls to this function can interleave with it.
   Meteor._noYieldsAllowed(function () {
-    if (_.has(self._observeMultiplexers, observeKey)) {
+    if (has(self._observeMultiplexers, observeKey)) {
       multiplexer = self._observeMultiplexers[observeKey];
     } else {
       firstHandle = true;
@@ -1335,7 +1338,7 @@ MongoConnection.prototype._observeChanges = function (
 
   if (firstHandle) {
     var matcher, sorter;
-    var canUseOplog = _.all([
+    var canUseOplog = [
       function () {
         // At a bare minimum, using the oplog requires us to have an oplog, to
         // want unordered callbacks, and to not want a callback on the polls
@@ -1369,7 +1372,7 @@ MongoConnection.prototype._observeChanges = function (
           //     so that this doesn't ignore unrelated exceptions
           return false;
         }
-      }], function (f) { return f(); });  // invoke each function
+      }].every(function (f) { return f(); });  // invoke each function
 
     var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
     observeDriver = new driverClass({
@@ -1407,7 +1410,7 @@ listenAll = function (cursorDescription, listenCallback) {
 
   return {
     stop: function () {
-      _.each(listeners, function (listener) {
+      listeners.forEach(function (listener) {
         listener.stop();
       });
     }
@@ -1419,7 +1422,7 @@ forEachTrigger = function (cursorDescription, triggerCallback) {
   var specificIds = LocalCollection._idsMatchedBySelector(
     cursorDescription.selector);
   if (specificIds) {
-    _.each(specificIds, function (id) {
+    specificIds.forEach(function (id) {
       triggerCallback(_.extend({id: id}, key));
     });
     triggerCallback(_.extend({dropCollection: true, id: null}, key));

@@ -1,3 +1,5 @@
+import throttle from 'lodash.throttle';
+
 var POLLING_THROTTLE_MS = +process.env.METEOR_POLLING_THROTTLE_MS || 50;
 var POLLING_INTERVAL_MS = +process.env.METEOR_POLLING_INTERVAL_MS || 10 * 1000;
 
@@ -30,7 +32,7 @@ PollingObserveDriver = function (options) {
 
   // Make sure to create a separately throttled function for each
   // PollingObserveDriver object.
-  self._ensurePollIsScheduled = _.throttle(
+  self._ensurePollIsScheduled = throttle(
     self._unthrottledEnsurePollIsScheduled,
     self._cursorDescription.options.pollingThrottleMs || POLLING_THROTTLE_MS /* ms */);
 
@@ -69,7 +71,7 @@ PollingObserveDriver = function (options) {
           self._cursorDescription.options._pollingInterval || // COMPAT with 1.2
           POLLING_INTERVAL_MS;
     var intervalHandle = Meteor.setInterval(
-      _.bind(self._ensurePollIsScheduled, self), pollingInterval);
+      self._ensurePollIsScheduled.bind(self), pollingInterval);
     self._stopCallbacks.push(function () {
       Meteor.clearInterval(intervalHandle);
     });
@@ -82,7 +84,7 @@ PollingObserveDriver = function (options) {
     "mongo-livedata", "observe-drivers-polling", 1);
 };
 
-_.extend(PollingObserveDriver.prototype, {
+Object.assign(PollingObserveDriver.prototype, {
   // This is always called through _.throttle (except once at startup).
   _unthrottledEnsurePollIsScheduled: function () {
     var self = this;
@@ -202,7 +204,7 @@ _.extend(PollingObserveDriver.prototype, {
     // commmitted. (If new writes have shown up in the meantime, there'll
     // already be another _pollMongo task scheduled.)
     self._multiplexer.onFlush(function () {
-      _.each(writesForCycle, function (w) {
+      writesForCycle.forEach(function (w) {
         w.committed();
       });
     });
@@ -211,9 +213,9 @@ _.extend(PollingObserveDriver.prototype, {
   stop: function () {
     var self = this;
     self._stopped = true;
-    _.each(self._stopCallbacks, function (c) { c(); });
+    self._stopCallbacks.forEach(function (c) { c(); });
     // Release any write fences that are waiting on us.
-    _.each(self._pendingWrites, function (w) {
+    self._pendingWrites.forEach(function (w) {
       w.committed();
     });
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
