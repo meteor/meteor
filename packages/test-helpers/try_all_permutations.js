@@ -39,7 +39,7 @@ try_all_permutations = function () {
 
   var expand_next_set = function () {
     if (current_set === args.length) {
-      _.each(chosen, function (f) { f(); });
+      chosen.forEach(function (f) { f(); });
     } else {
       var set = args[current_set];
       if (typeof set === "function")

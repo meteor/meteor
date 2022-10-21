@@ -1,3 +1,6 @@
+import isEmpty from 'lodash.isempty';
+import isEqual from 'lodash.isequal';
+
 // This file allows you to write tests that expect certain callbacks to be
 // called in certain orders, or optionally in groups where the order does not
 // matter.  It can be set up in either a synchronous manner, so that each
@@ -19,7 +22,7 @@ withCallbackLogger = function (test, callbackNames, async, fun) {
   if (async) {
     if (!Fiber)
       throw new Error("Fiber is not available");
-    logger.fiber = Fiber(_.bind(fun, null, logger));
+    logger.fiber = Fiber(fun.bind(null, logger));
     logger.fiber.run();
   } else {
     fun(logger);
@@ -31,9 +34,9 @@ var CallbackLogger = function (test, callbackNames) {
   self._log = [];
   self._test = test;
   self._yielded = false;
-  _.each(callbackNames, function (callbackName) {
+  callbackNames.forEach(function (callbackName) {
     self[callbackName] = function () {
-      var args = _.toArray(arguments);
+      var args = Array.from(arguments);
       self._log.push({callback: callbackName, args: args});
       if (self.fiber) {
         setTimeout(function () {
@@ -56,7 +59,7 @@ CallbackLogger.prototype._yield = function (arg) {
 CallbackLogger.prototype.expectResult = function (callbackName, args) {
   var self = this;
   self._waitForLengthOrTimeout(1);
-  if (_.isEmpty(self._log)) {
+  if (isEmpty(self._log)) {
     self._test.fail(["Expected callback " + callbackName + " got none"]);
     return;
   }
@@ -93,13 +96,13 @@ CallbackLogger.prototype.expectResultUnordered = function (list) {
 
   self._waitForLengthOrTimeout(list.length);
 
-  list = _.clone(list); // shallow copy.
+  list = [...list]; // shallow copy.
   var i = list.length;
   while (i > 0) {
     var found = false;
     var dequeued = self._log.shift();
     for (var j = 0; j < list.length; j++) {
-      if (_.isEqual(list[j], dequeued)) {
+      if (isEqual(list[j], dequeued)) {
         list.splice(j, 1);
         found = true;
         break;
@@ -131,7 +134,7 @@ CallbackLogger.prototype.expectNoResult = function (fn) {
       self.fiber.run(handle);
     }, TIMEOUT);
     var foo = self._yield();
-    while (_.isEmpty(self._log) && foo !== handle) {
+    while (isEmpty(self._log) && foo !== handle) {
       foo = self._yield();
     }
     clearTimeout(handle);
