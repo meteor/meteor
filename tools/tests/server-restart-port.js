@@ -21,5 +21,5 @@ function testHelper(server) {
     (match, n) => `module.id, ${ ++n }`,
   ));
 
-  run.match("Meteor server restarted on port 21000");
+  run.match("Meteor server restarted at: http://localhost:21000/");
 }
