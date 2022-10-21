@@ -142,7 +142,7 @@ Create a basic [React](https://reactjs.org) + [Tailwind CSS](https://tailwindcss
 
 `--chakra-ui`
 
-Create a basic [chakra-ui](https://chakra-ui.com/) app.
+Create a basic [React](https://reactjs.org) + [Chakra-UI](https://chakra-ui.com/) app.
 
 `--solid`
 
@@ -266,7 +266,7 @@ Your project should be a git repository as the commit hash is going to be used t
 The `cache-build` option is available since Meteor 1.11.
 {% endpullquote %}
 
-With the argument `--container-size` you can change your app's container size using the deploy command. The valid arguments are: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, and `dozen`. One more thing to note here is that the `--container-size` flag can only be used when the `--plan` option is already specified, else the use of `--container-size` option will throw an error with the message : `Error deploying application: Internal error`. To see more about the difference and prices of each one you can check it [here](https://www.meteor.com/cloud#pricing-section). 
+With the argument `--container-size` you can change your app's container size using the deploy command. The valid arguments are: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, and `dozen`. One more thing to note here is that the `--container-size` flag can only be used when the `--plan` option is already specified, otherwise using the `--container-size` option will throw an error with the message : `Error deploying application: Internal error`. To see more about the difference and prices of each one you can check [here](https://www.meteor.com/cloud#pricing-section). 
 
 {% pullquote warning %}
 The `--container-size` option is available since Meteor 2.4.1.

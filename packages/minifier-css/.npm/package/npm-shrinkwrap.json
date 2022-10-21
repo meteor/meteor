@@ -62,9 +62,9 @@
       "integrity": "sha512-bsTwuIg/BZZK/vreVTYYbSWoe2F+71P7K5QGEX+pT250DZbfU1MQ5prOKpPR+LL6uWKK3KMwMCAS74QB3Um1uw=="
     },
     "caniuse-lite": {
-      "version": "1.0.30001409",
-      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001409.tgz",
-      "integrity": "sha512-V0mnJ5dwarmhYv8/MzhJ//aW68UpvnQBXv8lJ2QUsvn2pHcmAuNtu8hQEDz37XnA1iE+lRR9CIfGWWpgJ5QedQ=="
+      "version": "1.0.30001420",
+      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001420.tgz",
+      "integrity": "sha512-OnyeJ9ascFA9roEj72ok2Ikp7PHJTKubtEJIQ/VK3fdsS50q4KWy+Z5X0A1/GswEItKX0ctAp8n4SYDE7wTu6A=="
     },
     "chalk": {
       "version": "2.4.2",
@@ -264,9 +264,9 @@
       "integrity": "sha512-QM8q3zDe58hqUqjraQOmzZ1LIH9SWQJTlEKCH4kJ2oQvLZk7RbQXvtDM2XEq3fwkV9CCvvH4LA0AV+ogFsBM2Q=="
     },
     "electron-to-chromium": {
-      "version": "1.4.257",
-      "resolved": "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.257.tgz",
-      "integrity": "sha512-C65sIwHqNnPC2ADMfse/jWTtmhZMII+x6ADI9gENzrOiI7BpxmfKFE84WkIEl5wEg+7+SfIkwChDlsd1Erju2A=="
+      "version": "1.4.283",
+      "resolved": "https://registry.npmjs.org/electron-to-chromium/-/electron-to-chromium-1.4.283.tgz",
+      "integrity": "sha512-g6RQ9zCOV+U5QVHW9OpFR7rdk/V7xfopNXnyAamdpFgCHgZ1sjI8VuR1+zG2YG/TZk+tQ8mpNkug4P8FU0fuOA=="
     },
     "entities": {
       "version": "2.2.0",
@@ -279,9 +279,9 @@
       "integrity": "sha512-7dFHNmqeFSEt2ZBsCriorKnn3Z2pj+fd9kmI6QoWw4//DL+icEBfc0U7qJCisqrTsKTjw4fNFy2pW9OqStD84g=="
     },
     "es-abstract": {
-      "version": "1.20.2",
-      "resolved": "https://registry.npmjs.org/es-abstract/-/es-abstract-1.20.2.tgz",
-      "integrity": "sha512-XxXQuVNrySBNlEkTYJoDNFe5+s2yIOpzq80sUHEdPdQr0S5nTLz4ZPPPswNIpKseDDUS5yghX1gfLIHQZ1iNuQ=="
+      "version": "1.20.4",
+      "resolved": "https://registry.npmjs.org/es-abstract/-/es-abstract-1.20.4.tgz",
+      "integrity": "sha512-0UtvRN79eMe2L+UNEF1BwRe364sj/DXhQ/k5FmivgoSdpM90b8Jc0mDzKMGo7QS0BVbOP/bTwBKNnDc9rNzaPA=="
     },
     "es-array-method-boxes-properly": {
       "version": "1.0.0",
@@ -414,9 +414,9 @@
       "integrity": "sha512-gDYaKHJmnj4aWxyj6YHyXVpdQawtVLHU5cb+eztPGczf6cjuTdwve5ZIEfgXqH4e57An1D1AKf8CZ3kYrQRqYA=="
     },
     "is-callable": {
-      "version": "1.2.6",
-      "resolved": "https://registry.npmjs.org/is-callable/-/is-callable-1.2.6.tgz",
-      "integrity": "sha512-krO72EO2NptOGAX2KYyqbP9vYMlNAXdB53rq6f8LXY6RY7JdSR/3BD6wLUlPHSAesmY9vstNrjvqGaCiRK/91Q=="
+      "version": "1.2.7",
+      "resolved": "https://registry.npmjs.org/is-callable/-/is-callable-1.2.7.tgz",
+      "integrity": "sha512-1BC0BVFhS/p0qtw6enp8e+8OD0UrK0oFLztSjNzhcKA3WDuJxxAPXzPuPtKkjEY9UUoEWlX/8fgKeu2S8i9JTA=="
     },
     "is-color-stop": {
       "version": "1.1.0",
@@ -504,9 +504,9 @@
       "integrity": "sha512-iV3XNKw06j5Q7mi6h+9vbx23Tv7JkjEVgKHW4pimwyDGWm0OIQntJJ+u1C6mg6mK1EaTv42XQ7w76yuzH7M2cA=="
     },
     "minimist": {
-      "version": "1.2.6",
-      "resolved": "https://registry.npmjs.org/minimist/-/minimist-1.2.6.tgz",
-      "integrity": "sha512-Jsjnk4bw3YJqYzbdyBiNsPWHPfO++UGG749Cxs6peCu5Xg4nrena6OVxOYxrQTqww0Jmwt+Ref8rggumkTLz9Q=="
+      "version": "1.2.7",
+      "resolved": "https://registry.npmjs.org/minimist/-/minimist-1.2.7.tgz",
+      "integrity": "sha512-bzfL1YUZsP41gmu/qjrEk0Q6i2ix/cVeAhbCbqH9u3zYutS1cLg00qhrD0M2MVdCcx4Sc0UpP2eBWo9rotpq6g=="
     },
     "mkdirp": {
       "version": "0.5.6",
@@ -1162,6 +1162,11 @@
       "resolved": "https://registry.npmjs.org/rgba-regex/-/rgba-regex-1.0.0.tgz",
       "integrity": "sha512-zgn5OjNQXLUTdq8m17KdaicF6w89TZs8ZU8y0AYENIU6wG8GG6LLm0yLSiPY8DmaYmHdgRW8rnApjoT0fQRfMg=="
     },
+    "safe-regex-test": {
+      "version": "1.0.0",
+      "resolved": "https://registry.npmjs.org/safe-regex-test/-/safe-regex-test-1.0.0.tgz",
+      "integrity": "sha512-JBUUzyOgEwXQY1NuPtvcj/qcBDbDmEvWufhlnXZIm75DEHp+afM1r1ujJpJsV/gSM4t59tpDyPi1sd6ZaPFfsA=="
+    },
     "sax": {
       "version": "1.2.4",
       "resolved": "https://registry.npmjs.org/sax/-/sax-1.2.4.tgz",
@@ -1272,9 +1277,9 @@
       "integrity": "sha512-vRCqFv6UhXpWxZPyGDh/F3ZpNv8/qo7w6iufLpQg9aKnQ71qM4B5KiI7Mia9COcjEhrO9LueHpMYjYzsWH3OIg=="
     },
     "update-browserslist-db": {
-      "version": "1.0.9",
-      "resolved": "https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.0.9.tgz",
-      "integrity": "sha512-/xsqn21EGVdXI3EXSum1Yckj3ZVZugqyOZQ/CxYPBD/R+ko9NSUScf8tFF4dOKY+2pvSSJA/S+5B8s4Zr4kyvg=="
+      "version": "1.0.10",
+      "resolved": "https://registry.npmjs.org/update-browserslist-db/-/update-browserslist-db-1.0.10.tgz",
+      "integrity": "sha512-OztqDenkfFkbSG+tRxBeAnCVPckDBcvibKd35yDONx6OU8N7sqgwc7rCbkJ/WcYtVRZ4ba68d6byhC21GFh7sQ=="
     },
     "util-deprecate": {
       "version": "1.0.2",
