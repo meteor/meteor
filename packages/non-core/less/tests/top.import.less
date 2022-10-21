@@ -6,4 +6,11 @@
 
 // Make sure regular CSS import doesn't make the compiler explode - this was
 // a regression from 1.1.0.3 caught in QA
-@import url("http://hello.myfonts.net/count/2c4b9d");
+
+// 20 Oct 2022
+// GH link: https://github.com/meteor/meteor/pull/12236#discussion_r1000838738
+// older link broke and we putted in another CDN. if this breaks
+// again, the contents of the file are in top-cdn-file.import.less
+// feel free to use any other CDN
+
+@import url("https://css-cdn2.vercel.app/font");
