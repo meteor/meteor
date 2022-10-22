@@ -31,7 +31,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use(['tinytest', 'underscore']);
+  api.use(['tinytest']);
   api.use(['es5-shim', 'ecmascript', 'babel-compiler']);
   api.addFiles('runtime-tests.js');
   api.addFiles('transpilation-tests.js', 'server');
