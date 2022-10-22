@@ -6,11 +6,16 @@ Package.describe({
 
 Npm.depends({
   "permessage-deflate": "0.1.7",
-  sockjs: "0.3.21"
+  sockjs: "0.3.21",
+  "lodash.once": "4.1.1",
+  "lodash.has": "4.5.2",
+  "lodash.isempty": "4.4.0",
+  "lodash.isstring": "4.0.1",
+  "lodash.isobject": "3.0.2"
 });
 
 Package.onUse(function (api) {
-  api.use(['check', 'random', 'ejson', 'underscore',
+  api.use(['check', 'random', 'ejson',
            'retry', 'mongo-id', 'diff-sequence', 'ecmascript'],
           'server');
 
@@ -52,7 +57,7 @@ Package.onTest(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
-  api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo', 'reactive-var']);
+  api.use(['tinytest', 'random', 'tracker', 'minimongo', 'reactive-var']);
 
   api.addFiles('livedata_server_tests.js', 'server');
   api.addFiles('livedata_server_async_tests.js', 'server');
