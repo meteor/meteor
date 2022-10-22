@@ -1,6 +1,5 @@
 import { parse, serialize } from 'parse5';
 import { generateHTMLForArch } from './test-lib';
-import { _ } from 'meteor/underscore';
 
 Tinytest.addAsync(
   "boilerplate-generator-tests - web.cordova - basic output",
@@ -60,9 +59,7 @@ Tinytest.addAsync(
   async function (test) {
     const newHtml = await generateHTMLForArch('web.cordova', false);
 
-    _.templateSettings = {
-      interpolate: /\{\{(.+?)\}\}/g
-    };
+    
     test.matches(newHtml, /<link[^<>]*href="[^<>]*bootstrap[^<>]*">/);
     test.matches(newHtml, /<script[^<>]*src="[^<>]*templating[^<>]*">/);
     test.matches(newHtml, /<script>var a/);
