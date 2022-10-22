@@ -408,8 +408,7 @@ const eavesdropOnCollection = function(
   collection_name,
   messages
 ) {
-  const old_livedata_data = _.bind(
-    livedata_connection._livedata_data,
+  const old_livedata_data = livedata_connection._livedata_data.bind(
     livedata_connection
   );
 
@@ -453,7 +452,7 @@ if (Meteor.isClient) {
         ) {
           let actualAddedMessageCount = 0;
           let actualRemovedMessageCount = 0;
-          _.each(messages, function(msg) {
+          messages.forEach(function(msg) {
             if (msg.msg === 'added') ++actualAddedMessageCount;
             else if (msg.msg === 'removed') ++actualRemovedMessageCount;
             else test.fail({ unexpected: JSON.stringify(msg) });
@@ -742,7 +741,7 @@ if (Meteor.isClient) {
         },
         function(test, expect) {
           test.equal(coll.find().count(), 0);
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
 
           conn.subscribe(
             'publisherErrors',
@@ -760,7 +759,7 @@ if (Meteor.isClient) {
           // Because the last subscription is ready, we should have a document.
           test.equal(coll.find().count(), 1);
           test.isFalse(errorFromRerun);
-          test.equal(_.size(conn._subscriptions), 1); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 1); // white-box test
           conn.call('setUserId', 'bla', expect(function() {}));
         },
         function(test, expect) {
@@ -771,7 +770,7 @@ if (Meteor.isClient) {
           test.instanceOf(errorFromRerun, Meteor.Error);
           test.equal(errorFromRerun.error, 412);
           test.equal(errorFromRerun.reason, 'Explicit error');
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
 
           conn.subscribe(
             'publisherErrors',
@@ -792,7 +791,7 @@ if (Meteor.isClient) {
           test.equal(coll.find().count(), 0);
           // sub.stop does NOT call onError.
           test.isFalse(gotErrorFromStopper);
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
           conn._stream.disconnect({ _permanent: true });
         }
       ];
@@ -838,7 +837,7 @@ if (Meteor.isClient) {
         },
         function(test, expect) {
           test.equal(coll.find().count(), 0);
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
 
           conn.subscribe(
             'publisherErrors',
@@ -856,7 +855,7 @@ if (Meteor.isClient) {
           // Because the last subscription is ready, we should have a document.
           test.equal(coll.find().count(), 1);
           test.isFalse(errorFromRerun);
-          test.equal(_.size(conn._subscriptions), 1); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 1); // white-box test
           conn.call('setUserId', 'bla', expect(function() {}));
         },
         function(test, expect) {
@@ -867,7 +866,7 @@ if (Meteor.isClient) {
           test.instanceOf(errorFromRerun, Meteor.Error);
           test.equal(errorFromRerun.error, 412);
           test.equal(errorFromRerun.reason, 'Explicit error');
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
 
           conn.subscribe(
             'publisherErrors',
@@ -890,7 +889,7 @@ if (Meteor.isClient) {
           test.equal(coll.find().count(), 0);
           // sub.stop does NOT call onError.
           test.isFalse(gotErrorFromStopper);
-          test.equal(_.size(conn._subscriptions), 0); // white-box test
+          test.equal(Object.keys(conn._subscriptions).length, 0); // white-box test
           conn._stream.disconnect({ _permanent: true });
         }
       ];
