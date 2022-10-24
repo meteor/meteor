@@ -1,5 +1,3 @@
-var Fiber = Npm.require('fibers');
-
 export class DocFetcher {
   constructor(mongoConnection) {
     this._mongoConnection = mongoConnection;
@@ -32,9 +30,9 @@ export class DocFetcher {
     const callbacks = [callback];
     self._callbacksForOp.set(op, callbacks);
 
-    Fiber(function () {
+    Meteor._runAsync(async function () {
       try {
-        var doc = self._mongoConnection.findOne(
+        var doc = await self._mongoConnection.findOne(
           collectionName, {_id: id}) || null;
         // Return doc to all relevant callbacks. Note that this array can
         // continue to grow during callback excecution.
@@ -43,17 +41,17 @@ export class DocFetcher {
           // objects that are intertwingled with each other. Clone before
           // popping the future, so that if clone throws, the error gets passed
           // to the next callback.
-          callbacks.pop()(null, EJSON.clone(doc));
+          await callbacks.pop()(null, EJSON.clone(doc));
         }
       } catch (e) {
         while (callbacks.length > 0) {
-          callbacks.pop()(e);
+          await callbacks.pop()(e);
         }
       } finally {
         // XXX consider keeping the doc around for a period of time before
         // removing from the cache
         self._callbacksForOp.delete(op);
       }
-    }).run();
+    });
   }
 }
