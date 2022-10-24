@@ -1,3 +1,5 @@
+import { Migrations } from './migrations_server'
+
 Tinytest.add('Migrates up once and only once.', function(test) {
   var run = []; //keeps track of migrations in here
   Migrations._reset();

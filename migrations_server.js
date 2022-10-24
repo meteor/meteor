@@ -1,3 +1,7 @@
+import { Meteor } from 'meteor/meteor';
+import { check, Match } from 'meteor/check';
+import { Log } from 'meteor/logging';
+
 /*
   Adds migration capabilities. Migrations are defined like:
 
@@ -23,14 +27,14 @@
   Note: Migrations will lock ensuring only 1 app can be migrating at once. If
   a migration crashes, the control record in the migrations collection will
   remain locked and at the version it was at previously, however the db could
-  be in an inconsistant state.
+  be in an inconsistent state.
 */
 
 // since we'll be at version 0 by default, we should have a migration set for
 // it.
-var DefaultMigration = { version: 0, up: function() {} };
+const DefaultMigration = { version: 0, up: function() {} };
 
-Migrations = {
+export const Migrations = {
   _list: [DefaultMigration],
   options: {
     // false disables logging
@@ -43,7 +47,7 @@ Migrations = {
     collectionName: 'migrations',
   },
   config: function(opts) {
-    this.options = _.extend({}, this.options, opts);
+    this.options = Object.assign({}, this.options, opts);
   },
 };
 
@@ -68,7 +72,7 @@ function createLogger(prefix) {
     check(level, Match.OneOf('info', 'error', 'warn', 'debug'));
     check(message, String);
 
-    var logger = Migrations.options && Migrations.options.logger;
+    const logger = Migrations.options && Migrations.options.logger;
 
     if (logger && _.isFunction(logger)) {
       logger({
@@ -82,10 +86,10 @@ function createLogger(prefix) {
   };
 }
 
-var log;
+let log;
 
 Meteor.startup(function() {
-  var options = Migrations.options;
+  const options = Migrations.options;
 
   // collection holding the control record
   Migrations._collection = new Mongo.Collection(options.collectionName);
@@ -128,18 +132,20 @@ Migrations.add = function(migration) {
 // e.g 'latest', 'latest,exit', 2
 // use 'XX,rerun' to re-run the migration at that version
 Migrations.migrateTo = function(command) {
-  if (_.isUndefined(command) || command === '' || this._list.length === 0)
+  if (typeof command === 'undefined' || command === '' || this._list.length === 0)
     throw new Error('Cannot migrate using invalid command: ' + command);
 
+  let version;
+  let subcommand;
   if (typeof command === 'number') {
-    var version = command;
+    version = command;
   } else {
-    var version = command.split(',')[0]; //.trim();
-    var subcommand = command.split(',')[1]; //.trim();
+    version = command.split(',')[0]; //.trim();
+    subcommand = command.split(',')[1]; //.trim();
   }
 
   if (version === 'latest') {
-    this._migrateTo(_.last(this._list).version);
+    this._migrateTo(this._list[this._list.length -1].version);
   } else {
     this._migrateTo(parseInt(version), subcommand === 'rerun');
   }
@@ -155,9 +161,9 @@ Migrations.getVersion = function() {
 
 // migrates to the specific version passed in
 Migrations._migrateTo = function(version, rerun) {
-  var self = this;
-  var control = this._getControl(); // Side effect: upserts control document.
-  var currentVersion = control.version;
+  const self = this;
+  const control = this._getControl(); // Side effect: upserts control document.
+  let currentVersion = control.version;
 
   //Avoid unneeded locking, check if migration actually is going to run
   if (!rerun && currentVersion === version) {
@@ -180,8 +186,8 @@ Migrations._migrateTo = function(version, rerun) {
     return;
   }
 
-  var startIdx = this._findIndexByVersion(currentVersion);
-  var endIdx = this._findIndexByVersion(version);
+  const startIdx = this._findIndexByVersion(currentVersion);
+  const endIdx = this._findIndexByVersion(version);
 
   // log.info('startIdx:' + startIdx + ' endIdx:' + endIdx);
   log.info(
@@ -193,7 +199,7 @@ Migrations._migrateTo = function(version, rerun) {
 
   // run the actual migration
   function migrate(direction, idx) {
-    var migration = self._list[idx];
+    const migration = self._list[idx];
 
     if (typeof migration[direction] !== 'function') {
       unlock();
@@ -236,12 +242,12 @@ Migrations._migrateTo = function(version, rerun) {
   }
 
   if (currentVersion < version) {
-    for (var i = startIdx; i < endIdx; i++) {
+    for (let i = startIdx; i < endIdx; i++) {
       migrate('up', i + 1);
       currentVersion = self._list[i + 1].version;
     }
   } else {
-    for (var i = startIdx; i > endIdx; i--) {
+    for (let i = startIdx; i > endIdx; i--) {
       migrate('down', i);
       currentVersion = self._list[i - 1].version;
     }
@@ -251,9 +257,9 @@ Migrations._migrateTo = function(version, rerun) {
   log.info('Finished migrating.');
 };
 
-// gets the current control record, optionally creating it if non-existant
+// gets the current control record, optionally creating it if non-existent
 Migrations._getControl = function() {
-  var control = this._collection.findOne({ _id: 'control' });
+  const control = this._collection.findOne({ _id: 'control' });
 
   return control || this._setControl({ version: 0, locked: false });
 };
@@ -275,7 +281,7 @@ Migrations._setControl = function(control) {
 
 // returns the migration index in _list or throws if not found
 Migrations._findIndexByVersion = function(version) {
-  for (var i = 0; i < this._list.length; i++) {
+  for (let i = 0; i < this._list.length; i++) {
     if (this._list[i].version === version) return i;
   }
 
