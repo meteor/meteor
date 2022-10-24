@@ -53,7 +53,7 @@ mongo-id@1.0.8
 npm-mongo@4.9.0
 observe-sequence@1.0.20
 ordered-dict@1.1.0
-percolate:migrations@1.0.3
+percolate:migrations@1.1.0
 promise@0.12.0
 random@1.2.0
 react-fast-refresh@0.2.3

@@ -9,7 +9,7 @@ Package.onUse(function(api) {
   api.versionsFrom('METEOR@1.9');
   api.use('ecmascript');
   api.use(['underscore', 'check', 'mongo', 'logging'], 'server');
-  api.mainModule(['migrations_server.js'], 'server');
+  api.mainModule('migrations_server.js', 'server');
   api.export('Migrations', 'server');
 });
 
