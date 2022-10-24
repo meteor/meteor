@@ -252,14 +252,6 @@ async function setup() {
     await setupExecPath();
   }
   await fixOwnership();
-  try {
-    const packageData = require(process.cwd() + '/package.json');
-    console.log("name is", packageData.name);
-  } catch (e) {
-    // There was no package.json
-    console.log('no package.json found!');
-    return;
-  }
 
   showGettingStarted();
 }
