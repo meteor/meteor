@@ -28,7 +28,7 @@ const {
   extractWithNativeTar,
 } = require('./extract.js');
 const semver = require('semver');
-const isInstalledGlobally = process.env.npm_config_global === 'true';
+
 
 const { engines } = require('./package');
 const nodeVersion = engines.node;
@@ -40,16 +40,7 @@ if (!semver.satisfies(process.version, nodeVersion)) {
   console.warn(`We recommend using a Node version manager like NVM or Volta to install Node.js and npm.\n`);
 }
 
-if (!isInstalledGlobally) {
-  console.error('******************************************');
-  console.error(
-    'You are not using a global npm context to install, you should never add meteor to your package.json.'
-  );
-  console.error('Make sure you pass -g to npm install.');
-  console.error('Aborting...');
-  console.error('******************************************');
-  process.exit(1);
-}
+
 process.on('unhandledRejection', err => {
   throw err;
 });
@@ -261,6 +252,15 @@ async function setup() {
     await setupExecPath();
   }
   await fixOwnership();
+  try {
+    const packageData = require(process.cwd() + '/package.json');
+    console.log("name is", packageData.name);
+  } catch (e) {
+    // There was no package.json
+    console.log('no package.json found!');
+    return;
+  }
+
   showGettingStarted();
 }
 async function setupExecPath() {
