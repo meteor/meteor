@@ -180,6 +180,43 @@ Tinytest.add('Checks that locking works correctly', function(test) {
   test.equal(Migrations.getVersion(), 1);
 });
 
+Tinytest.add('Checks that version is updated if subsequent migration fails', function(test) {
+  var run = [];
+  var shouldError = true;
+  Migrations._reset();
+
+  // add the migrations
+  Migrations.add({
+    version: 1,
+    up: function() {
+      run.push('u1');
+    },
+  });
+  Migrations.add({
+    version: 2,
+    up: function() {
+      if (shouldError) {
+        throw new Error('Error in migration');
+      }
+      run.push('u2');
+    },
+  });
+
+  // migrate up, which should throw
+  test.throws(function() {
+    Migrations.migrateTo('latest');
+  });
+  test.equal(run, ['u1']);
+  test.equal(Migrations.getVersion(), 1);
+
+  shouldError = false;
+  // migrate up again, should succeed
+  Migrations.unlock();
+  Migrations.migrateTo('latest');
+  test.equal(run, ['u1', 'u2']);
+  test.equal(Migrations.getVersion(), 2);
+});
+
 Tinytest.add('Does nothing for no migrations.', function(test) {
   Migrations._reset();
 

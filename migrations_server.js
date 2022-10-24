@@ -241,15 +241,21 @@ Migrations._migrateTo = function(version, rerun) {
     self._setControl({ locked: false, version: currentVersion });
   }
 
+  function updateVersion() {
+    self._setControl({ locked: true, version: currentVersion });
+  }
+
   if (currentVersion < version) {
     for (let i = startIdx; i < endIdx; i++) {
       migrate('up', i + 1);
       currentVersion = self._list[i + 1].version;
+      updateVersion();
     }
   } else {
     for (let i = startIdx; i > endIdx; i--) {
       migrate('down', i);
       currentVersion = self._list[i - 1].version;
+      updateVersion();
     }
   }
 
