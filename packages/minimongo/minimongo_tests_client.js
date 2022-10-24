@@ -439,8 +439,16 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // dates
   const date1 = new Date;
   const date2 = new Date(date1.getTime() + 1000);
+  const date3 = new Date('');
   match({a: date1}, {a: date1});
   nomatch({a: date1}, {a: date2});
+  match({a: date3}, {a: date3});
+  nomatch({a: date1}, {a: date3});
+  nomatch({a: date3}, {a: date1});
+  match({a: {$gt: date3}}, {a: date1});
+  match({a: {$gte: date3}}, {a: date1});
+  nomatch({a: {$lt: date3}}, {a: date1});
+  nomatch({a: {$lte: date3}}, {a: date1});
 
 
   // arrays
