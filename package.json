@@ -20,7 +20,7 @@
   },
   "homepage": "https://atmospherejs.com/percolate/migrations",
   "dependencies": {
-    "spacejam": "^1.2.0"
+    "spacejam": "1.2.2"
   },
   "keywords": [
     "meteor",
