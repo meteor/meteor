@@ -604,6 +604,62 @@ Tinytest.add(
   }
 );
 
+
+Tinytest.addAsync(
+  'accounts async - Meteor.userAsync() obeys options.defaultFieldSelector',
+  async test => {
+    const ignoreFieldName = "bigArray";
+    const customField = "customField";
+    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
+    const stampedToken = Accounts._generateStampedLoginToken();
+    Accounts._insertLoginToken(userId, stampedToken);
+    const options = Accounts._options;
+
+    // stub Meteor.userId() so it works outside methods and returns the correct user:
+    const origAccountsUserId = Accounts.userId;
+    Accounts.userId = () => userId;
+
+    Accounts._options = {};
+
+    // test the field is included by default
+    let user = await Meteor.userAsync();
+    test.isNotUndefined(user[ignoreFieldName], 'included by default');
+
+    // test the field is excluded
+    Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
+    user = await Meteor.userAsync();
+    test.isUndefined(user[ignoreFieldName], 'excluded');
+    user = Meteor.user({});
+    test.isUndefined(user[ignoreFieldName], 'excluded {}');
+
+    // test the field can still be retrieved if required
+    user = await Meteor.userAsync({ fields: { [ignoreFieldName]: 1 } });
+    test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
+    test.isUndefined(user.username, 'field can be retrieved username');
+
+    // test a combined negative field specifier
+    user = await Meteor.userAsync({ fields: { username: 0 } });
+    test.isUndefined(user[ignoreFieldName], 'combined field selector');
+    test.isUndefined(user.username, 'combined field selector username');
+
+    // test an explicit request for the full user object
+    user = await Meteor.userAsync({ fields: {} });
+    test.isNotUndefined(user[ignoreFieldName], 'full selector');
+    test.isNotUndefined(user.username, 'full selector username');
+
+    Accounts._options = {};
+
+    // Test that a custom field gets retrieved properly
+    Accounts.config({ defaultFieldSelector: { [customField]: 1 } });
+    user = await Meteor.userAsync();
+    test.isNotUndefined(user[customField]);
+    test.isUndefined(user.username);
+    test.isUndefined(user[ignoreFieldName]);
+
+    Accounts._options = options;
+    Accounts.userId = origAccountsUserId;
+  }
+);
 Tinytest.add(
   'accounts - verify onExternalLogin hook can update oauth user profiles',
   test => {

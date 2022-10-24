@@ -95,6 +95,20 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts async - Meteor.loggingIn() is false after login has completed',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      // Login then verify loggingIn is false after login has completed
+      Meteor.loginWithPassword(username, password, async () => {
+        test.isTrue(await Meteor.userAsync());
+        test.isFalse(Meteor.loggingIn());
+        removeTestUser(done);
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
   'accounts - Meteor.loggingOut() is true right after a logout call',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
@@ -150,7 +164,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts - Meteor.user obeys explicit and default field selectors',
+  'accounts - Meteor.user() obeys explicit and default field selectors',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
       Meteor.loginWithPassword(username, password, () => {
@@ -178,6 +192,37 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync(
+  'accounts async - Meteor.userAsync() obeys explicit and default field selectors',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      Meteor.loginWithPassword(username, password, () => {
+        // by default, all fields should be returned
+        Meteor.userAsync().then(user => {
+          test.equal( user.profile[excludeField], excludeValue);
+        });
+
+        // this time we want to exclude the default fields
+        const options = Accounts._options;
+        Accounts._options = {};
+        Accounts.config({defaultFieldSelector: {['profile.'+defaultExcludeField]: 0}});
+        Meteor.userAsync().then(async user => {
+          test.isUndefined(user.profile[defaultExcludeField]);
+          test.equal(user.profile[excludeField], excludeValue);
+          test.equal(user.profile.name, username);
+        })
+        // this time we only want certain fields...
+        Meteor.userAsync({fields: {'profile.name': 1}}).then(user => {
+          test.isUndefined(user.profile[excludeField]);
+          test.isUndefined(user.profile[defaultExcludeField]);
+          test.equal(user.profile.name, username);
+        });
+        Accounts._options = options;
+        removeTestUser(done);
+      });
+    });
+  }
+);
 
 Tinytest.addAsync(
   'accounts-2fa - Meteor.loginWithPasswordAnd2faCode() fails when token is not provided',
