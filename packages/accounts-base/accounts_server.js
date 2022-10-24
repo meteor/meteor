@@ -434,7 +434,7 @@ export class AccountsServer extends AccountsCommon {
   // If the login is allowed and isn't aborted by a validate login hook
   // callback, log in the user.
   //
-  _attemptLogin(
+  async _attemptLogin(
     methodInvocation,
     methodName,
     methodArgs,
@@ -494,18 +494,18 @@ export class AccountsServer extends AccountsCommon {
   // Ensure that thrown exceptions are caught and that login hook
   // callbacks are still called.
   //
-  _loginMethod(
+  async _loginMethod(
     methodInvocation,
     methodName,
     methodArgs,
     type,
     fn
   ) {
-    return this._attemptLogin(
+    return await this._attemptLogin(
       methodInvocation,
       methodName,
       methodArgs,
-      tryLoginMethod(type, fn)
+      await tryLoginMethod(type, fn)
     );
   };
 
@@ -587,11 +587,10 @@ export class AccountsServer extends AccountsCommon {
   // Try all of the registered login handlers until one of them doesn't
   // return `undefined`, meaning it handled this call to `login`. Return
   // that return value.
-  _runLoginHandlers(methodInvocation, options) {
+  async _runLoginHandlers(methodInvocation, options) {
     for (let handler of this._loginHandlers) {
-      const result = tryLoginMethod(
-        handler.name,
-        () => handler.handler.call(methodInvocation, options)
+      const result = await tryLoginMethod(handler.name, async () =>
+        await handler.handler.call(methodInvocation, options)
       );
 
       if (result) {
@@ -599,7 +598,10 @@ export class AccountsServer extends AccountsCommon {
       }
 
       if (result !== undefined) {
-        throw new Meteor.Error(400, "A login handler should return a result or undefined");
+        throw new Meteor.Error(
+          400,
+          'A login handler should return a result or undefined'
+        );
       }
     }
 
@@ -644,14 +646,15 @@ export class AccountsServer extends AccountsCommon {
     //   If successful, returns {token: reconnectToken, id: userId}
     //   If unsuccessful (for example, if the user closed the oauth login popup),
     //     throws an error describing the reason
-    methods.login = function (options) {
+    methods.login = async function (options) {
       // Login handlers should really also check whatever field they look at in
       // options, but we don't enforce it.
       check(options, Object);
 
-      const result = accounts._runLoginHandlers(this, options);
+      const result = await accounts._runLoginHandlers(this, options);
+      //console.log({result});
 
-      return accounts._attemptLogin(this, "login", arguments, result);
+      return await accounts._attemptLogin(this, "login", arguments, result);
     };
 
     methods.logout = function () {
@@ -1512,10 +1515,10 @@ const cloneAttemptWithConnection = (connection, attempt) => {
   return clonedAttempt;
 };
 
-const tryLoginMethod = (type, fn) => {
+const tryLoginMethod = async (type, fn) => {
   let result;
   try {
-    result = fn();
+    result = await fn();
   }
   catch (e) {
     result = {error: e};
