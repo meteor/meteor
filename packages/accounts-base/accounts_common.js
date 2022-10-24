@@ -170,6 +170,18 @@ export class AccountsCommon {
       : null;
   }
 
+  /**
+   * @summary Get the current user record, or `null` if no user is logged in.
+   * @locus Anywhere
+   * @param {Object} [options]
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   */
+  async userAsync(options) {
+    const userId = this.userId();
+    return userId
+      ? await this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
+      : null;
+  }
   // Set up config for the accounts system. Call this on both the client
   // and the server.
   //
@@ -417,6 +429,15 @@ Meteor.userId = () => Accounts.userId();
  * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
  */
 Meteor.user = options => Accounts.user(options);
+
+/**
+ * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @locus Anywhere but publish functions
+ * @importFromPackage meteor
+ * @param {Object} [options]
+ * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+ */
+Meteor.userAsync = options => Accounts.userAsync(options);
 
 // how long (in days) until a login token expires
 const DEFAULT_LOGIN_EXPIRATION_DAYS = 90;
