@@ -179,7 +179,7 @@ export class AccountsCommon {
   async userAsync(options) {
     const userId = this.userId();
     return userId
-      ? await this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
+      ? this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
       : null;
   }
   // Set up config for the accounts system. Call this on both the client
