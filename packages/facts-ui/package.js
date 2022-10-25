@@ -8,8 +8,7 @@ Package.onUse(function (api) {
     'ecmascript',
     'facts-base',
     'mongo',
-    'templating@1.2.13',
-    'underscore',
+    'templating@1.2.13'
   ], 'client');
 
   api.imply('facts-base');
