@@ -13,11 +13,18 @@
     "vue": "^2.6.14",
     "vue-meteor-tracker": "^2.0.0-beta.5"
   },
+  "devDependencies": {
+    "meteor": "2.8.1"
+  },
   "meteor": {
     "mainModule": {
       "client": "client/main.js",
       "server": "server/main.js"
     },
     "testModule": "tests/main.js"
+  },
+  "engines": {
+    "node": "<=14.x",
+    "npm": "<=6.x"
   }
 }

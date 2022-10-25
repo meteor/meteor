@@ -12,6 +12,7 @@
     "meteor-node-stubs": "^1.2.1",
     "solid-js": "^1.5.4"
   },
+
   "meteor": {
     "mainModule": {
       "client": "client/main.jsx",
@@ -23,6 +24,11 @@
     "babel-preset-solid": "^1.5.4",
     "vite": "^3.0.9",
     "vite-plugin-solid": "^2.3.0",
-    "vite-plugin-solid-svg": "^0.4.1"
+    "vite-plugin-solid-svg": "^0.4.1",
+    "meteor": "2.8.1"
+  },
+  "engines": {
+    "node": "<=14.x",
+    "npm": "<=6.x"
   }
 }

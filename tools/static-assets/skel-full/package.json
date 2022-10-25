@@ -11,6 +11,11 @@
     "meteor-node-stubs": "^1.2.1"
   },
   "devDependencies": {
-    "chai": "^4.2.0"
+    "chai": "^4.2.0",
+    "meteor": "2.8.1"
+  },
+  "engines": {
+    "node": "<=14.x",
+    "npm": "<=6.x"
   }
 }

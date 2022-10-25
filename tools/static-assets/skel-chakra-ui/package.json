@@ -19,11 +19,18 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },
+  "devDependencies": {
+    "meteor": "2.8.1"
+  },
   "meteor": {
     "mainModule": {
       "client": "client/main.jsx",
       "server": "server/main.js"
     },
     "testModule": "tests/main.js"
+  },
+  "engines": {
+    "node": "<=14.x",
+    "npm": "<=6.x"
   }
 }
