@@ -629,7 +629,7 @@ Tinytest.addAsync(
     Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
     user = await Meteor.userAsync();
     test.isUndefined(user[ignoreFieldName], 'excluded');
-    user = Meteor.user({});
+    user = await Meteor.userAsync({});
     test.isUndefined(user[ignoreFieldName], 'excluded {}');
 
     // test the field can still be retrieved if required

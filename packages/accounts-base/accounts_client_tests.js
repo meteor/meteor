@@ -100,8 +100,8 @@ Tinytest.addAsync(
     logoutAndCreateUser(test, done, () => {
       // Login then verify loggingIn is false after login has completed
       Meteor.loginWithPassword(username, password, async () => {
-        test.isTrue(await Meteor.userAsync());
         test.isFalse(Meteor.loggingIn());
+        test.isTrue(await Meteor.userAsync());
         removeTestUser(done);
       });
     });
@@ -196,27 +196,28 @@ Tinytest.addAsync(
   'accounts async - Meteor.userAsync() obeys explicit and default field selectors',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
-      Meteor.loginWithPassword(username, password, () => {
+      Meteor.loginWithPassword(username, password, async () => {
         // by default, all fields should be returned
-        Meteor.userAsync().then(user => {
-          test.equal( user.profile[excludeField], excludeValue);
-        });
+        let user;
+        user = await Meteor.userAsync();
+        test.equal(user.profile[excludeField], excludeValue);
 
         // this time we want to exclude the default fields
         const options = Accounts._options;
         Accounts._options = {};
-        Accounts.config({defaultFieldSelector: {['profile.'+defaultExcludeField]: 0}});
-        Meteor.userAsync().then(async user => {
-          test.isUndefined(user.profile[defaultExcludeField]);
-          test.equal(user.profile[excludeField], excludeValue);
-          test.equal(user.profile.name, username);
-        })
+        Accounts.config({ defaultFieldSelector: { ['profile.' + defaultExcludeField]: 0 } });
+
+        user = await Meteor.userAsync();
+        test.isUndefined(user.profile[defaultExcludeField]);
+        test.equal(user.profile[excludeField], excludeValue);
+        test.equal(user.profile.name, username);
+
         // this time we only want certain fields...
-        Meteor.userAsync({fields: {'profile.name': 1}}).then(user => {
-          test.isUndefined(user.profile[excludeField]);
-          test.isUndefined(user.profile[defaultExcludeField]);
-          test.equal(user.profile.name, username);
-        });
+
+        user = await Meteor.userAsync({ fields: { 'profile.name': 1 } });
+        test.isUndefined(user.profile[excludeField]);
+        test.isUndefined(user.profile[defaultExcludeField]);
+        test.equal(user.profile.name, username);
         Accounts._options = options;
         removeTestUser(done);
       });

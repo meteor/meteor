@@ -21,11 +21,13 @@ const internalLoginWithPassword = ({ selector, password, code, callback }) => {
         code,
       },
     ],
-    userCallback: (error, result) => {
+    userCallback: async (error, result) => {
       if (error) {
         reportError(error, callback);
       } else {
-        callback && callback();
+        const isAsync = callback && callback.constructor.name === 'AsyncFunction';
+        if (isAsync) callback && await callback();
+        else callback && callback();
       }
     },
   });
