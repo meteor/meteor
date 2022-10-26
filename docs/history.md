@@ -670,7 +670,7 @@ This version should be ignored. Proceed to 2.5.5 above.
 * Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
 * Email package now allows setting `Email.customTransport` to override sending method.
 * Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming.
-* Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
+* Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG_historical.md#v300)
 * `reify` has been updated to v0.22.2 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
 * Meteor NPM installer is [now available for all platforms](https://github.com/meteor/meteor/pull/11590).
 * DDP server now allows you to set publication strategies for your publications to control mergebox behavior
@@ -1040,7 +1040,7 @@ This version should be ignored. Proceed to 2.5.5 above.
     - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
     - Skeletons dependencies updated to latest version
     - Svelte skeleton now has HMR
-    - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-only)
+    - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy.
     - Improved watched system to properly rebuild `client` even when a file is outside of `client` or `imports` folders. See [PR](https://github.com/meteor/meteor/pull/11474) for details.
     - Fix an issue when `App.appendToConfig` crashed Cordova build.
     - Reify compiler now uses cache in runtime. [Read more](https://github.com/meteor/meteor/pull/11400)
@@ -1528,7 +1528,7 @@ N/A
 
 * `meteor create --vue` is now available thanks to [@chris-visser](https://github.com/chris-visser). PR [#11086](https://github.com/meteor/meteor/pull/11086)
 
-* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-build).
+* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments.
 
 * Multiple optimizations in build performance, many of them for Windows thanks to [@zodern](https://github.com/zodern). PRs [#10838](https://github.com/meteor/meteor/pull/10838), [#11114](https://github.com/meteor/meteor/pull/11114), [#11115](https://github.com/meteor/meteor/pull/11115), [#11102](https://github.com/meteor/meteor/pull/11102), [#10839](https://github.com/meteor/meteor/pull/10839)
 
