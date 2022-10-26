@@ -7,12 +7,18 @@ const reportError = (error, callback) => {
    }
 };
 
+const reportErrorAsync = async (error, callback) => {
+  if (callback) {
+    await callback(error);
+  } else {
+    throw error;
+  }
+};
 
 const internalLoginWithPassword = ({ selector, password, code, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@')) selector = { username: selector };
     else selector = { email: selector };
-
   Accounts.callLoginMethod({
     methodArguments: [
       {
@@ -22,10 +28,11 @@ const internalLoginWithPassword = ({ selector, password, code, callback }) => {
       },
     ],
     userCallback: async (error, result) => {
+      const isAsync = callback && callback.constructor.name === 'AsyncFunction';
       if (error) {
-        reportError(error, callback);
+        if (isAsync) await reportErrorAsync(error, callback);
+        else reportError(error, callback);
       } else {
-        const isAsync = callback && callback.constructor.name === 'AsyncFunction';
         if (isAsync) callback && await callback();
         else callback && callback();
       }
