@@ -7,14 +7,6 @@ const reportError = (error, callback) => {
    }
 };
 
-const reportErrorAsync = async (error, callback) => {
-  if (callback) {
-    await callback(error);
-  } else {
-    throw error;
-  }
-};
-
 const internalLoginWithPassword = ({ selector, password, code, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@')) selector = { username: selector };
@@ -27,14 +19,11 @@ const internalLoginWithPassword = ({ selector, password, code, callback }) => {
         code,
       },
     ],
-    userCallback: async (error, result) => {
-      const isAsync = callback && callback.constructor.name === 'AsyncFunction';
+    userCallback: (error, result) => {
       if (error) {
-        if (isAsync) await reportErrorAsync(error, callback);
-        else reportError(error, callback);
+        reportError(error, callback);
       } else {
-        if (isAsync) callback && await callback();
-        else callback && callback();
+        callback && callback();
       }
     },
   });
