@@ -86,9 +86,11 @@ class EnvironmentVariableAsync {
     let ret;
     try {
       currentValues[this.slot] = value;
+      Meteor._updateAslStore("_meteor_dynamics", currentValues);
       ret = await func();
     } finally {
       currentValues[this.slot] = saved;
+      Meteor._updateAslStore("_meteor_dynamics", currentValues);
     }
 
     return ret;
