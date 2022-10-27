@@ -66,6 +66,7 @@ sidebar_categories:
   Production:
     - security
     - deployment
+    - scaling
   Meta:
     - CONTRIBUTING
     - CHANGELOG
