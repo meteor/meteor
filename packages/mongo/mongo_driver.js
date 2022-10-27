@@ -69,6 +69,10 @@ var unmakeMongoLegal = function (name) { return name.substr(5); };
 
 var replaceMongoAtomWithMeteor = function (document) {
   if (document instanceof MongoDB.Binary) {
+    // for backwards compatibility
+    if (document.sub_type !== 0) {
+      return document;
+    }
     var buffer = document.value(true);
     return new Uint8Array(buffer);
   }
@@ -97,6 +101,9 @@ var replaceMeteorAtomWithMongo = function (document) {
     // MongoDB.BSON only looks like it takes a Uint8Array (and doesn't actually
     // serialize it correctly).
     return new MongoDB.Binary(Buffer.from(document));
+  }
+  if (document instanceof MongoDB.Binary) {
+     return document;
   }
   if (document instanceof Mongo.ObjectID) {
     return new MongoDB.ObjectID(document.toHexString());
@@ -1019,10 +1026,10 @@ MongoConnection.prototype._createSynchronousCursor = function(
     dbCursor = dbCursor.hint(cursorOptions.hint);
   }
 
-  return new SynchronousCursor(dbCursor, cursorDescription, options);
+  return new SynchronousCursor(dbCursor, cursorDescription, options, collection);
 };
 
-var SynchronousCursor = function (dbCursor, cursorDescription, options) {
+var SynchronousCursor = function (dbCursor, cursorDescription, options, collection) {
   var self = this;
   options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
@@ -1038,7 +1045,13 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
     self._transform = null;
   }
 
-  self._synchronousCount = Future.wrap(dbCursor.count.bind(dbCursor));
+  self._synchronousCount = Future.wrap(
+    collection.countDocuments.bind(
+      collection,
+      replaceTypes(cursorDescription.selector, replaceMeteorAtomWithMongo),
+      replaceTypes(cursorDescription.options, replaceMeteorAtomWithMongo),
+    )
+  );
   self._visitedIds = new LocalCollection._IdMap;
 };
 

@@ -26,8 +26,8 @@ OAuth.registerService('twitter', 1, urls, function(oauthBinding) {
   };
 
   // include helpful fields from twitter
-  var fields = _.pick(identity, Twitter.whitelistedFields);
-  _.extend(serviceData, fields);
+  const { identity: fields } = Twitter.whitelistedFields;
+  Object.assign(serviceData, fields);
 
   return {
     serviceData: serviceData,
