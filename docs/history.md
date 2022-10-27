@@ -1,16 +1,18 @@
-## v2.8, 2022-08-XX
+## v2.8, 2022-10-19
 
 #### Highlights
 * New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
-* Node update to [v14.20.0](https://nodejs.org/en/blog/release/v14.20.0/) as part of the [July 7th security release](https://nodejs.org/en/blog/vulnerability/july-2022-security-releases/)
+* Node update to [v14.20.1](https://nodejs.org/en/blog/release/v14.20.1/) as part of the [September 22nd security release](https://nodejs.org/en/blog/vulnerability/september-2022-security-releases/)
 * Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
-* Upgrade TypeScript to 4.6.4 [PR]()
+* Meteor.callAsync method. [PR](https://github.com/meteor/meteor/pull/12196)
+* Added new Chakra-ui Skeleton. [PR](https://github.com/meteor/meteor/pull/12181)
+* Added new Solid Skeleton. [PR](https://github.com/meteor/meteor/pull/12186)
 
 #### Breaking Changes
 N/A
 
 #### Migration Steps
-Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.app/2.8-migration.html) for this version.
+Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this version.
 
 #### Meteor Version Release
 * `modules@0.19.0`:
@@ -33,6 +35,7 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Refactoring/Remove unused imports from tools folder. [PR](https://github.com/meteor/meteor/pull/12084).
   - Fix problem when publishing async methods. [PR](https://github.com/meteor/meteor/pull/12152).
   - Update skeletons Apollo[PR](https://github.com/meteor/meteor/pull/12091) and other skeletons [PR](https://github.com/meteor/meteor/pull/12099)
+  - Added callAsync method for calling async methods [PR](https://github.com/meteor/meteor/pull/12196).
 * `meteor-installer@2.7.5`:
   - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
 * `npm-mongo@4.9.0`:
@@ -367,7 +370,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 #### Highlights
 
 * Fixed 2.5.7 MongoDB error
-* Patch release to update Node and npm versions.
+* Patch release to update Node to version 14.19.3 and npm version to 6.14.17.
 
 #### Breaking Changes
 
