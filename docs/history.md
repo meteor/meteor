@@ -11,6 +11,7 @@
   - Updated default version of Facebook GraphAPI to v15
 
 
+
 ## v2.8, 2022-10-19
 
 #### Highlights

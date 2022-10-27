@@ -26,24 +26,49 @@ const runCommand = async (command) => {
   })
 }
 
+/**
+ *
+ * @returns {Promise<string>}
+ */
 async function getPackages() {
   return await runCommand("./get-diff.sh");
 }
 
+async function getFile(path) {
+  try {
+    const data = await fs.promises.readFile(path, 'utf8');
+    return [data, null]
+  } catch (e) {
+    console.error(e);
+    return ['', e];
+  }
+
+}
+
 async function main() {
+  /**
+   * @type {string[]}
+   */
   let args = process.argv.slice(2);
 
-  if (args[0] === '@auto') {
-    const packages = await getPackages();
+  if (args[0].startsWith('@auto')) {
+    const [_, type] = args[0].split('.');
+    // List of packages that for some reason are not in the diff.
+    // If there is a change in one of them please do not forget
+    // to add it to the list.
+    // List:
+    // ddp-common
+
+    const p = await getPackages();
+    const packages = p.concat(`packages/meteor-tool.${ type }`);
     args = packages
       .split('/')
-      .filter((packageName) => packageName !== 'packages' && packageName !== "\npackages" && packageName !== "\n");
+      .filter((packageName) => packageName !== 'packages' && packageName !== "\npackages" && packageName !== "\n")
+      .map((packageName) => `${ packageName }.${ type }`);
   }
+
   /**
-   * @type {{
-   *   name: string,
-   *   version: string,
-   * }[]}
+   * @type {{release, name: string|null}[]}
    */
   const packages = args.map(arg => {
     const [name, release] = arg.split('.');
@@ -51,8 +76,9 @@ async function main() {
   });
   for (const { name, release } of packages) {
     const filePath = `../../../packages/${ name }/package.js`;
-    const code = await fs.promises.readFile(filePath, 'utf8');
-
+    const [code, err] = await getFile(filePath);
+    // if there is an error reading the file, we will skip it.
+    if (err) continue;
     for (const line of code.split(/\n/)) {
       // should only run on lines that have a version
       if (!line.includes('version')) continue;
@@ -83,6 +109,8 @@ async function main() {
       await fs.promises.writeFile(filePath, newCode);
     }
   }
+  console.log('Done!');
+  if (!args[0].startsWith('@auto')) console.log('Do not forget to update meteor-tool');
 }
 
 main();
