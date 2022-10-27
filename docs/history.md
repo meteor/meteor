@@ -1,6 +1,7 @@
 ## 2.8.1, Unreleased
 
 #### Highlights
+* TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204)
 
 #### Breaking Changes
 
@@ -9,7 +10,6 @@
 #### Meteor Version Release
 * `facebook-oauth@1.12.0`
   - Updated default version of Facebook GraphAPI to v15
-
 
 
 ## v2.8, 2022-10-19
