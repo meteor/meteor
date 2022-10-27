@@ -318,7 +318,7 @@ export class AccountsServer extends AccountsCommon {
       // If user is not found, try a case insensitive lookup
       if (!user) {
         selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-        const candidateUsers = Meteor.users.find(selector, options).fetch();
+        const candidateUsers = Meteor.users.find(selector, { ...options, limit: 2 }).fetch();
         // No match if multiple candidates are found
         if (candidateUsers.length === 1) {
           user = candidateUsers[0];
@@ -547,19 +547,14 @@ export class AccountsServer extends AccountsCommon {
   /// LOGIN HANDLERS
   ///
 
-  // The main entry point for auth packages to hook in to login.
-  //
-  // A login handler is a login method which can return `undefined` to
-  // indicate that the login request is not handled by this handler.
-  //
-  // @param name {String} Optional.  The service name, used by default
-  // if a specific service name isn't returned in the result.
-  //
-  // @param handler {Function} A function that receives an options object
-  // (as passed as an argument to the `login` method) and returns one of:
-  // - `undefined`, meaning don't handle;
-  // - a login method result object
-
+  /**
+   * @summary Registers a new login handler.
+   * @locus Server
+   * @param {String} [name] The type of login method like oauth, password, etc.
+   * @param {Function} handler A function that receives an options object
+   * (as passed as an argument to the `login` method) and returns one of
+   * `undefined`, meaning don't handle or a login method result object.
+   */
   registerLoginHandler(name, handler) {
     if (! handler) {
       handler = name;
