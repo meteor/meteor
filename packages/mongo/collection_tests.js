@@ -1,3 +1,6 @@
+
+var MongoDB = NpmModuleMongodb;
+
 Tinytest.add(
   'collection - call Mongo.Collection without new',
   function (test) {
@@ -200,6 +203,184 @@ Tinytest.add('collection - calling find with an invalid readPreference',
         // Trigger the creation of _synchronousCursor
         cursor.count();
       }, `Invalid read preference mode "${invalidReadPreference}"`);
+    }
+  }
+);
+
+Tinytest.add('collection - inserting a document with a binary should return a document with a binary',
+  function(test) {
+    if (Meteor.isServer) {
+      const collection = new Mongo.Collection('testBinary1');
+      const _id = Random.id();
+      collection.insert({
+        _id,
+        binary: new MongoDB.Binary(Buffer.from('hello world'), 6)
+      });
+
+      const doc = collection.findOne({ _id });
+      test.ok(
+        doc.binary instanceof MongoDB.Binary
+      );
+      test.equal(
+        doc.binary.buffer,
+        Buffer.from('hello world')
+      );
+    }
+  }
+);
+
+Tinytest.add('collection - inserting a document with a binary (sub type 0) should return a document with a uint8array',
+  function(test) {
+    if (Meteor.isServer) {
+      const collection = new Mongo.Collection('testBinary8');
+      const _id = Random.id();
+      collection.insert({
+        _id,
+        binary: new MongoDB.Binary(Buffer.from('hello world'), 0)
+      });
+
+      const doc = collection.findOne({ _id });
+      test.ok(
+        doc.binary instanceof Uint8Array
+      );
+      test.equal(
+        doc.binary,
+        new Uint8Array(Buffer.from('hello world'))
+      );
+    }
+  }
+);
+
+Tinytest.add('collection - updating a document with a binary should return a document with a binary',
+  function(test) {
+    if (Meteor.isServer) {
+      const collection = new Mongo.Collection('testBinary2');
+      const _id = Random.id();
+      collection.insert({
+        _id
+      });
+
+      collection.update({ _id }, { $set: { binary: new MongoDB.Binary(Buffer.from('hello world'), 6) } });
+
+      const doc = collection.findOne({ _id });
+      test.ok(
+        doc.binary instanceof MongoDB.Binary
+      );
+      test.equal(
+        doc.binary.buffer,
+        Buffer.from('hello world')
+      );
+    }
+  }
+);
+
+Tinytest.add('collection - updating a document with a binary (sub type 0) should return a document with a uint8array',
+  function(test) {
+    if (Meteor.isServer) {
+      const collection = new Mongo.Collection('testBinary7');
+      const _id = Random.id();
+      collection.insert({
+        _id
+      });
+
+      collection.update({ _id }, { $set: { binary: new MongoDB.Binary(Buffer.from('hello world'), 0) } });
+
+      const doc = collection.findOne({ _id });
+      test.ok(
+        doc.binary instanceof Uint8Array
+      );
+      test.equal(
+        doc.binary,
+        new Uint8Array(Buffer.from('hello world'))
+      );
+    }
+  }
+);
+
+Tinytest.add('collection - inserting a document with a uint8array should return a document with a uint8array',
+  function(test) {
+    if (Meteor.isServer) {
+      const collection = new Mongo.Collection('testBinary3');
+      const _id = Random.id();
+      collection.insert({
+        _id,
+        binary: new Uint8Array(Buffer.from('hello world'))
+      });
+
+      const doc = collection.findOne({ _id });
+      test.ok(
+        doc.binary instanceof Uint8Array
+      );
+      test.equal(
+        doc.binary,
+        new Uint8Array(Buffer.from('hello world'))
+      );
+    }
+  }
+);
+
+Tinytest.add('collection - updating a document with a uint8array should return a document with a uint8array',
+  function(test) {
+    if (Meteor.isServer) {
+      const collection = new Mongo.Collection('testBinary4');
+      const _id = Random.id();
+      collection.insert({
+        _id
+      });
+
+      collection.update(
+        { _id },
+        { $set: { binary: new Uint8Array(Buffer.from('hello world')) } }
+      )
+
+      const doc = collection.findOne({ _id });
+      test.ok(
+        doc.binary instanceof Uint8Array
+      );
+      test.equal(
+        doc.binary,
+        new Uint8Array(Buffer.from('hello world'))
+      );
+    }
+  }
+);
+
+Tinytest.add('collection - finding with a query with a uint8array field should return the correct document',
+  function(test) {
+    if (Meteor.isServer) {
+      const collection = new Mongo.Collection('testBinary5');
+      const _id = Random.id();
+      collection.insert({
+        _id,
+        binary: new Uint8Array(Buffer.from('hello world'))
+      });
+
+      const doc = collection.findOne({ binary: new Uint8Array(Buffer.from('hello world')) });
+      test.equal(
+        doc._id,
+        _id
+      );
+      collection.remove({});
+    }
+  }
+);
+
+Tinytest.add('collection - finding with a query with a binary field should return the correct document',
+  function(test) {
+    if (Meteor.isServer) {
+      const collection = new Mongo.Collection('testBinary6');
+      const _id = Random.id();
+      collection.insert({
+        _id,
+        binary: new MongoDB.Binary(Buffer.from('hello world'), 6)
+      });
+
+      const doc = collection.findOne({ binary: new MongoDB.Binary(Buffer.from('hello world'), 6) });
+      test.equal(
+        doc._id,
+        _id
+      );
+      collection.remove({});
     }
   }
 );

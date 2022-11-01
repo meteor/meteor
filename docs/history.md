@@ -1,10 +1,25 @@
-## v2.8, 2022-08-XX
+## 2.8.1, Unreleased
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `facebook-oauth@1.12.0`
+  - Updated default version of Facebook GraphAPI to v15
+
+
+## v2.8, 2022-10-19
 
 #### Highlights
 * New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
 * Node update to [v14.20.1](https://nodejs.org/en/blog/release/v14.20.1/) as part of the [September 22nd security release](https://nodejs.org/en/blog/vulnerability/september-2022-security-releases/)
 * Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
 * Meteor.callAsync method. [PR](https://github.com/meteor/meteor/pull/12196)
+* Added new Chakra-ui Skeleton. [PR](https://github.com/meteor/meteor/pull/12181)
+* Added new Solid Skeleton. [PR](https://github.com/meteor/meteor/pull/12186)
 
 #### Breaking Changes
 N/A
@@ -75,7 +90,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this
 
 For making this great framework even better!
 
-## v2.7.3, 2022-05-31
+## v2.7.3, 2022-05-3
 
 #### Highlights
 * `accounts-passwordless@2.1.2`:
@@ -359,7 +374,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 #### Highlights
 
 * Fixed 2.5.7 MongoDB error
-* Patch release to update Node and npm versions.
+* Patch release to update Node to version 14.19.3 and npm version to 6.14.17.
 
 #### Breaking Changes
 
