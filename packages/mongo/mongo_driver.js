@@ -205,7 +205,7 @@ MongoConnection = function (url, options) {
   }
 };
 
-MongoConnection.prototype.close = function() {
+MongoConnection.prototype._close = async function() {
   var self = this;
 
   if (! self.db)
@@ -215,12 +215,16 @@ MongoConnection.prototype.close = function() {
   var oplogHandle = self._oplogHandle;
   self._oplogHandle = null;
   if (oplogHandle)
-    oplogHandle.stop();
+    await oplogHandle.stop();
 
   // Use Future.wrap so that errors get thrown. This happens to
   // work even outside a fiber since the 'close' method is not
   // actually asynchronous.
-  Future.wrap(_.bind(self.client.close, self.client))(true).wait();
+  await self.client.close();
+};
+
+MongoConnection.prototype.close = function () {
+  return Meteor._isFibersEnabled ? Promise.await(this._close()) : this._close();
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -1495,22 +1499,20 @@ Object.assign(MongoConnection.prototype, {
     // Find a matching ObserveMultiplexer, or create a new one. This next block is
     // guaranteed to not yield (and it doesn't call anything that can observe a
     // new query), so no other calls to this function can interleave with it.
-    Meteor._noYieldsAllowed(function () {
-      if (_.has(self._observeMultiplexers, observeKey)) {
-        multiplexer = self._observeMultiplexers[observeKey];
-      } else {
-        firstHandle = true;
-        // Create a new ObserveMultiplexer.
-        multiplexer = new ObserveMultiplexer({
-          ordered: ordered,
-          onStop: function () {
-            delete self._observeMultiplexers[observeKey];
-            observeDriver.stop();
-          }
-        });
-        self._observeMultiplexers[observeKey] = multiplexer;
-      }
-    });
+    if (_.has(self._observeMultiplexers, observeKey)) {
+      multiplexer = self._observeMultiplexers[observeKey];
+    } else {
+      firstHandle = true;
+      // Create a new ObserveMultiplexer.
+      multiplexer = new ObserveMultiplexer({
+        ordered: ordered,
+        onStop: function () {
+          delete self._observeMultiplexers[observeKey];
+          return observeDriver.stop();
+        }
+      });
+      self._observeMultiplexers[observeKey] = multiplexer;
+    }
 
     var observeHandle = new ObserveHandle(multiplexer,
         callbacks,

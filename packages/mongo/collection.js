@@ -465,7 +465,7 @@ Object.assign(Mongo.Collection, {
 
     // register stop callback (expects lambda w/ no args).
     sub.onStop(function() {
-      observeHandle.stop();
+      return observeHandle.stop();
     });
 
     // return the observeHandle in case it needs to be stopped early

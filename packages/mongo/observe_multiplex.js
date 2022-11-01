@@ -129,7 +129,7 @@ ObserveMultiplexer = class {
   // all handles. "ready" must have already been called on this multiplexer.
   onFlush(cb) {
     var self = this;
-    this._queue.queueTask(async function () {
+    return this._queue.queueTask(async function () {
       if (!self._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
