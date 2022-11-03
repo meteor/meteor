@@ -1,4 +1,4 @@
-## NEXT, 2022-XX-XX
+## 2.9, 2022-XX-XX
 
 ### Highlights
 
@@ -8,6 +8,19 @@
 #### Migration Steps
 
 #### Meteor Version Release
+
+
+## 2.8.1, Unreleased
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `facebook-oauth@1.12.0`
+  - Updated default version of Facebook GraphAPI to v15
 
 ## v2.8, 2022-10-19
 
@@ -88,7 +101,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this
 
 For making this great framework even better!
 
-## v2.7.3, 2022-05-31
+## v2.7.3, 2022-05-3
 
 #### Highlights
 * `accounts-passwordless@2.1.2`:

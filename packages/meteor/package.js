@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.10.1'
+  version: '1.10.1-beta280.2'
 });
 
 Package.registerBuildPlugin({
@@ -33,6 +33,7 @@ Package.onUse(function (api) {
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
   api.addFiles('errors.js', ['client', 'server']);
+  api.addFiles('asl-helpers.js', 'server');
   api.addFiles('fiber_helpers.js', 'server');
   api.addFiles('fiber_stubs_client.js', 'client');
   api.addFiles('startup_client.js', ['client']);

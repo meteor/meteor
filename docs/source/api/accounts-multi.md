@@ -315,6 +315,15 @@ Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
   }
 })
 ```
+{% apibox "AccountsServer#registerLoginHandler" %}
+
+Use this to register your own custom authentication method. This is also used by all of the other inbuilt accounts packages to integrate with the accounts system.
+
+There can be multiple login handlers that are registered. When a login request is made, it will go through all these handlers to find its own handler.
+
+The registered handler callback is called with a single argument, the `options` object which comes from the login method. For example, if you want to login with a plaintext password, `options` could be `{ user: { username: <username> }, password: <password> }`,or `{ user: { email: <email> }, password: <password> }`.
+
+The login handler should return `undefined` if it's not going to handle the login request or else the login result object.
 
 <h2 id="accounts_rate_limit">Rate Limiting</h2>
 

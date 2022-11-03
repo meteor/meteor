@@ -1,4 +1,4 @@
-var crypto = Npm.require("crypto");
+import { createHash } from "crypto";
 
 WebAppHashing = {};
 
@@ -13,13 +13,11 @@ WebAppHashing = {};
 
 WebAppHashing.calculateClientHash =
   function (manifest, includeFilter, runtimeConfigOverride) {
-  var hash = crypto.createHash('sha1');
+  var hash = createHash('sha1');
 
   // Omit the old hashed client values in the new hash. These may be
   // modified in the new boilerplate.
-  var runtimeCfg = _.omit(__meteor_runtime_config__,
-    ['autoupdateVersion', 'autoupdateVersionRefreshable',
-     'autoupdateVersionCordova']);
+  var { autoupdateVersion, autoupdateVersionRefreshable, autoupdateVersionCordova, ...runtimeCfg } = __meteor_runtime_config__;
 
   if (runtimeConfigOverride) {
     runtimeCfg = runtimeConfigOverride;
@@ -27,7 +25,7 @@ WebAppHashing.calculateClientHash =
 
   hash.update(JSON.stringify(runtimeCfg, 'utf8'));
 
-  _.each(manifest, function (resource) {
+  manifest.forEach(function (resource) {
       if ((! includeFilter || includeFilter(resource.type, resource.replaceable)) &&
           (resource.where === 'client' || resource.where === 'internal')) {
       hash.update(resource.path);
@@ -39,7 +37,7 @@ WebAppHashing.calculateClientHash =
 
 WebAppHashing.calculateCordovaCompatibilityHash =
   function(platformVersion, pluginVersions) {
-  const hash = crypto.createHash('sha1');
+  const hash = createHash('sha1');
 
   hash.update(platformVersion);
 
