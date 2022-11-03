@@ -1,15 +1,32 @@
-## v2.8, 2022-08-XX
+## 2.8.1, Unreleased
+
+#### Highlights
+
+#### Breaking Changes
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `facebook-oauth@1.12.0`
+  - Updated default version of Facebook GraphAPI to v15
+
+
+
+## v2.8, 2022-10-19
 
 #### Highlights
 * New MongoDB Package Async API. [PR](https://github.com/meteor/meteor/pull/12028)
-* Node update to [v14.20.0](https://nodejs.org/en/blog/release/v14.20.0/) as part of the [July 7th security release](https://nodejs.org/en/blog/vulnerability/july-2022-security-releases/)
+* Node update to [v14.20.1](https://nodejs.org/en/blog/release/v14.20.1/) as part of the [September 22nd security release](https://nodejs.org/en/blog/vulnerability/september-2022-security-releases/)
 * Update MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12097)
+* Meteor.callAsync method. [PR](https://github.com/meteor/meteor/pull/12196)
+* Added new Chakra-ui Skeleton. [PR](https://github.com/meteor/meteor/pull/12181)
+* Added new Solid Skeleton. [PR](https://github.com/meteor/meteor/pull/12186)
 
 #### Breaking Changes
 N/A
 
 #### Migration Steps
-Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.app/2.8-migration.html) for this version.
+Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this version.
 
 #### Meteor Version Release
 * `modules@0.19.0`:
@@ -32,6 +49,7 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
   - Refactoring/Remove unused imports from tools folder. [PR](https://github.com/meteor/meteor/pull/12084).
   - Fix problem when publishing async methods. [PR](https://github.com/meteor/meteor/pull/12152).
   - Update skeletons Apollo[PR](https://github.com/meteor/meteor/pull/12091) and other skeletons [PR](https://github.com/meteor/meteor/pull/12099)
+  - Added callAsync method for calling async methods [PR](https://github.com/meteor/meteor/pull/12196).
 * `meteor-installer@2.7.5`:
   - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
 * `npm-mongo@4.9.0`:
@@ -73,7 +91,7 @@ Read our [Migration Guide](https://deploy-preview-12057--meteor-guide.netlify.ap
 
 For making this great framework even better!
 
-## v2.7.3, 2022-05-31
+## v2.7.3, 2022-05-3
 
 #### Highlights
 * `accounts-passwordless@2.1.2`:
@@ -357,7 +375,7 @@ Read our [Migration Guide](https://guide.meteor.com/2.6-migration.html) for this
 #### Highlights
 
 * Fixed 2.5.7 MongoDB error
-* Patch release to update Node and npm versions.
+* Patch release to update Node to version 14.19.3 and npm version to 6.14.17.
 
 #### Breaking Changes
 
@@ -666,7 +684,7 @@ This version should be ignored. Proceed to 2.5.5 above.
 * Typescript updated to [v4.3.5](https://github.com/Microsoft/TypeScript/releases/tag/v4.3.5)
 * Email package now allows setting `Email.customTransport` to override sending method.
 * Use `createIndex` instead of `_ensureIndex` to align with new MongoDB naming.
-* Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG.md#v300)
+* Apollo skeleton has been upgraded for [Apollo server v3](https://github.com/apollographql/apollo-server/blob/main/CHANGELOG_historical.md#v300)
 * `reify` has been updated to v0.22.2 which reduces the overhead of `import` statements and some uses of `export ... from`, especially when a module is imported a large number of times or re-exports a large number of exports from other modules. PRs [1](https://github.com/benjamn/reify/pull/246), [2](https://github.com/benjamn/reify/pull/291)
 * Meteor NPM installer is [now available for all platforms](https://github.com/meteor/meteor/pull/11590).
 * DDP server now allows you to set publication strategies for your publications to control mergebox behavior
@@ -1036,7 +1054,7 @@ This version should be ignored. Proceed to 2.5.5 above.
     - The undocumented environment variable `DDP_DEFAULT_CONNECTION_URL` behavior has changed. Setting `DDP_DEFAULT_CONNECTION_URL` when running the server (development: `meteor run` or production: `node main.js`) sets the default DDP server value for meteor.  But this did not work for `cordova` apps.  Now you can define the `cordova` app default DDP server value by setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`).
     - Skeletons dependencies updated to latest version
     - Svelte skeleton now has HMR
-    - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-only)
+    - New deploy option: `--build-only`. Helpful if you want to build first and after some validations proceeding with the upload and deploy. [Read more](https://galaxy-guide.meteor.com/deploy-command-line.html#cache-only)
     - Improved watched system to properly rebuild `client` even when a file is outside of `client` or `imports` folders. See [PR](https://github.com/meteor/meteor/pull/11474) for details.
     - Fix an issue when `App.appendToConfig` crashed Cordova build.
     - Reify compiler now uses cache in runtime. [Read more](https://github.com/meteor/meteor/pull/11400)
@@ -1524,7 +1542,7 @@ N/A
 
 * `meteor create --vue` is now available thanks to [@chris-visser](https://github.com/chris-visser). PR [#11086](https://github.com/meteor/meteor/pull/11086)
 
-* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://cloud-guide.meteor.com/deploy-guide.html#cache-build).
+* `--cache-build` option is now available on `meteor deploy` command and you can use it safely all the time if you are using a Git repository to run your deploy. This is helpful if your upload is failing then you can retry just the upload and also if you deploy the same bundle to multiple environments. [Read more](https://galaxy-guide.meteor.com/deploy-command-line.html#cache-build)
 
 * Multiple optimizations in build performance, many of them for Windows thanks to [@zodern](https://github.com/zodern). PRs [#10838](https://github.com/meteor/meteor/pull/10838), [#11114](https://github.com/meteor/meteor/pull/11114), [#11115](https://github.com/meteor/meteor/pull/11115), [#11102](https://github.com/meteor/meteor/pull/11102), [#10839](https://github.com/meteor/meteor/pull/10839)
 
