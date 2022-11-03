@@ -1,3 +1,15 @@
+## 2.9, 2022-XX-XX
+
+### Highlights
+
+#### Breaking Changes
+* Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+
 ## 2.8.1, Unreleased
 
 #### Highlights
@@ -9,7 +21,6 @@
 #### Meteor Version Release
 * `facebook-oauth@1.12.0`
   - Updated default version of Facebook GraphAPI to v15
-
 
 ## v2.8, 2022-10-19
 
