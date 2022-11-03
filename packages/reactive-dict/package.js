@@ -9,7 +9,7 @@ Package.onUse(function (api) {
   api.use(['mongo', 'reload'], { weak: true });
   api.mainModule('migration.js');
   api.export('ReactiveDict');
-  api.addAssets('reactive-dict.d.ts', ['client', 'server']);
+  api.addAssets('reactive-dict.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

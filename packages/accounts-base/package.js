@@ -49,7 +49,7 @@ Package.onUse(api => {
   api.mainModule('server_main.js', 'server');
   api.mainModule('client_main.js', 'client');
 
-  api.addAssets('accounts-base.d.ts', ['client', 'server']);
+  api.addAssets('accounts-base.d.ts', 'server');
 });
 
 Package.onTest(api => {

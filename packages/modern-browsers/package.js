@@ -10,7 +10,7 @@ Package.describe({
 Package.onUse(function(api) {
   api.use('modules');
   api.mainModule('modern.js', 'server');
-  api.addAssets('modern.d.ts', ['client', 'server']);
+  api.addAssets('modern.d.ts', 'server');
 });
 
 Package.onTest(function(api) {

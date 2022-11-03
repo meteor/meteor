@@ -10,5 +10,5 @@ Package.onUse(function(api) {
   api.export('ServiceConfiguration');
   api.addFiles('service_configuration_common.js', ['client', 'server']);
   api.addFiles('service_configuration_server.js', 'server');
-  api.addAssets('service-configuration.d.ts', ['client', 'server']);
+  api.addAssets('service-configuration.d.ts', 'server');
 });

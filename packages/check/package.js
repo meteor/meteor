@@ -7,7 +7,7 @@ Package.onUse(api => {
   api.use('ecmascript');
   api.use('ejson');
 
-  api.addAssets('check.d.ts', ['client', 'server']);
+  api.addAssets('check.d.ts', 'server');
 
   api.mainModule('match.js');
 

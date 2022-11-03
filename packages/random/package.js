@@ -8,7 +8,7 @@ Package.onUse(function (api) {
   api.export('Random');
   api.mainModule('main_client.js', 'client');
   api.mainModule('main_server.js', 'server');
-  api.addAssets('random.d.ts', ['client', 'server']);
+  api.addAssets('random.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

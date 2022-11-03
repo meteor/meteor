@@ -28,7 +28,7 @@ Package.onUse(function (api) {
   // objects, not as arrays.  Search for looksLikeArray.
   api.addFiles(['pre.js', 'underscore.js', 'post.js']);
 
-  api.addAssets('underscore.d.ts', ['client', 'server']);
+  api.addAssets('underscore.d.ts', 'server');
 });
 
 
