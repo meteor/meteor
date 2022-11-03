@@ -2509,6 +2509,112 @@ main.registerCommand({
 
 
 ///////////////////////////////////////////////////////////////////////////////
+// generate
+///////////////////////////////////////////////////////////////////////////////
+
+
+// Examples of generate:
+//  meteor generate --collection posts -> api/posts/collection.js => Posts
+//  meteor generate --methods posts -> api/posts/methods.js => Posts
+//  meteor generate posts ^^ same as above
+
+main.registerCommand({
+  name: 'generate',
+  maxArgs: 1,
+  minArgs: 1,
+  options: {
+    path: { type: String },
+  },
+  pretty: false,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  const { args, appDir } = options;
+  /**
+   * @type{string}
+   */
+  const scaffoldName = args[0];
+
+  // get directory where we will place our files
+  const scaffoldPath = options.path ||`${ appDir }/imports/api/${ scaffoldName }`;
+
+  if (scaffoldName.includes('-')) throw new main.ShowUsage;
+
+  if (scaffoldName.includes('/')) throw new main.ShowUsage;
+
+  const allNonWordRegex = /\W/g;
+  if (allNonWordRegex.test(scaffoldName)) throw new main.ShowUsage;
+
+  const getFilesInDir = (appDir) => {
+    const appPath = files.pathResolve(appDir);
+    return files.readdirNoDots(appPath);
+  }
+
+  const getExtension = () => {
+    const rootFiles = getFilesInDir(appDir);
+    if (rootFiles.includes('tsconfig.json')) return 'ts'
+    else return 'js'
+  }
+
+  /**
+   * @param str{string}
+   * @returns {string}
+   */
+  const toPascalCase = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+
+
+  /**
+   *
+   * @param name {string}
+   */
+  const transformName = (name) => {
+    return name.replace(/\$\$name\$\$|\$\$UpperName\$\$/g, function (substring, args) {
+      if (substring === '$$name$$') return scaffoldName;
+      if (substring === '$$UpperName$$') return toPascalCase(scaffoldName);
+    })
+  }
+
+
+  /// Program
+
+  const extension = getExtension()
+  const assetsPath = () => {
+    return files.pathJoin(
+      __dirnameConverted,
+      '..',
+      'static-assets',
+      `scaffolds-${ extension }`)
+  }
+  // create directory
+  const isOk = files.mkdir_p(scaffoldPath);
+  // Remember to write that code 2 means that something went wrong on creating the folder
+  if (!isOk) return 2;
+  files.cp_r(assetsPath(), files.pathResolve(scaffoldPath), {
+    transformFilename: function (f) {
+      return transformName(f);
+    },
+    transformContents: function (contents, file) {
+      return transformName(contents.toString());
+    }
+  })
+  // TODO: add to imports to main.js
+  // before get meteor.mainModule.server string from package.json
+  // get from package.json
+
+  const mainJsPath = files.pathJoin(appDir, 'server', 'main.js');
+  const mainJs = files.readFile(mainJsPath);
+  const mainJsLines = mainJs.toString().split('\n');
+  const importLine = options.path
+    ? `import ${options.path}/${scaffoldName}';`
+    : `import '/imports/api/${ scaffoldName }';`
+  const mainJsFile = [importLine, ...mainJsLines].join('\n');
+  files.writeFile(mainJsPath, mainJsFile);
+
+
+  return 0;
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
 // admin get-machine
 ///////////////////////////////////////////////////////////////////////////////
 
