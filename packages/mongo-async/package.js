@@ -85,7 +85,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use('mongo');
+  api.use('mongo-async');
   api.use('check');
   api.use('ecmascript');
   api.use('npm-mongo', 'server');

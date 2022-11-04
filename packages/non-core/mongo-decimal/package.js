@@ -15,7 +15,11 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use('mongo');
+  if (!process.env.DISABLE_FIBERS) {
+    api.use('mongo');
+  } else {
+    api.use('mongo-async');
+  }
   api.use('mongo-decimal');
   api.use('insecure');
   api.use(['tinytest']);

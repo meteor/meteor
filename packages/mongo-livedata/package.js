@@ -4,5 +4,9 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.imply("mongo");
+  if (!process.env.DISABLE_FIBERS) {
+    api.imply('mongo');
+  } else {
+    api.imply('mongo-async');
+  }
 });

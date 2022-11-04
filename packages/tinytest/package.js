@@ -10,9 +10,13 @@ Package.onUse(function (api) {
     'underscore',
     'random',
     'ddp',
-    'mongo',
     'check'
   ]);
+  if (!process.env.DISABLE_FIBERS) {
+    api.use('mongo');
+  } else {
+    api.use('mongo-async');
+  }
 
   api.mainModule('tinytest_client.js', 'client');
   api.mainModule('tinytest_server.js', 'server');

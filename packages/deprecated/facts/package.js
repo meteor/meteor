@@ -7,8 +7,12 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use(['underscore'], ['client', 'server']);
-  api.use(['templating@1.2.13', 'mongo', 'ddp'], ['client']);
-
+  api.use(['templating@1.2.13', 'ddp'], ['client']);
+  if (!process.env.DISABLE_FIBERS) {
+    api.use('mongo', ['client', 'server']);
+  } else {
+    api.use('mongo-async', ['client', 'server']);
+  }
   // Detect whether autopublish is used.
   api.use('autopublish', 'server', {weak: true});
 

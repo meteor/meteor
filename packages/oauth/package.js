@@ -5,8 +5,12 @@ Package.describe({
 
 Package.onUse(api => {
   api.use(['check', 'ecmascript', 'localstorage', 'url']);
-
-  api.use(['routepolicy', 'webapp', 'mongo', 'service-configuration', 'logging'], 'server');
+  if (!process.env.DISABLE_FIBERS) {
+    api.use('mongo', 'server');
+  } else {
+    api.use('mongo-async', 'server');
+  }
+  api.use(['routepolicy', 'webapp', 'service-configuration', 'logging'], 'server');
 
   api.use(['reload', 'base64'], 'client');
 
