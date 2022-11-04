@@ -2537,11 +2537,9 @@ main.registerCommand({
   // get directory where we will place our files
   const scaffoldPath = options.path ||`${ appDir }/imports/api/${ scaffoldName }`;
 
-  if (scaffoldName.includes('-')) throw new main.ShowUsage;
-
   if (scaffoldName.includes('/')) throw new main.ShowUsage;
 
-  const allNonWordRegex = /\W/g;
+  const allNonWordRegex = /[^a-zA-Z0-9_-]/g; // all numbers and letters plus _ and -
   if (allNonWordRegex.test(scaffoldName)) throw new main.ShowUsage;
 
   const getFilesInDir = (appDir) => {
@@ -2556,11 +2554,14 @@ main.registerCommand({
   }
 
   /**
+   * if contains - turns into pascal
    * @param str{string}
    * @returns {string}
    */
-  const toPascalCase = (str) => str.charAt(0).toUpperCase() + str.slice(1);
-
+  const toPascalCase = (str) => {
+    if(!str.includes('-')) return str.charAt(0).toUpperCase() + str.slice(1);
+    else return str.split('-').map(toPascalCase).join('');
+  }
 
   /**
    *
@@ -2596,15 +2597,19 @@ main.registerCommand({
       return transformName(contents.toString());
     }
   })
-  // TODO: add to imports to main.js
-  // before get meteor.mainModule.server string from package.json
-  // get from package.json
 
-  const mainJsPath = files.pathJoin(appDir, 'server', 'main.js');
+  const packageJsonPath = files.pathJoin(appDir, 'package.json');
+  const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
+  const packageJson = JSON.parse(packageJsonFile);
+
+  const mainJsPath =
+    packageJson?.meteor?.mainModule?.server
+      ? files.pathJoin(appDir, packageJson.meteor.mainModule.server)
+      : files.pathJoin(appDir, 'server', 'main.js');
   const mainJs = files.readFile(mainJsPath);
   const mainJsLines = mainJs.toString().split('\n');
   const importLine = options.path
-    ? `import ${options.path}/${scaffoldName}';`
+    ? `import '${options.path}';`
     : `import '/imports/api/${ scaffoldName }';`
   const mainJsFile = [importLine, ...mainJsLines].join('\n');
   files.writeFile(mainJsPath, mainJsFile);
