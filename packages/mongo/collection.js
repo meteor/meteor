@@ -319,6 +319,13 @@ Object.assign(Mongo.Collection.prototype, {
   ///
   /// Main collection API
   ///
+  countDocuments(...args) {
+    return this._collection.countDocuments(...args);
+  },
+
+  estimatedDocumentCount(...args) {
+    return this._collection.estimatedDocumentCount(...args);
+  },
 
   _getFindSelector(args) {
     if (args.length == 0) return {};

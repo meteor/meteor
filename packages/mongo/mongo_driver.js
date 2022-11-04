@@ -819,6 +819,16 @@ MongoConnection.prototype.createIndex = function (collectionName, index,
   future.wait();
 };
 
+MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
+  const collection = this.rawCollection(collectionName);
+  return collection.countDocuments(...args);
+};
+
+MongoConnection.prototype.estimatedDocumentCount = function (collectionName, ...args) {
+  const collection = this.rawCollection(collectionName);
+  return collection.estimatedDocumentCount(...args);
+};
+
 MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 
 MongoConnection.prototype._dropIndex = function (collectionName, index) {
