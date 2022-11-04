@@ -60,6 +60,10 @@ async function main() {
     // ddp-common
 
     const p = await getPackages();
+    console.log('****************')
+    console.log('Will be updating the following packages:');
+    console.dir(p)
+    console.log('****************')
     const packages = p.concat(`packages/meteor-tool.${ type }`);
     args = packages
       .split('/')
@@ -88,8 +92,12 @@ async function main() {
       //   version: '1.2.3' <--- this is the line we want, we assure that it has a version in the previous if
       //});
       const [_, versionValue] = line.split(':');
-      const currentVersion = versionValue.trim().replace(',', '');
-      const semverVersion = semver.coerce(currentVersion);
+      const currentVersion = versionValue
+        .trim()
+        .replace(',', '')
+        .replace(/'/g, '')
+        .replace(/"/g, '');
+
 
       /**
        *
@@ -98,9 +106,9 @@ async function main() {
        */
       function incrementNewVersion(release) {
         if (release.includes('beta') || release.includes('rc')) {
-          return semver.inc(semverVersion, 'prerelease', release);
+          return semver.inc(currentVersion, 'prerelease', release);
         }
-        return semver.inc(semverVersion, release);
+        return semver.inc(currentVersion, release);
       }
 
       const newVersion = incrementNewVersion(release);
