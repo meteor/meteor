@@ -231,7 +231,7 @@ MongoConnection.prototype._close = async function() {
 };
 
 MongoConnection.prototype.close = function () {
-  return Meteor._isFibersEnabled ? Promise.await(this._close()) : this._close();
+  return this._close();
 };
 
 // Returns the Mongo Collection object; may yield.
@@ -786,7 +786,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
 _.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
-    return Meteor._isFibersEnabled ? Meteor.wrapAsync(self["_" + method]).apply(self, arguments) : Meteor.promisify(self[`_${method}`]).apply(self, arguments);
+    return Meteor.promisify(self[`_${method}`]).apply(self, arguments);
   };
 });
 
@@ -818,17 +818,7 @@ MongoConnection.prototype.find = function (collectionName, selector, options) {
     self, new CursorDescription(collectionName, selector, options));
 };
 
-MongoConnection.prototype._findOneFibers = function (collection_name, selector, options) {
-  var self = this;
-  if (arguments.length === 1)
-    selector = {};
-
-  options = options || {};
-  options.limit = 1;
-  return self.find(collection_name, selector, options).fetch()[0];
-};
-
-MongoConnection.prototype._findOneNoFibers = async function (collection_name, selector, options) {
+MongoConnection.prototype.findOne = async function (collection_name, selector, options) {
   var self = this;
   if (arguments.length === 1) {
     selector = {};
@@ -840,10 +830,6 @@ MongoConnection.prototype._findOneNoFibers = async function (collection_name, se
   const results = await self.find(collection_name, selector, options).fetch();
 
   return results[0];
-};
-
-MongoConnection.prototype.findOne = function (...args) {
-  return Meteor._isFibersEnabled ? this._findOneFibers(...args) : this._findOneNoFibers(...args);
 };
 
 // We'll actually design an index API later. For now, we just pass through to
@@ -1060,7 +1046,7 @@ MongoConnection.prototype._createSynchronousCursor = function(
     dbCursor = dbCursor.hint(cursorOptions.hint);
   }
 
-  return Meteor._isFibersEnabled ? new SynchronousCursor(dbCursor, cursorDescription, options, collection) : new AsynchronousCursor(dbCursor, cursorDescription, options, collection);
+  return new AsynchronousCursor(dbCursor, cursorDescription, options, collection);
 };
 
 /**
@@ -1473,14 +1459,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
 };
 
 Object.assign(MongoConnection.prototype, {
-  _observeChanges: function (
-      cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
-    return Meteor._isFibersEnabled
-        ? this._observeChangesFibers(cursorDescription, ordered, callbacks, nonMutatingCallbacks)
-        : this._observeChangesNoFibers(cursorDescription, ordered, callbacks, nonMutatingCallbacks);
-  },
-
-  _observeChangesNoFibers: async function (
+  _observeChanges: async function (
       cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
     var self = this;
 
@@ -1589,116 +1568,6 @@ Object.assign(MongoConnection.prototype, {
     return observeHandle;
   },
 
-  _observeChangesFibers: function (
-      cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
-    var self = this;
-
-    if (cursorDescription.options.tailable) {
-      return self._observeChangesTailable(cursorDescription, ordered, callbacks);
-    }
-
-    // You may not filter out _id when observing changes, because the id is a core
-    // part of the observeChanges API.
-    const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
-    if (fieldsOptions &&
-        (fieldsOptions._id === 0 ||
-            fieldsOptions._id === false)) {
-      throw Error("You may not observe a cursor with {fields: {_id: 0}}");
-    }
-
-    var observeKey = EJSON.stringify(
-        _.extend({ordered: ordered}, cursorDescription));
-
-    var multiplexer, observeDriver;
-    var firstHandle = false;
-
-    // Find a matching ObserveMultiplexer, or create a new one. This next block is
-    // guaranteed to not yield (and it doesn't call anything that can observe a
-    // new query), so no other calls to this function can interleave with it.
-    Meteor._noYieldsAllowed(function () {
-      if (_.has(self._observeMultiplexers, observeKey)) {
-        multiplexer = self._observeMultiplexers[observeKey];
-      } else {
-        firstHandle = true;
-        // Create a new ObserveMultiplexer.
-        multiplexer = new ObserveMultiplexer({
-          ordered: ordered,
-          onStop: function () {
-            delete self._observeMultiplexers[observeKey];
-            observeDriver.stop();
-          }
-        });
-        self._observeMultiplexers[observeKey] = multiplexer;
-      }
-    });
-
-    var observeHandle = new ObserveHandle(multiplexer,
-        callbacks,
-        nonMutatingCallbacks,
-    );
-
-    if (firstHandle) {
-      var matcher, sorter;
-      var canUseOplog = _.all([
-        function () {
-          // At a bare minimum, using the oplog requires us to have an oplog, to
-          // want unordered callbacks, and to not want a callback on the polls
-          // that won't happen.
-          return self._oplogHandle && !ordered &&
-              !callbacks._testOnlyPollCallback;
-        }, function () {
-          // We need to be able to compile the selector. Fall back to polling for
-          // some newfangled $selector that minimongo doesn't support yet.
-          try {
-            matcher = new Minimongo.Matcher(cursorDescription.selector);
-            return true;
-          } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
-            return false;
-          }
-        }, function () {
-          // ... and the selector itself needs to support oplog.
-          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-        }, function () {
-          // And we need to be able to compile the sort, if any.  eg, can't be
-          // {$natural: 1}.
-          if (!cursorDescription.options.sort)
-            return true;
-          try {
-            sorter = new Minimongo.Sorter(cursorDescription.options.sort);
-            return true;
-          } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
-            return false;
-          }
-        }], function (f) { return f(); });  // invoke each function
-
-      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
-      observeDriver = new driverClass({
-        cursorDescription: cursorDescription,
-        mongoHandle: self,
-        multiplexer: multiplexer,
-        ordered: ordered,
-        matcher: matcher,  // ignored by polling
-        sorter: sorter,  // ignored by polling
-        _testOnlyPollCallback: callbacks._testOnlyPollCallback
-      });
-
-      if (observeDriver._init) {
-        observeDriver._init();
-      }
-
-      // This field is only set for use in tests.
-      multiplexer._observeDriver = observeDriver;
-    }
-
-    // Blocks until the initial adds have been sent.
-    multiplexer.addHandleAndSendInitialAdds(observeHandle);
-
-    return observeHandle;
-  },
 });
 
 

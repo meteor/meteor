@@ -29,7 +29,7 @@ ObserveMultiplexer = class {
   }
 
   addHandleAndSendInitialAdds(handle) {
-    return Meteor._isFibersEnabled ? Promise.await(this._addHandleAndSendInitialAdds(handle)) : this._addHandleAndSendInitialAdds(handle);
+    return this._addHandleAndSendInitialAdds(handle);
   }
 
   async _addHandleAndSendInitialAdds(handle) {

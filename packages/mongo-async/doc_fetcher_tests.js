@@ -1,5 +1,3 @@
-var Fiber = Npm.require('fibers');
-var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
 
 testAsyncMulti("mongo-livedata - doc fetcher", [

@@ -412,37 +412,7 @@ Object.assign(Mongo.Collection.prototype, {
 });
 
 Object.assign(Mongo.Collection, {
-  _publishCursorFibers(cursor, sub, collection) {
-    var observeHandle = cursor.observeChanges(
-        {
-          added: function(id, fields) {
-            sub.added(collection, id, fields);
-          },
-          changed: function(id, fields) {
-            sub.changed(collection, id, fields);
-          },
-          removed: function(id) {
-            sub.removed(collection, id);
-          },
-        },
-        // Publications don't mutate the documents
-        // This is tested by the `livedata - publish callbacks clone` test
-        { nonMutatingCallbacks: true }
-    );
-
-    // We don't call sub.ready() here: it gets called in livedata_server, after
-    // possibly calling _publishCursor on multiple returned cursors.
-
-    // register stop callback (expects lambda w/ no args).
-    sub.onStop(function() {
-      observeHandle.stop();
-    });
-
-    // return the observeHandle in case it needs to be stopped early
-    return observeHandle;
-  },
-
-  async _publishCursorNoFibers(cursor, sub, collection) {
+  async _publishCursor(cursor, sub, collection) {
     var observeHandle = await cursor.observeChanges(
         {
           added: function(id, fields) {
@@ -470,12 +440,6 @@ Object.assign(Mongo.Collection, {
 
     // return the observeHandle in case it needs to be stopped early
     return observeHandle;
-  },
-
-  _publishCursor(cursor, sub, collection) {
-    return Meteor._isFibersEnabled
-        ? this._publishCursorFibers(cursor, sub, collection)
-        : this._publishCursorNoFibers(cursor, sub, collection);
   },
 
   // protect against dangerous selectors.  falsey and {_id: falsey} are both
@@ -705,7 +669,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
    */
   insert(doc, callback) {
-    return Meteor._isFibersEnabled ? this._insertSync(doc, callback) : this._insertAsync(doc, callback);
+    return this._insertAsync(doc, callback);
   },
 
   /**

@@ -78,9 +78,7 @@ OplogHandle = function (oplogUrl, dbName) {
   self._workerActive = false;
 
   const shouldAwait = self._startTailing();
-  if (Meteor._isFibersEnabled) {
-    Promise.await(shouldAwait);
-  }
+  //TODO Why wait?
 };
 
 Object.assign(OplogHandle.prototype, {
@@ -115,7 +113,7 @@ Object.assign(OplogHandle.prototype, {
     };
   },
   onOplogEntry: function (trigger, callback) {
-    return Meteor._isFibersEnabled ? Promise.await(this._onOplogEntry(trigger, callback)) : this._onOplogEntry(trigger, callback);
+    return this._onOplogEntry(trigger, callback);
   },
   // Register a callback to be invoked any time we skip oplog entries (eg,
   // because we are too far behind).
@@ -190,7 +188,7 @@ Object.assign(OplogHandle.prototype, {
   // XXX become convinced that this is actually safe even if oplogConnection
   // is some kind of pool
   waitUntilCaughtUp: function () {
-    return Meteor._isFibersEnabled ? Promise.await(this._waitUntilCaughtUp()) : this._waitUntilCaughtUp();
+    return this._waitUntilCaughtUp();
   },
 
   _startTailing: async function () {

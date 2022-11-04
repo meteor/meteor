@@ -676,7 +676,7 @@ _.extend(OplogObserveDriver.prototype, {
 
   // Yields!
   _runInitialQuery: function () {
-    return Meteor._isFibersEnabled ? Promise.await(this._runInitialQueryAsync()) : this._runInitialQueryAsync();
+    return this._runInitialQueryAsync();
   },
 
   // In various circumstances, we may just want to stop processing the oplog and
@@ -772,7 +772,7 @@ _.extend(OplogObserveDriver.prototype, {
 
   // Yields!
   _runQuery: function (options) {
-    return Meteor._isFibersEnabled ? Promise.await(this._runQueryAsync(options)) : this._runQueryAsync(options);
+    return this._runQueryAsync(options);
   },
 
   // Transitions to QUERYING and runs another query, or (if already in QUERYING)
@@ -959,7 +959,7 @@ _.extend(OplogObserveDriver.prototype, {
   },
   stop: function() {
     const self = this;
-    return Meteor._isFibersEnabled ? Promise.await(self._stop()) : self._stop();
+    return self._stop();
   },
 
   _registerPhaseChange: function (phase) {
