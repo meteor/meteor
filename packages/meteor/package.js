@@ -54,6 +54,8 @@ Package.onUse(function (api) {
   // People expect process.exit() to not swallow console output.
   // On Windows, it sometimes does, so we fix it for all apps and packages
   api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');
+
+  api.addAssets('meteor.d.ts', 'server');
 });
 
 Package.onTest(function (api) {
