@@ -412,22 +412,22 @@ Object.assign(Mongo.Collection.prototype, {
 });
 
 Object.assign(Mongo.Collection, {
-  _publishCursorFibers(cursor, sub, collection) {
+  _publishCursor(cursor, sub, collection) {
     var observeHandle = cursor.observeChanges(
-        {
-          added: function(id, fields) {
-            sub.added(collection, id, fields);
-          },
-          changed: function(id, fields) {
-            sub.changed(collection, id, fields);
-          },
-          removed: function(id) {
-            sub.removed(collection, id);
-          },
+      {
+        added: function(id, fields) {
+          sub.added(collection, id, fields);
         },
-        // Publications don't mutate the documents
-        // This is tested by the `livedata - publish callbacks clone` test
-        { nonMutatingCallbacks: true }
+        changed: function(id, fields) {
+          sub.changed(collection, id, fields);
+        },
+        removed: function(id) {
+          sub.removed(collection, id);
+        },
+      },
+      // Publications don't mutate the documents
+      // This is tested by the `livedata - publish callbacks clone` test
+      { nonMutatingCallbacks: true }
     );
 
     // We don't call sub.ready() here: it gets called in livedata_server, after
@@ -440,42 +440,6 @@ Object.assign(Mongo.Collection, {
 
     // return the observeHandle in case it needs to be stopped early
     return observeHandle;
-  },
-
-  async _publishCursorNoFibers(cursor, sub, collection) {
-    var observeHandle = await cursor.observeChanges(
-        {
-          added: function(id, fields) {
-            sub.added(collection, id, fields);
-          },
-          changed: function(id, fields) {
-            sub.changed(collection, id, fields);
-          },
-          removed: function(id) {
-            sub.removed(collection, id);
-          },
-        },
-        // Publications don't mutate the documents
-        // This is tested by the `livedata - publish callbacks clone` test
-        { nonMutatingCallbacks: true }
-    );
-
-    // We don't call sub.ready() here: it gets called in livedata_server, after
-    // possibly calling _publishCursor on multiple returned cursors.
-
-    // register stop callback (expects lambda w/ no args).
-    sub.onStop(function() {
-      return observeHandle.stop();
-    });
-
-    // return the observeHandle in case it needs to be stopped early
-    return observeHandle;
-  },
-
-  _publishCursor(cursor, sub, collection) {
-    return Meteor._isFibersEnabled
-        ? this._publishCursorFibers(cursor, sub, collection)
-        : this._publishCursorNoFibers(cursor, sub, collection);
   },
 
   // protect against dangerous selectors.  falsey and {_id: falsey} are both
@@ -533,7 +497,16 @@ Object.assign(Mongo.Collection.prototype, {
   // them. In the future maybe we should provide a flag to turn this
   // off.
 
-  _insertSync(doc, callback) {
+  /**
+   * @summary Insert a document in the collection.  Returns its unique _id.
+   * @locus Anywhere
+   * @method  insert
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
+   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
+   */
+  insert(doc, callback) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -541,17 +514,17 @@ Object.assign(Mongo.Collection.prototype, {
 
     // Make a shallow clone of the document, preserving its prototype.
     doc = Object.create(
-        Object.getPrototypeOf(doc),
-        Object.getOwnPropertyDescriptors(doc)
+      Object.getPrototypeOf(doc),
+      Object.getOwnPropertyDescriptors(doc)
     );
 
     if ('_id' in doc) {
       if (
-          !doc._id ||
-          !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
+        !doc._id ||
+        !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
       ) {
         throw new Error(
-            'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
+          'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
         );
       }
     } else {
@@ -588,8 +561,8 @@ Object.assign(Mongo.Collection.prototype, {
     };
 
     const wrappedCallback = wrapCallback(
-        callback,
-        chooseReturnValueFromCollectionResult
+      callback,
+      chooseReturnValueFromCollectionResult
     );
 
     if (this._isRemoteCollection()) {
@@ -612,100 +585,6 @@ Object.assign(Mongo.Collection.prototype, {
       }
       throw e;
     }
-  },
-
-  async _insertAsync(doc, callback) {
-    // Make sure we were passed a document to insert
-    if (!doc) {
-      throw new Error('insert requires an argument');
-    }
-
-    // Make a shallow clone of the document, preserving its prototype.
-    doc = Object.create(
-        Object.getPrototypeOf(doc),
-        Object.getOwnPropertyDescriptors(doc)
-    );
-
-    if ('_id' in doc) {
-      if (
-          !doc._id ||
-          !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
-      ) {
-        throw new Error(
-            'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
-        );
-      }
-    } else {
-      let generateId = true;
-
-      // Don't generate the id if we're the client and the 'outermost' call
-      // This optimization saves us passing both the randomSeed and the id
-      // Passing both is redundant.
-      if (this._isRemoteCollection()) {
-        const enclosing = DDP._CurrentMethodInvocation.get();
-        if (!enclosing) {
-          generateId = false;
-        }
-      }
-
-      if (generateId) {
-        doc._id = this._makeNewID();
-      }
-    }
-
-    // On inserts, always return the id that we generated; on all other
-    // operations, just return the result from the collection.
-    var chooseReturnValueFromCollectionResult = function(result) {
-      if (doc._id) {
-        return doc._id;
-      }
-
-      // XXX what is this for??
-      // It's some iteraction between the callback to _callMutatorMethod and
-      // the return value conversion
-      doc._id = result;
-
-      return result;
-    };
-
-    const wrappedCallback = wrapCallback(
-        callback,
-        chooseReturnValueFromCollectionResult
-    );
-
-    if (this._isRemoteCollection()) {
-      const result = this._callMutatorMethod('insert', [doc], wrappedCallback);
-      return chooseReturnValueFromCollectionResult(result);
-    }
-
-    // it's my collection.  descend into the collection object
-    // and propagate any exception.
-    try {
-      // If the user provided a callback and the collection implements this
-      // operation asynchronously, then queryRet will be undefined, and the
-      // result will be returned through the callback instead.
-      const result = await this._collection.insert(doc, wrappedCallback);
-      return chooseReturnValueFromCollectionResult(result);
-    } catch (e) {
-      if (callback) {
-        callback(e);
-        return null;
-      }
-      throw e;
-    }
-  },
-
-  /**
-   * @summary Insert a document in the collection.  Returns its unique _id.
-   * @locus Anywhere
-   * @method  insert
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {Object} doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
-   * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
-   */
-  insert(doc, callback) {
-    return Meteor._isFibersEnabled ? this._insertSync(doc, callback) : this._insertAsync(doc, callback);
   },
 
   /**
