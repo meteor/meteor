@@ -1,4 +1,4 @@
-import { $$UpperName$$Collection } from './collection';
+import { $$UpperName$$, $$UpperName$$Collection } from './collection';
 import {
   save$$UpperName$$,
   update$$UpperName$$,
@@ -7,7 +7,8 @@ import {
 } from './methods';
 
 export {
-$$UpperName$$Collection,
+  $$UpperName$$,
+  $$UpperName$$Collection,
   save$$UpperName$$,
   update$$UpperName$$,
   remove$$UpperName$$,
