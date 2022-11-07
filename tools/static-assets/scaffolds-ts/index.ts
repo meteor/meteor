@@ -1,16 +1,8 @@
-import { $$UpperName$$, $$UpperName$$Collection } from './collection';
-import {
-  save$$UpperName$$,
-  update$$UpperName$$,
-  remove$$UpperName$$,
-  find$$UpperName$$ById
-} from './methods';
+import { $$UpperName$$Type, $$UpperName$$Collection } from './collection';
+import * as $$UpperName$$ from './methods';
 
 export {
-  $$UpperName$$,
+  $$UpperName$$Type,
   $$UpperName$$Collection,
-  save$$UpperName$$,
-  update$$UpperName$$,
-  remove$$UpperName$$,
-  find$$UpperName$$ById
+  $$UpperName$$
 }
