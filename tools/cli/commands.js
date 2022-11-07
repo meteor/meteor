@@ -2542,9 +2542,14 @@ main.registerCommand({
   const allNonWordRegex = /[^a-zA-Z0-9_-]/g; // all numbers and letters plus _ and -
   if (allNonWordRegex.test(scaffoldName)) throw new main.ShowUsage;
 
+  /**
+   *
+   * @param appDir
+   * @returns {string[]}
+   */
   const getFilesInDir = (appDir) => {
     const appPath = files.pathResolve(appDir);
-    return files.readdirNoDots(appPath);
+    return files.readdir(appPath);
   }
 
   const getExtension = () => {
@@ -2576,6 +2581,8 @@ main.registerCommand({
 
 
   /// Program
+  const rootFiles = getFilesInDir(appDir);
+  if (!rootFiles.includes('.meteor')) throw new main.ShowUsage;
 
   const extension = getExtension()
   const assetsPath = () => {
@@ -2614,6 +2621,7 @@ main.registerCommand({
   const mainJsFile = [importLine, ...mainJsLines].join('\n');
   files.writeFile(mainJsPath, mainJsFile);
 
+  Console.info(`Created ${ scaffoldName } scaffold in ${ scaffoldPath }`);
 
   return 0;
 });
