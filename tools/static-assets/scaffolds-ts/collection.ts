@@ -1,6 +1,6 @@
 import { Mongo } from 'meteor/mongo';
 
-export type $$UpperName$$ = {
+export type $$UpperName$$Type = {
   _id?: string;
   name: string;
   createdAt: Date;
