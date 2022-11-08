@@ -1,25 +1,29 @@
 import { Meteor } from 'meteor/meteor';
-import { $$UpperName$$Collection } from './collection';
+import { check } from 'meteor/check';
+import { $$PascalName$$Collection } from './collection';
 
 export function create(data) {
-  return $$UpperName$$Collection.insertAsync({ ...data });
+  return $$PascalName$$Collection.insertAsync({ ...data });
 }
 
 export function update(_id, data) {
-  return $$UpperName$$Collection.updateAsync(_id, { ...data });
+  check(_id, String);
+  return $$PascalName$$Collection.updateAsync(_id, { ...data });
 }
 
 export function remove(_id) {
-  return $$UpperName$$Collection.removeAsync(_id);
+  check(_id, String);
+  return $$PascalName$$Collection.removeAsync(_id);
 }
 
 export function findById(_id) {
-  return $$UpperName$$Collection.findOneAsync(_id);
+  check(_id, String);
+  return $$PascalName$$Collection.findOneAsync(_id);
 }
 
 Meteor.methods({
-  '$$UpperName$$.create': create,
-  '$$UpperName$$.update': update,
-  '$$UpperName$$.remove': remove,
-  '$$UpperName$$.find': findById
+  '$$PascalName$$.create': create,
+  '$$PascalName$$.update': update,
+  '$$PascalName$$.remove': remove,
+  '$$PascalName$$.find': findById
 });
