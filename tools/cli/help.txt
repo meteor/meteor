@@ -842,19 +842,32 @@ environment variable. For example,
 `DEPLOY_HOSTNAME=eu-west-1.galaxy-deploy.meteor.com meteor list-sites`
 
 >>> generate
-Generate boilerplate code for a MeteorJS RPC api. It generates a collection with
-the name you pass and its methods. Is JS and TS compatible.
 
-Usage: meteor generate <collectionName> [options]
+Generate boilerplate code for a MeteorJS RPC api.
+It generates a collection with the name you pass and its methods.
+Is JS and TS compatible. No collection name
+runs the wizard.
 
-Generates a collection.ts|js file with the name you pass and its methods(insert,
-update, remove, find, findOne) in a methods.js|ts file.
+Usage: meteor generate [<collectionName>] [options]
+
+By default, generates a collection.ts|js file with the name you pass,
+methods(insert, update, remove, find, findOne) in a methods.js|ts file
+and publications.js|ts. If you just use the command without collectionName,
+it will generate run the wizard, asking you what is necessary.
+
+We do have as well the templatePath, wich uses the template you pass to generate
+the boilerplate code. You can use the default template or create your own.
+for replacing the names, we offer $$PascalName$$, $$camelName$$, $$name$$.
+
 This is a MeteorJS project command.
 
 Options:
-	--help, -h  Show this help message.
-	--path  	  A Path where the files will be generated. Default is the
-							imports/api directory.
+	--help          	Show help.
+	--path          	The path to the folder where the files will be generated. Default is the current folder.
+	--templatePath  	Path to the template file.
+	--methods       	Generate methods.
+	--publications  	Generate publications.
+
 
 >>> publish-release
 Publish a new meteor release to the package server.
