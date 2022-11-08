@@ -1,2 +1,2 @@
-export * from "./collection";
-export * from "./methods";
+export * from './collection';
+export * from './methods';
