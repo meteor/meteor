@@ -1,5 +1,7 @@
 var main = require('./main.js');
 var _ = require('underscore');
+const readline = require('readline')
+  .createInterface({ input: process.stdin, output: process.stdout });
 var files = require('../fs/files');
 var deploy = require('../meteor-services/deploy.js');
 var buildmessage = require('../utils/buildmessage.js');
@@ -12,6 +14,13 @@ var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
+const {
+  blue,
+  green,
+  purple,
+  red,
+  yellow
+} = require('../console/colors.ts');
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
@@ -2512,30 +2521,95 @@ main.registerCommand({
 // generate
 ///////////////////////////////////////////////////////////////////////////////
 
+/**
+ *
+ * @param question
+ * @returns {Promise<string>}
+ */
+const ask = async (question) => {
+  return new Promise((resolve, reject) => {
+    readline.question(question, (answer) => {
+      resolve(answer);
+    })
+  })
+}
+const sanitizeBoolAnswer = (string) => {
 
-// Examples of generate:
-//  meteor generate --collection posts -> api/posts/collection.js => Posts
-//  meteor generate --methods posts -> api/posts/methods.js => Posts
-//  meteor generate posts ^^ same as above
+  if (string.toLowerCase() === 'y' || string.toLowerCase() === 'yes') return true;
+
+  if (string.toLowerCase() === 'n' || string.toLowerCase() === 'no' ) return false;
+
+  Console.error('\x1b[31mYou must provide a valid answer\x1b[0m');
+  throw main.ShowUsage;
+}
 
 main.registerCommand({
   name: 'generate',
   maxArgs: 1,
-  minArgs: 1,
+  minArgs: 0,
   options: {
     path: { type: String },
+    methods: { type: Boolean },
+    publications: { type: Boolean },
+    templatePath : { type: String },
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   const { args, appDir } = options;
+
+
+
+  const setup = async (arg0) => {
+    if (arg0 === undefined) {
+      // the ANSI color chart is here: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+      const scaffoldName = await ask(`What is the name of your ${yellow('model')}? `);
+      if (scaffoldName === '') {
+        Console.error(red('You must provide a name for your model'));
+        throw main.ShowUsage;
+      }
+      const areMethods = await ask('there will be methods? [Y/n] ');
+      const methods = sanitizeBoolAnswer(areMethods);
+      const arePublications = await ask('there will be publications? [Y/n] ');
+      const publications = sanitizeBoolAnswer(arePublications);
+      const path = await ask(`Where it will be placed? press enter for ${yellow('./imports/api/')} `);
+      return {
+        isWizard: true,
+        scaffoldName,
+        path,
+        methods,
+        publications,
+      }
+    }
+
+    const {
+      path,
+      methods,
+      publications
+    } = options;
+
+    return {
+      isWizard: false,
+      scaffoldName: arg0,
+      path,
+      methods,
+      publications,
+    }
+  }
   /**
    * @type{string}
    */
-  const scaffoldName = args[0];
+  const {
+    isWizard,
+    scaffoldName,
+    path,
+    methods,
+    publications
+  } = await setup(args[0]);
+
 
   // get directory where we will place our files
-  const scaffoldPath = options.path ||`${ appDir }/imports/api/${ scaffoldName }`;
+  const scaffoldPath = path ||`${ appDir }/imports/api/${ scaffoldName }`;
 
   if (scaffoldName.includes('/')) throw new main.ShowUsage;
 
@@ -2567,25 +2641,52 @@ main.registerCommand({
     if(!str.includes('-')) return str.charAt(0).toUpperCase() + str.slice(1);
     else return str.split('-').map(toPascalCase).join('');
   }
-
+  const toCamelCase = (str) => {
+    if(!str.includes('-')) return str.charAt(0).toLowerCase() + str.slice(1);
+    else return str.split('-').map(toPascalCase).join('');
+  }
   /**
    *
    * @param name {string}
    */
   const transformName = (name) => {
-    return name.replace(/\$\$name\$\$|\$\$UpperName\$\$/g, function (substring, args) {
+    return name.replace(/\$\$name\$\$|\$\$PascalName\$\$|\$\$camelName\$\$/g, function (substring, args) {
       if (substring === '$$name$$') return scaffoldName;
-      if (substring === '$$UpperName$$') return toPascalCase(scaffoldName);
+      if (substring === '$$PascalName$$') return toPascalCase(scaffoldName);
+      if (substring === '$$camelName$$') return toCamelCase(scaffoldName);
     })
   }
 
-
+  /**
+   *
+   * @param content{string}
+   * @param fileName{string}
+   * @returns {string}
+   */
+  const removeUnusedLines = (content, fileName) => {
+    if (methods && publications) return content;
+    if (!methods && !publications) return content;
+    if(!fileName.startsWith('index')) return content;
+    return content
+      .split('\n')
+      .filter(line => {
+        if (!methods && line.includes('methods')) return false;
+        if (!publications && line.includes('publications')) return false;
+        return true;
+      })
+      .join('\n');
+  }
   /// Program
   const rootFiles = getFilesInDir(appDir);
   if (!rootFiles.includes('.meteor')) throw new main.ShowUsage;
 
   const extension = getExtension()
   const assetsPath = () => {
+    if (options.templatePath){
+      const templatePath = files.pathJoin(appDir, options.templatePath)
+      Console.info(`Using template that is in: ${purple(templatePath)}`)
+      return templatePath;
+    }
     return files.pathJoin(
       __dirnameConverted,
       '..',
@@ -2596,14 +2697,34 @@ main.registerCommand({
   const isOk = files.mkdir_p(scaffoldPath);
   // Remember to write that code 2 means that something went wrong on creating the folder
   if (!isOk) return 2;
+
   files.cp_r(assetsPath(), files.pathResolve(scaffoldPath), {
     transformFilename: function (f) {
       return transformName(f);
     },
-    transformContents: function (contents, file) {
-      return transformName(contents.toString());
+    transformContents: function (contents, fileName) {
+      const cleaned = removeUnusedLines(contents.toString(), fileName);
+      return transformName(cleaned);
     }
   })
+
+  const checkAndRemoveFiles = () => {
+    if (!methods)
+      files.unlink(files.pathJoin(scaffoldPath, `methods.${ extension }`));
+
+    if (!publications)
+      files.unlink(files.pathJoin(scaffoldPath, `publications.${ extension }`));
+  }
+
+  const xor = (a, b) => ( a || b ) && !( a && b );
+
+  if (!isWizard && xor(methods, publications)) {
+    checkAndRemoveFiles()
+  }
+
+  if (isWizard) {
+    checkAndRemoveFiles()
+  }
 
   const packageJsonPath = files.pathJoin(appDir, 'package.json');
   const packageJsonFile = files.readFile(packageJsonPath, 'utf8');
@@ -2615,13 +2736,13 @@ main.registerCommand({
       : files.pathJoin(appDir, 'server', 'main.js');
   const mainJs = files.readFile(mainJsPath);
   const mainJsLines = mainJs.toString().split('\n');
-  const importLine = options.path
-    ? `import '${options.path}';`
+  const importLine = path
+    ? `import '${path}';`
     : `import '/imports/api/${ scaffoldName }';`
   const mainJsFile = [importLine, ...mainJsLines].join('\n');
   files.writeFile(mainJsPath, mainJsFile);
 
-  Console.info(`Created ${ scaffoldName } scaffold in ${ scaffoldPath }`);
+  Console.info(`Created ${ blue(scaffoldName) } scaffold in ${ yellow(scaffoldPath) }`);
 
   return 0;
 });
