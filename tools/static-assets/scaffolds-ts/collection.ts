@@ -1,9 +1,9 @@
 import { Mongo } from 'meteor/mongo';
 
-export type $$UpperName$$ = {
+export type $$PascalName$$ = {
   _id?: string;
   name: string;
   createdAt: Date;
 }
 
-export const $$UpperName$$Collection = new Mongo.Collection<$$UpperName$$, $$UpperName$$>('$$name$$');
+export const $$PascalName$$Collection = new Mongo.Collection<$$PascalName$$, $$PascalName$$>('$$name$$');
