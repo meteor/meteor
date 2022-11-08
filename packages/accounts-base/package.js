@@ -24,11 +24,8 @@ Package.onUse(api => {
 
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away
-  if (!process.env.DISABLE_FIBERS) {
-    api.use('mongo', ['client', 'server']);
-  } else {
-     api.use('mongo-async', ['client', 'server']);
-  }
+  api.use('mongo', ['client', 'server']);
+
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
   api.use('blaze@2.5.0', 'client', { weak: true });

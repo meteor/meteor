@@ -7,13 +7,10 @@ Package.onUse(function (api) {
   api.use([
     'ecmascript',
     'facts-base',
+    'mongo',
     'templating@1.2.13'
   ], 'client');
-  if (!process.env.DISABLE_FIBERS) {
-    api.use('mongo', 'client');
-  } else {
-    api.use('mongo-async', 'client');
-  }
+
   api.imply('facts-base');
 
   api.addFiles('facts_ui.html', 'client');

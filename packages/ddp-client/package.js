@@ -40,6 +40,7 @@ Package.onUse((api) => {
 Package.onTest((api) => {
   api.use([
     'livedata',
+    'mongo',
     'test-helpers',
     'ecmascript',
     'underscore',
@@ -53,11 +54,6 @@ Package.onTest((api) => {
     'ddp-common',
     'check'
   ]);
-  if (!process.env.DISABLE_FIBERS) {
-    api.use('mongo', ['client', 'server']);
-  } else {
-    api.use('mongo-async', ['client', 'server']);
-  }
 
   api.addFiles('test/stub_stream.js');
   api.addFiles('test/livedata_connection_tests.js');

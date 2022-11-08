@@ -30,6 +30,8 @@ Package.onUse(function(api) {
     // DDP: Meteor's client/server protocol.
     'ddp',
     'livedata', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
+    // You want to keep your data somewhere? How about MongoDB?
+    'mongo',
     // Blaze: Reactive DOM!
     'blaze',
     'ui', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
@@ -48,12 +50,6 @@ Package.onUse(function(api) {
     // People like being able to clone objects.
     'ejson'
   ]);
-  // You want to keep your data somewhere? How about MongoDB?
-  if (!process.env.DISABLE_FIBERS) {
-    api.imply(['mongo']);
-  } else {
-    api.imply(['mongo-async']);
-  }
 
   // These are useful too!  But you don't have to see their exports
   // unless you want to.

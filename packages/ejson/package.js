@@ -11,12 +11,7 @@ Package.onUse(function onUse(api) {
 });
 
 Package.onTest(function onTest(api) {
-  api.use(['ecmascript', 'tinytest']);
-  if (!process.env.DISABLE_FIBERS) {
-    api.use('mongo');
-  } else {
-    api.use('mongo-async');
-  }
+  api.use(['ecmascript', 'tinytest', 'mongo']);
   api.use('ejson');
   api.mainModule('ejson_tests.js');
 });
