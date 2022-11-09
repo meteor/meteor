@@ -98,7 +98,7 @@ const checkPasswordAsync = async (user, password) => {
   return result;
 };
 
-const checkPassword = async (user, password) => {
+const checkPassword = (user, password) => {
   return Promise.await(checkPasswordAsync(user, password));
 };
 
