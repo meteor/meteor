@@ -2534,13 +2534,14 @@ const ask = async (question) => {
   })
 }
 const sanitizeBoolAnswer = (string) => {
+  if (string === '') return true;
 
   if (string.toLowerCase() === 'y' || string.toLowerCase() === 'yes') return true;
 
   if (string.toLowerCase() === 'n' || string.toLowerCase() === 'no' ) return false;
 
   Console.error('\x1b[31mYou must provide a valid answer\x1b[0m');
-  throw main.ShowUsage;
+  throw new main.ShowUsage;
 }
 
 main.registerCommand({
@@ -2566,11 +2567,11 @@ main.registerCommand({
       const scaffoldName = await ask(`What is the name of your ${yellow('model')}? `);
       if (scaffoldName === '') {
         Console.error(red('You must provide a name for your model'));
-        throw main.ShowUsage;
+        throw new main.ShowUsage;
       }
-      const areMethods = await ask('there will be methods? [Y/n] ');
+      const areMethods = await ask('there will be methods? press enter for Y [Y/n] ');
       const methods = sanitizeBoolAnswer(areMethods);
-      const arePublications = await ask('there will be publications? [Y/n] ');
+      const arePublications = await ask('there will be publications? press enter for Y [Y/n] ');
       const publications = sanitizeBoolAnswer(arePublications);
       const path = await ask(`Where it will be placed? press enter for ${yellow('./imports/api/')} `);
       return {
