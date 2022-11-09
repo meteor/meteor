@@ -2533,6 +2533,7 @@ const ask = async (question) => {
     })
   })
 }
+
 const sanitizeBoolAnswer = (string) => {
   if (string === '') return true;
 
@@ -2542,7 +2543,32 @@ const sanitizeBoolAnswer = (string) => {
 
   Console.error(red('You must provide a valid answer'));
   Console.error(yellow('it should be either (y)es or (n)o or just press enter to accept the default value'));
-  throw new main.ShowUsage;
+  throw new main.ExitWithCode(2);
+}
+
+/**
+ * simple verification for the name
+ * @param scaffoldName {string}
+ */
+const checkScaffoldName = (scaffoldName) => {
+  if (scaffoldName === '') {
+    Console.error(red('You must provide a name for your model.'));
+    Console.error(yellow('Model names should not be empty.'));
+    throw new main.ExitWithCode(2);
+  }
+
+  if (scaffoldName.includes('/')) {
+    Console.error(red('You must provide a valid name for your model.'));
+    Console.error(yellow('Model names should not contain slashes.'));
+    throw new main.ExitWithCode(2);
+  }
+
+  const allNonWordRegex = /[^a-zA-Z0-9_-]/g; // all numbers and letters plus _ and -
+  if (allNonWordRegex.test(scaffoldName)) {
+    Console.error(red('You must provide a valid name for your model.'));
+    Console.error(yellow('Model names should not contain special characters except _ and -'));
+    throw new main.ExitWithCode(2);
+  }
 }
 
 main.registerCommand({
@@ -2560,31 +2586,6 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
   const { args, appDir } = options;
-
-  /**
-   * simple verification fot the name
-   * @param scaffoldName {string}
-   */
-  const checkScaffoldName = (scaffoldName) => {
-    if (scaffoldName === '') {
-      Console.error(red('You must provide a name for your model.'));
-      Console.error(yellow('Names should not be empty.'));
-      throw new main.ShowUsage;
-    }
-
-    if (scaffoldName.includes('/')) {
-      Console.error(red('You must provide a valid name for your model.'));
-      Console.error(yellow('Names should not contain slashes.'));
-      throw new main.ShowUsage;
-    }
-
-    const allNonWordRegex = /[^a-zA-Z0-9_-]/g; // all numbers and letters plus _ and -
-    if (allNonWordRegex.test(scaffoldName)) {
-      Console.error(red('You must provide a valid name for your model.'));
-      Console.error(yellow('Names should not contain special characters except _ and -'));
-      throw new main.ShowUsage;
-    }
-  }
 
   const setup = async (arg0) => {
     if (arg0 === undefined) {
@@ -2660,7 +2661,7 @@ main.registerCommand({
     if (typeof replaceFn !== 'function') {
       Console.error(red('You must provide a valid function transformFilename.'));
       Console.error(yellow('The function should be named transformFilename and should be exported.'));
-      throw new main.ShowUsage;
+      throw new main.ExitWithCode(2);
     }
     return replaceFn(scaffoldName, filename);
   }
@@ -2674,7 +2675,7 @@ main.registerCommand({
     if (typeof replaceFn !== 'function') {
       Console.error(red('You must provide a valid function transformContents.'));
       Console.error(yellow('The function should be named transformContents and should be exported.'));
-      throw new main.ShowUsage;
+      throw new main.ExitWithCode(2);
     }
     return replaceFn(scaffoldName, contents, fileName);
   }
@@ -2729,7 +2730,7 @@ main.registerCommand({
   if (!rootFiles.includes('.meteor')) {
     Console.error(red('You must be in a Meteor project to run this command'));
     Console.error(yellow('You can create a new Meteor project with `meteor create`'));
-    throw new main.ShowUsage;
+    throw new main.ExitWithCode(2);
   }
 
   const extension = getExtension()
@@ -2750,7 +2751,7 @@ main.registerCommand({
   if (!isOk) {
     Console.error(red('Something went wrong when creating the folder'));
     Console.error(yellow('Do you have the correct permissions?'));
-    return 2;
+    throw new main.ExitWithCode(2);
   }
 
   files.cp_r(assetsPath(), files.pathResolve(scaffoldPath), {
