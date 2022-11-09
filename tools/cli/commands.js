@@ -2540,7 +2540,8 @@ const sanitizeBoolAnswer = (string) => {
 
   if (string.toLowerCase() === 'n' || string.toLowerCase() === 'no' ) return false;
 
-  Console.error('\x1b[31mYou must provide a valid answer\x1b[0m');
+  Console.error(red('You must provide a valid answer'));
+  Console.error(yellow('it should be either (y)es or (n)o or just press enter to accept the default value'));
   throw new main.ShowUsage;
 }
 
@@ -2560,18 +2561,39 @@ main.registerCommand({
 }, async function (options) {
   const { args, appDir } = options;
 
+  /**
+   * simple verification fot the name
+   * @param scaffoldName {string}
+   */
+  const checkScaffoldName = (scaffoldName) => {
+    if (scaffoldName === '') {
+      Console.error(red('You must provide a name for your model.'));
+      Console.error(yellow('Names should not be empty.'));
+      throw new main.ShowUsage;
+    }
+
+    if (scaffoldName.includes('/')) {
+      Console.error(red('You must provide a valid name for your model.'));
+      Console.error(yellow('Names should not contain slashes.'));
+      throw new main.ShowUsage;
+    }
+
+    const allNonWordRegex = /[^a-zA-Z0-9_-]/g; // all numbers and letters plus _ and -
+    if (allNonWordRegex.test(scaffoldName)) {
+      Console.error(red('You must provide a valid name for your model.'));
+      Console.error(yellow('Names should not contain special characters except _ and -'));
+      throw new main.ShowUsage;
+    }
+  }
 
   const setup = async (arg0) => {
     if (arg0 === undefined) {
       // the ANSI color chart is here: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
       const scaffoldName = await ask(`What is the name of your ${yellow('model')}? `);
-      if (scaffoldName === '') {
-        Console.error(red('You must provide a name for your model'));
-        throw new main.ShowUsage;
-      }
-      const areMethods = await ask('there will be methods? press enter for Y [Y/n] ');
+      checkScaffoldName(scaffoldName);
+      const areMethods = await ask(`There will be methods [${green('Y')}/${red('n')}]? press enter for ${green('yes')}  `);
       const methods = sanitizeBoolAnswer(areMethods);
-      const arePublications = await ask('there will be publications? press enter for Y [Y/n] ');
+      const arePublications = await ask(`There will be publications [${green('Y')}/${red('n')}]? press enter for ${green('yes')}  `);
       const publications = sanitizeBoolAnswer(arePublications);
       const path = await ask(`Where it will be placed? press enter for ${yellow('./imports/api/')} `);
       return {
@@ -2608,14 +2630,9 @@ main.registerCommand({
     publications
   } = await setup(args[0]);
 
-
+  checkScaffoldName(scaffoldName);
   // get directory where we will place our files
   const scaffoldPath = path ||`${ appDir }/imports/api/${ scaffoldName }`;
-
-  if (scaffoldName.includes('/')) throw new main.ShowUsage;
-
-  const allNonWordRegex = /[^a-zA-Z0-9_-]/g; // all numbers and letters plus _ and -
-  if (allNonWordRegex.test(scaffoldName)) throw new main.ShowUsage;
 
   /**
    *
@@ -2640,7 +2657,11 @@ main.registerCommand({
   const userTransformFilenameFn = (filename) => {
     const path = files.pathResolve(files.pathJoin(appDir, options.replaceFn));
     const replaceFn = require(path).transformFilename;
-    if (typeof replaceFn !== 'function') throw new main.ShowUsage;
+    if (typeof replaceFn !== 'function') {
+      Console.error(red('You must provide a valid function transformFilename.'));
+      Console.error(yellow('The function should be named transformFilename and should be exported.'));
+      throw new main.ShowUsage;
+    }
     return replaceFn(scaffoldName, filename);
   }
   /**
@@ -2650,7 +2671,11 @@ main.registerCommand({
   const userTransformContentsFn = (contents, fileName) => {
     const path = files.pathResolve(files.pathJoin(appDir, options.replaceFn));
     const replaceFn = require(path).transformContents;
-    if (typeof replaceFn !== 'function') throw new main.ShowUsage;
+    if (typeof replaceFn !== 'function') {
+      Console.error(red('You must provide a valid function transformContents.'));
+      Console.error(yellow('The function should be named transformContents and should be exported.'));
+      throw new main.ShowUsage;
+    }
     return replaceFn(scaffoldName, contents, fileName);
   }
 
@@ -2701,7 +2726,11 @@ main.registerCommand({
   }
   /// Program
   const rootFiles = getFilesInDir(appDir);
-  if (!rootFiles.includes('.meteor')) throw new main.ShowUsage;
+  if (!rootFiles.includes('.meteor')) {
+    Console.error(red('You must be in a Meteor project to run this command'));
+    Console.error(yellow('You can create a new Meteor project with `meteor create`'));
+    throw new main.ShowUsage;
+  }
 
   const extension = getExtension()
   const assetsPath = () => {
@@ -2718,8 +2747,11 @@ main.registerCommand({
   }
   // create directory
   const isOk = files.mkdir_p(scaffoldPath);
-  // Remember to write that code 2 means that something went wrong on creating the folder
-  if (!isOk) return 2;
+  if (!isOk) {
+    Console.error(red('Something went wrong when creating the folder'));
+    Console.error(yellow('Do you have the correct permissions?'));
+    return 2;
+  }
 
   files.cp_r(assetsPath(), files.pathResolve(scaffoldPath), {
     transformFilename: function (f) {
