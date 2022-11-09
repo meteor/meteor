@@ -2553,12 +2553,12 @@ main.registerCommand({
     methods: { type: Boolean },
     publications: { type: Boolean },
     templatePath : { type: String },
+    replaceFn : { type: String },
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
   const { args, appDir } = options;
-
 
 
   const setup = async (arg0) => {
@@ -2634,6 +2634,27 @@ main.registerCommand({
   }
 
   /**
+   *
+   * @returns {string}
+   */
+  const userTransformFilenameFn = (filename) => {
+    const path = files.pathResolve(files.pathJoin(appDir, options.replaceFn));
+    const replaceFn = require(path).transformFilename;
+    if (typeof replaceFn !== 'function') throw new main.ShowUsage;
+    return replaceFn(scaffoldName, filename);
+  }
+  /**
+   *
+   * @returns {string}
+   */
+  const userTransformContentsFn = (contents, fileName) => {
+    const path = files.pathResolve(files.pathJoin(appDir, options.replaceFn));
+    const replaceFn = require(path).transformContents;
+    if (typeof replaceFn !== 'function') throw new main.ShowUsage;
+    return replaceFn(scaffoldName, contents, fileName);
+  }
+
+  /**
    * if contains - turns into pascal
    * @param str{string}
    * @returns {string}
@@ -2646,6 +2667,7 @@ main.registerCommand({
     if(!str.includes('-')) return str.charAt(0).toLowerCase() + str.slice(1);
     else return str.split('-').map(toPascalCase).join('');
   }
+
   /**
    *
    * @param name {string}
@@ -2701,9 +2723,11 @@ main.registerCommand({
 
   files.cp_r(assetsPath(), files.pathResolve(scaffoldPath), {
     transformFilename: function (f) {
+      if (options.replaceFn) return userTransformFilenameFn(f);
       return transformName(f);
     },
     transformContents: function (contents, fileName) {
+      if (options.replaceFn) return userTransformContentsFn(contents.toString(), fileName);
       const cleaned = removeUnusedLines(contents.toString(), fileName);
       return transformName(cleaned);
     }
