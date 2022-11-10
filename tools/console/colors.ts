@@ -5,7 +5,7 @@ const purple: Color = (text) => `\x1b[35m${ text }\x1b[0m`;
 const green: Color = (text) => `\x1b[32m${ text }\x1b[0m`;
 const blue: Color = (text) => `\x1b[34m${ text }\x1b[0m`;
 
-export {
+exports.colors = {
   yellow,
   red,
   purple,
