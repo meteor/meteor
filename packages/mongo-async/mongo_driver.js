@@ -14,7 +14,6 @@ const util = require("util");
 
 /** @type {import('mongodb')} */
 var MongoDB = NpmModuleMongodb;
-var Future = Npm.require('fibers/future');
 import { DocFetcher } from "./doc_fetcher.js";
 import {
   ASYNC_CURSOR_METHODS,
@@ -22,6 +21,9 @@ import {
 } from "meteor/minimongo/constants";
 
 MongoInternals = {};
+
+// TODO remove after test
+MongoInternals.__packageName = 'mongo-async';
 
 MongoInternals.NpmModules = {
   mongodb: {
@@ -244,19 +246,15 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
   return self.db.collection(collectionName);
 };
 
-MongoConnection.prototype._createCappedCollection = function (
+MongoConnection.prototype._createCappedCollection = async function (
     collectionName, byteSize, maxDocuments) {
   var self = this;
 
   if (! self.db)
     throw Error("_createCappedCollection called before Connection created?");
 
-  var future = new Future();
-  self.db.createCollection(
-    collectionName,
-    { capped: true, size: byteSize, max: maxDocuments },
-    future.resolver());
-  future.wait();
+  await self.db.createCollection(collectionName,
+    { capped: true, size: byteSize, max: maxDocuments });
 };
 
 // This should be called synchronously with a write, to create a
@@ -834,29 +832,25 @@ MongoConnection.prototype.findOne = async function (collection_name, selector, o
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-MongoConnection.prototype.createIndex = function (collectionName, index,
+MongoConnection.prototype.createIndex = async function (collectionName, index,
                                                    options) {
   var self = this;
 
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
   var collection = self.rawCollection(collectionName);
-  var future = new Future;
-  var indexName = collection.createIndex(index, options, future.resolver());
-  future.wait();
+  var indexName = await collection.createIndex(index, options);
 };
 
 MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
 
-MongoConnection.prototype._dropIndex = function (collectionName, index) {
+MongoConnection.prototype._dropIndex = async function (collectionName, index) {
   var self = this;
 
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
-  var future = new Future;
-  var indexName = collection.dropIndex(index, future.resolver());
-  future.wait();
+  var indexName = await collection.dropIndex(index);
 };
 
 // CURSORS

@@ -23,8 +23,9 @@ Npm.strip({
 Package.onUse(function (api) {
   if (process.env.DISABLE_FIBERS) {
     api.use('mongo-async', ['server', 'client']);
-    Mongo = Package["mongo-async"];
     api.export("Mongo");
+    api.export('MongoInternals', 'server');
+    api.export('ObserveMultiplexer', 'server', {testOnly: true});
     return;
   }
   api.use('npm-mongo', 'server');
