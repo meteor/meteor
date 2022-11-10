@@ -778,7 +778,7 @@ Object.assign(Session.prototype, {
             const isThenable =
               resultOrThenable && typeof resultOrThenable.then === 'function';
             if (isThenable) {
-              result = Promise.await(resultOrThenable);
+              result = Meteor._isFibersEnabled ? Promise.await(resultOrThenable) : resultOrThenable;
             } else {
               result = resultOrThenable;
             }
