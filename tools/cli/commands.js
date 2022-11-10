@@ -20,7 +20,7 @@ const {
   purple,
   red,
   yellow
-} = require('../console/colors.ts');
+} = require('../console/colors.ts').colors;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
