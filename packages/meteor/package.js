@@ -36,6 +36,7 @@ Package.onUse(function (api) {
   api.addFiles('asl-helpers.js', 'server');
   api.addFiles('fiber_helpers.js', 'server');
   api.addFiles('fiber_stubs_client.js', 'client');
+  api.addFiles('asl-helpers-client.js', 'client');
   api.addFiles('startup_client.js', ['client']);
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);

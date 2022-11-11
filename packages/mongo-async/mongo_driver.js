@@ -1057,8 +1057,8 @@ MongoConnection.prototype._createSynchronousCursor = function(
  */
 class AsynchronousCursor {
   constructor(dbCursor, cursorDescription, options) {
-    this._cursor = dbCursor;
-    this._cursorDescription = cursorDescription
+    this._dbCursor = dbCursor;
+    this._cursorDescription = cursorDescription;
 
     this._selfForIteration = options.selfForIteration || this;
     if (options.useTransform && cursorDescription.options.transform) {
@@ -1079,7 +1079,7 @@ class AsynchronousCursor {
   // the Mongo->Meteor type replacement).
   async _rawNextObjectPromise() {
     try {
-      return this._cursor.next();
+      return this._dbCursor.next();
     } catch (e) {
       console.error(e);
     }
@@ -1158,14 +1158,14 @@ class AsynchronousCursor {
 
   _rewind() {
     // known to be synchronous
-    this._cursor.rewind();
+    this._dbCursor.rewind();
 
     this._visitedIds = new LocalCollection._IdMap;
   }
 
   // Mostly usable for tailable cursors.
   close() {
-    this._cursor.close();
+    this._dbCursor.close();
   }
 
   fetch() {
@@ -1178,7 +1178,7 @@ class AsynchronousCursor {
    *  `collection.countDocuments` instead.
    */
   count() {
-    return this._cursor.count();
+    return this._dbCursor.count();
   }
 
   // This method is NOT wrapped in Cursor.

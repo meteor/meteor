@@ -496,8 +496,7 @@ Object.assign(Mongo.Collection.prototype, {
   // generating their result until the database has acknowledged
   // them. In the future maybe we should provide a flag to turn this
   // off.
-
-  _insertSync(doc, callback) {
+  _insert(doc, callback) {
     // Make sure we were passed a document to insert
     if (!doc) {
       throw new Error('insert requires an argument');
@@ -539,6 +538,8 @@ Object.assign(Mongo.Collection.prototype, {
     // On inserts, always return the id that we generated; on all other
     // operations, just return the result from the collection.
     var chooseReturnValueFromCollectionResult = function(result) {
+      if (Meteor._isPromise(result)) return result;
+
       if (doc._id) {
         return doc._id;
       }
@@ -567,88 +568,15 @@ Object.assign(Mongo.Collection.prototype, {
       // If the user provided a callback and the collection implements this
       // operation asynchronously, then queryRet will be undefined, and the
       // result will be returned through the callback instead.
-      const result = this._collection.insert(doc, wrappedCallback);
-      return chooseReturnValueFromCollectionResult(result);
-    } catch (e) {
-      if (callback) {
-        callback(e);
-        return null;
-      }
-      throw e;
-    }
-  },
-
-  async _insertAsync(doc, callback) {
-    // Make sure we were passed a document to insert
-    if (!doc) {
-      throw new Error('insert requires an argument');
-    }
-
-    // Make a shallow clone of the document, preserving its prototype.
-    doc = Object.create(
-        Object.getPrototypeOf(doc),
-        Object.getOwnPropertyDescriptors(doc)
-    );
-
-    if ('_id' in doc) {
-      if (
-          !doc._id ||
-          !(typeof doc._id === 'string' || doc._id instanceof Mongo.ObjectID)
-      ) {
-        throw new Error(
-            'Meteor requires document _id fields to be non-empty strings or ObjectIDs'
-        );
-      }
-    } else {
-      let generateId = true;
-
-      // Don't generate the id if we're the client and the 'outermost' call
-      // This optimization saves us passing both the randomSeed and the id
-      // Passing both is redundant.
-      if (this._isRemoteCollection()) {
-        const enclosing = DDP._CurrentMethodInvocation.get();
-        if (!enclosing) {
-          generateId = false;
-        }
+      let result;
+      if (!!wrappedCallback) {
+        result = this._collection.insert(doc, wrappedCallback);
+      } else {
+        // If we don't have the callback, we assume the user is using the promise.
+        // We can't just pass this._collection.insert to the promisify because it would lose the context.
+        result = Meteor.promisify((cb) => this._collection.insert(doc, cb))();
       }
 
-      if (generateId) {
-        doc._id = this._makeNewID();
-      }
-    }
-
-    // On inserts, always return the id that we generated; on all other
-    // operations, just return the result from the collection.
-    var chooseReturnValueFromCollectionResult = function(result) {
-      if (doc._id) {
-        return doc._id;
-      }
-
-      // XXX what is this for??
-      // It's some iteraction between the callback to _callMutatorMethod and
-      // the return value conversion
-      doc._id = result;
-
-      return result;
-    };
-
-    const wrappedCallback = wrapCallback(
-        callback,
-        chooseReturnValueFromCollectionResult
-    );
-
-    if (this._isRemoteCollection()) {
-      const result = this._callMutatorMethod('insert', [doc], wrappedCallback);
-      return chooseReturnValueFromCollectionResult(result);
-    }
-
-    // it's my collection.  descend into the collection object
-    // and propagate any exception.
-    try {
-      // If the user provided a callback and the collection implements this
-      // operation asynchronously, then queryRet will be undefined, and the
-      // result will be returned through the callback instead.
-      const result = await this._collection.insert(doc, wrappedCallback);
       return chooseReturnValueFromCollectionResult(result);
     } catch (e) {
       if (callback) {
@@ -669,7 +597,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @param {Function} [callback] Optional.  If present, called with an error object as the first argument and, if no error, the _id as the second.
    */
   insert(doc, callback) {
-    return this._insertAsync(doc, callback);
+    return this._insert(doc, callback);
   },
 
   /**
@@ -762,7 +690,7 @@ Object.assign(Mongo.Collection.prototype, {
       return this._callMutatorMethod('remove', [selector], wrappedCallback);
     }
 
-    // it's my collection.  descend into the collection object
+    // it's my collection.  descend into the collection1 object
     // and propagate any exception.
     try {
       // If the user provided a callback and the collection implements this

@@ -103,7 +103,7 @@ class AsynchronousQueue {
     await this._scheduleRun();
   }
 
-  runTask(task) {
+  async runTask(task) {
     const handle = {
       task: Meteor.bindEnvironment(task, function(e) {
         Meteor._debug('Exception from task', e);
@@ -112,6 +112,9 @@ class AsynchronousQueue {
       name: task.name
     };
     this._taskHandles.push(handle);
+
+    // XXX: We should be doing this a different way.
+    await Meteor._sleepForMs(10);
     return this._scheduleRun();
   }
 
