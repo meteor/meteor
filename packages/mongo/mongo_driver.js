@@ -820,11 +820,13 @@ MongoConnection.prototype.createIndex = function (collectionName, index,
 };
 
 MongoConnection.prototype.countDocuments = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
   const collection = this.rawCollection(collectionName);
   return collection.countDocuments(...args);
 };
 
 MongoConnection.prototype.estimatedDocumentCount = function (collectionName, ...args) {
+  args = args.map(arg => replaceTypes(arg, replaceMeteorAtomWithMongo));
   const collection = this.rawCollection(collectionName);
   return collection.estimatedDocumentCount(...args);
 };
