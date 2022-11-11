@@ -66,6 +66,53 @@ _In case you want types in your app using the core packages types/zodern:types (
   - added types for package.
 * `facebook-oauth@1.12.0`
   - Updated default version of Facebook GraphAPI to v15
+* `facts-ui@1.0.1`
+  - removed underscore.
+* `fetch@0.1.2`
+  - added types for package.
+* `geojson-utils@1.0.11`
+  - removed underscore.
+* `hot-module-replacement@0.5.2`
+  - added types for package.
+* `meteor@1.10.2`
+  - added types for package.
+* `modern-browsers@0.1.9`
+  - added types for package.
+* `modules-runtime@0.13.2`
+  - added accurate error messages.
+* `modules-runtime-hot@0.14.1`
+  - added accurate error messages.
+* `mongo@1.16.1`
+  - added types for package.
+  - added true mongo binary
+* `npm-mongo@4.11.0`
+  - updated npm mongo version to match npm one.
+* `promise@0.13.0`
+  - added types for package.
+* `random@1.2.1`
+  - added types for package.
+* `reactive-dict@1.3.1`
+  - added types for package.
+* `reactive-dict@1.0.12`
+  - added types for package.
+* `server-render@0.4.1`
+  - added types for package.
+* `service-configuration@1.3.1`
+  - added types for package.
+* `session@1.2.1`
+  - added types for package.
+* `test-in-browser@1.3.1`
+  - removed underscore.
+* `tracker@1.2.1`
+  - added types for package.
+* `twitter-oauth@1.3.1`
+  - removed underscore.
+* `underscore@1.0.11`
+  - added types for package.
+* `webapp@1.13.2`
+  - added types for package.
+* `webapp-hashing@1.1.1`
+  - added types for package.
 
 ## v2.8, 2022-10-19
 
