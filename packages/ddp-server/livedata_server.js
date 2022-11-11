@@ -1,5 +1,7 @@
 DDPServer = {};
 
+var Fiber = Npm.require('fibers');
+
 // Publication strategies define how we handle data from published cursors at the collection level
 // This allows someone to:
 // - Choose a trade-off between client-server bandwidth and server memory usage
@@ -328,9 +330,9 @@ var Session = function (server, version, socket, options) {
   self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
-  Meteor._runAsync(function() {
+  Fiber(function () {
     self.startUniversalSubs();
-  });
+  }).run();
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
     // We no longer need the low level timeout because we have heartbeats.
@@ -555,10 +557,10 @@ Object.assign(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      Meteor._runAsync(function() {
+      Fiber(function () {
         self.heartbeat.messageReceived();
-      });
-    };
+      }).run();
+    }
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
@@ -582,7 +584,7 @@ Object.assign(Session.prototype, {
         return;
       }
 
-      function runHandlers() {
+      Fiber(function () {
         var blocked = true;
 
         var unblock = function () {
@@ -602,9 +604,7 @@ Object.assign(Session.prototype, {
         else
           self.sendError('Bad request', msg);
         unblock(); // in case the handler didn't already do it
-      }
-
-      Meteor._runAsync(runHandlers);
+      }).run();
     };
 
     processNext();
@@ -1177,21 +1177,15 @@ Object.assign(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      if (Meteor._isFibersEnabled) {
-        try {
-          res._publishCursor(self);
-        } catch (e) {
-          self.error(e);
-          return;
-        }
-        // _publishCursor only returns after the initial added callbacks have run.
-        // mark subscription as ready.
-        self.ready();
-      } else {
-        res._publishCursor(self).then(() => {
-          self.ready();
-        }).catch((e) => self.error(e));
+      try {
+        res._publishCursor(self);
+      } catch (e) {
+        self.error(e);
+        return;
       }
+      // _publishCursor only returns after the initial added callbacks have run.
+      // mark subscription as ready.
+      self.ready();
     } else if (_.isArray(res)) {
       // Check all the elements are cursors
       if (! _.all(res, isCursor)) {
@@ -1213,21 +1207,15 @@ Object.assign(Subscription.prototype, {
         collectionNames[collectionName] = true;
       };
 
-      if (Meteor._isFibersEnabled) {
-        try {
-          _.each(res, function (cur) {
-            cur._publishCursor(self);
-          });
-        } catch (e) {
-          self.error(e);
-          return;
-        }
-        self.ready();
-      } else {
-        Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
-          self.ready();
-        }).catch((e) => self.error(e));
+      try {
+        _.each(res, function (cur) {
+          cur._publishCursor(self);
+        });
+      } catch (e) {
+        self.error(e);
+        return;
       }
+      self.ready();
     } else if (res) {
       // Truthy values other than cursors or arrays are probably a
       // user mistake (possible returning a Mongo document via, say,
@@ -1504,11 +1492,9 @@ Server = function (options = {}) {
             sendError("Already connected", msg);
             return;
           }
-
-          Meteor._runAsync(function() {
+          Fiber(function () {
             self._handleConnect(socket, msg);
-          })
-
+          }).run();
           return;
         }
 
@@ -1525,9 +1511,9 @@ Server = function (options = {}) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        Meteor._runAsync(function() {
+        Fiber(function () {
           socket._meteorSession.close();
-        });
+        }).run();
       }
     });
   });
@@ -1705,9 +1691,9 @@ Object.assign(Server.prototype, {
         // self.sessions to change while we're running this loop.
         self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
-            Meteor._runAsync(function() {
+            Fiber(function() {
               session._startSubscription(handler);
-            });
+            }).run();
           }
         });
       }

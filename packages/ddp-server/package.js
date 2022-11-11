@@ -10,6 +10,11 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
+  if (process.env.DISABLE_FIBERS) {
+    api.use('ddp-server-async', 'server');
+    api.export('DDPServer', 'server');
+    return;
+  }
   api.use(['check', 'random', 'ejson', 'underscore',
            'retry', 'mongo-id', 'diff-sequence', 'ecmascript'],
           'server');
@@ -50,11 +55,7 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('ecmascript', ['client', 'server']);
   api.use('livedata', ['client', 'server']);
-  if (!process.env.DISABLE_FIBERS) {
-    api.use('mongo', ['client', 'server']);
-  } else {
-    api.use('mongo-async', ['client', 'server']);
-  }
+  api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
   api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo', 'reactive-var']);
 

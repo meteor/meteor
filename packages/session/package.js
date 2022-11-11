@@ -20,10 +20,6 @@ Package.onTest(function (api) {
   api.use('tinytest');
   api.use('session', 'client');
   api.use('tracker');
-  if (!process.env.DISABLE_FIBERS) {
-    api.use('mongo');
-  } else {
-    api.use('mongo-async');
-  }
+  api.use('mongo');
   api.addFiles('session_tests.js', 'client');
 });

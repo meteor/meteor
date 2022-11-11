@@ -11,7 +11,7 @@ Module.prototype.resolve = function (id) {
 
 require("@meteorjs/reify/lib/runtime").enable(Module.prototype);
 
-if (!!!process.env.DISABLE_FIBERS) {
+if (!process.env.DISABLE_FIBERS) {
   require("meteor-promise").makeCompatible(
       global.Promise = global.Promise ||
           require("promise/lib/es6-extensions"),

@@ -10,11 +10,7 @@ Package.onUse(api => {
   api.use('oauth', ['client', 'server']);
   api.use('check', 'server');
 
-  if (!process.env.DISABLE_FIBERS) {
-    api.use('mongo');
-  } else {
-    api.use('mongo-async');
-  }
+  api.use('mongo');
 
   api.export('OAuth1Binding', 'server');
   api.export('OAuth1Test', 'server', {testOnly: true});

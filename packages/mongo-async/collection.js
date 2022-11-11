@@ -12,7 +12,7 @@ import { normalizeProjection } from "./mongo_utils";
  * @namespace
  */
 Mongo = {};
-
+console.log('Using package: mongo-async');
 /**
  * @summary Constructor for a Collection
  * @locus Anywhere
