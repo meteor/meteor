@@ -13,6 +13,7 @@
 - Add docs for Accounts.registerLoginHandler by [shivam1646](https://github.com/shivam1646)
 - Updated MongoDB driver to 4.11 by [radekmie](https://github.com/radekmie)
 - Show port in restart message by [harryadel](https://github.com/harryadel)
+- In the client, don't wait if the stub doesn't return a promise by [denihs](https://github.com/denihs)
 - The rest of type definitions for core packages by [piotrpospiech](https://github.com/piotrpospiech)
 - Removing underscore in packages by [harryadel](https://github.com/harryadel):
   - [twitter-oauth] Remove underscore 
@@ -38,6 +39,31 @@ _In case you want types in your app using the core packages types/zodern:types (
 3. Follow [installation guide for the Meteor Apps](https://github.com/zodern/meteor-types#meteor-apps) to update
 
 #### Meteor Version Release
+
+* `accounts-base@2.2.5`
+  - added types for package.
+* `browser-policy@1.1.1`
+  - adjusted package tests.
+* `browser-policy-common@1.0.12`
+  - added types for package.
+* `browser-policy-framing@1.1.1`
+  - removed underscore.
+* `check@1.3.2`
+  - added types for package.
+* `ddp@1.4.0`
+  - added types for package.
+* `ddp-client@2.6.1`
+  - In the client, don't wait if the stub doesn't return a promise.
+* `ddp-rate-limiter@1.1.1`
+  - added types for package.
+* `diff-sequence@1.1.2`
+  - removed underscore.
+* `ecmascript@0.16.3`
+  - removed underscore.
+* `ejson@1.1.3`
+  - added types for package. 
+* `ejson@2.2.2`
+  - added types for package.
 * `facebook-oauth@1.12.0`
   - Updated default version of Facebook GraphAPI to v15
 
