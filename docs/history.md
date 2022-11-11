@@ -2,15 +2,44 @@
 
 #### Highlights
 
+- modernize tools/run-updater.js by [afrokick](https://github.com/afrokick)
+- feat(error message): Especifing error message when cross-boundary by [Grubba27](https://github.com/Grubba27)
+- Type definitions for core packages by [piotrpospiech](https://github.com/piotrpospiech)
+- Add https proxy support to meteor-installer by [heschong](https://github.com/heschong)
+- Fix case insensitive lookup resource overuse by [ToyboxZach](https://github.com/ToyboxZach)
+- Update default Facebook API to v15 and fix local changelog by [StorytellerCZ](https://github.com/StorytellerCZ)
+- Bump to Node v14.21.0 by [StorytellerCZ](https://github.com/StorytellerCZ)
+- Use true mongo binary types by [znewsham](https://github.com/znewsham)
+- Add docs for Accounts.registerLoginHandler by [shivam1646](https://github.com/shivam1646)
+- Updated MongoDB driver to 4.11 by [radekmie](https://github.com/radekmie)
+- Show port in restart message by [harryadel](https://github.com/harryadel)
+- The rest of type definitions for core packages by [piotrpospiech](https://github.com/piotrpospiech)
+- Removing underscore in packages by [harryadel](https://github.com/harryadel):
+  - [twitter-oauth] Remove underscore 
+  - [test-in-browser] Remove underscore 
+  - [webapp-hashing] Remove underscore 
+  - [browser-policy] Remove underscore 
+  - [ecmascript] Remove underscore 
+  - [browser-policy-framing] Remove underscore 
+  - [diff-sequence] Remove underscore 
+  - [facts-ui] Remove underscore
+  - [geojson-utils] Remove underscore 
+
 #### Breaking Changes
 
+N/A
+
 #### Migration Steps
+
+_In case you want types in your app using the core packages types/zodern:types (now you do have the option)_
+
+1. Remove `@types/meteor` package
+2. Install [`zodern:types`](https://github.com/zodern/meteor-types) package
+3. Follow [installation guide for the Meteor Apps](https://github.com/zodern/meteor-types#meteor-apps) to update
 
 #### Meteor Version Release
 * `facebook-oauth@1.12.0`
   - Updated default version of Facebook GraphAPI to v15
-
-
 
 ## v2.8, 2022-10-19
 
@@ -3924,9 +3953,9 @@ N/A
 
 > Note: With this version of Reify, `import` declarations are compiled to
 `module.watch(require(id), ...)` instead of `module.importSync(id, ...)`
-or the older `module.import(id, ...)`. The behavior of the compiled code
-should be the same as before, but the details seemed different enough to
-warrant a note.
+> or the older `module.import(id, ...)`. The behavior of the compiled code
+> should be the same as before, but the details seemed different enough to
+> warrant a note.
 
 * The `install` npm package has been upgraded to version 0.10.1.
 
@@ -4270,15 +4299,15 @@ https://github.com/meteor/meteor/commit/0cbd25111d1249a61ca7adce23fad5215408c821
   are once again constrained by the current Meteor release.
 
 > Before Meteor 1.4, the current release dictated the exact version of
-every installed core package, which meant newer core packages could not
-be installed without publishing a new Meteor release. In order to
-support incremental development of core packages, Meteor 1.4 removed all
-release-based constraints on core package versions
+> every installed core package, which meant newer core packages could not
+> be installed without publishing a new Meteor release. In order to
+> support incremental development of core packages, Meteor 1.4 removed all
+> release-based constraints on core package versions
 ([#7084](https://github.com/meteor/meteor/pull/7084)). Now, in Meteor
-1.4.3, core package versions must remain patch-compatible with the
-versions they had when the Meteor release was published. This middle
-ground restores meaning to Meteor releases, yet still permits patch
-updates to core packages.
+> 1.4.3, core package versions must remain patch-compatible with the
+> versions they had when the Meteor release was published. This middle
+> ground restores meaning to Meteor releases, yet still permits patch
+> updates to core packages.
 
 * The `cordova-lib` npm package has been updated to 6.4.0, along with
   cordova-android (6.1.1) and cordova-ios (4.3.0), and various plugins.
@@ -4368,11 +4397,11 @@ updates to core packages.
   change was deemed too significant for this release.
 
 > Note: The decision to revert the above change was made late in the
-Meteor 1.4.2.4 release process, before it was ever recommended but too
-late in the process to avoid the additional increment of the version number.
-See [#8311](https://github.com/meteor/meteor/pull/8311) for additional
-information. This change will still be released in an upcoming version
-of Meteor with a more seamless upgrade.
+> Meteor 1.4.2.4 release process, before it was ever recommended but too
+> late in the process to avoid the additional increment of the version number.
+> See [#8311](https://github.com/meteor/meteor/pull/8311) for additional
+> information. This change will still be released in an upcoming version
+> of Meteor with a more seamless upgrade.
 
 ## v1.4.2.4, 2017-02-02
 
@@ -4381,7 +4410,7 @@ of Meteor with a more seamless upgrade.
 * The `npm` npm package has been upgraded from version 3.10.9 to 4.1.2.
 
 > Note: This change was later deemed too substantial for a point release
-and was reverted in Meteor 1.4.2.7.
+> and was reverted in Meteor 1.4.2.7.
 
 * Fix for [Issue #8136](https://github.com/meteor/meteor/issues/8136).
 
@@ -4408,9 +4437,9 @@ and was reverted in Meteor 1.4.2.7.
 
 > Note: Meteor 1.4.2.2 was finalized before
 [#8045](https://github.com/meteor/meteor/pull/8045) was merged, but
-those changes were [deemed important
+> those changes were [deemed important
 enough](https://github.com/meteor/meteor/pull/8044#issuecomment-260913739)
-to skip recommending 1.4.2.2 and instead immediately release 1.4.2.3.
+> to skip recommending 1.4.2.2 and instead immediately release 1.4.2.3.
 
 ## v1.4.2.2, 2016-11-15
 
@@ -4497,10 +4526,10 @@ to skip recommending 1.4.2.2 and instead immediately release 1.4.2.3.
   See https://github.com/meteor/meteor/pull/7668 for more details.
 
 > Note: the `METEOR_PROFILE` environment variable now provides data for
-server startup time as well as build time, which should make it easier
-to tell which of your packages are responsible for slow startup times.
-Please include the output of `METEOR_PROFILE=10 meteor run` with any
-GitHub issue about rebuild performance.
+> server startup time as well as build time, which should make it easier
+> to tell which of your packages are responsible for slow startup times.
+> Please include the output of `METEOR_PROFILE=10 meteor run` with any
+> GitHub issue about rebuild performance.
 
 * `npm` has been upgraded to version 3.10.9.
 
@@ -5077,8 +5106,8 @@ GitHub issue about rebuild performance.
 ## v1.3.2.4, 2016-04-20
 
 > Meteor 1.3.2.4 was published because publishing 1.3.2.3 failed in an
-unrecoverable way. Meteor 1.3.2.4 contains no additional changes beyond
-the changes in 1.3.2.3.
+> unrecoverable way. Meteor 1.3.2.4 contains no additional changes beyond
+> the changes in 1.3.2.3.
 
 ## v1.3.2.3, 2016-04-20
 
