@@ -7,7 +7,7 @@ boilerplate-generator@1.6.0
 caching-compiler@1.2.1
 caching-html-compiler@1.1.3
 callback-hook@1.1.0
-check@1.3.2-beta.1
+check@1.3.2
 ddp@1.4.0
 ddp-client@2.3.3
 ddp-common@1.4.0
