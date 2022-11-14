@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for browser-policy packages",
-  version: "1.0.11-rc.0"
+  version: "1.0.12"
 });
 
 Package.onUse(function (api) {
