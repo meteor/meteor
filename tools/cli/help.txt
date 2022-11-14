@@ -150,7 +150,7 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--vue-2|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
@@ -183,7 +183,8 @@ Options:
   --minimal     Create an app with as few Meteor packages as possible.
   --full        Create a fully scaffolded app.
   --react       Create a basic react-based app, same as default.
-  --vue         Create a basic vue-based app.
+  --vue         Create a basic vue3-based app.
+  --vue-2       Create a basic vue2-based app.
   --apollo      Create a basic apollo-based app.
   --svelte      Create a basic svelte-based app.
   --typescript  Create a basic Typescript React-based app.

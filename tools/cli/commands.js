@@ -533,6 +533,7 @@ main.registerCommand({
     blaze: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
+    'vue-2': { type: Boolean },
     typescript: { type: Boolean },
     apollo: { type: Boolean },
     svelte: { type: Boolean },
@@ -905,7 +906,8 @@ main.registerCommand({
     cmd("meteor create --minimal    # to create an app with as few Meteor packages as possible");
     cmd("meteor create --full       # to create a more complete scaffolded app");
     cmd("meteor create --react      # to create a basic React-based app");
-    cmd("meteor create --vue        # to create a basic Vue-based app");
+    cmd("meteor create --vue        # to create a basic Vue3-based app");
+    cmd("meteor create --vue-2      # to create a basic Vue2-based app");
     cmd("meteor create --apollo     # to create a basic Apollo + React app");
     cmd("meteor create --svelte     # to create a basic Svelte app");
     cmd("meteor create --typescript # to create an app using TypeScript and React");
