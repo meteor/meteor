@@ -57,3 +57,8 @@ npm install -g meteor --ignore-meteor-setup-exec-path
 ```
 
 (or by setting the environment variable `npm_config_ignore_meteor_setup_exec_path=true`)
+
+### Proxy configuration
+
+Setting the `https_proxy` or `HTTPS_PROXY` environment variable to a valid proxy URL will cause the
+downloader to use the configured proxy to retrieve the Meteor files.
