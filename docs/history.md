@@ -8,7 +8,7 @@
 - Add https proxy support to meteor-installer by [heschong](https://github.com/heschong)
 - Fix case insensitive lookup resource overuse by [ToyboxZach](https://github.com/ToyboxZach)
 - Update default Facebook API to v15 and fix local changelog by [StorytellerCZ](https://github.com/StorytellerCZ)
-- Bump to Node v14.21.0 by [StorytellerCZ](https://github.com/StorytellerCZ)
+- Bump to Node v14.21.1 by [StorytellerCZ](https://github.com/StorytellerCZ)
 - Use true mongo binary types by [znewsham](https://github.com/znewsham)
 - Add docs for Accounts.registerLoginHandler by [shivam1646](https://github.com/shivam1646)
 - Updated MongoDB driver to 4.11 by [radekmie](https://github.com/radekmie)
