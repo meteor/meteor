@@ -1,4 +1,4 @@
-## 2.8.1, Unreleased
+## 2.8.1, 2022-11-14
 
 #### Highlights
 
