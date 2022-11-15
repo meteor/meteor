@@ -25,8 +25,8 @@ ObserveMultiplexer = function (options) {
   self._addHandleTasksScheduledButNotPerformed = 0;
 
   self.callbackNames().forEach(function (callbackName) {
-    self[callbackName] = function (...args) {
-      self._applyCallback(callbackName, args);
+    self[callbackName] = function () {
+      self._applyCallback(callbackName, Array.from(arguments));
     };
   });
 };
