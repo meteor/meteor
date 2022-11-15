@@ -1520,8 +1520,9 @@ testAsyncMulti('mongo-livedata - transform sets _id if not present, ' + idGenera
   function (test, expect) {
     var self = this;
     var justId = function (doc) {
-      const {_id, ...rest} = doc;
-      return rest;
+      const docWithoutId = doc;
+      delete docWithoutId._id;
+      return docWithoutId;
     };
     TRANSFORMS["justId"] = justId;
     var collectionOptions = {
