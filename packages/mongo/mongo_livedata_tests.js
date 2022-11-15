@@ -3248,7 +3248,7 @@ Meteor.isServer && Tinytest.add(
 
       // Same as `MongoInternals.defaultRemoteCollectionDriver`.
       Promise.await(connection.client.connect());
-  }
+    }
 );
 
 Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
