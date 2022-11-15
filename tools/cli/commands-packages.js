@@ -1243,7 +1243,7 @@ main.registerCommand({
       if (showJson) {
         if (expandedAlready) {
           // on expanded packages we only want to add minimal information to
-          // keep the json file compact, so we make the value a stirng
+          // keep the json file compact, so we make the value a string
           if (topLevelSet.has(packageName)) {
             parent[packageName] = `${packageToPrint.version}-${suffixes.topLevel}`
           } else {
@@ -2425,7 +2425,7 @@ main.registerCommand({
 
   // Log that we removed the constraints. It is possible that there are
   // constraints that we officially removed that the project still 'depends' on,
-  // which is why we do this in addition to dislpaying the PackageMapDelta.
+  // which is why we do this in addition to displaying the PackageMapDelta.
   _.each(packagesToRemove, function (packageName) {
     Console.info(packageName + ": removed dependency");
   });
