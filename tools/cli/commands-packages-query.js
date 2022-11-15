@@ -278,7 +278,7 @@ var PkgImplies = function (pkgDeps) {
       var archName = (r.arch === "os") ? "server" : r.arch;
       architectures.push(archName);
     });
-    // Sort architecures alphabetically.
+    // Sort architectures alphabetically.
     architectures.sort();
     if (! _.isEmpty(architectures)) {
       self.data.push({ name: name, architectures: architectures });
