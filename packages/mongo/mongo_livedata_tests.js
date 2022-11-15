@@ -1225,7 +1225,7 @@ if (Meteor.isServer) {
     onComplete();
   });
 
-  Tinytest.addAsync("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test, onComplete) {
+  Tinytest.add("mongo-livedata - observe sorted, limited, big initial set" + idGeneration, function (test) {
     var run = test.runId();
     var coll = new Mongo.Collection("observeLimit-"+run, collectionOptions);
 
@@ -1333,8 +1333,6 @@ if (Meteor.isServer) {
     usesOplog && testSafeAppendToBufferFlag(true);
     clearOutput(o);
 
-
-    onComplete();
   });
 }
 
@@ -3247,7 +3245,7 @@ Meteor.isServer && Tinytest.add(
     // Exception happens in 30s
     test.throws(function () {
       const connection = new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
-      
+
       // Same as `MongoInternals.defaultRemoteCollectionDriver`.
       Promise.await(connection.client.connect());
   }
@@ -3448,7 +3446,7 @@ if (Meteor.isServer) {
 }
 
 if (Meteor.isServer) {
-  Tinytest.addAsync("mongo-livedata - transaction", function (test, onComplete) {
+  Tinytest.addAsync("mongo-livedata - transaction", function (test) {
     const { client } = MongoInternals.defaultRemoteCollectionDriver().mongo;
 
     const Collection = new Mongo.Collection(`transaction_test_${test.runId()}`);
@@ -3459,49 +3457,51 @@ if (Meteor.isServer) {
 
     let changeCount = 0;
 
-    function finalize() {
-      observeHandle.stop();
-      Meteor.clearTimeout(timeout);
-      onComplete();
-    }
-
-    const observeHandle = Collection.find().observeChanges({
-      changed(id, fields) {
-        let expectedValue;
-
-        if (id === "a") {
-          expectedValue = "updated1";
-        } else if (id === "b") {
-          expectedValue = "updated2";
-        }
-
-        test.equal(fields.field, expectedValue);
-        changeCount += 1;
-
-        if (changeCount === 2) {
-          finalize();
-        }
+    return new Promise(resolve => {
+      function finalize() {
+        observeHandle.stop();
+        Meteor.clearTimeout(timeout);
+        resolve();
       }
-    });
 
-    const timeout = Meteor.setTimeout(() => {
-      test.fail("Didn't receive all transaction operations in two seconds.");
-      finalize();
-    }, 2000);
+      const observeHandle = Collection.find().observeChanges({
+        changed(id, fields) {
+          let expectedValue;
 
-    const session = client.startSession();
-    session.withTransaction(session => {
-      let promise = Promise.resolve();
-      ["a", "b"].forEach((id, index) => {
-        promise = promise.then(() => rawCollection.updateMany(
-          { _id: id },
-          { $set: { field: `updated${index + 1}` } },
-          { session }
-        ));
+          if (id === "a") {
+            expectedValue = "updated1";
+          } else if (id === "b") {
+            expectedValue = "updated2";
+          }
+
+          test.equal(fields.field, expectedValue);
+          changeCount += 1;
+
+          if (changeCount === 2) {
+            finalize();
+          }
+        }
       });
-      return promise;
-    }).finally(() => {
-      session.endSession();
+
+      const timeout = Meteor.setTimeout(() => {
+        test.fail("Didn't receive all transaction operations in two seconds.");
+        finalize();
+      }, 2000);
+
+      const session = client.startSession();
+      session.withTransaction(session => {
+        let promise = Promise.resolve();
+        ["a", "b"].forEach((id, index) => {
+          promise = promise.then(() => rawCollection.updateMany(
+            { _id: id },
+            { $set: { field: `updated${index + 1}` } },
+            { session }
+          ));
+        });
+        return promise;
+      }).finally(() => {
+        session.endSession();
+      });
     });
   });
 }
