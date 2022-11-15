@@ -2516,67 +2516,6 @@ testAsyncMulti('mongo-livedata - empty string _id', [
 
 
 if (Meteor.isServer) {
-
-  testAsyncMulti("mongo-livedata - minimongo on server to server connection", [
-    function (test, expect) {
-      var self = this;
-      Meteor._debug("connection setup");
-      self.id = Random.id();
-      var C = self.C = new Mongo.Collection("ServerMinimongo_" + self.id);
-      C.allow({
-        insert: function () {return true;},
-        update: function () {return true;},
-        remove: function () {return true;}
-      });
-      C.insert({a: 0, b: 1});
-      C.insert({a: 0, b: 2});
-      C.insert({a: 1, b: 3});
-      Meteor.publish(self.id, function () {
-        return C.find({a: 0});
-      });
-
-      self.conn = DDP.connect(Meteor.absoluteUrl());
-      pollUntil(expect, function () {
-        return self.conn.status().connected;
-      }, 10000);
-    },
-
-    function (test, expect) {
-      var self = this;
-      if (self.conn.status().connected) {
-        self.miniC = new Mongo.Collection("ServerMinimongo_" + self.id, {
-          connection: self.conn
-        });
-        var exp = expect(function (err) {
-          test.isFalse(err);
-        });
-        self.conn.subscribe(self.id, {
-          onError: exp,
-          onReady: exp
-        });
-      }
-    },
-
-    function (test, expect) {
-      var self = this;
-      if (self.miniC) {
-        var contents = self.miniC.find().fetch();
-        test.equal(contents.length, 2);
-        test.equal(contents[0].a, 0);
-      }
-    },
-
-    function (test, expect) {
-      var self = this;
-      if (!self.miniC)
-        return;
-      self.miniC.insert({a:0, b:3});
-      var contents = self.miniC.find({b:3}).fetch();
-      test.equal(contents.length, 1);
-      test.equal(contents[0].a, 0);
-    }
-  ]);
-
   testAsyncMulti("mongo-livedata - minimongo observe on server", [
     function (test, expect) {
       var self = this;
@@ -3178,7 +3117,7 @@ testAsyncMulti("mongo-livedata - oplog - update EJSON", [
 ]);
 
 
-var waitUntilOplogCaughtUp = function () {
+function waitUntilOplogCaughtUp() {
   var oplogHandle =
         MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle;
   if (oplogHandle)
@@ -3305,9 +3244,12 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidde
 Meteor.isServer && Tinytest.add(
   "mongo-livedata - connection failure throws",
   function (test) {
+    // Exception happens in 30s
     test.throws(function () {
-      new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
-    });
+      const connection = new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+      
+      // Same as `MongoInternals.defaultRemoteCollectionDriver`.
+      Promise.await(connection.client.connect());
   }
 );
 
