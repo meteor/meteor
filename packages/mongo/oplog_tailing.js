@@ -276,7 +276,6 @@ Object.assign(OplogHandle.prototype, {
             // This was a successful transaction, so we need to apply the
             // operations that were involved.
             let nextTimestamp = doc.ts;
-            console.log(doc.o.applyOps)
             doc.o.applyOps.forEach(op => {
               // See https://github.com/meteor/meteor/issues/10420.
               if (!op.ts) {
