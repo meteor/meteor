@@ -1,3 +1,5 @@
+import { Meteor } from 'meteor/meteor';
+
 // Listen to calls to `login` with an oauth option set. This is where
 // users actually get logged in to meteor via oauth.
 Accounts.registerLoginHandler(options => {
@@ -54,4 +56,45 @@ Accounts.registerLoginHandler(options => {
     }
     return Accounts.updateOrCreateUserFromExternalService(result.serviceName, result.serviceData, result.options);
   }
+});
+
+///
+/// OAuth Encryption Support
+///
+
+const OAuthEncryption = Package["oauth-encryption"]?.OAuthEncryption;
+
+const usingOAuthEncryption = () => {
+  return OAuthEncryption?.keyIsLoaded();
+};
+
+// Encrypt unencrypted login service secrets when oauth-encryption is
+// added.
+//
+// XXX For the oauthSecretKey to be available here at startup, the
+// developer must call Accounts.config({oauthSecretKey: ...}) at load
+// time, instead of in a Meteor.startup block, because the startup
+// block in the app code will run after this accounts-base startup
+// block.  Perhaps we need a post-startup callback?
+
+Meteor.startup(() => {
+  if (! usingOAuthEncryption()) {
+    return;
+  }
+
+  const { ServiceConfiguration } = Package['service-configuration'];
+
+  ServiceConfiguration.configurations.find({
+    $and: [{
+      secret: { $exists: true }
+    }, {
+      "secret.algorithm": { $exists: false }
+    }]
+  }).forEach(config => {
+    ServiceConfiguration.configurations.update(config._id, {
+      $set: {
+        secret: OAuthEncryption.seal(config.secret)
+      }
+    });
+  });
 });

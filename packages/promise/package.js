@@ -20,6 +20,7 @@ Package.onUse(function(api) {
   api.mainModule("client.js", "client");
   api.mainModule("server.js", "server");
   api.export("Promise");
+  api.addAssets("promise.d.ts", ["client", "server"]);
 });
 
 Package.onTest(function(api) {

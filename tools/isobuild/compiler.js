@@ -516,7 +516,7 @@ var compileUnibuild = Profile(function (options) {
       // addAssets or putting it in the public/private directories in an app.
       //
       // This is a backwards-incompatible change, but it doesn't affect
-      // previously-published packages (because the check is occuring in the
+      // previously-published packages (because the check is occurring in the
       // compiler), and it doesn't affect apps (where random files outside of
       // private/public never end up in the source list anyway).
       //

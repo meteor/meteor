@@ -150,7 +150,7 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
+Usage: meteor create [--release <release>] [--prototype] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid] <path>
        meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
@@ -191,6 +191,7 @@ Options:
   --tailwind    Create a basic react-based app, with tailwind configured.
   --chakra-ui   Create a basic react-based app, with chakra-ui configured.
   --solid       Create a basic solid-based app.
+  --prototype   Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
 
 
 >>> update
@@ -209,10 +210,10 @@ conflicts with other packages in the app.
 Passing the --patch argument will update to the latest patch, if such exists.
 Patch releases contain very minor changes, usually bug fixes. Updating to
 the latest patch is always recommended. This will try to not update non-core
-packages unless strictly nessessary.
+packages unless strictly necessary.
 
 Passing the --release argument will force update to a specific release of
-meteor.  This will not update non-core packages unless strictly nessessary. It
+meteor.  This will not update non-core packages unless strictly necessary. It
 is also possible that some packages cannot be updated to be compatible with the
 new release. If that happens, the app will not build until dependencies on those
 packages are removed.
