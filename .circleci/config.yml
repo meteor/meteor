@@ -116,7 +116,8 @@ set_fibers_env: &set_fibers_env
 matrix_for_fibers: &matrix_for_fibers
   matrix:
     parameters:
-      fibers: [true, false]
+      # If we want to run with Fibers and without, just append false here.
+      fibers: [true]
 
 
 jobs:
