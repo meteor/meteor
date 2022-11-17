@@ -1,17 +1,34 @@
 BrowserPolicy._setRunningTest();
 
+var toObject = function(list, values) {
+  if (list == null) return {};
+  var result = {};
+  for (var i = 0, length = list.length; i < length; i++) {
+    if (values) {
+      result[list[i]] = values[i];
+    } else {
+      result[list[i][0]] = list[i][1];
+    }
+  }
+  return result;
+};
+
 var cspsEqual = function (csp1, csp2) {
   var cspToObj = function (csp) {
     csp = csp.substring(0, csp.length - 1);
-    var parts = _.map(csp.split("; "), function (part) {
+    var parts = csp.split("; ").map(function (part) {
       return part.split(" ");
     });
-    var keys = _.map(parts, _.first);
-    var values = _.map(parts, _.rest);
-    _.each(values, function (value) {
+    var keys = parts.map(part => part[0]);
+    var values = parts.map((part) => {
+      const [head, ...tail] = part;
+      return tail;
+    });
+    values.forEach(function (value) {
       value.sort();
     });
-    return _.object(keys, values);
+    
+    return toObject(keys, values);
   };
 
   return EJSON.equals(cspToObj(csp1), cspToObj(csp2));
@@ -137,11 +154,11 @@ Tinytest.add("browser-policy - csp", function (test) {
                         "default-src 'none'; frame-src https://foo.com; " +
                         "object-src http://foo.com https://foo.com;"));
 
-  // Check that frame-ancestors property is set correctly. 
-  BrowserPolicy.content.allowFrameAncestorsOrigin("https://foo.com/"); 
-  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(), 
-                        "default-src 'none'; frame-src https://foo.com; " + 
-                        "object-src http://foo.com https://foo.com; " + 
+  // Check that frame-ancestors property is set correctly.
+  BrowserPolicy.content.allowFrameAncestorsOrigin("https://foo.com/");
+  test.isTrue(cspsEqual(BrowserPolicy.content._constructCsp(),
+                        "default-src 'none'; frame-src https://foo.com; " +
+                        "object-src http://foo.com https://foo.com; " +
                         "frame-ancestors https://foo.com;"));
 
   // CSP2 options: nonce
