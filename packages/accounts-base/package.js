@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'A user account system',
-  version: '2.2.4',
+  version: '2.2.5',
 });
 
 Package.onUse(api => {
@@ -48,6 +48,8 @@ Package.onUse(api => {
   // modules that import the accounts-base package.
   api.mainModule('server_main.js', 'server');
   api.mainModule('client_main.js', 'client');
+
+  api.addAssets('accounts-base.d.ts', 'server');
 });
 
 Package.onTest(api => {
