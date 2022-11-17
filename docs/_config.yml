@@ -86,6 +86,7 @@ sidebar_categories:
   Command Line:
     - commandline
     - environment-variables
+    - using-core-types
   Troubleshooting:
     - expired-certificate
     - windows

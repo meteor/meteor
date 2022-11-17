@@ -210,10 +210,10 @@ conflicts with other packages in the app.
 Passing the --patch argument will update to the latest patch, if such exists.
 Patch releases contain very minor changes, usually bug fixes. Updating to
 the latest patch is always recommended. This will try to not update non-core
-packages unless strictly nessessary.
+packages unless strictly necessary.
 
 Passing the --release argument will force update to a specific release of
-meteor.  This will not update non-core packages unless strictly nessessary. It
+meteor.  This will not update non-core packages unless strictly necessary. It
 is also possible that some packages cannot be updated to be compatible with the
 new release. If that happens, the app will not build until dependencies on those
 packages are removed.

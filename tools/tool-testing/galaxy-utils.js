@@ -44,8 +44,8 @@ exports.sanityCheck = selftest.markStack(function () {
 
 // Login to Galaxy with environment-variable credentials passed in by the user.
 //
-// Unlike the normal `meteor deploy` Galaxy is not yet publically available, so
-// we don't want to use the publically-accessible test account here.
+// Unlike the normal `meteor deploy` Galaxy is not yet publicly available, so
+// we don't want to use the publicly-accessible test account here.
 exports.loginToGalaxy = selftest.markStack(function (sandbox) {
   var user = GALAXY_USERNAME;
   var pass = GALAXY_PASSWORD;
@@ -99,7 +99,7 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
   var settings = options.settings;
   var appName = options.appName || testUtils.randomAppName();
 
-  // The simple app contains standart app packages and some small bits of code
+  // The simple app contains standard app packages and some small bits of code
   // so that we can check that it is being served correctly. Let's use that as
   // our default.
   var templateApp = options.templateApp || 'simple-app';
