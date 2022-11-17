@@ -139,7 +139,8 @@ export default class LocalCollection {
       }
     });
 
-    this._observeQueue.drain().then(() => {
+    // TODO -> Check here.
+    Promise.resolve(this._observeQueue.drain()).then(() => {
       // Defer because the caller likely doesn't expect the callback to be run
       // immediately.
       if (callback) {
