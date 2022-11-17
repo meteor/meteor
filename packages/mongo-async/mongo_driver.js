@@ -363,7 +363,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
     ).then(({insertedId}) => {
       callback(null, insertedId);
     }).catch((e) => {
-      callback(e, null)
+      callback(e, null);
     });
   } catch (err) {
     write.committed();

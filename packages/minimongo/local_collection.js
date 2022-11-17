@@ -139,15 +139,15 @@ export default class LocalCollection {
       }
     });
 
-    this._observeQueue.drain();
-
-    // Defer because the caller likely doesn't expect the callback to be run
-    // immediately.
-    if (callback) {
-      Meteor.defer(() => {
-        callback(null, id);
-      });
-    }
+    this._observeQueue.drain().then(() => {
+      // Defer because the caller likely doesn't expect the callback to be run
+      // immediately.
+      if (callback) {
+        Meteor.defer(() => {
+          callback(null, id);
+        });
+      }
+    });
 
     return id;
   }

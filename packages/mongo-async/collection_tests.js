@@ -53,12 +53,12 @@ Tinytest.add('collection - call new Mongo.Collection with defineMutationMethods=
   }
 );
 
-Tinytest.add('collection - call find with sort function',
-  function (test) {
-    var initialize = function (collection) {
-      collection.insert({a: 2});
-      collection.insert({a: 3});
-      collection.insert({a: 1});
+Tinytest.addAsync('collection - call find with sort function',
+  async function (test) {
+    var initialize = async function (collection) {
+        await collection.insert({a: 2});
+        await collection.insert({a: 3});
+        await collection.insert({a: 1});
     };
 
     var sorter = function (a, b) {
@@ -73,23 +73,23 @@ Tinytest.add('collection - call find with sort function',
     var localCollection = new Mongo.Collection(null);
     var namedCollection = new Mongo.Collection(collectionName, {connection: null});
 
-    initialize(localCollection);
-    test.equal(getSorted(localCollection), [1, 2, 3]);
+    await initialize(localCollection);
+    test.equal(await getSorted(localCollection), [1, 2, 3]);
 
-    initialize(namedCollection);
-    test.equal(getSorted(namedCollection), [1, 2, 3]);
+    await initialize(namedCollection);
+    test.equal(await getSorted(namedCollection), [1, 2, 3]);
   }
 );
 
-Tinytest.add('collection - call native find with sort function',
-  function (test) {
+Tinytest.addAsync('collection - call native find with sort function',
+  async function (test) {
     var collectionName = 'sortNative' + test.id;
     var nativeCollection = new Mongo.Collection(collectionName);
 
     if (Meteor.isServer) {
-      test.throws(
+        await test.throwsAsync(
         function () {
-          nativeCollection
+          return nativeCollection
             .find({}, {
               sort: function () {},
             })
@@ -103,32 +103,32 @@ Tinytest.add('collection - call native find with sort function',
   }
 );
 
-Tinytest.add('collection - calling native find with maxTimeMs should timeout',
-  function(test) {
+Tinytest.addAsync('collection - calling native find with maxTimeMs should timeout',
+  async function(test) {
     var collectionName = 'findOptions1' + test.id;
     var collection = new Mongo.Collection(collectionName);
-    collection.insert({a: 1});
+    await collection.insert({a: 1});
 
     function doTest() {
       return collection.find({$where: "sleep(100) || true"}, {maxTimeMs: 50}).count();
     }
     if (Meteor.isServer) {
-      test.throws(doTest);
+      await test.throwsAsync(doTest);
     }
   }
 );
 
 
-Tinytest.add('collection - calling native find with $reverse hint should reverse on server',
-  function(test) {
+Tinytest.addAsync('collection - calling native find with $reverse hint should reverse on server',
+  async function(test) {
     var collectionName = 'findOptions2' + test.id;
     var collection = new Mongo.Collection(collectionName);
-    collection.insert({a: 1});
-    collection.insert({a: 2});
+    await collection.insert({a: 1});
+    await collection.insert({a: 2});
 
     function m(doc) { return doc.a; }
-    var fwd = collection.find({}, {hint: {$natural: 1}}).map(m);
-    var rev = collection.find({}, {hint: {$natural: -1}}).map(m);
+    var fwd = await collection.find({}, {hint: {$natural: 1}}).map(m);
+    var rev = await collection.find({}, {hint: {$natural: -1}}).map(m);
     if (Meteor.isServer) {
       test.equal(fwd, rev.reverse());
     } else {
@@ -139,10 +139,10 @@ Tinytest.add('collection - calling native find with $reverse hint should reverse
 );
 
 Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs should succeed',
-  function(test, done) {
+  async function(test, done) {
     var collectionName = 'findOptions3' + test.id;
     var collection = new Mongo.Collection(collectionName);
-    collection.insert({a: 1});
+    await collection.insert({a: 1});
 
     Promise.resolve(
       Meteor.isServer &&
@@ -157,8 +157,8 @@ Tinytest.addAsync('collection - calling native find with good hint and maxTimeMs
   }
 );
 
-Tinytest.add('collection - calling find with a valid readPreference',
-  function(test) {
+Tinytest.addAsync('collection - calling find with a valid readPreference',
+  async function(test) {
     if (Meteor.isServer) {
       const defaultReadPreference = 'primary';
       const customReadPreference = 'secondaryPreferred';
@@ -170,8 +170,8 @@ Tinytest.add('collection - calling find with a valid readPreference',
       );
 
       // Trigger the creation of _synchronousCursor
-      defaultCursor.count();
-      customCursor.count();
+      await defaultCursor.count();
+      await customCursor.count();
 
       // defaultCursor._synchronousCursor._dbCursor.operation is not an option anymore
       // as the cursor options are now private
@@ -189,7 +189,7 @@ Tinytest.add('collection - calling find with a valid readPreference',
   }
 );
 
-Tinytest.add('collection - calling find with an invalid readPreference',
+Tinytest.addAsync('collection - calling find with an invalid readPreference',
   function(test) {
     if (Meteor.isServer) {
       const invalidReadPreference = 'INVALID';
@@ -199,25 +199,25 @@ Tinytest.add('collection - calling find with an invalid readPreference',
         { readPreference: invalidReadPreference }
       );
 
-      test.throws(function() {
+      return test.throwsAsync(function() {
         // Trigger the creation of _synchronousCursor
-        cursor.count();
+        return cursor.count();
       }, `Invalid read preference mode "${invalidReadPreference}"`);
     }
   }
 );
 
-Tinytest.add('collection - inserting a document with a binary should return a document with a binary',
-  function(test) {
+Tinytest.addAsync('collection - inserting a document with a binary should return a document with a binary',
+  async function(test) {
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary1');
       const _id = Random.id();
-      collection.insert({
+        await collection.insert({
         _id,
         binary: new MongoDB.Binary(Buffer.from('hello world'), 6)
       });
 
-      const doc = collection.findOne({ _id });
+      const doc = await collection.findOne({ _id });
       test.ok(
         doc.binary instanceof MongoDB.Binary
       );
@@ -229,17 +229,17 @@ Tinytest.add('collection - inserting a document with a binary should return a do
   }
 );
 
-Tinytest.add('collection - inserting a document with a binary (sub type 0) should return a document with a uint8array',
-  function(test) {
+Tinytest.addAsync('collection - inserting a document with a binary (sub type 0) should return a document with a uint8array',
+  async function(test) {
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary8');
       const _id = Random.id();
-      collection.insert({
+      await collection.insert({
         _id,
         binary: new MongoDB.Binary(Buffer.from('hello world'), 0)
       });
 
-      const doc = collection.findOne({ _id });
+      const doc = await collection.findOne({ _id });
       test.ok(
         doc.binary instanceof Uint8Array
       );
@@ -251,18 +251,18 @@ Tinytest.add('collection - inserting a document with a binary (sub type 0) shoul
   }
 );
 
-Tinytest.add('collection - updating a document with a binary should return a document with a binary',
-  function(test) {
+Tinytest.addAsync('collection - updating a document with a binary should return a document with a binary',
+  async function(test) {
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary2');
       const _id = Random.id();
-      collection.insert({
+      await collection.insert({
         _id
       });
 
-      collection.update({ _id }, { $set: { binary: new MongoDB.Binary(Buffer.from('hello world'), 6) } });
+      await collection.update({ _id }, { $set: { binary: new MongoDB.Binary(Buffer.from('hello world'), 6) } });
 
-      const doc = collection.findOne({ _id });
+      const doc = await collection.findOne({ _id });
       test.ok(
         doc.binary instanceof MongoDB.Binary
       );
@@ -274,18 +274,18 @@ Tinytest.add('collection - updating a document with a binary should return a doc
   }
 );
 
-Tinytest.add('collection - updating a document with a binary (sub type 0) should return a document with a uint8array',
-  function(test) {
+Tinytest.addAsync('collection - updating a document with a binary (sub type 0) should return a document with a uint8array',
+  async function(test) {
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary7');
       const _id = Random.id();
-      collection.insert({
+      await collection.insert({
         _id
       });
 
-      collection.update({ _id }, { $set: { binary: new MongoDB.Binary(Buffer.from('hello world'), 0) } });
+        await collection.update({ _id }, { $set: { binary: new MongoDB.Binary(Buffer.from('hello world'), 0) } });
 
-      const doc = collection.findOne({ _id });
+      const doc = await collection.findOne({ _id });
       test.ok(
         doc.binary instanceof Uint8Array
       );
@@ -297,17 +297,17 @@ Tinytest.add('collection - updating a document with a binary (sub type 0) should
   }
 );
 
-Tinytest.add('collection - inserting a document with a uint8array should return a document with a uint8array',
-  function(test) {
+Tinytest.addAsync('collection - inserting a document with a uint8array should return a document with a uint8array',
+  async function(test) {
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary3');
       const _id = Random.id();
-      collection.insert({
+        await collection.insert({
         _id,
         binary: new Uint8Array(Buffer.from('hello world'))
       });
 
-      const doc = collection.findOne({ _id });
+      const doc = await collection.findOne({ _id });
       test.ok(
         doc.binary instanceof Uint8Array
       );
@@ -319,21 +319,21 @@ Tinytest.add('collection - inserting a document with a uint8array should return 
   }
 );
 
-Tinytest.add('collection - updating a document with a uint8array should return a document with a uint8array',
-  function(test) {
+Tinytest.addAsync('collection - updating a document with a uint8array should return a document with a uint8array',
+  async function(test) {
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary4');
       const _id = Random.id();
-      collection.insert({
+        await collection.insert({
         _id
       });
 
-      collection.update(
+        await collection.update(
         { _id },
         { $set: { binary: new Uint8Array(Buffer.from('hello world')) } }
       )
 
-      const doc = collection.findOne({ _id });
+      const doc = await collection.findOne({ _id });
       test.ok(
         doc.binary instanceof Uint8Array
       );
@@ -345,42 +345,42 @@ Tinytest.add('collection - updating a document with a uint8array should return a
   }
 );
 
-Tinytest.add('collection - finding with a query with a uint8array field should return the correct document',
-  function(test) {
+Tinytest.addAsync('collection - finding with a query with a uint8array field should return the correct document',
+  async function(test) {
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary5');
       const _id = Random.id();
-      collection.insert({
+        await collection.insert({
         _id,
         binary: new Uint8Array(Buffer.from('hello world'))
       });
 
-      const doc = collection.findOne({ binary: new Uint8Array(Buffer.from('hello world')) });
+      const doc = await collection.findOne({ binary: new Uint8Array(Buffer.from('hello world')) });
       test.equal(
         doc._id,
         _id
       );
-      collection.remove({});
+        await collection.remove({});
     }
   }
 );
 
-Tinytest.add('collection - finding with a query with a binary field should return the correct document',
-  function(test) {
+Tinytest.addAsync('collection - finding with a query with a binary field should return the correct document',
+  async function(test) {
     if (Meteor.isServer) {
       const collection = new Mongo.Collection('testBinary6');
       const _id = Random.id();
-      collection.insert({
+      await collection.insert({
         _id,
         binary: new MongoDB.Binary(Buffer.from('hello world'), 6)
       });
 
-      const doc = collection.findOne({ binary: new MongoDB.Binary(Buffer.from('hello world'), 6) });
+      const doc = await collection.findOne({ binary: new MongoDB.Binary(Buffer.from('hello world'), 6) });
       test.equal(
         doc._id,
         _id
       );
-      collection.remove({});
+      await collection.remove({});
     }
   }
 );

@@ -570,7 +570,7 @@ Object.assign(Mongo.Collection.prototype, {
       // result will be returned through the callback instead.
       let result;
       if (!!wrappedCallback) {
-        result = this._collection.insert(doc, wrappedCallback);
+        this._collection.insert(doc, wrappedCallback);
       } else {
         // If we don't have the callback, we assume the user is using the promise.
         // We can't just pass this._collection.insert to the promisify because it would lose the context.

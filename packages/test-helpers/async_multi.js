@@ -65,13 +65,13 @@ _.extend(ExpectationManager.prototype, {
       throw new Error("Too late to add more expectations to the test");
     self.outstanding++;
 
-    return function (/* arguments */) {
+    return async function (/* arguments */) {
       if (self.dead)
         return;
 
       if (typeof expected === "function") {
         try {
-          expected.apply({}, arguments);
+          await expected.apply({}, arguments);
         } catch (e) {
           if (self.cancel())
             self.test.exception(e);
