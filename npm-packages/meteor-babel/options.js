@@ -20,7 +20,8 @@ function getReifyOptions(features) {
   const reifyOptions = {
     avoidModernSyntax: true,
     enforceStrictMode: false,
-    dynamicImport: true
+    dynamicImport: true,
+    topLevelAwait: features.topLevelAwait
   };
 
   if (features) {
