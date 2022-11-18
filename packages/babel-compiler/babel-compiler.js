@@ -87,8 +87,12 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
+      
+      features.topLevelAwait = true;
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
+
+      // TODO: add an env var to enable top level await for the client
     }
 
     if (! features.hasOwnProperty("jscript")) {
