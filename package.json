@@ -19,6 +19,20 @@
   "eslintConfig": {
     "extends": [
       "@quave/quave"
-    ]
+    ],
+    "rules": {
+      "global-require": "off",
+      "no-console": "off",
+      "camelcase": "warn",
+      "consistent-return": "off",
+      "quotes": "warn",
+      "no-shadow": [
+        "error",
+        {
+          "allow": ["resolve"]
+        }
+      ],
+      "no-use-before-define": "warn"
+    }
   }
 }
