@@ -14,6 +14,6 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 14.x
-      - run: npm i
+      - run: npm ci
       - name: Run ESLint@8
         run: npx eslint@8 "./npm-packages/meteor-installer/**/*.js"
