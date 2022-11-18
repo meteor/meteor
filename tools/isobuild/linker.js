@@ -439,7 +439,7 @@ Object.assign(Module.prototype, {
     assert.ok(_.isNumber(moduleCount));
     assert.ok(_.isNumber(sourceWidth));
 
-    let exportsName;
+    let exportsIndex = -1;
 
     // Now that we have installed everything in this package or
     // application, first evaluate the bare files, then require the
@@ -458,21 +458,33 @@ Object.assign(Module.prototype, {
     });
 
     if (eagerModuleFiles.length > 0) {
-      _.each(eagerModuleFiles, file => {
+      let code = 'Package._evaluateEagerModules(require,[';
+      let paths = eagerModuleFiles.map((file, index) => {
         if (file.mainModule) {
-          exportsName = "exports";
+          exportsIndex = index;
         }
 
-        chunks.push(
-          file.mainModule ? "\nvar " + exportsName + " = " : "\n",
-          "require(",
-          JSON.stringify(file.absModuleId),
-          ");"
-        );
+        return JSON.stringify(file.absModuleId);
       });
+
+      code += paths.join(',\n  ');
+      code += ']';
+
+      if (exportsIndex !== -1) {
+        code += `, ${exportsIndex}`;
+      }
+
+      code += ');';
+      
+      if (exportsIndex !== -1) {
+        code = '\nvar exports = ' + code;
+      }
+
+      chunks.push(code);
     }
 
-    return exportsName;
+
+    return exportsIndex === -1 ? undefined : 'exports';
   }
 });
 
@@ -964,8 +976,22 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 var getHeader = function (options) {
   var chunks = [];
 
+  // TODO: find a better check that also works for packages that
+  // load before the Meteor package
+  if (options.name !== 'meteor') {
+    let depsCode = Object.values(options.imports).map(k => JSON.stringify(k)).join(', ');
+
+    chunks.push(
+        `Package.load("${options.name}", [`,
+        depsCode,
+        '], function () {'
+    );
+    
+  } else {
+      chunks.push("(function() {\n\n")
+  }
+
   chunks.push(
-    "(function () {\n\n",
     getImportCode(options.imports, "/* Imports */\n", false),
   );
 
@@ -1015,33 +1041,47 @@ var getFooter = function ({
   name,
   exported,
   exportsName,
+  imports
 }) {
   var chunks = [];
 
-  if (name && exported) {
+  if (name === 'meteor') {
+    chunks.push("Package._define(" + JSON.stringify(name) + ", ");
+    if (!_.isEmpty(exported)) {
+      const scratch = {};
+      _.each(exported, symbol => scratch[symbol] = symbol);
+      const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
+      chunks.push(symbolTree);
+    }
+    chunks.push(');\n');
+
+  } else if (exported || exportsName) {
     chunks.push("\n\n/* Exports */\n");
+    chunks.push('return {\n');
+
+    if (exportsName) {
+      chunks.push(`  mainModule: ${exportsName},`);
+    }
 
     // Even if there are no exports, we need to define Package.foo,
     // because the existence of Package.foo is how another package
     // (e.g., one that weakly depends on foo) can tell if foo is loaded.
-    chunks.push("Package._define(" + JSON.stringify(name));
-
-    if (exportsName) {
-      // If we have an exports object, use it as Package[name].
-      chunks.push(", ", exportsName);
-    }
 
     if (! _.isEmpty(exported)) {
       const scratch = {};
       _.each(exported, symbol => scratch[symbol] = symbol);
       const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
-      chunks.push(", ", symbolTree);
+      chunks.push("exports: ", symbolTree);
     }
-
-    chunks.push(");\n");
+    chunks.push('};\n');
+    
+  }
+  if (name !== 'meteor') {
+    chunks.push("\n});\n");
+  } else {
+    chunks.push("\n})();\n");
   }
 
-  chunks.push("\n})();\n");
   return chunks.join('');
 };
 
@@ -1150,6 +1190,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // Otherwise we're making a package and we have to actually combine the files
   // into a single scope.
   var header = getHeader({
+    name,
     imports,
     packageVariables: _.union(assignedVariables, declaredExports)
   });
@@ -1164,7 +1205,8 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   var footer = getFooter({
     exported: declaredExports,
     exportsName,
-    name
+    name,
+    imports
   });
 
   if (includeSourceMapInstructions) {
