@@ -32,7 +32,8 @@
           "allow": ["resolve"]
         }
       ],
-      "no-use-before-define": "warn"
+      "no-use-before-define": "warn",
+      "import/no-unresolved": "warn"
     }
   }
 }
