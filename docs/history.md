@@ -1,3 +1,15 @@
+## 2.9, 2022-XX-XX
+
+### Highlights
+
+#### Breaking Changes
+* Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+
 ## 2.8.1, 2022-11-14
 
 #### Highlights
@@ -113,7 +125,6 @@ _In case you want types in your app using the core packages types/zodern:types (
   - added types for package.
 * `webapp-hashing@1.1.1`
   - added types for package.
-
 ## v2.8, 2022-10-19
 
 #### Highlights
