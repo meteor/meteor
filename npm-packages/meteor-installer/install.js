@@ -1,5 +1,4 @@
 const { DownloaderHelper } = require('node-downloader-helper');
-const HttpsProxyAgent = require('https-proxy-agent');
 const cliProgress = require('cli-progress');
 const Seven = require('node-7z');
 const path = require('path');
@@ -149,6 +148,8 @@ function generateProxyAgent() {
   if (!proxyUrl) {
     return undefined;
   }
+
+  const HttpsProxyAgent = require('https-proxy-agent');
 
   return new HttpsProxyAgent(proxyUrl);
 }
