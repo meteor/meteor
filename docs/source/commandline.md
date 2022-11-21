@@ -184,6 +184,327 @@ Create a basic [solid](https://www.solidjs.com/) app.
 | [webapp](https://atmospherejs.com/meteor/webapp)                                                     |                     |          |          |      X      |           |            |         |            |              |               |           |
 | [react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)                               |          X          |          |          |             |           |            |         |            |      X       |       X       |           |
 
+<h2 id="meteorgenerate"> meteor generate </h2>
+
+``meteor generate`` is a command for generating scaffolds for your current project. when ran without arguments, it will ask
+you what is the name of the model you want to generate, if you do want methods for your api and publications. It can be
+used as a command line only operation as well.
+
+running 
+```bash
+meteor generate customer
+
+```
+
+it will generate the following code in ``/imports/api``
+![Screenshot 2022-11-09 at 11 28 29](https://user-images.githubusercontent.com/70247653/200856551-71c100f5-8714-4b34-9678-4f08780dcc8b.png)
+
+that will have the following code:
+
+
+<h3 id="meteorgenerate-collection.js">collection.js</h3>
+
+```js
+
+ import { Mongo } from 'meteor/mongo';
+
+export const CustomerCollection = new Mongo.Collection('customer');
+
+```
+
+
+
+<h3 id="meteorgenerate-methods.js">methods.js</h3>
+
+```js
+import { Meteor } from 'meteor/meteor';
+import { check } from 'meteor/check';
+import { CustomerCollection } from './collection';
+
+export function create(data) {
+  return CustomerCollection.insertAsync({ ...data });
+}
+
+export function update(_id, data) {
+  check(_id, String);
+  return CustomerCollection.updateAsync(_id, { ...data });
+}
+
+export function remove(_id) {
+  check(_id, String);
+  return CustomerCollection.removeAsync(_id);
+}
+
+export function findById(_id) {
+  check(_id, String);
+  return CustomerCollection.findOneAsync(_id);
+}
+
+Meteor.methods({
+  'Customer.create': create,
+  'Customer.update': update,
+  'Customer.remove': remove,
+  'Customer.find': findById
+});
+
+```
+
+
+
+
+
+<h3 id="meteorgenerate-publication.js">publication.js</h3>
+
+```js
+
+import { Meteor } from 'meteor/meteor';
+import { CustomerCollection } from './collection';
+
+Meteor.publish('CustomersByLoggedUser', function publishCustomersByUserId() {
+  return CustomerCollection.find({ userId: this.userId });
+});
+
+Meteor.publish('allCustomers', function publishCustomers() {
+  return CustomerCollection.find({});
+});
+
+
+```
+
+
+
+
+
+
+<h3 id="meteorgenerate-index.js">index.js</h3>
+
+```js
+
+export * from './collection';
+export * from './methods';
+export * from './publications';
+
+```
+
+
+
+
+Also, there is the same version of these methods using TypeScript, that will be shown bellow.
+
+<h3 id="meteorgenerate-path">path option</h3>
+
+for those that may want to create in another path, you can use the ``--path`` option in order to select where to place this boilerplate.
+It will generate the model in that path. Note that I'm using TypeScript in this example.
+
+```bash
+
+meteor generate another-customer --path=server/admin
+
+```
+
+it will generate in ``server/admin`` the another-client code:
+
+![Screenshot 2022-11-09 at 11 32 39](https://user-images.githubusercontent.com/70247653/200857560-a4874e4c-1078-4b7a-9381-4c6590d2f63b.png)
+
+
+<h3 id="meteorgenerate-collection.ts">collection.ts</h3>
+
+```typescript
+
+import { Mongo } from 'meteor/mongo';
+
+export type AnotherCustomer = {
+  _id?: string;
+  name: string;
+  createdAt: Date;
+}
+
+export const AnotherCustomerCollection = new Mongo.Collection<AnotherCustomer, AnotherCustomer>('another-customer');
+
+```
+
+<h3 id="meteorgenerate-methods.ts">methods.ts</h3>
+
+```typescript
+
+import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
+import { check } from 'meteor/check';
+import { AnotherCustomer, AnotherCustomerCollection } from './collection';
+
+export function create(data: AnotherCustomer) {
+  return AnotherCustomerCollection.insertAsync({ ...data });
+}
+
+export function update(_id: string, data: Mongo.Modifier<AnotherCustomer>) {
+  check(_id, String);
+  return AnotherCustomerCollection.updateAsync(_id, { ...data });
+}
+
+export function remove(_id: string) {
+  check(_id, String);
+  return AnotherCustomerCollection.removeAsync(_id);
+}
+
+export function findById(_id: string) {
+  check(_id, String);
+  return AnotherCustomerCollection.findOneAsync(_id);
+}
+
+Meteor.methods({
+  'AnotherCustomer.create': create,
+  'AnotherCustomer.update': update,
+  'AnotherCustomer.remove': remove,
+  'AnotherCustomer.find': findById
+});
+
+
+```
+
+
+
+<h3 id="meteorgenerate-publications.ts">publications.ts</h3>
+
+```typescript
+
+import { Meteor } from 'meteor/meteor';
+import { AnotherCustomerCollection } from './collection';
+
+Meteor.publish('AnotherCustomersByLoggedUser', function publishAnotherCustomersByUserId(this) {
+  return AnotherCustomerCollection.find({ userId: this.userId });
+});
+
+Meteor.publish('allAnotherCustomers', function publishAnotherCustomers() {
+  return AnotherCustomerCollection.find({});
+});
+
+```
+
+
+
+<h3 id="meteorgenerate-index.ts">index.ts</h3>
+
+```typescript
+
+export * from './collection';
+export * from './methods';
+export * from './publications';
+
+```
+
+
+
+---
+
+
+<h3 id="meteorgenerate-wizard"> Using the Wizard  </h3>
+
+
+if you run the following command:
+
+```bash
+meteor generate
+```
+
+it will prompt the following questions.
+
+![Screenshot 2022-11-09 at 11 38 29](https://user-images.githubusercontent.com/70247653/200859087-a2ef63b6-7ac1-492b-8918-0630cbd30686.png)
+
+
+
+
+--- 
+
+<h3 id="meteorgenerate-templating"> Using your own template </h3>
+
+`--templatePath`
+
+```bash
+meteor generate feed --templatePath=/scaffolds-ts
+```
+![Screenshot 2022-11-09 at 11 42 47](https://user-images.githubusercontent.com/70247653/200860178-2341befe-bcfd-422f-a4bd-7c9918abfd97.png)
+
+> Note that this is not a CLI framework inside meteor but just giving some solutions for really common problems out of the box.
+> Check out Yargs, Inquirer or Commander for more information about CLI frameworks.
+
+
+You can use your own templates for scaffolding your specific workloads. To do that, you should pass in a template directory URL so that it can copy it with its changes.
+
+<h3 id="meteorgenerate-template-rename"> how do I rename things?</h3>
+
+Out of the box I provide a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
+
+these replacements come from this function:
+ 
+_note that scaffoldName is the name that you have passed as argument_
+
+```js
+const transformName = (name) => {
+    return name.replace(/\$\$name\$\$|\$\$PascalName\$\$|\$\$camelName\$\$/g, function (substring, args) {
+      if (substring === '$$name$$') return scaffoldName;
+      if (substring === '$$PascalName$$') return toPascalCase(scaffoldName);
+      if (substring === '$$camelName$$') return toCamelCase(scaffoldName);
+    })
+  }
+```
+
+<h3 id="meteorgenerate-template-faq"> What if I want to have my own way of templating? </h3>
+
+`--replaceFn`
+
+There is an option called ``--replaceFn`` that when you pass in given a .js file with two functions it will override all templating that we have defaulted to use your given function.
+_example of a replacer file_
+```js
+export function transformFilename(scaffoldName, filename) {
+  console.log(scaffoldName, filename);
+  return filename
+}
+
+export function transformContents(scaffoldName, contents, fileName) {
+  console.log(fileName, contents);
+  return contents
+}
+
+```
+if you run your command like this:
+
+```bash
+ meteor generate feed --replaceFn=/fn/replace.js
+```
+it will generate files full of ``$$PascalCase$$``using the meteor provided templates.
+
+A better example of this feature would be the following js file:
+```js
+const toPascalCase = (str) => {
+  if(!str.includes('-')) return str.charAt(0).toUpperCase() + str.slice(1);
+  else return str.split('-').map(toPascalCase).join('');
+}
+const toCamelCase = (str) => {
+  if(!str.includes('-')) return str.charAt(0).toLowerCase() + str.slice(1);
+  else return str.split('-').map(toPascalCase).join('');
+}
+
+const transformName = (scaffoldName, str) => {
+    return str.replace(/\$\$name\$\$|\$\$PascalName\$\$|\$\$camelName\$\$/g, function (substring, args) {
+      if (substring === '$$name$$') return scaffoldName;
+      if (substring === '$$PascalName$$') return toPascalCase(scaffoldName);
+      if (substring === '$$camelName$$') return toCamelCase(scaffoldName);
+    })
+
+}
+
+export function transformFilename(scaffoldName, filename) {
+  return transformName(scaffoldName, filename);
+}
+
+export function transformContents(scaffoldName, contents, fileName) {
+  return transformName(scaffoldName, contents);
+}
+```
+
+
+
+
 <h2 id="meteorloginlogout">meteor login / logout</h2>
 
 Log in and out of your account using Meteor's authentication system.
