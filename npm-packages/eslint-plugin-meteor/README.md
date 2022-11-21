@@ -1,82 +1,154 @@
-# <a href='https://www.meteor.com'><img src='https://user-images.githubusercontent.com/841294/26841702-0902bbee-4af3-11e7-9805-0618da66a246.png' height='60' alt='Meteor'></a>
+# ESLint-plugin-Meteor
 
-[![TravisCI Status](https://travis-ci.org/meteor/meteor.svg?branch=devel)](https://travis-ci.org/meteor/meteor)
-[![CircleCI Status](https://circleci.com/gh/meteor/meteor/tree/devel.svg?style=shield&circle-token=c2d3c041506bd493ef3795ffa4448684cfce97b8)](https://circleci.com/gh/meteor/meteor/tree/devel)
+Meteor specific linting rules for ESLint
 
-Meteor is an ultra-simple environment for building modern web
-applications.
+[![Build Status][actions-image]][actions-url]
+[![Coverage Status][coverage-image]][coverage-url]
+[![Dependency Status][deps-image]][deps-url]
 
-With Meteor you write apps:
+[![Join the chat at https://gitter.im/dferber90/eslint-plugin-meteor][gitter-image]][gitter-url]
+[![Maintenance Status][status-image]][status-url]
+[![semantic-release][semantic-release-image]][semantic-release]
+[![Commitizen friendly][commitizen-image]][commitizen]
 
-* in modern JavaScript
-* that send data over the wire, rather than HTML
-* using your choice of popular open-source libraries
+[![License][license-image]][license-url]
+[![NPM version][npm-image]][npm-url]
+[![NPM downloads][npm-downloads-image]][npm-downloads-url]
 
-Try a getting started tutorial:
- * [React](https://react-tutorial.meteor.com)
- * [Blaze](https://blaze-tutorial.meteor.com/)
- * [Angular](https://www.meteor.com/tutorials/angular/creating-an-app)
- * [Vue](https://vue-tutorial.meteor.com/)
- * [Svelte](https://svelte-tutorial.meteor.com/)
+![Example](docs/media/epm.gif)
 
-Next, read the [guide](https://guide.meteor.com) and the [documentation](https://docs.meteor.com/).
+*This gif shows integration of ESLint-plugin-Meteor into Atom. Find out more in the [integration guide](docs/guides/integration.md).*
 
-Are you looking for examples? Check this [meteor/examples](https://github.com/meteor/examples)
 
-## Quick Start
+# Quickstart
+## Installation
 
-On Linux/macOS/Windows, use this line:
+Install [ESLint](https://www.github.com/eslint/eslint) and this plugin either locally or globally.
 
-```bash
-npm install -g meteor
+```sh
+$ npm install eslint --save-dev
+$ npm install eslint-plugin-meteor --save-dev
 ```
 
-Visit the official [install page](https://www.meteor.com/developers/install) to learn more.
 
-Alternatively, on macOS and Linux you can use:
+## Configuration
 
-```bash
-curl https://install.meteor.com/ | sh
+Create an `.eslintrc.json` file with this content at the root of your project:
+
+```json
+{
+  "plugins": ["meteor"],
+  "extends": ["plugin:meteor/recommended"]
+}
 ```
 
-Create a project:
+For a more thorough introduction, read the [setup guide](/docs/guides/setup.md).
 
-```bash
-meteor create try-meteor
+An article with detailed setup instructions can be found [here](https://medium.com/@dferber90/linting-meteor-8f229ebc7942).
+
+# List of supported rules
+
+## Best Practices
+
+* General
+  * [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
+* Session
+  * [no-session](docs/rules/no-session.md): Prevent usage of Session
+  * [prefer-session-equals](docs/rules/prefer-session-equals.md): Prefer `Session.equals` in conditions
+* Security
+  * [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
+* Blaze
+  * [template-names](docs/rules/template-names.md): Naming convention for templates
+  * [no-template-lifecycle-assignments](docs/rules/no-template-lifecycle-assignments.md): Prevent deprecated template lifecycle callback assignments
+  * [eventmap-params](docs/rules/eventmap-params.md): Force consistent event handler parameter names in event maps
+  * [prefix-eventmap-selectors](docs/rules/prefix-eventmap-selectors.md): Convention for eventmap selectors
+  * [scope-dom-lookups](docs/rules/scope-dom-lookups.md): Scope DOM lookups to the template instance
+  * [no-dom-lookup-on-created](docs/rules/no-dom-lookup-on-created.md): Forbid DOM lookups in template creation callback
+  * [no-template-parent-data](docs/rules/no-template-parent-data.md): Avoid accessing template parent data
+
+## Core API
+* *currently no rules implemented*
+
+[Any rule idea is welcome !](https://github.com/dferber90/eslint-plugin-meteor/issues)
+
+## Recommended Configuration
+
+This plugin exports a recommended configuration which enforces good Meteor practices.
+The rules enabled in this configuration can be found in [`lib/index.js`](https://github.com/dferber90/eslint-plugin-meteor/blob/master/lib/index.js).
+
+To enable the recommended configuration use the extends property in your `.eslintrc.json` config file:
+
+```json
+{
+  "plugins": [
+    "meteor"
+  ],
+  "extends": ["eslint:recommended", "plugin:meteor/recommended"]
+}
 ```
 
-Run it:
+You probably also want to enable ESLint to parse ECMAScript 2015 and to support React templates.
 
-```bash
-cd try-meteor
-meteor
+Add the following to your `.eslintrc.json` config file
+
+```json
+{
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+    "ecmaFeatures": {
+        "jsx": true
+    }
+  }
+}
 ```
 
-## Developer Resources
+See [ESLint documentation](http://eslint.org/docs/user-guide/configuring#extending-configuration-files) for more information about extending configuration files.
 
-Building an application with Meteor?
+## Limitations
 
-* Deploy on Galaxy hosting: https://www.meteor.com/cloud
-* Announcement list: sign up at https://www.meteor.com/
-* Discussion forums: https://forums.meteor.com/
-* Join the Meteor community Slack by clicking this [invite link](https://join.slack.com/t/meteor-community/shared_invite/enQtODA0NTU2Nzk5MTA3LWY5NGMxMWRjZDgzYWMyMTEyYTQ3MTcwZmU2YjM5MTY3MjJkZjQ0NWRjOGZlYmIxZjFlYTA5Mjg4OTk3ODRiOTc).
+ESLint-plugin-Meteor is not aware of where files are going to be executed, to keep the plugin simple.
+It will not warn when accessing client-only features on the server and vice versa.
+
+# Contributing
+
+Read about [set up of the development environment](/docs/guides/development.md).
+
+# Thanks
+
+This plugin is inspired by [eslint-plugin-react](https://github.com/yannickcr/eslint-plugin-react).
+
+# License
+
+ESLint-plugin-Meteor is licensed under the [MIT License](http://www.opensource.org/licenses/mit-license.php).
 
 
-Interested in helping or contributing to Meteor?  These resources will help:
+[gitter-image]: https://img.shields.io/badge/gitter-chat-e10079.svg?style=flat-square
+[gitter-url]: https://gitter.im/dferber90/eslint-plugin-meteor?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 
-* [Core development guide](DEVELOPMENT.md)
-* [Contribution guidelines](CONTRIBUTING.md)
-* [Feature requests](https://github.com/meteor/meteor/discussions/)
-* [Issue tracker](https://github.com/meteor/meteor/issues)
+[npm-url]: https://npmjs.org/package/eslint-plugin-meteor
+[npm-image]: http://img.shields.io/npm/v/eslint-plugin-meteor.svg?style=flat-square
 
-## Uninstalling Meteor
+[npm-downloads-url]: https://npm-stat.com/charts.html?package=eslint-plugin-meteor
+[npm-downloads-image]: https://img.shields.io/npm/dm/eslint-plugin-meteor.svg?style=flat-square
 
-Aside from a short launcher shell script, Meteor installs itself inside your
-home directory. To uninstall Meteor, run:
+[actions-url]: https://github.com/dferber90/eslint-plugin-meteor/actions?query=workflow%3APR
+[actions-image]: https://img.shields.io/github/workflow/status/dferber90/eslint-plugin-meteor/PR?style=flat-square
 
-```bash
-rm -rf ~/.meteor/
-sudo rm /usr/local/bin/meteor
-```
+[deps-url]: https://david-dm.org/dferber90/eslint-plugin-meteor
+[deps-image]: https://img.shields.io/david/dev/dferber90/eslint-plugin-meteor.svg?style=flat-square
 
-On Windows, [read here](npm-packages/meteor-installer/README.md).
+[coverage-url]: https://coveralls.io/github/dferber90/eslint-plugin-meteor?branch=master
+[coverage-image]: http://img.shields.io/coveralls/dferber90/eslint-plugin-meteor/master.svg?style=flat-square
+
+[license-url]: https://github.com/dferber90/eslint-plugin-meteor/blob/master/LICENSE
+[license-image]: https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square
+
+[status-url]: https://github.com/dferber90/eslint-plugin-meteor/pulse
+[status-image]: http://img.shields.io/badge/status-maintained-e10079.svg?style=flat-square
+
+[semantic-release-image]: https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg?style=flat-square
+[semantic-release]: https://github.com/semantic-release/semantic-release
+
+[commitizen-image]: https://img.shields.io/badge/commitizen-friendly-e10079.svg?style=flat-square
+[commitizen]: http://commitizen.github.io/cz-cli/
