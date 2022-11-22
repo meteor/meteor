@@ -848,8 +848,8 @@ MongoConnection.prototype.createIndex = async function (collectionName, index,
   console.dir(index)
   const p = new Promise(async (resolve, reject) => {
     try {
-      const j = await collection.createIndex(index, options)
-      resolve(j)
+      const i = await collection.createIndex(index, options)
+      resolve(i)
     } catch (e) {
       reject(e);
     }
@@ -867,8 +867,8 @@ MongoConnection.prototype._dropIndex = async function (collectionName, index) {
   var collection = self.rawCollection(collectionName);
   const p = new Promise(async (resolve, reject) => {
     try {
-      const k = await collection.dropIndex(index)
-      resolve(k)
+      const i = await collection.dropIndex(index)
+      resolve(i)
     } catch (e) {
       reject(e);
     }
