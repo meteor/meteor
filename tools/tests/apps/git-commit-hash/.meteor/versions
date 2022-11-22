@@ -33,7 +33,7 @@ standard-minifier-css@1.5.2
 standard-minifier-js@2.4.0
 static-html@1.2.2
 templating-tools@1.1.2
-tracker@1.2.0
-underscore@1.0.10
+tracker@1.2.1
+underscore@1.0.11
 webapp@1.7.3-beta181.16
 webapp-hashing@1.0.9
