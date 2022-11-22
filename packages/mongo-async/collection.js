@@ -774,7 +774,6 @@ Object.assign(Mongo.Collection.prototype, {
     var self = this;
     if (!self._collection.createIndex)
       throw new Error('Can only call createIndex on server collections');
-    console.dir(index, options)
     try {
       await self._collection.createIndex(index, options);
     } catch (e) {
