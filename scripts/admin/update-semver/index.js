@@ -7,6 +7,7 @@
 const semver = require('semver');
 const fs = require('fs');
 const { exec } = require("child_process");
+const { readdir } = require("fs/promises");
 
 const runCommand = async (command) => {
   return new Promise((resolve, reject) => {
@@ -45,11 +46,22 @@ async function getFile(path) {
 
 }
 
+const getDirectories = async source =>
+  (await readdir(source, { withFileTypes: true }))
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => dirent.name);
+
 async function main() {
   /**
    * @type {string[]}
    */
   let args = process.argv.slice(2);
+
+  if (args[0].startsWith('@all')) {
+    const [_, type] = args[0].split('.');
+    const allPackages = await getDirectories('../../../packages');
+    args = allPackages.map((packageName) => `${ packageName }.${ type }`);
+  }
 
   if (args[0].startsWith('@auto')) {
     const [_, type] = args[0].split('.');
@@ -60,6 +72,10 @@ async function main() {
     // ddp-common
 
     const p = await getPackages();
+    console.log('****************')
+    console.log('Will be updating the following packages:');
+    console.dir(p)
+    console.log('****************')
     const packages = p.concat(`packages/meteor-tool.${ type }`);
     args = packages
       .split('/')
@@ -88,8 +104,13 @@ async function main() {
       //   version: '1.2.3' <--- this is the line we want, we assure that it has a version in the previous if
       //});
       const [_, versionValue] = line.split(':');
-      const currentVersion = versionValue.trim().replace(',', '');
-      const semverVersion = semver.coerce(currentVersion);
+      if (!versionValue) continue;
+      const currentVersion = versionValue
+        .trim()
+        .replace(',', '')
+        .replace(/'/g, '')
+        .replace(/"/g, '');
+
 
       /**
        *
@@ -98,14 +119,14 @@ async function main() {
        */
       function incrementNewVersion(release) {
         if (release.includes('beta') || release.includes('rc')) {
-          return semver.inc(semverVersion, 'prerelease', release);
+          return semver.inc(currentVersion, 'prerelease', release);
         }
-        return semver.inc(semverVersion, release);
+        return semver.inc(currentVersion, release);
       }
 
       const newVersion = incrementNewVersion(release);
       console.log(`Updating ${ name } from ${ currentVersion } to ${ newVersion }`);
-      const newCode = code.replace(currentVersion, "'" + newVersion + "'");
+      const newCode = code.replace(currentVersion, `${ newVersion }`);
       await fs.promises.writeFile(filePath, newCode);
     }
   }
