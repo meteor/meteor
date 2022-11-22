@@ -845,7 +845,6 @@ MongoConnection.prototype.createIndex = async function (collectionName, index,
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
   var collection = self.rawCollection(collectionName)
-  console.dir(index)
   const p = new Promise(async (resolve, reject) => {
     try {
       const i = await collection.createIndex(index, options)
