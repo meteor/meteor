@@ -117,7 +117,6 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
         color: 'blue',
       }).observeChanges({
         added(id, fields) {
-          console.log(id, fields)
           if (fields.name === 'dog 5') {
             blueDog5Id = id
             resolver2()
