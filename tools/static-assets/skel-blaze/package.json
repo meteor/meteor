@@ -13,7 +13,7 @@
     "meteor-node-stubs": "^1.2.1"
   },
   "devDependencies": {
-    "meteor": "2.8.1"
+    "meteor": "^2.8.2"
   },
   "meteor": {
     "mainModule": {

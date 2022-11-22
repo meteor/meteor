@@ -14,7 +14,7 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "meteor": "2.8.1"
+    "meteor": "^2.8.2"
   },
   "meteor": {
     "mainModule": {
