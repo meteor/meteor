@@ -111,7 +111,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       var blueDog5Id = null;
       var gotSpot = false;
       let resolver; const gotSpotPromise = new Promise(resolve => resolver = resolve)
-      let resolver2; const gotSpotPromise2 = new Promise(resolve => resolver = resolve)
+      let resolver2; const gotSpotPromise2 = new Promise(resolve => resolver2 = resolve)
       self.subHandle = await self.collection.find({
         species: 'dog',
         color: 'blue',
@@ -119,7 +119,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
         added(id, fields) {
           console.log(id, fields)
           if (fields.name === 'dog 5') {
-            blueDog5Id = true
+            blueDog5Id = id
             resolver2()
           }
         },
@@ -131,13 +131,7 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
           }
         },
       });
-      console.log(self.subHandle._multiplexer._observeDriver._usesOplog);
-      console.log(blueDog5Id);
-      console.log(gotSpot);
       test.isTrue(self.subHandle._multiplexer._observeDriver._usesOplog);
-      test.isTrue(blueDog5Id);
-      test.isFalse(gotSpot);
-
       self.skipped = false;
       self.skipHandle = MongoInternals.defaultRemoteCollectionDriver()
         .mongo._oplogHandle.onSkippedEntries(function () {
@@ -151,10 +145,13 @@ process.env.MONGO_OPLOG_URL && testAsyncMulti(
       await self.collection.update({ species: 'cat' },
         { $set: { color: 'blue' } },
         { multi: true });
+      test.isTrue(blueDog5Id);
+      test.isFalse(gotSpot);
       await self.collection.update(blueDog5Id, { $set: { name: 'spot' } });
 
+
       // We ought to see the spot change soon!
-      return await Promise.all[gotSpotPromise, gotSpotPromise2];
+      return Promise.all([gotSpotPromise, gotSpotPromise2]);
     },
 
     async function (test, expect) {
