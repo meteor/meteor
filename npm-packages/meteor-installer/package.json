@@ -1,6 +1,6 @@
 {
   "name": "meteor",
-  "version": "2.8.1",
+  "version": "2.8.2",
   "description": "Install Meteor",
   "main": "install.js",
   "scripts": {
@@ -11,6 +11,7 @@
   "dependencies": {
     "7zip-bin": "^5.2.0",
     "cli-progress": "^3.11.1",
+    "https-proxy-agent": "^5.0.1",
     "node-7z": "^2.1.2",
     "node-downloader-helper": "^1.0.19",
     "rimraf": "^3.0.2",
