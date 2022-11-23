@@ -830,7 +830,7 @@ Object.assign(Mongo.Collection.prototype, {
    * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.0/api/Db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
    * @locus Server
    * @memberof Mongo.Collection
-   * @ce
+   * @instance
    */
   rawDatabase() {
     var self = this;
