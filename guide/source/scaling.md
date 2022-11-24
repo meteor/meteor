@@ -10,9 +10,7 @@ Also do note that every app is different so there are unique challenges to each 
 practices describe in this guide should be used as a guiding posts rather than absolutes.
 
 This guide has been heavily inspired by [Marcin Szuster's Vazco article](https://www.vazco.eu/blog/how-to-optimize-and-scale-meteor-projects)
-on this issue and talk by Paulo Mogollón's talk at Impact 2022 titled "First steps on scaling Meteor realtime data".
-
-TODO video from Impact 2022 https://impact.meteor.com/meetings/virtual/uo2Er8YPqx2vuRcne
+on this issue and talk by Paulo Mogollón's talk at Impact 2022 titled ["First steps on scaling Meteor realtime data"](https://impact.meteor.com/meetings/virtual/uo2Er8YPqx2vuRcne).
 
 <h2 id="performance-monitoring">Performance monitoring</h2>
 
@@ -118,7 +116,18 @@ There are mainly two different ways of scaling: the vertical and horizontal one.
 * **Vertical scaling** boils down to adding more resources (CPU/RAM/disk) to your server, while horizontal scaling refers to adding more machines or containers to your pool of resources.
 * **Horizontal scaling** for Meteor projects typically includes running multiple instances of your app on a single server with multiple cores, or running multiple instances on multiple servers.
 
-<h3 id="autoscaling">Autoscaling</h3>
+<h3 id="autoscaling">Container autoscaling</h3>
+
+It is important to be ready for a sudden spikes of traffic.
+While all the other measures mentioned here will help, but a certain point it becomes impossible to support more users on one container and additional containers need to be added to support these users.
+Today most hosting solutions offer scaling triggers that you can set to automatically scale up (and down) the number of containers for your app based on things like number of connection, CPU and RAM usage.
+Galaxy has these as well. Learn more about [setting triggers for scaling on Galaxy](https://galaxy-guide.meteor.com/triggers.html).
+
+Setting these is vital, so that your application can keep on running when you have extra people come and then saves you money by scaling down when the containers are not in use.
+When initially setting these pay a close attention to the performance of your app. you need to learn when is the right time to scale your app so it has enough time to spin up new containers before the existing one get overwhelmed by traffic and so on.
+There are other points to pay attention to as well. For example if your app is used by corporation you might want to setup that on weekdays the minimum number of containers is going to increase just before the start of working hours and the then decrease the minimum to 1 for after hours and on weekends.  
+
+Usually when you are working on performance issues you will have higher numbers of containers as you optimize your app. It is therefore vital to revisit your scaling setting after each rounds of improvements to ensure that scaling triggers are properly optimized.
 
 <h2 id="packages">Packages</h2>
 
