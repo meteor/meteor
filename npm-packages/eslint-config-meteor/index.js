@@ -1,21 +1,16 @@
 module.exports = {
   parser: 'babel-eslint',
   parserOptions: {
-    allowImportExportEverywhere: true
+    allowImportExportEverywhere: true,
   },
   env: {
     node: true,
-    browser: true
+    browser: true,
   },
-  plugins: [
-    'meteor'
-  ],
-  extends: [
-    'airbnb',
-    'plugin:meteor/recommended'
-  ],
+  plugins: ['meteor'],
+  extends: ['airbnb', 'plugin:meteor/recommended'],
   settings: {
-    'import/resolver': 'meteor'
+    'import/resolver': 'meteor',
   },
   rules: {
     'react/jsx-filename-extension': 0,
@@ -30,24 +25,21 @@ module.exports = {
     'no-underscore-dangle': [
       'error',
       {
-        allow: [
-          '_id',
-          '_ensureIndex'
-        ]
-      }
+        allow: ['_id', '_ensureIndex'],
+      },
     ],
     'object-shorthand': [
       'error',
       'always',
       {
-        avoidQuotes: false
-      }
+        avoidQuotes: false,
+      },
     ],
 
     'space-before-function-paren': 0,
-    
+
     // for Meteor API's that rely on `this` context, e.g. Template.onCreated and publications
     'func-names': 0,
-    'prefer-arrow-callback': 0
-  }
+    'prefer-arrow-callback': 0,
+  },
 };
