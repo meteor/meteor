@@ -3,6 +3,7 @@
 var Fiber = Meteor._isFibersEnabled && Npm.require('fibers');
 
 let nextSlot = 0;
+let callAsyncMethodRunning = false;
 
 Meteor._nodeCodeMustBeInFiber = function () {
   if (!Fiber.current) {
@@ -110,6 +111,14 @@ class EnvironmentVariableAsync {
     const saved = _meteor_dynamics[this.slot];
     this._set(value);
     return saved;
+  }
+
+  _isCallAsyncMethodRunning() {
+    return callAsyncMethodRunning;
+  }
+
+  _setCallAsyncMethodRunning(value) {
+    callAsyncMethodRunning = value;
   }
 }
 
