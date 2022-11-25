@@ -239,6 +239,7 @@ const bindEnvironmentAsync = (func, onException, _this) => {
     if (Meteor._getAslStore()) {
       return runWithEnvironment();
     }
-    global.asyncLocalStorage.run({}, runWithEnvironment);
+
+    return global.asyncLocalStorage.run({}, runWithEnvironment);
   };
 };

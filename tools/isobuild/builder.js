@@ -119,11 +119,11 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
     // Build the output from scratch
     if (resetBuildPath) {
-      files.rm_recursive(this.buildPath);
-      files.mkdir_p(this.buildPath, 0o755);
+      files.rm_recursive(this.buildPath).then(() => {
+        files.mkdir_p(this.buildPath, 0o755);
+        this.watchSet = new WatchSet();
+      });
     }
-
-    this.watchSet = new WatchSet();
 
     // XXX cleaner error handling. don't make the humans read an
     // exception (and, make suitable for use in automated systems)
@@ -419,7 +419,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // Serialize `data` as JSON and write it to `relPath` (a path to a
   // file relative to the bundle root), creating parent directories as
   // necessary. Throw an exception if the file already exists.
-  writeJson(relPath, data) {
+  async writeJson(relPath, data) {
     // Ensure no trailing slash
     if (relPath.slice(-1) === files.pathSep) {
       relPath = relPath.slice(0, -1);
@@ -428,7 +428,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     this._ensureDirectory(files.pathDirname(relPath));
     const absPath = files.pathJoin(this.buildPath, relPath);
 
-    atomicallyRewriteFile(
+    await atomicallyRewriteFile(
       absPath,
       Buffer.from(JSON.stringify(data, null, 2), 'utf8'),
       {mode: 0o444});
@@ -920,7 +920,7 @@ function jsToTs(path) {
   return path;
 }
 
-function atomicallyRewriteFile(path, data, options) {
+async function atomicallyRewriteFile(path, data, options) {
   // create a different file with a random name and then rename over atomically
   const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
   const rpath = files.pathJoin(files.pathDirname(path), rname);
@@ -932,7 +932,7 @@ function atomicallyRewriteFile(path, data, options) {
       // replacing a directory with a file; this is rare (so it can
       // be a slow path) but can legitimately happen if e.g. a developer
       // puts a file where there used to be a directory in their app.
-      files.rm_recursive(path);
+      await files.rm_recursive(path);
       files.rename(rpath, path);
     } else {
       throw e;

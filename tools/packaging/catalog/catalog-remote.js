@@ -39,7 +39,7 @@ var Mutex = function () {
 };
 
 Object.assign(Mutex.prototype, {
-  lock: function () {
+  lock: async function () {
     var self = this;
 
     while (true) {
@@ -48,13 +48,13 @@ Object.assign(Mutex.prototype, {
         return;
       }
 
-      new Promise(function (resolve) {
+      await new Promise(function (resolve) {
         self._resolvers.push(resolve);
-      }).await();
+      });
     }
   },
 
-  unlock: function () {
+  unlock: async function () {
     var self = this;
 
     if (!self._locked) {
@@ -64,7 +64,7 @@ Object.assign(Mutex.prototype, {
     self._locked = false;
     var resolve = self._resolvers.shift();
     if (resolve) {
-      resolve();
+      await resolve();
     }
   }
 });
@@ -91,7 +91,7 @@ Object.assign(Txn.prototype, {
   },
 
   // Start a transaction
-  begin: function (mode) {
+  begin: async function (mode) {
     var self = this;
 
     // XXX: Use DEFERRED mode?
@@ -101,12 +101,12 @@ Object.assign(Txn.prototype, {
       throw new Error("Transaction already started");
     }
 
-    self.db._execute("BEGIN " + mode + " TRANSACTION");
+    await self.db._execute("BEGIN " + mode + " TRANSACTION");
     self.started = true;
   },
 
   // Releases resources from the transaction; Rollback if commit not already called.
-  close: function () {
+  close: async function () {
     var self = this;
 
     if (self.closed) {
@@ -117,16 +117,16 @@ Object.assign(Txn.prototype, {
       return;
     }
 
-    self.db._execute("ROLLBACK TRANSACTION");
+    await self.db._execute("ROLLBACK TRANSACTION");
     self.committed = false;
     self.closed = true;
   },
 
   // Commits the transaction.  close() will then be a no-op
-  commit: function () {
+  commit: async function () {
     var self = this;
 
-    self.db._execute("END TRANSACTION");
+    await self.db._execute("END TRANSACTION");
     self.committed = true;
     self.closed = true;
   }
@@ -175,14 +175,14 @@ Object.assign(Db.prototype, {
   },
 
   // Runs functions serially, in a mutex
-  _serialize: function (f) {
+  _serialize: async function (f) {
     var self = this;
 
     try {
-      self._transactionMutex.lock();
-      return f();
+      await self._transactionMutex.lock();
+      return await f();
     } finally {
-      self._transactionMutex.unlock();
+      await self._transactionMutex.unlock();
     }
   },
 
@@ -199,10 +199,10 @@ Object.assign(Db.prototype, {
   },
 
   // Runs the function inside a transaction block
-  runInTransaction: function (action) {
+  runInTransaction: async function (action) {
     var self = this;
 
-    var runOnce = Profile("sqlite query", function () {
+    var runOnce = Profile("sqlite query", async function () {
       var txn = new Txn(self);
 
       var t1 = Date.now();
@@ -211,15 +211,15 @@ Object.assign(Db.prototype, {
       var result = null;
       var resultError = null;
 
-      txn.begin();
+      await txn.begin();
       try {
-        result = action(txn);
-        txn.commit();
+        result = await action(txn);
+        await txn.commit();
       } catch (err) {
         resultError = err;
       } finally {
         try {
-          txn.close();
+          await txn.close();
         } catch (e) {
           // We don't have a lot of options here...
           Console.warn("Error closing transaction", e);
@@ -243,7 +243,7 @@ Object.assign(Db.prototype, {
 
     for (var attempt = 0; ; attempt++) {
       try {
-        return self._serialize(runOnce);
+        return await self._serialize(runOnce);
       } catch (err) {
         var retry = false;
         // Grr... doesn't expose error code; must string-match
@@ -261,7 +261,7 @@ Object.assign(Db.prototype, {
 
       // Wait on average BUSY_RETRY_INTERVAL, but randomize to avoid thundering herd
       var t = (Math.random() + 0.5) * BUSY_RETRY_INTERVAL;
-      utils.sleepMs(t);
+      await utils.sleepMs(t);
     }
   },
 
@@ -320,9 +320,9 @@ Object.assign(Db.prototype, {
     return rows;
   },
 
-  // Runs a query synchronously, returning no rows
+  // Runs a query, returning no rows
   // Hidden to enforce transaction usage
-  _execute: function (sql, params) {
+  _execute: async function (sql, params) {
     var self = this;
 
     var prepared = null;
@@ -335,7 +335,7 @@ Object.assign(Db.prototype, {
     // entirely.)
     var prepare = self._autoPrepare && !_.isEmpty(params);
     if (prepare) {
-      prepared = self._prepareWithCache(sql);
+      prepared = await self._prepareWithCache(sql);
     }
 
     if (DEBUG_SQL) {
@@ -344,7 +344,7 @@ Object.assign(Db.prototype, {
 
     //Console.debug("Executing SQL ", sql, params);
 
-    var ret = new Promise(function (resolve, reject) {
+    var ret = await new Promise(function (resolve, reject) {
       function callback(err) {
         err ? reject(err) : resolve({
           // Yes, lastID & changes are on this(!)
@@ -358,7 +358,7 @@ Object.assign(Db.prototype, {
       } else {
         self._db.run(sql, params, callback);
       }
-    }).await();
+    });
 
     if (DEBUG_SQL) {
       var t2 = Date.now();
@@ -371,17 +371,17 @@ Object.assign(Db.prototype, {
   },
 
   // Prepares the statement, caching the result
-  _prepareWithCache: function (sql) {
+  _prepareWithCache: async function (sql) {
     var self = this;
 
     var prepared = self._prepared[sql];
     if (!prepared) {
       //Console.debug("Preparing statement: ", sql);
-      new Promise(function (resolve, reject) {
+      await new Promise(function (resolve, reject) {
         prepared = self._db.prepare(sql, function (err) {
           err ? reject(err) : resolve();
         });
-      }).await();
+      });
 
       self._prepared[sql] = prepared;
     }
@@ -750,7 +750,7 @@ Object.assign(RemoteCatalog.prototype, {
     });
   },
 
-  refresh: function (options) {
+  refresh: async function (options) {
     var self = this;
     options = options || {};
 
@@ -766,7 +766,7 @@ Object.assign(RemoteCatalog.prototype, {
       return false;
 
     if (options.maxAge) {
-      var lastSync = self.getMetadata(METADATA_LAST_SYNC);
+      var lastSync = await self.getMetadata(METADATA_LAST_SYNC);
       Console.debug("lastSync = ", lastSync);
       if (lastSync && lastSync.timestamp) {
         if ((Date.now() - lastSync.timestamp) < options.maxAge) {
@@ -778,12 +778,12 @@ Object.assign(RemoteCatalog.prototype, {
 
     var updateResult = {};
     // XXX This buildmessage.enterJob only exists for showing progress.
-    buildmessage.enterJob({ title: 'updating package catalog' }, function () {
-      updateResult = packageClient.updateServerPackageData(self);
+    await buildmessage.enterJob({ title: 'updating package catalog' }, async function () {
+      updateResult = await packageClient.updateServerPackageData(self);
     });
 
     if (updateResult.resetData) {
-      tropohouse.default.wipeAllPackages();
+      await tropohouse.default.wipeAllPackages();
     }
 
     return true;
@@ -934,9 +934,9 @@ Object.assign(RemoteCatalog.prototype, {
     return result[0];
   },
 
-  getMetadata: function(key) {
+  getMetadata: async function(key) {
     var self = this;
-    var row = self.db.runInTransaction(function (txn) {
+    var row = await self.db.runInTransaction(function (txn) {
       return self.tableMetadata.find(txn, key);
     });
     if (row) {

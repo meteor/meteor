@@ -284,7 +284,7 @@ export namespace Profile {
     return Profile(bucket, f)();
   }
 
-  export function run<TResult>(bucket: string, f: () => TResult) {
+  export async function run<TResult>(bucket: string, f: () => TResult) {
     if (! Profile.enabled) {
       return f();
     }
@@ -293,14 +293,14 @@ export namespace Profile {
       // We've kept the calls to Profile.run in the tool disjoint so far,
       // and should probably keep doing so, but if we mess up, warn and continue.
       console.log("Warning: Nested Profile.run at " + bucket);
-      return time(bucket, f);
+      return await time(bucket, f);
     }
 
     runningName = bucket;
     print(`(#${reportNum}) Profiling: ${runningName}`);
     start();
     try {
-      return time(bucket, f);
+      return await time(bucket, f);
     } finally {
       report();
       reportNum++;

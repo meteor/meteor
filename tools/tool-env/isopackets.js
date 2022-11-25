@@ -134,7 +134,7 @@ var isopacketPath = function (isopacketName) {
 // ensureIsopacketsLoadable is called at startup and ensures that all isopackets
 // exist on disk as up-to-date loadable programs.
 var calledEnsure = false;
-export function ensureIsopacketsLoadable() {
+export async function ensureIsopacketsLoadable() {
   if (calledEnsure) {
     throw Error("can't ensureIsopacketsLoadable twice!");
   }
@@ -155,16 +155,16 @@ export function ensureIsopacketsLoadable() {
   var failedPackageBuild = false;
   // Look at each isopacket. Check to see if it's on disk and up to date. If
   // not, build it. We rebuild them in the order listed in ISOPACKETS.
-  var messages = Console.withProgressDisplayVisible(function () {
-    return buildmessage.capture(function () {
-      _.each(ISOPACKETS, function (packages, isopacketName) {
+  var messages = await Console.withProgressDisplayVisible(function () {
+    return buildmessage.capture(async function () {
+      for (const [isopacketName, packages] of Object.entries(ISOPACKETS)) {
         if (failedPackageBuild) {
-          return;
+          continue;
         }
 
         var isopacketRoot = isopacketPath(isopacketName);
         var existingBuildinfo = files.readJSONOrNull(
-          files.pathJoin(isopacketRoot, 'isopacket-buildinfo.json'));
+            files.pathJoin(isopacketRoot, 'isopacket-buildinfo.json'));
         var needRebuild = !existingBuildinfo;
         if (!needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
           needRebuild = true;
@@ -178,26 +178,26 @@ export function ensureIsopacketsLoadable() {
         if (!needRebuild) {
           // Great, it's loadable without a rebuild.
           loadedIsopackets[isopacketName] = null;
-          return;
+          continue;
         }
 
         // We're going to need to build! Make a catalog and loader if we haven't
         // yet.
         if (!isopacketBuildContext) {
-          isopacketBuildContext = makeIsopacketBuildContext();
+          isopacketBuildContext = await makeIsopacketBuildContext();
         }
 
-        buildmessage.enterJob({
+        await buildmessage.enterJob({
           title: "bundling " + isopacketName + " packages for the tool"
-        }, function () {
+        }, async function () {
           // Build the packages into the in-memory IsopackCache.
-          isopacketBuildContext.isopackCache.buildLocalPackages(packages);
+          await isopacketBuildContext.isopackCache.buildLocalPackages(packages);
           if (buildmessage.jobHasMessages()) {
             return;
           }
 
           // Now bundle them into a program.
-          var built = bundler.buildJsImage({
+          var built = await bundler.buildJsImage({
             name: "isopacket-" + isopacketName,
             packageMap: isopacketBuildContext.packageMap,
             isopackCache: isopacketBuildContext.isopackCache,
@@ -208,16 +208,16 @@ export function ensureIsopacketsLoadable() {
           }
 
           var builder = new Builder({ outputPath: isopacketRoot });
-          builder.writeJson('isopacket-buildinfo.json', {
+          await builder.writeJson('isopacket-buildinfo.json', {
             builtBy: compiler.BUILT_BY,
             watchSet: built.watchSet.toJSON()
           });
-          built.image.write(builder);
-          builder.complete();
+          await built.image.write(builder);
+          await builder.complete();
           // It's loadable now.
           loadedIsopackets[isopacketName] = null;
         });
-      });
+      }
     });
   });
 
@@ -231,16 +231,16 @@ export function ensureIsopacketsLoadable() {
 }
 
 // Returns a new all-local-packages catalog to be used for building isopackets.
-var newIsopacketBuildingCatalog = function () {
+var newIsopacketBuildingCatalog = async function () {
   if (!files.inCheckout()) {
     throw Error("No need to build isopackets unless in checkout!");
   }
 
   var catalogLocal = require('../packaging/catalog/catalog-local.js');
   var isopacketCatalog = new catalogLocal.LocalCatalog;
-  var messages = buildmessage.capture(
+  var messages = await buildmessage.capture(
     { title: "scanning local core packages" },
-    function () {
+    async function () {
       const packagesDir =
         files.pathJoin(files.getCurrentToolsDir(), 'packages');
 
@@ -249,7 +249,7 @@ var newIsopacketBuildingCatalog = function () {
       // $PACKAGE_DIRS packages.  One side effect of this: we really really
       // expect them to all build, and we're fine with dying if they don't
       // (there's no worries about needing to springboard).
-      isopacketCatalog.initialize({
+      await isopacketCatalog.initialize({
         localPackageSearchDirs: [
           packagesDir,
           files.pathJoin(packagesDir, "non-core", "*", "packages"),
@@ -265,9 +265,9 @@ var newIsopacketBuildingCatalog = function () {
   return isopacketCatalog;
 };
 
-export function makeIsopacketBuildContext() {
+export async function makeIsopacketBuildContext() {
   var context = {};
-  var catalog = newIsopacketBuildingCatalog();
+  var catalog = await newIsopacketBuildingCatalog();
   var versions = {};
   _.each(catalog.getAllPackageNames(), function (packageName) {
     versions[packageName] = catalog.getLatestVersion(packageName).version;
@@ -285,14 +285,14 @@ export function makeIsopacketBuildContext() {
     // 'meteor' tool command invocations, we care more about startup time than
     // legibility, and the difference is actually observable (eg 25% speedup
     // loading constraint-solver).
-    noLineNumbers: true
+    noLineNumbers: true,
   });
   return context;
 }
 
 // Loads a built isopacket from disk. Always loads (the cache is in 'load', not
 // this function). Does not run a build process; it must already be built.
-var loadIsopacketFromDisk = function (isopacketName) {
+var loadIsopacketFromDisk = async function (isopacketName) {
   var image = bundler.readJsImage(
     files.pathJoin(isopacketPath(isopacketName), 'program.json'));
 
@@ -305,10 +305,10 @@ var loadIsopacketFromDisk = function (isopacketName) {
   env.Profile = Profile;
 
   var ret;
-  var messages = buildmessage.capture({
+  var messages = await buildmessage.capture({
     title: "loading isopacket `" + isopacketName + "`"
-  }, function () {
-    ret = image.load(env);
+  }, async function () {
+    ret = await image.load(env);
   });
 
   // This is a build step ... but it's one that only happens in development, so
@@ -322,7 +322,7 @@ var loadIsopacketFromDisk = function (isopacketName) {
   // Run any user startup hooks.
   while (env.__meteor_bootstrap__.startupHooks.length) {
     var hook = env.__meteor_bootstrap__.startupHooks.shift();
-    hook();
+    await hook();
   }
   // Setting this to null tells Meteor.startup to call hooks immediately.
   env.__meteor_bootstrap__.startupHooks = null;

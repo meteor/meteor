@@ -344,14 +344,13 @@ export function rm_recursive_async(path: string) {
 }
 
 // Like rm -r.
-export const rm_recursive = Profile("files.rm_recursive", (path: string) => {
+export const rm_recursive = Profile("files.rm_recursive", async (path: string) => {
   try {
     rimraf.sync(convertToOSPath(path));
   } catch (e: any) {
     if ((e.code === "ENOTEMPTY" ||
-         e.code === "EPERM") &&
-        canYield()) {
-      rm_recursive_async(path).await();
+         e.code === "EPERM")) {
+      await rm_recursive_async(path);
       return;
     }
     throw e;
@@ -920,7 +919,7 @@ export const createTarball = Profile(function (_: string, tarball: string) {
 // sitting around", but not "there's any time where toDir exists but
 // is in a state other than initial or final".)
 export const renameDirAlmostAtomically =
-Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
+Profile("files.renameDirAlmostAtomically", async (fromDir: string, toDir: string) => {
   const garbageDir = pathJoin(
     pathDirname(toDir),
     // Begin the base filename with a '.' character so that it can be
@@ -932,7 +931,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   let cleanupGarbage = false;
   let forceCopy = false;
   try {
-    rename(toDir, garbageDir);
+    await rename(toDir, garbageDir);
     cleanupGarbage = true;
   } catch (e: any) {
     if (e.code === 'EXDEV') {
@@ -951,7 +950,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
 
   if (! forceCopy) {
     try {
-      rename(fromDir, toDir);
+      await rename(fromDir, toDir);
     } catch (e: any) {
       // It's possible that there may not have been a `toDir` to have
       // advanced warning about this, so we're prepared to handle it again.
@@ -966,7 +965,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   // If we've been forced to jeopardize our atomicity due to file-system
   // limitations, we'll resort to copying.
   if (forceCopy) {
-    rm_recursive(toDir);
+    await rm_recursive(toDir);
     cp_r(fromDir, toDir, {
       preserveSymlinks: true,
     });
@@ -975,7 +974,7 @@ Profile("files.renameDirAlmostAtomically", (fromDir: string, toDir: string) => {
   // ... and take out the trash.
   if (cleanupGarbage) {
     // We don't care about how long this takes, so we'll let it go async.
-    rm_recursive_async(garbageDir);
+    await rm_recursive_async(garbageDir);
   }
 });
 
@@ -1625,7 +1624,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
     } else {
       throw error;
     }
-  }).await();
+  });
 } : wrappedRename;
 
 // Warning: doesn't convert slashes in the second 'cache' arg

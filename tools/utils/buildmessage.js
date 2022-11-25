@@ -239,9 +239,8 @@ var addChildTracker = function (title) {
 // begin capturing errors. Alternately you may pass `options`
 // (otherwise optional) and a job will be created for you based on
 // `options`.
-function capture(options, f) {
-  var messageSet = new MessageSet;
-  var parentMessageSet = currentMessageSet.get();
+async function capture(options, f) {
+  var messageSet = new MessageSet();
 
   var title;
   if (typeof options === "object" && options.title) {
@@ -280,7 +279,9 @@ function capture(options, f) {
   }
 
   try {
-    f();
+    await f();
+  } catch (e) {
+    console.error(e);
   } finally {
     progress.reportProgressDone();
 
@@ -313,7 +314,7 @@ function capture(options, f) {
 // - rootPath: the absolute path relative to which paths in messages
 //   in this job should be interpreted (omit if there is no way to map
 //   files that this job talks about back to files on disk)
-function enterJob(options, f) {
+async function enterJob(options, f) {
   if (typeof options === "function") {
     f = options;
     options = {};
@@ -353,12 +354,12 @@ function enterJob(options, f) {
     resetFns.push(currentNestingLevel.set(nestingLevel + 1));
 
     try {
-      return f();
+      return await f();
     } finally {
       progress.reportProgressDone();
 
       while (resetFns.length) {
-        resetFns.pop()();
+        await resetFns.pop()();
       }
 
       if (debugBuild) {
@@ -385,12 +386,12 @@ function enterJob(options, f) {
   }
 
   try {
-    return f();
+    return await f();
   } finally {
     progress.reportProgressDone();
 
     while (resetFns.length) {
-      resetFns.pop()();
+      await resetFns.pop()();
     }
 
     if (debugBuild) {
@@ -459,6 +460,8 @@ var markBoundary = function (f, context) {
 var error = function (message, options) {
   options = options || {};
 
+  console.log("111")
+  console.trace("dasdsa")
   if (options.downcase) {
     message = message.slice(0,1).toLowerCase() + message.slice(1);
   }
@@ -561,7 +564,7 @@ var assertInJob = function () {
 };
 
 var assertInCapture = function () {
-  if (! currentMessageSet.get()) {
+  if (!currentMessageSet.get()) {
     throw new Error("Expected to be in a buildmessage capture");
   }
 };

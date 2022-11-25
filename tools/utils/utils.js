@@ -1,3 +1,5 @@
+import child_process from "child_process";
+
 var _ = require('underscore');
 var semver = require('semver');
 var os = require('os');
@@ -194,9 +196,9 @@ exports.sleepMs = function (ms) {
     return;
   }
 
-  new Promise(function (resolve) {
+  return new Promise(function (resolve) {
     setTimeout(resolve, ms);
-  }).await();
+  });
 };
 
 // Return a short, high entropy string without too many funny
@@ -513,7 +515,7 @@ exports.isValidVersion = function (version, {forCordova}) {
 };
 
 
-exports.execFileSync = function (file, args, opts) {
+exports.execFile = async function (file, args, opts) {
   var child_process = require('child_process');
   var { eachline } = require('./eachline');
 
@@ -534,9 +536,9 @@ exports.execFileSync = function (file, args, opts) {
     });
 
     return {
-      success: ! new Promise(function (resolve) {
+      success: await !new Promise(function (resolve) {
         p.on('exit', resolve);
-      }).await(),
+      }),
       stdout: "",
       stderr: ""
     };
@@ -550,7 +552,7 @@ exports.execFileSync = function (file, args, opts) {
         stderr: stderr
       });
     });
-  }).await();
+  });
 };
 
 exports.execFileAsync = function (file, args, opts) {
@@ -572,16 +574,28 @@ exports.execFileAsync = function (file, args, opts) {
   eachline(p.stdout, logOutput);
   eachline(p.stderr, logOutput);
 
+  if (!opts) {
+    return new Promise(function (resolve) {
+      child_process.execFile(file, args, opts, function (err, stdout, stderr) {
+        resolve({
+          success: ! err,
+          stdout: stdout,
+          stderr: stderr
+        });
+      });
+    });
+  }
+
   return p;
 };
 
 
-exports.runGitInCheckout = function (...args) {
+exports.runGitInCheckout = async function (...args) {
   args.unshift(
     '--git-dir=' +
     files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
 
-  return exports.execFileSync('git', args).stdout;
+  return (await exports.execFile('git', args)).stdout;
 };
 
 exports.Throttled = function (options) {
@@ -623,7 +637,7 @@ exports.ThrottledYield = function (options) {
 };
 
 Object.assign(exports.ThrottledYield.prototype, {
-  yield: function () {
+  yield: async function () {
     var self = this;
     if (self._throttle.isAllowed()) {
       // setImmediate allows signals and IO to be processed but doesn't
@@ -632,7 +646,7 @@ Object.assign(exports.ThrottledYield.prototype, {
       // setTimeout 1 (which adds a minimum of 1 ms and often more in delays).
       // XXX Actually, setImmediate is so fast that we might not even need
       // to use the throttler at all?
-      new Promise(setImmediate).await();
+      await new Promise(setImmediate);
     }
   }
 });

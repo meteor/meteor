@@ -844,27 +844,27 @@ class Target {
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
-  make({packages, minifyMode, addCacheBusters, minifiers, onJsOutputFiles = () => {}}) {
+  async make({packages, minifyMode, addCacheBusters, minifiers, onJsOutputFiles = () => {}}) {
     buildmessage.assertInCapture();
 
-    buildmessage.enterJob("building for " + this.arch, () => {
+    await buildmessage.enterJob("building for " + this.arch, async () => {
       // Populate the list of unibuilds to load
-      this._determineLoadOrder({
+      await this._determineLoadOrder({
         packages: packages || []
       });
 
-      const sourceBatches = this._runCompilerPlugins({
+      const sourceBatches = await this._runCompilerPlugins({
         minifiers,
         minifyMode,
       });
 
       // Link JavaScript and set up this.js, etc.
-      this._emitResources(sourceBatches, (outputFiles, sourceBatch, cacheKey) => {
+      await this._emitResources(sourceBatches, (outputFiles, sourceBatch, cacheKey) => {
         function getFileOutput(file) {
           return new LinkerFile(file).getPrelinkedOutput({});
         };
 
-        onJsOutputFiles(
+        return onJsOutputFiles(
           {
             arch: this.arch,
             name: sourceBatch.unibuild.pkg.name || null,
@@ -878,7 +878,7 @@ class Target {
 
       // Add top-level Cordova dependencies, which override Cordova
       // dependencies from packages.
-      this._addDirectCordovaDependencies();
+      await this._addDirectCordovaDependencies();
 
       // Minify, with mode requested.
       // Why do we only minify in client targets?
@@ -903,10 +903,10 @@ class Target {
         });
 
         if (minifiersByExt.js) {
-          this.minifyJs(minifiersByExt.js, minifyMode);
+          await this.minifyJs(minifiersByExt.js, minifyMode);
         }
         if (minifiersByExt.css) {
-          this.minifyCss(minifiersByExt.css, minifyMode);
+          await this.minifyCss(minifiersByExt.css, minifyMode);
         }
       }
 
@@ -928,15 +928,15 @@ class Target {
   // - packages: an array of packages (or, properly speaking, unibuilds)
   //   to include. Each element should either be a Isopack object or a
   //   package name as a string
-  _determineLoadOrder({packages}) {
+  async _determineLoadOrder({packages}) {
     buildmessage.assertInCapture();
 
     const isopackCache = this.isopackCache;
 
-    buildmessage.enterJob('linking the program', () => {
+    await buildmessage.enterJob('linking the program', async () => {
       // Find the roots
       const rootUnibuilds = [];
-      packages.forEach((p) => {
+      for (let p of packages) {
         if (typeof p === 'string') {
           p = isopackCache.getIsopack(p);
         }
@@ -952,9 +952,9 @@ class Target {
         if (p.testOnly && this.buildMode !== 'test') {
           return;
         }
-        const unibuild = p.getUnibuildAtArch(this.arch);
+        const unibuild = await p.getUnibuildAtArch(this.arch);
         unibuild && rootUnibuilds.push(unibuild);
-      });
+      }
 
       if (buildmessage.jobHasMessages()) {
         return;
@@ -971,7 +971,7 @@ class Target {
       // Phase 2.
       const usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
       this.usedPackages = {};  // Map from package name to true;
-      const addToGetsUsed = function (unibuild) {
+      const addToGetsUsed = async function (unibuild) {
         if (_.has(usedUnibuilds, unibuild.id)) {
           return;
         }
@@ -980,7 +980,7 @@ class Target {
           // Only track real packages, not plugin pseudo-packages.
           this.usedPackages[unibuild.pkg.name] = true;
         }
-        compiler.eachUsedUnibuild({
+        await compiler.eachUsedUnibuild({
           dependencies: unibuild.uses,
           arch: this.arch,
           isopackCache: isopackCache,
@@ -992,7 +992,10 @@ class Target {
         }, addToGetsUsed);
       }.bind(this);
 
-      rootUnibuilds.forEach(addToGetsUsed);
+      // TODO -> We may need to keep the order here?
+      for (const unibuild of rootUnibuilds) {
+        await addToGetsUsed(unibuild);
+      }
 
       if (buildmessage.jobHasMessages()) {
         return;
@@ -1019,7 +1022,7 @@ class Target {
 
       // This helper recursively adds unibuild's ordered dependencies to
       // this.unibuilds, then adds unibuild itself.
-      const add = function (unibuild) {
+      const add = async function (unibuild) {
         // If this has already been added, there's nothing to do.
         if (!_.has(needed, unibuild.id)) {
           return;
@@ -1038,7 +1041,7 @@ class Target {
         var processUnibuild = function (usedUnibuild) {
           if (onStack[usedUnibuild.id]) {
             buildmessage.error(
-              "circular dependency between packages " +
+                "circular dependency between packages " +
                 unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
             // recover by not enforcing one of the depedencies
             return;
@@ -1047,7 +1050,7 @@ class Target {
           add(usedUnibuild);
           delete onStack[usedUnibuild.id];
         };
-        compiler.eachUsedUnibuild({
+        await compiler.eachUsedUnibuild({
           dependencies: unibuild.uses,
           arch: this.arch,
           isopackCache: isopackCache,
@@ -1070,11 +1073,11 @@ class Target {
         for (first in needed) {
           break;
         }
-        if (! first) {
+        if (!first) {
           break;
         }
         // Now add it, after its ordered dependencies.
-        add(needed[first]);
+        await add(needed[first]);
       }
     });
   }
@@ -1154,7 +1157,7 @@ class Target {
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
   // linker).
-  _emitResources(sourceBatches, onJsOutputFiles = () => {}) {
+  async _emitResources(sourceBatches, onJsOutputFiles = () => {}) {
     buildmessage.assertInJob();
 
     const isWeb = archinfo.matches(this.arch, 'web');
@@ -1398,7 +1401,7 @@ class Target {
   }
 
   // Minify the JS in this target
-  minifyJs(minifierDef, minifyMode) {
+  async minifyJs(minifierDef, minifyMode) {
     const staticFiles = [];
     const dynamicFiles = [];
     const { arch } = this;
@@ -1421,14 +1424,14 @@ class Target {
       minifierDef.userPlugin
     );
 
-    buildmessage.enterJob('minifying app code', function () {
+    await buildmessage.enterJob('minifying app code', async function () {
       try {
-        Promise.all([
+        await Promise.all([
           markedMinifier(staticFiles, { minifyMode }),
           ...dynamicFiles.map(
             file => markedMinifier([file], { minifyMode })
           ),
-        ]).await();
+        ]);
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -1694,8 +1697,8 @@ class ClientTarget extends Target {
   }
 
   // Minify the CSS in this target
-  minifyCss(minifierDef, minifyMode) {
-    this.css = minifyCssFiles(this.css, {
+  async minifyCss(minifierDef, minifyMode) {
+    this.css = await minifyCssFiles(this.css, {
       arch: this.arch,
       minifier: minifierDef,
       minifyMode,
@@ -1905,7 +1908,7 @@ class ClientTarget extends Target {
   }
 }
 
-function minifyCssFiles (files, {
+async function minifyCssFiles (files, {
   arch,
   minifier,
   minifyMode,
@@ -1922,9 +1925,9 @@ function minifyCssFiles (files, {
     minifier.userPlugin,
   );
 
-  buildmessage.enterJob('minifying app stylesheet', function () {
+  await buildmessage.enterJob('minifying app stylesheet', async function () {
     try {
-      Promise.await(markedMinifier(sources, { minifyMode }));
+      await markedMinifier(sources, { minifyMode });
     } catch (e) {
       buildmessage.exception(e);
     }
@@ -3184,7 +3187,7 @@ exports.bundle = Profile("bundler.bundle", function (options) {
   return files.withCache(() => bundle(options));
 });
 
-function bundle({
+async function bundle({
   projectContext,
   outputPath,
   includeNodeModules,
@@ -3238,14 +3241,14 @@ function bundle({
     throw new Error('Unrecognized build mode: ' + buildMode);
   }
 
-  var messages = buildmessage.capture({
+  var messages = await buildmessage.capture({
     title: "building the application"
-  }, function () {
-    var packageSource = new PackageSource;
+  }, async function () {
+    var packageSource = new PackageSource();
     packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
 
     var makeClientTarget = Profile(
-      "bundler.bundle..makeClientTarget", function (app, webArch, options) {
+      "bundler.bundle..makeClientTarget", async function (app, webArch, options) {
       var client = new ClientTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
@@ -3257,7 +3260,7 @@ function bundle({
         buildMode: buildOptions.buildMode
       });
 
-      client.make({
+      await client.make({
         packages: [app],
         minifyMode: minifyMode,
         minifiers: options.minifiers || [],
@@ -3269,7 +3272,7 @@ function bundle({
     });
 
     var makeServerTarget = Profile(
-      "bundler.bundle..makeServerTarget", function (app, clientArchs) {
+      "bundler.bundle..makeServerTarget", async function (app, clientArchs) {
       const server = new ServerTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
@@ -3282,7 +3285,7 @@ function bundle({
         clientArchs,
       });
 
-      server.make({
+      await server.make({
         packages: [app]
       });
 
@@ -3292,7 +3295,7 @@ function bundle({
     // Create a Isopack object that represents the app
     // XXX should this be part of prepareProjectForBuild and get cached?
     //     at the very least, would speed up deploy after build.
-    var app = compiler.compile(packageSource, {
+    var app = await compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
       isopackCache: projectContext.isopackCache,
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
@@ -3317,7 +3320,7 @@ function bundle({
     }
 
     if (! buildmessage.jobHasMessages()) {
-      lintingMessages = lintBundle(projectContext, app, packageSource);
+      lintingMessages = await lintBundle(projectContext, app, packageSource);
     }
     // If while trying to lint, we got a compilation error (eg, an issue loading
     // plugins in one of the linter packages), restart on any relevant change,
@@ -3330,7 +3333,7 @@ function bundle({
     if (! ['development', 'production'].includes(minifyMode)) {
       throw new Error('Unrecognized minification mode: ' + minifyMode);
     }
-    minifiers = compiler.getMinifiers(packageSource, {
+    minifiers = await compiler.getMinifiers(packageSource, {
       isopackCache: projectContext.isopackCache,
       isopack: app
     });
@@ -3371,7 +3374,7 @@ function bundle({
     }
 
     // Client
-    webArchs.forEach(arch => {
+    for (const arch of webArchs) {
       if (allowDelayedClientBuilds &&
           hasOwn.call(previousBuilders, arch) &&
           projectContext.platformList.canDelayBuildingArch(arch)) {
@@ -3380,14 +3383,14 @@ function bundle({
         // build later (e.g. web.browser.legacy), then schedule it to be
         // built after the server has started up.
         postStartupCallbacks.push(async ({
-          pauseClient,
-          refreshClient,
-          runLog,
-        }) => {
+                                           pauseClient,
+                                           refreshClient,
+                                           runLog,
+                                         }) => {
           const start = +new Date;
 
           // Build the target first.
-          const target = makeClientTarget(app, arch, { minifiers });
+          const target = await makeClientTarget(app, arch, { minifiers });
 
           // Tell the webapp package to pause responding to requests from
           // clients that use this arch, because we're about to write a
@@ -3410,20 +3413,19 @@ function bundle({
           // should regenerate the client program for this arch.
           if (Profile.enabled) {
             runLog.log(`Finished delayed build of ${arch} in ${
-              new Date - start
+                new Date - start
             }ms`, { arrow: true });
           }
         });
-
       } else {
         // Otherwise make the client target now, and write it below.
-        targets[arch] = makeClientTarget(app, arch, {minifiers});
+        targets[arch] = await makeClientTarget(app, arch, {minifiers});
       }
-    });
+    }
 
     // Server
     if (! hasCachedBundle) {
-      targets.server = makeServerTarget(app, webArchs);
+      targets.server = await makeServerTarget(app, webArchs);
     }
 
     if (outputPath !== null) {
@@ -3476,14 +3478,14 @@ function ignoreHarmlessErrors(error) {
 // Returns null if there are no lint warnings and the app has no linters
 // defined. Returns an empty MessageSet if the app has a linter defined but
 // there are no lint warnings (on app or packages).
-function lintBundle (projectContext, isopack, packageSource) {
+async function lintBundle (projectContext, isopack, packageSource) {
   buildmessage.assertInJob();
 
   let lintedAnything = false;
   const lintingMessages = new buildmessage._MessageSet();
 
   if (projectContext.lintAppAndLocalPackages) {
-    const {warnings: appMessages, linted} = compiler.lint(packageSource, {
+    const {warnings: appMessages, linted} = await compiler.lint(packageSource, {
       isopack,
       isopackCache: projectContext.isopackCache
     });
@@ -3543,7 +3545,7 @@ function lintBundle (projectContext, isopack, packageSource) {
 // It would be nice to have a way to say "make this package anonymous"
 // without also saying "make its namespace the same as the global
 // namespace." It should be an easy refactor,
-exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
+exports.buildJsImage = Profile("bundler.buildJsImage", async function (options) {
   buildmessage.assertInCapture();
   if (options.npmDependencies && ! options.npmDir) {
     throw new Error("Must indicate .npm directory to use");
@@ -3552,7 +3554,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     throw new Error("Must provide a name");
   }
 
-  var packageSource = new PackageSource;
+  var packageSource = new PackageSource();
 
   packageSource.initFromOptions(options.name, {
     kind: "plugin",
@@ -3567,7 +3569,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     localNodeModulesDirs: options.localNodeModulesDirs,
   });
 
-  var isopack = compiler.compile(packageSource, {
+  var isopack = await compiler.compile(packageSource, {
     packageMap: options.packageMap,
     isopackCache: options.isopackCache,
     // There's no web.cordova unibuild here anyway, just os.
@@ -3583,9 +3585,9 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     // cross-bundling, not cross-package-building, and this function is only
     // used to build plugins (during package build) and for isopack.load
     // (which always wants to build for the current host).
-    arch: archinfo.host()
+    arch: await archinfo.host()
   });
-  target.make({ packages: [isopack] });
+  await target.make({ packages: [isopack] });
 
   return {
     image: target.toJsImage(),

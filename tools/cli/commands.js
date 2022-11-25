@@ -541,7 +541,7 @@ main.registerCommand({
     solid: { type: Boolean },
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
@@ -551,12 +551,12 @@ main.registerCommand({
     if (options.list || options.example) {
       Console.error("No package examples exist at this time.");
       Console.error();
-      throw new main.ShowUsage;
+      throw new main.ShowUsage();
     }
 
     if (!packageName) {
       Console.error("Please specify the name of the package.");
-      throw new main.ShowUsage;
+      throw new main.ShowUsage();
     }
 
     utils.validatePackageNameOrExit(
@@ -666,7 +666,7 @@ main.registerCommand({
   // at the end.)
   if (! release.current.isCheckout() && !release.forced) {
     if (release.current.name !== release.latestKnown()) {
-      throw new main.SpringboardToLatestRelease;
+      throw new main.SpringboardToLatestRelease();
     }
   }
 
@@ -712,7 +712,7 @@ main.registerCommand({
   if (options.args.length === 1) {
     appPathAsEntered = options.args[0];
   } else {
-    throw new main.ShowUsage;
+    throw new main.ShowUsage();
   }
   var appPath = files.pathResolve(appPathAsEntered);
 
@@ -811,13 +811,13 @@ main.registerCommand({
     allowIncompatibleUpdate: true
   });
 
-  main.captureAndExit("=> Errors while creating your project", function () {
+  await main.captureAndExit("=> Errors while creating your project", async function () {
     projectContext.readProjectMetadata();
     if (buildmessage.jobHasMessages()) {
       return;
     }
 
-    projectContext.releaseFile.write(
+    await projectContext.releaseFile.write(
       release.current.isCheckout() ? "none" : release.current.name);
     if (buildmessage.jobHasMessages()) {
       return;
@@ -837,7 +837,8 @@ main.registerCommand({
     var upgraders = require('../upgraders.js');
     projectContext.finishedUpgraders.appendUpgraders(upgraders.allUpgraders());
 
-    projectContext.prepareProjectForBuild();
+    console.log("1111111115555")
+    await projectContext.prepareProjectForBuild();
   });
   // No need to display the PackageMapDelta here, since it would include all of
   // the packages (or maybe an unpredictable subset based on what happens to be
@@ -845,7 +846,7 @@ main.registerCommand({
 
   // Since some of the project skeletons include npm `devDependencies`, we need
   // to make sure they're included when running `npm install`.
-  require("./default-npm-deps.js").install(
+  await require("./default-npm-deps.js").install(
     appPath,
     { includeDevDependencies: true }
   );
