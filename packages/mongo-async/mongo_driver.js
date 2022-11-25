@@ -845,15 +845,7 @@ MongoConnection.prototype.createIndex = async function (collectionName, index,
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
   var collection = self.rawCollection(collectionName)
-  const p = new Promise(async (resolve, reject) => {
-    try {
-      const i = await collection.createIndex(index, options)
-      resolve(i)
-    } catch (e) {
-      reject(e);
-    }
-  })
-  var indexName = await p
+  var indexName = await collection.createIndex(index, options)
 };
 
 MongoConnection.prototype._ensureIndex = MongoConnection.prototype.createIndex;
@@ -864,15 +856,7 @@ MongoConnection.prototype._dropIndex = async function (collectionName, index) {
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
   var collection = self.rawCollection(collectionName);
-  const p = new Promise(async (resolve, reject) => {
-    try {
-      const i = await collection.dropIndex(index)
-      resolve(i)
-    } catch (e) {
-      reject(e);
-    }
-  })
-  var indexName = await p;
+  var indexName =  await collection.dropIndex(index)
 };
 
 // CURSORS
