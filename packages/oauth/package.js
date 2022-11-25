@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "2.1.2"
+  version: "2.1.3-beta.1"
 });
 
 Package.onUse(api => {
@@ -11,6 +11,7 @@ Package.onUse(api => {
   api.use(['reload', 'base64'], 'client');
 
   api.use('oauth-encryption', 'server', {weak: true});
+  api.use('fetch', 'server');
 
 
   api.export('OAuth');

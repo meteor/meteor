@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'A user account system',
-  version: '2.2.5',
+  version: '2.2.6-beta.1',
 });
 
 Package.onUse(api => {
@@ -14,10 +14,6 @@ Package.onUse(api => {
   api.use('callback-hook', ['client', 'server']);
   api.use('reactive-var', 'client');
   api.use('url', ['client', 'server']);
-
-  // use unordered to work around a circular dependency
-  // (service-configuration needs Accounts.connection)
-  api.use('service-configuration', ['client', 'server'], { unordered: true });
 
   // needed for getting the currently logged-in user and handling reconnects
   api.use('ddp', ['client', 'server']);

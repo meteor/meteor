@@ -1,3 +1,16 @@
+## 2.9, 2022-XX-XX
+
+### Highlights
+* TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204)
+
+#### Breaking Changes
+* Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`
+
+#### Migration Steps
+
+#### Meteor Version Release
+
+
 ## 2.8.1, 2022-11-14
 
 #### Highlights
@@ -104,7 +117,7 @@ _In case you want types in your app using the core packages types/zodern:types (
 * `test-in-browser@1.3.1`
   - removed underscore.
 * `tracker@1.2.1`
-  - added types for package.
+- added types for package.
 * `twitter-oauth@1.3.1`
   - removed underscore.
 * `underscore@1.0.11`
@@ -113,7 +126,6 @@ _In case you want types in your app using the core packages types/zodern:types (
   - added types for package.
 * `webapp-hashing@1.1.1`
   - added types for package.
-
 ## v2.8, 2022-10-19
 
 #### Highlights
@@ -156,7 +168,16 @@ Read our [Migration Guide](https://guide.meteor.com/2.8-migration.html) for this
   - Validates required Node.js version. [PR](https://github.com/meteor/meteor/pull/12066).
 * `npm-mongo@4.9.0`:
   - Updated MongoDB driver to 4.9. [PR](https://github.com/meteor/meteor/pull/12163).
-
+* `@meteorjs/babel@7.17.0`
+  - Upgrade TypeScript to `4.6.4`
+* `babel-compiler@7.10.0`
+  - Upgrade TypeScript to `4.6.4`
+* `ecmascript@0.16.3`
+  - Upgrade TypeScript to `4.6.4`
+* `typescript@4.6.4`
+  - Upgrade TypeScript to `4.6.4`
+* `eslint-plugin-meteor@7.4.0`
+  - Upgrade TypeScript to `4.6.4`
 
 #### Independent Releases
 * `accounts-passwordless@2.1.3`:

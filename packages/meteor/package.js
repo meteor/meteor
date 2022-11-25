@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.10.2'
+  version: '1.10.3-beta.1'
 });
 
 Package.registerBuildPlugin({
@@ -33,6 +33,7 @@ Package.onUse(function (api) {
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);
   api.addFiles('errors.js', ['client', 'server']);
+  api.addFiles('asl-helpers.js', 'server');
   api.addFiles('fiber_helpers.js', 'server');
   api.addFiles('fiber_stubs_client.js', 'client');
   api.addFiles('startup_client.js', ['client']);
@@ -54,8 +55,6 @@ Package.onUse(function (api) {
   // People expect process.exit() to not swallow console output.
   // On Windows, it sometimes does, so we fix it for all apps and packages
   api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');
-
-  api.addAssets('meteor.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

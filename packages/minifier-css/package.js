@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'CSS minifier',
-  version: '1.6.1'
+  version: '1.6.2-beta.1'
 });
 
 Npm.depends({
@@ -19,6 +19,7 @@ Package.onTest(function (api) {
   api.use('tinytest');
   api.addFiles([
     'minifier-tests.js',
+    'minifier-async-tests.js',
     'urlrewriting-tests.js'
   ], 'server');
 });
