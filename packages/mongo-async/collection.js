@@ -745,6 +745,19 @@ Object.assign(Mongo.Collection.prototype, {
 
   // We'll actually design an index API later. For now, we just pass through to
   // Mongo's, but make it synchronous.
+    /**
+   * @summary Creates the specified index on the collection.
+   * @locus server
+   * @deprecated in 3.0
+   * @method createIndex
+   * @memberof Mongo.Collection
+   * @instance
+   * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
+   * @param {Object} [options] All options are listed in [MongoDB documentation](https://docs.mongodb.com/manual/reference/method/db.collection.createIndex/#options)
+   * @param {String} options.name Name of the index
+   * @param {Boolean} options.unique Define that the index values must be unique, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-unique/)
+   * @param {Boolean} options.sparse Define that the index is sparse, more at [MongoDB documentation](https://docs.mongodb.com/manual/core/index-sparse/)
+   */
   async _ensureIndex(index, options) {
     var self = this;
     if (!self._collection._ensureIndex || !self._collection.createIndex)
