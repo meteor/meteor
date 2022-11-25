@@ -749,7 +749,6 @@ Object.assign(Mongo.Collection.prototype, {
    * @summary Creates the specified index on the collection.
    * @locus server
    * @deprecated in 3.0
-   * @method createIndex
    * @memberof Mongo.Collection
    * @instance
    * @param {Object} index A document that contains the field and value pairs where the field is the index key and the value describes the type of index for that field. For an ascending index on a field, specify a value of `1`; for descending index, specify a value of `-1`. Use `text` for text indexes.
