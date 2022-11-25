@@ -451,7 +451,7 @@ Template.test.helpers({
 
   eventsArray: function() {
     var events = this.events.filter(function(e) {
-      return e[type] != "finish";
+      return e.type != "finish";
     });
 
     var partitionBy = function(seq, func) {
