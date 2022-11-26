@@ -58,7 +58,7 @@ var NpmFailure = function () {};
 // @param npmDependencies {Object} dependencies that should be
 //     installed, eg {tar: '0.1.6', gcd: '0.0.0'}. If falsey or empty,
 //     will remove the .npm directory instead.
-meteorNpm.updateDependencies = function (packageName,
+meteorNpm.updateDependencies = async function (packageName,
                                          packageNpmDir,
                                          npmDependencies,
                                          quiet) {
@@ -84,7 +84,7 @@ meteorNpm.updateDependencies = function (packageName,
       // It didn't exist, which is exactly what we wanted.
       return false;
     }
-    files.rm_recursive(newPackageNpmDir);
+    await files.rm_recursive(newPackageNpmDir);
     return false;
   }
 
@@ -99,19 +99,19 @@ meteorNpm.updateDependencies = function (packageName,
     // proceed.
     if (files.exists(packageNpmDir) &&
         ! files.exists(files.pathJoin(packageNpmDir, 'npm-shrinkwrap.json'))) {
-      files.rm_recursive(packageNpmDir);
+      await files.rm_recursive(packageNpmDir);
     }
 
     if (files.exists(packageNpmDir)) {
       // we already nave a .npm directory. update it appropriately with some
       // ceremony involving:
       // `npm install`, `npm install name@version`, `npm shrinkwrap`
-      updateExistingNpmDirectory(
+      await updateExistingNpmDirectory(
         packageName, newPackageNpmDir, packageNpmDir, npmDependencies, quiet);
     } else {
       // create a fresh .npm directory with `npm install
       // name@version` and `npm shrinkwrap`
-      createFreshNpmDirectory(
+      await createFreshNpmDirectory(
         packageName, newPackageNpmDir, packageNpmDir, npmDependencies, quiet);
     }
   } catch (e) {
@@ -126,7 +126,7 @@ meteorNpm.updateDependencies = function (packageName,
     throw e;
   } finally {
     if (files.exists(newPackageNpmDir)) {
-      files.rm_recursive(newPackageNpmDir);
+      await files.rm_recursive(newPackageNpmDir);
     }
     tmpDirs = _.without(tmpDirs, newPackageNpmDir);
   }
@@ -280,7 +280,7 @@ function isDirectory(path) {
 // Rebuilds any binary dependencies in the given node_modules directory,
 // and returns true iff anything was rebuilt.
 meteorNpm.rebuildIfNonPortable =
-Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
+Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
   const dirsToRebuild = [];
 
   function scan(dir, scoped) {
@@ -364,10 +364,10 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
 
   // The `npm rebuild` command must be run in the parent directory of the
   // relevant node_modules directory, which in this case is tempDir.
-  const rebuildResult = runNpmCommand(getRebuildArgs(), tempDir);
+  const rebuildResult = await runNpmCommand(getRebuildArgs(), tempDir);
   if (! rebuildResult.success) {
     buildmessage.error(rebuildResult.error);
-    files.rm_recursive(tempDir);
+    await files.rm_recursive(tempDir);
     return false;
   }
 
@@ -403,7 +403,7 @@ Profile("meteorNpm.rebuildIfNonPortable", function (nodeModulesDir) {
     files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
   });
 
-  files.rm_recursive(tempDir);
+  await files.rm_recursive(tempDir);
 
   return true;
 });
@@ -594,7 +594,7 @@ var makeNewPackageNpmDir = function (newPackageNpmDir) {
      ''/*git diff complains without trailing newline*/].join('\n'));
 };
 
-var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
+var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
                                            packageNpmDir, npmDependencies,
                                            quiet) {
   // sanity check on contents of .npm directory
@@ -679,7 +679,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
   } else {
     // Otherwise install npmTree.dependencies as if we were creating a new
     // .npm/package directory, and leave preservedShrinkwrap empty.
-    installNpmDependencies(npmDependencies, newPackageNpmDir);
+    await installNpmDependencies(npmDependencies, newPackageNpmDir);
 
     // Note: as of npm@4.0.0, npm-shrinkwrap.json files are regarded as
     // "canonical," meaning `npm install` (without a package argument)
@@ -720,7 +720,7 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
     );
 
     // `npm install`
-    installFromShrinkwrap(newPackageNpmDir);
+    await installFromShrinkwrap(newPackageNpmDir);
 
     files.unlink(newShrinkwrapFile);
     files.unlink(newPackageJsonFile);
@@ -752,7 +752,7 @@ function isSubtreeOf(subsetTree, supersetTree, predicate) {
   return false;
 }
 
-var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
+var createFreshNpmDirectory = async function (packageName, newPackageNpmDir,
                                         packageNpmDir, npmDependencies, quiet) {
   if (! quiet) {
     logUpdateDependencies(packageName, npmDependencies);
@@ -760,13 +760,13 @@ var createFreshNpmDirectory = function (packageName, newPackageNpmDir,
 
   makeNewPackageNpmDir(newPackageNpmDir);
 
-  installNpmDependencies(npmDependencies, newPackageNpmDir);
+  await installNpmDependencies(npmDependencies, newPackageNpmDir);
 
   completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
 
-function installNpmDependencies(dependencies, dir) {
+async function installNpmDependencies(dependencies, dir) {
   const packageJsonPath = files.pathJoin(dir, "package.json");
   const packageJsonExisted = files.exists(packageJsonPath);
 
@@ -776,10 +776,10 @@ function installNpmDependencies(dependencies, dir) {
   );
 
   try {
-    Object.keys(dependencies).forEach(name => {
+    for (const name of Object.keys(dependencies)) {
       const version = dependencies[name];
-      installNpmModule(name, version, dir);
-    });
+      await installNpmModule(name, version, dir);
+    }
   } finally {
     if (! packageJsonExisted) {
       files.unlink(packageJsonPath);
@@ -881,7 +881,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
 
   return getEnv({
     devBundle: devBundleDir
-  }).then(env => {
+  }).then(async env => {
     const opts = {
       env: env,
       maxBuffer: 10 * 1024 * 1024
@@ -894,7 +894,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
     // Make sure we don't honor any user-provided configuration files.
     env.npm_config_userconfig = npmUserConfigFile;
 
-    return new Promise(function (resolve) {
+    return await new Promise(function (resolve) {
       require('child_process').execFile(
         commandToRun, args, opts, function (err, stdout, stderr) {
           if (meteorNpm._printNpmCalls) {
@@ -909,9 +909,8 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
           });
         }
       );
-    }).await();
-
-  }).await();
+    });
+  });
 });
 
 // Gets a JSON object from `npm ls --json` (getInstalledDependenciesTree) or
@@ -1050,7 +1049,7 @@ var getShrinkwrappedDependencies = function (dir) {
   return treeToDependencies(getShrinkwrappedDependenciesTree(dir));
 };
 
-const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
+const installNpmModule = meteorNpm.installNpmModule = async (name, version, dir) => {
   const installArg = utils.isNpmUrl(version)
     ? version
     : `${name}@${version}`;
@@ -1058,7 +1057,7 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
   // We don't use npm.commands.install since we couldn't figure out
   // how to silence all output (specifically the installed tree which
   // is printed out with `console.log`)
-  const result = runNpmCommand(["install", installArg], dir);
+  const result = await runNpmCommand(["install", installArg], dir);
 
   if (! result.success) {
     const pkgNotFound =
@@ -1080,7 +1079,7 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
     }
 
     // Recover by returning false from updateDependencies
-    throw new NpmFailure;
+    throw new NpmFailure();
   }
 
   const pkgDir = files.pathJoin(dir, "node_modules", name);
@@ -1107,19 +1106,19 @@ const installNpmModule = meteorNpm.installNpmModule = (name, version, dir) => {
 "The following file paths in the NPM module '" + name + "' have colons, ':', which won't work on Windows:\n" +
 firstTen.join("\n"));
 
-      throw new NpmFailure;
+      throw new NpmFailure();
     }
   }
 };
 
-var installFromShrinkwrap = function (dir) {
+var installFromShrinkwrap = async function (dir) {
   if (! files.exists(files.pathJoin(dir, "npm-shrinkwrap.json"))) {
     throw new Error(
       "Can't call `npm install` without a npm-shrinkwrap.json file present");
   }
 
   // `npm install`, which reads npm-shrinkwrap.json.
-  var result = runNpmCommand(["install"], dir);
+  var result = await runNpmCommand(["install"], dir);
 
   if (! result.success) {
     buildmessage.error(
@@ -1128,7 +1127,7 @@ var installFromShrinkwrap = function (dir) {
     );
 
     // Recover by returning false from updateDependencies
-    throw new NpmFailure;
+    throw new NpmFailure();
   }
 
   const nodeModulesDir = files.pathJoin(dir, "node_modules");

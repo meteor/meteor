@@ -89,15 +89,16 @@ catalog.refreshOrWarn = function (options) {
 
 // Runs 'attempt'; if it fails in a way that can be fixed by refreshing the
 // official catalog, does that and tries again.
-catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
+catalog.runAndRetryWithRefreshIfHelpful = async function (attempt) {
   buildmessage.assertInJob();
 
   var canRetry = ! (catalog.triedToRefreshRecently ||
                     catalog.official.offline);
 
+  console.log("11111")
   // Run `attempt` in a nested buildmessage context.
-  var messages = buildmessage.capture(function () {
-    attempt(canRetry);
+  var messages = await buildmessage.capture(function () {
+    return attempt(canRetry);
   });
 
   // Did it work? Great.
@@ -119,8 +120,9 @@ catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
   // catalog.refreshOrWarn, which is a higher-level function that's allowed to
   // log.
   catalog.triedToRefreshRecently = true;
+  console.log("adsdasd")
   try {
-    catalog.official.refresh();
+    await catalog.official.refresh();
     catalog.refreshFailed = false;
   } catch (err) {
     if (err.errorType !== 'DDP.ConnectionError')
@@ -128,17 +130,17 @@ catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
     // First place the previous errors in the capture.
     buildmessage.mergeMessagesIntoCurrentJob(messages);
     // Then put an error representing this DDP error.
-    buildmessage.enterJob(
+    await buildmessage.enterJob(
       "refreshing package catalog to resolve previous errors",
       function () {
-        buildmessage.error(err.message);
+        return buildmessage.error(err.message);
       }
     );
     return;
   }
 
   // Try again, this time directly in the current buildmessage job.
-  attempt(false); // canRetry = false
+  await attempt(false); // canRetry = false
 };
 
 // As a work-around for [] !== [], we use a function to check whether values are acceptable

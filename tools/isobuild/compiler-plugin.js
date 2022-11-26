@@ -137,25 +137,30 @@ export class CompilerPluginProcessor {
     }
   }
 
-  runCompilerPlugins() {
+  async runCompilerPlugins() {
     const self = this;
     buildmessage.assertInJob();
 
     // plugin id -> {sourceProcessor, resourceSlots}
     var sourceProcessorsWithSlots = {};
 
-    var sourceBatches = _.map(self.unibuilds, function (unibuild) {
+    const sourceBatches = [];
+    for (const unibuild of self.unibuilds) {
       const { pkg: { name }, arch } = unibuild;
       const sourceRoot = name
-        && self.isopackCache.getSourceRoot(name, arch)
-        || self.sourceRoot;
+          && self.isopackCache.getSourceRoot(name, arch)
+          || self.sourceRoot;
 
-      return new PackageSourceBatch(unibuild, self, {
+      const batch = new PackageSourceBatch(unibuild, self, {
         sourceRoot,
         linkerCacheDir: self.linkerCacheDir,
         scannerCacheDir: self.scannerCacheDir,
       });
-    });
+
+      await batch.init();
+
+      sourceBatches.push(batch);
+    }
 
     // If we failed to match sources with processors, we're done.
     if (buildmessage.jobHasMessages()) {
@@ -182,8 +187,8 @@ export class CompilerPluginProcessor {
       });
     });
 
-    // Now actually run the handlers.
-    _.each(sourceProcessorsWithSlots, function (data, id) {
+    // Now actually run the handlers
+    for (const [id, data] of Object.entries(sourceProcessorsWithSlots)) {
       var sourceProcessor = data.sourceProcessor;
       var resourceSlots = data.resourceSlots;
 
@@ -193,27 +198,27 @@ export class CompilerPluginProcessor {
         " (for target ", self.arch, ")"
       ].join('');
 
-      Profile.time("plugin "+sourceProcessor.isopack.name, () => {
-        buildmessage.enterJob({
+      await Profile.time("plugin "+sourceProcessor.isopack.name, async () => {
+        await buildmessage.enterJob({
           title: jobTitle
-        }, function () {
+        }, async function () {
           var inputFiles = _.map(resourceSlots, function (resourceSlot) {
             return new InputFile(resourceSlot);
           });
 
           const markedMethod = buildmessage.markBoundary(
-            sourceProcessor.userPlugin.processFilesForTarget,
-            sourceProcessor.userPlugin
+              sourceProcessor.userPlugin.processFilesForTarget,
+              sourceProcessor.userPlugin
           );
 
           try {
-            Promise.await(markedMethod(inputFiles));
+            await markedMethod(inputFiles);
           } catch (e) {
             buildmessage.exception(e);
           }
         });
       });
-    });
+    }
 
     return sourceBatches;
   }
@@ -1061,12 +1066,6 @@ export class PackageSourceBatch {
     self._nodeModulesPaths = null;
 
     self.resourceSlots = [];
-    unibuild.resources.forEach(resource => {
-      const slot = self.makeResourceSlot(resource);
-      if (slot) {
-        self.resourceSlots.push(slot);
-      }
-    });
 
     // Compute imports by merging the exports of all of the packages we
     // use. Note that in the case of conflicting symbols, later packages get
@@ -1079,8 +1078,18 @@ export class PackageSourceBatch {
     // decision of whether or not an unrelated package in the target
     // depends on something).
     self.importedSymbolToPackageName = {}; // map from symbol to supplying package name
+  }
 
-    compiler.eachUsedUnibuild({
+  async init() {
+    const self = this;
+    for (const resource of this.unibuild.resources) {
+      const slot = await self.makeResourceSlot(resource);
+      if (slot) {
+        self.resourceSlots.push(slot);
+      }
+    }
+
+    await compiler.eachUsedUnibuild({
       dependencies: self.unibuild.uses,
       arch: self.processor.arch,
       isopackCache: self.processor.isopackCache,
@@ -1101,24 +1110,24 @@ export class PackageSourceBatch {
     });
 
     self.useMeteorInstall =
-      _.isString(self.sourceRoot) &&
-      self.processor.isopackCache.uses(
-        self.unibuild.pkg,
-        "modules",
-        self.unibuild.arch
-      );
+        _.isString(self.sourceRoot) &&
+        self.processor.isopackCache.uses(
+            self.unibuild.pkg,
+            "modules",
+            self.unibuild.arch
+        );
 
     const isDevelopment = self.processor.buildMode === 'development';
     const usesHMRPackage = self.unibuild.pkg.name !== "hot-module-replacement" &&
-      self.processor.isopackCache.uses(
-        self.unibuild.pkg,
-        "hot-module-replacement",
-        self.unibuild.arch
-      );
+        self.processor.isopackCache.uses(
+            self.unibuild.pkg,
+            "hot-module-replacement",
+            self.unibuild.arch
+        );
     const supportedArch = archinfo.matches(self.unibuild.arch, 'web');
 
     self.hmrAvailable = self.useMeteorInstall && isDevelopment
-      && usesHMRPackage && supportedArch;
+        && usesHMRPackage && supportedArch;
 
     // These are the options that should be passed as the second argument
     // to meteorInstall when modules in this source batch are installed.
@@ -1127,8 +1136,8 @@ export class PackageSourceBatch {
     } : null;
   }
 
-  compileOneJsResource(resource) {
-    const slot = this.makeResourceSlot({
+  async compileOneJsResource(resource) {
+    const slot = await this.makeResourceSlot({
       type: "source",
       extension: "js",
       // Need { data, path, hash } here, at least.
@@ -1144,7 +1153,7 @@ export class PackageSourceBatch {
       // added directly to slot.jsOutputResources by makeResourceSlot,
       // meaning we do not need to compile it.
       if (slot.jsOutputResources.length > 0) {
-        return slot.jsOutputResources
+        return slot.jsOutputResources;
       }
 
       const inputFile = new InputFile(slot);
@@ -1158,7 +1167,7 @@ export class PackageSourceBatch {
             userPlugin
           );
           try {
-            Promise.await(markedMethod([inputFile]));
+            await markedMethod([inputFile]);
           } catch (e) {
             buildmessage.exception(e);
           }
@@ -1171,13 +1180,13 @@ export class PackageSourceBatch {
     return [];
   }
 
-  makeResourceSlot(resource) {
+ async makeResourceSlot(resource) {
     let sourceProcessor = null;
     if (resource.type === "source") {
       var extension = resource.extension;
       if (extension === null) {
         const filename = files.pathBasename(resource.path);
-        sourceProcessor = this._getSourceProcessorSet().getByFilename(filename);
+        sourceProcessor = (await this._getSourceProcessorSet()).getByFilename(filename);
         if (! sourceProcessor) {
           buildmessage.error(
             `no plugin found for ${ resource.path } in ` +
@@ -1187,7 +1196,7 @@ export class PackageSourceBatch {
           // recover by ignoring
         }
       } else {
-        sourceProcessor = this._getSourceProcessorSet().getByExtension(extension);
+        sourceProcessor = (await this._getSourceProcessorSet()).getByExtension(extension);
         // If resource.extension === 'js', it's ok for there to be no
         // sourceProcessor, since we #HardcodeJs in ResourceSlot.
         if (! sourceProcessor && extension !== 'js') {
@@ -1245,12 +1254,12 @@ export class PackageSourceBatch {
     return this._nodeModulesPaths;
   }
 
-  _getSourceProcessorSet() {
+  async _getSourceProcessorSet() {
     if (! this._sourceProcessorSet) {
       buildmessage.assertInJob();
 
       const isopack = this.unibuild.pkg;
-      const activePluginPackages = compiler.getActivePluginPackages(isopack, {
+      const activePluginPackages = await compiler.getActivePluginPackages(isopack, {
         uses: this.unibuild.uses,
         isopackCache: this.processor.isopackCache
       });
@@ -1258,12 +1267,12 @@ export class PackageSourceBatch {
       this._sourceProcessorSet = new buildPluginModule.SourceProcessorSet(
         isopack.displayName(), { hardcodeJs: true });
 
-      _.each(activePluginPackages, otherPkg => {
-        otherPkg.ensurePluginsInitialized();
+      for (const otherPkg of activePluginPackages) {
+        await otherPkg.ensurePluginsInitialized();
         this._sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler, {
           arch: this.processor.arch,
         });
-      });
+      }
     }
 
     return this._sourceProcessorSet;

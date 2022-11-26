@@ -9,6 +9,11 @@ Npm.depends({
 });
 
 Package.onUse((api) => {
+  if (process.env.DISABLE_FIBERS) {
+    api.use('ddp-client-async');
+    api.export('DDP', 'server');
+    return;
+  }
   api.use([
     'check',
     'random',

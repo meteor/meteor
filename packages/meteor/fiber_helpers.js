@@ -2,6 +2,10 @@ var Fiber = Npm.require('fibers');
 var Future = Npm.require('fibers/future');
 
 Meteor._noYieldsAllowed = function (f) {
+  if (!Meteor._isFibersEnabled) {
+    return f();
+  }
+
   var savedYield = Fiber.yield;
   Fiber.yield = function () {
     throw new Error("Can't call yield in a noYieldsAllowed block!");
@@ -32,152 +36,150 @@ Meteor._DoubleEndedQueue = Npm.require('double-ended-queue');
 // XXX could maybe use the npm 'schlock' module instead, which would
 //     also support multiple concurrent "read" tasks
 //
-Meteor._SynchronousQueue = function () {
-  var self = this;
-  // List of tasks to run (not including a currently-running task if any). Each
-  // is an object with field 'task' (the task function to run) and 'future' (the
-  // Future associated with the blocking runTask call that queued it, or null if
-  // called from queueTask).
-  self._taskHandles = new Meteor._DoubleEndedQueue();
-  // This is true if self._run() is either currently executing or scheduled to
-  // do so soon.
-  self._runningOrRunScheduled = false;
-  // During the execution of a task, this is set to the fiber used to execute
-  // that task. We use this to throw an error rather than deadlocking if the
-  // user calls runTask from within a task on the same fiber.
-  self._currentTaskFiber = undefined;
-  // This is true if we're currently draining.  While we're draining, a further
-  // drain is a noop, to prevent infinite loops.  "drain" is a heuristic type
-  // operation, that has a meaning like unto "what a naive person would expect
-  // when modifying a table from an observe"
-  self._draining = false;
-};
-
-var SQp = Meteor._SynchronousQueue.prototype;
-
-SQp.runTask = function (task) {
-  var self = this;
-
-  if (!self.safeToRunTask()) {
-    if (Fiber.current)
-      throw new Error("Can't runTask from another task in the same fiber");
-    else
-      throw new Error("Can only call runTask in a Fiber");
+class AsynchronousQueue {
+  constructor() {
+    this._taskHandles = new Meteor._DoubleEndedQueue();
+    this._runningOrRunScheduled = false;
+    // This is true if we're currently draining.  While we're draining, a further
+    // drain is a noop, to prevent infinite loops.  "drain" is a heuristic type
+    // operation, that has a meaning like unto "what a naive person would expect
+    // when modifying a table from an observe"
+    this._draining = false;
   }
 
-  var fut = new Future;
-  var handle = {
-    task: Meteor.bindEnvironment(task, function (e) {
-      Meteor._debug("Exception from task", e);
-      throw e;
-    }),
-    future: fut,
-    name: task.name
-  };
-  self._taskHandles.push(handle);
-  self._scheduleRun();
-  // Yield. We'll get back here after the task is run (and will throw if the
-  // task throws).
-  fut.wait();
-};
-
-SQp.queueTask = function (task) {
-  var self = this;
-  self._taskHandles.push({
-    task: task,
-    name: task.name
-  });
-  self._scheduleRun();
-  // No need to block.
-};
-
-SQp.flush = function () {
-  var self = this;
-  self.runTask(function () {});
-};
-
-SQp.safeToRunTask = function () {
-  var self = this;
-  return Fiber.current && self._currentTaskFiber !== Fiber.current;
-};
-
-SQp.drain = function () {
-  var self = this;
-  if (self._draining)
-    return;
-  if (!self.safeToRunTask())
-    return;
-  self._draining = true;
-  while (! self._taskHandles.isEmpty()) {
-    self.flush();
+  queueTask(task) {
+    this._taskHandles.push({
+      task: task,
+      name: task.name
+    });
+    return this._scheduleRun();
   }
-  self._draining = false;
-};
 
-SQp._scheduleRun = function () {
-  var self = this;
-  // Already running or scheduled? Do nothing.
-  if (self._runningOrRunScheduled)
-    return;
+  _scheduleRun() {
+    // Already running or scheduled? Do nothing.
+    if (this._runningOrRunScheduled)
+      return;
 
-  self._runningOrRunScheduled = true;
-  setImmediate(function () {
-    Fiber(function () {
-      self._run();
-    }).run();
-  });
-};
+    this._runningOrRunScheduled = true;
 
-SQp._run = function () {
-  var self = this;
+    let resolver;
+    const returnValue = new Promise(r => resolver = r);
+    setImmediate(() => {
+      Meteor._runAsync(async () => {
+        await this._run();
 
-  if (!self._runningOrRunScheduled)
-    throw new Error("expected to be _runningOrRunScheduled");
+        if (!resolver) {
+          throw new Error("Resolver not found for task");
+        }
 
-  if (self._taskHandles.isEmpty()) {
-    // Done running tasks! Don't immediately schedule another run, but
-    // allow future tasks to do so.
-    self._runningOrRunScheduled = false;
-    return;
+        resolver();
+      });
+    });
+
+    return returnValue;
   }
-  var taskHandle = self._taskHandles.shift();
 
-  // Run the task.
-  self._currentTaskFiber = Fiber.current;
-  var exception = undefined;
-  try {
-    taskHandle.task();
-  } catch (err) {
-    if (taskHandle.future) {
-      // We'll throw this exception through runTask.
-      exception = err;
-    } else {
-      Meteor._debug("Exception in queued task", err);
+  async _run() {
+    if (!this._runningOrRunScheduled)
+      throw new Error("expected to be _runningOrRunScheduled");
+
+    if (this._taskHandles.isEmpty()) {
+      // Done running tasks! Don't immediately schedule another run, but
+      // allow future tasks to do so.
+      this._runningOrRunScheduled = false;
+      return;
     }
+    const taskHandle = this._taskHandles.shift();
+
+    // Run the task.
+    try {
+      await taskHandle.task();
+    } catch (err) {
+        Meteor._debug("Exception in queued task", err);
+    }
+
+    // Soon, run the next task, if there is any.
+    this._runningOrRunScheduled = false;
+    await this._scheduleRun();
   }
-  self._currentTaskFiber = undefined;
 
-  // Soon, run the next task, if there is any.
-  self._runningOrRunScheduled = false;
-  self._scheduleRun();
+  async runTask(task) {
+    const handle = {
+      task: Meteor.bindEnvironment(task, function(e) {
+        Meteor._debug('Exception from task', e);
+        throw e;
+      }),
+      name: task.name
+    };
+    this._taskHandles.push(handle);
 
-  // If this was queued with runTask, let the runTask call return (throwing if
-  // the task threw).
-  if (taskHandle.future) {
-    if (exception)
-      taskHandle.future['throw'](exception);
-    else
-      taskHandle.future['return']();
+    // XXX: We should be doing this a different way.
+    await Meteor._sleepForMs(10);
+    return this._scheduleRun();
+  }
+
+  flush() {
+    return this.runTask(() => {});
+  }
+
+  async drain() {
+    if (this._draining)
+      return;
+
+    this._draining = true;
+    while (!this._taskHandles.isEmpty()) {
+      await this.flush();
+    }
+    this._draining = false;
+  }
+}
+
+Meteor._AsynchronousQueue = AsynchronousQueue;
+
+Meteor._SynchronousQueue = class extends AsynchronousQueue {
+  constructor() {
+    super();
+    // During the execution of a task, this is set to the fiber used to execute
+    // that task. We use this to throw an error rather than deadlocking if the
+    // user calls runTask from within a task on the same fiber.
+    this._currentTaskFiber = undefined;
+  }
+
+  runWithFibers(fn, args) {
+    if (!Meteor._isFibersEnabled) {
+      return fn.apply(this, args);
+    }
+
+    return Promise.await(fn.apply(this, args));
+  }
+
+  runTask(task) {
+    this.runWithFibers(super.runTask, [task]);
+  }
+
+  flush() {
+    this.runWithFibers(super.flush);
+  }
+
+  safeToRunTask() {
+    return Fiber.current && this._currentTaskFiber !== Fiber.current;
+  }
+
+  drain() {
+    this.runWithFibers(super.drain);
+  }
+
+  _run() {
+    this.runWithFibers(super._run);
   }
 };
 
 // Sleep. Mostly used for debugging (eg, inserting latency into server
 // methods).
 //
+const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 Meteor._sleepForMs = function (ms) {
-  var fiber = Fiber.current;
-  setTimeout(function() {
-    fiber.run();
-  }, ms);
-  Fiber.yield();
+  if (!Meteor._isFibersEnabled) return _sleep(ms);
+
+  Promise.await(_sleep(ms));
 };

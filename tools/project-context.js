@@ -313,38 +313,38 @@ Object.assign(ProjectContext.prototype, {
   readProjectMetadata: function () {
     // don't generate a profiling report for this stage (Profile.run),
     // because all we do here is read a handful of files.
-    this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
+    return this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
   },
   initializeCatalog: function () {
-    Profile.run('ProjectContext initializeCatalog', () => {
-      this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
+    return Profile.run('ProjectContext initializeCatalog', () => {
+      return this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
     });
   },
   resolveConstraints: function () {
-    Profile.run('ProjectContext resolveConstraints', () => {
-      this._completeStagesThrough(STAGE.RESOLVE_CONSTRAINTS);
+    return Profile.run('ProjectContext resolveConstraints', () => {
+      return this._completeStagesThrough(STAGE.RESOLVE_CONSTRAINTS);
     });
   },
   downloadMissingPackages: function () {
-    Profile.run('ProjectContext downloadMissingPackages', () => {
-      this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
+    return Profile.run('ProjectContext downloadMissingPackages', () => {
+      return this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
     });
   },
   buildLocalPackages: function () {
-    Profile.run('ProjectContext buildLocalPackages', () => {
-      this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
+    return Profile.run('ProjectContext buildLocalPackages', () => {
+      return this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
     });
   },
   saveChangedMetadata: function () {
-    Profile.run('ProjectContext saveChangedMetadata', () => {
-      this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    return Profile.run('ProjectContext saveChangedMetadata', () => {
+      return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
   prepareProjectForBuild: function () {
     // This is the same as saveChangedMetadata, but if we insert stages after
     // that one it will continue to mean "fully finished".
-    Profile.run('ProjectContext prepareProjectForBuild', () => {
-      this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    return Profile.run('ProjectContext prepareProjectForBuild', () => {
+      return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
 
@@ -352,7 +352,7 @@ Object.assign(ProjectContext.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    buildmessage.enterJob('preparing project', function () {
+    return buildmessage.enterJob('preparing project', async function () {
       while (self._completedStage !== targetStage) {
         // This error gets thrown if you request to go to a stage that's earlier
         // than where you started. Note that the error will be mildly confusing
@@ -360,9 +360,11 @@ Object.assign(ProjectContext.prototype, {
         if (self.completedStage === STAGE.SAVE_CHANGED_METADATA)
           throw Error("can't find requested stage " + targetStage);
 
+        console.log("11111111")
+        console.log(self._completedStage)
         // The actual value of STAGE.FOO is the name of the method that takes
         // you to the next step after FOO.
-        self[self._completedStage]();
+        await self[self._completedStage]();
         if (buildmessage.jobHasMessages())
           return;
       }
@@ -384,11 +386,11 @@ Object.assign(ProjectContext.prototype, {
   //
   // This should be pretty fast --- for example, we shouldn't worry about
   // needing to wait for it to be done before we open the runner proxy.
-  _readProjectMetadata: Profile('_readProjectMetadata', function () {
+  _readProjectMetadata: Profile('_readProjectMetadata', async function () {
     var self = this;
     buildmessage.assertInCapture();
 
-    buildmessage.enterJob('reading project metadata', function () {
+    await buildmessage.enterJob('reading project metadata', function () {
       // Ensure this is actually a project directory.
       self._ensureProjectDir();
       if (buildmessage.jobHasMessages())
@@ -777,20 +779,20 @@ Object.assign(ProjectContext.prototype, {
   // but does not compile the packages.
   //
   // Must be run in a buildmessage context. On build error, returns null.
-  _initializeCatalog: Profile('_initializeCatalog', function () {
+  _initializeCatalog: Profile('_initializeCatalog', async function () {
     var self = this;
     buildmessage.assertInJob();
 
-    catalog.runAndRetryWithRefreshIfHelpful(function () {
-      buildmessage.enterJob(
+    await catalog.runAndRetryWithRefreshIfHelpful(function () {
+      return buildmessage.enterJob(
         "scanning local packages",
-        function () {
-          self.localCatalog = new catalogLocal.LocalCatalog;
+        async function () {
+          self.localCatalog = new catalogLocal.LocalCatalog();
           self.projectCatalog = new catalog.LayeredCatalog(
             self.localCatalog, self._officialCatalog);
 
           var searchDirs = self._localPackageSearchDirs();
-          self.localCatalog.initialize({
+          await self.localCatalog.initialize({
             localPackageSearchDirs: searchDirs,
             explicitlyAddedLocalPackageDirs: self._explicitlyAddedLocalPackageDirs
           });

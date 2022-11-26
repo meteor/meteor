@@ -380,7 +380,11 @@ Tinytest.addAsync('ecmascript - runtime - misc support', (test, done) => {
       if (Meteor.isServer) {
         const Fiber = Npm.require('fibers');
         // Make sure the Promise polyfill runs callbacks in a Fiber.
-        test.instanceOf(Fiber.current, Fiber);
+        if (Meteor._isFibersEnabled) {
+          test.instanceOf(Fiber.current, Fiber);
+        } else {
+          test.isUndefined(Fiber.current);
+        }
       }
     })
     .then(done, error => test.exception(error));
@@ -401,8 +405,15 @@ Tinytest.addAsync('ecmascript - runtime - async fibers', (test, done) => {
     const fiberBeforeAwait = Fiber.current;
     await wait();
     const fiberAfterAwait = Fiber.current;
-    test.isTrue(fiberBeforeAwait instanceof Fiber);
-    test.isTrue(fiberBeforeAwait === fiberAfterAwait);
+    if (Meteor._isFibersEnabled) {
+      test.isTrue(fiberBeforeAwait instanceof Fiber);
+      test.isTrue(fiberBeforeAwait === fiberAfterAwait);
+      return;
+    }
+
+    test.isUndefined(fiberBeforeAwait);
+    test.isUndefined(fiberAfterAwait)
+    test.isTrue(fiberBeforeAwait === fiberAfterAwait)
   }
 
   check().then(done);

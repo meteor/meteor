@@ -15,7 +15,7 @@ type ProgressState = {
 
 /**
  * Utility class for computing the progress of complex tasks.
- * 
+ *
  * Watchers are invoked with a ProgressState object.
  */
 export class Progress {

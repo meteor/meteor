@@ -56,7 +56,7 @@ export class IsopackCache {
     self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
   }
 
-  buildLocalPackages(rootPackageNames) {
+  async buildLocalPackages(rootPackageNames) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -66,13 +66,13 @@ export class IsopackCache {
 
     var onStack = {};
     if (rootPackageNames) {
-      _.each(rootPackageNames, function (name) {
-        self._ensurePackageLoaded(name, onStack);
-      });
+      for (const name of rootPackageNames) {
+        await self._ensurePackageLoaded(name, onStack);
+      }
     } else {
-      self._packageMap.eachPackage(function (name, packageInfo) {
-        self._ensurePackageLoaded(name, onStack);
-        requestGarbageCollection();
+      await self._packageMap.eachPackage(async function (name) {
+        await self._ensurePackageLoaded(name, onStack);
+        await requestGarbageCollection();
       });
     }
   }
@@ -140,7 +140,7 @@ export class IsopackCache {
     return null;
   }
 
-  uses(isopack, name, arch) {
+  async uses(isopack, name, arch) {
     if (! isopack) {
       return false;
     }
@@ -150,21 +150,23 @@ export class IsopackCache {
       return true;
     }
 
-    const unibuild = isopack.getUnibuildAtArch(arch);
+    const unibuild = await isopack.getUnibuildAtArch(arch);
     if (! unibuild) {
       return false;
     }
 
-    return _.some(unibuild.uses, use => {
-      return this.implies(
-        this._isopacks[use.package],
-        name,
-        arch,
+    for (const use of unibuild.uses) {
+      const implies = await this.implies(
+          this._isopacks[use.package],
+          name,
+          arch,
       );
-    });
+
+      if (implies) return implies;
+    }
   }
 
-  implies(isopack, name, arch) {
+  async implies(isopack, name, arch) {
     if (! isopack) {
       return false;
     }
@@ -174,28 +176,30 @@ export class IsopackCache {
       return true;
     }
 
-    const unibuild = isopack.getUnibuildAtArch(arch);
+    const unibuild = await isopack.getUnibuildAtArch(arch);
     if (! unibuild) {
       return false;
     }
 
-    return _.some(unibuild.implies, imp => {
-      return this.implies(
-        this._isopacks[imp.package],
-        name,
-        arch,
+    for (const imp of unibuild.implies) {
+      const implies = await this.implies(
+          this._isopacks[imp.package],
+          name,
+          arch,
       );
-    });
+
+      if (implies) return implies;
+    }
   }
 
-  _ensurePackageLoaded(name, onStack) {
+  async _ensurePackageLoaded(name, onStack) {
     var self = this;
     buildmessage.assertInCapture();
     if (_.has(self._isopacks, name)) {
       return;
     }
 
-    var ensureLoaded = function (depName) {
+    var ensureLoaded = async function (depName) {
       if (_.has(onStack, depName)) {
         buildmessage.error("circular dependency between packages " +
                            name + " and " + depName);
@@ -203,7 +207,7 @@ export class IsopackCache {
         return;
       }
       onStack[depName] = true;
-      self._ensurePackageLoaded(depName, onStack);
+      await self._ensurePackageLoaded(depName, onStack);
       delete onStack[depName];
     };
 
@@ -229,17 +233,17 @@ export class IsopackCache {
     if (packageInfo.kind === 'local') {
       var packageNames =
             packageInfo.packageSource.getPackagesToLoadFirst(self._packageMap);
-      buildmessage.enterJob("preparing to build package " + name, function () {
-        _.each(packageNames, function (depName) {
-          ensureLoaded(depName);
-        });
+      await buildmessage.enterJob("preparing to build package " + name, async function () {
+        for (const depName of packageNames) {
+          await ensureLoaded(depName);
+        }
         // If we failed to load something that this package depends on, don't
         // load it.
         if (buildmessage.jobHasMessages()) {
           return;
         }
-        Profile.time('IsopackCache Build local isopack', () => {
-          self._loadLocalPackage(name, packageInfo, previousIsopack);
+        await Profile.time('IsopackCache Build local isopack', () => {
+          return self._loadLocalPackage(name, packageInfo, previousIsopack);
         });
       });
     } else if (packageInfo.kind === 'versioned') {
@@ -252,7 +256,7 @@ export class IsopackCache {
 
       var isopack = null, packagesToLoad = [];
 
-      Profile.time('IsopackCache Load local isopack', () => {
+      await Profile.time('IsopackCache Load local isopack', async () => {
         if (previousIsopack) {
           // We can always reuse a previous Isopack for a versioned package, since
           // we assume that it never changes.  (Admittedly, this means we won't
@@ -262,9 +266,9 @@ export class IsopackCache {
         }
         if (! isopack) {
           // Load the isopack from disk.
-          buildmessage.enterJob(
+          await buildmessage.enterJob(
             "loading package " + name + "@" + packageInfo.version,
-            function () {
+            async function () {
               var pluginCacheDir;
               if (self._pluginCacheDirRoot) {
                 pluginCacheDir = self._pluginCacheDirForVersion(
@@ -276,7 +280,7 @@ export class IsopackCache {
 
               var Isopack = isopackModule.Isopack;
               isopack = new Isopack();
-              isopack.initFromPath(name, isopackPath, {
+              await isopack.initFromPath(name, isopackPath, {
                 pluginCacheDir: pluginCacheDir
               });
               // If loading the isopack fails, then we don't need to look for more
@@ -285,7 +289,7 @@ export class IsopackCache {
               if (buildmessage.jobHasMessages()) {
                 return;
               }
-              packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
+              packagesToLoad = await isopack.getStrongOrderedUsedAndImpliedPackages();
             });
         }
       });
@@ -302,10 +306,10 @@ export class IsopackCache {
     }
   }
 
-  _loadLocalPackage(name, packageInfo, previousIsopack) {
+  async _loadLocalPackage(name, packageInfo, previousIsopack) {
     var self = this;
     buildmessage.assertInCapture();
-    buildmessage.enterJob("building package " + name, function () {
+    await buildmessage.enterJob("building package " + name, async function () {
       var isopack;
       if (previousIsopack && self._checkUpToDatePreloaded(previousIsopack)) {
         isopack = previousIsopack;
@@ -327,7 +331,7 @@ export class IsopackCache {
           pluginCacheDir && files.mkdir_p(pluginCacheDir);
 
           isopack = new isopackModule.Isopack();
-          isopack.initFromPath(name, self._isopackDir(name), {
+          await isopack.initFromPath(name, self._isopackDir(name), {
             isopackBuildInfoJson: isopackBuildInfoJson,
             pluginCacheDir: pluginCacheDir
           });
@@ -343,14 +347,15 @@ export class IsopackCache {
           // Because we don't save linter messages to disk, we have to relint
           // this package.
           // XXX save linter messages to disk?
-          self._lintLocalPackage(packageInfo.packageSource, isopack);
+          await self._lintLocalPackage(packageInfo.packageSource, isopack);
         } else {
           // Nope! Compile it again. Give it a fresh plugin cache.
           if (pluginCacheDir) {
-            files.rm_recursive(pluginCacheDir);
+            await files.rm_recursive(pluginCacheDir);
             files.mkdir_p(pluginCacheDir);
           }
-          isopack = compiler.compile(packageInfo.packageSource, {
+
+          isopack = await compiler.compile(packageInfo.packageSource, {
             packageMap: self._packageMap,
             isopackCache: self,
             includeCordovaUnibuild: self._includeCordovaUnibuild,
@@ -364,10 +369,10 @@ export class IsopackCache {
           if (! buildmessage.jobHasMessages()) {
             // Lint the package. We do this before saving so that the linter can
             // augment the saved-to-disk WatchSet with linter-specific files.
-            self._lintLocalPackage(packageInfo.packageSource, isopack);
+            await self._lintLocalPackage(packageInfo.packageSource, isopack);
             if (self.cacheDir) {
               // Save to disk, for next time!
-              isopack.saveToPath(self._isopackDir(name), {
+              await isopack.saveToPath(self._isopackDir(name), {
                 includeIsopackBuildInfo: true,
                 isopackCache: self,
               });
@@ -385,12 +390,12 @@ export class IsopackCache {
 
   // Runs appropriate linters on a package. It also augments their unibuilds'
   // WatchSets with files used by the linter.
-  _lintLocalPackage(packageSource, isopack) {
+  async _lintLocalPackage(packageSource, isopack) {
     buildmessage.assertInJob();
     if (!this._shouldLintPackage(packageSource)) {
       return;
     }
-    const {warnings, linted} = compiler.lint(packageSource, {
+    const {warnings, linted} = await compiler.lint(packageSource, {
       isopackCache: this,
       isopack: isopack,
       includeCordovaUnibuild: this._includeCordovaUnibuild

@@ -5,7 +5,6 @@ if (showRequireProfile) {
 
 var assert = require("assert");
 var _ = require('underscore');
-var Fiber = require('fibers');
 var Console = require('../console/console.js').Console;
 var files = require('../fs/files');
 var warehouse = require('../packaging/warehouse.js');
@@ -15,16 +14,11 @@ var projectContextModule = require('../project-context.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
+const {asyncLocalStorage} = require("../utils/fiber-helpers");
 const archinfo = require('../utils/archinfo');
 import { isEmacs } from "../utils/utils.js";
 
 var main = exports;
-
-if (process.platform === 'darwin' && process.arch === 'arm64') {
-  // pool size needs to be bigger on m1 because arm64 builds are using
-  // fibers with CORO_PTHREAD set. - default on fibers is 120
-  Fiber.poolSize = 250;
-}
 
 require('./flush-buffers-on-exit-in-windows.js');
 
@@ -273,12 +267,12 @@ main.registerCommand = function (options, func) {
   target[nameParts[0]] = new Command(options);
 };
 
-main.captureAndExit = function (header, title, f) {
+main.captureAndExit = async function (header, title, f) {
   var messages;
   if (f) {
-    messages = buildmessage.capture({ title: title }, f);
+    messages = await buildmessage.capture({ title: title }, f);
   } else {
-    messages = buildmessage.capture(title);  // title is really f
+    messages = await buildmessage.capture(title);  // title is really f
   }
   if (messages.hasMessages()) {
     Console.error(header);
@@ -427,7 +421,7 @@ var longHelp = exports.longHelp = function (commandName) {
 //   and will cause release.forced to be true).
 // - fromApp: this release was suggested because it is the app's
 //   release.  affects error messages.
-var springboard = function (rel, options) {
+var springboard = async function (rel, options) {
   options = options || {};
   if (process.env.METEOR_DEBUG_SPRINGBOARD) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
@@ -461,11 +455,11 @@ var springboard = function (rel, options) {
   });
 
   // XXX split better
-  Console.withProgressDisplayVisible(function () {
-    var messages = buildmessage.capture({
+  await Console.withProgressDisplayVisible(async function () {
+    var messages = await buildmessage.capture({
       title: "downloading the command-line tool"
     }, function () {
-      catalog.runAndRetryWithRefreshIfHelpful(function () {
+      return catalog.runAndRetryWithRefreshIfHelpful(function () {
         tropohouse.default.downloadPackagesMissingFromMap(packageMap, {
           serverArchitectures,
         });
@@ -554,13 +548,13 @@ var springboard = function (rel, options) {
   );
 
   if (isWindows) {
-    process.exit(new Promise(function (resolve) {
+    process.exit(await new Promise(function (resolve) {
       var execPath = files.convertToOSPath(executable);
       var child = require("child_process").spawn(execPath, newArgv, {
         env: process.env,
         stdio: 'inherit'
       }).on('exit', resolve);
-    }).await());
+    }));
   }
 
   // Now exec; we're not coming back.
@@ -596,8 +590,7 @@ var oldSpringboard = function (toolsVersion) {
 // finding the requested command in the commands table, and making
 // sure that you're using the version of the Meteor tools that match
 // your project.
-
-Fiber(function () {
+asyncLocalStorage.run({}, async function () {
   // If running inside the Emacs shell, set stdin to be blocking,
   // reversing node's normal setting of O_NONBLOCK on the evaluation
   // of process.stdin (because Node unblocks stdio when forking). This
@@ -873,7 +866,8 @@ Fiber(function () {
     appDir = files.pathResolve(appDir);
   }
 
-  require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
+  // TODO -> Maybe await here?
+  await require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
 
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk
@@ -988,8 +982,8 @@ Fiber(function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
-        Console.withProgressDisplayVisible(function () {
-          catalog.refreshOrWarn();
+        await Console.withProgressDisplayVisible(function () {
+          return catalog.refreshOrWarn();
         });
         releaseName = release.latestKnown();
       }
@@ -1028,7 +1022,7 @@ Fiber(function () {
       // mean we've downloaded the tool or any packages yet.)  release.load just
       // does a single sqlite query; it doesn't refresh the catalog.
       try {
-        rel = release.load(releaseName);
+        rel = await release.load(releaseName);
       } catch (e) {
         if (!(e instanceof release.NoSuchReleaseError)) {
           throw e;
@@ -1049,14 +1043,14 @@ Fiber(function () {
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
-        Console.withProgressDisplayVisible(function () {
-          catalog.refreshOrWarn();
+        await Console.withProgressDisplayVisible(function () {
+          return catalog.refreshOrWarn();
         });
 
         // Try to load the release even if the refresh failed, since it might
         // have failed on a later page than the one we needed.
         try {
-          rel = release.load(releaseName);
+          rel = await release.load(releaseName);
         } catch (e) {
           if (!(e instanceof release.NoSuchReleaseError)) {
             throw e;
@@ -1162,13 +1156,13 @@ Fiber(function () {
       release.current.isProperRelease()) {
     if (files.getToolsVersion() !==
         release.current.getToolsPackageAtVersion()) {
-      springboard(release.current, {
+      await springboard(release.current, {
         fromApp: releaseFromApp,
         mayReturn: false,
-      })
+      });
       // Does not return!
     } else if (archinfo.canSwitchTo64Bit()) {
-      springboard(release.current, {
+      await springboard(release.current, {
         fromApp: releaseFromApp,
         // Switching to a 64-bit meteor-tool build may fail, in which case
         // we should continue on as usual.
@@ -1525,14 +1519,14 @@ Fiber(function () {
     var catalogRefreshStrategy = command.catalogRefresh;
     if (! catalog.triedToRefreshRecently &&
         catalogRefreshStrategy.beforeCommand) {
-      buildmessage.enterJob({title: 'updating package catalog'}, function () {
-        catalogRefreshStrategy.beforeCommand();
+      await buildmessage.enterJob({title: 'updating package catalog'}, function () {
+        return catalogRefreshStrategy.beforeCommand();
       });
     }
 
-    var ret = Promise.resolve(
+    var ret = await Promise.resolve(
       command.func(options, { rawOptions })
-    ).await();
+    );
 
   } catch (e) {
     Console.enableProgressDisplay(false);
@@ -1550,15 +1544,15 @@ Fiber(function () {
       // Load the metadata for the latest release (or at least, the latest
       // release we know about locally). We should only do this if we know there
       // is some latest release on this track.
-      var latestRelease = release.load(release.latestKnown(e.track));
-      springboard(latestRelease, { releaseOverride: latestRelease.name });
+      var latestRelease = await release.load(release.latestKnown(e.track));
+      await springboard(latestRelease, { releaseOverride: latestRelease.name });
       // (does not return)
     } else if (e instanceof main.SpringboardToSpecificRelease) {
       // Springboard to a specific release. This is only throw by
       // publish-for-arch, which is catalog.Refresh.OnceAtStart, so we ought to
       // have decent knowledge of the latest release.
-      var nextRelease = release.load(e.fullReleaseName);
-      springboard(nextRelease, { releaseOverride: e.fullReleaseName });
+      var nextRelease = await release.load(e.fullReleaseName);
+      await springboard(nextRelease, { releaseOverride: e.fullReleaseName });
       // (does not return)
     } else if (e instanceof main.WaitForExit) {
       return;
@@ -1580,4 +1574,4 @@ Fiber(function () {
     throw new Error("command returned non-number?");
   }
   process.exit(ret);
-}).run();
+});
