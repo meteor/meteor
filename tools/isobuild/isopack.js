@@ -1018,6 +1018,7 @@ Object.assign(Isopack.prototype, {
     var outputPath = outputDir;
 
     var builder = new Builder({ outputPath: outputPath });
+    await builder.init();
     try {
       var mainJson = {
         name: self.name,
@@ -1098,13 +1099,13 @@ Object.assign(Isopack.prototype, {
       var unibuildInfos = [];
 
       // Unibuilds
-      _.each(self.unibuilds, function (unibuild) {
+      for (const unibuild of self.unibuilds) {
         // Make up a filename for this unibuild
         var baseUnibuildName = unibuild.arch;
         var unibuildDir =
-          builder.generateFilename(baseUnibuildName, { directory: true });
+            builder.generateFilename(baseUnibuildName, { directory: true });
         var unibuildJsonFile =
-          builder.generateFilename(baseUnibuildName + ".json");
+            builder.generateFilename(baseUnibuildName + ".json");
         mainJson.builds.push({
           kind: unibuild.kind,
           arch: unibuild.arch,
@@ -1115,11 +1116,11 @@ Object.assign(Isopack.prototype, {
         // too hard about how to encode pair (name, arch).
         if (isopackBuildInfoJson) {
           isopackBuildInfoJson.unibuildDependencies[unibuildJsonFile] =
-            unibuild.watchSet.toJSON();
+              unibuild.watchSet.toJSON();
         }
 
         const usesModules = ! isopackCache ||
-          isopackCache.uses(self, "modules", unibuild.arch);
+            isopackCache.uses(self, "modules", unibuild.arch);
 
         const unibuildJson = unibuild.toJSON({
           builder,
@@ -1132,17 +1133,17 @@ Object.assign(Isopack.prototype, {
         // original form of the resource object (with the source in a
         // Buffer, etc) instead of the later version.  #HardcodeJs
         const jsResourcesForLegacyPrelink =
-          writeLegacyBuilds ? unibuild.getLegacyJsResources() : [];
+            writeLegacyBuilds ? unibuild.getLegacyJsResources() : [];
 
         // Control file for unibuild
-        builder.writeJson(unibuildJsonFile, unibuildJson);
+        await builder.writeJson(unibuildJsonFile, unibuildJson);
 
         unibuildInfos.push({
           unibuild,
           unibuildJson,
           jsResourcesForLegacyPrelink,
         });
-      });
+      }
 
       // If unibuilds included node_modules, copy them in.
       _.each(npmDirsToCopy, (bundlePath, sourcePath) => {
@@ -1200,13 +1201,13 @@ Object.assign(Isopack.prototype, {
         mainLegacyJson = _.clone(mainJson);
         mainLegacyJson.builds = [];
 
-        _.each(unibuildInfos, function (unibuildInfo) {
+        for (const unibuildInfo of unibuildInfos) {
           var unibuild = unibuildInfo.unibuild;
           var unibuildJson = unibuildInfo.unibuildJson;
           var jsResourcesForLegacyPrelink =
-                unibuildInfo.jsResourcesForLegacyPrelink;
+              unibuildInfo.jsResourcesForLegacyPrelink;
           var legacyFilename = builder.generateFilename(
-            unibuild.arch + '-legacy.json');
+              unibuild.arch + '-legacy.json');
           var legacyDir = unibuild.arch + '-legacy';
           mainLegacyJson.builds.push({
             kind: unibuild.kind,
@@ -1234,7 +1235,7 @@ Object.assign(Isopack.prototype, {
               // already, in the format that linker.prelink understands.
             } else {
               throw Error(
-                "shouldn't write legacy builds for non-JS/CSS source "
+                  "shouldn't write legacy builds for non-JS/CSS source "
                   + JSON.stringify(resource));
             }
           });
@@ -1251,7 +1252,7 @@ Object.assign(Isopack.prototype, {
             // assignment differs from that below), ah well.
             prelinkData = prelinkFile.data;
             packageVariables =
-              jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
+                jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
           } else {
             // Determine captured variables, legacy way. First, start with the
             // exports. We'll add the package variables after running prelink.
@@ -1276,15 +1277,15 @@ Object.assign(Isopack.prototype, {
                 // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
                 // XXX: If we change this, we can get rid of source arch names!
                 combinedServePath: (
-                  "/packages/" + colonConverter.convert(
-                    unibuild.pkg.name +
-                      (unibuild.kind === "main" ? "" : (":" + unibuild.kind)) +
-                      ".js")),
+                    "/packages/" + colonConverter.convert(
+                        unibuild.pkg.name +
+                        (unibuild.kind === "main" ? "" : (":" + unibuild.kind)) +
+                        ".js")),
                 name: unibuild.pkg.name
               });
               if (results.files.length !== 1) {
                 throw Error("prelink should return 1 file, not " +
-                            results.files.length);
+                    results.files.length);
               }
               prelinkFile = results.files[0];
               prelinkData = Buffer.from(prelinkFile.source, 'utf8');
@@ -1305,8 +1306,8 @@ Object.assign(Isopack.prototype, {
             var prelinkResource = {
               type: 'prelink',
               file: builder.writeToGeneratedFilename(
-                files.pathJoin(legacyDir, prelinkFile.servePath),
-                { data: prelinkData }),
+                  files.pathJoin(legacyDir, prelinkFile.servePath),
+                  { data: prelinkData }),
               length: prelinkData.length,
               offset: 0,
               servePath: prelinkFile.servePath || undefined
@@ -1319,9 +1320,9 @@ Object.assign(Isopack.prototype, {
               //      so here's some exhaustive checking of things buffer
               //      _will_ accept.
               var acceptedByBuffer = _.isString(prelinkFile.sourceMap)
-                    || _.isNumber(prelinkFile.sourceMap)
-                    || _.isArray(prelinkFile.sourceMap)
-                    || (prelinkFile.sourceMap instanceof Buffer);
+                  || _.isNumber(prelinkFile.sourceMap)
+                  || _.isArray(prelinkFile.sourceMap)
+                  || (prelinkFile.sourceMap instanceof Buffer);
               if (!acceptedByBuffer) {
                 prelinkFile.sourceMap = JSON.stringify(prelinkFile.sourceMap);
               }
@@ -1332,8 +1333,8 @@ Object.assign(Isopack.prototype, {
               }
 
               prelinkResource.sourceMap = builder.writeToGeneratedFilename(
-                files.pathJoin(legacyDir, prelinkFile.servePath + '.map'),
-                { data: Buffer.from(prelinkFile.sourceMap, 'utf8') }
+                  files.pathJoin(legacyDir, prelinkFile.servePath + '.map'),
+                  { data: Buffer.from(prelinkFile.sourceMap, 'utf8') }
               );
             }
             newResources.push(prelinkResource);
@@ -1345,13 +1346,13 @@ Object.assign(Isopack.prototype, {
 
           unibuildJson.resources = newResources;
           delete unibuildJson.declaredExports;
-          builder.writeJson(legacyFilename, unibuildJson);
-        });
+          await builder.writeJson(legacyFilename, unibuildJson);
+        }
 
         // old unipackage.json format/filename.  no point to save this if
         // we can't even support isopack-1.
         // XXX COMPAT WITH 0.9.3
-        builder.writeJson(
+        await builder.writeJson(
           "unipackage.json",
           Isopack.convertIsopackFormat(
             // Note that mainLegacyJson is isopack-1 (has no "source" resources)
@@ -1374,10 +1375,10 @@ Object.assign(Isopack.prototype, {
       //   isopack-1: {... data ...},
       //   isopack-2: {... data ...}
       // }
-      builder.writeJson("isopack.json", isopackJson);
+      await builder.writeJson("isopack.json", isopackJson);
 
       if (isopackBuildInfoJson) {
-        builder.writeJson("isopack-buildinfo.json", isopackBuildInfoJson);
+        await builder.writeJson("isopack-buildinfo.json", isopackBuildInfoJson);
       }
       builder.complete();
     } catch (e) {

@@ -117,16 +117,19 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       }
     }
 
-    // Build the output from scratch
-    if (resetBuildPath) {
-      files.rm_recursive(this.buildPath).then(() => {
-        files.mkdir_p(this.buildPath, 0o755);
-        this.watchSet = new WatchSet();
-      });
-    }
+    this.resetBuildPath = resetBuildPath;
 
     // XXX cleaner error handling. don't make the humans read an
     // exception (and, make suitable for use in automated systems)
+  }
+
+  async init() {
+    // Build the output from scratch
+    if (this.resetBuildPath) {
+      await files.rm_recursive(this.buildPath);
+      files.mkdir_p(this.buildPath, 0o755);
+      this.watchSet = new WatchSet();
+    }
   }
 
   // Like mkdir_p, but records in self.usedAsFile that we have created

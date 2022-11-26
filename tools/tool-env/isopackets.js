@@ -208,6 +208,7 @@ export async function ensureIsopacketsLoadable() {
           }
 
           var builder = new Builder({ outputPath: isopacketRoot });
+          await builder.init();
           await builder.writeJson('isopacket-buildinfo.json', {
             builtBy: compiler.BUILT_BY,
             watchSet: built.watchSet.toJSON()
