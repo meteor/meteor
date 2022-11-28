@@ -1,16 +1,16 @@
 ---
-title: Scaling
+title: Performance improvements
 description: How to optimize your Meteor application for higher performance when you start growing.
 ---
 
-This guide focuses on providing you tips and common practices on how to scale your Meteor app. 
+This guide focuses on providing you tips and common practices on how to improve performance of your Meteor app (sometimes also called scaling). 
 It is important to note that at the end of the day Meteor is a Node.js app tied closely to MongoDB, 
 so a lot of the problems you are going to encounter are common to other Node.js and MongoDB apps. 
-Also do note that every app is different so there are unique challenges to each when scaling, so 
+Also do note that every app is different so there are unique challenges to each, therefore 
 practices describe in this guide should be used as a guiding posts rather than absolutes.
 
-This guide has been heavily inspired by [Marcin Szuster's Vazco article](https://www.vazco.eu/blog/how-to-optimize-and-scale-meteor-projects)
-on this issue and talk by Paulo Mogollón's talk at Impact 2022 titled ["First steps on scaling Meteor realtime data"](https://impact.meteor.com/meetings/virtual/uo2Er8YPqx2vuRcne).
+This guide has been heavily inspired by [Marcin Szuster's Vazco article](https://www.vazco.eu/blog/how-to-optimize-and-scale-meteor-projects), the official [Meteor Galaxy guide](https://galaxy-guide.meteor.com/),
+and talk by Paulo Mogollón's talk at Impact 2022 titled ["First steps on scaling Meteor realtime data"](https://impact.meteor.com/meetings/virtual/uo2Er8YPqx2vuRcne).
 
 <h2 id="performance-monitoring">Performance monitoring</h2>
 
@@ -23,6 +23,8 @@ specific data that Galaxy APM and Monti APM specialize in. For this guide we wil
 which is the same as with Monti APM, for simplicity.
 
 Once you setup either of those APMs you will need to add a package to your Meteor app to start sending them data.
+
+For working with Galaxy APM and optimizing your app through the data there, don't forget to visit the [Meteor APM guide](https://galaxy-guide.meteor.com/apm-getting-started.html).
 
 #### Galaxy APM [package](https://atmospherejs.com/mdg/meteor-apm-agent)
 ```sh
@@ -60,9 +62,23 @@ of use, it is still high, and without any doubt should be optimized first.
 It’s also absolutely vital to remember that you shouldn't optimize everything as it goes. 
 The key is to think strategically and match the most critical issues with your product priorities.
 
-<h2 id="publications">Publications</h2>
-<h3 id="low-observer-reuse">Low observer reuse</h3>
+For more information about all the things you can find in Galaxy APM take a look at the Meteor APM section in [Galaxy Guide](https://galaxy-guide.meteor.com/apm-getting-started.html).
 
+<h2 id="publications">Publications</h2>
+Publications allow for the most prominent aspect of Meteor, live data.
+At the same this is the most resource intensive part of a Meteor application.
+
+<h3 id="publications-proper-use">Proper use of publications</h3>
+
+<h4 id="publications-methods">Methods over publications</h3>
+8:00
+
+<h4 id="publications-replacements">Publication replacements</h4>
+consider GraphQL or REST
+
+<h3 id="low-observer-reuse">Low observer reuse</h3>
+https://galaxy-guide.meteor.com/apm-know-your-observers.html
+https://galaxy-guide.meteor.com/apm-make-your-app-faster.html
 https://www.vazco.eu/blog/how-to-optimize-and-scale-meteor-projects
 
 <h3 id="redis-oplog">Redis Oplog</h3>
@@ -81,17 +97,24 @@ https://www.vazco.eu/blog/how-to-optimize-and-scale-meteor-projects
 <h3 id="rate-limiting">Rate limiting</h3>
 
 <h2 id="mongodb">MongoDB</h2>
-* always limit access to your cluster (IP whitelisting)
+The following section offers some guidance on optimizing performance of your Meteor application when it comes to the database.
+You can find these and more information in other places that deal with MongoDB performance optimization, like on the [official MongoDB website](https://www.mongodb.com/basics/best-practices).
+These are all applicable and you should spend some time researching into them as well. The guide here offers some initial and most common patterns.
+
+<h3 id="mongo-ip-whitelisting">IP whitelisting</h3>
+If your MongoDB hosting provider allows it, you should make sure that only whitelisted  
+
+https://galaxy-guide.meteor.com/container-environment.html#network-outgoing
 
 <h3 id="mongodb-indexes">Indexes</h3>
 10:00
 * compound indexes
 * ESR (equity, sort, range)
 * only the ones needed
+* too many indexes actually slow things down
 * n + 1
 * read from secondaries
 * do not use regex
-* too many indexes actually slow things down
 
 <h3 id="find-strategies">Find strategies</h3>
 17:46
@@ -104,17 +127,13 @@ https://www.vazco.eu/blog/how-to-optimize-and-scale-meteor-projects
 * query caching
 * use aggregation & save them
 
-<h3 id="methods-publications">Methods over publications</h3>
-also consider GraphQL or REST
-8:00
-
 <h2 id="scaling">Scaling</h2>
 
 <h3 id="vertical-horizontal">Vertical and horizontal scaling</h3>
 There are mainly two different ways of scaling: the vertical and horizontal one.
 
-* **Vertical scaling** boils down to adding more resources (CPU/RAM/disk) to your server, while horizontal scaling refers to adding more machines or containers to your pool of resources.
-* **Horizontal scaling** for Meteor projects typically includes running multiple instances of your app on a single server with multiple cores, or running multiple instances on multiple servers.
+* **Vertical scaling** boils down to adding more resources (CPU/RAM/disk) to your containers, while horizontal scaling refers to adding more machines or containers to your pool of resources.
+* **Horizontal scaling** for Meteor projects typically includes running multiple instances of your app on a single container with multiple cores, or running multiple instances on multiple containers.
 
 <h3 id="autoscaling">Container autoscaling</h3>
 
