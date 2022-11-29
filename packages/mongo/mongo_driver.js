@@ -907,11 +907,26 @@ function setupSynchronousCursor(cursor, method) {
   return cursor._synchronousCursor;
 }
 
+
 [...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
+  // count is handled specially since we don't want to create a cursor.
+  // it is still included in ASYNC_CURSOR_METHODS because we still want an async version of it to exist.
+  if (methodName === 'count') {
+    return;
+  }
   Cursor.prototype[methodName] = function (...args) {
     const cursor = setupSynchronousCursor(this, methodName);
     return cursor[methodName](...args);
   };
+
+
+  Cursor.prototype.count = function () {
+    const collection = this._mongo.rawCollection(this._cursorDescription.collectionName);
+    return Promise.await(collection.countDocuments(
+      replaceTypes(this._cursorDescription.selector, replaceMeteorAtomWithMongo),
+      replaceTypes(this._cursorDescription.options, replaceMeteorAtomWithMongo),
+    ));
+  }
 
   // These methods are handled separately.
   if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) {
