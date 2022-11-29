@@ -1,3 +1,29 @@
+## v2.8.2, 2022-11-29
+
+#### Highlights
+* `mongo@1.16.2`:
+  - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
+* `meteorjs/babel@7.16.1-beta.0`
+  - ADjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
+
+#### Breaking Changes
+N/A
+
+#### Migration Steps
+
+#### Meteor Version Release
+* `mongo@1.16.2`:
+  - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
+* `meteorjs/babel@7.16.1-beta.0`
+  - ADjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
+
+#### Special thanks to
+- [@henriquealbert](https://github.com/henriquealbert)
+- [@znewsham](https://github.com/znewsham)
+
+For making this great framework even better!
+
+
 ## 2.8.1, 2022-11-14
 
 #### Highlights
