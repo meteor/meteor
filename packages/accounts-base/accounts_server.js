@@ -13,6 +13,7 @@ const NonEmptyString = Match.Where(x => {
   return x.length > 0;
 });
 
+
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
  * @locus Server
@@ -70,8 +71,6 @@ export class AccountsServer extends AccountsCommon {
 
     // list of all registered handlers.
     this._loginHandlers = [];
-
-    setupUsersCollection(this.users);
     setupDefaultLoginHandlers(this);
     setExpireTokensInterval(this);
 
@@ -123,6 +122,10 @@ export class AccountsServer extends AccountsCommon {
     if (!currentInvocation)
       throw new Error("Meteor.userId can only be invoked in method calls or publications.");
     return currentInvocation.userId;
+  }
+
+  async init() {
+    await setupUsersCollection(this.users);
   }
 
   ///
@@ -258,11 +261,11 @@ export class AccountsServer extends AccountsCommon {
     });
   };
 
-  _successfulLogout(connection, userId) {
+  async _successfulLogout(connection, userId) {
     // don't fetch the user object unless there are some callbacks registered
     let user;
-    this._onLogoutHook.each(callback => {
-      if (!user && userId) user = this.users.findOne(userId, {fields: this._options.defaultFieldSelector});
+    await this._onLogoutHook.forEachAsync(async callback => {
+      if (!user && userId) user = await this.users.findOne(userId, { fields: this._options.defaultFieldSelector });
       callback({ user, connection });
       return true;
     });
@@ -614,8 +617,8 @@ export class AccountsServer extends AccountsCommon {
   // Any connections associated with old-style unhashed tokens will be
   // in the process of becoming associated with hashed tokens and then
   // they'll get closed.
-  destroyToken(userId, loginToken) {
-    this.users.update(userId, {
+  async destroyToken(userId, loginToken) {
+    await this.users.update(userId, {
       $pull: {
         "services.resume.loginTokens": {
           $or: [
@@ -652,13 +655,13 @@ export class AccountsServer extends AccountsCommon {
       return await accounts._attemptLogin(this, "login", arguments, result);
     };
 
-    methods.logout = function () {
+    methods.logout = async function () {
       const token = accounts._getLoginToken(this.connection.id);
       accounts._setLoginToken(this.userId, this.connection, null);
       if (token && this.userId) {
-        accounts.destroyToken(this.userId, token);
+       await accounts.destroyToken(this.userId, token);
       }
-      accounts._successfulLogout(this.connection, this.userId);
+      await accounts._successfulLogout(this.connection, this.userId);
       this.setUserId(null);
     };
 
@@ -670,8 +673,8 @@ export class AccountsServer extends AccountsCommon {
     // @returns Object
     //   If successful, returns { token: <new token>, id: <user id>,
     //   tokenExpires: <expiration date> }.
-    methods.getNewToken = function () {
-      const user = accounts.users.findOne(this.userId, {
+    methods.getNewToken = async function () {
+      const user = await accounts.users.findOne(this.userId, {
         fields: { "services.resume.loginTokens": 1 }
       });
       if (! this.userId || ! user) {
@@ -964,7 +967,7 @@ export class AccountsServer extends AccountsCommon {
       // already -- in this case we just clean up the observe that we started).
       const myObserveNumber = ++this._nextUserObserveNumber;
       this._userObservesForConnections[connection.id] = myObserveNumber;
-      Meteor.defer(() => {
+      Meteor.defer(async () => {
         // If something else happened on this connection in the meantime (it got
         // closed, or another call to _setLoginToken happened), just do
         // nothing. We don't need to start an observe for an old connection or old
@@ -977,7 +980,7 @@ export class AccountsServer extends AccountsCommon {
         // Because we upgrade unhashed login tokens to hashed tokens at
         // login time, sessions will only be logged in with a hashed
         // token. Thus we only need to observe hashed tokens here.
-        const observe = this.users.find({
+        const observe = await this.users.find({
           _id: userId,
           'services.resume.loginTokens.hashedToken': newToken
         }, { fields: { _id: 1 } }).observeChanges({
@@ -1781,7 +1784,7 @@ function defaultValidateNewUserHook(user) {
   }
 }
 
-const setupUsersCollection = users => {
+const setupUsersCollection = async users => {
   ///
   /// RESTRICTING WRITES TO USER OBJECTS
   ///
@@ -1807,21 +1810,21 @@ const setupUsersCollection = users => {
   });
 
   /// DEFAULT INDEXES ON USERS
-  users.createIndex('username', { unique: true, sparse: true });
-  users.createIndex('emails.address', { unique: true, sparse: true });
-  users.createIndex('services.resume.loginTokens.hashedToken',
+  await users.createIndex('username', { unique: true, sparse: true });
+  await users.createIndex('emails.address', { unique: true, sparse: true });
+  await users.createIndex('services.resume.loginTokens.hashedToken',
     { unique: true, sparse: true });
-  users.createIndex('services.resume.loginTokens.token',
+  await users.createIndex('services.resume.loginTokens.token',
     { unique: true, sparse: true });
   // For taking care of logoutOtherClients calls that crashed before the
   // tokens were deleted.
-  users.createIndex('services.resume.haveLoginTokensToDelete',
+  await users.createIndex('services.resume.haveLoginTokensToDelete',
     { sparse: true });
   // For expiring login tokens
-  users.createIndex("services.resume.loginTokens.when", { sparse: true });
+  await users.createIndex("services.resume.loginTokens.when", { sparse: true });
   // For expiring password tokens
-  users.createIndex('services.password.reset.when', { sparse: true });
-  users.createIndex('services.password.enroll.when', { sparse: true });
+  await users.createIndex('services.password.reset.when', { sparse: true });
+  await users.createIndex('services.password.enroll.when', { sparse: true });
 };
 
 
