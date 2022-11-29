@@ -745,9 +745,10 @@ Object.assign(Mongo.Collection.prototype, {
 
   // We'll actually design an index API later. For now, we just pass through to
   // Mongo's, but make it synchronous.
-    /**
+  /**
    * @summary Creates the specified index on the collection.
    * @locus server
+   * @method _ensureIndex
    * @deprecated in 3.0
    * @memberof Mongo.Collection
    * @instance
