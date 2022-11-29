@@ -179,7 +179,7 @@ Meteor.publish("livedata_server_test_sub_method", async function (connectionId) 
   this.stop();
 });
 
-Meteor.publish("livedata_server_test_sub_context", function (connectionId, userId) {
+Meteor.publish("livedata_server_test_sub_context", async function (connectionId, userId) {
   var callback = onSubscription[connectionId];
   var methodInvocation = DDP._CurrentMethodInvocation.get();
   var publicationInvocation = DDP._CurrentPublicationInvocation.get();
@@ -201,7 +201,7 @@ Meteor.publish("livedata_server_test_sub_context", function (connectionId, userI
     this.stop();
   } else {
     this.ready();
-    Meteor.call('livedata_server_test_setuserid', userId);
+    await Meteor.callAsync('livedata_server_test_setuserid', userId);
   }
 });
 

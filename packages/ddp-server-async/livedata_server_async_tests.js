@@ -35,11 +35,6 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   this.onStop(function() {
     var onStopMethodInvocation = DDP._CurrentMethodInvocation.get();
     var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.get();
-    // console.log('onStopMethodInvocation', onStopMethodInvocation);
-
-
-      console.log('onStopPublicationInvocation', !!onStopPublicationInvocation, this.userId);
-
 
     callback.call(
       this,
