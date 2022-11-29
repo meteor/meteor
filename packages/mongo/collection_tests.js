@@ -170,8 +170,8 @@ Tinytest.add('collection - calling find with a valid readPreference',
       );
 
       // Trigger the creation of _synchronousCursor
-      defaultCursor.count();
-      customCursor.count();
+      defaultCursor.fetch();
+      customCursor.fetch();
 
       // defaultCursor._synchronousCursor._dbCursor.operation is not an option anymore
       // as the cursor options are now private
@@ -382,5 +382,35 @@ Tinytest.add('collection - finding with a query with a binary field should retur
       );
       collection.remove({});
     }
+  }
+);
+
+
+Tinytest.add('collection - count should release the session',
+  function(test) {
+    const client = MongoInternals.defaultRemoteCollectionDriver().mongo.client;
+    var collectionName = 'count' + test.id;
+    var collection = new Mongo.Collection(collectionName);
+    collection.insert({ _id: '1' });
+    collection.insert({ _id: '2' });
+    collection.insert({ _id: '3' });
+    const preCount = client.s.activeSessions.size;
+
+    test.equal(collection.find().count(), 3);
+
+    // options and selector still work
+    test.equal(collection.find({ _id: { $ne: '1' } }, { skip: 1 }).count(), 1);
+
+    // cursor reuse
+    const cursor1 = collection.find({ _id: { $ne: '1' } }, { skip: 1 });
+    test.equal(cursor1.count(), 1);
+    test.equal(cursor1.fetch().length, 1);
+
+    const cursor2 = collection.find({ _id: { $ne: '1' } }, { skip: 1 });
+    test.equal(cursor2.fetch().length, 1);
+    test.equal(cursor2.count(), 1);
+
+    const postCount = client.s.activeSessions.size;
+    test.equal(preCount, postCount);
   }
 );
