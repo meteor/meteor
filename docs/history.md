@@ -26,9 +26,6 @@
 
 * `eslint-plugin-meteor@7.4.0`:
   - updated Typescript deps and meteor babel
-* `meteorjs/babel@7.16.1-beta.0`
-  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
-  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0
 
 * `eslint-plugin-meteor@7.4.0`:
   - updated Typescript deps and meteor babel
