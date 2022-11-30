@@ -21,7 +21,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   await sleep(50);
   var callback = onSubscription[connectionId];
   var methodInvocation = DDP._CurrentMethodInvocation.get();
-  var publicationInvocation = DDP._CurrentPublicationInvocation.get();
+  var publicationInvocation = DDP._CurrentPublicationInvocation.getExt();
 
 // console.log('methodInvocation', methodInvocation);
 // console.log('publicationInvocation', !!publicationInvocation);
@@ -34,7 +34,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   // and that it runs with the same environment variables as this publish function.
   this.onStop(function() {
     var onStopMethodInvocation = DDP._CurrentMethodInvocation.get();
-    var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.get();
+    var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.getExt();
 
     callback.call(
       this,

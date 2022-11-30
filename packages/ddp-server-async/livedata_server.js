@@ -1106,60 +1106,56 @@ var Subscription = function (
 
 Object.assign(Subscription.prototype, {
   _runHandler: function() {
-    Meteor._runAsync(
-      () => {
-        // XXX should we unblock() here? Either before running the publish
-        // function, or before running _publishCursor.
-        //
-        // Right now, each publish function blocks all future publishes and
-        // methods waiting on data from Mongo (or whatever else the function
-        // blocks on). This probably slows page load in common cases.
+    // XXX should we unblock() here? Either before running the publish
+    // function, or before running _publishCursor.
+    //
+    // Right now, each publish function blocks all future publishes and
+    // methods waiting on data from Mongo (or whatever else the function
+    // blocks on). This probably slows page load in common cases.
 
-        if (!this.unblock) {
-          this.unblock = () => {};
-        }
+    if (!this.unblock) {
+      this.unblock = () => {};
+    }
 
-        const self = this;
-        let resultOrThenable = null;
-        try {
-          resultOrThenable = DDP._CurrentPublicationInvocation.withValue(
+    const self = this;
+    let resultOrThenable = null;
+    try {
+      resultOrThenable = DDP._CurrentPublicationInvocation.withValueExt(
+        self,
+        () =>
+          maybeAuditArgumentChecks(
+            self._handler,
             self,
-            () =>
-              maybeAuditArgumentChecks(
-                self._handler,
-                self,
-                EJSON.clone(self._params),
-                // It's OK that this would look weird for universal subscriptions,
-                // because they have no arguments so there can never be an
-                // audit-argument-checks failure.
-                "publisher '" + self._name + "'"
-              )
-          );
-        } catch (e) {
-          self.error(e);
-          return;
-        }
+            EJSON.clone(self._params),
+            // It's OK that this would look weird for universal subscriptions,
+            // because they have no arguments so there can never be an
+            // audit-argument-checks failure.
+            "publisher '" + self._name + "'"
+          ),
+        { name: self._name }
+      );
+    } catch (e) {
+      self.error(e);
+      return;
+    }
 
-        // Did the handler call this.error or this.stop?
-        if (self._isDeactivated()) return;
+    // Did the handler call this.error or this.stop?
+    if (self._isDeactivated()) return;
 
-        // Both conventional and async publish handler functions are supported.
-        // If an object is returned with a then() function, it is either a promise
-        // or thenable and will be resolved asynchronously.
-        const isThenable =
-          resultOrThenable && typeof resultOrThenable.then === 'function';
-        if (isThenable) {
-          Promise.resolve(resultOrThenable).then(
-            (...args) => self._publishHandlerResult.bind(self)(...args),
-            e => self.error(e)
-          );
-        } else {
-          self._publishHandlerResult(resultOrThenable);
-        }
-      },
-      this,
-      { callId: '_runHandler' }
-    );
+    // Both conventional and async publish handler functions are supported.
+    // If an object is returned with a then() function, it is either a promise
+    // or thenable and will be resolved asynchronously.
+    const isThenable =
+      resultOrThenable && typeof resultOrThenable.then === 'function';
+    if (isThenable) {
+      Promise.resolve(resultOrThenable).then(
+        (...args) => self._publishHandlerResult.bind(self)(...args),
+        e => self.error(e)
+      );
+    } else {
+      self._publishHandlerResult(resultOrThenable);
+    }
+
   },
 
   _publishHandlerResult: function (res) {
@@ -1811,7 +1807,7 @@ Object.assign(Server.prototype, {
     };
     var connection = null;
     var currentMethodInvocation = DDP._CurrentMethodInvocation.get();
-    var currentPublicationInvocation = DDP._CurrentPublicationInvocation.get();
+    var currentPublicationInvocation = DDP._CurrentPublicationInvocation.getExt();
     var randomSeed = null;
     if (currentMethodInvocation) {
       userId = currentMethodInvocation.userId;

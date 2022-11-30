@@ -5,11 +5,13 @@ var Fiber = Meteor._isFibersEnabled && Npm.require('fibers');
 let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
-Meteor._nodeCodeMustBeInFiber = function () {
+Meteor._nodeCodeMustBeInFiber = function() {
   if (!Fiber.current) {
-    throw new Error("Meteor code must always run within a Fiber. " +
-        "Try wrapping callbacks that you pass to non-Meteor " +
-        "libraries with Meteor.bindEnvironment.");
+    throw new Error(
+      'Meteor code must always run within a Fiber. ' +
+        'Try wrapping callbacks that you pass to non-Meteor ' +
+        'libraries with Meteor.bindEnvironment.'
+    );
   }
 };
 
@@ -21,21 +23,23 @@ class EnvironmentVariableFibers {
   get() {
     Meteor._nodeCodeMustBeInFiber();
 
-    return Fiber.current._meteor_dynamics &&
-        Fiber.current._meteor_dynamics[this.slot];
+    return (
+      Fiber.current._meteor_dynamics &&
+      Fiber.current._meteor_dynamics[this.slot]
+    );
   }
 
   getOrNullIfOutsideFiber() {
-    if (!Fiber.current)
-      return null;
+    if (!Fiber.current) return null;
     return this.get();
   }
 
   withValue(value, func) {
     Meteor._nodeCodeMustBeInFiber();
 
-    if (!Fiber.current._meteor_dynamics)
+    if (!Fiber.current._meteor_dynamics) {
       Fiber.current._meteor_dynamics = [];
+    }
     var currentValues = Fiber.current._meteor_dynamics;
 
     var saved = currentValues[this.slot];
@@ -69,8 +73,11 @@ class EnvironmentVariableAsync {
   }
 
   get() {
-    const currentValue = Meteor._getValueFromAslStore("_meteor_dynamics");
+    const currentValue = Meteor._getValueFromAslStore('_meteor_dynamics');
     return currentValue && currentValue[this.slot];
+  }
+  getExt() {
+    return Meteor._getValueFromAslStore('currentValue');
   }
 
   getOrNullIfOutsideFiber() {
@@ -78,7 +85,7 @@ class EnvironmentVariableAsync {
   }
 
   async withValue(value, func) {
-    let currentValues = Meteor._getValueFromAslStore("_meteor_dynamics");
+    let currentValues = Meteor._getValueFromAslStore('_meteor_dynamics');
     if (!currentValues) {
       currentValues = [];
     }
@@ -87,23 +94,46 @@ class EnvironmentVariableAsync {
     let ret;
     try {
       currentValues[this.slot] = value;
-      Meteor._updateAslStore("_meteor_dynamics", currentValues);
+      Meteor._updateAslStore('_meteor_dynamics', currentValues);
       ret = await func();
     } finally {
       currentValues[this.slot] = saved;
-      Meteor._updateAslStore("_meteor_dynamics", currentValues);
+      Meteor._updateAslStore('_meteor_dynamics', currentValues);
     }
 
     return ret;
   }
 
+  async withValueExt(value, func, storeOptions = {}) {
+    return Meteor._runAsync(
+      async () => {
+        let ret;
+        try {
+          Meteor._updateAslStore('currentValue', value);
+          ret = await func();
+        } finally {
+          console.log(
+            `withValueExt finish running ${Meteor._getValueFromAslStore(
+              'callId'
+            ) || 'no-id'} from met/sub ${Meteor._getValueFromAslStore('name') ||
+              'no-name'}`
+          );
+        }
+        return ret;
+      },
+      this,
+      { callId: `withValueExt-${this.slot}`, ...storeOptions }
+    );
+  }
+
   _set(context) {
-    const _meteor_dynamics = Meteor._getValueFromAslStore("_meteor_dynamics") || [];
+    const _meteor_dynamics =
+      Meteor._getValueFromAslStore('_meteor_dynamics') || [];
     _meteor_dynamics[this.slot] = context;
   }
 
   _setNewContextAndGetCurrent(value) {
-    let _meteor_dynamics = Meteor._getValueFromAslStore("_meteor_dynamics");
+    let _meteor_dynamics = Meteor._getValueFromAslStore('_meteor_dynamics');
     if (!_meteor_dynamics) {
       _meteor_dynamics = [];
     }
@@ -128,7 +158,9 @@ class EnvironmentVariableAsync {
  * @locus Anywhere
  * @class
  */
-Meteor.EnvironmentVariable = Meteor._isFibersEnabled ? EnvironmentVariableFibers : EnvironmentVariableAsync;
+Meteor.EnvironmentVariable = Meteor._isFibersEnabled
+  ? EnvironmentVariableFibers
+  : EnvironmentVariableAsync;
 
 // Meteor application code is always supposed to be run inside a
 // fiber. bindEnvironment ensures that the function it wraps is run from
@@ -160,8 +192,10 @@ Meteor.EnvironmentVariable = Meteor._isFibersEnabled ? EnvironmentVariableFibers
  * @param {Object} _this Optional `this` object against which the original function will be invoked
  * @return {Function} The wrapped function
  */
-Meteor.bindEnvironment = function (func, onException, _this) {
-  return Meteor._isFibersEnabled ? bindEnvironmentFibers(func, onException, _this) : bindEnvironmentAsync(func, onException, _this);
+Meteor.bindEnvironment = function(func, onException, _this) {
+  return Meteor._isFibersEnabled
+    ? bindEnvironmentFibers(func, onException, _this)
+    : bindEnvironmentAsync(func, onException, _this);
 };
 
 const bindEnvironmentFibers = (func, onException, _this) => {
@@ -170,22 +204,21 @@ const bindEnvironmentFibers = (func, onException, _this) => {
   var dynamics = Fiber.current._meteor_dynamics;
   var boundValues = dynamics ? dynamics.slice() : [];
 
-  if (!onException || typeof(onException) === 'string') {
-    var description = onException || "callback of async function";
-    onException = function (error) {
-      Meteor._debug(
-          "Exception in " + description + ":",
-          error
-      );
+  if (!onException || typeof onException === 'string') {
+    var description = onException || 'callback of async function';
+    onException = function(error) {
+      Meteor._debug('Exception in ' + description + ':', error);
     };
-  } else if (typeof(onException) !== 'function') {
-    throw new Error('onException argument must be a function, string or undefined for Meteor.bindEnvironment().');
+  } else if (typeof onException !== 'function') {
+    throw new Error(
+      'onException argument must be a function, string or undefined for Meteor.bindEnvironment().'
+    );
   }
 
-  return function (/* arguments */) {
+  return function(/* arguments */) {
     var args = Array.prototype.slice.call(arguments);
 
-    var runWithEnvironment = function () {
+    var runWithEnvironment = function() {
       var savedValues = Fiber.current._meteor_dynamics;
       try {
         // Need to clone boundValues in case two fibers invoke this
@@ -203,44 +236,42 @@ const bindEnvironmentFibers = (func, onException, _this) => {
       return ret;
     };
 
-    if (Fiber.current)
-      return runWithEnvironment();
+    if (Fiber.current) return runWithEnvironment();
     Fiber(runWithEnvironment).run();
   };
 };
 
 const bindEnvironmentAsync = (func, onException, _this) => {
-  var dynamics = Meteor._getValueFromAslStore("_meteor_dynamics");
+  var dynamics = Meteor._getValueFromAslStore('_meteor_dynamics');
   var boundValues = Array.isArray(dynamics) ? dynamics.slice() : [];
 
-  if (!onException || typeof(onException) === 'string') {
-    var description = onException || "callback of async function";
-    onException = function (error) {
-      Meteor._debug(
-          "Exception in " + description + ":",
-          error
-      );
+  if (!onException || typeof onException === 'string') {
+    var description = onException || 'callback of async function';
+    onException = function(error) {
+      Meteor._debug('Exception in ' + description + ':', error);
     };
-  } else if (typeof(onException) !== 'function') {
-    throw new Error('onException argument must be a function, string or undefined for Meteor.bindEnvironment().');
+  } else if (typeof onException !== 'function') {
+    throw new Error(
+      'onException argument must be a function, string or undefined for Meteor.bindEnvironment().'
+    );
   }
 
-  return function (/* arguments */) {
+  return function(/* arguments */) {
     var args = Array.prototype.slice.call(arguments);
 
-    var runWithEnvironment = async function () {
-      const savedValues = Meteor._getValueFromAslStore("_meteor_dynamics");
+    var runWithEnvironment = async function() {
+      const savedValues = Meteor._getValueFromAslStore('_meteor_dynamics');
       let ret;
       try {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
         // TODO -> Probably not needed
-        Meteor._updateAslStore("_meteor_dynamics", boundValues.slice());
+        Meteor._updateAslStore('_meteor_dynamics', boundValues.slice());
         ret = await func.apply(_this, args);
       } catch (e) {
         onException(e);
       } finally {
-        Meteor._updateAslStore("_meteor_dynamics", savedValues);
+        Meteor._updateAslStore('_meteor_dynamics', savedValues);
       }
       return ret;
     };
