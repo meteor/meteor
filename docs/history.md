@@ -17,7 +17,8 @@
 * `mongo@1.16.2`:
   - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
 * `meteorjs/babel@7.16.1-beta.0`
-  - ADjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
+  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327).
+  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0
 
 #### Breaking Changes
 N/A
@@ -28,7 +29,8 @@ N/A
 * `mongo@1.16.2`:
   - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
 * `meteorjs/babel@7.16.1-beta.0`
-  - ADjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
+  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
+  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0
 
 #### Special thanks to
 - [@henriquealbert](https://github.com/henriquealbert)
