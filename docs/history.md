@@ -2,13 +2,93 @@
 
 ### Highlights
 * TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204)
-
+* Create Email.sendAsync method without using Fibers[PR](https://github.com/meteor/meteor/pull/12101) .by [edimarlnx](https://github.com/edimarlnx)
+* Create async method CssTools.minifyCssAsync [PR](https://github.com/meteor/meteor/pull/12105) by  [edimarlnx](https://github.com/edimarlnx)
+* Change Accounts and Oauth to use Async methods[PR](https://github.com/meteor/meteor/pull/12156). by [edimarlnx](https://github.com/edimarlnx)
+* TinyTest package without Future[PR](https://github.com/meteor/meteor/pull/12222) by [matheusccastroo](https://github.com/matheusccastroo)
+* Feat user accounts base async[PR](https://github.com/meteor/meteor/pull/12274) by [Grubba27](https://github.com/Grubba27)
+* Move some OAuth of out of accounts-base[PR](https://github.com/meteor/meteor/pull/12202) by [StorytellerCZ](https://github.com/StorytellerCZ)
+* Feat: not using insecure & autopublish[PR](https://github.com/meteor/meteor/pull/12220 by default by [Grubba27](https://github.com/Grubba27)
+* Don't apply babel async-await plugin when not running on Fibers[PR](https://github.com/meteor/meteor/pull/12221). by [matheusccastroo](https://github.com/matheusccastroo)
+* Implemented Fibers-less MongoDB count methods[PR](https://github.com/meteor/meteor/pull/12295). by [radekmie](https://github.com/radekmie)
+* (feat): Generate scaffold in cli[PR](https://github.com/meteor/meteor/pull/12298) by [Grubba27](https://github.com/Grubba27)
+* Update types[PR](https://github.com/meteor/meteor/pull/12306) by [piotrpospiech](https://github.com/piotrpospiech)
+* [package-version-parser] Remove underscore[PR](https://github.com/meteor/meteor/pull/12248) by [harryadel](https://github.com/harryadel)
+* updated mongo  [PR](https://github.com/meteor/meteor/pull/12333) by [Grubba27](https://github.com/Grubba27)
 #### Breaking Changes
+
 * Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`
+
 
 #### Migration Steps
 
 #### Meteor Version Release
+
+* `eslint-plugin-meteor@7.4.0`:
+  - updated Typescript deps and meteor babel
+* `meteorjs/babel@7.16.1-beta.0`
+  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
+  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0
+
+* `eslint-plugin-meteor@7.4.0`:
+  - updated Typescript deps and meteor babel
+* `meteorjs/babel@7.17.1-beta.0`
+  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
+  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0
+* `accounts-base@2.2.6`
+  - Moved some functions to accounts-oauth.
+* `accounts-oauth@1.4.2`
+  - Received functions from accounts-base.
+* `accounts-password@2.3.2`
+  - Asyncfied functions such as `changePassword`, `forgotPassword`, `resetPassword`, `verifyEmail`, `setPasswordAsync`
+* `babel-compiler@7.10.1`
+  - Updated babel to 7.17.1.
+* `email@2.2.3`
+  - Create Email.sendAsync method without using Fibers.
+* `facebook-oauth@1.11.2`
+  - Updated facebook-oauth to use async functions.
+* `github-oauth@1.4.1`
+  - Updated github-oauth to use async functions.
+* `google-oauth@1.4.3`
+  - Updated google-oauth to use async functions.
+* `meetup-oauth@1.1.2`
+  - Updated meetup-oauth to use async functions.
+* `meteor-developer-oauth@1.3.2`
+  - Updated meteor-developer-oauth to use async functions.
+* `meteor@1.10.3`
+  - Added Async Local Storage helpers.
+* `minifier-css@1.6.2`
+  - Asyncfied `minifyCss` function.
+* `minimongo@1.9.1`
+  - Implemented Fibers-less MongoDB count methods.
+* `mongo@1.16.2`
+  - Implemented Fibers-less MongoDB count methods.
+* `npm-mongo@4.12.1`
+  - Updated npm-mongo to 4.12.
+* `oauth@2.1.3`
+  - Asyncfied methods.
+* `oauth1@1.5.1`
+  - Asyncfied methods.
+* `oauth2@1.3.2`
+  - Asyncfied methods.
+* `package-version-parser@3.2.1`
+  - Removed underscore.
+* `promise@0.12.2`
+  - Added DISABLE_FIBERS flag.
+* `standard-minifier-css@1.8.3`
+  - Asyncfied minify method.
+* `test-helpers@1.3.1`
+  - added runAndThrowIfNeeded function.
+* `test-in-browser@1.3.2`
+  - Adjusted e[type] to e.type
+* `tinytest@1.2.2`
+  - TinyTest package without Future
+* `twitter-oauth@1.3.2`
+  - Asyncfied methods.
+* `typescript@4.6.4`
+  - updated typescript to 4.6.4.
+* `weibo-oauth@1.3.2`
+  - Asyncfied methods.
 
 
 ## v2.8.2, 2022-11-29
