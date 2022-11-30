@@ -484,13 +484,13 @@ function startServerProcess() {
   global.asyncLocalStorage = new AsyncLocalStorage();
 
   Profile.run('Server startup', function() {
-    // TODO the if around loadServerBundles should be enough
+    // TODO[FIBERS] the if around loadServerBundles should be enough
     if (IS_FIBERS_ENABLED) {
       loadServerBundles();
       callStartupHooks();
       runMain();
     } else {
-      global.asyncLocalStorage.run({}, () => {
+      global.asyncLocalStorage.run({ level: 'boot' }, () => {
         loadServerBundles();
         callStartupHooks();
         runMain();

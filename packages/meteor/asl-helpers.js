@@ -17,7 +17,7 @@ Meteor._runAsync = (fn, ctx, store = {}) => {
     }
 
     return global.asyncLocalStorage.run(
-      { ...Meteor._getAslStore(), ...store },
+      store || Meteor._getAslStore(),
       () => {
         return fn.call(ctx);
       }

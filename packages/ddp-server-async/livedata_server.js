@@ -762,33 +762,32 @@ Object.assign(Session.prototype, {
           }
         }
 
-        const getCurrentMethodInvocationResult = () => {
-          const currentContext = DDP._CurrentMethodInvocation._setNewContextAndGetCurrent(
-            invocation
+        const getCurrentMethodInvocationResult = () =>
+          DDP._CurrentPublicationInvocation.withValue(
+            invocation,
+            () =>
+              maybeAuditArgumentChecks(
+                handler,
+                invocation,
+                msg.params,
+                "call to '" + msg.method + "'"
+              ),
+            {
+              name: 'getCurrentMethodInvocationResult',
+              keyName: 'getCurrentMethodInvocationResult',
+            }
           );
 
-          try {
-            let result;
-            const resultOrThenable = maybeAuditArgumentChecks(
-              handler,
-              invocation,
-              msg.params,
-              "call to '" + msg.method + "'"
-            );
-            const isThenable =
-              resultOrThenable && typeof resultOrThenable.then === 'function';
-            if (isThenable) {
-              result = Meteor._isFibersEnabled ? Promise.await(resultOrThenable) : resultOrThenable;
-            } else {
-              result = resultOrThenable;
+        resolve(
+          DDPServer._CurrentWriteFence.withValue(
+            fence,
+            getCurrentMethodInvocationResult,
+            {
+              name: 'DDPServer._CurrentWriteFence',
+              keyName: '_CurrentWriteFence',
             }
-            return result;
-          } finally {
-            DDP._CurrentMethodInvocation._set(currentContext);
-          }
-        };
-
-        resolve(DDPServer._CurrentWriteFence.withValue(fence, getCurrentMethodInvocationResult));
+          )
+        );
       });
 
       function finish() {
@@ -899,7 +898,7 @@ Object.assign(Session.prototype, {
       // subs.
       self._dontStartNewUniversalSubs = false;
       self.startUniversalSubs();
-    });
+    }, { name: '_setUserId' });
 
     // Start sending messages again, beginning with the diff from the previous
     // state of the world to the current state. No yields are allowed during
@@ -1120,7 +1119,7 @@ Object.assign(Subscription.prototype, {
     const self = this;
     let resultOrThenable = null;
     try {
-      resultOrThenable = DDP._CurrentPublicationInvocation.withValueExt(
+      resultOrThenable = DDP._CurrentPublicationInvocation.withValue(
         self,
         () =>
           maybeAuditArgumentChecks(
@@ -1807,7 +1806,7 @@ Object.assign(Server.prototype, {
     };
     var connection = null;
     var currentMethodInvocation = DDP._CurrentMethodInvocation.get();
-    var currentPublicationInvocation = DDP._CurrentPublicationInvocation.getExt();
+    var currentPublicationInvocation = DDP._CurrentPublicationInvocation.get();
     var randomSeed = null;
     if (currentMethodInvocation) {
       userId = currentMethodInvocation.userId;

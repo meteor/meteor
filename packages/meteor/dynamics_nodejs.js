@@ -5,6 +5,9 @@ var Fiber = Meteor._isFibersEnabled && Npm.require('fibers');
 let nextSlot = 0;
 let callAsyncMethodRunning = false;
 
+const CURRENT_VALUE_KEY_NAME = 'currentValue';
+const SLOT_CALL_KEY = 'slotCall';
+
 Meteor._nodeCodeMustBeInFiber = function() {
   if (!Fiber.current) {
     throw new Error(
@@ -73,56 +76,34 @@ class EnvironmentVariableAsync {
   }
 
   get() {
-    const currentValue = Meteor._getValueFromAslStore('_meteor_dynamics');
-    return currentValue && currentValue[this.slot];
-  }
-  getExt() {
-    return Meteor._getValueFromAslStore('currentValue');
+    if (this.slot !== Meteor._getValueFromAslStore(SLOT_CALL_KEY)) {
+      return;
+    }
+    return Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
   }
 
   getOrNullIfOutsideFiber() {
     return this.get();
   }
 
-  async withValue(value, func) {
-    let currentValues = Meteor._getValueFromAslStore('_meteor_dynamics');
-    if (!currentValues) {
-      currentValues = [];
-    }
-
-    const saved = currentValues[this.slot];
-    let ret;
-    try {
-      currentValues[this.slot] = value;
-      Meteor._updateAslStore('_meteor_dynamics', currentValues);
-      ret = await func();
-    } finally {
-      currentValues[this.slot] = saved;
-      Meteor._updateAslStore('_meteor_dynamics', currentValues);
-    }
-
-    return ret;
-  }
-
-  async withValueExt(value, func, storeOptions = {}) {
+  async withValue(value, func, options = {}) {
     return Meteor._runAsync(
       async () => {
         let ret;
         try {
-          Meteor._updateAslStore('currentValue', value);
+          Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, value);
           ret = await func();
         } finally {
-          console.log(
-            `withValueExt finish running ${Meteor._getValueFromAslStore(
-              'callId'
-            ) || 'no-id'} from met/sub ${Meteor._getValueFromAslStore('name') ||
-              'no-name'}`
-          );
+          Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, undefined);
         }
         return ret;
       },
       this,
-      { callId: `withValueExt-${this.slot}`, ...storeOptions }
+      {
+        callId: `${this.slot}-${Math.random()}`,
+        [SLOT_CALL_KEY]: this.slot,
+        ...options,
+      }
     );
   }
 
@@ -242,8 +223,8 @@ const bindEnvironmentFibers = (func, onException, _this) => {
 };
 
 const bindEnvironmentAsync = (func, onException, _this) => {
-  var dynamics = Meteor._getValueFromAslStore('_meteor_dynamics');
-  var boundValues = Array.isArray(dynamics) ? dynamics.slice() : [];
+  const dynamics = Meteor._getValueFromAslStore(CURRENT_VALUE_KEY_NAME);
+  const currentSlot = Meteor._getValueFromAslStore(SLOT_CALL_KEY);
 
   if (!onException || typeof onException === 'string') {
     var description = onException || 'callback of async function';
@@ -259,21 +240,26 @@ const bindEnvironmentAsync = (func, onException, _this) => {
   return function(/* arguments */) {
     var args = Array.prototype.slice.call(arguments);
 
-    var runWithEnvironment = async function() {
-      const savedValues = Meteor._getValueFromAslStore('_meteor_dynamics');
-      let ret;
-      try {
-        // Need to clone boundValues in case two fibers invoke this
-        // function at the same time
-        // TODO -> Probably not needed
-        Meteor._updateAslStore('_meteor_dynamics', boundValues.slice());
-        ret = await func.apply(_this, args);
-      } catch (e) {
-        onException(e);
-      } finally {
-        Meteor._updateAslStore('_meteor_dynamics', savedValues);
-      }
-      return ret;
+    var runWithEnvironment = function() {
+      return Meteor._runAsync(
+        async () => {
+          let ret;
+          try {
+            Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, dynamics);
+            ret = await func.apply(_this, args);
+          } catch (e) {
+            onException(e);
+          } finally {
+            Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, undefined);
+          }
+          return ret;
+        },
+        _this,
+        {
+          callId: `bindEnvironment-${Math.random()}`,
+          [SLOT_CALL_KEY]: currentSlot,
+        }
+      );
     };
 
     if (Meteor._getAslStore()) {
