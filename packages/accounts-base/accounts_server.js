@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { Meteor } from 'meteor/meteor'
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
@@ -724,14 +725,19 @@ export class AccountsServer extends AccountsCommon {
         throw new Meteor.Error(403, "Service unknown");
       }
 
-      const { ServiceConfiguration } = Package['service-configuration'];
-      if (ServiceConfiguration.configurations.findOne({service: options.service}))
-        throw new Meteor.Error(403, `Service ${options.service} already configured`);
+      if (Package['service-configuration']) {
+        const { ServiceConfiguration } = Package['service-configuration'];
+        if (ServiceConfiguration.configurations.findOne({service: options.service}))
+          throw new Meteor.Error(403, `Service ${options.service} already configured`);
 
-      if (hasOwn.call(options, 'secret') && usingOAuthEncryption())
-        options.secret = OAuthEncryption.seal(options.secret);
+        if (Package["oauth-encryption"]) {
+          const { OAuthEncryption } = Package["oauth-encryption"]
+          if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
+            options.secret = OAuthEncryption.seal(options.secret);
+        }
 
-      ServiceConfiguration.configurations.insert(options);
+        ServiceConfiguration.configurations.insert(options);
+      }
     };
 
     accounts._server.methods(methods);
@@ -756,8 +762,10 @@ export class AccountsServer extends AccountsCommon {
 
     // Publish all login service configuration fields other than secret.
     this._server.publish("meteor.loginServiceConfiguration", () => {
-      const { ServiceConfiguration } = Package['service-configuration'];
-      return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
+      if (Package['service-configuration']) {
+        const { ServiceConfiguration } = Package['service-configuration'];
+        return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
+      }
     }, {is_auto: true}); // not technically autopublish, but stops the warning.
 
     // Use Meteor.startup to give other packages a chance to call
@@ -1682,17 +1690,7 @@ const setExpireTokensInterval = accounts => {
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 
-///
-/// OAuth Encryption Support
-///
-
-const OAuthEncryption =
-  Package["oauth-encryption"] &&
-  Package["oauth-encryption"].OAuthEncryption;
-
-const usingOAuthEncryption = () => {
-  return OAuthEncryption && OAuthEncryption.keyIsLoaded();
-};
+const OAuthEncryption = Package["oauth-encryption"]?.OAuthEncryption;
 
 // OAuth service data is temporarily stored in the pending credentials
 // collection during the oauth authentication process.  Sensitive data
@@ -1704,43 +1702,11 @@ const usingOAuthEncryption = () => {
 const pinEncryptedFieldsToUser = (serviceData, userId) => {
   Object.keys(serviceData).forEach(key => {
     let value = serviceData[key];
-    if (OAuthEncryption && OAuthEncryption.isSealed(value))
+    if (OAuthEncryption?.isSealed(value))
       value = OAuthEncryption.seal(OAuthEncryption.open(value), userId);
     serviceData[key] = value;
   });
 };
-
-
-// Encrypt unencrypted login service secrets when oauth-encryption is
-// added.
-//
-// XXX For the oauthSecretKey to be available here at startup, the
-// developer must call Accounts.config({oauthSecretKey: ...}) at load
-// time, instead of in a Meteor.startup block, because the startup
-// block in the app code will run after this accounts-base startup
-// block.  Perhaps we need a post-startup callback?
-
-Meteor.startup(() => {
-  if (! usingOAuthEncryption()) {
-    return;
-  }
-
-  const { ServiceConfiguration } = Package['service-configuration'];
-
-  ServiceConfiguration.configurations.find({
-    $and: [{
-      secret: { $exists: true }
-    }, {
-      "secret.algorithm": { $exists: false }
-    }]
-  }).forEach(config => {
-    ServiceConfiguration.configurations.update(config._id, {
-      $set: {
-        secret: OAuthEncryption.seal(config.secret)
-      }
-    });
-  });
-});
 
 // XXX see comment on Accounts.createUser in passwords_server about adding a
 // second "server options" argument.

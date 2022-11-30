@@ -15,7 +15,8 @@ env:
     - phantom=false
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
   jobs:
-    - DISABLE_FIBERS=1
+    # We don't want to run the tests without fibers anymore.
+    # - DISABLE_FIBERS=1
     # Use a different flag, since node would use false as a string.
     - FIBERS_ENABLED=1
 addons:
