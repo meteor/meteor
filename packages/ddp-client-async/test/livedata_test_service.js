@@ -202,10 +202,10 @@ if (Meteor.isServer) {
 /// Helper for "livedata - setUserId fails when called on server"
 
 if (Meteor.isServer) {
-  Meteor.startup(function() {
+  Meteor.startup(async function() {
     errorThrownWhenCallingSetUserIdDirectlyOnServer = null;
     try {
-      Meteor.call('setUserId', '1000');
+      await Meteor.callAsync('setUserId', '1000');
     } catch (e) {
       errorThrownWhenCallingSetUserIdDirectlyOnServer = e;
     }
