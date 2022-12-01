@@ -117,179 +117,184 @@ if (process.platform === 'win32') {
   // Windows doesn't have a ps equivalent that (reliably) includes the command
   // line, so approximate using the combined output of tasklist and netstat.
   findMongoPids = function(dbDir_unused, port) {
-    var promise = fiberHelpers.makeFulfillablePromise();
+    return new Promise((resolve, reject) => {
 
-    child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"', function(
-      error,
-      stdout,
-      stderr
-    ) {
-      if (error) {
-        var additionalInfo = JSON.stringify(error);
-        if (error.code === 'ENOENT') {
-          additionalInfo =
-            "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
-        }
-        promise.reject(
-          new Error("Couldn't run tasklist.exe: " + additionalInfo)
-        );
-        return;
-      } else {
-        // Find the pids of all mongod processes
-        var mongo_pids = [];
-        stdout.split('\n').forEach(function(line) {
-          var m = line.match(/^mongod.exe\s+(\d+) /);
-          if (m) {
-            mongo_pids[m[1]] = true;
+      child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"', function(
+        error,
+        stdout,
+        stderr
+      ) {
+        if (error) {
+          var additionalInfo = JSON.stringify(error);
+          if (error.code === 'ENOENT') {
+            additionalInfo =
+              "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
           }
-        });
+          reject(
+            new Error("Couldn't run tasklist.exe: " + additionalInfo)
+          );
+          return;
+        } else {
+          // Find the pids of all mongod processes
+          var mongo_pids = [];
+          stdout.split('\n')
+            .forEach(function(line) {
+              var m = line.match(/^mongod.exe\s+(\d+) /);
+              if (m) {
+                mongo_pids[m[1]] = true;
+              }
+            });
 
-        // Now get the corresponding port numbers
-        child_process.exec(
-          'netstat -ano',
-          { maxBuffer: 1024 * 1024 * 10 },
-          function(error, stdout, stderr) {
-            if (error) {
-              promise.reject(
-                new Error("Couldn't run netstat -ano: " + JSON.stringify(error))
-              );
-              return;
-            } else {
-              var pids = [];
-              stdout.split('\n').forEach(function(line) {
-                var m = line.match(
-                  /^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/
+          // Now get the corresponding port numbers
+          child_process.exec(
+            'netstat -ano',
+            { maxBuffer: 1024 * 1024 * 10 },
+            function(error, stdout, stderr) {
+              if (error) {
+                promise.reject(
+                  new Error("Couldn't run netstat -ano: " + JSON.stringify(error))
                 );
-                if (m) {
-                  var found_pid = parseInt(m[2], 10);
-                  var found_port = parseInt(m[1], 10);
+                return;
+              } else {
+                var pids = [];
+                stdout.split('\n')
+                  .forEach(function(line) {
+                    var m = line.match(
+                      /^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/
+                    );
+                    if (m) {
+                      var found_pid = parseInt(m[2], 10);
+                      var found_port = parseInt(m[1], 10);
 
-                  // We can't check the path app_dir so assume it always matches
-                  if (mongo_pids[found_pid] && (!port || port === found_port)) {
-                    // Note that if the mongo rest interface is enabled the
-                    // initial port + 1000 is also likely to be open.
-                    // So remove the pid so we only match it once.
-                    delete mongo_pids[found_pid];
-                    pids.push({
-                      pid: found_pid,
-                      port: found_port,
-                      app_dir: null,
-                    });
-                  }
-                }
-              });
+                      // We can't check the path app_dir so assume it always matches
+                      if (mongo_pids[found_pid] && (!port || port === found_port)) {
+                        // Note that if the mongo rest interface is enabled the
+                        // initial port + 1000 is also likely to be open.
+                        // So remove the pid so we only match it once.
+                        delete mongo_pids[found_pid];
+                        pids.push({
+                          pid: found_pid,
+                          port: found_port,
+                          app_dir: null,
+                        });
+                      }
+                    }
+                  });
 
-              promise.resolve(pids);
+                resolve(pids);
+              }
             }
-          }
-        );
-      }
+          );
+        }
+      });
     });
-
-    return promise.await();
   };
 } else {
   findMongoPids = function(dbDir, port) {
-    var promise = fiberHelpers.makeFulfillablePromise();
+    return new Promise((resolve, reject) => {
 
-    // 'ps ax' should be standard across all MacOS and Linux.
-    // However, ps on OS X corrupts some non-ASCII characters in arguments,
-    // such as т (CYRILLIC SMALL LETTER TE), leading to this function
-    // failing to properly match pathnames with those characters.  #3999
-    //
-    // pgrep appears to do a better job (and has output that is roughly
-    // similar; it lacks a few fields that we don't care about).  Plus,
-    // it can do some of the grepping for us.
-    //
-    // However, 'pgrep' only started shipping with OS X 10.8 (and may be less
-    // common on Linux too), so we check to see if it exists and fall back to
-    // 'ps' if we can't find it.
-    //
-    // We avoid using pgrep on Linux, because some versions of Linux pgrep
-    // require you to pass -a/--list-full to include the arguments in the
-    // output, and other versions fail if you pass that option. We have not
-    // observed the Unicode corruption on Linux, so using ps ax there is fine.
-    var psScript = 'ps ax';
-    if (process.platform === 'darwin') {
-      psScript =
-        'if type pgrep >/dev/null 2>&1; then ' +
-        // -lf means to display and match against full argument lists.
-        // pgrep exits 1 if no processes match the argument; we're OK
-        // considering this as a success, but we don't want other errors
-        // to be ignored.  Note that this is sh not bash, so we can't use
-        // [[.
-        'pgrep -lf mongod; test "$?" -eq 0 -o "$?" -eq 1;' +
-        'else ps ax; fi';
-    }
+      // 'ps ax' should be standard across all MacOS and Linux.
+      // However, ps on OS X corrupts some non-ASCII characters in arguments,
+      // such as т (CYRILLIC SMALL LETTER TE), leading to this function
+      // failing to properly match pathnames with those characters.  #3999
+      //
+      // pgrep appears to do a better job (and has output that is roughly
+      // similar; it lacks a few fields that we don't care about).  Plus,
+      // it can do some of the grepping for us.
+      //
+      // However, 'pgrep' only started shipping with OS X 10.8 (and may be less
+      // common on Linux too), so we check to see if it exists and fall back to
+      // 'ps' if we can't find it.
+      //
+      // We avoid using pgrep on Linux, because some versions of Linux pgrep
+      // require you to pass -a/--list-full to include the arguments in the
+      // output, and other versions fail if you pass that option. We have not
+      // observed the Unicode corruption on Linux, so using ps ax there is fine.
+      var psScript = 'ps ax';
+      if (process.platform === 'darwin') {
+        psScript =
+          'if type pgrep >/dev/null 2>&1; then ' +
+          // -lf means to display and match against full argument lists.
+          // pgrep exits 1 if no processes match the argument; we're OK
+          // considering this as a success, but we don't want other errors
+          // to be ignored.  Note that this is sh not bash, so we can't use
+          // [[.
+          'pgrep -lf mongod; test "$?" -eq 0 -o "$?" -eq 1;' +
+          'else ps ax; fi';
+      }
 
-    // If the child process output includes unicode, make sure it's
-    // handled properly.
-    const {
-      LANG = 'en_US.UTF-8',
-      LC_ALL = LANG,
-      LANGUAGE = LANG,
-      // Remainder of process.env without above properties.
-      ...env
-    } = process.env;
+      // If the child process output includes unicode, make sure it's
+      // handled properly.
+      const {
+        LANG = 'en_US.UTF-8',
+        LC_ALL = LANG,
+        LANGUAGE = LANG,
+        // Remainder of process.env without above properties.
+        ...env
+      } = process.env;
 
-    // Make sure all three properties are set to the same value, which
-    // defaults to "en_US.UTF-8" or whatever LANG was already set to.
-    Object.assign(env, { LANG, LC_ALL, LANGUAGE });
+      // Make sure all three properties are set to the same value, which
+      // defaults to "en_US.UTF-8" or whatever LANG was already set to.
+      Object.assign(env, {
+        LANG,
+        LC_ALL,
+        LANGUAGE
+      });
 
-    child_process.exec(
-      psScript,
-      {
-        env,
-        // we don't want this to randomly fail just because you're running
-        // lots of processes. 10MB should be more than ps ax will ever
-        // spit out; the default is 200K, which at least one person hit
-        // (#2158).
-        maxBuffer: 1024 * 1024 * 10,
-      },
-      function(error, stdout, stderr) {
-        if (error) {
-          promise.reject(
-            new Error(
-              "Couldn't run ps ax: " +
+      child_process.exec(
+        psScript,
+        {
+          env,
+          // we don't want this to randomly fail just because you're running
+          // lots of processes. 10MB should be more than ps ax will ever
+          // spit out; the default is 200K, which at least one person hit
+          // (#2158).
+          maxBuffer: 1024 * 1024 * 10,
+        },
+        function(error, stdout, stderr) {
+          if (error) {
+            reject(
+              new Error(
+                "Couldn't run ps ax: " +
                 JSON.stringify(error) +
                 '; ' +
                 error.message
-            )
-          );
-          return;
-        }
-
-        var ret = [];
-        stdout.split('\n').forEach(function(line) {
-          // Matches mongos we start. Note that this matches
-          // 'fake-mongod' (our mongod stub for automated tests) as well
-          // as 'mongod'.
-          var m = line.match(
-            /^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+(?:\/|\\)db)/
-          );
-          if (m && m.length === 4) {
-            var foundPid = parseInt(m[1], 10);
-            var foundPort = parseInt(m[2], 10);
-            var foundPath = m[3];
-
-            if (
-              (!port || port === foundPort) &&
-              (!dbDir || dbDir === foundPath)
-            ) {
-              ret.push({
-                pid: foundPid,
-                port: foundPort,
-                dbDir: foundPath,
-              });
-            }
+              )
+            );
+            return;
           }
-        });
 
-        promise.resolve(ret);
-      }
-    );
+          var ret = [];
+          stdout.split('\n')
+            .forEach(function(line) {
+              // Matches mongos we start. Note that this matches
+              // 'fake-mongod' (our mongod stub for automated tests) as well
+              // as 'mongod'.
+              var m = line.match(
+                /^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+(?:\/|\\)db)/
+              );
+              if (m && m.length === 4) {
+                var foundPid = parseInt(m[1], 10);
+                var foundPort = parseInt(m[2], 10);
+                var foundPath = m[3];
 
-    return promise.await();
+                if (
+                  (!port || port === foundPort) &&
+                  (!dbDir || dbDir === foundPath)
+                ) {
+                  ret.push({
+                    pid: foundPid,
+                    port: foundPort,
+                    dbDir: foundPath,
+                  });
+                }
+              }
+            });
+
+          resolve(ret);
+        }
+      );
+    });
   };
 }
 

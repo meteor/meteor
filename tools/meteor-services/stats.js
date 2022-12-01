@@ -1,4 +1,4 @@
-var Fiber = require("fibers");
+//var Fiber = require("fibers");
 var _ = require("underscore");
 
 var config = require('./config.js');
@@ -7,6 +7,7 @@ var auth = require('./auth.js');
 var ServiceConnection = require('./service-connection.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var Console = require('../console/console.js').Console;
+const { asyncLocalStorage } = require('../utils/fiber-helpers');
 
 // The name of the package that you add to your app to opt out of
 // sending stats.
@@ -56,7 +57,7 @@ var recordPackages = function (options) {
   // This also gives it its own buildmessage state.
   // However, we do make sure to have already extracted the package list from
   // projectContext, since it might mutate out from under us otherwise.
-  Fiber(function () {
+  asyncLocalStorage.run({}, function () {
 
     var details = {
       what: options.what,
@@ -64,9 +65,9 @@ var recordPackages = function (options) {
       sessionId: auth.getSessionId(config.getAccountsDomain()),
       site: options.site
     };
-
+    var conn;
     try {
-      var conn = connectToPackagesStatsServer();
+      conn = connectToPackagesStatsServer();
       var accountsConfiguration = auth.getAccountsConfiguration(conn);
 
       if (auth.isLoggedIn()) {
@@ -111,7 +112,7 @@ var recordPackages = function (options) {
     } finally {
       conn && conn.close();
     }
-  }).run();
+  });
 };
 
 var logErrorIfInCheckout = function (err) {

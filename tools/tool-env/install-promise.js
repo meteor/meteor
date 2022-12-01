@@ -2,7 +2,7 @@
 // methods before we call makeCompatible, because the meteor-promise
 // implementation captures Fiber.yield and keeps calling the captured
 // version, which ignores any wrapping that happens later.
-require("./wrap-fibers.js");
+//require("./wrap-fibers.js");
 
 // Ensure the global Promise constructor knows how to run all its
 // callbacks in Fibers.
@@ -10,10 +10,10 @@ require("./wrap-fibers.js");
 const { Promise } = global;
 
 function makeCompatible(newPromise) {
-  require("meteor-promise").makeCompatible(
-    newPromise,
-    require("fibers")
-  );
+  // require("meteor-promise").makeCompatible(
+  //   newPromise,
+  //   require("fibers")
+  // );
 }
 
 makeCompatible(Promise);

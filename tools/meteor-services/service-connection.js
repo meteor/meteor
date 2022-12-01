@@ -95,15 +95,15 @@ var ServiceConnection = function (endpointUrl, options) {
     }
   });
 
-  connectPromise.await();
+  return connectPromise;
 };
 
 Object.assign(ServiceConnection.prototype, {
-  call: function (name, ...args) {
-    return this.apply(name, args);
+  call: async function (name, ...args) {
+    return await this.apply(name, args);
   },
 
-  apply: function (...args) {
+  apply: async function (...args) {
     var self = this;
 
     if (self.currentPromise) {
@@ -128,12 +128,12 @@ Object.assign(ServiceConnection.prototype, {
 
     self.connection.apply(...args);
 
-    return self.currentPromise.await();
+    return await self.currentPromise;
   },
 
   // XXX derived from _subscribeAndWait in ddp_connection.js
   // -- but with a different signature..
-  subscribeAndWait: function (...args) {
+  subscribeAndWait: async function (...args) {
     var self = this;
 
     if (self.currentPromise) {
@@ -165,7 +165,7 @@ Object.assign(ServiceConnection.prototype, {
     });
 
     var sub = self.connection.subscribe(...args);
-    subPromise.await();
+    await subPromise;
     return sub;
   },
 

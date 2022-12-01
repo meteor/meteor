@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var Fiber = require('fibers');
+var { asyncLocalStorage } = require('../utils/fiber-helpers');
 var files = require('../fs/files');
 var watch = require('../fs/watch');
 var bundler = require('../isobuild/bundler.js');
@@ -395,7 +395,7 @@ var AppRunner = function (options) {
 Object.assign(AppRunner.prototype, {
   // Start the app running, and restart it as necessary. Returns
   // immediately.
-  start: function () {
+  start: async function () {
     var self = this;
 
     if (self.fiber) {
@@ -404,10 +404,11 @@ Object.assign(AppRunner.prototype, {
 
     self.startPromise = self._makePromise("start");
 
-    self.fiber = Fiber(function () {
-      self._fiber();
+    //TODO Check
+    self.fiber = await asyncLocalStorage.run({}, async function () {
+      return await self._fiber();
     });
-    self.fiber.run();
+    //self.fiber.run();
 
     self.startPromise.await();
     self.startPromise = null;
@@ -480,7 +481,7 @@ Object.assign(AppRunner.prototype, {
 
   // Run the program once, wait for it to exit, and then return. The
   // return value is same as onRunEnd.
-  _runOnce: function (options) {
+  _runOnce: async function (options) {
     var self = this;
     options = options || {};
     var firstRun = options.firstRun;
@@ -497,7 +498,7 @@ Object.assign(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
 
-    var bundleApp = function () {
+    var bundleApp = async function () {
       if (! firstRun) {
         // If the build fails in a way that could be fixed by a refresh, allow
         // it even if we refreshed previously, since that might have been a
@@ -524,7 +525,8 @@ Object.assign(AppRunner.prototype, {
           // shown from the previous solution.
           preservePackageMap: true
         });
-        var messages = buildmessage.capture(function () {
+        var messages = await buildmessage.capture(function () {
+          console.log(self.projectContext.packageMapDelta);
           self.projectContext.readProjectMetadata();
         });
         if (messages.hasMessages()) {
@@ -550,9 +552,10 @@ Object.assign(AppRunner.prototype, {
         };
       }
 
-      messages = buildmessage.capture(function () {
+      messages = await buildmessage.capture(function () {
         self.projectContext.prepareProjectForBuild();
       });
+      console.log({messages});
       if (messages.hasMessages()) {
         return {
           runResult: {
@@ -565,6 +568,7 @@ Object.assign(AppRunner.prototype, {
 
       // Show package changes... unless it's the first time in test-packages.
       if (!(self.omitPackageMapDeltaDisplayOnFirstRun && firstRun)) {
+        console.log(self.projectContext.packageMapDelta);
         self.projectContext.packageMapDelta.displayOnConsole();
       }
 
@@ -622,7 +626,7 @@ Object.assign(AppRunner.prototype, {
     };
 
     var bundleResult;
-    var bundleResultOrRunResult = bundleApp();
+    var bundleResultOrRunResult = await bundleApp();
     if (bundleResultOrRunResult.runResult) {
       return bundleResultOrRunResult.runResult;
     }
@@ -939,12 +943,12 @@ Object.assign(AppRunner.prototype, {
     return ret;
   },
 
-  _fiber: function () {
+  _fiber: async function () {
     var self = this;
     var firstRun = true;
 
     while (true) {
-      var runResult = self._runOnce({
+      var runResult = await self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {
             runLog.logRestart(self);

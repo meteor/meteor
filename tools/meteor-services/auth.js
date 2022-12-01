@@ -46,12 +46,12 @@ var withAccountsConnection = function (f) {
 //
 // XXX if we reconnect we won't reauthenticate. Fix that before using
 // this for long-lived connections.
-var loggedInAccountsConnection = function (token) {
+var loggedInAccountsConnection = async function (token) {
   var connection = loadDDP().connect(
     config.getAuthDDPUrl()
   );
 
-  return new Promise(function (resolve, reject) {
+  return await new Promise(function (resolve, reject) {
     connection.apply(
       'login',
       [{ resume: token }],
@@ -74,7 +74,7 @@ var loggedInAccountsConnection = function (token) {
     // Something else went wrong
     throw err;
 
-  }).await();
+  });
 };
 
 // The accounts server has some wrapped methods that take and return
@@ -133,7 +133,7 @@ var sessionMethodCaller = function (methodName, options) {
       cleanUp();
       throw err;
 
-    }).await();
+    });
   };
 };
 
@@ -554,7 +554,7 @@ exports.doUsernamePasswordLogin = function (options) {
 
 exports.doInteractivePasswordLogin = doInteractivePasswordLogin;
 
-exports.loginCommand = withAccountsConnection(function (options,
+exports.loginCommand = withAccountsConnection(async function (options,
                                                         connection) {
   var data = readSessionData();
 
@@ -581,7 +581,7 @@ exports.loginCommand = withAccountsConnection(function (options,
     }
   }
 
-  tryRevokeOldTokens({ firstTry: true, connection: connection });
+  await tryRevokeOldTokens({ firstTry: true, connection: connection });
 
   data = readSessionData();
   Console.error();
