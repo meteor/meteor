@@ -149,7 +149,7 @@
 // wait until later.
 
 var assert = require('assert');
-var Fiber = require('fibers');
+//var Fiber = require('fibers');
 var _ = require('underscore');
 
 var compiler = require('./compiler.js');
@@ -2043,10 +2043,6 @@ class JsImage {
       assetPath = files.convertToStandardPath(assetPath);
       var promise;
       if (! callback) {
-        if (! Fiber.current) {
-          throw new Error("The synchronous Assets API can " +
-                          "only be called from within a Fiber.");
-        }
 
         promise = new Promise(function (resolve, reject) {
           callback = function (err, res) {
@@ -2729,8 +2725,8 @@ class ServerTarget extends JsImageTarget {
     serverPkgJson.dependencies["node-gyp"] =
       require("node-gyp/package.json").version;
 
-    serverPkgJson.dependencies["node-pre-gyp"] =
-      require("node-pre-gyp/package.json").version;
+    serverPkgJson.dependencies["@mapbox/node-pre-gyp"] =
+      require("@mapbox/node-pre-gyp/package.json").version;
 
     builder.write('package.json', {
       data: Buffer.from(

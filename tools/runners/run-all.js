@@ -331,7 +331,7 @@ class Runner {
 // - recordPackageUsage: (default true) if set to false, don't send
 //   information about packages used by this app to the package stats
 //   server.
-exports.run = function (options) {
+exports.run = async function (options) {
   var runOptions = _.clone(options);
   var once = runOptions.once;
 
@@ -396,7 +396,7 @@ exports.run = function (options) {
 
   var runner = new Runner(runOptions);
   runner.start();
-  var result = promise.await();
+  var result = await promise;
   runner.stop();
 
   if (result.outcome === "conflicting-versions") {

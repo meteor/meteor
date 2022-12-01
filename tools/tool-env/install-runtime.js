@@ -2,7 +2,7 @@
 
 // This module gets imported again in install-promise.js, but we might as
 // well import it here as well, in case we ever stop using meteor-promise.
-require("./wrap-fibers.js");
+//require("./wrap-fibers.js");
 
 // Install ES2015-complaint polyfills for Object, Array, String, Function,
 // Symbol, Map, Set, and Promise, patching the native implementations when

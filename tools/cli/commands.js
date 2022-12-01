@@ -194,7 +194,7 @@ main.registerCommand({
   requiresRelease: false,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+}, async function (options) {
   if (release.current === null) {
     if (! options.appDir) {
       throw new Error("missing release, but not in an app?");
@@ -208,9 +208,9 @@ main.registerCommand({
   }
 
   if (release.current.isCheckout()) {
-    var gitLog = utils.runGitInCheckout(
+    var gitLog = (await utils.runGitInCheckout(
       'log',
-      '--format=%h%d', '-n 1').trim();
+      '--format=%h%d', '-n 1')).trim();
     Console.error("Unreleased, running from a checkout at " + gitLog);
     return 1;
   }
@@ -335,7 +335,7 @@ main.registerCommand(Object.assign(
   runCommandOptions
 ), doRunCommand);
 
-function doRunCommand(options) {
+async function doRunCommand(options) {
   Console.setVerbose(!!options.verbose);
 
   // Additional args are interpreted as run targets
@@ -434,7 +434,7 @@ function doRunCommand(options) {
   }
 
   var runAll = require('../runners/run-all.js');
-  return runAll.run({
+  return await runAll.run({
     projectContext: projectContext,
     proxyPort: parsedServerUrl.port,
     proxyHost: parsedServerUrl.hostname,
@@ -465,9 +465,9 @@ function doRunCommand(options) {
 main.registerCommand(Object.assign(
   { name: 'debug' },
   runCommandOptions
-), function (options) {
+), async function (options) {
   options["inspect-brk"] = options["inspect-brk"] || "9229";
-  return doRunCommand(options);
+  return await doRunCommand(options);
 });
 
 ///////////////////////////////////////////////////////////////////////////////

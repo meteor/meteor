@@ -315,8 +315,8 @@ Object.assign(ProjectContext.prototype, {
     // because all we do here is read a handful of files.
     return this._completeStagesThrough(STAGE.READ_PROJECT_METADATA);
   },
-  initializeCatalog: function () {
-    return Profile.run('ProjectContext initializeCatalog', () => {
+  initializeCatalog: async function () {
+    return await Profile.run('ProjectContext initializeCatalog', () => {
       return this._completeStagesThrough(STAGE.INITIALIZE_CATALOG);
     });
   },
@@ -340,10 +340,10 @@ Object.assign(ProjectContext.prototype, {
       return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
-  prepareProjectForBuild: function () {
+  prepareProjectForBuild: async function () {
     // This is the same as saveChangedMetadata, but if we insert stages after
     // that one it will continue to mean "fully finished".
-    return Profile.run('ProjectContext prepareProjectForBuild', () => {
+    return await Profile.run('ProjectContext prepareProjectForBuild', () => {
       return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },

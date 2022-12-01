@@ -161,7 +161,6 @@
 //
 // In both reports the grand total is 600ms.
 
-const Fiber = require('fibers');
 
 const filter = parseFloat(process.env.METEOR_PROFILE || "100"); // ms
 
@@ -254,9 +253,12 @@ export function Profile<
       ? bucketName.apply(this, arguments as any)
       : bucketName;
 
-    const currentEntry = Fiber.current
-      ? Fiber.current.profilerEntry || (Fiber.current.profilerEntry = [])
-      : globalEntry;
+    // TODO Test with Profile / use asyncLocalStorage
+    //const currentStore = asyncLo
+    // const currentEntry = Fiber.current
+    //   ? Fiber.current.profilerEntry || (Fiber.current.profilerEntry = [])
+    //   : globalEntry;
+    const currentEntry = globalEntry;
 
     currentEntry.push(name);
     const key = encodeEntryKey(currentEntry);
