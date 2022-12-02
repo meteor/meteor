@@ -165,7 +165,7 @@ then
 fi
 
 delete sqlite3/deps
-delete sqlite3/node_modules/node-pre-gyp
+delete sqlite3/node_modules/@mapbox/node-pre-gyp
 delete wordwrap/test
 delete moment/min
 
