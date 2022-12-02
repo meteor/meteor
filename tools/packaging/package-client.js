@@ -809,7 +809,7 @@ exports.publishPackage = function (options) {
     // XXX If package version already exists, print a nice error message
     // telling them to try 'meteor publish-for-arch' if they want to
     // publish a new build.
-
+    console.log(JSON.stringify(uploadInfo))
     // Documentation is smaller than the source. Upload it first, to minimize
     // the chances of PUT URLs expiring. (XXX: in the far future, parallelize this)
     buildmessage.enterJob("uploading documentation", function () {
@@ -820,6 +820,7 @@ exports.publishPackage = function (options) {
     }
 
     buildmessage.enterJob("uploading source", function () {
+      console.log(JSON.stringify(uploadInfo))
       uploadFile(uploadInfo.uploadUrl, sourceBundleResult.sourceTarball);
     });
     if (buildmessage.jobHasMessages()) {
