@@ -380,7 +380,7 @@ Object.assign(Module.prototype, {
     // Emit one meteorInstall call per distinct meteorInstallOptions
     // object, since the options apply to all modules installed by a given
     // call to meteorInstall.
-    for (const [tree, options] of trees) {
+    for (const [options, tree] of trees) {
       chunks.push("meteorInstall(");
       await walk(tree);
       chunks.push(",", self._stringifyInstallOptions(options), ");\n");
