@@ -1421,7 +1421,7 @@ main.registerCommand({
   return 0;
 });
 
-var getNewerVersion = function (packageName, curVersion, whichCatalog) {
+var getNewerVersion = async function (packageName, curVersion, whichCatalog) {
   // Check to see if there are later versions available, returning the
   // latest version if there are.
   //
@@ -1434,9 +1434,9 @@ var getNewerVersion = function (packageName, curVersion, whichCatalog) {
   // that we'll find something when we look in the catalog.
   var latest;
   if (/-/.test(curVersion)) {
-    latest = whichCatalog.getLatestVersion(packageName);
+    latest = await whichCatalog.getLatestVersion(packageName);
   } else {
-    latest = whichCatalog.getLatestMainlineVersion(packageName);
+    latest = await whichCatalog.getLatestMainlineVersion(packageName);
   }
   if (! latest) {
     // Shouldn't happen: we've chosen a published version of this package,

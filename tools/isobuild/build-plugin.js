@@ -37,7 +37,7 @@ Object.assign(exports.SourceProcessor.prototype, {
       async () => {
         try {
           const markedFactoryFunction = buildmessage.markBoundary(self.factoryFunction);
-          self.userPlugin = await markedFactoryFunction().call(null);
+          self.userPlugin = await markedFactoryFunction.call(null);
           // If we have a disk cache directory and the plugin wants it, use it.
           if (self.isopack.pluginCacheDir &&
               self.userPlugin.setDiskCacheDirectory) {

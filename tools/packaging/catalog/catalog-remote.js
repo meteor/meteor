@@ -141,25 +141,26 @@ var Db = function (dbFile, options) {
   self._prepared = {};
 
   self._transactionMutex = new Mutex();
-
-  self._db = self._retry(function () {
-    return self.open(dbFile);
-  });
-
-  self._retry(function () {
-    self._execute(`PRAGMA journal_mode=${JOURNAL_MODE}`);
-  });
 };
 
 Object.assign(Db.prototype, {
+  init: async function() {
+    const self = this;
+    self._db = await self._retry(function () {
+      return self.open(self._dbFile);
+    });
 
+    await self._retry(function () {
+      return self._execute(`PRAGMA journal_mode=${JOURNAL_MODE}`);
+    });
+  },
   // TODO: Move to utils?
-  _retry: function (f, options) {
+  _retry: async function (f, options) {
     options = Object.assign({ maxAttempts: 3, delay: 500}, options || {});
 
     for (var attempt = 1; attempt <= options.maxAttempts; attempt++) {
       try {
-        return f();
+        return await f();
       } catch (err) {
         if (attempt < options.maxAttempts) {
           Console.warn("Retrying after error", err);
@@ -169,7 +170,7 @@ Object.assign(Db.prototype, {
       }
 
       if (options.delay) {
-        utils.sleepMs(options.delay);
+        await utils.sleepMs(options.delay);
       }
     }
   },
@@ -188,14 +189,14 @@ Object.assign(Db.prototype, {
 
   // Do not call any other methods on this object after calling this one.
   // This yields.
-  closePermanently: function () {
+  closePermanently: async function () {
     var self = this;
-    self._closePreparedStatements();
+    await self._closePreparedStatements();
     var db = self._db;
     self._db = null;
-    new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       db.close(err => err ? reject(err) : resolve());
-    }).await();
+    });
   },
 
   // Runs the function inside a transaction block
@@ -282,13 +283,13 @@ Object.assign(Db.prototype, {
 
   // Runs a query synchronously, returning all rows
   // Hidden to enforce transaction usage
-  _query: function (sql, params) {
+  _query: async function (sql, params) {
     var self = this;
 
     var prepared = null;
     var prepare = self._autoPrepare && !_.isEmpty(params);
     if (prepare) {
-      prepared = self._prepareWithCache(sql);
+      prepared = await self._prepareWithCache(sql);
     }
 
     if (DEBUG_SQL) {
@@ -297,7 +298,7 @@ Object.assign(Db.prototype, {
 
     //Console.debug("Executing SQL ", sql, params);
 
-    var rows = new Promise((resolve, reject) => {
+    var rows = await new Promise((resolve, reject) => {
       function callback(err, rows) {
         err ? reject(err) : resolve(rows);
       }
@@ -307,7 +308,7 @@ Object.assign(Db.prototype, {
       } else {
         self._db.all(sql, params, callback);
       }
-    }).await();
+    });
 
     if (DEBUG_SQL) {
       var t2 = Date.now();
@@ -391,25 +392,24 @@ Object.assign(Db.prototype, {
 
 
   // Close any cached prepared statements
-  _closePreparedStatements: function () {
+  _closePreparedStatements: async function () {
     var self = this;
 
     var prepared = self._prepared;
     self._prepared = {};
 
-    _.each(prepared, function (statement) {
-      var err = new Promise(function (resolve) {
+    for (const statement of prepared) {
+      var err = await new Promise(function (resolve) {
         // We resolve the promise with an error instead of rejecting it,
         // because we don't want to throw.
         statement.finalize(resolve);
-      }).await();
+      });
 
       if (err) {
         Console.warn("Error finalizing statement ", err);
       }
-    });
+    }
   }
-
 });
 
 
@@ -441,9 +441,9 @@ Object.assign(Table.prototype, {
     return "(" + _.times(n, function () { return "?" }).join(",") + ")";
   },
 
-  find: function (txn, id) {
+  find: async function (txn, id) {
     var self = this;
-    var rows = txn.query(self._selectQuery, [ id ]);
+    var rows = await txn.query(self._selectQuery, [ id ]);
     if (rows.length !== 0) {
       if (rows.length !== 1) {
         throw new Error("Corrupt database (PK violation)");
@@ -453,17 +453,17 @@ Object.assign(Table.prototype, {
     return undefined;
   },
 
-  upsert: function (txn, objects) {
+  upsert: async function (txn, objects) {
     var self = this;
 
     // XXX: Use sqlite upsert
     // XXX: Speculative insert
     // XXX: Fix transaction logic so we always roll back
-    _.each(objects, function (o) {
+    for (const o of objects) {
       var id = o._id;
-      var rows = txn.query(self._selectQuery, [ id ]);
+      var rows = await txn.query(self._selectQuery, [ id ]);
       if (rows.length !== 0) {
-        var deleteResults = txn.execute(self._deleteQuery, [ id ]);
+        var deleteResults = await txn.execute(self._deleteQuery, [ id ]);
         if (deleteResults.changes !== 1) {
           throw new Error("Unable to delete row: " + id);
         }
@@ -475,11 +475,11 @@ Object.assign(Table.prototype, {
       if (! self.noContentColumn) {
         row.push(JSON.stringify(o));
       }
-      txn.execute(self._insertQuery, row);
-    });
+      await txn.execute(self._insertQuery, row);
+    }
   },
 
-  createTable: function (txn) {
+  createTable: async function (txn) {
     var self = this;
 
     var sql = 'CREATE TABLE IF NOT EXISTS ' + self.name + '(';
@@ -496,7 +496,7 @@ Object.assign(Table.prototype, {
       sql += ", content STRING";
     }
     sql += ")";
-    txn.execute(sql);
+    await txn.execute(sql);
 
     //sql = "CREATE INDEX IF NOT EXISTS idx_" + self.name + "_id ON " + self.name + "(_id)";
     //txn.execute(sql);
@@ -530,14 +530,14 @@ Object.assign(RemoteCatalog.prototype, {
   // are closed (eg to ensure that all writes have been flushed from the '-wal'
   // file to the main DB file). Most methods on this class will stop working
   // after you call this method. Note that this yields.
-  closePermanently: function () {
+  closePermanently: async function () {
     var self = this;
-    self.db.closePermanently();
+    await self.db.closePermanently();
     self.db = null;
   },
 
-  getVersion: function (packageName, version) {
-    var result = this._contentQuery(
+  getVersion: async function (packageName, version) {
+    var result = await this._contentQuery(
       "SELECT content FROM versions WHERE packageName=? AND version=?",
       [packageName, version]);
     return filterExactRows(result, { packageName, version });
@@ -552,9 +552,9 @@ Object.assign(RemoteCatalog.prototype, {
     return self.getVersion(name, _.last(versions));
   },
 
-  getSortedVersions: function (name) {
+  getSortedVersions: async function (name) {
     var self = this;
-    var match = this._columnsQuery(
+    var match = await this._columnsQuery(
       "SELECT version FROM versions WHERE packageName=?", name);
     if (match === null)
       return [];
@@ -658,9 +658,9 @@ Object.assign(RemoteCatalog.prototype, {
     return filterExactRows(result, { name });
   },
 
-  getReleaseVersion: function (track, version) {
+  getReleaseVersion: async function (track, version) {
     var self = this;
-    var result = self._contentQuery(
+    var result = await self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=? AND version=?",
       [track, version]);
     return filterExactRows(result, { track, version });
@@ -688,7 +688,7 @@ Object.assign(RemoteCatalog.prototype, {
     return _.pluck(this._columnsQuery("SELECT name FROM packages"), 'name');
   },
 
-  initialize: function (options) {
+  initialize: async function (options) {
     var self = this;
 
     options = options || {};
@@ -697,6 +697,8 @@ Object.assign(RemoteCatalog.prototype, {
 
     var dbFile = options.packageStorage || config.getPackageStorage();
     self.db = new Db(dbFile);
+
+    await self.db.init();
 
     self.tableVersions = new Table('versions', ['packageName', 'version', '_id']);
     self.tableBuilds = new Table('builds', ['versionId', '_id']);
@@ -718,24 +720,24 @@ Object.assign(RemoteCatalog.prototype, {
       self.tableMetadata,
       self.tableBannersShown
     ];
-    return self.db.runInTransaction(function(txn) {
-      _.each(self.allTables, function (table) {
-        table.createTable(txn);
-      });
+    return self.db.runInTransaction(async function(txn) {
+      for (const table of self.allTables) {
+        await table.createTable(txn);
+      }
 
       // Extra indexes for the most expensive queries
       // These are non-unique indexes
       // XXX We used to have a versionsNamesIdx here on versions(packageName);
       //     we no longer create it but we don't waste time dropping it either.
-      txn.execute("CREATE INDEX IF NOT EXISTS versionsIdx ON " +
+      await txn.execute("CREATE INDEX IF NOT EXISTS versionsIdx ON " +
                   "versions(packageName, version)");
-      txn.execute("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON " +
+      await txn.execute("CREATE INDEX IF NOT EXISTS buildsVersionsIdx ON " +
                   "builds(versionId)");
-      txn.execute("CREATE INDEX IF NOT EXISTS packagesIdx ON " +
+      await txn.execute("CREATE INDEX IF NOT EXISTS packagesIdx ON " +
                   "packages(name)");
-      txn.execute("CREATE INDEX IF NOT EXISTS releaseTracksIdx ON " +
+      await txn.execute("CREATE INDEX IF NOT EXISTS releaseTracksIdx ON " +
                   "releaseTracks(name)");
-      txn.execute("CREATE INDEX IF NOT EXISTS releaseVersionsIdx ON " +
+      await txn.execute("CREATE INDEX IF NOT EXISTS releaseVersionsIdx ON " +
                   "releaseVersions(track, version)");
     });
   },
@@ -871,9 +873,9 @@ Object.assign(RemoteCatalog.prototype, {
   },
 
   // Executes a query, returning an array of each content column parsed as JSON
-  _contentQuery: function (query, params) {
+  _contentQuery: async function (query, params) {
     var self = this;
-    var rows = self._columnsQuery(query, params);
+    var rows = await self._columnsQuery(query, params);
     return _.map(rows, function(entity) {
       return JSON.parse(entity.content);
     });
@@ -881,9 +883,9 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Executes a query, returning an array of maps from column name to data.
   // No JSON parsing is performed.
-  _columnsQuery: function (query, params) {
+  _columnsQuery: async function (query, params) {
     var self = this;
-    var rows = self.db.runInTransaction(function (txn) {
+    var rows = await self.db.runInTransaction(function (txn) {
       return txn.query(query, params);
     });
     return rows;
@@ -918,9 +920,9 @@ Object.assign(RemoteCatalog.prototype, {
     });
   },
 
-  getSyncToken: function() {
+  getSyncToken: async function() {
     var self = this;
-    var result = self._contentQuery("SELECT content FROM syncToken WHERE _id=?",
+    var result = await self._contentQuery("SELECT content FROM syncToken WHERE _id=?",
                                     [ SYNCTOKEN_ID ]);
     if (!result || result.length === 0) {
       Console.debug("No sync token found");

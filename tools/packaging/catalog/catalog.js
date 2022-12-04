@@ -95,7 +95,6 @@ catalog.runAndRetryWithRefreshIfHelpful = async function (attempt) {
   var canRetry = ! (catalog.triedToRefreshRecently ||
                     catalog.official.offline);
 
-  console.log("11111")
   // Run `attempt` in a nested buildmessage context.
   var messages = await buildmessage.capture(function () {
     return attempt(canRetry);
@@ -120,7 +119,6 @@ catalog.runAndRetryWithRefreshIfHelpful = async function (attempt) {
   // catalog.refreshOrWarn, which is a higher-level function that's allowed to
   // log.
   catalog.triedToRefreshRecently = true;
-  console.log("adsdasd")
   try {
     await catalog.official.refresh();
     catalog.refreshFailed = false;
@@ -220,10 +218,10 @@ Object.assign(LayeredCatalog.prototype, {
   // As getVersion, but returns info on the latest version of the
   // package, or null if the package doesn't exist or has no versions.
   // It does not include prereleases (with dashes in the version);
-  getLatestMainlineVersion: function (name) {
+  getLatestMainlineVersion: async function (name) {
     var self = this;
 
-    var versions = self.getSortedVersions(name);
+    var versions = await self.getSortedVersions(name);
     versions.reverse();
     var latest = versions.find(function (version) {
       return !/-/.test(version);

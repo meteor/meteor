@@ -1,3 +1,5 @@
+import {debug} from "util";
+
 var assert = require('assert');
 var _ = require('underscore');
 
@@ -93,14 +95,14 @@ var loadedIsopackets = {};
 // dependency, complaining if the package does not exist. Note that
 // ensureIsopacketsLoadable must be called first, as this function does
 // not trigger any building.
-export function loadIsopackage(packageName, isopacketName = "combined") {
+export async function loadIsopackage(packageName, isopacketName = "combined") {
   // Small but necessary hack: because archinfo.host() calls execFileSync,
   // it yields the first time we call it, which is a problem for the
   // fiberHelpers.noYieldsAllowed block below. Calling it here ensures the
   // result is cached, so no yielding occurs later.
-  assert.strictEqual(archinfo.host().split(".", 1)[0], "os");
+  assert.strictEqual((await archinfo.host()).split(".", 1)[0], "os");
 
-  const isopacket = function () {
+  async function load() {
     if (_.has(loadedIsopackets, isopacketName)) {
       if (loadedIsopackets[isopacketName]) {
         return loadedIsopackets[isopacketName];
@@ -108,8 +110,10 @@ export function loadIsopackage(packageName, isopacketName = "combined") {
 
       // This is the case where the isopacket is up to date on disk but not
       // loaded.
-      return loadedIsopackets[isopacketName] =
-        loadIsopacketFromDisk(isopacketName);
+      const loaded = await loadIsopacketFromDisk(isopacketName);
+      loadedIsopackets[isopacketName] = loaded;
+
+      return loaded;
     }
 
     if (_.has(ISOPACKETS, isopacketName)) {
@@ -118,8 +122,12 @@ export function loadIsopackage(packageName, isopacketName = "combined") {
     }
 
     throw Error("Unknown isopacket: " + isopacketName);
-  }();
+  }
 
+  const isopacket = await load();
+  console.log("Isopacket: ", isopacket);
+  console.log("PackageName: ", packageName);
+  console.log("***********");
   if (!_.has(isopacket, packageName)) {
     throw new Error("Unknown isopacket dependency: " + packageName);
   }
@@ -165,7 +173,7 @@ export async function ensureIsopacketsLoadable() {
         var isopacketRoot = isopacketPath(isopacketName);
         var existingBuildinfo = files.readJSONOrNull(
             files.pathJoin(isopacketRoot, 'isopacket-buildinfo.json'));
-        var needRebuild = !existingBuildinfo;
+        var needRebuild = true;
         if (!needRebuild && existingBuildinfo.builtBy !== compiler.BUILT_BY) {
           needRebuild = true;
         }
@@ -294,7 +302,7 @@ export async function makeIsopacketBuildContext() {
 // Loads a built isopacket from disk. Always loads (the cache is in 'load', not
 // this function). Does not run a build process; it must already be built.
 var loadIsopacketFromDisk = async function (isopacketName) {
-  var image = bundler.readJsImage(
+  var image = await bundler.readJsImage(
     files.pathJoin(isopacketPath(isopacketName), 'program.json'));
 
   // An incredibly minimalist version of the environment from

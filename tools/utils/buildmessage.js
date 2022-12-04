@@ -460,8 +460,6 @@ var markBoundary = function (f, context) {
 var error = function (message, options) {
   options = options || {};
 
-  console.log("111")
-  console.trace("dasdsa")
   if (options.downcase) {
     message = message.slice(0,1).toLowerCase() + message.slice(1);
   }

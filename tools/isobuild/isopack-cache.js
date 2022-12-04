@@ -77,25 +77,25 @@ export class IsopackCache {
     }
   }
 
-  wipeCachedPackages(packages) {
+  async wipeCachedPackages(packages) {
     var self = this;
     if (packages) {
       // Wipe specific packages.
-      _.each(packages, function (packageName) {
+      for (const packageName of packages) {
         if (self.cacheDir) {
-          files.rm_recursive(self._isopackDir(packageName));
+          await files.rm_recursive(self._isopackDir(packageName));
         }
         if (self._pluginCacheDirRoot) {
-          files.rm_recursive(self._pluginCacheDirForPackage(packageName));
+          await files.rm_recursive(self._pluginCacheDirForPackage(packageName));
         }
-      });
+      }
     } else {
       // Wipe all packages.
       if (self.cacheDir) {
-        files.rm_recursive(self.cacheDir);
+        await files.rm_recursive(self.cacheDir);
       }
       if (self._pluginCacheDirRoot) {
-        files.rm_recursive(self._pluginCacheDirRoot);
+        await files.rm_recursive(self._pluginCacheDirRoot);
       }
     }
   }

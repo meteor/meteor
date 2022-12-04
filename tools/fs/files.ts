@@ -1033,7 +1033,7 @@ export function runJavaScript(code: string, {
   sourceMap?: object;
   sourceMapRoot?: string;
 }) {
-  return Profile.time('runJavaScript ' + filename, () => {
+  return Profile.time('runJavaScript ' + filename, async () => {
     const keys: string[] = [], values: any[] = [];
     // don't assume that _.keys and _.values are guaranteed to
     // enumerate in the same order
@@ -1053,7 +1053,7 @@ export function runJavaScript(code: string, {
     const header = "(function(" + keys.join(',') + "){";
     chunks.push(header);
     if (sourceMap) {
-      const sourcemapConsumer = Promise.await(new sourcemap.SourceMapConsumer(sourceMap));
+      const sourcemapConsumer = await new sourcemap.SourceMapConsumer(sourceMap);
       chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
         code, sourcemapConsumer));
       sourcemapConsumer.destroy();
@@ -1125,7 +1125,7 @@ export function runJavaScript(code: string, {
 
         if (parsedSourceMap) {
           // XXX this duplicates code in computeGlobalReferences
-          var consumer2 = Promise.await(new sourcemap.SourceMapConsumer(parsedSourceMap));
+          var consumer2 = await new sourcemap.SourceMapConsumer(parsedSourceMap);
           var original = consumer2.originalPositionFor(parseError.loc);
           consumer2.destroy();
           if (original.source) {
@@ -1155,7 +1155,7 @@ export function runJavaScript(code: string, {
     }
 
     return buildmessage.markBoundary(
-      script.runInThisContext()
+      await script.runInThisContext()
     ).apply(null, values);
   });
 }

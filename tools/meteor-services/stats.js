@@ -147,11 +147,14 @@ var getPackagesForAppIdInTest = function (projectContext) {
   return result;
 };
 
-var connectToPackagesStatsServer = function () {
-  return new ServiceConnection(
-    config.getPackageStatsServerUrl(),
-    {_dontPrintErrors: true}
+var connectToPackagesStatsServer = async function () {
+  const connection = new ServiceConnection(
+      config.getPackageStatsServerUrl(),
+      {_dontPrintErrors: true}
   );
+
+  await connection.init();
+  return connection;
 };
 
 exports.recordPackages = recordPackages;

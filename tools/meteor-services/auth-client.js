@@ -8,11 +8,14 @@ exports.AlreadyPrintedMessageError = function () {};
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
 // using a current user-agent header composed by http-helpers.js.
-exports.openServiceConnection = function (serverUrl) {
-  return new ServiceConnection(
-    serverUrl,
-    {headers: {"User-Agent": httpHelpers.getUserAgent()},
-     _dontPrintErrors: true});
+exports.openServiceConnection = async function (serverUrl) {
+  const connection = new ServiceConnection(
+      serverUrl,
+      {headers: {"User-Agent": httpHelpers.getUserAgent()},
+        _dontPrintErrors: true});
+
+  await connection.init();
+  return connection;
 };
 
 

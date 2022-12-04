@@ -375,7 +375,7 @@ Object.assign(LocalCatalog.prototype, {
     });
   },
 
-  _loadLocalPackages(buildingIsopackets) {
+  async _loadLocalPackages(buildingIsopackets) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -391,7 +391,7 @@ Object.assign(LocalCatalog.prototype, {
     //  with the same name in your app. We don't check that.)
     var initSourceFromDir = async function (packageDir, definiteName) {
       var packageSource = new PackageSource();
-      return buildmessage.enterJob({
+      await buildmessage.enterJob({
         title: "reading package from `" + packageDir + "`",
         rootPath: packageDir
       }, async function () {
@@ -461,7 +461,7 @@ Object.assign(LocalCatalog.prototype, {
 
     // Load the package sources for packages and their tests into
     // self.packages.
-    return buildmessage.enterJob('initializing packages', async function() {
+    await buildmessage.enterJob('initializing packages', async function() {
       for (const dir of self.effectiveLocalPackageDirs) {
         await initSourceFromDir(dir);
       }

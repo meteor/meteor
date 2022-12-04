@@ -375,12 +375,12 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
 
   // If the `npm rebuild` command succeeded, overwrite the original
   // package directories with the rebuilt package directories.
-  dirsToRebuild.forEach(function (pkgPath) {
+  for (const pkgPath of dirsToRebuild) {
     const actualNodeModulesDir =
-      files.pathJoin(pkgPath, "node_modules");
+        files.pathJoin(pkgPath, "node_modules");
 
     const actualNodeModulesStat =
-      files.statOrNull(actualNodeModulesDir);
+        files.statOrNull(actualNodeModulesDir);
 
     if (actualNodeModulesStat &&
         actualNodeModulesStat.isDirectory()) {
@@ -392,16 +392,16 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
       // directory that contains real packages rather than symlinks.
 
       const symlinkNodeModulesDir =
-        files.pathJoin(tempPkgDirs[pkgPath], "node_modules");
+          files.pathJoin(tempPkgDirs[pkgPath], "node_modules");
 
-      files.renameDirAlmostAtomically(
-        actualNodeModulesDir,
-        symlinkNodeModulesDir
+      await files.renameDirAlmostAtomically(
+          actualNodeModulesDir,
+          symlinkNodeModulesDir
       );
     }
 
-    files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
-  });
+    await files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
+  }
 
   await files.rm_recursive(tempDir);
 
@@ -726,7 +726,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     files.unlink(newPackageJsonFile);
   }
 
-  completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
+  await completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
 
@@ -762,7 +762,7 @@ var createFreshNpmDirectory = async function (packageName, newPackageNpmDir,
 
   await installNpmDependencies(npmDependencies, newPackageNpmDir);
 
-  completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
+  await completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
 
@@ -788,7 +788,7 @@ async function installNpmDependencies(dependencies, dir) {
 }
 
 // Shared code for updateExistingNpmDirectory and createFreshNpmDirectory.
-function completeNpmDirectory(
+async function completeNpmDirectory(
   packageName,
   newPackageNpmDir,
   packageNpmDir,
@@ -805,7 +805,7 @@ function completeNpmDirectory(
 
   createReadme(newPackageNpmDir);
   createNodeVersion(newPackageNpmDir);
-  files.renameDirAlmostAtomically(newPackageNpmDir, packageNpmDir);
+  await files.renameDirAlmostAtomically(newPackageNpmDir, packageNpmDir);
 
   dirtyNodeModulesDirectory(files.pathJoin(packageNpmDir, "node_modules"));
 }
@@ -850,7 +850,7 @@ const npmUserConfigFile = files.pathJoin(
 );
 
 var runNpmCommand = meteorNpm.runNpmCommand =
-Profile("meteorNpm.runNpmCommand", function (args, cwd) {
+Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
   import { getEnv } from "../cli/dev-bundle-bin-helpers.js";
 
   const devBundleDir = files.getDevBundle();
@@ -879,23 +879,22 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
                          args.join(' ') + ' ...\n');
   }
 
-  return getEnv({
-    devBundle: devBundleDir
-  }).then(async env => {
-    const opts = {
-      env: env,
-      maxBuffer: 10 * 1024 * 1024
-    };
+  const env = getEnv({devBundle: devBundleDir});
 
-    if (cwd) {
-      opts.cwd = files.convertToOSPath(cwd);
-    }
+  const opts = {
+    env: env,
+    maxBuffer: 10 * 1024 * 1024
+  };
 
-    // Make sure we don't honor any user-provided configuration files.
-    env.npm_config_userconfig = npmUserConfigFile;
+  if (cwd) {
+    opts.cwd = files.convertToOSPath(cwd);
+  }
 
-    return await new Promise(function (resolve) {
-      require('child_process').execFile(
+  // Make sure we don't honor any user-provided configuration files.
+  env.npm_config_userconfig = npmUserConfigFile;
+
+  return await new Promise(function (resolve) {
+    require('child_process').execFile(
         commandToRun, args, opts, function (err, stdout, stderr) {
           if (meteorNpm._printNpmCalls) {
             process.stdout.write(err ? 'failed\n' : 'done\n');
@@ -908,8 +907,7 @@ Profile("meteorNpm.runNpmCommand", function (args, cwd) {
             stderr: stderr
           });
         }
-      );
-    });
+    );
   });
 });
 

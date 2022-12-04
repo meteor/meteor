@@ -419,9 +419,9 @@ CS.Solver.prototype.minimize = function (step, options) {
 
     self.setSolution(logic.minimizeWeightedSum(
       self.solution, optimized.costTerms, optimized.costWeights, {
-        progress: function (status, cost) {
+        progress: async function (status, cost) {
           if (self.options.nudge) {
-            self.options.nudge();
+            await self.options.nudge();
           }
           if (DEBUG) {
             if (status === 'improving') {

@@ -487,7 +487,7 @@ var springboard = async function (rel, options) {
   const isopack = require('../isobuild/isopack.js');
   const packagePath = tropohouse.default.packagePath(toolsPkg, toolsVersion);
   const toolIsopack = new isopack.Isopack;
-  toolIsopack.initFromPath(toolsPkg, packagePath);
+  await toolIsopack.initFromPath(toolsPkg, packagePath);
 
   let toolRecord = null;
   serverArchitectures.some(arch => {
@@ -495,7 +495,7 @@ var springboard = async function (rel, options) {
   });
 
   if (!toolRecord) {
-    throw Error("missing tool for " + archinfo.host() + " in " +
+    throw Error("missing tool for " + await archinfo.host() + " in " +
                 toolsPkg + "@" + toolsVersion);
   }
 
@@ -539,7 +539,7 @@ var springboard = async function (rel, options) {
 
   // Release our connection to the sqlite catalog database for the current
   // process, so that the springboarded process can reestablish it.
-  catalog.official.closePermanently();
+  await catalog.official.closePermanently();
 
   const isWindows = process.platform === "win32";
   const executable = files.pathJoin(
@@ -872,7 +872,7 @@ asyncLocalStorage.run({}, async function () {
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk
   // to the server and refresh it.
-  catalog.official.initialize({
+  await catalog.official.initialize({
     offline: !!process.env.METEOR_OFFLINE_CATALOG
   });
 

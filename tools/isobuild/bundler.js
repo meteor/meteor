@@ -351,7 +351,7 @@ class NodeModulesDirectory {
   // objects returned by the toJSON method above. Note that this works
   // even if the node_modules parameter is a string, though that will only
   // be the case for bundles built before Meteor 1.3.
-  static readDirsFromJSON(node_modules, {
+  static async readDirsFromJSON(node_modules, {
     rebuildBinaries = false,
     // Options consumed by readDirsFromJSON are listed above. Any other
     // options will be passed on to NodeModulesDirectory constructor via
@@ -422,9 +422,9 @@ class NodeModulesDirectory {
     }
 
     if (rebuildBinaries) {
-      _.each(nodeModulesDirectories, (info, path) => {
-        meteorNpm.rebuildIfNonPortable(path);
-      });
+      for (const path of Object.keys(nodeModulesDirectories)) {
+        await meteorNpm.rebuildIfNonPortable(path);
+      }
     }
 
     return nodeModulesDirectories;
@@ -944,13 +944,13 @@ class Target {
         // `debugOnly` packages work with "debug" and "test" build
         // modes.
         if (p.debugOnly && this.buildMode === 'production') {
-          return;
+          continue;
         }
         if (p.prodOnly && this.buildMode !== 'production') {
-          return;
+          continue;
         }
         if (p.testOnly && this.buildMode !== 'test') {
-          return;
+          continue;
         }
         const unibuild = await p.getUnibuildAtArch(this.arch);
         unibuild && rootUnibuilds.push(unibuild);
@@ -992,7 +992,6 @@ class Target {
         }, addToGetsUsed);
       }.bind(this);
 
-      // TODO -> We may need to keep the order here?
       for (const unibuild of rootUnibuilds) {
         await addToGetsUsed(unibuild);
       }
@@ -1038,7 +1037,7 @@ class Target {
         // eachUsedUnibuild does follow weak edges (ie, they affect the
         // ordering), but only if they point to a package in usedPackages (ie, a
         // package that SOMETHING uses strongly).
-        var processUnibuild = function (usedUnibuild) {
+        var processUnibuild = async function (usedUnibuild) {
           if (onStack[usedUnibuild.id]) {
             buildmessage.error(
                 "circular dependency between packages " +
@@ -1047,7 +1046,7 @@ class Target {
             return;
           }
           onStack[usedUnibuild.id] = true;
-          add(usedUnibuild);
+          await add(usedUnibuild);
           delete onStack[usedUnibuild.id];
         };
         await compiler.eachUsedUnibuild({
@@ -1084,7 +1083,7 @@ class Target {
 
   // Run all the compiler plugins on all source files in the project. Returns an
   // array of PackageSourceBatches which contain the results of this processing.
-  _runCompilerPlugins({
+  async _runCompilerPlugins({
     minifiers = [],
     minifyMode = "development",
   }) {
@@ -1120,7 +1119,7 @@ class Target {
 
       // Takes a CssOutputResource and returns a string of minified CSS,
       // or null to indicate no minification occurred.
-      minifyCssResource: (resource) => {
+      minifyCssResource: async (resource) => {
         if (! minifiersByExt.css) {
           // Indicates the caller should use the original resource.data
           // without minification.
@@ -1143,12 +1142,14 @@ class Target {
         file.setTargetPathFromRelPath(
           stripLeadingSlash(resource.servePath));
 
-        return minifyCssFiles([file], {
+        const results = await minifyCssFiles([file], {
           arch: target.arch,
           minifier: minifiersByExt.css,
           minifyMode,
           watchSet: this.watchSet
-        }).map(file => file.contents("utf8")).join("\n");
+        });
+
+        return results.map(file => file.contents("utf8")).join("\n");
       }
     });
 
@@ -1193,27 +1194,26 @@ class Target {
     const dynamicImportFiles = new Set;
 
     // Copy their resources into the bundle in order
-    sourceBatches.forEach((sourceBatch) => {
+    for (const sourceBatch of sourceBatches) {
       const unibuild = sourceBatch.unibuild;
 
       if (this.cordovaDependencies) {
         _.each(unibuild.pkg.cordovaDependencies, (version, name) => {
           this._addCordovaDependency(
-            name,
-            version,
-            // use newer version if another version has already been added
-            false
+              name,
+              version,
+              // use newer version if another version has already been added
+              false
           );
         });
       }
 
       const name = unibuild.pkg.name || null;
-      const isApp = ! name;
 
       // Emit the resources
-      const resources = sourceBatch.getResources(
-        jsOutputFilesMap.get(name).files,
-        (linkCacheKey, jsResources) => onJsOutputFiles(jsResources, sourceBatch, linkCacheKey)
+      const resources = await sourceBatch.getResources(
+          jsOutputFilesMap.get(name).files,
+          (linkCacheKey, jsResources) => onJsOutputFiles(jsResources, sourceBatch, linkCacheKey)
       );
 
       // First, find all the assets, so that we can associate them with each js
@@ -1246,8 +1246,8 @@ class Target {
 
         assetFiles.forEach(f => {
           const relPath = isOs
-            ? files.pathJoin('assets', resource.servePath)
-            : stripLeadingSlash(resource.servePath);
+              ? files.pathJoin('assets', resource.servePath)
+              : stripLeadingSlash(resource.servePath);
 
           f.setTargetPathFromRelPath(relPath);
 
@@ -1353,7 +1353,7 @@ class Target {
           addToTree(file.hash(), file.targetPath, versions);
         }
       });
-    });
+    }
 
     dynamicImportFiles.forEach(file => {
       file.setContents(
@@ -1367,15 +1367,15 @@ class Target {
     // Call any plugin.afterLink callbacks defined by compiler plugins,
     // and update the watch set's list of potentially unused files
     // now that all compilation (including lazy compilation) is finished.
-    sourceBatches.forEach(batch => {
-      batch.resourceSlots.forEach(slot => {
+    for (const batch of sourceBatches) {
+      for (const slot of batch.resourceSlots) {
         const plugin =
-          slot.sourceProcessor &&
-          slot.sourceProcessor.userPlugin;
+            slot.sourceProcessor &&
+            slot.sourceProcessor.userPlugin;
         if (plugin && typeof plugin.afterLink === "function") {
-          plugin.afterLink();
+          await plugin.afterLink();
         }
-      });
+      }
 
       // Any source resource that the content or hash was accessed for are marked
       // as definitely used.
@@ -1389,15 +1389,14 @@ class Target {
         }
 
         assert.strictEqual(
-          typeof resource._dataUsed,
-          "boolean"
+            typeof resource._dataUsed,
+            "boolean"
         );
 
         let absPath = files.pathJoin(batch.sourceRoot, resource.path);
         this.watchSet.addFile(absPath, resource.hash);
       });
-    });
-
+    }
   }
 
   // Minify the JS in this target
@@ -1711,23 +1710,23 @@ class ClientTarget extends Target {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the target
-  write(builder, {minifyMode, buildMode}) {
+  async write(builder, {minifyMode, buildMode}) {
     builder.reserve("program.json");
 
     // Helper to iterate over all resources that we serve over HTTP.
-    const eachResource = function (f) {
-      ["js", "css", "asset"].forEach((type) => {
-        this[type].forEach((file) => {
-          f(file, file.type || type);
-        });
-      });
+    const eachResource = async function (f) {
+      for (const type of ["js", "css", "asset"]) {
+        for (const file of this[type]) {
+          await f(file, file.type || type);
+        }
+      }
     }.bind(this);
 
     // Reserve all file names from the manifest, so that interleaved
     // generateFilename calls don't overlap with them.
 
     const targetPathToHash = new Map;
-    eachResource((file, type) => {
+    await eachResource((file, type) => {
       const hash = targetPathToHash.get(file.targetPath);
       if (hash) {
         // When we add assets that have a URL prefix like /__cordova, we
@@ -1750,7 +1749,7 @@ class ClientTarget extends Target {
 
     // Build up a manifest of all resources served via HTTP.
     const manifest = [];
-    eachResource((file, type) => {
+    await eachResource(async (file, type) => {
       const manifestItem = {
         path: file.targetPath,
         where: "client",
@@ -1781,7 +1780,7 @@ class ClientTarget extends Target {
           mapData = Buffer.from(JSON.stringify(file.sourceMap), 'utf8');
         }
 
-        manifestItem.sourceMap = builder.writeToGeneratedFilename(
+        manifestItem.sourceMap = await builder.writeToGeneratedFilename(
           file.targetPath + '.map', {data: mapData});
 
         // Use a SHA to make this cacheable.
@@ -1796,7 +1795,7 @@ class ClientTarget extends Target {
       manifestItem.sri = file.sri();
 
       if (! file.targetPath.startsWith("dynamic/")) {
-        writeFile(file, builder, {
+        await writeFile(file, builder, {
           leaveSourceMapUrls: type === 'asset'
         });
         manifest.push(manifestItem);
@@ -1822,7 +1821,7 @@ class ClientTarget extends Target {
         // source maps can be very large), but rather include a normal URL
         // referring to the source map (as a comment), so that it can be
         // loaded from the web server when needed.
-        writeFile(file, builder, {
+        await writeFile(file, builder, {
           sourceMapUrl: manifestItem.sourceMapUrl,
         });
 
@@ -1847,16 +1846,16 @@ class ClientTarget extends Target {
       } else {
         // If the dynamic module does not have a source map, just write it
         // normally.
-        writeFile(file, builder);
+        await writeFile(file, builder);
       }
     });
 
-    ['head', 'body'].forEach((type) => {
+    for (const type of ['head', 'body']) {
       const data = this[type].join('\n');
       if (data) {
         const dataBuffer = Buffer.from(data, 'utf8');
-        const dataFile = builder.writeToGeneratedFilename(
-          type + '.html', { data: dataBuffer });
+        const dataFile = await builder.writeToGeneratedFilename(
+            type + '.html', { data: dataBuffer });
         manifest.push({
           path: dataFile,
           where: 'internal',
@@ -1864,7 +1863,7 @@ class ClientTarget extends Target {
           hash: watch.sha1(dataBuffer)
         });
       }
-    });
+    }
 
     // Control file
     const program = {
@@ -1874,7 +1873,7 @@ class ClientTarget extends Target {
 
     if (this.arch === 'web.cordova') {
       import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
-      const { WebAppHashing } = loadIsopackage('webapp-hashing');
+      const { WebAppHashing } = await loadIsopackage('webapp-hashing');
 
       const cordovaCompatibilityVersions =
         _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
@@ -1899,8 +1898,7 @@ class ClientTarget extends Target {
     if (buildMode === 'development') {
       program.hmrVersion = Date.now();
     }
-
-    builder.writeJson('program.json', program);
+    await builder.writeJson('program.json', program);
 
     return {
       controlFile: "program.json"
@@ -2032,7 +2030,7 @@ class JsImage {
   // XXX throw an error if the image includes any "app-style" code
   // that is built to put symbols in the global namespace rather than
   // in a compartment of Package
-  load(bindings) {
+  async load(bindings) {
     var self = this;
     var ret = new PackageRegistry();
 
@@ -2043,11 +2041,6 @@ class JsImage {
       assetPath = files.convertToStandardPath(assetPath);
       var promise;
       if (! callback) {
-        if (! Fiber.current) {
-          throw new Error("The synchronous Assets API can " +
-                          "only be called from within a Fiber.");
-        }
-
         promise = new Promise(function (resolve, reject) {
           callback = function (err, res) {
             err ? reject(err) : resolve(res);
@@ -2072,7 +2065,7 @@ class JsImage {
       }
 
       if (promise) {
-        return promise.await();
+        return promise;
       }
     };
 
@@ -2114,9 +2107,9 @@ class JsImage {
     // packages, and an 'Assets' symbol to help the package find its
     // static assets.
     var failed = false;
-    _.each(self.jsToLoad, function (item) {
+    for (const item of self.jsToLoad) {
       if (failed) {
-        return;
+        continue;
       }
 
       var env = Object.assign({
@@ -2152,13 +2145,13 @@ class JsImage {
               }
 
               var nodeModulesTopDir = files.pathJoin(
-                nodeModulesPath,
-                name.split("/", 1)[0]
+                  nodeModulesPath,
+                  name.split("/", 1)[0]
               );
 
               if (files.exists(nodeModulesTopDir)) {
                 return fullPath = files.convertToOSPath(
-                  files.pathJoin(nodeModulesPath, name)
+                    files.pathJoin(nodeModulesPath, name)
                 );
               }
             }
@@ -2184,7 +2177,7 @@ class JsImage {
               //
               // in the parent package (e.g. ecmascript, coffeescript).
               const nmdSourcePaths =
-                nodeModulesDirsByPackageName.get(bindings.Plugin.name);
+                  nodeModulesDirsByPackageName.get(bindings.Plugin.name);
               if (Array.isArray(nmdSourcePaths)) {
                 found = _.some(nmdSourcePaths, sourcePath => {
                   return tryLookup(sourcePath, name);
@@ -2201,7 +2194,7 @@ class JsImage {
 
             if (appDir && resolved) {
               const isOutsideAppDir =
-                files.pathRelative(appDir, resolved).startsWith("..");
+                  files.pathRelative(appDir, resolved).startsWith("..");
 
               if (! isOutsideAppDir) {
                 return require(resolved);
@@ -2209,7 +2202,7 @@ class JsImage {
             }
 
             throw error || new Error(
-              "Cannot find module " + JSON.stringify(name)
+                "Cannot find module " + JSON.stringify(name)
             );
           })
         },
@@ -2254,7 +2247,7 @@ class JsImage {
         // XXX XXX Get the actual source file path -- item.targetPath
         // is not actually correct (it's the path in the bundle rather
         // than in the source tree).
-        files.runJavaScript(item.source.toString('utf8'), {
+        await files.runJavaScript(item.source.toString('utf8'), {
           filename: item.targetPath,
           symbols: env,
           sourceMap: item.sourceMap,
@@ -2266,7 +2259,7 @@ class JsImage {
         failed = true;
         return;
       }
-    });
+    }
 
     return ret;
   }
@@ -2350,7 +2343,7 @@ class JsImage {
   // Returns an object with the following keys:
   // - controlFile: the path (relative to 'builder') of the control file for
   // the image
-  write(builder, {
+  async write(builder, {
     buildMode,
     // falsy or 'symlink', documented on exports.bundle
     includeNodeModules,
@@ -2389,7 +2382,7 @@ class JsImage {
 
     // JavaScript sources
     var load = [];
-    _.each(self.jsToLoad, function (item) {
+    for (const item of self.jsToLoad) {
       if (! item.targetPath) {
         throw new Error("No targetPath?");
       }
@@ -2398,7 +2391,7 @@ class JsImage {
         node_modules: {}
       };
 
-      _.each(item.nodeModulesDirectories, nmd => {
+      for (const nmd of Object.values(item.nodeModulesDirectories)) {
         // We need to make sure to use the directory name we got from
         // builder.generateFilename here.
         // XXX these two parallel data structures of self.jsToLoad and
@@ -2406,14 +2399,14 @@ class JsImage {
         const generatedNMD = nodeModulesDirectories[nmd.sourcePath];
         if (generatedNMD) {
           assert.strictEqual(
-            typeof generatedNMD.preferredBundlePath,
-            "string"
+              typeof generatedNMD.preferredBundlePath,
+              "string"
           );
 
           loadItem.node_modules[generatedNMD.preferredBundlePath] =
-            generatedNMD.toJSON();
+              await generatedNMD.toJSON();
         }
-      });
+      }
 
       const preferredPaths = Object.keys(loadItem.node_modules);
       if (preferredPaths.length === 1) {
@@ -2432,23 +2425,23 @@ class JsImage {
 
       if (item.sourceMap) {
         const sourceMapBuffer =
-          Buffer.from(JSON.stringify(item.sourceMap), "utf8");
+            Buffer.from(JSON.stringify(item.sourceMap), "utf8");
 
-        loadItem.sourceMap = builder.writeToGeneratedFilename(
-          item.targetPath + ".map",
-          { data: sourceMapBuffer }
+        loadItem.sourceMap = await builder.writeToGeneratedFilename(
+            item.targetPath + ".map",
+            { data: sourceMapBuffer }
         );
 
         const sourceMappingURL =
-          "data:application/json;charset=utf8;base64," +
-          sourceMapBuffer.toString("base64");
+            "data:application/json;charset=utf8;base64," +
+            sourceMapBuffer.toString("base64");
 
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
         sourceBuffer = addSourceMappingURL(
-          item.source,
-          sourceMappingURL,
-          item.targetPath,
+            item.source,
+            sourceMappingURL,
+            item.targetPath,
         );
 
         if (item.sourceMapRoot) {
@@ -2461,9 +2454,9 @@ class JsImage {
         sourceBuffer = removeSourceMappingURLs(item.source);
       }
 
-      loadItem.path = builder.writeToGeneratedFilename(
-        item.targetPath,
-        { data: sourceBuffer }
+      loadItem.path = await builder.writeToGeneratedFilename(
+          item.targetPath,
+          { data: sourceBuffer }
       );
 
       if (!_.isEmpty(item.assets)) {
@@ -2471,7 +2464,7 @@ class JsImage {
         // assets/packages specific to this package. Application assets (e.g. those
         // inside private/) go in assets/app/.
         // XXX same hack as setTargetPathFromRelPath
-          var assetBundlePath;
+        var assetBundlePath;
         if (item.targetPath.match(/^packages\//)) {
           var dir = files.pathDirname(item.targetPath);
           var base = files.pathBasename(item.targetPath, ".js");
@@ -2481,22 +2474,22 @@ class JsImage {
         }
 
         loadItem.assets = {};
-        _.each(item.assets, function (data, relPath) {
+        for (const [relPath, data] of Object.entries(item.assets)) {
           var sha = watch.sha1(data);
           if (_.has(assetFilesBySha, sha)) {
             loadItem.assets[relPath] = assetFilesBySha[sha];
           } else {
             loadItem.assets[relPath] = assetFilesBySha[sha] =
-              builder.writeToGeneratedFilename(
-                files.pathJoin(assetBundlePath, relPath), { data: data });
+                await builder.writeToGeneratedFilename(
+                    files.pathJoin(assetBundlePath, relPath), { data: data });
           }
-        });
+        }
       }
 
       if (! item.targetPath.startsWith("dynamic/")) {
         load.push(loadItem);
       }
-    });
+    }
 
     const rebuildDirs = Object.create(null);
 
@@ -2554,7 +2547,7 @@ class JsImage {
 
     // This JSON file will be read by npm-rebuild.js, which is executed to
     // trigger rebuilds for all non-portable npm packages.
-    builder.write("npm-rebuilds.json", {
+    await builder.write("npm-rebuilds.json", {
       data: Buffer.from(
         JSON.stringify(Object.keys(rebuildDirs), null, 2) + "\n",
         "utf8"
@@ -2562,7 +2555,7 @@ class JsImage {
     });
 
     // Control file
-    builder.writeJson('program.json', {
+    await builder.writeJson('program.json', {
       format: "javascript-image-pre1",
       arch: self.arch,
       load: load
@@ -2576,8 +2569,8 @@ class JsImage {
   // Create a JsImage by loading a bundle of format
   // 'javascript-image-pre1' from disk (eg, previously written out with
   // write()). `dir` is the path to the control file.
-  static readFromDisk (controlFilePath) {
-    var ret = new JsImage;
+  static async readFromDisk (controlFilePath) {
+    var ret = new JsImage();
     var json = JSON.parse(files.readFile(controlFilePath));
     var dir = files.pathDirname(controlFilePath);
 
@@ -2589,20 +2582,20 @@ class JsImage {
     ret.arch = json.arch;
 
     // Rebuild binary npm packages if host arch matches image arch.
-    const rebuildBinaries = archinfo.matches(archinfo.host(), ret.arch);
+    const rebuildBinaries = archinfo.matches(await archinfo.host(), ret.arch);
 
-    _.each(json.load, function (item) {
+    for (const item of json.load) {
       rejectBadPath(item.path);
 
       let nodeModulesDirectories;
       if (item.node_modules) {
         Object.assign(
-          ret.nodeModulesDirectories,
-          nodeModulesDirectories =
-            NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
-              sourceRoot: dir,
-              rebuildBinaries,
-            })
+            ret.nodeModulesDirectories,
+            nodeModulesDirectories =
+                await NodeModulesDirectory.readDirsFromJSON(item.node_modules, {
+                  sourceRoot: dir,
+                  rebuildBinaries,
+                })
         );
       }
 
@@ -2616,7 +2609,7 @@ class JsImage {
         // XXX this is the same code as isopack.initFromPath
         rejectBadPath(item.sourceMap);
         loadItem.sourceMap = JSON.parse(files.readFile(
-          files.pathJoin(dir, item.sourceMap), 'utf8'));
+            files.pathJoin(dir, item.sourceMap), 'utf8'));
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
 
@@ -2628,7 +2621,7 @@ class JsImage {
       }
 
       ret.jsToLoad.push(loadItem);
-    });
+    }
 
     return ret;
   }
@@ -2699,7 +2692,7 @@ class ServerTarget extends JsImageTarget {
   //
   // Returns the path (relative to 'builder') of the control file for
   // the plugin and the required NODE_PATH.
-  write(builder, {
+  async write(builder, {
     buildMode,
     // falsy or 'symlink', documented in exports.bundle
     includeNodeModules,
@@ -2711,7 +2704,7 @@ class ServerTarget extends JsImageTarget {
 
     // We will write out config.json, the dependency kit, and the
     // server driver alongside the JsImage
-    builder.writeJson("config.json", {
+    await builder.writeJson("config.json", {
       meteorRelease: self.releaseName || undefined,
       appId: self.appIdentifier || undefined,
       clientArchs: self.clientArchs || undefined,
@@ -2732,14 +2725,14 @@ class ServerTarget extends JsImageTarget {
     serverPkgJson.dependencies["node-pre-gyp"] =
       require("node-pre-gyp/package.json").version;
 
-    builder.write('package.json', {
+    await builder.write('package.json', {
       data: Buffer.from(
         JSON.stringify(serverPkgJson, null, 2) + "\n",
         "utf8"
       )
     });
 
-    builder.write('npm-shrinkwrap.json', {
+    await builder.write('npm-shrinkwrap.json', {
       file: files.pathJoin(files.getDevBundle(), 'etc', 'npm-shrinkwrap.json')
     });
 
@@ -2747,7 +2740,7 @@ class ServerTarget extends JsImageTarget {
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
     if (includeNodeModules === 'symlink') {
-      builder.write('node_modules', {
+      await builder.write('node_modules', {
         symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
     } else if (includeNodeModules) {
@@ -2760,7 +2753,7 @@ class ServerTarget extends JsImageTarget {
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
     var jsImage = self.toJsImage();
-    jsImage.write(builder, {
+    await jsImage.write(builder, {
       buildMode,
       includeNodeModules,
     });
@@ -2768,14 +2761,14 @@ class ServerTarget extends JsImageTarget {
     const toolsDir = files.pathDirname(
       files.convertToStandardPath(__dirname));
 
-    builder.copyTranspiledModules([
+    await builder.copyTranspiledModules([
       "profile.ts"
     ], {
       sourceRootDir: files.pathJoin(toolsDir, "tool-env"),
     });
 
     // Server bootstrap
-    builder.copyTranspiledModules([
+    await builder.copyTranspiledModules([
       "boot.js",
       "boot-utils.js",
       "debug.ts",
@@ -2823,7 +2816,7 @@ class ServerTarget extends JsImageTarget {
   ServerTarget.prototype[method] = Profile(`ServerTarget#${method}`, ServerTarget.prototype[method]);
 });
 
-var writeFile = Profile("bundler writeFile", function (file, builder, options) {
+var writeFile = Profile("bundler writeFile", async function (file, builder, options) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
@@ -2850,7 +2843,7 @@ var writeFile = Profile("bundler writeFile", function (file, builder, options) {
     data = removeSourceMappingURLs(data);
   }
 
-  builder.write(file.targetPath, { data, hash });
+  await builder.write(file.targetPath, { data, hash });
 });
 
 // Takes a Buffer or string and returns a Buffer. If it looks like there
@@ -2909,7 +2902,7 @@ function addSourceMappingURL(data, url, targetPath) {
 // Writes a target a path in 'programs'
 var writeTargetToPath = Profile(
   "bundler writeTargetToPath",
-  function (name, target, outputPath, {
+  async function (name, target, outputPath, {
     includeNodeModules,
     previousBuilder = null,
     buildMode,
@@ -2928,13 +2921,15 @@ var writeTargetToPath = Profile(
       forceInPlaceBuild
     });
 
-    var targetBuild = target.write(builder, {
+    await builder.init();
+
+    var targetBuild = await target.write(builder, {
       includeNodeModules,
       buildMode,
       minifyMode,
     });
 
-    builder.complete();
+    await builder.complete();
 
     return {
       name,
@@ -2969,7 +2964,7 @@ var writeTargetToPath = Profile(
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
 // - previousBuilder: previous Builder object used in previous iteration
-var writeSiteArchive = Profile("bundler writeSiteArchive", function (
+var writeSiteArchive = Profile("bundler writeSiteArchive", async function (
   targets, outputPath, {
     includeNodeModules,
     builtBy,
@@ -3016,22 +3011,22 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
     // symlinked a node_modules, since that's probably enough for it to work in
     // spite of the presence of node_modules for the wrong arch). The place we
     // stash this is grody for temporary reasons of backwards compatibility.
-    builder.write(files.pathJoin('server', '.bundle_version.txt'), {
+    await builder.write(files.pathJoin('server', '.bundle_version.txt'), {
       file: files.pathJoin(files.getDevBundle(), '.bundle_version.txt')
     });
 
-    builder.write('.node_version.txt', {
+    await builder.write('.node_version.txt', {
       data: Buffer.from(process.version + '\n', 'utf8')
     });
 
     // Affordances for standalone use
     if (targets.server) {
       // add program.json as the first argument after "node main.js" to the boot script.
-      builder.write('main.js', {
+      await builder.write('main.js', {
         data: Buffer.from(exports._mainJsContents, 'utf8')
       });
 
-      builder.write('README', { data: Buffer.from(
+      await builder.write('README', { data: Buffer.from(
 `This is a Meteor application bundle. It has only one external dependency:
 Node.js ${process.version}. To run the application:
 
@@ -3062,12 +3057,12 @@ Find out more about Meteor at meteor.com.
       }
     });
 
-    Object.keys(targets).forEach(name => {
+    for (const name of Object.keys(targets)) {
       const target = targets[name];
       const {
         arch, path, cordovaDependencies,
         builder: targetBuilder
-      } = writeTargetToPath(name, target, builder.buildPath, {
+      } = await writeTargetToPath(name, target, builder.buildPath, {
         includeNodeModules,
         builtBy,
         releaseName,
@@ -3082,13 +3077,13 @@ Find out more about Meteor at meteor.com.
       json.programs.push({
         name, arch, path, cordovaDependencies
       });
-    });
+    }
 
     // Control file
-    builder.writeJson('star.json', json);
+    await builder.writeJson('star.json', json);
 
     // We did it!
-    builder.complete();
+    await builder.complete();
 
     // Now, go and "fix up" the outputPath properties of the sub-builders.
     // Since the sub-builders originally were targetted at a temporary
@@ -3107,7 +3102,7 @@ Find out more about Meteor at meteor.com.
       builders,
     };
   } catch (e) {
-    builder.abort();
+    await builder.abort();
     throw e;
   }
 });
@@ -3200,7 +3195,7 @@ async function bundle({
 }) {
   buildOptions = buildOptions || {};
 
-  var serverArch = buildOptions.serverArch || archinfo.host();
+  var serverArch = buildOptions.serverArch || await archinfo.host();
   var webArchs;
   if (buildOptions.webArchs) {
     // Don't attempt to build web.cordova when platforms have been removed
@@ -3362,9 +3357,9 @@ async function bundle({
       forceInPlaceBuild,
     };
 
-    function writeClientTarget(target) {
+    async function writeClientTarget(target) {
       const { arch } = target;
-      const written = writeTargetToPath(arch, target, outputPath, {
+      const written = await writeTargetToPath(arch, target, outputPath, {
         buildMode: buildOptions.buildMode,
         previousBuilder: previousBuilders[arch],
         ...writeOptions,
@@ -3402,7 +3397,7 @@ async function bundle({
           // Now write the target to disk. Note that we are rewriting the
           // bundle in place, so this work is not atomic by any means,
           // which is why we needed to pause the client.
-          writeClientTarget(target);
+          await writeClientTarget(target);
 
           // Refresh and unpause the client, now that writing is finished.
           // If the child process exited for some reason, don't worry if
@@ -3432,7 +3427,9 @@ async function bundle({
       if (hasCachedBundle) {
         // If we already have a cached bundle, just recreate the new targets.
         // XXX This might make the contents of "star.json" out of date.
-        _.each(targets, writeClientTarget);
+        for (const target of targets) {
+          await writeClientTarget(target);
+        }
       } else {
         starResult = writeSiteArchive(targets, outputPath, {
           buildMode: buildOptions.buildMode,
@@ -3556,7 +3553,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", async function (options) 
 
   var packageSource = new PackageSource();
 
-  packageSource.initFromOptions(options.name, {
+  await packageSource.initFromOptions(options.name, {
     kind: "plugin",
     use: options.use || [],
     sourceRoot: options.sourceRoot,
@@ -3587,6 +3584,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", async function (options) 
     // (which always wants to build for the current host).
     arch: await archinfo.host()
   });
+
   await target.make({ packages: [isopack] });
 
   return {

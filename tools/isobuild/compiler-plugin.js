@@ -202,9 +202,7 @@ export class CompilerPluginProcessor {
         await buildmessage.enterJob({
           title: jobTitle
         }, async function () {
-          var inputFiles = _.map(resourceSlots, function (resourceSlot) {
-            return new InputFile(resourceSlot);
-          });
+          var inputFiles = resourceSlots.map(resourceSlot => new InputFile(resourceSlot));
 
           const markedMethod = buildmessage.markBoundary(
               sourceProcessor.userPlugin.processFilesForTarget,
@@ -1111,7 +1109,7 @@ export class PackageSourceBatch {
 
     self.useMeteorInstall =
         _.isString(self.sourceRoot) &&
-        self.processor.isopackCache.uses(
+        await self.processor.isopackCache.uses(
             self.unibuild.pkg,
             "modules",
             self.unibuild.arch
@@ -1660,7 +1658,7 @@ export class PackageSourceBatch {
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources(jsResources, onCacheKey) {
+  async getResources(jsResources, onCacheKey) {
     buildmessage.assertInJob();
 
     const resources = [];
@@ -1669,12 +1667,12 @@ export class PackageSourceBatch {
       resources.push(...slot.outputResources);
     });
 
-    resources.push(...this._linkJS(jsResources, onCacheKey));
+    resources.push(...await this._linkJS(jsResources, onCacheKey));
 
     return resources;
   }
 
-  _linkJS(jsResources, onCacheKey = () => {}) {
+  async _linkJS(jsResources, onCacheKey = () => {}) {
     const self = this;
     buildmessage.assertInJob();
 
@@ -1723,7 +1721,7 @@ export class PackageSourceBatch {
       fileHashes
     }));
     const cacheKey = `${cacheKeyPrefix}_${cacheKeySuffix}`;
-    onCacheKey(cacheKey, jsResources);
+    await onCacheKey(cacheKey, jsResources);
 
     if (LINKER_CACHE.has(cacheKey)) {
       if (CACHE_DEBUG) {
@@ -1779,8 +1777,8 @@ export class PackageSourceBatch {
     // mutate anything from it.
     let canCache = true;
     let linkedFiles = null;
-    buildmessage.enterJob('linking', () => {
-      linkedFiles = linker.fullLink(jsResources, linkerOptions);
+    await buildmessage.enterJob('linking', async () => {
+      linkedFiles = await linker.fullLink(jsResources, linkerOptions);
       if (buildmessage.jobHasMessages()) {
         canCache = false;
       }
@@ -1813,13 +1811,11 @@ export class PackageSourceBatch {
       LINKER_CACHE.set(cacheKey, ret);
       if (cacheFilename) {
         // Write asynchronously.
-        Promise.resolve().then(() => {
-          try {
-            files.rm_recursive(wildcardCacheFilename);
-          } finally {
-            files.writeFileAtomically(cacheFilename, retAsJSON);
-          }
-        });
+        try {
+          await files.rm_recursive(wildcardCacheFilename);
+        } finally {
+          await files.writeFileAtomically(cacheFilename, retAsJSON);
+        }
       }
     }
 

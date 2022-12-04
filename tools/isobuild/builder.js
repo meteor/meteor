@@ -289,7 +289,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // Returns the final canonicalize relPath that was written to.
   //
   // If `file` is used then it will be added to the builder's WatchSet.
-  write(relPath, {data, file, hash, sanitize, executable, symlink}) {
+  async write(relPath, {data, file, hash, sanitize, executable, symlink}) {
     relPath = this._normalizeFilePath(relPath, sanitize);
 
     let getData = null;
@@ -326,7 +326,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         if (this.buildPath === this.outputPath || this.writtenHashes[relPath]) {
           // atomicallyRewriteFile handles overwriting files that have already been created
-          atomicallyRewriteFile(absPath, getData(), {
+          await atomicallyRewriteFile(absPath, getData(), {
               mode
           });
         } else {
@@ -335,7 +335,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // it is not important to write atomically.
           files.writeFile(absPath, getData(), {
             mode
-          })
+          });
       }
       }
 
@@ -346,7 +346,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return relPath;
   }
 
-  copyTranspiledModules(relativePaths, {
+  async copyTranspiledModules(relativePaths, {
     sourceRootDir,
     targetRootDir = this.outputPath,
     needToTranspile = files.inCheckout(),
@@ -355,14 +355,14 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       // If these files have already been transpiled, copy the transpiled files
       // (both .js and .js.map) directly to the builder output directory, without
       // recompiling them.
-      relativePaths.forEach(relPath => {
+      for (const relPath of relativePaths) {
         const jsPath = jsToTs(relPath);
-        [jsPath, jsPath + ".map"].forEach(path => {
-          this.write(path, {
+        for (const path of [jsPath, jsPath + ".map"]) {
+          await this.write(path, {
             file: files.pathJoin(sourceRootDir, path),
           });
-        });
-      });
+        }
+      }
       return;
     }
 
@@ -521,9 +521,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // is patched through directly rather than rewriting its inputs and
   // outputs. This is only valid because it does nothing with its inputs
   // and outputs other than send pass them to other methods.)
-  writeToGeneratedFilename(relPath, writeOptions) {
+  async writeToGeneratedFilename(relPath, writeOptions) {
     const generated = this.generateFilename(relPath);
-    this.write(generated, writeOptions);
+    await this.write(generated, writeOptions);
     return generated;
   }
 
@@ -858,13 +858,13 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   }
 
   // Move the completed bundle into its final location (outputPath)
-  complete() {
+  async complete() {
     if (this.previousUsedAsFile) {
       // delete files and folders left-over from previous runs and not
       // re-used in this run
       const removed = {};
       const paths = Object.keys(this.previousUsedAsFile);
-      paths.forEach((path) => {
+      for (const path of paths) {
         // if the same path was re-used, leave it
         if (this.usedAsFile.hasOwnProperty(path)) { return; }
 
@@ -880,7 +880,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           removed[path] = true;
         } else {
           // directory
-          files.rm_recursive(absPath);
+          await files.rm_recursive(absPath);
 
           // mark all sub-paths as removed, too
           paths.forEach((anotherPath) => {
@@ -889,7 +889,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             }
           });
         }
-      });
+      }
     }
 
     // XXX Alternatively, we could just keep buildPath around, and make
@@ -897,13 +897,13 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     // case of renameDirAlmostAtomically since that one is constructing files to
     // be checked in to version control, but here we could get away with it.
     if (this.buildPath !== this.outputPath) {
-      files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
+      await files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
     }
   }
 
   // Delete the partially-completed bundle. Do not disturb outputPath.
   abort() {
-    files.rm_recursive(this.buildPath);
+    return files.rm_recursive(this.buildPath);
   }
 
   // Returns a WatchSet representing all files that were read from disk by the

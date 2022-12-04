@@ -120,7 +120,6 @@ function ProjectContext(options) {
     throw Error("missing projectDir!");
 
   self.originalOptions = options;
-  self.reset();
 }
 exports.ProjectContext = ProjectContext;
 
@@ -136,7 +135,11 @@ var STAGE = {
 };
 
 Object.assign(ProjectContext.prototype, {
-  reset: function (moreOptions, resetOptions) {
+  init: function () {
+    const self = this;
+    return self.reset();
+  },
+  reset: async function (moreOptions, resetOptions) {
     var self = this;
     // Allow overriding some options until the next call to reset;
     var options = Object.assign({}, self.originalOptions, moreOptions);
@@ -154,7 +157,7 @@ Object.assign(ProjectContext.prototype, {
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
     // plugins.
-    self._serverArchitectures.push(archinfo.host());
+    self._serverArchitectures.push(await archinfo.host());
     self._serverArchitectures = _.uniq(self._serverArchitectures);
 
     // test-packages overrides this to load local packages from your real app
@@ -360,8 +363,6 @@ Object.assign(ProjectContext.prototype, {
         if (self.completedStage === STAGE.SAVE_CHANGED_METADATA)
           throw Error("can't find requested stage " + targetStage);
 
-        console.log("11111111")
-        console.log(self._completedStage)
         // The actual value of STAGE.FOO is the name of the method that takes
         // you to the next step after FOO.
         await self[self._completedStage]();
@@ -556,7 +557,7 @@ Object.assign(ProjectContext.prototype, {
     self.appIdentifier = appId;
   },
 
-  _resolveConstraints: Profile('_resolveConstraints', function () {
+  _resolveConstraints: Profile('_resolveConstraints', async function () {
     var self = this;
     buildmessage.assertInJob();
 
@@ -591,9 +592,9 @@ Object.assign(ProjectContext.prototype, {
 
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
-    catalog.runAndRetryWithRefreshIfHelpful(function (canRetry) {
-      buildmessage.enterJob("selecting package versions", function () {
-        var resolver = self._buildResolver();
+    await catalog.runAndRetryWithRefreshIfHelpful(function (canRetry) {
+      return buildmessage.enterJob("selecting package versions", async function () {
+        var resolver = await self._buildResolver();
 
         var resolveOptions = {
           previousSolution: cachedVersions,
@@ -620,7 +621,7 @@ Object.assign(ProjectContext.prototype, {
 
         var solution;
         try {
-          Profile.time(
+          await Profile.time(
             "Select Package Versions" +
               (resolverRunCount > 1 ? (" (Try " + resolverRunCount + ")") : ""),
             function () {
@@ -900,27 +901,27 @@ Object.assign(ProjectContext.prototype, {
     return anticipatedPrereleases;
   },
 
-  _buildResolver: function () {
-    const { ConstraintSolver } = loadIsopackage('constraint-solver');
+  _buildResolver: async function () {
+    const { ConstraintSolver } = await loadIsopackage('constraint-solver');
 
     return new ConstraintSolver.PackagesResolver(this.projectCatalog, {
       nudge() {
-        Console.nudge(true);
+        return Console.nudge(true);
       },
       Profile: Profile,
       resultCache: this._resolverResultCache
     });
   },
 
-  _downloadMissingPackages: Profile('_downloadMissingPackages', function () {
+  _downloadMissingPackages: Profile('_downloadMissingPackages', async function () {
     var self = this;
     buildmessage.assertInJob();
     if (!self.packageMap)
       throw Error("which packages to download?");
 
-    catalog.runAndRetryWithRefreshIfHelpful(function () {
-      buildmessage.enterJob("downloading missing packages", function () {
-        self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
+    await catalog.runAndRetryWithRefreshIfHelpful(function () {
+      return buildmessage.enterJob("downloading missing packages", async function () {
+        await self.tropohouse.downloadPackagesMissingFromMap(self.packageMap, {
           serverArchitectures: self._serverArchitectures
         });
         if (buildmessage.jobHasMessages())
@@ -930,12 +931,12 @@ Object.assign(ProjectContext.prototype, {
     });
   }),
 
-  _buildLocalPackages: Profile('_buildLocalPackages', function () {
+  _buildLocalPackages: Profile('_buildLocalPackages', async function () {
     var self = this;
     buildmessage.assertInCapture();
 
 
-    self.packageMap.eachPackage((name, packageInfo) => {
+    await self.packageMap.eachPackage((name, packageInfo) => {
       if (packageInfo.kind === 'local') {
         addWatchRoot(packageInfo.packageSource.sourceRoot)
       }
@@ -954,13 +955,13 @@ Object.assign(ProjectContext.prototype, {
     });
 
     if (self._forceRebuildPackages) {
-      self.isopackCache.wipeCachedPackages(
+      await self.isopackCache.wipeCachedPackages(
         self._forceRebuildPackages === true
           ? null : self._forceRebuildPackages);
     }
 
-    buildmessage.enterJob('building local packages', function () {
-      self.isopackCache.buildLocalPackages();
+    await buildmessage.enterJob('building local packages', function () {
+      return self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   }),

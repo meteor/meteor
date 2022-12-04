@@ -184,7 +184,6 @@ compiler.compile = Profile(function (packageSource, options) {
 
     // TODO -> Maybe this withCache will bring some problems in other commands.
     await files.withCache(async () => {
-      // TODO -> Check why the result is undefined...
       var unibuildResult = await compileUnibuild({
         isopack: isopk,
         sourceArch: architecture,

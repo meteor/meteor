@@ -811,8 +811,10 @@ main.registerCommand({
     allowIncompatibleUpdate: true
   });
 
+  await projectContext.init();
+
   await main.captureAndExit("=> Errors while creating your project", async function () {
-    projectContext.readProjectMetadata();
+    await projectContext.readProjectMetadata();
     if (buildmessage.jobHasMessages()) {
       return;
     }
@@ -837,7 +839,6 @@ main.registerCommand({
     var upgraders = require('../upgraders.js');
     projectContext.finishedUpgraders.appendUpgraders(upgraders.allUpgraders());
 
-    console.log("1111111115555")
     await projectContext.prepareProjectForBuild();
   });
   // No need to display the PackageMapDelta here, since it would include all of

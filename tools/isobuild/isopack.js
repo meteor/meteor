@@ -790,7 +790,7 @@ Object.assign(Isopack.prototype, {
       },
 
       nudge: function () {
-        Console.nudge(true);
+        return Console.nudge(true);
       },
 
       convertToOSPath: files.convertToOSPath,
@@ -816,7 +816,7 @@ Object.assign(Isopack.prototype, {
   // - isopackBuildInfoJson: parsed isopack-buildinfo.json object,
   //   if loading from an IsopackCache.
   initFromPath: Profile(
-    "Isopack#initFromPath", function (name, dir, options) {
+    "Isopack#initFromPath", async function (name, dir, options) {
     var self = this;
     options = _.clone(options || {});
     options.firstIsopack = true;
@@ -825,7 +825,7 @@ Object.assign(Isopack.prototype, {
       self.pluginCacheDir = options.pluginCacheDir;
     }
 
-    return self._loadUnibuildsFromPath(name, dir, options);
+    await self._loadUnibuildsFromPath(name, dir, options);
   }),
 
   _loadUnibuildsFromPath: async function (name, dir, options) {
@@ -891,10 +891,10 @@ Object.assign(Isopack.prototype, {
       self.prodOnly = !!mainJson.prodOnly;
       self.testOnly = !!mainJson.testOnly;
     }
-    _.each(mainJson.plugins, function (pluginMeta) {
+    for (const pluginMeta of mainJson.plugins) {
       rejectBadPath(pluginMeta.path);
 
-      var plugin = bundler.readJsImage(files.pathJoin(dir, pluginMeta.path));
+      var plugin = await bundler.readJsImage(files.pathJoin(dir, pluginMeta.path));
 
       if (!_.has(self.plugins, pluginMeta.name)) {
         self.plugins[pluginMeta.name] = {};
@@ -903,9 +903,9 @@ Object.assign(Isopack.prototype, {
       if (!_.has(self.plugins[pluginMeta.name], plugin.arch)) {
         self.plugins[pluginMeta.name][plugin.arch] = plugin;
       }
-    });
+    }
     self.pluginsBuilt = true;
-    _.each(mainJson.builds, function (unibuildMeta) {
+    for (const unibuildMeta of mainJson.builds) {
       // aggressively sanitize path (don't let it escape to parent
       // directory)
       rejectBadPath(unibuildMeta.path);
@@ -915,17 +915,17 @@ Object.assign(Isopack.prototype, {
         return unibuild.arch === unibuildMeta.arch;
       });
       if (alreadyHaveUnibuild) {
-        return;
+        continue;
       }
 
-      const unibuild = Unibuild.fromJSON(JSON.parse(
-        files.readFile(files.pathJoin(dir, unibuildMeta.path))
+      const unibuild = await Unibuild.fromJSON(JSON.parse(
+          files.readFile(files.pathJoin(dir, unibuildMeta.path))
       ), {
         isopack: self,
         kind: unibuildMeta.kind,
         arch: unibuildMeta.arch,
         unibuildBasePath: files.pathDirname(
-          files.pathJoin(dir, unibuildMeta.path)),
+            files.pathJoin(dir, unibuildMeta.path)),
         watchSet: unibuildWatchSets[unibuildMeta.path],
       });
 
@@ -940,7 +940,7 @@ Object.assign(Isopack.prototype, {
       }
 
       self.unibuilds.push(unibuild);
-    });
+    }
 
     self.cordovaDependencies = mainJson.cordovaDependencies || null;
 
@@ -1089,7 +1089,7 @@ Object.assign(Isopack.prototype, {
       // to see if package.js exists instead of just looking for the package
       // directory.)
       // XXX Remove this once we can.
-      builder.write("package.js", {
+      await builder.write("package.js", {
         data: Buffer.from(
           ("// This file is included for compatibility with the Meteor " +
            "0.6.4 package downloader.\n"),
@@ -1146,14 +1146,14 @@ Object.assign(Isopack.prototype, {
       }
 
       // If unibuilds included node_modules, copy them in.
-      _.each(npmDirsToCopy, (bundlePath, sourcePath) => {
-        builder.copyNodeModulesDirectory({
+      for (const [sourcePath, bundlePath] of Object.entries(npmDirsToCopy)) {
+        await builder.copyNodeModulesDirectory({
           from: sourcePath,
           to: bundlePath,
           npmDiscards: self.npmDiscards,
           symlink: false
         });
-      });
+      }
 
       // Plugins
       _.each(self.plugins, function (pluginsByArch, name) {
@@ -1176,16 +1176,16 @@ Object.assign(Isopack.prototype, {
       // Tools
       // First, are we supposed to include our own source as a tool?
       if (self.includeTool) {
-        var toolsJson = self._writeTool(builder);
+        var toolsJson = await self._writeTool(builder);
         mainJson.tools = toolsJson;
       }
       // Next, what about other tools we may be merging from other isopacks?
       // XXX check for overlap
-      _.each(self.toolsOnDisk, function (toolMeta) {
+      for (const toolMeta of self.toolsOnDisk) {
         toolMeta = _.clone(toolMeta);
         var rootDir = toolMeta.rootDir;
         delete toolMeta.rootDir;
-        builder.copyDirectory({
+        await builder.copyDirectory({
           from: files.pathJoin(rootDir, toolMeta.path),
           to: toolMeta.path,
           symlink: false
@@ -1194,7 +1194,7 @@ Object.assign(Isopack.prototype, {
           mainJson.tools = [];
         }
         mainJson.tools.push(toolMeta);
-      });
+      }
 
       var mainLegacyJson = null;
       if (writeLegacyBuilds) {
@@ -1271,7 +1271,7 @@ Object.assign(Isopack.prototype, {
 
             if (jsResourcesForLegacyPrelink.length) {
               // Not originally legacy; let's run prelink to make it legacy.
-              var results = linker.prelink({
+              var results = await linker.prelink({
                 inputFiles: jsResourcesForLegacyPrelink,
                 // I was confused about this, so I am leaving a comment -- the
                 // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
@@ -1305,7 +1305,7 @@ Object.assign(Isopack.prototype, {
           if (prelinkFile && prelinkData) {
             var prelinkResource = {
               type: 'prelink',
-              file: builder.writeToGeneratedFilename(
+              file: await builder.writeToGeneratedFilename(
                   files.pathJoin(legacyDir, prelinkFile.servePath),
                   { data: prelinkData }),
               length: prelinkData.length,
@@ -1332,7 +1332,7 @@ Object.assign(Isopack.prototype, {
                 prelinkFile.sourceMap = JSON.stringify(prelinkFile.sourceMap);
               }
 
-              prelinkResource.sourceMap = builder.writeToGeneratedFilename(
+              prelinkResource.sourceMap = await builder.writeToGeneratedFilename(
                   files.pathJoin(legacyDir, prelinkFile.servePath + '.map'),
                   { data: Buffer.from(prelinkFile.sourceMap, 'utf8') }
               );
@@ -1380,9 +1380,9 @@ Object.assign(Isopack.prototype, {
       if (isopackBuildInfoJson) {
         await builder.writeJson("isopack-buildinfo.json", isopackBuildInfoJson);
       }
-      builder.complete();
+      await builder.complete();
     } catch (e) {
-      builder.abort();
+      await builder.abort();
       throw e;
     }
   }),
@@ -1448,16 +1448,16 @@ Object.assign(Isopack.prototype, {
     builder = await builder.enter(toolPath);
 
     const sourceRootDir = files.getCurrentToolsDir();
-    builder.copyTranspiledModules(pathsToTranspile, {
+    await builder.copyTranspiledModules(pathsToTranspile, {
       sourceRootDir,
       needToTranspile: true,
     });
 
     var gitSha = await utils.runGitInCheckout('rev-parse', 'HEAD');
     builder.reserve('isopackets', {directory: true});
-    builder.write('.git_version.txt', {data: Buffer.from(gitSha, 'utf8')});
+    await builder.write('.git_version.txt', {data: Buffer.from(gitSha, 'utf8')});
 
-    builder.copyDirectory({
+    await builder.copyDirectory({
       from: files.getCurrentToolsDir(),
       to: '',
       specificFiles: pathsToCopyStraight,
@@ -1468,7 +1468,7 @@ Object.assign(Isopack.prototype, {
     // self-test (which isn't supported from release).
     var devBundleIgnore = _.clone(bundler.ignoreFiles);
     devBundleIgnore.push(/BrowserStackLocal/, /browserstack-webdriver/);
-    builder.copyDirectory({
+    await builder.copyDirectory({
       from: files.pathJoin(files.getDevBundle()),
       to: 'dev_bundle',
       ignore: devBundleIgnore,
@@ -1486,10 +1486,8 @@ Object.assign(Isopack.prototype, {
       // necessary here, since any isopackets loaded as part of the build
       // process are going to be the current tool's isopackets, not the
       // isopackets that we're writing out.
-      for (const [isopacketName, packages] of ISOPACKETS) {
-
+      for (const [isopacketName, packages] of Object.entries(ISOPACKETS)) {
         requestGarbageCollection();
-
         await buildmessage.enterJob({
           title: "compiling " + isopacketName + " packages for the tool"
         }, async function () {
@@ -1510,8 +1508,8 @@ Object.assign(Isopack.prototype, {
 
           requestGarbageCollection();
 
-          image.write(
-              builder.enter(files.pathJoin('isopackets', isopacketName)));
+          await image.write(
+              await builder.enter(files.pathJoin('isopackets', isopacketName)));
         });
       }
     });
