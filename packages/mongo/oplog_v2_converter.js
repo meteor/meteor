@@ -46,6 +46,12 @@ function isArrayOperator(operator) {
   return operator.a === true && Object.keys(operator).every(isArrayOperatorKey);
 }
 
+const arrayUpdateRegex = /^(u\d+)$/;
+
+function isArrayUpdate(operator) {
+  return arrayUpdateRegex.test(operator);
+}
+
 function flattenObjectInto(target, source, prefix) {
   if (Array.isArray(source) || typeof source !== 'object' || source === null) {
     target[prefix] = source;
@@ -85,6 +91,15 @@ function convertOplogDiff(oplogEntry, diff, prefix) {
       Object.entries(value).forEach(([key, value]) => {
         oplogEntry.$set[join(prefix, key)] = value;
       });
+    } else if (isArrayUpdate(diffKey)) {
+      const positionKey = join(prefix, diffKey.slice(1));
+      if (value === null) {
+        oplogEntry.$unset ??= {};
+        oplogEntry.$unset[positionKey] = true;
+      } else {
+        oplogEntry.$set ??= {};
+        oplogEntry.$set[positionKey] = value;
+      }
     } else {
       // Handle s-fields.
       const key = diffKey.slice(1);
