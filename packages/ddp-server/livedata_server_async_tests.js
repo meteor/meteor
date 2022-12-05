@@ -1,4 +1,3 @@
-var Fiber = Npm.require('fibers');
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));

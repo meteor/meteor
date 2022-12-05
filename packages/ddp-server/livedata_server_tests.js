@@ -1,6 +1,3 @@
-var Fiber = Npm.require('fibers');
-
-
 Tinytest.addAsync(
   "livedata server - connectionHandle.onClose()",
   function (test, onComplete) {
