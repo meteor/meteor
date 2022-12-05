@@ -10,11 +10,6 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  if (process.env.DISABLE_FIBERS) {
-    api.use('ddp-server-async', 'server');
-    api.export('DDPServer', 'server');
-    return;
-  }
   api.use(['check', 'random', 'ejson', 'underscore',
            'retry', 'mongo-id', 'diff-sequence', 'ecmascript'],
           'server');

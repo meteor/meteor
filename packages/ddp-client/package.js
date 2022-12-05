@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '2.6.1',
+  version: '2.6.0',
   documentation: null
 });
 
@@ -9,11 +9,6 @@ Npm.depends({
 });
 
 Package.onUse((api) => {
-  if (process.env.DISABLE_FIBERS) {
-    api.use('ddp-client-async');
-    api.export('DDP', 'server');
-    return;
-  }
   api.use([
     'check',
     'random',

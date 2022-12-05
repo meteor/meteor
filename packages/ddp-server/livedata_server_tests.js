@@ -87,8 +87,8 @@ Meteor.methods({
     return this.connection && this.connection.id;
   },
 
-  livedata_server_test_outer: function () {
-    return Meteor.call('livedata_server_test_inner');
+  livedata_server_test_outer: async function () {
+    return await Meteor.callAsync('livedata_server_test_inner');
   },
 
   livedata_server_test_setuserid: function (userId) {
@@ -108,12 +108,17 @@ Tinytest.addAsync(
         });
 
         makeTestConnection(
-            test,
-            function (clientConn, serverConn) {
-                clientConn.call('livedata_server_test_inner');
-                clientConn.disconnect();
-            },
-            onComplete
+          test,
+          function(clientConn, serverConn) {
+            clientConn
+              .callAsync('livedata_server_test_inner')
+              .then(() => clientConn.disconnect())
+              .catch(e => {
+                onComplete();
+                throw new Meteor.Error(e);
+              });
+          },
+          onComplete
         );
     }
 );
@@ -125,10 +130,11 @@ Tinytest.addAsync(
     makeTestConnection(
       test,
       function (clientConn, serverConn) {
-        var res = clientConn.call('livedata_server_test_inner');
-        test.equal(res, serverConn.id);
-        clientConn.disconnect();
-        onComplete();
+        clientConn.callAsync('livedata_server_test_inner').then(res => {
+          test.equal(res, serverConn.id);
+          clientConn.disconnect();
+          onComplete();
+        });
       },
       onComplete
     );
@@ -142,10 +148,11 @@ Tinytest.addAsync(
     makeTestConnection(
       test,
       function (clientConn, serverConn) {
-        var res = clientConn.call('livedata_server_test_outer');
-        test.equal(res, serverConn.id);
-        clientConn.disconnect();
-        onComplete();
+        clientConn.callAsync('livedata_server_test_outer').then(res => {
+          test.equal(res, serverConn.id);
+          clientConn.disconnect();
+          onComplete();
+        });
       },
       onComplete
     );
@@ -163,16 +170,16 @@ Meteor.publish("livedata_server_test_sub", function (connectionId) {
   this.stop();
 });
 
-Meteor.publish("livedata_server_test_sub_method", function (connectionId) {
+Meteor.publish("livedata_server_test_sub_method", async function (connectionId) {
   var callback = onSubscription[connectionId];
   if (callback) {
-    var id = Meteor.call('livedata_server_test_inner');
+    var id = await Meteor.callAsync('livedata_server_test_inner');
     callback(id);
   }
   this.stop();
 });
 
-Meteor.publish("livedata_server_test_sub_context", function (connectionId, userId) {
+Meteor.publish("livedata_server_test_sub_context", async function (connectionId, userId) {
   var callback = onSubscription[connectionId];
   var methodInvocation = DDP._CurrentMethodInvocation.get();
   var publicationInvocation = DDP._CurrentPublicationInvocation.get();
@@ -194,7 +201,7 @@ Meteor.publish("livedata_server_test_sub_context", function (connectionId, userI
     this.stop();
   } else {
     this.ready();
-    Meteor.call('livedata_server_test_setuserid', userId);
+    await Meteor.callAsync('livedata_server_test_setuserid', userId);
   }
 });
 
@@ -311,13 +318,13 @@ Tinytest.addAsync(
 );
 
 Meteor.methods({
-  testResolvedPromise(arg) {
-    const invocation1 = DDP._CurrentMethodInvocation.get();
+  async testResolvedPromise(arg) {
+    const invocationRunningFromCallAsync1 = DDP._CurrentMethodInvocation._isCallAsyncMethodRunning();
     return Promise.resolve(arg).then(result => {
-      const invocation2 = DDP._CurrentMethodInvocation.get();
-      // This equality holds because Promise callbacks are bound to the
-      // dynamic environment where .then was called.
-      if (invocation1 !== invocation2) {
+      const invocationRunningFromCallAsync2 = DDP._CurrentMethodInvocation._isCallAsyncMethodRunning();
+      // What matters here is that both invocations are coming from the same call,
+      // so both of them can be considered a simulation.
+      if (invocationRunningFromCallAsync1 !== invocationRunningFromCallAsync2) {
         throw new Meteor.Error("invocation mismatch");
       }
       return result + " after waiting";
@@ -344,9 +351,10 @@ Meteor.methods({
 
 Tinytest.addAsync(
   "livedata server - waiting for Promise",
-  (test, onComplete) => makeTestConnection(test, (clientConn, serverConn) => {
+  (test, onComplete) => makeTestConnection(test, async (clientConn, serverConn) => {
+    const testResolvedPromiseResult = await clientConn.callAsync("testResolvedPromise", "clientConn.call");
     test.equal(
-      clientConn.call("testResolvedPromise", "clientConn.call"),
+      testResolvedPromiseResult,
       "clientConn.call after waiting"
     );
 

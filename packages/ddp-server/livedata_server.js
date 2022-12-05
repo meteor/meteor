@@ -1,7 +1,5 @@
 DDPServer = {};
 
-var Fiber = Npm.require('fibers');
-
 // Publication strategies define how we handle data from published cursors at the collection level
 // This allows someone to:
 // - Choose a trade-off between client-server bandwidth and server memory usage
@@ -330,9 +328,9 @@ var Session = function (server, version, socket, options) {
   self.send({ msg: 'connected', session: self.id });
 
   // On initial connect, spin up all the universal publishers.
-  Fiber(function () {
+  Meteor._runAsync(function() {
     self.startUniversalSubs();
-  }).run();
+  });
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
     // We no longer need the low level timeout because we have heartbeats.
@@ -557,10 +555,10 @@ Object.assign(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      Fiber(function () {
+      Meteor._runAsync(function() {
         self.heartbeat.messageReceived();
-      }).run();
-    }
+      });
+    };
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
@@ -584,7 +582,7 @@ Object.assign(Session.prototype, {
         return;
       }
 
-      Fiber(function () {
+      function runHandlers() {
         var blocked = true;
 
         var unblock = function () {
@@ -604,7 +602,9 @@ Object.assign(Session.prototype, {
         else
           self.sendError('Bad request', msg);
         unblock(); // in case the handler didn't already do it
-      }).run();
+      }
+
+      Meteor._runAsync(runHandlers);
     };
 
     processNext();
@@ -762,33 +762,32 @@ Object.assign(Session.prototype, {
           }
         }
 
-        const getCurrentMethodInvocationResult = () => {
-          const currentContext = DDP._CurrentMethodInvocation._setNewContextAndGetCurrent(
-            invocation
+        const getCurrentMethodInvocationResult = () =>
+          DDP._CurrentPublicationInvocation.withValue(
+            invocation,
+            () =>
+              maybeAuditArgumentChecks(
+                handler,
+                invocation,
+                msg.params,
+                "call to '" + msg.method + "'"
+              ),
+            {
+              name: 'getCurrentMethodInvocationResult',
+              keyName: 'getCurrentMethodInvocationResult',
+            }
           );
 
-          try {
-            let result;
-            const resultOrThenable = maybeAuditArgumentChecks(
-              handler,
-              invocation,
-              msg.params,
-              "call to '" + msg.method + "'"
-            );
-            const isThenable =
-              resultOrThenable && typeof resultOrThenable.then === 'function';
-            if (isThenable) {
-              result = Promise.await(resultOrThenable);
-            } else {
-              result = resultOrThenable;
+        resolve(
+          DDPServer._CurrentWriteFence.withValue(
+            fence,
+            getCurrentMethodInvocationResult,
+            {
+              name: 'DDPServer._CurrentWriteFence',
+              keyName: '_CurrentWriteFence',
             }
-            return result;
-          } finally {
-            DDP._CurrentMethodInvocation._set(currentContext);
-          }
-        };
-
-        resolve(DDPServer._CurrentWriteFence.withValue(fence, getCurrentMethodInvocationResult));
+          )
+        );
       });
 
       function finish() {
@@ -899,7 +898,7 @@ Object.assign(Session.prototype, {
       // subs.
       self._dontStartNewUniversalSubs = false;
       self.startUniversalSubs();
-    });
+    }, { name: '_setUserId' });
 
     // Start sending messages again, beginning with the diff from the previous
     // state of the world to the current state. No yields are allowed during
@@ -1120,16 +1119,19 @@ Object.assign(Subscription.prototype, {
     const self = this;
     let resultOrThenable = null;
     try {
-      resultOrThenable = DDP._CurrentPublicationInvocation.withValue(self, () =>
-        maybeAuditArgumentChecks(
-          self._handler,
-          self,
-          EJSON.clone(self._params),
-          // It's OK that this would look weird for universal subscriptions,
-          // because they have no arguments so there can never be an
-          // audit-argument-checks failure.
-          "publisher '" + self._name + "'"
-        )
+      resultOrThenable = DDP._CurrentPublicationInvocation.withValue(
+        self,
+        () =>
+          maybeAuditArgumentChecks(
+            self._handler,
+            self,
+            EJSON.clone(self._params),
+            // It's OK that this would look weird for universal subscriptions,
+            // because they have no arguments so there can never be an
+            // audit-argument-checks failure.
+            "publisher '" + self._name + "'"
+          ),
+        { name: self._name }
       );
     } catch (e) {
       self.error(e);
@@ -1152,6 +1154,7 @@ Object.assign(Subscription.prototype, {
     } else {
       self._publishHandlerResult(resultOrThenable);
     }
+
   },
 
   _publishHandlerResult: function (res) {
@@ -1177,15 +1180,21 @@ Object.assign(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      try {
-        res._publishCursor(self);
-      } catch (e) {
-        self.error(e);
-        return;
+      if (Meteor._isFibersEnabled) {
+        try {
+          res._publishCursor(self);
+        } catch (e) {
+          self.error(e);
+          return;
+        }
+        // _publishCursor only returns after the initial added callbacks have run.
+        // mark subscription as ready.
+        self.ready();
+      } else {
+        res._publishCursor(self).then(() => {
+          self.ready();
+        }).catch((e) => self.error(e));
       }
-      // _publishCursor only returns after the initial added callbacks have run.
-      // mark subscription as ready.
-      self.ready();
     } else if (_.isArray(res)) {
       // Check all the elements are cursors
       if (! _.all(res, isCursor)) {
@@ -1207,15 +1216,21 @@ Object.assign(Subscription.prototype, {
         collectionNames[collectionName] = true;
       };
 
-      try {
-        _.each(res, function (cur) {
-          cur._publishCursor(self);
-        });
-      } catch (e) {
-        self.error(e);
-        return;
+      if (Meteor._isFibersEnabled) {
+        try {
+          _.each(res, function (cur) {
+            cur._publishCursor(self);
+          });
+        } catch (e) {
+          self.error(e);
+          return;
+        }
+        self.ready();
+      } else {
+        Promise.all(res.map((c) => c._publishCursor(self))).then(() => {
+          self.ready();
+        }).catch((e) => self.error(e));
       }
-      self.ready();
     } else if (res) {
       // Truthy values other than cursors or arrays are probably a
       // user mistake (possible returning a Mongo document via, say,
@@ -1492,9 +1507,11 @@ Server = function (options = {}) {
             sendError("Already connected", msg);
             return;
           }
-          Fiber(function () {
+
+          Meteor._runAsync(function() {
             self._handleConnect(socket, msg);
-          }).run();
+          })
+
           return;
         }
 
@@ -1511,9 +1528,9 @@ Server = function (options = {}) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        Fiber(function () {
+        Meteor._runAsync(function() {
           socket._meteorSession.close();
-        }).run();
+        });
       }
     });
   });
@@ -1691,9 +1708,9 @@ Object.assign(Server.prototype, {
         // self.sessions to change while we're running this loop.
         self.sessions.forEach(function (session) {
           if (!session._dontStartNewUniversalSubs) {
-            Fiber(function() {
+            Meteor._runAsync(function() {
               session._startSubscription(handler);
-            }).run();
+            });
           }
         });
       }

@@ -23,8 +23,6 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   var methodInvocation = DDP._CurrentMethodInvocation.get();
   var publicationInvocation = DDP._CurrentPublicationInvocation.get();
 
-// console.log('methodInvocation', methodInvocation);
-// console.log('publicationInvocation', !!publicationInvocation);
   // Check the publish function's environment variables and context.
   if (callback) {
     callback.call(this, methodInvocation, publicationInvocation);
@@ -35,7 +33,6 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
   this.onStop(function() {
     var onStopMethodInvocation = DDP._CurrentMethodInvocation.get();
     var onStopPublicationInvocation = DDP._CurrentPublicationInvocation.get();
-
     callback.call(
       this,
       onStopMethodInvocation,
@@ -48,7 +45,7 @@ Meteor.publish('livedata_server_test_sub_context_async', async function(
     this.stop();
   } else {
     this.ready();
-    await Meteor.callAsync('livedata_server_test_setuserid', userId);
+    Meteor.call('livedata_server_test_setuserid', userId);
   }
 });
 
