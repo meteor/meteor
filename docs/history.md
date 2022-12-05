@@ -91,6 +91,18 @@
 * `weibo-oauth@1.3.2`
   - Asyncfied methods.
 
+#### Special thanks to
+- [@henriquealbert](https://github.com/henriquealbert)
+- [@edimarlnx](https://github.com/edimarlnx)
+- [@matheusccastroo](https://github.com/matheusccastroo)
+- [@Grubba27](https://github.com/Grubba27)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@radekmie](https://github.com/radekmie)
+- [@piotrpospiech](https://github.com/piotrpospiech)
+- [@harryadel](https://github.com/harryadel)
+
+For making this great framework even better!
+
 
 ## v2.8.2, 2022-11-29
 
