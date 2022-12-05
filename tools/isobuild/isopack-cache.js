@@ -311,7 +311,7 @@ export class IsopackCache {
     buildmessage.assertInCapture();
     await buildmessage.enterJob("building package " + name, async function () {
       var isopack;
-      if (previousIsopack && self._checkUpToDatePreloaded(previousIsopack)) {
+      if (previousIsopack && await self._checkUpToDatePreloaded(previousIsopack)) {
         isopack = previousIsopack;
         // We don't need to call self._lintLocalPackage here, because
         // lintingMessages is saved on the isopack.
@@ -324,7 +324,7 @@ export class IsopackCache {
         // Do we have an up-to-date package on disk?
         var isopackBuildInfoJson = self.cacheDir && files.readJSONOrNull(
           self._isopackBuildInfoPath(name));
-        var upToDate = self._checkUpToDate(isopackBuildInfoJson);
+        var upToDate = await self._checkUpToDate(isopackBuildInfoJson);
 
         if (upToDate) {
           // Reuse existing plugin cache dir

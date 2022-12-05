@@ -8,23 +8,16 @@ var linker = require('./linker.js');
 var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
-import {
-  WatchSet,
-  sha1,
-  readAndWatchFileWithHash,
-} from  '../fs/watch';
+import {readAndWatchFileWithHash, sha1, WatchSet,} from '../fs/watch';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import {Console} from '../console/console.js';
 import ImportScanner from './import-scanner';
 import {cssToCommonJS} from "./css-modules";
 import Resolver from "./resolver";
-import {
-  optimisticStatOrNull,
-  optimisticHashOrNull,
-} from "../fs/optimistic";
+import {optimisticHashOrNull, optimisticStatOrNull,} from "../fs/optimistic";
 
-import { isTestFilePath } from './test-files.js';
+import {isTestFilePath} from './test-files.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -579,16 +572,16 @@ class ResourceSlot {
     self.packageSourceBatch = packageSourceBatch;
 
     if (self.inputResource.type === "source") {
-      if (sourceProcessor) {
+      if (self.sourceProcessor) {
         // If we have a sourceProcessor, it will handle the adding of the
         // final processed JavaScript.
       } else if (self.inputResource.extension === "js") {
         self._addDirectlyToJsOutputResources();
       }
     } else {
-      if (sourceProcessor) {
+      if (self.sourceProcessor) {
         throw Error("sourceProcessor for non-source? " +
-                    JSON.stringify(unibuildResourceInfo));
+            JSON.stringify(self.inputResource));
       }
       // Any resource that isn't handled by compiler plugins just gets passed
       // through.
@@ -902,45 +895,45 @@ class OutputResource {
     });
   }
 
-  finalize() {
+  async finalize() {
     if (this._finalizerPromise) {
-      this._finalizerPromise.await();
+      await this._finalizerPromise;
     } else if (this._lazyFinalizer) {
       const finalize = this._lazyFinalizer;
       this._lazyFinalizer = null;
-      (this._finalizerPromise =
-       // It's important to initialize this._finalizerPromise to the new
-       // Promise before calling finalize(), so there's no possibility of
-       // finalize() triggering code that reenters this function before we
-       // have the final version of this._finalizerPromise. If this code
-       // used `new Promise(resolve => resolve(finalize()))` instead of
-       // `Promise.resolve().then(finalize)`, the finalize() call would
-       // begin before this._finalizerPromise was fully initialized.
-       Promise.resolve().then(finalize).then(result => {
-         if (result) {
-           Object.assign(this._initialOptions, result);
-         } else if (this._errors.length === 0) {
-           // In case the finalize() call failed without reporting any
-           // errors, create at least one generic error that can be
-           // reported when reportPendingErrors is called.
-           const error = new Error("lazyFinalizer failed");
-           error.info = { resource: this, finalize }
-           this._errors.push(error);
-         }
-         // The this._finalizerPromise object only survives for the
-         // duration of the initial finalization.
-         this._finalizerPromise = null;
-       })).await();
+
+      // It's important to initialize this._finalizerPromise to the new
+      // Promise before calling finalize(), so there's no possibility of
+      // finalize() triggering code that reenters this function before we
+      // have the final version of this._finalizerPromise. If this code
+      // used `new Promise(resolve => resolve(finalize()))` instead of
+      // `Promise.resolve().then(finalize)`, the finalize() call would
+      // begin before this._finalizerPromise was fully initialized.
+      this._finalizerPromise = await (Promise.resolve().then(finalize).then(result => {
+        if (result) {
+          Object.assign(this._initialOptions, result);
+        } else if (this._errors.length === 0) {
+          // In case the finalize() call failed without reporting any
+          // errors, create at least one generic error that can be
+          // reported when reportPendingErrors is called.
+          const error = new Error("lazyFinalizer failed");
+          error.info = { resource: this, finalize }
+          this._errors.push(error);
+        }
+        // The this._finalizerPromise object only survives for the
+        // duration of the initial finalization.
+        this._finalizerPromise = null;
+      }));
     }
   }
 
-  hasPendingErrors() {
-    this.finalize();
+  async hasPendingErrors() {
+    await this.finalize();
     return this._errors.length > 0;
   }
 
-  reportPendingErrors() {
-    if (this.hasPendingErrors()) {
+  async reportPendingErrors() {
+    if (await this.hasPendingErrors()) {
       const firstError = this._errors[0];
       buildmessage.error(
         firstError.message,
@@ -961,12 +954,12 @@ class OutputResource {
 
   // Method for getting properties that may be computed lazily, or that
   // require some one-time post-processing.
-  _get(name) {
+  async _get(name) {
     if (hasOwn.call(this, name)) {
       return this[name];
     }
 
-    if (this.hasPendingErrors()) {
+    if (await this.hasPendingErrors()) {
       // If you're considering using this resource, you should call
       // hasPendingErrors or reportPendingErrors to find out if it's safe
       // to access computed properties like .data, .hash, or .sourceMap.
@@ -990,7 +983,7 @@ class OutputResource {
         hashes.push(this._inputHash);
       }
 
-      hashes.push(sha1(this._get("data")));
+      hashes.push(sha1(await this._get("data")));
 
       return this._set("hash", sha1(...hashes));
     }
@@ -1210,7 +1203,7 @@ export class PackageSourceBatch {
       }
     }
 
-    return new ResourceSlot(resource, sourceProcessor, this);
+   return new ResourceSlot(resource, sourceProcessor, this);
   }
 
   addImportExtension(extension) {
@@ -1277,7 +1270,7 @@ export class PackageSourceBatch {
   }
 
   // Returns a map from package names to arrays of JS output files.
-  static computeJsOutputFilesMap(sourceBatches) {
+  static async computeJsOutputFilesMap(sourceBatches) {
     const map = new Map;
 
     sourceBatches.forEach(batch => {
@@ -1349,14 +1342,14 @@ export class PackageSourceBatch {
     const allRelocatedModules = Object.create(null);
     const scannerMap = new Map;
 
-    sourceBatches.forEach(batch => {
+    for (const batch of sourceBatches) {
       const name = batch.unibuild.pkg.name || null;
       const isApp = ! name;
 
       if (! batch.useMeteorInstall && ! isApp) {
         // If this batch represents a package that does not use the module
         // system, then we don't need to scan its dependencies.
-        return;
+        continue;
       }
 
       const nodeModulesPaths = [];
@@ -1381,23 +1374,23 @@ export class PackageSourceBatch {
         cacheDir: batch.scannerCacheDir,
       });
 
-      scanner.addInputFiles(entry.files);
+      await scanner.addInputFiles(entry.files);
 
       if (batch.useMeteorInstall) {
-        scanner.scanImports();
-        ImportScanner.mergeMissing(
-          allMissingModules,
-          scanner.allMissingModules
+        await scanner.scanImports();
+        await ImportScanner.mergeMissing(
+            allMissingModules,
+            scanner.allMissingModules
         );
       }
 
       scannerMap.set(name, scanner);
-    });
+    }
 
-    function handleMissing(missingModules) {
+    async function handleMissing(missingModules) {
       const missingMap = new Map;
 
-      _.each(missingModules, (importInfoList, id) => {
+      for (let [id, importInfoList] of Object.entries(missingModules)) {
         const parts = id.split("/");
         let name = null;
 
@@ -1432,27 +1425,27 @@ export class PackageSourceBatch {
           missingMap.set(name, Object.create(null));
         }
 
-        ImportScanner.mergeMissing(
-          missingMap.get(name),
-          { [id]: importInfoList }
+        await ImportScanner.mergeMissing(
+            missingMap.get(name),
+            { [id]: importInfoList }
         );
-      });
+      }
 
       const nextMissingModules = Object.create(null);
 
-      missingMap.forEach((missing, name) => {
+      for (const [name, missing] of missingMap) {
         const { newlyAdded, newlyMissing } =
-          scannerMap.get(name).scanMissingModules(missing);
+            await scannerMap.get(name).scanMissingModules(missing);
         ImportScanner.mergeMissing(allRelocatedModules, newlyAdded);
         ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
-      });
+      }
 
       if (! _.isEmpty(nextMissingModules)) {
-        handleMissing(nextMissingModules);
+        await handleMissing(nextMissingModules);
       }
     }
 
-    handleMissing(allMissingModules);
+    await handleMissing(allMissingModules);
 
     Object.keys(allRelocatedModules).forEach(id => {
       delete allMissingModules[id];
@@ -1702,19 +1695,21 @@ export class PackageSourceBatch {
     const fileHashes = [];
     const cacheKeyPrefix = sha1(JSON.stringify({
       linkerOptions,
-      files: jsResources.map((inputFile) => {
-        fileHashes.push(inputFile.hash);
-        return {
+      files: await jsResources.reduce(async (acc, inputFile) => {
+        const resolvedAcc = await acc;
+
+        fileHashes.push(await inputFile.hash);
+        return [...resolvedAcc, {
           meteorInstallOptions: inputFile.meteorInstallOptions,
           absModuleId: inputFile.absModuleId,
-          sourceMap: !! inputFile.sourceMap,
+          sourceMap: !! await inputFile.sourceMap,
           mainModule: inputFile.mainModule,
           imported: inputFile.imported,
           alias: inputFile.alias,
           lazy: inputFile.lazy,
           bare: inputFile.bare,
-        };
-      })
+        }];
+      }, Promise.resolve([]))
     }));
     const cacheKeySuffix = sha1(JSON.stringify({
       LINKER_CACHE_SALT,

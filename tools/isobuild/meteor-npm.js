@@ -76,7 +76,7 @@ meteorNpm.updateDependencies = async function (packageName,
     // instances are trying to make this update in parallel, so we rename the
     // directory to something before doing the rm -rf.
     try {
-      files.rename(packageNpmDir, newPackageNpmDir);
+      await files.rename(packageNpmDir, newPackageNpmDir);
     } catch (e) {
       if (e.code !== 'ENOENT') {
         throw e;
@@ -627,7 +627,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     }
 
     if (oldNodeVersion !== currentNodeCompatibilityVersion()) {
-      files.rm_recursive(nodeModulesDir);
+      await files.rm_recursive(nodeModulesDir);
     }
   }
 
@@ -879,7 +879,7 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
                          args.join(' ') + ' ...\n');
   }
 
-  const env = getEnv({devBundle: devBundleDir});
+  const env = await getEnv({devBundle: devBundleDir});
 
   const opts = {
     env: env,
@@ -893,7 +893,7 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
   // Make sure we don't honor any user-provided configuration files.
   env.npm_config_userconfig = npmUserConfigFile;
 
-  return await new Promise(function (resolve) {
+  return new Promise(function (resolve) {
     require('child_process').execFile(
         commandToRun, args, opts, function (err, stdout, stderr) {
           if (meteorNpm._printNpmCalls) {

@@ -1134,8 +1134,8 @@ class Target {
         const file = new File({
           info: 'resource ' + resource.servePath,
           arch: target.arch,
-          data: resource.data,
-          hash: resource.hash,
+          data: await resource.data,
+          hash: await resource.hash,
           sourcePath
         });
 
@@ -1164,7 +1164,7 @@ class Target {
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
-    const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
+    const jsOutputFilesMap = await compilerPluginModule.PackageSourceBatch
       .computeJsOutputFilesMap(sourceBatches);
 
     sourceBatches.forEach(batch => {
@@ -1219,18 +1219,18 @@ class Target {
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
       const unibuildAssets = {};
-      resources.forEach((resource) => {
+      for (const resource of resources) {
         if (resource.type !== 'asset') {
-          return;
+          continue;
         }
 
         const fileOptions = {
           info: 'unbuild ' + resource,
           arch: this.arch,
-          data: resource.data,
+          data: await resource.data,
           cacheable: false,
-          hash: resource.hash,
-          skipSri: !!resource.hash
+          hash: await resource.hash,
+          skipSri: !!await resource.hash
         };
 
         const file = new File(fileOptions);
@@ -1259,20 +1259,20 @@ class Target {
 
           this.asset.push(f);
         });
-      });
+      }
 
       // Now look for the other kinds of resources.
-      resources.forEach((resource) => {
+      for (const resource of resources) {
         if (resource.type === 'asset') {
           // already handled
-          return;
+          continue;
         }
 
         if (resource.type !== "js" &&
             resource.lazy) {
           // Only files that compile to JS can be imported, so any other
           // files should be ignored here, if lazy.
-          return;
+          continue;
         }
 
         if (['js', 'css'].includes(resource.type)) {
@@ -1283,7 +1283,7 @@ class Target {
 
             // XXX XXX can't we easily do that in the css handler in
             // meteor.js?
-            return;
+            continue;
           }
 
           let sourcePath;
@@ -1293,8 +1293,8 @@ class Target {
           const f = new File({
             info: 'resource ' + resource.servePath,
             arch: this.arch,
-            data: resource.data,
-            hash: resource.hash,
+            data: await resource.data,
+            hash: await resource.hash,
             cacheable: false,
             replaceable: resource.type === 'js' && sourceBatch.hmrAvailable,
             sourcePath
@@ -1330,7 +1330,7 @@ class Target {
           }
 
           this[resource.type].push(f);
-          return;
+          continue;
         }
 
         if (['head', 'body'].includes(resource.type)) {
@@ -1338,11 +1338,11 @@ class Target {
             throw new Error('HTML segments can only go to the client');
           }
           this[resource.type].push(resource.data);
-          return;
+          continue;
         }
 
         throw new Error('Unknown type ' + resource.type);
-      });
+      }
 
       this.js.forEach(file => {
         if (file.targetPath === "packages/dynamic-import.js") {

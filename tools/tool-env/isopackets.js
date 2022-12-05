@@ -125,9 +125,7 @@ export async function loadIsopackage(packageName, isopacketName = "combined") {
   }
 
   const isopacket = await load();
-  console.log("Isopacket: ", isopacket);
-  console.log("PackageName: ", packageName);
-  console.log("***********");
+  // TODO -> Check here.
   if (!_.has(isopacket, packageName)) {
     throw new Error("Unknown isopacket dependency: " + packageName);
   }
