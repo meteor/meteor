@@ -15,6 +15,9 @@
 * Update types[PR](https://github.com/meteor/meteor/pull/12306) by [piotrpospiech](https://github.com/piotrpospiech)
 * [package-version-parser] Remove underscore[PR](https://github.com/meteor/meteor/pull/12248) by [harryadel](https://github.com/harryadel)
 * updated mongo  [PR](https://github.com/meteor/meteor/pull/12333) by [Grubba27](https://github.com/Grubba27)
+* feat: vue3-skel [PR](https://github.com/meteor/meteor/pull/12302) by  [henriquealbert](https://github.com/henriquealbert)
+
+
 #### Breaking Changes
 
 * Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`
