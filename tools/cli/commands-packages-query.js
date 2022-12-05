@@ -137,7 +137,7 @@ var padLongformDate = function (dateStr) {
 //  - packageDir: If we are running in a package directory, this will contain
 //    the source root of that package. If we are running from inside a package,
 //    we want that package to show up in our results.
-var getTempContext = function (options) {
+var getTempContext = async function (options) {
   var projectContext;
   // If we are running in an app, we will use it to create a
   // (mostly immutable) projectContext.
@@ -161,8 +161,8 @@ var getTempContext = function (options) {
   // packages if we can't read them. If this turns out to be a frequent problem,
   // we can give a warning, instead of failing in the future. For now, we want
   // to err on the side of consistency.
-  main.captureAndExit("=> Errors while reading local packages:", function () {
-    projectContext.initializeCatalog();
+  await main.captureAndExit("=> Errors while reading local packages:", async function () {
+    await projectContext.initializeCatalog();
   });
   return projectContext;
 };
@@ -415,18 +415,29 @@ var PackageQuery = function (options) {
 
   // Collect the data for this package, including looking up any specific
   // package version that we care about.
-  if (options.version) {
-    var versionRecord = self._getVersionRecord(options.version);
-    if (! versionRecord) {
-      self.data = null;
-      return;
+  return new Promise(resolve => {
+    console.log('init .....');
+    if (options.version) {
+      var versionRecord = self._getVersionRecord(options.version);
+      if (! versionRecord) {
+        self.data = null;
+        return;
+      }
+      if (versionRecord.local) {
+        self._getLocalVersion(versionRecord).then(res => {
+          self.data = res;
+          console.log('init .....', {res});
+          resolve();
+        });
+      } else {
+        self.data = self._getOfficialVersion(versionRecord);
+      }
+
+    } else {
+      self.data = self._collectPackageData();
+      resolve();
     }
-    self.data = versionRecord.local ?
-      self._getLocalVersion(versionRecord) :
-      self._getOfficialVersion(versionRecord);
-  } else {
-    self.data = self._collectPackageData();
-  }
+  });
 };
 
 Object.assign(PackageQuery.prototype, {
@@ -496,7 +507,7 @@ Object.assign(PackageQuery.prototype, {
   //   per-version information that is relevant to the package as a whole, such
   //   as git, description,etc.
   // - versions: an array of objects representing versions of this package.
-  _collectPackageData: function () {
+  _collectPackageData: async function () {
     var self = this;
     var data = {
       name: self.metaRecord.name,
@@ -558,7 +569,7 @@ Object.assign(PackageQuery.prototype, {
     var localVersion = self.localCatalog.getLatestVersion(self.name);
     var local;
     if (localVersion) {
-      local = self._getLocalVersion(localVersion);
+      local = await self._getLocalVersion(localVersion);
       data["versions"].push(local);
       totalVersions++;
     }
@@ -707,7 +718,7 @@ Object.assign(PackageQuery.prototype, {
   //     - packageName: name of the dependency
   //     - constraint: constraint for that dependency
   //     - weak: true if this is a weak dependency.
-  _getLocalVersion: function (localRecord) {
+  _getLocalVersion: async function (localRecord) {
     var self = this;
     var data =  {
       name: self.name,
@@ -739,7 +750,7 @@ Object.assign(PackageQuery.prototype, {
     }
 
     var readmeInfo;
-    main.captureAndExit(
+    await main.captureAndExit(
       "=> Errors while reading local packages:",
       "reading " + data["directory"],
        function () {
@@ -1384,13 +1395,13 @@ main.registerCommand({
   catalogRefresh:
     new catalog.Refresh.OnceAtStart(
         { maxAge: DEFAULT_MAX_AGE_MS, ignoreErrors: true })
-}, function (options) {
+}, async function (options) {
   var fullName;
   var name;
   var version;
   // Because of the new projectContext interface, we need to initialize the
   // project context in order to load the local catalog. This is not ideal.
-  var projectContext = getTempContext(options);
+  var projectContext = await getTempContext(options);
 
   // If the user specified a query, process it.
   if (! _.isEmpty(options.args)) {
@@ -1434,7 +1445,7 @@ main.registerCommand({
         catalog.official.getPackage(name) ||
         projectContext.localCatalog.getPackage(name);
   if (packageRecord) {
-    query =  new PackageQuery({
+    query = await new PackageQuery({
       metaRecord: packageRecord,
       version: version,
       projectContext: projectContext,
@@ -1491,7 +1502,7 @@ main.registerCommand({
   catalogRefresh:
     new catalog.Refresh.OnceAtStart(
       { maxAge: DEFAULT_MAX_AGE_MS, ignoreErrors: true })
-}, function (options) {
+}, async function (options) {
   if (options.args.length === 0) {
     Console.info(
       "To show all packages, do", Console.command("meteor search ."));
@@ -1500,7 +1511,7 @@ main.registerCommand({
 
   // Because of the new projectContext interface, we need to initialize the
   // project context in order to load the local catalog.
-  var projectContext = getTempContext(options);
+  var projectContext = await getTempContext(options);
 
   // XXX We should push the queries into SQLite!
   var allPackages = _.union(

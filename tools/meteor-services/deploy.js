@@ -82,7 +82,7 @@ const CAPABILITIES = ['showDeployMessages', 'canTransferAuthorization'];
 //   derived from either a transport-level exception, the response
 //   body, or a generic 'try again later' message, as appropriate
 
-function deployRpc(options) {
+async function deployRpc(options) {
   options = Object.assign({}, options);
   options.headers = Object.assign({}, options.headers || {});
   if (options.headers.cookie) {
@@ -100,7 +100,7 @@ function deployRpc(options) {
     options.qs.capabilities.push('willPollVersionStatus');
   }
 
-  const deployURLBase = getDeployURL(options.site).await();
+  const deployURLBase = await getDeployURL(options.site);
 
   if (options.printDeployURL) {
     Console.info("Talking to Galaxy servers at " + deployURLBase);
@@ -193,13 +193,13 @@ function deployRpc(options) {
 //   accounts server but our authentication actually fails, then prompt
 //   the user to log in with a username and password and then resend the
 //   RPC.
-function authedRpc(options) {
+async function authedRpc(options) {
   var rpcOptions = Object.assign({}, options);
   var preflight = rpcOptions.preflight;
   delete rpcOptions.preflight;
 
   // Fetch auth info
-  var infoResult = deployRpc({
+  var infoResult = await deployRpc({
     operation: 'info',
     site: rpcOptions.site,
     expectPayload: [],

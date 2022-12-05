@@ -1524,9 +1524,7 @@ asyncLocalStorage.run({}, async function () {
       });
     }
 
-    var ret = await Promise.resolve(
-      command.func(options, { rawOptions })
-    );
+    var ret = await command.func(options, { rawOptions });
 
   } catch (e) {
     Console.enableProgressDisplay(false);

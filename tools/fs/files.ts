@@ -12,7 +12,6 @@ import { Slot } from "@wry/context";
 import { dep } from "optimism";
 
 const _ = require('underscore');
-const Fiber = require("fibers");
 
 const rimraf = require('rimraf');
 const sourcemap = require('source-map');
@@ -62,11 +61,11 @@ function useParsedSourceMap(pathForSourceMap: string) {
 // Try this source map first
 sourceMapRetrieverStack.push(useParsedSourceMap);
 
-function canYield() {
-  return Fiber.current &&
-    Fiber.yield &&
-    ! Fiber.yield.disallowed;
-}
+// function canYield() {
+//   return Fiber.current &&
+//     Fiber.yield &&
+//     ! Fiber.yield.disallowed;
+// }
 
 // given a predicate function and a starting path, traverse upwards
 // from the path until we find a path that satisfies the predicate.
