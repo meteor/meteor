@@ -36,7 +36,7 @@ function join(prefix, key) {
   return prefix ? `${prefix}.${key}` : key;
 }
 
-const arrayOperatorKeyRegex = /^(a|u\d+)$/;
+const arrayOperatorKeyRegex = /^(a|[su]\d+)$/;
 
 function isArrayOperatorKey(field) {
   return arrayOperatorKeyRegex.test(field);
@@ -44,12 +44,6 @@ function isArrayOperatorKey(field) {
 
 function isArrayOperator(operator) {
   return operator.a === true && Object.keys(operator).every(isArrayOperatorKey);
-}
-
-const arrayUpdateRegex = /^(u\d+)$/;
-
-function isArrayUpdate(operator) {
-  return arrayUpdateRegex.test(operator);
 }
 
 function flattenObjectInto(target, source, prefix) {
@@ -91,15 +85,6 @@ function convertOplogDiff(oplogEntry, diff, prefix) {
       Object.entries(value).forEach(([key, value]) => {
         oplogEntry.$set[join(prefix, key)] = value;
       });
-    } else if (isArrayUpdate(diffKey)) {
-      const positionKey = join(prefix, diffKey.slice(1));
-      if (value === null) {
-        oplogEntry.$unset ??= {};
-        oplogEntry.$unset[positionKey] = true;
-      } else {
-        oplogEntry.$set ??= {};
-        oplogEntry.$set[positionKey] = value;
-      }
     } else {
       // Handle s-fields.
       const key = diffKey.slice(1);
@@ -111,7 +96,9 @@ function convertOplogDiff(oplogEntry, diff, prefix) {
           }
 
           const positionKey = join(join(prefix, key), position.slice(1));
-          if (value === null) {
+          if (position[0] === 's') {
+            convertOplogDiff(oplogEntry, value, positionKey);
+          } else if (value === null) {
             oplogEntry.$unset ??= {};
             oplogEntry.$unset[positionKey] = true;
           } else {
