@@ -13,7 +13,7 @@ selftest.define("meteor shell", function () {
   var shell = s.run("shell");
   // First try a simple one-line expression.
   shell.write("{server:Meteor.isServer}\n");
-  shell.match('{server:true}');
+  shell.match('{ server: true }');
   shell.proc.stdin.end();
   shell.waitSecs(20);
   shell.expectExit(0);
