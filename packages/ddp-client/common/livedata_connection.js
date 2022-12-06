@@ -17,7 +17,8 @@ import {
 
 let Fiber;
 let Future;
-if (Meteor.isServer) {
+// TODO Review fiber use
+if (Meteor.isServer && Meteor._isFibersEnabled) {
   Fiber = Npm.require('fibers');
   Future = Npm.require('fibers/future');
 }

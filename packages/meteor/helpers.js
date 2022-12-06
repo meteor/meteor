@@ -1,4 +1,6 @@
-if (Meteor.isServer)
+
+// TODO Review fiber use
+if (Meteor.isServer && Meteor._isFibersEnabled)
   var Future = Npm.require('fibers/future');
 
 if (typeof __meteor_runtime_config__ === 'object' &&

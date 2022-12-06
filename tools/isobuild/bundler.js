@@ -149,7 +149,6 @@
 // wait until later.
 
 var assert = require('assert');
-var Fiber = require('fibers');
 var _ = require('underscore');
 
 var compiler = require('./compiler.js');

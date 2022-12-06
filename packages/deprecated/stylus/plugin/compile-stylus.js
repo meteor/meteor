@@ -1,7 +1,8 @@
 const stylus = Npm.require('stylus');
 const nib = Npm.require('nib');
 const autoprefixer = Npm.require('autoprefixer-stylus');
-const Future = Npm.require('fibers/future');
+// TODO Review fiber use
+const Future = Meteor._isFibersEnabled ? Npm.require('fibers/future') : null;
 const fs = Plugin.fs;
 const path = Plugin.path;
 

@@ -1,7 +1,7 @@
-var Fiber = require("fibers");
+// var Fiber = require("fibers");
 var fs = require("fs");
 var path = require("path");
-var Future = require("fibers/future");
+//var Future = require("fibers/future");
 var sourcemap_support = require('source-map-support');
 
 var bootUtils = require('./boot-utils.js');
@@ -52,8 +52,9 @@ if (!process.env.APP_ID) {
 // Map from load path to its source map.
 var parsedSourceMaps = {};
 
+// TODO Review fiber use
 const meteorDebugFuture =
-  process.env.METEOR_INSPECT_BRK ? new Future : null;
+  process.env.METEOR_INSPECT_BRK ? null : null;
 
 function maybeWaitForDebuggerToAttach() {
   if (meteorDebugFuture) {
@@ -75,7 +76,7 @@ function maybeWaitForDebuggerToAttach() {
           `Debugger did not attach after ${waitLimitMinutes} minutes; continuing.`
         );
 
-        meteorDebugFuture.return();
+        //meteorDebugFuture.return();
 
       } else {
         // This pause function contains a debugger keyword that will only
@@ -95,7 +96,7 @@ function maybeWaitForDebuggerToAttach() {
           // time, we can conclude the debugger keyword must be active,
           // which means a debugging client must be connected, which means
           // we should stop polling and let the main Fiber continue.
-          meteorDebugFuture.return();
+          //meteorDebugFuture.return();
 
         } else {
           // If the pause() function call didn't take a meaningful amount
@@ -108,7 +109,7 @@ function maybeWaitForDebuggerToAttach() {
     }, pollIntervalMs);
 
     // The polling will continue while we wait here.
-    meteorDebugFuture.wait();
+    //meteorDebugFuture.wait();
   }
 }
 
@@ -311,8 +312,8 @@ var loadServerBundles = Profile("Load server bundles", function () {
     var getAsset = function (assetPath, encoding, callback) {
       var fut;
       if (! callback) {
-        fut = new Future();
-        callback = fut.resolver();
+        //fut = new Future();
+        //callback = fut.resolver();
       }
       // This assumes that we've already loaded the meteor package, so meteor
       // itself can't call Assets.get*. (We could change this function so that
@@ -499,12 +500,12 @@ function startServerProcess() {
   });
 }
 
-if (IS_FIBERS_ENABLED) {
-  Fiber(function() {
-    startServerProcess();
-  }).run();
-  return;
-} else {
+// if (IS_FIBERS_ENABLED) {
+//   Fiber(function() {
+//     startServerProcess();
+//   }).run();
+//   return;
+// } else {
   startServerProcess();
-}
+//}
 
