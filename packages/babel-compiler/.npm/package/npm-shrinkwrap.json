@@ -436,9 +436,9 @@
       "integrity": "sha512-MCNzAp77qzKca9+W/+I0+sEpaUnZoeasnghNeVc41VZCEKaCH73Vq3BZZ/SzWIgrqE4H4ceI+p+b6C0mHf9T4g=="
     },
     "@meteorjs/babel": {
-      "version": "7.17.1-beta.0",
-      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.17.1-beta.0.tgz",
-      "integrity": "sha512-ogXjGkuWbH1YwHXX3VOOjonC9aENrijkj0j6NZtDuKBq3pt0nSULvpU5fRjKu1HjgmhRFky6uE4TYa9FtlCKlQ=="
+      "version": "7.17.2-beta.0",
+      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.17.2-beta.0.tgz",
+      "integrity": "sha512-gFXgGNIUu2mVvLRTtEPRE8OdpbdwDY2+vAOSn4/O//w42n7xKBDuYkiyNQtXCWIVuEjO4UBFkX2CHD88eTKhxA=="
     },
     "@meteorjs/reify": {
       "version": "0.23.0",
@@ -648,9 +648,9 @@
       "integrity": "sha512-CBHJJdDmgjl3daYjN5Cp5kbTf1mUhZoS+beLklHIvkOWscs83YAhLlF3Wsh/lciQYAcbBJgTOD44VtG31ZM4Hw=="
     },
     "caniuse-lite": {
-      "version": "1.0.30001435",
-      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001435.tgz",
-      "integrity": "sha512-kdCkUTjR+v4YAJelyiDTqiu82BDr4W4CP5sgTA0ZBmqn30XfS2ZghPLMowik9TPhS+psWJiUNxsqLyurDbmutA=="
+      "version": "1.0.30001436",
+      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001436.tgz",
+      "integrity": "sha512-ZmWkKsnC2ifEPoWUvSAIGyOYwT+keAaaWPHiQ9DfMqS1t6tfuyFYoWR78TeZtznkEQ64+vGXH9cZrElwR2Mrxg=="
     },
     "chalk": {
       "version": "2.4.2",
