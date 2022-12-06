@@ -1306,8 +1306,9 @@ export class PackageSourceBatch {
       }
 
       const meteorPackageInstalls = [];
-      for (const [name, info] of map) {
-        if (!name) continue;
+      map.forEach((info, name) => {
+        if (! name) return;
+
         const mainModule = info.mainModule &&
             `meteor/${name}/${info.mainModule.targetPath}`;
 
@@ -1316,7 +1317,7 @@ export class PackageSourceBatch {
             (mainModule ? ", " + JSON.stringify(mainModule) : '') +
             ");\n"
         );
-      }
+      });
 
       if (meteorPackageInstalls.length === 0) {
         continue;
