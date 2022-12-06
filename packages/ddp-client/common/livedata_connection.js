@@ -15,13 +15,6 @@ import {
   last,
 } from "meteor/ddp-common/utils.js";
 
-let Fiber;
-let Future;
-if (Meteor.isServer) {
-  Fiber = Npm.require('fibers');
-  Future = Npm.require('fibers/future');
-}
-
 class MongoIDMap extends IdMap {
   constructor() {
     super(MongoID.idStringify, MongoID.idParse);
@@ -491,30 +484,6 @@ export class Connection {
       });
     }
 
-    return handle;
-  }
-
-  // options:
-  // - onLateError {Function(error)} called if an error was received after the ready event.
-  //     (errors received before ready cause an error to be thrown)
-  _subscribeAndWait(name, args, options) {
-    const self = this;
-    const f = new Future();
-    let ready = false;
-    args = args || [];
-    args.push({
-      onReady() {
-        ready = true;
-        f['return']();
-      },
-      onError(e) {
-        if (!ready) f['throw'](e);
-        else options && options.onLateError && options.onLateError(e);
-      }
-    });
-
-    const handle = self.subscribe.apply(self, [name].concat(args));
-    f.wait();
     return handle;
   }
 
