@@ -80,11 +80,7 @@ exports.getDefaults = function getDefaults(features) {
 
 function maybeAddReactPlugins(features, options) {
   if (features && features.react) {
-    options.presets.push(
-      [require("@babel/preset-react"), {
-        runtime: "automatic"
-      }]
-    );
+    options.presets.push(require("@babel/preset-react"));
     options.plugins.push(
       [require("@babel/plugin-proposal-class-properties"), {
         loose: true
