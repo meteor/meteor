@@ -80,14 +80,7 @@ exports.getDefaults = function getDefaults(features) {
 
 function maybeAddReactPlugins(features, options) {
   if (features && features.react) {
-    // get flag passed in args BABEL_TESTING
-    const reactBabel =
-      process.env.BABEL_TESTING
-        ? require("@babel/preset-react")
-        : [require("@babel/preset-react"), {
-          runtime: "automatic"
-        }];
-    options.presets.push(reactBabel);
+    options.presets.push(require("@babel/preset-react"));
     options.plugins.push(
       [require("@babel/plugin-proposal-class-properties"), {
         loose: true
