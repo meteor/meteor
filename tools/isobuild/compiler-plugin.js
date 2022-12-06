@@ -909,7 +909,7 @@ class OutputResource {
       // used `new Promise(resolve => resolve(finalize()))` instead of
       // `Promise.resolve().then(finalize)`, the finalize() call would
       // begin before this._finalizerPromise was fully initialized.
-      this._finalizerPromise = await (Promise.resolve().then(finalize).then(result => {
+      (this._finalizerPromise = Promise.resolve().then(finalize).then(result => {
         if (result) {
           Object.assign(this._initialOptions, result);
         } else if (this._errors.length === 0) {
@@ -917,13 +917,15 @@ class OutputResource {
           // errors, create at least one generic error that can be
           // reported when reportPendingErrors is called.
           const error = new Error("lazyFinalizer failed");
-          error.info = { resource: this, finalize }
+          error.info = { resource: this, finalize };
           this._errors.push(error);
         }
         // The this._finalizerPromise object only survives for the
         // duration of the initial finalization.
         this._finalizerPromise = null;
       }));
+
+      await this._finalizerPromise;
     }
   }
 
@@ -1298,40 +1300,41 @@ export class PackageSourceBatch {
 
     // Append install(<name>) calls to the install-packages.js file in the
     // modules package for every Meteor package name used.
-    map.get("modules").files.some(file => {
+    for (const file of map.get("modules").files) {
       if (file.sourcePath !== "install-packages.js") {
-        return false;
+        continue;
       }
 
       const meteorPackageInstalls = [];
-
-      map.forEach((info, name) => {
-        if (! name) return;
-
+      for (const [name, info] of map) {
+        if (!name) continue;
         const mainModule = info.mainModule &&
-          `meteor/${name}/${info.mainModule.targetPath}`;
+            `meteor/${name}/${info.mainModule.targetPath}`;
 
         meteorPackageInstalls.push(
-          "install(" + JSON.stringify(name) +
+            "install(" + JSON.stringify(name) +
             (mainModule ? ", " + JSON.stringify(mainModule) : '') +
-          ");\n"
+            ");\n"
         );
-      });
-
-      if (meteorPackageInstalls.length === 0) {
-        return false;
       }
 
-      file.data = Buffer.from(
-        file.data.toString("utf8") + "\n" +
+      if (meteorPackageInstalls.length === 0) {
+        continue;
+      }
+
+      const fileData = await file.data;
+      const bufferData = Buffer.from(
+          fileData.toString("utf8") + "\n" +
           meteorPackageInstalls.join(""),
-        "utf8"
+          "utf8"
       );
+      const fileHash = sha1(fileData);
 
-      file.hash = sha1(file.data);
-
-      return true;
-    });
+      // The getter's from file (file.data and file.hash) are async, unfortunately.
+      // That's why we need the Object.assign here.
+      Object.assign(file, { data: bufferData, hash: fileHash });
+      break;
+    }
 
     // Map from module identifiers that previously could not be imported
     // to lists of info objects describing the failed imports.
