@@ -234,21 +234,21 @@ import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 import { CustomerCollection } from './collection';
 
-export function create(data) {
+export async function create(data) {
   return CustomerCollection.insertAsync({ ...data });
 }
 
-export function update(_id, data) {
+export async function update(_id, data) {
   check(_id, String);
   return CustomerCollection.updateAsync(_id, { ...data });
 }
 
-export function remove(_id) {
+export async function remove(_id) {
   check(_id, String);
   return CustomerCollection.removeAsync(_id);
 }
 
-export function findById(_id) {
+export async function findById(_id) {
   check(_id, String);
   return CustomerCollection.findOneAsync(_id);
 }
@@ -334,21 +334,21 @@ import { Mongo } from 'meteor/mongo';
 import { check } from 'meteor/check';
 import { AnotherCustomer, AnotherCustomerCollection } from './collection';
 
-export function create(data: AnotherCustomer) {
+export async function create(data: AnotherCustomer) {
   return AnotherCustomerCollection.insertAsync({ ...data });
 }
 
-export function update(_id: string, data: Mongo.Modifier<AnotherCustomer>) {
+export async function update(_id: string, data: Mongo.Modifier<AnotherCustomer>) {
   check(_id, String);
   return AnotherCustomerCollection.updateAsync(_id, { ...data });
 }
 
-export function remove(_id: string) {
+export async function remove(_id: string) {
   check(_id, String);
   return AnotherCustomerCollection.removeAsync(_id);
 }
 
-export function findById(_id: string) {
+export async function findById(_id: string) {
   check(_id, String);
   return AnotherCustomerCollection.findOneAsync(_id);
 }
