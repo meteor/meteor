@@ -32,23 +32,23 @@ _.extend(StubStream.prototype, {
   },
 
   // Methods for tests
-  receive: function(data) {
+  receive: async function(data) {
     const self = this;
 
     if (typeof data === 'object') {
       data = EJSON.stringify(data);
     }
 
-    _.each(self.callbacks['message'], function(cb) {
-      cb(data);
-    });
+    for (const cb of self.callbacks['message']) {
+      await cb(data);
+    }
   },
 
-  reset: function() {
+  reset: async function() {
     const self = this;
-    _.each(self.callbacks['reset'], function(cb) {
-      cb();
-    });
+    for (const cb of self.callbacks['reset']) {
+      await cb();
+    }
   },
 
   // Provide a tag to detect stub streams.

@@ -59,28 +59,29 @@ if (Meteor.isServer) {
   // other.
   const waiters = Object.create(null);
 
-  const Future = Npm.require('fibers/future');
-
   const returnThroughFuture = function(token, returnValue) {
     // Make sure that when we call return, the fields are already cleared.
     const record = waiters[token];
     if (!record) return;
     delete waiters[token];
-    record.future['return'](returnValue);
+    record.future(returnValue);
   };
 
   Meteor.methods({
     delayedTrue: function(token) {
       check(token, String);
-      const record = (waiters[token] = {
-        future: new Future(),
+
+      let resolver;
+      const promise = new Promise(res => resolver = res);
+      waiters[token] = {
+        future: resolver,
         timer: Meteor.setTimeout(function() {
           returnThroughFuture(token, true);
         }, 1000)
-      });
+      };
 
       this.unblock();
-      return record.future.wait();
+      return promise;
     },
     makeDelayedTrueImmediatelyReturnFalse: function(token) {
       check(token, String);
@@ -202,10 +203,10 @@ if (Meteor.isServer) {
 /// Helper for "livedata - setUserId fails when called on server"
 
 if (Meteor.isServer) {
-  Meteor.startup(function() {
+  Meteor.startup(async function() {
     errorThrownWhenCallingSetUserIdDirectlyOnServer = null;
     try {
-      Meteor.call('setUserId', '1000');
+      await Meteor.callAsync('setUserId', '1000');
     } catch (e) {
       errorThrownWhenCallingSetUserIdDirectlyOnServer = e;
     }

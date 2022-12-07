@@ -79,10 +79,10 @@ Tinytest.add('livedata - non-function method', function(test) {
 });
 
 const echoTest = function(item) {
-  return function(test, expect) {
+  return async function(test, expect) {
     if (Meteor.isServer) {
-      test.equal(Meteor.call('echo', item), [item]);
-      test.equal(Meteor.call('echoOne', item), item);
+      test.equal(await Meteor.callAsync('echo', item), [item]);
+      test.equal(await Meteor.callAsync('echoOne', item), item);
     }
     if (Meteor.isClient) test.equal(Meteor.call('echo', item), undefined);
 
@@ -96,13 +96,13 @@ const echoTest = function(item) {
 
 testAsyncMulti('livedata - basic method invocation', [
   // Unknown methods
-  function(test, expect) {
+  async function(test, expect) {
     if (Meteor.isServer) {
       // On server, with no callback, throws exception
       let ret;
       let threw;
       try {
-        ret = Meteor.call('unknown method');
+        ret = await Meteor.callAsync('unknown method');
       } catch (e) {
         test.equal(e.error, 404);
         threw = true;
@@ -125,18 +125,18 @@ testAsyncMulti('livedata - basic method invocation', [
     test.equal(ret, undefined);
   },
 
-  function(test, expect) {
+  async function(test, expect) {
     // make sure 'undefined' is preserved as such, instead of turning
     // into null (JSON does not have 'undefined' so there is special
     // code for this)
-    if (Meteor.isServer) test.equal(Meteor.call('nothing'), undefined);
+    if (Meteor.isServer) test.equal(await Meteor.callAsync('nothing'), undefined);
     if (Meteor.isClient) test.equal(Meteor.call('nothing'), undefined);
 
     test.equal(Meteor.call('nothing', expect(undefined, undefined)), undefined);
   },
 
-  function(test, expect) {
-    if (Meteor.isServer) test.equal(Meteor.call('echo'), []);
+  async function(test, expect) {
+    if (Meteor.isServer) test.equal(await Meteor.callAsync('echo'), []);
     if (Meteor.isClient) test.equal(Meteor.call('echo'), undefined);
 
     test.equal(Meteor.call('echo', expect(undefined, [])), undefined);
@@ -153,9 +153,9 @@ testAsyncMulti('livedata - basic method invocation', [
   echoTest(Infinity),
   echoTest(-Infinity),
 
-  function(test, expect) {
+  async function(test, expect) {
     if (Meteor.isServer)
-      test.equal(Meteor.call('echo', 12, { x: 13 }), [12, { x: 13 }]);
+      test.equal(await Meteor.callAsync('echo', 12, { x: 13 }), [12, { x: 13 }]);
     if (Meteor.isClient)
       test.equal(Meteor.call('echo', 12, { x: 13 }), undefined);
 
@@ -198,7 +198,7 @@ testAsyncMulti('livedata - basic method invocation', [
     }
   },
 
-  function(test, expect) {
+  async function(test, expect) {
     // No callback
 
     if (Meteor.isServer) {
@@ -209,7 +209,7 @@ testAsyncMulti('livedata - basic method invocation', [
         Meteor.call('exception', 'server');
       });
       // No exception, because no code will run on the client
-      test.equal(Meteor.call('exception', 'client'), undefined);
+      test.equal(await Meteor.callAsync('exception', 'client'), undefined);
     }
 
     if (Meteor.isClient) {
@@ -273,15 +273,15 @@ testAsyncMulti('livedata - basic method invocation', [
         ),
         undefined
       );
-      test.equal(Meteor.call('exception', 'client'), undefined);
+      test.equal(await Meteor.callAsync('exception', 'client'), undefined);
     }
   },
 
-  function(test, expect) {
+  async function(test, expect) {
     if (Meteor.isServer) {
       let threw = false;
       try {
-        Meteor.call('exception', 'both', { intended: true });
+        await Meteor.callAsync('exception', 'both', { intended: true });
       } catch (e) {
         threw = true;
         test.equal(e.error, 999);
@@ -290,7 +290,7 @@ testAsyncMulti('livedata - basic method invocation', [
       test.isTrue(threw);
       threw = false;
       try {
-        Meteor.call('exception', 'both', {
+        await Meteor.callAsync('exception', 'both', {
           intended: true,
           throwThroughFuture: true
         });
@@ -992,10 +992,10 @@ if (Meteor.isServer) {
         );
       },
 
-      function(test, expect) {
+      async function(test, expect) {
         const self = this;
         if (self.conn.status().connected) {
-          test.equal(self.conn.call('s2s', 'foo'), 's2s foo');
+          test.equal(await self.conn.callAsync('s2s', 'foo'), 's2s foo');
         }
       }
     ]);

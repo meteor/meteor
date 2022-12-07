@@ -245,12 +245,12 @@ const bindEnvironmentAsync = (func, onException, _this) => {
         async () => {
           let ret;
           try {
-            Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, dynamics);
+            if (currentSlot) {
+              Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, dynamics);
+            }
             ret = await func.apply(_this, args);
           } catch (e) {
             onException(e);
-          } finally {
-            Meteor._updateAslStore(CURRENT_VALUE_KEY_NAME, undefined);
           }
           return ret;
         },
