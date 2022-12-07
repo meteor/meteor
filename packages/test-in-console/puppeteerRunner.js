@@ -4,9 +4,7 @@ async function runNextUrl(browser) {
   const page = await browser.newPage();
 
   page.on('console', msg => {
-    if (msg._text !== undefined) {
-      console.log(msg._text);
-    }
+    console.log(msg._text);
   });
 
   if (!process.env.URL) {
