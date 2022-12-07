@@ -1329,7 +1329,7 @@ export class PackageSourceBatch {
           meteorPackageInstalls.join(""),
           "utf8"
       );
-      const fileHash = sha1(fileData);
+      const fileHash = sha1(bufferData);
 
       // The getter's from file (file.data and file.hash) are async, unfortunately.
       // That's why we need the Object.assign here.
