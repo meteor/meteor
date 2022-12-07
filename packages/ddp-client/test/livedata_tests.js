@@ -992,10 +992,10 @@ if (Meteor.isServer) {
         );
       },
 
-      function(test, expect) {
+      async function(test, expect) {
         const self = this;
         if (self.conn.status().connected) {
-          test.equal(self.conn.call('s2s', 'foo'), 's2s foo');
+          test.equal(await self.conn.callAsync('s2s', 'foo'), 's2s foo');
         }
       }
     ]);
