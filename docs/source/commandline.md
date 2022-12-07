@@ -273,10 +273,6 @@ Meteor.methods({
 import { Meteor } from 'meteor/meteor';
 import { CustomerCollection } from './collection';
 
-Meteor.publish('CustomersByLoggedUser', function publishCustomersByUserId() {
-  return CustomerCollection.find({ userId: this.userId });
-});
-
 Meteor.publish('allCustomers', function publishCustomers() {
   return CustomerCollection.find({});
 });
@@ -307,7 +303,7 @@ Also, there is the same version of these methods using TypeScript, that will be 
 <h3 id="meteorgenerate-path">path option</h3>
 
 for those that may want to create in another path, you can use the ``--path`` option in order to select where to place this boilerplate.
-It will generate the model in that path. Note that I'm using TypeScript in this example.
+It will generate the model in that path. Note that is used TypeScript in this example.
 
 ```bash
 
@@ -383,10 +379,6 @@ Meteor.methods({
 import { Meteor } from 'meteor/meteor';
 import { AnotherCustomerCollection } from './collection';
 
-Meteor.publish('AnotherCustomersByLoggedUser', function publishAnotherCustomersByUserId(this) {
-  return AnotherCustomerCollection.find({ userId: this.userId });
-});
-
 Meteor.publish('allAnotherCustomers', function publishAnotherCustomers() {
   return AnotherCustomerCollection.find({});
 });
@@ -443,9 +435,9 @@ meteor generate feed --templatePath=/scaffolds-ts
 
 You can use your own templates for scaffolding your specific workloads. To do that, you should pass in a template directory URL so that it can copy it with its changes.
 
-<h3 id="meteorgenerate-template-rename"> how do I rename things?</h3>
+<h3 id="meteorgenerate-template-rename"> how to rename things?</h3>
 
-Out of the box I provide a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
+Out of the box is provided a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
 
 these replacements come from this function:
  
@@ -461,7 +453,7 @@ const transformName = (name) => {
   }
 ```
 
-<h3 id="meteorgenerate-template-faq"> What if I want to have my own way of templating? </h3>
+<h3 id="meteorgenerate-template-faq"> How to bring your own templates? </h3>
 
 `--replaceFn`
 
