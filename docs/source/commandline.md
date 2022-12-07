@@ -199,7 +199,7 @@ Create a basic [Solid](https://www.solidjs.com/) app.
 
 <h2 id="meteorgenerate"> meteor generate </h2>
 
-``meteor generate`` is a command for generating scaffolds for your current project. when ran without arguments, it will ask
+``meteor generate`` is a command for generating scaffolds for your current project. When ran without arguments, it will ask
 you what is the name of the model you want to generate, if you do want methods for your api and publications. It can be
 used as a command line only operation as well.
 
@@ -209,10 +209,10 @@ meteor generate customer
 
 ```
 
-it will generate the following code in ``/imports/api``
+It will generate the following code in ``/imports/api``
 ![Screenshot 2022-11-09 at 11 28 29](https://user-images.githubusercontent.com/70247653/200856551-71c100f5-8714-4b34-9678-4f08780dcc8b.png)
 
-that will have the following code:
+That will have the following code:
 
 
 <h3 id="meteorgenerate-collection.js">collection.js</h3>
@@ -264,8 +264,6 @@ Meteor.methods({
 
 
 
-
-
 <h3 id="meteorgenerate-publication.js">publication.js</h3>
 
 ```js
@@ -283,8 +281,6 @@ Meteor.publish('allCustomers', function publishCustomers() {
 
 
 
-
-
 <h3 id="meteorgenerate-index.js">index.js</h3>
 
 ```js
@@ -295,14 +291,11 @@ export * from './publications';
 
 ```
 
-
-
-
 Also, there is the same version of these methods using TypeScript, that will be shown bellow.
 
 <h3 id="meteorgenerate-path">path option</h3>
 
-for those that may want to create in another path, you can use the ``--path`` option in order to select where to place this boilerplate.
+If you want to create in another path, you can use the ``--path`` option in order to select where to place this boilerplate.
 It will generate the model in that path. Note that is used TypeScript in this example.
 
 ```bash
@@ -311,7 +304,7 @@ meteor generate another-customer --path=server/admin
 
 ```
 
-it will generate in ``server/admin`` the another-client code:
+It will generate in ``server/admin`` the another-client code:
 
 ![Screenshot 2022-11-09 at 11 32 39](https://user-images.githubusercontent.com/70247653/200857560-a4874e4c-1078-4b7a-9381-4c6590d2f63b.png)
 
@@ -405,13 +398,13 @@ export * from './publications';
 <h3 id="meteorgenerate-wizard"> Using the Wizard  </h3>
 
 
-if you run the following command:
+If you run the following command:
 
 ```bash
 meteor generate
 ```
 
-it will prompt the following questions.
+It will prompt the following questions.
 
 ![Screenshot 2022-11-09 at 11 38 29](https://user-images.githubusercontent.com/70247653/200859087-a2ef63b6-7ac1-492b-8918-0630cbd30686.png)
 
@@ -435,13 +428,13 @@ meteor generate feed --templatePath=/scaffolds-ts
 
 You can use your own templates for scaffolding your specific workloads. To do that, you should pass in a template directory URL so that it can copy it with its changes.
 
-<h3 id="meteorgenerate-template-rename"> how to rename things?</h3>
+<h3 id="meteorgenerate-template-rename"> How to rename things?</h3>
 
 Out of the box is provided a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
 
 these replacements come from this function:
  
-_note that scaffoldName is the name that you have passed as argument_
+_Note that scaffoldName is the name that you have passed as argument_
 
 ```js
 const transformName = (name) => {
@@ -471,12 +464,12 @@ export function transformContents(scaffoldName, contents, fileName) {
 }
 
 ```
-if you run your command like this:
+If you run your command like this:
 
 ```bash
  meteor generate feed --replaceFn=/fn/replace.js
 ```
-it will generate files full of ``$$PascalCase$$``using the meteor provided templates.
+It will generate files full of ``$$PascalCase$$``using the meteor provided templates.
 
 A better example of this feature would be the following js file:
 ```js
