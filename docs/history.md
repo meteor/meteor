@@ -29,13 +29,8 @@
 
 * `eslint-plugin-meteor@7.4.0`:
   - updated Typescript deps and meteor babel
-* `meteorjs/babel@7.16.1-beta.0`
-  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
 * `eslint-plugin-meteor@7.4.0`:
   - updated Typescript deps and meteor babel
-* `meteorjs/babel@7.17.1-beta.0`
-  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
-  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0
 * `accounts-base@2.2.6`
   - Moved some functions to accounts-oauth.
 * `accounts-oauth@1.4.2`
@@ -121,9 +116,6 @@ N/A
 #### Meteor Version Release
 * `mongo@1.16.2`:
   - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
-* `meteorjs/babel@7.16.1-beta.0`
-  - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327)
-  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0
 
 #### Special thanks to
 - [@henriquealbert](https://github.com/henriquealbert)
