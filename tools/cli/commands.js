@@ -2170,8 +2170,8 @@ main.registerCommand({
     email: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  return auth.loginCommand(Object.assign({
+}, async function (options) {
+  return await auth.loginCommand(Object.assign({
     overwriteExistingToken: true
   }, options));
 });
