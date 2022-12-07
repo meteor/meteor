@@ -477,8 +477,8 @@ if (Meteor.isClient) {
 
     // setup method
     conn.methods({
-      do_something: async function(x) {
-        await coll.insertAsync({ value: x });
+      do_something: function(x) {
+        coll.insert({ value: x });
       }
     });
 
@@ -522,7 +522,7 @@ if (Meteor.isClient) {
 
     test.equal(await coll.find({}).count(), 1);
     test.equal(await coll.find({ value: 'friday!' }).count(), 1);
-    const docId = await coll.findOneAsync({ value: 'friday!' })._id;
+    const docId = (await coll.findOneAsync({ value: 'friday!' }))._id;
 
     // results does not yet result in callback, because data is not
     // ready.
@@ -683,7 +683,7 @@ if (Meteor.isClient) {
     // but inner method runs locally.
     o.expectCallbacks({ added: 1 });
     test.equal(coll.find().count(), 1);
-    const docId = await coll.findOneAsync()._id;
+    const docId = (await coll.findOneAsync())._id;
     test.equal(await coll.findOneAsync(), { _id: docId, a: 1 });
 
     // we get the results
@@ -1006,7 +1006,7 @@ if (Meteor.isClient) {
 
       const collName = Random.id();
       const coll = new Mongo.Collection(collName, { connection: conn });
-      const o = observeCursor(test, coll.find());
+      const o = await observeCursor(test, coll.find());
 
       conn.methods({
         writeSomething: function() {
@@ -1034,7 +1034,7 @@ if (Meteor.isClient) {
       );
       // Stub write is visible.
       test.equal(coll.find({ foo: 'bar' }).count(), 1);
-      const stubWrittenId = await coll.findOneAsync({ foo: 'bar' })._id;
+      const stubWrittenId = (await coll.findOneAsync({ foo: 'bar' }))._id;
       o.expectCallbacks({ added: 1 });
       // Callback not called.
       test.equal(callbackOutput, []);
@@ -1124,7 +1124,7 @@ if (Meteor.isClient) {
       );
       // Stub write is visible.
       test.equal(coll.find({ foo: 'bar' }).count(), 1);
-      const stubWrittenId2 = await coll.findOneAsync({ foo: 'bar' })._id;
+      const stubWrittenId2 = (await coll.findOneAsync({ foo: 'bar' }))._id;
       o.expectCallbacks({ added: 1 });
       // Callback not called.
       test.equal(callbackOutput, ['bla']);
@@ -1343,7 +1343,7 @@ if (Meteor.isClient) {
 
     const collName = Random.id();
     const coll = new Mongo.Collection(collName, { connection: conn });
-    const o = observeCursor(test, coll.find());
+    const o = await observeCursor(test, coll.find());
 
     conn.methods({
       insertSomething: function() {
@@ -1361,7 +1361,7 @@ if (Meteor.isClient) {
     conn.call('insertSomething', _.identity);
     // Stub write is visible.
     test.equal(coll.find({ foo: 'bar' }).count(), 1);
-    const stubWrittenId = await coll.findOneAsync({ foo: 'bar' })._id;
+    const stubWrittenId = (await coll.findOneAsync({ foo: 'bar' }))._id;
     o.expectCallbacks({ added: 1 });
     // Method sent.
     const insertMethodId = testGotMessage(test, stream, {
@@ -2338,7 +2338,7 @@ if (Meteor.isClient) {
 
       await stream.receive(subDocMessage);
       await stream.receive(subReadyMessage);
-      test.isTrue(await coll.findOneAsync('aaa').value == 111);
+      test.isTrue((await coll.findOneAsync('aaa')).value == 111);
 
       // Initiate reconnect.
       await stream.reset();
@@ -2347,12 +2347,12 @@ if (Meteor.isClient) {
       await stream.receive({ msg: 'connected', session: SESSION_ID + 1 });
 
       // Now in reconnect, can still see the document.
-      test.isTrue(await coll.findOneAsync('aaa').value == 111);
+      test.isTrue((await coll.findOneAsync('aaa')).value == 111);
 
       await conn.callAsync('update_value');
 
       // Observe the stub-written value.
-      test.isTrue(await coll.findOneAsync('aaa').value == 222);
+      test.isTrue((await coll.findOneAsync('aaa')).value == 222);
 
       let methodMessage = JSON.parse(stream.sent.shift());
       test.equal(methodMessage, {
@@ -2369,7 +2369,7 @@ if (Meteor.isClient) {
       // By this point quiescence is reached and stores have been reset.
 
       // The stub-written value is still there.
-      test.isTrue(await coll.findOneAsync('aaa').value == 222);
+      test.isTrue((await coll.findOneAsync('aaa')).value == 222);
 
       await stream.receive({
         msg: 'changed',
@@ -2381,7 +2381,7 @@ if (Meteor.isClient) {
       await stream.receive({ msg: 'result', id: methodMessage.id, result: null });
 
       // Server wrote a different value, make sure it's visible now.
-      test.isTrue(await coll.findOneAsync('aaa').value == 333);
+      test.isTrue((await coll.findOneAsync('aaa')).value == 333);
     }
   );
 
@@ -2402,7 +2402,7 @@ if (Meteor.isClient) {
 
     conn.methods({
       update_value: async function() {
-        const value = await coll.findOneAsync('aaa').subscription;
+        const value = (await coll.findOneAsync('aaa')).subscription;
         // Method should have access to the latest value of the collection.
         coll.update('aaa', { $set: { method: value + 110 } });
       }
@@ -2430,7 +2430,7 @@ if (Meteor.isClient) {
 
     await stream.receive(subDocMessage);
     await stream.receive(subReadyMessage);
-    test.equal(await coll.findOneAsync('aaa').subscription, 111);
+    test.equal((await coll.findOneAsync('aaa')).subscription, 111);
 
     const subDocChangeMessage = {
       msg: 'changed',
@@ -2441,16 +2441,16 @@ if (Meteor.isClient) {
 
     await stream.receive(subDocChangeMessage);
     // Still 111 because buffer has not been flushed.
-    test.equal(await coll.findOneAsync('aaa').subscription, 111);
+    test.equal((await coll.findOneAsync('aaa')).subscription, 111);
 
     // Call updates the stub.
     await conn.callAsync('update_value');
 
     // Observe the stub-written value.
-    test.equal(await coll.findOneAsync('aaa').method, 222);
+    test.equal((await coll.findOneAsync('aaa')).method, 222);
     // subscription field is updated to the latest value
     // because of the method call.
-    test.equal(await coll.findOneAsync('aaa').subscription, 112);
+    test.equal((await coll.findOneAsync('aaa')).subscription, 112);
 
     let methodMessage = JSON.parse(stream.sent.shift());
     test.equal(methodMessage, {
@@ -2473,14 +2473,14 @@ if (Meteor.isClient) {
     await stream.receive({ msg: 'updated', methods: [methodMessage.id] });
     await stream.receive({ msg: 'result', id: methodMessage.id, result: null });
 
-    test.equal(await coll.findOneAsync('aaa').method, 222);
-    test.equal(await coll.findOneAsync('aaa').subscription, 112);
+    test.equal((await coll.findOneAsync('aaa')).method, 222);
+    test.equal((await coll.findOneAsync('aaa')).subscription, 112);
 
     // Buffer should already be flushed because of a non-update message.
     // And after a flush we really want subscription field to be 112.
     conn._flushBufferedWrites();
-    test.equal(await coll.findOneAsync('aaa').method, 222);
-    test.equal(await coll.findOneAsync('aaa').subscription, 112);
+    test.equal((await coll.findOneAsync('aaa')).method, 222);
+    test.equal((await coll.findOneAsync('aaa')).subscription, 112);
   });
 }
 
