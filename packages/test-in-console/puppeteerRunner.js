@@ -1,10 +1,15 @@
 const puppeteer = require('../../dev_bundle/lib/node_modules/puppeteer');
 
+let testNumber = 0;
 async function runNextUrl(browser) {
   const page = await browser.newPage();
 
   page.on('console', msg => {
-    console.log(msg._text);
+    // this is a way to make sure the travis does not timeout
+    // if the test is running for too long without any output to the console (10 minutes)
+    if (msg._text !== undefined) console.log(msg._text);
+    else console.log(`Test number ${testNumber}`);
+    testNumber++;
   });
 
   if (!process.env.URL) {
