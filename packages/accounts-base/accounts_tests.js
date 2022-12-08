@@ -679,15 +679,15 @@ Tinytest.add(
     // Verify user profile data is saved properly when not using the
     // onExternalLogin hook.
     let facebookId = Random.id();
-    const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    const u1 = await Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 1 } },
-    ).userId;
+    );
     const ignoreFieldName = "bigArray";
-    const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
+    const c = await Meteor.users.update(u1.userId, {$set: {[ignoreFieldName]: [1]}});
     let users =
-      Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+      await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 1);
     test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
@@ -703,13 +703,13 @@ Tinytest.add(
       test.isUndefined(users[ignoreFieldName], 'ignoreField - after limit fields');
       return options;
     });
-    Accounts.updateOrCreateUserFromExternalService(
+    await Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 1 } },
     );
     // test.isUndefined(users[0][ignoreFieldName], 'ignoreField - fields limited');
-    users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+    users = await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 2);
     test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - still there');
@@ -717,18 +717,18 @@ Tinytest.add(
     // Verify user profile data can be modified using the onExternalLogin
     // hook, for new users.
     facebookId = Random.id();
-    const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    const u2 = await Accounts.updateOrCreateUserFromExternalService(
       'facebook',
       { id: facebookId },
       { profile: { foo: 3 } },
-    ).userId;
-    users = Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+    );
+    users = await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
     test.equal(users[0].profile.foo, 2);
 
     // Cleanup
-    Meteor.users.remove(uid1);
-    Meteor.users.remove(uid2);
+    await Meteor.users.remove(u1);
+    await Meteor.users.remove(u2.userId);
     Accounts._onExternalLoginHook = null;
     Accounts._options = accountsOptions;
   }
