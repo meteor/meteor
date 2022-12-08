@@ -691,7 +691,7 @@ export class AccountsServer extends AccountsCommon {
       }
       const newStampedToken = accounts._generateStampedLoginToken();
       newStampedToken.when = currentStampedToken.when;
-      accounts._insertLoginToken(this.userId, newStampedToken);
+      await accounts._insertLoginToken(this.userId, newStampedToken);
       return accounts._loginUser(this, this.userId, newStampedToken);
     };
 
