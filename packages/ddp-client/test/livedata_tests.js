@@ -1,6 +1,8 @@
 import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
 
+const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // XXX should check error codes
 const failure = function(test, code, reason) {
   return function(error, result) {
@@ -435,7 +437,7 @@ if (Meteor.isClient) {
   testAsyncMulti(
     'livedata - changing userid reruns subscriptions without flapping data on the wire',
     [
-      function(test, expect) {
+      async function(test, expect) {
         const messages = [];
         const undoEavesdrop = eavesdropOnCollection(
           Meteor.connection,
@@ -484,54 +486,68 @@ if (Meteor.isClient) {
         let afterSecondSetUserId;
         let afterThirdSetUserId;
 
-        Meteor.subscribe(
-          'objectsWithUsers',
-          expect(function() {
-            expectMessages(1, 0, ['owned by none']);
-            Meteor.apply(
-              'setUserId',
-              ['1'],
-              { wait: true },
-              afterFirstSetUserId
-            );
-          })
-        );
+        const handle = Meteor.subscribe('objectsWithUsers');
 
-        afterFirstSetUserId = expect(function() {
-          expectMessages(3, 1, [
-            'owned by one - a',
-            'owned by one/two - a',
-            'owned by one/two - b'
-          ]);
+        let control = 0;
+        // Just make sure the subscription is ready before running the tests
+        // As everything now runs async, the tests were running before the data fully came in
+        while (!handle.ready()) {
+          if (!handle.ready()) {
+            // Just in case something happens with the subscription, we have this control
+            if (control++ === 1000) {
+              throw new Error("Subscribe to objectsWithUsers is taking too long!");
+            }
+            await _sleep(0);
+            return;
+          }
+          expectMessages(1, 0, ['owned by none']);
           Meteor.apply(
             'setUserId',
-            ['2'],
+            ['1'],
             { wait: true },
-            afterSecondSetUserId
+            afterFirstSetUserId
           );
-        });
+          afterFirstSetUserId = expect(function() {
+            expectMessages(3, 1, [
+              'owned by one - a',
+              'owned by one/two - a',
+              'owned by one/two - b',
+            ]);
+            Meteor.apply(
+              'setUserId',
+              ['2'],
+              { wait: true },
+              afterSecondSetUserId
+            );
+          });
 
-        afterSecondSetUserId = expect(function() {
-          expectMessages(2, 1, [
-            'owned by one/two - a',
-            'owned by one/two - b',
-            'owned by two - a',
-            'owned by two - b'
-          ]);
-          Meteor.apply('setUserId', ['2'], { wait: true }, afterThirdSetUserId);
-        });
+          afterSecondSetUserId = expect(function() {
+            expectMessages(2, 1, [
+              'owned by one/two - a',
+              'owned by one/two - b',
+              'owned by two - a',
+              'owned by two - b',
+            ]);
+            Meteor.apply(
+              'setUserId',
+              ['2'],
+              { wait: true },
+              afterThirdSetUserId
+            );
+          });
 
-        afterThirdSetUserId = expect(function() {
-          // Nothing should have been sent since the results of the
-          // query are the same ("don't flap data on the wire")
-          expectMessages(0, 0, [
-            'owned by one/two - a',
-            'owned by one/two - b',
-            'owned by two - a',
-            'owned by two - b'
-          ]);
-          undoEavesdrop();
-        });
+          afterThirdSetUserId = expect(function() {
+            // Nothing should have been sent since the results of the
+            // query are the same ("don't flap data on the wire")
+            expectMessages(0, 0, [
+              'owned by one/two - a',
+              'owned by one/two - b',
+              'owned by two - a',
+              'owned by two - b',
+            ]);
+            undoEavesdrop();
+          });
+        }
       },
       function(test, expect) {
         const key = Random.id();

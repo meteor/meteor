@@ -157,47 +157,48 @@ Meteor.methods({
 
 objectsWithUsers = new Mongo.Collection('objectsWithUsers');
 
-if (Meteor.isServer) {
-  objectsWithUsers.remove({});
-  objectsWithUsers.insert({ name: 'owned by none', ownerUserIds: [null] });
-  objectsWithUsers.insert({ name: 'owned by one - a', ownerUserIds: ['1'] });
-  objectsWithUsers.insert({
-    name: 'owned by one/two - a',
-    ownerUserIds: ['1', '2']
-  });
-  objectsWithUsers.insert({
-    name: 'owned by one/two - b',
-    ownerUserIds: ['1', '2']
-  });
-  objectsWithUsers.insert({ name: 'owned by two - a', ownerUserIds: ['2'] });
-  objectsWithUsers.insert({ name: 'owned by two - b', ownerUserIds: ['2'] });
+Meteor.startup(async function() {
+  if (Meteor.isServer) {
+    await objectsWithUsers.removeAsync({});
+    await objectsWithUsers.insertAsync({name: 'owned by none', ownerUserIds: [null]});
+    await objectsWithUsers.insertAsync({name: 'owned by one - a', ownerUserIds: ['1']});
+    await objectsWithUsers.insertAsync({
+      name: 'owned by one/two - a',
+      ownerUserIds: ['1', '2']
+    });
+    await objectsWithUsers.insertAsync({
+      name: 'owned by one/two - b',
+      ownerUserIds: ['1', '2']
+    });
+    await objectsWithUsers.insertAsync({name: 'owned by two - a', ownerUserIds: ['2']});
+    await objectsWithUsers.insertAsync({name: 'owned by two - b', ownerUserIds: ['2']});
 
-  Meteor.publish('objectsWithUsers', function() {
-    return objectsWithUsers.find(
-      { ownerUserIds: this.userId },
-      { fields: { ownerUserIds: 0 } }
-    );
-  });
-
-  (function() {
-    const userIdWhenStopped = Object.create(null);
-    Meteor.publish('recordUserIdOnStop', function(key) {
-      check(key, String);
-      const self = this;
-      self.onStop(function() {
-        userIdWhenStopped[key] = self.userId;
-      });
+    Meteor.publish('objectsWithUsers', function () {
+      return objectsWithUsers.find(
+        {ownerUserIds: this.userId},
+        {fields: {ownerUserIds: 0}}
+      );
     });
 
-    Meteor.methods({
-      userIdWhenStopped: function(key) {
+    (function () {
+      const userIdWhenStopped = Object.create(null);
+      Meteor.publish('recordUserIdOnStop', function (key) {
         check(key, String);
-        return userIdWhenStopped[key];
-      }
-    });
-  })();
-}
+        const self = this;
+        self.onStop(function () {
+          userIdWhenStopped[key] = self.userId;
+        });
+      });
 
+      Meteor.methods({
+        userIdWhenStopped: function (key) {
+          check(key, String);
+          return userIdWhenStopped[key];
+        }
+      });
+    })();
+  }
+});
 /*****/
 
 /// Helper for "livedata - setUserId fails when called on server"
