@@ -17,14 +17,14 @@ Tinytest.add(
   test => test.throws(() => Accounts.config({foo: "bar"}))
 );
 
-Tinytest.add('accounts - config - token lifetime', test => {
+Tinytest.addAsync('accounts - config - token lifetime', async test => {
   const { loginExpirationInDays } = Accounts._options;
   Accounts._options.loginExpirationInDays = 2;
   test.equal(Accounts._getTokenLifetimeMs(), 2 * 24 * 60 * 60 * 1000);
   Accounts._options.loginExpirationInDays = loginExpirationInDays;
 });
 
-Tinytest.add('accounts - config - unexpiring tokens', test => {
+Tinytest.addAsync('accounts - config - unexpiring tokens', async test => {
   const { loginExpirationInDays } = Accounts._options;
 
   // When setting loginExpirationInDays to null in the global Accounts
@@ -52,7 +52,7 @@ Tinytest.add('accounts - config - unexpiring tokens', test => {
   Accounts._options.loginExpirationInDays = loginExpirationInDays;
 });
 
-Tinytest.add('accounts - config - default token lifetime', test => {
+Tinytest.addAsync('accounts - config - default token lifetime', async test => {
   const options = Accounts._options;
   Accounts._options = {};
   test.equal(
@@ -62,7 +62,7 @@ Tinytest.add('accounts - config - default token lifetime', test => {
   Accounts._options = options;
 });
 
-Tinytest.add('accounts - config - defaultFieldSelector', test => {
+Tinytest.addAsync('accounts - config - defaultFieldSelector', async test => {
   const options = Accounts._options;
   Accounts._options = {};
   const setValue = {bigArray: 0};
@@ -77,12 +77,12 @@ Accounts.validateNewUser(user => {
   return true;
 });
 
-Tinytest.add('accounts - validateNewUser gets passed user with _id', test => {
-  const newUserId = Accounts.updateOrCreateUserFromExternalService('foobook', {id: Random.id()}).userId;
-  test.isTrue(newUserId in idsInValidateNewUser);
+Tinytest.addAsync('accounts - validateNewUser gets passed user with _id', async test => {
+  const { userId } = await Accounts.updateOrCreateUserFromExternalService('foobook', { id: Random.id() });
+  test.isTrue(userId in idsInValidateNewUser);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test => {
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook', async test => {
   const facebookId = Random.id();
 
   // create an account with facebook
@@ -112,7 +112,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Facebook', test
   Meteor.users.remove(uid1);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Meteor Developer', test => {
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Meteor Developer', async test => {
   const developerId = Random.id();
   const uid1 = Accounts.updateOrCreateUserFromExternalService(
     'meteor-developer',
@@ -138,7 +138,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Meteor Develope
   Meteor.users.remove(uid1);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', test => {
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', async test => {
   const weiboId1 = Random.id();
   const weiboId2 = Random.id();
 
@@ -158,7 +158,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Weibo', test =>
   Meteor.users.remove(uid2);
 });
 
-Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', test => {
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', async test => {
   const twitterIdOld = parseInt(Random.hexString(4), 16);
   const twitterIdNew = ''+twitterIdOld;
 
@@ -184,7 +184,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', test 
 });
 
 
-Tinytest.add('accounts - insertUserDoc username', test => {
+Tinytest.addAsync('accounts - insertUserDoc username', async test => {
   const userIn = {
     username: Random.id()
   };
@@ -210,7 +210,7 @@ Tinytest.add('accounts - insertUserDoc username', test => {
   Meteor.users.remove(userId);
 });
 
-Tinytest.add('accounts - insertUserDoc email', test => {
+Tinytest.addAsync('accounts - insertUserDoc email', async test => {
   const email1 = Random.id();
   const email2 = Random.id();
   const email3 = Random.id();
@@ -380,7 +380,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.add('accounts - get new token', test => {
+Tinytest.addAsync('accounts - get new token', async test => {
     // Test that the `getNewToken` method returns us a valid token, with
     // the same expiration as our original token.
     const userId = Accounts.insertUserDoc({}, { username: Random.id() });
@@ -441,9 +441,9 @@ Tinytest.addAsync('accounts - remove other tokens', (test, onComplete) => {
   }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - hook callbacks can access Meteor.userId()',
-  test => {
+  async test => {
     const userId = Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedToken = Accounts._generateStampedLoginToken();
     Accounts._insertLoginToken(userId, stampedToken);
@@ -491,9 +491,9 @@ Tinytest.add(
   }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - hook callbacks obey options.defaultFieldSelector',
-  test => {
+  async test => {
     const ignoreFieldName = "bigArray";
     const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
     const stampedToken = Accounts._generateStampedLoginToken();
@@ -548,9 +548,9 @@ Tinytest.add(
   }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - Meteor.user() obeys options.defaultFieldSelector',
-  test => {
+  async test => {
     const ignoreFieldName = "bigArray";
     const customField = "customField";
     const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
@@ -607,7 +607,7 @@ Tinytest.add(
 
 Tinytest.addAsync(
   'accounts async - Meteor.userAsync() obeys options.defaultFieldSelector',
-  async test => {
+  async  test => {
     const ignoreFieldName = "bigArray";
     const customField = "customField";
     const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
@@ -660,9 +660,9 @@ Tinytest.addAsync(
     Accounts.userId = origAccountsUserId;
   }
 );
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - verify onExternalLogin hook can update oauth user profiles',
-  test => {
+  async test => {
     // Verify user profile data is saved properly when not using the
     // onExternalLogin hook.
     let facebookId = Random.id();
@@ -721,9 +721,9 @@ Tinytest.add(
   }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
     'accounts - verify beforeExternalLogin hook can stop user login',
-    test => {
+    async test => {
         // Verify user data is saved properly when not using the
         // beforeExternalLogin hook.
         let facebookId = Random.id();
@@ -762,9 +762,9 @@ Tinytest.add(
     }
 );
 
-Tinytest.add(
+Tinytest.addAsync(
   'accounts - verify setAdditionalFindUserOnExternalLogin hook can provide user',
-  test => {
+  async test => {
       // create test user, without a google service
       const testEmail = "test@testdomain.com"
       const uid0 = Accounts.createUser({email: testEmail})
@@ -795,9 +795,9 @@ Tinytest.add(
 );
 
 if(Meteor.isServer) {
-  Tinytest.add(
+  Tinytest.addAsync(
     'accounts - make sure that extra params to accounts urls are added',
-    test => {
+    async test => {
       // No extra params
       const verifyEmailURL = new URL(Accounts.urls.verifyEmail('test'));
       test.equal(verifyEmailURL.searchParams.toString(), "");
