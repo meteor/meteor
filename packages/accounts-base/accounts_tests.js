@@ -190,19 +190,18 @@ Tinytest.addAsync('accounts - insertUserDoc username', async test => {
   };
 
   // user does not already exist. create a user object with fields set.
-  const userId = Accounts.insertUserDoc(
+  const userId = await Accounts.insertUserDoc(
     {profile: {name: 'Foo Bar'}},
     userIn
   );
-  const userOut = Meteor.users.findOne(userId);
-
+  const userOut = await Meteor.users.findOne(userId);
   test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
   test.equal(userOut.username, userIn.username);
 
   // run the hook again. now the user exists, so it throws an error.
-  test.throws(
-    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
+  await test.throwsAsync(
+   async () => await Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
     'Username already exists.'
   );
 
