@@ -82,112 +82,6 @@ Tinytest.addAsync('accounts - validateNewUser gets passed user with _id', async 
   test.isTrue(userId in idsInValidateNewUser);
 });
 
-Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook', async test => {
-  const facebookId = Random.id();
-
-  // create an account with facebook
-  const u1 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'facebook', { id: facebookId, monkey: 42 }, { profile: { foo: 1 } });
-  const users1 =
-    await Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
-  test.length(users1, 1);
-  test.equal(users1[0].profile.foo, 1);
-  test.equal(users1[0].services.facebook.monkey, 42);
-
-  // create again with the same id, see that we get the same user.
-  // it should update services.facebook but not profile.
-  const u2 =
-    await Accounts.updateOrCreateUserFromExternalService(
-      'facebook', { id: facebookId, llama: 50 },
-      { profile: { foo: 1000, bar: 2 } });
-  test.equal(u1.id, u2.id);
-  const users2 =
-    await Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
-  test.length(users2, 1);
-  test.equal(users2[0].profile.foo, 1);
-  test.equal(users2[0].profile.bar, undefined);
-  test.equal(users2[0].services.facebook.llama, 50);
-  // make sure we *don't* lose values not passed this call to
-  // updateOrCreateUserFromExternalService
-  test.equal(users2[0].services.facebook.monkey, 42);
-
-  // cleanup
-  await Meteor.users.remove(u1.id);
-});
-
-Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Meteor Developer', async test => {
-  const developerId = Random.id();
-  const uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'meteor-developer',
-    { id: developerId, username: 'meteor-developer' },
-    { profile: { name: 'meteor-developer' } }
-  ).id;
-  const users1 = Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
-  test.length(users1, 1);
-  test.equal(users1[0].profile.name, 'meteor-developer');
-
-  const uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'meteor-developer',
-    { id: developerId, username: 'meteor-developer' },
-    { profile: { name: 'meteor-developer', username: 'developer' } }
-  ).id;
-  test.equal(uid1, uid2);
-  const users2 = Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
-  test.length(users2, 1);
-  test.equal(users1[0].profile.name, 'meteor-developer');
-  test.equal(users1[0].profile.username, undefined);
-
-  // cleanup
-  Meteor.users.remove(uid1);
-});
-
-Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', async test => {
-  const weiboId1 = Random.id();
-  const weiboId2 = Random.id();
-
-  // users that have different service ids get different users
-  const uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'weibo', { id: weiboId1 }, { profile: { foo: 1 } }).id;
-  const uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'weibo', { id: weiboId2 }, { profile: { bar: 2 } }).id;
-  test.equal(Meteor.users.find({ "services.weibo.id": { $in: [weiboId1, weiboId2] } }).count(), 2);
-  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId1 }).profile.foo, 1);
-  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId1 }).emails, undefined);
-  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId2 }).profile.bar, 2);
-  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId2 }).emails, undefined);
-
-  // cleanup
-  Meteor.users.remove(uid1);
-  Meteor.users.remove(uid2);
-});
-
-Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', async test => {
-  const twitterIdOld = parseInt(Random.hexString(4), 16);
-  const twitterIdNew = '' + twitterIdOld;
-
-  // create an account with twitter using the old ID format of integer
-  const uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'twitter', { id: twitterIdOld, monkey: 42 }, { profile: { foo: 1 } }).id;
-  const users1 = Meteor.users.find({ "services.twitter.id": twitterIdOld }).fetch();
-  test.length(users1, 1);
-  test.equal(users1[0].profile.foo, 1);
-  test.equal(users1[0].services.twitter.monkey, 42);
-
-  // Update the account with the new ID format of string
-  // test that the existing user is found, and that the ID
-  // gets updated to a string value
-  const uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'twitter', { id: twitterIdNew, monkey: 42 }, { profile: { foo: 1 } }).id;
-  test.equal(uid1, uid2);
-  const users2 = Meteor.users.find({ "services.twitter.id": twitterIdNew }).fetch();
-  test.length(users2, 1);
-
-  // cleanup
-  await Meteor.users.remove(uid1);
-});
-
-
 Tinytest.addAsync('accounts - insertUserDoc username', async test => {
   const userIn = {
     username: Random.id()
@@ -851,3 +745,114 @@ if (Meteor.isServer) {
     }
   );
 }
+
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook', async test => {
+  const facebookId = Random.id();
+
+  // create an account with facebook
+  const u1 =
+    await Accounts.updateOrCreateUserFromExternalService(
+      'facebook', { id: facebookId, monkey: 42 }, { profile: { foo: 1 } });
+  const users1 =
+    await Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.foo, 1);
+  test.equal(users1[0].services.facebook.monkey, 42);
+
+  // create again with the same id, see that we get the same user.
+  // it should update services.facebook but not profile.
+  const u2 =
+    await Accounts.updateOrCreateUserFromExternalService(
+      'facebook', { id: facebookId, llama: 50 },
+      { profile: { foo: 1000, bar: 2 } });
+  test.equal(u1.id, u2.id);
+  const users2 =
+    await Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
+  test.length(users2, 1);
+  test.equal(users2[0].profile.foo, 1);
+  test.equal(users2[0].profile.bar, undefined);
+  test.equal(users2[0].services.facebook.llama, 50);
+  // make sure we *don't* lose values not passed this call to
+  // updateOrCreateUserFromExternalService
+  test.equal(users2[0].services.facebook.monkey, 42);
+
+  // cleanup
+  await Meteor.users.remove(u1.id);
+});
+
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Meteor Developer', async test => {
+  const developerId =
+    Random.id();
+  const u1 =
+    await Accounts.updateOrCreateUserFromExternalService(
+      'meteor-developer',
+      { id: developerId, username: 'meteor-developer' },
+      { profile: { name: 'meteor-developer' } }
+    );
+  const users1 =
+    await Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.name, 'meteor-developer');
+
+  const u2 =
+    await Accounts.updateOrCreateUserFromExternalService(
+      'meteor-developer',
+      { id: developerId, username: 'meteor-developer' },
+      { profile: { name: 'meteor-developer', username: 'developer' } }
+    );
+  test.equal(u1.id, u2.id);
+  const users2 =
+    await Meteor.users.find({ 'services.meteor-developer.id': developerId }).fetch();
+  test.length(users2, 1);
+  test.equal(users1[0].profile.name, 'meteor-developer');
+  test.equal(users1[0].profile.username, undefined);
+
+  // cleanup
+  await Meteor.users.remove(u1);
+});
+
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', async test => {
+  const weiboId1 = Random.id();
+  const weiboId2 = Random.id();
+
+  // users that have different service ids get different users
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'weibo', { id: weiboId1 }, { profile: { foo: 1 } }).id;
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'weibo', { id: weiboId2 }, { profile: { bar: 2 } }).id;
+  test.equal(Meteor.users.find({ "services.weibo.id": { $in: [weiboId1, weiboId2] } }).count(), 2);
+  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId1 }).profile.foo, 1);
+  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId1 }).emails, undefined);
+  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId2 }).profile.bar, 2);
+  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId2 }).emails, undefined);
+
+  // cleanup
+  Meteor.users.remove(uid1);
+  Meteor.users.remove(uid2);
+});
+
+Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', async test => {
+  const twitterIdOld = parseInt(Random.hexString(4), 16);
+  const twitterIdNew = '' + twitterIdOld;
+
+  // create an account with twitter using the old ID format of integer
+  const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    'twitter', { id: twitterIdOld, monkey: 42 }, { profile: { foo: 1 } }).id;
+  const users1 = Meteor.users.find({ "services.twitter.id": twitterIdOld }).fetch();
+  test.length(users1, 1);
+  test.equal(users1[0].profile.foo, 1);
+  test.equal(users1[0].services.twitter.monkey, 42);
+
+  // Update the account with the new ID format of string
+  // test that the existing user is found, and that the ID
+  // gets updated to a string value
+  const uid2 = Accounts.updateOrCreateUserFromExternalService(
+    'twitter', { id: twitterIdNew, monkey: 42 }, { profile: { foo: 1 } }).id;
+  test.equal(uid1, uid2);
+  const users2 = Meteor.users.find({ "services.twitter.id": twitterIdNew }).fetch();
+  test.length(users2, 1);
+
+  // cleanup
+  await Meteor.users.remove(uid1);
+});
+
