@@ -899,10 +899,10 @@ export class AccountsServer extends AccountsCommon {
   // Using $addToSet avoids getting an index error if another client
   // logging in simultaneously has already inserted the new hashed
   // token.
-  _insertHashedLoginToken(userId, hashedToken, query) {
+  async _insertHashedLoginToken(userId, hashedToken, query) {
     query = query ? { ...query } : {};
     query._id = userId;
-    this.users.update(query, {
+    await this.users.update(query, {
       $addToSet: {
         "services.resume.loginTokens": hashedToken
       }
@@ -910,8 +910,8 @@ export class AccountsServer extends AccountsCommon {
   };
 
   // Exported for tests.
-  _insertLoginToken(userId, stampedToken, query) {
-    this._insertHashedLoginToken(
+  async _insertLoginToken(userId, stampedToken, query) {
+    await this._insertHashedLoginToken(
       userId,
       this._hashStampedToken(stampedToken),
       query
