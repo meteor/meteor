@@ -14,7 +14,7 @@ Meteor.methods({
 // (impossible?)
 Tinytest.add(
   'accounts - config validates keys',
-  test => test.throws(() => Accounts.config({foo: "bar"}))
+  test => test.throws(() => Accounts.config({ foo: "bar" }))
 );
 
 Tinytest.addAsync('accounts - config - token lifetime', async test => {
@@ -65,8 +65,8 @@ Tinytest.addAsync('accounts - config - default token lifetime', async test => {
 Tinytest.addAsync('accounts - config - defaultFieldSelector', async test => {
   const options = Accounts._options;
   Accounts._options = {};
-  const setValue = {bigArray: 0};
-  Accounts.config({defaultFieldSelector: setValue});
+  const setValue = { bigArray: 0 };
+  Accounts.config({ defaultFieldSelector: setValue });
   test.equal(Accounts._options.defaultFieldSelector, setValue);
   Accounts._options = options;
 });
@@ -87,8 +87,8 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook',
 
   // create an account with facebook
   const uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', {id: facebookId, monkey: 42}, {profile: {foo: 1}}).id;
-  const users1 = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
+    'facebook', { id: facebookId, monkey: 42 }, { profile: { foo: 1 } }).id;
+  const users1 = Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
   test.length(users1, 1);
   test.equal(users1[0].profile.foo, 1);
   test.equal(users1[0].services.facebook.monkey, 42);
@@ -96,10 +96,10 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook',
   // create again with the same id, see that we get the same user.
   // it should update services.facebook but not profile.
   const uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', {id: facebookId, llama: 50},
-    {profile: {foo: 1000, bar: 2}}).id;
+    'facebook', { id: facebookId, llama: 50 },
+    { profile: { foo: 1000, bar: 2 } }).id;
   test.equal(uid1, uid2);
-  const users2 = Meteor.users.find({"services.facebook.id": facebookId}).fetch();
+  const users2 = Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
   test.length(users2, 1);
   test.equal(users2[0].profile.foo, 1);
   test.equal(users2[0].profile.bar, undefined);
@@ -144,14 +144,14 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', as
 
   // users that have different service ids get different users
   const uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'weibo', {id: weiboId1}, {profile: {foo: 1}}).id;
+    'weibo', { id: weiboId1 }, { profile: { foo: 1 } }).id;
   const uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'weibo', {id: weiboId2}, {profile: {bar: 2}}).id;
-  test.equal(Meteor.users.find({"services.weibo.id": {$in: [weiboId1, weiboId2]}}).count(), 2);
-  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).profile.foo, 1);
-  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId1}).emails, undefined);
-  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId2}).profile.bar, 2);
-  test.equal(Meteor.users.findOne({"services.weibo.id": weiboId2}).emails, undefined);
+    'weibo', { id: weiboId2 }, { profile: { bar: 2 } }).id;
+  test.equal(Meteor.users.find({ "services.weibo.id": { $in: [weiboId1, weiboId2] } }).count(), 2);
+  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId1 }).profile.foo, 1);
+  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId1 }).emails, undefined);
+  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId2 }).profile.bar, 2);
+  test.equal(Meteor.users.findOne({ "services.weibo.id": weiboId2 }).emails, undefined);
 
   // cleanup
   Meteor.users.remove(uid1);
@@ -160,12 +160,12 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Weibo', as
 
 Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', async test => {
   const twitterIdOld = parseInt(Random.hexString(4), 16);
-  const twitterIdNew = ''+twitterIdOld;
+  const twitterIdNew = '' + twitterIdOld;
 
   // create an account with twitter using the old ID format of integer
   const uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'twitter', {id: twitterIdOld, monkey: 42}, {profile: {foo: 1}}).id;
-  const users1 = Meteor.users.find({"services.twitter.id": twitterIdOld}).fetch();
+    'twitter', { id: twitterIdOld, monkey: 42 }, { profile: { foo: 1 } }).id;
+  const users1 = Meteor.users.find({ "services.twitter.id": twitterIdOld }).fetch();
   test.length(users1, 1);
   test.equal(users1[0].profile.foo, 1);
   test.equal(users1[0].services.twitter.monkey, 42);
@@ -174,9 +174,9 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // test that the existing user is found, and that the ID
   // gets updated to a string value
   const uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'twitter', {id: twitterIdNew, monkey: 42}, {profile: {foo: 1}}).id;
+    'twitter', { id: twitterIdNew, monkey: 42 }, { profile: { foo: 1 } }).id;
   test.equal(uid1, uid2);
-  const users2 = Meteor.users.find({"services.twitter.id": twitterIdNew}).fetch();
+  const users2 = Meteor.users.find({ "services.twitter.id": twitterIdNew }).fetch();
   test.length(users2, 1);
 
   // cleanup
@@ -191,7 +191,7 @@ Tinytest.addAsync('accounts - insertUserDoc username', async test => {
 
   // user does not already exist. create a user object with fields set.
   const userId = await Accounts.insertUserDoc(
-    {profile: {name: 'Foo Bar'}},
+    { profile: { name: 'Foo Bar' } },
     userIn
   );
   const userOut = await Meteor.users.findOne(userId);
@@ -201,7 +201,7 @@ Tinytest.addAsync('accounts - insertUserDoc username', async test => {
 
   // run the hook again. now the user exists, so it throws an error.
   await test.throwsAsync(
-   async () => await Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
+    async () => await Accounts.insertUserDoc({ profile: { name: 'Foo Bar' } }, userIn),
     'Username already exists.'
   );
 
@@ -214,13 +214,13 @@ Tinytest.addAsync('accounts - insertUserDoc email', async test => {
   const email2 = Random.id();
   const email3 = Random.id();
   const userIn = {
-    emails: [{address: email1, verified: false},
-             {address: email2, verified: true}]
+    emails: [{ address: email1, verified: false },
+      { address: email2, verified: true }]
   };
 
   // user does not already exist. create a user object with fields set.
   const userId = await Accounts.insertUserDoc(
-    {profile: {name: 'Foo Bar'}},
+    { profile: { name: 'Foo Bar' } },
     userIn
   );
   const userOut = await Meteor.users.findOne(userId);
@@ -252,7 +252,7 @@ Tinytest.addAsync('accounts - insertUserDoc email', async test => {
 
   // a third email works.
   const userId3 = await Accounts.insertUserDoc(
-      {}, {emails: [{address: email3}]}
+    {}, { emails: [{ address: email3 }] }
   );
   const user3 = await Meteor.users.findOne(userId3);
   test.equal(typeof user3.createdAt, 'object');
@@ -265,9 +265,11 @@ Tinytest.addAsync('accounts - insertUserDoc email', async test => {
 // More token expiration tests are in accounts-password
 Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) => {
   const userIn = { username: Random.id() };
-  const userId = await Accounts.insertUserDoc({ profile: {
-    name: 'Foo Bar'
-  } }, userIn);
+  const userId = await Accounts.insertUserDoc({
+    profile: {
+      name: 'Foo Bar'
+    }
+  }, userIn);
   const date = new Date(new Date() - 5000);
   await Meteor.users.update(userId, {
     $set: {
@@ -283,7 +285,7 @@ Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) =>
   const observe = await Meteor.users.find(userId).observe({
     changed: newUser => {
       if (newUser.services && newUser.services.resume &&
-          (!newUser.services.resume.loginTokens ||
+        (!newUser.services.resume.loginTokens ||
           newUser.services.resume.loginTokens.length === 0)) {
         observe.stop();
         onComplete();
@@ -299,7 +301,7 @@ Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) =>
 const insertUnhashedLoginToken = async (userId, stampedToken) => {
   await Meteor.users.update(
     userId,
-    {$push: {'services.resume.loginTokens': stampedToken}}
+    { $push: { 'services.resume.loginTokens': stampedToken } }
   );
 };
 
@@ -422,15 +424,16 @@ Tinytest.addAsync('accounts - remove other tokens', async (test) => {
     const stampedTokens = [];
     const conns = [];
 
-    for(let i = 0; i < 2; i++) {
+    for (let i = 0; i < 2; i++) {
       stampedTokens.push(Accounts._generateStampedLoginToken());
       await Accounts._insertLoginToken(userId, stampedTokens[i]);
       const conn = DDP.connect(Meteor.absoluteUrl());
       await conn.callAsync('login', { resume: stampedTokens[i].token });
       test.equal(await conn.callAsync('getCurrentLoginToken'),
-                 Accounts._hashLoginToken(stampedTokens[i].token));
+        Accounts._hashLoginToken(stampedTokens[i].token));
       conns.push(conn);
-    };
+    }
+    ;
 
     await conns[0].callAsync('removeOtherTokens');
     simplePoll(async () => {
@@ -438,7 +441,7 @@ Tinytest.addAsync('accounts - remove other tokens', async (test) => {
         for (const conn of conns) {
           tokens.push(await conn.callAsync('getCurrentLoginToken'));
         }
-        return ! tokens[1] &&
+        return !tokens[1] &&
           tokens[0] === Accounts._hashLoginToken(stampedTokens[0].token);
       },
       () => { // success
@@ -507,13 +510,14 @@ Tinytest.addAsync(
   'accounts - hook callbacks obey options.defaultFieldSelector',
   async test => {
     const ignoreFieldName = "bigArray";
-    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
+    const userId =
+      await Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1] });
     const stampedToken = Accounts._generateStampedLoginToken();
-    Accounts._insertLoginToken(userId, stampedToken);
+    await Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;
     Accounts._options = {};
-    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
-    test.equal(Accounts._options.defaultFieldSelector, {[ignoreFieldName]: 0}, 'defaultFieldSelector');
+    Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
+    test.equal(Accounts._options.defaultFieldSelector, { [ignoreFieldName]: 0 }, 'defaultFieldSelector');
 
     const validateStopper = Accounts.validateLoginAttempt(attempt => {
       test.isUndefined(allowLogin != 'bogus' ? attempt.user[ignoreFieldName] : attempt.user, "validateLoginAttempt")
@@ -533,23 +537,27 @@ Tinytest.addAsync(
 
     // test a new connection
     let allowLogin = true;
-    conn.call('login', { resume: stampedToken.token });
+    await conn.callAsync('login', { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
     // return that user.
-    conn.call('login', { resume: stampedToken.token });
+    await conn.callAsync('login', { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks, this will not include the user object
     allowLogin = 'bogus';
-    test.throws(() => conn.call('login', { resume: "bogus" }), '403');
+    await test.throwsAsync(
+      async () =>
+        await conn.callAsync('login', { resume: "bogus" }), '403');
 
     // test a forced login fail which WILL include the user object
     allowLogin = false;
-    test.throws(() => conn.call('login', { resume: stampedToken.token }), '403');
+    await test.throwsAsync(
+      async () =>
+        await conn.callAsync('login', { resume: stampedToken.token }), '403');
 
     // Trigger onLogout callbacks
     const onLogoutExpectedUserId = userId;
-    conn.call('logout');
+    await conn.callAsync('logout');
 
     Accounts._options = options;
     conn.disconnect();
@@ -581,31 +589,31 @@ Tinytest.addAsync(
     test.isNotUndefined(user[ignoreFieldName], 'included by default');
 
     // test the field is excluded
-    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
     user = Meteor.user();
     test.isUndefined(user[ignoreFieldName], 'excluded');
     user = Meteor.user({});
     test.isUndefined(user[ignoreFieldName], 'excluded {}');
 
     // test the field can still be retrieved if required
-    user = Meteor.user({fields: {[ignoreFieldName]: 1}});
+    user = Meteor.user({ fields: { [ignoreFieldName]: 1 } });
     test.isNotUndefined(user[ignoreFieldName], 'field can be retrieved');
     test.isUndefined(user.username, 'field can be retrieved username');
 
     // test a combined negative field specifier
-    user = Meteor.user({fields: {username: 0}});
+    user = Meteor.user({ fields: { username: 0 } });
     test.isUndefined(user[ignoreFieldName], 'combined field selector');
     test.isUndefined(user.username, 'combined field selector username');
 
     // test an explicit request for the full user object
-    user = Meteor.user({fields: {}});
+    user = Meteor.user({ fields: {} });
     test.isNotUndefined(user[ignoreFieldName], 'full selector');
     test.isNotUndefined(user.username, 'full selector username');
 
     Accounts._options = {};
 
     // Test that a custom field gets retrieved properly
-    Accounts.config({defaultFieldSelector: {[customField]: 1}});
+    Accounts.config({ defaultFieldSelector: { [customField]: 1 } });
     user = Meteor.user()
     test.isNotUndefined(user[customField]);
     test.isUndefined(user.username);
@@ -619,7 +627,7 @@ Tinytest.addAsync(
 
 Tinytest.addAsync(
   'accounts async - Meteor.userAsync() obeys options.defaultFieldSelector',
-  async  test => {
+  async test => {
     const ignoreFieldName = "bigArray";
     const customField = "customField";
     const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
@@ -684,7 +692,7 @@ Tinytest.addAsync(
       { profile: { foo: 1 } },
     ).userId;
     const ignoreFieldName = "bigArray";
-    const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
+    const c = Meteor.users.update(uid1, { $set: { [ignoreFieldName]: [1] } });
     let users =
       Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
     test.length(users, 1);
@@ -696,7 +704,7 @@ Tinytest.addAsync(
     // Also verify that the user object is filtered by _options.defaultFieldSelector
     const accountsOptions = Accounts._options;
     Accounts._options = {};
-    Accounts.config({defaultFieldSelector: {[ignoreFieldName]: 0}});
+    Accounts.config({ defaultFieldSelector: { [ignoreFieldName]: 0 } });
     Accounts.onExternalLogin((options, user) => {
       options.profile.foo = 2;
       test.isUndefined(users[ignoreFieldName], 'ignoreField - after limit fields');
@@ -734,79 +742,79 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-    'accounts - verify beforeExternalLogin hook can stop user login',
-    async test => {
-        // Verify user data is saved properly when not using the
-        // beforeExternalLogin hook.
-        let facebookId = Random.id();
-        const uid1 = Accounts.updateOrCreateUserFromExternalService(
-            'facebook',
-            { id: facebookId },
-            { profile: { foo: 1 } },
-        ).userId;
-        const ignoreFieldName = "bigArray";
-        const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
-        let users =
-            Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
-        test.length(users, 1);
-        test.equal(users[0].profile.foo, 1);
-        test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
+  'accounts - verify beforeExternalLogin hook can stop user login',
+  async test => {
+    // Verify user data is saved properly when not using the
+    // beforeExternalLogin hook.
+    let facebookId = Random.id();
+    const uid1 = Accounts.updateOrCreateUserFromExternalService(
+      'facebook',
+      { id: facebookId },
+      { profile: { foo: 1 } },
+    ).userId;
+    const ignoreFieldName = "bigArray";
+    const c = Meteor.users.update(uid1, { $set: { [ignoreFieldName]: [1] } });
+    let users =
+      Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+    test.length(users, 1);
+    test.equal(users[0].profile.foo, 1);
+    test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
 
-        // Verify that when beforeExternalLogin returns false
-        // that an error throws and user is not saved
-        Accounts.beforeExternalLogin((serviceName, serviceData, user) => {
-            // Check that we get the correct data
-            test.equal(serviceName, 'facebook');
-            test.equal(serviceData, { id: facebookId });
-            test.equal(user._id, uid1);
-            return false
-        });
+    // Verify that when beforeExternalLogin returns false
+    // that an error throws and user is not saved
+    Accounts.beforeExternalLogin((serviceName, serviceData, user) => {
+      // Check that we get the correct data
+      test.equal(serviceName, 'facebook');
+      test.equal(serviceData, { id: facebookId });
+      test.equal(user._id, uid1);
+      return false
+    });
 
-        test.throws(() => Accounts.updateOrCreateUserFromExternalService(
-            'facebook',
-            { id: facebookId },
-            { profile: { foo: 1 } },
-        ));
+    test.throws(() => Accounts.updateOrCreateUserFromExternalService(
+      'facebook',
+      { id: facebookId },
+      { profile: { foo: 1 } },
+    ));
 
-        // Cleanup
-        Meteor.users.remove(uid1);
-        Accounts._beforeExternalLoginHook = null;
-    }
+    // Cleanup
+    Meteor.users.remove(uid1);
+    Accounts._beforeExternalLoginHook = null;
+  }
 );
 
 Tinytest.addAsync(
   'accounts - verify setAdditionalFindUserOnExternalLogin hook can provide user',
   async test => {
-      // create test user, without a google service
-      const testEmail = "test@testdomain.com"
-      const uid0 = Accounts.createUser({email: testEmail})
+    // create test user, without a google service
+    const testEmail = "test@testdomain.com"
+    const uid0 = Accounts.createUser({ email: testEmail })
 
-      // Verify that user is found from email and service merged
-      Accounts.setAdditionalFindUserOnExternalLogin(({serviceName, serviceData}) => {
-        if (serviceName === "google") {
-          return Accounts.findUserByEmail(serviceData.email)
-        }
-      })
-
-      let googleId = Random.id();
-      const uid1 = Accounts.updateOrCreateUserFromExternalService(
-          'google',
-          { id: googleId, email: testEmail },
-          { profile: { foo: 1 } },
-      ).userId;
-
-      test.equal(uid0, uid1)
-
-      // Cleanup
-      if (uid1 !== uid0) {
-        Meteor.users.remove(uid0)
+    // Verify that user is found from email and service merged
+    Accounts.setAdditionalFindUserOnExternalLogin(({ serviceName, serviceData }) => {
+      if (serviceName === "google") {
+        return Accounts.findUserByEmail(serviceData.email)
       }
-      Meteor.users.remove(uid1);
-      Accounts.selectCustomUserOnExternalLogin = null;
+    })
+
+    let googleId = Random.id();
+    const uid1 = Accounts.updateOrCreateUserFromExternalService(
+      'google',
+      { id: googleId, email: testEmail },
+      { profile: { foo: 1 } },
+    ).userId;
+
+    test.equal(uid0, uid1)
+
+    // Cleanup
+    if (uid1 !== uid0) {
+      Meteor.users.remove(uid0)
+    }
+    Meteor.users.remove(uid1);
+    Accounts.selectCustomUserOnExternalLogin = null;
   }
 );
 
-if(Meteor.isServer) {
+if (Meteor.isServer) {
   Tinytest.addAsync(
     'accounts - make sure that extra params to accounts urls are added',
     async test => {
@@ -815,7 +823,7 @@ if(Meteor.isServer) {
       test.equal(verifyEmailURL.searchParams.toString(), "");
 
       // Extra params
-      const extraParams = { test: 'success'};
+      const extraParams = { test: 'success' };
       const resetPasswordURL = new URL(Accounts.urls.resetPassword('test', extraParams));
       test.equal(resetPasswordURL.searchParams.get('test'), extraParams.test);
       const enrollAccountURL = new URL(Accounts.urls.enrollAccount('test', extraParams));
