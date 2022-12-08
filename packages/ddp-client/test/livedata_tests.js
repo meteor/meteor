@@ -1,7 +1,23 @@
 import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
 
-const _sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+const _sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const callWhenSubReady = async (subName, handle, cb = () => {}) => {
+  let control = 0;
+
+  while (!handle.ready()) {
+    if (!handle.ready()) {
+      // Just in case something happens with the subscription, we have this control
+      if (control++ === 1000) {
+        throw new Error(`Subscribe to ${subName} is taking too long!`);
+      }
+      await _sleep(0);
+      return;
+    }
+    await cb();
+  }
+};
 
 // XXX should check error codes
 const failure = function(test, code, reason) {
@@ -131,7 +147,8 @@ testAsyncMulti('livedata - basic method invocation', [
     // make sure 'undefined' is preserved as such, instead of turning
     // into null (JSON does not have 'undefined' so there is special
     // code for this)
-    if (Meteor.isServer) test.equal(await Meteor.callAsync('nothing'), undefined);
+    if (Meteor.isServer)
+      test.equal(await Meteor.callAsync('nothing'), undefined);
     if (Meteor.isClient) test.equal(Meteor.call('nothing'), undefined);
 
     test.equal(Meteor.call('nothing', expect(undefined, undefined)), undefined);
@@ -157,7 +174,10 @@ testAsyncMulti('livedata - basic method invocation', [
 
   async function(test, expect) {
     if (Meteor.isServer)
-      test.equal(await Meteor.callAsync('echo', 12, { x: 13 }), [12, { x: 13 }]);
+      test.equal(await Meteor.callAsync('echo', 12, { x: 13 }), [
+        12,
+        { x: 13 },
+      ]);
     if (Meteor.isClient)
       test.equal(Meteor.call('echo', 12, { x: 13 }), undefined);
 
@@ -294,7 +314,7 @@ testAsyncMulti('livedata - basic method invocation', [
       try {
         await Meteor.callAsync('exception', 'both', {
           intended: true,
-          throwThroughFuture: true
+          throwThroughFuture: true,
         });
       } catch (e) {
         threw = true;
@@ -329,74 +349,81 @@ testAsyncMulti('livedata - basic method invocation', [
           'server',
           {
             intended: true,
-            throwThroughFuture: true
+            throwThroughFuture: true,
           },
           expect(failure(test, 999, 'Client-visible test exception'))
         ),
         undefined
       );
     }
-  }
+  },
 ]);
 
-const checkBalances = function(test, a, b) {
-  const alice = Ledger.findOne({ name: 'alice', world: test.runId() });
-  const bob = Ledger.findOne({ name: 'bob', world: test.runId() });
+const checkBalances = async function(test, a, b) {
+  const alice = await Ledger.findOneAsync({
+    name: 'alice',
+    world: test.runId(),
+  });
+  const bob = await Ledger.findOneAsync({ name: 'bob', world: test.runId() });
+
   test.equal(alice.balance, a);
   test.equal(bob.balance, b);
+};
+
+const subscribeBeforeRun = async (subName, testId, cb) => {
+  if (Meteor.isClient) {
+    const handle = Meteor.subscribe(subName, testId);
+    await callWhenSubReady(subName, handle);
+    handle.stop();
+  }
+  await cb();
 };
 
 // would be nice to have a database-aware test harness of some kind --
 // this is a big hack (and XXX pollutes the global test namespace)
 testAsyncMulti('livedata - compound methods', [
-  function(test, expect) {
-    if (Meteor.isClient) Meteor.subscribe('ledger', test.runId(), expect());
-
-    Ledger.insert(
-      { name: 'alice', balance: 100, world: test.runId() },
-      expect(function() {})
-    );
-    Ledger.insert(
-      { name: 'bob', balance: 50, world: test.runId() },
-      expect(function() {})
-    );
+  async function(test) {
+    await Ledger.insertAsync({
+      name: 'alice',
+      balance: 100,
+      world: test.runId(),
+    });
+    await Ledger.insertAsync({ name: 'bob', balance: 50, world: test.runId() });
   },
-  function(test, expect) {
-    Meteor.call(
-      'ledger/transfer',
-      test.runId(),
-      'alice',
-      'bob',
-      10,
-      expect(function(err, result) {
-        test.equal(err, undefined);
-        test.equal(result, undefined);
-        checkBalances(test, 90, 60);
-      })
-    );
-    checkBalances(test, 90, 60);
+  async function(test) {
+    await subscribeBeforeRun('ledger', test.runId(), async () => {
+      await Meteor.callAsync(
+        'ledger/transfer',
+        test.runId(),
+        'alice',
+        'bob',
+        10
+      );
+      await checkBalances(test, 90, 60);
+    });
   },
-  function(test, expect) {
-    Meteor.call(
-      'ledger/transfer',
-      test.runId(),
-      'alice',
-      'bob',
-      100,
-      true,
-      expect(function(err, result) {
-        failure(test, 409)(err, result);
-        // Balances are reverted back to pre-stub values.
-        checkBalances(test, 90, 60);
-      })
-    );
+  async function(test) {
+    await subscribeBeforeRun('ledger', test.runId(), async () => {
+      try {
+        await Meteor.callAsync(
+          'ledger/transfer',
+          test.runId(),
+          'alice',
+          'bob',
+          100,
+          true
+        );
+      } catch (e) {}
 
-    if (Meteor.isClient)
-      // client can fool itself by cheating, but only until the sync
-      // finishes
-      checkBalances(test, -10, 160);
-    else checkBalances(test, 90, 60);
-  }
+      if (Meteor.isClient) {
+        // client can fool itself by cheating, but only until the sync
+        // finishes
+        await checkBalances(test, -10, 160);
+      } else {
+        await checkBalances(test, 90, 60);
+      }
+    });
+  },
 ]);
 
 // Replaces the Connection's `_livedata_data` method to push incoming
@@ -488,25 +515,11 @@ if (Meteor.isClient) {
 
         const handle = Meteor.subscribe('objectsWithUsers');
 
-        let control = 0;
         // Just make sure the subscription is ready before running the tests
         // As everything now runs async, the tests were running before the data fully came in
-        while (!handle.ready()) {
-          if (!handle.ready()) {
-            // Just in case something happens with the subscription, we have this control
-            if (control++ === 1000) {
-              throw new Error("Subscribe to objectsWithUsers is taking too long!");
-            }
-            await _sleep(0);
-            return;
-          }
+        await callWhenSubReady('objectsWithUsers', handle, () => {
           expectMessages(1, 0, ['owned by none']);
-          Meteor.apply(
-            'setUserId',
-            ['1'],
-            { wait: true },
-            afterFirstSetUserId
-          );
+          Meteor.apply('setUserId', ['1'], { wait: true }, afterFirstSetUserId);
           afterFirstSetUserId = expect(function() {
             expectMessages(3, 1, [
               'owned by one - a',
@@ -547,7 +560,7 @@ if (Meteor.isClient) {
             ]);
             undoEavesdrop();
           });
-        }
+        });
       },
       function(test, expect) {
         const key = Random.id();
@@ -579,7 +592,7 @@ if (Meteor.isClient) {
           { wait: true },
           expect(function() {})
         );
-      }
+      },
     ]
   );
 }
@@ -630,7 +643,7 @@ Meteor.methods({
       return 2;
     }
     return 0;
-  }
+  },
 });
 
 if (Meteor.isClient) {
@@ -639,12 +652,22 @@ if (Meteor.isClient) {
     const id = Random.id();
     testAsyncMulti('livedata - added from two different subs', [
       function(test, expect) {
-        Meteor.call('livedata/setup', id, expect(function() {}));
+        Meteor.call(
+          'livedata/setup',
+          id,
+          expect(function() {})
+        );
       },
       function(test, expect) {
         MultiPub = new Mongo.Collection('MultiPubCollection' + id);
-        const sub1 = Meteor.subscribe('pub1' + id, expect(function() {}));
-        const sub2 = Meteor.subscribe('pub2' + id, expect(function() {}));
+        const sub1 = Meteor.subscribe(
+          'pub1' + id,
+          expect(function() {})
+        );
+        const sub2 = Meteor.subscribe(
+          'pub2' + id,
+          expect(function() {})
+        );
       },
       function(test, expect) {
         Meteor.call(
@@ -669,7 +692,7 @@ if (Meteor.isClient) {
       },
       function(test, expect) {
         test.equal(MultiPub.findOne('foo'), { _id: 'foo', a: 'aa', b: 'bb' });
-      }
+      },
     ]);
   })();
 }
@@ -688,7 +711,7 @@ if (Meteor.isClient) {
           test.isTrue(coll.findOne(token));
         })
       );
-    }
+    },
   ]);
 
   testAsyncMulti('livedata - runtime universal sub creation', [
@@ -704,7 +727,7 @@ if (Meteor.isClient) {
           test.isTrue(coll.findOne(token));
         })
       );
-    }
+    },
   ]);
 
   testAsyncMulti('livedata - no setUserId after unblock', [
@@ -716,7 +739,7 @@ if (Meteor.isClient) {
           test.isTrue(result);
         })
       );
-    }
+    },
   ]);
 
   testAsyncMulti(
@@ -730,7 +753,7 @@ if (Meteor.isClient) {
           // Use a separate connection so that we can safely check to see if
           // conn._subscriptions is empty.
           conn = new Connection('/', {
-            reloadWithOutstanding: true
+            reloadWithOutstanding: true,
           });
           collName = Random.id();
           coll = new Mongo.Collection(collName, { connection: conn });
@@ -746,7 +769,7 @@ if (Meteor.isClient) {
                     ? 'Internal server error'
                     : 'Explicit error'
                 )
-              )
+              ),
             });
           };
           testSubError({ throwInHandler: true });
@@ -768,7 +791,7 @@ if (Meteor.isClient) {
               onReady: expect(),
               onError: function(error) {
                 errorFromRerun = error;
-              }
+              },
             }
           );
         },
@@ -777,7 +800,11 @@ if (Meteor.isClient) {
           test.equal(coll.find().count(), 1);
           test.isFalse(errorFromRerun);
           test.equal(_.size(conn._subscriptions), 1); // white-box test
-          conn.call('setUserId', 'bla', expect(function() {}));
+          conn.call(
+            'setUserId',
+            'bla',
+            expect(function() {})
+          );
         },
         function(test, expect) {
           // Now that we've re-run, we should have stopped the subscription,
@@ -796,13 +823,16 @@ if (Meteor.isClient) {
             {
               onError: function() {
                 gotErrorFromStopper = true;
-              }
+              },
             }
           );
           // Call a method. This method won't be processed until the publisher's
           // function returns, so blocking on it being done ensures that we've
           // gotten the removed/nosub/etc.
-          conn.call('nothing', expect(function() {}));
+          conn.call(
+            'nothing',
+            expect(function() {})
+          );
         },
         function(test, expect) {
           test.equal(coll.find().count(), 0);
@@ -810,7 +840,7 @@ if (Meteor.isClient) {
           test.isFalse(gotErrorFromStopper);
           test.equal(_.size(conn._subscriptions), 0); // white-box test
           conn._stream.disconnect({ _permanent: true });
-        }
+        },
       ];
     })()
   );
@@ -826,7 +856,7 @@ if (Meteor.isClient) {
           // Use a separate connection so that we can safely check to see if
           // conn._subscriptions is empty.
           conn = new Connection('/', {
-            reloadWithOutstanding: true
+            reloadWithOutstanding: true,
           });
           collName = Random.id();
           coll = new Mongo.Collection(collName, { connection: conn });
@@ -842,7 +872,7 @@ if (Meteor.isClient) {
                     ? 'Internal server error'
                     : 'Explicit error'
                 )
-              )
+              ),
             });
           };
           testSubError({ throwInHandler: true });
@@ -864,7 +894,7 @@ if (Meteor.isClient) {
               onReady: expect(),
               onStop: function(error) {
                 errorFromRerun = error;
-              }
+              },
             }
           );
         },
@@ -873,7 +903,11 @@ if (Meteor.isClient) {
           test.equal(coll.find().count(), 1);
           test.isFalse(errorFromRerun);
           test.equal(_.size(conn._subscriptions), 1); // white-box test
-          conn.call('setUserId', 'bla', expect(function() {}));
+          conn.call(
+            'setUserId',
+            'bla',
+            expect(function() {})
+          );
         },
         function(test, expect) {
           // Now that we've re-run, we should have stopped the subscription,
@@ -894,13 +928,16 @@ if (Meteor.isClient) {
                 if (error) {
                   gotErrorFromStopper = true;
                 }
-              }
+              },
             }
           );
           // Call a method. This method won't be processed until the publisher's
           // function returns, so blocking on it being done ensures that we've
           // gotten the removed/nosub/etc.
-          conn.call('nothing', expect(function() {}));
+          conn.call(
+            'nothing',
+            expect(function() {})
+          );
         },
         function(test, expect) {
           test.equal(coll.find().count(), 0);
@@ -908,7 +945,7 @@ if (Meteor.isClient) {
           test.isFalse(gotErrorFromStopper);
           test.equal(_.size(conn._subscriptions), 0); // white-box test
           conn._stream.disconnect({ _permanent: true });
-        }
+        },
       ];
     })()
   );
@@ -924,7 +961,7 @@ if (Meteor.isClient) {
             test.equal(One.find().count(), 2);
             test.equal(Two.find().count(), 3);
           }),
-          onError: failure()
+          onError: failure(),
         }
       );
     },
@@ -934,7 +971,7 @@ if (Meteor.isClient) {
         { dup: 1 },
         {
           onReady: failure(),
-          onError: expect(failure(test, 500, 'Internal server error'))
+          onError: expect(failure(test, 500, 'Internal server error')),
         }
       );
     },
@@ -944,10 +981,10 @@ if (Meteor.isClient) {
         { notCursor: 1 },
         {
           onReady: failure(),
-          onError: expect(failure(test, 500, 'Internal server error'))
+          onError: expect(failure(test, 500, 'Internal server error')),
         }
       );
-    }
+    },
   ]);
 }
 
@@ -960,7 +997,7 @@ if (Meteor.isServer) {
     s2s: function(arg) {
       check(arg, String);
       return 's2s ' + arg;
-    }
+    },
   });
 }
 (function() {
@@ -989,7 +1026,7 @@ if (Meteor.isServer) {
           })
         );
       }
-    }
+    },
   ]);
 })();
 
@@ -1013,7 +1050,7 @@ if (Meteor.isServer) {
         if (self.conn.status().connected) {
           test.equal(await self.conn.callAsync('s2s', 'foo'), 's2s foo');
         }
-      }
+      },
     ]);
   })();
 }
@@ -1030,7 +1067,7 @@ if (Meteor.isServer) {
         }),
         500
       );
-    }
+    },
   ]);
 })();
 
@@ -1054,13 +1091,13 @@ if (Meteor.isServer) {
           onReady: expect(function() {
             test.equal(PublisherCloningCollection.findOne(), {
               _id: 'a',
-              x: { y: 43 }
+              x: { y: 43 },
             });
           }),
-          onError: failure()
+          onError: failure(),
         }
       );
-    }
+    },
   ]);
 }
 
@@ -1099,7 +1136,7 @@ testAsyncMulti('livedata - result by value', [
         test.equal(self.firstResult.length + 1, secondResult.length);
       })
     );
-  }
+  },
 ]);
 
 // XXX some things to test in greater detail:

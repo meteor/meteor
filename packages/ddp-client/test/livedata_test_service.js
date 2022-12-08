@@ -109,8 +109,8 @@ Ledger.allow({
   fetch: []
 });
 
-Meteor.startup(function() {
-  if (Meteor.isServer) Ledger.remove({}); // XXX can this please be Ledger.remove()?
+Meteor.startup(async function() {
+  if (Meteor.isServer) await Ledger.removeAsync({});
 });
 
 if (Meteor.isServer)
@@ -120,14 +120,14 @@ if (Meteor.isServer)
   });
 
 Meteor.methods({
-  'ledger/transfer': function(world, from_name, to_name, amount, cheat) {
+  'ledger/transfer': async function(world, from_name, to_name, amount, cheat) {
     check(world, String);
     check(from_name, String);
     check(to_name, String);
     check(amount, Number);
     check(cheat, Match.Optional(Boolean));
-    const from = Ledger.findOne({ name: from_name, world: world });
-    const to = Ledger.findOne({ name: to_name, world: world });
+    const from = await Ledger.findOneAsync({ name: from_name, world: world });
+    const to = await Ledger.findOneAsync({ name: to_name, world: world });
 
     if (Meteor.isServer) cheat = false;
 
@@ -146,8 +146,8 @@ Meteor.methods({
     if (from.balance < amount && !cheat)
       throw new Meteor.Error(409, 'Insufficient funds');
 
-    Ledger.update(from._id, { $inc: { balance: -amount } });
-    Ledger.update(to._id, { $inc: { balance: amount } });
+    await Ledger.updateAsync({_id: from._id}, { $inc: { balance: -amount } });
+    await Ledger.updateAsync({_id: to._id, }, { $inc: { balance: amount } });
   }
 });
 
