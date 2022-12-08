@@ -264,13 +264,13 @@ Tinytest.add('accounts - insertUserDoc email', test => {
 });
 
 // More token expiration tests are in accounts-password
-Tinytest.addAsync('accounts - expire numeric token', (test, onComplete) => {
+Tinytest.addAsync('accounts - expire numeric token', async (test, onComplete) => {
   const userIn = { username: Random.id() };
-  const userId = Accounts.insertUserDoc({ profile: {
+  const userId = await Accounts.insertUserDoc({ profile: {
     name: 'Foo Bar'
   } }, userIn);
   const date = new Date(new Date() - 5000);
-  Meteor.users.update(userId, {
+  await Meteor.users.update(userId, {
     $set: {
       "services.resume.loginTokens": [{
         hashedToken: Random.id(),
@@ -281,7 +281,7 @@ Tinytest.addAsync('accounts - expire numeric token', (test, onComplete) => {
       }]
     }
   });
-  const observe = Meteor.users.find(userId).observe({
+  const observe = await Meteor.users.find(userId).observe({
     changed: newUser => {
       if (newUser.services && newUser.services.resume &&
           (!newUser.services.resume.loginTokens ||
@@ -291,7 +291,7 @@ Tinytest.addAsync('accounts - expire numeric token', (test, onComplete) => {
       }
     }
   });
-  Accounts._expireTokens(new Date(), userId);
+  await Accounts._expireTokens(new Date(), userId);
 });
 
 
