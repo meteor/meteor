@@ -13,7 +13,7 @@ Meteor.methods({
 // *are* validated, but Accounts._options is global state which makes this hard
 // (impossible?)
 Tinytest.add(
-  'accounts - config validates keys',
+  'accounts - config - validates keys',
   test => test.throws(() => Accounts.config({ foo: "bar" }))
 );
 
@@ -86,20 +86,24 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook',
   const facebookId = Random.id();
 
   // create an account with facebook
-  const uid1 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', { id: facebookId, monkey: 42 }, { profile: { foo: 1 } }).id;
-  const users1 = Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
+  const u1 =
+    await Accounts.updateOrCreateUserFromExternalService(
+      'facebook', { id: facebookId, monkey: 42 }, { profile: { foo: 1 } });
+  const users1 =
+    await Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
   test.length(users1, 1);
   test.equal(users1[0].profile.foo, 1);
   test.equal(users1[0].services.facebook.monkey, 42);
 
   // create again with the same id, see that we get the same user.
   // it should update services.facebook but not profile.
-  const uid2 = Accounts.updateOrCreateUserFromExternalService(
-    'facebook', { id: facebookId, llama: 50 },
-    { profile: { foo: 1000, bar: 2 } }).id;
-  test.equal(uid1, uid2);
-  const users2 = Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
+  const u2 =
+    await Accounts.updateOrCreateUserFromExternalService(
+      'facebook', { id: facebookId, llama: 50 },
+      { profile: { foo: 1000, bar: 2 } });
+  test.equal(u1.id, u2.id);
+  const users2 =
+    await Meteor.users.find({ "services.facebook.id": facebookId }).fetch();
   test.length(users2, 1);
   test.equal(users2[0].profile.foo, 1);
   test.equal(users2[0].profile.bar, undefined);
@@ -109,7 +113,7 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Facebook',
   test.equal(users2[0].services.facebook.monkey, 42);
 
   // cleanup
-  Meteor.users.remove(uid1);
+  await Meteor.users.remove(u1.id);
 });
 
 Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Meteor Developer', async test => {
@@ -632,14 +636,16 @@ Tinytest.addAsync(
   async test => {
     const ignoreFieldName = "bigArray";
     const customField = "customField";
-    const userId = Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
+    const userId =
+      await Accounts.insertUserDoc({}, { username: Random.id(), [ignoreFieldName]: [1], [customField]: 'test' });
     const stampedToken = Accounts._generateStampedLoginToken();
-    Accounts._insertLoginToken(userId, stampedToken);
+    await Accounts._insertLoginToken(userId, stampedToken);
     const options = Accounts._options;
 
     // stub Meteor.userId() so it works outside methods and returns the correct user:
     const origAccountsUserId = Accounts.userId;
-    Accounts.userId = () => userId;
+    Accounts.userId =
+      () => userId;
 
     Accounts._options = {};
 
