@@ -63,5 +63,5 @@ Package.onTest(api => {
 
   api.addFiles('accounts_tests_setup.js', 'server');
   api.mainModule('server_tests.js', 'server');
-  api.mainModule('client_tests.js', 'client');
+  // api.mainModule('client_tests.js', 'client');
 });
