@@ -402,10 +402,10 @@ export class AccountsServer extends AccountsCommon {
   // indicates that the login token has already been inserted into the
   // database and doesn't need to be inserted again.  (It's used by the
   // "resume" login handler).
-  _loginUser(methodInvocation, userId, stampedLoginToken) {
+  async _loginUser(methodInvocation, userId, stampedLoginToken) {
     if (! stampedLoginToken) {
       stampedLoginToken = this._generateStampedLoginToken();
-      this._insertLoginToken(userId, stampedLoginToken);
+      await this._insertLoginToken(userId, stampedLoginToken);
     }
 
     // This order (and the avoidance of yields) is important to make
@@ -476,12 +476,13 @@ export class AccountsServer extends AccountsCommon {
     this._validateLogin(methodInvocation.connection, attempt);
 
     if (attempt.allowed) {
+      const o = await this._loginUser(
+        methodInvocation,
+        result.userId,
+        result.stampedLoginToken
+      )
       const ret = {
-        ...this._loginUser(
-          methodInvocation,
-          result.userId,
-          result.stampedLoginToken
-        ),
+        ...o,
         ...result.options
       };
       ret.type = attempt.type;
@@ -695,7 +696,7 @@ export class AccountsServer extends AccountsCommon {
       const newStampedToken = accounts._generateStampedLoginToken();
       newStampedToken.when = currentStampedToken.when;
       await accounts._insertLoginToken(this.userId, newStampedToken);
-      return accounts._loginUser(this, this.userId, newStampedToken);
+      return await accounts._loginUser(this, this.userId, newStampedToken);
     };
 
     // Removes all tokens except the token associated with the current

@@ -702,6 +702,8 @@ Tinytest.addAsync(
   async test => {
     // create test user, without a google service
     const testEmail = "test@testdomain.com"
+    // being sure that the user is not already in the database
+    await Meteor.users.remove({ "emails.address": testEmail });
     const uid0 = await Accounts.createUser({ email: testEmail })
 
     // Verify that user is found from email and service merged
