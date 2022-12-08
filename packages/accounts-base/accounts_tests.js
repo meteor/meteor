@@ -4,8 +4,8 @@ import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 
 Meteor.methods({
-  getCurrentLoginToken: function () {
-    return Accounts._getLoginToken(this.connection.id);
+  getCurrentLoginToken: async function () {
+    return await Accounts._getLoginToken(this.connection.id);
   }
 });
 
@@ -390,56 +390,60 @@ Tinytest.addAsync(
 Tinytest.addAsync('accounts - get new token', async test => {
     // Test that the `getNewToken` method returns us a valid token, with
     // the same expiration as our original token.
-    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedToken = Accounts._generateStampedLoginToken();
-    Accounts._insertLoginToken(userId, stampedToken);
+    await Accounts._insertLoginToken(userId, stampedToken);
     const conn = DDP.connect(Meteor.absoluteUrl());
-    conn.call('login', { resume: stampedToken.token });
-    test.equal(conn.call('getCurrentLoginToken'),
-               Accounts._hashLoginToken(stampedToken.token));
+    await conn.callAsync('login', { resume: stampedToken.token });
+    test.equal(await conn.callAsync('getCurrentLoginToken'),
+      Accounts._hashLoginToken(stampedToken.token));
 
-    const newTokenResult = conn.call('getNewToken');
+    const newTokenResult = await conn.callAsync('getNewToken');
     test.equal(newTokenResult.tokenExpires,
-               Accounts._tokenExpiration(stampedToken.when));
-    test.equal(conn.call('getCurrentLoginToken'),
-               Accounts._hashLoginToken(newTokenResult.token));
+      Accounts._tokenExpiration(stampedToken.when));
+    const token = await conn.callAsync('getCurrentLoginToken');
+    console.log(token);
+    test.equal(await conn.callAsync('getCurrentLoginToken'),
+      Accounts._hashLoginToken(newTokenResult.token));
     conn.disconnect();
 
     // A second connection should be able to log in with the new token
     // we got.
     const secondConn = DDP.connect(Meteor.absoluteUrl());
-    secondConn.call('login', { resume: newTokenResult.token });
+    await secondConn.callAsync('login', { resume: newTokenResult.token });
     secondConn.disconnect();
   }
 );
 
-Tinytest.addAsync('accounts - remove other tokens', (test, onComplete) => {
+Tinytest.addAsync('accounts - remove other tokens', async (test) => {
     // Test that the `removeOtherTokens` method removes all tokens other
     // than the caller's token, thereby logging out and closing other
     // connections.
-    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedTokens = [];
     const conns = [];
 
     for(let i = 0; i < 2; i++) {
       stampedTokens.push(Accounts._generateStampedLoginToken());
-      Accounts._insertLoginToken(userId, stampedTokens[i]);
+      await Accounts._insertLoginToken(userId, stampedTokens[i]);
       const conn = DDP.connect(Meteor.absoluteUrl());
-      conn.call('login', { resume: stampedTokens[i].token });
-      test.equal(conn.call('getCurrentLoginToken'),
+      await conn.callAsync('login', { resume: stampedTokens[i].token });
+      test.equal(await conn.callAsync('getCurrentLoginToken'),
                  Accounts._hashLoginToken(stampedTokens[i].token));
       conns.push(conn);
     };
 
-    conns[0].call('removeOtherTokens');
-    simplePoll(() => {
-        const tokens = conns.map(conn => conn.call('getCurrentLoginToken'));
+    await conns[0].callAsync('removeOtherTokens');
+    simplePoll(async () => {
+        let tokens = [];
+        for (const conn of conns) {
+          tokens.push(await conn.callAsync('getCurrentLoginToken'));
+        }
         return ! tokens[1] &&
           tokens[0] === Accounts._hashLoginToken(stampedTokens[0].token);
       },
       () => { // success
         conns.forEach(conn => conn.disconnect());
-        onComplete();
       },
       () => { // timed out
         throw new Error("accounts - remove other tokens timed out");
