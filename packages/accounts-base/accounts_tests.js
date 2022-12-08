@@ -180,7 +180,7 @@ Tinytest.add('accounts - updateOrCreateUserFromExternalService - Twitter', test 
   test.length(users2, 1);
 
   // cleanup
-  Meteor.users.remove(uid1);
+  await Meteor.users.remove(uid1);
 });
 
 
@@ -207,7 +207,7 @@ Tinytest.add('accounts - insertUserDoc username', test => {
   );
 
   // cleanup
-  Meteor.users.remove(userId);
+  await Meteor.users.remove(userId);
 });
 
 Tinytest.add('accounts - insertUserDoc email', test => {
@@ -220,11 +220,11 @@ Tinytest.add('accounts - insertUserDoc email', test => {
   };
 
   // user does not already exist. create a user object with fields set.
-  const userId = Accounts.insertUserDoc(
+  const userId = await Accounts.insertUserDoc(
     {profile: {name: 'Foo Bar'}},
     userIn
   );
-  const userOut = Meteor.users.findOne(userId);
+  const userOut = await Meteor.users.findOne(userId);
 
   test.equal(typeof userOut.createdAt, 'object');
   test.equal(userOut.profile.name, 'Foo Bar');
@@ -232,33 +232,35 @@ Tinytest.add('accounts - insertUserDoc email', test => {
 
   // run the hook again with the exact same emails.
   // run the hook again. now the user exists, so it throws an error.
-  test.throws(
-    () => Accounts.insertUserDoc({profile: {name: 'Foo Bar'}}, userIn),
+  await test.throwsAsync(
+    async () => await Accounts.insertUserDoc({ profile: { name: 'Foo Bar' } }, userIn),
     'Email already exists.'
   );
 
   // now with only one of them.
-  test.throws(() =>
-    Accounts.insertUserDoc({}, {emails: [{address: email1}]}),
+  await test.throwsAsync(
+    async () =>
+      await Accounts.insertUserDoc({}, { emails: [{ address: email1 }] }),
     'Email already exists.'
   );
 
-  test.throws(() =>
-    Accounts.insertUserDoc({}, {emails: [{address: email2}]}),
+  await test.throwsAsync(
+    async () =>
+      await Accounts.insertUserDoc({}, { emails: [{ address: email2 }] }),
     'Email already exists.'
   );
 
 
   // a third email works.
-  const userId3 = Accounts.insertUserDoc(
+  const userId3 = await Accounts.insertUserDoc(
       {}, {emails: [{address: email3}]}
   );
-  const user3 = Meteor.users.findOne(userId3);
+  const user3 = await Meteor.users.findOne(userId3);
   test.equal(typeof user3.createdAt, 'object');
 
   // cleanup
-  Meteor.users.remove(userId);
-  Meteor.users.remove(userId3);
+  await Meteor.users.remove(userId);
+  await Meteor.users.remove(userId3);
 });
 
 // More token expiration tests are in accounts-password
