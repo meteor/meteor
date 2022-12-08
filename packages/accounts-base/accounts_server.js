@@ -1335,7 +1335,7 @@ export class AccountsServer extends AccountsCommon {
     // Check to see if the developer has a custom way to find the user outside
     // of the general selectors above.
     if (!user && this._additionalFindUserOnExternalLogin) {
-      user = this._additionalFindUserOnExternalLogin({serviceName, serviceData, options})
+      user = await this._additionalFindUserOnExternalLogin({serviceName, serviceData, options})
     }
 
     // Before continuing, run user hook to see if we should continue
