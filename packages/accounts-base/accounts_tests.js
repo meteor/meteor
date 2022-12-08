@@ -802,29 +802,28 @@ Tinytest.addAsync(
   async test => {
     // create test user, without a google service
     const testEmail = "test@testdomain.com"
-    const uid0 = Accounts.createUser({ email: testEmail })
+    const uid0 = await Accounts.createUser({ email: testEmail })
 
     // Verify that user is found from email and service merged
-    Accounts.setAdditionalFindUserOnExternalLogin(({ serviceName, serviceData }) => {
+    Accounts.setAdditionalFindUserOnExternalLogin(async ({ serviceName, serviceData }) => {
       if (serviceName === "google") {
-        return Accounts.findUserByEmail(serviceData.email)
+        return await Accounts.findUserByEmail(serviceData.email)
       }
     })
 
     let googleId = Random.id();
-    const uid1 = Accounts.updateOrCreateUserFromExternalService(
+    const u1 = await Accounts.updateOrCreateUserFromExternalService(
       'google',
       { id: googleId, email: testEmail },
       { profile: { foo: 1 } },
-    ).userId;
-
-    test.equal(uid0, uid1)
+    );
+    test.equal(uid0, u1.userId)
 
     // Cleanup
-    if (uid1 !== uid0) {
-      Meteor.users.remove(uid0)
+    if (u1.userId !== uid0) {
+      await Meteor.users.remove(uid0)
     }
-    Meteor.users.remove(uid1);
+    await Meteor.users.remove(u1.userId);
     Accounts.selectCustomUserOnExternalLogin = null;
   }
 );
