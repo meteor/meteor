@@ -685,9 +685,12 @@ Tinytest.add(
       { profile: { foo: 1 } },
     );
     const ignoreFieldName = "bigArray";
-    const c = await Meteor.users.update(u1.userId, {$set: {[ignoreFieldName]: [1]}});
+
+    const c =
+      await Meteor.users.update(u1.userId, {$set: {[ignoreFieldName]: [1]}});
     let users =
       await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+
     test.length(users, 1);
     test.equal(users[0].profile.foo, 1);
     test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
@@ -737,21 +740,28 @@ Tinytest.add(
 Tinytest.add(
     'accounts - verify beforeExternalLogin hook can stop user login',
     test => {
-        // Verify user data is saved properly when not using the
-        // beforeExternalLogin hook.
-        let facebookId = Random.id();
-        const uid1 = Accounts.updateOrCreateUserFromExternalService(
-            'facebook',
-            { id: facebookId },
-            { profile: { foo: 1 } },
-        ).userId;
-        const ignoreFieldName = "bigArray";
-        const c = Meteor.users.update(uid1, {$set: {[ignoreFieldName]: [1]}});
-        let users =
-            Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
-        test.length(users, 1);
-        test.equal(users[0].profile.foo, 1);
-        test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
+    // Verify user data is saved properly when not using the
+    // beforeExternalLogin hook.
+    let facebookId = Random.id();
+
+    const u =
+      await Accounts.updateOrCreateUserFromExternalService(
+        'facebook',
+        { id: facebookId },
+        { profile: { foo: 1 } },
+      );
+
+    const ignoreFieldName = "bigArray";
+
+    const c =
+      await Meteor.users.update(u.userId, { $set: { [ignoreFieldName]: [1] } });
+
+    let users =
+      await Meteor.users.find({ 'services.facebook.id': facebookId }).fetch();
+
+    test.length(users, 1);
+    test.equal(users[0].profile.foo, 1);
+    test.isNotUndefined(users[0][ignoreFieldName], 'ignoreField - before limit fields');
 
         // Verify that when beforeExternalLogin returns false
         // that an error throws and user is not saved
@@ -759,18 +769,20 @@ Tinytest.add(
             // Check that we get the correct data
             test.equal(serviceName, 'facebook');
             test.equal(serviceData, { id: facebookId });
-            test.equal(user._id, uid1);
+            test.equal(user._id, u.userId);
             return false
         });
 
-        test.throws(() => Accounts.updateOrCreateUserFromExternalService(
-            'facebook',
-            { id: facebookId },
-            { profile: { foo: 1 } },
+        await test.throwsAsync(
+      async () =>
+        await Accounts.updateOrCreateUserFromExternalService(
+          'facebook',
+          { id: facebookId },
+          { profile: { foo: 1 } },
         ));
 
         // Cleanup
-        Meteor.users.remove(uid1);
+        await Meteor.users.remove(u.userId);
         Accounts._beforeExternalLoginHook = null;
     }
 );
