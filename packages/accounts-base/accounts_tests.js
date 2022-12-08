@@ -454,9 +454,9 @@ Tinytest.addAsync('accounts - remove other tokens', async (test) => {
 Tinytest.addAsync(
   'accounts - hook callbacks can access Meteor.userId()',
   async test => {
-    const userId = Accounts.insertUserDoc({}, { username: Random.id() });
+    const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
     const stampedToken = Accounts._generateStampedLoginToken();
-    Accounts._insertLoginToken(userId, stampedToken);
+    await Accounts._insertLoginToken(userId, stampedToken);
 
     const validateStopper = Accounts.validateLoginAttempt(attempt => {
       test.equal(Meteor.userId(), validateAttemptExpectedUserId, "validateLoginAttempt");
@@ -478,20 +478,22 @@ Tinytest.addAsync(
     // On a new connection, Meteor.userId() should be null until logged in.
     let validateAttemptExpectedUserId = null;
     const onLoginExpectedUserId = userId;
-    conn.call('login', { resume: stampedToken.token });
+    await conn.callAsync('login', { resume: stampedToken.token });
 
     // Now that the user is logged in on the connection, Meteor.userId() should
     // return that user.
     validateAttemptExpectedUserId = userId;
-    conn.call('login', { resume: stampedToken.token });
+    await conn.callAsync('login', { resume: stampedToken.token });
 
     // Trigger onLoginFailure callbacks
     const onLoginFailureExpectedUserId = userId;
-    test.throws(() => conn.call('login', { resume: "bogus" }), '403');
+    await test.throwsAsync(
+      async () =>
+        await conn.callAsync('login', { resume: "bogus" }), '403');
 
     // Trigger onLogout callbacks
     const onLogoutExpectedUserId = userId;
-    conn.call('logout');
+    await conn.callAsync('logout');
 
     conn.disconnect();
     validateStopper.stop();
