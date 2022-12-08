@@ -1,6 +1,8 @@
 body {
   height: 100vh;
   width: 100vw;
+  background-color: black !important;
+  color: white !important;
 }
 
 .test-in-browser {
@@ -71,11 +73,12 @@ body {
 
 .test_table .groupname {
   font-weight: bold;
-  background: #ddd;
+  background: #212121;
   padding-left: 5px;
   line-height: 24px;
   vertical-align: middle;
   font-size: 16px;
+  color: white;
 }
 
 .test_table .event {
@@ -114,11 +117,11 @@ body {
   line-height: 24px;
   vertical-align: middle;
   font-size: 14px;
-  color: #666;
+  color: #757575;
 }
 
-.test_table .succeeded .teststatus { color: #090; /* green */  background: #cfc; }
-.test_table .failed .teststatus { color: #900; /* red */  background: #fcc; }
+.test_table .succeeded .teststatus { color: #090; /* green */  background: black; }
+.test_table .failed .teststatus { color: #900; /* red */  background: black; }
 .test_table .running .teststatus { color: #ccc; }
 
 .test_table .event .expected_fail { color: #600; }
