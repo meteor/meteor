@@ -402,7 +402,6 @@ Tinytest.addAsync('accounts - get new token', async test => {
     test.equal(newTokenResult.tokenExpires,
       Accounts._tokenExpiration(stampedToken.when));
     const token = await conn.callAsync('getCurrentLoginToken');
-    console.log(token);
     test.equal(await conn.callAsync('getCurrentLoginToken'),
       Accounts._hashLoginToken(newTokenResult.token));
     conn.disconnect();
