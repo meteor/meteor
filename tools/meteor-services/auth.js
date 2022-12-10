@@ -10,16 +10,16 @@ var Console = require('../console/console.js').Console;
 
 var auth = exports;
 
-function loadDDP() {
-  return require("../tool-env/isopackets.js")
-    .loadIsopackage("ddp-client")
-    .DDP;
+async function loadDDP() {
+  const isopackage = require("../tool-env/isopackets.js");
+  const { DDP } = await isopackage.loadIsopackage("ddp-client");
+  return DDP;
 }
 
 // Opens and returns a DDP connection to the accounts server. Remember
 // to close it when you're done with it!
-var openAccountsConnection = function () {
-  return loadDDP().connect(config.getAuthDDPUrl(), {
+var openAccountsConnection = async function () {
+  return (await loadDDP()).connect(config.getAuthDDPUrl(), {
     headers: { 'User-Agent': httpHelpers.getUserAgent() }
   });
 };
@@ -28,9 +28,9 @@ var openAccountsConnection = function () {
 // that is a connection to the accounts server, which gets closed when
 // `f` returns or throws.
 var withAccountsConnection = function (f) {
-  return function (...args) {
+  return async function (...args) {
     var self = this;
-    var conn = openAccountsConnection();
+    var conn = await openAccountsConnection();
     args.push(conn);
     try {
       var result = f.apply(self, args);
@@ -47,7 +47,7 @@ var withAccountsConnection = function (f) {
 // XXX if we reconnect we won't reauthenticate. Fix that before using
 // this for long-lived connections.
 var loggedInAccountsConnection = async function (token) {
-  var connection = loadDDP().connect(
+  var connection = (await loadDDP()).connect(
     config.getAuthDDPUrl()
   );
 
@@ -91,13 +91,13 @@ var loggedInAccountsConnection = async function (token) {
 //    provided, one will be opened and then closed before returning.
 var sessionMethodCaller = function (methodName, options) {
   options = options || {};
-  return function (...args) {
+  return async function (...args) {
     args.push({
       session: auth.getSessionId(config.getAccountsDomain()) || null
     });
 
     var timer;
-    var conn = options.connection || openAccountsConnection();
+    var conn = options.connection || await openAccountsConnection();
 
     function cleanUp() {
       timer && clearTimeout(timer);
@@ -289,7 +289,7 @@ var removePendingRevoke = function (domain, tokenIds) {
 //    session. just changes the error message.
 //  - connection: an open connection to the accounts server. If not
 //    provided, this function will open one itself.
-var tryRevokeOldTokens = function (options) {
+var tryRevokeOldTokens = async function (options) {
   options = Object.assign({
     timeout: 5000
   }, options || {});
@@ -313,8 +313,7 @@ var tryRevokeOldTokens = function (options) {
       warned = true;
     }
   };
-
-  _.each(domainsWithRevokedTokens, function (domain) {
+  for (const domain in domainsWithRevokedTokens) {
     var data = readSessionData();
     var session = data.sessions[domain] || {};
     var tokenIds = session.pendingRevoke || [];
@@ -327,7 +326,7 @@ var tryRevokeOldTokens = function (options) {
 
     if (session.type === "meteor-account") {
       try {
-        sessionMethodCaller('revoke', {
+        await sessionMethodCaller('revoke', {
           timeout: options.timeout,
           connection: options.connection
         })(tokenIds);
@@ -346,7 +345,7 @@ var tryRevokeOldTokens = function (options) {
       logoutFailWarning(domain);
       return;
     }
-  });
+  }
 };
 
 var sendAuthorizeRequest = function (clientId, redirectUri, state) {
@@ -457,7 +456,7 @@ var oauthFlow = function (conn, options) {
 //   error message to stderr if the login fails
 // - connection: an open connection to the accounts server. If not
 //   provided, this function will open its own connection.
-var doInteractivePasswordLogin = function (options) {
+var doInteractivePasswordLogin = async function (options) {
   var loginData = {};
 
   if (_.has(options, 'username')) {
@@ -478,7 +477,7 @@ var doInteractivePasswordLogin = function (options) {
     }
   };
 
-  var conn = options.connection || openAccountsConnection();
+  var conn = options.connection || await openAccountsConnection();
 
   var maybeCloseConnection = function () {
     if (! options.connection) {
@@ -576,7 +575,7 @@ exports.loginCommand = withAccountsConnection(async function (options,
 
     loginOptions.connection = connection;
 
-    if (! doInteractivePasswordLogin(loginOptions)) {
+    if (! await doInteractivePasswordLogin(loginOptions)) {
       return 1;
     }
   }

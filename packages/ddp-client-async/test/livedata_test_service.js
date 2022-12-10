@@ -34,7 +34,8 @@ Meteor.methods({
 
       // We used to improperly serialize errors that were thrown through a
       // future first.
-      if (Meteor.isServer && options.throwThroughFuture) {
+      // TODO Review fiber use
+      if (Meteor.isServer && options.throwThroughFuture && Meteor._isFibersEnabled) {
         const Future = Npm.require('fibers/future');
         const f = new Future();
         f['throw'](e);
@@ -59,7 +60,8 @@ if (Meteor.isServer) {
   // other.
   const waiters = Object.create(null);
 
-  const Future = Npm.require('fibers/future');
+  // TODO Review fiber use
+  const Future = Meteor._isFibersEnabled ? Npm.require('fibers/future') : null;
 
   const returnThroughFuture = function(token, returnValue) {
     // Make sure that when we call return, the fields are already cleared.

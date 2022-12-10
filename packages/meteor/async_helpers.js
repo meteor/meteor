@@ -1,5 +1,3 @@
-var Fiber = Npm.require('fibers');
-var Future = Npm.require('fibers/future');
 
 Meteor._noYieldsAllowed = function (f) {
   return f();

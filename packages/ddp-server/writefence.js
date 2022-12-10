@@ -1,4 +1,5 @@
-var Future = Npm.require('fibers/future');
+// TODO Review fiber use
+var Future = Meteor._isFibersEnabled ? Npm.require('fibers/future') : null;
 
 // A write fence collects a group of writes, and provides a callback
 // when all of the writes are fully committed and propagated (all
