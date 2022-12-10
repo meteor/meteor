@@ -298,9 +298,9 @@ export class IsopackCache {
       // Also load its dependencies. This is so that if this package is being
       // built as part of a plugin, all the transitive dependencies of the
       // plugin are loaded.
-      _.each(packagesToLoad, function (packageToLoad) {
-        ensureLoaded(packageToLoad);
-      });
+      for (const packageToLoad of packagesToLoad) {
+        await ensureLoaded(packageToLoad);
+      }
     } else {
       throw Error("unknown packageInfo kind?");
     }

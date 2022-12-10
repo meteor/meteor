@@ -1344,7 +1344,7 @@ export class PackageSourceBatch {
     // Records the subset of allMissingModules that were successfully
     // relocated to a source batch that could handle them.
     const allRelocatedModules = Object.create(null);
-    const scannerMap = new Map;
+    const scannerMap = new Map();
 
     for (const batch of sourceBatches) {
       const name = batch.unibuild.pkg.name || null;

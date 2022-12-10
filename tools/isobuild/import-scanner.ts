@@ -1244,7 +1244,7 @@ export default class ImportScanner {
     return info;
   }
 
-  private readModule(absPath: string): RawFile | null {
+  private async readModule(absPath: string): RawFile | null {
     const dotExt = pathExtname(absPath).toLowerCase();
 
     if (dotExt === ".node") {
@@ -1278,7 +1278,7 @@ export default class ImportScanner {
       }
     }
 
-    info.dataString = this.defaultHandlers.call(ext as any, info);
+    info.dataString = await this.defaultHandlers.call(ext as any, info);
     if (info.dataString !== dataString) {
       info.data = Buffer.from(info.dataString, "utf8");
     }
@@ -1322,7 +1322,7 @@ export default class ImportScanner {
     } else {
       rawFile = absModuleId.endsWith("/package.json")
         ? this.readPackageJson(absPath)
-        : this.readModule(absPath);
+        : await this.readModule(absPath);
 
       // If the module is not readable, _readModule may return null.
       // Otherwise it will return { data, dataString, hash }.

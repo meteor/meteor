@@ -1122,7 +1122,7 @@ Object.assign(Isopack.prototype, {
         const usesModules = ! isopackCache ||
             isopackCache.uses(self, "modules", unibuild.arch);
 
-        const unibuildJson = unibuild.toJSON({
+        const unibuildJson = await unibuild.toJSON({
           builder,
           unibuildDir,
           usesModules,
