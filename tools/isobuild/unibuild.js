@@ -213,7 +213,7 @@ export class Unibuild {
         packageName: isopack.name,
         sourceRoot: unibuildBasePath,
         // Rebuild binary npm packages if unibuild arch matches host arch.
-        rebuildBinaries: archinfo.matches(archinfo.host(), arch)
+        rebuildBinaries: archinfo.matches(await archinfo.host(), arch)
       });
 
     return new this(isopack, {
@@ -252,7 +252,7 @@ export class Unibuild {
 
     // Figure out where the npm dependencies go.
     let node_modules = {};
-    for (const nmd of unibuild.nodeModulesDirectories) {
+    for (const nmd of Object.values(unibuild.nodeModulesDirectories)) {
       const bundlePath = _.has(npmDirsToCopy, nmd.sourcePath)
           // We already have this npm directory from another unibuild.
           ? npmDirsToCopy[nmd.sourcePath]
@@ -307,7 +307,7 @@ export class Unibuild {
       }
     });
 
-    for (const [type, parts] of Object.entries(offset)) {
+    for (const [type, parts] of Object.entries(concat)) {
       if (parts.length) {
         await builder.write(files.pathJoin(unibuildDir, type), {
           data: Buffer.concat(concat[type], offset[type])

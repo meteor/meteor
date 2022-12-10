@@ -136,9 +136,9 @@ function getMentionedPackages(input) {
   return _.keys(packages);
 }
 
-CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
+CS.Input.prototype.loadFromCatalog = async function (catalogLoader) {
   // Load packages into the cache (if they aren't loaded already).
-  catalogLoader.loadAllVersionsRecursive(getMentionedPackages(this));
+  await catalogLoader.loadAllVersionsRecursive(getMentionedPackages(this));
 };
 
 CS.Input.prototype.loadOnlyPreviousSolution = function (catalogLoader) {

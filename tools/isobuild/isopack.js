@@ -1156,22 +1156,22 @@ Object.assign(Isopack.prototype, {
       }
 
       // Plugins
-      _.each(self.plugins, function (pluginsByArch, name) {
-        _.each(pluginsByArch, function (plugin) {
+      for (const [name, pluginsByArch] of Object.entries(self.plugins)) {
+        for (const plugin of Object.values(pluginsByArch)) {
           // XXX the name of the plugin doesn't typically contain a colon, but
           // escape it just in case.
           var pluginDir = builder.generateFilename(
-            'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
-            { directory: true });
-          var pluginBuild = plugin.write(builder.enter(pluginDir));
+              'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
+              { directory: true });
+          var pluginBuild = await plugin.write(builder.enter(pluginDir));
           var pluginEntry = {
             name: name,
             arch: plugin.arch,
             path: files.pathJoin(pluginDir, pluginBuild.controlFile)
           };
           mainJson.plugins.push(pluginEntry);
-        });
-      });
+        }
+      }
 
       // Tools
       // First, are we supposed to include our own source as a tool?

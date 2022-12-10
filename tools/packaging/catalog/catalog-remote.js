@@ -566,9 +566,9 @@ Object.assign(RemoteCatalog.prototype, {
 
   // Just getVersion mapped over getSortedVersions, but only makes one round
   // trip to sqlite.
-  getSortedVersionRecords: function (name) {
+  getSortedVersionRecords: async function (name) {
     var self = this;
-    var versionRecords = this._contentQuery(
+    var versionRecords = await this._contentQuery(
       "SELECT content FROM versions WHERE packageName=?", [name]);
     if (! versionRecords)
       return [];

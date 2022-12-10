@@ -458,9 +458,9 @@ var springboard = async function (rel, options) {
   await Console.withProgressDisplayVisible(async function () {
     var messages = await buildmessage.capture({
       title: "downloading the command-line tool"
-    }, function () {
-      return catalog.runAndRetryWithRefreshIfHelpful(function () {
-        tropohouse.default.downloadPackagesMissingFromMap(packageMap, {
+    }, async function () {
+      await catalog.runAndRetryWithRefreshIfHelpful(async function () {
+        await tropohouse.default.downloadPackagesMissingFromMap(packageMap, {
           serverArchitectures,
         });
       });
@@ -563,7 +563,7 @@ var springboard = async function (rel, options) {
 };
 
 // Springboard to a pre-0.9.0 release.
-var oldSpringboard = function (toolsVersion) {
+var oldSpringboard = async function (toolsVersion) {
   // Strip off the "node" and "meteor.js" from argv and replace it with the
   // appropriate tools's meteor shell script.
   var newArgv = process.argv.slice(2);
@@ -572,7 +572,7 @@ var oldSpringboard = function (toolsVersion) {
 
   // Release our connection to the sqlite catalog database for the current
   // process, so that the springboarded process can reestablish it.
-  catalog.official.closePermanently();
+  await catalog.official.closePermanently();
 
   // Now exec; we're not coming back.
   require('kexec')(cmd, newArgv);
@@ -866,7 +866,6 @@ asyncLocalStorage.run({}, async function () {
     appDir = files.pathResolve(appDir);
   }
 
-  // TODO -> Maybe await here?
   await require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
 
   // Initialize the server catalog. Among other things, this is where we get
@@ -982,8 +981,8 @@ asyncLocalStorage.run({}, async function () {
         // Somehow we have a catalog that doesn't have any releases on the
         // default track. Try syncing, at least.  (This is a pretty unlikely
         // error case, since you should always start with a non-empty catalog.)
-        await Console.withProgressDisplayVisible(function () {
-          return catalog.refreshOrWarn();
+        await Console.withProgressDisplayVisible(async function () {
+          await catalog.refreshOrWarn();
         });
         releaseName = release.latestKnown();
       }
@@ -1039,12 +1038,12 @@ asyncLocalStorage.run({}, async function () {
         if (warehouse.realReleaseExistsInWarehouse(releaseName)) {
           var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
             releaseName);
-          oldSpringboard(manifest.tools);  // doesn't return
+          await oldSpringboard(manifest.tools);  // doesn't return
         }
 
         // ATTEMPT 3: modern release, troposphere sync needed.
-        await Console.withProgressDisplayVisible(function () {
-          return catalog.refreshOrWarn();
+        await Console.withProgressDisplayVisible(async function () {
+          await catalog.refreshOrWarn();
         });
 
         // Try to load the release even if the refresh failed, since it might
@@ -1087,7 +1086,7 @@ asyncLocalStorage.run({}, async function () {
         }
         if (manifest) {
           // OK, it was an legacy release. We should old-springboard to it.
-          oldSpringboard(manifest.tools);  // doesn't return
+          await oldSpringboard(manifest.tools);  // doesn't return
         }
       }
     }
@@ -1107,7 +1106,7 @@ asyncLocalStorage.run({}, async function () {
         if (process.platform === "win32") {
           // Give a good warning if this release exists, but only in the super old
           // warehouse.
-          var result = httpHelpers.request(
+          var result = await httpHelpers.request(
             "http://warehouse.meteor.com/releases/" + releaseName + ".release.json");
           if(result.response.statusCode === 200) {
             Console.error("Meteor on Windows does not support running any releases",
@@ -1519,8 +1518,8 @@ asyncLocalStorage.run({}, async function () {
     var catalogRefreshStrategy = command.catalogRefresh;
     if (! catalog.triedToRefreshRecently &&
         catalogRefreshStrategy.beforeCommand) {
-      await buildmessage.enterJob({title: 'updating package catalog'}, function () {
-        return catalogRefreshStrategy.beforeCommand();
+      await buildmessage.enterJob({title: 'updating package catalog'}, async function () {
+        await catalogRefreshStrategy.beforeCommand();
       });
     }
 

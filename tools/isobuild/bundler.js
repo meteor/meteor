@@ -2827,7 +2827,7 @@ var writeFile = Profile("bundler writeFile", async function (file, builder, opti
   // directories)
 
   let data = file.contents();
-  const hash = file.hash();
+  const hash = await file.hash();
 
   if (builder.usePreviousWrite(file.targetPath, hash)) {
     return;
@@ -3493,7 +3493,7 @@ async function lintBundle (projectContext, isopack, packageSource) {
   }
 
   const localPackagesMessages =
-    projectContext.getLintingMessagesForLocalPackages();
+    await projectContext.getLintingMessagesForLocalPackages();
   if (localPackagesMessages) {
     lintedAnything = true;
     lintingMessages.merge(localPackagesMessages);

@@ -160,23 +160,27 @@ exports.PackageMap.fromReleaseVersion = function (releaseVersion) {
 exports.PackageMapDelta = function (options) {
   var self = this;
   self._changedPackages = {};
-
-  options.packageMap.eachPackage(function (packageName, info) {
-    var oldVersion = _.has(options.cachedVersions, packageName)
-          ? options.cachedVersions[packageName] : null;
-    self._storeAddOrChange(
-      packageName, info, oldVersion, options.anticipatedPrereleases,
-      options.neededToUseUnanticipatedPrereleases);
-  });
-
-  _.each(options.cachedVersions, function (oldVersion, packageName) {
-    if (! options.packageMap.getInfo(packageName)) {
-      self._storeRemove(packageName, oldVersion);
-    }
-  });
+  self.options = options;
 };
 
 Object.assign(exports.PackageMapDelta.prototype, {
+  init: async function() {
+    const self = this;
+
+    await self.options.packageMap.eachPackage(function (packageName, info) {
+      var oldVersion = _.has(self.options.cachedVersions, packageName)
+          ? self.options.cachedVersions[packageName] : null;
+      self._storeAddOrChange(
+          packageName, info, oldVersion, self.options.anticipatedPrereleases,
+          self.options.neededToUseUnanticipatedPrereleases);
+    });
+
+    _.each(self.options.cachedVersions, function (oldVersion, packageName) {
+      if (! self.options.packageMap.getInfo(packageName)) {
+        self._storeRemove(packageName, oldVersion);
+      }
+    });
+  },
   _storeAddOrChange: function (packageName, newInfo, oldVersion,
                                anticipatedPrereleases,
                                neededToUseUnanticipatedPrereleases) {

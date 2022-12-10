@@ -242,8 +242,8 @@ export class IsopackCache {
         if (buildmessage.jobHasMessages()) {
           return;
         }
-        await Profile.time('IsopackCache Build local isopack', () => {
-          return self._loadLocalPackage(name, packageInfo, previousIsopack);
+        await Profile.time('IsopackCache Build local isopack', async () => {
+          await self._loadLocalPackage(name, packageInfo, previousIsopack);
         });
       });
     } else if (packageInfo.kind === 'versioned') {
@@ -262,7 +262,7 @@ export class IsopackCache {
           // we assume that it never changes.  (Admittedly, this means we won't
           // notice if we download an additional build for the package.)
           isopack = previousIsopack;
-          packagesToLoad = isopack.getStrongOrderedUsedAndImpliedPackages();
+          packagesToLoad = await isopack.getStrongOrderedUsedAndImpliedPackages();
         }
         if (! isopack) {
           // Load the isopack from disk.
@@ -513,11 +513,11 @@ export class IsopackCache {
     return this._lintPackageWithSourceRoot === packageSource.sourceRoot;
   }
 
-  getLintingMessagesForLocalPackages() {
+  async getLintingMessagesForLocalPackages() {
     const messages = new buildmessage._MessageSet();
     let anyLinters = false;
 
-    this._packageMap.eachPackage((name, packageInfo) => {
+    await this._packageMap.eachPackage((name, packageInfo) => {
       const isopack = this._isopacks[name];
       if (packageInfo.kind === 'local') {
         if (!this._shouldLintPackage(packageInfo.packageSource)) {

@@ -363,13 +363,7 @@ Object.assign(exports, {
     }
 
     if (promise) {
-      try {
-        return promise.await();
-      } finally {
-        if (progress) {
-          progress.reportProgressDone();
-        }
-      }
+      return promise.finally(async () => await progress.reportProgressDone());
     } else {
       return req;
     }
@@ -436,7 +430,7 @@ Object.assign(exports, {
   // We only use this for package downloads. In theory we could use it for
   // all requests but that seems like overkill and it isn't well tested in
   // other scenarioes.
-  getUrlWithResuming(urlOrOptions) {
+  async getUrlWithResuming(urlOrOptions) {
     const options = _.isObject(urlOrOptions) ? _.clone(urlOrOptions) : {
       url: urlOrOptions,
     };
@@ -495,8 +489,8 @@ Object.assign(exports, {
       }
     }
 
-    const result = attempt().await();
-    const response = result.response
+    const result = await attempt();
+    const response = result.response;
     if (response.statusCode >= 400 && response.statusCode < 600) {
       const href = response.request.href;
       throw Error(`Could not get ${href}; server returned [${response.statusCode}]`);

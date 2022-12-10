@@ -333,21 +333,21 @@ Object.assign(ProjectContext.prototype, {
       return this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
     });
   },
-  buildLocalPackages: function () {
+  buildLocalPackages: async function () {
     return Profile.run('ProjectContext buildLocalPackages', () => {
       return this._completeStagesThrough(STAGE.BUILD_LOCAL_PACKAGES);
     });
   },
-  saveChangedMetadata: function () {
-    return Profile.run('ProjectContext saveChangedMetadata', () => {
-      return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+  saveChangedMetadata: async function () {
+    return await Profile.run('ProjectContext saveChangedMetadata', async () => {
+      return await this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
   prepareProjectForBuild: async function () {
     // This is the same as saveChangedMetadata, but if we insert stages after
     // that one it will continue to mean "fully finished".
-    return await Profile.run('ProjectContext prepareProjectForBuild', () => {
-      return this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
+    return await Profile.run('ProjectContext prepareProjectForBuild', async () => {
+      return await this._completeStagesThrough(STAGE.SAVE_CHANGED_METADATA);
     });
   },
 
@@ -624,8 +624,8 @@ Object.assign(ProjectContext.prototype, {
           await Profile.time(
             "Select Package Versions" +
               (resolverRunCount > 1 ? (" (Try " + resolverRunCount + ")") : ""),
-            function () {
-              solution = resolver.resolve(
+            async function () {
+              solution = await resolver.resolve(
                 depsAndConstraints.deps, depsAndConstraints.constraints,
                 resolveOptions);
             });
@@ -657,6 +657,8 @@ Object.assign(ProjectContext.prototype, {
           solution.neededToUseUnanticipatedPrereleases,
           anticipatedPrereleases: anticipatedPrereleases
         });
+
+        await self.packageMapDelta.init();
 
         self._saveResolverResultCache();
 
@@ -960,8 +962,8 @@ Object.assign(ProjectContext.prototype, {
           ? null : self._forceRebuildPackages);
     }
 
-    await buildmessage.enterJob('building local packages', function () {
-      return self.isopackCache.buildLocalPackages();
+    await buildmessage.enterJob('building local packages', async function () {
+      await self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
   }),

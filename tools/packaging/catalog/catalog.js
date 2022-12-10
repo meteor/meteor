@@ -16,9 +16,9 @@ catalog.Refresh.OnceAtStart = function (options) {
   self.options = Object.assign({}, options);
 };
 
-catalog.Refresh.OnceAtStart.prototype.beforeCommand = function () {
+catalog.Refresh.OnceAtStart.prototype.beforeCommand = async function () {
   var self = this;
-  if (!catalog.refreshOrWarn(self.options)) {
+  if (!await catalog.refreshOrWarn(self.options)) {
     if (self.options.ignoreErrors) {
       Console.debug("Failed to update package catalog, but will continue.");
     } else {
@@ -42,10 +42,10 @@ catalog.Refresh.Never = function (options) {
 //
 // THIS IS A HIGH-LEVEL UI COMMAND. DO NOT CALL IT FROM LOW-LEVEL CODE (ie, call
 // it only from main.js or command implementations).
-catalog.refreshOrWarn = function (options) {
+catalog.refreshOrWarn = async function (options) {
   catalog.triedToRefreshRecently = true;
   try {
-    catalog.official.refresh(options);
+    await catalog.official.refresh(options);
     catalog.refreshFailed = false;
     return true;
   } catch (err) {
@@ -96,8 +96,8 @@ catalog.runAndRetryWithRefreshIfHelpful = async function (attempt) {
                     catalog.official.offline);
 
   // Run `attempt` in a nested buildmessage context.
-  var messages = await buildmessage.capture(function () {
-    return attempt(canRetry);
+  var messages = await buildmessage.capture(async function () {
+    await attempt(canRetry);
   });
 
   // Did it work? Great.

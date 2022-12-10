@@ -45,7 +45,7 @@ export class Progress {
     return "Progress [state=" + JSON.stringify(this.state) + "]";
   }
 
-  reportProgressDone() {
+  async reportProgressDone() {
     const state = {
       ...this.selfState,
       done: true,
@@ -58,7 +58,7 @@ export class Progress {
       state.current = state.end;
     }
 
-    this.reportProgress(state);
+    await this.reportProgress(state);
   }
 
   // Tries to determine which is the 'current' job in the tree
@@ -138,13 +138,14 @@ export class Progress {
   }
 
   // Receives a state report indicating progress of self
-  reportProgress(state: ProgressState) {
+  async reportProgress(state: ProgressState) {
     this.selfState = state;
 
     this.updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
-    require('./console.js').Console.nudge(false);
+    const { Console } = require("./console.js");
+    await Console.nudge(false);
 
     this.notifyState();
   }
