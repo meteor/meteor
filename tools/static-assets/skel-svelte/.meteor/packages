@@ -20,5 +20,4 @@ autopublish             # Publish all data to the clients (for prototyping)
 insecure                # Allow all DB writes from clients (for prototyping)
 static-html             # Define static page content in .html files
 zodern:melte            # Meteor package to allow us to create files with the .svelte extension
-rdb:svelte-meteor-data  # Meteor package which allows us to consume Meteor's reactive data sources inside of our Svelte components
 hot-module-replacement  # Update client in development without reloading the page
