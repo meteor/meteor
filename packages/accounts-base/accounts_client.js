@@ -119,18 +119,21 @@ export class AccountsClient extends AccountsCommon {
    */
   logout(callback) {
     this._loggingOut.set(true);
-    this.connection.apply('logout', [], {
+
+    this.connection.applyAsync('logout', [], {
+      // TODO[FIBERS]: Look this { wait: true } later.
       wait: true
-    }, (error, result) => {
-      this._loggingOut.set(false);
-      this._loginCallbacksCalled = false;
-      if (error) {
-        callback && callback(error);
-      } else {
+    })
+      .then((result) => {
+        this._loggingOut.set(false);
+        this._loginCallbacksCalled = false;
         this.makeClientLoggedOut();
         callback && callback();
-      }
-    });
+      })
+      .catch((e) => {
+        this._loggingOut.set(false);
+        callback && callback(e);
+      });
   }
 
   /**
