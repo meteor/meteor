@@ -1,8 +1,23 @@
+
+* {
+  font-family: 'Space Grotesk', 'VT323', monospace;
+  /* Variables */
+  --bg-black : #18181b;
+  --primary-white : #F9FAFB;
+
+  --red-200 : #fecaca;
+  --red-500 : #dc2626;
+  --red-900 : #7f1d1d;
+
+  --gray-300: #d6d3d1;
+}
+
 body {
   height: 100vh;
   width: 100vw;
-  background-color: black !important;
-  color: white !important;
+  background-color: var(--bg-black) !important;
+  color: var(--primary-white) !important;
+
 }
 
 .test-in-browser {
@@ -125,8 +140,8 @@ body {
 .test_table .running .teststatus { color: #ccc; }
 
 .test_table .event .expected_fail { color: #600; }
-.test_table .event .fail { color: #d00; }
-.test_table .event .exception { color: #d00; }
+.test_table .event .fail { color: #dc2626; }
+.test_table .event .exception { color: #dc2626; }
 .test_table .event .nodata { color: #ccc; font-style: italic; }
 
 .test_table .event .xtimes, .test_table .event .failkey { font-weight: bold; }
@@ -137,7 +152,7 @@ body {
 
 .test_table .event:hover .debug {
     display: inline;
-    color: gray;
+    color: #737373; /* neutral 500 */
     text-decoration: underline;
     cursor: pointer;
 }
@@ -156,18 +171,18 @@ body {
   text-decoration: none;
 }
 .string_equal_expected ins {
-  background: #ed0;
+  background: #facc15; /* yellow 400 */
 }
 .string_equal_actual ins {
-  color: #d00;
-  background: #fcc;
+  color: #dc2626; /* red 600 */
+  background: #fecaca; /* red  200 */
 }
 
 #current-client-test {
-  color: #ccc;
+  color: #d6d3d1; /* gray  300 */
   margin-right: 15px;
 }
 
 .failedTests {
-  color: #900; /* red */
+  color: #7f1d1d; /* red 900 */
 }
