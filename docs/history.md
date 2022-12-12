@@ -11,9 +11,9 @@
   by [edimarlnx](https://github.com/edimarlnx).
 * TinyTest package without Future [PR](https://github.com/meteor/meteor/pull/12222)
   by [matheusccastroo](https://github.com/matheusccastroo).
-* Feat user accounts base async [PR](https://github.com/meteor/meteor/pull/12274)
+* Feat: user accounts base async [PR](https://github.com/meteor/meteor/pull/12274)
   by [Grubba27](https://github.com/Grubba27).
-* Move some OAuth of out of accounts-base [PR](https://github.com/meteor/meteor/pull/12202)
+* Move somed methods from OAuth of out of accounts-base [PR](https://github.com/meteor/meteor/pull/12202)
   by [StorytellerCZ](https://github.com/StorytellerCZ).
 * Feat: not using insecure & autopublish [PR](https://github.com/meteor/meteor/pull/12220)
   by [Grubba27](https://github.com/Grubba27).
@@ -21,13 +21,13 @@
   by [matheusccastroo](https://github.com/matheusccastroo).
 * Implemented Fibers-less MongoDB count methods [PR](https://github.com/meteor/meteor/pull/12295)
   by [radekmie](https://github.com/radekmie).
-* (feat): Generate scaffold in cli [PR](https://github.com/meteor/meteor/pull/12298)
+* Feat: Generate scaffold in cli [PR](https://github.com/meteor/meteor/pull/12298)
   by [Grubba27](https://github.com/Grubba27).
 * Update types [PR](https://github.com/meteor/meteor/pull/12306) by [piotrpospiech](https://github.com/piotrpospiech).
-* [package-version-parser] Remove underscore [PR](https://github.com/meteor/meteor/pull/12248)
+* Remove underscore from package-version-parser [PR](https://github.com/meteor/meteor/pull/12248)
   by [harryadel](https://github.com/harryadel).
-* updated mongo [PR](https://github.com/meteor/meteor/pull/12333) by [Grubba27](https://github.com/Grubba27).
-* feat: vue3-skel [PR](https://github.com/meteor/meteor/pull/12302)
+* Update MongoDB driver version [PR](https://github.com/meteor/meteor/pull/12333) by [Grubba27](https://github.com/Grubba27).
+* New Vue3 Skeleton [PR](https://github.com/meteor/meteor/pull/12302)
   by [henriquealbert](https://github.com/henriquealbert).
 
 #### Breaking Changes
