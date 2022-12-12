@@ -8,5 +8,6 @@ Package.onUse(function (api) {
   // the linker expects to exist.
   // Currently this package can not use any exports or ordered dependencies
 
+  api.use('meteor', { unordered: true });
   api.addFiles('package-registry.js');
 });
