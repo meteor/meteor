@@ -1,42 +1,53 @@
-## 2.9, 2022-XX-XX
+## v2.9, 2022-12-12
 
 ### Highlights
-* TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204)
-* Create Email.sendAsync method without using Fibers[PR](https://github.com/meteor/meteor/pull/12101) .by [edimarlnx](https://github.com/edimarlnx)
-* Create async method CssTools.minifyCssAsync [PR](https://github.com/meteor/meteor/pull/12105) by  [edimarlnx](https://github.com/edimarlnx)
-* Change Accounts and Oauth to use Async methods[PR](https://github.com/meteor/meteor/pull/12156). by [edimarlnx](https://github.com/edimarlnx)
-* TinyTest package without Future[PR](https://github.com/meteor/meteor/pull/12222) by [matheusccastroo](https://github.com/matheusccastroo)
-* Feat user accounts base async[PR](https://github.com/meteor/meteor/pull/12274) by [Grubba27](https://github.com/Grubba27)
-* Move some OAuth of out of accounts-base[PR](https://github.com/meteor/meteor/pull/12202) by [StorytellerCZ](https://github.com/StorytellerCZ)
-* Feat: not using insecure & autopublish[PR](https://github.com/meteor/meteor/pull/12220 by default by [Grubba27](https://github.com/Grubba27)
-* Don't apply babel async-await plugin when not running on Fibers[PR](https://github.com/meteor/meteor/pull/12221). by [matheusccastroo](https://github.com/matheusccastroo)
-* Implemented Fibers-less MongoDB count methods[PR](https://github.com/meteor/meteor/pull/12295). by [radekmie](https://github.com/radekmie)
-* (feat): Generate scaffold in cli[PR](https://github.com/meteor/meteor/pull/12298) by [Grubba27](https://github.com/Grubba27)
-* Update types[PR](https://github.com/meteor/meteor/pull/12306) by [piotrpospiech](https://github.com/piotrpospiech)
-* [package-version-parser] Remove underscore[PR](https://github.com/meteor/meteor/pull/12248) by [harryadel](https://github.com/harryadel)
-* updated mongo  [PR](https://github.com/meteor/meteor/pull/12333) by [Grubba27](https://github.com/Grubba27)
-* feat: vue3-skel [PR](https://github.com/meteor/meteor/pull/12302) by  [henriquealbert](https://github.com/henriquealbert)
 
+* TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204)
+* Create Email.sendAsync method without using Fibers [PR](https://github.com/meteor/meteor/pull/12101)
+  by [edimarlnx](https://github.com/edimarlnx).
+* Create async method CssTools.minifyCssAsync [PR](https://github.com/meteor/meteor/pull/12105)
+  by  [edimarlnx](https://github.com/edimarlnx).
+* Change Accounts and Oauth to use Async methods [PR](https://github.com/meteor/meteor/pull/12156)
+  by [edimarlnx](https://github.com/edimarlnx).
+* TinyTest package without Future [PR](https://github.com/meteor/meteor/pull/12222)
+  by [matheusccastroo](https://github.com/matheusccastroo).
+* Feat user accounts base async [PR](https://github.com/meteor/meteor/pull/12274)
+  by [Grubba27](https://github.com/Grubba27).
+* Move some OAuth of out of accounts-base [PR](https://github.com/meteor/meteor/pull/12202)
+  by [StorytellerCZ](https://github.com/StorytellerCZ).
+* Feat: not using insecure & autopublish [PR](https://github.com/meteor/meteor/pull/12220)
+  by [Grubba27](https://github.com/Grubba27).
+* Don't apply babel async-await plugin when not running on Fibers [PR](https://github.com/meteor/meteor/pull/12221).
+  by [matheusccastroo](https://github.com/matheusccastroo).
+* Implemented Fibers-less MongoDB count methods [PR](https://github.com/meteor/meteor/pull/12295)
+  by [radekmie](https://github.com/radekmie).
+* (feat): Generate scaffold in cli [PR](https://github.com/meteor/meteor/pull/12298)
+  by [Grubba27](https://github.com/Grubba27).
+* Update types [PR](https://github.com/meteor/meteor/pull/12306) by [piotrpospiech](https://github.com/piotrpospiech).
+* [package-version-parser] Remove underscore [PR](https://github.com/meteor/meteor/pull/12248)
+  by [harryadel](https://github.com/harryadel).
+* updated mongo [PR](https://github.com/meteor/meteor/pull/12333) by [Grubba27](https://github.com/Grubba27).
+* feat: vue3-skel [PR](https://github.com/meteor/meteor/pull/12302)
+  by [henriquealbert](https://github.com/henriquealbert).
 
 #### Breaking Changes
 
-* Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`
-
+* Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`.
 
 #### Migration Steps
 
 #### Meteor Version Release
 
 * `eslint-plugin-meteor@7.4.0`:
-  - updated Typescript deps and meteor babel
+  - updated Typescript deps and meteor babel.
 * `eslint-plugin-meteor@7.4.0`:
-  - updated Typescript deps and meteor babel
+  - updated Typescript deps and meteor babel.
 * `accounts-base@2.2.6`
   - Moved some functions to accounts-oauth.
 * `accounts-oauth@1.4.2`
   - Received functions from accounts-base.
 * `accounts-password@2.3.2`
-  - Asyncfied functions such as `changePassword`, `forgotPassword`, `resetPassword`, `verifyEmail`, `setPasswordAsync`
+  - Asyncfied functions such as `changePassword`, `forgotPassword`, `resetPassword`, `verifyEmail`, `setPasswordAsync`.
 * `babel-compiler@7.10.1`
   - Updated babel to 7.17.1.
 * `email@2.2.3`
@@ -78,7 +89,7 @@
 * `test-in-browser@1.3.2`
   - Adjusted e[type] to e.type
 * `tinytest@1.2.2`
-  - TinyTest package without Future
+  - TinyTest package without Future.
 * `twitter-oauth@1.3.2`
   - Asyncfied methods.
 * `typescript@4.6.4`
@@ -87,14 +98,14 @@
   - Asyncfied methods.
 
 #### Special thanks to
-- [@henriquealbert](https://github.com/henriquealbert)
-- [@edimarlnx](https://github.com/edimarlnx)
-- [@matheusccastroo](https://github.com/matheusccastroo)
-- [@Grubba27](https://github.com/Grubba27)
-- [@StorytellerCZ](https://github.com/StorytellerCZ)
-- [@radekmie](https://github.com/radekmie)
-- [@piotrpospiech](https://github.com/piotrpospiech)
-- [@harryadel](https://github.com/harryadel)
+- [@henriquealbert](https://github.com/henriquealbert);
+- [@edimarlnx](https://github.com/edimarlnx);
+- [@matheusccastroo](https://github.com/matheusccastroo);
+- [@Grubba27](https://github.com/Grubba27);
+- [@StorytellerCZ](https://github.com/StorytellerCZ);
+- [@radekmie](https://github.com/radekmie);
+- [@piotrpospiech](https://github.com/piotrpospiech);
+- [@harryadel](https://github.com/harryadel);
 
 For making this great framework even better!
 
@@ -106,7 +117,7 @@ For making this great framework even better!
   - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
 * `meteorjs/babel@7.16.1-beta.0`
   - Adjusted config to  Auto import React on jsx,tsx files [PR](https://github.com/meteor/meteor/pull/12327).
-  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0
+  - needs to use directly from npm the meteorjs/babel@7.16.1-beta.0.
 
 #### Breaking Changes
 N/A
@@ -118,14 +129,14 @@ N/A
   - Make count NOT create a cursor. [PR](https://github.com/meteor/meteor/pull/12326).
 
 #### Special thanks to
-- [@henriquealbert](https://github.com/henriquealbert)
-- [@znewsham](https://github.com/znewsham)
+- [@henriquealbert](https://github.com/henriquealbert);
+- [@znewsham](https://github.com/znewsham);
 
 For making this great framework even better!
 
 
 
-## 2.8.1, 2022-11-14
+## v2.8.1, 2022-11-14
 
 #### Highlights
 
