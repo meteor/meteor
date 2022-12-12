@@ -6,15 +6,13 @@
     counter += 1;
   }
   
-  const subIsReady = true; // remove this line if you want to use the code below
-  // no need to publish/subscribe as there is autopublish package installed
-  // let subIsReady = false;
-  // $m: {
-  //   const handle = Meteor.subscribe('links.all'); // todo: setup the server-side publication
-  //   subIsReady = handle.ready();
-  // }
+  let subIsReady = false;
+  $m: {
+    const handle = Meteor.subscribe('links.all');
+    subIsReady = handle.ready();
+  }
 
-  // $m is available from zodern:melte package
+  // more information about $m at https://atmospherejs.com/zodern/melte#tracker-statements
   $m: links = LinksCollection.find().fetch();
 </script>
 
