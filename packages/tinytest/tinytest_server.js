@@ -9,7 +9,7 @@ import {
 
 export { Tinytest };
 
-const Fiber = Meteor._isFibersEnabled && require('fibers');
+const Fiber = require('fibers');
 const handlesForRun = new Map;
 const reportsForRun = new Map;
 
@@ -58,7 +58,7 @@ Meteor.methods({
     }
 
     function onReport(report) {
-      if (Fiber && !Fiber.current) {
+      if (! Fiber.current) {
         Meteor._debug("Trying to report a test not in a fiber! "+
                       "You probably forgot to wrap a callback in bindEnvironment.");
         console.trace();

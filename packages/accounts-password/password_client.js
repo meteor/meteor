@@ -7,10 +7,12 @@ const reportError = (error, callback) => {
    }
 };
 
+
 const internalLoginWithPassword = ({ selector, password, code, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@')) selector = { username: selector };
     else selector = { email: selector };
+
   Accounts.callLoginMethod({
     methodArguments: [
       {

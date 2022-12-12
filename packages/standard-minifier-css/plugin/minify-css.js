@@ -60,7 +60,7 @@ class CssToolsMinifier {
         path: 'merged-stylesheets.css'
       }];
     } else {
-      const minifiedFiles = await CssTools.minifyCssAsync(merged.code);
+      const minifiedFiles = CssTools.minifyCss(merged.code);
 
       result = minifiedFiles.map(minified => ({
         data: minified

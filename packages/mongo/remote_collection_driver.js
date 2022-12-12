@@ -4,28 +4,13 @@ MongoInternals.RemoteCollectionDriver = function (
   self.mongo = new MongoConnection(mongo_url, options);
 };
 
-const REMOTE_COLLECTION_METHODS = [
-  '_createCappedCollection',
-  '_dropIndex',
-  '_ensureIndex',
-  'createIndex',
-  'countDocuments',
-  'dropCollection',
-  'estimatedDocumentCount',
-  'find',
-  'findOne',
-  'insert',
-  'rawCollection',
-  'remove',
-  'update',
-  'upsert',
-];
-
 Object.assign(MongoInternals.RemoteCollectionDriver.prototype, {
   open: function (name) {
     var self = this;
     var ret = {};
-    REMOTE_COLLECTION_METHODS.forEach(
+    ['find', 'findOne', 'insert', 'update', 'upsert',
+      'remove', '_ensureIndex', 'createIndex', '_dropIndex', '_createCappedCollection',
+      'dropCollection', 'rawCollection'].forEach(
       function (m) {
         ret[m] = _.bind(self.mongo[m], self.mongo, name);
       });

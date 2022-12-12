@@ -1,9 +1,12 @@
 Github = {};
 
-OAuth.registerService('github', 2, null, async (query) => {
-  const accessToken = await getAccessToken(query);
-  const identity = await getIdentity(accessToken);
-  const emails = await getEmails(accessToken);
+OAuth.registerService('github', 2, null, (query) => {
+  const accessTokenCall = Meteor.wrapAsync(getAccessToken);
+  const accessToken = accessTokenCall(query);
+  const identityCall = Meteor.wrapAsync(getIdentity);
+  const identity = identityCall(accessToken);
+  const emailsCall = Meteor.wrapAsync(getEmails);
+  const emails = emailsCall(accessToken);
   const primaryEmail = emails.find((email) => email.primary);
 
   return {
@@ -28,7 +31,7 @@ OAuth.registerService('github', 2, null, async (query) => {
 let userAgent = 'Meteor';
 if (Meteor.release) userAgent += `/${Meteor.release}`;
 
-const getAccessToken = async (query) => {
+const getAccessToken = async (query, callback) => {
   const config = ServiceConfiguration.configurations.findOne({
     service: 'github'
   });
@@ -65,16 +68,18 @@ const getAccessToken = async (query) => {
     );
   }
   if (response.error) {
+    callback(response.error);
     // if the http response was a json object with an error attribute
     throw new Error(
       `Failed to complete OAuth handshake with GitHub. ${response.error}`
     );
   } else {
+    callback(null, response.access_token);
     return response.access_token;
   }
 };
 
-const getIdentity = async (accessToken) => {
+const getIdentity = async (accessToken, callback) => {
   try {
     const request = await fetch('https://api.github.com/user', {
       method: 'GET',
@@ -84,8 +89,11 @@ const getIdentity = async (accessToken) => {
         Authorization: `token ${accessToken}`
       } // http://developer.github.com/v3/#user-agent-required
     });
-    return await request.json();
+    const response = await request.json();
+    callback(null, response);
+    return response;
   } catch (err) {
+    callback(err.message);
     throw Object.assign(
       new Error(`Failed to fetch identity from Github. ${err.message}`),
       { response: err.response }
@@ -93,7 +101,7 @@ const getIdentity = async (accessToken) => {
   }
 };
 
-const getEmails = async (accessToken) => {
+const getEmails = async (accessToken, callback) => {
   try {
     const request = await fetch('https://api.github.com/user/emails', {
       method: 'GET',
@@ -103,8 +111,11 @@ const getEmails = async (accessToken) => {
         Authorization: `token ${accessToken}`
       } // http://developer.github.com/v3/#user-agent-required
     });
-    return await request.json();
+    const response = await request.json();
+    callback(null, response);
+    return response;
   } catch (err) {
+    callback(err.message, []);
     return [];
   }
 };

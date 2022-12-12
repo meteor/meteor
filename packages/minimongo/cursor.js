@@ -39,11 +39,7 @@ export default class Cursor {
   }
 
   /**
-   * @deprecated in 2.9
-   * @summary Returns the number of documents that match a query. This method is
-   *          [deprecated since MongoDB 4.0](https://www.mongodb.com/docs/v4.4/reference/command/count/);
-   *          see `Collection.countDocuments` and
-   *          `Collection.estimatedDocumentCount` for a replacement.
+   * @summary Returns the number of documents that match a query.
    * @memberOf Mongo.Cursor
    * @method  count
    * @instance

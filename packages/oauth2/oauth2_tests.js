@@ -1,6 +1,6 @@
 import http from 'http';
 
-const testPendingCredential = async function (test, method) {
+const testPendingCredential = function (test, method) {
   const foobookId = Random.id();
   const foobookOption1 = Random.id();
   const credentialToken = Random.id();
@@ -51,7 +51,7 @@ const testPendingCredential = async function (test, method) {
       return end.apply(this, args);
     };
 
-    await OAuthTest.middleware(req, res);
+    OAuthTest.middleware(req, res);
     const credentialSecret = respData;
 
     // Test that the result for the token is available
@@ -72,17 +72,17 @@ const testPendingCredential = async function (test, method) {
   }
 };
 
-Tinytest.addAsync("oauth2 - pendingCredential is stored and can be retrieved (without oauth encryption)", async test => {
+Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (without oauth encryption)", test => {
   OAuthEncryption.loadKey(null);
-  await testPendingCredential(test, "GET");
-  await testPendingCredential(test, "POST");
+  testPendingCredential(test, "GET");
+  testPendingCredential(test, "POST");
 });
 
-Tinytest.addAsync("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", async test => {
+Tinytest.add("oauth2 - pendingCredential is stored and can be retrieved (with oauth encryption)", test => {
   try {
     OAuthEncryption.loadKey(Buffer.from([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
-    await testPendingCredential(test, "GET");
-    await testPendingCredential(test, "POST");
+    testPendingCredential(test, "GET");
+    testPendingCredential(test, "POST");
   } finally {
     OAuthEncryption.loadKey(null);
   }

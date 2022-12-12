@@ -6,7 +6,7 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
 
   Object.assign(
     redirectUrlObj.query,
-    whitelistedQueryParams.reduce((prev, param) =>
+    whitelistedQueryParams.reduce((prev, param) => 
       params.query[param] ? { ...prev, param: params.query[param] } : prev,
       {}
     ),
@@ -25,7 +25,7 @@ OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitel
 };
 
 // connect middleware
-OAuth._requestHandlers['1'] = async (service, query, res) => {
+OAuth._requestHandlers['1'] = (service, query, res) => {
   const config = ServiceConfiguration.configurations.findOne({service: service.serviceName});
   if (! config) {
     throw new ServiceConfiguration.ConfigError(service.serviceName);
@@ -45,7 +45,7 @@ OAuth._requestHandlers['1'] = async (service, query, res) => {
     });
 
     // Get a request token to start auth process
-    await oauthBinding.prepareRequestToken(callbackUrl);
+    oauthBinding.prepareRequestToken(callbackUrl);
 
     // Keep track of request token so we can verify it on the next step
     OAuth._storeRequestToken(
@@ -91,10 +91,10 @@ OAuth._requestHandlers['1'] = async (service, query, res) => {
       // subsequent call to the `login` method will be immediate.
 
       // Get the access token for signing requests
-      await oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
+      oauthBinding.prepareAccessToken(query, requestTokenInfo.requestTokenSecret);
 
       // Run service-specific handler.
-      const oauthResult = await service.handleOauthRequest(
+      const oauthResult = service.handleOauthRequest(
         oauthBinding, { query: query });
 
       const credentialToken = OAuth._credentialTokenFromQuery(query);

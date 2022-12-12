@@ -147,18 +147,11 @@ export namespace Meteor {
   }): void;
 
   /**
-   * Invokes a method with a sync stub, passing any number of arguments.
+   * Invokes a method passing any number of arguments.
    * @param name Name of method to invoke
    * @param args Optional method arguments
    */
   function call(name: string, ...args: any[]): any;
-
-  /**
-   * Invokes a method with an async stub, passing any number of arguments.
-   * @param name Name of method to invoke
-   * @param args Optional method arguments
-   */
-  function callAsync(name: string, ...args: any[]): Promise<any>;
 
   function apply<
     Result extends
@@ -441,14 +434,7 @@ export namespace Meteor {
    */
   function publish(
     name: string | null,
-    func: (
-      this: Subscription,
-      ...args: any[]
-    ) =>
-      | void
-      | Mongo.Cursor<any>
-      | Mongo.Cursor<any>[]
-      | Promise<void | Mongo.Cursor<any> | Mongo.Cursor<any>[]>,
+    func: (this: Subscription, ...args: any[]) => void,
     options?: { is_auto: boolean }
   ): void;
 

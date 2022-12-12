@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.3.1'
+  version: '1.3.0'
 });
 
 Package.onUse(function (api) {
@@ -28,8 +28,7 @@ Package.onUse(function (api) {
     'SeededRandom', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
     'renderToDiv', 'clickIt',
-    'withCallbackLogger', 'testAsyncMulti',
-    'simplePoll', 'runAndThrowIfNeeded',
+    'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
     'makeTestConnection', 'DomUtils']);
 
   api.addFiles('try_all_permutations.js');

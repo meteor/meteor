@@ -39,14 +39,6 @@ export default class LocalCollection {
     this.paused = false;
   }
 
-  countDocuments(selector, options) {
-    return this.find(selector ?? {}, options).countAsync();
-  }
-
-  estimatedDocumentCount(options) {
-    return this.find({}, options).countAsync();
-  }
-
   // options may include sort, skip, limit, reactive
   // sort may be any of these forms:
   //     {a: 1, b: -1}

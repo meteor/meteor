@@ -1,7 +1,7 @@
 import http from 'http';
 import { OAuth1Binding } from './oauth1_binding';
 
-const testPendingCredential = async (test, method) => {
+const testPendingCredential = (test, method) => {
   const twitterfooId = Random.id();
   const twitterfooName = `nickname${Random.id()}`;
   const twitterfooAccessToken = Random.id();
@@ -17,8 +17,8 @@ const testPendingCredential = async (test, method) => {
     authenticate: "https://example.com/oauth/authenticate"
   };
 
-  OAuth1Binding.prototype.prepareRequestToken = async () => {};
-  OAuth1Binding.prototype.prepareAccessToken = async function() {
+  OAuth1Binding.prototype.prepareRequestToken = () => {};
+  OAuth1Binding.prototype.prepareAccessToken = function() {
     this.accessToken = twitterfooAccessToken;
     this.accessTokenSecret = twitterfooAccessTokenSecret;
   };
@@ -27,7 +27,7 @@ const testPendingCredential = async (test, method) => {
 
   try {
     // register a fake login service
-    OAuth.registerService(serviceName, 1, urls, async query => ({
+    OAuth.registerService(serviceName, 1, urls, query => ({
       serviceData: {
         id: twitterfooId,
         screenName: twitterfooName,
@@ -71,7 +71,7 @@ const testPendingCredential = async (test, method) => {
       respData += args[0];
       return end.apply(this, arguments);
     };
-    await OAuthTest.middleware(req, res);
+    OAuthTest.middleware(req, res);
     const credentialSecret = respData;
 
     // Test that the result for the token is available
@@ -94,17 +94,17 @@ const testPendingCredential = async (test, method) => {
   }
 };
 
-Tinytest.addAsync("oauth1 - pendingCredential is stored and can be retrieved (without oauth encryption)", async test => {
+Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (without oauth encryption)", test => {
   OAuthEncryption.loadKey(null);
-  await testPendingCredential(test, "GET");
-  await testPendingCredential(test, "POST");
+  testPendingCredential(test, "GET");
+  testPendingCredential(test, "POST");
 });
 
-Tinytest.addAsync("oauth1 - pendingCredential is stored and can be retrieved (with oauth encryption)", async test => {
+Tinytest.add("oauth1 - pendingCredential is stored and can be retrieved (with oauth encryption)", test => {
   try {
     OAuthEncryption.loadKey(Buffer.from([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]).toString("base64"));
-    await testPendingCredential(test, "GET");
-    await testPendingCredential(test, "POST");
+    testPendingCredential(test, "GET");
+    testPendingCredential(test, "POST");
   } finally {
     OAuthEncryption.loadKey(null);
   }

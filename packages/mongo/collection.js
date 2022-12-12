@@ -319,33 +319,6 @@ Object.assign(Mongo.Collection.prototype, {
   ///
   /// Main collection API
   ///
-  /**
-   * @summary Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
-   * @locus Anywhere
-   * @method countDocuments
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {MongoSelector} [selector] A query describing the documents to count
-   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
-   * @returns {Promise<number>}
-   */
-  countDocuments(...args) {
-    return this._collection.countDocuments(...args);
-  },
-
-  /**
-   * @summary Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
-   * @locus Anywhere
-   * @method estimatedDocumentCount
-   * @memberof Mongo.Collection
-   * @instance
-   * @param {MongoSelector} [selector] A query describing the documents to count
-   * @param {Object} [options] All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/EstimatedDocumentCountOptions.html). Please note that not all of them are available on the client.
-   * @returns {Promise<number>}
-   */
-  estimatedDocumentCount(...args) {
-    return this._collection.estimatedDocumentCount(...args);
-  },
 
   _getFindSelector(args) {
     if (args.length == 0) return {};

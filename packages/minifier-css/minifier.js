@@ -1,5 +1,6 @@
 import path from 'path';
 import url from 'url';
+import Future from 'fibers/future';
 import postcss from 'postcss';
 import cssnano from 'cssnano';
 
@@ -64,21 +65,23 @@ const CssTools = {
    * @return {String[]} Array containing the minified CSS.
    */
   minifyCss(cssText) {
-    return Promise.await(CssTools.minifyCssAsync(cssText));
-  },
+    const f = new Future;
+    postcss([
+      cssnano({ safe: true }),
+    ]).process(cssText, {
+      from: void 0,
+    }).then(result => {
+      f.return(result.css);
+    }).catch(error => {
+      f.throw(error);
+    });
+    const minifiedCss = f.wait();
 
-  /**
-   * Minify the passed in CSS string.
-   *
-   * @param {string} cssText CSS string to minify.
-   * @return {Promise<String[]>} Array containing the minified CSS.
-   */
-  async minifyCssAsync(cssText) {
-    return await postcss([cssnano({ safe: true })])
-      .process(cssText, {
-        from: void 0,
-      })
-      .then((result) => [result.css]);
+    // Since this function has always returned an array, we'll wrap the
+    // minified css string in an array before returning, even though we're
+    // only ever returning one minified css string in that array (maintaining
+    // backwards compatibility).
+    return [minifiedCss];
   },
 
   /**
@@ -184,7 +187,6 @@ if (typeof Profile !== 'undefined') {
     'parseCss',
     'stringifyCss',
     'minifyCss',
-    'minifyCssAsync',
     'mergeCssAsts',
     'rewriteCssUrls',
   ].forEach(funcName => {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth1-based login services",
-  version: "1.5.1",
+  version: "1.5.0",
 });
 
 Package.onUse(api => {
@@ -8,7 +8,10 @@ Package.onUse(api => {
   api.use('random');
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('check', 'server');
+  api.use([
+    'check',
+    'http@1.4.4 || 2.0.0'
+  ], 'server');
 
   api.use('mongo');
 
