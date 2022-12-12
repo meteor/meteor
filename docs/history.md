@@ -2,7 +2,7 @@
 
 ### Highlights
 
-* TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204)
+* TypeScript update to v4.6.4 [PR](https://github.com/meteor/meteor/pull/12204) by [@StorytellerCZ](https://github.com/StorytellerCZ).
 * Create Email.sendAsync method without using Fibers [PR](https://github.com/meteor/meteor/pull/12101)
   by [edimarlnx](https://github.com/edimarlnx).
 * Create async method CssTools.minifyCssAsync [PR](https://github.com/meteor/meteor/pull/12105)
@@ -35,6 +35,8 @@
 * Most of OAuth related code has been moved from `accounts-base` to `accounts-oauth`.
 
 #### Migration Steps
+
+You can follow in [here](https://guide.meteor.com/2.9-migration.html).
 
 #### Meteor Version Release
 
