@@ -185,11 +185,13 @@ function getDefaultsForNode8(features) {
 
     // Ensure that async functions run in a Fiber, while also taking
     // full advantage of native async/await support in Node 8.
-    combined.plugins.push([require("./plugins/async-await.js"), {
-      // Do not transform `await x` to `Promise.await(x)`, since Node
-      // 8 has native support for await expressions.
-      useNativeAsyncAwait: false
-    }]);
+    if (!process.env.DISABLE_FIBERS) {
+      combined.plugins.push([require("./plugins/async-await.js"), {
+        // Do not transform `await x` to `Promise.await(x)`, since Node
+        // 8 has native support for await expressions.
+        useNativeAsyncAwait: false
+      }]);
+    }
 
     // Enable async generator functions proposal.
     combined.plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
