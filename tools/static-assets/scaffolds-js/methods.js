@@ -2,21 +2,21 @@ import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 import { $$PascalName$$Collection } from './collection';
 
-export function create(data) {
+export async function create(data) {
   return $$PascalName$$Collection.insertAsync({ ...data });
 }
 
-export function update(_id, data) {
+export async function update(_id, data) {
   check(_id, String);
   return $$PascalName$$Collection.updateAsync(_id, { ...data });
 }
 
-export function remove(_id) {
+export async function remove(_id) {
   check(_id, String);
   return $$PascalName$$Collection.removeAsync(_id);
 }
 
-export function findById(_id) {
+export async function findById(_id) {
   check(_id, String);
   return $$PascalName$$Collection.findOneAsync(_id);
 }

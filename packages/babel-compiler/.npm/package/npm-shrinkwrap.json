@@ -436,9 +436,9 @@
       "integrity": "sha512-MCNzAp77qzKca9+W/+I0+sEpaUnZoeasnghNeVc41VZCEKaCH73Vq3BZZ/SzWIgrqE4H4ceI+p+b6C0mHf9T4g=="
     },
     "@meteorjs/babel": {
-      "version": "7.16.0-beta.7",
-      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.16.0-beta.7.tgz",
-      "integrity": "sha512-++ZngcRX51mu0fgijc7VYQnVlPr2tiq5p+sr1tOSQoe6gqH4toRCzVr4lzmPkrBXHl9IvSvkWcQYIGP5iSRsJw=="
+      "version": "7.17.2-beta.0",
+      "resolved": "https://registry.npmjs.org/@meteorjs/babel/-/babel-7.17.2-beta.0.tgz",
+      "integrity": "sha512-gFXgGNIUu2mVvLRTtEPRE8OdpbdwDY2+vAOSn4/O//w42n7xKBDuYkiyNQtXCWIVuEjO4UBFkX2CHD88eTKhxA=="
     },
     "@meteorjs/reify": {
       "version": "0.23.0",
@@ -648,9 +648,9 @@
       "integrity": "sha512-CBHJJdDmgjl3daYjN5Cp5kbTf1mUhZoS+beLklHIvkOWscs83YAhLlF3Wsh/lciQYAcbBJgTOD44VtG31ZM4Hw=="
     },
     "caniuse-lite": {
-      "version": "1.0.30001434",
-      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001434.tgz",
-      "integrity": "sha512-aOBHrLmTQw//WFa2rcF1If9fa3ypkC1wzqqiKHgfdrXTWcU8C4gKVZT77eQAPWN1APys3+uQ0Df07rKauXGEYA=="
+      "version": "1.0.30001436",
+      "resolved": "https://registry.npmjs.org/caniuse-lite/-/caniuse-lite-1.0.30001436.tgz",
+      "integrity": "sha512-ZmWkKsnC2ifEPoWUvSAIGyOYwT+keAaaWPHiQ9DfMqS1t6tfuyFYoWR78TeZtznkEQ64+vGXH9cZrElwR2Mrxg=="
     },
     "chalk": {
       "version": "2.4.2",
@@ -880,9 +880,9 @@
       "integrity": "sha512-/OaKK0xYrs3DmxRYqL/yDc+FxFUVYhDlXMhRmv3z915w2HF1tnN1omB354j8VUGO/hbRzyD6Y3sA7v7GS/ceog=="
     },
     "typescript": {
-      "version": "4.9.3",
-      "resolved": "https://registry.npmjs.org/typescript/-/typescript-4.9.3.tgz",
-      "integrity": "sha512-CIfGzTelbKNEnLpLdGFgdyKhG23CKdKgQPOBc+OUNrkJ2vr+KSzsSV5kq5iWhEQbok+quxgGzrAtGWCyU7tHnA=="
+      "version": "4.6.4",
+      "resolved": "https://registry.npmjs.org/typescript/-/typescript-4.6.4.tgz",
+      "integrity": "sha512-9ia/jWHIEbo49HfjrLGfKbZSuWo9iTMwXO+Ca3pRsSpbsMbc7/IU8NKdCZVRRBafVPGnoJeFL76ZOAA84I9fEg=="
     },
     "unicode-canonical-property-names-ecmascript": {
       "version": "2.0.0",

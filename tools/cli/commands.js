@@ -1,7 +1,5 @@
 var main = require('./main.js');
 var _ = require('underscore');
-const readline = require('readline')
-  .createInterface({ input: process.stdin, output: process.stdout });
 var files = require('../fs/files');
 var deploy = require('../meteor-services/deploy.js');
 var buildmessage = require('../utils/buildmessage.js');
@@ -2549,10 +2547,12 @@ main.registerCommand({
 /**
  *
  * @param question
- * @returns {Promise<string>}
+ * @returns {function(string): Promise<string>}
  */
-const ask = async (question) => {
-  return new Promise((resolve, reject) => {
+const createPrompt = () => {
+  const readline = require('readline')
+    .createInterface({ input: process.stdin, output: process.stdout });
+  return async (question) => new Promise((resolve, reject) => {
     readline.question(question, (answer) => {
       resolve(answer);
     })
@@ -2614,6 +2614,7 @@ main.registerCommand({
 
   const setup = async (arg0) => {
     if (arg0 === undefined) {
+      const ask = createPrompt();
       // the ANSI color chart is here: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
       const scaffoldName = await ask(`What is the name of your ${yellow('model')}? `);
       checkScaffoldName(scaffoldName);
