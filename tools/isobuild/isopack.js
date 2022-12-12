@@ -1399,7 +1399,7 @@ Object.assign(Isopack.prototype, {
       'tools', 'examples', 'LICENSE.txt', 'LICENSES',
       'meteor', 'meteor.bat', 'scripts/admin/launch-meteor',
       'packages/package-version-parser/package-version-parser.js',
-      'packages/meteor/define-package.js',
+      'packages/core-runtime/package-registry.js',
       'packages/meteor/flush-buffers-on-exit-in-windows.js',
     );
 

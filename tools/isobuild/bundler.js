@@ -170,7 +170,7 @@ var release = require('../packaging/release.js');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
-import { PackageRegistry } from "../../packages/meteor/define-package.js";
+import { PackageRegistry } from "../../packages/core-runtime/package-registry.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
