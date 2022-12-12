@@ -974,22 +974,19 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 ]);
 
 var getHeader = function (options) {
+  if (options.name === 'core-runtime') {
+    return '(function() {\n\n';
+  }
+
   var chunks = [];
 
-  // TODO: find a better check that also works for packages that
-  // load before the Meteor package
-  if (options.name !== 'meteor') {
-    let depsCode = Object.values(options.imports).map(k => JSON.stringify(k)).join(', ');
+  let depsList = Object.values(options.imports).map(k => JSON.stringify(k)).join(', ');
 
-    chunks.push(
-        `Package.load("${options.name}", [`,
-        depsCode,
-        '], function () {'
-    );
-    
-  } else {
-      chunks.push("(function() {\n\n")
-  }
+  chunks.push(
+      `Package.load("${options.name}", [`,
+      depsList,
+      '], function () {'
+  );
 
   chunks.push(
     getImportCode(options.imports, "/* Imports */\n", false),
@@ -1043,19 +1040,12 @@ var getFooter = function ({
   exportsName,
   imports
 }) {
+  if (name === 'core-runtime') {
+    return '\n})();\n';
+  }
+
   var chunks = [];
 
-  if (name === 'meteor') {
-    chunks.push("Package._define(" + JSON.stringify(name) + ", ");
-    if (!_.isEmpty(exported)) {
-      const scratch = {};
-      _.each(exported, symbol => scratch[symbol] = symbol);
-      const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
-      chunks.push(symbolTree);
-    }
-    chunks.push(');\n');
-
-  } else if (exported || exportsName) {
     chunks.push("\n\n/* Exports */\n");
     chunks.push('return {\n');
 
@@ -1074,13 +1064,8 @@ var getFooter = function ({
       chunks.push("exports: ", symbolTree);
     }
     chunks.push('};\n');
-    
-  }
-  if (name !== 'meteor') {
+
     chunks.push("\n});\n");
-  } else {
-    chunks.push("\n})();\n");
-  }
 
   return chunks.join('');
 };
