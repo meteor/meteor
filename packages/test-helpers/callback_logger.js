@@ -16,14 +16,7 @@ var TIMEOUT = 1000;
 
 withCallbackLogger = function (test, callbackNames, async, fun) {
   var logger = new CallbackLogger(test, callbackNames);
-  if (async) {
-    if (!Fiber)
-      throw new Error("Fiber is not available");
-    logger.fiber = Fiber(_.bind(fun, null, logger));
-    logger.fiber.run();
-  } else {
-    fun(logger);
-  }
+  return fun(logger);
 };
 
 var CallbackLogger = function (test, callbackNames) {

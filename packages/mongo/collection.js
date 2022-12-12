@@ -13,6 +13,7 @@ import { normalizeProjection } from "./mongo_utils";
  */
 Mongo = {};
 
+console.log('Using package: mongo');
 /**
  * @summary Constructor for a Collection
  * @locus Anywhere

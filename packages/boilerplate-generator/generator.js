@@ -1,11 +1,11 @@
-import { readFile } from 'fs';
+import {readFileSync} from 'fs';
 import { create as createStream } from "combined-stream2";
 
 import WebBrowserTemplate from './template-web.browser';
 import WebCordovaTemplate from './template-web.cordova';
 
 // Copied from webapp_server
-const readUtf8FileSync = filename => Meteor.wrapAsync(readFile)(filename, 'utf8');
+const readUtf8FileSync = filename => readFileSync(filename, 'utf8');
 
 const identity = value => value;
 

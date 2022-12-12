@@ -23,6 +23,9 @@ import {
 
 MongoInternals = {};
 
+// TODO remove after test
+MongoInternals.__packageName = 'mongo'
+
 MongoInternals.NpmModules = {
   mongodb: {
     version: NpmModuleMongodbVersion,
