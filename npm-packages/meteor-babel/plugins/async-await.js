@@ -9,7 +9,7 @@ module.exports = function (babel) {
       Function: {
         exit: function (path) {
           const node = path.node;
-          if (!node.async || this.opts.isFiberDisabled) {
+          if (!node.async || !this.opts.isFiberDisabled) {
             return;
           }
 
