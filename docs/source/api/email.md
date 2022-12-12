@@ -23,8 +23,7 @@ prior to being upgraded to TLS/SSL (using `STARTTLS`) typically use port 587
 (and _sometimes_ 25) and should use `smtp://`.  For more information see the
 [Nodemailer docs](https://nodemailer.com/smtp/)
 
-Second, if you are using a one of the [supported services](https://nodemailer.com/smtp/well-known/#supported-services) 
-you can setup the sending options in your app settings like this:
+Second, if you are using a one of the [supported services](https://community.nodemailer.com/smtp/well-known/#supported-services) you can setup the sending options in your app settings like this:
 
 ```json
 {

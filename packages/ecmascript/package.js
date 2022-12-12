@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.16.2',
+  version: '0.16.3',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md',
 });
@@ -31,7 +31,7 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use(['tinytest', 'underscore']);
+  api.use(['tinytest']);
   api.use(['es5-shim', 'ecmascript', 'babel-compiler']);
   api.addFiles('runtime-tests.js');
   api.addFiles('transpilation-tests.js', 'server');
