@@ -36,7 +36,7 @@ function join(prefix, key) {
   return prefix ? `${prefix}.${key}` : key;
 }
 
-const arrayOperatorKeyRegex = /^(a|u\d+)$/;
+const arrayOperatorKeyRegex = /^(a|[su]\d+)$/;
 
 function isArrayOperatorKey(field) {
   return arrayOperatorKeyRegex.test(field);
@@ -96,7 +96,9 @@ function convertOplogDiff(oplogEntry, diff, prefix) {
           }
 
           const positionKey = join(join(prefix, key), position.slice(1));
-          if (value === null) {
+          if (position[0] === 's') {
+            convertOplogDiff(oplogEntry, value, positionKey);
+          } else if (value === null) {
             oplogEntry.$unset ??= {};
             oplogEntry.$unset[positionKey] = true;
           } else {
