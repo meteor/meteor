@@ -133,6 +133,12 @@ Create a basic [Vue 3](https://vuejs.org/) app.
 
 `--react`
 
+Create a basic react app. See the section on [React tutorial](https://guide.meteor.com/react.html#react-tutorial)  
+for more information. This is the default.
+
+`--angular`
+for more information.
+
 `--vue-2`
 
 Create a basic vue2-based app. See the [Vue guide](https://vue-tutorial.meteor.com/) 
@@ -157,43 +163,43 @@ Create a basic [Solid](https://www.solidjs.com/) app.
 **Packages**
 
 |                                                                                                      | Default (`--react`) | `--bare` | `--full` | `--minimal` | `--blaze` | `--apollo` | `--vue-2` | `--svelte` | `--tailwind` | `--chakra-ui` | `--solid` | `--vue` |
-|------------------------------------------------------------------------------------------------------|:-------------------:|:--------:|:--------:|:-----------:|:---------:|:----------:|:-------:|:----------:|:------------:|:-------------:|:---------:|:---------:|
-| [autopublish](https://atmospherejs.com/meteor/autopublish)                                           |          X          |          |          |             |     X     |            |         |     X      |      X       |       X       |     X     |
-| [akryum:vue-component](https://atmospherejs.com/akryum/vue-component)                                |                     |          |          |             |           |            |    X    |            |              |               |           |
-| [apollo](https://atmospherejs.com/meteor/apollo)                                                     |                     |          |          |             |           |     X      |         |            |              |               |           |
-| [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)                         |                     |          |    X     |             |     X     |            |         |            |              |               |           |
-| [ecmascript](https://atmospherejs.com/meteor/ecmascript)                                             |          X          |    X     |    X     |      X      |     X     |     X      |    X    |     X      |      X       |       X       |     X     |    X     |
-| [es5-shim](https://atmospherejs.com/meteor/es5-shim)                                                 |          X          |    X     |    X     |      X      |     X     |     X      |    X    |     X      |      X       |       X       |     X     |    X     |
-| [hot-module-replacement](https://atmospherejs.com/meteor/hot-module-replacement)                     |          X          |          |          |             |     X     |     X      |         |            |      X       |       X       |     X     |    X     |
-| [insecure](https://atmospherejs.com/meteor/insecure)                                                 |          X          |          |          |             |     X     |            |         |     X      |      X       |       X       |     X     |    X     |
-| [johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook/publication-collector) |                     |          |    X     |             |           |     X      |         |            |              |               |           |
-| [jquery](https://atmospherejs.com/meteor/jquery)                                                     |                     |          |    X     |             |     X     |            |         |            |              |               |           |
-| [ostrio:flow-router-extra](https://atmospherejs.com/meteor/ostrio/flow-router-extra)                 |                     |          |    X     |             |           |            |         |            |              |               |           |
-| [less](https://atmospherejs.com/meteor/less)                                                         |                     |          |    X     |             |           |            |         |            |              |               |           |
-| [meteor](https://atmospherejs.com/meteor/meteor)                                                     |                     |          |          |      X      |           |            |         |            |              |               |           |
-| [meteor-base](https://atmospherejs.com/meteor/meteor-base)                                           |          X          |    X     |    X     |             |     X     |     X      |    X    |     X      |      X       |       X       |     X     |     X     |
-| [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)                               |          X          |    X     |    X     |             |     X     |     X      |    X    |     X      |      X       |       X       |     X     |     X     |
-| [mongo](https://atmospherejs.com/meteor/mongo)                                                       |          X          |    X     |    X     |             |     X     |     X      |    X    |     X      |      X       |       X       |     X     |     X     |
-| [meteortesting:mocha](https://atmospherejs.com/meteortesting/mocha)                                  |                     |          |    X     |             |           |            |    X    |            |              |               |           |
-| [reactive-var](https://atmospherejs.com/meteor/reactive-var)                                         |          X          |    X     |    X     |             |     X     |     X      |    X    |     X      |      X       |       X       |     X     |     X     |
-| [rdb:svelte-meteor-data](https://atmospherejs.com/rdb/svelte-meteor-data)                            |                     |          |          |             |           |            |         |     X      |              |               |           |
-| [server-render](https://atmospherejs.com/meteor/server-render)                                       |                     |          |          |      X      |           |     X      |    X    |            |              |               |           |
-| [shell-server](https://atmospherejs.com/meteor/shell-server)                                         |                     |    X     |          |      X      |     X     |     X      |    X    |     X      |      X       |       X       |     X     |     X     |
-| [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)                       |          X          |    X     |    X     |      X      |     X     |     X      |    X    |     X      |      X       |       X       |     X     |     X     |
-| [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)                         |          X          |    X     |    X     |      X      |     X     |     X      |    X    |     X      |      X       |       X       |     X     |     X     |
-| [static-html](https://atmospherejs.com/meteor/static-html)                                           |                     |    X     |          |      X      |           |     X      |    X    |     X      |              |               |           |
-| [svelte:compiler](https://atmospherejs.com/svelte/compiler)                                          |                     |          |          |             |           |            |         |     X      |              |               |           |
-| [swydo:graphql](https://atmospherejs.com/swydo/graphql)                                              |                     |          |          |             |           |     X      |         |            |              |               |           |
-| [tailwindcss](https://tailwindcss.com)                                                               |                     |    X     |    X     |             |     X     |            |    X    |            |      X       |               |           |
-| [tracker](https://atmospherejs.com/meteor/tracker)                                                   |                     |    X     |    X     |             |     X     |            |    X    |            |              |               |           |
-| [typescript](https://atmospherejs.com/meteor/typescript)                                             |          X          |    X     |    X     |      X      |     X     |     X      |    X    |     X      |      X       |       X       |     X     |
-| [webapp](https://atmospherejs.com/meteor/webapp)                                                     |                     |          |          |      X      |           |            |         |            |              |               |           |
-| [react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)                               |          X          |          |          |             |           |            |         |            |      X       |       X       |           |
-| [vite:bundler](https://atmospherejs.com/vite/bundler)                                                |                     |          |          |             |           |            |         |            |              |               |     X     |       X     |
+|------------------------------------------------------------------------------------------------------|:-------------------:|:--------:|:--------:|:-----------:|:---------:|:----------:|:---------:|:----------:|:------------:|:-------------:|:---------:|:-------:|
+| [autopublish](https://atmospherejs.com/meteor/autopublish)                                           |          X          |          |          |             |     X     |            |           |     X      |      X       |       X       |     X     |         |
+| [akryum:vue-component](https://atmospherejs.com/akryum/vue-component)                                |                     |          |          |             |           |            |     X     |            |              |               |           |         |
+| [apollo](https://atmospherejs.com/meteor/apollo)                                                     |                     |          |          |             |           |     X      |           |            |              |               |           |         |
+| [blaze-html-templates](https://atmospherejs.com/meteor/blaze-html-templates)                         |                     |          |    X     |             |     X     |            |           |            |              |               |           |         |
+| [ecmascript](https://atmospherejs.com/meteor/ecmascript)                                             |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [es5-shim](https://atmospherejs.com/meteor/es5-shim)                                                 |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [hot-module-replacement](https://atmospherejs.com/meteor/hot-module-replacement)                     |          X          |          |          |             |     X     |     X      |           |            |      X       |       X       |     X     |    X    |
+| [insecure](https://atmospherejs.com/meteor/insecure)                                                 |          X          |          |          |             |     X     |            |           |     X      |      X       |       X       |     X     |    X    |
+| [johanbrook:publication-collector](https://atmospherejs.com/meteor/johanbrook/publication-collector) |                     |          |    X     |             |           |     X      |           |            |              |               |           |         |
+| [jquery](https://atmospherejs.com/meteor/jquery)                                                     |                     |          |    X     |             |     X     |            |           |            |              |               |           |         |
+| [ostrio:flow-router-extra](https://atmospherejs.com/meteor/ostrio/flow-router-extra)                 |                     |          |    X     |             |           |            |           |            |              |               |           |         |
+| [less](https://atmospherejs.com/meteor/less)                                                         |                     |          |    X     |             |           |            |           |            |              |               |           |         |
+| [meteor](https://atmospherejs.com/meteor/meteor)                                                     |                     |          |          |      X      |           |            |           |            |              |               |           |         |
+| [meteor-base](https://atmospherejs.com/meteor/meteor-base)                                           |          X          |    X     |    X     |             |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [mobile-experience](https://atmospherejs.com/meteor/mobile-experience)                               |          X          |    X     |    X     |             |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [mongo](https://atmospherejs.com/meteor/mongo)                                                       |          X          |    X     |    X     |             |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [meteortesting:mocha](https://atmospherejs.com/meteortesting/mocha)                                  |                     |          |    X     |             |           |            |     X     |            |              |               |           |         |
+| [reactive-var](https://atmospherejs.com/meteor/reactive-var)                                         |          X          |    X     |    X     |             |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [rdb:svelte-meteor-data](https://atmospherejs.com/rdb/svelte-meteor-data)                            |                     |          |          |             |           |            |           |     X      |              |               |           |         |
+| [server-render](https://atmospherejs.com/meteor/server-render)                                       |                     |          |          |      X      |           |     X      |     X     |            |              |               |           |         |
+| [shell-server](https://atmospherejs.com/meteor/shell-server)                                         |                     |    X     |          |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [standard-minifier-css](https://atmospherejs.com/meteor/standard-minifier-css)                       |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [standard-minifier-js](https://atmospherejs.com/meteor/standard-minifier-js)                         |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |    X    |
+| [static-html](https://atmospherejs.com/meteor/static-html)                                           |                     |    X     |          |      X      |           |     X      |     X     |     X      |              |               |           |         |
+| [svelte:compiler](https://atmospherejs.com/svelte/compiler)                                          |                     |          |          |             |           |            |           |     X      |              |               |           |         |
+| [swydo:graphql](https://atmospherejs.com/swydo/graphql)                                              |                     |          |          |             |           |     X      |           |            |              |               |           |         |
+| [tailwindcss](https://tailwindcss.com)                                                               |                     |    X     |    X     |             |     X     |            |     X     |            |      X       |               |           |         |
+| [tracker](https://atmospherejs.com/meteor/tracker)                                                   |                     |    X     |    X     |             |     X     |            |     X     |            |              |               |           |         |
+| [typescript](https://atmospherejs.com/meteor/typescript)                                             |          X          |    X     |    X     |      X      |     X     |     X      |     X     |     X      |      X       |       X       |     X     |         |
+| [webapp](https://atmospherejs.com/meteor/webapp)                                                     |                     |          |          |      X      |           |            |           |            |              |               |           |         |
+| [react-meteor-data](https://atmospherejs.com/meteor/react-meteor-data)                               |          X          |          |          |             |           |            |           |            |      X       |       X       |           |         |
+| [vite:bundler](https://atmospherejs.com/vite/bundler)                                                |                     |          |          |             |           |            |           |            |              |               |     X     |    X    |
 
 <h2 id="meteorgenerate"> meteor generate </h2>
 
-``meteor generate`` is a command for generating scaffolds for your current project. when ran without arguments, it will ask
+``meteor generate`` is a command for generating scaffolds for your current project. When ran without arguments, it will ask
 you what is the name of the model you want to generate, if you do want methods for your api and publications. It can be
 used as a command line only operation as well.
 
@@ -203,10 +209,10 @@ meteor generate customer
 
 ```
 
-it will generate the following code in ``/imports/api``
+It will generate the following code in ``/imports/api``
 ![Screenshot 2022-11-09 at 11 28 29](https://user-images.githubusercontent.com/70247653/200856551-71c100f5-8714-4b34-9678-4f08780dcc8b.png)
 
-that will have the following code:
+That will have the following code:
 
 
 <h3 id="meteorgenerate-collection.js">collection.js</h3>
@@ -228,21 +234,21 @@ import { Meteor } from 'meteor/meteor';
 import { check } from 'meteor/check';
 import { CustomerCollection } from './collection';
 
-export function create(data) {
+export async function create(data) {
   return CustomerCollection.insertAsync({ ...data });
 }
 
-export function update(_id, data) {
+export async function update(_id, data) {
   check(_id, String);
   return CustomerCollection.updateAsync(_id, { ...data });
 }
 
-export function remove(_id) {
+export async function remove(_id) {
   check(_id, String);
   return CustomerCollection.removeAsync(_id);
 }
 
-export function findById(_id) {
+export async function findById(_id) {
   check(_id, String);
   return CustomerCollection.findOneAsync(_id);
 }
@@ -258,8 +264,6 @@ Meteor.methods({
 
 
 
-
-
 <h3 id="meteorgenerate-publication.js">publication.js</h3>
 
 ```js
@@ -267,18 +271,12 @@ Meteor.methods({
 import { Meteor } from 'meteor/meteor';
 import { CustomerCollection } from './collection';
 
-Meteor.publish('CustomersByLoggedUser', function publishCustomersByUserId() {
-  return CustomerCollection.find({ userId: this.userId });
-});
-
 Meteor.publish('allCustomers', function publishCustomers() {
   return CustomerCollection.find({});
 });
 
 
 ```
-
-
 
 
 
@@ -293,15 +291,12 @@ export * from './publications';
 
 ```
 
-
-
-
 Also, there is the same version of these methods using TypeScript, that will be shown bellow.
 
 <h3 id="meteorgenerate-path">path option</h3>
 
-for those that may want to create in another path, you can use the ``--path`` option in order to select where to place this boilerplate.
-It will generate the model in that path. Note that I'm using TypeScript in this example.
+If you want to create in another path, you can use the ``--path`` option in order to select where to place this boilerplate.
+It will generate the model in that path. Note that is used TypeScript in this example.
 
 ```bash
 
@@ -309,7 +304,7 @@ meteor generate another-customer --path=server/admin
 
 ```
 
-it will generate in ``server/admin`` the another-client code:
+It will generate in ``server/admin`` the another-client code:
 
 ![Screenshot 2022-11-09 at 11 32 39](https://user-images.githubusercontent.com/70247653/200857560-a4874e4c-1078-4b7a-9381-4c6590d2f63b.png)
 
@@ -339,21 +334,21 @@ import { Mongo } from 'meteor/mongo';
 import { check } from 'meteor/check';
 import { AnotherCustomer, AnotherCustomerCollection } from './collection';
 
-export function create(data: AnotherCustomer) {
+export async function create(data: AnotherCustomer) {
   return AnotherCustomerCollection.insertAsync({ ...data });
 }
 
-export function update(_id: string, data: Mongo.Modifier<AnotherCustomer>) {
+export async function update(_id: string, data: Mongo.Modifier<AnotherCustomer>) {
   check(_id, String);
   return AnotherCustomerCollection.updateAsync(_id, { ...data });
 }
 
-export function remove(_id: string) {
+export async function remove(_id: string) {
   check(_id, String);
   return AnotherCustomerCollection.removeAsync(_id);
 }
 
-export function findById(_id: string) {
+export async function findById(_id: string) {
   check(_id, String);
   return AnotherCustomerCollection.findOneAsync(_id);
 }
@@ -376,10 +371,6 @@ Meteor.methods({
 
 import { Meteor } from 'meteor/meteor';
 import { AnotherCustomerCollection } from './collection';
-
-Meteor.publish('AnotherCustomersByLoggedUser', function publishAnotherCustomersByUserId(this) {
-  return AnotherCustomerCollection.find({ userId: this.userId });
-});
 
 Meteor.publish('allAnotherCustomers', function publishAnotherCustomers() {
   return AnotherCustomerCollection.find({});
@@ -407,13 +398,13 @@ export * from './publications';
 <h3 id="meteorgenerate-wizard"> Using the Wizard  </h3>
 
 
-if you run the following command:
+If you run the following command:
 
 ```bash
 meteor generate
 ```
 
-it will prompt the following questions.
+It will prompt the following questions.
 
 ![Screenshot 2022-11-09 at 11 38 29](https://user-images.githubusercontent.com/70247653/200859087-a2ef63b6-7ac1-492b-8918-0630cbd30686.png)
 
@@ -437,13 +428,13 @@ meteor generate feed --templatePath=/scaffolds-ts
 
 You can use your own templates for scaffolding your specific workloads. To do that, you should pass in a template directory URL so that it can copy it with its changes.
 
-<h3 id="meteorgenerate-template-rename"> how do I rename things?</h3>
+<h3 id="meteorgenerate-template-rename"> How to rename things?</h3>
 
-Out of the box I provide a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
+Out of the box is provided a few functions such as replacing ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$``
 
 these replacements come from this function:
  
-_note that scaffoldName is the name that you have passed as argument_
+_Note that scaffoldName is the name that you have passed as argument_
 
 ```js
 const transformName = (name) => {
@@ -455,7 +446,7 @@ const transformName = (name) => {
   }
 ```
 
-<h3 id="meteorgenerate-template-faq"> What if I want to have my own way of templating? </h3>
+<h3 id="meteorgenerate-template-faq"> How to bring your own templates? </h3>
 
 `--replaceFn`
 
@@ -473,12 +464,12 @@ export function transformContents(scaffoldName, contents, fileName) {
 }
 
 ```
-if you run your command like this:
+If you run your command like this:
 
 ```bash
  meteor generate feed --replaceFn=/fn/replace.js
 ```
-it will generate files full of ``$$PascalCase$$``using the meteor provided templates.
+It will generate files full of ``$$PascalCase$$``using the meteor provided templates.
 
 A better example of this feature would be the following js file:
 ```js
@@ -932,8 +923,8 @@ The `meteor node` command calls the
 [`node`](https://nodejs.org) version bundled with Meteor itself.
 
 > This is not to be confused with [`meteor shell`](#meteorshell), which provides
-an almost identical experience but also gives you access to the "server" context
-of a Meteor application.  Typically, `meteor shell` will be preferred.
+> an almost identical experience but also gives you access to the "server" context
+> of a Meteor application. Typically, `meteor shell` will be preferred.
 
 Additional parameters can be passed in the same way as the `node` command, and
 the [Node.js documentation](https://nodejs.org/dist/latest-v4.x/docs/api/cli.html)
