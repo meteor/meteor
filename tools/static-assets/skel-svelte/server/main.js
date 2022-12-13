@@ -5,7 +5,7 @@ async function insertLink({ title, url }) {
   await LinksCollection.insertAsync({ title, url, createdAt: new Date() });
 }
 
-Meteor.publish('links.all', function () {
+Meteor.publish('links.all', function publishLinksAll() {
   return LinksCollection.find();
 })
 

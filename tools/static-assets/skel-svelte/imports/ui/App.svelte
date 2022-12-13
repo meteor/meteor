@@ -33,4 +33,7 @@
   {:else}
     <div>Loading ...</div>  
   {/if}
+
+  <h2>Typescript ready</h2>
+  <p>Just add lang="ts" to .svelte components.</p>
 </div>
