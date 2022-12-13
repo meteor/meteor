@@ -1,18 +1,20 @@
-<script>
-  import { LinksCollection } from '/imports/api/links';
+<script lang="ts">
+  import { Meteor } from "meteor/meteor";
+  import { LinksCollection, type Link } from '../api/links';
   
-  let counter = 0;
-  const addToCounter = () => {
+  let counter: number = 0;
+  const addToCounter = (): void => {
     counter += 1;
   }
   
-  let subIsReady = false;
+  let subIsReady: boolean = false;
   $m: {
-    const handle = Meteor.subscribe('links.all');
+    const handle: Meteor.SubscriptionHandle = Meteor.subscribe("links.all");
     subIsReady = handle.ready();
   }
 
   // more information about $m at https://atmospherejs.com/zodern/melte#tracker-statements
+  let links: Link[];
   $m: links = LinksCollection.find().fetch();
 </script>
 
@@ -33,7 +35,4 @@
   {:else}
     <div>Loading ...</div>  
   {/if}
-
-  <h2>Typescript ready</h2>
-  <p>Just add lang="ts" to .svelte components.</p>
 </div>

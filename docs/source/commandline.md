@@ -195,6 +195,7 @@ Create a basic [Solid](https://www.solidjs.com/) app.
 | [vite:bundler](https://atmospherejs.com/vite/bundler)                                                |                     |          |          |             |           |            |           |            |              |               |     X     |    X    |
 | [webapp](https://atmospherejs.com/meteor/webapp)                                                     |                     |          |          |      X      |           |            |           |            |              |               |           |         |
 | [zodern:melte](https://atmospherejs.com/zodern/melte)                                                |                     |          |          |             |           |            |           |     X      |              |               |           |         |
+| [zodern:types](https://atmospherejs.com/zodern/types)                                                |                     |          |          |             |           |            |           |     X      |              |               |           |         |
 
 <h2 id="meteorgenerate"> meteor generate </h2>
 
