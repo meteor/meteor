@@ -13,7 +13,7 @@ require("./cli/dev-bundle-bin-commands.js").then(function (child) {
     throw error;
   });
 });
-process.env.DISABLE_FIBERS = process.env.DISABLE_FIBERS || 0;
+
 function continueSetup() {
   // Set up the Babel transpiler
   require('./tool-env/install-babel.js');
