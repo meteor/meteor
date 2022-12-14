@@ -31,9 +31,18 @@
   by [henriquealbert](https://github.com/henriquealbert).
 
 #### Breaking Changes
+ N/A
 
-* OAuth related code has been moved from `accounts-base` to `accounts-oauth`, removing the dependency on `service-configuration`
-more can be seen in this [discussion](https://github.com/meteor/meteor/discussions/12171) and in the [PR](https://github.com/meteor/meteor/pull/12202).
+####  Internal API changes
+* Internal methods from `OAuth` that are now async:
+  - _attemptLogin
+  - _loginMethod
+  - _runLoginHandlers
+  - OAuth.registerService now accepts async functions
+
+OAuth related code has been moved from `accounts-base` to `accounts-oauth`, removing the dependency on `service-configuration`
+more can be seen in this [discussion](https://github.com/meteor/meteor/discussions/12171) and in the [PR](https://github.com/meteor/meteor/pull/12202). 
+This means that if you don’t use third-party login on your project, you don’t need to add the package service-configuration anymore.
 
 #### Migration Steps
 
