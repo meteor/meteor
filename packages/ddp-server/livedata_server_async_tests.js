@@ -166,8 +166,8 @@ Tinytest.addAsync('livedata server - async publish cursor', function(
     const remoteCollection = new Mongo.Collection('names', {
       connection: clientConn,
     });
-    clientConn.subscribe('asyncPublishCursor', () => {
-      const actual = remoteCollection.find().fetch();
+    clientConn.subscribe('asyncPublishCursor', async () => {
+      const actual = await remoteCollection.find().fetch();
       test.equal(actual[0].name, 'async');
       onComplete();
     });
