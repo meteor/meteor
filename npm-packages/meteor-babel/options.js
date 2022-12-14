@@ -185,12 +185,13 @@ function getDefaultsForNode8(features) {
 
     // Ensure that async functions run in a Fiber, while also taking
     // full advantage of native async/await support in Node 8.
-
+    const isFiberDisabled = process.env.DISABLE_FIBERS || false;
     combined.plugins.push([require("./plugins/async-await.js"), {
       // Do not transform `await x` to `Promise.await(x)`, since Node
       // 8 has native support for await expressions.
-      useNativeAsyncAwait: !process.env.DISABLE_FIBERS,
-      isFiberDisabled: process.env.DISABLE_FIBERS,
+      useNativeAsyncAwait: !isFiberDisabled,
+      isFiberDisabled: isFiberDisabled,
+      overwriteFiberExit: process.env.OVERWRITE_FIBERS_EXIT === '1',
     }]);
 
     // Enable async generator functions proposal.
