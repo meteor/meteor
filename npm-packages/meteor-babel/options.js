@@ -191,6 +191,7 @@ function getDefaultsForNode8(features) {
       // 8 has native support for await expressions.
       useNativeAsyncAwait: !isFiberDisabled,
       isFiberDisabled: isFiberDisabled,
+      overwriteFiberExit: process.env.OVERWRITE_FIBERS_EXIT === '1',
     }]);
 
     // Enable async generator functions proposal.

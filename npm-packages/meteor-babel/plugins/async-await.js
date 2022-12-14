@@ -9,13 +9,9 @@ module.exports = function (babel) {
       Function: {
         exit: function (path) {
           const node = path.node;
-          if (!node.async || this.opts.isFiberDisabled) {
+          if (!node.async) {
             return;
           }
-
-          // The original function becomes a non-async function that
-          // returns a Promise.
-          node.async = false;
 
           // The inner function should inherit lexical environment items
           // like `this`, `super`, and `arguments` from the outer
@@ -29,6 +25,17 @@ module.exports = function (babel) {
             // async if we have native async/await support.
             !! this.opts.useNativeAsyncAwait
           );
+
+          if (this.opts.isFiberDisabled && this.opts.overwriteFiberExit) {
+            if (node.type === "ArrowFunctionExpression") {
+              node.body = innerFn;
+            }
+            return;
+          }
+
+          // The original function becomes a non-async function that
+          // returns a Promise.
+          node.async = false;
 
           const promiseResultExpression = t.callExpression(
             t.memberExpression(
