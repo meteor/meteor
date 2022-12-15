@@ -2,7 +2,9 @@ import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
 import { Accounts } from "meteor/accounts-base";
 
 // Utility for grabbing user
-const getUserById = (id, options) => Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
+const getUserById =
+  async (id, options) =>
+    await Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
 
 // User records have a 'services.password.bcrypt' field on them to hold
 // their hashed passwords.
@@ -228,13 +230,15 @@ Accounts.registerLoginHandler("password", async options => {
  * @param {String} newUsername A new username for the user.
  * @importFromPackage accounts-base
  */
-Accounts.setUsername = (userId, newUsername) => {
+Accounts.setUsername =
+  async (userId, newUsername) => {
   check(userId, NonEmptyString);
   check(newUsername, NonEmptyString);
 
-  const user = getUserById(userId, {fields: {
+  const user = await getUserById(userId, {fields: {
     username: 1,
   }});
+
   if (!user) {
     Accounts._handleError("User not found");
   }
@@ -262,7 +266,9 @@ Accounts.setUsername = (userId, newUsername) => {
 // Let the user change their own password if they know the old
 // password. `oldPassword` and `newPassword` should be objects with keys
 // `digest` and `algorithm` (representing the SHA256 of the password).
-Meteor.methods({changePassword: async function (oldPassword, newPassword) {
+Meteor.methods(
+  {
+    changePassword: async function (oldPassword, newPassword) {
   check(oldPassword, passwordValidator);
   check(newPassword, passwordValidator);
 
@@ -270,7 +276,7 @@ Meteor.methods({changePassword: async function (oldPassword, newPassword) {
     throw new Meteor.Error(401, "Must be logged in");
   }
 
-  const user = getUserById(this.userId, {fields: {
+  const user = await getUserById(this.userId, {fields: {
     services: 1,
     ...Accounts._checkPasswordUserFields,
   }});
@@ -326,7 +332,7 @@ Accounts.setPasswordAsync = async (userId, newPlaintextPassword, options) => {
   check(options, Match.Maybe({ logout: Boolean }));
   options = { logout: true , ...options };
 
-  const user = getUserById(userId, {fields: {_id: 1}});
+  const user = await getUserById(userId, { fields: { _id: 1 } });
   if (!user) {
     throw new Meteor.Error(403, "User not found");
   }
@@ -395,11 +401,12 @@ Meteor.methods({forgotPassword: options => {
  * @returns {Object} Object with {email, user, token} values.
  * @importFromPackage accounts-base
  */
-Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
+Accounts.generateResetToken =
+  async (userId, email, reason, extraTokenData) => {
   // Make sure the user exists, and email is one of their addresses.
   // Don't limit the fields in the user object since the user is returned
   // by the function and some other fields might be used elsewhere.
-  const user = getUserById(userId);
+  const user = await getUserById(userId);
   if (!user) {
     Accounts._handleError("Can't find user");
   }
@@ -467,11 +474,12 @@ Accounts.generateResetToken = (userId, email, reason, extraTokenData) => {
  * @returns {Object} Object with {email, user, token} values.
  * @importFromPackage accounts-base
  */
-Accounts.generateVerificationToken = (userId, email, extraTokenData) => {
+Accounts.generateVerificationToken =
+  async (userId, email, extraTokenData) => {
   // Make sure the user exists, and email is one of their addresses.
   // Don't limit the fields in the user object since the user is returned
   // by the function and some other fields might be used elsewhere.
-  const user = getUserById(userId);
+  const user = await getUserById(userId);
   if (!user) {
     Accounts._handleError("Can't find user");
   }
@@ -711,77 +719,88 @@ Meteor.methods({resetPassword: async function (...args) {
  * @returns {Object} Object with {email, user, token, url, options} values.
  * @importFromPackage accounts-base
  */
-Accounts.sendVerificationEmail = (userId, email, extraTokenData, extraParams) => {
-  // XXX Also generate a link using which someone can delete this
-  // account if they own said address but weren't those who created
-  // this account.
+Accounts.sendVerificationEmail =
+  async (userId, email, extraTokenData, extraParams) => {
+    // XXX Also generate a link using which someone can delete this
+    // account if they own said address but weren't those who created
+    // this account.
 
-  const {email: realEmail, user, token} =
-    Accounts.generateVerificationToken(userId, email, extraTokenData);
-  const url = Accounts.urls.verifyEmail(token, extraParams);
-  const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
-  Email.send(options);
-  if (Meteor.isDevelopment) {
-    console.log(`\nVerification email URL: ${url}`);
-  }
-  return {email: realEmail, user, token, url, options};
-};
+    const { email: realEmail, user, token } =
+      await Accounts.generateVerificationToken(userId, email, extraTokenData);
+    const url = Accounts.urls.verifyEmail(token, extraParams);
+    const options = Accounts.generateOptionsForEmail(realEmail, user, url, 'verifyEmail');
+    Email.send(options);
+    if (Meteor.isDevelopment) {
+      console.log(`\nVerification email URL: ${ url }`);
+    }
+    return { email: realEmail, user, token, url, options };
+  };
 
 // Take token from sendVerificationEmail, mark the email as verified,
 // and log them in.
-Meteor.methods({verifyEmail: async function (...args) {
-  const token = args[0];
-  return await Accounts._loginMethod(
-    this,
-    "verifyEmail",
-    args,
-    "password",
-    () => {
-      check(token, String);
+Meteor.methods(
+  {
+    verifyEmail: async function (...args) {
+      const token = args[0];
+      return await Accounts._loginMethod(
+        this,
+        "verifyEmail",
+        args,
+        "password",
+        async () => {
+          check(token, String);
 
-      const user = Meteor.users.findOne(
-        {'services.email.verificationTokens.token': token},
-        {fields: {
-          services: 1,
-          emails: 1,
-        }}
+          const user = await Meteor.users.findOne(
+            { 'services.email.verificationTokens.token': token },
+            {
+              fields: {
+                services: 1,
+                emails: 1,
+              }
+            }
+          );
+          if (!user)
+            throw new Meteor.Error(403, "Verify email link expired");
+
+          const tokenRecord =
+            await user
+              .services.email.verificationTokens.find(t => t.token == token);
+
+          if (!tokenRecord)
+            return {
+              userId: user._id,
+              error: new Meteor.Error(403, "Verify email link expired")
+            };
+
+          const emailsRecord =
+            user.emails.find(e => e.address == tokenRecord.address);
+
+          if (!emailsRecord)
+            return {
+              userId: user._id,
+              error: new Meteor.Error(403, "Verify email link is for unknown address")
+            };
+
+          // By including the address in the query, we can use 'emails.$' in the
+          // modifier to get a reference to the specific object in the emails
+          // array. See
+          // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
+          // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
+          await Meteor.users.update(
+            {
+              _id: user._id,
+              'emails.address': tokenRecord.address
+            },
+            {
+              $set: { 'emails.$.verified': true },
+              $pull: { 'services.email.verificationTokens': { address: tokenRecord.address } }
+            });
+
+          return { userId: user._id };
+        }
       );
-      if (!user)
-        throw new Meteor.Error(403, "Verify email link expired");
-
-        const tokenRecord = user.services.email.verificationTokens.find(
-          t => t.token == token
-        );
-      if (!tokenRecord)
-        return {
-          userId: user._id,
-          error: new Meteor.Error(403, "Verify email link expired")
-        };
-
-      const emailsRecord = user.emails.find(
-        e => e.address == tokenRecord.address
-      );
-      if (!emailsRecord)
-        return {
-          userId: user._id,
-          error: new Meteor.Error(403, "Verify email link is for unknown address")
-        };
-
-      // By including the address in the query, we can use 'emails.$' in the
-      // modifier to get a reference to the specific object in the emails
-      // array. See
-      // http://www.mongodb.org/display/DOCS/Updating/#Updating-The%24positionaloperator)
-      // http://www.mongodb.org/display/DOCS/Updating#Updating-%24pull
-      Meteor.users.update(
-        {_id: user._id,
-         'emails.address': tokenRecord.address},
-        {$set: {'emails.$.verified': true},
-         $pull: {'services.email.verificationTokens': {address: tokenRecord.address}}});
-
-      return {userId: user._id};
     }
-  );
-}});
+  });
 
 /**
  * @summary Add an email address for a user. Use this instead of directly
@@ -795,7 +814,8 @@ Meteor.methods({verifyEmail: async function (...args) {
  * be marked as verified. Defaults to false.
  * @importFromPackage accounts-base
  */
-Accounts.addEmail = (userId, newEmail, verified) => {
+Accounts.addEmail =
+  async (userId, newEmail, verified) => {
   check(userId, NonEmptyString);
   check(newEmail, NonEmptyString);
   check(verified, Match.Optional(Boolean));
@@ -804,7 +824,7 @@ Accounts.addEmail = (userId, newEmail, verified) => {
     verified = false;
   }
 
-  const user = getUserById(userId, {fields: {emails: 1}});
+  const user = await getUserById(userId, {fields: {emails: 1}});
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
@@ -819,6 +839,9 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   const caseInsensitiveRegExp =
     new RegExp(`^${Meteor._escapeRegExp(newEmail)}$`, 'i');
 
+  // TODO: make this async
+  // TODO: This is a linear search. If we have a lot of emails.
+  // we should consider using a different data structure.
   const didUpdateOwnEmail = (user.emails || []).reduce(
     (prev, email) => {
       if (caseInsensitiveRegExp.test(email.address)) {
@@ -852,7 +875,7 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   Accounts._checkForCaseInsensitiveDuplicates('emails.address',
     'Email', newEmail, user._id);
 
-  Meteor.users.update({
+  await Meteor.users.update({
     _id: user._id
   }, {
     $addToSet: {
@@ -870,7 +893,7 @@ Accounts.addEmail = (userId, newEmail, verified) => {
       'Email', newEmail, user._id);
   } catch (ex) {
     // Undo update if the check fails
-    Meteor.users.update({_id: user._id},
+    await Meteor.users.update({_id: user._id},
       {$pull: {emails: {address: newEmail}}});
     throw ex;
   }
@@ -884,17 +907,18 @@ Accounts.addEmail = (userId, newEmail, verified) => {
  * @param {String} email The email address to remove.
  * @importFromPackage accounts-base
  */
-Accounts.removeEmail = (userId, email) => {
-  check(userId, NonEmptyString);
-  check(email, NonEmptyString);
+Accounts.removeEmail =
+  async (userId, email) => {
+    check(userId, NonEmptyString);
+    check(email, NonEmptyString);
 
-  const user = getUserById(userId, {fields: {_id: 1}});
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+    const user = await getUserById(userId, { fields: { _id: 1 } });
+    if (!user)
+      throw new Meteor.Error(403, "User not found");
 
-  Meteor.users.update({_id: user._id},
-    {$pull: {emails: {address: email}}});
-}
+    await Meteor.users.update({ _id: user._id },
+      { $pull: { emails: { address: email } } });
+  }
 
 ///
 /// CREATING USERS
@@ -905,51 +929,55 @@ Accounts.removeEmail = (userId, email) => {
 // does the actual user insertion.
 //
 // returns the user id
-const createUser = async options => {
-  // Unknown keys allowed, because a onCreateUserHook can take arbitrary
-  // options.
-  check(options, Match.ObjectIncluding({
-    username: Match.Optional(String),
-    email: Match.Optional(String),
-    password: Match.Optional(passwordValidator)
-  }));
+const createUser =
+  async options => {
+    // Unknown keys allowed, because a onCreateUserHook can take arbitrary
+    // options.
+    check(options, Match.ObjectIncluding({
+      username: Match.Optional(String),
+      email: Match.Optional(String),
+      password: Match.Optional(passwordValidator)
+    }));
 
-  const { username, email, password } = options;
-  if (!username && !email)
-    throw new Meteor.Error(400, "Need to set a username or email");
+    const { username, email, password } = options;
+    if (!username && !email)
+      throw new Meteor.Error(400, "Need to set a username or email");
 
-  const user = {services: {}};
-  if (password) {
-    const hashed = await hashPassword(password);
-    user.services.password = { bcrypt: hashed };
-  }
+    const user = { services: {} };
+    if (password) {
+      const hashed = await hashPassword(password);
+      user.services.password = { bcrypt: hashed };
+    }
 
-  return Accounts._createUserCheckingDuplicates({ user, email, username, options });
-};
+    return Accounts._createUserCheckingDuplicates({ user, email, username, options });
+  };
 
 // method for create user. Requests come from the client.
-Meteor.methods({createUser: async function (...args) {
-  const options = args[0];
-  return await Accounts._loginMethod(
-    this,
-    "createUser",
-    args,
-    "password",
-    async () => {
-      // createUser() above does more checking.
-      check(options, Object);
-      if (Accounts._options.forbidClientAccountCreation)
-        return {
-          error: new Meteor.Error(403, "Signups forbidden")
-        };
+Meteor.methods(
+  {
+    createUser: async function (...args) {
+      const options = args[0];
+      return await Accounts._loginMethod(
+        this,
+        "createUser",
+        args,
+        "password",
+        async () => {
+          // createUser() above does more checking.
+          check(options, Object);
+          if (Accounts._options.forbidClientAccountCreation)
+            return {
+              error: new Meteor.Error(403, "Signups forbidden")
+            };
 
-      const userId = await Accounts.createUserVerifyingEmail(options);
+          const userId = await Accounts.createUserVerifyingEmail(options);
 
-      // client gets logged in as the new user afterwards.
-      return {userId: userId};
+          // client gets logged in as the new user afterwards.
+          return { userId: userId };
+        }
+      );
     }
-  );
-}});
+  });
 
 /**
  * @summary Creates an user and sends an email if `options.email` is informed.
@@ -965,28 +993,29 @@ Meteor.methods({createUser: async function (...args) {
  * @param {Object} options.profile The user's profile, typically including the `name` field.
  * @importFromPackage accounts-base
  * */
-Accounts.createUserVerifyingEmail = async (options) => {
-  options = { ...options };
-  // Create user. result contains id and token.
-  const userId = await createUser(options);
-  // safety belt. createUser is supposed to throw on error. send 500 error
-  // instead of sending a verification email with empty userid.
-  if (! userId)
-    throw new Error("createUser failed to insert new user");
+Accounts.createUserVerifyingEmail =
+  async (options) => {
+    options = { ...options };
+    // Create user. result contains id and token.
+    const userId = await createUser(options);
+    // safety belt. createUser is supposed to throw on error. send 500 error
+    // instead of sending a verification email with empty userid.
+    if (!userId)
+      throw new Error("createUser failed to insert new user");
 
-  // If `Accounts._options.sendVerificationEmail` is set, register
-  // a token to verify the user's primary email, and send it to
-  // that address.
-  if (options.email && Accounts._options.sendVerificationEmail) {
-    if (options.password) {
-      Accounts.sendVerificationEmail(userId, options.email);
-    } else {
-      Accounts.sendEnrollmentEmail(userId, options.email);
+    // If `Accounts._options.sendVerificationEmail` is set, register
+    // a token to verify the user's primary email, and send it to
+    // that address.
+    if (options.email && Accounts._options.sendVerificationEmail) {
+      if (options.password) {
+        Accounts.sendVerificationEmail(userId, options.email);
+      } else {
+        Accounts.sendEnrollmentEmail(userId, options.email);
+      }
     }
-  }
 
-  return userId;
-};
+    return userId;
+  };
 
 // Create user directly on the server.
 //
@@ -1001,16 +1030,17 @@ Accounts.createUserVerifyingEmail = async (options) => {
 // method calling Accounts.createUser could set?
 //
 
-Accounts.createUserAsync = async (options, callback) => {
-  options = { ...options };
+Accounts.createUserAsync =
+  async (options, callback) => {
+    options = { ...options };
 
-  // XXX allow an optional callback?
-  if (callback) {
-    throw new Error("Accounts.createUser with callback not supported on the server yet.");
-  }
+    // XXX allow an optional callback?
+    if (callback) {
+      throw new Error("Accounts.createUser with callback not supported on the server yet.");
+    }
 
-  return createUser(options);
-};
+    return createUser(options);
+  };
 
 // Create user directly on the server.
 //
